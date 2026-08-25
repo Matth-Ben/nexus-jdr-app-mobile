@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/network/env_config.dart';
+import 'core/router/app_router.dart';
+import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,27 +29,17 @@ Future<void> main() async {
 }
 
 /// Point d'entrée de l'application "Nexus JDR — Personnages".
-class NexusJdrApp extends StatelessWidget {
+class NexusJdrApp extends ConsumerWidget {
   const NexusJdrApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(appRouterProvider);
+
+    return MaterialApp.router(
       title: 'Nexus JDR — Personnages',
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
-      home: const _HomePlaceholder(),
-    );
-  }
-}
-
-class _HomePlaceholder extends StatelessWidget {
-  const _HomePlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nexus JDR — Personnages')),
-      body: const Center(child: Text('Nexus JDR — Personnages')),
+      theme: AppTheme.light,
+      routerConfig: router,
     );
   }
 }
