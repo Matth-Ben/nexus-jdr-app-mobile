@@ -38,7 +38,11 @@ dependencies:
   flutter_riverpod: ^3.4.2
   riverpod_annotation: ^4.0.6
   drift: ^2.34.3
-  sqlite3_flutter_libs: ^0.6.0+eol
+  # sqlite3_flutter_libs est gelé en 0.6.0+eol par son mainteneur (plus de
+  # nouvelles versions) au profit de sqlite3 3.x, qui bundle SQLite via les
+  # build hooks/native assets Flutter (stable depuis Flutter 3.38 / Dart 3.10,
+  # cf. config/README.md pour le contexte) — plus besoin de ce package.
+  sqlite3: ^3.5.2
   path_provider: ^2.1.6
   freezed_annotation: ^3.1.0
   json_annotation: ^4.12.0
