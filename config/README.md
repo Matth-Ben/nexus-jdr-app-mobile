@@ -24,6 +24,9 @@ préféré plus tard (ex. alignement avec un choix déjà fait côté app web).
   Git** (voir `.gitignore` à la racine) — ne jamais les committer.
 - `config/*.json.example` : versions avec des valeurs placeholder, committées,
   pour que chaque développeur sache quoi remplir localement.
+- `config/integration.json` : même mécanisme, mais pour les tests
+  d'intégration (`test_integration/`) contre un stack Supabase **local**
+  (pas un flavor de l'app) — voir `test_integration/README.md`.
 
 ## État actuel : un seul projet Supabase pour les trois flavors
 

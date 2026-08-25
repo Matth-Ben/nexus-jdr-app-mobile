@@ -61,3 +61,8 @@ docs/cahier-des-charges/
 config/dev.json
 config/staging.json
 config/prod.json
+
+# Config du stack Supabase local utilisé par test_integration/ (voir
+# test_integration/README.md) — clé anon propre à chaque poste (générée par
+# `supabase start`, différente d'une machine à l'autre).
+config/integration.json

@@ -15,3 +15,11 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+## Tests
+
+- `flutter test` : suite unitaire/widgets habituelle (`test/`), rapide, sans
+  réseau — repose sur des doubles factices pour les repositories Supabase.
+- `test_integration/` : tests d'intégration contre un vrai stack Supabase
+  local (Postgres/PostgREST/RLS réels). Voir
+  [`test_integration/README.md`](test_integration/README.md).
