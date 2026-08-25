@@ -14,6 +14,10 @@ abstract class AuthRepository {
   });
 
   Future<void> signUp({required String email, required String password});
+
+  /// Déconnecte l'utilisateur courant (ex. action "Se déconnecter" du menu
+  /// profil de la liste des personnages).
+  Future<void> signOut();
 }
 
 /// Implémentation réelle, basée sur `Supabase.instance.client.auth`.
@@ -45,6 +49,17 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<void> signUp({required String email, required String password}) async {
     try {
       await _client.auth.signUp(email: email, password: password);
+    } on AuthException catch (error) {
+      throw mapAuthException(error);
+    } catch (_) {
+      throw mapUnknownError();
+    }
+  }
+
+  @override
+  Future<void> signOut() async {
+    try {
+      await _client.auth.signOut();
     } on AuthException catch (error) {
       throw mapAuthException(error);
     } catch (_) {

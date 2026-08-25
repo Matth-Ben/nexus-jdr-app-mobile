@@ -42,8 +42,20 @@ abstract final class AppColors {
   static const Color hpCriticalStart = Color(0xFFA13D2B);
   static const Color hpCriticalEnd = Color(0xFF7A2A1C);
 
+  // Jauge (PV/XP) — piste commune aux deux jauges, voir design système
+  // section 3 "Jauge (PV / XP)".
+  static const Color gaugeTrack = Color(0xFFE0D2AB);
+  static const Color gaugeTrackBorder = Color(0xFFA08862);
+
   // Bouton primaire : ombre portée basse ("effet pressable").
   static const Color primaryButtonShadow = Color(0xFF7A4D1F);
+
+  /// Ombre portée diffuse de la carte personnage (voir design système
+  /// section 4, composant "Carte personnage" : "... ombre portée diffuse.").
+  /// La valeur exacte n'y est pas chiffrée ; extension raisonnable en
+  /// attendant confirmation du design system, comme documenté pour
+  /// [textOnWoodMuted] sur l'écran de connexion.
+  static const Color cardDiffuseShadow = Color(0x33000000);
 
   /// Fond dégradé des écrans "scène" (voir section 6 du design système :
   /// connexion, liste des personnages, récapitulatifs ponctuels).

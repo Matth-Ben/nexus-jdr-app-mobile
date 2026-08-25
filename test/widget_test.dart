@@ -5,8 +5,10 @@
 // test de widget. Le routeur applicatif lit `Supabase.instance.client` dès
 // sa construction (redirection connecté/non connecté) : on le surcharge donc
 // ici via `appRouterProvider.overrideWithValue` avec un routeur de test
-// minimal, plutôt que d'initialiser Supabase pour de vrai.
+// minimal (un simple `Scaffold` de test, sans dépendre d'un écran réel de
+// l'app), plutôt que d'initialiser Supabase pour de vrai.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -22,7 +24,8 @@ void main() {
       routes: [
         GoRoute(
           path: '/',
-          builder: (context, state) => const HomePlaceholderScreen(),
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('Route de test'))),
         ),
       ],
     );
@@ -34,6 +37,6 @@ void main() {
       ),
     );
 
-    expect(find.text('Nexus JDR — Personnages'), findsWidgets);
+    expect(find.text('Route de test'), findsOneWidget);
   });
 }

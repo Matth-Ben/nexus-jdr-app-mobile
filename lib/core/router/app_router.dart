@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/character_creation/presentation/character_creation_placeholder_screen.dart';
+import '../../features/characters/presentation/character_detail_placeholder_screen.dart';
+import '../../features/characters/presentation/character_list_screen.dart';
 import '../network/supabase_client_provider.dart';
 
 part 'app_router.g.dart';
@@ -38,9 +41,20 @@ GoRouter appRouter(Ref ref) {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => const HomePlaceholderScreen(),
+        builder: (context, state) => const CharacterListScreen(),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/characters/new',
+        builder: (context, state) => const CharacterCreationPlaceholderScreen(),
+      ),
+      GoRoute(
+        path: '/characters/:id',
+        builder: (context, state) => CharacterDetailPlaceholderScreen(
+          characterId: state.pathParameters['id']!,
+          characterName: state.extra is String ? state.extra! as String : null,
+        ),
+      ),
     ],
   );
 }
@@ -61,20 +75,6 @@ String? computeAuthRedirect({
     return '/';
   }
   return null;
-}
-
-/// Placeholder de l'écran d'accueil ("Liste des personnages"), en attendant
-/// son implémentation dans `lib/features/characters/presentation/`.
-class HomePlaceholderScreen extends StatelessWidget {
-  const HomePlaceholderScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nexus JDR — Personnages')),
-      body: const Center(child: Text('Nexus JDR — Personnages')),
-    );
-  }
 }
 
 /// Pont entre un [Stream] (ici `onAuthStateChange`) et l'interface

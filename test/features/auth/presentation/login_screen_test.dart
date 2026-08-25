@@ -29,6 +29,7 @@ import 'package:personnages/features/auth/presentation/providers/auth_providers.
 class _FakeAuthRepository implements AuthRepository {
   int signInCallCount = 0;
   int signUpCallCount = 0;
+  int signOutCallCount = 0;
 
   Object? signInError;
   Object? signUpError;
@@ -59,6 +60,11 @@ class _FakeAuthRepository implements AuthRepository {
     if (signUpError != null) {
       throw signUpError!;
     }
+  }
+
+  @override
+  Future<void> signOut() async {
+    signOutCallCount++;
   }
 }
 
