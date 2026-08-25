@@ -9,6 +9,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
+import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
 import '../domain/character_failure.dart';
 import '../domain/character_summary.dart';
 import 'providers/character_providers.dart';
@@ -63,7 +64,7 @@ class CharacterListScreen extends ConsumerWidget {
                   Expanded(
                     child: PrimaryButton(
                       label: '+ Créer',
-                      onPressed: () => context.push('/characters/new'),
+                      onPressed: () => _startCreation(context, ref),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -80,6 +81,19 @@ class CharacterListScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Réinitialise le brouillon de création avant de démarrer l'assistant.
+  ///
+  /// Le brouillon (`character_creation_draft_provider.dart`) est
+  /// volontairement `keepAlive` pour survivre à la navigation entre les
+  /// étapes d'une même session de création : sans ce `reset()` explicite,
+  /// une création abandonnée en cours de route (retour à cette liste sans
+  /// avoir atteint l'étape 9) laisserait ses choix en mémoire et serait
+  /// reprise silencieusement à la prochaine tentative de "+ Créer".
+  void _startCreation(BuildContext context, WidgetRef ref) {
+    ref.read(characterCreationDraftControllerProvider.notifier).reset();
+    context.push('/characters/new');
   }
 
   void _showImportNotAvailable(BuildContext context) {

@@ -11,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
+import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
@@ -68,8 +70,8 @@ void main() {
     fakeAuthRepository = _FakeAuthRepository();
   });
 
-  Widget buildTestWidget() {
-    final router = GoRouter(
+  GoRouter buildTestRouter() {
+    return GoRouter(
       initialLocation: '/',
       routes: [
         GoRoute(
@@ -92,13 +94,15 @@ void main() {
         ),
       ],
     );
+  }
 
+  Widget buildTestWidget() {
     return ProviderScope(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeCharacterRepository),
         authRepositoryProvider.overrideWithValue(fakeAuthRepository),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(routerConfig: buildTestRouter()),
     );
   }
 
@@ -352,6 +356,44 @@ void main() {
 
     expect(find.text('Assistant de création'), findsOneWidget);
   });
+
+  testWidgets(
+    'le bouton "+ Créer" réinitialise le brouillon de création en mémoire '
+    'avant de naviguer, pour ne jamais reprendre un brouillon abandonné',
+    (WidgetTester tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+
+      final container = ProviderContainer(
+        overrides: [
+          characterRepositoryProvider.overrideWithValue(
+            fakeCharacterRepository,
+          ),
+          authRepositoryProvider.overrideWithValue(fakeAuthRepository),
+        ],
+      );
+      addTearDown(container.dispose);
+      // Simule un brouillon abandonné d'une session précédente.
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setRace(raceId: 7, subraceId: 3);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: buildTestRouter()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('+ CRÉER'));
+      await tester.pumpAndSettle();
+
+      expect(
+        container.read(characterCreationDraftControllerProvider),
+        const CharacterCreationDraft(),
+      );
+    },
+  );
 
   testWidgets(
     'taper une carte personnage navigue vers sa fiche (/characters/:id)',

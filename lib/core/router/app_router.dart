@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/character_creation/presentation/character_creation_placeholder_screen.dart';
+import '../../features/character_creation/presentation/race_step_screen.dart';
 import '../../features/characters/presentation/character_detail_placeholder_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
 import '../network/supabase_client_provider.dart';
@@ -46,6 +47,12 @@ GoRouter appRouter(Ref ref) {
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/characters/new',
+        builder: (context, state) => const RaceStepScreen(),
+      ),
+      GoRoute(
+        // Étapes 2 à 9 de l'assistant, pas encore implémentées (voir
+        // `character_creation_placeholder_screen.dart`).
+        path: '/characters/new/next',
         builder: (context, state) => const CharacterCreationPlaceholderScreen(),
       ),
       GoRoute(

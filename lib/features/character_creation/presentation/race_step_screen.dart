@@ -1,0 +1,398 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/primary_button.dart';
+import '../../../core/widgets/secondary_button.dart';
+import '../../../core/widgets/selectable_option_tile.dart';
+import '../../../core/widgets/step_progress_bar.dart';
+import '../domain/character_creation_failure.dart';
+import '../domain/race_catalog.dart';
+import '../domain/race_step_selection.dart';
+import '../domain/subrace_option.dart';
+import 'providers/character_creation_draft_provider.dart';
+import 'providers/character_creation_providers.dart';
+
+/// Étape 1/9 de l'assistant de création de personnage : choix de la race
+/// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
+/// point 1, maquette `02_étape_1_race.png`).
+///
+/// En-tête bois plein (pas le dégradé "scène") : `Scaffold` classique plutôt
+/// que `SceneScaffold`, avec un bandeau `wood.medium` posé manuellement au
+/// sommet — voir `_Header` ci-dessous.
+class RaceStepScreen extends ConsumerStatefulWidget {
+  const RaceStepScreen({super.key});
+
+  @override
+  ConsumerState<RaceStepScreen> createState() => _RaceStepScreenState();
+}
+
+class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
+  static const int _totalSteps = 9;
+
+  final _customRaceController = TextEditingController();
+
+  int? _selectedRaceId;
+  int? _selectedSubraceId;
+  bool _isCustomRaceSelected = false;
+
+  @override
+  void dispose() {
+    _customRaceController.dispose();
+    super.dispose();
+  }
+
+  void _selectRace(int raceId) {
+    setState(() {
+      _isCustomRaceSelected = false;
+      if (raceId != _selectedRaceId) {
+        _selectedSubraceId = null;
+      }
+      _selectedRaceId = raceId;
+    });
+  }
+
+  void _selectSubrace(int subraceId) {
+    setState(() {
+      _selectedSubraceId = subraceId;
+    });
+  }
+
+  void _selectCustomRace() {
+    setState(() {
+      _isCustomRaceSelected = true;
+      _selectedRaceId = null;
+      _selectedSubraceId = null;
+    });
+  }
+
+  void _goToCharacterList() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/');
+    }
+  }
+
+  /// Met à jour le brouillon en mémoire et passe à l'étape suivante.
+  ///
+  /// Aucun appel réseau ici : contrairement à l'ancienne architecture (voir
+  /// `data/character_creation_repository.dart`), cette étape n'écrit plus
+  /// rien en base — juste l'état local du brouillon
+  /// (`providers/character_creation_draft_provider.dart`), donc pas d'état
+  /// de chargement ni de gestion d'erreur réseau nécessaires ici (à la
+  /// différence du chargement du catalogue races/sous-races, un vrai appel
+  /// réseau).
+  void _submit() {
+    ref
+        .read(characterCreationDraftControllerProvider.notifier)
+        .setRace(
+          raceId: _isCustomRaceSelected ? null : _selectedRaceId,
+          subraceId: _isCustomRaceSelected ? null : _selectedSubraceId,
+          raceCustomText: _isCustomRaceSelected
+              ? _customRaceController.text.trim()
+              : null,
+        );
+    context.push('/characters/new/next');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final catalogAsync = ref.watch(raceCatalogProvider);
+
+    return Scaffold(
+      body: Column(
+        children: [
+          _Header(onBack: _goToCharacterList),
+          Expanded(
+            child: catalogAsync.when(
+              data: _buildContent,
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.goldEnd),
+              ),
+              error: (error, stackTrace) => _ErrorState(
+                message: error is CharacterCreationFailure
+                    ? error.message
+                    : 'Impossible de charger les races disponibles. '
+                          'Réessayez.',
+                onRetry: () => ref.invalidate(raceCatalogProvider),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(RaceCatalog catalog) {
+    final subracesForSelectedRace = _selectedRaceId != null
+        ? catalog.subracesOf(_selectedRaceId!)
+        : const <SubraceOption>[];
+
+    final canProceed = RaceStepSelection.canProceed(
+      isCustomRace: _isCustomRaceSelected,
+      customRaceText: _customRaceController.text,
+      selectedRaceId: _selectedRaceId,
+      selectedRaceHasSubraces: subracesForSelectedRace.isNotEmpty,
+      selectedSubraceId: _selectedSubraceId,
+    );
+
+    return SafeArea(
+      top: false,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.md,
+              AppSpacing.lg,
+              0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '1. Race',
+                      style: AppTypography.body(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      'Étape 1 / $_totalSteps',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                const StepProgressBar(totalSteps: _totalSteps, currentStep: 1),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  "Choisis l'ascendance de ton personnage.",
+                  style: AppTypography.body(fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              children: [
+                for (var i = 0; i < catalog.races.length; i++) ...[
+                  if (i > 0) const SizedBox(height: AppSpacing.sm),
+                  SelectableOptionTile(
+                    title: catalog.races[i].name,
+                    subtitle: catalog.races[i].summaryLine,
+                    selected:
+                        !_isCustomRaceSelected &&
+                        _selectedRaceId == catalog.races[i].id,
+                    leading: _RaceIconBadge(index: i),
+                    onTap: () => _selectRace(catalog.races[i].id),
+                  ),
+                ],
+                if (subracesForSelectedRace.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Choisis une sous-race.',
+                    style: AppTypography.body(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  for (var i = 0; i < subracesForSelectedRace.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.sm),
+                    SelectableOptionTile(
+                      title: subracesForSelectedRace[i].name,
+                      subtitle: subracesForSelectedRace[i].summaryLine,
+                      selected:
+                          _selectedSubraceId == subracesForSelectedRace[i].id,
+                      leading: _RaceIconBadge(index: i),
+                      onTap: () =>
+                          _selectSubrace(subracesForSelectedRace[i].id),
+                    ),
+                  ],
+                ],
+                const SizedBox(height: AppSpacing.sm),
+                SelectableOptionTile(
+                  title: 'Race personnalisée',
+                  selected: _isCustomRaceSelected,
+                  leading: const _RaceIconBadge(index: -1),
+                  onTap: _selectCustomRace,
+                ),
+                if (_isCustomRaceSelected) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  TextField(
+                    controller: _customRaceController,
+                    decoration: const InputDecoration(
+                      hintText: 'Nom de la race personnalisée',
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SecondaryButton(
+                    label: 'Retour',
+                    surface: SecondaryButtonSurface.parchment,
+                    onPressed: _goToCharacterList,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: PrimaryButton(
+                    label: 'Suivant',
+                    onPressed: canProceed ? _submit : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bandeau bois plein en tête d'écran, avec le bouton retour vers la liste
+/// des personnages (maquette `02_étape_1_race.png` : "< CRÉATION").
+class _Header extends StatelessWidget {
+  const _Header({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.woodMedium,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: onBack,
+                icon: const Icon(
+                  Icons.arrow_back_ios_new,
+                  color: AppColors.textOnWood,
+                ),
+              ),
+              Text(
+                'CRÉATION',
+                style: AppTypography.display(
+                  fontSize: 11,
+                  color: AppColors.textOnWood,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Badge carré 40×40 à gauche de chaque ligne race/sous-race.
+///
+/// Aucun asset pixel art dédié par race n'existe encore
+/// (`docs/cahier-des-charges/10-design-system.md` section 5 liste les races
+/// comme icônes encore à produire) : icône Material de repli, comme pour le
+/// logo de l'écran de connexion (`Icons.shield_rounded`,
+/// `features/auth/presentation/login_screen.dart`), avec une couleur
+/// d'accent différente par ligne pour varier visuellement la liste en
+/// attendant une vraie iconographie — dette de polish DA à traiter avec
+/// l'agent `direction-artistique`.
+class _RaceIconBadge extends StatelessWidget {
+  const _RaceIconBadge({required this.index});
+
+  /// Index de l'option dans sa liste, pour cycler sur les couleurs d'accent.
+  /// `-1` (race personnalisée) est rendu dans un ton neutre plutôt que
+  /// cyclé.
+  final int index;
+
+  static const List<Color> _accentCycle = [
+    AppColors.accentTeal,
+    AppColors.accentBrick,
+    AppColors.accentBlue,
+    AppColors.accentViolet,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final color = index < 0
+        ? AppColors.textMuted
+        : _accentCycle[index % _accentCycle.length];
+
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Icon(
+        index < 0 ? Icons.edit_note : Icons.shield_rounded,
+        color: Colors.white,
+        size: 20,
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 48,
+              color: AppColors.accentBrick,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTypography.body(color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+          ],
+        ),
+      ),
+    );
+  }
+}
