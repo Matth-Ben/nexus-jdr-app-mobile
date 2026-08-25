@@ -7,19 +7,26 @@ séparé du monorepo web — voir `13-depot-versioning-publication.md` du cahier
 
 Le cahier des charges complet (14 documents : vision, modèle de données, UX,
 design system, roadmap...) vit dans le projet claude.ai **"Nexus JDR - App mobile"**,
-pas dans ce dépôt. Avant toute tâche un peu structurante, relire le document
-pertinent plutôt que de deviner :
-- Vision/faisabilité → `00-vision-et-faisabilite.md`
-- Architecture technique (Flutter, Supabase, cache offline) → `01-architecture-technique.md`
-- Modèle de données → `02-modele-donnees.md`
-- Import XML aidedd.org → `03-import-xml-aidedd.md`
-- Fonctionnalités → `04-fonctionnalites-app-mobile.md`
-- UX/navigation → `05-ux-navigation.md`
-- Roadmap et phases → `06-roadmap.md`
-- Direction artistique → `08-direction-artistique.md`
-- Design system (tokens, composants) → `10-design-system.md`
-- Partage et groupes → `12-partage-et-groupes.md`
-- Dépôt/CI/CD/publication stores → `13-depot-versioning-publication.md`
+qui reste la source de vérité. Une copie locale de lecture est disponible dans
+`docs/cahier-des-charges/` à la racine de ce dépôt (ignorée par Git — voir `.gitignore`,
+resynchronisée manuellement depuis claude.ai en cas de mise à jour d'un document), pour
+que Claude Code local puisse la consulter directement sans accès au projet claude.ai.
+Avant toute tâche un peu structurante, relire le document pertinent plutôt que de deviner :
+- Vision/faisabilité → `docs/cahier-des-charges/00-vision-et-faisabilite.md`
+- Architecture technique (Flutter, Supabase, cache offline) → `docs/cahier-des-charges/01-architecture-technique.md`
+- Modèle de données → `docs/cahier-des-charges/02-modele-donnees.md`
+- Import XML aidedd.org → `docs/cahier-des-charges/03-import-xml-aidedd.md`
+- Fonctionnalités → `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`
+- UX/navigation → `docs/cahier-des-charges/05-ux-navigation.md`
+- Roadmap et phases → `docs/cahier-des-charges/06-roadmap.md`
+- Source des données D&D et stratégie FR/EN → `docs/cahier-des-charges/07-source-donnees-i18n.md`
+- Direction artistique → `docs/cahier-des-charges/08-direction-artistique.md`
+- Maquettes/captures → `docs/cahier-des-charges/09-maquettes-captures.md`
+- Design system (tokens, composants) → `docs/cahier-des-charges/10-design-system.md`
+- Fonctionnalités à ajouter → `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`
+- Partage et groupes → `docs/cahier-des-charges/12-partage-et-groupes.md`
+- Dépôt/CI/CD/publication stores → `docs/cahier-des-charges/13-depot-versioning-publication.md`
+- Organisation multi-agent → `docs/cahier-des-charges/14-organisation-multi-agent.md`
 
 ## Comment ce dépôt est organisé (une fois amorcé)
 
@@ -41,6 +48,7 @@ lib/
 Conventions figées dans le cahier des charges (à ne jamais recontester sans
 raison neuve) :
 - Flutter + `supabase_flutter`, cache local `drift`, modèles `freezed` + `json_serializable`.
+- Gestion d'état : **Riverpod** (décision du 25/08/2026, voir `01-architecture-technique.md`).
 - Lint strict (`flutter_lints` ou `very_good_analysis`) dès le premier commit.
 - Tests unitaires sur la logique métier (modificateurs, montée de niveau,
   emplacements de sorts) + tests de widgets sur les écrans critiques.
