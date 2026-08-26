@@ -15,15 +15,20 @@ import '../theme/app_spacing.dart';
 /// l'agent `direction-artistique`, identique pour les deux étapes.
 class AccentIconBadge extends StatelessWidget {
   const AccentIconBadge({
-    required this.index,
+    this.index = 0,
     required this.icon,
     this.neutralIcon,
+    this.color,
     super.key,
   });
 
-  /// Index de l'option dans sa liste, pour cycler sur les couleurs d'accent.
-  /// `-1` (ex. "Race personnalisée") est rendu dans un ton neutre plutôt que
-  /// cyclé, avec [neutralIcon] si fourni.
+  /// Index de l'option dans sa liste, pour cycler sur les couleurs d'accent
+  /// quand [color] n'est pas fourni. `-1` (ex. "Race personnalisée") est
+  /// rendu dans un ton neutre plutôt que cyclé, avec [neutralIcon] si
+  /// fourni. Ignoré si [color] est fourni (hormis pour le choix de
+  /// [neutralIcon]). Vaut `0` par défaut : les appelants qui fournissent
+  /// [color] (couleur d'accent dédiée, ex. une caractéristique) n'ont pas à
+  /// s'en préoccuper.
   final int index;
 
   /// Icône affichée pour `index >= 0`.
@@ -32,6 +37,12 @@ class AccentIconBadge extends StatelessWidget {
   /// Icône affichée pour `index < 0`, si différente de [icon]. Retombe sur
   /// [icon] si `null`.
   final IconData? neutralIcon;
+
+  /// Couleur d'accent explicite, prioritaire sur le cycle basé sur [index]
+  /// — pour les usages qui ont une couleur dédiée par option plutôt qu'un
+  /// simple cycle générique (ex. une couleur par caractéristique à l'étape
+  /// 4/9 "Caractéristiques", voir `domain/ability_score_definitions.dart`).
+  final Color? color;
 
   static const List<Color> _accentCycle = [
     AppColors.accentTeal,
@@ -42,15 +53,17 @@ class AccentIconBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = index < 0
-        ? AppColors.textMuted
-        : _accentCycle[index % _accentCycle.length];
+    final resolvedColor =
+        color ??
+        (index < 0
+            ? AppColors.textMuted
+            : _accentCycle[index % _accentCycle.length]);
 
     return Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: color,
+        color: resolvedColor,
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Icon(

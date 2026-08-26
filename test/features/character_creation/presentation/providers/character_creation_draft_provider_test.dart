@@ -9,6 +9,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/features/character_creation/domain/ability_score_method.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 
 void main() {
@@ -90,5 +91,61 @@ void main() {
 
     final draft = container.read(characterCreationDraftControllerProvider);
     expect(draft.backgroundId, isNull);
+  });
+
+  test(
+    'setAbilityScores après setRace/setClass/setBackground conserve les '
+    'choix déjà faits aux étapes précédentes (étape 4 "Caractéristiques")',
+    () {
+      final controller = container.read(
+        characterCreationDraftControllerProvider.notifier,
+      );
+
+      controller.setRace(raceId: 7, subraceId: 3, raceCustomText: null);
+      controller.setClass(classId: 42);
+      controller.setBackground(backgroundId: 5);
+      controller.setAbilityScores(
+        method: AbilityScoreMethod.pointBuy,
+        scores: const {
+          'str': 15,
+          'dex': 14,
+          'con': 13,
+          'int': 12,
+          'wis': 10,
+          'cha': 8,
+        },
+      );
+
+      final draft = container.read(characterCreationDraftControllerProvider);
+      expect(draft.raceId, 7);
+      expect(draft.subraceId, 3);
+      expect(draft.classId, 42);
+      expect(draft.backgroundId, 5);
+      expect(draft.abilityScoreMethod, AbilityScoreMethod.pointBuy);
+      expect(draft.abilityScores, {
+        'str': 15,
+        'dex': 14,
+        'con': 13,
+        'int': 12,
+        'wis': 10,
+        'cha': 8,
+      });
+    },
+  );
+
+  test('reset remet aussi abilityScoreMethod/abilityScores à zéro', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    controller.setAbilityScores(
+      method: AbilityScoreMethod.diceRoll,
+      scores: const {'str': 10},
+    );
+    controller.reset();
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.abilityScoreMethod, isNull);
+    expect(draft.abilityScores, isNull);
   });
 }

@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'ability_score_method.dart';
+
 part 'character_creation_draft.freezed.dart';
 
 /// Brouillon du personnage en cours de création par l'assistant, tenu
@@ -36,5 +38,18 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// d'historique personnalisé à cette étape (décision du chef de projet,
     /// voir `domain/background_catalog.dart`).
     int? backgroundId,
+
+    /// Méthode de génération des scores de caractéristiques choisie à
+    /// l'étape 4, `null` si pas encore choisie (l'écran retombe alors sur
+    /// `AbilityScoreMethod.standardArray` par défaut — voir
+    /// `presentation/ability_score_step_screen.dart`).
+    AbilityScoreMethod? abilityScoreMethod,
+
+    /// Scores de base choisis à l'étape 4, clés
+    /// 'str'/'dex'/'con'/'int'/'wis'/'cha' — **avant** application du bonus
+    /// racial (voir `domain/ability_score_modifier_calculator.dart` pour le
+    /// calcul du modificateur final affiché, qui l'ajoute). `null` si pas
+    /// encore choisis.
+    Map<String, int>? abilityScores,
   }) = _CharacterCreationDraft;
 }

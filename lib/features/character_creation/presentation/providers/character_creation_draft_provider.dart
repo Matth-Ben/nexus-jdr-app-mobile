@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../domain/ability_score_method.dart';
 import '../../domain/character_creation_draft.dart';
 
 part 'character_creation_draft_provider.g.dart';
@@ -60,6 +61,17 @@ class CharacterCreationDraftController
   /// rationale que [setClass].
   void setBackground({required int backgroundId}) {
     state = state.copyWith(backgroundId: backgroundId);
+  }
+
+  /// Met à jour la méthode et les scores de caractéristiques de l'étape 4.
+  /// Fusion partielle via `copyWith` (même rationale que [setClass] et
+  /// [setBackground]) : cette étape n'a pas de champ à effacer sur les
+  /// étapes suivantes en fonction du choix fait ici.
+  void setAbilityScores({
+    required AbilityScoreMethod method,
+    required Map<String, int> scores,
+  }) {
+    state = state.copyWith(abilityScoreMethod: method, abilityScores: scores);
   }
 
   /// Remet le brouillon à zéro. Appelé par `CharacterListScreen` avant de
