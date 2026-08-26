@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/accent_icon_badge.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
@@ -96,7 +97,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
               ? _customRaceController.text.trim()
               : null,
         );
-    context.push('/characters/new/next');
+    context.push('/characters/new/step-2');
   }
 
   @override
@@ -200,7 +201,10 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                     selected:
                         !_isCustomRaceSelected &&
                         _selectedRaceId == catalog.races[i].id,
-                    leading: _RaceIconBadge(index: i),
+                    leading: AccentIconBadge(
+                      index: i,
+                      icon: Icons.shield_rounded,
+                    ),
                     onTap: () => _selectRace(catalog.races[i].id),
                   ),
                 ],
@@ -221,7 +225,10 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                       subtitle: subracesForSelectedRace[i].summaryLine,
                       selected:
                           _selectedSubraceId == subracesForSelectedRace[i].id,
-                      leading: _RaceIconBadge(index: i),
+                      leading: AccentIconBadge(
+                        index: i,
+                        icon: Icons.shield_rounded,
+                      ),
                       onTap: () =>
                           _selectSubrace(subracesForSelectedRace[i].id),
                     ),
@@ -231,7 +238,11 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                 SelectableOptionTile(
                   title: 'Race personnalisée',
                   selected: _isCustomRaceSelected,
-                  leading: const _RaceIconBadge(index: -1),
+                  leading: const AccentIconBadge(
+                    index: -1,
+                    icon: Icons.shield_rounded,
+                    neutralIcon: Icons.edit_note,
+                  ),
                   onTap: _selectCustomRace,
                 ),
                 if (_isCustomRaceSelected) ...[
@@ -311,53 +322,6 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Badge carré 40×40 à gauche de chaque ligne race/sous-race.
-///
-/// Aucun asset pixel art dédié par race n'existe encore
-/// (`docs/cahier-des-charges/10-design-system.md` section 5 liste les races
-/// comme icônes encore à produire) : icône Material de repli, comme pour le
-/// logo de l'écran de connexion (`Icons.shield_rounded`,
-/// `features/auth/presentation/login_screen.dart`), avec une couleur
-/// d'accent différente par ligne pour varier visuellement la liste en
-/// attendant une vraie iconographie — dette de polish DA à traiter avec
-/// l'agent `direction-artistique`.
-class _RaceIconBadge extends StatelessWidget {
-  const _RaceIconBadge({required this.index});
-
-  /// Index de l'option dans sa liste, pour cycler sur les couleurs d'accent.
-  /// `-1` (race personnalisée) est rendu dans un ton neutre plutôt que
-  /// cyclé.
-  final int index;
-
-  static const List<Color> _accentCycle = [
-    AppColors.accentTeal,
-    AppColors.accentBrick,
-    AppColors.accentBlue,
-    AppColors.accentViolet,
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final color = index < 0
-        ? AppColors.textMuted
-        : _accentCycle[index % _accentCycle.length];
-
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-      ),
-      child: Icon(
-        index < 0 ? Icons.edit_note : Icons.shield_rounded,
-        color: Colors.white,
-        size: 20,
       ),
     );
   }

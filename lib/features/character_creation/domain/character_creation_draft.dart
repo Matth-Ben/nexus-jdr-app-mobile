@@ -26,5 +26,10 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// Texte libre de race personnalisée (étape 1), `null` si une race du
     /// catalogue a été choisie à la place.
     String? raceCustomText,
+
+    /// Classe choisie à l'étape 2, `null` si pas encore choisie. Pas de
+    /// sous-classe ni de "classe personnalisée" à cette étape (décision du
+    /// chef de projet, voir `domain/class_catalog.dart`).
+    int? classId,
   }) = _CharacterCreationDraft;
 }

@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/character_creation_repository.dart';
+import '../../domain/class_catalog.dart';
 import '../../domain/race_catalog.dart';
 
 part 'character_creation_providers.g.dart';
@@ -23,6 +24,13 @@ CharacterCreationRepository characterCreationRepository(Ref ref) {
 @Riverpod(retry: _noRetry)
 Future<RaceCatalog> raceCatalog(Ref ref) {
   return ref.watch(characterCreationRepositoryProvider).fetchRaceCatalog();
+}
+
+/// Catalogue des classes de l'étape 2/9, exposé à `ClassStepScreen` — même
+/// rationale que [raceCatalog] (`autoDispose`, pas de retry automatique).
+@Riverpod(retry: _noRetry)
+Future<ClassCatalog> classCatalog(Ref ref) {
+  return ref.watch(characterCreationRepositoryProvider).fetchClassCatalog();
 }
 
 Duration? _noRetry(int retryCount, Object error) => null;

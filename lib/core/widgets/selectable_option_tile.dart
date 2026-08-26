@@ -73,6 +73,8 @@ class SelectableOptionTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: AppTypography.body(
                           fontSize: 12,
                           color: AppColors.textSecondary,

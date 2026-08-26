@@ -28,16 +28,27 @@ class CharacterCreationDraftController
 
   /// Met à jour le choix de race/sous-race (ou race personnalisée) de
   /// l'étape 1. Remplace intégralement ces trois champs (pas de fusion
-  /// partielle) : l'appelant (`presentation/race_step_screen.dart`) doit
-  /// toujours fournir la sélection complète et cohérente de l'écran, y
-  /// compris les champs à effacer (ex. `subraceId: null` en cas de race sans
-  /// sous-race).
+  /// partielle sur ces trois-là) via `copyWith` : l'appelant
+  /// (`presentation/race_step_screen.dart`) doit toujours fournir la
+  /// sélection complète et cohérente de l'écran, y compris les champs à
+  /// effacer (ex. `subraceId: null` en cas de race sans sous-race). Les
+  /// autres champs du brouillon (ex. `classId` de l'étape 2) sont conservés :
+  /// revenir à l'étape 1 puis retaper "Suivant" ne doit pas effacer les
+  /// choix déjà faits aux étapes suivantes.
   void setRace({int? raceId, int? subraceId, String? raceCustomText}) {
-    state = CharacterCreationDraft(
+    state = state.copyWith(
       raceId: raceId,
       subraceId: subraceId,
       raceCustomText: raceCustomText,
     );
+  }
+
+  /// Met à jour le choix de classe de l'étape 2. Ne touche à aucun autre
+  /// champ (fusion partielle via `copyWith`, contrairement à [setRace]) :
+  /// cette étape n'a pas de sous-choix à effacer en fonction de la classe
+  /// choisie (pas de sous-classe ici, voir `domain/class_catalog.dart`).
+  void setClass({required int classId}) {
+    state = state.copyWith(classId: classId);
   }
 
   /// Remet le brouillon à zéro. Appelé par `CharacterListScreen` avant de

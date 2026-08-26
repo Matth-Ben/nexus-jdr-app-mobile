@@ -18,6 +18,7 @@ import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
+import 'package:personnages/features/character_creation/domain/class_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_option.dart';
 import 'package:personnages/features/character_creation/domain/race_trait.dart';
@@ -41,6 +42,12 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
     }
     return catalogToReturn ?? const RaceCatalog(races: [], subraces: []);
   }
+
+  // Non exercé par ces tests (étape 1 "Race" uniquement) : implémentation
+  // minimale requise pour satisfaire `CharacterCreationRepository`.
+  @override
+  Future<ClassCatalog> fetchClassCatalog() async =>
+      const ClassCatalog(classes: []);
 }
 
 const _elfe = RaceOption(
@@ -115,7 +122,7 @@ void main() {
           builder: (context, state) => const RaceStepScreen(),
         ),
         GoRoute(
-          path: '/characters/new/next',
+          path: '/characters/new/step-2',
           builder: (context, state) =>
               const Scaffold(body: Center(child: Text('Étape suivante'))),
         ),

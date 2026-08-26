@@ -125,3 +125,50 @@ final class RaceCatalogProvider
 }
 
 String _$raceCatalogHash() => r'8c79727f6540a4acf682a33db08f636ed983c91e';
+
+/// Catalogue des classes de l'étape 2/9, exposé à `ClassStepScreen` — même
+/// rationale que [raceCatalog] (`autoDispose`, pas de retry automatique).
+
+@ProviderFor(classCatalog)
+final classCatalogProvider = ClassCatalogProvider._();
+
+/// Catalogue des classes de l'étape 2/9, exposé à `ClassStepScreen` — même
+/// rationale que [raceCatalog] (`autoDispose`, pas de retry automatique).
+
+final class ClassCatalogProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ClassCatalog>,
+          ClassCatalog,
+          FutureOr<ClassCatalog>
+        >
+    with $FutureModifier<ClassCatalog>, $FutureProvider<ClassCatalog> {
+  /// Catalogue des classes de l'étape 2/9, exposé à `ClassStepScreen` — même
+  /// rationale que [raceCatalog] (`autoDispose`, pas de retry automatique).
+  ClassCatalogProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'classCatalogProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$classCatalogHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ClassCatalog> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ClassCatalog> create(Ref ref) {
+    return classCatalog(ref);
+  }
+}
+
+String _$classCatalogHash() => r'009b8c24097214888340d26f51ffe44117da5b3f';

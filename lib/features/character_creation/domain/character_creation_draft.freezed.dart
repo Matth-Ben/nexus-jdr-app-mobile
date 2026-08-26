@@ -21,7 +21,10 @@ mixin _$CharacterCreationDraft {
 /// ou pas encore choisie.
  int? get subraceId;/// Texte libre de race personnalisée (étape 1), `null` si une race du
 /// catalogue a été choisie à la place.
- String? get raceCustomText;
+ String? get raceCustomText;/// Classe choisie à l'étape 2, `null` si pas encore choisie. Pas de
+/// sous-classe ni de "classe personnalisée" à cette étape (décision du
+/// chef de projet, voir `domain/class_catalog.dart`).
+ int? get classId;
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -32,16 +35,16 @@ $CharacterCreationDraftCopyWith<CharacterCreationDraft> get copyWith => _$Charac
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.classId, classId) || other.classId == classId));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText);
+int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText,classId);
 
 @override
 String toString() {
-  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText)';
+  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText, classId: $classId)';
 }
 
 
@@ -52,7 +55,7 @@ abstract mixin class $CharacterCreationDraftCopyWith<$Res>  {
   factory $CharacterCreationDraftCopyWith(CharacterCreationDraft value, $Res Function(CharacterCreationDraft) _then) = _$CharacterCreationDraftCopyWithImpl;
 @useResult
 $Res call({
- int? raceId, int? subraceId, String? raceCustomText
+ int? raceId, int? subraceId, String? raceCustomText, int? classId
 });
 
 
@@ -69,12 +72,13 @@ class _$CharacterCreationDraftCopyWithImpl<$Res>
 
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,Object? classId = freezed,}) {
   return _then(CharacterCreationDraft(
 raceId: freezed == raceId ? _self.raceId : raceId // ignore: cast_nullable_to_non_nullable
 as int?,subraceId: freezed == subraceId ? _self.subraceId : subraceId // ignore: cast_nullable_to_non_nullable
 as int?,raceCustomText: freezed == raceCustomText ? _self.raceCustomText : raceCustomText // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,classId: freezed == classId ? _self.classId : classId // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -159,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CharacterCreationDraft() when $default != null:
-return $default(_that.raceId,_that.subraceId,_that.raceCustomText);case _:
+return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId);case _:
   return orElse();
 
 }
@@ -180,10 +184,10 @@ return $default(_that.raceId,_that.subraceId,_that.raceCustomText);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId)  $default,) {final _that = this;
 switch (_that) {
 case _CharacterCreationDraft():
-return $default(_that.raceId,_that.subraceId,_that.raceCustomText);case _:
+return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +204,10 @@ return $default(_that.raceId,_that.subraceId,_that.raceCustomText);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? raceId,  int? subraceId,  String? raceCustomText)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId)?  $default,) {final _that = this;
 switch (_that) {
 case _CharacterCreationDraft() when $default != null:
-return $default(_that.raceId,_that.subraceId,_that.raceCustomText);case _:
+return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId);case _:
   return null;
 
 }
@@ -215,7 +219,7 @@ return $default(_that.raceId,_that.subraceId,_that.raceCustomText);case _:
 
 
 class _CharacterCreationDraft implements CharacterCreationDraft {
-  const _CharacterCreationDraft({this.raceId, this.subraceId, this.raceCustomText});
+  const _CharacterCreationDraft({this.raceId, this.subraceId, this.raceCustomText, this.classId});
   
 
 /// Race choisie à l'étape 1, `null` si race personnalisée ou pas encore
@@ -227,6 +231,10 @@ class _CharacterCreationDraft implements CharacterCreationDraft {
 /// Texte libre de race personnalisée (étape 1), `null` si une race du
 /// catalogue a été choisie à la place.
 @override final  String? raceCustomText;
+/// Classe choisie à l'étape 2, `null` si pas encore choisie. Pas de
+/// sous-classe ni de "classe personnalisée" à cette étape (décision du
+/// chef de projet, voir `domain/class_catalog.dart`).
+@override final  int? classId;
 
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
@@ -238,16 +246,16 @@ _$CharacterCreationDraftCopyWith<_CharacterCreationDraft> get copyWith => __$Cha
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.classId, classId) || other.classId == classId));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText);
+int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText,classId);
 
 @override
 String toString() {
-  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText)';
+  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText, classId: $classId)';
 }
 
 
@@ -258,7 +266,7 @@ abstract mixin class _$CharacterCreationDraftCopyWith<$Res> implements $Characte
   factory _$CharacterCreationDraftCopyWith(_CharacterCreationDraft value, $Res Function(_CharacterCreationDraft) _then) = __$CharacterCreationDraftCopyWithImpl;
 @override @useResult
 $Res call({
- int? raceId, int? subraceId, String? raceCustomText
+ int? raceId, int? subraceId, String? raceCustomText, int? classId
 });
 
 
@@ -275,12 +283,13 @@ class __$CharacterCreationDraftCopyWithImpl<$Res>
 
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,Object? classId = freezed,}) {
   return _then(_CharacterCreationDraft(
 raceId: freezed == raceId ? _self.raceId : raceId // ignore: cast_nullable_to_non_nullable
 as int?,subraceId: freezed == subraceId ? _self.subraceId : subraceId // ignore: cast_nullable_to_non_nullable
 as int?,raceCustomText: freezed == raceCustomText ? _self.raceCustomText : raceCustomText // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,classId: freezed == classId ? _self.classId : classId // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
