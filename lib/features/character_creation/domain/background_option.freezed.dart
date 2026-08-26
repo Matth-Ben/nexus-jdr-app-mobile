@@ -18,7 +18,12 @@ mixin _$BackgroundOption {
  int get id; String get name;/// Noms de compétences en français directement (`backgrounds
 /// .skill_proficiencies`, jsonb) — pas de FK vers `skills`, donc aucune
 /// jointure nécessaire pour les afficher.
- List<String> get skillProficiencies; String get featureName; String get featureDescription;
+ List<String> get skillProficiencies; String get featureName; String get featureDescription;/// Contenu de la clé `"tools"` de `tool_or_language_choices`, tel quel
+/// (voir le commentaire de classe) — vide si cette clé est absente.
+ List<String> get toolOrLanguageGrantedTools;/// Contenu de la clé `"languages"` de `tool_or_language_choices`, `null`
+/// si cette clé est absente (pas de choix de langue octroyé par cet
+/// historique).
+ int? get languageChoiceCount;
 /// Create a copy of BackgroundOption
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +34,16 @@ $BackgroundOptionCopyWith<BackgroundOption> get copyWith => _$BackgroundOptionCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BackgroundOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.skillProficiencies, skillProficiencies)&&(identical(other.featureName, featureName) || other.featureName == featureName)&&(identical(other.featureDescription, featureDescription) || other.featureDescription == featureDescription));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BackgroundOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.skillProficiencies, skillProficiencies)&&(identical(other.featureName, featureName) || other.featureName == featureName)&&(identical(other.featureDescription, featureDescription) || other.featureDescription == featureDescription)&&const DeepCollectionEquality().equals(other.toolOrLanguageGrantedTools, toolOrLanguageGrantedTools)&&(identical(other.languageChoiceCount, languageChoiceCount) || other.languageChoiceCount == languageChoiceCount));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(skillProficiencies),featureName,featureDescription);
+int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(skillProficiencies),featureName,featureDescription,const DeepCollectionEquality().hash(toolOrLanguageGrantedTools),languageChoiceCount);
 
 @override
 String toString() {
-  return 'BackgroundOption(id: $id, name: $name, skillProficiencies: $skillProficiencies, featureName: $featureName, featureDescription: $featureDescription)';
+  return 'BackgroundOption(id: $id, name: $name, skillProficiencies: $skillProficiencies, featureName: $featureName, featureDescription: $featureDescription, toolOrLanguageGrantedTools: $toolOrLanguageGrantedTools, languageChoiceCount: $languageChoiceCount)';
 }
 
 
@@ -49,7 +54,7 @@ abstract mixin class $BackgroundOptionCopyWith<$Res>  {
   factory $BackgroundOptionCopyWith(BackgroundOption value, $Res Function(BackgroundOption) _then) = _$BackgroundOptionCopyWithImpl;
 @useResult
 $Res call({
- int id, String name, List<String> skillProficiencies, String featureName, String featureDescription
+ int id, String name, List<String> skillProficiencies, String featureName, String featureDescription, List<String> toolOrLanguageGrantedTools, int? languageChoiceCount
 });
 
 
@@ -66,14 +71,16 @@ class _$BackgroundOptionCopyWithImpl<$Res>
 
 /// Create a copy of BackgroundOption
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? skillProficiencies = null,Object? featureName = null,Object? featureDescription = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? skillProficiencies = null,Object? featureName = null,Object? featureDescription = null,Object? toolOrLanguageGrantedTools = null,Object? languageChoiceCount = freezed,}) {
   return _then(BackgroundOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,skillProficiencies: null == skillProficiencies ? _self.skillProficiencies : skillProficiencies // ignore: cast_nullable_to_non_nullable
 as List<String>,featureName: null == featureName ? _self.featureName : featureName // ignore: cast_nullable_to_non_nullable
 as String,featureDescription: null == featureDescription ? _self.featureDescription : featureDescription // ignore: cast_nullable_to_non_nullable
-as String,
+as String,toolOrLanguageGrantedTools: null == toolOrLanguageGrantedTools ? _self.toolOrLanguageGrantedTools : toolOrLanguageGrantedTools // ignore: cast_nullable_to_non_nullable
+as List<String>,languageChoiceCount: freezed == languageChoiceCount ? _self.languageChoiceCount : languageChoiceCount // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 
@@ -158,10 +165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  List<String> skillProficiencies,  String featureName,  String featureDescription)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  List<String> skillProficiencies,  String featureName,  String featureDescription,  List<String> toolOrLanguageGrantedTools,  int? languageChoiceCount)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BackgroundOption() when $default != null:
-return $default(_that.id,_that.name,_that.skillProficiencies,_that.featureName,_that.featureDescription);case _:
+return $default(_that.id,_that.name,_that.skillProficiencies,_that.featureName,_that.featureDescription,_that.toolOrLanguageGrantedTools,_that.languageChoiceCount);case _:
   return orElse();
 
 }
@@ -179,10 +186,10 @@ return $default(_that.id,_that.name,_that.skillProficiencies,_that.featureName,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  List<String> skillProficiencies,  String featureName,  String featureDescription)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  List<String> skillProficiencies,  String featureName,  String featureDescription,  List<String> toolOrLanguageGrantedTools,  int? languageChoiceCount)  $default,) {final _that = this;
 switch (_that) {
 case _BackgroundOption():
-return $default(_that.id,_that.name,_that.skillProficiencies,_that.featureName,_that.featureDescription);case _:
+return $default(_that.id,_that.name,_that.skillProficiencies,_that.featureName,_that.featureDescription,_that.toolOrLanguageGrantedTools,_that.languageChoiceCount);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +206,10 @@ return $default(_that.id,_that.name,_that.skillProficiencies,_that.featureName,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  List<String> skillProficiencies,  String featureName,  String featureDescription)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  List<String> skillProficiencies,  String featureName,  String featureDescription,  List<String> toolOrLanguageGrantedTools,  int? languageChoiceCount)?  $default,) {final _that = this;
 switch (_that) {
 case _BackgroundOption() when $default != null:
-return $default(_that.id,_that.name,_that.skillProficiencies,_that.featureName,_that.featureDescription);case _:
+return $default(_that.id,_that.name,_that.skillProficiencies,_that.featureName,_that.featureDescription,_that.toolOrLanguageGrantedTools,_that.languageChoiceCount);case _:
   return null;
 
 }
@@ -214,7 +221,7 @@ return $default(_that.id,_that.name,_that.skillProficiencies,_that.featureName,_
 
 
 class _BackgroundOption extends BackgroundOption {
-  const _BackgroundOption({required this.id, required this.name, required  List<String> skillProficiencies, required this.featureName, required this.featureDescription}): _skillProficiencies = skillProficiencies,super._();
+  const _BackgroundOption({required this.id, required this.name, required  List<String> skillProficiencies, required this.featureName, required this.featureDescription,  List<String> toolOrLanguageGrantedTools = const <String>[], this.languageChoiceCount}): _skillProficiencies = skillProficiencies,_toolOrLanguageGrantedTools = toolOrLanguageGrantedTools,super._();
   
 
 @override final  int id;
@@ -234,6 +241,21 @@ class _BackgroundOption extends BackgroundOption {
 
 @override final  String featureName;
 @override final  String featureDescription;
+/// Contenu de la clé `"tools"` de `tool_or_language_choices`, tel quel
+/// (voir le commentaire de classe) — vide si cette clé est absente.
+ final  List<String> _toolOrLanguageGrantedTools;
+/// Contenu de la clé `"tools"` de `tool_or_language_choices`, tel quel
+/// (voir le commentaire de classe) — vide si cette clé est absente.
+@override@JsonKey() List<String> get toolOrLanguageGrantedTools {
+  if (_toolOrLanguageGrantedTools is EqualUnmodifiableListView) return _toolOrLanguageGrantedTools;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_toolOrLanguageGrantedTools);
+}
+
+/// Contenu de la clé `"languages"` de `tool_or_language_choices`, `null`
+/// si cette clé est absente (pas de choix de langue octroyé par cet
+/// historique).
+@override final  int? languageChoiceCount;
 
 /// Create a copy of BackgroundOption
 /// with the given fields replaced by the non-null parameter values.
@@ -245,16 +267,16 @@ _$BackgroundOptionCopyWith<_BackgroundOption> get copyWith => __$BackgroundOptio
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BackgroundOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other._skillProficiencies, _skillProficiencies)&&(identical(other.featureName, featureName) || other.featureName == featureName)&&(identical(other.featureDescription, featureDescription) || other.featureDescription == featureDescription));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BackgroundOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other._skillProficiencies, _skillProficiencies)&&(identical(other.featureName, featureName) || other.featureName == featureName)&&(identical(other.featureDescription, featureDescription) || other.featureDescription == featureDescription)&&const DeepCollectionEquality().equals(other._toolOrLanguageGrantedTools, _toolOrLanguageGrantedTools)&&(identical(other.languageChoiceCount, languageChoiceCount) || other.languageChoiceCount == languageChoiceCount));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(_skillProficiencies),featureName,featureDescription);
+int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(_skillProficiencies),featureName,featureDescription,const DeepCollectionEquality().hash(_toolOrLanguageGrantedTools),languageChoiceCount);
 
 @override
 String toString() {
-  return 'BackgroundOption(id: $id, name: $name, skillProficiencies: $skillProficiencies, featureName: $featureName, featureDescription: $featureDescription)';
+  return 'BackgroundOption(id: $id, name: $name, skillProficiencies: $skillProficiencies, featureName: $featureName, featureDescription: $featureDescription, toolOrLanguageGrantedTools: $toolOrLanguageGrantedTools, languageChoiceCount: $languageChoiceCount)';
 }
 
 
@@ -265,7 +287,7 @@ abstract mixin class _$BackgroundOptionCopyWith<$Res> implements $BackgroundOpti
   factory _$BackgroundOptionCopyWith(_BackgroundOption value, $Res Function(_BackgroundOption) _then) = __$BackgroundOptionCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String name, List<String> skillProficiencies, String featureName, String featureDescription
+ int id, String name, List<String> skillProficiencies, String featureName, String featureDescription, List<String> toolOrLanguageGrantedTools, int? languageChoiceCount
 });
 
 
@@ -282,14 +304,16 @@ class __$BackgroundOptionCopyWithImpl<$Res>
 
 /// Create a copy of BackgroundOption
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? skillProficiencies = null,Object? featureName = null,Object? featureDescription = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? skillProficiencies = null,Object? featureName = null,Object? featureDescription = null,Object? toolOrLanguageGrantedTools = null,Object? languageChoiceCount = freezed,}) {
   return _then(_BackgroundOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,skillProficiencies: null == skillProficiencies ? _self._skillProficiencies : skillProficiencies // ignore: cast_nullable_to_non_nullable
 as List<String>,featureName: null == featureName ? _self.featureName : featureName // ignore: cast_nullable_to_non_nullable
 as String,featureDescription: null == featureDescription ? _self.featureDescription : featureDescription // ignore: cast_nullable_to_non_nullable
-as String,
+as String,toolOrLanguageGrantedTools: null == toolOrLanguageGrantedTools ? _self._toolOrLanguageGrantedTools : toolOrLanguageGrantedTools // ignore: cast_nullable_to_non_nullable
+as List<String>,languageChoiceCount: freezed == languageChoiceCount ? _self.languageChoiceCount : languageChoiceCount // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

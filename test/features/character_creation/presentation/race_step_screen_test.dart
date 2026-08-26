@@ -21,10 +21,12 @@ import 'package:personnages/features/character_creation/domain/background_catalo
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
 import 'package:personnages/features/character_creation/domain/class_catalog.dart';
+import 'package:personnages/features/character_creation/domain/language_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_option.dart';
 import 'package:personnages/features/character_creation/domain/race_trait.dart';
 import 'package:personnages/features/character_creation/domain/subrace_option.dart';
+import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/race_step_screen.dart';
@@ -56,6 +58,17 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   @override
   Future<BackgroundCatalog> fetchBackgroundCatalog() async =>
       const BackgroundCatalog(backgrounds: []);
+
+  // Non exercé par ces tests (étape 1 "Race" uniquement) : implémentation
+  // minimale requise pour satisfaire `CharacterCreationRepository`.
+  @override
+  Future<ToolCatalog> fetchToolCatalog() async => const ToolCatalog(tools: []);
+
+  // Non exercé par ces tests (étape 1 "Race" uniquement) : implémentation
+  // minimale requise pour satisfaire `CharacterCreationRepository`.
+  @override
+  Future<LanguageCatalog> fetchLanguageCatalog() async =>
+      const LanguageCatalog(languages: []);
 }
 
 const _elfe = RaceOption(

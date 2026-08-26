@@ -74,6 +74,26 @@ class CharacterCreationDraftController
     state = state.copyWith(abilityScoreMethod: method, abilityScores: scores);
   }
 
+  /// Met à jour les compétences/outils/langues choisis à l'étape 5. Fusion
+  /// partielle via `copyWith` (même rationale que [setClass]/[setBackground]/
+  /// [setAbilityScores]) : cette étape n'a pas de champ à effacer sur les
+  /// étapes suivantes en fonction du choix fait ici. Les trois listes sont
+  /// toujours fournies ensemble (même si une section ne s'appliquait pas,
+  /// auquel cas l'appelant fournit une liste vide) : voir
+  /// `domain/character_creation_draft.dart` pour le rationale des noms
+  /// plutôt que des ids stockés.
+  void setSkillsAndTools({
+    required List<String> classSkillChoices,
+    required List<String> classToolChoices,
+    required List<String> backgroundLanguageChoices,
+  }) {
+    state = state.copyWith(
+      classSkillChoices: classSkillChoices,
+      classToolChoices: classToolChoices,
+      backgroundLanguageChoices: backgroundLanguageChoices,
+    );
+  }
+
   /// Remet le brouillon à zéro. Appelé par `CharacterListScreen` avant de
   /// démarrer une nouvelle création ("+ Créer"), pour ne jamais reprendre
   /// silencieusement un brouillon abandonné d'une session précédente.

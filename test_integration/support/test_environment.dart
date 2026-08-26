@@ -62,11 +62,12 @@ Future<void> signUpTestUser(SupabaseClient client) async {
   }
 }
 
-/// Contenu de référence D&D existant (une race, une classe) à utiliser dans
-/// les tests, avec leur nom traduit en français attendu. Peuplé par les
-/// migrations de seed du dépôt web
-/// (`supabase/migrations/..._seed_races_subraces.sql` et
-/// `..._seed_classes_subclasses_features.sql`).
+/// Contenu de référence D&D existant (une race, une classe, un historique,
+/// un outil, une langue) à utiliser dans les tests, avec leur nom traduit en
+/// français attendu. Peuplé par les migrations de seed du dépôt web
+/// (`supabase/migrations/..._seed_races_subraces.sql`,
+/// `..._seed_classes_subclasses_features.sql`,
+/// `..._seed_reference_core_data.sql` pour `tools`/`languages`).
 class ReferenceContent {
   const ReferenceContent({
     required this.raceId,
@@ -75,6 +76,10 @@ class ReferenceContent {
     required this.className,
     required this.backgroundId,
     required this.backgroundName,
+    required this.toolId,
+    required this.toolName,
+    required this.languageId,
+    required this.languageName,
   });
 
   final Object raceId;
@@ -83,6 +88,16 @@ class ReferenceContent {
   final String className;
   final Object backgroundId;
   final String backgroundName;
+
+  /// Étape 5/9 "Compétences et outils" — voir
+  /// `SupabaseCharacterCreationRepository.fetchToolCatalog`.
+  final Object toolId;
+  final String toolName;
+
+  /// Étape 5/9 "Compétences et outils" — voir
+  /// `SupabaseCharacterCreationRepository.fetchLanguageCatalog`.
+  final Object languageId;
+  final String languageName;
 }
 
 /// Récupère [ReferenceContent] en lisant la première race et la première
@@ -106,6 +121,16 @@ Future<ReferenceContent> fetchReferenceContent(SupabaseClient client) async {
     table: 'backgrounds',
     entityType: 'background',
   );
+  final tool = await _fetchFirstTranslatedName(
+    client,
+    table: 'tools',
+    entityType: 'tool',
+  );
+  final language = await _fetchFirstTranslatedName(
+    client,
+    table: 'languages',
+    entityType: 'language',
+  );
   return ReferenceContent(
     raceId: race.$1,
     raceName: race.$2,
@@ -113,6 +138,10 @@ Future<ReferenceContent> fetchReferenceContent(SupabaseClient client) async {
     className: characterClass.$2,
     backgroundId: background.$1,
     backgroundName: background.$2,
+    toolId: tool.$1,
+    toolName: tool.$2,
+    languageId: language.$1,
+    languageName: language.$2,
   );
 }
 

@@ -10,6 +10,7 @@ import '../../features/character_creation/presentation/background_step_screen.da
 import '../../features/character_creation/presentation/character_creation_placeholder_screen.dart';
 import '../../features/character_creation/presentation/class_step_screen.dart';
 import '../../features/character_creation/presentation/race_step_screen.dart';
+import '../../features/character_creation/presentation/skills_and_tools_step_screen.dart';
 import '../../features/characters/presentation/character_detail_placeholder_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
 import '../network/supabase_client_provider.dart';
@@ -65,11 +66,15 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const AbilityScoreStepScreen(),
       ),
       GoRoute(
-        // Étapes 5 à 9 de l'assistant, pas encore implémentées (voir
-        // `character_creation_placeholder_screen.dart`).
         path: '/characters/new/step-5',
+        builder: (context, state) => const SkillsAndToolsStepScreen(),
+      ),
+      GoRoute(
+        // Étapes 6 à 9 de l'assistant, pas encore implémentées (voir
+        // `character_creation_placeholder_screen.dart`).
+        path: '/characters/new/step-6',
         builder: (context, state) => const CharacterCreationPlaceholderScreen(
-          stepText: 'Étape 5/9 — Compétences et outils — à venir',
+          stepText: 'Étape 6/9 — Sorts — à venir',
         ),
       ),
       GoRoute(

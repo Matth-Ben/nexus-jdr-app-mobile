@@ -224,3 +224,145 @@ final class BackgroundCatalogProvider
 }
 
 String _$backgroundCatalogHash() => r'f03bb8230dc30985f627cac63f3d258a06e61d5d';
+
+/// Catalogue des outils/instruments de l'étape 5/9, exposé à
+/// `SkillsAndToolsStepScreen` — même rationale que [raceCatalog]
+/// (`autoDispose`, pas de retry automatique).
+
+@ProviderFor(toolCatalog)
+final toolCatalogProvider = ToolCatalogProvider._();
+
+/// Catalogue des outils/instruments de l'étape 5/9, exposé à
+/// `SkillsAndToolsStepScreen` — même rationale que [raceCatalog]
+/// (`autoDispose`, pas de retry automatique).
+
+final class ToolCatalogProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ToolCatalog>,
+          ToolCatalog,
+          FutureOr<ToolCatalog>
+        >
+    with $FutureModifier<ToolCatalog>, $FutureProvider<ToolCatalog> {
+  /// Catalogue des outils/instruments de l'étape 5/9, exposé à
+  /// `SkillsAndToolsStepScreen` — même rationale que [raceCatalog]
+  /// (`autoDispose`, pas de retry automatique).
+  ToolCatalogProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'toolCatalogProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$toolCatalogHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ToolCatalog> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ToolCatalog> create(Ref ref) {
+    return toolCatalog(ref);
+  }
+}
+
+String _$toolCatalogHash() => r'fc8c55981cc99895e180f79d1e3abfc1e514a451';
+
+/// Catalogue des langues de l'étape 5/9, exposé à `SkillsAndToolsStepScreen`
+/// — même rationale que [raceCatalog] (`autoDispose`, pas de retry
+/// automatique).
+
+@ProviderFor(languageCatalog)
+final languageCatalogProvider = LanguageCatalogProvider._();
+
+/// Catalogue des langues de l'étape 5/9, exposé à `SkillsAndToolsStepScreen`
+/// — même rationale que [raceCatalog] (`autoDispose`, pas de retry
+/// automatique).
+
+final class LanguageCatalogProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<LanguageCatalog>,
+          LanguageCatalog,
+          FutureOr<LanguageCatalog>
+        >
+    with $FutureModifier<LanguageCatalog>, $FutureProvider<LanguageCatalog> {
+  /// Catalogue des langues de l'étape 5/9, exposé à `SkillsAndToolsStepScreen`
+  /// — même rationale que [raceCatalog] (`autoDispose`, pas de retry
+  /// automatique).
+  LanguageCatalogProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'languageCatalogProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$languageCatalogHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<LanguageCatalog> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<LanguageCatalog> create(Ref ref) {
+    return languageCatalog(ref);
+  }
+}
+
+String _$languageCatalogHash() => r'8a9e87cda7d631331b87853fe52dd2777b67525c';
+
+@ProviderFor(skillsAndToolsStepData)
+final skillsAndToolsStepDataProvider = SkillsAndToolsStepDataProvider._();
+
+final class SkillsAndToolsStepDataProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<SkillsAndToolsStepData>,
+          SkillsAndToolsStepData,
+          FutureOr<SkillsAndToolsStepData>
+        >
+    with
+        $FutureModifier<SkillsAndToolsStepData>,
+        $FutureProvider<SkillsAndToolsStepData> {
+  SkillsAndToolsStepDataProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'skillsAndToolsStepDataProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$skillsAndToolsStepDataHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<SkillsAndToolsStepData> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<SkillsAndToolsStepData> create(Ref ref) {
+    return skillsAndToolsStepData(ref);
+  }
+}
+
+String _$skillsAndToolsStepDataHash() =>
+    r'baaeb5eafc430a19a126f1e0e291e21e36fd8ff5';

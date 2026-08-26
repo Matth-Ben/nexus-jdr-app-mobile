@@ -9,6 +9,29 @@ part 'background_option.freezed.dart';
 /// quel, jamais utilisé pour construire une UI de choix de compétences) :
 /// voir le commentaire de classe de [BackgroundCatalog] pour le rationale
 /// détaillé de ce report.
+///
+/// [toolOrLanguageGrantedTools]/[languageChoiceCount] ne sont utilisés qu'à
+/// l'étape 5/9 "Compétences et outils" (`presentation
+/// /skills_and_tools_step_screen.dart`), même rationale que les champs
+/// équivalents de [ClassOption] : voyagent sur ce modèle plutôt qu'un modèle
+/// dédié, valeurs par défaut permissives pour ne pas casser les usages
+/// existants de l'étape 3/9.
+///
+/// `backgrounds.tool_or_language_choices` (jsonb) peut contenir jusqu'à trois
+/// clés (vérifié contre
+/// `supabase/migrations/20260825090800_seed_backgrounds.sql` du dépôt web) :
+/// - `"tools"` (tableau de chaînes) : parfois un vrai nom d'outil ("Kit de
+///   déguisement"), parfois une phrase de substitution ("un jeu au choix",
+///   "un instrument de musique au choix") — décision du chef de projet :
+///   traité tel quel comme du texte informatif octroyé automatiquement, pas
+///   comme un choix interactif (contrairement à la forme `{"count", "type"}`
+///   de `classes.tool_proficiencies`), donc jamais résolu vers un id
+///   `tools.id`. Voir [toolOrLanguageGrantedTools].
+/// - `"languages"` (entier) : un vrai choix interactif de N langues parmi la
+///   table `languages`. Voir [languageChoiceCount].
+/// - `"vehicles"` (tableau de chaînes) : hors périmètre de l'étape 5/9,
+///   jamais lu ni affiché (décision du chef de projet) — pas de champ dédié
+///   sur ce modèle.
 @freezed
 abstract class BackgroundOption with _$BackgroundOption {
   const BackgroundOption._();
@@ -23,6 +46,15 @@ abstract class BackgroundOption with _$BackgroundOption {
     required List<String> skillProficiencies,
     required String featureName,
     required String featureDescription,
+
+    /// Contenu de la clé `"tools"` de `tool_or_language_choices`, tel quel
+    /// (voir le commentaire de classe) — vide si cette clé est absente.
+    @Default(<String>[]) List<String> toolOrLanguageGrantedTools,
+
+    /// Contenu de la clé `"languages"` de `tool_or_language_choices`, `null`
+    /// si cette clé est absente (pas de choix de langue octroyé par cet
+    /// historique).
+    int? languageChoiceCount,
   }) = _BackgroundOption;
 
   /// Ligne "Compétences : X, Y" affichée pour toutes les lignes, qu'elles

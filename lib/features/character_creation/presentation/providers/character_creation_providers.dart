@@ -3,8 +3,14 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/character_creation_repository.dart';
 import '../../domain/background_catalog.dart';
+import '../../domain/background_option.dart';
+import '../../domain/character_creation_failure.dart';
 import '../../domain/class_catalog.dart';
+import '../../domain/class_option.dart';
+import '../../domain/language_catalog.dart';
 import '../../domain/race_catalog.dart';
+import '../../domain/tool_catalog.dart';
+import 'character_creation_draft_provider.dart';
 
 part 'character_creation_providers.g.dart';
 
@@ -42,6 +48,77 @@ Future<BackgroundCatalog> backgroundCatalog(Ref ref) {
   return ref
       .watch(characterCreationRepositoryProvider)
       .fetchBackgroundCatalog();
+}
+
+/// Catalogue des outils/instruments de l'étape 5/9, exposé à
+/// `SkillsAndToolsStepScreen` — même rationale que [raceCatalog]
+/// (`autoDispose`, pas de retry automatique).
+@Riverpod(retry: _noRetry)
+Future<ToolCatalog> toolCatalog(Ref ref) {
+  return ref.watch(characterCreationRepositoryProvider).fetchToolCatalog();
+}
+
+/// Catalogue des langues de l'étape 5/9, exposé à `SkillsAndToolsStepScreen`
+/// — même rationale que [raceCatalog] (`autoDispose`, pas de retry
+/// automatique).
+@Riverpod(retry: _noRetry)
+Future<LanguageCatalog> languageCatalog(Ref ref) {
+  return ref.watch(characterCreationRepositoryProvider).fetchLanguageCatalog();
+}
+
+/// Données déjà résolues nécessaires à l'étape 5/9 "Compétences et outils" :
+/// la [ClassOption]/[BackgroundOption] déjà choisies aux étapes 2/3 (pas les
+/// catalogues complets, cet écran n'a besoin que d'une seule entrée de
+/// chacun), plus les catalogues d'outils/langues complets pour peupler les
+/// sections interactives correspondantes.
+///
+/// Combine 4 providers déjà existants ([classCatalogProvider]/
+/// [backgroundCatalogProvider]/[toolCatalogProvider]/[languageCatalogProvider])
+/// plutôt que de refaire une requête dédiée : `classes`/`backgrounds` ont
+/// déjà été chargées aux étapes 2/3, `tools`/`languages` sont de petites
+/// tables de référence bon marché à récupérer en entier (même principe que
+/// `raceCatalogProvider` rechargé en entier à l'étape 4/9 pour les bonus
+/// raciaux). Premier écran de l'assistant à combiner plusieurs catalogues :
+/// pattern Riverpod standard (`ref.watch(xProvider.future)` dans un provider
+/// `Future`), pas une rupture de convention, mais signalé ici puisqu'aucun
+/// écran précédent n'en avait eu besoin.
+typedef SkillsAndToolsStepData = ({
+  ClassOption classOption,
+  BackgroundOption backgroundOption,
+  ToolCatalog toolCatalog,
+  LanguageCatalog languageCatalog,
+});
+
+@Riverpod(retry: _noRetry)
+Future<SkillsAndToolsStepData> skillsAndToolsStepData(Ref ref) async {
+  final draft = ref.watch(characterCreationDraftControllerProvider);
+
+  final classCatalog = await ref.watch(classCatalogProvider.future);
+  final backgroundCatalog = await ref.watch(backgroundCatalogProvider.future);
+  final toolCatalog = await ref.watch(toolCatalogProvider.future);
+  final languageCatalog = await ref.watch(languageCatalogProvider.future);
+
+  final classOption = classCatalog.classes.firstWhere(
+    (option) => option.id == draft.classId,
+    orElse: () => throw const CharacterCreationFailure(
+      "Classe introuvable pour l'étape Compétences et outils. Revenez à "
+      "l'étape Classe.",
+    ),
+  );
+  final backgroundOption = backgroundCatalog.backgrounds.firstWhere(
+    (option) => option.id == draft.backgroundId,
+    orElse: () => throw const CharacterCreationFailure(
+      "Historique introuvable pour l'étape Compétences et outils. Revenez "
+      "à l'étape Historique.",
+    ),
+  );
+
+  return (
+    classOption: classOption,
+    backgroundOption: backgroundOption,
+    toolCatalog: toolCatalog,
+    languageCatalog: languageCatalog,
+  );
 }
 
 Duration? _noRetry(int retryCount, Object error) => null;

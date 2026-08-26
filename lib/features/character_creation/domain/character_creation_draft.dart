@@ -51,5 +51,32 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// calcul du modificateur final affiché, qui l'ajoute). `null` si pas
     /// encore choisis.
     Map<String, int>? abilityScores,
+
+    /// Compétences de classe choisies à l'étape 5 (noms affichés, ex.
+    /// "Arcanes", pas des ids `skills.id`). Liste vide tant qu'aucune n'est
+    /// choisie.
+    ///
+    /// Décision assumée (voir `presentation/skills_and_tools_step_screen.dart`)
+    /// : le brouillon garde des **noms** plutôt que des ids `skills`/`tools`/
+    /// `languages` réels pour les trois champs de cette étape — la
+    /// résolution fine vers ces ids est repoussée à l'étape 9
+    /// "Récapitulatif" (pas encore implémentée), seule étape qui écrira
+    /// réellement des lignes en base. Ce choix évite de faire porter à cette
+    /// étape une jointure supplémentaire (nom -> id) dont le résultat
+    /// n'est utile qu'au moment d'écrire en base, à l'étape 9.
+    @Default(<String>[]) List<String> classSkillChoices,
+
+    /// Outils/instruments de classe choisis à l'étape 5 (noms affichés),
+    /// vide si la classe n'a pas de choix interactif d'outils
+    /// (`ClassOption.toolChoice` `null`) ou si aucun n'est encore choisi.
+    /// Même décision noms-plutôt-qu'ids que [classSkillChoices].
+    @Default(<String>[]) List<String> classToolChoices,
+
+    /// Langues d'historique choisies à l'étape 5 (noms affichés), vide si
+    /// l'historique n'offre pas de choix de langue
+    /// (`BackgroundOption.languageChoiceCount` `null`) ou si aucune n'est
+    /// encore choisie. Même décision noms-plutôt-qu'ids que
+    /// [classSkillChoices].
+    @Default(<String>[]) List<String> backgroundLanguageChoices,
   }) = _CharacterCreationDraft;
 }

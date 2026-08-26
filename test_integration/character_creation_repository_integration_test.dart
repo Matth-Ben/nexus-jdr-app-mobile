@@ -55,5 +55,32 @@ void main() {
       expect(background.featureDescription, isNotEmpty);
       expect(background.skillProficiencies, isNotEmpty);
     });
+
+    test('fetchToolCatalog résout le nom d\'outil/instrument via translations '
+        '(entity_type=\'tool\') — étape 5/9 "Compétences et outils"', () async {
+      final repository = SupabaseCharacterCreationRepository(client);
+
+      final catalog = await repository.fetchToolCatalog();
+
+      final tool = catalog.tools.singleWhere((t) => t.id == reference.toolId);
+      expect(tool.name, reference.toolName);
+      expect(tool.category, isNotEmpty);
+    });
+
+    test(
+      'fetchLanguageCatalog résout le nom de langue via translations '
+      '(entity_type=\'language\') — étape 5/9 "Compétences et outils"',
+      () async {
+        final repository = SupabaseCharacterCreationRepository(client);
+
+        final catalog = await repository.fetchLanguageCatalog();
+
+        final language = catalog.languages.singleWhere(
+          (l) => l.id == reference.languageId,
+        );
+        expect(language.name, reference.languageName);
+        expect(language.type, isNotEmpty);
+      },
+    );
   });
 }

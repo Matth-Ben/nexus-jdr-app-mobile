@@ -2,11 +2,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/background_catalog.dart';
 import '../domain/class_catalog.dart';
+import '../domain/language_catalog.dart';
 import '../domain/race_catalog.dart';
+import '../domain/tool_catalog.dart';
 import 'background_row_mapper.dart';
 import 'character_creation_error_mapper.dart';
 import 'class_row_mapper.dart';
+import 'language_row_mapper.dart';
 import 'race_row_mapper.dart';
+import 'tool_row_mapper.dart';
 
 /// Langue d'affichage des noms de race/sous-race/classe, en dur pour
 /// l'instant — même rationale que `_locale` de
@@ -21,6 +25,12 @@ const String _classCatalogErrorMessage =
 
 const String _backgroundCatalogErrorMessage =
     'Impossible de charger les historiques disponibles. Réessayez.';
+
+const String _toolCatalogErrorMessage =
+    'Impossible de charger les outils disponibles. Réessayez.';
+
+const String _languageCatalogErrorMessage =
+    'Impossible de charger les langues disponibles. Réessayez.';
 
 /// Passerelle vers les données de l'assistant de création de personnage.
 ///
@@ -53,6 +63,18 @@ abstract class CharacterCreationRepository {
   /// leur aptitude (nom + description) déjà résolus (`translations`, locale
   /// FR) — étape 3/9 de l'assistant.
   Future<BackgroundCatalog> fetchBackgroundCatalog();
+
+  /// Récupère l'intégralité des outils/instruments disponibles, avec leur
+  /// nom déjà résolu (`translations`, locale FR) — étape 5/9 de l'assistant
+  /// ("Compétences et outils"), utilisé pour proposer les candidats d'un
+  /// choix interactif d'outils de classe (`ClassOption.toolChoice`).
+  Future<ToolCatalog> fetchToolCatalog();
+
+  /// Récupère l'intégralité des langues disponibles, avec leur nom déjà
+  /// résolu (`translations`, locale FR) — étape 5/9 de l'assistant
+  /// ("Compétences et outils"), utilisé pour proposer les candidats du choix
+  /// de langues d'historique (`BackgroundOption.languageChoiceCount`).
+  Future<LanguageCatalog> fetchLanguageCatalog();
 }
 
 /// Implémentation réelle, basée sur `Supabase.instance.client`.
@@ -108,7 +130,7 @@ class SupabaseCharacterCreationRepository
     try {
       final classRows = await _client
           .from('classes')
-          .select('id, hit_die')
+          .select('id, hit_die, skill_choices, tool_proficiencies')
           .order('id');
 
       final classIds = ClassRowMapper.collectIds(classRows);
@@ -147,7 +169,7 @@ class SupabaseCharacterCreationRepository
     try {
       final backgroundRows = await _client
           .from('backgrounds')
-          .select('id, skill_proficiencies')
+          .select('id, skill_proficiencies, tool_or_language_choices')
           .order('id');
 
       final backgroundIds = BackgroundRowMapper.collectIds(backgroundRows);
@@ -180,6 +202,60 @@ class SupabaseCharacterCreationRepository
       throw mapCharacterCreationError(
         error,
         fallbackMessage: _backgroundCatalogErrorMessage,
+      );
+    } catch (_) {
+      throw mapUnknownCharacterCreationError();
+    }
+  }
+
+  @override
+  Future<ToolCatalog> fetchToolCatalog() async {
+    try {
+      final toolRows = await _client
+          .from('tools')
+          .select('id, category')
+          .order('id');
+
+      final names = await _fetchToolTranslatedNames(
+        entityIds: ToolRowMapper.collectIds(toolRows),
+      );
+
+      return ToolCatalog(
+        tools: toolRows
+            .map((row) => ToolRowMapper.toToolOption(row, names: names))
+            .toList(),
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterCreationError(
+        error,
+        fallbackMessage: _toolCatalogErrorMessage,
+      );
+    } catch (_) {
+      throw mapUnknownCharacterCreationError();
+    }
+  }
+
+  @override
+  Future<LanguageCatalog> fetchLanguageCatalog() async {
+    try {
+      final languageRows = await _client
+          .from('languages')
+          .select('id, type')
+          .order('id');
+
+      final names = await _fetchLanguageTranslatedNames(
+        entityIds: LanguageRowMapper.collectIds(languageRows),
+      );
+
+      return LanguageCatalog(
+        languages: languageRows
+            .map((row) => LanguageRowMapper.toLanguageOption(row, names: names))
+            .toList(),
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterCreationError(
+        error,
+        fallbackMessage: _languageCatalogErrorMessage,
       );
     } catch (_) {
       throw mapUnknownCharacterCreationError();
@@ -254,5 +330,49 @@ class SupabaseCharacterCreationRepository
         .inFilter('entity_id', entityIds.toList());
 
     return BackgroundRowMapper.parseTranslatedValues(rows);
+  }
+
+  /// Récupère `{entity_id: name}` pour toutes les traductions `tool` dont
+  /// l'identifiant est dans [entityIds]. Retourne une map vide sans requête
+  /// si [entityIds] est vide — même principe que
+  /// [_fetchBackgroundTranslatedValues], distinct pour ne pas coupler
+  /// l'étape 5/9 aux étapes précédentes.
+  Future<Map<String, String>> _fetchToolTranslatedNames({
+    required Set<String> entityIds,
+  }) async {
+    if (entityIds.isEmpty) {
+      return const {};
+    }
+
+    final rows = await _client
+        .from('translations')
+        .select('entity_id, value')
+        .eq('entity_type', 'tool')
+        .eq('field_name', 'name')
+        .eq('locale', _locale)
+        .inFilter('entity_id', entityIds.toList());
+
+    return ToolRowMapper.parseTranslatedValues(rows);
+  }
+
+  /// Récupère `{entity_id: name}` pour toutes les traductions `language`
+  /// dont l'identifiant est dans [entityIds] — même principe que
+  /// [_fetchToolTranslatedNames].
+  Future<Map<String, String>> _fetchLanguageTranslatedNames({
+    required Set<String> entityIds,
+  }) async {
+    if (entityIds.isEmpty) {
+      return const {};
+    }
+
+    final rows = await _client
+        .from('translations')
+        .select('entity_id, value')
+        .eq('entity_type', 'language')
+        .eq('field_name', 'name')
+        .eq('locale', _locale)
+        .inFilter('entity_id', entityIds.toList());
+
+    return LanguageRowMapper.parseTranslatedValues(rows);
   }
 }
