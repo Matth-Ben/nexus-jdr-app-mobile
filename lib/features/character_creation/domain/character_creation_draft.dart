@@ -110,5 +110,40 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// [equipmentChoiceTab], pas la présence de ce champ, qui détermine ce
     /// qui est effectivement retenu à l'étape 9.
     @Default(<String, int>{}) Map<String, int> purchasedEquipment,
+
+    /// Les 9 champs texte libres de l'étape 8 "Apparence, histoire et
+    /// portrait" (`presentation/appearance_and_backstory_step_screen.dart`),
+    /// tous optionnels — `null` tant que le champ n'a jamais été renseigné.
+    /// Ordre canonique du XML aidedd.org / des colonnes `characters.*` (voir
+    /// le commentaire de classe de `AppearanceAndBackstoryStepScreen`), pas
+    /// l'ordre partiel visible sur la maquette (extrait tronqué). Aucune
+    /// résolution supplémentaire nécessaire à l'étape 9 contrairement aux
+    /// autres champs du brouillon : ce sont déjà les valeurs texte finales
+    /// destinées aux colonnes `characters.appearance_text`/`traits_text`/...
+    String? appearanceText,
+
+    /// Voir [appearanceText] — `characters.traits_text`.
+    String? traitsText,
+
+    /// Voir [appearanceText] — `characters.ideals_text`.
+    String? idealsText,
+
+    /// Voir [appearanceText] — `characters.bonds_text`.
+    String? bondsText,
+
+    /// Voir [appearanceText] — `characters.flaws_text`.
+    String? flawsText,
+
+    /// Voir [appearanceText] — `characters.backstory_text`.
+    String? backstoryText,
+
+    /// Voir [appearanceText] — `characters.allies_text`.
+    String? alliesText,
+
+    /// Voir [appearanceText] — `characters.features_text`.
+    String? featuresText,
+
+    /// Voir [appearanceText] — `characters.treasure_text`.
+    String? treasureText,
   }) = _CharacterCreationDraft;
 }

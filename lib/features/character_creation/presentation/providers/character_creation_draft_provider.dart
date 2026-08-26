@@ -127,6 +127,36 @@ class CharacterCreationDraftController
     );
   }
 
+  /// Met à jour les 9 champs texte libres de l'étape 8 "Apparence, histoire
+  /// et portrait". Fusion partielle via `copyWith` (même rationale que
+  /// [setSpells]/[setEquipment]) : cette étape n'a pas de champ à effacer sur
+  /// l'étape suivante en fonction du choix fait ici. Les 9 valeurs sont
+  /// toujours fournies ensemble (même si un champ est resté vide, auquel cas
+  /// l'appelant fournit `null`) — voir `domain/character_creation_draft.dart`.
+  void setAppearanceAndBackstory({
+    required String? appearanceText,
+    required String? traitsText,
+    required String? idealsText,
+    required String? bondsText,
+    required String? flawsText,
+    required String? backstoryText,
+    required String? alliesText,
+    required String? featuresText,
+    required String? treasureText,
+  }) {
+    state = state.copyWith(
+      appearanceText: appearanceText,
+      traitsText: traitsText,
+      idealsText: idealsText,
+      bondsText: bondsText,
+      flawsText: flawsText,
+      backstoryText: backstoryText,
+      alliesText: alliesText,
+      featuresText: featuresText,
+      treasureText: treasureText,
+    );
+  }
+
   /// Remet le brouillon à zéro. Appelé par `CharacterListScreen` avant de
   /// démarrer une nouvelle création ("+ Créer"), pour ne jamais reprendre
   /// silencieusement un brouillon abandonné d'une session précédente.

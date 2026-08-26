@@ -200,4 +200,92 @@ void main() {
     expect(draft.equipmentChoiceTab, isNull);
     expect(draft.purchasedEquipment, isEmpty);
   });
+
+  test('setAppearanceAndBackstory après setClass/setBackground conserve les '
+      'choix déjà faits aux étapes précédentes (étape 8 "Apparence, histoire '
+      'et portrait")', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    controller.setClass(classId: 42);
+    controller.setBackground(backgroundId: 5);
+    controller.setAppearanceAndBackstory(
+      appearanceText: 'Grand et mince',
+      traitsText: 'Curieux',
+      idealsText: 'La justice',
+      bondsText: 'Sa famille',
+      flawsText: 'Trop confiant',
+      backstoryText: 'Né dans un village isolé',
+      alliesText: 'La guilde des marchands',
+      featuresText: 'Une cicatrice au visage',
+      treasureText: 'Une amulette ancienne',
+    );
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.classId, 42);
+    expect(draft.backgroundId, 5);
+    expect(draft.appearanceText, 'Grand et mince');
+    expect(draft.traitsText, 'Curieux');
+    expect(draft.idealsText, 'La justice');
+    expect(draft.bondsText, 'Sa famille');
+    expect(draft.flawsText, 'Trop confiant');
+    expect(draft.backstoryText, 'Né dans un village isolé');
+    expect(draft.alliesText, 'La guilde des marchands');
+    expect(draft.featuresText, 'Une cicatrice au visage');
+    expect(draft.treasureText, 'Une amulette ancienne');
+  });
+
+  test('setAppearanceAndBackstory accepte des valeurs null (champ jamais '
+      'renseigné) sans planter', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    controller.setAppearanceAndBackstory(
+      appearanceText: null,
+      traitsText: null,
+      idealsText: null,
+      bondsText: null,
+      flawsText: null,
+      backstoryText: null,
+      alliesText: null,
+      featuresText: null,
+      treasureText: null,
+    );
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.appearanceText, isNull);
+    expect(draft.treasureText, isNull);
+  });
+
+  test('reset remet aussi les 9 champs texte de l\'étape 8 à zéro', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    controller.setAppearanceAndBackstory(
+      appearanceText: 'Grand et mince',
+      traitsText: 'Curieux',
+      idealsText: 'La justice',
+      bondsText: 'Sa famille',
+      flawsText: 'Trop confiant',
+      backstoryText: 'Né dans un village isolé',
+      alliesText: 'La guilde des marchands',
+      featuresText: 'Une cicatrice au visage',
+      treasureText: 'Une amulette ancienne',
+    );
+    controller.reset();
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.appearanceText, isNull);
+    expect(draft.traitsText, isNull);
+    expect(draft.idealsText, isNull);
+    expect(draft.bondsText, isNull);
+    expect(draft.flawsText, isNull);
+    expect(draft.backstoryText, isNull);
+    expect(draft.alliesText, isNull);
+    expect(draft.featuresText, isNull);
+    expect(draft.treasureText, isNull);
+  });
 }

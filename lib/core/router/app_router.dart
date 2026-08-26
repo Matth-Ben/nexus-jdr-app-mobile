@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/character_creation/presentation/ability_score_step_screen.dart';
+import '../../features/character_creation/presentation/appearance_and_backstory_step_screen.dart';
 import '../../features/character_creation/presentation/background_step_screen.dart';
 import '../../features/character_creation/presentation/character_creation_placeholder_screen.dart';
 import '../../features/character_creation/presentation/class_step_screen.dart';
@@ -83,11 +84,15 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const EquipmentStepScreen(),
       ),
       GoRoute(
-        // Étapes 8 et 9 de l'assistant, pas encore implémentées (voir
-        // `character_creation_placeholder_screen.dart`).
         path: '/characters/new/step-8',
+        builder: (context, state) => const AppearanceAndBackstoryStepScreen(),
+      ),
+      GoRoute(
+        // Étape 9 "Récapitulatif" de l'assistant, pas encore implémentée
+        // (voir `character_creation_placeholder_screen.dart`).
+        path: '/characters/new/step-9',
         builder: (context, state) => const CharacterCreationPlaceholderScreen(
-          stepText: 'Étape 8/9 — Apparence, histoire et portrait — à venir',
+          stepText: 'Étape 9/9 — Récapitulatif — à venir',
         ),
       ),
       GoRoute(

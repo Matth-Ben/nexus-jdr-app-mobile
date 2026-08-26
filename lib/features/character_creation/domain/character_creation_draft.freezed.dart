@@ -80,7 +80,24 @@ mixin _$CharacterCreationDraft {
 /// `presentation/equipment_step_screen.dart`) : c'est
 /// [equipmentChoiceTab], pas la présence de ce champ, qui détermine ce
 /// qui est effectivement retenu à l'étape 9.
- Map<String, int> get purchasedEquipment;
+ Map<String, int> get purchasedEquipment;/// Les 9 champs texte libres de l'étape 8 "Apparence, histoire et
+/// portrait" (`presentation/appearance_and_backstory_step_screen.dart`),
+/// tous optionnels — `null` tant que le champ n'a jamais été renseigné.
+/// Ordre canonique du XML aidedd.org / des colonnes `characters.*` (voir
+/// le commentaire de classe de `AppearanceAndBackstoryStepScreen`), pas
+/// l'ordre partiel visible sur la maquette (extrait tronqué). Aucune
+/// résolution supplémentaire nécessaire à l'étape 9 contrairement aux
+/// autres champs du brouillon : ce sont déjà les valeurs texte finales
+/// destinées aux colonnes `characters.appearance_text`/`traits_text`/...
+ String? get appearanceText;/// Voir [appearanceText] — `characters.traits_text`.
+ String? get traitsText;/// Voir [appearanceText] — `characters.ideals_text`.
+ String? get idealsText;/// Voir [appearanceText] — `characters.bonds_text`.
+ String? get bondsText;/// Voir [appearanceText] — `characters.flaws_text`.
+ String? get flawsText;/// Voir [appearanceText] — `characters.backstory_text`.
+ String? get backstoryText;/// Voir [appearanceText] — `characters.allies_text`.
+ String? get alliesText;/// Voir [appearanceText] — `characters.features_text`.
+ String? get featuresText;/// Voir [appearanceText] — `characters.treasure_text`.
+ String? get treasureText;
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -91,16 +108,16 @@ $CharacterCreationDraftCopyWith<CharacterCreationDraft> get copyWith => _$Charac
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.classId, classId) || other.classId == classId)&&(identical(other.backgroundId, backgroundId) || other.backgroundId == backgroundId)&&(identical(other.abilityScoreMethod, abilityScoreMethod) || other.abilityScoreMethod == abilityScoreMethod)&&const DeepCollectionEquality().equals(other.abilityScores, abilityScores)&&const DeepCollectionEquality().equals(other.classSkillChoices, classSkillChoices)&&const DeepCollectionEquality().equals(other.classToolChoices, classToolChoices)&&const DeepCollectionEquality().equals(other.backgroundLanguageChoices, backgroundLanguageChoices)&&const DeepCollectionEquality().equals(other.classCantripChoices, classCantripChoices)&&const DeepCollectionEquality().equals(other.classLevelOneSpellChoices, classLevelOneSpellChoices)&&(identical(other.equipmentChoiceTab, equipmentChoiceTab) || other.equipmentChoiceTab == equipmentChoiceTab)&&const DeepCollectionEquality().equals(other.purchasedEquipment, purchasedEquipment));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.classId, classId) || other.classId == classId)&&(identical(other.backgroundId, backgroundId) || other.backgroundId == backgroundId)&&(identical(other.abilityScoreMethod, abilityScoreMethod) || other.abilityScoreMethod == abilityScoreMethod)&&const DeepCollectionEquality().equals(other.abilityScores, abilityScores)&&const DeepCollectionEquality().equals(other.classSkillChoices, classSkillChoices)&&const DeepCollectionEquality().equals(other.classToolChoices, classToolChoices)&&const DeepCollectionEquality().equals(other.backgroundLanguageChoices, backgroundLanguageChoices)&&const DeepCollectionEquality().equals(other.classCantripChoices, classCantripChoices)&&const DeepCollectionEquality().equals(other.classLevelOneSpellChoices, classLevelOneSpellChoices)&&(identical(other.equipmentChoiceTab, equipmentChoiceTab) || other.equipmentChoiceTab == equipmentChoiceTab)&&const DeepCollectionEquality().equals(other.purchasedEquipment, purchasedEquipment)&&(identical(other.appearanceText, appearanceText) || other.appearanceText == appearanceText)&&(identical(other.traitsText, traitsText) || other.traitsText == traitsText)&&(identical(other.idealsText, idealsText) || other.idealsText == idealsText)&&(identical(other.bondsText, bondsText) || other.bondsText == bondsText)&&(identical(other.flawsText, flawsText) || other.flawsText == flawsText)&&(identical(other.backstoryText, backstoryText) || other.backstoryText == backstoryText)&&(identical(other.alliesText, alliesText) || other.alliesText == alliesText)&&(identical(other.featuresText, featuresText) || other.featuresText == featuresText)&&(identical(other.treasureText, treasureText) || other.treasureText == treasureText));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText,classId,backgroundId,abilityScoreMethod,const DeepCollectionEquality().hash(abilityScores),const DeepCollectionEquality().hash(classSkillChoices),const DeepCollectionEquality().hash(classToolChoices),const DeepCollectionEquality().hash(backgroundLanguageChoices),const DeepCollectionEquality().hash(classCantripChoices),const DeepCollectionEquality().hash(classLevelOneSpellChoices),equipmentChoiceTab,const DeepCollectionEquality().hash(purchasedEquipment));
+int get hashCode => Object.hashAll([runtimeType,raceId,subraceId,raceCustomText,classId,backgroundId,abilityScoreMethod,const DeepCollectionEquality().hash(abilityScores),const DeepCollectionEquality().hash(classSkillChoices),const DeepCollectionEquality().hash(classToolChoices),const DeepCollectionEquality().hash(backgroundLanguageChoices),const DeepCollectionEquality().hash(classCantripChoices),const DeepCollectionEquality().hash(classLevelOneSpellChoices),equipmentChoiceTab,const DeepCollectionEquality().hash(purchasedEquipment),appearanceText,traitsText,idealsText,bondsText,flawsText,backstoryText,alliesText,featuresText,treasureText]);
 
 @override
 String toString() {
-  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText, classId: $classId, backgroundId: $backgroundId, abilityScoreMethod: $abilityScoreMethod, abilityScores: $abilityScores, classSkillChoices: $classSkillChoices, classToolChoices: $classToolChoices, backgroundLanguageChoices: $backgroundLanguageChoices, classCantripChoices: $classCantripChoices, classLevelOneSpellChoices: $classLevelOneSpellChoices, equipmentChoiceTab: $equipmentChoiceTab, purchasedEquipment: $purchasedEquipment)';
+  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText, classId: $classId, backgroundId: $backgroundId, abilityScoreMethod: $abilityScoreMethod, abilityScores: $abilityScores, classSkillChoices: $classSkillChoices, classToolChoices: $classToolChoices, backgroundLanguageChoices: $backgroundLanguageChoices, classCantripChoices: $classCantripChoices, classLevelOneSpellChoices: $classLevelOneSpellChoices, equipmentChoiceTab: $equipmentChoiceTab, purchasedEquipment: $purchasedEquipment, appearanceText: $appearanceText, traitsText: $traitsText, idealsText: $idealsText, bondsText: $bondsText, flawsText: $flawsText, backstoryText: $backstoryText, alliesText: $alliesText, featuresText: $featuresText, treasureText: $treasureText)';
 }
 
 
@@ -111,7 +128,7 @@ abstract mixin class $CharacterCreationDraftCopyWith<$Res>  {
   factory $CharacterCreationDraftCopyWith(CharacterCreationDraft value, $Res Function(CharacterCreationDraft) _then) = _$CharacterCreationDraftCopyWithImpl;
 @useResult
 $Res call({
- int? raceId, int? subraceId, String? raceCustomText, int? classId, int? backgroundId, AbilityScoreMethod? abilityScoreMethod, Map<String, int>? abilityScores, List<String> classSkillChoices, List<String> classToolChoices, List<String> backgroundLanguageChoices, List<String> classCantripChoices, List<String> classLevelOneSpellChoices, EquipmentChoiceTab? equipmentChoiceTab, Map<String, int> purchasedEquipment
+ int? raceId, int? subraceId, String? raceCustomText, int? classId, int? backgroundId, AbilityScoreMethod? abilityScoreMethod, Map<String, int>? abilityScores, List<String> classSkillChoices, List<String> classToolChoices, List<String> backgroundLanguageChoices, List<String> classCantripChoices, List<String> classLevelOneSpellChoices, EquipmentChoiceTab? equipmentChoiceTab, Map<String, int> purchasedEquipment, String? appearanceText, String? traitsText, String? idealsText, String? bondsText, String? flawsText, String? backstoryText, String? alliesText, String? featuresText, String? treasureText
 });
 
 
@@ -128,7 +145,7 @@ class _$CharacterCreationDraftCopyWithImpl<$Res>
 
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,Object? classId = freezed,Object? backgroundId = freezed,Object? abilityScoreMethod = freezed,Object? abilityScores = freezed,Object? classSkillChoices = null,Object? classToolChoices = null,Object? backgroundLanguageChoices = null,Object? classCantripChoices = null,Object? classLevelOneSpellChoices = null,Object? equipmentChoiceTab = freezed,Object? purchasedEquipment = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,Object? classId = freezed,Object? backgroundId = freezed,Object? abilityScoreMethod = freezed,Object? abilityScores = freezed,Object? classSkillChoices = null,Object? classToolChoices = null,Object? backgroundLanguageChoices = null,Object? classCantripChoices = null,Object? classLevelOneSpellChoices = null,Object? equipmentChoiceTab = freezed,Object? purchasedEquipment = null,Object? appearanceText = freezed,Object? traitsText = freezed,Object? idealsText = freezed,Object? bondsText = freezed,Object? flawsText = freezed,Object? backstoryText = freezed,Object? alliesText = freezed,Object? featuresText = freezed,Object? treasureText = freezed,}) {
   return _then(CharacterCreationDraft(
 raceId: freezed == raceId ? _self.raceId : raceId // ignore: cast_nullable_to_non_nullable
 as int?,subraceId: freezed == subraceId ? _self.subraceId : subraceId // ignore: cast_nullable_to_non_nullable
@@ -144,7 +161,16 @@ as List<String>,classCantripChoices: null == classCantripChoices ? _self.classCa
 as List<String>,classLevelOneSpellChoices: null == classLevelOneSpellChoices ? _self.classLevelOneSpellChoices : classLevelOneSpellChoices // ignore: cast_nullable_to_non_nullable
 as List<String>,equipmentChoiceTab: freezed == equipmentChoiceTab ? _self.equipmentChoiceTab : equipmentChoiceTab // ignore: cast_nullable_to_non_nullable
 as EquipmentChoiceTab?,purchasedEquipment: null == purchasedEquipment ? _self.purchasedEquipment : purchasedEquipment // ignore: cast_nullable_to_non_nullable
-as Map<String, int>,
+as Map<String, int>,appearanceText: freezed == appearanceText ? _self.appearanceText : appearanceText // ignore: cast_nullable_to_non_nullable
+as String?,traitsText: freezed == traitsText ? _self.traitsText : traitsText // ignore: cast_nullable_to_non_nullable
+as String?,idealsText: freezed == idealsText ? _self.idealsText : idealsText // ignore: cast_nullable_to_non_nullable
+as String?,bondsText: freezed == bondsText ? _self.bondsText : bondsText // ignore: cast_nullable_to_non_nullable
+as String?,flawsText: freezed == flawsText ? _self.flawsText : flawsText // ignore: cast_nullable_to_non_nullable
+as String?,backstoryText: freezed == backstoryText ? _self.backstoryText : backstoryText // ignore: cast_nullable_to_non_nullable
+as String?,alliesText: freezed == alliesText ? _self.alliesText : alliesText // ignore: cast_nullable_to_non_nullable
+as String?,featuresText: freezed == featuresText ? _self.featuresText : featuresText // ignore: cast_nullable_to_non_nullable
+as String?,treasureText: freezed == treasureText ? _self.treasureText : treasureText // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -229,10 +255,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices,  List<String> classToolChoices,  List<String> backgroundLanguageChoices,  List<String> classCantripChoices,  List<String> classLevelOneSpellChoices,  EquipmentChoiceTab? equipmentChoiceTab,  Map<String, int> purchasedEquipment)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices,  List<String> classToolChoices,  List<String> backgroundLanguageChoices,  List<String> classCantripChoices,  List<String> classLevelOneSpellChoices,  EquipmentChoiceTab? equipmentChoiceTab,  Map<String, int> purchasedEquipment,  String? appearanceText,  String? traitsText,  String? idealsText,  String? bondsText,  String? flawsText,  String? backstoryText,  String? alliesText,  String? featuresText,  String? treasureText)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CharacterCreationDraft() when $default != null:
-return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores,_that.classSkillChoices,_that.classToolChoices,_that.backgroundLanguageChoices,_that.classCantripChoices,_that.classLevelOneSpellChoices,_that.equipmentChoiceTab,_that.purchasedEquipment);case _:
+return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores,_that.classSkillChoices,_that.classToolChoices,_that.backgroundLanguageChoices,_that.classCantripChoices,_that.classLevelOneSpellChoices,_that.equipmentChoiceTab,_that.purchasedEquipment,_that.appearanceText,_that.traitsText,_that.idealsText,_that.bondsText,_that.flawsText,_that.backstoryText,_that.alliesText,_that.featuresText,_that.treasureText);case _:
   return orElse();
 
 }
@@ -250,10 +276,10 @@ return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices,  List<String> classToolChoices,  List<String> backgroundLanguageChoices,  List<String> classCantripChoices,  List<String> classLevelOneSpellChoices,  EquipmentChoiceTab? equipmentChoiceTab,  Map<String, int> purchasedEquipment)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices,  List<String> classToolChoices,  List<String> backgroundLanguageChoices,  List<String> classCantripChoices,  List<String> classLevelOneSpellChoices,  EquipmentChoiceTab? equipmentChoiceTab,  Map<String, int> purchasedEquipment,  String? appearanceText,  String? traitsText,  String? idealsText,  String? bondsText,  String? flawsText,  String? backstoryText,  String? alliesText,  String? featuresText,  String? treasureText)  $default,) {final _that = this;
 switch (_that) {
 case _CharacterCreationDraft():
-return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores,_that.classSkillChoices,_that.classToolChoices,_that.backgroundLanguageChoices,_that.classCantripChoices,_that.classLevelOneSpellChoices,_that.equipmentChoiceTab,_that.purchasedEquipment);case _:
+return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores,_that.classSkillChoices,_that.classToolChoices,_that.backgroundLanguageChoices,_that.classCantripChoices,_that.classLevelOneSpellChoices,_that.equipmentChoiceTab,_that.purchasedEquipment,_that.appearanceText,_that.traitsText,_that.idealsText,_that.bondsText,_that.flawsText,_that.backstoryText,_that.alliesText,_that.featuresText,_that.treasureText);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -270,10 +296,10 @@ return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices,  List<String> classToolChoices,  List<String> backgroundLanguageChoices,  List<String> classCantripChoices,  List<String> classLevelOneSpellChoices,  EquipmentChoiceTab? equipmentChoiceTab,  Map<String, int> purchasedEquipment)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices,  List<String> classToolChoices,  List<String> backgroundLanguageChoices,  List<String> classCantripChoices,  List<String> classLevelOneSpellChoices,  EquipmentChoiceTab? equipmentChoiceTab,  Map<String, int> purchasedEquipment,  String? appearanceText,  String? traitsText,  String? idealsText,  String? bondsText,  String? flawsText,  String? backstoryText,  String? alliesText,  String? featuresText,  String? treasureText)?  $default,) {final _that = this;
 switch (_that) {
 case _CharacterCreationDraft() when $default != null:
-return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores,_that.classSkillChoices,_that.classToolChoices,_that.backgroundLanguageChoices,_that.classCantripChoices,_that.classLevelOneSpellChoices,_that.equipmentChoiceTab,_that.purchasedEquipment);case _:
+return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores,_that.classSkillChoices,_that.classToolChoices,_that.backgroundLanguageChoices,_that.classCantripChoices,_that.classLevelOneSpellChoices,_that.equipmentChoiceTab,_that.purchasedEquipment,_that.appearanceText,_that.traitsText,_that.idealsText,_that.bondsText,_that.flawsText,_that.backstoryText,_that.alliesText,_that.featuresText,_that.treasureText);case _:
   return null;
 
 }
@@ -285,7 +311,7 @@ return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,
 
 
 class _CharacterCreationDraft implements CharacterCreationDraft {
-  const _CharacterCreationDraft({this.raceId, this.subraceId, this.raceCustomText, this.classId, this.backgroundId, this.abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices = const <String>[],  List<String> classToolChoices = const <String>[],  List<String> backgroundLanguageChoices = const <String>[],  List<String> classCantripChoices = const <String>[],  List<String> classLevelOneSpellChoices = const <String>[], this.equipmentChoiceTab,  Map<String, int> purchasedEquipment = const <String, int>{}}): _abilityScores = abilityScores,_classSkillChoices = classSkillChoices,_classToolChoices = classToolChoices,_backgroundLanguageChoices = backgroundLanguageChoices,_classCantripChoices = classCantripChoices,_classLevelOneSpellChoices = classLevelOneSpellChoices,_purchasedEquipment = purchasedEquipment;
+  const _CharacterCreationDraft({this.raceId, this.subraceId, this.raceCustomText, this.classId, this.backgroundId, this.abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices = const <String>[],  List<String> classToolChoices = const <String>[],  List<String> backgroundLanguageChoices = const <String>[],  List<String> classCantripChoices = const <String>[],  List<String> classLevelOneSpellChoices = const <String>[], this.equipmentChoiceTab,  Map<String, int> purchasedEquipment = const <String, int>{}, this.appearanceText, this.traitsText, this.idealsText, this.bondsText, this.flawsText, this.backstoryText, this.alliesText, this.featuresText, this.treasureText}): _abilityScores = abilityScores,_classSkillChoices = classSkillChoices,_classToolChoices = classToolChoices,_backgroundLanguageChoices = backgroundLanguageChoices,_classCantripChoices = classCantripChoices,_classLevelOneSpellChoices = classLevelOneSpellChoices,_purchasedEquipment = purchasedEquipment;
   
 
 /// Race choisie à l'étape 1, `null` si race personnalisée ou pas encore
@@ -453,6 +479,32 @@ class _CharacterCreationDraft implements CharacterCreationDraft {
   return EqualUnmodifiableMapView(_purchasedEquipment);
 }
 
+/// Les 9 champs texte libres de l'étape 8 "Apparence, histoire et
+/// portrait" (`presentation/appearance_and_backstory_step_screen.dart`),
+/// tous optionnels — `null` tant que le champ n'a jamais été renseigné.
+/// Ordre canonique du XML aidedd.org / des colonnes `characters.*` (voir
+/// le commentaire de classe de `AppearanceAndBackstoryStepScreen`), pas
+/// l'ordre partiel visible sur la maquette (extrait tronqué). Aucune
+/// résolution supplémentaire nécessaire à l'étape 9 contrairement aux
+/// autres champs du brouillon : ce sont déjà les valeurs texte finales
+/// destinées aux colonnes `characters.appearance_text`/`traits_text`/...
+@override final  String? appearanceText;
+/// Voir [appearanceText] — `characters.traits_text`.
+@override final  String? traitsText;
+/// Voir [appearanceText] — `characters.ideals_text`.
+@override final  String? idealsText;
+/// Voir [appearanceText] — `characters.bonds_text`.
+@override final  String? bondsText;
+/// Voir [appearanceText] — `characters.flaws_text`.
+@override final  String? flawsText;
+/// Voir [appearanceText] — `characters.backstory_text`.
+@override final  String? backstoryText;
+/// Voir [appearanceText] — `characters.allies_text`.
+@override final  String? alliesText;
+/// Voir [appearanceText] — `characters.features_text`.
+@override final  String? featuresText;
+/// Voir [appearanceText] — `characters.treasure_text`.
+@override final  String? treasureText;
 
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
@@ -464,16 +516,16 @@ _$CharacterCreationDraftCopyWith<_CharacterCreationDraft> get copyWith => __$Cha
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.classId, classId) || other.classId == classId)&&(identical(other.backgroundId, backgroundId) || other.backgroundId == backgroundId)&&(identical(other.abilityScoreMethod, abilityScoreMethod) || other.abilityScoreMethod == abilityScoreMethod)&&const DeepCollectionEquality().equals(other._abilityScores, _abilityScores)&&const DeepCollectionEquality().equals(other._classSkillChoices, _classSkillChoices)&&const DeepCollectionEquality().equals(other._classToolChoices, _classToolChoices)&&const DeepCollectionEquality().equals(other._backgroundLanguageChoices, _backgroundLanguageChoices)&&const DeepCollectionEquality().equals(other._classCantripChoices, _classCantripChoices)&&const DeepCollectionEquality().equals(other._classLevelOneSpellChoices, _classLevelOneSpellChoices)&&(identical(other.equipmentChoiceTab, equipmentChoiceTab) || other.equipmentChoiceTab == equipmentChoiceTab)&&const DeepCollectionEquality().equals(other._purchasedEquipment, _purchasedEquipment));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.classId, classId) || other.classId == classId)&&(identical(other.backgroundId, backgroundId) || other.backgroundId == backgroundId)&&(identical(other.abilityScoreMethod, abilityScoreMethod) || other.abilityScoreMethod == abilityScoreMethod)&&const DeepCollectionEquality().equals(other._abilityScores, _abilityScores)&&const DeepCollectionEquality().equals(other._classSkillChoices, _classSkillChoices)&&const DeepCollectionEquality().equals(other._classToolChoices, _classToolChoices)&&const DeepCollectionEquality().equals(other._backgroundLanguageChoices, _backgroundLanguageChoices)&&const DeepCollectionEquality().equals(other._classCantripChoices, _classCantripChoices)&&const DeepCollectionEquality().equals(other._classLevelOneSpellChoices, _classLevelOneSpellChoices)&&(identical(other.equipmentChoiceTab, equipmentChoiceTab) || other.equipmentChoiceTab == equipmentChoiceTab)&&const DeepCollectionEquality().equals(other._purchasedEquipment, _purchasedEquipment)&&(identical(other.appearanceText, appearanceText) || other.appearanceText == appearanceText)&&(identical(other.traitsText, traitsText) || other.traitsText == traitsText)&&(identical(other.idealsText, idealsText) || other.idealsText == idealsText)&&(identical(other.bondsText, bondsText) || other.bondsText == bondsText)&&(identical(other.flawsText, flawsText) || other.flawsText == flawsText)&&(identical(other.backstoryText, backstoryText) || other.backstoryText == backstoryText)&&(identical(other.alliesText, alliesText) || other.alliesText == alliesText)&&(identical(other.featuresText, featuresText) || other.featuresText == featuresText)&&(identical(other.treasureText, treasureText) || other.treasureText == treasureText));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText,classId,backgroundId,abilityScoreMethod,const DeepCollectionEquality().hash(_abilityScores),const DeepCollectionEquality().hash(_classSkillChoices),const DeepCollectionEquality().hash(_classToolChoices),const DeepCollectionEquality().hash(_backgroundLanguageChoices),const DeepCollectionEquality().hash(_classCantripChoices),const DeepCollectionEquality().hash(_classLevelOneSpellChoices),equipmentChoiceTab,const DeepCollectionEquality().hash(_purchasedEquipment));
+int get hashCode => Object.hashAll([runtimeType,raceId,subraceId,raceCustomText,classId,backgroundId,abilityScoreMethod,const DeepCollectionEquality().hash(_abilityScores),const DeepCollectionEquality().hash(_classSkillChoices),const DeepCollectionEquality().hash(_classToolChoices),const DeepCollectionEquality().hash(_backgroundLanguageChoices),const DeepCollectionEquality().hash(_classCantripChoices),const DeepCollectionEquality().hash(_classLevelOneSpellChoices),equipmentChoiceTab,const DeepCollectionEquality().hash(_purchasedEquipment),appearanceText,traitsText,idealsText,bondsText,flawsText,backstoryText,alliesText,featuresText,treasureText]);
 
 @override
 String toString() {
-  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText, classId: $classId, backgroundId: $backgroundId, abilityScoreMethod: $abilityScoreMethod, abilityScores: $abilityScores, classSkillChoices: $classSkillChoices, classToolChoices: $classToolChoices, backgroundLanguageChoices: $backgroundLanguageChoices, classCantripChoices: $classCantripChoices, classLevelOneSpellChoices: $classLevelOneSpellChoices, equipmentChoiceTab: $equipmentChoiceTab, purchasedEquipment: $purchasedEquipment)';
+  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText, classId: $classId, backgroundId: $backgroundId, abilityScoreMethod: $abilityScoreMethod, abilityScores: $abilityScores, classSkillChoices: $classSkillChoices, classToolChoices: $classToolChoices, backgroundLanguageChoices: $backgroundLanguageChoices, classCantripChoices: $classCantripChoices, classLevelOneSpellChoices: $classLevelOneSpellChoices, equipmentChoiceTab: $equipmentChoiceTab, purchasedEquipment: $purchasedEquipment, appearanceText: $appearanceText, traitsText: $traitsText, idealsText: $idealsText, bondsText: $bondsText, flawsText: $flawsText, backstoryText: $backstoryText, alliesText: $alliesText, featuresText: $featuresText, treasureText: $treasureText)';
 }
 
 
@@ -484,7 +536,7 @@ abstract mixin class _$CharacterCreationDraftCopyWith<$Res> implements $Characte
   factory _$CharacterCreationDraftCopyWith(_CharacterCreationDraft value, $Res Function(_CharacterCreationDraft) _then) = __$CharacterCreationDraftCopyWithImpl;
 @override @useResult
 $Res call({
- int? raceId, int? subraceId, String? raceCustomText, int? classId, int? backgroundId, AbilityScoreMethod? abilityScoreMethod, Map<String, int>? abilityScores, List<String> classSkillChoices, List<String> classToolChoices, List<String> backgroundLanguageChoices, List<String> classCantripChoices, List<String> classLevelOneSpellChoices, EquipmentChoiceTab? equipmentChoiceTab, Map<String, int> purchasedEquipment
+ int? raceId, int? subraceId, String? raceCustomText, int? classId, int? backgroundId, AbilityScoreMethod? abilityScoreMethod, Map<String, int>? abilityScores, List<String> classSkillChoices, List<String> classToolChoices, List<String> backgroundLanguageChoices, List<String> classCantripChoices, List<String> classLevelOneSpellChoices, EquipmentChoiceTab? equipmentChoiceTab, Map<String, int> purchasedEquipment, String? appearanceText, String? traitsText, String? idealsText, String? bondsText, String? flawsText, String? backstoryText, String? alliesText, String? featuresText, String? treasureText
 });
 
 
@@ -501,7 +553,7 @@ class __$CharacterCreationDraftCopyWithImpl<$Res>
 
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,Object? classId = freezed,Object? backgroundId = freezed,Object? abilityScoreMethod = freezed,Object? abilityScores = freezed,Object? classSkillChoices = null,Object? classToolChoices = null,Object? backgroundLanguageChoices = null,Object? classCantripChoices = null,Object? classLevelOneSpellChoices = null,Object? equipmentChoiceTab = freezed,Object? purchasedEquipment = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,Object? classId = freezed,Object? backgroundId = freezed,Object? abilityScoreMethod = freezed,Object? abilityScores = freezed,Object? classSkillChoices = null,Object? classToolChoices = null,Object? backgroundLanguageChoices = null,Object? classCantripChoices = null,Object? classLevelOneSpellChoices = null,Object? equipmentChoiceTab = freezed,Object? purchasedEquipment = null,Object? appearanceText = freezed,Object? traitsText = freezed,Object? idealsText = freezed,Object? bondsText = freezed,Object? flawsText = freezed,Object? backstoryText = freezed,Object? alliesText = freezed,Object? featuresText = freezed,Object? treasureText = freezed,}) {
   return _then(_CharacterCreationDraft(
 raceId: freezed == raceId ? _self.raceId : raceId // ignore: cast_nullable_to_non_nullable
 as int?,subraceId: freezed == subraceId ? _self.subraceId : subraceId // ignore: cast_nullable_to_non_nullable
@@ -517,7 +569,16 @@ as List<String>,classCantripChoices: null == classCantripChoices ? _self._classC
 as List<String>,classLevelOneSpellChoices: null == classLevelOneSpellChoices ? _self._classLevelOneSpellChoices : classLevelOneSpellChoices // ignore: cast_nullable_to_non_nullable
 as List<String>,equipmentChoiceTab: freezed == equipmentChoiceTab ? _self.equipmentChoiceTab : equipmentChoiceTab // ignore: cast_nullable_to_non_nullable
 as EquipmentChoiceTab?,purchasedEquipment: null == purchasedEquipment ? _self._purchasedEquipment : purchasedEquipment // ignore: cast_nullable_to_non_nullable
-as Map<String, int>,
+as Map<String, int>,appearanceText: freezed == appearanceText ? _self.appearanceText : appearanceText // ignore: cast_nullable_to_non_nullable
+as String?,traitsText: freezed == traitsText ? _self.traitsText : traitsText // ignore: cast_nullable_to_non_nullable
+as String?,idealsText: freezed == idealsText ? _self.idealsText : idealsText // ignore: cast_nullable_to_non_nullable
+as String?,bondsText: freezed == bondsText ? _self.bondsText : bondsText // ignore: cast_nullable_to_non_nullable
+as String?,flawsText: freezed == flawsText ? _self.flawsText : flawsText // ignore: cast_nullable_to_non_nullable
+as String?,backstoryText: freezed == backstoryText ? _self.backstoryText : backstoryText // ignore: cast_nullable_to_non_nullable
+as String?,alliesText: freezed == alliesText ? _self.alliesText : alliesText // ignore: cast_nullable_to_non_nullable
+as String?,featuresText: freezed == featuresText ? _self.featuresText : featuresText // ignore: cast_nullable_to_non_nullable
+as String?,treasureText: freezed == treasureText ? _self.treasureText : treasureText // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
