@@ -288,4 +288,44 @@ void main() {
     expect(draft.featuresText, isNull);
     expect(draft.treasureText, isNull);
   });
+
+  test('setCharacterName après setClass/setBackground conserve les choix '
+      'déjà faits aux étapes précédentes (étape 9 "Récapitulatif")', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    controller.setClass(classId: 42);
+    controller.setBackground(backgroundId: 5);
+    controller.setCharacterName('Halltesse Ambrelune');
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.classId, 42);
+    expect(draft.backgroundId, 5);
+    expect(draft.characterName, 'Halltesse Ambrelune');
+  });
+
+  test('setCharacterName accepte null (champ jamais renseigné) sans '
+      'planter', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    controller.setCharacterName(null);
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.characterName, isNull);
+  });
+
+  test('reset remet aussi characterName à zéro', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    controller.setCharacterName('Halltesse Ambrelune');
+    controller.reset();
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.characterName, isNull);
+  });
 }

@@ -145,5 +145,13 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
 
     /// Voir [appearanceText] — `characters.treasure_text`.
     String? treasureText,
+
+    /// Nom du personnage, saisi à l'étape 9 "Récapitulatif" (`characters
+    /// .name`) — `null` tant qu'il n'a jamais été renseigné. Aucune étape 1-8
+    /// ne capture ce champ (gap identifié et validé avec l'utilisateur lors
+    /// de l'implémentation de l'étape 9) : contrairement aux autres champs de
+    /// ce brouillon, il n'a donc pas d'étape "propriétaire" antérieure,
+    /// seule `presentation/summary_step_screen.dart` le lit/l'écrit.
+    String? characterName,
   }) = _CharacterCreationDraft;
 }

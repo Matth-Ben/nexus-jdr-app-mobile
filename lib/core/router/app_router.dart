@@ -8,12 +8,12 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/character_creation/presentation/ability_score_step_screen.dart';
 import '../../features/character_creation/presentation/appearance_and_backstory_step_screen.dart';
 import '../../features/character_creation/presentation/background_step_screen.dart';
-import '../../features/character_creation/presentation/character_creation_placeholder_screen.dart';
 import '../../features/character_creation/presentation/class_step_screen.dart';
 import '../../features/character_creation/presentation/equipment_step_screen.dart';
 import '../../features/character_creation/presentation/race_step_screen.dart';
 import '../../features/character_creation/presentation/skills_and_tools_step_screen.dart';
 import '../../features/character_creation/presentation/spells_step_screen.dart';
+import '../../features/character_creation/presentation/summary_step_screen.dart';
 import '../../features/characters/presentation/character_detail_placeholder_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
 import '../network/supabase_client_provider.dart';
@@ -88,12 +88,10 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const AppearanceAndBackstoryStepScreen(),
       ),
       GoRoute(
-        // Étape 9 "Récapitulatif" de l'assistant, pas encore implémentée
-        // (voir `character_creation_placeholder_screen.dart`).
+        // Étape 9/9 "Récapitulatif" : dernière étape, seule à écrire en
+        // base (voir `presentation/summary_step_screen.dart`).
         path: '/characters/new/step-9',
-        builder: (context, state) => const CharacterCreationPlaceholderScreen(
-          stepText: 'Étape 9/9 — Récapitulatif — à venir',
-        ),
+        builder: (context, state) => const SummaryStepScreen(),
       ),
       GoRoute(
         path: '/characters/:id',

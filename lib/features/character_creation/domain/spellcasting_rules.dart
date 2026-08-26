@@ -98,4 +98,34 @@ abstract final class SpellcastingRules {
   static bool isSpellcastingClass(String className) =>
       _cantripQuotaByClassName.containsKey(className) ||
       _levelOneSpellQuotaByClassName.containsKey(className);
+
+  /// Classes "préparées" en 5e (le joueur choisit chaque jour, parmi tous les
+  /// sorts de sa liste de classe, lesquels préparer — modificateur de
+  /// caractéristique + niveau) : `character_spells.status = 'préparé'` pour
+  /// leurs sorts, `'connu'` pour les 4 autres classes lanceuses (Barde,
+  /// Ensorceleur, Occultiste, Rôdeur, qui apprennent un nombre fixe de sorts
+  /// définitivement connus) — voir la consigne originale de l'étape 9/9
+  /// "Récapitulatif" pour cette règle 5e standard, encodée ici en dur plutôt
+  /// que sur une colonne de `classes` (même rationale que les quotas
+  /// ci-dessus : cette distinction n'existe nulle part en base).
+  static const Set<String> _preparedCasterClassNames = {
+    'Clerc',
+    'Druide',
+    'Magicien',
+    'Paladin',
+  };
+
+  /// `character_spells.status` pour un sort de [className] — voir le
+  /// commentaire de classe ci-dessus. Retombe sur `'connu'` par défaut (les 4
+  /// classes "connues" explicitement listées, ET tout nom de classe imprévu)
+  /// : cette méthode n'est normalement appelée que pour l'une des 8 classes
+  /// lanceuses de sorts (voir [isSpellcastingClass]), jamais vérifié en
+  /// amont par un `assert` pour rester une pure fonction de mapping, sans
+  /// jamais crasher sur une donnée inattendue.
+  static String statusFor(String className) {
+    if (_preparedCasterClassNames.contains(className)) {
+      return 'préparé';
+    }
+    return 'connu';
+  }
 }

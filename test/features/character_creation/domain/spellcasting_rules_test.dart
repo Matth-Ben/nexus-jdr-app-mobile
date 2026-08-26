@@ -93,4 +93,35 @@ void main() {
       expect(SpellcastingRules.isSpellcastingClass('Inventeur'), isFalse);
     });
   });
+
+  group('statusFor', () {
+    test("'préparé' pour les 4 classes lanceuses \"préparées\"", () {
+      for (final className in ['Clerc', 'Druide', 'Magicien', 'Paladin']) {
+        expect(
+          SpellcastingRules.statusFor(className),
+          'préparé',
+          reason: className,
+        );
+      }
+    });
+
+    test("'connu' pour les 4 classes lanceuses \"connues\"", () {
+      for (final className in [
+        'Barde',
+        'Ensorceleur',
+        'Occultiste',
+        'Rôdeur',
+      ]) {
+        expect(
+          SpellcastingRules.statusFor(className),
+          'connu',
+          reason: className,
+        );
+      }
+    });
+
+    test("retombe sur 'connu' pour un nom de classe imprévu (défensif)", () {
+      expect(SpellcastingRules.statusFor('Inventeur'), 'connu');
+    });
+  });
 }

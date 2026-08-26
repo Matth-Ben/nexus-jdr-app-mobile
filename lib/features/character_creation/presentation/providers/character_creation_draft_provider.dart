@@ -157,6 +157,20 @@ class CharacterCreationDraftController
     );
   }
 
+  /// Met à jour le nom du personnage saisi à l'étape 9 "Récapitulatif".
+  /// Fusion partielle via `copyWith` (même rationale que les setters
+  /// précédents). Contrairement aux étapes 1-8, l'étape 9 n'a pas de
+  /// "Suivant" qui committerait ce champ au brouillon avant de naviguer (elle
+  /// se termine soit par la création réelle du personnage, soit par un retour
+  /// en arrière) — `presentation/summary_step_screen.dart` appelle donc cette
+  /// méthode explicitement avant toute navigation qui la quitte (retour
+  /// arrière, édition d'une étape antérieure), pas seulement à la
+  /// soumission finale, pour ne jamais perdre silencieusement le nom déjà
+  /// saisi.
+  void setCharacterName(String? characterName) {
+    state = state.copyWith(characterName: characterName);
+  }
+
   /// Remet le brouillon à zéro. Appelé par `CharacterListScreen` avant de
   /// démarrer une nouvelle création ("+ Créer"), pour ne jamais reprendre
   /// silencieusement un brouillon abandonné d'une session précédente.

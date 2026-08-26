@@ -620,3 +620,92 @@ final class EquipmentStepDataProvider
 }
 
 String _$equipmentStepDataHash() => r'3df34622f7dab34840e102fd86348fdc7858e453';
+
+/// Catalogue des 18 compétences de l'étape 9/9 "Récapitulatif", exposé à
+/// `SummaryStepScreen` — même rationale que [toolCatalog] (`autoDispose`,
+/// pas de retry automatique).
+
+@ProviderFor(skillCatalog)
+final skillCatalogProvider = SkillCatalogProvider._();
+
+/// Catalogue des 18 compétences de l'étape 9/9 "Récapitulatif", exposé à
+/// `SummaryStepScreen` — même rationale que [toolCatalog] (`autoDispose`,
+/// pas de retry automatique).
+
+final class SkillCatalogProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<SkillCatalog>,
+          SkillCatalog,
+          FutureOr<SkillCatalog>
+        >
+    with $FutureModifier<SkillCatalog>, $FutureProvider<SkillCatalog> {
+  /// Catalogue des 18 compétences de l'étape 9/9 "Récapitulatif", exposé à
+  /// `SummaryStepScreen` — même rationale que [toolCatalog] (`autoDispose`,
+  /// pas de retry automatique).
+  SkillCatalogProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'skillCatalogProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$skillCatalogHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<SkillCatalog> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<SkillCatalog> create(Ref ref) {
+    return skillCatalog(ref);
+  }
+}
+
+String _$skillCatalogHash() => r'a714ff5e0126d605d6ff0084293eab63cfe29f87';
+
+@ProviderFor(summaryStepData)
+final summaryStepDataProvider = SummaryStepDataProvider._();
+
+final class SummaryStepDataProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<SummaryStepData>,
+          SummaryStepData,
+          FutureOr<SummaryStepData>
+        >
+    with $FutureModifier<SummaryStepData>, $FutureProvider<SummaryStepData> {
+  SummaryStepDataProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'summaryStepDataProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$summaryStepDataHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<SummaryStepData> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<SummaryStepData> create(Ref ref) {
+    return summaryStepData(ref);
+  }
+}
+
+String _$summaryStepDataHash() => r'73f3d798a33d20315e60fae778d32fbd1df47dd3';

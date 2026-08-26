@@ -27,11 +27,14 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
 import 'package:personnages/features/character_creation/domain/ability_score_method.dart';
 import 'package:personnages/features/character_creation/domain/background_catalog.dart';
+import 'package:personnages/features/character_creation/domain/background_option.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/class_catalog.dart';
+import 'package:personnages/features/character_creation/domain/class_option.dart';
 import 'package:personnages/features/character_creation/domain/item_catalog.dart';
 import 'package:personnages/features/character_creation/domain/language_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
+import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_option.dart';
@@ -70,6 +73,24 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
 
   @override
   Future<ItemCatalog> fetchItemCatalog() async => const ItemCatalog(items: []);
+
+  @override
+  Future<SkillCatalog> fetchSkillCatalog() async =>
+      const SkillCatalog(skills: []);
+
+  @override
+  Future<String> createCharacter({
+    required CharacterCreationDraft draft,
+    required String characterName,
+    required RaceCatalog raceCatalog,
+    required ClassOption classOption,
+    required BackgroundOption backgroundOption,
+    required SkillCatalog skillCatalog,
+    required ToolCatalog toolCatalog,
+    required LanguageCatalog languageCatalog,
+    required SpellCatalog spellCatalog,
+    required ItemCatalog itemCatalog,
+  }) async => throw UnimplementedError();
 }
 
 const _elfe = RaceOption(

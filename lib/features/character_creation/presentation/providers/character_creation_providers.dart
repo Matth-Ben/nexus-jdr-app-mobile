@@ -13,6 +13,7 @@ import '../../domain/class_option.dart';
 import '../../domain/item_catalog.dart';
 import '../../domain/language_catalog.dart';
 import '../../domain/race_catalog.dart';
+import '../../domain/skill_catalog.dart';
 import '../../domain/spell_catalog.dart';
 import '../../domain/tool_catalog.dart';
 import 'character_creation_draft_provider.dart';
@@ -223,6 +224,81 @@ Future<EquipmentStepData> equipmentStepData(Ref ref) async {
     itemCatalog: itemCatalog,
     startingGold: startingGold,
     historyEquipment: historyEquipment,
+  );
+}
+
+/// Catalogue des 18 compétences de l'étape 9/9 "Récapitulatif", exposé à
+/// `SummaryStepScreen` — même rationale que [toolCatalog] (`autoDispose`,
+/// pas de retry automatique).
+@Riverpod(retry: _noRetry)
+Future<SkillCatalog> skillCatalog(Ref ref) {
+  return ref.watch(characterCreationRepositoryProvider).fetchSkillCatalog();
+}
+
+/// Données déjà résolues nécessaires à l'étape 9/9 "Récapitulatif" : la
+/// [ClassOption]/[BackgroundOption] déjà choisies aux étapes 2/3 (comme
+/// [SkillsAndToolsStepData]), plus les catalogues complets de races
+/// (bonus raciaux, en-tête), compétences, outils, langues, sorts (de la
+/// classe déjà choisie) et objets — tout ce dont
+/// `CharacterCreationRepository.createCharacter` a besoin pour résoudre le
+/// brouillon vers de vraies lignes en base, réutilisé tel quel plutôt que
+/// rechargé une seconde fois au moment de la soumission finale (voir
+/// `presentation/summary_step_screen.dart`).
+///
+/// Même pattern combinateur que [SkillsAndToolsStepData]/[SpellsStepData]/
+/// [EquipmentStepData], simplement combinant davantage de catalogues (dernier
+/// écran de l'assistant, celui qui a besoin de la vue d'ensemble la plus
+/// large).
+typedef SummaryStepData = ({
+  RaceCatalog raceCatalog,
+  ClassOption classOption,
+  BackgroundOption backgroundOption,
+  SkillCatalog skillCatalog,
+  ToolCatalog toolCatalog,
+  LanguageCatalog languageCatalog,
+  SpellCatalog spellCatalog,
+  ItemCatalog itemCatalog,
+});
+
+@Riverpod(retry: _noRetry)
+Future<SummaryStepData> summaryStepData(Ref ref) async {
+  final draft = ref.watch(characterCreationDraftControllerProvider);
+
+  final raceCatalog = await ref.watch(raceCatalogProvider.future);
+  final classCatalog = await ref.watch(classCatalogProvider.future);
+  final backgroundCatalog = await ref.watch(backgroundCatalogProvider.future);
+  final skillCatalog = await ref.watch(skillCatalogProvider.future);
+  final toolCatalog = await ref.watch(toolCatalogProvider.future);
+  final languageCatalog = await ref.watch(languageCatalogProvider.future);
+  final itemCatalog = await ref.watch(itemCatalogProvider.future);
+
+  final classOption = classCatalog.classes.firstWhere(
+    (option) => option.id == draft.classId,
+    orElse: () => throw const CharacterCreationFailure(
+      "Classe introuvable pour le récapitulatif. Revenez à l'étape Classe.",
+    ),
+  );
+  final backgroundOption = backgroundCatalog.backgrounds.firstWhere(
+    (option) => option.id == draft.backgroundId,
+    orElse: () => throw const CharacterCreationFailure(
+      "Historique introuvable pour le récapitulatif. Revenez à l'étape "
+      'Historique.',
+    ),
+  );
+
+  final spellCatalog = await ref.watch(
+    spellCatalogProvider(classId: classOption.id).future,
+  );
+
+  return (
+    raceCatalog: raceCatalog,
+    classOption: classOption,
+    backgroundOption: backgroundOption,
+    skillCatalog: skillCatalog,
+    toolCatalog: toolCatalog,
+    languageCatalog: languageCatalog,
+    spellCatalog: spellCatalog,
+    itemCatalog: itemCatalog,
   );
 }
 
