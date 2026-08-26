@@ -94,6 +94,22 @@ class CharacterCreationDraftController
     );
   }
 
+  /// Met à jour les sorts choisis à l'étape 6 "Sorts". Fusion partielle via
+  /// `copyWith` (même rationale que [setSkillsAndTools]) : cette étape n'a
+  /// pas de champ à effacer sur les étapes suivantes en fonction du choix
+  /// fait ici. Les deux listes sont toujours fournies ensemble (même si un
+  /// onglet ne s'appliquait pas à cette classe, auquel cas l'appelant fournit
+  /// une liste vide) — voir `domain/character_creation_draft.dart`.
+  void setSpells({
+    required List<String> classCantripChoices,
+    required List<String> classLevelOneSpellChoices,
+  }) {
+    state = state.copyWith(
+      classCantripChoices: classCantripChoices,
+      classLevelOneSpellChoices: classLevelOneSpellChoices,
+    );
+  }
+
   /// Remet le brouillon à zéro. Appelé par `CharacterListScreen` avant de
   /// démarrer une nouvelle création ("+ Créer"), pour ne jamais reprendre
   /// silencieusement un brouillon abandonné d'une session précédente.

@@ -39,10 +39,26 @@ class CheckableOptionTile extends StatelessWidget {
     this.trailingLabel,
     this.enabled = true,
     this.onTap,
+    this.leading,
+    this.subtitle,
     super.key,
   });
 
   final String title;
+
+  /// Icône/illustration à gauche de la ligne, ex. un [AccentIconBadge] —
+  /// même rôle que `SelectableOptionTile.leading`, ajouté ici pour son
+  /// premier usage à l'étape 6/9 "Sorts" (`presentation/spells_step_screen.dart`)
+  /// plutôt que de dupliquer toute la carcasse (case à cocher, dimming,
+  /// bordures) dans un nouveau composant. `null` par défaut : les usages
+  /// existants (étape 5/9) n'en fournissent pas et n'affichent donc rien de
+  /// plus qu'avant.
+  final Widget? leading;
+
+  /// Ligne de méta optionnelle affichée sous [title] — même rôle que
+  /// `SelectableOptionTile.subtitle`, même rationale d'ajout que [leading].
+  /// `null` par défaut.
+  final String? subtitle;
 
   /// Libellé affiché à droite de la ligne, en gris (ex. l'abréviation de
   /// caractéristique d'une compétence, "Int"/"Sag"...). `null` pour ne rien
@@ -98,15 +114,41 @@ class CheckableOptionTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                _Checkbox(checked: checked),
-                const SizedBox(width: AppSpacing.sm),
+                // La case à cocher reste à gauche (comportement historique,
+                // étape 5/9) tant qu'aucun [leading] n'est fourni ; avec un
+                // [leading] (étape 6/9 "Sorts"), elle passe à droite pour
+                // laisser la place à l'icône — voir la documentation de
+                // [leading].
+                if (leading != null) ...[
+                  leading!,
+                  const SizedBox(width: AppSpacing.sm),
+                ] else ...[
+                  _Checkbox(checked: checked),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
                 Expanded(
-                  child: Text(
-                    title,
-                    style: AppTypography.body(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: AppTypography.body(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 if (trailingLabel != null) ...[
@@ -118,6 +160,10 @@ class CheckableOptionTile extends StatelessWidget {
                       color: AppColors.textMuted,
                     ),
                   ),
+                ],
+                if (leading != null) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  _Checkbox(checked: checked),
                 ],
               ],
             ),

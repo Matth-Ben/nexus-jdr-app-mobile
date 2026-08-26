@@ -192,4 +192,61 @@ void main() {
     expect(trailingStyle?.fontSize, isNotNull);
     expect(trailingStyle!.fontSize!, greaterThanOrEqualTo(11));
   });
+
+  group('leading/subtitle (étape 6/9 "Sorts")', () {
+    testWidgets('sans leading fourni, la case à cocher reste à gauche du titre '
+        '(comportement historique, étape 5/9)', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _wrap(const CheckableOptionTile(title: 'Athlétisme', checked: true)),
+      );
+
+      final checkCenter = tester.getCenter(find.byIcon(Icons.check));
+      final titleCenter = tester.getCenter(find.text('Athlétisme'));
+      expect(checkCenter.dx, lessThan(titleCenter.dx));
+    });
+
+    testWidgets(
+      'avec un leading fourni, il est affiché à gauche et la case à cocher '
+      'passe à droite (maquette réelle étape 6/9)',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            const CheckableOptionTile(
+              title: 'Trait de feu',
+              subtitle: 'Évocation · 1 action',
+              leading: Icon(Icons.auto_awesome, key: Key('leading-icon')),
+              checked: true,
+            ),
+          ),
+        );
+
+        expect(find.byKey(const Key('leading-icon')), findsOneWidget);
+        expect(find.text('Trait de feu'), findsOneWidget);
+        expect(find.text('Évocation · 1 action'), findsOneWidget);
+        expect(find.byIcon(Icons.check), findsOneWidget);
+
+        // Le leading précède le titre, et la case à cocher (icône de coche)
+        // suit le titre — ordre inverse du comportement historique.
+        final leadingCenter = tester.getCenter(
+          find.byKey(const Key('leading-icon')),
+        );
+        final titleCenter = tester.getCenter(find.text('Trait de feu'));
+        final checkCenter = tester.getCenter(find.byIcon(Icons.check));
+        expect(leadingCenter.dx, lessThan(titleCenter.dx));
+        expect(titleCenter.dx, lessThan(checkCenter.dx));
+      },
+    );
+
+    testWidgets('sans subtitle fourni, aucune ligne de méta n\'est affichée', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(const CheckableOptionTile(title: 'Réparation', checked: false)),
+      );
+
+      expect(find.text('Réparation'), findsOneWidget);
+      // Une seule ligne de texte (le titre) : pas de sous-titre.
+      expect(find.byType(Text), findsOneWidget);
+    });
+  });
 }

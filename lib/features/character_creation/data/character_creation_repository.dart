@@ -4,12 +4,14 @@ import '../domain/background_catalog.dart';
 import '../domain/class_catalog.dart';
 import '../domain/language_catalog.dart';
 import '../domain/race_catalog.dart';
+import '../domain/spell_catalog.dart';
 import '../domain/tool_catalog.dart';
 import 'background_row_mapper.dart';
 import 'character_creation_error_mapper.dart';
 import 'class_row_mapper.dart';
 import 'language_row_mapper.dart';
 import 'race_row_mapper.dart';
+import 'spell_row_mapper.dart';
 import 'tool_row_mapper.dart';
 
 /// Langue d'affichage des noms de race/sous-race/classe, en dur pour
@@ -31,6 +33,9 @@ const String _toolCatalogErrorMessage =
 
 const String _languageCatalogErrorMessage =
     'Impossible de charger les langues disponibles. Réessayez.';
+
+const String _spellCatalogErrorMessage =
+    'Impossible de charger les sorts disponibles. Réessayez.';
 
 /// Passerelle vers les données de l'assistant de création de personnage.
 ///
@@ -75,6 +80,17 @@ abstract class CharacterCreationRepository {
   /// ("Compétences et outils"), utilisé pour proposer les candidats du choix
   /// de langues d'historique (`BackgroundOption.languageChoiceCount`).
   Future<LanguageCatalog> fetchLanguageCatalog();
+
+  /// Récupère les sorts (mineurs ET niveau 1 mélangés, voir
+  /// `domain/spell_catalog.dart`) accessibles à la classe [classId]
+  /// (`spell_classes`), avec leur nom déjà résolu (`translations`, locale
+  /// FR) — étape 6/9 de l'assistant ("Sorts"). Retourne un catalogue vide
+  /// sans requête sur `spells`/`translations` si la classe n'a aucune ligne
+  /// `spell_classes` (classe non lanceuse — ne devrait normalement jamais
+  /// être appelé pour une telle classe, voir
+  /// `SpellcastingRules.isSpellcastingClass`, mais reste sûr si c'est le cas
+  /// malgré tout).
+  Future<SpellCatalog> fetchSpellCatalog({required int classId});
 }
 
 /// Implémentation réelle, basée sur `Supabase.instance.client`.
@@ -262,6 +278,46 @@ class SupabaseCharacterCreationRepository
     }
   }
 
+  @override
+  Future<SpellCatalog> fetchSpellCatalog({required int classId}) async {
+    try {
+      final spellClassRows = await _client
+          .from('spell_classes')
+          .select('spell_id')
+          .eq('class_id', classId);
+
+      final spellIds = SpellRowMapper.collectSpellIds(spellClassRows);
+      if (spellIds.isEmpty) {
+        return const SpellCatalog(spells: []);
+      }
+
+      final spellRows = await _client
+          .from('spells')
+          .select('id, level, school, casting_time')
+          .inFilter('id', spellIds.toList())
+          .order('id');
+
+      final names = await _fetchSpellTranslatedNames(
+        entityIds: SpellRowMapper.collectIds(spellRows),
+      );
+
+      final spells =
+          spellRows
+              .map((row) => SpellRowMapper.toSpellOption(row, names: names))
+              .toList()
+            ..sort((a, b) => a.name.compareTo(b.name));
+
+      return SpellCatalog(spells: spells);
+    } on PostgrestException catch (error) {
+      throw mapCharacterCreationError(
+        error,
+        fallbackMessage: _spellCatalogErrorMessage,
+      );
+    } catch (_) {
+      throw mapUnknownCharacterCreationError();
+    }
+  }
+
   /// Récupère `{entity_id: name}` pour toutes les traductions `race`/`subrace`
   /// dont l'identifiant est dans [entityIds]. Retourne une map vide sans
   /// requête si [entityIds] est vide.
@@ -374,5 +430,26 @@ class SupabaseCharacterCreationRepository
         .inFilter('entity_id', entityIds.toList());
 
     return LanguageRowMapper.parseTranslatedValues(rows);
+  }
+
+  /// Récupère `{entity_id: name}` pour toutes les traductions `spell` dont
+  /// l'identifiant est dans [entityIds] — même principe que
+  /// [_fetchLanguageTranslatedNames].
+  Future<Map<String, String>> _fetchSpellTranslatedNames({
+    required Set<String> entityIds,
+  }) async {
+    if (entityIds.isEmpty) {
+      return const {};
+    }
+
+    final rows = await _client
+        .from('translations')
+        .select('entity_id, value')
+        .eq('entity_type', 'spell')
+        .eq('field_name', 'name')
+        .eq('locale', _locale)
+        .inFilter('entity_id', entityIds.toList());
+
+    return SpellRowMapper.parseTranslatedValues(rows);
   }
 }

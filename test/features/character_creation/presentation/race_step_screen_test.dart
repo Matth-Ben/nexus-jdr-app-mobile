@@ -25,6 +25,7 @@ import 'package:personnages/features/character_creation/domain/language_catalog.
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_option.dart';
 import 'package:personnages/features/character_creation/domain/race_trait.dart';
+import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
 import 'package:personnages/features/character_creation/domain/subrace_option.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
@@ -69,6 +70,12 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   @override
   Future<LanguageCatalog> fetchLanguageCatalog() async =>
       const LanguageCatalog(languages: []);
+
+  // Non exercé par ces tests (étape 1 "Race" uniquement) : implémentation
+  // minimale requise pour satisfaire `CharacterCreationRepository`.
+  @override
+  Future<SpellCatalog> fetchSpellCatalog({required int classId}) async =>
+      const SpellCatalog(spells: []);
 }
 
 const _elfe = RaceOption(

@@ -28,6 +28,7 @@ import 'package:personnages/features/character_creation/domain/class_tool_choice
 import 'package:personnages/features/character_creation/domain/language_catalog.dart';
 import 'package:personnages/features/character_creation/domain/language_option.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
+import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/domain/tool_option.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
@@ -68,6 +69,10 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   @override
   Future<LanguageCatalog> fetchLanguageCatalog() async =>
       languageCatalogToReturn ?? const LanguageCatalog(languages: []);
+
+  @override
+  Future<SpellCatalog> fetchSpellCatalog({required int classId}) async =>
+      const SpellCatalog(spells: []);
 }
 
 // Classe sans aucune section outils (ni toolChoice, ni grantedToolNames) :
@@ -200,6 +205,13 @@ void main() {
   // `SkillsAndToolsStepScreen` est atteinte via un `push`, comme dans la
   // vraie navigation (`ability_score_step_screen.dart` pousse
   // `/characters/new/step-5`).
+  //
+  // La route stub "étape 6" affiche le même texte ("Étape suivante") que la
+  // plupart des tests ci-dessous s'attendent à voir après "Suivant" (peu
+  // importe la route exacte pour eux) ; la route stub "étape 7" affiche un
+  // texte distinct ("Étape suivante (sorts sautés)") uniquement pour le
+  // groupe de tests dédié au saut de l'étape 6/9 pour une classe non
+  // lanceuse de sorts, qui a besoin de distinguer les deux routes.
   GoRouter buildTestRouter() {
     router = GoRouter(
       initialLocation: '/characters/new/step-4',
@@ -218,6 +230,12 @@ void main() {
           path: '/characters/new/step-6',
           builder: (context, state) =>
               const Scaffold(body: Center(child: Text('Étape suivante'))),
+        ),
+        GoRoute(
+          path: '/characters/new/step-7',
+          builder: (context, state) => const Scaffold(
+            body: Center(child: Text('Étape suivante (sorts sautés)')),
+          ),
         ),
       ],
     );
@@ -381,7 +399,10 @@ void main() {
         await tester.tap(find.text('SUIVANT'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Étape suivante'), findsOneWidget);
+        // Guerrier n'est pas lanceur de sorts : l'étape 6/9 est sautée (voir
+        // le groupe de tests dédié en fin de fichier), d'où le texte distinct
+        // de la route stub "étape 7".
+        expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
         expect(
           readDraft().classSkillChoices,
           containsAll(['Athlétisme', 'Intimidation']),
@@ -559,7 +580,10 @@ void main() {
       await tester.tap(find.text('SUIVANT'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Étape suivante'), findsOneWidget);
+      // Guerrier n'est pas lanceur de sorts : l'étape 6/9 est sautée, même
+      // remarque que le test "Suivant" ne s'active qu'une fois le quota de
+      // compétences atteint" ci-dessus.
+      expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
     });
   });
 
@@ -619,7 +643,9 @@ void main() {
         await tester.tap(find.text('SUIVANT'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Étape suivante'), findsOneWidget);
+        // Guerrier n'est pas lanceur de sorts : l'étape 6/9 est sautée, même
+        // remarque que les tests "Guerrier" ci-dessus.
+        expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
         expect(readDraft().backgroundLanguageChoices, ['Commun']);
       },
     );
@@ -912,6 +938,62 @@ void main() {
           containsAll(['Commun', 'Nain', 'Elfique']),
         );
         expect(readDraft().backgroundLanguageChoices.length, 3);
+      },
+    );
+  });
+
+  group('saut de l\'étape 6/9 "Sorts" pour une classe non lanceuse de sorts '
+      '(SpellcastingRules.isSpellcastingClass)', () {
+    testWidgets('"Suivant" pousse directement l\'étape 7/9 pour une classe non '
+        'lanceuse (Guerrier)', (WidgetTester tester) async {
+      fakeRepository.classCatalogToReturn = const ClassCatalog(
+        classes: [_guerrier],
+      );
+      fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+        backgrounds: [_ermite],
+      );
+      selectClassAndBackground(classId: 1, backgroundId: 10);
+
+      await pumpSkillsAndToolsStep(tester);
+
+      await tester.tap(find.text('Athlétisme'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Intimidation'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
+    });
+
+    testWidgets(
+      '"Suivant" pousse l\'étape 6/9 "Sorts" pour une classe lanceuse '
+      '(Barde)',
+      (WidgetTester tester) async {
+        fakeRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [_barde],
+        );
+        fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+          backgrounds: [_ermite],
+        );
+        fakeRepository.toolCatalogToReturn = const ToolCatalog(
+          tools: [_lutTool],
+        );
+        selectClassAndBackground(classId: 2, backgroundId: 10);
+
+        await pumpSkillsAndToolsStep(tester);
+
+        await tester.tap(find.text('Arcanes'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Histoire'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Luth'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape suivante'), findsOneWidget);
+        expect(find.text('Étape suivante (sorts sautés)'), findsNothing);
       },
     );
   });

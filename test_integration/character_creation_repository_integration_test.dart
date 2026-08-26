@@ -82,5 +82,38 @@ void main() {
         expect(language.type, isNotEmpty);
       },
     );
+
+    test('fetchSpellCatalog résout le nom de sort via translations '
+        '(entity_type=\'spell\') pour une classe lanceuse de sorts — étape '
+        '6/9 "Sorts"', () async {
+      final repository = SupabaseCharacterCreationRepository(client);
+
+      final catalog = await repository.fetchSpellCatalog(
+        classId: reference.spellcastingClassId as int,
+      );
+
+      final spell = catalog.spells.singleWhere(
+        (s) => s.id == reference.spellId,
+      );
+      expect(spell.name, reference.spellName);
+      expect(spell.level, inInclusiveRange(0, 9));
+      expect(spell.school, isNotEmpty);
+      expect(spell.castingTime, isNotEmpty);
+    });
+
+    test('fetchSpellCatalog retourne un catalogue vide pour une classe sans '
+        'aucune ligne spell_classes (non lanceuse de sorts) plutôt que '
+        'd\'échouer', () async {
+      final repository = SupabaseCharacterCreationRepository(client);
+
+      // Un identifiant très au-delà de la plage peuplée par les seeds :
+      // aucune ligne `spell_classes` ne peut exister pour lui, même
+      // rationale qu'un id de classe non lanceuse (Barbare/Guerrier/
+      // Moine/Roublard) sans dépendre de savoir lequel des 12 ids réels
+      // correspond à l'une de ces 4 classes.
+      final catalog = await repository.fetchSpellCatalog(classId: 999999);
+
+      expect(catalog.spells, isEmpty);
+    });
   });
 }

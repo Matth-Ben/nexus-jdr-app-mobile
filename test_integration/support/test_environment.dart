@@ -80,6 +80,9 @@ class ReferenceContent {
     required this.toolName,
     required this.languageId,
     required this.languageName,
+    required this.spellcastingClassId,
+    required this.spellId,
+    required this.spellName,
   });
 
   final Object raceId;
@@ -98,6 +101,17 @@ class ReferenceContent {
   /// `SupabaseCharacterCreationRepository.fetchLanguageCatalog`.
   final Object languageId;
   final String languageName;
+
+  /// Étape 6/9 "Sorts" — une classe ayant au moins une ligne
+  /// `spell_classes` (lanceuse de sorts, voir `domain/spellcasting_rules.dart`),
+  /// et un sort accessible à cette classe, pour
+  /// `SupabaseCharacterCreationRepository.fetchSpellCatalog`. Distinct de
+  /// [classId] : ce dernier est simplement la première classe de la table
+  /// `classes`, pas nécessairement lanceuse de sorts (c'est même le cas dans
+  /// le contenu peuplé actuel, `classes.id = 1` est Barbare).
+  final Object spellcastingClassId;
+  final Object spellId;
+  final String spellName;
 }
 
 /// Récupère [ReferenceContent] en lisant la première race et la première
@@ -131,6 +145,36 @@ Future<ReferenceContent> fetchReferenceContent(SupabaseClient client) async {
     table: 'languages',
     entityType: 'language',
   );
+
+  final spellClassRow = await client
+      .from('spell_classes')
+      .select('class_id, spell_id')
+      .order('class_id')
+      .limit(1)
+      .maybeSingle();
+  if (spellClassRow == null) {
+    throw StateError(
+      "Table 'spell_classes' vide : les migrations/seeds du dépôt web "
+      "ont-elles été appliquées (supabase db reset) ?",
+    );
+  }
+  final spellId = spellClassRow['spell_id'] as Object;
+  final spellTranslation = await client
+      .from('translations')
+      .select('value')
+      .eq('entity_type', 'spell')
+      .eq('entity_id', spellId.toString())
+      .eq('field_name', 'name')
+      .eq('locale', 'fr')
+      .maybeSingle();
+  final spellName = spellTranslation?['value'] as String?;
+  if (spellName == null) {
+    throw StateError(
+      "Traduction manquante pour spell #$spellId : les seeds du dépôt web "
+      "ont-ils été appliqués en entier (supabase db reset) ?",
+    );
+  }
+
   return ReferenceContent(
     raceId: race.$1,
     raceName: race.$2,
@@ -142,6 +186,9 @@ Future<ReferenceContent> fetchReferenceContent(SupabaseClient client) async {
     toolName: tool.$2,
     languageId: language.$1,
     languageName: language.$2,
+    spellcastingClassId: spellClassRow['class_id'] as Object,
+    spellId: spellId,
+    spellName: spellName,
   );
 }
 

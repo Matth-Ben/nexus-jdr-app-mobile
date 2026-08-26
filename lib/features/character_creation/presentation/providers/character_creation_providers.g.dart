@@ -366,3 +366,166 @@ final class SkillsAndToolsStepDataProvider
 
 String _$skillsAndToolsStepDataHash() =>
     r'baaeb5eafc430a19a126f1e0e291e21e36fd8ff5';
+
+/// Sorts (mineurs et niveau 1 mélangés) accessibles à la classe [classId],
+/// exposé à `SpellsStepScreen` — étape 6/9 "Sorts". `family` (paramétré par
+/// `classId`) plutôt qu'un provider simple : contrairement à
+/// [toolCatalogProvider]/[languageCatalogProvider] (petites tables complètes,
+/// indépendantes de tout choix précédent), les sorts sont filtrés côté
+/// requête par la classe déjà choisie à l'étape 2/9 (voir
+/// `SupabaseCharacterCreationRepository.fetchSpellCatalog`) — même rationale
+/// que [raceCatalog]/[classCatalog] pour le reste (`autoDispose`, pas de
+/// retry automatique).
+
+@ProviderFor(spellCatalog)
+final spellCatalogProvider = SpellCatalogFamily._();
+
+/// Sorts (mineurs et niveau 1 mélangés) accessibles à la classe [classId],
+/// exposé à `SpellsStepScreen` — étape 6/9 "Sorts". `family` (paramétré par
+/// `classId`) plutôt qu'un provider simple : contrairement à
+/// [toolCatalogProvider]/[languageCatalogProvider] (petites tables complètes,
+/// indépendantes de tout choix précédent), les sorts sont filtrés côté
+/// requête par la classe déjà choisie à l'étape 2/9 (voir
+/// `SupabaseCharacterCreationRepository.fetchSpellCatalog`) — même rationale
+/// que [raceCatalog]/[classCatalog] pour le reste (`autoDispose`, pas de
+/// retry automatique).
+
+final class SpellCatalogProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<SpellCatalog>,
+          SpellCatalog,
+          FutureOr<SpellCatalog>
+        >
+    with $FutureModifier<SpellCatalog>, $FutureProvider<SpellCatalog> {
+  /// Sorts (mineurs et niveau 1 mélangés) accessibles à la classe [classId],
+  /// exposé à `SpellsStepScreen` — étape 6/9 "Sorts". `family` (paramétré par
+  /// `classId`) plutôt qu'un provider simple : contrairement à
+  /// [toolCatalogProvider]/[languageCatalogProvider] (petites tables complètes,
+  /// indépendantes de tout choix précédent), les sorts sont filtrés côté
+  /// requête par la classe déjà choisie à l'étape 2/9 (voir
+  /// `SupabaseCharacterCreationRepository.fetchSpellCatalog`) — même rationale
+  /// que [raceCatalog]/[classCatalog] pour le reste (`autoDispose`, pas de
+  /// retry automatique).
+  SpellCatalogProvider._({
+    required SpellCatalogFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: _noRetry,
+         name: r'spellCatalogProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$spellCatalogHash();
+
+  @override
+  String toString() {
+    return r'spellCatalogProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<SpellCatalog> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<SpellCatalog> create(Ref ref) {
+    final argument = this.argument as int;
+    return spellCatalog(ref, classId: argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SpellCatalogProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$spellCatalogHash() => r'508427cca86b7c320027a1eb408fb2f3ebb78343';
+
+/// Sorts (mineurs et niveau 1 mélangés) accessibles à la classe [classId],
+/// exposé à `SpellsStepScreen` — étape 6/9 "Sorts". `family` (paramétré par
+/// `classId`) plutôt qu'un provider simple : contrairement à
+/// [toolCatalogProvider]/[languageCatalogProvider] (petites tables complètes,
+/// indépendantes de tout choix précédent), les sorts sont filtrés côté
+/// requête par la classe déjà choisie à l'étape 2/9 (voir
+/// `SupabaseCharacterCreationRepository.fetchSpellCatalog`) — même rationale
+/// que [raceCatalog]/[classCatalog] pour le reste (`autoDispose`, pas de
+/// retry automatique).
+
+final class SpellCatalogFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<SpellCatalog>, int> {
+  SpellCatalogFamily._()
+    : super(
+        retry: _noRetry,
+        name: r'spellCatalogProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Sorts (mineurs et niveau 1 mélangés) accessibles à la classe [classId],
+  /// exposé à `SpellsStepScreen` — étape 6/9 "Sorts". `family` (paramétré par
+  /// `classId`) plutôt qu'un provider simple : contrairement à
+  /// [toolCatalogProvider]/[languageCatalogProvider] (petites tables complètes,
+  /// indépendantes de tout choix précédent), les sorts sont filtrés côté
+  /// requête par la classe déjà choisie à l'étape 2/9 (voir
+  /// `SupabaseCharacterCreationRepository.fetchSpellCatalog`) — même rationale
+  /// que [raceCatalog]/[classCatalog] pour le reste (`autoDispose`, pas de
+  /// retry automatique).
+
+  SpellCatalogProvider call({required int classId}) =>
+      SpellCatalogProvider._(argument: classId, from: this);
+
+  @override
+  String toString() => r'spellCatalogProvider';
+}
+
+@ProviderFor(spellsStepData)
+final spellsStepDataProvider = SpellsStepDataProvider._();
+
+final class SpellsStepDataProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<SpellsStepData>,
+          SpellsStepData,
+          FutureOr<SpellsStepData>
+        >
+    with $FutureModifier<SpellsStepData>, $FutureProvider<SpellsStepData> {
+  SpellsStepDataProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'spellsStepDataProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$spellsStepDataHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<SpellsStepData> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<SpellsStepData> create(Ref ref) {
+    return spellsStepData(ref);
+  }
+}
+
+String _$spellsStepDataHash() => r'71ebd0f72755c4a0e0319666d19a679a135b6ecc';

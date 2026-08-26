@@ -14,6 +14,7 @@ import '../domain/character_creation_failure.dart';
 import '../domain/class_option.dart';
 import '../domain/skill_ability_mapping.dart';
 import '../domain/skills_and_tools_step_selection.dart';
+import '../domain/spellcasting_rules.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 
@@ -98,7 +99,18 @@ class _SkillsAndToolsStepScreenState
 
   /// Met à jour le brouillon en mémoire et passe à l'étape suivante — aucun
   /// appel réseau ici, même rationale que les étapes précédentes.
-  void _submit() {
+  ///
+  /// [classOption] détermine la route suivante : l'étape 6/9 "Sorts" est
+  /// sautée directement vers l'étape 7/9 "Équipement" si la classe n'est pas
+  /// lanceuse de sorts (`SpellcastingRules.isSpellcastingClass`, voir
+  /// `domain/spellcasting_rules.dart`) — cette étape n'aurait alors rien à
+  /// afficher (aucune ligne `spell_classes` pour cette classe). Le chemin
+  /// retour depuis l'étape 7/9 revient alors automatiquement à cette étape 5
+  /// (pas à une étape 6 vide) : la pile de navigation `go_router`
+  /// (`context.push` à chaque étape) n'a jamais empilé l'étape 6 pour ce
+  /// personnage, donc `pop()` depuis l'étape 7 atterrit directement ici, sans
+  /// logique supplémentaire à écrire côté étape 7.
+  void _submit(ClassOption classOption) {
     ref
         .read(characterCreationDraftControllerProvider.notifier)
         .setSkillsAndTools(
@@ -106,7 +118,11 @@ class _SkillsAndToolsStepScreenState
           classToolChoices: _selectedClassTools,
           backgroundLanguageChoices: _selectedBackgroundLanguages,
         );
-    context.push('/characters/new/step-6');
+    final nextStepRoute =
+        SpellcastingRules.isSpellcastingClass(classOption.name)
+        ? '/characters/new/step-6'
+        : '/characters/new/step-7';
+    context.push(nextStepRoute);
   }
 
   @override
@@ -296,7 +312,7 @@ class _SkillsAndToolsStepScreenState
                 Expanded(
                   child: PrimaryButton(
                     label: 'Suivant',
-                    onPressed: canProceed ? _submit : null,
+                    onPressed: canProceed ? () => _submit(classOption) : null,
                   ),
                 ),
               ],

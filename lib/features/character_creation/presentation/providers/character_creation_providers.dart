@@ -9,6 +9,7 @@ import '../../domain/class_catalog.dart';
 import '../../domain/class_option.dart';
 import '../../domain/language_catalog.dart';
 import '../../domain/race_catalog.dart';
+import '../../domain/spell_catalog.dart';
 import '../../domain/tool_catalog.dart';
 import 'character_creation_draft_provider.dart';
 
@@ -119,6 +120,47 @@ Future<SkillsAndToolsStepData> skillsAndToolsStepData(Ref ref) async {
     toolCatalog: toolCatalog,
     languageCatalog: languageCatalog,
   );
+}
+
+/// Sorts (mineurs et niveau 1 mélangés) accessibles à la classe [classId],
+/// exposé à `SpellsStepScreen` — étape 6/9 "Sorts". `family` (paramétré par
+/// `classId`) plutôt qu'un provider simple : contrairement à
+/// [toolCatalogProvider]/[languageCatalogProvider] (petites tables complètes,
+/// indépendantes de tout choix précédent), les sorts sont filtrés côté
+/// requête par la classe déjà choisie à l'étape 2/9 (voir
+/// `SupabaseCharacterCreationRepository.fetchSpellCatalog`) — même rationale
+/// que [raceCatalog]/[classCatalog] pour le reste (`autoDispose`, pas de
+/// retry automatique).
+@Riverpod(retry: _noRetry)
+Future<SpellCatalog> spellCatalog(Ref ref, {required int classId}) {
+  return ref
+      .watch(characterCreationRepositoryProvider)
+      .fetchSpellCatalog(classId: classId);
+}
+
+/// Données déjà résolues nécessaires à l'étape 6/9 "Sorts" : la [ClassOption]
+/// déjà choisie à l'étape 2/9 (pour son nom, utilisé par
+/// `SpellcastingRules` pour les quotas), plus le [SpellCatalog] complet de
+/// cette classe — même pattern combinateur que [SkillsAndToolsStepData].
+typedef SpellsStepData = ({ClassOption classOption, SpellCatalog spellCatalog});
+
+@Riverpod(retry: _noRetry)
+Future<SpellsStepData> spellsStepData(Ref ref) async {
+  final draft = ref.watch(characterCreationDraftControllerProvider);
+
+  final classCatalog = await ref.watch(classCatalogProvider.future);
+  final classOption = classCatalog.classes.firstWhere(
+    (option) => option.id == draft.classId,
+    orElse: () => throw const CharacterCreationFailure(
+      "Classe introuvable pour l'étape Sorts. Revenez à l'étape Classe.",
+    ),
+  );
+
+  final spellCatalog = await ref.watch(
+    spellCatalogProvider(classId: classOption.id).future,
+  );
+
+  return (classOption: classOption, spellCatalog: spellCatalog);
 }
 
 Duration? _noRetry(int retryCount, Object error) => null;

@@ -78,5 +78,18 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// encore choisie. Même décision noms-plutôt-qu'ids que
     /// [classSkillChoices].
     @Default(<String>[]) List<String> backgroundLanguageChoices,
+
+    /// Sorts mineurs ("cantrips") choisis à l'étape 6 (noms affichés). Vide
+    /// tant qu'aucun n'est choisi, et reste vide en permanence pour une
+    /// classe non lanceuse de sorts ou une classe lanceuse sans quota de
+    /// cantrips (Paladin/Rôdeur, voir `domain/spellcasting_rules.dart`) —
+    /// cette étape est alors sautée entièrement (voir
+    /// `presentation/skills_and_tools_step_screen.dart`). Même décision
+    /// noms-plutôt-qu'ids que [classSkillChoices].
+    @Default(<String>[]) List<String> classCantripChoices,
+
+    /// Sorts de niveau 1 choisis à l'étape 6 (noms affichés), même rationale
+    /// que [classCantripChoices].
+    @Default(<String>[]) List<String> classLevelOneSpellChoices,
   }) = _CharacterCreationDraft;
 }
