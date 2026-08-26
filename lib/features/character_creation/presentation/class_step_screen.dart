@@ -11,34 +11,33 @@ import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
 import '../domain/character_creation_failure.dart';
-import '../domain/race_catalog.dart';
-import '../domain/race_step_selection.dart';
-import '../domain/subrace_option.dart';
+import '../domain/class_catalog.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 
-/// Étape 1/9 de l'assistant de création de personnage : choix de la race
+/// Étape 2/9 de l'assistant de création de personnage : choix de la classe
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
-/// point 1, maquette `02_étape_1_race.png`).
+/// point 2, maquette `03_étape_2_classe.png`).
 ///
-/// En-tête bois plein (pas le dégradé "scène") : `Scaffold` classique plutôt
-/// que `SceneScaffold`, avec un bandeau `wood.medium` posé manuellement au
-/// sommet — voir `_Header` ci-dessous.
-class RaceStepScreen extends ConsumerStatefulWidget {
-  const RaceStepScreen({super.key});
+/// Plus simple que l'étape 1 "Race" : ni sous-classe (ne s'y ajoute pas à
+/// cette étape, décision du chef de projet), ni "classe personnalisée" —
+/// "Suivant" s'active dès qu'une classe est choisie.
+///
+/// En-tête bois plein dupliqué depuis `race_step_screen.dart`
+/// (`_Header` ci-dessous) plutôt que factorisé dans `core/widgets` : même
+/// principe que `ClassRowMapper` dupliqué depuis `RaceRowMapper`, pour ne pas
+/// coupler les deux étapes entre elles.
+class ClassStepScreen extends ConsumerStatefulWidget {
+  const ClassStepScreen({super.key});
 
   @override
-  ConsumerState<RaceStepScreen> createState() => _RaceStepScreenState();
+  ConsumerState<ClassStepScreen> createState() => _ClassStepScreenState();
 }
 
-class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
+class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
   static const int _totalSteps = 9;
 
-  final _customRaceController = TextEditingController();
-
-  int? _selectedRaceId;
-  int? _selectedSubraceId;
-  bool _isCustomRaceSelected = false;
+  int? _selectedClassId;
 
   @override
   void initState() {
@@ -49,84 +48,41 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
     // en arrière sans perdre les choix déjà faits." Le brouillon `keepAlive`
     // ne perd jamais la donnée, mais sans cette lecture l'écran repartait à
     // zéro visuellement. Si le brouillon est vide (première visite), rien ne
-    // change : les trois champs valent `null`/`false` comme avant.
-    final draft = ref.read(characterCreationDraftControllerProvider);
-    _selectedRaceId = draft.raceId;
-    _selectedSubraceId = draft.subraceId;
-    _isCustomRaceSelected = draft.raceCustomText != null;
-    if (_isCustomRaceSelected) {
-      _customRaceController.text = draft.raceCustomText!;
-    }
+    // change : `classId` est `null`.
+    _selectedClassId = ref
+        .read(characterCreationDraftControllerProvider)
+        .classId;
   }
 
-  @override
-  void dispose() {
-    _customRaceController.dispose();
-    super.dispose();
-  }
-
-  void _selectRace(int raceId) {
+  void _selectClass(int classId) {
     setState(() {
-      _isCustomRaceSelected = false;
-      if (raceId != _selectedRaceId) {
-        _selectedSubraceId = null;
-      }
-      _selectedRaceId = raceId;
+      _selectedClassId = classId;
     });
   }
 
-  void _selectSubrace(int subraceId) {
-    setState(() {
-      _selectedSubraceId = subraceId;
-    });
-  }
+  /// Toujours poussée depuis `/characters/new` (étape 1 "Race") via
+  /// `context.push` : `pop()` suffit, pas besoin du repli `context.go('/')`
+  /// de `RaceStepScreen._goToCharacterList` (qui, lui, peut être la première
+  /// route de la pile).
+  void _goBack() => context.pop();
 
-  void _selectCustomRace() {
-    setState(() {
-      _isCustomRaceSelected = true;
-      _selectedRaceId = null;
-      _selectedSubraceId = null;
-    });
-  }
-
-  void _goToCharacterList() {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go('/');
-    }
-  }
-
-  /// Met à jour le brouillon en mémoire et passe à l'étape suivante.
-  ///
-  /// Aucun appel réseau ici : contrairement à l'ancienne architecture (voir
-  /// `data/character_creation_repository.dart`), cette étape n'écrit plus
-  /// rien en base — juste l'état local du brouillon
-  /// (`providers/character_creation_draft_provider.dart`), donc pas d'état
-  /// de chargement ni de gestion d'erreur réseau nécessaires ici (à la
-  /// différence du chargement du catalogue races/sous-races, un vrai appel
-  /// réseau).
+  /// Met à jour le brouillon en mémoire et passe à l'étape suivante — aucun
+  /// appel réseau ici, même rationale que `RaceStepScreen._submit`.
   void _submit() {
     ref
         .read(characterCreationDraftControllerProvider.notifier)
-        .setRace(
-          raceId: _isCustomRaceSelected ? null : _selectedRaceId,
-          subraceId: _isCustomRaceSelected ? null : _selectedSubraceId,
-          raceCustomText: _isCustomRaceSelected
-              ? _customRaceController.text.trim()
-              : null,
-        );
-    context.push('/characters/new/step-2');
+        .setClass(classId: _selectedClassId!);
+    context.push('/characters/new/step-3');
   }
 
   @override
   Widget build(BuildContext context) {
-    final catalogAsync = ref.watch(raceCatalogProvider);
+    final catalogAsync = ref.watch(classCatalogProvider);
 
     return Scaffold(
       body: Column(
         children: [
-          _Header(onBack: _goToCharacterList),
+          _Header(onBack: _goBack),
           Expanded(
             child: catalogAsync.when(
               data: _buildContent,
@@ -136,9 +92,9 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
               error: (error, stackTrace) => _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
-                    : 'Impossible de charger les races disponibles. '
+                    : 'Impossible de charger les classes disponibles. '
                           'Réessayez.',
-                onRetry: () => ref.invalidate(raceCatalogProvider),
+                onRetry: () => ref.invalidate(classCatalogProvider),
               ),
             ),
           ),
@@ -147,18 +103,8 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
     );
   }
 
-  Widget _buildContent(RaceCatalog catalog) {
-    final subracesForSelectedRace = _selectedRaceId != null
-        ? catalog.subracesOf(_selectedRaceId!)
-        : const <SubraceOption>[];
-
-    final canProceed = RaceStepSelection.canProceed(
-      isCustomRace: _isCustomRaceSelected,
-      customRaceText: _customRaceController.text,
-      selectedRaceId: _selectedRaceId,
-      selectedRaceHasSubraces: subracesForSelectedRace.isNotEmpty,
-      selectedSubraceId: _selectedSubraceId,
-    );
+  Widget _buildContent(ClassCatalog catalog) {
+    final canProceed = _selectedClassId != null;
 
     return SafeArea(
       top: false,
@@ -178,14 +124,14 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '1. Race',
+                      '2. Classe',
                       style: AppTypography.body(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     Text(
-                      'Étape 1 / $_totalSteps',
+                      'Étape 2 / $_totalSteps',
                       style: AppTypography.body(
                         fontSize: 13,
                         color: AppColors.textMuted,
@@ -194,10 +140,10 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                const StepProgressBar(totalSteps: _totalSteps, currentStep: 1),
+                const StepProgressBar(totalSteps: _totalSteps, currentStep: 2),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  "Choisis l'ascendance de ton personnage.",
+                  'Choisis la voie que ton personnage empruntera.',
                   style: AppTypography.body(fontSize: 14),
                 ),
               ],
@@ -212,66 +158,17 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                 AppSpacing.md,
               ),
               children: [
-                for (var i = 0; i < catalog.races.length; i++) ...[
+                for (var i = 0; i < catalog.classes.length; i++) ...[
                   if (i > 0) const SizedBox(height: AppSpacing.sm),
                   SelectableOptionTile(
-                    title: catalog.races[i].name,
-                    subtitle: catalog.races[i].summaryLine,
-                    selected:
-                        !_isCustomRaceSelected &&
-                        _selectedRaceId == catalog.races[i].id,
+                    title: catalog.classes[i].name,
+                    subtitle: catalog.classes[i].summaryLine,
+                    selected: _selectedClassId == catalog.classes[i].id,
                     leading: AccentIconBadge(
                       index: i,
-                      icon: Icons.shield_rounded,
+                      icon: Icons.auto_awesome,
                     ),
-                    onTap: () => _selectRace(catalog.races[i].id),
-                  ),
-                ],
-                if (subracesForSelectedRace.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    'Choisis une sous-race.',
-                    style: AppTypography.body(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  for (var i = 0; i < subracesForSelectedRace.length; i++) ...[
-                    if (i > 0) const SizedBox(height: AppSpacing.sm),
-                    SelectableOptionTile(
-                      title: subracesForSelectedRace[i].name,
-                      subtitle: subracesForSelectedRace[i].summaryLine,
-                      selected:
-                          _selectedSubraceId == subracesForSelectedRace[i].id,
-                      leading: AccentIconBadge(
-                        index: i,
-                        icon: Icons.shield_rounded,
-                      ),
-                      onTap: () =>
-                          _selectSubrace(subracesForSelectedRace[i].id),
-                    ),
-                  ],
-                ],
-                const SizedBox(height: AppSpacing.sm),
-                SelectableOptionTile(
-                  title: 'Race personnalisée',
-                  selected: _isCustomRaceSelected,
-                  leading: const AccentIconBadge(
-                    index: -1,
-                    icon: Icons.shield_rounded,
-                    neutralIcon: Icons.edit_note,
-                  ),
-                  onTap: _selectCustomRace,
-                ),
-                if (_isCustomRaceSelected) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  TextField(
-                    controller: _customRaceController,
-                    decoration: const InputDecoration(
-                      hintText: 'Nom de la race personnalisée',
-                    ),
-                    onChanged: (_) => setState(() {}),
+                    onTap: () => _selectClass(catalog.classes[i].id),
                   ),
                 ],
               ],
@@ -285,7 +182,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                   child: SecondaryButton(
                     label: 'Retour',
                     surface: SecondaryButtonSurface.parchment,
-                    onPressed: _goToCharacterList,
+                    onPressed: _goBack,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -304,8 +201,8 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   }
 }
 
-/// Bandeau bois plein en tête d'écran, avec le bouton retour vers la liste
-/// des personnages (maquette `02_étape_1_race.png` : "< CRÉATION").
+/// Bandeau bois plein en tête d'écran, avec le bouton retour vers l'étape
+/// précédente (maquette `03_étape_2_classe.png` : "< CRÉATION").
 class _Header extends StatelessWidget {
   const _Header({required this.onBack});
 

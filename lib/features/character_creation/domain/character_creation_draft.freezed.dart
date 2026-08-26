@@ -21,7 +21,22 @@ mixin _$CharacterCreationDraft {
 /// ou pas encore choisie.
  int? get subraceId;/// Texte libre de race personnalisée (étape 1), `null` si une race du
 /// catalogue a été choisie à la place.
- String? get raceCustomText;
+ String? get raceCustomText;/// Classe choisie à l'étape 2, `null` si pas encore choisie. Pas de
+/// sous-classe ni de "classe personnalisée" à cette étape (décision du
+/// chef de projet, voir `domain/class_catalog.dart`).
+ int? get classId;/// Historique choisi à l'étape 3, `null` si pas encore choisi. Pas
+/// d'historique personnalisé à cette étape (décision du chef de projet,
+/// voir `domain/background_catalog.dart`).
+ int? get backgroundId;/// Méthode de génération des scores de caractéristiques choisie à
+/// l'étape 4, `null` si pas encore choisie (l'écran retombe alors sur
+/// `AbilityScoreMethod.standardArray` par défaut — voir
+/// `presentation/ability_score_step_screen.dart`).
+ AbilityScoreMethod? get abilityScoreMethod;/// Scores de base choisis à l'étape 4, clés
+/// 'str'/'dex'/'con'/'int'/'wis'/'cha' — **avant** application du bonus
+/// racial (voir `domain/ability_score_modifier_calculator.dart` pour le
+/// calcul du modificateur final affiché, qui l'ajoute). `null` si pas
+/// encore choisis.
+ Map<String, int>? get abilityScores;
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -32,16 +47,16 @@ $CharacterCreationDraftCopyWith<CharacterCreationDraft> get copyWith => _$Charac
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.classId, classId) || other.classId == classId)&&(identical(other.backgroundId, backgroundId) || other.backgroundId == backgroundId)&&(identical(other.abilityScoreMethod, abilityScoreMethod) || other.abilityScoreMethod == abilityScoreMethod)&&const DeepCollectionEquality().equals(other.abilityScores, abilityScores));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText);
+int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText,classId,backgroundId,abilityScoreMethod,const DeepCollectionEquality().hash(abilityScores));
 
 @override
 String toString() {
-  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText)';
+  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText, classId: $classId, backgroundId: $backgroundId, abilityScoreMethod: $abilityScoreMethod, abilityScores: $abilityScores)';
 }
 
 
@@ -52,7 +67,7 @@ abstract mixin class $CharacterCreationDraftCopyWith<$Res>  {
   factory $CharacterCreationDraftCopyWith(CharacterCreationDraft value, $Res Function(CharacterCreationDraft) _then) = _$CharacterCreationDraftCopyWithImpl;
 @useResult
 $Res call({
- int? raceId, int? subraceId, String? raceCustomText
+ int? raceId, int? subraceId, String? raceCustomText, int? classId, int? backgroundId, AbilityScoreMethod? abilityScoreMethod, Map<String, int>? abilityScores
 });
 
 
@@ -69,12 +84,16 @@ class _$CharacterCreationDraftCopyWithImpl<$Res>
 
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,Object? classId = freezed,Object? backgroundId = freezed,Object? abilityScoreMethod = freezed,Object? abilityScores = freezed,}) {
   return _then(CharacterCreationDraft(
 raceId: freezed == raceId ? _self.raceId : raceId // ignore: cast_nullable_to_non_nullable
 as int?,subraceId: freezed == subraceId ? _self.subraceId : subraceId // ignore: cast_nullable_to_non_nullable
 as int?,raceCustomText: freezed == raceCustomText ? _self.raceCustomText : raceCustomText // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,classId: freezed == classId ? _self.classId : classId // ignore: cast_nullable_to_non_nullable
+as int?,backgroundId: freezed == backgroundId ? _self.backgroundId : backgroundId // ignore: cast_nullable_to_non_nullable
+as int?,abilityScoreMethod: freezed == abilityScoreMethod ? _self.abilityScoreMethod : abilityScoreMethod // ignore: cast_nullable_to_non_nullable
+as AbilityScoreMethod?,abilityScores: freezed == abilityScores ? _self.abilityScores : abilityScores // ignore: cast_nullable_to_non_nullable
+as Map<String, int>?,
   ));
 }
 
@@ -159,10 +178,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CharacterCreationDraft() when $default != null:
-return $default(_that.raceId,_that.subraceId,_that.raceCustomText);case _:
+return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores);case _:
   return orElse();
 
 }
@@ -180,10 +199,10 @@ return $default(_that.raceId,_that.subraceId,_that.raceCustomText);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores)  $default,) {final _that = this;
 switch (_that) {
 case _CharacterCreationDraft():
-return $default(_that.raceId,_that.subraceId,_that.raceCustomText);case _:
+return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +219,10 @@ return $default(_that.raceId,_that.subraceId,_that.raceCustomText);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? raceId,  int? subraceId,  String? raceCustomText)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores)?  $default,) {final _that = this;
 switch (_that) {
 case _CharacterCreationDraft() when $default != null:
-return $default(_that.raceId,_that.subraceId,_that.raceCustomText);case _:
+return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores);case _:
   return null;
 
 }
@@ -215,7 +234,7 @@ return $default(_that.raceId,_that.subraceId,_that.raceCustomText);case _:
 
 
 class _CharacterCreationDraft implements CharacterCreationDraft {
-  const _CharacterCreationDraft({this.raceId, this.subraceId, this.raceCustomText});
+  const _CharacterCreationDraft({this.raceId, this.subraceId, this.raceCustomText, this.classId, this.backgroundId, this.abilityScoreMethod,  Map<String, int>? abilityScores}): _abilityScores = abilityScores;
   
 
 /// Race choisie à l'étape 1, `null` si race personnalisée ou pas encore
@@ -227,6 +246,38 @@ class _CharacterCreationDraft implements CharacterCreationDraft {
 /// Texte libre de race personnalisée (étape 1), `null` si une race du
 /// catalogue a été choisie à la place.
 @override final  String? raceCustomText;
+/// Classe choisie à l'étape 2, `null` si pas encore choisie. Pas de
+/// sous-classe ni de "classe personnalisée" à cette étape (décision du
+/// chef de projet, voir `domain/class_catalog.dart`).
+@override final  int? classId;
+/// Historique choisi à l'étape 3, `null` si pas encore choisi. Pas
+/// d'historique personnalisé à cette étape (décision du chef de projet,
+/// voir `domain/background_catalog.dart`).
+@override final  int? backgroundId;
+/// Méthode de génération des scores de caractéristiques choisie à
+/// l'étape 4, `null` si pas encore choisie (l'écran retombe alors sur
+/// `AbilityScoreMethod.standardArray` par défaut — voir
+/// `presentation/ability_score_step_screen.dart`).
+@override final  AbilityScoreMethod? abilityScoreMethod;
+/// Scores de base choisis à l'étape 4, clés
+/// 'str'/'dex'/'con'/'int'/'wis'/'cha' — **avant** application du bonus
+/// racial (voir `domain/ability_score_modifier_calculator.dart` pour le
+/// calcul du modificateur final affiché, qui l'ajoute). `null` si pas
+/// encore choisis.
+ final  Map<String, int>? _abilityScores;
+/// Scores de base choisis à l'étape 4, clés
+/// 'str'/'dex'/'con'/'int'/'wis'/'cha' — **avant** application du bonus
+/// racial (voir `domain/ability_score_modifier_calculator.dart` pour le
+/// calcul du modificateur final affiché, qui l'ajoute). `null` si pas
+/// encore choisis.
+@override Map<String, int>? get abilityScores {
+  final value = _abilityScores;
+  if (value == null) return null;
+  if (_abilityScores is EqualUnmodifiableMapView) return _abilityScores;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
 
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
@@ -238,16 +289,16 @@ _$CharacterCreationDraftCopyWith<_CharacterCreationDraft> get copyWith => __$Cha
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.classId, classId) || other.classId == classId)&&(identical(other.backgroundId, backgroundId) || other.backgroundId == backgroundId)&&(identical(other.abilityScoreMethod, abilityScoreMethod) || other.abilityScoreMethod == abilityScoreMethod)&&const DeepCollectionEquality().equals(other._abilityScores, _abilityScores));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText);
+int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText,classId,backgroundId,abilityScoreMethod,const DeepCollectionEquality().hash(_abilityScores));
 
 @override
 String toString() {
-  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText)';
+  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText, classId: $classId, backgroundId: $backgroundId, abilityScoreMethod: $abilityScoreMethod, abilityScores: $abilityScores)';
 }
 
 
@@ -258,7 +309,7 @@ abstract mixin class _$CharacterCreationDraftCopyWith<$Res> implements $Characte
   factory _$CharacterCreationDraftCopyWith(_CharacterCreationDraft value, $Res Function(_CharacterCreationDraft) _then) = __$CharacterCreationDraftCopyWithImpl;
 @override @useResult
 $Res call({
- int? raceId, int? subraceId, String? raceCustomText
+ int? raceId, int? subraceId, String? raceCustomText, int? classId, int? backgroundId, AbilityScoreMethod? abilityScoreMethod, Map<String, int>? abilityScores
 });
 
 
@@ -275,12 +326,16 @@ class __$CharacterCreationDraftCopyWithImpl<$Res>
 
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,Object? classId = freezed,Object? backgroundId = freezed,Object? abilityScoreMethod = freezed,Object? abilityScores = freezed,}) {
   return _then(_CharacterCreationDraft(
 raceId: freezed == raceId ? _self.raceId : raceId // ignore: cast_nullable_to_non_nullable
 as int?,subraceId: freezed == subraceId ? _self.subraceId : subraceId // ignore: cast_nullable_to_non_nullable
 as int?,raceCustomText: freezed == raceCustomText ? _self.raceCustomText : raceCustomText // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,classId: freezed == classId ? _self.classId : classId // ignore: cast_nullable_to_non_nullable
+as int?,backgroundId: freezed == backgroundId ? _self.backgroundId : backgroundId // ignore: cast_nullable_to_non_nullable
+as int?,abilityScoreMethod: freezed == abilityScoreMethod ? _self.abilityScoreMethod : abilityScoreMethod // ignore: cast_nullable_to_non_nullable
+as AbilityScoreMethod?,abilityScores: freezed == abilityScores ? _self._abilityScores : abilityScores // ignore: cast_nullable_to_non_nullable
+as Map<String, int>?,
   ));
 }
 

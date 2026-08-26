@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'ability_score_method.dart';
+
 part 'character_creation_draft.freezed.dart';
 
 /// Brouillon du personnage en cours de création par l'assistant, tenu
@@ -26,5 +28,28 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// Texte libre de race personnalisée (étape 1), `null` si une race du
     /// catalogue a été choisie à la place.
     String? raceCustomText,
+
+    /// Classe choisie à l'étape 2, `null` si pas encore choisie. Pas de
+    /// sous-classe ni de "classe personnalisée" à cette étape (décision du
+    /// chef de projet, voir `domain/class_catalog.dart`).
+    int? classId,
+
+    /// Historique choisi à l'étape 3, `null` si pas encore choisi. Pas
+    /// d'historique personnalisé à cette étape (décision du chef de projet,
+    /// voir `domain/background_catalog.dart`).
+    int? backgroundId,
+
+    /// Méthode de génération des scores de caractéristiques choisie à
+    /// l'étape 4, `null` si pas encore choisie (l'écran retombe alors sur
+    /// `AbilityScoreMethod.standardArray` par défaut — voir
+    /// `presentation/ability_score_step_screen.dart`).
+    AbilityScoreMethod? abilityScoreMethod,
+
+    /// Scores de base choisis à l'étape 4, clés
+    /// 'str'/'dex'/'con'/'int'/'wis'/'cha' — **avant** application du bonus
+    /// racial (voir `domain/ability_score_modifier_calculator.dart` pour le
+    /// calcul du modificateur final affiché, qui l'ajoute). `null` si pas
+    /// encore choisis.
+    Map<String, int>? abilityScores,
   }) = _CharacterCreationDraft;
 }

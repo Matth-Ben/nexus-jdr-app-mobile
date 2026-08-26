@@ -26,5 +26,34 @@ void main() {
         expect(race.name, reference.raceName);
       },
     );
+
+    test('fetchClassCatalog résout le nom et la description de classe via '
+        'translations', () async {
+      final repository = SupabaseCharacterCreationRepository(client);
+
+      final catalog = await repository.fetchClassCatalog();
+
+      final characterClass = catalog.classes.singleWhere(
+        (c) => c.id == reference.classId,
+      );
+      expect(characterClass.name, reference.className);
+      expect(characterClass.description, isNotEmpty);
+      expect(characterClass.hitDie, greaterThan(0));
+    });
+
+    test('fetchBackgroundCatalog résout le nom, l\'aptitude et les '
+        'compétences d\'historique via translations', () async {
+      final repository = SupabaseCharacterCreationRepository(client);
+
+      final catalog = await repository.fetchBackgroundCatalog();
+
+      final background = catalog.backgrounds.singleWhere(
+        (b) => b.id == reference.backgroundId,
+      );
+      expect(background.name, reference.backgroundName);
+      expect(background.featureName, isNotEmpty);
+      expect(background.featureDescription, isNotEmpty);
+      expect(background.skillProficiencies, isNotEmpty);
+    });
   });
 }

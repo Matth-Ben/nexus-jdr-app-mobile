@@ -5,7 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/character_creation/presentation/ability_score_step_screen.dart';
+import '../../features/character_creation/presentation/background_step_screen.dart';
 import '../../features/character_creation/presentation/character_creation_placeholder_screen.dart';
+import '../../features/character_creation/presentation/class_step_screen.dart';
 import '../../features/character_creation/presentation/race_step_screen.dart';
 import '../../features/characters/presentation/character_detail_placeholder_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
@@ -50,10 +53,24 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const RaceStepScreen(),
       ),
       GoRoute(
-        // Étapes 2 à 9 de l'assistant, pas encore implémentées (voir
+        path: '/characters/new/step-2',
+        builder: (context, state) => const ClassStepScreen(),
+      ),
+      GoRoute(
+        path: '/characters/new/step-3',
+        builder: (context, state) => const BackgroundStepScreen(),
+      ),
+      GoRoute(
+        path: '/characters/new/step-4',
+        builder: (context, state) => const AbilityScoreStepScreen(),
+      ),
+      GoRoute(
+        // Étapes 5 à 9 de l'assistant, pas encore implémentées (voir
         // `character_creation_placeholder_screen.dart`).
-        path: '/characters/new/next',
-        builder: (context, state) => const CharacterCreationPlaceholderScreen(),
+        path: '/characters/new/step-5',
+        builder: (context, state) => const CharacterCreationPlaceholderScreen(
+          stepText: 'Étape 5/9 — Compétences et outils — à venir',
+        ),
       ),
       GoRoute(
         path: '/characters/:id',

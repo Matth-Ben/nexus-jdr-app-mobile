@@ -21,18 +21,28 @@ class SelectableOptionTile extends StatelessWidget {
     required this.onTap,
     this.subtitle,
     this.leading,
+    this.selectedDetail,
     super.key,
   });
 
   final String title;
 
-  /// Ligne de résumé optionnelle affichée sous [title].
+  /// Ligne de résumé optionnelle affichée sous [title], quel que soit l'état
+  /// de sélection.
   final String? subtitle;
   final bool selected;
   final VoidCallback onTap;
 
   /// Icône/illustration à gauche de la ligne, ex. un badge coloré.
   final Widget? leading;
+
+  /// Contenu additionnel affiché sous [subtitle], uniquement quand [selected]
+  /// vaut `true` (ex. l'aptitude d'un historique à l'étape 3/9 de l'assistant
+  /// de création, maquette `04_étape_3_historique.png` : seule la ligne
+  /// sélectionnée affiche "Aptitude : ..."). `null` par défaut : les usages
+  /// existants (race, sous-race, classe) ne le fournissent pas et n'affichent
+  /// donc rien de plus qu'avant.
+  final String? selectedDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -73,9 +83,21 @@ class SelectableOptionTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: AppTypography.body(
                           fontSize: 12,
                           color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                    if (selected && selectedDetail != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        selectedDetail!,
+                        style: AppTypography.body(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
                         ),
                       ),
                     ],

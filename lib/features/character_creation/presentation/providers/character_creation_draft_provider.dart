@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../domain/ability_score_method.dart';
 import '../../domain/character_creation_draft.dart';
 
 part 'character_creation_draft_provider.g.dart';
@@ -28,16 +29,49 @@ class CharacterCreationDraftController
 
   /// Met à jour le choix de race/sous-race (ou race personnalisée) de
   /// l'étape 1. Remplace intégralement ces trois champs (pas de fusion
-  /// partielle) : l'appelant (`presentation/race_step_screen.dart`) doit
-  /// toujours fournir la sélection complète et cohérente de l'écran, y
-  /// compris les champs à effacer (ex. `subraceId: null` en cas de race sans
-  /// sous-race).
+  /// partielle sur ces trois-là) via `copyWith` : l'appelant
+  /// (`presentation/race_step_screen.dart`) doit toujours fournir la
+  /// sélection complète et cohérente de l'écran, y compris les champs à
+  /// effacer (ex. `subraceId: null` en cas de race sans sous-race). Les
+  /// autres champs du brouillon (ex. `classId` de l'étape 2) sont conservés :
+  /// revenir à l'étape 1 puis retaper "Suivant" ne doit pas effacer les
+  /// choix déjà faits aux étapes suivantes.
   void setRace({int? raceId, int? subraceId, String? raceCustomText}) {
-    state = CharacterCreationDraft(
+    state = state.copyWith(
       raceId: raceId,
       subraceId: subraceId,
       raceCustomText: raceCustomText,
     );
+  }
+
+  /// Met à jour le choix de classe de l'étape 2. Ne touche à aucun autre
+  /// champ (fusion partielle via `copyWith`, contrairement à [setRace]) :
+  /// cette étape n'a pas de sous-choix à effacer en fonction de la classe
+  /// choisie (pas de sous-classe ici, voir `domain/class_catalog.dart`).
+  void setClass({required int classId}) {
+    state = state.copyWith(classId: classId);
+  }
+
+  /// Met à jour le choix d'historique de l'étape 3. Fusion partielle via
+  /// `copyWith` (jamais `CharacterCreationDraft(...)` reconstruit de zéro) :
+  /// même piège que documenté sur [setRace] déjà rencontré une fois en revue
+  /// — reconstruire l'état effacerait silencieusement `raceId`/`classId` déjà
+  /// choisis aux étapes précédentes. Pas de sous-choix à effacer ici (pas
+  /// d'historique personnalisé, voir `domain/background_catalog.dart`), même
+  /// rationale que [setClass].
+  void setBackground({required int backgroundId}) {
+    state = state.copyWith(backgroundId: backgroundId);
+  }
+
+  /// Met à jour la méthode et les scores de caractéristiques de l'étape 4.
+  /// Fusion partielle via `copyWith` (même rationale que [setClass] et
+  /// [setBackground]) : cette étape n'a pas de champ à effacer sur les
+  /// étapes suivantes en fonction du choix fait ici.
+  void setAbilityScores({
+    required AbilityScoreMethod method,
+    required Map<String, int> scores,
+  }) {
+    state = state.copyWith(abilityScoreMethod: method, abilityScores: scores);
   }
 
   /// Remet le brouillon à zéro. Appelé par `CharacterListScreen` avant de

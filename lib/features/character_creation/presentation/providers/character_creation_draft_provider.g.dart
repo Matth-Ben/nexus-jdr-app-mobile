@@ -96,7 +96,7 @@ final class CharacterCreationDraftControllerProvider
 }
 
 String _$characterCreationDraftControllerHash() =>
-    r'3385bb51ff9d1ac09750390fc5e2203dcdca2bed';
+    r'c44a84b62c9a436364257ac69499bce8183cc127';
 
 /// Brouillon en mémoire de la session de création en cours, réutilisé par
 /// toutes les étapes de l'assistant (voir `domain/character_creation_draft.dart`).
