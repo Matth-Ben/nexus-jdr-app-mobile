@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/character_creation/presentation/background_step_screen.dart';
 import '../../features/character_creation/presentation/character_creation_placeholder_screen.dart';
 import '../../features/character_creation/presentation/class_step_screen.dart';
 import '../../features/character_creation/presentation/race_step_screen.dart';
@@ -55,11 +56,15 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const ClassStepScreen(),
       ),
       GoRoute(
-        // Étapes 3 à 9 de l'assistant, pas encore implémentées (voir
-        // `character_creation_placeholder_screen.dart`).
         path: '/characters/new/step-3',
+        builder: (context, state) => const BackgroundStepScreen(),
+      ),
+      GoRoute(
+        // Étapes 4 à 9 de l'assistant, pas encore implémentées (voir
+        // `character_creation_placeholder_screen.dart`).
+        path: '/characters/new/step-4',
         builder: (context, state) => const CharacterCreationPlaceholderScreen(
-          stepText: 'Étape 3/9 — Historique — à venir',
+          stepText: 'Étape 4/9 — Caractéristiques — à venir',
         ),
       ),
       GoRoute(

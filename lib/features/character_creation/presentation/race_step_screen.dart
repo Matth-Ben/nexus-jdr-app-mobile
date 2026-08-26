@@ -41,6 +41,25 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   bool _isCustomRaceSelected = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Réhydrate la sélection depuis le brouillon déjà en mémoire (retour en
+    // arrière depuis une étape suivante) — voir
+    // `docs/cahier-des-charges/05-ux-navigation.md` : "Possibilité de revenir
+    // en arrière sans perdre les choix déjà faits." Le brouillon `keepAlive`
+    // ne perd jamais la donnée, mais sans cette lecture l'écran repartait à
+    // zéro visuellement. Si le brouillon est vide (première visite), rien ne
+    // change : les trois champs valent `null`/`false` comme avant.
+    final draft = ref.read(characterCreationDraftControllerProvider);
+    _selectedRaceId = draft.raceId;
+    _selectedSubraceId = draft.subraceId;
+    _isCustomRaceSelected = draft.raceCustomText != null;
+    if (_isCustomRaceSelected) {
+      _customRaceController.text = draft.raceCustomText!;
+    }
+  }
+
+  @override
   void dispose() {
     _customRaceController.dispose();
     super.dispose();

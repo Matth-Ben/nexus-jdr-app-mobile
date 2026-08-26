@@ -51,6 +51,17 @@ class CharacterCreationDraftController
     state = state.copyWith(classId: classId);
   }
 
+  /// Met à jour le choix d'historique de l'étape 3. Fusion partielle via
+  /// `copyWith` (jamais `CharacterCreationDraft(...)` reconstruit de zéro) :
+  /// même piège que documenté sur [setRace] déjà rencontré une fois en revue
+  /// — reconstruire l'état effacerait silencieusement `raceId`/`classId` déjà
+  /// choisis aux étapes précédentes. Pas de sous-choix à effacer ici (pas
+  /// d'historique personnalisé, voir `domain/background_catalog.dart`), même
+  /// rationale que [setClass].
+  void setBackground({required int backgroundId}) {
+    state = state.copyWith(backgroundId: backgroundId);
+  }
+
   /// Remet le brouillon à zéro. Appelé par `CharacterListScreen` avant de
   /// démarrer une nouvelle création ("+ Créer"), pour ne jamais reprendre
   /// silencieusement un brouillon abandonné d'une session précédente.

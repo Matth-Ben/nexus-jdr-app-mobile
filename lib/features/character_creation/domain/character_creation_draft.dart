@@ -31,5 +31,10 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// sous-classe ni de "classe personnalisée" à cette étape (décision du
     /// chef de projet, voir `domain/class_catalog.dart`).
     int? classId,
+
+    /// Historique choisi à l'étape 3, `null` si pas encore choisi. Pas
+    /// d'historique personnalisé à cette étape (décision du chef de projet,
+    /// voir `domain/background_catalog.dart`).
+    int? backgroundId,
   }) = _CharacterCreationDraft;
 }

@@ -10,34 +10,47 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../domain/background_catalog.dart';
 import '../domain/character_creation_failure.dart';
-import '../domain/class_catalog.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 
-/// Étape 2/9 de l'assistant de création de personnage : choix de la classe
+/// Étape 3/9 de l'assistant de création de personnage : choix de l'historique
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
-/// point 2, maquette `03_étape_2_classe.png`).
+/// point 3, maquette `04_étape_3_historique.png`).
 ///
-/// Plus simple que l'étape 1 "Race" : ni sous-classe (ne s'y ajoute pas à
-/// cette étape, décision du chef de projet), ni "classe personnalisée" —
-/// "Suivant" s'active dès qu'une classe est choisie.
+/// Même gabarit que `ClassStepScreen` (étape 2) : ni historique personnalisé,
+/// ni choix de compétences/outils/langues à cette étape (voir
+/// `domain/background_catalog.dart`) — "Suivant" s'active dès qu'un
+/// historique est choisi.
 ///
-/// En-tête bois plein dupliqué depuis `race_step_screen.dart`
-/// (`_Header` ci-dessous) plutôt que factorisé dans `core/widgets` : même
-/// principe que `ClassRowMapper` dupliqué depuis `RaceRowMapper`, pour ne pas
-/// coupler les deux étapes entre elles.
-class ClassStepScreen extends ConsumerStatefulWidget {
-  const ClassStepScreen({super.key});
+/// Différence par rapport à Race/Classe : chaque ligne affiche en plus
+/// "Compétences : X, Y" (toujours visible), et la ligne **sélectionnée
+/// uniquement** affiche "Aptitude : {nom} — {description}" en dessous, via le
+/// slot `SelectableOptionTile.selectedDetail`.
+///
+/// En-tête bois plein dupliqué depuis `class_step_screen.dart`/
+/// `race_step_screen.dart` (`_Header` ci-dessous) plutôt que factorisé dans
+/// `core/widgets` : même principe que `BackgroundRowMapper` dupliqué depuis
+/// `ClassRowMapper`, pour ne pas coupler les étapes entre elles.
+///
+/// Écart assumé par rapport à la maquette `04_étape_3_historique.png` : cette
+/// maquette ne montre aucune icône à gauche des tuiles, mais `AccentIconBadge`
+/// est conservé ici (décision du chef de projet) pour la cohérence visuelle
+/// avec les étapes Race/Classe qui la précèdent — un joueur qui enchaîne les
+/// étapes ne doit pas voir l'iconographie disparaître puis réapparaître.
+class BackgroundStepScreen extends ConsumerStatefulWidget {
+  const BackgroundStepScreen({super.key});
 
   @override
-  ConsumerState<ClassStepScreen> createState() => _ClassStepScreenState();
+  ConsumerState<BackgroundStepScreen> createState() =>
+      _BackgroundStepScreenState();
 }
 
-class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
+class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
   static const int _totalSteps = 9;
 
-  int? _selectedClassId;
+  int? _selectedBackgroundId;
 
   @override
   void initState() {
@@ -48,36 +61,35 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
     // en arrière sans perdre les choix déjà faits." Le brouillon `keepAlive`
     // ne perd jamais la donnée, mais sans cette lecture l'écran repartait à
     // zéro visuellement. Si le brouillon est vide (première visite), rien ne
-    // change : `classId` est `null`.
-    _selectedClassId = ref
+    // change : `backgroundId` est `null`.
+    _selectedBackgroundId = ref
         .read(characterCreationDraftControllerProvider)
-        .classId;
+        .backgroundId;
   }
 
-  void _selectClass(int classId) {
+  void _selectBackground(int backgroundId) {
     setState(() {
-      _selectedClassId = classId;
+      _selectedBackgroundId = backgroundId;
     });
   }
 
-  /// Toujours poussée depuis `/characters/new` (étape 1 "Race") via
-  /// `context.push` : `pop()` suffit, pas besoin du repli `context.go('/')`
-  /// de `RaceStepScreen._goToCharacterList` (qui, lui, peut être la première
-  /// route de la pile).
+  /// Toujours poussée depuis `/characters/new/step-2` (étape 2 "Classe") via
+  /// `context.push` : `pop()` suffit, même rationale que
+  /// `ClassStepScreen._goBack`.
   void _goBack() => context.pop();
 
   /// Met à jour le brouillon en mémoire et passe à l'étape suivante — aucun
-  /// appel réseau ici, même rationale que `RaceStepScreen._submit`.
+  /// appel réseau ici, même rationale que `ClassStepScreen._submit`.
   void _submit() {
     ref
         .read(characterCreationDraftControllerProvider.notifier)
-        .setClass(classId: _selectedClassId!);
-    context.push('/characters/new/step-3');
+        .setBackground(backgroundId: _selectedBackgroundId!);
+    context.push('/characters/new/step-4');
   }
 
   @override
   Widget build(BuildContext context) {
-    final catalogAsync = ref.watch(classCatalogProvider);
+    final catalogAsync = ref.watch(backgroundCatalogProvider);
 
     return Scaffold(
       body: Column(
@@ -92,9 +104,9 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
               error: (error, stackTrace) => _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
-                    : 'Impossible de charger les classes disponibles. '
+                    : 'Impossible de charger les historiques disponibles. '
                           'Réessayez.',
-                onRetry: () => ref.invalidate(classCatalogProvider),
+                onRetry: () => ref.invalidate(backgroundCatalogProvider),
               ),
             ),
           ),
@@ -103,8 +115,8 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
     );
   }
 
-  Widget _buildContent(ClassCatalog catalog) {
-    final canProceed = _selectedClassId != null;
+  Widget _buildContent(BackgroundCatalog catalog) {
+    final canProceed = _selectedBackgroundId != null;
 
     return SafeArea(
       top: false,
@@ -124,14 +136,14 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '2. Classe',
+                      '3. Historique',
                       style: AppTypography.body(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     Text(
-                      'Étape 2 / $_totalSteps',
+                      'Étape 3 / $_totalSteps',
                       style: AppTypography.body(
                         fontSize: 13,
                         color: AppColors.textMuted,
@@ -140,10 +152,10 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                const StepProgressBar(totalSteps: _totalSteps, currentStep: 2),
+                const StepProgressBar(totalSteps: _totalSteps, currentStep: 3),
                 const SizedBox(height: AppSpacing.md),
                 Text(
-                  'Choisis la voie que ton personnage empruntera.',
+                  "D'où vient ton personnage avant l'aventure ?",
                   style: AppTypography.body(fontSize: 14),
                 ),
               ],
@@ -158,17 +170,16 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                 AppSpacing.md,
               ),
               children: [
-                for (var i = 0; i < catalog.classes.length; i++) ...[
+                for (var i = 0; i < catalog.backgrounds.length; i++) ...[
                   if (i > 0) const SizedBox(height: AppSpacing.sm),
                   SelectableOptionTile(
-                    title: catalog.classes[i].name,
-                    subtitle: catalog.classes[i].summaryLine,
-                    selected: _selectedClassId == catalog.classes[i].id,
-                    leading: AccentIconBadge(
-                      index: i,
-                      icon: Icons.auto_awesome,
-                    ),
-                    onTap: () => _selectClass(catalog.classes[i].id),
+                    title: catalog.backgrounds[i].name,
+                    subtitle: catalog.backgrounds[i].skillsSummaryLine,
+                    selectedDetail: catalog.backgrounds[i].featureSummaryLine,
+                    selected:
+                        _selectedBackgroundId == catalog.backgrounds[i].id,
+                    leading: AccentIconBadge(index: i, icon: Icons.menu_book),
+                    onTap: () => _selectBackground(catalog.backgrounds[i].id),
                   ),
                 ],
               ],
@@ -202,7 +213,7 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
 }
 
 /// Bandeau bois plein en tête d'écran, avec le bouton retour vers l'étape
-/// précédente (maquette `03_étape_2_classe.png` : "< CRÉATION").
+/// précédente (maquette `04_étape_3_historique.png` : "< CRÉATION").
 class _Header extends StatelessWidget {
   const _Header({required this.onBack});
 

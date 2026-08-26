@@ -73,12 +73,16 @@ class ReferenceContent {
     required this.raceName,
     required this.classId,
     required this.className,
+    required this.backgroundId,
+    required this.backgroundName,
   });
 
   final Object raceId;
   final String raceName;
   final Object classId;
   final String className;
+  final Object backgroundId;
+  final String backgroundName;
 }
 
 /// Récupère [ReferenceContent] en lisant la première race et la première
@@ -97,11 +101,18 @@ Future<ReferenceContent> fetchReferenceContent(SupabaseClient client) async {
     table: 'classes',
     entityType: 'class',
   );
+  final background = await _fetchFirstTranslatedName(
+    client,
+    table: 'backgrounds',
+    entityType: 'background',
+  );
   return ReferenceContent(
     raceId: race.$1,
     raceName: race.$2,
     classId: characterClass.$1,
     className: characterClass.$2,
+    backgroundId: background.$1,
+    backgroundName: background.$2,
   );
 }
 

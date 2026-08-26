@@ -12,7 +12,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
+import 'package:personnages/core/widgets/selectable_option_tile.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
+import 'package:personnages/features/character_creation/domain/background_catalog.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
 import 'package:personnages/features/character_creation/domain/class_catalog.dart';
@@ -41,6 +43,12 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
     }
     return catalogToReturn ?? const ClassCatalog(classes: []);
   }
+
+  // Non exercé par ces tests (étape 2 "Classe" uniquement) : implémentation
+  // minimale requise pour satisfaire `CharacterCreationRepository`.
+  @override
+  Future<BackgroundCatalog> fetchBackgroundCatalog() async =>
+      const BackgroundCatalog(backgrounds: []);
 }
 
 const _magicien = ClassOption(
@@ -306,4 +314,38 @@ void main() {
     expect(readDraft(), const CharacterCreationDraft());
     expect(find.text('Étape suivante'), findsNothing);
   });
+
+  testWidgets(
+    'revenir sur l\'étape avec un brouillon déjà rempli affiche la classe '
+    'déjà choisie (retour en arrière depuis une étape suivante, '
+    'docs/cahier-des-charges/05-ux-navigation.md)',
+    (WidgetTester tester) async {
+      fakeRepository.catalogToReturn = const ClassCatalog(
+        classes: [_magicien, _guerrier],
+      );
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setClass(classId: 2);
+
+      await pumpClassStep(tester);
+
+      final tiles = tester.widgetList<SelectableOptionTile>(
+        find.byType(SelectableOptionTile),
+      );
+      expect(
+        tiles.firstWhere((tile) => tile.title == 'Guerrier').selected,
+        true,
+      );
+      expect(
+        tiles.firstWhere((tile) => tile.title == 'Magicien').selected,
+        false,
+      );
+
+      // "Suivant" doit déjà être actif : pas besoin de re-sélectionner.
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(readDraft(), const CharacterCreationDraft(classId: 2));
+    },
+  );
 }

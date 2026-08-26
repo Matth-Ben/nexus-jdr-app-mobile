@@ -15,7 +15,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
+import 'package:personnages/core/widgets/selectable_option_tile.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
+import 'package:personnages/features/character_creation/domain/background_catalog.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
 import 'package:personnages/features/character_creation/domain/class_catalog.dart';
@@ -48,6 +50,12 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   @override
   Future<ClassCatalog> fetchClassCatalog() async =>
       const ClassCatalog(classes: []);
+
+  // Non exercé par ces tests (étape 1 "Race" uniquement) : implémentation
+  // minimale requise pour satisfaire `CharacterCreationRepository`.
+  @override
+  Future<BackgroundCatalog> fetchBackgroundCatalog() async =>
+      const BackgroundCatalog(backgrounds: []);
 }
 
 const _elfe = RaceOption(
@@ -487,6 +495,94 @@ void main() {
       expect(
         readDraft(),
         const CharacterCreationDraft(raceId: 1, subraceId: 10),
+      );
+    },
+  );
+
+  testWidgets(
+    'revenir sur l\'étape avec un brouillon déjà rempli affiche la race et '
+    'la sous-race déjà choisies (retour en arrière depuis une étape '
+    'suivante, docs/cahier-des-charges/05-ux-navigation.md)',
+    (WidgetTester tester) async {
+      fakeRepository.catalogToReturn = const RaceCatalog(
+        races: [_elfe, _humain],
+        subraces: [_hautElfe],
+      );
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setRace(raceId: 1, subraceId: 10);
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Haut-elfe'), findsOneWidget);
+      final tiles = tester.widgetList<SelectableOptionTile>(
+        find.byType(SelectableOptionTile),
+      );
+      expect(tiles.firstWhere((tile) => tile.title == 'Elfe').selected, true);
+      expect(
+        tiles.firstWhere((tile) => tile.title == 'Humain').selected,
+        false,
+      );
+      expect(
+        tiles.firstWhere((tile) => tile.title == 'Haut-elfe').selected,
+        true,
+      );
+
+      // "Suivant" doit déjà être actif : pas besoin de re-choisir quoi que
+      // ce soit pour avancer.
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(
+        readDraft(),
+        const CharacterCreationDraft(raceId: 1, subraceId: 10),
+      );
+    },
+  );
+
+  testWidgets(
+    'revenir sur l\'étape avec un brouillon déjà rempli avec une race '
+    'personnalisée affiche l\'option "Race personnalisée" sélectionnée et '
+    'le texte déjà saisi (retour en arrière depuis une étape suivante, '
+    'docs/cahier-des-charges/05-ux-navigation.md)',
+    (WidgetTester tester) async {
+      fakeRepository.catalogToReturn = const RaceCatalog(
+        races: [_elfe, _humain],
+        subraces: [_hautElfe],
+      );
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setRace(raceCustomText: 'Gobelours');
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      final tiles = tester.widgetList<SelectableOptionTile>(
+        find.byType(SelectableOptionTile),
+      );
+      expect(
+        tiles.firstWhere((tile) => tile.title == 'Race personnalisée').selected,
+        true,
+      );
+      expect(tiles.firstWhere((tile) => tile.title == 'Elfe').selected, false);
+      expect(
+        tiles.firstWhere((tile) => tile.title == 'Humain').selected,
+        false,
+      );
+
+      expect(find.text('Gobelours'), findsOneWidget);
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      expect(textField.controller?.text, 'Gobelours');
+
+      // "Suivant" doit déjà être actif : le texte n'est pas vide, pas besoin
+      // de re-saisir quoi que ce soit pour avancer.
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(
+        readDraft(),
+        const CharacterCreationDraft(raceCustomText: 'Gobelours'),
       );
     },
   );

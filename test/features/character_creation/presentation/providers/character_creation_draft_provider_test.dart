@@ -62,4 +62,33 @@ void main() {
     expect(draft.classId, isNull);
     expect(draft.raceId, isNull);
   });
+
+  test('setRace puis setClass puis setBackground conservent les trois choix '
+      '(non-régression, étape 3 "Historique")', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    controller.setRace(raceId: 7, subraceId: 3, raceCustomText: null);
+    controller.setClass(classId: 42);
+    controller.setBackground(backgroundId: 5);
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.raceId, 7);
+    expect(draft.subraceId, 3);
+    expect(draft.classId, 42);
+    expect(draft.backgroundId, 5);
+  });
+
+  test('reset remet aussi backgroundId à zéro', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    controller.setBackground(backgroundId: 1);
+    controller.reset();
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.backgroundId, isNull);
+  });
 }

@@ -172,3 +172,55 @@ final class ClassCatalogProvider
 }
 
 String _$classCatalogHash() => r'009b8c24097214888340d26f51ffe44117da5b3f';
+
+/// Catalogue des historiques de l'étape 3/9, exposé à `BackgroundStepScreen`
+/// — même rationale que [raceCatalog]/[classCatalog] (`autoDispose`, pas de
+/// retry automatique).
+
+@ProviderFor(backgroundCatalog)
+final backgroundCatalogProvider = BackgroundCatalogProvider._();
+
+/// Catalogue des historiques de l'étape 3/9, exposé à `BackgroundStepScreen`
+/// — même rationale que [raceCatalog]/[classCatalog] (`autoDispose`, pas de
+/// retry automatique).
+
+final class BackgroundCatalogProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<BackgroundCatalog>,
+          BackgroundCatalog,
+          FutureOr<BackgroundCatalog>
+        >
+    with
+        $FutureModifier<BackgroundCatalog>,
+        $FutureProvider<BackgroundCatalog> {
+  /// Catalogue des historiques de l'étape 3/9, exposé à `BackgroundStepScreen`
+  /// — même rationale que [raceCatalog]/[classCatalog] (`autoDispose`, pas de
+  /// retry automatique).
+  BackgroundCatalogProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'backgroundCatalogProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$backgroundCatalogHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<BackgroundCatalog> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<BackgroundCatalog> create(Ref ref) {
+    return backgroundCatalog(ref);
+  }
+}
+
+String _$backgroundCatalogHash() => r'f03bb8230dc30985f627cac63f3d258a06e61d5d';
