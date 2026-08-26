@@ -72,12 +72,50 @@ abstract final class BackgroundRowMapper {
   }) {
     final id = (row['id'] as num).toInt();
     final key = id.toString();
+    final toolOrLanguageChoices = row['tool_or_language_choices'];
     return BackgroundOption(
       id: id,
       name: names[key] ?? 'Historique #$id',
       skillProficiencies: parseSkillProficiencies(row['skill_proficiencies']),
       featureName: featureNames[key] ?? '',
       featureDescription: featureDescriptions[key] ?? '',
+      toolOrLanguageGrantedTools: parseToolOrLanguageGrantedTools(
+        toolOrLanguageChoices,
+      ),
+      languageChoiceCount: parseLanguageChoiceCount(toolOrLanguageChoices),
     );
+  }
+
+  /// Parse la clé `"tools"` de la colonne jsonb `tool_or_language_choices`
+  /// (étape 5/9 "Compétences et outils") — un tableau de chaînes, parfois un
+  /// vrai nom d'outil ("Kit de déguisement"), parfois une phrase de
+  /// substitution ("un jeu au choix") : décision du chef de projet, traité
+  /// tel quel comme du texte informatif octroyé automatiquement, jamais
+  /// résolu vers un id `tools.id` (voir `domain/background_option.dart`
+  /// pour le rationale détaillé). `null`/type inattendu ou clé absente
+  /// retombe sur une liste vide.
+  static List<String> parseToolOrLanguageGrantedTools(dynamic raw) {
+    if (raw is! Map) {
+      return const [];
+    }
+    final tools = raw['tools'];
+    if (tools is! List) {
+      return const [];
+    }
+    return tools.whereType<String>().toList();
+  }
+
+  /// Parse la clé `"languages"` (entier) de la colonne jsonb
+  /// `tool_or_language_choices` — un vrai choix interactif de N langues. La
+  /// clé `"vehicles"`, quand elle est présente à côté, est hors périmètre de
+  /// l'étape 5/9 et n'est lue nulle part (décision du chef de projet).
+  /// `null`/type inattendu ou clé absente retombe sur `null` (pas de choix
+  /// de langue octroyé par cet historique).
+  static int? parseLanguageChoiceCount(dynamic raw) {
+    if (raw is! Map) {
+      return null;
+    }
+    final languages = raw['languages'];
+    return languages is num ? languages.toInt() : null;
   }
 }

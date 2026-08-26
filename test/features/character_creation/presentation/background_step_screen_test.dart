@@ -23,7 +23,9 @@ import 'package:personnages/features/character_creation/domain/background_option
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
 import 'package:personnages/features/character_creation/domain/class_catalog.dart';
+import 'package:personnages/features/character_creation/domain/language_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
+import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/background_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
@@ -51,6 +53,13 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
     }
     return catalogToReturn ?? const BackgroundCatalog(backgrounds: []);
   }
+
+  @override
+  Future<ToolCatalog> fetchToolCatalog() async => const ToolCatalog(tools: []);
+
+  @override
+  Future<LanguageCatalog> fetchLanguageCatalog() async =>
+      const LanguageCatalog(languages: []);
 }
 
 const _ermite = BackgroundOption(

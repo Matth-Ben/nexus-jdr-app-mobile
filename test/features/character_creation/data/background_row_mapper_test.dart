@@ -195,5 +195,133 @@ void main() {
         'Aptitude :  — une description orpheline de son titre.',
       );
     });
+
+    test('toBackgroundOption relaie tool_or_language_choices vers '
+        'parseToolOrLanguageGrantedTools/parseLanguageChoiceCount', () {
+      final backgroundOption = BackgroundRowMapper.toBackgroundOption(
+        {
+          'id': 30,
+          'skill_proficiencies': <String>[],
+          'tool_or_language_choices': {
+            'tools': ['Kit de déguisement'],
+            'languages': 2,
+          },
+        },
+        names: const {},
+        featureNames: const {},
+        featureDescriptions: const {},
+      );
+
+      expect(backgroundOption.toolOrLanguageGrantedTools, [
+        'Kit de déguisement',
+      ]);
+      expect(backgroundOption.languageChoiceCount, 2);
+    });
+
+    test('tool_or_language_choices absent -> toolOrLanguageGrantedTools vide, '
+        'languageChoiceCount null', () {
+      final backgroundOption = BackgroundRowMapper.toBackgroundOption(
+        {'id': 31, 'skill_proficiencies': <String>[]},
+        names: const {},
+        featureNames: const {},
+        featureDescriptions: const {},
+      );
+
+      expect(backgroundOption.toolOrLanguageGrantedTools, isEmpty);
+      expect(backgroundOption.languageChoiceCount, isNull);
+    });
+  });
+
+  group('parseToolOrLanguageGrantedTools', () {
+    test('clé "tools" (tableau de chaînes) -> conservée telle quelle', () {
+      expect(
+        BackgroundRowMapper.parseToolOrLanguageGrantedTools({
+          'tools': ['Kit de déguisement', 'un jeu au choix'],
+        }),
+        ['Kit de déguisement', 'un jeu au choix'],
+      );
+    });
+
+    test('clé "tools" absente -> liste vide', () {
+      expect(
+        BackgroundRowMapper.parseToolOrLanguageGrantedTools({'languages': 2}),
+        isEmpty,
+      );
+    });
+
+    test('type inattendu (null, liste au lieu de map) -> liste vide', () {
+      expect(
+        BackgroundRowMapper.parseToolOrLanguageGrantedTools(null),
+        isEmpty,
+      );
+      expect(
+        BackgroundRowMapper.parseToolOrLanguageGrantedTools(['tools']),
+        isEmpty,
+      );
+    });
+
+    test(
+      'clé "tools" avec un type inattendu (pas une liste) -> liste vide',
+      () {
+        expect(
+          BackgroundRowMapper.parseToolOrLanguageGrantedTools({
+            'tools': 'un instrument de musique au choix',
+          }),
+          isEmpty,
+        );
+      },
+    );
+
+    test('clé "vehicles" présente à côté de "tools" -> ignorée, "tools" quand '
+        'même résolu', () {
+      expect(
+        BackgroundRowMapper.parseToolOrLanguageGrantedTools({
+          'tools': ["Kit d'artisan"],
+          'vehicles': ['un véhicule terrestre'],
+        }),
+        ["Kit d'artisan"],
+      );
+    });
+  });
+
+  group('parseLanguageChoiceCount', () {
+    test('clé "languages" (entier) -> conservée telle quelle', () {
+      expect(BackgroundRowMapper.parseLanguageChoiceCount({'languages': 2}), 2);
+    });
+
+    test('clé "languages" absente -> null (pas de choix octroyé)', () {
+      expect(
+        BackgroundRowMapper.parseLanguageChoiceCount({
+          'tools': ['Kit de déguisement'],
+        }),
+        isNull,
+      );
+    });
+
+    test('type inattendu (null, liste au lieu de map) -> null', () {
+      expect(BackgroundRowMapper.parseLanguageChoiceCount(null), isNull);
+      expect(
+        BackgroundRowMapper.parseLanguageChoiceCount(['languages']),
+        isNull,
+      );
+    });
+
+    test('clé "languages" avec un type inattendu (pas un nombre) -> null', () {
+      expect(
+        BackgroundRowMapper.parseLanguageChoiceCount({'languages': 'deux'}),
+        isNull,
+      );
+    });
+
+    test('clé "vehicles" présente à côté de "languages" -> ignorée, '
+        '"languages" quand même résolu (hors périmètre étape 5/9)', () {
+      expect(
+        BackgroundRowMapper.parseLanguageChoiceCount({
+          'languages': 1,
+          'vehicles': ['un véhicule aquatique'],
+        }),
+        1,
+      );
+    });
   });
 }

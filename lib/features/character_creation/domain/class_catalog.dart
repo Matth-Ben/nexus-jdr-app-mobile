@@ -15,14 +15,17 @@ part 'class_catalog.freezed.dart';
 /// `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3 point
 /// 2 ne le mentionnent) — décision du chef de projet.
 ///
-/// Pas non plus d'affichage/sélection des compétences, outils ou langues
-/// octroyés par la classe à cette étape : `04-fonctionnalites-app-mobile.md`
-/// section 3 point 2 les mentionne pour l'étape "Classe", mais ce texte
-/// précède le découpage détaillé en 9 étapes de
-/// `09-maquettes-captures.md`, qui a une étape 5 dédiée "Compétences et
-/// outils" séparée de celle-ci — la maquette `03_étape_2_classe.png` ne
-/// montre qu'un choix de classe simple. Repoussé à l'étape 5 : décision du
-/// chef de projet, pas un oubli.
+/// Pas d'affichage/sélection des compétences ou outils octroyés par la
+/// classe à *cette* étape (2/9) : `04-fonctionnalites-app-mobile.md` section
+/// 3 point 2 les mentionne, mais ce texte précède le découpage détaillé en 9
+/// étapes de `09-maquettes-captures.md`, qui a une étape 5 dédiée
+/// "Compétences et outils" séparée de celle-ci — la maquette
+/// `03_étape_2_classe.png` ne montre qu'un choix de classe simple. Ces
+/// champs existent bien sur [ClassOption] (`skillChoices`/`toolChoice`/
+/// `grantedToolNames`), simplement pas exploités par
+/// `presentation/class_step_screen.dart` : voir
+/// `presentation/skills_and_tools_step_screen.dart` (étape 5/9) pour leur
+/// seul usage.
 @freezed
 abstract class ClassCatalog with _$ClassCatalog {
   const factory ClassCatalog({required List<ClassOption> classes}) =
