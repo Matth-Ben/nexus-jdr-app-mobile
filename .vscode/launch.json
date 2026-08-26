@@ -1,0 +1,38 @@
+{
+  // Voir config/README.md : l'app nécessite --flavor + --dart-define-from-file
+  // pour se lancer (SUPABASE_URL / SUPABASE_ANON_KEY), sinon elle échoue au
+  // démarrage (assert dans lib/main.dart). Ces configurations passent les
+  // bons flags pour que le bouton Run/Debug de VS Code fonctionne tel quel.
+  //
+  // Prérequis : créer config/dev.json (et staging/prod si besoin) à partir
+  // de config/dev.json.example avec les vraies valeurs Supabase — ces
+  // fichiers sont ignorés par Git (secrets), donc absents après un clone.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "personnages (dev)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "dev", "--dart-define-from-file=config/dev.json"]
+    },
+    {
+      "name": "personnages (staging)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": [
+        "--flavor",
+        "staging",
+        "--dart-define-from-file=config/staging.json"
+      ]
+    },
+    {
+      "name": "personnages (prod)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": ["--flavor", "prod", "--dart-define-from-file=config/prod.json"]
+    }
+  ]
+}
