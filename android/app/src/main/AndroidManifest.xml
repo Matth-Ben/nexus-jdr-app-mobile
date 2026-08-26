@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Requis par `image_picker` (fiche personnage, upload de portrait) pour
+         la prise de photo (la sélection en galerie passe par le sélecteur
+         photo système, sans permission dédiée sur les versions d'Android
+         récentes). -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="personnages"
         android:name="${applicationName}"

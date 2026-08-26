@@ -26,6 +26,14 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Requis par `image_picker` (fiche personnage, upload de portrait,
+	     `features/characters/presentation/widgets/portrait_upload_sheet.dart`) :
+	     iOS refuse silencieusement l'accès caméra/photothèque sans ces
+	     libellés d'usage. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Nexus JDR a besoin de l'appareil photo pour définir le portrait d'un personnage.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Nexus JDR a besoin d'accéder à vos photos pour définir le portrait d'un personnage.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

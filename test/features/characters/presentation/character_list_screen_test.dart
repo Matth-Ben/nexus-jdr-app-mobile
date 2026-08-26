@@ -5,6 +5,7 @@
 // `overrideWithValue`, pour ne jamais toucher à `Supabase.instance.client`.
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,7 @@ import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
+import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/presentation/character_list_screen.dart';
@@ -37,6 +39,36 @@ class _FakeCharacterRepository implements CharacterRepository {
       throw errorToThrow!;
     }
     return charactersToReturn ?? const [];
+  }
+
+  @override
+  Future<CharacterDetail> fetchCharacterDetail(String characterId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> updateHp({
+    required String characterId,
+    required int currentHp,
+    required int temporaryHp,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<String> uploadPortrait({
+    required String characterId,
+    required Uint8List bytes,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> removePortrait({
+    required String characterId,
+    required String portraitUrl,
+  }) {
+    throw UnimplementedError();
   }
 }
 

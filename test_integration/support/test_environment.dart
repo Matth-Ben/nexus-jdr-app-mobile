@@ -86,6 +86,8 @@ class ReferenceContent {
     required this.itemId,
     required this.itemName,
     required this.itemCategory,
+    required this.alignmentId,
+    required this.alignmentName,
   });
 
   final Object raceId;
@@ -121,6 +123,11 @@ class ReferenceContent {
   final Object itemId;
   final String itemName;
   final String itemCategory;
+
+  /// Fiche personnage (onglet "Personnage") — voir
+  /// `SupabaseCharacterRepository.fetchCharacterDetail`.
+  final Object alignmentId;
+  final String alignmentName;
 }
 
 /// Récupère [ReferenceContent] en lisant la première race et la première
@@ -153,6 +160,11 @@ Future<ReferenceContent> fetchReferenceContent(SupabaseClient client) async {
     client,
     table: 'languages',
     entityType: 'language',
+  );
+  final alignment = await _fetchFirstTranslatedName(
+    client,
+    table: 'alignments',
+    entityType: 'alignment',
   );
   final itemRow = await client
       .from('items')
@@ -230,6 +242,8 @@ Future<ReferenceContent> fetchReferenceContent(SupabaseClient client) async {
     itemId: itemId,
     itemName: itemName,
     itemCategory: itemCategory,
+    alignmentId: alignment.$1,
+    alignmentName: alignment.$2,
   );
 }
 

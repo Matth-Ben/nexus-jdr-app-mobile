@@ -10,6 +10,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../core/widgets/wood_back_header.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/race_catalog.dart';
 import '../domain/race_step_selection.dart';
@@ -126,7 +127,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
     return Scaffold(
       body: Column(
         children: [
-          _Header(onBack: _goToCharacterList),
+          WoodBackHeader(title: 'CRÉATION', onBack: _goToCharacterList),
           Expanded(
             child: catalogAsync.when(
               data: _buildContent,
@@ -299,48 +300,6 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Bandeau bois plein en tête d'écran, avec le bouton retour vers la liste
-/// des personnages (maquette `02_étape_1_race.png` : "< CRÉATION").
-class _Header extends StatelessWidget {
-  const _Header({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: AppColors.woodMedium,
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: onBack,
-                icon: const Icon(
-                  Icons.arrow_back_ios_new,
-                  color: AppColors.textOnWood,
-                ),
-              ),
-              Text(
-                'CRÉATION',
-                style: AppTypography.display(
-                  fontSize: 11,
-                  color: AppColors.textOnWood,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

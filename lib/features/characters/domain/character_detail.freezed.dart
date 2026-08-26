@@ -1,0 +1,364 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// coverage:ignore-file
+// ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
+// ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
+
+part of 'character_detail.dart';
+
+// **************************************************************************
+// FreezedGenerator
+// **************************************************************************
+
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// dart format off
+T _$identity<T>(T value) => value;
+/// @nodoc
+mixin _$CharacterDetail {
+
+ String get id; String get name;/// URL publique du portrait (`characters.portrait_url`), `null` si le
+/// joueur n'en a pas encore défini un.
+ String? get portraitUrl;/// Nom de race traduit, `null` si non résolu (race personnalisée ou
+/// `race_id` nul).
+ String? get raceName;/// Nom de sous-race traduit, `null` si le personnage n'a pas de
+/// sous-race.
+ String? get subraceName;/// Texte libre de race personnalisée (`characters.race_custom_text`),
+/// `null` si le personnage a une race du catalogue.
+ String? get raceCustomText;/// Nom d'historique traduit, `null` si `background_id` est nul.
+ String? get backgroundName;/// Nom d'alignement traduit, `null` si `alignment_id` est nul.
+ String? get alignmentName;/// Toutes les lignes `character_classes` du personnage (multiclassage
+/// inclus), dans l'ordre renvoyé par PostgREST.
+ List<CharacterDetailClassRow> get classes; int get xp; int get currentHp; int get maxHp; int get temporaryHp;/// Scores finaux par caractéristique (`character_ability_scores`), clé
+/// 'str'/'dex'/'con'/'int'/'wis'/'cha' — déjà le score final en base,
+/// aucun bonus racial à recalculer ici (voir
+/// `character_creation/domain/final_ability_scores_resolver.dart` pour
+/// l'endroit où ce calcul a déjà eu lieu, à la création).
+ Map<String, int> get abilityScores;
+/// Create a copy of CharacterDetail
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CharacterDetailCopyWith<CharacterDetail> get copyWith => _$CharacterDetailCopyWithImpl<CharacterDetail>(this as CharacterDetail, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.subraceName, subraceName) || other.subraceName == subraceName)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.backgroundName, backgroundName) || other.backgroundName == backgroundName)&&(identical(other.alignmentName, alignmentName) || other.alignmentName == alignmentName)&&const DeepCollectionEquality().equals(other.classes, classes)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.currentHp, currentHp) || other.currentHp == currentHp)&&(identical(other.maxHp, maxHp) || other.maxHp == maxHp)&&(identical(other.temporaryHp, temporaryHp) || other.temporaryHp == temporaryHp)&&const DeepCollectionEquality().equals(other.abilityScores, abilityScores));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,id,name,portraitUrl,raceName,subraceName,raceCustomText,backgroundName,alignmentName,const DeepCollectionEquality().hash(classes),xp,currentHp,maxHp,temporaryHp,const DeepCollectionEquality().hash(abilityScores));
+
+@override
+String toString() {
+  return 'CharacterDetail(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, subraceName: $subraceName, raceCustomText: $raceCustomText, backgroundName: $backgroundName, alignmentName: $alignmentName, classes: $classes, xp: $xp, currentHp: $currentHp, maxHp: $maxHp, temporaryHp: $temporaryHp, abilityScores: $abilityScores)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CharacterDetailCopyWith<$Res>  {
+  factory $CharacterDetailCopyWith(CharacterDetail value, $Res Function(CharacterDetail) _then) = _$CharacterDetailCopyWithImpl;
+@useResult
+$Res call({
+ String id, String name, String? portraitUrl, String? raceName, String? subraceName, String? raceCustomText, String? backgroundName, String? alignmentName, List<CharacterDetailClassRow> classes, int xp, int currentHp, int maxHp, int temporaryHp, Map<String, int> abilityScores
+});
+
+
+
+
+}
+/// @nodoc
+class _$CharacterDetailCopyWithImpl<$Res>
+    implements $CharacterDetailCopyWith<$Res> {
+  _$CharacterDetailCopyWithImpl(this._self, this._then);
+
+  final CharacterDetail _self;
+  final $Res Function(CharacterDetail) _then;
+
+/// Create a copy of CharacterDetail
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? subraceName = freezed,Object? raceCustomText = freezed,Object? backgroundName = freezed,Object? alignmentName = freezed,Object? classes = null,Object? xp = null,Object? currentHp = null,Object? maxHp = null,Object? temporaryHp = null,Object? abilityScores = null,}) {
+  return _then(CharacterDetail(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,portraitUrl: freezed == portraitUrl ? _self.portraitUrl : portraitUrl // ignore: cast_nullable_to_non_nullable
+as String?,raceName: freezed == raceName ? _self.raceName : raceName // ignore: cast_nullable_to_non_nullable
+as String?,subraceName: freezed == subraceName ? _self.subraceName : subraceName // ignore: cast_nullable_to_non_nullable
+as String?,raceCustomText: freezed == raceCustomText ? _self.raceCustomText : raceCustomText // ignore: cast_nullable_to_non_nullable
+as String?,backgroundName: freezed == backgroundName ? _self.backgroundName : backgroundName // ignore: cast_nullable_to_non_nullable
+as String?,alignmentName: freezed == alignmentName ? _self.alignmentName : alignmentName // ignore: cast_nullable_to_non_nullable
+as String?,classes: null == classes ? _self.classes : classes // ignore: cast_nullable_to_non_nullable
+as List<CharacterDetailClassRow>,xp: null == xp ? _self.xp : xp // ignore: cast_nullable_to_non_nullable
+as int,currentHp: null == currentHp ? _self.currentHp : currentHp // ignore: cast_nullable_to_non_nullable
+as int,maxHp: null == maxHp ? _self.maxHp : maxHp // ignore: cast_nullable_to_non_nullable
+as int,temporaryHp: null == temporaryHp ? _self.temporaryHp : temporaryHp // ignore: cast_nullable_to_non_nullable
+as int,abilityScores: null == abilityScores ? _self.abilityScores : abilityScores // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CharacterDetail].
+extension CharacterDetailPatterns on CharacterDetail {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CharacterDetail value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CharacterDetail() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CharacterDetail value)  $default,){
+final _that = this;
+switch (_that) {
+case _CharacterDetail():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CharacterDetail value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CharacterDetail() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? subraceName,  String? raceCustomText,  String? backgroundName,  String? alignmentName,  List<CharacterDetailClassRow> classes,  int xp,  int currentHp,  int maxHp,  int temporaryHp,  Map<String, int> abilityScores)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CharacterDetail() when $default != null:
+return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.subraceName,_that.raceCustomText,_that.backgroundName,_that.alignmentName,_that.classes,_that.xp,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.abilityScores);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? subraceName,  String? raceCustomText,  String? backgroundName,  String? alignmentName,  List<CharacterDetailClassRow> classes,  int xp,  int currentHp,  int maxHp,  int temporaryHp,  Map<String, int> abilityScores)  $default,) {final _that = this;
+switch (_that) {
+case _CharacterDetail():
+return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.subraceName,_that.raceCustomText,_that.backgroundName,_that.alignmentName,_that.classes,_that.xp,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.abilityScores);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? subraceName,  String? raceCustomText,  String? backgroundName,  String? alignmentName,  List<CharacterDetailClassRow> classes,  int xp,  int currentHp,  int maxHp,  int temporaryHp,  Map<String, int> abilityScores)?  $default,) {final _that = this;
+switch (_that) {
+case _CharacterDetail() when $default != null:
+return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.subraceName,_that.raceCustomText,_that.backgroundName,_that.alignmentName,_that.classes,_that.xp,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.abilityScores);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+
+
+class _CharacterDetail extends CharacterDetail {
+  const _CharacterDetail({required this.id, required this.name, this.portraitUrl, this.raceName, this.subraceName, this.raceCustomText, this.backgroundName, this.alignmentName, required  List<CharacterDetailClassRow> classes, required this.xp, required this.currentHp, required this.maxHp, required this.temporaryHp, required  Map<String, int> abilityScores}): _classes = classes,_abilityScores = abilityScores,super._();
+  
+
+@override final  String id;
+@override final  String name;
+/// URL publique du portrait (`characters.portrait_url`), `null` si le
+/// joueur n'en a pas encore défini un.
+@override final  String? portraitUrl;
+/// Nom de race traduit, `null` si non résolu (race personnalisée ou
+/// `race_id` nul).
+@override final  String? raceName;
+/// Nom de sous-race traduit, `null` si le personnage n'a pas de
+/// sous-race.
+@override final  String? subraceName;
+/// Texte libre de race personnalisée (`characters.race_custom_text`),
+/// `null` si le personnage a une race du catalogue.
+@override final  String? raceCustomText;
+/// Nom d'historique traduit, `null` si `background_id` est nul.
+@override final  String? backgroundName;
+/// Nom d'alignement traduit, `null` si `alignment_id` est nul.
+@override final  String? alignmentName;
+/// Toutes les lignes `character_classes` du personnage (multiclassage
+/// inclus), dans l'ordre renvoyé par PostgREST.
+ final  List<CharacterDetailClassRow> _classes;
+/// Toutes les lignes `character_classes` du personnage (multiclassage
+/// inclus), dans l'ordre renvoyé par PostgREST.
+@override List<CharacterDetailClassRow> get classes {
+  if (_classes is EqualUnmodifiableListView) return _classes;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_classes);
+}
+
+@override final  int xp;
+@override final  int currentHp;
+@override final  int maxHp;
+@override final  int temporaryHp;
+/// Scores finaux par caractéristique (`character_ability_scores`), clé
+/// 'str'/'dex'/'con'/'int'/'wis'/'cha' — déjà le score final en base,
+/// aucun bonus racial à recalculer ici (voir
+/// `character_creation/domain/final_ability_scores_resolver.dart` pour
+/// l'endroit où ce calcul a déjà eu lieu, à la création).
+ final  Map<String, int> _abilityScores;
+/// Scores finaux par caractéristique (`character_ability_scores`), clé
+/// 'str'/'dex'/'con'/'int'/'wis'/'cha' — déjà le score final en base,
+/// aucun bonus racial à recalculer ici (voir
+/// `character_creation/domain/final_ability_scores_resolver.dart` pour
+/// l'endroit où ce calcul a déjà eu lieu, à la création).
+@override Map<String, int> get abilityScores {
+  if (_abilityScores is EqualUnmodifiableMapView) return _abilityScores;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_abilityScores);
+}
+
+
+/// Create a copy of CharacterDetail
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CharacterDetailCopyWith<_CharacterDetail> get copyWith => __$CharacterDetailCopyWithImpl<_CharacterDetail>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.subraceName, subraceName) || other.subraceName == subraceName)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.backgroundName, backgroundName) || other.backgroundName == backgroundName)&&(identical(other.alignmentName, alignmentName) || other.alignmentName == alignmentName)&&const DeepCollectionEquality().equals(other._classes, _classes)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.currentHp, currentHp) || other.currentHp == currentHp)&&(identical(other.maxHp, maxHp) || other.maxHp == maxHp)&&(identical(other.temporaryHp, temporaryHp) || other.temporaryHp == temporaryHp)&&const DeepCollectionEquality().equals(other._abilityScores, _abilityScores));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,id,name,portraitUrl,raceName,subraceName,raceCustomText,backgroundName,alignmentName,const DeepCollectionEquality().hash(_classes),xp,currentHp,maxHp,temporaryHp,const DeepCollectionEquality().hash(_abilityScores));
+
+@override
+String toString() {
+  return 'CharacterDetail(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, subraceName: $subraceName, raceCustomText: $raceCustomText, backgroundName: $backgroundName, alignmentName: $alignmentName, classes: $classes, xp: $xp, currentHp: $currentHp, maxHp: $maxHp, temporaryHp: $temporaryHp, abilityScores: $abilityScores)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CharacterDetailCopyWith<$Res> implements $CharacterDetailCopyWith<$Res> {
+  factory _$CharacterDetailCopyWith(_CharacterDetail value, $Res Function(_CharacterDetail) _then) = __$CharacterDetailCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String name, String? portraitUrl, String? raceName, String? subraceName, String? raceCustomText, String? backgroundName, String? alignmentName, List<CharacterDetailClassRow> classes, int xp, int currentHp, int maxHp, int temporaryHp, Map<String, int> abilityScores
+});
+
+
+
+
+}
+/// @nodoc
+class __$CharacterDetailCopyWithImpl<$Res>
+    implements _$CharacterDetailCopyWith<$Res> {
+  __$CharacterDetailCopyWithImpl(this._self, this._then);
+
+  final _CharacterDetail _self;
+  final $Res Function(_CharacterDetail) _then;
+
+/// Create a copy of CharacterDetail
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? subraceName = freezed,Object? raceCustomText = freezed,Object? backgroundName = freezed,Object? alignmentName = freezed,Object? classes = null,Object? xp = null,Object? currentHp = null,Object? maxHp = null,Object? temporaryHp = null,Object? abilityScores = null,}) {
+  return _then(_CharacterDetail(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,portraitUrl: freezed == portraitUrl ? _self.portraitUrl : portraitUrl // ignore: cast_nullable_to_non_nullable
+as String?,raceName: freezed == raceName ? _self.raceName : raceName // ignore: cast_nullable_to_non_nullable
+as String?,subraceName: freezed == subraceName ? _self.subraceName : subraceName // ignore: cast_nullable_to_non_nullable
+as String?,raceCustomText: freezed == raceCustomText ? _self.raceCustomText : raceCustomText // ignore: cast_nullable_to_non_nullable
+as String?,backgroundName: freezed == backgroundName ? _self.backgroundName : backgroundName // ignore: cast_nullable_to_non_nullable
+as String?,alignmentName: freezed == alignmentName ? _self.alignmentName : alignmentName // ignore: cast_nullable_to_non_nullable
+as String?,classes: null == classes ? _self._classes : classes // ignore: cast_nullable_to_non_nullable
+as List<CharacterDetailClassRow>,xp: null == xp ? _self.xp : xp // ignore: cast_nullable_to_non_nullable
+as int,currentHp: null == currentHp ? _self.currentHp : currentHp // ignore: cast_nullable_to_non_nullable
+as int,maxHp: null == maxHp ? _self.maxHp : maxHp // ignore: cast_nullable_to_non_nullable
+as int,temporaryHp: null == temporaryHp ? _self.temporaryHp : temporaryHp // ignore: cast_nullable_to_non_nullable
+as int,abilityScores: null == abilityScores ? _self._abilityScores : abilityScores // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,
+  ));
+}
+
+
+}
+
+// dart format on

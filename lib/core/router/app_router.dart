@@ -14,7 +14,7 @@ import '../../features/character_creation/presentation/race_step_screen.dart';
 import '../../features/character_creation/presentation/skills_and_tools_step_screen.dart';
 import '../../features/character_creation/presentation/spells_step_screen.dart';
 import '../../features/character_creation/presentation/summary_step_screen.dart';
-import '../../features/characters/presentation/character_detail_placeholder_screen.dart';
+import '../../features/characters/presentation/character_detail_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
 import '../network/supabase_client_provider.dart';
 
@@ -95,10 +95,8 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: '/characters/:id',
-        builder: (context, state) => CharacterDetailPlaceholderScreen(
-          characterId: state.pathParameters['id']!,
-          characterName: state.extra is String ? state.extra! as String : null,
-        ),
+        builder: (context, state) =>
+            CharacterDetailScreen(characterId: state.pathParameters['id']!),
       ),
     ],
   );
