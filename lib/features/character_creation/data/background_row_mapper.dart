@@ -83,7 +83,20 @@ abstract final class BackgroundRowMapper {
         toolOrLanguageChoices,
       ),
       languageChoiceCount: parseLanguageChoiceCount(toolOrLanguageChoices),
+      equipment: parseEquipment(row['equipment']),
     );
+  }
+
+  /// Parse la colonne jsonb `equipment` (tableau plat de chaînes de texte
+  /// libre, voir le commentaire de classe de `domain/background_option.dart`)
+  /// en `List<String>`. `null`/type inattendu retombe sur une liste vide
+  /// plutôt que de crasher, même règle que [parseSkillProficiencies] ; les
+  /// entrées qui ne sont pas des chaînes sont ignorées.
+  static List<String> parseEquipment(dynamic raw) {
+    if (raw is! List) {
+      return const [];
+    }
+    return raw.whereType<String>().toList();
   }
 
   /// Parse la clé `"tools"` de la colonne jsonb `tool_or_language_choices`

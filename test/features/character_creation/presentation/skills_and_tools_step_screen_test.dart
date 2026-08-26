@@ -25,6 +25,7 @@ import 'package:personnages/features/character_creation/domain/class_catalog.dar
 import 'package:personnages/features/character_creation/domain/class_option.dart';
 import 'package:personnages/features/character_creation/domain/class_skill_choices.dart';
 import 'package:personnages/features/character_creation/domain/class_tool_choice.dart';
+import 'package:personnages/features/character_creation/domain/item_catalog.dart';
 import 'package:personnages/features/character_creation/domain/language_catalog.dart';
 import 'package:personnages/features/character_creation/domain/language_option.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
@@ -73,6 +74,9 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   @override
   Future<SpellCatalog> fetchSpellCatalog({required int classId}) async =>
       const SpellCatalog(spells: []);
+
+  @override
+  Future<ItemCatalog> fetchItemCatalog() async => const ItemCatalog(items: []);
 }
 
 // Classe sans aucune section outils (ni toolChoice, ni grantedToolNames) :

@@ -41,6 +41,8 @@ class CheckableOptionTile extends StatelessWidget {
     this.onTap,
     this.leading,
     this.subtitle,
+    this.trailing,
+    this.showIndicator = true,
     super.key,
   });
 
@@ -64,6 +66,25 @@ class CheckableOptionTile extends StatelessWidget {
   /// caractéristique d'une compétence, "Int"/"Sag"...). `null` pour ne rien
   /// afficher (outils, langues).
   final String? trailingLabel;
+
+  /// Widget optionnel affiché à la place de la case à cocher intégrée (ex.
+  /// un `StepperCounter` pour l'onglet "Acheter" de l'étape 7/9 "Équipement
+  /// de départ") — ajouté pour son premier usage sur cette étape, même
+  /// rationale d'ajout que [leading]. Prioritaire sur [showIndicator] (le
+  /// remplace plutôt que de coexister avec lui) ; `null` par défaut, les
+  /// usages existants n'en fournissent pas et gardent donc la case à cocher
+  /// intégrée.
+  final Widget? trailing;
+
+  /// `false` masque la case à cocher intégrée sans la remplacer par rien —
+  /// ajouté pour l'onglet "Historique" de l'étape 7/9 "Équipement de
+  /// départ" (objets automatiquement accordés, non interactifs : "pas de
+  /// case à cocher ni de bouton radio" d'après la consigne d'origine, à la
+  /// différence de l'octroi automatique de l'étape 5/9 qui affiche, lui, une
+  /// case cochée verrouillée). Sans effet si [trailing] est fourni (déjà
+  /// prioritaire). `true` par défaut : comportement inchangé pour les usages
+  /// existants (étapes 5/9 et 6/9).
+  final bool showIndicator;
 
   final bool checked;
 
@@ -91,6 +112,12 @@ class CheckableOptionTile extends StatelessWidget {
     // documentation de la classe.
     final isDimmed = !checked && !enabled;
 
+    // `trailing` prime sur `showIndicator` (voir leur documentation) ; sans
+    // l'un ni l'autre (ex. onglet "Historique" de l'étape 7/9), aucun
+    // indicateur n'est rendu du tout, ni à gauche ni à droite.
+    final indicator =
+        trailing ?? (showIndicator ? _Checkbox(checked: checked) : null);
+
     return Opacity(
       opacity: isDimmed ? 0.45 : 1,
       child: Material(
@@ -114,16 +141,17 @@ class CheckableOptionTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // La case à cocher reste à gauche (comportement historique,
-                // étape 5/9) tant qu'aucun [leading] n'est fourni ; avec un
-                // [leading] (étape 6/9 "Sorts"), elle passe à droite pour
-                // laisser la place à l'icône — voir la documentation de
-                // [leading].
+                // L'indicateur (case à cocher intégrée, [trailing] fourni,
+                // ou rien) reste à gauche (comportement historique, étape
+                // 5/9) tant qu'aucun [leading] n'est fourni ; avec un
+                // [leading] (étape 6/9 "Sorts", étape 7/9 "Équipement"), il
+                // passe à droite pour laisser la place à l'icône — voir la
+                // documentation de [leading].
                 if (leading != null) ...[
                   leading!,
                   const SizedBox(width: AppSpacing.sm),
-                ] else ...[
-                  _Checkbox(checked: checked),
+                ] else if (indicator != null) ...[
+                  indicator,
                   const SizedBox(width: AppSpacing.sm),
                 ],
                 Expanded(
@@ -161,9 +189,9 @@ class CheckableOptionTile extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (leading != null) ...[
+                if (leading != null && indicator != null) ...[
                   const SizedBox(width: AppSpacing.sm),
-                  _Checkbox(checked: checked),
+                  indicator,
                 ],
               ],
             ),

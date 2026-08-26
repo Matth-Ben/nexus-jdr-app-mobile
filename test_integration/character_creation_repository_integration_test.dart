@@ -56,6 +56,30 @@ void main() {
       expect(background.skillProficiencies, isNotEmpty);
     });
 
+    test(
+      'fetchBackgroundCatalog expose `equipment` (étape 7/9 "Équipement de '
+      'départ") avec une ligne "Bourse (N po)" pour chaque historique peuplé',
+      () async {
+        final repository = SupabaseCharacterCreationRepository(client);
+
+        final catalog = await repository.fetchBackgroundCatalog();
+
+        final background = catalog.backgrounds.singleWhere(
+          (b) => b.id == reference.backgroundId,
+        );
+        expect(background.equipment, isNotEmpty);
+        expect(
+          background.equipment.any(
+            (line) => RegExp(r'^Bourse \(\d+ po\)$').hasMatch(line),
+          ),
+          isTrue,
+          reason:
+              'Chaque historique peuplé porte une ligne "Bourse (N po)" '
+              '(voir la consigne de la tâche qui a produit ce test).',
+        );
+      },
+    );
+
     test('fetchToolCatalog résout le nom d\'outil/instrument via translations '
         '(entity_type=\'tool\') — étape 5/9 "Compétences et outils"', () async {
       final repository = SupabaseCharacterCreationRepository(client);
@@ -114,6 +138,19 @@ void main() {
       final catalog = await repository.fetchSpellCatalog(classId: 999999);
 
       expect(catalog.spells, isEmpty);
+    });
+
+    test('fetchItemCatalog résout le nom et la catégorie d\'objet via '
+        'translations (entity_type=\'item\') — étape 7/9 "Équipement de '
+        'départ"', () async {
+      final repository = SupabaseCharacterCreationRepository(client);
+
+      final catalog = await repository.fetchItemCatalog();
+
+      final item = catalog.items.singleWhere((i) => i.id == reference.itemId);
+      expect(item.name, reference.itemName);
+      expect(item.category, reference.itemCategory);
+      expect(item.costAmount, greaterThanOrEqualTo(0));
     });
   });
 }

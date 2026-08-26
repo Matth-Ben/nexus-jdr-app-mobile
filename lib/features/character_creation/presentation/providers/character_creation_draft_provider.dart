@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../domain/ability_score_method.dart';
 import '../../domain/character_creation_draft.dart';
+import '../../domain/equipment_choice_tab.dart';
 
 part 'character_creation_draft_provider.g.dart';
 
@@ -107,6 +108,22 @@ class CharacterCreationDraftController
     state = state.copyWith(
       classCantripChoices: classCantripChoices,
       classLevelOneSpellChoices: classLevelOneSpellChoices,
+    );
+  }
+
+  /// Met à jour le choix d'équipement de l'étape 7 "Équipement de départ".
+  /// Fusion partielle via `copyWith` (même rationale que [setSpells]) :
+  /// [purchasedEquipment] est toujours fourni (liste/carte vide si l'onglet
+  /// "Historique" est celui retenu) — voir `domain/character_creation_draft.dart`
+  /// pour le rationale du choix mutuellement exclusif porté par
+  /// [activeTab].
+  void setEquipment({
+    required EquipmentChoiceTab activeTab,
+    required Map<String, int> purchasedEquipment,
+  }) {
+    state = state.copyWith(
+      equipmentChoiceTab: activeTab,
+      purchasedEquipment: purchasedEquipment,
     );
   }
 

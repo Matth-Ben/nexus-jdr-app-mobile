@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/background_catalog.dart';
 import '../domain/class_catalog.dart';
+import '../domain/item_catalog.dart';
 import '../domain/language_catalog.dart';
 import '../domain/race_catalog.dart';
 import '../domain/spell_catalog.dart';
@@ -9,6 +10,7 @@ import '../domain/tool_catalog.dart';
 import 'background_row_mapper.dart';
 import 'character_creation_error_mapper.dart';
 import 'class_row_mapper.dart';
+import 'item_row_mapper.dart';
 import 'language_row_mapper.dart';
 import 'race_row_mapper.dart';
 import 'spell_row_mapper.dart';
@@ -36,6 +38,9 @@ const String _languageCatalogErrorMessage =
 
 const String _spellCatalogErrorMessage =
     'Impossible de charger les sorts disponibles. Réessayez.';
+
+const String _itemCatalogErrorMessage =
+    'Impossible de charger le catalogue d\'équipement. Réessayez.';
 
 /// Passerelle vers les données de l'assistant de création de personnage.
 ///
@@ -91,6 +96,14 @@ abstract class CharacterCreationRepository {
   /// `SpellcastingRules.isSpellcastingClass`, mais reste sûr si c'est le cas
   /// malgré tout).
   Future<SpellCatalog> fetchSpellCatalog({required int classId});
+
+  /// Récupère l'intégralité des objets disponibles, avec leur nom déjà
+  /// résolu (`translations`, locale FR) — étape 7/9 de l'assistant
+  /// ("Équipement de départ"), utilisé à la fois pour résoudre les chaînes
+  /// de `backgrounds.equipment` (onglet "Historique",
+  /// `domain/background_equipment_resolver.dart`) et pour peupler le
+  /// catalogue d'achat libre (onglet "Acheter").
+  Future<ItemCatalog> fetchItemCatalog();
 }
 
 /// Implémentation réelle, basée sur `Supabase.instance.client`.
@@ -185,7 +198,9 @@ class SupabaseCharacterCreationRepository
     try {
       final backgroundRows = await _client
           .from('backgrounds')
-          .select('id, skill_proficiencies, tool_or_language_choices')
+          .select(
+            'id, skill_proficiencies, tool_or_language_choices, equipment',
+          )
           .order('id');
 
       final backgroundIds = BackgroundRowMapper.collectIds(backgroundRows);
@@ -312,6 +327,33 @@ class SupabaseCharacterCreationRepository
       throw mapCharacterCreationError(
         error,
         fallbackMessage: _spellCatalogErrorMessage,
+      );
+    } catch (_) {
+      throw mapUnknownCharacterCreationError();
+    }
+  }
+
+  @override
+  Future<ItemCatalog> fetchItemCatalog() async {
+    try {
+      final itemRows = await _client
+          .from('items')
+          .select('id, category, cost')
+          .order('id');
+
+      final names = await _fetchItemTranslatedNames(
+        entityIds: ItemRowMapper.collectIds(itemRows),
+      );
+
+      return ItemCatalog(
+        items: itemRows
+            .map((row) => ItemRowMapper.toItemOption(row, names: names))
+            .toList(),
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterCreationError(
+        error,
+        fallbackMessage: _itemCatalogErrorMessage,
       );
     } catch (_) {
       throw mapUnknownCharacterCreationError();
@@ -451,5 +493,26 @@ class SupabaseCharacterCreationRepository
         .inFilter('entity_id', entityIds.toList());
 
     return SpellRowMapper.parseTranslatedValues(rows);
+  }
+
+  /// Récupère `{entity_id: name}` pour toutes les traductions `item` dont
+  /// l'identifiant est dans [entityIds] — même principe que
+  /// [_fetchSpellTranslatedNames].
+  Future<Map<String, String>> _fetchItemTranslatedNames({
+    required Set<String> entityIds,
+  }) async {
+    if (entityIds.isEmpty) {
+      return const {};
+    }
+
+    final rows = await _client
+        .from('translations')
+        .select('entity_id, value')
+        .eq('entity_type', 'item')
+        .eq('field_name', 'name')
+        .eq('locale', _locale)
+        .inFilter('entity_id', entityIds.toList());
+
+    return ItemRowMapper.parseTranslatedValues(rows);
   }
 }

@@ -74,6 +74,30 @@ void main() {
     });
   });
 
+  group('parseEquipment', () {
+    test('lit le tableau plat de chaînes de texte libre tel quel', () {
+      expect(
+        BackgroundRowMapper.parseEquipment([
+          'Symbole sacré',
+          'Habits communs',
+          'Bourse (15 po)',
+        ]),
+        ['Symbole sacré', 'Habits communs', 'Bourse (15 po)'],
+      );
+    });
+
+    test('type inattendu (null, map...) retombe sur une liste vide', () {
+      expect(BackgroundRowMapper.parseEquipment(null), isEmpty);
+      expect(BackgroundRowMapper.parseEquipment({'a': 1}), isEmpty);
+    });
+
+    test('ignore les entrées de la liste qui ne sont pas des chaînes', () {
+      expect(BackgroundRowMapper.parseEquipment(['Dague', 42, null]), [
+        'Dague',
+      ]);
+    });
+  });
+
   group('toBackgroundOption', () {
     test('résout le nom, les compétences et l\'aptitude via les maps de '
         'traductions', () {
@@ -229,6 +253,32 @@ void main() {
 
       expect(backgroundOption.toolOrLanguageGrantedTools, isEmpty);
       expect(backgroundOption.languageChoiceCount, isNull);
+    });
+
+    test('relaie equipment tel quel (étape 7/9 "Équipement de départ")', () {
+      final backgroundOption = BackgroundRowMapper.toBackgroundOption(
+        {
+          'id': 1,
+          'skill_proficiencies': <String>[],
+          'equipment': ['Symbole sacré', 'Bourse (15 po)'],
+        },
+        names: const {},
+        featureNames: const {},
+        featureDescriptions: const {},
+      );
+
+      expect(backgroundOption.equipment, ['Symbole sacré', 'Bourse (15 po)']);
+    });
+
+    test('equipment absent -> liste vide plutôt que crash', () {
+      final backgroundOption = BackgroundRowMapper.toBackgroundOption(
+        {'id': 1, 'skill_proficiencies': <String>[]},
+        names: const {},
+        featureNames: const {},
+        featureDescriptions: const {},
+      );
+
+      expect(backgroundOption.equipment, isEmpty);
     });
   });
 

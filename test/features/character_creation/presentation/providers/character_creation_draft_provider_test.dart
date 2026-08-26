@@ -10,6 +10,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/character_creation/domain/ability_score_method.dart';
+import 'package:personnages/features/character_creation/domain/equipment_choice_tab.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 
 void main() {
@@ -147,5 +148,56 @@ void main() {
     final draft = container.read(characterCreationDraftControllerProvider);
     expect(draft.abilityScoreMethod, isNull);
     expect(draft.abilityScores, isNull);
+  });
+
+  test('setEquipment après setBackground conserve backgroundId (étape 7 '
+      '"Équipement de départ")', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    controller.setBackground(backgroundId: 5);
+    controller.setEquipment(
+      activeTab: EquipmentChoiceTab.purchase,
+      purchasedEquipment: const {'Dague': 2},
+    );
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.backgroundId, 5);
+    expect(draft.equipmentChoiceTab, EquipmentChoiceTab.purchase);
+    expect(draft.purchasedEquipment, {'Dague': 2});
+  });
+
+  test('setEquipment avec l\'onglet "Historique" retenu conserve quand même '
+      'un panier "Acheter" non vide (choix mutuellement exclusif porté par '
+      'equipmentChoiceTab, pas par la présence du panier)', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    controller.setEquipment(
+      activeTab: EquipmentChoiceTab.background,
+      purchasedEquipment: const {'Dague': 1},
+    );
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.equipmentChoiceTab, EquipmentChoiceTab.background);
+    expect(draft.purchasedEquipment, {'Dague': 1});
+  });
+
+  test('reset remet aussi equipmentChoiceTab/purchasedEquipment à zéro', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    controller.setEquipment(
+      activeTab: EquipmentChoiceTab.purchase,
+      purchasedEquipment: const {'Dague': 1},
+    );
+    controller.reset();
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.equipmentChoiceTab, isNull);
+    expect(draft.purchasedEquipment, isEmpty);
   });
 }

@@ -9,6 +9,7 @@ import '../../features/character_creation/presentation/ability_score_step_screen
 import '../../features/character_creation/presentation/background_step_screen.dart';
 import '../../features/character_creation/presentation/character_creation_placeholder_screen.dart';
 import '../../features/character_creation/presentation/class_step_screen.dart';
+import '../../features/character_creation/presentation/equipment_step_screen.dart';
 import '../../features/character_creation/presentation/race_step_screen.dart';
 import '../../features/character_creation/presentation/skills_and_tools_step_screen.dart';
 import '../../features/character_creation/presentation/spells_step_screen.dart';
@@ -75,14 +76,18 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const SpellsStepScreen(),
       ),
       GoRoute(
-        // Étapes 7 à 9 de l'assistant, pas encore implémentées (voir
-        // `character_creation_placeholder_screen.dart`). Atteinte
-        // directement depuis l'étape 5/9 pour une classe non lanceuse de
-        // sorts (`SkillsAndToolsStepScreen._submit` saute l'étape 6/9) — voir
-        // `domain/spellcasting_rules.dart`.
+        // Atteinte directement depuis l'étape 5/9 pour une classe non
+        // lanceuse de sorts (`SkillsAndToolsStepScreen._submit` saute
+        // l'étape 6/9) — voir `domain/spellcasting_rules.dart`.
         path: '/characters/new/step-7',
+        builder: (context, state) => const EquipmentStepScreen(),
+      ),
+      GoRoute(
+        // Étapes 8 et 9 de l'assistant, pas encore implémentées (voir
+        // `character_creation_placeholder_screen.dart`).
+        path: '/characters/new/step-8',
         builder: (context, state) => const CharacterCreationPlaceholderScreen(
-          stepText: 'Étape 7/9 — Équipement — à venir',
+          stepText: 'Étape 8/9 — Apparence, histoire et portrait — à venir',
         ),
       ),
       GoRoute(

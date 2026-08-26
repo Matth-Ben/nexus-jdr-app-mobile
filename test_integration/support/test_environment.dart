@@ -83,6 +83,9 @@ class ReferenceContent {
     required this.spellcastingClassId,
     required this.spellId,
     required this.spellName,
+    required this.itemId,
+    required this.itemName,
+    required this.itemCategory,
   });
 
   final Object raceId;
@@ -112,6 +115,12 @@ class ReferenceContent {
   final Object spellcastingClassId;
   final Object spellId;
   final String spellName;
+
+  /// Étape 7/9 "Équipement de départ" — voir
+  /// `SupabaseCharacterCreationRepository.fetchItemCatalog`.
+  final Object itemId;
+  final String itemName;
+  final String itemCategory;
 }
 
 /// Récupère [ReferenceContent] en lisant la première race et la première
@@ -145,6 +154,35 @@ Future<ReferenceContent> fetchReferenceContent(SupabaseClient client) async {
     table: 'languages',
     entityType: 'language',
   );
+  final itemRow = await client
+      .from('items')
+      .select('id, category')
+      .order('id')
+      .limit(1)
+      .maybeSingle();
+  if (itemRow == null) {
+    throw StateError(
+      "Table 'items' vide : les migrations/seeds du dépôt web ont-elles "
+      "été appliquées (supabase db reset) ?",
+    );
+  }
+  final itemId = itemRow['id'] as Object;
+  final itemCategory = itemRow['category'] as String;
+  final itemTranslation = await client
+      .from('translations')
+      .select('value')
+      .eq('entity_type', 'item')
+      .eq('entity_id', itemId.toString())
+      .eq('field_name', 'name')
+      .eq('locale', 'fr')
+      .maybeSingle();
+  final itemName = itemTranslation?['value'] as String?;
+  if (itemName == null) {
+    throw StateError(
+      "Traduction manquante pour item #$itemId : les seeds du dépôt web "
+      "ont-ils été appliqués en entier (supabase db reset) ?",
+    );
+  }
 
   final spellClassRow = await client
       .from('spell_classes')
@@ -189,6 +227,9 @@ Future<ReferenceContent> fetchReferenceContent(SupabaseClient client) async {
     spellcastingClassId: spellClassRow['class_id'] as Object,
     spellId: spellId,
     spellName: spellName,
+    itemId: itemId,
+    itemName: itemName,
+    itemCategory: itemCategory,
   );
 }
 

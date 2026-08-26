@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'ability_score_method.dart';
+import 'equipment_choice_tab.dart';
 
 part 'character_creation_draft.freezed.dart';
 
@@ -91,5 +92,23 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// Sorts de niveau 1 choisis à l'étape 6 (noms affichés), même rationale
     /// que [classCantripChoices].
     @Default(<String>[]) List<String> classLevelOneSpellChoices,
+
+    /// Onglet actif de l'étape 7 "Équipement de départ" au moment de
+    /// "Suivant", `null` tant que l'étape n'a pas encore été validée une
+    /// première fois. Détermine lequel de [purchasedEquipment] ou de
+    /// l'équipement de l'historique choisi (recalculé à l'étape 9
+    /// "Récapitulatif" à partir de `backgroundId`, jamais dupliqué ici) est
+    /// retenu — voir `domain/equipment_choice_tab.dart` pour le rationale du
+    /// choix mutuellement exclusif.
+    EquipmentChoiceTab? equipmentChoiceTab,
+
+    /// Panier de l'onglet "Acheter" de l'étape 7 (`{nom d'objet: quantité}`),
+    /// même décision noms-plutôt-qu'ids que [classSkillChoices]. Conservé
+    /// même si [equipmentChoiceTab] vaut `EquipmentChoiceTab.background` au
+    /// moment de "Suivant" (panier préservé au changement d'onglet, voir
+    /// `presentation/equipment_step_screen.dart`) : c'est
+    /// [equipmentChoiceTab], pas la présence de ce champ, qui détermine ce
+    /// qui est effectivement retenu à l'étape 9.
+    @Default(<String, int>{}) Map<String, int> purchasedEquipment,
   }) = _CharacterCreationDraft;
 }

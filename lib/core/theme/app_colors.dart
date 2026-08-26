@@ -47,6 +47,12 @@ abstract final class AppColors {
   static const Color gaugeTrack = Color(0xFFE0D2AB);
   static const Color gaugeTrackBorder = Color(0xFFA08862);
 
+  /// Fond du "Bandeau d'alerte inline" (design système section 4) : "Utilisé
+  /// pour signaler un champ d'import XML non reconnu ou une erreur de
+  /// saisie". Premier usage à l'étape 7/9 "Équipement de départ" de
+  /// l'assistant de création (budget d'achat dépassé).
+  static const Color alertBannerBackground = Color(0xFFFDECE0);
+
   // Bouton primaire : ombre portée basse ("effet pressable").
   static const Color primaryButtonShadow = Color(0xFF7A4D1F);
 

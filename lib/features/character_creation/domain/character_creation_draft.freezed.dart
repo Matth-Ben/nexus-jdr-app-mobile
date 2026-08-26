@@ -66,7 +66,21 @@ mixin _$CharacterCreationDraft {
 /// noms-plutôt-qu'ids que [classSkillChoices].
  List<String> get classCantripChoices;/// Sorts de niveau 1 choisis à l'étape 6 (noms affichés), même rationale
 /// que [classCantripChoices].
- List<String> get classLevelOneSpellChoices;
+ List<String> get classLevelOneSpellChoices;/// Onglet actif de l'étape 7 "Équipement de départ" au moment de
+/// "Suivant", `null` tant que l'étape n'a pas encore été validée une
+/// première fois. Détermine lequel de [purchasedEquipment] ou de
+/// l'équipement de l'historique choisi (recalculé à l'étape 9
+/// "Récapitulatif" à partir de `backgroundId`, jamais dupliqué ici) est
+/// retenu — voir `domain/equipment_choice_tab.dart` pour le rationale du
+/// choix mutuellement exclusif.
+ EquipmentChoiceTab? get equipmentChoiceTab;/// Panier de l'onglet "Acheter" de l'étape 7 (`{nom d'objet: quantité}`),
+/// même décision noms-plutôt-qu'ids que [classSkillChoices]. Conservé
+/// même si [equipmentChoiceTab] vaut `EquipmentChoiceTab.background` au
+/// moment de "Suivant" (panier préservé au changement d'onglet, voir
+/// `presentation/equipment_step_screen.dart`) : c'est
+/// [equipmentChoiceTab], pas la présence de ce champ, qui détermine ce
+/// qui est effectivement retenu à l'étape 9.
+ Map<String, int> get purchasedEquipment;
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -77,16 +91,16 @@ $CharacterCreationDraftCopyWith<CharacterCreationDraft> get copyWith => _$Charac
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.classId, classId) || other.classId == classId)&&(identical(other.backgroundId, backgroundId) || other.backgroundId == backgroundId)&&(identical(other.abilityScoreMethod, abilityScoreMethod) || other.abilityScoreMethod == abilityScoreMethod)&&const DeepCollectionEquality().equals(other.abilityScores, abilityScores)&&const DeepCollectionEquality().equals(other.classSkillChoices, classSkillChoices)&&const DeepCollectionEquality().equals(other.classToolChoices, classToolChoices)&&const DeepCollectionEquality().equals(other.backgroundLanguageChoices, backgroundLanguageChoices)&&const DeepCollectionEquality().equals(other.classCantripChoices, classCantripChoices)&&const DeepCollectionEquality().equals(other.classLevelOneSpellChoices, classLevelOneSpellChoices));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.classId, classId) || other.classId == classId)&&(identical(other.backgroundId, backgroundId) || other.backgroundId == backgroundId)&&(identical(other.abilityScoreMethod, abilityScoreMethod) || other.abilityScoreMethod == abilityScoreMethod)&&const DeepCollectionEquality().equals(other.abilityScores, abilityScores)&&const DeepCollectionEquality().equals(other.classSkillChoices, classSkillChoices)&&const DeepCollectionEquality().equals(other.classToolChoices, classToolChoices)&&const DeepCollectionEquality().equals(other.backgroundLanguageChoices, backgroundLanguageChoices)&&const DeepCollectionEquality().equals(other.classCantripChoices, classCantripChoices)&&const DeepCollectionEquality().equals(other.classLevelOneSpellChoices, classLevelOneSpellChoices)&&(identical(other.equipmentChoiceTab, equipmentChoiceTab) || other.equipmentChoiceTab == equipmentChoiceTab)&&const DeepCollectionEquality().equals(other.purchasedEquipment, purchasedEquipment));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText,classId,backgroundId,abilityScoreMethod,const DeepCollectionEquality().hash(abilityScores),const DeepCollectionEquality().hash(classSkillChoices),const DeepCollectionEquality().hash(classToolChoices),const DeepCollectionEquality().hash(backgroundLanguageChoices),const DeepCollectionEquality().hash(classCantripChoices),const DeepCollectionEquality().hash(classLevelOneSpellChoices));
+int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText,classId,backgroundId,abilityScoreMethod,const DeepCollectionEquality().hash(abilityScores),const DeepCollectionEquality().hash(classSkillChoices),const DeepCollectionEquality().hash(classToolChoices),const DeepCollectionEquality().hash(backgroundLanguageChoices),const DeepCollectionEquality().hash(classCantripChoices),const DeepCollectionEquality().hash(classLevelOneSpellChoices),equipmentChoiceTab,const DeepCollectionEquality().hash(purchasedEquipment));
 
 @override
 String toString() {
-  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText, classId: $classId, backgroundId: $backgroundId, abilityScoreMethod: $abilityScoreMethod, abilityScores: $abilityScores, classSkillChoices: $classSkillChoices, classToolChoices: $classToolChoices, backgroundLanguageChoices: $backgroundLanguageChoices, classCantripChoices: $classCantripChoices, classLevelOneSpellChoices: $classLevelOneSpellChoices)';
+  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText, classId: $classId, backgroundId: $backgroundId, abilityScoreMethod: $abilityScoreMethod, abilityScores: $abilityScores, classSkillChoices: $classSkillChoices, classToolChoices: $classToolChoices, backgroundLanguageChoices: $backgroundLanguageChoices, classCantripChoices: $classCantripChoices, classLevelOneSpellChoices: $classLevelOneSpellChoices, equipmentChoiceTab: $equipmentChoiceTab, purchasedEquipment: $purchasedEquipment)';
 }
 
 
@@ -97,7 +111,7 @@ abstract mixin class $CharacterCreationDraftCopyWith<$Res>  {
   factory $CharacterCreationDraftCopyWith(CharacterCreationDraft value, $Res Function(CharacterCreationDraft) _then) = _$CharacterCreationDraftCopyWithImpl;
 @useResult
 $Res call({
- int? raceId, int? subraceId, String? raceCustomText, int? classId, int? backgroundId, AbilityScoreMethod? abilityScoreMethod, Map<String, int>? abilityScores, List<String> classSkillChoices, List<String> classToolChoices, List<String> backgroundLanguageChoices, List<String> classCantripChoices, List<String> classLevelOneSpellChoices
+ int? raceId, int? subraceId, String? raceCustomText, int? classId, int? backgroundId, AbilityScoreMethod? abilityScoreMethod, Map<String, int>? abilityScores, List<String> classSkillChoices, List<String> classToolChoices, List<String> backgroundLanguageChoices, List<String> classCantripChoices, List<String> classLevelOneSpellChoices, EquipmentChoiceTab? equipmentChoiceTab, Map<String, int> purchasedEquipment
 });
 
 
@@ -114,7 +128,7 @@ class _$CharacterCreationDraftCopyWithImpl<$Res>
 
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,Object? classId = freezed,Object? backgroundId = freezed,Object? abilityScoreMethod = freezed,Object? abilityScores = freezed,Object? classSkillChoices = null,Object? classToolChoices = null,Object? backgroundLanguageChoices = null,Object? classCantripChoices = null,Object? classLevelOneSpellChoices = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,Object? classId = freezed,Object? backgroundId = freezed,Object? abilityScoreMethod = freezed,Object? abilityScores = freezed,Object? classSkillChoices = null,Object? classToolChoices = null,Object? backgroundLanguageChoices = null,Object? classCantripChoices = null,Object? classLevelOneSpellChoices = null,Object? equipmentChoiceTab = freezed,Object? purchasedEquipment = null,}) {
   return _then(CharacterCreationDraft(
 raceId: freezed == raceId ? _self.raceId : raceId // ignore: cast_nullable_to_non_nullable
 as int?,subraceId: freezed == subraceId ? _self.subraceId : subraceId // ignore: cast_nullable_to_non_nullable
@@ -128,7 +142,9 @@ as List<String>,classToolChoices: null == classToolChoices ? _self.classToolChoi
 as List<String>,backgroundLanguageChoices: null == backgroundLanguageChoices ? _self.backgroundLanguageChoices : backgroundLanguageChoices // ignore: cast_nullable_to_non_nullable
 as List<String>,classCantripChoices: null == classCantripChoices ? _self.classCantripChoices : classCantripChoices // ignore: cast_nullable_to_non_nullable
 as List<String>,classLevelOneSpellChoices: null == classLevelOneSpellChoices ? _self.classLevelOneSpellChoices : classLevelOneSpellChoices // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<String>,equipmentChoiceTab: freezed == equipmentChoiceTab ? _self.equipmentChoiceTab : equipmentChoiceTab // ignore: cast_nullable_to_non_nullable
+as EquipmentChoiceTab?,purchasedEquipment: null == purchasedEquipment ? _self.purchasedEquipment : purchasedEquipment // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,
   ));
 }
 
@@ -213,10 +229,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices,  List<String> classToolChoices,  List<String> backgroundLanguageChoices,  List<String> classCantripChoices,  List<String> classLevelOneSpellChoices)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices,  List<String> classToolChoices,  List<String> backgroundLanguageChoices,  List<String> classCantripChoices,  List<String> classLevelOneSpellChoices,  EquipmentChoiceTab? equipmentChoiceTab,  Map<String, int> purchasedEquipment)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CharacterCreationDraft() when $default != null:
-return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores,_that.classSkillChoices,_that.classToolChoices,_that.backgroundLanguageChoices,_that.classCantripChoices,_that.classLevelOneSpellChoices);case _:
+return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores,_that.classSkillChoices,_that.classToolChoices,_that.backgroundLanguageChoices,_that.classCantripChoices,_that.classLevelOneSpellChoices,_that.equipmentChoiceTab,_that.purchasedEquipment);case _:
   return orElse();
 
 }
@@ -234,10 +250,10 @@ return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices,  List<String> classToolChoices,  List<String> backgroundLanguageChoices,  List<String> classCantripChoices,  List<String> classLevelOneSpellChoices)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices,  List<String> classToolChoices,  List<String> backgroundLanguageChoices,  List<String> classCantripChoices,  List<String> classLevelOneSpellChoices,  EquipmentChoiceTab? equipmentChoiceTab,  Map<String, int> purchasedEquipment)  $default,) {final _that = this;
 switch (_that) {
 case _CharacterCreationDraft():
-return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores,_that.classSkillChoices,_that.classToolChoices,_that.backgroundLanguageChoices,_that.classCantripChoices,_that.classLevelOneSpellChoices);case _:
+return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores,_that.classSkillChoices,_that.classToolChoices,_that.backgroundLanguageChoices,_that.classCantripChoices,_that.classLevelOneSpellChoices,_that.equipmentChoiceTab,_that.purchasedEquipment);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -254,10 +270,10 @@ return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices,  List<String> classToolChoices,  List<String> backgroundLanguageChoices,  List<String> classCantripChoices,  List<String> classLevelOneSpellChoices)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? raceId,  int? subraceId,  String? raceCustomText,  int? classId,  int? backgroundId,  AbilityScoreMethod? abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices,  List<String> classToolChoices,  List<String> backgroundLanguageChoices,  List<String> classCantripChoices,  List<String> classLevelOneSpellChoices,  EquipmentChoiceTab? equipmentChoiceTab,  Map<String, int> purchasedEquipment)?  $default,) {final _that = this;
 switch (_that) {
 case _CharacterCreationDraft() when $default != null:
-return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores,_that.classSkillChoices,_that.classToolChoices,_that.backgroundLanguageChoices,_that.classCantripChoices,_that.classLevelOneSpellChoices);case _:
+return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,_that.backgroundId,_that.abilityScoreMethod,_that.abilityScores,_that.classSkillChoices,_that.classToolChoices,_that.backgroundLanguageChoices,_that.classCantripChoices,_that.classLevelOneSpellChoices,_that.equipmentChoiceTab,_that.purchasedEquipment);case _:
   return null;
 
 }
@@ -269,7 +285,7 @@ return $default(_that.raceId,_that.subraceId,_that.raceCustomText,_that.classId,
 
 
 class _CharacterCreationDraft implements CharacterCreationDraft {
-  const _CharacterCreationDraft({this.raceId, this.subraceId, this.raceCustomText, this.classId, this.backgroundId, this.abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices = const <String>[],  List<String> classToolChoices = const <String>[],  List<String> backgroundLanguageChoices = const <String>[],  List<String> classCantripChoices = const <String>[],  List<String> classLevelOneSpellChoices = const <String>[]}): _abilityScores = abilityScores,_classSkillChoices = classSkillChoices,_classToolChoices = classToolChoices,_backgroundLanguageChoices = backgroundLanguageChoices,_classCantripChoices = classCantripChoices,_classLevelOneSpellChoices = classLevelOneSpellChoices;
+  const _CharacterCreationDraft({this.raceId, this.subraceId, this.raceCustomText, this.classId, this.backgroundId, this.abilityScoreMethod,  Map<String, int>? abilityScores,  List<String> classSkillChoices = const <String>[],  List<String> classToolChoices = const <String>[],  List<String> backgroundLanguageChoices = const <String>[],  List<String> classCantripChoices = const <String>[],  List<String> classLevelOneSpellChoices = const <String>[], this.equipmentChoiceTab,  Map<String, int> purchasedEquipment = const <String, int>{}}): _abilityScores = abilityScores,_classSkillChoices = classSkillChoices,_classToolChoices = classToolChoices,_backgroundLanguageChoices = backgroundLanguageChoices,_classCantripChoices = classCantripChoices,_classLevelOneSpellChoices = classLevelOneSpellChoices,_purchasedEquipment = purchasedEquipment;
   
 
 /// Race choisie à l'étape 1, `null` si race personnalisée ou pas encore
@@ -408,6 +424,35 @@ class _CharacterCreationDraft implements CharacterCreationDraft {
   return EqualUnmodifiableListView(_classLevelOneSpellChoices);
 }
 
+/// Onglet actif de l'étape 7 "Équipement de départ" au moment de
+/// "Suivant", `null` tant que l'étape n'a pas encore été validée une
+/// première fois. Détermine lequel de [purchasedEquipment] ou de
+/// l'équipement de l'historique choisi (recalculé à l'étape 9
+/// "Récapitulatif" à partir de `backgroundId`, jamais dupliqué ici) est
+/// retenu — voir `domain/equipment_choice_tab.dart` pour le rationale du
+/// choix mutuellement exclusif.
+@override final  EquipmentChoiceTab? equipmentChoiceTab;
+/// Panier de l'onglet "Acheter" de l'étape 7 (`{nom d'objet: quantité}`),
+/// même décision noms-plutôt-qu'ids que [classSkillChoices]. Conservé
+/// même si [equipmentChoiceTab] vaut `EquipmentChoiceTab.background` au
+/// moment de "Suivant" (panier préservé au changement d'onglet, voir
+/// `presentation/equipment_step_screen.dart`) : c'est
+/// [equipmentChoiceTab], pas la présence de ce champ, qui détermine ce
+/// qui est effectivement retenu à l'étape 9.
+ final  Map<String, int> _purchasedEquipment;
+/// Panier de l'onglet "Acheter" de l'étape 7 (`{nom d'objet: quantité}`),
+/// même décision noms-plutôt-qu'ids que [classSkillChoices]. Conservé
+/// même si [equipmentChoiceTab] vaut `EquipmentChoiceTab.background` au
+/// moment de "Suivant" (panier préservé au changement d'onglet, voir
+/// `presentation/equipment_step_screen.dart`) : c'est
+/// [equipmentChoiceTab], pas la présence de ce champ, qui détermine ce
+/// qui est effectivement retenu à l'étape 9.
+@override@JsonKey() Map<String, int> get purchasedEquipment {
+  if (_purchasedEquipment is EqualUnmodifiableMapView) return _purchasedEquipment;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_purchasedEquipment);
+}
+
 
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
@@ -419,16 +464,16 @@ _$CharacterCreationDraftCopyWith<_CharacterCreationDraft> get copyWith => __$Cha
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.classId, classId) || other.classId == classId)&&(identical(other.backgroundId, backgroundId) || other.backgroundId == backgroundId)&&(identical(other.abilityScoreMethod, abilityScoreMethod) || other.abilityScoreMethod == abilityScoreMethod)&&const DeepCollectionEquality().equals(other._abilityScores, _abilityScores)&&const DeepCollectionEquality().equals(other._classSkillChoices, _classSkillChoices)&&const DeepCollectionEquality().equals(other._classToolChoices, _classToolChoices)&&const DeepCollectionEquality().equals(other._backgroundLanguageChoices, _backgroundLanguageChoices)&&const DeepCollectionEquality().equals(other._classCantripChoices, _classCantripChoices)&&const DeepCollectionEquality().equals(other._classLevelOneSpellChoices, _classLevelOneSpellChoices));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterCreationDraft&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.subraceId, subraceId) || other.subraceId == subraceId)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.classId, classId) || other.classId == classId)&&(identical(other.backgroundId, backgroundId) || other.backgroundId == backgroundId)&&(identical(other.abilityScoreMethod, abilityScoreMethod) || other.abilityScoreMethod == abilityScoreMethod)&&const DeepCollectionEquality().equals(other._abilityScores, _abilityScores)&&const DeepCollectionEquality().equals(other._classSkillChoices, _classSkillChoices)&&const DeepCollectionEquality().equals(other._classToolChoices, _classToolChoices)&&const DeepCollectionEquality().equals(other._backgroundLanguageChoices, _backgroundLanguageChoices)&&const DeepCollectionEquality().equals(other._classCantripChoices, _classCantripChoices)&&const DeepCollectionEquality().equals(other._classLevelOneSpellChoices, _classLevelOneSpellChoices)&&(identical(other.equipmentChoiceTab, equipmentChoiceTab) || other.equipmentChoiceTab == equipmentChoiceTab)&&const DeepCollectionEquality().equals(other._purchasedEquipment, _purchasedEquipment));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText,classId,backgroundId,abilityScoreMethod,const DeepCollectionEquality().hash(_abilityScores),const DeepCollectionEquality().hash(_classSkillChoices),const DeepCollectionEquality().hash(_classToolChoices),const DeepCollectionEquality().hash(_backgroundLanguageChoices),const DeepCollectionEquality().hash(_classCantripChoices),const DeepCollectionEquality().hash(_classLevelOneSpellChoices));
+int get hashCode => Object.hash(runtimeType,raceId,subraceId,raceCustomText,classId,backgroundId,abilityScoreMethod,const DeepCollectionEquality().hash(_abilityScores),const DeepCollectionEquality().hash(_classSkillChoices),const DeepCollectionEquality().hash(_classToolChoices),const DeepCollectionEquality().hash(_backgroundLanguageChoices),const DeepCollectionEquality().hash(_classCantripChoices),const DeepCollectionEquality().hash(_classLevelOneSpellChoices),equipmentChoiceTab,const DeepCollectionEquality().hash(_purchasedEquipment));
 
 @override
 String toString() {
-  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText, classId: $classId, backgroundId: $backgroundId, abilityScoreMethod: $abilityScoreMethod, abilityScores: $abilityScores, classSkillChoices: $classSkillChoices, classToolChoices: $classToolChoices, backgroundLanguageChoices: $backgroundLanguageChoices, classCantripChoices: $classCantripChoices, classLevelOneSpellChoices: $classLevelOneSpellChoices)';
+  return 'CharacterCreationDraft(raceId: $raceId, subraceId: $subraceId, raceCustomText: $raceCustomText, classId: $classId, backgroundId: $backgroundId, abilityScoreMethod: $abilityScoreMethod, abilityScores: $abilityScores, classSkillChoices: $classSkillChoices, classToolChoices: $classToolChoices, backgroundLanguageChoices: $backgroundLanguageChoices, classCantripChoices: $classCantripChoices, classLevelOneSpellChoices: $classLevelOneSpellChoices, equipmentChoiceTab: $equipmentChoiceTab, purchasedEquipment: $purchasedEquipment)';
 }
 
 
@@ -439,7 +484,7 @@ abstract mixin class _$CharacterCreationDraftCopyWith<$Res> implements $Characte
   factory _$CharacterCreationDraftCopyWith(_CharacterCreationDraft value, $Res Function(_CharacterCreationDraft) _then) = __$CharacterCreationDraftCopyWithImpl;
 @override @useResult
 $Res call({
- int? raceId, int? subraceId, String? raceCustomText, int? classId, int? backgroundId, AbilityScoreMethod? abilityScoreMethod, Map<String, int>? abilityScores, List<String> classSkillChoices, List<String> classToolChoices, List<String> backgroundLanguageChoices, List<String> classCantripChoices, List<String> classLevelOneSpellChoices
+ int? raceId, int? subraceId, String? raceCustomText, int? classId, int? backgroundId, AbilityScoreMethod? abilityScoreMethod, Map<String, int>? abilityScores, List<String> classSkillChoices, List<String> classToolChoices, List<String> backgroundLanguageChoices, List<String> classCantripChoices, List<String> classLevelOneSpellChoices, EquipmentChoiceTab? equipmentChoiceTab, Map<String, int> purchasedEquipment
 });
 
 
@@ -456,7 +501,7 @@ class __$CharacterCreationDraftCopyWithImpl<$Res>
 
 /// Create a copy of CharacterCreationDraft
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,Object? classId = freezed,Object? backgroundId = freezed,Object? abilityScoreMethod = freezed,Object? abilityScores = freezed,Object? classSkillChoices = null,Object? classToolChoices = null,Object? backgroundLanguageChoices = null,Object? classCantripChoices = null,Object? classLevelOneSpellChoices = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? raceId = freezed,Object? subraceId = freezed,Object? raceCustomText = freezed,Object? classId = freezed,Object? backgroundId = freezed,Object? abilityScoreMethod = freezed,Object? abilityScores = freezed,Object? classSkillChoices = null,Object? classToolChoices = null,Object? backgroundLanguageChoices = null,Object? classCantripChoices = null,Object? classLevelOneSpellChoices = null,Object? equipmentChoiceTab = freezed,Object? purchasedEquipment = null,}) {
   return _then(_CharacterCreationDraft(
 raceId: freezed == raceId ? _self.raceId : raceId // ignore: cast_nullable_to_non_nullable
 as int?,subraceId: freezed == subraceId ? _self.subraceId : subraceId // ignore: cast_nullable_to_non_nullable
@@ -470,7 +515,9 @@ as List<String>,classToolChoices: null == classToolChoices ? _self._classToolCho
 as List<String>,backgroundLanguageChoices: null == backgroundLanguageChoices ? _self._backgroundLanguageChoices : backgroundLanguageChoices // ignore: cast_nullable_to_non_nullable
 as List<String>,classCantripChoices: null == classCantripChoices ? _self._classCantripChoices : classCantripChoices // ignore: cast_nullable_to_non_nullable
 as List<String>,classLevelOneSpellChoices: null == classLevelOneSpellChoices ? _self._classLevelOneSpellChoices : classLevelOneSpellChoices // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<String>,equipmentChoiceTab: freezed == equipmentChoiceTab ? _self.equipmentChoiceTab : equipmentChoiceTab // ignore: cast_nullable_to_non_nullable
+as EquipmentChoiceTab?,purchasedEquipment: null == purchasedEquipment ? _self._purchasedEquipment : purchasedEquipment // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,
   ));
 }
 

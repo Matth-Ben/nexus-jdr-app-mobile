@@ -32,6 +32,12 @@ part 'background_option.freezed.dart';
 /// - `"vehicles"` (tableau de chaînes) : hors périmètre de l'étape 5/9,
 ///   jamais lu ni affiché (décision du chef de projet) — pas de champ dédié
 ///   sur ce modèle.
+///
+/// [equipment] n'est utilisé qu'à l'étape 7/9 "Équipement de départ"
+/// (`presentation/equipment_step_screen.dart`), même rationale que
+/// [toolOrLanguageGrantedTools]/[languageChoiceCount] pour l'étape 5/9 :
+/// voyage sur ce modèle plutôt qu'un modèle dédié, valeur par défaut vide
+/// pour ne pas casser les usages existants des étapes 3/5.
 @freezed
 abstract class BackgroundOption with _$BackgroundOption {
   const BackgroundOption._();
@@ -55,6 +61,16 @@ abstract class BackgroundOption with _$BackgroundOption {
     /// si cette clé est absente (pas de choix de langue octroyé par cet
     /// historique).
     int? languageChoiceCount,
+
+    /// `backgrounds.equipment` (jsonb), tableau plat de chaînes de texte
+    /// libre tel quel (ex. `["Symbole sacré", ..., "Bourse (15 po)"]`) —
+    /// **pas** de structure `{item, quantity}` (contrairement à
+    /// `equipment_packs.contents`, non utilisé ici), voir le commentaire de
+    /// classe pour le rationale détaillé et
+    /// `domain/background_equipment_parser.dart`/
+    /// `domain/background_equipment_resolver.dart` pour son exploitation à
+    /// l'étape 7/9.
+    @Default(<String>[]) List<String> equipment,
   }) = _BackgroundOption;
 
   /// Ligne "Compétences : X, Y" affichée pour toutes les lignes, qu'elles

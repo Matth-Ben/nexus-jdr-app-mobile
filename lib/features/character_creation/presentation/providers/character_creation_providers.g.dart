@@ -529,3 +529,94 @@ final class SpellsStepDataProvider
 }
 
 String _$spellsStepDataHash() => r'71ebd0f72755c4a0e0319666d19a679a135b6ecc';
+
+/// Catalogue complet des objets de l'étape 7/9 "Équipement de départ",
+/// exposé à `EquipmentStepScreen` — même rationale que [toolCatalog]
+/// (`autoDispose`, pas de retry automatique).
+
+@ProviderFor(itemCatalog)
+final itemCatalogProvider = ItemCatalogProvider._();
+
+/// Catalogue complet des objets de l'étape 7/9 "Équipement de départ",
+/// exposé à `EquipmentStepScreen` — même rationale que [toolCatalog]
+/// (`autoDispose`, pas de retry automatique).
+
+final class ItemCatalogProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ItemCatalog>,
+          ItemCatalog,
+          FutureOr<ItemCatalog>
+        >
+    with $FutureModifier<ItemCatalog>, $FutureProvider<ItemCatalog> {
+  /// Catalogue complet des objets de l'étape 7/9 "Équipement de départ",
+  /// exposé à `EquipmentStepScreen` — même rationale que [toolCatalog]
+  /// (`autoDispose`, pas de retry automatique).
+  ItemCatalogProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'itemCatalogProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$itemCatalogHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ItemCatalog> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ItemCatalog> create(Ref ref) {
+    return itemCatalog(ref);
+  }
+}
+
+String _$itemCatalogHash() => r'024e4aaaa854b7b2ca6bf4718fe04f3da19bebff';
+
+@ProviderFor(equipmentStepData)
+final equipmentStepDataProvider = EquipmentStepDataProvider._();
+
+final class EquipmentStepDataProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<EquipmentStepData>,
+          EquipmentStepData,
+          FutureOr<EquipmentStepData>
+        >
+    with
+        $FutureModifier<EquipmentStepData>,
+        $FutureProvider<EquipmentStepData> {
+  EquipmentStepDataProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'equipmentStepDataProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$equipmentStepDataHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<EquipmentStepData> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<EquipmentStepData> create(Ref ref) {
+    return equipmentStepData(ref);
+  }
+}
+
+String _$equipmentStepDataHash() => r'3df34622f7dab34840e102fd86348fdc7858e453';

@@ -3,10 +3,14 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/character_creation_repository.dart';
 import '../../domain/background_catalog.dart';
+import '../../domain/background_equipment_entry.dart';
+import '../../domain/background_equipment_parser.dart';
+import '../../domain/background_equipment_resolver.dart';
 import '../../domain/background_option.dart';
 import '../../domain/character_creation_failure.dart';
 import '../../domain/class_catalog.dart';
 import '../../domain/class_option.dart';
+import '../../domain/item_catalog.dart';
 import '../../domain/language_catalog.dart';
 import '../../domain/race_catalog.dart';
 import '../../domain/spell_catalog.dart';
@@ -161,6 +165,65 @@ Future<SpellsStepData> spellsStepData(Ref ref) async {
   );
 
   return (classOption: classOption, spellCatalog: spellCatalog);
+}
+
+/// Catalogue complet des objets de l'étape 7/9 "Équipement de départ",
+/// exposé à `EquipmentStepScreen` — même rationale que [toolCatalog]
+/// (`autoDispose`, pas de retry automatique).
+@Riverpod(retry: _noRetry)
+Future<ItemCatalog> itemCatalog(Ref ref) {
+  return ref.watch(characterCreationRepositoryProvider).fetchItemCatalog();
+}
+
+/// Données déjà résolues nécessaires à l'étape 7/9 "Équipement de départ" :
+/// le [BackgroundOption] déjà choisi à l'étape 3/9 (pour son nom et son
+/// équipement brut), l'[ItemCatalog] complet (onglet "Acheter" ET résolution
+/// de l'équipement d'historique, un seul fetch pour les deux, voir
+/// `domain/item_catalog.dart`), l'or de départ déjà extrait
+/// (`domain/background_equipment_parser.dart`) et l'équipement d'historique
+/// déjà résolu (`domain/background_equipment_resolver.dart`) — même pattern
+/// combinateur que [SkillsAndToolsStepData]/[SpellsStepData].
+typedef EquipmentStepData = ({
+  BackgroundOption backgroundOption,
+  ItemCatalog itemCatalog,
+  int startingGold,
+  List<BackgroundEquipmentEntry> historyEquipment,
+});
+
+@Riverpod(retry: _noRetry)
+Future<EquipmentStepData> equipmentStepData(Ref ref) async {
+  final draft = ref.watch(characterCreationDraftControllerProvider);
+
+  final backgroundCatalog = await ref.watch(backgroundCatalogProvider.future);
+  final itemCatalog = await ref.watch(itemCatalogProvider.future);
+
+  final backgroundOption = backgroundCatalog.backgrounds.firstWhere(
+    (option) => option.id == draft.backgroundId,
+    orElse: () => throw const CharacterCreationFailure(
+      "Historique introuvable pour l'étape Équipement. Revenez à l'étape "
+      'Historique.',
+    ),
+  );
+
+  final startingGold =
+      BackgroundEquipmentParser.extractStartingGold(
+        backgroundOption.equipment,
+      ) ??
+      0;
+  final equipmentLines = BackgroundEquipmentParser.withoutStartingGoldLine(
+    backgroundOption.equipment,
+  );
+  final historyEquipment = BackgroundEquipmentResolver.resolve(
+    equipmentLines: equipmentLines,
+    catalog: itemCatalog,
+  );
+
+  return (
+    backgroundOption: backgroundOption,
+    itemCatalog: itemCatalog,
+    startingGold: startingGold,
+    historyEquipment: historyEquipment,
+  );
 }
 
 Duration? _noRetry(int retryCount, Object error) => null;

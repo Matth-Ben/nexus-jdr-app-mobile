@@ -23,6 +23,7 @@ import 'package:personnages/features/character_creation/domain/character_creatio
 import 'package:personnages/features/character_creation/domain/class_catalog.dart';
 import 'package:personnages/features/character_creation/domain/class_option.dart';
 import 'package:personnages/features/character_creation/domain/class_skill_choices.dart';
+import 'package:personnages/features/character_creation/domain/item_catalog.dart';
 import 'package:personnages/features/character_creation/domain/language_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
@@ -72,6 +73,9 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
     }
     return spellCatalogToReturn ?? const SpellCatalog(spells: []);
   }
+
+  @override
+  Future<ItemCatalog> fetchItemCatalog() async => const ItemCatalog(items: []);
 }
 
 // Barde : cantrips (quota 2) ET sorts de niveau 1 (quota 4) -> les deux
