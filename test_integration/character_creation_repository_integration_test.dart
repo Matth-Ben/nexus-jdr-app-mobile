@@ -37,6 +37,23 @@ void main() {
       },
     );
 
+    test(
+      'fetchRaceCatalog retourne races/sous-races triées par id croissant '
+      '(`.order(\'id\', ascending: true)` — le défaut du package postgrest '
+      '2.9.1 est `ascending: false`, voir la note de '
+      'SupabaseCharacterCreationRepository.fetchRaceCatalog)',
+      () async {
+        final repository = SupabaseCharacterCreationRepository(client);
+
+        final catalog = await repository.fetchRaceCatalog();
+
+        final raceIds = catalog.races.map((r) => r.id).toList();
+        expect(raceIds, List<int>.from(raceIds)..sort());
+        final subraceIds = catalog.subraces.map((s) => s.id).toList();
+        expect(subraceIds, List<int>.from(subraceIds)..sort());
+      },
+    );
+
     test('fetchClassCatalog résout le nom et la description de classe via '
         'translations', () async {
       final repository = SupabaseCharacterCreationRepository(client);
@@ -174,6 +191,52 @@ void main() {
       expect(skill.name, isNotEmpty);
       expect(skill.abilityId, isNotEmpty);
     });
+
+    test(
+      'fetchClassCatalog/fetchBackgroundCatalog/fetchToolCatalog/'
+      'fetchLanguageCatalog/fetchItemCatalog/fetchSkillCatalog retournent '
+      'chacun leurs lignes triées par id croissant (même garde-fou que '
+      'fetchRaceCatalog ci-dessus contre le défaut `ascending: false` du '
+      'package postgrest 2.9.1)',
+      () async {
+        final repository = SupabaseCharacterCreationRepository(client);
+
+        Iterable<int> sortedCopy(Iterable<int> ids) =>
+            List<int>.from(ids)..sort();
+
+        final classIds = (await repository.fetchClassCatalog()).classes
+            .map((c) => c.id)
+            .toList();
+        expect(classIds, sortedCopy(classIds));
+
+        final backgroundIds = (await repository.fetchBackgroundCatalog())
+            .backgrounds
+            .map((b) => b.id)
+            .toList();
+        expect(backgroundIds, sortedCopy(backgroundIds));
+
+        final toolIds = (await repository.fetchToolCatalog()).tools
+            .map((t) => t.id)
+            .toList();
+        expect(toolIds, sortedCopy(toolIds));
+
+        final languageIds = (await repository.fetchLanguageCatalog())
+            .languages
+            .map((l) => l.id)
+            .toList();
+        expect(languageIds, sortedCopy(languageIds));
+
+        final itemIds = (await repository.fetchItemCatalog()).items
+            .map((i) => i.id)
+            .toList();
+        expect(itemIds, sortedCopy(itemIds));
+
+        final skillIds = (await repository.fetchSkillCatalog()).skills
+            .map((s) => s.id)
+            .toList();
+        expect(skillIds, sortedCopy(skillIds));
+      },
+    );
 
     test('createCharacter crée un personnage lanceur de sorts complet (choix '
         'd\'équipement d\'historique) et peuple toutes les tables enfants '

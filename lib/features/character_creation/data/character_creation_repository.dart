@@ -190,11 +190,11 @@ class SupabaseCharacterCreationRepository
       final raceRows = await _client
           .from('races')
           .select('id, ability_bonuses, traits')
-          .order('id');
+          .order('id', ascending: true);
       final subraceRows = await _client
           .from('subraces')
           .select('id, race_id, ability_bonuses, traits')
-          .order('id');
+          .order('id', ascending: true);
 
       final raceNames = await _fetchTranslatedNames(
         entityType: 'race',
@@ -231,7 +231,7 @@ class SupabaseCharacterCreationRepository
       final classRows = await _client
           .from('classes')
           .select('id, hit_die, skill_choices, tool_proficiencies')
-          .order('id');
+          .order('id', ascending: true);
 
       final classIds = ClassRowMapper.collectIds(classRows);
       final names = await _fetchClassTranslatedValues(
@@ -272,7 +272,7 @@ class SupabaseCharacterCreationRepository
           .select(
             'id, skill_proficiencies, tool_or_language_choices, equipment',
           )
-          .order('id');
+          .order('id', ascending: true);
 
       final backgroundIds = BackgroundRowMapper.collectIds(backgroundRows);
       final names = await _fetchBackgroundTranslatedValues(
@@ -316,7 +316,7 @@ class SupabaseCharacterCreationRepository
       final toolRows = await _client
           .from('tools')
           .select('id, category')
-          .order('id');
+          .order('id', ascending: true);
 
       final names = await _fetchToolTranslatedNames(
         entityIds: ToolRowMapper.collectIds(toolRows),
@@ -343,7 +343,7 @@ class SupabaseCharacterCreationRepository
       final languageRows = await _client
           .from('languages')
           .select('id, type')
-          .order('id');
+          .order('id', ascending: true);
 
       final names = await _fetchLanguageTranslatedNames(
         entityIds: LanguageRowMapper.collectIds(languageRows),
@@ -381,7 +381,7 @@ class SupabaseCharacterCreationRepository
           .from('spells')
           .select('id, level, school, casting_time')
           .inFilter('id', spellIds.toList())
-          .order('id');
+          .order('id', ascending: true);
 
       final names = await _fetchSpellTranslatedNames(
         entityIds: SpellRowMapper.collectIds(spellRows),
@@ -410,7 +410,7 @@ class SupabaseCharacterCreationRepository
       final itemRows = await _client
           .from('items')
           .select('id, category, cost')
-          .order('id');
+          .order('id', ascending: true);
 
       final names = await _fetchItemTranslatedNames(
         entityIds: ItemRowMapper.collectIds(itemRows),
@@ -437,7 +437,7 @@ class SupabaseCharacterCreationRepository
       final skillRows = await _client
           .from('skills')
           .select('id, ability_id')
-          .order('id');
+          .order('id', ascending: true);
 
       final names = await _fetchSkillTranslatedNames(
         entityIds: SkillRowMapper.collectIds(skillRows),
