@@ -286,9 +286,10 @@ abstract final class CharacterDetailRowMapper {
   /// `translations`) que ce mapper pur, sans accès réseau, ne peut pas faire
   /// lui-même — toutes optionnelles (défaut liste vide) pour ne pas casser
   /// les tests existants de [toCharacterDetail] qui ne les fournissent pas
-  /// encore. La monnaie (`currency_gp`/`pp`/`ep`/`sp`/`cp`), à l'inverse,
-  /// est une simple colonne de `characters` : résolue directement ici,
-  /// même règle que [xp]/[currentHp].
+  /// encore. La monnaie (`currency_gp`/`pp`/`ep`/`sp`/`cp`) et les 9 champs
+  /// texte de l'onglet "Histoire" (`appearance_text`/`traits_text`/...), à
+  /// l'inverse, sont de simples colonnes de `characters` : résolues
+  /// directement ici, même règle que [xp]/[currentHp].
   static CharacterDetail toCharacterDetail(
     Map<String, dynamic> row, {
     required Map<String, String> raceNames,
@@ -342,6 +343,15 @@ abstract final class CharacterDetailRowMapper {
       currencySp: (row['currency_sp'] as num?)?.toInt() ?? 0,
       currencyCp: (row['currency_cp'] as num?)?.toInt() ?? 0,
       inventory: inventory,
+      appearanceText: (row['appearance_text'] as String?) ?? '',
+      traitsText: (row['traits_text'] as String?) ?? '',
+      idealsText: (row['ideals_text'] as String?) ?? '',
+      bondsText: (row['bonds_text'] as String?) ?? '',
+      flawsText: (row['flaws_text'] as String?) ?? '',
+      backstoryText: (row['backstory_text'] as String?) ?? '',
+      alliesText: (row['allies_text'] as String?) ?? '',
+      featuresText: (row['features_text'] as String?) ?? '',
+      treasureText: (row['treasure_text'] as String?) ?? '',
     );
   }
 }

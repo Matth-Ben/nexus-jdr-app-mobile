@@ -368,4 +368,67 @@ void main() {
       expect(CharacterDetailRowMapper.parseSpellSlots(row), isEmpty);
     });
   });
+
+  group('CharacterDetailRowMapper — onglet Histoire (9 champs texte)', () {
+    test(
+      'résout les 9 champs directement depuis la ligne quand renseignés',
+      () {
+        final row = _row();
+        row['appearance_text'] = 'Cheveux argentés.';
+        row['traits_text'] = 'Curieuse.';
+        row['ideals_text'] = 'Le savoir avant tout.';
+        row['bonds_text'] = 'Recherche un grimoire.';
+        row['flaws_text'] = 'Trop curieuse.';
+        row['backstory_text'] = 'Élevée dans une enclave.';
+        row['allies_text'] = "L'Ordre des Archivistes.";
+        row['features_text'] = 'Une cicatrice.';
+        row['treasure_text'] = 'Un grimoire scellé.';
+
+        final detail = CharacterDetailRowMapper.toCharacterDetail(
+          row,
+          raceNames: const {},
+          subraceNames: const {},
+          classNames: const {},
+          backgroundNames: const {},
+          alignmentNames: const {},
+        );
+
+        expect(detail.appearanceText, 'Cheveux argentés.');
+        expect(detail.traitsText, 'Curieuse.');
+        expect(detail.idealsText, 'Le savoir avant tout.');
+        expect(detail.bondsText, 'Recherche un grimoire.');
+        expect(detail.flawsText, 'Trop curieuse.');
+        expect(detail.backstoryText, 'Élevée dans une enclave.');
+        expect(detail.alliesText, "L'Ordre des Archivistes.");
+        expect(detail.featuresText, 'Une cicatrice.');
+        expect(detail.treasureText, 'Un grimoire scellé.');
+      },
+    );
+
+    test('les 9 champs replient sur une chaîne vide quand absents/nuls de la '
+        'ligne (colonnes `not null default \'\'` en base, jamais nulles en '
+        'pratique, mais un repli défensif comme sur xp/current_hp)', () {
+      final row = _row();
+      row['appearance_text'] = null;
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.appearanceText, '');
+      expect(detail.traitsText, '');
+      expect(detail.idealsText, '');
+      expect(detail.bondsText, '');
+      expect(detail.flawsText, '');
+      expect(detail.backstoryText, '');
+      expect(detail.alliesText, '');
+      expect(detail.featuresText, '');
+      expect(detail.treasureText, '');
+    });
+  });
 }

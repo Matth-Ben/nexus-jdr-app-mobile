@@ -113,6 +113,24 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// PostgREST séparée (résolution des noms d'objets du catalogue via
     /// `translations`), voir `SupabaseCharacterRepository._fetchInventory`.
     @Default(<CharacterInventoryItem>[]) List<CharacterInventoryItem> inventory,
+
+    /// Les 9 champs de texte libre de l'onglet "Histoire" — voir
+    /// `presentation/widgets/character_story_tab_body.dart`. Colonnes
+    /// `characters.*_text`, toutes `not null default ''` en base (vérifié
+    /// contre `20260825090400_create_character_tables.sql` côté dépôt web) :
+    /// jamais `null` ici, une chaîne vide signifie "jamais renseigné" — même
+    /// convention que [name]. `@Default('')` comme les autres champs ajoutés
+    /// après la première version de ce modèle (voir la remarque sur
+    /// [currencyGp] ci-dessus).
+    @Default('') String appearanceText,
+    @Default('') String traitsText,
+    @Default('') String idealsText,
+    @Default('') String bondsText,
+    @Default('') String flawsText,
+    @Default('') String backstoryText,
+    @Default('') String alliesText,
+    @Default('') String featuresText,
+    @Default('') String treasureText,
   }) = _CharacterDetail;
 
   /// Niveau total, somme de `character_classes.level` sur toutes les lignes

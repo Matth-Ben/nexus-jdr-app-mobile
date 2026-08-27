@@ -326,6 +326,80 @@ void main() {
       expect(customLine.totalWeight, isNull);
     });
 
+    test('fetchCharacterDetail résout les 9 champs texte de l\'onglet '
+        '"Histoire" (appearance_text/traits_text/ideals_text/bonds_text/'
+        'flaws_text/backstory_text/allies_text/features_text/'
+        'treasure_text) directement depuis characters, et replie sur '
+        'une chaîne vide (jamais null) pour un personnage qui ne les a '
+        'jamais renseignés', () async {
+      final character = await client
+          .from('characters')
+          .insert({
+            'owner_id': ownerId,
+            'name': 'Test Intégration Histoire',
+            'appearance_text': 'Cheveux argentés tressés.',
+            'traits_text': "Curieuse jusqu'à l'imprudence.",
+            'ideals_text': 'Le savoir doit être partagé.',
+            'bonds_text': 'Recherche le maître qui a scellé le grimoire.',
+            'flaws_text': 'Incapable de résister à un mystère non résolu.',
+            'backstory_text': 'Élevée dans une enclave forestière.',
+            'allies_text': "L'Ordre des Archivistes.",
+            'features_text': 'Une cicatrice fine sur la joue gauche.',
+            'treasure_text': 'Un vieux grimoire scellé.',
+          })
+          .select('id')
+          .single();
+      final characterId = character['id'] as String;
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', characterId);
+      });
+
+      final repository = SupabaseCharacterRepository(client);
+      final detail = await repository.fetchCharacterDetail(characterId);
+
+      expect(detail.appearanceText, 'Cheveux argentés tressés.');
+      expect(detail.traitsText, "Curieuse jusqu'à l'imprudence.");
+      expect(detail.idealsText, 'Le savoir doit être partagé.');
+      expect(detail.bondsText, 'Recherche le maître qui a scellé le grimoire.');
+      expect(
+        detail.flawsText,
+        'Incapable de résister à un mystère non résolu.',
+      );
+      expect(detail.backstoryText, 'Élevée dans une enclave forestière.');
+      expect(detail.alliesText, "L'Ordre des Archivistes.");
+      expect(detail.featuresText, 'Une cicatrice fine sur la joue gauche.');
+      expect(detail.treasureText, 'Un vieux grimoire scellé.');
+
+      // Second personnage sans aucun des 9 champs renseigné : colonnes
+      // `not null default ''` en base (voir
+      // `20260825090400_create_character_tables.sql`), jamais `null`.
+      final blankCharacter = await client
+          .from('characters')
+          .insert({
+            'owner_id': ownerId,
+            'name': 'Test Intégration Histoire vide',
+          })
+          .select('id')
+          .single();
+      final blankCharacterId = blankCharacter['id'] as String;
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', blankCharacterId);
+      });
+
+      final blankDetail = await repository.fetchCharacterDetail(
+        blankCharacterId,
+      );
+      expect(blankDetail.appearanceText, '');
+      expect(blankDetail.traitsText, '');
+      expect(blankDetail.idealsText, '');
+      expect(blankDetail.bondsText, '');
+      expect(blankDetail.flawsText, '');
+      expect(blankDetail.backstoryText, '');
+      expect(blankDetail.alliesText, '');
+      expect(blankDetail.featuresText, '');
+      expect(blankDetail.treasureText, '');
+    });
+
     test(
       'fetchCharacterDetail lève une CharacterFailure "introuvable" pour un '
       'personnage inexistant ou appartenant à un autre joueur (RLS)',

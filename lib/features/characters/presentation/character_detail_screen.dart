@@ -20,15 +20,16 @@ import 'widgets/character_identity_card.dart';
 import 'widgets/character_inventory_tab_body.dart';
 import 'widgets/character_saving_throws_card.dart';
 import 'widgets/character_skills_tab_body.dart';
+import 'widgets/character_story_tab_body.dart';
 import 'widgets/character_vitals_card.dart';
 import 'widgets/hp_adjustment_sheet.dart';
 import 'widgets/portrait_upload_sheet.dart';
 
 /// Fiche personnage, route `/characters/:id` — remplace
-/// `CharacterDetailPlaceholderScreen`. 4 onglets à terme (voir
-/// `CharacterDetailTab`) ; les onglets "Personnage", "Compétences" et
-/// "Inventaire" ont un vrai contenu, "Histoire" reste un placeholder (même
-/// approche "un onglet à la fois" que l'assistant de création).
+/// `CharacterDetailPlaceholderScreen`. Les 4 onglets (voir
+/// `CharacterDetailTab`) ont désormais tous un vrai contenu (même approche
+/// "un onglet à la fois" que l'assistant de création : "Personnage",
+/// "Compétences", "Inventaire" puis "Histoire" livrés séparément).
 class CharacterDetailScreen extends ConsumerStatefulWidget {
   const CharacterDetailScreen({required this.characterId, super.key});
 
@@ -193,8 +194,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     if (_tab == CharacterDetailTab.inventory) {
       return CharacterInventoryTabBody(detail: detail);
     }
-    if (_tab != CharacterDetailTab.character) {
-      return _PlaceholderTabBody(tab: _tab);
+    if (_tab == CharacterDetailTab.story) {
+      return CharacterStoryTabBody(detail: detail);
     }
     return _CharacterTabBody(
       detail: detail,
@@ -274,38 +275,6 @@ class _CharacterTabBody extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         CharacterSavingThrowsCard(results: savingThrows),
       ],
-    );
-  }
-}
-
-/// Contenu placeholder du seul onglet pas encore implémenté ("Histoire") —
-/// voir la documentation de classe de [CharacterDetailScreen].
-class _PlaceholderTabBody extends StatelessWidget {
-  const _PlaceholderTabBody({required this.tab});
-
-  final CharacterDetailTab tab;
-
-  static const Map<CharacterDetailTab, String> _sectionLabels = {
-    CharacterDetailTab.story: 'Histoire',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(tab.icon, size: 48, color: AppColors.textMuted),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              '${_sectionLabels[tab] ?? tab.label} — à venir',
-              style: AppTypography.body(fontSize: 16),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
