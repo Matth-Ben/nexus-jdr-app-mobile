@@ -39,7 +39,13 @@ dans `docs/cahier-des-charges/08-direction-artistique.md` et
   7. Équipement ([`equipment_step_screen.dart`](lib/features/character_creation/presentation/equipment_step_screen.dart))
   8. Apparence et histoire personnelle ([`appearance_and_backstory_step_screen.dart`](lib/features/character_creation/presentation/appearance_and_backstory_step_screen.dart))
   9. Récapitulatif et création ([`summary_step_screen.dart`](lib/features/character_creation/presentation/summary_step_screen.dart)) — seule étape qui écrit en base
-- **Fiche personnage** ([`character_detail_screen.dart`](lib/features/characters/presentation/character_detail_screen.dart)) — 4 onglets (Personnage / Compétences / Sac / Histoire), dont seul l'onglet **Personnage** a un contenu réel pour l'instant (identité, caractéristiques, jets de sauvegarde, points de vie ajustables, portrait avec recadrage). Les 3 autres onglets sont des placeholders.
+- **Fiche personnage** ([`character_detail_screen.dart`](lib/features/characters/presentation/character_detail_screen.dart)) — 4 onglets, tous avec un contenu réel :
+  1. Personnage — identité, caractéristiques, jets de sauvegarde, points de vie ajustables, portrait avec recadrage.
+  2. Compétences ([`character_skills_tab_body.dart`](lib/features/characters/presentation/widgets/character_skills_tab_body.dart)) — aptitudes de classe, les 18 compétences avec bonus calculé, maîtrises d'outils, langues connues, sorts connus/préparés par niveau avec emplacements disponibles.
+  3. Inventaire/Sac ([`character_inventory_tab_body.dart`](lib/features/characters/presentation/widgets/character_inventory_tab_body.dart)) — monnaie, liste des objets avec catégorie/poids/statut équipé.
+  4. Histoire ([`character_story_tab_body.dart`](lib/features/characters/presentation/widgets/character_story_tab_body.dart)) — apparence, personnalité, idéaux/défauts, liens, histoire personnelle, alliés, particularités, trésor.
+
+  Les onglets Compétences/Inventaire/Histoire sont en **lecture seule** à ce stade : aucune action d'écriture (lancer un sort, équiper/utiliser/retirer un objet, ajuster la monnaie, décompte d'usage d'aptitude) n'est encore câblée — voir "Reste à faire".
 
 ### Maquettes
 
@@ -50,11 +56,16 @@ suit). La liste complète des 19 écrans maquettés vit dans ce document.
 
 <table>
   <tr>
-    <td align="center" width="20%"><img src="docs/assets/screenshots/connexion.png" alt="Écran de connexion"><br><sub>Connexion</sub></td>
-    <td align="center" width="20%"><img src="docs/assets/screenshots/liste-personnages.png" alt="Liste des personnages"><br><sub>Liste des personnages</sub></td>
-    <td align="center" width="20%"><img src="docs/assets/screenshots/creation-race.png" alt="Assistant de création — étape Race"><br><sub>Création — étape Race</sub></td>
-    <td align="center" width="20%"><img src="docs/assets/screenshots/creation-recapitulatif.png" alt="Assistant de création — étape Récapitulatif"><br><sub>Création — Récapitulatif</sub></td>
-    <td align="center" width="20%"><img src="docs/assets/screenshots/fiche-personnage.png" alt="Fiche personnage — onglet Personnage"><br><sub>Fiche personnage</sub></td>
+    <td align="center" width="25%"><img src="docs/assets/screenshots/connexion.png" alt="Écran de connexion"><br><sub>Connexion</sub></td>
+    <td align="center" width="25%"><img src="docs/assets/screenshots/liste-personnages.png" alt="Liste des personnages"><br><sub>Liste des personnages</sub></td>
+    <td align="center" width="25%"><img src="docs/assets/screenshots/creation-race.png" alt="Assistant de création — étape Race"><br><sub>Création — étape Race</sub></td>
+    <td align="center" width="25%"><img src="docs/assets/screenshots/creation-recapitulatif.png" alt="Assistant de création — étape Récapitulatif"><br><sub>Création — Récapitulatif</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><img src="docs/assets/screenshots/fiche-personnage.png" alt="Fiche personnage — onglet Personnage"><br><sub>Fiche — Personnage</sub></td>
+    <td align="center" width="25%"><img src="docs/assets/screenshots/tab-competences.png" alt="Fiche personnage — onglet Compétences"><br><sub>Fiche — Compétences</sub></td>
+    <td align="center" width="25%"><img src="docs/assets/screenshots/tab-inventaire.png" alt="Fiche personnage — onglet Inventaire"><br><sub>Fiche — Inventaire</sub></td>
+    <td align="center" width="25%"><img src="docs/assets/screenshots/tab-histoire.png" alt="Fiche personnage — onglet Histoire"><br><sub>Fiche — Histoire</sub></td>
   </tr>
 </table>
 
@@ -98,11 +109,13 @@ Suit la roadmap détaillée dans `docs/cahier-des-charges/06-roadmap.md`.
 - [x] Authentification (compte partagé avec l'app web).
 - [x] Liste des personnages.
 - [x] Assistant de création de personnage complet (9 étapes, y compris gestion du multiclassage de sorts/non-sorts et calcul des points de vie/modificateurs).
-- [x] Fiche personnage, onglet **Personnage** (identité, caractéristiques, jets de sauvegarde, PV ajustables, upload/recadrage de portrait).
+- [x] Fiche personnage complète, 4 onglets : Personnage (identité, caractéristiques, jets de sauvegarde, PV ajustables, portrait), Compétences (aptitudes, 18 compétences, outils/langues, sorts), Inventaire (monnaie, objets), Histoire (apparence, personnalité, backstory).
 
 ### Reste à faire
 
-- [ ] Fiche personnage — onglets **Compétences**, **Sac** (inventaire) et **Histoire** (actuellement des placeholders).
+- [ ] Actions d'écriture des onglets Compétences/Inventaire/Histoire : lancer un sort (consommation d'emplacement), décompte d'usage d'aptitude, équiper/déséquiper/utiliser/retirer un objet, ajuster la monnaie, ajouter un objet/une récompense, panneau "Infos" détaillé (sort/objet).
+- [ ] Section "apparence physique" (âge, taille, poids, yeux, peau, cheveux) sur l'onglet Personnage — prévue par la spec, pas encore ajoutée.
+- [ ] Titre de l'en-tête de fiche par onglet (actuellement statique "FICHE" quel que soit l'onglet actif).
 - [ ] Montée de niveau.
 - [ ] Phase 3 — import XML depuis aidedd.org (rétro-ingénierie des identifiants, écran d'import avec vérification/correction).
 - [ ] Phase 4 — synchronisation avec l'app web "Histoires" : rejoindre une histoire par code d'invitation, section "Aventures" sur la fiche, deep linking. Dépend d'un petit chantier côté dépôt web (colonnes `invite_code`/`invite_code_enabled` + edge function `join-story`).
