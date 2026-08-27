@@ -32,7 +32,26 @@ mixin _$CharacterDetail {
 /// aucun bonus racial à recalculer ici (voir
 /// `character_creation/domain/final_ability_scores_resolver.dart` pour
 /// l'endroit où ce calcul a déjà eu lieu, à la création).
- Map<String, int> get abilityScores;
+ Map<String, int> get abilityScores;/// Les 18 compétences résolues (nom, caractéristique, maîtrise) —
+/// onglet "Compétences", carte "LES 18 COMPÉTENCES". Liste vide tant
+/// qu'aucune compétence de référence n'a pu être résolue (ne devrait
+/// arriver que pour un stack de contenu vide).
+ List<CharacterSkillRow> get skills;/// Aptitudes de classe déjà atteintes par le niveau actuel du
+/// personnage — onglet "Compétences", carte "APTITUDES DE CLASSE". Voir
+/// la documentation de classe de [CharacterClassFeature] pour la portée
+/// (aptitudes de sous-classe jamais incluses à cette itération).
+ List<CharacterClassFeature> get classFeatures;/// Noms des outils dont le personnage est compétent (texte libre inclus)
+/// — onglet "Compétences", carte "MAÎTRISES D'OUTILS".
+ List<String> get toolProficiencyNames;/// Noms des langues connues — onglet "Compétences", carte "LANGUES
+/// CONNUES".
+ List<String> get knownLanguageNames;/// Sorts connus/préparés du personnage — onglet "Compétences", section
+/// "SORTS". Liste vide pour un personnage qui ne lance pas de sorts (pas
+/// de distinction stockée entre "classe non lanceuse" et "lanceuse sans
+/// sort encore choisi" : les deux cas affichent simplement une section
+/// absente, voir `presentation/widgets/character_skills_tab_body.dart`).
+ List<CharacterSpellEntry> get spells;/// Emplacements de sorts par niveau (1 à 9) — onglet "Compétences",
+/// section "SORTS".
+ List<CharacterSpellSlot> get spellSlots;
 /// Create a copy of CharacterDetail
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -43,16 +62,16 @@ $CharacterDetailCopyWith<CharacterDetail> get copyWith => _$CharacterDetailCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.subraceName, subraceName) || other.subraceName == subraceName)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.backgroundName, backgroundName) || other.backgroundName == backgroundName)&&(identical(other.alignmentName, alignmentName) || other.alignmentName == alignmentName)&&const DeepCollectionEquality().equals(other.classes, classes)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.currentHp, currentHp) || other.currentHp == currentHp)&&(identical(other.maxHp, maxHp) || other.maxHp == maxHp)&&(identical(other.temporaryHp, temporaryHp) || other.temporaryHp == temporaryHp)&&const DeepCollectionEquality().equals(other.abilityScores, abilityScores));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.subraceName, subraceName) || other.subraceName == subraceName)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.backgroundName, backgroundName) || other.backgroundName == backgroundName)&&(identical(other.alignmentName, alignmentName) || other.alignmentName == alignmentName)&&const DeepCollectionEquality().equals(other.classes, classes)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.currentHp, currentHp) || other.currentHp == currentHp)&&(identical(other.maxHp, maxHp) || other.maxHp == maxHp)&&(identical(other.temporaryHp, temporaryHp) || other.temporaryHp == temporaryHp)&&const DeepCollectionEquality().equals(other.abilityScores, abilityScores)&&const DeepCollectionEquality().equals(other.skills, skills)&&const DeepCollectionEquality().equals(other.classFeatures, classFeatures)&&const DeepCollectionEquality().equals(other.toolProficiencyNames, toolProficiencyNames)&&const DeepCollectionEquality().equals(other.knownLanguageNames, knownLanguageNames)&&const DeepCollectionEquality().equals(other.spells, spells)&&const DeepCollectionEquality().equals(other.spellSlots, spellSlots));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,portraitUrl,raceName,subraceName,raceCustomText,backgroundName,alignmentName,const DeepCollectionEquality().hash(classes),xp,currentHp,maxHp,temporaryHp,const DeepCollectionEquality().hash(abilityScores));
+int get hashCode => Object.hashAll([runtimeType,id,name,portraitUrl,raceName,subraceName,raceCustomText,backgroundName,alignmentName,const DeepCollectionEquality().hash(classes),xp,currentHp,maxHp,temporaryHp,const DeepCollectionEquality().hash(abilityScores),const DeepCollectionEquality().hash(skills),const DeepCollectionEquality().hash(classFeatures),const DeepCollectionEquality().hash(toolProficiencyNames),const DeepCollectionEquality().hash(knownLanguageNames),const DeepCollectionEquality().hash(spells),const DeepCollectionEquality().hash(spellSlots)]);
 
 @override
 String toString() {
-  return 'CharacterDetail(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, subraceName: $subraceName, raceCustomText: $raceCustomText, backgroundName: $backgroundName, alignmentName: $alignmentName, classes: $classes, xp: $xp, currentHp: $currentHp, maxHp: $maxHp, temporaryHp: $temporaryHp, abilityScores: $abilityScores)';
+  return 'CharacterDetail(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, subraceName: $subraceName, raceCustomText: $raceCustomText, backgroundName: $backgroundName, alignmentName: $alignmentName, classes: $classes, xp: $xp, currentHp: $currentHp, maxHp: $maxHp, temporaryHp: $temporaryHp, abilityScores: $abilityScores, skills: $skills, classFeatures: $classFeatures, toolProficiencyNames: $toolProficiencyNames, knownLanguageNames: $knownLanguageNames, spells: $spells, spellSlots: $spellSlots)';
 }
 
 
@@ -63,7 +82,7 @@ abstract mixin class $CharacterDetailCopyWith<$Res>  {
   factory $CharacterDetailCopyWith(CharacterDetail value, $Res Function(CharacterDetail) _then) = _$CharacterDetailCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String? portraitUrl, String? raceName, String? subraceName, String? raceCustomText, String? backgroundName, String? alignmentName, List<CharacterDetailClassRow> classes, int xp, int currentHp, int maxHp, int temporaryHp, Map<String, int> abilityScores
+ String id, String name, String? portraitUrl, String? raceName, String? subraceName, String? raceCustomText, String? backgroundName, String? alignmentName, List<CharacterDetailClassRow> classes, int xp, int currentHp, int maxHp, int temporaryHp, Map<String, int> abilityScores, List<CharacterSkillRow> skills, List<CharacterClassFeature> classFeatures, List<String> toolProficiencyNames, List<String> knownLanguageNames, List<CharacterSpellEntry> spells, List<CharacterSpellSlot> spellSlots
 });
 
 
@@ -80,7 +99,7 @@ class _$CharacterDetailCopyWithImpl<$Res>
 
 /// Create a copy of CharacterDetail
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? subraceName = freezed,Object? raceCustomText = freezed,Object? backgroundName = freezed,Object? alignmentName = freezed,Object? classes = null,Object? xp = null,Object? currentHp = null,Object? maxHp = null,Object? temporaryHp = null,Object? abilityScores = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? subraceName = freezed,Object? raceCustomText = freezed,Object? backgroundName = freezed,Object? alignmentName = freezed,Object? classes = null,Object? xp = null,Object? currentHp = null,Object? maxHp = null,Object? temporaryHp = null,Object? abilityScores = null,Object? skills = null,Object? classFeatures = null,Object? toolProficiencyNames = null,Object? knownLanguageNames = null,Object? spells = null,Object? spellSlots = null,}) {
   return _then(CharacterDetail(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -96,7 +115,13 @@ as int,currentHp: null == currentHp ? _self.currentHp : currentHp // ignore: cas
 as int,maxHp: null == maxHp ? _self.maxHp : maxHp // ignore: cast_nullable_to_non_nullable
 as int,temporaryHp: null == temporaryHp ? _self.temporaryHp : temporaryHp // ignore: cast_nullable_to_non_nullable
 as int,abilityScores: null == abilityScores ? _self.abilityScores : abilityScores // ignore: cast_nullable_to_non_nullable
-as Map<String, int>,
+as Map<String, int>,skills: null == skills ? _self.skills : skills // ignore: cast_nullable_to_non_nullable
+as List<CharacterSkillRow>,classFeatures: null == classFeatures ? _self.classFeatures : classFeatures // ignore: cast_nullable_to_non_nullable
+as List<CharacterClassFeature>,toolProficiencyNames: null == toolProficiencyNames ? _self.toolProficiencyNames : toolProficiencyNames // ignore: cast_nullable_to_non_nullable
+as List<String>,knownLanguageNames: null == knownLanguageNames ? _self.knownLanguageNames : knownLanguageNames // ignore: cast_nullable_to_non_nullable
+as List<String>,spells: null == spells ? _self.spells : spells // ignore: cast_nullable_to_non_nullable
+as List<CharacterSpellEntry>,spellSlots: null == spellSlots ? _self.spellSlots : spellSlots // ignore: cast_nullable_to_non_nullable
+as List<CharacterSpellSlot>,
   ));
 }
 
@@ -181,10 +206,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? subraceName,  String? raceCustomText,  String? backgroundName,  String? alignmentName,  List<CharacterDetailClassRow> classes,  int xp,  int currentHp,  int maxHp,  int temporaryHp,  Map<String, int> abilityScores)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? subraceName,  String? raceCustomText,  String? backgroundName,  String? alignmentName,  List<CharacterDetailClassRow> classes,  int xp,  int currentHp,  int maxHp,  int temporaryHp,  Map<String, int> abilityScores,  List<CharacterSkillRow> skills,  List<CharacterClassFeature> classFeatures,  List<String> toolProficiencyNames,  List<String> knownLanguageNames,  List<CharacterSpellEntry> spells,  List<CharacterSpellSlot> spellSlots)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CharacterDetail() when $default != null:
-return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.subraceName,_that.raceCustomText,_that.backgroundName,_that.alignmentName,_that.classes,_that.xp,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.abilityScores);case _:
+return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.subraceName,_that.raceCustomText,_that.backgroundName,_that.alignmentName,_that.classes,_that.xp,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.abilityScores,_that.skills,_that.classFeatures,_that.toolProficiencyNames,_that.knownLanguageNames,_that.spells,_that.spellSlots);case _:
   return orElse();
 
 }
@@ -202,10 +227,10 @@ return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.subra
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? subraceName,  String? raceCustomText,  String? backgroundName,  String? alignmentName,  List<CharacterDetailClassRow> classes,  int xp,  int currentHp,  int maxHp,  int temporaryHp,  Map<String, int> abilityScores)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? subraceName,  String? raceCustomText,  String? backgroundName,  String? alignmentName,  List<CharacterDetailClassRow> classes,  int xp,  int currentHp,  int maxHp,  int temporaryHp,  Map<String, int> abilityScores,  List<CharacterSkillRow> skills,  List<CharacterClassFeature> classFeatures,  List<String> toolProficiencyNames,  List<String> knownLanguageNames,  List<CharacterSpellEntry> spells,  List<CharacterSpellSlot> spellSlots)  $default,) {final _that = this;
 switch (_that) {
 case _CharacterDetail():
-return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.subraceName,_that.raceCustomText,_that.backgroundName,_that.alignmentName,_that.classes,_that.xp,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.abilityScores);case _:
+return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.subraceName,_that.raceCustomText,_that.backgroundName,_that.alignmentName,_that.classes,_that.xp,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.abilityScores,_that.skills,_that.classFeatures,_that.toolProficiencyNames,_that.knownLanguageNames,_that.spells,_that.spellSlots);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -222,10 +247,10 @@ return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.subra
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? subraceName,  String? raceCustomText,  String? backgroundName,  String? alignmentName,  List<CharacterDetailClassRow> classes,  int xp,  int currentHp,  int maxHp,  int temporaryHp,  Map<String, int> abilityScores)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? subraceName,  String? raceCustomText,  String? backgroundName,  String? alignmentName,  List<CharacterDetailClassRow> classes,  int xp,  int currentHp,  int maxHp,  int temporaryHp,  Map<String, int> abilityScores,  List<CharacterSkillRow> skills,  List<CharacterClassFeature> classFeatures,  List<String> toolProficiencyNames,  List<String> knownLanguageNames,  List<CharacterSpellEntry> spells,  List<CharacterSpellSlot> spellSlots)?  $default,) {final _that = this;
 switch (_that) {
 case _CharacterDetail() when $default != null:
-return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.subraceName,_that.raceCustomText,_that.backgroundName,_that.alignmentName,_that.classes,_that.xp,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.abilityScores);case _:
+return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.subraceName,_that.raceCustomText,_that.backgroundName,_that.alignmentName,_that.classes,_that.xp,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.abilityScores,_that.skills,_that.classFeatures,_that.toolProficiencyNames,_that.knownLanguageNames,_that.spells,_that.spellSlots);case _:
   return null;
 
 }
@@ -237,7 +262,7 @@ return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.subra
 
 
 class _CharacterDetail extends CharacterDetail {
-  const _CharacterDetail({required this.id, required this.name, this.portraitUrl, this.raceName, this.subraceName, this.raceCustomText, this.backgroundName, this.alignmentName, required  List<CharacterDetailClassRow> classes, required this.xp, required this.currentHp, required this.maxHp, required this.temporaryHp, required  Map<String, int> abilityScores}): _classes = classes,_abilityScores = abilityScores,super._();
+  const _CharacterDetail({required this.id, required this.name, this.portraitUrl, this.raceName, this.subraceName, this.raceCustomText, this.backgroundName, this.alignmentName, required  List<CharacterDetailClassRow> classes, required this.xp, required this.currentHp, required this.maxHp, required this.temporaryHp, required  Map<String, int> abilityScores,  List<CharacterSkillRow> skills = const <CharacterSkillRow>[],  List<CharacterClassFeature> classFeatures = const <CharacterClassFeature>[],  List<String> toolProficiencyNames = const <String>[],  List<String> knownLanguageNames = const <String>[],  List<CharacterSpellEntry> spells = const <CharacterSpellEntry>[],  List<CharacterSpellSlot> spellSlots = const <CharacterSpellSlot>[]}): _classes = classes,_abilityScores = abilityScores,_skills = skills,_classFeatures = classFeatures,_toolProficiencyNames = toolProficiencyNames,_knownLanguageNames = knownLanguageNames,_spells = spells,_spellSlots = spellSlots,super._();
   
 
 @override final  String id;
@@ -290,6 +315,86 @@ class _CharacterDetail extends CharacterDetail {
   return EqualUnmodifiableMapView(_abilityScores);
 }
 
+/// Les 18 compétences résolues (nom, caractéristique, maîtrise) —
+/// onglet "Compétences", carte "LES 18 COMPÉTENCES". Liste vide tant
+/// qu'aucune compétence de référence n'a pu être résolue (ne devrait
+/// arriver que pour un stack de contenu vide).
+ final  List<CharacterSkillRow> _skills;
+/// Les 18 compétences résolues (nom, caractéristique, maîtrise) —
+/// onglet "Compétences", carte "LES 18 COMPÉTENCES". Liste vide tant
+/// qu'aucune compétence de référence n'a pu être résolue (ne devrait
+/// arriver que pour un stack de contenu vide).
+@override@JsonKey() List<CharacterSkillRow> get skills {
+  if (_skills is EqualUnmodifiableListView) return _skills;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_skills);
+}
+
+/// Aptitudes de classe déjà atteintes par le niveau actuel du
+/// personnage — onglet "Compétences", carte "APTITUDES DE CLASSE". Voir
+/// la documentation de classe de [CharacterClassFeature] pour la portée
+/// (aptitudes de sous-classe jamais incluses à cette itération).
+ final  List<CharacterClassFeature> _classFeatures;
+/// Aptitudes de classe déjà atteintes par le niveau actuel du
+/// personnage — onglet "Compétences", carte "APTITUDES DE CLASSE". Voir
+/// la documentation de classe de [CharacterClassFeature] pour la portée
+/// (aptitudes de sous-classe jamais incluses à cette itération).
+@override@JsonKey() List<CharacterClassFeature> get classFeatures {
+  if (_classFeatures is EqualUnmodifiableListView) return _classFeatures;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_classFeatures);
+}
+
+/// Noms des outils dont le personnage est compétent (texte libre inclus)
+/// — onglet "Compétences", carte "MAÎTRISES D'OUTILS".
+ final  List<String> _toolProficiencyNames;
+/// Noms des outils dont le personnage est compétent (texte libre inclus)
+/// — onglet "Compétences", carte "MAÎTRISES D'OUTILS".
+@override@JsonKey() List<String> get toolProficiencyNames {
+  if (_toolProficiencyNames is EqualUnmodifiableListView) return _toolProficiencyNames;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_toolProficiencyNames);
+}
+
+/// Noms des langues connues — onglet "Compétences", carte "LANGUES
+/// CONNUES".
+ final  List<String> _knownLanguageNames;
+/// Noms des langues connues — onglet "Compétences", carte "LANGUES
+/// CONNUES".
+@override@JsonKey() List<String> get knownLanguageNames {
+  if (_knownLanguageNames is EqualUnmodifiableListView) return _knownLanguageNames;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_knownLanguageNames);
+}
+
+/// Sorts connus/préparés du personnage — onglet "Compétences", section
+/// "SORTS". Liste vide pour un personnage qui ne lance pas de sorts (pas
+/// de distinction stockée entre "classe non lanceuse" et "lanceuse sans
+/// sort encore choisi" : les deux cas affichent simplement une section
+/// absente, voir `presentation/widgets/character_skills_tab_body.dart`).
+ final  List<CharacterSpellEntry> _spells;
+/// Sorts connus/préparés du personnage — onglet "Compétences", section
+/// "SORTS". Liste vide pour un personnage qui ne lance pas de sorts (pas
+/// de distinction stockée entre "classe non lanceuse" et "lanceuse sans
+/// sort encore choisi" : les deux cas affichent simplement une section
+/// absente, voir `presentation/widgets/character_skills_tab_body.dart`).
+@override@JsonKey() List<CharacterSpellEntry> get spells {
+  if (_spells is EqualUnmodifiableListView) return _spells;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_spells);
+}
+
+/// Emplacements de sorts par niveau (1 à 9) — onglet "Compétences",
+/// section "SORTS".
+ final  List<CharacterSpellSlot> _spellSlots;
+/// Emplacements de sorts par niveau (1 à 9) — onglet "Compétences",
+/// section "SORTS".
+@override@JsonKey() List<CharacterSpellSlot> get spellSlots {
+  if (_spellSlots is EqualUnmodifiableListView) return _spellSlots;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_spellSlots);
+}
+
 
 /// Create a copy of CharacterDetail
 /// with the given fields replaced by the non-null parameter values.
@@ -301,16 +406,16 @@ _$CharacterDetailCopyWith<_CharacterDetail> get copyWith => __$CharacterDetailCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.subraceName, subraceName) || other.subraceName == subraceName)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.backgroundName, backgroundName) || other.backgroundName == backgroundName)&&(identical(other.alignmentName, alignmentName) || other.alignmentName == alignmentName)&&const DeepCollectionEquality().equals(other._classes, _classes)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.currentHp, currentHp) || other.currentHp == currentHp)&&(identical(other.maxHp, maxHp) || other.maxHp == maxHp)&&(identical(other.temporaryHp, temporaryHp) || other.temporaryHp == temporaryHp)&&const DeepCollectionEquality().equals(other._abilityScores, _abilityScores));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.subraceName, subraceName) || other.subraceName == subraceName)&&(identical(other.raceCustomText, raceCustomText) || other.raceCustomText == raceCustomText)&&(identical(other.backgroundName, backgroundName) || other.backgroundName == backgroundName)&&(identical(other.alignmentName, alignmentName) || other.alignmentName == alignmentName)&&const DeepCollectionEquality().equals(other._classes, _classes)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.currentHp, currentHp) || other.currentHp == currentHp)&&(identical(other.maxHp, maxHp) || other.maxHp == maxHp)&&(identical(other.temporaryHp, temporaryHp) || other.temporaryHp == temporaryHp)&&const DeepCollectionEquality().equals(other._abilityScores, _abilityScores)&&const DeepCollectionEquality().equals(other._skills, _skills)&&const DeepCollectionEquality().equals(other._classFeatures, _classFeatures)&&const DeepCollectionEquality().equals(other._toolProficiencyNames, _toolProficiencyNames)&&const DeepCollectionEquality().equals(other._knownLanguageNames, _knownLanguageNames)&&const DeepCollectionEquality().equals(other._spells, _spells)&&const DeepCollectionEquality().equals(other._spellSlots, _spellSlots));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,portraitUrl,raceName,subraceName,raceCustomText,backgroundName,alignmentName,const DeepCollectionEquality().hash(_classes),xp,currentHp,maxHp,temporaryHp,const DeepCollectionEquality().hash(_abilityScores));
+int get hashCode => Object.hashAll([runtimeType,id,name,portraitUrl,raceName,subraceName,raceCustomText,backgroundName,alignmentName,const DeepCollectionEquality().hash(_classes),xp,currentHp,maxHp,temporaryHp,const DeepCollectionEquality().hash(_abilityScores),const DeepCollectionEquality().hash(_skills),const DeepCollectionEquality().hash(_classFeatures),const DeepCollectionEquality().hash(_toolProficiencyNames),const DeepCollectionEquality().hash(_knownLanguageNames),const DeepCollectionEquality().hash(_spells),const DeepCollectionEquality().hash(_spellSlots)]);
 
 @override
 String toString() {
-  return 'CharacterDetail(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, subraceName: $subraceName, raceCustomText: $raceCustomText, backgroundName: $backgroundName, alignmentName: $alignmentName, classes: $classes, xp: $xp, currentHp: $currentHp, maxHp: $maxHp, temporaryHp: $temporaryHp, abilityScores: $abilityScores)';
+  return 'CharacterDetail(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, subraceName: $subraceName, raceCustomText: $raceCustomText, backgroundName: $backgroundName, alignmentName: $alignmentName, classes: $classes, xp: $xp, currentHp: $currentHp, maxHp: $maxHp, temporaryHp: $temporaryHp, abilityScores: $abilityScores, skills: $skills, classFeatures: $classFeatures, toolProficiencyNames: $toolProficiencyNames, knownLanguageNames: $knownLanguageNames, spells: $spells, spellSlots: $spellSlots)';
 }
 
 
@@ -321,7 +426,7 @@ abstract mixin class _$CharacterDetailCopyWith<$Res> implements $CharacterDetail
   factory _$CharacterDetailCopyWith(_CharacterDetail value, $Res Function(_CharacterDetail) _then) = __$CharacterDetailCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String? portraitUrl, String? raceName, String? subraceName, String? raceCustomText, String? backgroundName, String? alignmentName, List<CharacterDetailClassRow> classes, int xp, int currentHp, int maxHp, int temporaryHp, Map<String, int> abilityScores
+ String id, String name, String? portraitUrl, String? raceName, String? subraceName, String? raceCustomText, String? backgroundName, String? alignmentName, List<CharacterDetailClassRow> classes, int xp, int currentHp, int maxHp, int temporaryHp, Map<String, int> abilityScores, List<CharacterSkillRow> skills, List<CharacterClassFeature> classFeatures, List<String> toolProficiencyNames, List<String> knownLanguageNames, List<CharacterSpellEntry> spells, List<CharacterSpellSlot> spellSlots
 });
 
 
@@ -338,7 +443,7 @@ class __$CharacterDetailCopyWithImpl<$Res>
 
 /// Create a copy of CharacterDetail
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? subraceName = freezed,Object? raceCustomText = freezed,Object? backgroundName = freezed,Object? alignmentName = freezed,Object? classes = null,Object? xp = null,Object? currentHp = null,Object? maxHp = null,Object? temporaryHp = null,Object? abilityScores = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? subraceName = freezed,Object? raceCustomText = freezed,Object? backgroundName = freezed,Object? alignmentName = freezed,Object? classes = null,Object? xp = null,Object? currentHp = null,Object? maxHp = null,Object? temporaryHp = null,Object? abilityScores = null,Object? skills = null,Object? classFeatures = null,Object? toolProficiencyNames = null,Object? knownLanguageNames = null,Object? spells = null,Object? spellSlots = null,}) {
   return _then(_CharacterDetail(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -354,7 +459,13 @@ as int,currentHp: null == currentHp ? _self.currentHp : currentHp // ignore: cas
 as int,maxHp: null == maxHp ? _self.maxHp : maxHp // ignore: cast_nullable_to_non_nullable
 as int,temporaryHp: null == temporaryHp ? _self.temporaryHp : temporaryHp // ignore: cast_nullable_to_non_nullable
 as int,abilityScores: null == abilityScores ? _self._abilityScores : abilityScores // ignore: cast_nullable_to_non_nullable
-as Map<String, int>,
+as Map<String, int>,skills: null == skills ? _self._skills : skills // ignore: cast_nullable_to_non_nullable
+as List<CharacterSkillRow>,classFeatures: null == classFeatures ? _self._classFeatures : classFeatures // ignore: cast_nullable_to_non_nullable
+as List<CharacterClassFeature>,toolProficiencyNames: null == toolProficiencyNames ? _self._toolProficiencyNames : toolProficiencyNames // ignore: cast_nullable_to_non_nullable
+as List<String>,knownLanguageNames: null == knownLanguageNames ? _self._knownLanguageNames : knownLanguageNames // ignore: cast_nullable_to_non_nullable
+as List<String>,spells: null == spells ? _self._spells : spells // ignore: cast_nullable_to_non_nullable
+as List<CharacterSpellEntry>,spellSlots: null == spellSlots ? _self._spellSlots : spellSlots // ignore: cast_nullable_to_non_nullable
+as List<CharacterSpellSlot>,
   ));
 }
 

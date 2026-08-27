@@ -84,9 +84,13 @@ class _SavingThrowItem extends StatelessWidget {
           style: AppTypography.body(
             fontSize: 13,
             fontWeight: FontWeight.w700,
+            // `textPrimary` (pas `textSecondary`) : aligné sur
+            // `character_skills_card.dart::_SkillRow`, même rôle visuel
+            // (bonus final en gras) — incohérence entre les deux cartes
+            // signalée en revue direction-artistique.
             color: result.bonus < 0
                 ? AppColors.accentBrick
-                : AppColors.textSecondary,
+                : AppColors.textPrimary,
           ),
         ),
       ],

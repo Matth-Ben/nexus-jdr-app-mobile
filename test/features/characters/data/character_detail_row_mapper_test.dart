@@ -199,5 +199,113 @@ void main() {
       expect(detail.backgroundName, isNull);
       expect(detail.alignmentName, isNull);
     });
+
+    test('les listes de l\'onglet Compétences sont transmises telles quelles '
+        'quand fournies', () {
+      final row = _row();
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+        toolProficiencyNames: const ['Outils de forgeron'],
+        knownLanguageNames: const ['Nain'],
+      );
+      expect(detail.toolProficiencyNames, ['Outils de forgeron']);
+      expect(detail.knownLanguageNames, ['Nain']);
+    });
+  });
+
+  group('CharacterDetailRowMapper — onglet Compétences', () {
+    test('collectClassIdsRaw collecte les class_id en Set<int>', () {
+      final row = _row(
+        characterClasses: const [
+          {'class_id': 5, 'level': 3, 'is_primary': true},
+          {'class_id': 7, 'level': 2, 'is_primary': false},
+          {'class_id': 5, 'level': 3, 'is_primary': true},
+        ],
+      );
+      expect(CharacterDetailRowMapper.collectClassIdsRaw(row), {5, 7});
+    });
+
+    test('collectClassLevels construit {class_id: level}', () {
+      final row = _row(
+        characterClasses: const [
+          {'class_id': 5, 'level': 3, 'is_primary': true},
+          {'class_id': 7, 'level': 2, 'is_primary': false},
+        ],
+      );
+      expect(CharacterDetailRowMapper.collectClassLevels(row), {
+        '5': 3,
+        '7': 2,
+      });
+    });
+
+    test('collectToolIds/parseToolProficiencyNames : custom_text prioritaire '
+        'sur le nom résolu via translations, tool_id sans traduction résolue '
+        'retombe sur un libellé générique', () {
+      final rows = [
+        {'tool_id': 1, 'custom_text': null},
+        {'tool_id': null, 'custom_text': 'Outils de bricolage improvisés'},
+        {'tool_id': 99, 'custom_text': null},
+      ];
+
+      expect(CharacterDetailRowMapper.collectToolIds(rows), {1, 99});
+
+      final names = CharacterDetailRowMapper.parseToolProficiencyNames(
+        rows,
+        toolNames: const {'1': 'Outils de forgeron'},
+      );
+      expect(names, [
+        'Outils de forgeron',
+        'Outils de bricolage improvisés',
+        'Outil #99',
+      ]);
+    });
+
+    test(
+      'collectLanguageIds/parseLanguageNames résolvent les noms de langues',
+      () {
+        final rows = [
+          {'language_id': 1},
+          {'language_id': 2},
+        ];
+
+        expect(CharacterDetailRowMapper.collectLanguageIds(rows), {1, 2});
+
+        final names = CharacterDetailRowMapper.parseLanguageNames(
+          rows,
+          languageNames: const {'1': 'Commun', '2': 'Nain'},
+        );
+        expect(names, ['Commun', 'Nain']);
+      },
+    );
+
+    test('parseSpellSlots construit un CharacterSpellSlot par ligne', () {
+      final row = _row();
+      row['character_spell_slots'] = [
+        {'slot_level': 1, 'slots_total': 4, 'slots_used': 1},
+        {'slot_level': 2, 'slots_total': 3, 'slots_used': 3},
+      ];
+
+      final slots = CharacterDetailRowMapper.parseSpellSlots(row);
+
+      expect(slots, hasLength(2));
+      expect(slots[0].level, 1);
+      expect(slots[0].total, 4);
+      expect(slots[0].used, 1);
+      expect(slots[1].remaining, 0);
+    });
+
+    test('une ligne character_spell_slots sans slot_level est ignorée', () {
+      final row = _row();
+      row['character_spell_slots'] = [
+        {'slot_level': null, 'slots_total': 4, 'slots_used': 1},
+      ];
+
+      expect(CharacterDetailRowMapper.parseSpellSlots(row), isEmpty);
+    });
   });
 }

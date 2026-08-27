@@ -91,6 +91,159 @@ void main() {
       },
     );
 
+    test('fetchCharacterDetail résout les compétences/aptitudes de classe/'
+        'maîtrises d\'outils/langues/sorts/emplacements de sorts de l\'onglet '
+        '"Compétences" via le vrai schéma (character_skill_proficiencies, '
+        'class_features, character_tool_proficiencies, character_languages, '
+        'character_spells, character_spell_slots, character_feature_uses)', () async {
+      final character = await client
+          .from('characters')
+          .insert({'owner_id': ownerId, 'name': 'Test Intégration Compétences'})
+          .select('id')
+          .single();
+      final characterId = character['id'] as String;
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', characterId);
+      });
+
+      // Niveau 5 dans la classe de référence : assez haut pour couvrir
+      // plusieurs aptitudes de classe (`class_features.level`) sans
+      // dépendre d'un contenu précis — voir la note ci-dessous sur la
+      // résolution dynamique de la ligne de test.
+      await client.from('character_classes').insert({
+        'character_id': characterId,
+        'class_id': reference.classId,
+        'level': 5,
+        'is_primary': true,
+      });
+
+      final skillRow = await client
+          .from('skills')
+          .select('id, ability_id')
+          .order('id')
+          .limit(1)
+          .single();
+      final skillId = skillRow['id'] as Object;
+      await client.from('character_skill_proficiencies').insert({
+        'character_id': characterId,
+        'skill_id': skillId,
+        'proficiency': 'expertise',
+      });
+
+      await client.from('character_tool_proficiencies').insert({
+        'character_id': characterId,
+        'tool_id': reference.toolId,
+      });
+
+      await client.from('character_languages').insert({
+        'character_id': characterId,
+        'language_id': reference.languageId,
+      });
+
+      await client.from('character_spells').insert({
+        'character_id': characterId,
+        'spell_id': reference.spellId,
+        'status': 'connu',
+      });
+      final spellRow = await client
+          .from('spells')
+          .select('level, school')
+          .eq('id', reference.spellId)
+          .single();
+
+      await client.from('character_spell_slots').insert({
+        'character_id': characterId,
+        'slot_level': 1,
+        'slots_total': 4,
+        'slots_used': 1,
+      });
+
+      // Toutes les aptitudes de niveau <= 5 de la classe de référence, pour
+      // trouver dynamiquement une aptitude à usage limité (uses_per_rest
+      // non nul) sans dépendre d'un contenu précis (le contenu de
+      // référence peut évoluer) — le stack local peuple au moins les 12
+      // classes du Manuel des Joueurs avec leurs aptitudes de niveau 1+
+      // (voir `20260825090700_seed_classes_subclasses_features.sql` côté
+      // dépôt web), donc au moins une aptitude est garantie ici.
+      final attainedFeatureRows = await client
+          .from('class_features')
+          .select('id, level, uses_per_rest')
+          .eq('class_id', reference.classId)
+          .lte('level', 5);
+      expect(
+        attainedFeatureRows,
+        isNotEmpty,
+        reason:
+            'Contenu de référence inattendu : la classe #${reference.classId} '
+            'n\'a aucune aptitude de niveau <= 5 côté seed — vérifier '
+            'supabase db reset côté dépôt web.',
+      );
+      final limitedFeatureRow = attainedFeatureRows.firstWhere(
+        (row) => row['uses_per_rest'] != null,
+        orElse: () => const {},
+      );
+      if (limitedFeatureRow.isNotEmpty) {
+        await client.from('character_feature_uses').insert({
+          'character_id': characterId,
+          'class_feature_id': limitedFeatureRow['id'],
+          'uses_remaining': 0,
+        });
+      }
+
+      final repository = SupabaseCharacterRepository(client);
+      final detail = await repository.fetchCharacterDetail(characterId);
+
+      // Les 18 compétences sont toujours résolues (table de référence
+      // complète), celle marquée 'expertise' ci-dessus doit ressortir avec
+      // la bonne caractéristique.
+      expect(detail.skills, hasLength(18));
+      final skillResult = detail.skills.singleWhere((s) => s.id == skillId);
+      expect(skillResult.proficiency, 'expertise');
+      expect(skillResult.abilityId, skillRow['ability_id']);
+
+      expect(detail.toolProficiencyNames, contains(reference.toolName));
+      expect(detail.knownLanguageNames, contains(reference.languageName));
+
+      expect(
+        detail.classFeatures.map((f) => f.id),
+        containsAll(attainedFeatureRows.map((r) => r['id'] as int)),
+      );
+      // Ordre déterministe (`.order('level')` côté requête, voir
+      // `SupabaseCharacterRepository._fetchClassFeatures`) : les niveaux
+      // affichés ne doivent jamais redescendre — signalé en revue QA
+      // (dépendait auparavant de l'ordre non garanti renvoyé par
+      // PostgREST).
+      final levels = detail.classFeatures.map((f) => f.level).toList();
+      expect(
+        levels,
+        List<int>.from(levels)..sort(),
+        reason: 'detail.classFeatures doit être trié par level croissant.',
+      );
+
+      if (limitedFeatureRow.isNotEmpty) {
+        final limitedFeature = detail.classFeatures.singleWhere(
+          (f) => f.id == limitedFeatureRow['id'],
+        );
+        expect(limitedFeature.isPassive, isFalse);
+        expect(limitedFeature.usesRemaining, 0);
+        final usesPerRest =
+            limitedFeatureRow['uses_per_rest'] as Map<String, dynamic>;
+        expect(limitedFeature.usesMax, usesPerRest['amount']);
+        expect(limitedFeature.restType, usesPerRest['rest_type']);
+      }
+
+      expect(detail.spells, hasLength(1));
+      expect(detail.spells.single.name, reference.spellName);
+      expect(detail.spells.single.level, spellRow['level']);
+      expect(detail.spells.single.school, spellRow['school'] ?? '');
+
+      expect(detail.spellSlots, hasLength(1));
+      expect(detail.spellSlots.single.level, 1);
+      expect(detail.spellSlots.single.total, 4);
+      expect(detail.spellSlots.single.used, 1);
+      expect(detail.spellSlots.single.remaining, 3);
+    });
+
     test(
       'fetchCharacterDetail lève une CharacterFailure "introuvable" pour un '
       'personnage inexistant ou appartenant à un autre joueur (RLS)',
@@ -191,24 +344,30 @@ void main() {
 
     group('isolation cross-utilisateur (RLS + filtre owner_id)', () {
       // Reproduit le point soulevé en revue de code : `fetchCharacterDetail`
-      // avait déjà un test RLS (lecture, voir ci-dessus), mais rien
-      // n'exerçait `updateHp`/`uploadPortrait`/`removePortrait` avec le
-      // `characterId` d'un personnage appartenant à un *autre* joueur — la
-      // garantie reposait uniquement sur la RLS serveur + le filtre
-      // `.eq('owner_id', ownerId)` côté client
+      // n'avait qu'un test RLS avec un UUID *inexistant* (voir ci-dessus),
+      // jamais un vrai personnage appartenant à un *second utilisateur réel*
+      // — le seul cas qui exerce réellement la policy RLS de lecture
+      // (`auth.uid() = owner_id`) plutôt que le simple "aucune ligne avec
+      // cet id". Signalé en revue QA : `fetchCharacterDetail` embarque
+      // désormais 6 jointures supplémentaires (compétences/aptitudes/
+      // outils/langues/sorts/emplacements de sorts) jamais vérifiées sous cet
+      // angle. Pareillement, rien n'exerçait `updateHp`/`uploadPortrait`/
+      // `removePortrait` avec le `characterId` d'un personnage appartenant à
+      // un *autre* joueur — la garantie reposait uniquement sur la RLS
+      // serveur + le filtre `.eq('owner_id', ownerId)` côté client
       // (`data/character_repository.dart`), jamais exercée contre le vrai
       // stack.
       //
       // Un second `SupabaseClient`, authentifié avec un second utilisateur
-      // jetable, appelle chacune des 3 méthodes d'écriture sur le
-      // personnage du *premier* utilisateur (`characterId` ci-dessous,
-      // créé par `client`/`ownerId`). Qu'elles lèvent une erreur ou
-      // échouent silencieusement (0 ligne affectée : le filtre
-      // `.eq('owner_id', ownerId)` côté client utilise l'identité de
-      // l'appelant, qui ne correspond jamais au vrai propriétaire — voir
-      // `character_repository.dart`) est accepté indifféremment ici : seule
-      // l'absence de toute modification effective en base, vérifiée en
-      // relisant avec la session du premier utilisateur, fait foi.
+      // jetable, appelle chacune des méthodes sur le personnage du *premier*
+      // joueur (`characterId` ci-dessous, créé par `client`/`ownerId`).
+      // Qu'elles lèvent une erreur ou échouent silencieusement (0 ligne
+      // affectée : le filtre `.eq('owner_id', ownerId)` côté client utilise
+      // l'identité de l'appelant, qui ne correspond jamais au vrai
+      // propriétaire — voir `character_repository.dart`) est accepté
+      // indifféremment ici pour les méthodes d'écriture ; pour la lecture
+      // (`fetchCharacterDetail`), seule une `CharacterFailure` "introuvable"
+      // est acceptable (jamais les données d'un autre joueur).
       late SupabaseClient otherClient;
       late String characterId;
 
@@ -234,6 +393,23 @@ void main() {
 
       tearDown(() async {
         await client.from('characters').delete().eq('id', characterId);
+      });
+
+      test('fetchCharacterDetail appelé depuis la session d\'un autre joueur '
+          'lève une CharacterFailure "introuvable", jamais les données du '
+          'personnage visé', () async {
+        final otherRepository = SupabaseCharacterRepository(otherClient);
+
+        await expectLater(
+          otherRepository.fetchCharacterDetail(characterId),
+          throwsA(
+            isA<CharacterFailure>().having(
+              (failure) => failure.message,
+              'message',
+              'Personnage introuvable.',
+            ),
+          ),
+        );
       });
 
       test('updateHp appelé depuis la session d\'un autre joueur ne modifie '

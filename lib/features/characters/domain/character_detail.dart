@@ -1,6 +1,10 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'character_class_feature.dart';
 import 'character_detail_class_row.dart';
+import 'character_skill_row.dart';
+import 'character_spell_entry.dart';
+import 'character_spell_slot.dart';
 import 'xp_table.dart';
 
 part 'character_detail.freezed.dart';
@@ -57,6 +61,38 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// `character_creation/domain/final_ability_scores_resolver.dart` pour
     /// l'endroit où ce calcul a déjà eu lieu, à la création).
     required Map<String, int> abilityScores,
+
+    /// Les 18 compétences résolues (nom, caractéristique, maîtrise) —
+    /// onglet "Compétences", carte "LES 18 COMPÉTENCES". Liste vide tant
+    /// qu'aucune compétence de référence n'a pu être résolue (ne devrait
+    /// arriver que pour un stack de contenu vide).
+    @Default(<CharacterSkillRow>[]) List<CharacterSkillRow> skills,
+
+    /// Aptitudes de classe déjà atteintes par le niveau actuel du
+    /// personnage — onglet "Compétences", carte "APTITUDES DE CLASSE". Voir
+    /// la documentation de classe de [CharacterClassFeature] pour la portée
+    /// (aptitudes de sous-classe jamais incluses à cette itération).
+    @Default(<CharacterClassFeature>[])
+    List<CharacterClassFeature> classFeatures,
+
+    /// Noms des outils dont le personnage est compétent (texte libre inclus)
+    /// — onglet "Compétences", carte "MAÎTRISES D'OUTILS".
+    @Default(<String>[]) List<String> toolProficiencyNames,
+
+    /// Noms des langues connues — onglet "Compétences", carte "LANGUES
+    /// CONNUES".
+    @Default(<String>[]) List<String> knownLanguageNames,
+
+    /// Sorts connus/préparés du personnage — onglet "Compétences", section
+    /// "SORTS". Liste vide pour un personnage qui ne lance pas de sorts (pas
+    /// de distinction stockée entre "classe non lanceuse" et "lanceuse sans
+    /// sort encore choisi" : les deux cas affichent simplement une section
+    /// absente, voir `presentation/widgets/character_skills_tab_body.dart`).
+    @Default(<CharacterSpellEntry>[]) List<CharacterSpellEntry> spells,
+
+    /// Emplacements de sorts par niveau (1 à 9) — onglet "Compétences",
+    /// section "SORTS".
+    @Default(<CharacterSpellSlot>[]) List<CharacterSpellSlot> spellSlots,
   }) = _CharacterDetail;
 
   /// Niveau total, somme de `character_classes.level` sur toutes les lignes

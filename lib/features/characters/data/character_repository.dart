@@ -2,13 +2,19 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
+import '../domain/character_skill_row.dart';
+import '../domain/character_spell_entry.dart';
 import '../domain/character_summary.dart';
 import '../domain/portrait_storage_path_resolver.dart';
 import 'character_detail_row_mapper.dart';
 import 'character_error_mapper.dart';
 import 'character_row_mapper.dart';
+import 'character_skill_row_mapper.dart';
+import 'character_spell_row_mapper.dart';
+import 'class_feature_row_mapper.dart';
 
 /// Langue d'affichage des noms de race/classe, en dur pour l'instant : l'app
 /// démarre en français uniquement (`docs/cahier-des-charges/07-source-donnees-i18n.md`),
@@ -160,7 +166,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
             background_id,
             alignment_id,
             character_classes(class_id, level, is_primary, classes(saving_throw_proficiencies)),
-            character_ability_scores(ability_id, score)
+            character_ability_scores(ability_id, score),
+            character_skill_proficiencies(skill_id, proficiency),
+            character_tool_proficiencies(tool_id, custom_text),
+            character_languages(language_id),
+            character_spells(spell_id, status),
+            character_spell_slots(slot_level, slots_total, slots_used),
+            character_feature_uses(class_feature_id, uses_remaining)
           ''')
           .eq('id', characterId)
           .eq('owner_id', ownerId)
@@ -191,6 +203,12 @@ class SupabaseCharacterRepository implements CharacterRepository {
         entityIds: CharacterDetailRowMapper.collectAlignmentIds(row),
       );
 
+      final skills = await _fetchSkills(row);
+      final classFeatures = await _fetchClassFeatures(row);
+      final toolProficiencyNames = await _fetchToolProficiencyNames(row);
+      final knownLanguageNames = await _fetchLanguageNames(row);
+      final spells = await _fetchSpells(row);
+
       return CharacterDetailRowMapper.toCharacterDetail(
         row,
         raceNames: raceNames,
@@ -198,6 +216,12 @@ class SupabaseCharacterRepository implements CharacterRepository {
         classNames: classNames,
         backgroundNames: backgroundNames,
         alignmentNames: alignmentNames,
+        skills: skills,
+        classFeatures: classFeatures,
+        toolProficiencyNames: toolProficiencyNames,
+        knownLanguageNames: knownLanguageNames,
+        spells: spells,
+        spellSlots: CharacterDetailRowMapper.parseSpellSlots(row),
       );
     } on CharacterFailure {
       rethrow;
@@ -342,5 +366,163 @@ class SupabaseCharacterRepository implements CharacterRepository {
         .inFilter('entity_id', entityIds.toList());
 
     return CharacterRowMapper.parseTranslatedNames(rows);
+  }
+
+  /// Les 18 [CharacterSkillRow] de l'onglet "Compétences" : `skills` est une
+  /// table de référence à peuplement fixe (pas liée à `characters`), donc
+  /// interrogée intégralement ici plutôt qu'embarquée dans le `select`
+  /// principal — contrairement à `character_skill_proficiencies`, qui l'est
+  /// (relation réelle vers `characters`).
+  Future<List<CharacterSkillRow>> _fetchSkills(Map<String, dynamic> row) async {
+    // `ascending: true` explicite : le package `postgrest` (2.9.1) a un
+    // défaut `ascending: false` contre-intuitif pour `.order(...)` — bug
+    // trouvé en corrigeant le même défaut sur `_fetchClassFeatures`
+    // ci-dessous (revue QA) : sans ce paramètre, les 18 compétences
+    // ressortaient dans l'ordre alphabétique français *inversé* plutôt que
+    // l'ordre attendu (voir la maquette de
+    // `character_skills_card.dart`).
+    final skillRows = await _client
+        .from('skills')
+        .select('id, ability_id')
+        .order('id', ascending: true);
+
+    final skillNames = await _fetchTranslatedNames(
+      entityType: 'skill',
+      entityIds: CharacterSkillRowMapper.collectIds(skillRows),
+    );
+
+    final proficiencies = CharacterSkillRowMapper.parseProficiencies(
+      CharacterDetailRowMapper.skillProficiencyRowsOf(row),
+    );
+
+    return CharacterSkillRowMapper.toCharacterSkillRows(
+      skillRows,
+      names: skillNames,
+      proficiencies: proficiencies,
+    );
+  }
+
+  /// Aptitudes de classe déjà atteintes par le niveau actuel du personnage,
+  /// carte "APTITUDES DE CLASSE" — `class_features` n'est pas liée
+  /// directement à `characters` (seulement via `classes`), donc interrogée
+  /// séparément, filtrée sur les `class_id` du personnage. Retourne une
+  /// liste vide sans requête si le personnage n'a aucune classe (brouillon
+  /// incomplet).
+  Future<List<CharacterClassFeature>> _fetchClassFeatures(
+    Map<String, dynamic> row,
+  ) async {
+    final classIds = CharacterDetailRowMapper.collectClassIdsRaw(row);
+    if (classIds.isEmpty) {
+      return const [];
+    }
+
+    // `.order('level', ascending: true)` : affichage déterministe, important
+    // pour un personnage multiclassé où plusieurs `class_id` (donc plusieurs
+    // jeux d'aptitudes) sont mélangés dans une même requête — sans quoi
+    // PostgREST ne garantit aucun ordre particulier. Signalé en revue QA.
+    // `ascending: true` explicite, pas la valeur par défaut : le package
+    // `postgrest` (2.9.1) défaut sur `ascending: false` pour `.order(...)`,
+    // contre-intuitif — repéré ici via le test d'intégration ajouté pour
+    // cette correction, qui a échoué avec un ordre descendant avant l'ajout
+    // du paramètre explicite (voir aussi `_fetchSkills` ci-dessus, même
+    // correctif appliqué au même défaut du package).
+    final featureRows = await _client
+        .from('class_features')
+        .select('id, class_id, level, uses_per_rest')
+        .inFilter('class_id', classIds.toList())
+        .order('level', ascending: true);
+
+    final attainedRows = ClassFeatureRowMapper.filterAttained(
+      featureRows,
+      classLevels: CharacterDetailRowMapper.collectClassLevels(row),
+    );
+
+    final featureNames = await _fetchTranslatedNames(
+      entityType: 'class_feature',
+      entityIds: ClassFeatureRowMapper.collectIds(attainedRows),
+    );
+
+    final usesRemaining = ClassFeatureRowMapper.parseUsesRemaining(
+      CharacterDetailRowMapper.featureUsesRowsOf(row),
+    );
+
+    return [
+      for (final featureRow in attainedRows)
+        ClassFeatureRowMapper.toCharacterClassFeature(
+          featureRow,
+          names: featureNames,
+          usesRemaining: usesRemaining,
+        ),
+    ];
+  }
+
+  /// Noms de maîtrise d'outils, carte "MAÎTRISES D'OUTILS" —
+  /// `character_tool_proficiencies` est déjà embarquée dans le `select`
+  /// principal (relation réelle vers `characters`), seuls les noms d'outils
+  /// du catalogue restent à résoudre via `translations`.
+  Future<List<String>> _fetchToolProficiencyNames(
+    Map<String, dynamic> row,
+  ) async {
+    final toolRows = CharacterDetailRowMapper.toolProficiencyRowsOf(row);
+    final toolNames = await _fetchTranslatedNames(
+      entityType: 'tool',
+      entityIds: CharacterDetailRowMapper.collectToolIds(toolRows)
+          .map((id) => id.toString())
+          .toSet(),
+    );
+    return CharacterDetailRowMapper.parseToolProficiencyNames(
+      toolRows,
+      toolNames: toolNames,
+    );
+  }
+
+  /// Noms de langues connues, carte "LANGUES CONNUES" — même principe que
+  /// [_fetchToolProficiencyNames].
+  Future<List<String>> _fetchLanguageNames(Map<String, dynamic> row) async {
+    final languageRows = CharacterDetailRowMapper.languageRowsOf(row);
+    final languageNames = await _fetchTranslatedNames(
+      entityType: 'language',
+      entityIds: CharacterDetailRowMapper.collectLanguageIds(languageRows)
+          .map((id) => id.toString())
+          .toSet(),
+    );
+    return CharacterDetailRowMapper.parseLanguageNames(
+      languageRows,
+      languageNames: languageNames,
+    );
+  }
+
+  /// Sorts connus/préparés, section "SORTS" — `character_spells` est déjà
+  /// embarquée dans le `select` principal, seuls `spells.level`/`school` et
+  /// les noms restent à résoudre. Retourne une liste vide sans requête si le
+  /// personnage n'a aucun sort.
+  Future<List<CharacterSpellEntry>> _fetchSpells(
+    Map<String, dynamic> row,
+  ) async {
+    final characterSpellRows = CharacterDetailRowMapper.characterSpellRowsOf(
+      row,
+    );
+    final spellIds = CharacterSpellRowMapper.collectSpellIds(
+      characterSpellRows,
+    );
+    if (spellIds.isEmpty) {
+      return const [];
+    }
+
+    final spellRows = await _client
+        .from('spells')
+        .select('id, level, school')
+        .inFilter('id', spellIds.toList());
+
+    final spellNames = await _fetchTranslatedNames(
+      entityType: 'spell',
+      entityIds: spellIds.map((id) => id.toString()).toSet(),
+    );
+
+    return CharacterSpellRowMapper.toCharacterSpellEntries(
+      spellRows,
+      names: spellNames,
+      statuses: CharacterSpellRowMapper.parseStatuses(characterSpellRows),
+    );
   }
 }

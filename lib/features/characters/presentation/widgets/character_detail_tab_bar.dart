@@ -4,8 +4,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 
 /// Les 4 onglets de la fiche personnage — voir
-/// `docs/cahier-des-charges/05-ux-navigation.md`. Seul [character] a un
-/// contenu réel à cette itération, les 3 autres affichent un placeholder
+/// `docs/cahier-des-charges/05-ux-navigation.md`. [character] et [skills]
+/// ont un contenu réel, les 2 autres affichent un placeholder
 /// (`_PlaceholderTabBody` dans `character_detail_screen.dart`).
 enum CharacterDetailTab {
   character(icon: Icons.person, label: 'PERSO'),

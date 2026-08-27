@@ -387,33 +387,31 @@ void main() {
     expect(find.text('Portrait retiré.'), findsOneWidget);
   });
 
-  testWidgets(
-    'la navigation entre les 4 onglets fonctionne, les 3 non implémentés '
-    'affichent un placeholder',
-    (tester) async {
-      fakeRepository.detailToReturn = _baseDetail;
+  testWidgets('la navigation entre les 4 onglets fonctionne : "Personnage" et '
+      '"Compétences" ont un vrai contenu, les 2 autres affichent un '
+      'placeholder', (tester) async {
+    fakeRepository.detailToReturn = _baseDetail;
 
-      await pumpDetail(tester);
-      await tester.pumpAndSettle();
+    await pumpDetail(tester);
+    await tester.pumpAndSettle();
 
-      expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+    expect(find.text('Halltesse Ambrelune'), findsOneWidget);
 
-      await tester.tap(find.text('COMP.'));
-      await tester.pumpAndSettle();
-      expect(find.text('Compétences — à venir'), findsOneWidget);
-      expect(find.text('Halltesse Ambrelune'), findsNothing);
+    await tester.tap(find.text('COMP.'));
+    await tester.pumpAndSettle();
+    expect(find.text('LES 18 COMPÉTENCES'), findsOneWidget);
+    expect(find.text('Halltesse Ambrelune'), findsNothing);
 
-      await tester.tap(find.text('SAC'));
-      await tester.pumpAndSettle();
-      expect(find.text('Inventaire — à venir'), findsOneWidget);
+    await tester.tap(find.text('SAC'));
+    await tester.pumpAndSettle();
+    expect(find.text('Inventaire — à venir'), findsOneWidget);
 
-      await tester.tap(find.text('HIST.'));
-      await tester.pumpAndSettle();
-      expect(find.text('Histoire — à venir'), findsOneWidget);
+    await tester.tap(find.text('HIST.'));
+    await tester.pumpAndSettle();
+    expect(find.text('Histoire — à venir'), findsOneWidget);
 
-      await tester.tap(find.text('PERSO'));
-      await tester.pumpAndSettle();
-      expect(find.text('Halltesse Ambrelune'), findsOneWidget);
-    },
-  );
+    await tester.tap(find.text('PERSO'));
+    await tester.pumpAndSettle();
+    expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+  });
 }
