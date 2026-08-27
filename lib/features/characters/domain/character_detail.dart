@@ -114,6 +114,27 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// `translations`), voir `SupabaseCharacterRepository._fetchInventory`.
     @Default(<CharacterInventoryItem>[]) List<CharacterInventoryItem> inventory,
 
+    /// Les 7 champs "apparence physique" de l'onglet "Personnage" — voir
+    /// `presentation/widgets/character_appearance_card.dart`. Colonnes
+    /// `characters.sexe/age/height/weight/eyes/skin/hair`, `text` nullables
+    /// **sans** valeur par défaut en base (vérifié contre
+    /// `20260825090400_create_character_tables.sql` côté dépôt web) —
+    /// contrairement aux 9 champs `*_text` de l'onglet "Histoire" ci-dessous,
+    /// qui eux sont `not null default ''`. Le mapper
+    /// (`data/character_detail_row_mapper.dart`) replie tout de même une
+    /// valeur nulle sur une chaîne vide ici, même convention que
+    /// [appearanceText] et consorts : une chaîne vide signifie "jamais
+    /// renseigné" pour ce modèle, jamais `null`. `@Default('')` comme les
+    /// autres champs ajoutés après la première version de ce modèle (voir la
+    /// remarque sur [currencyGp] ci-dessus).
+    @Default('') String sexe,
+    @Default('') String age,
+    @Default('') String height,
+    @Default('') String weight,
+    @Default('') String eyes,
+    @Default('') String skin,
+    @Default('') String hair,
+
     /// Les 9 champs de texte libre de l'onglet "Histoire" — voir
     /// `presentation/widgets/character_story_tab_body.dart`. Colonnes
     /// `characters.*_text`, toutes `not null default ''` en base (vérifié

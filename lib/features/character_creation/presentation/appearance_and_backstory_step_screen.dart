@@ -26,7 +26,7 @@ import 'providers/character_creation_draft_provider.dart';
 /// colonnes `characters.*` (décision du chef de projet), **pas** l'ordre
 /// partiel visible sur la maquette d'origine (qui n'en montre que 4 sur 9,
 /// coupée avant la fin — extrait tronqué, pas une réduction volontaire du
-/// périmètre). Les 6 colonnes structurées `characters.sexe`/`age`/`height`/
+/// périmètre). Les 7 colonnes structurées `characters.sexe`/`age`/`height`/
 /// `weight`/`eyes`/`skin`/`hair` ne sont pas dans le périmètre de cette
 /// étape (absentes de la maquette et de l'énoncé fonctionnel).
 ///

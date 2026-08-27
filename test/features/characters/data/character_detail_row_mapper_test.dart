@@ -431,4 +431,61 @@ void main() {
       expect(detail.treasureText, '');
     });
   });
+
+  group('CharacterDetailRowMapper — carte "Apparence physique" (7 champs)', () {
+    test(
+      'résout les 7 champs directement depuis la ligne quand renseignés',
+      () {
+        final row = _row();
+        row['sexe'] = 'Femme';
+        row['age'] = '124 ans';
+        row['height'] = '1m70';
+        row['weight'] = '58 kg';
+        row['eyes'] = 'Argentés';
+        row['skin'] = 'Pâle';
+        row['hair'] = 'Argentés, tressés';
+
+        final detail = CharacterDetailRowMapper.toCharacterDetail(
+          row,
+          raceNames: const {},
+          subraceNames: const {},
+          classNames: const {},
+          backgroundNames: const {},
+          alignmentNames: const {},
+        );
+
+        expect(detail.sexe, 'Femme');
+        expect(detail.age, '124 ans');
+        expect(detail.height, '1m70');
+        expect(detail.weight, '58 kg');
+        expect(detail.eyes, 'Argentés');
+        expect(detail.skin, 'Pâle');
+        expect(detail.hair, 'Argentés, tressés');
+      },
+    );
+
+    test('les 7 champs replient sur une chaîne vide quand absents/nuls de la '
+        'ligne (colonnes `text` nullables sans défaut en base, à la '
+        'différence des colonnes `*_text` de l\'onglet Histoire ci-dessus, '
+        'mais même repli défensif côté modèle)', () {
+      final row = _row();
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.sexe, '');
+      expect(detail.age, '');
+      expect(detail.height, '');
+      expect(detail.weight, '');
+      expect(detail.eyes, '');
+      expect(detail.skin, '');
+      expect(detail.hair, '');
+    });
+  });
 }

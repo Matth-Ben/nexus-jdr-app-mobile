@@ -15,6 +15,7 @@ import '../domain/saving_throw_calculator.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
 import 'widgets/character_ability_score_grid.dart';
+import 'widgets/character_appearance_card.dart';
 import 'widgets/character_detail_tab_bar.dart';
 import 'widgets/character_identity_card.dart';
 import 'widgets/character_inventory_tab_body.dart';
@@ -274,6 +275,10 @@ class _CharacterTabBody extends StatelessWidget {
         CharacterAbilityScoreGrid(abilityScores: detail.abilityScores),
         const SizedBox(height: AppSpacing.md),
         CharacterSavingThrowsCard(results: savingThrows),
+        if (CharacterAppearanceCard.hasContent(detail)) ...[
+          const SizedBox(height: AppSpacing.md),
+          CharacterAppearanceCard(detail: detail),
+        ],
       ],
     );
   }

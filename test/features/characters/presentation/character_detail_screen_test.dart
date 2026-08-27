@@ -285,6 +285,49 @@ void main() {
     },
   );
 
+  testWidgets(
+    'affiche la carte "Apparence physique" seulement si au moins un des 7 '
+    'champs est renseigné',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('APPARENCE PHYSIQUE'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'la carte "Apparence physique" affiche les champs renseignés, sous la '
+    'carte "Jets de sauvegarde"',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        sexe: 'Femme',
+        eyes: 'Argentés',
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('APPARENCE PHYSIQUE'), findsOneWidget);
+      expect(find.text('Sexe'), findsOneWidget);
+      expect(find.text('Femme'), findsOneWidget);
+      expect(find.text('Yeux'), findsOneWidget);
+      expect(find.text('Argentés'), findsOneWidget);
+      // Champs non renseignés omis.
+      expect(find.text('Taille'), findsNothing);
+
+      final savingThrowsPosition = tester.getTopLeft(
+        find.text('JETS DE SAUVEGARDE'),
+      );
+      final appearancePosition = tester.getTopLeft(
+        find.text('APPARENCE PHYSIQUE'),
+      );
+      expect(appearancePosition.dy, greaterThan(savingThrowsPosition.dy));
+    },
+  );
+
   testWidgets('affiche les bandeaux PV et XP', (tester) async {
     fakeRepository.detailToReturn = _baseDetail;
 

@@ -400,6 +400,72 @@ void main() {
       expect(blankDetail.treasureText, '');
     });
 
+    test('fetchCharacterDetail résout les 7 champs de la carte "Apparence '
+        'physique" (sexe/age/height/weight/eyes/skin/hair) directement '
+        'depuis characters, et replie sur une chaîne vide (jamais null) '
+        'pour un personnage qui ne les a jamais renseignés — colonnes '
+        '`text` nullables sans défaut en base, à la différence des colonnes '
+        '`*_text` de l\'onglet "Histoire" testées ci-dessus', () async {
+      final character = await client
+          .from('characters')
+          .insert({
+            'owner_id': ownerId,
+            'name': 'Test Intégration Apparence',
+            'sexe': 'Femme',
+            'age': '124 ans',
+            'height': '1m70',
+            'weight': '58 kg',
+            'eyes': 'Argentés',
+            'skin': 'Pâle',
+            'hair': 'Argentés, tressés',
+          })
+          .select('id')
+          .single();
+      final characterId = character['id'] as String;
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', characterId);
+      });
+
+      final repository = SupabaseCharacterRepository(client);
+      final detail = await repository.fetchCharacterDetail(characterId);
+
+      expect(detail.sexe, 'Femme');
+      expect(detail.age, '124 ans');
+      expect(detail.height, '1m70');
+      expect(detail.weight, '58 kg');
+      expect(detail.eyes, 'Argentés');
+      expect(detail.skin, 'Pâle');
+      expect(detail.hair, 'Argentés, tressés');
+
+      // Second personnage sans aucun des 7 champs renseigné : colonnes
+      // nullables sans défaut en base (voir
+      // `20260825090400_create_character_tables.sql`), donc bien `null`
+      // côté PostgREST — c'est au mapper de replier sur `''`.
+      final blankCharacter = await client
+          .from('characters')
+          .insert({
+            'owner_id': ownerId,
+            'name': 'Test Intégration Apparence vide',
+          })
+          .select('id')
+          .single();
+      final blankCharacterId = blankCharacter['id'] as String;
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', blankCharacterId);
+      });
+
+      final blankDetail = await repository.fetchCharacterDetail(
+        blankCharacterId,
+      );
+      expect(blankDetail.sexe, '');
+      expect(blankDetail.age, '');
+      expect(blankDetail.height, '');
+      expect(blankDetail.weight, '');
+      expect(blankDetail.eyes, '');
+      expect(blankDetail.skin, '');
+      expect(blankDetail.hair, '');
+    });
+
     test(
       'fetchCharacterDetail lève une CharacterFailure "introuvable" pour un '
       'personnage inexistant ou appartenant à un autre joueur (RLS)',
