@@ -9,6 +9,8 @@ import '../domain/character_inventory_item.dart';
 import '../domain/character_skill_row.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_summary.dart';
+import '../domain/level_up_apply_result.dart';
+import '../domain/level_up_level_data.dart';
 import '../domain/portrait_storage_path_resolver.dart';
 import 'character_detail_row_mapper.dart';
 import 'character_error_mapper.dart';
@@ -74,6 +76,45 @@ abstract class CharacterRepository {
   Future<void> removePortrait({
     required String characterId,
     required String portraitUrl,
+  });
+
+  /// Écrit directement `characters.xp` avec [newXp] (déjà calculé par
+  /// l'appelant — `xp actuel + montant saisi`, voir
+  /// `presentation/widgets/add_xp_sheet.dart`) : même principe que
+  /// [updateHp], aucun calcul métier fait ici.
+  Future<void> addXp({required String characterId, required int newXp});
+
+  /// Aptitudes/choix `class_features` de la classe [classId] au niveau
+  /// [targetLevel] — écran "Montée de niveau"
+  /// (`presentation/level_up_screen.dart`), étapes "Aptitudes de classe
+  /// automatiques" et vérification de blocage (voir
+  /// `domain/level_up_block_reason.dart`).
+  Future<LevelUpLevelData> fetchLevelUpLevelData({
+    required Object classId,
+    required int targetLevel,
+  });
+
+  /// Applique une montée de niveau déjà validée par le joueur (écran
+  /// "Montée de niveau", récapitulatif) : incrémente
+  /// `character_classes.level`, ajoute [hpGain] à `characters.max_hp`/
+  /// `current_hp`, et insère une ligne `character_level_hp`. [hpRolled] et
+  /// [hpGain] sont déjà calculés par l'appelant (voir
+  /// `domain/level_up_hit_points_calculator.dart`), cette méthode ne fait
+  /// qu'écrire le résultat déjà calculé — même principe que [updateHp].
+  ///
+  /// Ne touche jamais `characters.xp` : soit l'XP a déjà été écrite par
+  /// [addXp] (déclenchement automatique au franchissement d'un seuil), soit
+  /// le déclenchement est manuel et l'XP ne doit pas bouger (voir la spec de
+  /// la tâche qui a produit cette méthode).
+  ///
+  /// Lève une [CharacterFailure] si le personnage n'a pas exactement une
+  /// ligne `character_classes` (aucune classe, ou multiclassage — non pris
+  /// en charge par la montée de niveau automatique à cet incrément).
+  Future<LevelUpApplyResult> applyLevelUp({
+    required String characterId,
+    required int hpRolled,
+    required String hpMethod,
+    required int hpGain,
   });
 }
 
@@ -188,7 +229,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             allies_text,
             features_text,
             treasure_text,
-            character_classes(class_id, level, is_primary, classes(saving_throw_proficiencies)),
+            character_classes(class_id, level, is_primary, classes(saving_throw_proficiencies, hit_die)),
             character_ability_scores(ability_id, score),
             character_skill_proficiencies(skill_id, proficiency),
             character_tool_proficiencies(tool_id, custom_text),
@@ -350,6 +391,152 @@ class SupabaseCharacterRepository implements CharacterRepository {
             ? error.message
             : 'Impossible de retirer le portrait. Réessayez.',
       );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<void> addXp({required String characterId, required int newXp}) async {
+    final ownerId = _requireOwnerId();
+    try {
+      await _client
+          .from('characters')
+          .update({'xp': newXp})
+          .eq('id', characterId)
+          .eq('owner_id', ownerId);
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<LevelUpLevelData> fetchLevelUpLevelData({
+    required Object classId,
+    required int targetLevel,
+  }) async {
+    try {
+      final featureRows = await _client
+          .from('class_features')
+          .select('id, level, choice_type, uses_per_rest')
+          .eq('class_id', classId)
+          .eq('level', targetLevel)
+          .order('id', ascending: true);
+
+      final blockingRow = featureRows.firstWhere(
+        (row) => row['choice_type'] != null,
+        orElse: () => const <String, dynamic>{},
+      );
+      final automaticRows = [
+        for (final row in featureRows)
+          if (row['choice_type'] == null) row,
+      ];
+
+      final featureNames = await _fetchTranslatedNames(
+        entityType: 'class_feature',
+        entityIds: ClassFeatureRowMapper.collectIds(automaticRows),
+      );
+
+      return LevelUpLevelData(
+        blockingChoiceType: blockingRow.isEmpty
+            ? null
+            : blockingRow['choice_type'] as String?,
+        automaticFeatures: [
+          for (final row in automaticRows)
+            ClassFeatureRowMapper.toCharacterClassFeature(
+              row,
+              names: featureNames,
+              // Aucune utilisation à afficher ici (pas la carte "Aptitudes
+              // de classe" de l'onglet Compétences) : map vide, jamais
+              // consommée puisque ces aptitudes viennent d'être obtenues.
+              usesRemaining: const {},
+            ),
+        ],
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<LevelUpApplyResult> applyLevelUp({
+    required String characterId,
+    required int hpRolled,
+    required String hpMethod,
+    required int hpGain,
+  }) async {
+    final ownerId = _requireOwnerId();
+    try {
+      final classRows = await _client
+          .from('character_classes')
+          .select('id, level')
+          .eq('character_id', characterId);
+      if (classRows.length != 1) {
+        throw const CharacterFailure(
+          'Montée de niveau non prise en charge pour un personnage '
+          'multiclassé, ou personnage sans classe.',
+        );
+      }
+      final classRow = classRows.single;
+      final newLevel = (classRow['level'] as num).toInt() + 1;
+
+      final characterRow = await _client
+          .from('characters')
+          .select('max_hp, current_hp')
+          .eq('id', characterId)
+          .eq('owner_id', ownerId)
+          .maybeSingle();
+      if (characterRow == null) {
+        throw const CharacterFailure('Personnage introuvable.');
+      }
+      final newMaxHp = (characterRow['max_hp'] as num).toInt() + hpGain;
+      final newCurrentHp = (characterRow['current_hp'] as num).toInt() + hpGain;
+
+      // Compromis assumé, même rationale que
+      // `CharacterCreationRepository.createCharacter` (voir sa
+      // documentation) : pas de RPC Postgres atomique à cet incrément, ces
+      // 3 écritures sont séquentielles côté client. Ordre choisi pour
+      // limiter les dégâts d'un échec partiel : `characters` d'abord (si
+      // cet update échoue, rien d'autre n'a encore été écrit) ; puis
+      // `character_classes.level` (si celui-ci échoue après le premier,
+      // l'incohérence reste limitée à un `max_hp`/`current_hp` déjà
+      // incrémentés sans changement de niveau ni d'historique — visible et
+      // corrigible manuellement, jamais un personnage fantôme) ; enfin
+      // `character_level_hp`, purement un historique, en dernier. Contrairement
+      // à `createCharacter`, aucun nettoyage ("best effort") n'est possible
+      // ici : il n'y a pas de ligne fraîchement créée à supprimer, seulement
+      // des colonnes déjà existantes mises à jour.
+      await _client
+          .from('characters')
+          .update({'max_hp': newMaxHp, 'current_hp': newCurrentHp})
+          .eq('id', characterId)
+          .eq('owner_id', ownerId);
+
+      await _client
+          .from('character_classes')
+          .update({'level': newLevel})
+          .eq('id', classRow['id']);
+
+      await _client.from('character_level_hp').insert({
+        'character_id': characterId,
+        'level': newLevel,
+        'hp_rolled': hpRolled,
+        'method': hpMethod,
+      });
+
+      return LevelUpApplyResult(
+        newLevel: newLevel,
+        newMaxHp: newMaxHp,
+        newCurrentHp: newCurrentHp,
+      );
+    } on CharacterFailure {
+      rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (_) {

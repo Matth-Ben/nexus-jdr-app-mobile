@@ -62,7 +62,7 @@ void main() {
 
         final expectedProficiencies = await client
             .from('classes')
-            .select('saving_throw_proficiencies')
+            .select('saving_throw_proficiencies, hit_die')
             .eq('id', reference.classId)
             .single();
 
@@ -87,6 +87,10 @@ void main() {
           detail.classes.single.savingThrowProficiencies,
           (expectedProficiencies['saving_throw_proficiencies'] as List)
               .cast<String>(),
+        );
+        expect(
+          detail.classes.single.hitDie,
+          (expectedProficiencies['hit_die'] as num).toInt(),
         );
       },
     );

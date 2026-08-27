@@ -34,6 +34,8 @@ import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
+import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
+import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 
@@ -72,6 +74,29 @@ class _FakeRepository implements CharacterRepository {
     required String characterId,
     required String portraitUrl,
   }) async {}
+
+  @override
+  Future<void> addXp({required String characterId, required int newXp}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LevelUpLevelData> fetchLevelUpLevelData({
+    required Object classId,
+    required int targetLevel,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LevelUpApplyResult> applyLevelUp({
+    required String characterId,
+    required int hpRolled,
+    required String hpMethod,
+    required int hpGain,
+  }) {
+    throw UnimplementedError();
+  }
 }
 
 const _detail = CharacterDetail(
@@ -80,6 +105,7 @@ const _detail = CharacterDetail(
   classes: [
     CharacterDetailClassRow(
       classId: 1,
+      hitDie: 8,
       className: 'Guerrier',
       level: 1,
       isPrimary: true,
@@ -127,8 +153,11 @@ void main() {
       // Deux taps rapides sur le "+" du stepper, sans attendre entre les
       // deux que le premier `updateHp` se termine — reproduit un joueur qui
       // soigne son personnage de plusieurs points d'affilée.
-      await tester.tap(find.byIcon(Icons.add));
-      await tester.tap(find.byIcon(Icons.add));
+      // `find.byIcon(Icons.add)` matche aussi le bouton "+" de l'en-tête XP
+      // (ouverture d'`AddXpSheet`) : distingue via le `semanticLabel`
+      // "Augmenter" du stepper rapide (`StepperCounter`).
+      await tester.tap(find.bySemanticsLabel('Augmenter'));
+      await tester.tap(find.bySemanticsLabel('Augmenter'));
       await tester.pumpAndSettle();
 
       expect(

@@ -18,6 +18,8 @@ import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
+import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
+import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/core/widgets/portrait_frame.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
@@ -35,6 +37,17 @@ class _FakeCharacterRepository implements CharacterRepository {
 
   String? lastRemovedPortraitUrl;
   int removePortraitCallCount = 0;
+
+  int? lastAddedXpNewXp;
+  int addXpCallCount = 0;
+  Object? addXpErrorToThrow;
+
+  LevelUpLevelData? levelUpLevelDataToReturn;
+  Object? levelUpLevelDataErrorToThrow;
+
+  LevelUpApplyResult? applyLevelUpResultToReturn;
+  Object? applyLevelUpErrorToThrow;
+  int applyLevelUpCallCount = 0;
 
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
@@ -72,6 +85,38 @@ class _FakeCharacterRepository implements CharacterRepository {
     removePortraitCallCount++;
     lastRemovedPortraitUrl = portraitUrl;
   }
+
+  @override
+  Future<void> addXp({required String characterId, required int newXp}) async {
+    addXpCallCount++;
+    if (addXpErrorToThrow != null) throw addXpErrorToThrow!;
+    lastAddedXpNewXp = newXp;
+  }
+
+  @override
+  Future<LevelUpLevelData> fetchLevelUpLevelData({
+    required Object classId,
+    required int targetLevel,
+  }) async {
+    if (levelUpLevelDataErrorToThrow != null) {
+      throw levelUpLevelDataErrorToThrow!;
+    }
+    return levelUpLevelDataToReturn ??
+        const LevelUpLevelData(blockingChoiceType: null, automaticFeatures: []);
+  }
+
+  @override
+  Future<LevelUpApplyResult> applyLevelUp({
+    required String characterId,
+    required int hpRolled,
+    required String hpMethod,
+    required int hpGain,
+  }) async {
+    applyLevelUpCallCount++;
+    if (applyLevelUpErrorToThrow != null) throw applyLevelUpErrorToThrow!;
+    return applyLevelUpResultToReturn ??
+        const LevelUpApplyResult(newLevel: 6, newMaxHp: 40, newCurrentHp: 28);
+  }
 }
 
 const _baseDetail = CharacterDetail(
@@ -84,6 +129,7 @@ const _baseDetail = CharacterDetail(
   classes: [
     CharacterDetailClassRow(
       classId: 1,
+      hitDie: 8,
       className: 'Magicienne',
       level: 5,
       isPrimary: true,
@@ -124,6 +170,19 @@ void main() {
           path: '/characters/:id',
           builder: (context, state) =>
               CharacterDetailScreen(characterId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          // Stub : la navigation *vers* le flux de montée de niveau (avec
+          // le bon `level`) est testée ici ; le flux lui-même a ses propres
+          // tests dans `level_up_screen_test.dart`.
+          path: '/characters/:id/level-up',
+          builder: (context, state) => Scaffold(
+            body: Center(
+              child: Text(
+                'Montée de niveau : ${state.uri.queryParameters['level']}',
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -216,6 +275,7 @@ void main() {
         classes: const [
           CharacterDetailClassRow(
             classId: 1,
+            hitDie: 8,
             className: 'Guerrier',
             level: 3,
             isPrimary: true,
@@ -223,6 +283,7 @@ void main() {
           ),
           CharacterDetailClassRow(
             classId: 2,
+            hitDie: 8,
             className: 'Magicien',
             level: 2,
             isPrimary: false,
@@ -359,7 +420,11 @@ void main() {
     await pumpDetail(tester);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.add));
+    // `find.byIcon(Icons.add)` matche aussi le bouton "+" de l'en-tête XP
+    // (ouverture d'`AddXpSheet`, voir `add_xp_sheet_test.dart`/
+    // `level_up_screen_test.dart`) : distingue via le `semanticLabel`
+    // "Augmenter" du stepper rapide (`StepperCounter`).
+    await tester.tap(find.bySemanticsLabel('Augmenter'));
     await tester.pumpAndSettle();
 
     expect(fakeRepository.updateHpCallCount, 1);
@@ -472,5 +537,143 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Halltesse Ambrelune'), findsOneWidget);
     expect(find.text('FICHE'), findsOneWidget);
+  });
+
+  group('déclenchement de la montée de niveau (increment 1)', () {
+    testWidgets(
+      'le bouton "+" du bandeau XP ouvre AddXpSheet ; valider appelle '
+      'addXp avec le nouveau total et rafraîchit la fiche',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        // `find.byIcon(Icons.add)` matche aussi le stepper rapide "+" du
+        // bandeau PV (`semanticLabel` "Augmenter") : le bouton "+" du
+        // bandeau XP est le seul `IconButton` parmi les deux icônes
+        // trouvées (le stepper rapide n'utilise pas `IconButton`, voir
+        // `StepperCounter._StepperButton`).
+        expect(find.byIcon(Icons.add), findsNWidgets(2));
+        await tester.tap(
+          find.ancestor(
+            of: find.byIcon(Icons.add),
+            matching: find.byType(IconButton),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text("Ajouter de l'XP"), findsOneWidget);
+
+        await tester.enterText(find.byType(TextFormField), '250');
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('AJOUTER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.addXpCallCount, 1);
+        expect(fakeRepository.lastAddedXpNewXp, 7250);
+        expect(fakeRepository.fetchDetailCallCount, greaterThan(1));
+      },
+    );
+
+    testWidgets(
+      'ajouter assez d\'XP pour franchir le seuil pousse immédiatement le '
+      'flux de montée de niveau, ciblant totalLevel + 1',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.ancestor(
+            of: find.byIcon(Icons.add),
+            matching: find.byType(IconButton),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // xp actuelle 7000, seuil niveau 6 = 14000 -> 7500 suffit à le
+        // franchir.
+        await tester.enterText(find.byType(TextFormField), '7500');
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('AJOUTER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.lastAddedXpNewXp, 14500);
+        expect(find.text('Montée de niveau : 6'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'lien "Monter de niveau manuellement" visible tant que l\'XP n\'a pas '
+      'franchi le seuil, et ouvre le flux ciblant totalLevel + 1',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Monter de niveau manuellement'), findsOneWidget);
+        expect(find.textContaining('DISPONIBLE'), findsNothing);
+
+        await tester.tap(find.text('Monter de niveau manuellement'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Montée de niveau : 6'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'bandeau "NIVEAU {n} DISPONIBLE" remplace le lien discret quand le '
+      'seuil est déjà franchi, et ouvre le même flux',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(xp: 14000);
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Monter de niveau manuellement'), findsNothing);
+        expect(find.text('NIVEAU 6 DISPONIBLE'), findsOneWidget);
+
+        await tester.tap(find.text('NIVEAU 6 DISPONIBLE'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Montée de niveau : 6'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'un échec de addXp affiche un SnackBar, sans pousser le flux de '
+      'montée de niveau',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.addXpErrorToThrow = const CharacterFailure(
+          "Impossible d'ajouter l'XP. Réessayez.",
+        );
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.ancestor(
+            of: find.byIcon(Icons.add),
+            matching: find.byType(IconButton),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField), '250');
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('AJOUTER'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text("Impossible d'ajouter l'XP. Réessayez."),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Montée de niveau'), findsNothing);
+      },
+    );
   });
 }

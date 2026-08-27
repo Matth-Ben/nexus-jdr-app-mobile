@@ -16,6 +16,7 @@ import '../../features/character_creation/presentation/spells_step_screen.dart';
 import '../../features/character_creation/presentation/summary_step_screen.dart';
 import '../../features/characters/presentation/character_detail_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
+import '../../features/characters/presentation/level_up_screen.dart';
 import '../network/supabase_client_provider.dart';
 
 part 'app_router.g.dart';
@@ -97,6 +98,18 @@ GoRouter appRouter(Ref ref) {
         path: '/characters/:id',
         builder: (context, state) =>
             CharacterDetailScreen(characterId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        // Flux "Montée de niveau" (increment 1) : poussée avec `?level=N`
+        // (le niveau ciblé, `currentLevel + 1`) plutôt qu'un `extra` — pas
+        // de précédent `extra` dans ce dépôt (voir `app_router.dart`), et un
+        // paramètre de requête reste simple/inspectable pour un flux qui
+        // n'a de toute façon pas vocation à être deep-linké.
+        path: '/characters/:id/level-up',
+        builder: (context, state) => LevelUpScreen(
+          characterId: state.pathParameters['id']!,
+          initialTargetLevel: int.parse(state.uri.queryParameters['level']!),
+        ),
       ),
     ],
   );

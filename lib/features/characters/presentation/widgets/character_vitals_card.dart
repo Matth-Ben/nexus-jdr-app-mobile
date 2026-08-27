@@ -14,6 +14,8 @@ class CharacterVitalsCard extends StatelessWidget {
     required this.onTapAdjustHp,
     required this.onQuickHeal,
     required this.onQuickDamage,
+    required this.onTapAddXp,
+    required this.onTapLevelUp,
     super.key,
   });
 
@@ -28,6 +30,15 @@ class CharacterVitalsCard extends StatelessWidget {
   /// `StepperCounter` "-" : dégât rapide de 1 PV (PV temporaires absorbés en
   /// premier, même règle que la feuille d'ajustement détaillée).
   final VoidCallback onQuickDamage;
+
+  /// `IconButton` "+" de fin de ligne d'en-tête XP : ouvre `AddXpSheet`.
+  final VoidCallback onTapAddXp;
+
+  /// Lien discret "Monter de niveau manuellement" (XP sous le seuil) ou
+  /// bandeau "NIVEAU {n+1} DISPONIBLE" (seuil déjà franchi) : les deux
+  /// ouvrent le même flux de montée de niveau, ciblant `totalLevel + 1` —
+  /// voir `character_detail_screen.dart`.
+  final VoidCallback onTapLevelUp;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +59,11 @@ class CharacterVitalsCard extends StatelessWidget {
             onQuickDamage: onQuickDamage,
           ),
           const SizedBox(height: AppSpacing.sm),
-          _XpSection(detail: detail),
+          _XpSection(
+            detail: detail,
+            onTapAddXp: onTapAddXp,
+            onTapLevelUp: onTapLevelUp,
+          ),
         ],
       ),
     );
@@ -208,9 +223,15 @@ class _TemporaryHpChip extends StatelessWidget {
 }
 
 class _XpSection extends StatelessWidget {
-  const _XpSection({required this.detail});
+  const _XpSection({
+    required this.detail,
+    required this.onTapAddXp,
+    required this.onTapLevelUp,
+  });
 
   final CharacterDetail detail;
+  final VoidCallback onTapAddXp;
+  final VoidCallback onTapLevelUp;
 
   @override
   Widget build(BuildContext context) {
@@ -220,6 +241,12 @@ class _XpSection extends StatelessWidget {
     // valeur affichée "{xp} / {xp}") plutôt qu'un cas non couvert par la
     // spec visuelle.
     final threshold = detail.nextLevelXpThreshold ?? detail.xp;
+    // Seuil déjà franchi (montée en attente) : `nextLevelXpThreshold` non
+    // nul (donc pas déjà au niveau maximum) ET l'XP actuelle l'a atteint ou
+    // dépassé.
+    final thresholdReached =
+        detail.nextLevelXpThreshold != null &&
+        detail.xp >= detail.nextLevelXpThreshold!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,6 +267,19 @@ class _XpSection extends StatelessWidget {
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textSecondary,
+              ),
+            ),
+            SizedBox(
+              width: 44,
+              height: 44,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: onTapAddXp,
+                icon: const Icon(
+                  Icons.add,
+                  size: 18,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
           ],
@@ -264,7 +304,111 @@ class _XpSection extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: AppSpacing.xs),
+        if (thresholdReached)
+          _LevelUpAvailableBanner(
+            targetLevel: detail.totalLevel + 1,
+            onTap: onTapLevelUp,
+          )
+        else
+          _ManualLevelUpLink(onTap: onTapLevelUp),
       ],
+    );
+  }
+}
+
+/// Lien discret "Monter de niveau manuellement" (XP sous le seuil), toujours
+/// visible sous la jauge XP — déclenchement manuel "hors XP" (spec visuelle
+/// section 1a).
+class _ManualLevelUpLink extends StatelessWidget {
+  const _ManualLevelUpLink({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.arrow_upward,
+                size: 14,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Monter de niveau manuellement',
+                style: AppTypography.body(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bandeau "NIVEAU {n} DISPONIBLE" (seuil franchi, montée en attente) —
+/// remplace [_ManualLevelUpLink] tant que la montée n'a pas été effectuée
+/// (spec visuelle section 1b).
+class _LevelUpAvailableBanner extends StatelessWidget {
+  const _LevelUpAvailableBanner({
+    required this.targetLevel,
+    required this.onTap,
+  });
+
+  final int targetLevel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: AppColors.parchmentCardAlt,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: AppColors.goldEnd,
+              width: AppBorders.card,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.arrow_upward,
+                size: 16,
+                color: AppColors.accentBrick,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                'NIVEAU $targetLevel DISPONIBLE',
+                style: AppTypography.display(
+                  fontSize: 11,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

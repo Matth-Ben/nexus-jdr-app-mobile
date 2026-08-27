@@ -28,6 +28,7 @@ void main() {
         classes: const [
           CharacterDetailClassRow(
             classId: 1,
+            hitDie: 8,
             className: 'Guerrier',
             level: 3,
             isPrimary: true,
@@ -35,6 +36,7 @@ void main() {
           ),
           CharacterDetailClassRow(
             classId: 2,
+            hitDie: 8,
             className: 'Magicien',
             level: 2,
             isPrimary: false,
@@ -58,6 +60,7 @@ void main() {
           classes: const [
             CharacterDetailClassRow(
               classId: 1,
+              hitDie: 8,
               className: 'Guerrier',
               level: 1,
               isPrimary: false,
@@ -65,6 +68,7 @@ void main() {
             ),
             CharacterDetailClassRow(
               classId: 2,
+              hitDie: 8,
               className: 'Magicien',
               level: 4,
               isPrimary: true,
@@ -83,6 +87,7 @@ void main() {
         classes: const [
           CharacterDetailClassRow(
             classId: 1,
+            hitDie: 8,
             className: 'Guerrier',
             level: 1,
             isPrimary: false,
@@ -117,6 +122,7 @@ void main() {
         classes: const [
           CharacterDetailClassRow(
             classId: 1,
+            hitDie: 8,
             className: 'Guerrier',
             level: 1,
             isPrimary: true,
@@ -133,6 +139,7 @@ void main() {
         classes: const [
           CharacterDetailClassRow(
             classId: 1,
+            hitDie: 8,
             className: 'Guerrier',
             level: 20,
             isPrimary: true,

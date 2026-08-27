@@ -16,6 +16,7 @@ class CharacterDetailClassRow {
     required this.level,
     required this.isPrimary,
     required this.savingThrowProficiencies,
+    required this.hitDie,
   });
 
   /// Identifiant de la classe (`classes.id`, entier côté Supabase, gardé en
@@ -28,6 +29,27 @@ class CharacterDetailClassRow {
   final String className;
 
   final int level;
+
+  /// `classes.hit_die` (6/8/10/12), embarqué via la même relation de clé
+  /// étrangère que [savingThrowProficiencies] — ajouté pour l'étape "Points
+  /// de vie" de la montée de niveau (`domain/level_up_hit_points_calculator.dart`),
+  /// qui a besoin du dé de vie de la classe pour proposer un lancer/une
+  /// valeur moyenne. Comme [savingThrowProficiencies], seule pertinente pour
+  /// la classe [isPrimary] à cette itération (pas de montée de niveau
+  /// multiclassée gérée, voir `data/character_repository.dart::applyLevelUp`).
+  ///
+  /// Volontairement `null` (plutôt qu'un repli silencieux sur une valeur par
+  /// défaut) si `hit_die` est absent en base : contrairement aux autres
+  /// champs de cette classe (purement affichés), celui-ci alimente une
+  /// écriture irréversible (`CharacterRepository.applyLevelUp`,
+  /// `characters.max_hp`/`character_level_hp`) — un défaut silencieux
+  /// produirait un gain de PV faux et indétectable. Le flux de montée de
+  /// niveau (`presentation/providers/level_up_provider.dart`) doit lever une
+  /// [CharacterFailure] explicite plutôt que de démarrer avec cette valeur
+  /// absente. Revue de code du 2026-08-28 : cohérence volontaire avec
+  /// `character_creation/data/class_row_mapper.dart`, qui plante plutôt que
+  /// deviner pour cette même colonne.
+  final int? hitDie;
 
   /// Vrai pour la classe de départ (`character_classes.is_primary`).
   final bool isPrimary;

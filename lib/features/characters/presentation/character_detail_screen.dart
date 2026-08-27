@@ -14,6 +14,7 @@ import '../domain/proficiency_bonus.dart';
 import '../domain/saving_throw_calculator.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
+import 'widgets/add_xp_sheet.dart';
 import 'widgets/character_ability_score_grid.dart';
 import 'widgets/character_appearance_card.dart';
 import 'widgets/character_detail_tab_bar.dart';
@@ -122,6 +123,42 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Ajoute [amount] XP (déjà saisi par le joueur dans `AddXpSheet`) à
+  /// `detail.xp`, écrit le nouveau total en base
+  /// (`CharacterRepository.addXp`), puis pousse immédiatement le flux de
+  /// montée de niveau si le seuil du niveau suivant est franchi — spec
+  /// visuelle section 1c : "une fois l'XP écrite en base, si le seuil est
+  /// franchi, pousser immédiatement l'écran scène du flux sur la pile de
+  /// navigation (pas juste revenir sur la fiche)".
+  Future<void> _addXp(CharacterDetail detail, int amount) async {
+    final newXp = detail.xp + amount;
+    try {
+      await ref
+          .read(characterRepositoryProvider)
+          .addXp(characterId: widget.characterId, newXp: newXp);
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      if (!mounted) return;
+
+      final threshold = detail.nextLevelXpThreshold;
+      if (threshold != null && newXp >= threshold) {
+        _openLevelUp(detail.totalLevel + 1);
+      }
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar("Impossible d'ajouter l'XP. Réessayez.");
+    }
+  }
+
+  /// Ouvre le flux "Montée de niveau" ciblant [targetLevel] — déclenchement
+  /// manuel (lien/bandeau du bandeau XP) ou automatique (seuil franchi via
+  /// [_addXp]), voir `level_up_screen.dart`.
+  void _openLevelUp(int targetLevel) {
+    context.push(
+      '/characters/${widget.characterId}/level-up?level=$targetLevel',
+    );
+  }
+
   void _showSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -220,6 +257,13 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         detail,
         HpAdjustmentCalculator.applyDamage(_hpStateOf(detail), 1),
       ),
+      onTapAddXp: () => showAddXpSheet(
+        context,
+        currentXp: detail.xp,
+        nextLevelXpThreshold: detail.nextLevelXpThreshold,
+        onApply: (amount) => _addXp(detail, amount),
+      ),
+      onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
     );
   }
 }
@@ -232,6 +276,8 @@ class _CharacterTabBody extends StatelessWidget {
     required this.onTapAdjustHp,
     required this.onQuickHeal,
     required this.onQuickDamage,
+    required this.onTapAddXp,
+    required this.onTapLevelUp,
   });
 
   final CharacterDetail detail;
@@ -248,6 +294,8 @@ class _CharacterTabBody extends StatelessWidget {
   final VoidCallback onTapAdjustHp;
   final VoidCallback onQuickHeal;
   final VoidCallback onQuickDamage;
+  final VoidCallback onTapAddXp;
+  final VoidCallback onTapLevelUp;
 
   @override
   Widget build(BuildContext context) {
@@ -270,6 +318,8 @@ class _CharacterTabBody extends StatelessWidget {
           onTapAdjustHp: onTapAdjustHp,
           onQuickHeal: onQuickHeal,
           onQuickDamage: onQuickDamage,
+          onTapAddXp: onTapAddXp,
+          onTapLevelUp: onTapLevelUp,
         ),
         const SizedBox(height: AppSpacing.md),
         CharacterAbilityScoreGrid(abilityScores: detail.abilityScores),

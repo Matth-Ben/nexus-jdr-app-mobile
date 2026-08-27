@@ -18,6 +18,8 @@ import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
+import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
+import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/presentation/character_list_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_card.dart';
@@ -67,6 +69,29 @@ class _FakeCharacterRepository implements CharacterRepository {
   Future<void> removePortrait({
     required String characterId,
     required String portraitUrl,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> addXp({required String characterId, required int newXp}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LevelUpLevelData> fetchLevelUpLevelData({
+    required Object classId,
+    required int targetLevel,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LevelUpApplyResult> applyLevelUp({
+    required String characterId,
+    required int hpRolled,
+    required String hpMethod,
+    required int hpGain,
   }) {
     throw UnimplementedError();
   }

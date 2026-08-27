@@ -249,6 +249,7 @@ abstract final class CharacterDetailRowMapper {
           savingThrowProficiencies: parseSavingThrowProficiencies(
             nestedClass?['saving_throw_proficiencies'],
           ),
+          hitDie: (nestedClass?['hit_die'] as num?)?.toInt(),
         ),
       );
     }
