@@ -431,9 +431,8 @@ void main() {
   });
 
   testWidgets('la navigation entre les 4 onglets fonctionne : "Personnage", '
-      '"Compétences", "Inventaire" et "Histoire" ont chacun un vrai contenu', (
-    tester,
-  ) async {
+      '"Compétences", "Inventaire" et "Histoire" ont chacun un vrai contenu, '
+      'avec le titre du bandeau qui suit l\'onglet actif', (tester) async {
     fakeRepository.detailToReturn = _baseDetail.copyWith(
       appearanceText: 'Cheveux argentés.',
     );
@@ -442,11 +441,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+    expect(find.text('FICHE'), findsOneWidget);
 
     await tester.tap(find.text('COMP.'));
     await tester.pumpAndSettle();
     expect(find.text('LES 18 COMPÉTENCES'), findsOneWidget);
     expect(find.text('Halltesse Ambrelune'), findsNothing);
+    expect(find.text('COMPÉTENCES'), findsOneWidget);
+    expect(find.text('FICHE'), findsNothing);
 
     await tester.tap(find.text('SAC'));
     await tester.pumpAndSettle();
@@ -456,6 +458,7 @@ void main() {
     // `CharacterInventoryTabBody`, pas sur un autre onglet.
     expect(find.text('PO'), findsOneWidget);
     expect(find.text('Ajouter un objet'), findsOneWidget);
+    expect(find.text('INVENTAIRE'), findsOneWidget);
 
     await tester.tap(find.text('HIST.'));
     await tester.pumpAndSettle();
@@ -463,9 +466,11 @@ void main() {
     // `character_story_tab_body_test.dart` pour le détail de ce contenu).
     expect(find.text('APPARENCE PHYSIQUE'), findsOneWidget);
     expect(find.text('Cheveux argentés.'), findsOneWidget);
+    expect(find.text('HISTOIRE'), findsOneWidget);
 
     await tester.tap(find.text('PERSO'));
     await tester.pumpAndSettle();
     expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+    expect(find.text('FICHE'), findsOneWidget);
   });
 }

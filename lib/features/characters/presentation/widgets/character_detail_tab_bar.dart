@@ -7,15 +7,35 @@ import '../../../../core/theme/app_typography.dart';
 /// `docs/cahier-des-charges/05-ux-navigation.md`. Les 4 ont désormais un
 /// contenu réel ([character]/[skills]/[inventory]/[story]).
 enum CharacterDetailTab {
-  character(icon: Icons.person, label: 'PERSO'),
-  skills(icon: Icons.star_outline, label: 'COMP.'),
-  inventory(icon: Icons.backpack_outlined, label: 'SAC'),
-  story(icon: Icons.description_outlined, label: 'HIST.');
+  character(icon: Icons.person, label: 'PERSO', headerTitle: 'FICHE'),
+  skills(
+    icon: Icons.star_outline,
+    label: 'COMP.',
+    headerTitle: 'COMPÉTENCES',
+  ),
+  inventory(
+    icon: Icons.backpack_outlined,
+    label: 'SAC',
+    headerTitle: 'INVENTAIRE',
+  ),
+  story(
+    icon: Icons.description_outlined,
+    label: 'HIST.',
+    headerTitle: 'HISTOIRE',
+  );
 
-  const CharacterDetailTab({required this.icon, required this.label});
+  const CharacterDetailTab({
+    required this.icon,
+    required this.label,
+    required this.headerTitle,
+  });
 
   final IconData icon;
   final String label;
+
+  /// Titre affiché dans `WoodBackHeader` en tête de la fiche personnage
+  /// quand cet onglet est actif — voir `09-maquettes-captures.md`.
+  final String headerTitle;
 }
 
 /// Barre de navigation à 4 onglets, en pied de la fiche personnage —

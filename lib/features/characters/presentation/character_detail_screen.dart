@@ -160,7 +160,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     return Scaffold(
       body: Column(
         children: [
-          WoodBackHeader(title: 'FICHE', onBack: _goBack),
+          WoodBackHeader(title: _tab.headerTitle, onBack: _goBack),
           Expanded(
             child: detailAsync.when(
               data: (detail) => _buildTabBody(detail),
