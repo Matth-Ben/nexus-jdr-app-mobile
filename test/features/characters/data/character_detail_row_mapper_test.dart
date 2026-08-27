@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/data/character_detail_row_mapper.dart';
+import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 
 Map<String, dynamic> _row({
   Object? raceId = 1,
@@ -183,6 +184,65 @@ void main() {
       expect(detail.temporaryHp, 5);
       expect(detail.classes.single.className, 'Guerrier');
       expect(detail.abilityScores, {'str': 16});
+      // Colonnes absentes de `_row(...)` -> repli à 0, même règle que
+      // xp/current_hp/etc.
+      expect(detail.currencyGp, 0);
+      expect(detail.currencyPp, 0);
+      expect(detail.currencyEp, 0);
+      expect(detail.currencySp, 0);
+      expect(detail.currencyCp, 0);
+    });
+
+    test('résout la monnaie (currency_gp/pp/ep/sp/cp) directement depuis la '
+        'ligne, sans dépendre d\'une requête supplémentaire', () {
+      final row = _row();
+      row['currency_gp'] = 42;
+      row['currency_pp'] = 2;
+      row['currency_ep'] = 3;
+      row['currency_sp'] = 6;
+      row['currency_cp'] = 14;
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.currencyGp, 42);
+      expect(detail.currencyPp, 2);
+      expect(detail.currencyEp, 3);
+      expect(detail.currencySp, 6);
+      expect(detail.currencyCp, 14);
+    });
+
+    test('inventory est transmis tel quel quand fourni', () {
+      final row = _row();
+      const inventory = [
+        CharacterInventoryItem(
+          id: 'inv-1',
+          itemId: 1,
+          name: 'Dague',
+          category: 'arme',
+          quantity: 2,
+          equipped: false,
+          totalWeight: 1,
+        ),
+      ];
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+        inventory: inventory,
+      );
+
+      expect(detail.inventory, inventory);
     });
 
     test('un id nul (race_id/background_id/alignment_id) reste non résolu', () {

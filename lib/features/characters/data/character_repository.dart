@@ -5,12 +5,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
+import '../domain/character_inventory_item.dart';
 import '../domain/character_skill_row.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_summary.dart';
 import '../domain/portrait_storage_path_resolver.dart';
 import 'character_detail_row_mapper.dart';
 import 'character_error_mapper.dart';
+import 'character_inventory_row_mapper.dart';
 import 'character_row_mapper.dart';
 import 'character_skill_row_mapper.dart';
 import 'character_spell_row_mapper.dart';
@@ -165,6 +167,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
             race_custom_text,
             background_id,
             alignment_id,
+            currency_gp,
+            currency_pp,
+            currency_ep,
+            currency_sp,
+            currency_cp,
             character_classes(class_id, level, is_primary, classes(saving_throw_proficiencies)),
             character_ability_scores(ability_id, score),
             character_skill_proficiencies(skill_id, proficiency),
@@ -172,7 +179,8 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_languages(language_id),
             character_spells(spell_id, status),
             character_spell_slots(slot_level, slots_total, slots_used),
-            character_feature_uses(class_feature_id, uses_remaining)
+            character_feature_uses(class_feature_id, uses_remaining),
+            character_inventory(id, item_id, custom_name, quantity, equipped, items(category, weight))
           ''')
           .eq('id', characterId)
           .eq('owner_id', ownerId)
@@ -208,6 +216,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       final toolProficiencyNames = await _fetchToolProficiencyNames(row);
       final knownLanguageNames = await _fetchLanguageNames(row);
       final spells = await _fetchSpells(row);
+      final inventory = await _fetchInventory(row);
 
       return CharacterDetailRowMapper.toCharacterDetail(
         row,
@@ -222,6 +231,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         knownLanguageNames: knownLanguageNames,
         spells: spells,
         spellSlots: CharacterDetailRowMapper.parseSpellSlots(row),
+        inventory: inventory,
       );
     } on CharacterFailure {
       rethrow;
@@ -523,6 +533,38 @@ class SupabaseCharacterRepository implements CharacterRepository {
       spellRows,
       names: spellNames,
       statuses: CharacterSpellRowMapper.parseStatuses(characterSpellRows),
+    );
+  }
+
+  /// Inventaire résolu, onglet "Inventaire" — `character_inventory` est déjà
+  /// embarquée dans le `select` principal, `items` avec elle (relation de
+  /// clé étrangère réelle `character_inventory.item_id -> items.id`,
+  /// contrairement à `translations`, table polymorphe que PostgREST ne peut
+  /// jamais embarquer automatiquement) : seuls les noms d'objets du
+  /// catalogue restent à résoudre via `translations`
+  /// (`entity_type = 'item'`). Retourne une liste vide sans requête
+  /// `translations` si le personnage n'a que des objets personnalisés (ou
+  /// aucun objet).
+  ///
+  /// Pas de `.order(...)` sur `character_inventory` : contrairement à
+  /// `skills`/`class_features`, cette table n'a aucune colonne de tri
+  /// naturelle (ni `created_at`, ni équivalent — vérifié contre le schéma
+  /// réel, `20260825090400_create_character_tables.sql` côté dépôt web) ;
+  /// les objets sont donc affichés dans l'ordre renvoyé par PostgREST, sans
+  /// garantie particulière ni regroupement/tri applicatif à cette itération
+  /// (voir la documentation de classe de
+  /// `presentation/widgets/character_inventory_tab_body.dart`).
+  Future<List<CharacterInventoryItem>> _fetchInventory(
+    Map<String, dynamic> row,
+  ) async {
+    final inventoryRows = CharacterInventoryRowMapper.rowsOf(row);
+    final itemNames = await _fetchTranslatedNames(
+      entityType: 'item',
+      entityIds: CharacterInventoryRowMapper.collectItemIds(inventoryRows),
+    );
+    return CharacterInventoryRowMapper.toCharacterInventoryItems(
+      inventoryRows,
+      names: itemNames,
     );
   }
 }

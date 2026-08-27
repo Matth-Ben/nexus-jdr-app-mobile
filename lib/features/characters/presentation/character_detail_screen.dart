@@ -17,6 +17,7 @@ import 'providers/character_providers.dart';
 import 'widgets/character_ability_score_grid.dart';
 import 'widgets/character_detail_tab_bar.dart';
 import 'widgets/character_identity_card.dart';
+import 'widgets/character_inventory_tab_body.dart';
 import 'widgets/character_saving_throws_card.dart';
 import 'widgets/character_skills_tab_body.dart';
 import 'widgets/character_vitals_card.dart';
@@ -25,9 +26,9 @@ import 'widgets/portrait_upload_sheet.dart';
 
 /// Fiche personnage, route `/characters/:id` — remplace
 /// `CharacterDetailPlaceholderScreen`. 4 onglets à terme (voir
-/// `CharacterDetailTab`) ; les onglets "Personnage" et "Compétences" ont un
-/// vrai contenu, les 2 autres restent des placeholders (même approche "un
-/// onglet à la fois" que l'assistant de création).
+/// `CharacterDetailTab`) ; les onglets "Personnage", "Compétences" et
+/// "Inventaire" ont un vrai contenu, "Histoire" reste un placeholder (même
+/// approche "un onglet à la fois" que l'assistant de création).
 class CharacterDetailScreen extends ConsumerStatefulWidget {
   const CharacterDetailScreen({required this.characterId, super.key});
 
@@ -189,6 +190,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     if (_tab == CharacterDetailTab.skills) {
       return CharacterSkillsTabBody(detail: detail);
     }
+    if (_tab == CharacterDetailTab.inventory) {
+      return CharacterInventoryTabBody(detail: detail);
+    }
     if (_tab != CharacterDetailTab.character) {
       return _PlaceholderTabBody(tab: _tab);
     }
@@ -274,15 +278,14 @@ class _CharacterTabBody extends StatelessWidget {
   }
 }
 
-/// Contenu placeholder des 2 onglets pas encore implémentés — voir la
-/// documentation de classe de [CharacterDetailScreen].
+/// Contenu placeholder du seul onglet pas encore implémenté ("Histoire") —
+/// voir la documentation de classe de [CharacterDetailScreen].
 class _PlaceholderTabBody extends StatelessWidget {
   const _PlaceholderTabBody({required this.tab});
 
   final CharacterDetailTab tab;
 
   static const Map<CharacterDetailTab, String> _sectionLabels = {
-    CharacterDetailTab.inventory: 'Inventaire',
     CharacterDetailTab.story: 'Histoire',
   };
 

@@ -68,7 +68,24 @@ class AccentIconBadge extends StatelessWidget {
       ),
       child: Icon(
         index < 0 ? (neutralIcon ?? icon) : icon,
-        color: Colors.white,
+        // Blanc par défaut, sauf sur fond `goldEnd` : le contraste
+        // icône blanche/fond doré (~2,7:1) est sous le seuil WCAG 3:1 pour
+        // les composants graphiques (signalé en revue direction-artistique
+        // sur `character_inventory_item_card.dart`/
+        // `inventory_category_rules.dart` — catégorie "objet magique").
+        // Ce n'était pas le premier appelant à utiliser `goldEnd` en fond
+        // (déjà le cas pour Constitution, `ability_score_definitions.dart`,
+        // consommé par `ability_score_step_screen.dart`) — le défaut de
+        // contraste y était juste passé inaperçu jusqu'ici ; ce correctif
+        // profite donc aussi à cet écran déjà livré, sans régression
+        // visuelle (juste plus lisible).
+        // `woodDark` plutôt qu'une nouvelle teinte : déjà utilisé pour le
+        // même besoin de contraste sur fond `goldEnd` par
+        // `character_detail_tab_bar.dart::_TabButton` (icône/texte de
+        // l'onglet sélectionné).
+        color: resolvedColor == AppColors.goldEnd
+            ? AppColors.woodDark
+            : Colors.white,
         size: 20,
       ),
     );

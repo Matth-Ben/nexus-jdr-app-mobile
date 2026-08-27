@@ -1,6 +1,7 @@
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_detail_class_row.dart';
+import '../domain/character_inventory_item.dart';
 import '../domain/character_skill_row.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
@@ -275,15 +276,19 @@ abstract final class CharacterDetailRowMapper {
   /// [collectBackgroundIds]/[collectAlignmentIds].
   ///
   /// Les listes de l'onglet "Compétences" ([skills]/[classFeatures]/
-  /// [toolProficiencyNames]/[knownLanguageNames]/[spells]/[spellSlots]) sont
-  /// déjà entièrement construites par l'appelant (voir
-  /// `SupabaseCharacterRepository.fetchCharacterDetail`,
+  /// [toolProficiencyNames]/[knownLanguageNames]/[spells]/[spellSlots]) et
+  /// [inventory] (onglet "Inventaire") sont déjà entièrement construites par
+  /// l'appelant (voir `SupabaseCharacterRepository.fetchCharacterDetail`,
   /// `CharacterSkillRowMapper`/`ClassFeatureRowMapper`/
-  /// `CharacterSpellRowMapper`) : elles ont chacune besoin d'une requête
-  /// PostgREST supplémentaire (`skills`/`class_features`/`spells`) que ce
-  /// mapper pur, sans accès réseau, ne peut pas faire lui-même — toutes
-  /// optionnelles (défaut liste vide) pour ne pas casser les tests
-  /// existants de [toCharacterDetail] qui ne les fournissent pas encore.
+  /// `CharacterSpellRowMapper`/`CharacterInventoryRowMapper`) : elles ont
+  /// chacune besoin d'une requête PostgREST supplémentaire
+  /// (`skills`/`class_features`/`spells`/résolution des noms d'objets via
+  /// `translations`) que ce mapper pur, sans accès réseau, ne peut pas faire
+  /// lui-même — toutes optionnelles (défaut liste vide) pour ne pas casser
+  /// les tests existants de [toCharacterDetail] qui ne les fournissent pas
+  /// encore. La monnaie (`currency_gp`/`pp`/`ep`/`sp`/`cp`), à l'inverse,
+  /// est une simple colonne de `characters` : résolue directement ici,
+  /// même règle que [xp]/[currentHp].
   static CharacterDetail toCharacterDetail(
     Map<String, dynamic> row, {
     required Map<String, String> raceNames,
@@ -297,6 +302,7 @@ abstract final class CharacterDetailRowMapper {
     List<String> knownLanguageNames = const [],
     List<CharacterSpellEntry> spells = const [],
     List<CharacterSpellSlot> spellSlots = const [],
+    List<CharacterInventoryItem> inventory = const [],
   }) {
     final raceId = row['race_id'];
     final subraceId = row['subrace_id'];
@@ -330,6 +336,12 @@ abstract final class CharacterDetailRowMapper {
       knownLanguageNames: knownLanguageNames,
       spells: spells,
       spellSlots: spellSlots,
+      currencyGp: (row['currency_gp'] as num?)?.toInt() ?? 0,
+      currencyPp: (row['currency_pp'] as num?)?.toInt() ?? 0,
+      currencyEp: (row['currency_ep'] as num?)?.toInt() ?? 0,
+      currencySp: (row['currency_sp'] as num?)?.toInt() ?? 0,
+      currencyCp: (row['currency_cp'] as num?)?.toInt() ?? 0,
+      inventory: inventory,
     );
   }
 }

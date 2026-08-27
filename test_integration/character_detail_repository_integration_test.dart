@@ -244,6 +244,88 @@ void main() {
       expect(detail.spellSlots.single.remaining, 3);
     });
 
+    test('fetchCharacterDetail résout la monnaie et l\'inventaire de '
+        'l\'onglet "Inventaire" via le vrai schéma (character_inventory '
+        'joint à items par une vraie relation de clé étrangère, noms '
+        'd\'objets du catalogue via translations)', () async {
+      final character = await client
+          .from('characters')
+          .insert({
+            'owner_id': ownerId,
+            'name': 'Test Intégration Inventaire',
+            'currency_gp': 42,
+            'currency_pp': 2,
+            'currency_sp': 6,
+            'currency_cp': 14,
+          })
+          .select('id')
+          .single();
+      final characterId = character['id'] as String;
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', characterId);
+      });
+
+      final itemRow = await client
+          .from('items')
+          .select('weight')
+          .eq('id', reference.itemId)
+          .single();
+      final itemWeight = (itemRow['weight'] as num?)?.toDouble();
+
+      await client.from('character_inventory').insert([
+        {
+          'character_id': characterId,
+          'item_id': reference.itemId,
+          'quantity': 2,
+          'equipped': true,
+        },
+        {
+          'character_id': characterId,
+          'custom_name': 'Petit sac de sable',
+          'quantity': 1,
+          'equipped': false,
+        },
+      ]);
+
+      final repository = SupabaseCharacterRepository(client);
+      final detail = await repository.fetchCharacterDetail(characterId);
+
+      expect(detail.currencyGp, 42);
+      expect(detail.currencyPp, 2);
+      expect(detail.currencyEp, 0);
+      expect(detail.currencySp, 6);
+      expect(detail.currencyCp, 14);
+
+      expect(detail.inventory, hasLength(2));
+
+      final catalogLine = detail.inventory.singleWhere(
+        (line) => line.itemId == reference.itemId,
+      );
+      expect(catalogLine.name, reference.itemName);
+      expect(catalogLine.category, reference.itemCategory);
+      expect(catalogLine.quantity, 2);
+      expect(catalogLine.equipped, isTrue);
+      expect(catalogLine.isCustom, isFalse);
+      if (itemWeight != null) {
+        expect(catalogLine.totalWeight, closeTo(itemWeight * 2, 0.001));
+      } else {
+        expect(catalogLine.totalWeight, isNull);
+      }
+
+      final customLine = detail.inventory.singleWhere(
+        (line) => line.name == 'Petit sac de sable',
+      );
+      expect(customLine.itemId, isNull);
+      expect(customLine.isCustom, isTrue);
+      expect(customLine.category, isNull);
+      expect(customLine.quantity, 1);
+      expect(customLine.equipped, isFalse);
+      // Aucune ligne `items` pour un objet personnalisé : poids toujours
+      // inconnu côté schéma actuel, voir
+      // `domain/character_inventory_item.dart::totalWeight`.
+      expect(customLine.totalWeight, isNull);
+    });
+
     test(
       'fetchCharacterDetail lève une CharacterFailure "introuvable" pour un '
       'personnage inexistant ou appartenant à un autre joueur (RLS)',

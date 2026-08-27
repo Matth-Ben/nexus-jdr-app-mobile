@@ -387,9 +387,9 @@ void main() {
     expect(find.text('Portrait retiré.'), findsOneWidget);
   });
 
-  testWidgets('la navigation entre les 4 onglets fonctionne : "Personnage" et '
-      '"Compétences" ont un vrai contenu, les 2 autres affichent un '
-      'placeholder', (tester) async {
+  testWidgets('la navigation entre les 4 onglets fonctionne : "Personnage", '
+      '"Compétences" et "Inventaire" ont un vrai contenu, "Histoire" '
+      'affiche un placeholder', (tester) async {
     fakeRepository.detailToReturn = _baseDetail;
 
     await pumpDetail(tester);
@@ -404,7 +404,12 @@ void main() {
 
     await tester.tap(find.text('SAC'));
     await tester.pumpAndSettle();
-    expect(find.text('Inventaire — à venir'), findsOneWidget);
+    // Rangée de stat boxes toujours affichée, même sans monnaie/inventaire
+    // (voir `character_inventory_tab_body_test.dart` pour le détail de ce
+    // contenu) : "0" (PO) prouve que l'onglet a bien basculé sur
+    // `CharacterInventoryTabBody`, pas sur le placeholder générique.
+    expect(find.text('PO'), findsOneWidget);
+    expect(find.text('Ajouter un objet'), findsOneWidget);
 
     await tester.tap(find.text('HIST.'));
     await tester.pumpAndSettle();

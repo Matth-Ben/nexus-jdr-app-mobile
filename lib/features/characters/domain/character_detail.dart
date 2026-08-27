@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'character_class_feature.dart';
 import 'character_detail_class_row.dart';
+import 'character_inventory_item.dart';
 import 'character_skill_row.dart';
 import 'character_spell_entry.dart';
 import 'character_spell_slot.dart';
@@ -93,6 +94,25 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// Emplacements de sorts par niveau (1 à 9) — onglet "Compétences",
     /// section "SORTS".
     @Default(<CharacterSpellSlot>[]) List<CharacterSpellSlot> spellSlots,
+
+    /// Monnaie du personnage (`characters.currency_gp/pp/ep/sp/cp`) — onglet
+    /// "Inventaire", rangée de stat boxes (voir
+    /// `domain/inventory_stat_boxes_resolver.dart`). `@Default(0)` comme les
+    /// autres champs ajoutés après la première version de ce modèle
+    /// (`skills`/`classFeatures`/...) : évite de devoir toucher tous les
+    /// sites de construction directe de [CharacterDetail] déjà existants
+    /// dans les tests (voir la même remarque sur ces champs ci-dessus).
+    @Default(0) int currencyGp,
+    @Default(0) int currencyPp,
+    @Default(0) int currencyEp,
+    @Default(0) int currencySp,
+    @Default(0) int currencyCp,
+
+    /// Inventaire résolu du personnage — onglet "Inventaire", liste de
+    /// cartes. Comme [skills]/[classFeatures]/..., a besoin d'une requête
+    /// PostgREST séparée (résolution des noms d'objets du catalogue via
+    /// `translations`), voir `SupabaseCharacterRepository._fetchInventory`.
+    @Default(<CharacterInventoryItem>[]) List<CharacterInventoryItem> inventory,
   }) = _CharacterDetail;
 
   /// Niveau total, somme de `character_classes.level` sur toutes les lignes
