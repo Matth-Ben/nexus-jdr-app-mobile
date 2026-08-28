@@ -26,12 +26,14 @@ import 'package:personnages/features/characters/presentation/providers/character
 
 class _AppliedLevelUp {
   const _AppliedLevelUp({
+    required this.className,
     required this.hpRolled,
     required this.hpMethod,
     required this.hpGain,
     required this.choice,
   });
 
+  final String className;
   final int hpRolled;
   final String hpMethod;
   final int hpGain;
@@ -77,6 +79,7 @@ class _FakeCharacterRepository implements CharacterRepository {
   @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
+    required String className,
     required int hpRolled,
     required String hpMethod,
     required int hpGain,
@@ -84,6 +87,7 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) async {
     applyLevelUpCalls.add(
       _AppliedLevelUp(
+        className: className,
         hpRolled: hpRolled,
         hpMethod: hpMethod,
         hpGain: hpGain,
@@ -1015,6 +1019,259 @@ void main() {
         // "Force +2" résiduel du niveau 4.
         expect(find.text('Dextérité +2'), findsOneWidget);
         expect(find.text('Force +2'), findsNothing);
+      },
+    );
+  });
+
+  group('étape "Sorts" (increment 3)', () {
+    /// Classe primaire "Clerc" (lanceur complet "préparé", jamais bloqué par
+    /// `LevelUpBlockRules` quel que soit le niveau — voir
+    /// `domain/level_up_block_reason.dart`) au niveau [level].
+    CharacterDetailClassRow clercClass({required int level}) =>
+        CharacterDetailClassRow(
+          classId: 3,
+          hitDie: 8,
+          className: 'Clerc',
+          level: level,
+          isPrimary: true,
+          savingThrowProficiencies: [],
+        );
+
+    testWidgets(
+      '1 ligne (niveau 5, palier 3 débloqué) : étape numérotée 3 sur 4 '
+      "(pas d'étape \"Choix à faire\" à ce niveau), wording \"Nouveaux "
+      'emplacements de sorts", "Retour" ramène à "Aptitudes"',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [clercClass(level: 4)],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.applyResultToReturn = const LevelUpApplyResult(
+          newLevel: 5,
+          newMaxHp: 30,
+          newCurrentHp: 26,
+        );
+
+        await pushLevelUp(tester, 5);
+        expect(find.text('Étape 1 sur 4 · Points de vie'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Étape 2 sur 4 · Aptitudes de classe'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Étape 3 sur 4 · Emplacements de sorts'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Vos emplacements de sorts sont recalculés :'),
+          findsOneWidget,
+        );
+        expect(find.text('Nouveaux emplacements de sorts'), findsOneWidget);
+        expect(find.text('Niveau 3 débloqué'), findsOneWidget);
+
+        // "Retour" : aucune étape "Choix à faire" à ce niveau -> "Aptitudes".
+        await tester.tap(find.text('RETOUR'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Étape 2 sur 4 · Aptitudes de classe'),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        // "Continuer" toujours actif (pur recalcul automatique) -> mène au
+        // récapitulatif, qui reprend le même bloc "Sorts".
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        expect(find.text('Étape 3 sur 4'), findsNothing);
+        expect(find.text('Nouveaux emplacements de sorts'), findsOneWidget);
+        expect(find.text('Niveau 3 débloqué'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls, hasLength(1));
+        expect(fakeRepository.applyLevelUpCalls.single.className, 'Clerc');
+      },
+    );
+
+    testWidgets(
+      '2 lignes (niveau 3) : palier 1 renforcé ET palier 2 débloqué dans la '
+      'même étape, triées par niveau de sort croissant',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [clercClass(level: 2)],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+
+        await pushLevelUp(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Étape 3 sur 4 · Emplacements de sorts'),
+          findsOneWidget,
+        );
+        expect(find.text('Emplacements de sorts renforcés'), findsOneWidget);
+        expect(find.text('Niveau 1 : 3 → 4 (+1)'), findsOneWidget);
+        expect(find.text('Nouveaux emplacements de sorts'), findsOneWidget);
+        expect(find.text('Niveau 2 débloqué'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'étape absente pour une classe non lanceuse (Guerrier, scénario par '
+      'défaut de ce fichier) : totalSteps reste 3',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.levelDataByLevel = {
+          5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+
+        await pushLevelUp(tester, 5);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        // Directement le récapitulatif (pas d'étape "Sorts" ni "Choix à
+        // faire" à ce niveau) : aucun bloc "Sorts" affiché.
+        expect(find.textContaining('Étape'), findsNothing);
+        expect(find.text('Nouveaux emplacements de sorts'), findsNothing);
+        expect(find.text('Emplacements de sorts renforcés'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'étape absente quand le recalcul ne change rien à ce niveau (niveau '
+      '14, palier identique au niveau 13) même pour une classe lanceuse : '
+      'saut direct au récapitulatif, cas défensif de la spec visuelle',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [clercClass(level: 13)],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          14: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+
+        await pushLevelUp(tester, 14);
+        // Niveau 14 : ni ASI (4/8/12/16/19), ni choice_type -> pas d'étape
+        // "Choix à faire" non plus. totalSteps == 3 confirme qu'aucune étape
+        // "Sorts" n'est comptée (sinon 4).
+        expect(find.text('Étape 1 sur 3 · Points de vie'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        // Directement le récapitulatif.
+        expect(find.text('Étape 1 sur 3'), findsNothing);
+        expect(find.text('Nouveaux emplacements de sorts'), findsNothing);
+        expect(find.text('Emplacements de sorts renforcés'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'totalSteps == 5 quand "Choix à faire" (ASI) ET "Sorts" sont toutes '
+      'les deux déclenchées au même niveau (niveau 4, Clerc) : numérotation '
+      '3/5 puis 4/5, "Retour" de "Sorts" ramène à "Choix à faire", '
+      'récapitulatif dans l\'ordre PV -> Aptitudes -> Choix -> Sorts',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [clercClass(level: 3)],
+          xp: 0,
+        );
+        // Niveau 4 : niveau ASI standard, sans choice_type déclaré ici — le
+        // choix ASI est résolu indépendamment de `class_features`, voir
+        // `LevelUpBlockRules.abilityScoreImprovementLevels`.
+        fakeRepository.levelDataByLevel = {
+          4: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.applyResultToReturn = const LevelUpApplyResult(
+          newLevel: 4,
+          newMaxHp: 30,
+          newCurrentHp: 26,
+        );
+
+        await pushLevelUp(tester, 4);
+        expect(find.text('Étape 1 sur 5 · Points de vie'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Étape 2 sur 5 · Aptitudes de classe'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Étape 3 sur 5 · Amélioration de caractéristique'),
+          findsOneWidget,
+        );
+
+        // Répartit le budget ASI (+1 Force, 1ʳᵉ icône "+") pour activer
+        // "Continuer".
+        await tester.tap(find.byIcon(Icons.add).first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byIcon(Icons.add).first);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Étape 4 sur 5 · Emplacements de sorts'),
+          findsOneWidget,
+        );
+        expect(find.text('Emplacements de sorts renforcés'), findsOneWidget);
+        expect(find.text('Niveau 2 : 2 → 3 (+1)'), findsOneWidget);
+
+        // "Retour" de l'étape "Sorts" : ramène à "Choix à faire" (présente à
+        // ce niveau), jamais directement à "Aptitudes".
+        await tester.tap(find.text('RETOUR'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Étape 3 sur 5 · Amélioration de caractéristique'),
+          findsOneWidget,
+        );
+        expect(find.text('Tous les points sont répartis.'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        // Récapitulatif : ordre PV -> Aptitudes -> Choix -> Sorts.
+        expect(find.text('Points de vie maximum'), findsOneWidget);
+        expect(find.text('Amélioration de caractéristique'), findsOneWidget);
+        expect(find.text('Force +2'), findsOneWidget);
+        expect(find.text('Emplacements de sorts renforcés'), findsOneWidget);
+        expect(find.text('Niveau 2 : 2 → 3 (+1)'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Clerc');
+        expect(applied.choice!.kind, LevelUpChoiceKind.abilityScoreImprovement);
       },
     );
   });

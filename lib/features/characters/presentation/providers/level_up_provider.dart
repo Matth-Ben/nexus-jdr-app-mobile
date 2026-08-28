@@ -6,6 +6,8 @@ import '../../domain/character_failure.dart';
 import '../../domain/level_up_block_reason.dart';
 import '../../domain/level_up_choice_kind.dart';
 import '../../domain/level_up_subclass_option.dart';
+import '../../domain/spell_slot_change.dart';
+import '../../domain/spell_slot_progression.dart';
 import 'character_detail_provider.dart';
 import 'character_providers.dart';
 
@@ -54,6 +56,17 @@ typedef LevelUpStepData = ({
   /// [LevelUpChoiceKind.abilityScoreImprovement] (affichage "score actuel →
   /// nouveau score").
   Map<String, int> abilityScores,
+
+  /// Changements de total d'emplacements de sorts déclenchés par ce niveau
+  /// (increment 3, étape "Sorts") — voir
+  /// `domain/spell_slot_progression.dart::SpellSlotProgression.changesFor`.
+  /// Vide pour une classe non lanceuse ou l'Occultiste, indépendamment de
+  /// [blockReason] (les classes "à sorts connus" bloquées avant même
+  /// d'atteindre cette étape, voir `domain/level_up_block_reason.dart`, ont
+  /// simplement cette liste jamais consultée par l'écran de blocage — la
+  /// calculer quand même ici reste sans effet visible, plus simple que de la
+  /// conditionner sur [blockReason]).
+  List<SpellSlotChange> spellSlotChanges,
 });
 
 /// Même rationale que [characterDetailProvider] : `autoDispose` par défaut,
@@ -127,6 +140,10 @@ Future<LevelUpStepData> levelUpStepData(
     choiceClassFeatureId: levelData.choiceClassFeatureId,
     availableSubclasses: levelData.availableSubclasses,
     abilityScores: detail.abilityScores,
+    spellSlotChanges: SpellSlotProgression.changesFor(
+      className: primaryClass.className,
+      targetLevel: targetLevel,
+    ),
   );
 }
 

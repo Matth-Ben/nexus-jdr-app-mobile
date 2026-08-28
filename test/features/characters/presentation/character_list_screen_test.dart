@@ -90,6 +90,7 @@ class _FakeCharacterRepository implements CharacterRepository {
   @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
+    required String className,
     required int hpRolled,
     required String hpMethod,
     required int hpGain,

@@ -15,6 +15,7 @@ import '../domain/level_up_choice_selection.dart';
 import '../domain/level_up_level_data.dart';
 import '../domain/level_up_subclass_option.dart';
 import '../domain/portrait_storage_path_resolver.dart';
+import '../domain/spell_slot_progression.dart';
 import 'character_detail_row_mapper.dart';
 import 'character_error_mapper.dart';
 import 'character_inventory_row_mapper.dart';
@@ -114,6 +115,17 @@ abstract class CharacterRepository {
   /// - [LevelUpChoiceKind.fightingStyle]/[LevelUpChoiceKind.favoredEnemy] :
   ///   insert `character_class_options`.
   ///
+  /// Depuis l'increment 3 (étape "Sorts") : recalcule aussi
+  /// `character_spell_slots` pour la classe primaire, depuis zéro (upsert
+  /// complet pour le nouveau niveau, jamais un delta — voir
+  /// `domain/spell_slot_progression.dart::SpellSlotProgression.slotsForLevel`
+  /// et la documentation de [_upsertSpellSlots]). [className] est requis
+  /// pour ce recalcul (déjà résolu par l'appelant, voir `LevelUpStepData`
+  /// côté `presentation/providers/level_up_provider.dart`) : ni
+  /// `character_classes` ni `classes` ne portent le nom de classe
+  /// directement exploitable ici (résolu via `translations`, voir la
+  /// documentation de classe de [SupabaseCharacterRepository]).
+  ///
   /// [hpRolled] et [hpGain] sont déjà calculés par l'appelant (voir
   /// `domain/level_up_hit_points_calculator.dart`), cette méthode ne fait
   /// qu'écrire le résultat déjà calculé — même principe que [updateHp].
@@ -128,6 +140,7 @@ abstract class CharacterRepository {
   /// en charge par la montée de niveau automatique à cet incrément).
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
+    required String className,
     required int hpRolled,
     required String hpMethod,
     required int hpGain,
@@ -537,6 +550,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
+    required String className,
     required int hpRolled,
     required String hpMethod,
     required int hpGain,
@@ -584,15 +598,23 @@ class SupabaseCharacterRepository implements CharacterRepository {
       //    `UPDATE` quand [choice] est une sous-classe, plutôt qu'un appel
       //    séparé — même écriture, même niveau de risque, une requête de
       //    moins.
-      // 3. Le choix restant (ASI ou `character_class_options`), s'il y en a
+      // 3. `character_spell_slots` (increment 3, étape "Sorts" — voir
+      //    [_upsertSpellSlots]), placé ici plutôt qu'après le choix : ce
+      //    recalcul ne dépend que de `className`/`newLevel`, jamais de
+      //    [choice], donc rien ne justifie de le faire attendre derrière un
+      //    choix optionnel. Même donnée de jeu vivante que le choix
+      //    ci-dessous (pas un pur historique) : un échec à cette étape doit
+      //    laisser le niveau déjà incrémenté (visible, corrigible), même
+      //    rationale que 4.
+      // 4. Le choix restant (ASI ou `character_class_options`), s'il y en a
       //    un — placé ici (juste après le niveau, avant l'historique PV) car
       //    c'est une donnée de jeu vivante au moins aussi significative que
       //    le niveau lui-même (contrairement à `character_level_hp`, pur
       //    historique) : mieux vaut qu'un échec à cette étape laisse le
       //    niveau déjà incrémenté (visible, corrigible) plutôt que de la
       //    reporter après l'historique, qui doit rester la toute dernière
-      //    écriture (voir 4.).
-      // 4. `character_level_hp`, purement un historique, toujours en
+      //    écriture (voir 5.).
+      // 5. `character_level_hp`, purement un historique, toujours en
       //    dernier. Contrairement à `createCharacter`, aucun nettoyage
       //    ("best effort") n'est possible ici : il n'y a pas de ligne
       //    fraîchement créée à supprimer, seulement des colonnes déjà
@@ -611,6 +633,12 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .from('character_classes')
           .update(classUpdate)
           .eq('id', classRow['id']);
+
+      await _upsertSpellSlots(
+        characterId: characterId,
+        className: className,
+        newLevel: newLevel,
+      );
 
       if (choice != null) {
         await _applyChoice(
@@ -639,6 +667,97 @@ class SupabaseCharacterRepository implements CharacterRepository {
     } catch (_) {
       throw mapUnknownCharacterError();
     }
+  }
+
+  /// Recalcule `character_spell_slots` pour la classe primaire au nouveau
+  /// niveau [newLevel] — increment 3, étape "Sorts". **Recalcul complet
+  /// depuis zéro** (upsert de tous les paliers dont le total théorique à
+  /// [newLevel] est `> 0`), jamais un delta incrémental : contrairement au
+  /// reste de cette méthode, `character_spell_slots` n'est écrit nulle part
+  /// ailleurs dans ce dépôt (ni à la création de personnage), donc l'état
+  /// antérieur en base n'est pas fiable comme point de départ (voir le point
+  /// critique de la spec visuelle direction-artistique de l'étape "Sorts",
+  /// `presentation/level_up_screen.dart`).
+  ///
+  /// Aucune ligne écrite pour un niveau de sort à 0 — même convention que la
+  /// lecture existante (`CharacterDetailRowMapper.parseSpellSlots` : absence
+  /// de ligne == 0).
+  ///
+  /// Préserve `slots_used` d'une ligne déjà existante (un joueur peut avoir
+  /// déjà consommé des emplacements avant de monter de niveau) tant qu'il
+  /// reste cohérent avec le nouveau total (`slots_used <= slots_total`) ; le
+  /// replie sur `slots_total` sinon plutôt que de laisser une valeur
+  /// incohérente ou de planter — ne devrait jamais arriver en pratique (les
+  /// totaux ne font que croître avec le niveau).
+  ///
+  /// Ne fait rien pour une classe non lanceuse ou l'Occultiste (magie de
+  /// pacte, mécanisme différent, hors périmètre visuel de cet incrément) :
+  /// [SpellSlotProgression.slotsForLevel] retourne alors 9 zéros, donc
+  /// [nonZeroLevels] est vide.
+  Future<void> _upsertSpellSlots({
+    required String characterId,
+    required String className,
+    required int newLevel,
+  }) async {
+    final totals = SpellSlotProgression.slotsForLevel(className, newLevel);
+    final nonZeroLevels = [
+      for (var i = 0; i < totals.length; i++)
+        if (totals[i] > 0) i + 1,
+    ];
+    if (nonZeroLevels.isEmpty) {
+      return;
+    }
+
+    final existingRows = await _client
+        .from('character_spell_slots')
+        .select('slot_level, slots_used')
+        .eq('character_id', characterId)
+        .inFilter('slot_level', nonZeroLevels);
+    final usedByLevel = <int, int>{
+      for (final row in existingRows)
+        (row['slot_level'] as num).toInt():
+            (row['slots_used'] as num?)?.toInt() ?? 0,
+    };
+
+    final payload = [
+      for (final spellLevel in nonZeroLevels)
+        _spellSlotUpsertRow(
+          characterId: characterId,
+          spellLevel: spellLevel,
+          total: totals[spellLevel - 1],
+          existingUsed: usedByLevel[spellLevel] ?? 0,
+        ),
+    ];
+
+    // `onConflict` explicite sur la clé primaire réelle de la table
+    // (`character_spell_slots_pkey`, `(character_id, slot_level)` — vérifié
+    // contre le schéma du stack Supabase local) : sans lui, `upsert` de ce
+    // package retombe sur la contrainte `UNIQUE`/`PRIMARY KEY` par défaut de
+    // la table, ce qui fonctionnerait ici aussi, mais le rendre explicite
+    // documente l'intention et évite une ambiguïté si une autre contrainte
+    // unique était ajoutée un jour.
+    await _client
+        .from('character_spell_slots')
+        .upsert(payload, onConflict: 'character_id,slot_level');
+  }
+
+  /// Une ligne de payload `character_spell_slots` — factorisé hors de
+  /// [_upsertSpellSlots] pour isoler le filet de sécurité `slots_used`
+  /// (documenté sur l'appelant) dans un simple `return`, plutôt qu'une
+  /// expression de collection `for` moins lisible.
+  Map<String, dynamic> _spellSlotUpsertRow({
+    required String characterId,
+    required int spellLevel,
+    required int total,
+    required int existingUsed,
+  }) {
+    final used = existingUsed > total ? total : existingUsed;
+    return {
+      'character_id': characterId,
+      'slot_level': spellLevel,
+      'slots_total': total,
+      'slots_used': used,
+    };
   }
 
   /// Écrit [choice] pour la table concernée — voir la documentation de

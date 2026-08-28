@@ -21,6 +21,7 @@ import '../domain/level_up_choice_options.dart';
 import '../domain/level_up_choice_selection.dart';
 import '../domain/level_up_hit_points_calculator.dart';
 import '../domain/signed_modifier_formatter.dart';
+import '../domain/spell_slot_change.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
 import 'providers/level_up_provider.dart';
@@ -28,7 +29,7 @@ import 'widgets/level_up_header.dart';
 
 enum _HpMethod { roll, average }
 
-enum _LevelUpPhase { hitPoints, abilities, choice, summary }
+enum _LevelUpPhase { hitPoints, abilities, choice, spells, summary }
 
 /// Budget de points de l'étape "Choix à faire", variante amélioration de
 /// caractéristique (règle 5e standard : "+2 sur une caractéristique" OU
@@ -41,12 +42,15 @@ const int _abilityScoreImprovementBudget = 2;
 /// spec visuelle direction-artistique complète). Étapes "Points de vie" et
 /// "Aptitudes de classe automatiques" (increment 1), "Choix à faire"
 /// (increment 2, uniquement quand le niveau ciblé le déclenche — voir
-/// [LevelUpChoiceKind]), puis récapitulatif. Un niveau qui nécessite un
-/// choix non couvert (voir `domain/level_up_block_reason.dart`) bloque le
-/// flux avant l'étape "Points de vie", au lieu de l'ignorer silencieusement.
+/// [LevelUpChoiceKind]), "Sorts" (increment 3, uniquement quand le
+/// recalcul des emplacements de sorts change quelque chose à ce niveau —
+/// voir [LevelUpStepData.spellSlotChanges]), puis récapitulatif. Un niveau
+/// qui nécessite un choix non couvert (voir `domain/level_up_block_reason.dart`)
+/// bloque le flux avant l'étape "Points de vie", au lieu de l'ignorer
+/// silencieusement.
 ///
 /// Un seul écran (pas une route par étape, contrairement à l'assistant de
-/// création) : les 5 "vues" du flux (points de vie/aptitudes/choix/
+/// création) : les 6 "vues" du flux (points de vie/aptitudes/choix/sorts/
 /// récapitulatif/blocage) sont de simples changements de contenu à
 /// l'intérieur du même widget, piloté par [_LevelUpPhase] — plus simple à
 /// orchestrer ici que des routes distinctes, puisque le chaînage
@@ -229,6 +233,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     try {
       final result = await repository.applyLevelUp(
         characterId: widget.characterId,
+        className: data.className,
         hpRolled: hpRolled,
         hpMethod: hpMethod,
         hpGain: hpGain,
@@ -341,14 +346,35 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       _LevelUpPhase.hitPoints => _buildHpStep(data),
       _LevelUpPhase.abilities => _buildAbilitiesStep(data),
       _LevelUpPhase.choice => _buildChoiceStep(data),
+      _LevelUpPhase.spells => _buildSpellsStep(data),
       _LevelUpPhase.summary => _buildSummary(data),
     };
   }
 
-  /// 4 si [LevelUpStepData.choiceKind] déclenche l'étape "Choix à faire" à
-  /// ce niveau, 3 sinon (comportement de l'increment 1, inchangé) — spec
-  /// visuelle direction-artistique section 1.
-  int _totalSteps(LevelUpStepData data) => data.choiceKind != null ? 4 : 3;
+  /// 3, 4 ou 5 selon les étapes déclenchées à ce niveau — spec visuelle
+  /// direction-artistique section 1 (étape "Sorts", increment 3) :
+  /// [LevelUpStepData.choiceKind] non nul ajoute l'étape "Choix à faire"
+  /// (increment 2, inchangé), [LevelUpStepData.spellSlotChanges] non vide
+  /// ajoute l'étape "Sorts".
+  int _totalSteps(LevelUpStepData data) =>
+      3 +
+      (data.choiceKind != null ? 1 : 0) +
+      (data.spellSlotChanges.isNotEmpty ? 1 : 0);
+
+  /// Étape suivante une fois "Aptitudes"/"Choix à faire" franchies : l'étape
+  /// "Sorts" si ce niveau déclenche un changement d'emplacements
+  /// (increment 3), le récapitulatif sinon — même logique de chaînage
+  /// conditionnel que [LevelUpChoiceKind] pour l'étape "Choix à faire".
+  /// Couvre aussi le cas défensif "condition d'affichage vraie mais 0
+  /// changement calculé" (spec visuelle direction-artistique section 4) :
+  /// ce cas ne devrait jamais se produire en pratique (voir
+  /// `domain/spell_slot_progression.dart::SpellSlotProgression.changesFor`),
+  /// mais une liste vide retombe naturellement ici sur le récapitulatif,
+  /// sans code dédié supplémentaire.
+  _LevelUpPhase _phaseAfterChoiceOrAbilities(LevelUpStepData data) =>
+      data.spellSlotChanges.isNotEmpty
+      ? _LevelUpPhase.spells
+      : _LevelUpPhase.summary;
 
   Widget _buildHpStep(LevelUpStepData data) {
     final hpRolled = _hpRolledValue(data.hitDie);
@@ -540,7 +566,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           onContinue: () => setState(() {
             _phase = data.choiceKind != null
                 ? _LevelUpPhase.choice
-                : _LevelUpPhase.summary;
+                : _phaseAfterChoiceOrAbilities(data);
           }),
         ),
       ],
@@ -565,7 +591,8 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         _StepFooter(
           onBack: () => setState(() => _phase = _LevelUpPhase.abilities),
           onContinue: _canContinueChoiceStep(data, kind)
-              ? () => setState(() => _phase = _LevelUpPhase.summary)
+              ? () =>
+                    setState(() => _phase = _phaseAfterChoiceOrAbilities(data))
               : null,
         ),
       ],
@@ -771,6 +798,96 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     );
   }
 
+  /// Étape "Sorts" (increment 3), affichée uniquement quand
+  /// [LevelUpStepData.spellSlotChanges] n'est pas vide — voir [_totalSteps]
+  /// et [_phaseAfterChoiceOrAbilities]. Numérotation "Étape 3" si l'étape
+  /// "Choix à faire" n'existait pas à ce niveau, "Étape 4" sinon (spec
+  /// visuelle direction-artistique section 0) — toujours juste avant le
+  /// récapitulatif.
+  Widget _buildSpellsStep(LevelUpStepData data) {
+    final stepNumber = data.choiceKind != null ? 4 : 3;
+
+    return Column(
+      children: [
+        LevelUpHeader(
+          eyebrow: 'MONTÉE DE NIVEAU',
+          levelLabel: 'NIVEAU $_targetLevel',
+          stepLabel:
+              'Étape $stepNumber sur ${_totalSteps(data)} · '
+              'Emplacements de sorts',
+          remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: _ParchmentCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Vos emplacements de sorts sont recalculés :',
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  for (var i = 0; i < data.spellSlotChanges.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.md),
+                    _spellSlotGainRow(data.spellSlotChanges[i]),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+        _StepFooter(
+          // Vers l'étape "Choix à faire" si elle existait à ce niveau,
+          // "Aptitudes" sinon — même logique de chaînage conditionnel que le
+          // "Continuer" de l'étape "Aptitudes" (voir
+          // [_phaseAfterChoiceOrAbilities]), en sens inverse.
+          onBack: () => setState(() {
+            _phase = data.choiceKind != null
+                ? _LevelUpPhase.choice
+                : _LevelUpPhase.abilities;
+          }),
+          // Toujours actif : pur recalcul automatique, rien à valider (spec
+          // visuelle direction-artistique section 0).
+          onContinue: () => setState(() => _phase = _LevelUpPhase.summary),
+        ),
+      ],
+    );
+  }
+
+  /// Une ligne de gain de l'étape "Sorts", et du bloc "Sorts" du
+  /// récapitulatif ([_spellSlotSummaryGainRows]) — wording des deux
+  /// variantes, spec visuelle direction-artistique section 2 :
+  /// [SpellSlotChange.isNewlyUnlocked] (déblocage net, ancien total nul) vs
+  /// renfort d'un palier déjà actif (libellé approuvé par le chef de
+  /// projet).
+  GainRow _spellSlotGainRow(SpellSlotChange change) {
+    return GainRow(
+      icon: Icons.auto_awesome,
+      color: AppColors.accentViolet,
+      title: change.isNewlyUnlocked
+          ? 'Nouveaux emplacements de sorts'
+          : 'Emplacements de sorts renforcés',
+      subtitle: change.isNewlyUnlocked
+          ? 'Niveau ${change.spellLevel} débloqué'
+          : 'Niveau ${change.spellLevel} : ${change.oldTotal} → '
+                '${change.newTotal} (+${change.delta})',
+    );
+  }
+
+  /// Lignes de récapitulatif du bloc "Sorts" (increment 3), 0 à 2 éléments —
+  /// voir la spec visuelle direction-artistique section 3. Insérées dans
+  /// [_buildSummary] après le bloc "Choix à faire" existant, même ordre
+  /// visuel que les étapes (PV -> Aptitudes -> Choix -> Sorts).
+  List<GainRow> _spellSlotSummaryGainRows(LevelUpStepData data) => [
+    for (final change in data.spellSlotChanges) _spellSlotGainRow(change),
+  ];
+
   /// Ligne de récapitulatif du choix fait à l'étape "Choix à faire", `null`
   /// si ce niveau n'en déclenchait aucun — voir la spec visuelle
   /// direction-artistique section C.
@@ -840,6 +957,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                       if (_choiceSummaryGainRow(data) case final gainRow?) ...[
                         const SizedBox(height: AppSpacing.md),
                         gainRow,
+                      ],
+                      for (final spellGainRow in _spellSlotSummaryGainRows(
+                        data,
+                      )) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        spellGainRow,
                       ],
                     ],
                   ),

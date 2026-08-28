@@ -8,9 +8,11 @@ import 'support/test_environment.dart';
 
 /// Tests d'intégration des méthodes de `SupabaseCharacterRepository` ajoutées
 /// pour l'écran "Montée de niveau" — `addXp`/`fetchLevelUpLevelData`/
-/// `applyLevelUp` (increment 1), et l'étape "Choix à faire" (increment 2 :
+/// `applyLevelUp` (increment 1), l'étape "Choix à faire" (increment 2 :
 /// résolution des sous-classes disponibles, écriture ASI sur les deux
-/// tables, `character_classes.subclass_id`, `character_class_options`) —
+/// tables, `character_classes.subclass_id`, `character_class_options`) et
+/// l'étape "Sorts" (increment 3 : recalcul complet de
+/// `character_spell_slots`, voir `domain/spell_slot_progression.dart`) —
 /// voir `character_repository_integration_test.dart` pour le rationale
 /// général de ce dossier.
 void main() {
@@ -145,6 +147,11 @@ void main() {
       final repository = SupabaseCharacterRepository(client);
       final result = await repository.applyLevelUp(
         characterId: characterId,
+        // Nom de la classe de référence (`classes.id = 1`, "Barbare" côté
+        // seed actuel) : non lanceuse de sorts, donc sans effet sur
+        // `character_spell_slots` ici — ce test ne porte pas sur l'étape
+        // "Sorts" (increment 3, voir le groupe dédié plus bas).
+        className: reference.className,
         hpRolled: 6,
         hpMethod: 'lance',
         hpGain: 8,
@@ -196,6 +203,7 @@ void main() {
       await expectLater(
         repository.applyLevelUp(
           characterId: characterId,
+          className: reference.className,
           hpRolled: 5,
           hpMethod: 'moyenne',
           hpGain: 5,
@@ -295,6 +303,7 @@ void main() {
         final repository = SupabaseCharacterRepository(client);
         final result = await repository.applyLevelUp(
           characterId: characterId,
+          className: reference.className,
           hpRolled: 6,
           hpMethod: 'lance',
           hpGain: 8,
@@ -379,6 +388,10 @@ void main() {
         final repository = SupabaseCharacterRepository(client);
         final result = await repository.applyLevelUp(
           characterId: characterId,
+          // `className` n'a pas besoin de correspondre à `classId` ici :
+          // seul son effet sur `character_spell_slots` en dépend (increment
+          // 3), hors périmètre de ce test (sous-classe).
+          className: reference.className,
           hpRolled: 5,
           hpMethod: 'moyenne',
           hpGain: 5,
@@ -460,6 +473,7 @@ void main() {
 
         await repository.applyLevelUp(
           characterId: characterId,
+          className: reference.className,
           hpRolled: 5,
           hpMethod: 'moyenne',
           hpGain: 5,
@@ -474,6 +488,224 @@ void main() {
         expect(optionRows.single['class_feature_id'], classFeatureId);
         expect(optionRows.single['level'], targetLevel);
         expect(optionRows.single['chosen_value'], chosenValue);
+      });
+    });
+
+    group('étape "Sorts" (increment 3)', () {
+      /// `classes.id` dont le nom traduit `fr` vaut exactement [name] —
+      /// contrairement à [ReferenceContent] (qui ne garantit qu'*une*
+      /// classe/traduction quelconque), ces tests ont besoin d'une classe
+      /// précise (`Clerc`/`Guerrier`) pour que `className` corresponde à une
+      /// entrée connue de `SpellSlotProgression`. Échoue explicitement si le
+      /// seed du dépôt web ne contient plus cette classe.
+      Future<Object> classIdByName(String name) async {
+        final translation = await client
+            .from('translations')
+            .select('entity_id')
+            .eq('entity_type', 'class')
+            .eq('field_name', 'name')
+            .eq('locale', 'fr')
+            .eq('value', name)
+            .maybeSingle();
+        expect(
+          translation,
+          isNotNull,
+          reason:
+              'Aucune classe "$name" trouvée côté seed — vérifier '
+              'supabase db reset côté dépôt web (ce nom est attendu tel '
+              'quel par domain/spell_slot_progression.dart).',
+        );
+        return translation!['entity_id'] as Object;
+      }
+
+      test('recalcule character_spell_slots pour un lanceur complet (Clerc) : '
+          'upsert des nouveaux paliers, préserve slots_used déjà présent tant '
+          "qu'il reste cohérent avec le nouveau total", () async {
+        final clercId = await classIdByName('Clerc');
+
+        final character = await client
+            .from('characters')
+            .insert({
+              'owner_id': ownerId,
+              'name': 'Test Intégration Sorts Clerc',
+              'max_hp': 10,
+              'current_hp': 10,
+            })
+            .select('id')
+            .single();
+        final characterId = character['id'] as String;
+        addTearDown(() async {
+          await client.from('characters').delete().eq('id', characterId);
+        });
+
+        await client.from('character_classes').insert({
+          'character_id': characterId,
+          'class_id': clercId,
+          'level': 1,
+          'is_primary': true,
+        });
+
+        final repository = SupabaseCharacterRepository(client);
+
+        // Niveau 1 -> 2 : Clerc niveau 2 = [3,0,...] (table
+        // `SpellSlotProgression`). Aucune ligne `character_spell_slots`
+        // préexistante : `slots_used` démarre à 0.
+        await repository.applyLevelUp(
+          characterId: characterId,
+          className: 'Clerc',
+          hpRolled: 5,
+          hpMethod: 'moyenne',
+          hpGain: 5,
+        );
+
+        final afterLevel2 = await client
+            .from('character_spell_slots')
+            .select('slot_level, slots_total, slots_used')
+            .eq('character_id', characterId)
+            .order('slot_level', ascending: true);
+        expect(afterLevel2, hasLength(1));
+        expect(afterLevel2.single['slot_level'], 1);
+        expect(afterLevel2.single['slots_total'], 3);
+        expect(afterLevel2.single['slots_used'], 0);
+
+        // Simule un joueur ayant déjà consommé 2 des 3 emplacements de
+        // niveau 1 avant de monter de niveau.
+        await client
+            .from('character_spell_slots')
+            .update({'slots_used': 2})
+            .eq('character_id', characterId)
+            .eq('slot_level', 1);
+
+        // Niveau 2 -> 3 : Clerc niveau 3 = [4,2,...] — le palier 1 se
+        // renforce (3 -> 4, `slots_used` doit rester 2, pas réinitialisé à
+        // 0), le palier 2 se débloque (0 -> 2, `slots_used` démarre à 0,
+        // aucune ligne préexistante).
+        await repository.applyLevelUp(
+          characterId: characterId,
+          className: 'Clerc',
+          hpRolled: 5,
+          hpMethod: 'moyenne',
+          hpGain: 5,
+        );
+
+        final afterLevel3 = await client
+            .from('character_spell_slots')
+            .select('slot_level, slots_total, slots_used')
+            .eq('character_id', characterId)
+            .order('slot_level', ascending: true);
+        expect(afterLevel3, hasLength(2));
+        expect(afterLevel3[0]['slot_level'], 1);
+        expect(afterLevel3[0]['slots_total'], 4);
+        expect(afterLevel3[0]['slots_used'], 2);
+        expect(afterLevel3[1]['slot_level'], 2);
+        expect(afterLevel3[1]['slots_total'], 2);
+        expect(afterLevel3[1]['slots_used'], 0);
+      });
+
+      test('replie slots_used sur le nouveau slots_total si un slots_used '
+          'existant le dépasse (filet de sécurité, ne devrait jamais arriver '
+          'en pratique)', () async {
+        final clercId = await classIdByName('Clerc');
+
+        final character = await client
+            .from('characters')
+            .insert({
+              'owner_id': ownerId,
+              'name': 'Test Intégration Sorts Clerc Filet',
+              'max_hp': 10,
+              'current_hp': 10,
+            })
+            .select('id')
+            .single();
+        final characterId = character['id'] as String;
+        addTearDown(() async {
+          await client.from('characters').delete().eq('id', characterId);
+        });
+
+        await client.from('character_classes').insert({
+          'character_id': characterId,
+          'class_id': clercId,
+          'level': 1,
+          'is_primary': true,
+        });
+
+        final repository = SupabaseCharacterRepository(client);
+        await repository.applyLevelUp(
+          characterId: characterId,
+          className: 'Clerc',
+          hpRolled: 5,
+          hpMethod: 'moyenne',
+          hpGain: 5,
+        );
+
+        // Valeur artificiellement incohérente (ne devrait jamais arriver en
+        // conditions normales, les totaux ne font que croître) : simule le
+        // cas défensif documenté sur `_upsertSpellSlots`.
+        await client
+            .from('character_spell_slots')
+            .update({'slots_used': 10})
+            .eq('character_id', characterId)
+            .eq('slot_level', 1);
+
+        await repository.applyLevelUp(
+          characterId: characterId,
+          className: 'Clerc',
+          hpRolled: 5,
+          hpMethod: 'moyenne',
+          hpGain: 5,
+        );
+
+        final row = await client
+            .from('character_spell_slots')
+            .select('slots_total, slots_used')
+            .eq('character_id', characterId)
+            .eq('slot_level', 1)
+            .single();
+        // Clerc niveau 3 : palier 1 = 4.
+        expect(row['slots_total'], 4);
+        expect(row['slots_used'], 4);
+      });
+
+      test("n'écrit aucune ligne character_spell_slots pour une classe non "
+          'lanceuse de sorts (Guerrier)', () async {
+        final guerrierId = await classIdByName('Guerrier');
+
+        final character = await client
+            .from('characters')
+            .insert({
+              'owner_id': ownerId,
+              'name': 'Test Intégration Sorts Guerrier',
+              'max_hp': 10,
+              'current_hp': 10,
+            })
+            .select('id')
+            .single();
+        final characterId = character['id'] as String;
+        addTearDown(() async {
+          await client.from('characters').delete().eq('id', characterId);
+        });
+
+        await client.from('character_classes').insert({
+          'character_id': characterId,
+          'class_id': guerrierId,
+          'level': 1,
+          'is_primary': true,
+        });
+
+        final repository = SupabaseCharacterRepository(client);
+        await repository.applyLevelUp(
+          characterId: characterId,
+          className: 'Guerrier',
+          hpRolled: 8,
+          hpMethod: 'lance',
+          hpGain: 8,
+        );
+
+        final rows = await client
+            .from('character_spell_slots')
+            .select('slot_level')
+            .eq('character_id', characterId);
+        expect(rows, isEmpty);
       });
     });
 
@@ -538,6 +770,7 @@ void main() {
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
+            className: reference.className,
             hpRolled: 8,
             hpMethod: 'lance',
             hpGain: 8,
@@ -589,6 +822,7 @@ void main() {
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
+            className: reference.className,
             hpRolled: 8,
             hpMethod: 'lance',
             hpGain: 8,
@@ -628,6 +862,7 @@ void main() {
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
+            className: reference.className,
             hpRolled: 8,
             hpMethod: 'lance',
             hpGain: 8,
@@ -660,6 +895,7 @@ void main() {
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
+            className: reference.className,
             hpRolled: 8,
             hpMethod: 'lance',
             hpGain: 8,
@@ -677,6 +913,61 @@ void main() {
             .select('id')
             .eq('character_id', characterId);
         expect(optionRows, isEmpty);
+      });
+
+      // Ajouté pour la même raison que les 3 tests ci-dessus (increment 2) :
+      // `character_spell_slots` est une table introduite par cet increment 3,
+      // couverte explicitement plutôt que de compter implicitement sur le
+      // fait que le `SELECT character_classes` du tout début d'`applyLevelUp`
+      // bloque déjà tout pour `otherClient` (RLS `owns_character`). Le
+      // personnage de ce groupe utilise `reference.classId`
+      // (`Barbare`, non lanceur de sorts, voir la doc de `ReferenceContent`)
+      // : reclassé en Clerc ici, sinon `_upsertSpellSlots` retournerait tôt
+      // (`nonZeroLevels` vide) même si l'isolation échouait, et ce test ne
+      // prouverait rien.
+      test("applyLevelUp avec une classe lanceuse de sorts (Clerc), appelé "
+          "depuis la session d'un autre joueur, n'insère/ne modifie jamais "
+          "de ligne character_spell_slots pour le personnage visé", () async {
+        final clercTranslation = await client
+            .from('translations')
+            .select('entity_id')
+            .eq('entity_type', 'class')
+            .eq('field_name', 'name')
+            .eq('locale', 'fr')
+            .eq('value', 'Clerc')
+            .maybeSingle();
+        expect(
+          clercTranslation,
+          isNotNull,
+          reason:
+              'Aucune classe "Clerc" trouvée côté seed — vérifier '
+              'supabase db reset côté dépôt web.',
+        );
+        final clercId = clercTranslation!['entity_id'] as Object;
+
+        await client
+            .from('character_classes')
+            .update({'class_id': clercId})
+            .eq('character_id', characterId);
+
+        final otherRepository = SupabaseCharacterRepository(otherClient);
+        try {
+          await otherRepository.applyLevelUp(
+            characterId: characterId,
+            className: 'Clerc',
+            hpRolled: 8,
+            hpMethod: 'lance',
+            hpGain: 8,
+          );
+        } catch (_) {
+          // Idem — voir la documentation du groupe.
+        }
+
+        final slotRows = await client
+            .from('character_spell_slots')
+            .select('slot_level')
+            .eq('character_id', characterId);
+        expect(slotRows, isEmpty);
       });
     });
   });
