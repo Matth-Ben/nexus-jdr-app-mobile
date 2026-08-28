@@ -11,6 +11,14 @@
 /// valeur non répertoriée plutôt que d'afficher la clé technique telle
 /// quelle au joueur.
 abstract final class ClassFeatureChoiceLabelFormatter {
+  // `sous_classe`/`style_combat`/`ennemi_jure` sont mortes dans ce contexte
+  // depuis l'increment 2 de la montée de niveau : `LevelUpBlockRules.evaluate`
+  // ne bloque plus jamais pour ces 3 valeurs (`resolvedChoiceTypes`), elles
+  // mènent à l'étape "Choix à faire" à la place (voir
+  // `domain/level_up_choice_kind.dart`). Gardées ici quand même (plutôt que
+  // supprimées) : label toujours correct si jamais réutilisé ailleurs, et
+  // évite de retomber sur l'humanisation générique ("Sous Classe") en cas de
+  // régression future sur `resolvedChoiceTypes`.
   static const Map<String, String> _labels = {
     'sous_classe': 'Sous-classe à choisir',
     'style_combat': 'Style de combat',

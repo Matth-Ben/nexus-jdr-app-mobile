@@ -19,6 +19,7 @@ import 'package:personnages/features/characters/domain/character_detail_class_ro
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
+import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/core/widgets/portrait_frame.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
@@ -102,7 +103,7 @@ class _FakeCharacterRepository implements CharacterRepository {
       throw levelUpLevelDataErrorToThrow!;
     }
     return levelUpLevelDataToReturn ??
-        const LevelUpLevelData(blockingChoiceType: null, automaticFeatures: []);
+        const LevelUpLevelData(choiceType: null, automaticFeatures: []);
   }
 
   @override
@@ -111,6 +112,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     required int hpRolled,
     required String hpMethod,
     required int hpGain,
+    LevelUpChoiceSelection? choice,
   }) async {
     applyLevelUpCallCount++;
     if (applyLevelUpErrorToThrow != null) throw applyLevelUpErrorToThrow!;

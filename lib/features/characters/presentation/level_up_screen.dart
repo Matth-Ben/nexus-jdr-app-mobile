@@ -11,8 +11,14 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/segmented_toggle.dart';
+import '../../../core/widgets/selectable_option_tile.dart';
+import '../../../core/widgets/stepper_counter.dart';
+import '../../character_creation/domain/ability_score_definitions.dart';
 import '../domain/character_failure.dart';
 import '../domain/level_up_chain_resolver.dart';
+import '../domain/level_up_choice_kind.dart';
+import '../domain/level_up_choice_options.dart';
+import '../domain/level_up_choice_selection.dart';
 import '../domain/level_up_hit_points_calculator.dart';
 import '../domain/signed_modifier_formatter.dart';
 import 'providers/character_detail_provider.dart';
@@ -22,24 +28,31 @@ import 'widgets/level_up_header.dart';
 
 enum _HpMethod { roll, average }
 
-enum _LevelUpPhase { hitPoints, abilities, summary }
+enum _LevelUpPhase { hitPoints, abilities, choice, summary }
 
-/// Flux "Montée de niveau" — increment 1
+/// Budget de points de l'étape "Choix à faire", variante amélioration de
+/// caractéristique (règle 5e standard : "+2 sur une caractéristique" OU
+/// "+1/+1 sur deux", jamais l'alternative "don" — voir la documentation de
+/// `domain/level_up_choice_kind.dart::LevelUpChoiceKind.abilityScoreImprovement`).
+const int _abilityScoreImprovementBudget = 2;
+
+/// Flux "Montée de niveau"
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 6,
-/// spec visuelle direction-artistique complète). Couvre uniquement les
-/// niveaux qui ne nécessitent aucun choix du joueur : étapes "Points de
-/// vie" et "Aptitudes de classe automatiques", puis récapitulatif. Un
-/// niveau qui nécessite un choix (voir `domain/level_up_block_reason.dart`)
-/// bloque le flux avant l'étape "Points de vie", au lieu de l'ignorer
-/// silencieusement.
+/// spec visuelle direction-artistique complète). Étapes "Points de vie" et
+/// "Aptitudes de classe automatiques" (increment 1), "Choix à faire"
+/// (increment 2, uniquement quand le niveau ciblé le déclenche — voir
+/// [LevelUpChoiceKind]), puis récapitulatif. Un niveau qui nécessite un
+/// choix non couvert (voir `domain/level_up_block_reason.dart`) bloque le
+/// flux avant l'étape "Points de vie", au lieu de l'ignorer silencieusement.
 ///
 /// Un seul écran (pas une route par étape, contrairement à l'assistant de
-/// création) : les 4 "vues" du flux (points de vie/aptitudes/récapitulatif/
-/// blocage) sont de simples changements de contenu à l'intérieur du même
-/// widget, piloté par [_LevelUpPhase] — plus simple à orchestrer ici que des
-/// routes distinctes, puisque le chaînage multi-niveaux doit pouvoir revenir
-/// à l'étape "Points de vie" pour un *nouveau* niveau sans jamais repasser
-/// par la navigation (voir [_LevelUpScreenState._continueFromSummary]).
+/// création) : les 5 "vues" du flux (points de vie/aptitudes/choix/
+/// récapitulatif/blocage) sont de simples changements de contenu à
+/// l'intérieur du même widget, piloté par [_LevelUpPhase] — plus simple à
+/// orchestrer ici que des routes distinctes, puisque le chaînage
+/// multi-niveaux doit pouvoir revenir à l'étape "Points de vie" pour un
+/// *nouveau* niveau sans jamais repasser par la navigation (voir
+/// [_LevelUpScreenState._continueFromSummary]).
 ///
 /// Aucune écriture en base avant le tap "Continuer" du récapitulatif — voir
 /// la documentation de `CharacterRepository.applyLevelUp`.
@@ -71,6 +84,25 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   int? _rolledValue;
   int? _rolledForLevel;
 
+  // État de l'étape "Choix à faire" (increment 2). Un seul jeu de champs
+  // pour les 3 variantes "liste" (sous-classe/style de combat/ennemi juré) :
+  // jamais simultanées pour un même niveau (voir
+  // `domain/level_up_choice_kind.dart::LevelUpChoiceKind`, un seul
+  // `LevelUpChoiceKind` par niveau). [_selectedListOptionId] porte
+  // l'`Object` sélectionné (un `subclasses.id` pour la sous-classe, la
+  // chaîne elle-même pour style de combat/ennemi juré, voir
+  // `domain/level_up_choice_options.dart`).
+  Object? _selectedListOptionId;
+
+  /// Points alloués par caractéristique (0 à 2, clé
+  /// `ability_score_definitions.dart`), variante amélioration de
+  /// caractéristique — seules les entrées non nulles compteront pour
+  /// `LevelUpChoiceSelection.abilityAllocations` au moment d'appliquer
+  /// (voir [_buildChoiceSelection]). `null` tant que l'étape "Choix à faire"
+  /// n'a pas encore été construite pour le niveau courant (voir
+  /// [_ensureAbilityAllocationsInitialized]).
+  Map<String, int>? _abilityAllocations;
+
   bool _isApplying = false;
   String? _applyError;
 
@@ -78,6 +110,25 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   void initState() {
     super.initState();
     _targetLevel = widget.initialTargetLevel;
+  }
+
+  /// Remet à zéro l'état de l'étape "Choix à faire" — appelé au chaînage
+  /// vers un nouveau niveau (même rationale que la réinitialisation de
+  /// `_hpMethod` dans [_continueFromSummary] : chaque niveau du chaînage
+  /// repart d'un état de saisie vierge).
+  void _resetChoiceState() {
+    _selectedListOptionId = null;
+    _abilityAllocations = null;
+  }
+
+  /// Initialise [_abilityAllocations] à 0 pour les 6 caractéristiques, une
+  /// seule fois par niveau — appelée depuis `build()` (mutation de champ
+  /// sans `setState`, même précédent que [_ensureRolled] ci-dessous : sûr
+  /// tant qu'aucun rebuild n'est requis pour ce seul effet de bord).
+  Map<String, int> _ensureAbilityAllocationsInitialized() {
+    return _abilityAllocations ??= {
+      for (final definition in abilityScoreDefinitions) definition.key: 0,
+    };
   }
 
   void _goBackToSheet() {
@@ -131,6 +182,35 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         'ensuite';
   }
 
+  /// Construit le [LevelUpChoiceSelection] à envoyer à `applyLevelUp` depuis
+  /// l'état de saisie de l'étape "Choix à faire", `null` si [data] n'en
+  /// déclenchait aucun à ce niveau (comportement de l'increment 1,
+  /// inchangé). Appelée seulement au moment d'appliquer (récapitulatif),
+  /// jamais pendant la saisie — la validité de la sélection est déjà
+  /// garantie à ce stade par le bouton "Continuer" désactivé de l'étape
+  /// "Choix à faire" (voir [_canContinueChoiceStep]).
+  LevelUpChoiceSelection? _buildChoiceSelection(LevelUpStepData data) {
+    return switch (data.choiceKind) {
+      null => null,
+      LevelUpChoiceKind.abilityScoreImprovement =>
+        LevelUpChoiceSelection.abilityScoreImprovement({
+          for (final entry in _ensureAbilityAllocationsInitialized().entries)
+            if (entry.value > 0) entry.key: entry.value,
+        }),
+      LevelUpChoiceKind.subclass => LevelUpChoiceSelection.subclass(
+        _selectedListOptionId!,
+      ),
+      LevelUpChoiceKind.fightingStyle => LevelUpChoiceSelection.fightingStyle(
+        classFeatureId: data.choiceClassFeatureId!,
+        chosenValue: _selectedListOptionId! as String,
+      ),
+      LevelUpChoiceKind.favoredEnemy => LevelUpChoiceSelection.favoredEnemy(
+        classFeatureId: data.choiceClassFeatureId!,
+        chosenValue: _selectedListOptionId! as String,
+      ),
+    };
+  }
+
   Future<void> _continueFromSummary(LevelUpStepData data) async {
     if (_isApplying) return;
     setState(() {
@@ -152,6 +232,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         hpRolled: hpRolled,
         hpMethod: hpMethod,
         hpGain: hpGain,
+        choice: _buildChoiceSelection(data),
       );
 
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -177,6 +258,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         _targetLevel = result.newLevel + 1;
         _phase = _LevelUpPhase.hitPoints;
         _hpMethod = _HpMethod.roll;
+        _resetChoiceState();
         _isApplying = false;
       });
     } on CharacterFailure catch (failure) {
@@ -258,9 +340,15 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return switch (_phase) {
       _LevelUpPhase.hitPoints => _buildHpStep(data),
       _LevelUpPhase.abilities => _buildAbilitiesStep(data),
+      _LevelUpPhase.choice => _buildChoiceStep(data),
       _LevelUpPhase.summary => _buildSummary(data),
     };
   }
+
+  /// 4 si [LevelUpStepData.choiceKind] déclenche l'étape "Choix à faire" à
+  /// ce niveau, 3 sinon (comportement de l'increment 1, inchangé) — spec
+  /// visuelle direction-artistique section 1.
+  int _totalSteps(LevelUpStepData data) => data.choiceKind != null ? 4 : 3;
 
   Widget _buildHpStep(LevelUpStepData data) {
     final hpRolled = _hpRolledValue(data.hitDie);
@@ -276,7 +364,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         LevelUpHeader(
           eyebrow: 'MONTÉE DE NIVEAU',
           levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel: 'Étape 1 sur 3 · Points de vie',
+          stepLabel: 'Étape 1 sur ${_totalSteps(data)} · Points de vie',
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -411,7 +499,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         LevelUpHeader(
           eyebrow: 'MONTÉE DE NIVEAU',
           levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel: 'Étape 2 sur 3 · Aptitudes de classe',
+          stepLabel: 'Étape 2 sur ${_totalSteps(data)} · Aptitudes de classe',
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -449,9 +537,266 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         ),
         _StepFooter(
           onBack: () => setState(() => _phase = _LevelUpPhase.hitPoints),
-          onContinue: () => setState(() => _phase = _LevelUpPhase.summary),
+          onContinue: () => setState(() {
+            _phase = data.choiceKind != null
+                ? _LevelUpPhase.choice
+                : _LevelUpPhase.summary;
+          }),
         ),
       ],
+    );
+  }
+
+  /// Étape "Choix à faire" (increment 2), affichée uniquement quand
+  /// [LevelUpStepData.choiceKind] est non nul — voir [_totalSteps].
+  Widget _buildChoiceStep(LevelUpStepData data) {
+    final kind = data.choiceKind!;
+
+    return Column(
+      children: [
+        LevelUpHeader(
+          eyebrow: 'MONTÉE DE NIVEAU',
+          levelLabel: 'NIVEAU $_targetLevel',
+          stepLabel:
+              'Étape 3 sur ${_totalSteps(data)} · ${_choiceStepLabel(kind)}',
+          remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
+        ),
+        Expanded(child: _buildChoiceBody(data, kind)),
+        _StepFooter(
+          onBack: () => setState(() => _phase = _LevelUpPhase.abilities),
+          onContinue: _canContinueChoiceStep(data, kind)
+              ? () => setState(() => _phase = _LevelUpPhase.summary)
+              : null,
+        ),
+      ],
+    );
+  }
+
+  /// Libellé court de [stepLabel] pour l'étape "Choix à faire" — neufs,
+  /// volontairement distincts de `ClassFeatureChoiceLabelFormatter` (pensé
+  /// pour le contexte de blocage, voir sa documentation).
+  String _choiceStepLabel(LevelUpChoiceKind kind) {
+    return switch (kind) {
+      LevelUpChoiceKind.abilityScoreImprovement =>
+        'Amélioration de caractéristique',
+      LevelUpChoiceKind.subclass => 'Sous-classe',
+      LevelUpChoiceKind.fightingStyle => 'Style de combat',
+      LevelUpChoiceKind.favoredEnemy => 'Ennemi juré',
+    };
+  }
+
+  bool _canContinueChoiceStep(LevelUpStepData data, LevelUpChoiceKind kind) {
+    if (kind == LevelUpChoiceKind.abilityScoreImprovement) {
+      final allocations = _ensureAbilityAllocationsInitialized();
+      final spent = allocations.values.fold(0, (sum, value) => sum + value);
+      return spent == _abilityScoreImprovementBudget;
+    }
+    // Variante liste (sous-classe/style de combat/ennemi juré) : `null`
+    // par défaut sur une liste vide (état vide, cas défensif) — jamais
+    // sélectionnable, "Continuer" reste donc désactivé sans cas particulier
+    // à gérer ici.
+    return _selectedListOptionId != null;
+  }
+
+  Widget _buildChoiceBody(LevelUpStepData data, LevelUpChoiceKind kind) {
+    return switch (kind) {
+      LevelUpChoiceKind.abilityScoreImprovement => _buildAbilityAllocationBody(
+        data,
+      ),
+      LevelUpChoiceKind.subclass => _buildOptionListBody(
+        instruction: 'Choisissez une sous-classe.',
+        icon: Icons.auto_awesome,
+        options: [
+          for (final subclass in data.availableSubclasses)
+            (
+              id: subclass.id,
+              title: subclass.name,
+              subtitle: (subclass.description?.isNotEmpty ?? false)
+                  ? subclass.description
+                  : null,
+            ),
+        ],
+      ),
+      LevelUpChoiceKind.fightingStyle => _buildOptionListBody(
+        instruction: 'Choisissez un style de combat.',
+        icon: Icons.security,
+        options: [
+          for (final style in LevelUpChoiceOptions.fightingStyles)
+            (id: style, title: style, subtitle: null),
+        ],
+      ),
+      LevelUpChoiceKind.favoredEnemy => _buildOptionListBody(
+        instruction: 'Choisissez un ennemi juré.',
+        icon: Icons.gps_fixed,
+        options: [
+          for (final enemy in LevelUpChoiceOptions.favoredEnemies)
+            (id: enemy, title: enemy, subtitle: null),
+        ],
+      ),
+    };
+  }
+
+  /// Variante liste (sous-classe/style de combat/ennemi juré) — pas de carte
+  /// englobante (chaque [SelectableOptionTile] est déjà sa propre carte),
+  /// sauf état vide (spec visuelle direction-artistique section 2).
+  Widget _buildOptionListBody({
+    required String instruction,
+    required IconData icon,
+    required List<({Object id, String title, String? subtitle})> options,
+  }) {
+    if (options.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          child: _ParchmentCard(child: _EmptyChoiceState()),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            instruction,
+            style: AppTypography.body(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textOnWood,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          for (var i = 0; i < options.length; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.sm),
+            SelectableOptionTile(
+              title: options[i].title,
+              subtitle: options[i].subtitle,
+              selected: _selectedListOptionId == options[i].id,
+              onTap: () =>
+                  setState(() => _selectedListOptionId = options[i].id),
+              leading: AccentIconBadge(index: i, icon: icon),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Variante allocation ASI — budget partagé de
+  /// [_abilityScoreImprovementBudget] points entre les 6 caractéristiques.
+  Widget _buildAbilityAllocationBody(LevelUpStepData data) {
+    final allocations = _ensureAbilityAllocationsInitialized();
+    final spent = allocations.values.fold(0, (sum, value) => sum + value);
+    final remaining = _abilityScoreImprovementBudget - spent;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Répartissez $_abilityScoreImprovementBudget points entre vos '
+            'caractéristiques.',
+            style: AppTypography.body(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textOnWood,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            remaining > 0
+                ? 'Points restants : $remaining/$_abilityScoreImprovementBudget'
+                : 'Tous les points sont répartis.',
+            style: AppTypography.body(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textOnWood,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          for (var i = 0; i < abilityScoreDefinitions.length; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.sm),
+            _buildAllocationRow(
+              data: data,
+              definition: abilityScoreDefinitions[i],
+              allocations: allocations,
+              remaining: remaining,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Une ligne d'allocation ASI — factorisé hors de la boucle de
+  /// [_buildAbilityAllocationBody] pour pouvoir déclarer des variables
+  /// locales ([currentScore]/[alloc]/[atCap]) avant de construire le widget,
+  /// ce qu'une simple expression de collection `for` ne permet pas.
+  Widget _buildAllocationRow({
+    required LevelUpStepData data,
+    required AbilityScoreDefinition definition,
+    required Map<String, int> allocations,
+    required int remaining,
+  }) {
+    final key = definition.key;
+    final currentScore = data.abilityScores[key] ?? 10;
+    final alloc = allocations[key] ?? 0;
+    // Plafond RAW 5e (score final ≤ 20), en plus du budget partagé de 2
+    // points — voir aussi le filet de sécurité côté écriture
+    // (`data/character_repository.dart::_applyAbilityScoreImprovement`),
+    // cette garde UI ne doit pas être la seule ligne de défense.
+    final atCap = currentScore + alloc + 1 > 20;
+    return _AllocationRow(
+      definition: definition,
+      currentScore: currentScore,
+      alloc: alloc,
+      onIncrement: remaining == 0 || atCap
+          ? null
+          : () => setState(() => allocations[key] = alloc + 1),
+      onDecrement: alloc == 0
+          ? null
+          : () => setState(() => allocations[key] = alloc - 1),
+    );
+  }
+
+  /// Ligne de récapitulatif du choix fait à l'étape "Choix à faire", `null`
+  /// si ce niveau n'en déclenchait aucun — voir la spec visuelle
+  /// direction-artistique section C.
+  GainRow? _choiceSummaryGainRow(LevelUpStepData data) {
+    final kind = data.choiceKind;
+    if (kind == null) return null;
+
+    final subtitle = switch (kind) {
+      LevelUpChoiceKind.abilityScoreImprovement => [
+        for (final definition in abilityScoreDefinitions)
+          if ((_abilityAllocations?[definition.key] ?? 0) > 0)
+            '${definition.label} +${_abilityAllocations![definition.key]}',
+      ].join(', '),
+      LevelUpChoiceKind.subclass =>
+        data.availableSubclasses
+            .firstWhere((option) => option.id == _selectedListOptionId)
+            .name,
+      LevelUpChoiceKind.fightingStyle ||
+      LevelUpChoiceKind.favoredEnemy => _selectedListOptionId! as String,
+    };
+
+    return GainRow(
+      icon: Icons.checklist,
+      color: AppColors.accentBlue,
+      title: _choiceStepLabel(kind),
+      subtitle: subtitle,
     );
   }
 
@@ -491,6 +836,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                           title: 'Nouvelle aptitude',
                           subtitle: feature.name,
                         ),
+                      ],
+                      if (_choiceSummaryGainRow(data) case final gainRow?) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        gainRow,
                       ],
                     ],
                   ),
@@ -634,13 +983,114 @@ class _EmptyFeaturesState extends StatelessWidget {
   }
 }
 
+/// État vide de l'étape "Choix à faire" (increment 2, cas défensif — une
+/// liste de 0 option ne devrait normalement pas arriver) — patron
+/// `_EmptyFeaturesState` ci-dessus, hébergé dans une `_ParchmentCard` par
+/// l'appelant (spec visuelle direction-artistique section "États").
+class _EmptyChoiceState extends StatelessWidget {
+  const _EmptyChoiceState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.info_outline, size: 40, color: AppColors.textMuted),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Aucune option disponible pour ce choix.',
+          textAlign: TextAlign.center,
+          style: AppTypography.body(fontSize: 13, color: AppColors.textMuted),
+        ),
+      ],
+    );
+  }
+}
+
+/// Une ligne de caractéristique de la variante allocation ASI de l'étape
+/// "Choix à faire" — calquée sur `_AbilityRow` de
+/// `character_creation/presentation/ability_score_step_screen.dart` (spec
+/// visuelle direction-artistique section B), avec une différence
+/// importante : [alloc] est le nombre de points alloués à *cette*
+/// caractéristique (0 à [_abilityScoreImprovementBudget]), pas le score
+/// final affiché par `StepperCounter.value` à l'étape 4/9 "Caractéristiques"
+/// de l'assistant de création — à ne pas confondre.
+class _AllocationRow extends StatelessWidget {
+  const _AllocationRow({
+    required this.definition,
+    required this.currentScore,
+    required this.alloc,
+    required this.onIncrement,
+    required this.onDecrement,
+  });
+
+  final AbilityScoreDefinition definition;
+  final int currentScore;
+  final int alloc;
+  final VoidCallback? onIncrement;
+  final VoidCallback? onDecrement;
+
+  @override
+  Widget build(BuildContext context) {
+    final newScore = currentScore + alloc;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.parchmentCard,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
+      ),
+      child: Row(
+        children: [
+          AccentIconBadge(icon: definition.icon, color: definition.accentColor),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  definition.label.toUpperCase(),
+                  style: AppTypography.body(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  alloc == 0
+                      ? '$currentScore'
+                      : '$currentScore → $newScore (+$alloc)',
+                  style: AppTypography.body(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          StepperCounter(
+            value: alloc,
+            onIncrement: onIncrement,
+            onDecrement: onDecrement,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Footer `Row[SecondaryButton("Retour", surface: scene), PrimaryButton
-/// ("Continuer")]` des étapes 1 et 2 — spec visuelle section 0.
+/// ("Continuer")]` des étapes 1, 2 et 3 — spec visuelle section 0.
+/// [onContinue] nullable depuis l'increment 2 : l'étape "Choix à faire"
+/// désactive "Continuer" tant qu'aucune sélection valide n'a été faite
+/// (`PrimaryButton` gère déjà `onPressed: null`).
 class _StepFooter extends StatelessWidget {
   const _StepFooter({required this.onBack, required this.onContinue});
 
   final VoidCallback onBack;
-  final VoidCallback onContinue;
+  final VoidCallback? onContinue;
 
   @override
   Widget build(BuildContext context) {

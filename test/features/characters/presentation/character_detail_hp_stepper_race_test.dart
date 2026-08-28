@@ -35,6 +35,7 @@ import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
+import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
@@ -94,6 +95,7 @@ class _FakeRepository implements CharacterRepository {
     required int hpRolled,
     required String hpMethod,
     required int hpGain,
+    LevelUpChoiceSelection? choice,
   }) {
     throw UnimplementedError();
   }

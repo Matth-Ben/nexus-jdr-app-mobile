@@ -4,6 +4,8 @@ import '../../../character_creation/domain/ability_score_rules.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/character_failure.dart';
 import '../../domain/level_up_block_reason.dart';
+import '../../domain/level_up_choice_kind.dart';
+import '../../domain/level_up_subclass_option.dart';
 import 'character_detail_provider.dart';
 import 'character_providers.dart';
 
@@ -14,10 +16,10 @@ part 'level_up_provider.g.dart';
 /// donnés.
 ///
 /// Combine `characterDetailProvider` (classe primaire, modificateur de
-/// Constitution, PV/XP actuels — déjà chargés pour la fiche) et
-/// `CharacterRepository.fetchLevelUpLevelData` (aptitudes/choix du niveau
-/// ciblé) — même pattern combinateur que les `*StepData` de l'assistant de
-/// création
+/// Constitution, scores de caractéristiques, PV/XP actuels — déjà chargés
+/// pour la fiche) et `CharacterRepository.fetchLevelUpLevelData`
+/// (aptitudes/choix du niveau ciblé) — même pattern combinateur que les
+/// `*StepData` de l'assistant de création
 /// (`character_creation/presentation/providers/character_creation_providers.dart`).
 typedef LevelUpStepData = ({
   Object classId,
@@ -29,6 +31,29 @@ typedef LevelUpStepData = ({
   int currentXp,
   LevelUpBlockReason? blockReason,
   List<CharacterClassFeature> automaticFeatures,
+
+  /// Type de choix à proposer à l'étape "Choix à faire" (increment 2),
+  /// `null` si ce niveau n'en déclenche aucun (comportement de l'increment
+  /// 1, inchangé) — toujours `null` quand [blockReason] est non nul (voir
+  /// `domain/level_up_choice_kind.dart::LevelUpPendingChoiceResolver`,
+  /// appelée seulement si [LevelUpBlockRules.evaluate] n'a pas bloqué).
+  LevelUpChoiceKind? choiceKind,
+
+  /// `class_features.id` de la ligne `choice_type` de ce niveau — voir
+  /// `domain/level_up_level_data.dart::choiceClassFeatureId`. Pertinent
+  /// seulement pour [LevelUpChoiceKind.fightingStyle]/
+  /// [LevelUpChoiceKind.favoredEnemy].
+  int? choiceClassFeatureId,
+
+  /// Sous-classes disponibles à ce niveau — non vide seulement pour
+  /// [LevelUpChoiceKind.subclass].
+  List<LevelUpSubclassOption> availableSubclasses,
+
+  /// Scores de caractéristiques actuels (`character_ability_scores`),
+  /// nécessaires à l'étape "Choix à faire" variante
+  /// [LevelUpChoiceKind.abilityScoreImprovement] (affichage "score actuel →
+  /// nouveau score").
+  Map<String, int> abilityScores,
 });
 
 /// Même rationale que [characterDetailProvider] : `autoDispose` par défaut,
@@ -67,11 +92,24 @@ Future<LevelUpStepData> levelUpStepData(
         targetLevel: targetLevel,
       );
 
+  // Peut lever une [CharacterFailure] (cas défensif "deux choix simultanés"
+  // — voir sa documentation) : se propage naturellement comme n'importe
+  // quelle autre erreur de ce provider `Future`.
   final blockReason = LevelUpBlockRules.evaluate(
     targetLevel: targetLevel,
     className: primaryClass.className,
-    classFeatureChoiceType: levelData.blockingChoiceType,
+    classFeatureChoiceType: levelData.choiceType,
   );
+
+  // Seulement pertinent quand le flux n'est pas bloqué : `evaluate`
+  // n'aurait pas laissé passer une valeur de `choiceType` que
+  // [LevelUpPendingChoiceResolver.resolve] ne saurait pas mapper.
+  final choiceKind = blockReason == null
+      ? LevelUpPendingChoiceResolver.resolve(
+          targetLevel: targetLevel,
+          classFeatureChoiceType: levelData.choiceType,
+        )
+      : null;
 
   return (
     classId: primaryClass.classId,
@@ -85,6 +123,10 @@ Future<LevelUpStepData> levelUpStepData(
     currentXp: detail.xp,
     blockReason: blockReason,
     automaticFeatures: levelData.automaticFeatures,
+    choiceKind: choiceKind,
+    choiceClassFeatureId: levelData.choiceClassFeatureId,
+    availableSubclasses: levelData.availableSubclasses,
+    abilityScores: detail.abilityScores,
   );
 }
 

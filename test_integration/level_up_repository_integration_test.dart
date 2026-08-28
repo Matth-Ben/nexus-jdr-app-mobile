@@ -1,15 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
+import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'support/test_environment.dart';
 
 /// Tests d'intégration des méthodes de `SupabaseCharacterRepository` ajoutées
-/// pour l'écran "Montée de niveau" (increment 1) — `addXp`/
-/// `fetchLevelUpLevelData`/`applyLevelUp` — voir
-/// `character_repository_integration_test.dart` pour le rationale général de
-/// ce dossier.
+/// pour l'écran "Montée de niveau" — `addXp`/`fetchLevelUpLevelData`/
+/// `applyLevelUp` (increment 1), et l'étape "Choix à faire" (increment 2 :
+/// résolution des sous-classes disponibles, écriture ASI sur les deux
+/// tables, `character_classes.subclass_id`, `character_class_options`) —
+/// voir `character_repository_integration_test.dart` pour le rationale
+/// général de ce dossier.
 void main() {
   group('SupabaseCharacterRepository — montée de niveau (intégration)', () {
     late SupabaseClient client;
@@ -87,7 +90,7 @@ void main() {
       );
 
       expect(
-        data.blockingChoiceType,
+        data.choiceType,
         blockingRow.isEmpty ? isNull : blockingRow['choice_type'],
       );
       expect(
@@ -201,6 +204,279 @@ void main() {
       );
     });
 
+    group('étape "Choix à faire" (increment 2)', () {
+      test('fetchLevelUpLevelData résout availableSubclasses et '
+          "choiceClassFeatureId pour un choice_type 'sous_classe', noms "
+          'résolus via translations', () async {
+        final repository = SupabaseCharacterRepository(client);
+
+        final subclassFeatureRow = await client
+            .from('class_features')
+            .select('id, class_id, level')
+            .eq('choice_type', 'sous_classe')
+            .limit(1)
+            .maybeSingle();
+        expect(
+          subclassFeatureRow,
+          isNotNull,
+          reason:
+              "Aucune ligne class_features.choice_type = 'sous_classe' côté "
+              'seed — vérifier supabase db reset côté dépôt web.',
+        );
+
+        final classId = subclassFeatureRow!['class_id'] as Object;
+        final targetLevel = (subclassFeatureRow['level'] as num).toInt();
+
+        final expectedSubclassRows = await client
+            .from('subclasses')
+            .select('id')
+            .eq('class_id', classId)
+            .eq('available_from_level', targetLevel);
+        expect(
+          expectedSubclassRows,
+          isNotEmpty,
+          reason:
+              'Aucune sous-classe disponible pour class_id=$classId à '
+              'available_from_level=$targetLevel — incohérence entre '
+              'class_features et subclasses côté seed.',
+        );
+
+        final data = await repository.fetchLevelUpLevelData(
+          classId: classId,
+          targetLevel: targetLevel,
+        );
+
+        expect(data.choiceType, 'sous_classe');
+        expect(data.choiceClassFeatureId, subclassFeatureRow['id']);
+        expect(
+          data.availableSubclasses.map((option) => option.id).toSet(),
+          expectedSubclassRows.map((row) => row['id'] as Object).toSet(),
+        );
+        for (final option in data.availableSubclasses) {
+          expect(
+            option.name,
+            isNot(startsWith('Sous-classe #')),
+            reason:
+                'Traduction manquante pour la sous-classe #${option.id} '
+                '— seeds du dépôt web incomplets ?',
+          );
+        }
+      });
+
+      test('applyLevelUp avec un choix ASI écrit character_ability_scores '
+          '(score final) ET character_ability_increases (historique, '
+          "source: 'asi') pour chaque caractéristique augmentée", () async {
+        final character = await client
+            .from('characters')
+            .insert({
+              'owner_id': ownerId,
+              'name': 'Test Intégration ASI',
+              'max_hp': 20,
+              'current_hp': 15,
+            })
+            .select('id')
+            .single();
+        final characterId = character['id'] as String;
+        addTearDown(() async {
+          await client.from('characters').delete().eq('id', characterId);
+        });
+
+        await client.from('character_classes').insert({
+          'character_id': characterId,
+          'class_id': reference.classId,
+          'level': 3,
+          'is_primary': true,
+        });
+        await client.from('character_ability_scores').insert([
+          {'character_id': characterId, 'ability_id': 'str', 'score': 10},
+          {'character_id': characterId, 'ability_id': 'con', 'score': 12},
+        ]);
+
+        final repository = SupabaseCharacterRepository(client);
+        final result = await repository.applyLevelUp(
+          characterId: characterId,
+          hpRolled: 6,
+          hpMethod: 'lance',
+          hpGain: 8,
+          choice: const LevelUpChoiceSelection.abilityScoreImprovement({
+            'str': 1,
+            'con': 1,
+          }),
+        );
+
+        expect(result.newLevel, 4);
+
+        final scoreRows = await client
+            .from('character_ability_scores')
+            .select('ability_id, score')
+            .eq('character_id', characterId)
+            .inFilter('ability_id', ['str', 'con']);
+        final scoresByAbility = {
+          for (final row in scoreRows)
+            row['ability_id'] as String: (row['score'] as num).toInt(),
+        };
+        expect(scoresByAbility, {'str': 11, 'con': 13});
+
+        // `ascending: true` explicite : le package `postgrest` (2.9.1) a un
+        // défaut `ascending: false` contre-intuitif pour `.order(...)` —
+        // même piège déjà documenté sur `_fetchSkills`/`_fetchClassFeatures`
+        // de `character_repository.dart`.
+        final increaseRows = await client
+            .from('character_ability_increases')
+            .select('level, ability_id, increase, source')
+            .eq('character_id', characterId)
+            .order('ability_id', ascending: true);
+        expect(increaseRows, hasLength(2));
+        expect(increaseRows[0]['ability_id'], 'con');
+        expect(increaseRows[0]['level'], 4);
+        expect(increaseRows[0]['increase'], 1);
+        expect(increaseRows[0]['source'], 'asi');
+        expect(increaseRows[1]['ability_id'], 'str');
+        expect(increaseRows[1]['level'], 4);
+        expect(increaseRows[1]['increase'], 1);
+        expect(increaseRows[1]['source'], 'asi');
+      });
+
+      test('applyLevelUp avec un choix sous-classe écrit '
+          'character_classes.subclass_id, combiné avec level dans le même '
+          'UPDATE', () async {
+        // Trié par `available_from_level` décroissant : évite de tomber sur
+        // une sous-classe disponible dès le niveau 1 (`character_classes.level
+        // = availableFromLevel - 1` vaudrait alors 0, hors plage valide).
+        final subclassRow = await client
+            .from('subclasses')
+            .select('id, class_id, available_from_level')
+            .order('available_from_level', ascending: false)
+            .limit(1)
+            .single();
+        final classId = subclassRow['class_id'] as Object;
+        final subclassId = subclassRow['id'] as Object;
+        final availableFromLevel = (subclassRow['available_from_level'] as num)
+            .toInt();
+
+        final character = await client
+            .from('characters')
+            .insert({
+              'owner_id': ownerId,
+              'name': 'Test Intégration Sous-classe',
+              'max_hp': 20,
+              'current_hp': 15,
+            })
+            .select('id')
+            .single();
+        final characterId = character['id'] as String;
+        addTearDown(() async {
+          await client.from('characters').delete().eq('id', characterId);
+        });
+
+        await client.from('character_classes').insert({
+          'character_id': characterId,
+          'class_id': classId,
+          'level': availableFromLevel - 1,
+          'is_primary': true,
+        });
+
+        final repository = SupabaseCharacterRepository(client);
+        final result = await repository.applyLevelUp(
+          characterId: characterId,
+          hpRolled: 5,
+          hpMethod: 'moyenne',
+          hpGain: 5,
+          choice: LevelUpChoiceSelection.subclass(subclassId),
+        );
+
+        expect(result.newLevel, availableFromLevel);
+
+        final classRow = await client
+            .from('character_classes')
+            .select('level, subclass_id')
+            .eq('character_id', characterId)
+            .single();
+        expect(classRow['level'], availableFromLevel);
+        expect(classRow['subclass_id'], subclassId);
+      });
+
+      test('applyLevelUp avec un choix de style de combat/ennemi juré '
+          'insère character_class_options (class_feature_id/level/'
+          'chosen_value)', () async {
+        // Trié par `level` décroissant : même rationale que le test
+        // sous-classe ci-dessus, évite `character_classes.level =
+        // targetLevel - 1` = 0 (hors plage valide) si la 1ʳᵉ ligne trouvée
+        // était à level=1 (ex. style de combat du Guerrier).
+        final optionFeatureRow = await client
+            .from('class_features')
+            .select('id, class_id, level, choice_type')
+            .inFilter('choice_type', ['style_combat', 'ennemi_jure'])
+            .order('level', ascending: false)
+            .limit(1)
+            .maybeSingle();
+        expect(
+          optionFeatureRow,
+          isNotNull,
+          reason:
+              "Aucune ligne class_features.choice_type in "
+              "('style_combat', 'ennemi_jure') côté seed — vérifier "
+              'supabase db reset côté dépôt web.',
+        );
+
+        final classFeatureId = (optionFeatureRow!['id'] as num).toInt();
+        final classId = optionFeatureRow['class_id'] as Object;
+        final targetLevel = (optionFeatureRow['level'] as num).toInt();
+        final choiceType = optionFeatureRow['choice_type'] as String;
+        const chosenValue = 'Duel';
+
+        final character = await client
+            .from('characters')
+            .insert({
+              'owner_id': ownerId,
+              'name': 'Test Intégration Choix de classe',
+              'max_hp': 20,
+              'current_hp': 15,
+            })
+            .select('id')
+            .single();
+        final characterId = character['id'] as String;
+        addTearDown(() async {
+          await client.from('characters').delete().eq('id', characterId);
+        });
+
+        await client.from('character_classes').insert({
+          'character_id': characterId,
+          'class_id': classId,
+          'level': targetLevel - 1,
+          'is_primary': true,
+        });
+
+        final repository = SupabaseCharacterRepository(client);
+        final choice = choiceType == 'style_combat'
+            ? LevelUpChoiceSelection.fightingStyle(
+                classFeatureId: classFeatureId,
+                chosenValue: chosenValue,
+              )
+            : LevelUpChoiceSelection.favoredEnemy(
+                classFeatureId: classFeatureId,
+                chosenValue: chosenValue,
+              );
+
+        await repository.applyLevelUp(
+          characterId: characterId,
+          hpRolled: 5,
+          hpMethod: 'moyenne',
+          hpGain: 5,
+          choice: choice,
+        );
+
+        final optionRows = await client
+            .from('character_class_options')
+            .select('class_feature_id, level, chosen_value')
+            .eq('character_id', characterId);
+        expect(optionRows, hasLength(1));
+        expect(optionRows.single['class_feature_id'], classFeatureId);
+        expect(optionRows.single['level'], targetLevel);
+        expect(optionRows.single['chosen_value'], chosenValue);
+      });
+    });
+
     group('isolation cross-utilisateur (RLS + filtre owner_id)', () {
       // Même rationale que le groupe équivalent de
       // `character_detail_repository_integration_test.dart` : un échec
@@ -284,6 +560,123 @@ void main() {
             .eq('character_id', characterId)
             .single();
         expect(classRow['level'], 3);
+      });
+
+      // Les 3 tests suivants complètent la couverture d'isolation pour les
+      // écritures ajoutées à l'increment 2 (étape "Choix à faire") : le
+      // groupe existant ci-dessus n'appelait `applyLevelUp` qu'avec `choice:
+      // null` (increment 1), jamais avec une sélection concrète. En pratique
+      // ces 3 scénarios n'atteignent jamais `_applyChoice`
+      // (`character_repository.dart`) : le `SELECT character_classes` fait
+      // tout en haut d'`applyLevelUp` renvoie 0 ligne pour `otherClient`
+      // (RLS `owns_character`, vérifié via `\d character_classes` sur le
+      // stack local), donc l'appel échoue avant même d'atteindre le choix.
+      // Ajoutés quand même pour couvrir explicitement ces 3 tables plutôt
+      // que de compter implicitement sur ce détail d'ordonnancement des
+      // écritures — si `applyLevelUp` était un jour réordonné, ces tests
+      // détecteraient immédiatement une régression que le test générique
+      // ci-dessus ne peut pas voir (il ne passe jamais de `choice`).
+      test("applyLevelUp avec un choix ASI, appelé depuis la session d'un "
+          "autre joueur, ne modifie jamais character_ability_scores/"
+          "character_ability_increases du personnage visé", () async {
+        await client.from('character_ability_scores').insert({
+          'character_id': characterId,
+          'ability_id': 'str',
+          'score': 10,
+        });
+
+        final otherRepository = SupabaseCharacterRepository(otherClient);
+        try {
+          await otherRepository.applyLevelUp(
+            characterId: characterId,
+            hpRolled: 8,
+            hpMethod: 'lance',
+            hpGain: 8,
+            choice: const LevelUpChoiceSelection.abilityScoreImprovement({
+              'str': 2,
+            }),
+          );
+        } catch (_) {
+          // Idem — voir la documentation du groupe.
+        }
+
+        final scoreRow = await client
+            .from('character_ability_scores')
+            .select('score')
+            .eq('character_id', characterId)
+            .eq('ability_id', 'str')
+            .single();
+        expect(scoreRow['score'], 10);
+
+        final increaseRows = await client
+            .from('character_ability_increases')
+            .select('id')
+            .eq('character_id', characterId);
+        expect(increaseRows, isEmpty);
+      });
+
+      test("applyLevelUp avec un choix de sous-classe, appelé depuis la "
+          "session d'un autre joueur, ne modifie jamais "
+          "character_classes.subclass_id du personnage visé", () async {
+        final subclassRow = await client
+            .from('subclasses')
+            .select('id')
+            .limit(1)
+            .single();
+
+        final otherRepository = SupabaseCharacterRepository(otherClient);
+        try {
+          await otherRepository.applyLevelUp(
+            characterId: characterId,
+            hpRolled: 8,
+            hpMethod: 'lance',
+            hpGain: 8,
+            choice: LevelUpChoiceSelection.subclass(subclassRow['id']),
+          );
+        } catch (_) {
+          // Idem — voir la documentation du groupe.
+        }
+
+        final classRow = await client
+            .from('character_classes')
+            .select('level, subclass_id')
+            .eq('character_id', characterId)
+            .single();
+        expect(classRow['level'], 3);
+        expect(classRow['subclass_id'], isNull);
+      });
+
+      test("applyLevelUp avec un choix de style de combat, appelé depuis la "
+          "session d'un autre joueur, n'insère jamais de ligne "
+          "character_class_options pour le personnage visé", () async {
+        final featureRow = await client
+            .from('class_features')
+            .select('id')
+            .eq('choice_type', 'style_combat')
+            .limit(1)
+            .single();
+
+        final otherRepository = SupabaseCharacterRepository(otherClient);
+        try {
+          await otherRepository.applyLevelUp(
+            characterId: characterId,
+            hpRolled: 8,
+            hpMethod: 'lance',
+            hpGain: 8,
+            choice: LevelUpChoiceSelection.fightingStyle(
+              classFeatureId: (featureRow['id'] as num).toInt(),
+              chosenValue: 'Duel',
+            ),
+          );
+        } catch (_) {
+          // Idem — voir la documentation du groupe.
+        }
+
+        final optionRows = await client
+            .from('character_class_options')
+            .select('id')
+            .eq('character_id', characterId);
+        expect(optionRows, isEmpty);
       });
     });
   });

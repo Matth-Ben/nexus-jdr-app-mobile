@@ -10,7 +10,10 @@ import '../domain/character_skill_row.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_summary.dart';
 import '../domain/level_up_apply_result.dart';
+import '../domain/level_up_choice_kind.dart';
+import '../domain/level_up_choice_selection.dart';
 import '../domain/level_up_level_data.dart';
+import '../domain/level_up_subclass_option.dart';
 import '../domain/portrait_storage_path_resolver.dart';
 import 'character_detail_row_mapper.dart';
 import 'character_error_mapper.dart';
@@ -19,6 +22,7 @@ import 'character_row_mapper.dart';
 import 'character_skill_row_mapper.dart';
 import 'character_spell_row_mapper.dart';
 import 'class_feature_row_mapper.dart';
+import 'level_up_choice_row_mapper.dart';
 
 /// Langue d'affichage des noms de race/classe, en dur pour l'instant : l'app
 /// démarre en français uniquement (`docs/cahier-des-charges/07-source-donnees-i18n.md`),
@@ -87,8 +91,8 @@ abstract class CharacterRepository {
   /// Aptitudes/choix `class_features` de la classe [classId] au niveau
   /// [targetLevel] — écran "Montée de niveau"
   /// (`presentation/level_up_screen.dart`), étapes "Aptitudes de classe
-  /// automatiques" et vérification de blocage (voir
-  /// `domain/level_up_block_reason.dart`).
+  /// automatiques", "Choix à faire" (increment 2) et vérification de
+  /// blocage (voir `domain/level_up_block_reason.dart`).
   Future<LevelUpLevelData> fetchLevelUpLevelData({
     required Object classId,
     required int targetLevel,
@@ -97,8 +101,20 @@ abstract class CharacterRepository {
   /// Applique une montée de niveau déjà validée par le joueur (écran
   /// "Montée de niveau", récapitulatif) : incrémente
   /// `character_classes.level`, ajoute [hpGain] à `characters.max_hp`/
-  /// `current_hp`, et insère une ligne `character_level_hp`. [hpRolled] et
-  /// [hpGain] sont déjà calculés par l'appelant (voir
+  /// `current_hp`, insère une ligne `character_level_hp`, et — depuis
+  /// l'increment 2 — écrit [choice] s'il est fourni (étape "Choix à faire") :
+  /// - [LevelUpChoiceKind.abilityScoreImprovement] : upsert
+  ///   `character_ability_scores.score` (score final = score actuel +
+  ///   allocation) **et** insert `character_ability_increases` (une ligne
+  ///   par caractéristique augmentée, `source: 'asi'`) — les deux tables
+  ///   doivent être écrites, voir la documentation de
+  ///   [LevelUpChoiceSelection.abilityAllocations].
+  /// - [LevelUpChoiceKind.subclass] : `character_classes.subclass_id`,
+  ///   combiné dans le même `UPDATE` que `level`.
+  /// - [LevelUpChoiceKind.fightingStyle]/[LevelUpChoiceKind.favoredEnemy] :
+  ///   insert `character_class_options`.
+  ///
+  /// [hpRolled] et [hpGain] sont déjà calculés par l'appelant (voir
   /// `domain/level_up_hit_points_calculator.dart`), cette méthode ne fait
   /// qu'écrire le résultat déjà calculé — même principe que [updateHp].
   ///
@@ -115,6 +131,7 @@ abstract class CharacterRepository {
     required int hpRolled,
     required String hpMethod,
     required int hpGain,
+    LevelUpChoiceSelection? choice,
   });
 }
 
@@ -427,7 +444,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .eq('level', targetLevel)
           .order('id', ascending: true);
 
-      final blockingRow = featureRows.firstWhere(
+      final choiceRow = featureRows.firstWhere(
         (row) => row['choice_type'] != null,
         orElse: () => const <String, dynamic>{},
       );
@@ -441,10 +458,28 @@ class SupabaseCharacterRepository implements CharacterRepository {
         entityIds: ClassFeatureRowMapper.collectIds(automaticRows),
       );
 
+      final choiceType = choiceRow.isEmpty
+          ? null
+          : choiceRow['choice_type'] as String?;
+      final choiceClassFeatureId = choiceRow.isEmpty
+          ? null
+          : (choiceRow['id'] as num).toInt();
+
+      // `'sous_classe'` uniquement : les 2 autres choix résolus (increment 2,
+      // `style_combat`/`ennemi_jure`) n'ont pas de table de référence en
+      // base, voir `domain/level_up_choice_options.dart` (listes codées en
+      // dur, résolues directement dans l'écran).
+      final availableSubclasses = choiceType == 'sous_classe'
+          ? await _fetchAvailableSubclasses(
+              classId: classId,
+              targetLevel: targetLevel,
+            )
+          : const <LevelUpSubclassOption>[];
+
       return LevelUpLevelData(
-        blockingChoiceType: blockingRow.isEmpty
-            ? null
-            : blockingRow['choice_type'] as String?,
+        choiceType: choiceType,
+        choiceClassFeatureId: choiceClassFeatureId,
+        availableSubclasses: availableSubclasses,
         automaticFeatures: [
           for (final row in automaticRows)
             ClassFeatureRowMapper.toCharacterClassFeature(
@@ -464,12 +499,48 @@ class SupabaseCharacterRepository implements CharacterRepository {
     }
   }
 
+  /// Sous-classes disponibles pour [classId] à [targetLevel]
+  /// (`subclasses.available_from_level = targetLevel`), noms/descriptions
+  /// résolus via `translations` — étape "Choix à faire", variante
+  /// [LevelUpChoiceKind.subclass]. Appelée uniquement quand
+  /// `fetchLevelUpLevelData` a déjà déterminé `choiceType == 'sous_classe'`
+  /// pour ce niveau (une requête réseau évitée pour tous les autres cas).
+  Future<List<LevelUpSubclassOption>> _fetchAvailableSubclasses({
+    required Object classId,
+    required int targetLevel,
+  }) async {
+    final rows = await _client
+        .from('subclasses')
+        .select('id, available_from_level')
+        .eq('class_id', classId)
+        .eq('available_from_level', targetLevel)
+        .order('id', ascending: true);
+
+    final ids = LevelUpChoiceRowMapper.collectSubclassIds(rows);
+    final names = await _fetchTranslatedNames(
+      entityType: 'subclass',
+      entityIds: ids,
+    );
+    final descriptions = await _fetchTranslatedField(
+      entityType: 'subclass',
+      fieldName: 'description',
+      entityIds: ids,
+    );
+
+    return LevelUpChoiceRowMapper.toSubclassOptions(
+      rows,
+      names: names,
+      descriptions: descriptions,
+    );
+  }
+
   @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required int hpRolled,
     required String hpMethod,
     required int hpGain,
+    LevelUpChoiceSelection? choice,
   }) async {
     final ownerId = _requireOwnerId();
     try {
@@ -501,27 +572,53 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // Compromis assumé, même rationale que
       // `CharacterCreationRepository.createCharacter` (voir sa
       // documentation) : pas de RPC Postgres atomique à cet incrément, ces
-      // 3 écritures sont séquentielles côté client. Ordre choisi pour
-      // limiter les dégâts d'un échec partiel : `characters` d'abord (si
-      // cet update échoue, rien d'autre n'a encore été écrit) ; puis
-      // `character_classes.level` (si celui-ci échoue après le premier,
-      // l'incohérence reste limitée à un `max_hp`/`current_hp` déjà
-      // incrémentés sans changement de niveau ni d'historique — visible et
-      // corrigible manuellement, jamais un personnage fantôme) ; enfin
-      // `character_level_hp`, purement un historique, en dernier. Contrairement
-      // à `createCharacter`, aucun nettoyage ("best effort") n'est possible
-      // ici : il n'y a pas de ligne fraîchement créée à supprimer, seulement
-      // des colonnes déjà existantes mises à jour.
+      // écritures sont séquentielles côté client. Ordre choisi pour limiter
+      // les dégâts d'un échec partiel :
+      // 1. `characters` d'abord (si cet update échoue, rien d'autre n'a
+      //    encore été écrit) ;
+      // 2. `character_classes.level` (si celui-ci échoue après le premier,
+      //    l'incohérence reste limitée à un `max_hp`/`current_hp` déjà
+      //    incrémentés sans changement de niveau ni d'historique — visible
+      //    et corrigible manuellement, jamais un personnage fantôme).
+      //    Increment 2 : le choix `subclass_id` est combiné dans ce même
+      //    `UPDATE` quand [choice] est une sous-classe, plutôt qu'un appel
+      //    séparé — même écriture, même niveau de risque, une requête de
+      //    moins.
+      // 3. Le choix restant (ASI ou `character_class_options`), s'il y en a
+      //    un — placé ici (juste après le niveau, avant l'historique PV) car
+      //    c'est une donnée de jeu vivante au moins aussi significative que
+      //    le niveau lui-même (contrairement à `character_level_hp`, pur
+      //    historique) : mieux vaut qu'un échec à cette étape laisse le
+      //    niveau déjà incrémenté (visible, corrigible) plutôt que de la
+      //    reporter après l'historique, qui doit rester la toute dernière
+      //    écriture (voir 4.).
+      // 4. `character_level_hp`, purement un historique, toujours en
+      //    dernier. Contrairement à `createCharacter`, aucun nettoyage
+      //    ("best effort") n'est possible ici : il n'y a pas de ligne
+      //    fraîchement créée à supprimer, seulement des colonnes déjà
+      //    existantes mises à jour.
       await _client
           .from('characters')
           .update({'max_hp': newMaxHp, 'current_hp': newCurrentHp})
           .eq('id', characterId)
           .eq('owner_id', ownerId);
 
+      final classUpdate = <String, dynamic>{'level': newLevel};
+      if (choice != null && choice.kind == LevelUpChoiceKind.subclass) {
+        classUpdate['subclass_id'] = choice.subclassId;
+      }
       await _client
           .from('character_classes')
-          .update({'level': newLevel})
+          .update(classUpdate)
           .eq('id', classRow['id']);
+
+      if (choice != null) {
+        await _applyChoice(
+          characterId: characterId,
+          level: newLevel,
+          choice: choice,
+        );
+      }
 
       await _client.from('character_level_hp').insert({
         'character_id': characterId,
@@ -541,6 +638,124 @@ class SupabaseCharacterRepository implements CharacterRepository {
       throw mapCharacterError(error);
     } catch (_) {
       throw mapUnknownCharacterError();
+    }
+  }
+
+  /// Écrit [choice] pour la table concernée — voir la documentation de
+  /// [CharacterRepository.applyLevelUp]. Ne fait rien pour
+  /// [LevelUpChoiceKind.subclass] : déjà écrit dans le même `UPDATE` que
+  /// `character_classes.level` par l'appelant.
+  Future<void> _applyChoice({
+    required String characterId,
+    required int level,
+    required LevelUpChoiceSelection choice,
+  }) async {
+    switch (choice.kind) {
+      case LevelUpChoiceKind.subclass:
+        return;
+      case LevelUpChoiceKind.abilityScoreImprovement:
+        await _applyAbilityScoreImprovement(
+          characterId: characterId,
+          level: level,
+          allocations: choice.abilityAllocations!,
+        );
+      case LevelUpChoiceKind.fightingStyle:
+      case LevelUpChoiceKind.favoredEnemy:
+        await _client.from('character_class_options').insert({
+          'character_id': characterId,
+          'class_feature_id': choice.classFeatureId,
+          'level': level,
+          'chosen_value': choice.chosenValue,
+        });
+    }
+  }
+
+  /// Écrit une augmentation de caractéristique sur **les deux** tables
+  /// concernées (voir l'avertissement de la tâche qui a produit cette
+  /// méthode) :
+  /// 1. `character_ability_scores.score` — la table des scores
+  ///    actuels/vivants, celle que lit tout le reste de l'app
+  ///    (`CharacterDetail.abilityScores`, modificateurs, jets de
+  ///    sauvegarde...). Le score final est recalculé ici depuis le score
+  ///    *actuellement* en base (relu juste avant, jamais fait confiance à
+  ///    une valeur mise en cache côté écran) + l'allocation — même principe
+  ///    que `newMaxHp`/`newCurrentHp` ci-dessus (delta appliqué à une valeur
+  ///    fraîchement relue, pas une expression SQL : PostgREST ne supporte
+  ///    pas `score = score + increase` dans un payload `UPDATE`).
+  /// 2. `character_ability_increases` — historique/audit, une ligne par
+  ///    caractéristique augmentée (`source: 'asi'`). N'alimente aucun
+  ///    affichage : oublier cette table ne casse rien de visible
+  ///    immédiatement, d'où l'insistance de la documentation de la tâche à
+  ///    ne jamais l'omettre.
+  ///
+  /// [allocations] ne contient que les caractéristiques effectivement
+  /// augmentées (1 ou 2 entrées, jamais de valeur à 0 — voir
+  /// [LevelUpChoiceSelection.abilityAllocations]). Avec une répartition
+  /// "+1/+1" sur deux caractéristiques, la boucle ci-dessous écrit les deux
+  /// séquentiellement (pas de transaction/RPC, même compromis assumé que le
+  /// reste de cette méthode) : un échec réseau entre les deux itérations
+  /// laisserait une seule caractéristique augmentée alors que le niveau/PV
+  /// auraient déjà été appliqués — incohérence mineure et déjà dans la même
+  /// famille de compromis que `createCharacter`, pas une régression propre à
+  /// cette méthode.
+  Future<void> _applyAbilityScoreImprovement({
+    required String characterId,
+    required int level,
+    required Map<String, int> allocations,
+  }) async {
+    final abilityIds = allocations.keys.toList();
+    final currentRows = await _client
+        .from('character_ability_scores')
+        .select('ability_id, score')
+        .eq('character_id', characterId)
+        .inFilter('ability_id', abilityIds);
+    final currentScores = <String, int>{
+      for (final row in currentRows)
+        row['ability_id'] as String: (row['score'] as num).toInt(),
+    };
+
+    for (final abilityId in abilityIds) {
+      final increase = allocations[abilityId]!;
+      final currentScore = currentScores[abilityId];
+      if (currentScore == null) {
+        // Ne devrait pas arriver (une ligne `character_ability_scores`
+        // existe pour les 6 caractéristiques dès la création, voir
+        // `character_creation_repository.dart::createCharacter`) : échoue
+        // explicitement plutôt que de deviner un score de départ, même
+        // philosophie que `hitDie` (`CharacterDetailClassRow`).
+        throw CharacterFailure(
+          "Score actuel introuvable pour la caractéristique '$abilityId' : "
+          "impossible d'appliquer l'augmentation de caractéristique.",
+        );
+      }
+      final newScore = currentScore + increase;
+      if (newScore > 20) {
+        // Plafond RAW 5e : un score de caractéristique ne dépasse jamais 20.
+        // Filet de sécurité serveur — l'écran (`level_up_screen.dart`)
+        // désactive déjà le stepper avant d'atteindre ce cas, mais cette
+        // méthode ne doit jamais faire confiance uniquement à l'UI pour une
+        // écriture. Échoue explicitement plutôt que de plafonner
+        // silencieusement à 20 : un plafonnage silencieux livrerait moins de
+        // points que promis sans jamais le signaler au joueur.
+        throw CharacterFailure(
+          "Caractéristique '$abilityId' déjà à $currentScore : "
+          'impossible de dépasser le plafond de 20.',
+        );
+      }
+
+      await _client
+          .from('character_ability_scores')
+          .update({'score': newScore})
+          .eq('character_id', characterId)
+          .eq('ability_id', abilityId);
+
+      await _client.from('character_ability_increases').insert({
+        'character_id': characterId,
+        'level': level,
+        'ability_id': abilityId,
+        'increase': increase,
+        'source': 'asi',
+      });
     }
   }
 
@@ -565,6 +780,22 @@ class SupabaseCharacterRepository implements CharacterRepository {
   Future<Map<String, String>> _fetchTranslatedNames({
     required String entityType,
     required Set<String> entityIds,
+  }) {
+    return _fetchTranslatedField(
+      entityType: entityType,
+      fieldName: 'name',
+      entityIds: entityIds,
+    );
+  }
+
+  /// Généralisation de [_fetchTranslatedNames] à un [fieldName] arbitraire
+  /// (ex. `'description'` pour les sous-classes de l'étape "Choix à faire",
+  /// increment 2) — même règles (map vide sans requête si [entityIds] est
+  /// vide, parsing délégué à [CharacterRowMapper.parseTranslatedNames]).
+  Future<Map<String, String>> _fetchTranslatedField({
+    required String entityType,
+    required String fieldName,
+    required Set<String> entityIds,
   }) async {
     if (entityIds.isEmpty) {
       return const {};
@@ -574,7 +805,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         .from('translations')
         .select('entity_id, value')
         .eq('entity_type', entityType)
-        .eq('field_name', 'name')
+        .eq('field_name', fieldName)
         .eq('locale', _locale)
         .inFilter('entity_id', entityIds.toList());
 
