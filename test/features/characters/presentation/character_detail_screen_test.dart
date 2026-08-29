@@ -21,6 +21,7 @@ import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
+import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/core/widgets/portrait_frame.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
@@ -49,6 +50,11 @@ class _FakeCharacterRepository implements CharacterRepository {
   LevelUpApplyResult? applyLevelUpResultToReturn;
   Object? applyLevelUpErrorToThrow;
   int applyLevelUpCallCount = 0;
+
+  RestType? lastAppliedRestType;
+  String? lastAppliedRestClassName;
+  int applyRestCallCount = 0;
+  Object? applyRestErrorToThrow;
 
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
@@ -119,6 +125,18 @@ class _FakeCharacterRepository implements CharacterRepository {
     if (applyLevelUpErrorToThrow != null) throw applyLevelUpErrorToThrow!;
     return applyLevelUpResultToReturn ??
         const LevelUpApplyResult(newLevel: 6, newMaxHp: 40, newCurrentHp: 28);
+  }
+
+  @override
+  Future<void> applyRest({
+    required String characterId,
+    required RestType type,
+    required String className,
+  }) async {
+    applyRestCallCount++;
+    if (applyRestErrorToThrow != null) throw applyRestErrorToThrow!;
+    lastAppliedRestType = type;
+    lastAppliedRestClassName = className;
   }
 }
 
@@ -678,5 +696,98 @@ void main() {
         expect(find.textContaining('Montée de niveau'), findsNothing);
       },
     );
+  });
+
+  group('lien "Prendre un repos" et feuille "Repos"', () {
+    testWidgets(
+      'le lien "Prendre un repos" ouvre RestSheet avec les PV actuels/max',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Prendre un repos'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Repos'), findsOneWidget);
+        expect(find.text('PV actuels : 18 / 30'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'appliquer un repos long appelle applyRest(RestType.long), rafraîchit '
+      'la fiche et affiche la confirmation',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Prendre un repos'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('APPLIQUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyRestCallCount, 1);
+        expect(fakeRepository.lastAppliedRestType, RestType.long);
+        expect(fakeRepository.lastAppliedRestClassName, 'Magicienne');
+        expect(fakeRepository.fetchDetailCallCount, greaterThan(1));
+        expect(
+          find.text('Repos long effectué. PV restaurés au maximum.'),
+          findsOneWidget,
+        );
+        // Bascule optimiste immédiate du bandeau PV (résultat connu à
+        // l'avance pour un repos long), avant même que le rafraîchissement
+        // réseau ne confirme la même valeur.
+        expect(find.text('30 / 30'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'appliquer un repos court appelle applyRest(RestType.short) et affiche '
+      'une confirmation sobre',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Prendre un repos'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('REPOS COURT'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('APPLIQUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyRestCallCount, 1);
+        expect(fakeRepository.lastAppliedRestType, RestType.short);
+        expect(find.text('Repos court effectué.'), findsOneWidget);
+      },
+    );
+
+    testWidgets('un échec de applyRest affiche un SnackBar d\'erreur', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail;
+      fakeRepository.applyRestErrorToThrow = const CharacterFailure(
+        "Impossible d'effectuer le repos. Réessayez.",
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Prendre un repos'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text("Impossible d'effectuer le repos. Réessayez."),
+        findsOneWidget,
+      );
+    });
   });
 }

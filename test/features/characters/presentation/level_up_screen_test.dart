@@ -21,6 +21,7 @@ import 'package:personnages/features/characters/domain/level_up_choice_kind.dart
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/domain/level_up_subclass_option.dart';
+import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/presentation/level_up_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 
@@ -124,6 +125,15 @@ class _FakeCharacterRepository implements CharacterRepository {
   Future<void> removePortrait({
     required String characterId,
     required String portraitUrl,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> applyRest({
+    required String characterId,
+    required RestType type,
+    required String className,
   }) {
     throw UnimplementedError();
   }

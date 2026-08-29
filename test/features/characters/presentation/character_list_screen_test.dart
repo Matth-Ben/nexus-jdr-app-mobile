@@ -21,6 +21,7 @@ import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
+import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/presentation/character_list_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_card.dart';
@@ -95,6 +96,15 @@ class _FakeCharacterRepository implements CharacterRepository {
     required String hpMethod,
     required int hpGain,
     LevelUpChoiceSelection? choice,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> applyRest({
+    required String characterId,
+    required RestType type,
+    required String className,
   }) {
     throw UnimplementedError();
   }

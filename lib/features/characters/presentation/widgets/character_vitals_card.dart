@@ -16,6 +16,8 @@ class CharacterVitalsCard extends StatelessWidget {
     required this.onQuickDamage,
     required this.onTapAddXp,
     required this.onTapLevelUp,
+    required this.onTapRest,
+    this.hpActionsDisabled = false,
     super.key,
   });
 
@@ -31,6 +33,28 @@ class CharacterVitalsCard extends StatelessWidget {
   /// premier, même règle que la feuille d'ajustement détaillée).
   final VoidCallback onQuickDamage;
 
+  /// `true` pendant qu'un repos (`RestSheet`) — ou la réaffirmation PV
+  /// différée qu'un repos peut déclencher, voir
+  /// `_CharacterDetailScreenState._reassertCurrentHpState` — est en vol côté
+  /// réseau. Désactive le stepper PV (+/-), le bouton crayon "Ajuster PV" ET
+  /// le lien "Prendre un repos" lui-même (jamais masqués, juste avec un
+  /// callback `null`, pour que la fiche reste lisible) le temps de cette
+  /// fenêtre.
+  ///
+  /// Ferme la course résiduelle confirmée en revue de code : sans le verrou
+  /// sur le stepper/crayon, un ajustement PV démarré *pendant* qu'un repos
+  /// long écrit encore en base pourrait résoudre *avant* lui et se faire
+  /// écraser silencieusement par l'écriture `current_hp = max_hp` du repos,
+  /// arrivée après coup. Sans le verrou sur le lien "Prendre un repos"
+  /// lui-même, un second repos pourrait de la même façon démarrer et
+  /// résoudre pendant qu'une réaffirmation PV différée (déclenchée par
+  /// [_restGeneration]/`_reassertCurrentHpState`, l'autre sens de la course :
+  /// un ajustement PV démarré *avant* le repos et résolu après lui) est
+  /// encore en vol, et se faire écraser à son tour — même bug, un niveau
+  /// plus profond. Voir `_CharacterDetailScreenState._isApplyingRest`
+  /// (`character_detail_screen.dart`) pour le détail des deux mécanismes.
+  final bool hpActionsDisabled;
+
   /// `IconButton` "+" de fin de ligne d'en-tête XP : ouvre `AddXpSheet`.
   final VoidCallback onTapAddXp;
 
@@ -39,6 +63,10 @@ class CharacterVitalsCard extends StatelessWidget {
   /// ouvrent le même flux de montée de niveau, ciblant `totalLevel + 1` —
   /// voir `character_detail_screen.dart`.
   final VoidCallback onTapLevelUp;
+
+  /// Lien texte "Prendre un repos", en fin de carte — ouvre `RestSheet`
+  /// (voir `character_detail_screen.dart`).
+  final VoidCallback onTapRest;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +85,7 @@ class CharacterVitalsCard extends StatelessWidget {
             onTapAdjustHp: onTapAdjustHp,
             onQuickHeal: onQuickHeal,
             onQuickDamage: onQuickDamage,
+            actionsDisabled: hpActionsDisabled,
           ),
           const SizedBox(height: AppSpacing.sm),
           _XpSection(
@@ -64,7 +93,53 @@ class CharacterVitalsCard extends StatelessWidget {
             onTapAddXp: onTapAddXp,
             onTapLevelUp: onTapLevelUp,
           ),
+          const SizedBox(height: AppSpacing.sm),
+          const Divider(height: 1, thickness: 1, color: AppColors.gaugeTrack),
+          const SizedBox(height: AppSpacing.sm),
+          _RestLink(onTap: hpActionsDisabled ? null : onTapRest),
         ],
+      ),
+    );
+  }
+}
+
+/// Lien texte pleine largeur, centré, "Prendre un repos" — ouvre `RestSheet`
+/// (spec visuelle direction-artistique). Volontairement un lien de fin de
+/// carte plutôt qu'un second bouton icône dans l'en-tête PV (risque de
+/// mistap à côté du crayon existant, voir `_HpSection`).
+class _RestLink extends StatelessWidget {
+  const _RestLink({required this.onTap});
+
+  /// `null` pendant qu'un repos (ou sa réaffirmation PV différée, voir
+  /// `_CharacterDetailScreenState._isApplyingRest`) est déjà en vol — évite
+  /// qu'un second repos parte avant que le premier n'ait fini d'écrire.
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onTap == null;
+    final color = disabled ? AppColors.textMuted : AppColors.textSecondary;
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.local_fire_department, size: 14, color: color),
+              const SizedBox(width: 4),
+              Text(
+                'Prendre un repos',
+                style: AppTypography.body(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -76,12 +151,16 @@ class _HpSection extends StatelessWidget {
     required this.onTapAdjustHp,
     required this.onQuickHeal,
     required this.onQuickDamage,
+    required this.actionsDisabled,
   });
 
   final CharacterDetail detail;
   final VoidCallback onTapAdjustHp;
   final VoidCallback onQuickHeal;
   final VoidCallback onQuickDamage;
+
+  /// Voir `CharacterVitalsCard.hpActionsDisabled`.
+  final bool actionsDisabled;
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +189,7 @@ class _HpSection extends StatelessWidget {
               height: 44,
               child: IconButton(
                 padding: EdgeInsets.zero,
-                onPressed: onTapAdjustHp,
+                onPressed: actionsDisabled ? null : onTapAdjustHp,
                 icon: const Icon(
                   Icons.edit_outlined,
                   size: 18,
@@ -130,13 +209,17 @@ class _HpSection extends StatelessWidget {
             const Spacer(),
             StepperCounter(
               value: detail.currentHp,
-              onIncrement: detail.currentHp < detail.maxHp ? onQuickHeal : null,
+              onIncrement: !actionsDisabled && detail.currentHp < detail.maxHp
+                  ? onQuickHeal
+                  : null,
               // Un personnage à `current_hp = 0` peut encore avoir des PV
               // temporaires (`HpAdjustmentCalculator.applyDamage` les
               // absorbe en premier) : le "-" doit rester actif tant qu'il
               // reste des PV *ou* des PV temporaires à réduire, pas
               // seulement les premiers.
-              onDecrement: detail.currentHp > 0 || detail.temporaryHp > 0
+              onDecrement:
+                  !actionsDisabled &&
+                      (detail.currentHp > 0 || detail.temporaryHp > 0)
                   ? onQuickDamage
                   : null,
             ),

@@ -15,6 +15,7 @@ import '../domain/level_up_choice_selection.dart';
 import '../domain/level_up_level_data.dart';
 import '../domain/level_up_subclass_option.dart';
 import '../domain/portrait_storage_path_resolver.dart';
+import '../domain/rest_type.dart';
 import '../domain/spell_slot_progression.dart';
 import 'character_detail_row_mapper.dart';
 import 'character_error_mapper.dart';
@@ -145,6 +146,44 @@ abstract class CharacterRepository {
     required String hpMethod,
     required int hpGain,
     LevelUpChoiceSelection? choice,
+  });
+
+  /// Applique un repos (lien "Prendre un repos", onglet "Personnage" —
+  /// `presentation/widgets/rest_sheet.dart`), voir [RestType] pour l'effet
+  /// exact de chaque valeur :
+  /// - [RestType.long] : `characters.current_hp = max_hp`,
+  ///   `characters.temporary_hp = 0` ; recalcule (upsert) tous les
+  ///   `character_spell_slots` de la classe primaire pour son niveau actuel
+  ///   (`slots_used` toujours remis à 0), même fonction de progression que
+  ///   [applyLevelUp] ; et réinitialise (upsert)
+  ///   `character_feature_uses.uses_remaining` pour toutes les
+  ///   `class_features` de **toutes** les classes du personnage
+  ///   (multiclassage inclus) atteintes par leur niveau respectif, quel que
+  ///   soit leur `rest_type`.
+  /// - [RestType.short] : réinitialise uniquement (upsert) les
+  ///   `character_feature_uses` (toutes classes, multiclassage inclus)
+  ///   dont le `rest_type` correspondant vaut `'repos_court'`. Ne touche ni
+  ///   les PV ni `character_spell_slots`.
+  ///
+  /// [className] : même rôle et même rationale que sur [applyLevelUp] (voir
+  /// sa documentation) — nécessaire au recalcul de
+  /// `character_spell_slots` pour un repos long, résolu par l'appelant
+  /// depuis la classe primaire (`character_detail_screen.dart`). Ignoré
+  /// pour un repos court (aucun recalcul de sorts).
+  ///
+  /// `character_spell_slots`/`character_feature_uses` ne sont jamais
+  /// initialisées à la création de personnage (gaps pré-existants
+  /// documentés) : un personnage sans aucune classe ou sans aucune ligne
+  /// préexistante n'a simplement rien à réinitialiser sur ces tables,
+  /// jamais une erreur.
+  ///
+  /// Isolation cross-utilisateur : même garantie que le reste de ce
+  /// fichier (vérification explicite de `characters.owner_id`, RLS en
+  /// filet de sécurité).
+  Future<void> applyRest({
+    required String characterId,
+    required RestType type,
+    required String className,
   });
 }
 
@@ -667,6 +706,227 @@ class SupabaseCharacterRepository implements CharacterRepository {
     } catch (_) {
       throw mapUnknownCharacterError();
     }
+  }
+
+  @override
+  Future<void> applyRest({
+    required String characterId,
+    required RestType type,
+    required String className,
+  }) async {
+    final ownerId = _requireOwnerId();
+    try {
+      // Vérification d'appartenance explicite en tout premier — avant toute
+      // écriture, y compris pour un repos court qui ne touche jamais
+      // `characters` : sans ce garde-fou, un repos court n'aurait aucune
+      // requête filtrée sur `owner_id`, ne reposant que sur la RLS de
+      // `character_classes`/`class_features` (lecture seule) pour
+      // l'isolation — insuffisant pour l'écriture `character_feature_uses`
+      // qui suit. Récupère aussi `max_hp`, nécessaire au repos long.
+      final characterRow = await _client
+          .from('characters')
+          .select('max_hp')
+          .eq('id', characterId)
+          .eq('owner_id', ownerId)
+          .maybeSingle();
+      if (characterRow == null) {
+        throw const CharacterFailure('Personnage introuvable.');
+      }
+
+      // Toutes les classes du personnage (multiclassage inclus) — utilisées
+      // à la fois pour retrouver la classe primaire (repos long, recalcul
+      // des emplacements de sorts) et pour réinitialiser les aptitudes de
+      // *toutes* les classes (voir [_resetFeatureUses] : la lecture de la
+      // fiche, `_fetchClassFeatures`, gère déjà explicitement ce cas, un
+      // repos doit suivre la même règle plutôt qu'ignorer silencieusement
+      // les classes secondaires).
+      final classRows = await _client
+          .from('character_classes')
+          .select('class_id, level, is_primary')
+          .eq('character_id', characterId);
+
+      if (type == RestType.long) {
+        final maxHp = (characterRow['max_hp'] as num).toInt();
+        await _client
+            .from('characters')
+            .update({'current_hp': maxHp, 'temporary_hp': 0})
+            .eq('id', characterId)
+            .eq('owner_id', ownerId);
+
+        // Recalcul des emplacements de sorts : classe primaire uniquement
+        // (pas de calcul multiclassé), même convention déjà établie pour
+        // les emplacements de sorts à la montée de niveau ([applyLevelUp]
+        // rejette d'ailleurs explicitement un personnage multiclassé) —
+        // contrairement à la réinitialisation des aptitudes ci-dessous, qui
+        // doit couvrir toutes les classes.
+        final primaryClassRow = classRows.firstWhere(
+          (row) => row['is_primary'] == true,
+          orElse: () => const <String, dynamic>{},
+        );
+        if (primaryClassRow.isNotEmpty) {
+          await _resetSpellSlots(
+            characterId: characterId,
+            className: className,
+            totalLevel: (primaryClassRow['level'] as num).toInt(),
+          );
+        }
+      }
+
+      if (classRows.isNotEmpty) {
+        final classIds = <Object>{
+          for (final row in classRows) row['class_id'] as Object,
+        };
+        final classLevels = <String, int>{
+          for (final row in classRows)
+            (row['class_id'] as Object).toString(): (row['level'] as num)
+                .toInt(),
+        };
+        await _resetFeatureUses(
+          characterId: characterId,
+          classIds: classIds,
+          classLevels: classLevels,
+          onlyShortRest: type == RestType.short,
+        );
+      }
+    } on CharacterFailure {
+      rethrow;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  /// Repos long uniquement : réinitialise `character_spell_slots` pour la
+  /// classe primaire ([className]) à son niveau actuel ([totalLevel]), en
+  /// recalculant les totaux via [SpellSlotProgression.slotsForLevel] — même
+  /// fonction que [_upsertSpellSlots] (montée de niveau) — plutôt que de se
+  /// contenter de remettre à 0 les lignes déjà existantes.
+  ///
+  /// Décision chef de projet (revue QA) : un simple `UPDATE` sur les lignes
+  /// déjà existantes est insuffisant, parce que `character_spell_slots`
+  /// n'est écrite nulle part à la création de personnage — seulement par
+  /// [_upsertSpellSlots] lors d'une montée de niveau passée par l'app. Un
+  /// personnage lanceur de sorts qui n'a jamais monté de niveau via l'app
+  /// (cas réel, y compris après un futur import XML, Phase 3) a donc zéro
+  /// ligne `character_spell_slots` : un simple `UPDATE` ne ferait alors
+  /// rien, et un repos long resterait sans effet visible sur ses
+  /// emplacements de sorts.
+  ///
+  /// `slots_used` est toujours remis à 0 (jamais préservé, contrairement à
+  /// [_upsertSpellSlots] où une montée de niveau ne doit pas effacer une
+  /// consommation déjà faite) : c'est tout le sens d'un repos long. Aucune
+  /// ligne écrite pour un niveau de sort à 0, même convention que
+  /// [_upsertSpellSlots]/`CharacterDetailRowMapper.parseSpellSlots`. Ne fait
+  /// rien pour une classe non lanceuse ou l'Occultiste, même limite que
+  /// [_upsertSpellSlots].
+  Future<void> _resetSpellSlots({
+    required String characterId,
+    required String className,
+    required int totalLevel,
+  }) async {
+    final totals = SpellSlotProgression.slotsForLevel(className, totalLevel);
+    final payload = [
+      for (var i = 0; i < totals.length; i++)
+        if (totals[i] > 0)
+          {
+            'character_id': characterId,
+            'slot_level': i + 1,
+            'slots_total': totals[i],
+            'slots_used': 0,
+          },
+    ];
+    if (payload.isEmpty) return;
+
+    await _client
+        .from('character_spell_slots')
+        .upsert(payload, onConflict: 'character_id,slot_level');
+  }
+
+  /// Réinitialise (upsert) `character_feature_uses.uses_remaining` pour les
+  /// `class_features` de **toutes** les classes du personnage ([classIds])
+  /// atteintes par leur niveau respectif ([classLevels]) — personnage
+  /// multiclassé inclus. Réutilise littéralement
+  /// [ClassFeatureRowMapper.filterAttained], même règle de filtrage que la
+  /// lecture de la fiche (`_fetchClassFeatures`, qui gère déjà explicitement
+  /// ce cas pour la même raison : "pour un personnage multiclassé où
+  /// plusieurs `class_id`... sont mélangés").
+  ///
+  /// [onlyShortRest] détermine quelles aptitudes à usage limité sont
+  /// rechargées (voir [_rechargedAmount]) : `false` pour un repos long
+  /// (toutes, quel que soit leur `rest_type`), `true` pour un repos court
+  /// (seulement `rest_type == 'repos_court'`).
+  ///
+  /// Upsert (jamais un simple `UPDATE`) : `character_feature_uses` n'est
+  /// jamais initialisée à la création de personnage ni à la montée de
+  /// niveau (gap pré-existant documenté, voir `_upsertSpellSlots`) — une
+  /// aptitude jamais encore utilisée n'a donc pas de ligne, et doit malgré
+  /// tout ressortir avec son plein total après un repos. `onConflict`
+  /// explicite sur la clé primaire composite réelle de la table
+  /// (`character_id, class_feature_id` — voir `02-modele-donnees.md`),
+  /// même principe que [_upsertSpellSlots].
+  Future<void> _resetFeatureUses({
+    required String characterId,
+    required Set<Object> classIds,
+    required Map<String, int> classLevels,
+    required bool onlyShortRest,
+  }) async {
+    if (classIds.isEmpty) return;
+
+    final featureRows = await _client
+        .from('class_features')
+        .select('id, class_id, level, uses_per_rest')
+        .inFilter('class_id', classIds.toList());
+
+    final attainedRows = ClassFeatureRowMapper.filterAttained(
+      featureRows,
+      classLevels: classLevels,
+    );
+
+    final payload = [
+      for (final row in attainedRows)
+        if (_rechargedAmount(
+              row['uses_per_rest'] as Map<String, dynamic>?,
+              onlyShortRest: onlyShortRest,
+            )
+            case final amount?)
+          {
+            'character_id': characterId,
+            'class_feature_id': row['id'],
+            'uses_remaining': amount,
+          },
+    ];
+    if (payload.isEmpty) return;
+
+    await _client
+        .from('character_feature_uses')
+        .upsert(payload, onConflict: 'character_id,class_feature_id');
+  }
+
+  /// Total d'utilisations à écrire pour l'aptitude décrite par [usesPerRest]
+  /// si ce repos doit la recharger, `null` sinon — jamais rien à écrire dans
+  /// `character_feature_uses` dans ce cas (aptitude non rechargée par ce
+  /// type de repos, ou pas d'usage limité du tout).
+  ///
+  /// `null` dans 2 cas distincts, tous deux traités identiquement (aucune
+  /// ligne écrite) :
+  /// - [usesPerRest] lui-même `null` — aptitude passive, voir
+  ///   `CharacterClassFeature.isPassive`.
+  /// - `uses_per_rest->>'amount'` absent alors que `rest_type` est renseigné
+  ///   — cas réel constaté côté seed (ex. `class_features.id = 6`,
+  ///   `{amount: null, rest_type: 'repos_court'}`, vérifié contre le stack
+  ///   local) : même convention que
+  ///   `ClassFeatureRowMapper.toCharacterClassFeature` (`usesMax` nul ⇒
+  ///   `isPassive`), pour ne jamais écrire un total inconnu.
+  int? _rechargedAmount(
+    Map<String, dynamic>? usesPerRest, {
+    required bool onlyShortRest,
+  }) {
+    if (usesPerRest == null) return null;
+    if (onlyShortRest && usesPerRest['rest_type'] != 'repos_court') {
+      return null;
+    }
+    return (usesPerRest['amount'] as num?)?.toInt();
   }
 
   /// Recalcule `character_spell_slots` pour la classe primaire au nouveau

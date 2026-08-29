@@ -11,6 +11,7 @@ import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
 import '../domain/hp_adjustment.dart';
 import '../domain/proficiency_bonus.dart';
+import '../domain/rest_type.dart';
 import '../domain/saving_throw_calculator.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
@@ -26,6 +27,7 @@ import 'widgets/character_story_tab_body.dart';
 import 'widgets/character_vitals_card.dart';
 import 'widgets/hp_adjustment_sheet.dart';
 import 'widgets/portrait_upload_sheet.dart';
+import 'widgets/rest_sheet.dart';
 
 /// Fiche personnage, route `/characters/:id` — remplace
 /// `CharacterDetailPlaceholderScreen`. Les 4 onglets (voir
@@ -63,6 +65,41 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// serveur potentiellement obsolète le temps d'un aller-retour réseau.
   HpState? _localHpState;
 
+  /// Compteur incrémenté uniquement par un repos long réussi ([_applyRest])
+  /// — sert à détecter qu'un ajustement PV resté en vol ([_applyHpState],
+  /// ex. le stepper "+"/"-" ou `HpAdjustmentSheet`) a été dépassé par un
+  /// repos long démarré entre-temps : sans ce garde-fou, l'écriture tardive
+  /// de l'ajustement obsolète écrasait silencieusement en base le résultat
+  /// du repos une fois son propre appel réseau enfin résolu (perte de
+  /// données confirmée en revue QA, voir
+  /// `test/features/characters/presentation/character_detail_rest_stale_hp_test.dart`).
+  ///
+  /// Volontairement distinct d'un compteur générique incrémenté par *tout*
+  /// ajustement PV : deux taps rapides successifs sur le stepper
+  /// (`character_detail_hp_stepper_race_test.dart`) sont un cas normal déjà
+  /// géré par l'accumulateur [_localHpState], pas une raison de déclencher
+  /// [_reassertCurrentHpState] — seul un repos long change les PV
+  /// indépendamment de la valeur locale déjà affichée à ce moment-là.
+  int _restGeneration = 0;
+
+  /// `true` dès le début de [_applyRest] (avant son appel réseau), `false`
+  /// une fois résolu (succès ou échec) — désactive le stepper PV et le
+  /// bouton crayon "Ajuster PV" de `CharacterVitalsCard` le temps de cette
+  /// fenêtre (voir `CharacterVitalsCard.hpActionsDisabled`).
+  ///
+  /// Ferme la course résiduelle confirmée en revue de code (l'autre sens de
+  /// celle déjà couverte par [_restGeneration]) : sans ce verrou, un
+  /// ajustement PV pouvait démarrer *pendant* qu'un repos long écrit encore
+  /// en base et résoudre *avant* lui — [_restGeneration] ne détecte alors
+  /// aucun conflit (il n'a pas encore changé au moment où cet ajustement
+  /// capture sa valeur), et l'écriture `current_hp = max_hp` du repos,
+  /// arrivée après coup, écrase silencieusement le dégât/soin que le joueur
+  /// venait d'appliquer. Verrouiller les déclencheurs plutôt que de tenter
+  /// de réconcilier après coup l'ordre de résolution réseau (impossible à
+  /// garantir de façon fiable côté client) ferme cette fenêtre sans
+  /// dépendre de cet ordre.
+  bool _isApplyingRest = false;
+
   void _goBack() {
     if (context.canPop()) {
       context.pop();
@@ -94,6 +131,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // permet à un second tap rapide de repartir de cette valeur plutôt que
     // du `detail` désormais obsolète capturé au premier tap.
     final previousLocal = _localHpState;
+    // Capturé avant l'appel réseau : voir la documentation de
+    // [_restGeneration] pour ce que compare ce jeton une fois l'appel
+    // résolu.
+    final myRestGeneration = _restGeneration;
     setState(() => _localHpState = newState);
 
     try {
@@ -104,6 +145,17 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             currentHp: newState.currentHp,
             temporaryHp: newState.temporaryHp,
           );
+      if (_restGeneration != myRestGeneration) {
+        // Un repos long a démarré (et déjà écrit son propre résultat en
+        // base) pendant que cet appel réseau était en vol : l'écriture
+        // ci-dessus vient malgré tout de réussir, avec des valeurs
+        // désormais obsolètes. Regagne la cohérence serveur en réaffirmant
+        // l'état PV actuellement affiché (déjà mis à jour par le repos)
+        // plutôt que de laisser cette écriture obsolète stand — voir
+        // [_restGeneration].
+        await _reassertCurrentHpState();
+        return;
+      }
       ref.invalidate(characterDetailProvider(widget.characterId));
       // L'état local optimiste n'est pas relâché ici : il reste affiché tel
       // quel jusqu'à ce que le rafraîchissement déclenché ci-dessus livre
@@ -114,12 +166,70 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     } on CharacterFailure catch (failure) {
       // L'écriture a échoué : cette tentative n'a jamais été persistée,
       // revient à l'état local d'avant pour ne pas laisser un futur tap
-      // accumuler depuis une valeur fantôme jamais écrite en base.
-      if (mounted) setState(() => _localHpState = previousLocal);
+      // accumuler depuis une valeur fantôme jamais écrite en base — sauf si
+      // un repos long a entre-temps déjà établi un nouvel état local plus
+      // récent : le revert écraserait alors son résultat avec la valeur
+      // pré-repos (même garde-fou que le chemin de succès ci-dessus).
+      if (mounted && _restGeneration == myRestGeneration) {
+        setState(() => _localHpState = previousLocal);
+      }
       _showSnackBar(failure.message);
     } catch (_) {
-      if (mounted) setState(() => _localHpState = previousLocal);
+      if (mounted && _restGeneration == myRestGeneration) {
+        setState(() => _localHpState = previousLocal);
+      }
       _showSnackBar('Impossible de mettre à jour les PV. Réessayez.');
+    }
+  }
+
+  /// Réécrit en base l'état PV actuellement affiché (dernière valeur locale
+  /// optimiste, ou dernière donnée serveur connue à défaut) — appelé
+  /// uniquement quand un ajustement PV resté en vol vient de résoudre après
+  /// qu'un repos long a déjà écrit son propre résultat en base (voir
+  /// [_restGeneration], appelé depuis [_applyHpState]).
+  ///
+  /// Si cette réaffirmation échoue à son tour, le bug d'origine (PV
+  /// incohérents en base) peut resurgir sans que rien ne le signale —
+  /// contrairement à un simple "best effort" silencieux, affiche donc un
+  /// `SnackBar` d'erreur (même convention que le reste de cet écran) et
+  /// force un rafraîchissement depuis la vraie source de vérité serveur
+  /// (`ref.invalidate`) : sans ce rafraîchissement, `_localHpState`
+  /// resterait affiché tel quel alors qu'il ne correspond plus forcément à
+  /// ce qui est réellement en base.
+  Future<void> _reassertCurrentHpState() async {
+    if (!mounted) return;
+    // `AsyncValue.value` (riverpod 3.x) est déjà nullable ici — équivalent
+    // de `valueOrNull` des versions précédentes du package, absent de
+    // celle-ci.
+    final latest = ref.read(characterDetailProvider(widget.characterId)).value;
+    if (latest == null) return;
+    final state = _hpStateOf(latest);
+    // Verrouille aussi les déclencheurs pendant cette écriture (même
+    // mécanisme que [_applyRest]) : sans ça, un nouveau repos long pourrait
+    // démarrer pendant que cette réaffirmation est encore en vol, résoudre
+    // avant elle, et se faire écraser à son tour par cette écriture
+    // désormais obsolète — reproduction du bug d'origine un niveau plus
+    // profond (trouvé en revue de code). Fermer cette fenêtre-ci suffit en
+    // pratique : au-delà, il faudrait enchaîner plusieurs repos quasi
+    // simultanés pendant qu'une réaffirmation est déjà en vol, ce que ce
+    // verrou empêche justement de déclencher.
+    setState(() => _isApplyingRest = true);
+    try {
+      await ref
+          .read(characterRepositoryProvider)
+          .updateHp(
+            characterId: widget.characterId,
+            currentHp: state.currentHp,
+            temporaryHp: state.temporaryHp,
+          );
+    } on CharacterFailure catch (failure) {
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar(failure.message);
+    } catch (_) {
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar('Impossible de synchroniser les PV. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isApplyingRest = false);
     }
   }
 
@@ -147,6 +257,87 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       _showSnackBar(failure.message);
     } catch (_) {
       _showSnackBar("Impossible d'ajouter l'XP. Réessayez.");
+    }
+  }
+
+  /// Applique un repos (`RestSheet`) : écrit l'effet en base
+  /// (`CharacterRepository.applyRest`), rafraîchit la fiche, puis affiche
+  /// une confirmation — spec visuelle section 4 : contrairement à
+  /// `_applyHpState`/`_addXp`, une confirmation explicite est nécessaire ici
+  /// car l'effet n'est pas toujours visible sur la fiche (repos court,
+  /// notamment).
+  ///
+  /// [className] (`CharacterRepository.applyRest`) est résolu ici depuis la
+  /// classe primaire de [detail] — chaîne vide si le personnage n'a aucune
+  /// classe, auquel cas `SpellSlotProgression.slotsForLevel` ne trouve
+  /// aucune correspondance et ne recalcule simplement aucun emplacement de
+  /// sort (comportement voulu, même repli que pour une classe non
+  /// lanceuse).
+  ///
+  /// Pour un repos long, dont le résultat sur les PV est connu à l'avance
+  /// (`current_hp = max_hp`, `temporary_hp = 0`), bascule optimiste
+  /// immédiate — même principe que [_applyHpState] — et fait avancer
+  /// [_restGeneration] : marque comme obsolète tout ajustement PV encore en
+  /// vol (voir la documentation de [_restGeneration]).
+  ///
+  /// Fait aussi passer [_isApplyingRest] à `true` le temps de l'appel réseau
+  /// (`finally`, succès ou échec) : verrouille les actions PV de
+  /// `CharacterVitalsCard` pendant toute la durée de ce repos, voir sa
+  /// documentation pour le sens de course que ce verrou ferme (celui que
+  /// [_restGeneration] seul ne couvre pas).
+  Future<void> _applyRest(CharacterDetail detail, RestType type) async {
+    final previousLocal = _localHpState;
+    // Capturé avant l'appel réseau : `_restGeneration` peut ne pas encore
+    // avoir été avancé par cette tentative précise au moment de la capture
+    // (seul un repos long l'avance, voir ci-dessous) — comparé plus bas pour
+    // détecter si une tentative de repos plus récente l'a entre-temps
+    // dépassée, même principe que la garde symétrique posée sur
+    // [_applyHpState].
+    int? myRestGeneration;
+    if (type == RestType.long) {
+      _restGeneration++;
+      myRestGeneration = _restGeneration;
+      setState(
+        () => _localHpState = HpState(
+          currentHp: detail.maxHp,
+          maxHp: detail.maxHp,
+          temporaryHp: 0,
+        ),
+      );
+    }
+    setState(() => _isApplyingRest = true);
+
+    try {
+      await ref
+          .read(characterRepositoryProvider)
+          .applyRest(
+            characterId: widget.characterId,
+            type: type,
+            className: detail.primaryClass?.className ?? '',
+          );
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      if (!mounted) return;
+      _showSnackBar(
+        type == RestType.long
+            ? 'Repos long effectué. PV restaurés au maximum.'
+            : 'Repos court effectué.',
+      );
+    } on CharacterFailure catch (failure) {
+      if (type == RestType.long &&
+          mounted &&
+          _restGeneration == myRestGeneration) {
+        setState(() => _localHpState = previousLocal);
+      }
+      _showSnackBar(failure.message);
+    } catch (_) {
+      if (type == RestType.long &&
+          mounted &&
+          _restGeneration == myRestGeneration) {
+        setState(() => _localHpState = previousLocal);
+      }
+      _showSnackBar("Impossible d'effectuer le repos. Réessayez.");
+    } finally {
+      if (mounted) setState(() => _isApplyingRest = false);
     }
   }
 
@@ -264,6 +455,16 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onApply: (amount) => _addXp(detail, amount),
       ),
       onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
+      onTapRest: () {
+        final effective = _effectiveDetail(detail);
+        showRestSheet(
+          context,
+          currentHp: effective.currentHp,
+          maxHp: effective.maxHp,
+          onApply: (type) => _applyRest(detail, type),
+        );
+      },
+      hpActionsDisabled: _isApplyingRest,
     );
   }
 }
@@ -278,6 +479,8 @@ class _CharacterTabBody extends StatelessWidget {
     required this.onQuickDamage,
     required this.onTapAddXp,
     required this.onTapLevelUp,
+    required this.onTapRest,
+    required this.hpActionsDisabled,
   });
 
   final CharacterDetail detail;
@@ -296,6 +499,10 @@ class _CharacterTabBody extends StatelessWidget {
   final VoidCallback onQuickDamage;
   final VoidCallback onTapAddXp;
   final VoidCallback onTapLevelUp;
+  final VoidCallback onTapRest;
+
+  /// Voir `_CharacterDetailScreenState._isApplyingRest`.
+  final bool hpActionsDisabled;
 
   @override
   Widget build(BuildContext context) {
@@ -320,6 +527,8 @@ class _CharacterTabBody extends StatelessWidget {
           onQuickDamage: onQuickDamage,
           onTapAddXp: onTapAddXp,
           onTapLevelUp: onTapLevelUp,
+          onTapRest: onTapRest,
+          hpActionsDisabled: hpActionsDisabled,
         ),
         const SizedBox(height: AppSpacing.md),
         CharacterAbilityScoreGrid(abilityScores: detail.abilityScores),
