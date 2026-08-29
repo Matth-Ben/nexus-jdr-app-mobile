@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/character_creation_repository.dart';
 import '../../domain/background_catalog.dart';
@@ -22,7 +23,10 @@ part 'character_creation_providers.g.dart';
 
 @Riverpod(keepAlive: true)
 CharacterCreationRepository characterCreationRepository(Ref ref) {
-  return SupabaseCharacterCreationRepository(ref.watch(supabaseClientProvider));
+  return SupabaseCharacterCreationRepository(
+    ref.watch(supabaseClientProvider),
+    ref.watch(referenceDataCacheProvider),
+  );
 }
 
 /// Catalogue races/sous-races de l'étape 1/9, exposé à `RaceStepScreen`.

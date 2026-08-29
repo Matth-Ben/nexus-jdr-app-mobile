@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/cache/reference_data_cache.dart';
 import '../domain/ability_score_rules.dart';
 import '../domain/background_catalog.dart';
 import '../domain/background_option.dart';
@@ -62,6 +63,18 @@ const String _skillCatalogErrorMessage =
 
 const String _createCharacterErrorMessage =
     'Impossible de créer le personnage. Réessayez.';
+
+/// Clés de cache (`ReferenceDataCache`) des 7 catalogues non paramétrés —
+/// `fetchSpellCatalog` construit la sienne dynamiquement (`'spell_catalog:$classId'`,
+/// voir sa documentation), les 7 autres sont globales (une seule entrée pour
+/// tous les utilisateurs/personnages, ce sont des données de référence).
+const String _raceCatalogCacheKey = 'race_catalog';
+const String _classCatalogCacheKey = 'class_catalog';
+const String _backgroundCatalogCacheKey = 'background_catalog';
+const String _toolCatalogCacheKey = 'tool_catalog';
+const String _languageCatalogCacheKey = 'language_catalog';
+const String _itemCatalogCacheKey = 'item_catalog';
+const String _skillCatalogCacheKey = 'skill_catalog';
 
 /// Passerelle vers les données de l'assistant de création de personnage.
 ///
@@ -178,11 +191,33 @@ abstract class CharacterCreationRepository {
 }
 
 /// Implémentation réelle, basée sur `Supabase.instance.client`.
+///
+/// ## Cache hors-ligne des catalogues (`fetchXxxCatalog`)
+///
+/// Stratégie "réseau d'abord, cache en secours" (décision chef de projet,
+/// voir la tâche qui a introduit [_cache]) : chaque méthode `fetchXxxCatalog`
+/// tente d'abord la requête réseau comme avant ; si elle réussit, les
+/// **lignes brutes** (`List<Map<String, dynamic>>`, avant tout mapping) sont
+/// aussi écrites dans [_cache] (best-effort, voir [_writeCacheBestEffort]),
+/// en plus d'être mappées et retournées comme aujourd'hui. Si le réseau
+/// échoue (`PostgrestException` ou n'importe quelle autre exception), une
+/// entrée de cache existante est relue et passée par le **même mapper** que
+/// le chemin réseau (voir [_mappedFromCache]) — jamais de logique de parsing
+/// dupliquée entre les deux chemins. Si aucune entrée de cache n'existe non
+/// plus, l'erreur d'origine est relancée (comportement inchangé par rapport
+/// à avant l'introduction du cache).
+///
+/// Pas de vérification de version : un upsert à chaque succès réseau suffit
+/// à garder le cache raisonnablement à jour (volume de données de référence
+/// trop faible pour justifier davantage — voir la consigne de la tâche).
+/// Aucune file de synchro d'écritures ici : ces 8 catalogues sont en lecture
+/// seule côté client (voir la doc de classe de [CharacterCreationRepository]).
 class SupabaseCharacterCreationRepository
     implements CharacterCreationRepository {
-  const SupabaseCharacterCreationRepository(this._client);
+  const SupabaseCharacterCreationRepository(this._client, this._cache);
 
   final SupabaseClient _client;
+  final ReferenceDataCache _cache;
 
   @override
   Future<RaceCatalog> fetchRaceCatalog() async {
@@ -195,34 +230,58 @@ class SupabaseCharacterCreationRepository
           .from('subraces')
           .select('id, race_id, ability_bonuses, traits')
           .order('id', ascending: true);
-
-      final raceNames = await _fetchTranslatedNames(
+      final raceNameRows = await _fetchTranslationRows(
         entityType: 'race',
         entityIds: RaceRowMapper.collectIds(raceRows),
       );
-      final subraceNames = await _fetchTranslatedNames(
+      final subraceNameRows = await _fetchTranslationRows(
         entityType: 'subrace',
         entityIds: RaceRowMapper.collectIds(subraceRows),
       );
 
-      return RaceCatalog(
-        races: raceRows
-            .map((row) => RaceRowMapper.toRaceOption(row, names: raceNames))
-            .toList(),
-        subraces: subraceRows
-            .map(
-              (row) => RaceRowMapper.toSubraceOption(row, names: subraceNames),
-            )
-            .toList(),
-      );
+      final payload = <String, dynamic>{
+        'races': raceRows,
+        'subraces': subraceRows,
+        'raceNames': raceNameRows,
+        'subraceNames': subraceNameRows,
+      };
+      await _writeCacheBestEffort(_raceCatalogCacheKey, payload);
+      return _mapRaceCatalogPayload(payload);
     } on PostgrestException catch (error) {
+      final cached = await _mappedFromCache(
+        _raceCatalogCacheKey,
+        _mapRaceCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapCharacterCreationError(
         error,
         fallbackMessage: _raceCatalogErrorMessage,
       );
     } catch (_) {
+      final cached = await _mappedFromCache(
+        _raceCatalogCacheKey,
+        _mapRaceCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapUnknownCharacterCreationError();
     }
+  }
+
+  RaceCatalog _mapRaceCatalogPayload(Map<String, dynamic> payload) {
+    final raceNames = RaceRowMapper.parseTranslatedNames(
+      _rowsOf(payload['raceNames']),
+    );
+    final subraceNames = RaceRowMapper.parseTranslatedNames(
+      _rowsOf(payload['subraceNames']),
+    );
+    return RaceCatalog(
+      races: _rowsOf(payload['races'])
+          .map((row) => RaceRowMapper.toRaceOption(row, names: raceNames))
+          .toList(),
+      subraces: _rowsOf(payload['subraces'])
+          .map((row) => RaceRowMapper.toSubraceOption(row, names: subraceNames))
+          .toList(),
+    );
   }
 
   @override
@@ -234,34 +293,61 @@ class SupabaseCharacterCreationRepository
           .order('id', ascending: true);
 
       final classIds = ClassRowMapper.collectIds(classRows);
-      final names = await _fetchClassTranslatedValues(
-        fieldName: 'name',
+      final nameRows = await _fetchTranslationRows(
+        entityType: 'class',
         entityIds: classIds,
       );
-      final descriptions = await _fetchClassTranslatedValues(
-        fieldName: 'description',
+      final descriptionRows = await _fetchTranslationRows(
+        entityType: 'class',
         entityIds: classIds,
+        fieldName: 'description',
       );
 
-      return ClassCatalog(
-        classes: classRows
-            .map(
-              (row) => ClassRowMapper.toClassOption(
-                row,
-                names: names,
-                descriptions: descriptions,
-              ),
-            )
-            .toList(),
-      );
+      final payload = <String, dynamic>{
+        'classes': classRows,
+        'classNames': nameRows,
+        'classDescriptions': descriptionRows,
+      };
+      await _writeCacheBestEffort(_classCatalogCacheKey, payload);
+      return _mapClassCatalogPayload(payload);
     } on PostgrestException catch (error) {
+      final cached = await _mappedFromCache(
+        _classCatalogCacheKey,
+        _mapClassCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapCharacterCreationError(
         error,
         fallbackMessage: _classCatalogErrorMessage,
       );
     } catch (_) {
+      final cached = await _mappedFromCache(
+        _classCatalogCacheKey,
+        _mapClassCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapUnknownCharacterCreationError();
     }
+  }
+
+  ClassCatalog _mapClassCatalogPayload(Map<String, dynamic> payload) {
+    final names = ClassRowMapper.parseTranslatedValues(
+      _rowsOf(payload['classNames']),
+    );
+    final descriptions = ClassRowMapper.parseTranslatedValues(
+      _rowsOf(payload['classDescriptions']),
+    );
+    return ClassCatalog(
+      classes: _rowsOf(payload['classes'])
+          .map(
+            (row) => ClassRowMapper.toClassOption(
+              row,
+              names: names,
+              descriptions: descriptions,
+            ),
+          )
+          .toList(),
+    );
   }
 
   @override
@@ -275,39 +361,71 @@ class SupabaseCharacterCreationRepository
           .order('id', ascending: true);
 
       final backgroundIds = BackgroundRowMapper.collectIds(backgroundRows);
-      final names = await _fetchBackgroundTranslatedValues(
-        fieldName: 'name',
+      final nameRows = await _fetchTranslationRows(
+        entityType: 'background',
         entityIds: backgroundIds,
       );
-      final featureNames = await _fetchBackgroundTranslatedValues(
+      final featureNameRows = await _fetchTranslationRows(
+        entityType: 'background',
+        entityIds: backgroundIds,
         fieldName: 'feature_name',
-        entityIds: backgroundIds,
       );
-      final featureDescriptions = await _fetchBackgroundTranslatedValues(
-        fieldName: 'feature_description',
+      final featureDescriptionRows = await _fetchTranslationRows(
+        entityType: 'background',
         entityIds: backgroundIds,
+        fieldName: 'feature_description',
       );
 
-      return BackgroundCatalog(
-        backgrounds: backgroundRows
-            .map(
-              (row) => BackgroundRowMapper.toBackgroundOption(
-                row,
-                names: names,
-                featureNames: featureNames,
-                featureDescriptions: featureDescriptions,
-              ),
-            )
-            .toList(),
-      );
+      final payload = <String, dynamic>{
+        'backgrounds': backgroundRows,
+        'backgroundNames': nameRows,
+        'featureNames': featureNameRows,
+        'featureDescriptions': featureDescriptionRows,
+      };
+      await _writeCacheBestEffort(_backgroundCatalogCacheKey, payload);
+      return _mapBackgroundCatalogPayload(payload);
     } on PostgrestException catch (error) {
+      final cached = await _mappedFromCache(
+        _backgroundCatalogCacheKey,
+        _mapBackgroundCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapCharacterCreationError(
         error,
         fallbackMessage: _backgroundCatalogErrorMessage,
       );
     } catch (_) {
+      final cached = await _mappedFromCache(
+        _backgroundCatalogCacheKey,
+        _mapBackgroundCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapUnknownCharacterCreationError();
     }
+  }
+
+  BackgroundCatalog _mapBackgroundCatalogPayload(Map<String, dynamic> payload) {
+    final names = BackgroundRowMapper.parseTranslatedValues(
+      _rowsOf(payload['backgroundNames']),
+    );
+    final featureNames = BackgroundRowMapper.parseTranslatedValues(
+      _rowsOf(payload['featureNames']),
+    );
+    final featureDescriptions = BackgroundRowMapper.parseTranslatedValues(
+      _rowsOf(payload['featureDescriptions']),
+    );
+    return BackgroundCatalog(
+      backgrounds: _rowsOf(payload['backgrounds'])
+          .map(
+            (row) => BackgroundRowMapper.toBackgroundOption(
+              row,
+              names: names,
+              featureNames: featureNames,
+              featureDescriptions: featureDescriptions,
+            ),
+          )
+          .toList(),
+    );
   }
 
   @override
@@ -318,23 +436,46 @@ class SupabaseCharacterCreationRepository
           .select('id, category')
           .order('id', ascending: true);
 
-      final names = await _fetchToolTranslatedNames(
+      final nameRows = await _fetchTranslationRows(
+        entityType: 'tool',
         entityIds: ToolRowMapper.collectIds(toolRows),
       );
 
-      return ToolCatalog(
-        tools: toolRows
-            .map((row) => ToolRowMapper.toToolOption(row, names: names))
-            .toList(),
-      );
+      final payload = <String, dynamic>{
+        'tools': toolRows,
+        'toolNames': nameRows,
+      };
+      await _writeCacheBestEffort(_toolCatalogCacheKey, payload);
+      return _mapToolCatalogPayload(payload);
     } on PostgrestException catch (error) {
+      final cached = await _mappedFromCache(
+        _toolCatalogCacheKey,
+        _mapToolCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapCharacterCreationError(
         error,
         fallbackMessage: _toolCatalogErrorMessage,
       );
     } catch (_) {
+      final cached = await _mappedFromCache(
+        _toolCatalogCacheKey,
+        _mapToolCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapUnknownCharacterCreationError();
     }
+  }
+
+  ToolCatalog _mapToolCatalogPayload(Map<String, dynamic> payload) {
+    final names = ToolRowMapper.parseTranslatedValues(
+      _rowsOf(payload['toolNames']),
+    );
+    return ToolCatalog(
+      tools: _rowsOf(payload['tools'])
+          .map((row) => ToolRowMapper.toToolOption(row, names: names))
+          .toList(),
+    );
   }
 
   @override
@@ -345,27 +486,54 @@ class SupabaseCharacterCreationRepository
           .select('id, type')
           .order('id', ascending: true);
 
-      final names = await _fetchLanguageTranslatedNames(
+      final nameRows = await _fetchTranslationRows(
+        entityType: 'language',
         entityIds: LanguageRowMapper.collectIds(languageRows),
       );
 
-      return LanguageCatalog(
-        languages: languageRows
-            .map((row) => LanguageRowMapper.toLanguageOption(row, names: names))
-            .toList(),
-      );
+      final payload = <String, dynamic>{
+        'languages': languageRows,
+        'languageNames': nameRows,
+      };
+      await _writeCacheBestEffort(_languageCatalogCacheKey, payload);
+      return _mapLanguageCatalogPayload(payload);
     } on PostgrestException catch (error) {
+      final cached = await _mappedFromCache(
+        _languageCatalogCacheKey,
+        _mapLanguageCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapCharacterCreationError(
         error,
         fallbackMessage: _languageCatalogErrorMessage,
       );
     } catch (_) {
+      final cached = await _mappedFromCache(
+        _languageCatalogCacheKey,
+        _mapLanguageCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapUnknownCharacterCreationError();
     }
   }
 
+  LanguageCatalog _mapLanguageCatalogPayload(Map<String, dynamic> payload) {
+    final names = LanguageRowMapper.parseTranslatedValues(
+      _rowsOf(payload['languageNames']),
+    );
+    return LanguageCatalog(
+      languages: _rowsOf(payload['languages'])
+          .map((row) => LanguageRowMapper.toLanguageOption(row, names: names))
+          .toList(),
+    );
+  }
+
   @override
   Future<SpellCatalog> fetchSpellCatalog({required int classId}) async {
+    // Paramétrée par classId (contrairement aux 7 autres catalogues,
+    // globaux) : une entrée de cache distincte par classe, voir la doc de
+    // classe de `SupabaseCharacterCreationRepository`.
+    final cacheKey = 'spell_catalog:$classId';
     try {
       final spellClassRows = await _client
           .from('spell_classes')
@@ -373,35 +541,51 @@ class SupabaseCharacterCreationRepository
           .eq('class_id', classId);
 
       final spellIds = SpellRowMapper.collectSpellIds(spellClassRows);
-      if (spellIds.isEmpty) {
-        return const SpellCatalog(spells: []);
+
+      var spellRows = const <Map<String, dynamic>>[];
+      var spellNameRows = const <Map<String, dynamic>>[];
+      if (spellIds.isNotEmpty) {
+        spellRows = await _client
+            .from('spells')
+            .select('id, level, school, casting_time')
+            .inFilter('id', spellIds.toList())
+            .order('id', ascending: true);
+        spellNameRows = await _fetchTranslationRows(
+          entityType: 'spell',
+          entityIds: SpellRowMapper.collectIds(spellRows),
+        );
       }
 
-      final spellRows = await _client
-          .from('spells')
-          .select('id, level, school, casting_time')
-          .inFilter('id', spellIds.toList())
-          .order('id', ascending: true);
-
-      final names = await _fetchSpellTranslatedNames(
-        entityIds: SpellRowMapper.collectIds(spellRows),
-      );
-
-      final spells =
-          spellRows
-              .map((row) => SpellRowMapper.toSpellOption(row, names: names))
-              .toList()
-            ..sort((a, b) => a.name.compareTo(b.name));
-
-      return SpellCatalog(spells: spells);
+      final payload = <String, dynamic>{
+        'spells': spellRows,
+        'spellNames': spellNameRows,
+      };
+      await _writeCacheBestEffort(cacheKey, payload);
+      return _mapSpellCatalogPayload(payload);
     } on PostgrestException catch (error) {
+      final cached = await _mappedFromCache(cacheKey, _mapSpellCatalogPayload);
+      if (cached != null) return cached;
       throw mapCharacterCreationError(
         error,
         fallbackMessage: _spellCatalogErrorMessage,
       );
     } catch (_) {
+      final cached = await _mappedFromCache(cacheKey, _mapSpellCatalogPayload);
+      if (cached != null) return cached;
       throw mapUnknownCharacterCreationError();
     }
+  }
+
+  SpellCatalog _mapSpellCatalogPayload(Map<String, dynamic> payload) {
+    final names = SpellRowMapper.parseTranslatedValues(
+      _rowsOf(payload['spellNames']),
+    );
+    final spells =
+        _rowsOf(payload['spells'])
+            .map((row) => SpellRowMapper.toSpellOption(row, names: names))
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+    return SpellCatalog(spells: spells);
   }
 
   @override
@@ -412,23 +596,46 @@ class SupabaseCharacterCreationRepository
           .select('id, category, cost')
           .order('id', ascending: true);
 
-      final names = await _fetchItemTranslatedNames(
+      final nameRows = await _fetchTranslationRows(
+        entityType: 'item',
         entityIds: ItemRowMapper.collectIds(itemRows),
       );
 
-      return ItemCatalog(
-        items: itemRows
-            .map((row) => ItemRowMapper.toItemOption(row, names: names))
-            .toList(),
-      );
+      final payload = <String, dynamic>{
+        'items': itemRows,
+        'itemNames': nameRows,
+      };
+      await _writeCacheBestEffort(_itemCatalogCacheKey, payload);
+      return _mapItemCatalogPayload(payload);
     } on PostgrestException catch (error) {
+      final cached = await _mappedFromCache(
+        _itemCatalogCacheKey,
+        _mapItemCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapCharacterCreationError(
         error,
         fallbackMessage: _itemCatalogErrorMessage,
       );
     } catch (_) {
+      final cached = await _mappedFromCache(
+        _itemCatalogCacheKey,
+        _mapItemCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapUnknownCharacterCreationError();
     }
+  }
+
+  ItemCatalog _mapItemCatalogPayload(Map<String, dynamic> payload) {
+    final names = ItemRowMapper.parseTranslatedValues(
+      _rowsOf(payload['itemNames']),
+    );
+    return ItemCatalog(
+      items: _rowsOf(payload['items'])
+          .map((row) => ItemRowMapper.toItemOption(row, names: names))
+          .toList(),
+    );
   }
 
   @override
@@ -439,23 +646,46 @@ class SupabaseCharacterCreationRepository
           .select('id, ability_id')
           .order('id', ascending: true);
 
-      final names = await _fetchSkillTranslatedNames(
+      final nameRows = await _fetchTranslationRows(
+        entityType: 'skill',
         entityIds: SkillRowMapper.collectIds(skillRows),
       );
 
-      return SkillCatalog(
-        skills: skillRows
-            .map((row) => SkillRowMapper.toSkillOption(row, names: names))
-            .toList(),
-      );
+      final payload = <String, dynamic>{
+        'skills': skillRows,
+        'skillNames': nameRows,
+      };
+      await _writeCacheBestEffort(_skillCatalogCacheKey, payload);
+      return _mapSkillCatalogPayload(payload);
     } on PostgrestException catch (error) {
+      final cached = await _mappedFromCache(
+        _skillCatalogCacheKey,
+        _mapSkillCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapCharacterCreationError(
         error,
         fallbackMessage: _skillCatalogErrorMessage,
       );
     } catch (_) {
+      final cached = await _mappedFromCache(
+        _skillCatalogCacheKey,
+        _mapSkillCatalogPayload,
+      );
+      if (cached != null) return cached;
       throw mapUnknownCharacterCreationError();
     }
+  }
+
+  SkillCatalog _mapSkillCatalogPayload(Map<String, dynamic> payload) {
+    final names = SkillRowMapper.parseTranslatedValues(
+      _rowsOf(payload['skillNames']),
+    );
+    return SkillCatalog(
+      skills: _rowsOf(payload['skills'])
+          .map((row) => SkillRowMapper.toSkillOption(row, names: names))
+          .toList(),
+    );
   }
 
   @override
@@ -689,180 +919,88 @@ class SupabaseCharacterCreationRepository
     }
   }
 
-  /// Récupère `{entity_id: name}` pour toutes les traductions `race`/`subrace`
-  /// dont l'identifiant est dans [entityIds]. Retourne une map vide sans
-  /// requête si [entityIds] est vide.
-  Future<Map<String, String>> _fetchTranslatedNames({
+  /// Récupère les lignes brutes de `translations` (colonnes réelles
+  /// `entity_id`/`value`, PAS `name`) pour [entityType]/[fieldName] (`name`
+  /// par défaut, `description`/`feature_name`/`feature_description` pour
+  /// classes/historiques) dont l'identifiant est dans [entityIds]. Retourne
+  /// une liste vide sans requête si [entityIds] est vide.
+  ///
+  /// Ne parse plus la réponse en `{entity_id: value}` (contrairement à
+  /// avant l'introduction du cache) : cette étape de parsing fait
+  /// maintenant partie du mapper `XRowMapper.parseTranslatedValues`, appelé
+  /// depuis les méthodes `_mapXxxCatalogPayload`, pour rester le point
+  /// unique de mapping partagé entre le chemin réseau et le chemin cache
+  /// (voir la doc de classe de `SupabaseCharacterCreationRepository`).
+  Future<List<Map<String, dynamic>>> _fetchTranslationRows({
     required String entityType,
     required Set<String> entityIds,
+    String fieldName = 'name',
   }) async {
     if (entityIds.isEmpty) {
-      return const {};
+      return const [];
     }
 
-    final rows = await _client
+    return await _client
         .from('translations')
         .select('entity_id, value')
         .eq('entity_type', entityType)
-        .eq('field_name', 'name')
-        .eq('locale', _locale)
-        .inFilter('entity_id', entityIds.toList());
-
-    return RaceRowMapper.parseTranslatedNames(rows);
-  }
-
-  /// Récupère `{entity_id: value}` pour le champ `class`/[fieldName] (`name`
-  /// ou `description`) dont l'identifiant est dans [entityIds]. Retourne une
-  /// map vide sans requête si [entityIds] est vide — même principe que
-  /// [_fetchTranslatedNames], distinct pour ne pas modifier le comportement
-  /// déjà en place pour races/sous-races.
-  Future<Map<String, String>> _fetchClassTranslatedValues({
-    required String fieldName,
-    required Set<String> entityIds,
-  }) async {
-    if (entityIds.isEmpty) {
-      return const {};
-    }
-
-    final rows = await _client
-        .from('translations')
-        .select('entity_id, value')
-        .eq('entity_type', 'class')
         .eq('field_name', fieldName)
         .eq('locale', _locale)
         .inFilter('entity_id', entityIds.toList());
-
-    return ClassRowMapper.parseTranslatedValues(rows);
   }
 
-  /// Récupère `{entity_id: value}` pour le champ `background`/[fieldName]
-  /// (`name`, `feature_name` ou `feature_description`) dont l'identifiant est
-  /// dans [entityIds]. Retourne une map vide sans requête si [entityIds] est
-  /// vide — même principe que [_fetchClassTranslatedValues], distinct pour ne
-  /// pas modifier le comportement déjà en place pour races/sous-races/classes.
-  Future<Map<String, String>> _fetchBackgroundTranslatedValues({
-    required String fieldName,
-    required Set<String> entityIds,
-  }) async {
-    if (entityIds.isEmpty) {
-      return const {};
+  /// Écrit [payload] (lignes brutes structurées, voir chaque
+  /// `_mapXxxCatalogPayload`) dans [_cache] sous [key]. Best-effort : une
+  /// écriture cache en échec (ex. disque plein) ne doit jamais faire
+  /// échouer un fetch réseau qui a lui-même réussi — avalée silencieusement,
+  /// même principe que [_cleanupPartialCharacter].
+  Future<void> _writeCacheBestEffort(
+    String key,
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      await _cache.put(key, payload);
+    } catch (_) {
+      // Best-effort : voir la documentation de cette méthode.
     }
-
-    final rows = await _client
-        .from('translations')
-        .select('entity_id, value')
-        .eq('entity_type', 'background')
-        .eq('field_name', fieldName)
-        .eq('locale', _locale)
-        .inFilter('entity_id', entityIds.toList());
-
-    return BackgroundRowMapper.parseTranslatedValues(rows);
   }
 
-  /// Récupère `{entity_id: name}` pour toutes les traductions `tool` dont
-  /// l'identifiant est dans [entityIds]. Retourne une map vide sans requête
-  /// si [entityIds] est vide — même principe que
-  /// [_fetchBackgroundTranslatedValues], distinct pour ne pas coupler
-  /// l'étape 5/9 aux étapes précédentes.
-  Future<Map<String, String>> _fetchToolTranslatedNames({
-    required Set<String> entityIds,
-  }) async {
-    if (entityIds.isEmpty) {
-      return const {};
+  /// Relit [key] depuis [_cache] et la passe par [mapPayload] (l'une des
+  /// méthodes `_mapXxxCatalogPayload`, le même mapper que le chemin réseau)
+  /// si une entrée existe. Retourne `null` si aucune entrée de cache
+  /// n'existe, ou si la lecture/le mapping échoue (cache corrompu, format
+  /// inattendu) — traité comme "pas de cache" par l'appelant, qui relance
+  /// alors l'erreur réseau d'origine plutôt que de propager une erreur de
+  /// cache qui masquerait la vraie cause.
+  Future<T?> _mappedFromCache<T>(
+    String key,
+    T Function(Map<String, dynamic> payload) mapPayload,
+  ) async {
+    try {
+      final cached = await _cache.get(key);
+      if (cached is Map<String, dynamic>) {
+        return mapPayload(cached);
+      }
+    } catch (_) {
+      // Traité comme "pas de cache" — voir la documentation de cette
+      // méthode.
     }
-
-    final rows = await _client
-        .from('translations')
-        .select('entity_id, value')
-        .eq('entity_type', 'tool')
-        .eq('field_name', 'name')
-        .eq('locale', _locale)
-        .inFilter('entity_id', entityIds.toList());
-
-    return ToolRowMapper.parseTranslatedValues(rows);
+    return null;
   }
 
-  /// Récupère `{entity_id: name}` pour toutes les traductions `language`
-  /// dont l'identifiant est dans [entityIds] — même principe que
-  /// [_fetchToolTranslatedNames].
-  Future<Map<String, String>> _fetchLanguageTranslatedNames({
-    required Set<String> entityIds,
-  }) async {
-    if (entityIds.isEmpty) {
-      return const {};
+  /// Normalise une valeur potentiellement issue de `jsonDecode` (types
+  /// `dynamic` non garantis, notamment sur les maps imbriquées) ou
+  /// directement d'une réponse PostgREST (`List<Map<String, dynamic>>` déjà
+  /// bien typée) en `List<Map<String, dynamic>>`. Une valeur absente ou d'un
+  /// type inattendu retombe sur une liste vide plutôt que de crasher — même
+  /// principe défensif que les `XRowMapper.parseXxx` de ce dépôt.
+  static List<Map<String, dynamic>> _rowsOf(Object? value) {
+    if (value is! List) {
+      return const [];
     }
-
-    final rows = await _client
-        .from('translations')
-        .select('entity_id, value')
-        .eq('entity_type', 'language')
-        .eq('field_name', 'name')
-        .eq('locale', _locale)
-        .inFilter('entity_id', entityIds.toList());
-
-    return LanguageRowMapper.parseTranslatedValues(rows);
-  }
-
-  /// Récupère `{entity_id: name}` pour toutes les traductions `spell` dont
-  /// l'identifiant est dans [entityIds] — même principe que
-  /// [_fetchLanguageTranslatedNames].
-  Future<Map<String, String>> _fetchSpellTranslatedNames({
-    required Set<String> entityIds,
-  }) async {
-    if (entityIds.isEmpty) {
-      return const {};
-    }
-
-    final rows = await _client
-        .from('translations')
-        .select('entity_id, value')
-        .eq('entity_type', 'spell')
-        .eq('field_name', 'name')
-        .eq('locale', _locale)
-        .inFilter('entity_id', entityIds.toList());
-
-    return SpellRowMapper.parseTranslatedValues(rows);
-  }
-
-  /// Récupère `{entity_id: name}` pour toutes les traductions `item` dont
-  /// l'identifiant est dans [entityIds] — même principe que
-  /// [_fetchSpellTranslatedNames].
-  Future<Map<String, String>> _fetchItemTranslatedNames({
-    required Set<String> entityIds,
-  }) async {
-    if (entityIds.isEmpty) {
-      return const {};
-    }
-
-    final rows = await _client
-        .from('translations')
-        .select('entity_id, value')
-        .eq('entity_type', 'item')
-        .eq('field_name', 'name')
-        .eq('locale', _locale)
-        .inFilter('entity_id', entityIds.toList());
-
-    return ItemRowMapper.parseTranslatedValues(rows);
-  }
-
-  /// Récupère `{entity_id: name}` pour toutes les traductions `skill` dont
-  /// l'identifiant est dans [entityIds] — même principe que
-  /// [_fetchItemTranslatedNames].
-  Future<Map<String, String>> _fetchSkillTranslatedNames({
-    required Set<String> entityIds,
-  }) async {
-    if (entityIds.isEmpty) {
-      return const {};
-    }
-
-    final rows = await _client
-        .from('translations')
-        .select('entity_id, value')
-        .eq('entity_type', 'skill')
-        .eq('field_name', 'name')
-        .eq('locale', _locale)
-        .inFilter('entity_id', entityIds.toList());
-
-    return SkillRowMapper.parseTranslatedValues(rows);
+    return value
+        .whereType<Object>()
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
   }
 }

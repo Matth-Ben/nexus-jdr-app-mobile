@@ -29,6 +29,24 @@ tests ne pilotent pas l'app sur un appareil/émulateur (`flutter drive`), ce
 sont de simples tests VM (comme ceux de `test/`) qui parlent réseau à un vrai
 Supabase local. D'où le nom différent, pour ne pas prêter à confusion.
 
+### Exception bornée : mocker au niveau transport HTTP
+
+Une seule exception connue à "jamais mocker un `Supabase*Repository` dans
+`flutter test`" existe, dans
+`test/features/character_creation/data/character_creation_repository_test.dart`
+(chantier cache offline, 2026-08-29) : un double qui fake au niveau
+**transport HTTP** (`package:http/testing.dart`, `MockClient`, injecté via le
+paramètre `httpClient` d'un vrai `SupabaseClient`/`PostgrestClient`) plutôt
+qu'un mock du client Supabase lui-même — utilisé uniquement pour simuler un
+échec réseau (timeout/erreur) et vérifier le repli sur le cache local, jamais
+pour vérifier qu'une requête PostgREST est bien construite (filtres,
+`select`, jointures — ça reste le rôle de ce dossier). Ce double route par
+dernier segment de chemin et **ignore la query string** : le réutiliser pour
+tester une méthode qui construit une requête complexe redonnerait exactement
+le point mort que ce dossier existe pour corriger. Rationale complet en tête
+du fichier de test — à lire avant de s'en inspirer ailleurs, ne pas
+généraliser cette technique sans la même rigueur.
+
 ## Pourquoi séparé de `flutter test`
 
 `flutter test` (sans argument) exécute tout `test/**/*_test.dart`

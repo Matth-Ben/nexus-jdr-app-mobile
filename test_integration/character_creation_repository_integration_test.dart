@@ -1,4 +1,7 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/cache/app_database.dart';
+import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
@@ -18,17 +21,31 @@ void main() {
   group('SupabaseCharacterCreationRepository (intégration)', () {
     late SupabaseClient client;
     late ReferenceContent reference;
+    // Base drift en mémoire : ces tests d'intégration exercent le vrai
+    // réseau Supabase pour chaque appel (jamais le chemin de secours "cache"
+    // introduit par `ReferenceDataCache`, couvert par les tests unitaires de
+    // `character_creation_repository_test.dart`) — un fichier disque réel
+    // n'apporterait rien ici, voir `test_environment.dart` pour le même
+    // principe côté `SupabaseClient` (pas de `Supabase.initialize`).
+    late AppDatabase cacheDb;
+    late ReferenceDataCache cache;
 
     setUpAll(() async {
       client = createTestSupabaseClient();
       await signUpTestUser(client);
       reference = await fetchReferenceContent(client);
+      cacheDb = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(cacheDb);
+    });
+
+    tearDownAll(() async {
+      await cacheDb.close();
     });
 
     test(
       'fetchRaceCatalog résout les noms de race/sous-race via translations',
       () async {
-        final repository = SupabaseCharacterCreationRepository(client);
+        final repository = SupabaseCharacterCreationRepository(client, cache);
 
         final catalog = await repository.fetchRaceCatalog();
 
@@ -41,7 +58,7 @@ void main() {
         '(`.order(\'id\', ascending: true)` — le défaut du package postgrest '
         '2.9.1 est `ascending: false`, voir la note de '
         'SupabaseCharacterCreationRepository.fetchRaceCatalog)', () async {
-      final repository = SupabaseCharacterCreationRepository(client);
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
       final catalog = await repository.fetchRaceCatalog();
 
@@ -53,7 +70,7 @@ void main() {
 
     test('fetchClassCatalog résout le nom et la description de classe via '
         'translations', () async {
-      final repository = SupabaseCharacterCreationRepository(client);
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
       final catalog = await repository.fetchClassCatalog();
 
@@ -67,7 +84,7 @@ void main() {
 
     test('fetchBackgroundCatalog résout le nom, l\'aptitude et les '
         'compétences d\'historique via translations', () async {
-      final repository = SupabaseCharacterCreationRepository(client);
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
       final catalog = await repository.fetchBackgroundCatalog();
 
@@ -84,7 +101,7 @@ void main() {
       'fetchBackgroundCatalog expose `equipment` (étape 7/9 "Équipement de '
       'départ") avec une ligne "Bourse (N po)" pour chaque historique peuplé',
       () async {
-        final repository = SupabaseCharacterCreationRepository(client);
+        final repository = SupabaseCharacterCreationRepository(client, cache);
 
         final catalog = await repository.fetchBackgroundCatalog();
 
@@ -106,7 +123,7 @@ void main() {
 
     test('fetchToolCatalog résout le nom d\'outil/instrument via translations '
         '(entity_type=\'tool\') — étape 5/9 "Compétences et outils"', () async {
-      final repository = SupabaseCharacterCreationRepository(client);
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
       final catalog = await repository.fetchToolCatalog();
 
@@ -119,7 +136,7 @@ void main() {
       'fetchLanguageCatalog résout le nom de langue via translations '
       '(entity_type=\'language\') — étape 5/9 "Compétences et outils"',
       () async {
-        final repository = SupabaseCharacterCreationRepository(client);
+        final repository = SupabaseCharacterCreationRepository(client, cache);
 
         final catalog = await repository.fetchLanguageCatalog();
 
@@ -134,7 +151,7 @@ void main() {
     test('fetchSpellCatalog résout le nom de sort via translations '
         '(entity_type=\'spell\') pour une classe lanceuse de sorts — étape '
         '6/9 "Sorts"', () async {
-      final repository = SupabaseCharacterCreationRepository(client);
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
       final catalog = await repository.fetchSpellCatalog(
         classId: reference.spellcastingClassId as int,
@@ -152,7 +169,7 @@ void main() {
     test('fetchSpellCatalog retourne un catalogue vide pour une classe sans '
         'aucune ligne spell_classes (non lanceuse de sorts) plutôt que '
         'd\'échouer', () async {
-      final repository = SupabaseCharacterCreationRepository(client);
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
       // Un identifiant très au-delà de la plage peuplée par les seeds :
       // aucune ligne `spell_classes` ne peut exister pour lui, même
@@ -167,7 +184,7 @@ void main() {
     test('fetchItemCatalog résout le nom et la catégorie d\'objet via '
         'translations (entity_type=\'item\') — étape 7/9 "Équipement de '
         'départ"', () async {
-      final repository = SupabaseCharacterCreationRepository(client);
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
       final catalog = await repository.fetchItemCatalog();
 
@@ -179,7 +196,7 @@ void main() {
 
     test('fetchSkillCatalog résout le nom de compétence via translations '
         '(entity_type=\'skill\') — étape 9/9 "Récapitulatif"', () async {
-      final repository = SupabaseCharacterCreationRepository(client);
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
       final catalog = await repository.fetchSkillCatalog();
 
@@ -194,7 +211,7 @@ void main() {
         'chacun leurs lignes triées par id croissant (même garde-fou que '
         'fetchRaceCatalog ci-dessus contre le défaut `ascending: false` du '
         'package postgrest 2.9.1)', () async {
-      final repository = SupabaseCharacterCreationRepository(client);
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
       Iterable<int> sortedCopy(Iterable<int> ids) =>
           List<int>.from(ids)..sort();
@@ -234,7 +251,7 @@ void main() {
     test('createCharacter crée un personnage lanceur de sorts complet (choix '
         'd\'équipement d\'historique) et peuple toutes les tables enfants '
         'attendues', () async {
-      final repository = SupabaseCharacterCreationRepository(client);
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
       final raceCatalog = await repository.fetchRaceCatalog();
       final classCatalog = await repository.fetchClassCatalog();
@@ -400,7 +417,7 @@ void main() {
         'classToolChoices, donc n\'exerce jamais cette table enfant contre le '
         'vrai schéma — cette table a une colonne tool_id nullable + '
         'custom_text, jamais vérifiée en intégration avant ce test)', () async {
-      final repository = SupabaseCharacterCreationRepository(client);
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
       final raceCatalog = await repository.fetchRaceCatalog();
       final classCatalog = await repository.fetchClassCatalog();
@@ -474,7 +491,7 @@ void main() {
       'insert de table enfant échoue après coup — simulé avec un class_id '
       'inexistant (violation de contrainte FK sur character_classes)',
       () async {
-        final repository = SupabaseCharacterCreationRepository(client);
+        final repository = SupabaseCharacterCreationRepository(client, cache);
 
         final raceCatalog = await repository.fetchRaceCatalog();
         final backgroundCatalog = await repository.fetchBackgroundCatalog();

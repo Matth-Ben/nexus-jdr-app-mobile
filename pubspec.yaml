@@ -44,6 +44,11 @@ dependencies:
   # cf. config/README.md pour le contexte) — plus besoin de ce package.
   sqlite3: ^3.5.2
   path_provider: ^2.1.6
+  # Utilisé par `lib/core/cache/app_database.dart` pour construire le chemin
+  # du fichier SQLite du cache — déjà résolu transitivement (path_provider,
+  # drift...) mais déclaré explicitement puisqu'importé directement par du
+  # code de ce dépôt (pas seulement par les tests).
+  path: ^1.9.0
   freezed_annotation: ^3.1.0
   json_annotation: ^4.12.0
   xml: ^7.0.1
@@ -66,6 +71,15 @@ dev_dependencies:
   build_runner: ^2.16.0
   freezed: ^4.0.0
   json_serializable: ^6.14.1
+  # `package:http/testing.dart` (`MockClient`) — utilisé uniquement par
+  # `test/features/character_creation/data/character_creation_repository_test.dart`
+  # pour fabriquer un `SupabaseClient` de test qui n'ouvre aucune vraie
+  # connexion réseau (voir la doc de ce fichier de test pour le rationale :
+  # aucun double factice de `SupabaseClient` lui-même n'existait déjà dans ce
+  # dépôt avant cette tâche). Déjà résolu transitivement par
+  # `supabase`/`postgrest`/`gotrue`, déclaré explicitement puisqu'importé
+  # directement par du code de test de ce dépôt.
+  http: ^1.6.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
