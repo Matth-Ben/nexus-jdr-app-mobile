@@ -14,8 +14,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
+import 'package:personnages/core/widgets/step_progress_bar.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
 import 'package:personnages/features/character_creation/domain/background_catalog.dart';
 import 'package:personnages/features/character_creation/domain/background_option.dart';
@@ -304,7 +306,48 @@ void main() {
     await tester.pump();
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // Voir race_step_screen_test.dart pour le rationale : le bandeau bois
+    // complet ne doit apparaître qu'une fois les données chargées.
+    expect(find.byType(StepProgressBar), findsNothing);
   });
+
+  testWidgets(
+    'le titre d\'étape et la barre de progression sont sur le bandeau bois, '
+    'pas sur le fond parchemin (non-régression de la dette de fond corrigée '
+    'par l\'agent dev-flutter : le bois doit s\'étendre jusque sous '
+    'StepProgressBar, comme les étapes 6/9 et 7/9)',
+    (WidgetTester tester) async {
+      fakeRepository.classCatalogToReturn = const ClassCatalog(
+        classes: [_guerrier],
+      );
+      fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+        backgrounds: [_ermite],
+      );
+      selectClassAndBackground(classId: 1, backgroundId: 10);
+
+      await pumpSkillsAndToolsStep(tester);
+
+      final title = tester.widget<Text>(find.text('5. Compétences'));
+      expect(title.style?.color, AppColors.textOnWood);
+
+      final stepLabel = tester.widget<Text>(find.text('Étape 5 / 9'));
+      expect(stepLabel.style?.color, AppColors.textOnWoodMuted);
+
+      final woodBanner = find
+          .ancestor(
+            of: find.text('CRÉATION'),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is ColoredBox && widget.color == AppColors.woodMedium,
+            ),
+          )
+          .first;
+      expect(
+        find.descendant(of: woodBanner, matching: find.byType(StepProgressBar)),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets(
     'affiche un état d\'erreur avec un bouton "Réessayer" si un catalogue '

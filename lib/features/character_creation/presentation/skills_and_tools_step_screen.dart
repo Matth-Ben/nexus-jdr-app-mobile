@@ -130,16 +130,23 @@ class _SkillsAndToolsStepScreenState
     final dataAsync = ref.watch(skillsAndToolsStepDataProvider);
 
     return Scaffold(
-      body: Column(
-        children: [
-          _Header(onBack: _goBack),
-          Expanded(
-            child: dataAsync.when(
-              data: _buildContent,
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.goldEnd),
+      body: dataAsync.when(
+        data: _buildContent,
+        loading: () => Column(
+          children: [
+            _MinimalHeader(onBack: _goBack),
+            const Expanded(
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.woodMedium),
               ),
-              error: (error, stackTrace) => _ErrorState(
+            ),
+          ],
+        ),
+        error: (error, stackTrace) => Column(
+          children: [
+            _MinimalHeader(onBack: _goBack),
+            Expanded(
+              child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
                     : 'Impossible de charger les compétences et outils '
@@ -168,8 +175,8 @@ class _SkillsAndToolsStepScreenState
                 },
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -196,130 +203,110 @@ class _SkillsAndToolsStepScreenState
       selectedBackgroundLanguages: _selectedBackgroundLanguages,
     );
 
-    return SafeArea(
-      top: false,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              0,
-            ),
+    return Column(
+      children: [
+        _Header(onBack: _goBack, currentStep: 5, totalSteps: _totalSteps),
+        Expanded(
+          child: SafeArea(
+            top: false,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '5. Compétences',
-                      style: AppTypography.body(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Text(
-                      'Étape 5 / $_totalSteps',
-                      style: AppTypography.body(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                const StepProgressBar(totalSteps: _totalSteps, currentStep: 5),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.md,
-              ),
-              children: [
-                // Section 1 : "COMPÉTENCES DE CLASSE" — toujours affichée.
-                _SectionHeader(
-                  title: 'COMPÉTENCES DE CLASSE',
-                  badge:
-                      '${_selectedClassSkills.length} / '
-                      '${classOption.skillChoices.count} choisies',
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                for (
-                  var i = 0;
-                  i < classOption.skillChoices.choices.length;
-                  i++
-                ) ...[
-                  if (i > 0) const SizedBox(height: AppSpacing.xs),
-                  _skillTile(
-                    classOption.skillChoices.choices[i],
-                    classOption.skillChoices.count,
-                  ),
-                ],
-
-                // Section 2 : "OUTILS (CLASSE)" — si applicable.
-                if (showClassTools) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  ..._classToolSection(classOption, data),
-                ],
-
-                // Section 3 : "OUTILS (HISTORIQUE)" — si applicable, jamais
-                // interactive.
-                if (showBackgroundTools) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  const _SectionHeader(title: 'OUTILS (HISTORIQUE)'),
-                  const SizedBox(height: AppSpacing.sm),
-                  for (
-                    var i = 0;
-                    i < backgroundOption.toolOrLanguageGrantedTools.length;
-                    i++
-                  ) ...[
-                    if (i > 0) const SizedBox(height: AppSpacing.xs),
-                    CheckableOptionTile(
-                      title: backgroundOption.toolOrLanguageGrantedTools[i],
-                      checked: true,
-                      enabled: false,
-                    ),
-                  ],
-                ],
-
-                // Section 4 : "LANGUES (HISTORIQUE)" — si applicable.
-                if (showLanguages) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  ..._languageSection(backgroundOption, data),
-                ],
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Row(
               children: [
                 Expanded(
-                  child: SecondaryButton(
-                    label: 'Retour',
-                    surface: SecondaryButtonSurface.parchment,
-                    onPressed: _goBack,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                    ),
+                    children: [
+                      // Section 1 : "COMPÉTENCES DE CLASSE" — toujours
+                      // affichée.
+                      _SectionHeader(
+                        title: 'COMPÉTENCES DE CLASSE',
+                        badge:
+                            '${_selectedClassSkills.length} / '
+                            '${classOption.skillChoices.count} choisies',
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      for (
+                        var i = 0;
+                        i < classOption.skillChoices.choices.length;
+                        i++
+                      ) ...[
+                        if (i > 0) const SizedBox(height: AppSpacing.xs),
+                        _skillTile(
+                          classOption.skillChoices.choices[i],
+                          classOption.skillChoices.count,
+                        ),
+                      ],
+
+                      // Section 2 : "OUTILS (CLASSE)" — si applicable.
+                      if (showClassTools) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        ..._classToolSection(classOption, data),
+                      ],
+
+                      // Section 3 : "OUTILS (HISTORIQUE)" — si applicable,
+                      // jamais interactive.
+                      if (showBackgroundTools) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        const _SectionHeader(title: 'OUTILS (HISTORIQUE)'),
+                        const SizedBox(height: AppSpacing.sm),
+                        for (
+                          var i = 0;
+                          i <
+                              backgroundOption
+                                  .toolOrLanguageGrantedTools
+                                  .length;
+                          i++
+                        ) ...[
+                          if (i > 0) const SizedBox(height: AppSpacing.xs),
+                          CheckableOptionTile(
+                            title:
+                                backgroundOption.toolOrLanguageGrantedTools[i],
+                            checked: true,
+                            enabled: false,
+                          ),
+                        ],
+                      ],
+
+                      // Section 4 : "LANGUES (HISTORIQUE)" — si applicable.
+                      if (showLanguages) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        ..._languageSection(backgroundOption, data),
+                      ],
+                    ],
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: PrimaryButton(
-                    label: 'Suivant',
-                    onPressed: canProceed ? () => _submit(classOption) : null,
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SecondaryButton(
+                          label: 'Retour',
+                          surface: SecondaryButtonSurface.parchment,
+                          onPressed: _goBack,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: PrimaryButton(
+                          label: 'Suivant',
+                          onPressed: canProceed
+                              ? () => _submit(classOption)
+                              : null,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -501,11 +488,101 @@ class _QuotaBadge extends StatelessWidget {
   }
 }
 
-/// Bandeau bois plein en tête d'écran, avec le bouton retour vers l'étape
-/// précédente (maquette `06_étape_5_compétences_et_outils.png` :
-/// "< CRÉATION").
+/// Bandeau bois plein en tête d'écran, avec le titre d'étape et la barre de
+/// progression — copié depuis `equipment_step_screen.dart`/
+/// `summary_step_screen.dart` (voir la documentation de classe de
+/// [SkillsAndToolsStepScreen]).
 class _Header extends StatelessWidget {
-  const _Header({required this.onBack});
+  const _Header({
+    required this.onBack,
+    required this.currentStep,
+    required this.totalSteps,
+  });
+
+  final VoidCallback onBack;
+  final int currentStep;
+  final int totalSteps;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.woodMedium,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: onBack,
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: AppColors.textOnWood,
+                      ),
+                    ),
+                    Text(
+                      'CRÉATION',
+                      style: AppTypography.display(
+                        fontSize: 11,
+                        color: AppColors.textOnWood,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '5. Compétences',
+                          style: AppTypography.body(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textOnWood,
+                          ),
+                        ),
+                        Text(
+                          'Étape $currentStep / $totalSteps',
+                          style: AppTypography.body(
+                            fontSize: 13,
+                            color: AppColors.textOnWoodMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    StepProgressBar(
+                      totalSteps: totalSteps,
+                      currentStep: currentStep,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
+/// chargement/l'erreur — copie exacte du pattern des étapes 6/7/9.
+class _MinimalHeader extends StatelessWidget {
+  const _MinimalHeader({required this.onBack});
 
   final VoidCallback onBack;
 

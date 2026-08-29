@@ -92,16 +92,23 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
     final catalogAsync = ref.watch(backgroundCatalogProvider);
 
     return Scaffold(
-      body: Column(
-        children: [
-          _Header(onBack: _goBack),
-          Expanded(
-            child: catalogAsync.when(
-              data: _buildContent,
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.goldEnd),
+      body: catalogAsync.when(
+        data: _buildContent,
+        loading: () => Column(
+          children: [
+            _MinimalHeader(onBack: _goBack),
+            const Expanded(
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.woodMedium),
               ),
-              error: (error, stackTrace) => _ErrorState(
+            ),
+          ],
+        ),
+        error: (error, stackTrace) => Column(
+          children: [
+            _MinimalHeader(onBack: _goBack),
+            Expanded(
+              child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
                     : 'Impossible de charger les historiques disponibles. '
@@ -109,8 +116,8 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
                 onRetry: () => ref.invalidate(backgroundCatalogProvider),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -118,104 +125,184 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
   Widget _buildContent(BackgroundCatalog catalog) {
     final canProceed = _selectedBackgroundId != null;
 
-    return SafeArea(
-      top: false,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              0,
-            ),
+    return Column(
+      children: [
+        _Header(onBack: _goBack, currentStep: 3, totalSteps: _totalSteps),
+        Expanded(
+          child: SafeArea(
+            top: false,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    0,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "D'où vient ton personnage avant l'aventure ?",
+                      style: AppTypography.body(fontSize: 14),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                    ),
+                    children: [
+                      for (var i = 0; i < catalog.backgrounds.length; i++) ...[
+                        if (i > 0) const SizedBox(height: AppSpacing.sm),
+                        SelectableOptionTile(
+                          title: catalog.backgrounds[i].name,
+                          subtitle: catalog.backgrounds[i].skillsSummaryLine,
+                          selectedDetail:
+                              catalog.backgrounds[i].featureSummaryLine,
+                          selected:
+                              _selectedBackgroundId ==
+                              catalog.backgrounds[i].id,
+                          leading: AccentIconBadge(
+                            index: i,
+                            icon: Icons.menu_book,
+                          ),
+                          onTap: () =>
+                              _selectBackground(catalog.backgrounds[i].id),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SecondaryButton(
+                          label: 'Retour',
+                          surface: SecondaryButtonSurface.parchment,
+                          onPressed: _goBack,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: PrimaryButton(
+                          label: 'Suivant',
+                          onPressed: canProceed ? _submit : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Bandeau bois plein en tête d'écran, avec le titre d'étape et la barre de
+/// progression — copié depuis `equipment_step_screen.dart`/
+/// `summary_step_screen.dart` (voir la documentation de classe de
+/// [BackgroundStepScreen]).
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.onBack,
+    required this.currentStep,
+    required this.totalSteps,
+  });
+
+  final VoidCallback onBack;
+  final int currentStep;
+  final int totalSteps;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.woodMedium,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      '3. Historique',
-                      style: AppTypography.body(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                    IconButton(
+                      onPressed: onBack,
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: AppColors.textOnWood,
                       ),
                     ),
                     Text(
-                      'Étape 3 / $_totalSteps',
-                      style: AppTypography.body(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
+                      'CRÉATION',
+                      style: AppTypography.display(
+                        fontSize: 11,
+                        color: AppColors.textOnWood,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                const StepProgressBar(totalSteps: _totalSteps, currentStep: 3),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  "D'où vient ton personnage avant l'aventure ?",
-                  style: AppTypography.body(fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.md,
               ),
-              children: [
-                for (var i = 0; i < catalog.backgrounds.length; i++) ...[
-                  if (i > 0) const SizedBox(height: AppSpacing.sm),
-                  SelectableOptionTile(
-                    title: catalog.backgrounds[i].name,
-                    subtitle: catalog.backgrounds[i].skillsSummaryLine,
-                    selectedDetail: catalog.backgrounds[i].featureSummaryLine,
-                    selected:
-                        _selectedBackgroundId == catalog.backgrounds[i].id,
-                    leading: AccentIconBadge(index: i, icon: Icons.menu_book),
-                    onTap: () => _selectBackground(catalog.backgrounds[i].id),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'Retour',
-                    surface: SecondaryButtonSurface.parchment,
-                    onPressed: _goBack,
-                  ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '3. Historique',
+                          style: AppTypography.body(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textOnWood,
+                          ),
+                        ),
+                        Text(
+                          'Étape $currentStep / $totalSteps',
+                          style: AppTypography.body(
+                            fontSize: 13,
+                            color: AppColors.textOnWoodMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    StepProgressBar(
+                      totalSteps: totalSteps,
+                      currentStep: currentStep,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: PrimaryButton(
-                    label: 'Suivant',
-                    onPressed: canProceed ? _submit : null,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Bandeau bois plein en tête d'écran, avec le bouton retour vers l'étape
-/// précédente (maquette `04_étape_3_historique.png` : "< CRÉATION").
-class _Header extends StatelessWidget {
-  const _Header({required this.onBack});
+/// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
+/// chargement/l'erreur — copie exacte du pattern des étapes 6/7/9.
+class _MinimalHeader extends StatelessWidget {
+  const _MinimalHeader({required this.onBack});
 
   final VoidCallback onBack;
 

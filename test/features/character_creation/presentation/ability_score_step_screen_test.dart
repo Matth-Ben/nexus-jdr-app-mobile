@@ -24,6 +24,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/theme/app_colors.dart';
+import 'package:personnages/core/widgets/step_progress_bar.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
 import 'package:personnages/features/character_creation/domain/ability_score_method.dart';
 import 'package:personnages/features/character_creation/domain/background_catalog.dart';
@@ -213,6 +215,36 @@ void main() {
       );
       expect(find.text('15'), findsOneWidget);
       expect(find.text('14'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'le titre d\'étape et la barre de progression sont sur le bandeau bois, '
+    'pas sur le fond parchemin (non-régression de la dette de fond corrigée '
+    'par l\'agent dev-flutter : le bois doit s\'étendre jusque sous '
+    'StepProgressBar, comme les étapes 6/9 et 7/9)',
+    (WidgetTester tester) async {
+      await pumpAbilityScoreStep(tester);
+
+      final title = tester.widget<Text>(find.text('4. Caractéristiques'));
+      expect(title.style?.color, AppColors.textOnWood);
+
+      final stepLabel = tester.widget<Text>(find.text('Étape 4 / 9'));
+      expect(stepLabel.style?.color, AppColors.textOnWoodMuted);
+
+      final woodBanner = find
+          .ancestor(
+            of: find.text('CRÉATION'),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is ColoredBox && widget.color == AppColors.woodMedium,
+            ),
+          )
+          .first;
+      expect(
+        find.descendant(of: woodBanner, matching: find.byType(StepProgressBar)),
+        findsOneWidget,
+      );
     },
   );
 

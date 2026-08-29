@@ -129,7 +129,7 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
             _MinimalHeader(onBack: _goBack),
             const Expanded(
               child: Center(
-                child: CircularProgressIndicator(color: AppColors.goldEnd),
+                child: CircularProgressIndicator(color: AppColors.woodMedium),
               ),
             ),
           ],

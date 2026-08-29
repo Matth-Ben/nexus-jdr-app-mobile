@@ -229,7 +229,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
             _MinimalHeader(onBack: _goBack),
             const Expanded(
               child: Center(
-                child: CircularProgressIndicator(color: AppColors.goldEnd),
+                child: CircularProgressIndicator(color: AppColors.woodMedium),
               ),
             ),
           ],

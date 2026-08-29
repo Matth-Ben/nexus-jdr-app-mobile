@@ -166,171 +166,174 @@ class _AbilityScoreStepScreenState
     final catalogAsync = ref.watch(raceCatalogProvider);
 
     return Scaffold(
-      body: Column(
-        children: [
-          _Header(onBack: _goBack),
-          Expanded(
-            child: catalogAsync.when(
-              data: _buildContent,
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.goldEnd),
+      body: catalogAsync.when(
+        data: _buildContent,
+        loading: () => Column(
+          children: [
+            _MinimalHeader(onBack: _goBack),
+            const Expanded(
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.woodMedium),
               ),
-              error: (error, stackTrace) => _ErrorState(
+            ),
+          ],
+        ),
+        error: (error, stackTrace) => Column(
+          children: [
+            _MinimalHeader(onBack: _goBack),
+            Expanded(
+              child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
                     : 'Impossible de charger les bonus raciaux. Réessayez.',
                 onRetry: () => ref.invalidate(raceCatalogProvider),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildContent(RaceCatalog catalog) {
-    return SafeArea(
-      top: false,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              0,
-            ),
+    return Column(
+      children: [
+        _Header(onBack: _goBack, currentStep: 4, totalSteps: _totalSteps),
+        Expanded(
+          child: SafeArea(
+            top: false,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '4. Caractéristiques',
-                      style: AppTypography.body(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Text(
-                      'Étape 4 / $_totalSteps',
-                      style: AppTypography.body(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                const StepProgressBar(totalSteps: _totalSteps, currentStep: 4),
-                const SizedBox(height: AppSpacing.md),
-                SegmentedToggle<AbilityScoreMethod>(
-                  options: const [
-                    SegmentedToggleOption(
-                      value: AbilityScoreMethod.standardArray,
-                      label: 'Tableau',
-                    ),
-                    SegmentedToggleOption(
-                      value: AbilityScoreMethod.pointBuy,
-                      label: 'Points',
-                    ),
-                    SegmentedToggleOption(
-                      value: AbilityScoreMethod.diceRoll,
-                      label: 'Dés',
-                    ),
-                  ],
-                  value: _method,
-                  onChanged: _selectMethod,
-                ),
-                if (_method == AbilityScoreMethod.pointBuy) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Points restants : '
-                    '${AbilityScoreRules.pointBuyRemaining(_scores)}'
-                    '/${AbilityScoreRules.pointBuyBudget}',
-                    style: AppTypography.body(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary,
-                    ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    0,
                   ),
-                ],
-                if (_method == AbilityScoreMethod.diceRoll) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: _rerollDice,
-                      child: Text(
-                        'Relancer les dés',
-                        style: AppTypography.body(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textSecondary,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SegmentedToggle<AbilityScoreMethod>(
+                        options: const [
+                          SegmentedToggleOption(
+                            value: AbilityScoreMethod.standardArray,
+                            label: 'Tableau',
+                          ),
+                          SegmentedToggleOption(
+                            value: AbilityScoreMethod.pointBuy,
+                            label: 'Points',
+                          ),
+                          SegmentedToggleOption(
+                            value: AbilityScoreMethod.diceRoll,
+                            label: 'Dés',
+                          ),
+                        ],
+                        value: _method,
+                        onChanged: _selectMethod,
+                      ),
+                      if (_method == AbilityScoreMethod.pointBuy) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'Points restants : '
+                          '${AbilityScoreRules.pointBuyRemaining(_scores)}'
+                          '/${AbilityScoreRules.pointBuyBudget}',
+                          style: AppTypography.body(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                      if (_method == AbilityScoreMethod.diceRoll) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: _rerollDice,
+                            child: Text(
+                              'Relancer les dés',
+                              style: AppTypography.body(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                    ),
+                    children: [
+                      for (
+                        var i = 0;
+                        i < abilityScoreDefinitions.length;
+                        i++
+                      ) ...[
+                        if (i > 0) const SizedBox(height: AppSpacing.sm),
+                        _AbilityRow(
+                          definition: abilityScoreDefinitions[i],
+                          score: _scores[abilityScoreDefinitions[i].key]!,
+                          modifier: AbilityScoreModifierCalculator.modifierFor(
+                            baseScore: _scores[abilityScoreDefinitions[i].key]!,
+                            racialBonus:
+                                AbilityScoreModifierCalculator.racialBonusFor(
+                                  abilityKey: abilityScoreDefinitions[i].key,
+                                  catalog: catalog,
+                                  raceId: _raceId,
+                                  subraceId: _subraceId,
+                                ),
+                          ),
+                          canIncrement: _canIncrement(
+                            abilityScoreDefinitions[i].key,
+                          ),
+                          canDecrement: _canDecrement(
+                            abilityScoreDefinitions[i].key,
+                          ),
+                          onIncrement: () =>
+                              _increment(abilityScoreDefinitions[i].key),
+                          onDecrement: () =>
+                              _decrement(abilityScoreDefinitions[i].key),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SecondaryButton(
+                          label: 'Retour',
+                          surface: SecondaryButtonSurface.parchment,
+                          onPressed: _goBack,
                         ),
                       ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.md,
-              ),
-              children: [
-                for (var i = 0; i < abilityScoreDefinitions.length; i++) ...[
-                  if (i > 0) const SizedBox(height: AppSpacing.sm),
-                  _AbilityRow(
-                    definition: abilityScoreDefinitions[i],
-                    score: _scores[abilityScoreDefinitions[i].key]!,
-                    modifier: AbilityScoreModifierCalculator.modifierFor(
-                      baseScore: _scores[abilityScoreDefinitions[i].key]!,
-                      racialBonus:
-                          AbilityScoreModifierCalculator.racialBonusFor(
-                            abilityKey: abilityScoreDefinitions[i].key,
-                            catalog: catalog,
-                            raceId: _raceId,
-                            subraceId: _subraceId,
-                          ),
-                    ),
-                    canIncrement: _canIncrement(abilityScoreDefinitions[i].key),
-                    canDecrement: _canDecrement(abilityScoreDefinitions[i].key),
-                    onIncrement: () =>
-                        _increment(abilityScoreDefinitions[i].key),
-                    onDecrement: () =>
-                        _decrement(abilityScoreDefinitions[i].key),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'Retour',
-                    surface: SecondaryButtonSurface.parchment,
-                    onPressed: _goBack,
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: PrimaryButton(
+                          label: 'Suivant',
+                          onPressed: _submit,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: PrimaryButton(label: 'Suivant', onPressed: _submit),
-                ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -405,10 +408,101 @@ class _AbilityRow extends StatelessWidget {
   }
 }
 
-/// Bandeau bois plein en tête d'écran, avec le bouton retour vers l'étape
-/// précédente (maquette `05_étape_4_caractéristiques.png` : "< CRÉATION").
+/// Bandeau bois plein en tête d'écran, avec le titre d'étape et la barre de
+/// progression — copié depuis `equipment_step_screen.dart`/
+/// `summary_step_screen.dart` (voir la documentation de classe de
+/// [AbilityScoreStepScreen]).
 class _Header extends StatelessWidget {
-  const _Header({required this.onBack});
+  const _Header({
+    required this.onBack,
+    required this.currentStep,
+    required this.totalSteps,
+  });
+
+  final VoidCallback onBack;
+  final int currentStep;
+  final int totalSteps;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.woodMedium,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: onBack,
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: AppColors.textOnWood,
+                      ),
+                    ),
+                    Text(
+                      'CRÉATION',
+                      style: AppTypography.display(
+                        fontSize: 11,
+                        color: AppColors.textOnWood,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '4. Caractéristiques',
+                          style: AppTypography.body(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textOnWood,
+                          ),
+                        ),
+                        Text(
+                          'Étape $currentStep / $totalSteps',
+                          style: AppTypography.body(
+                            fontSize: 13,
+                            color: AppColors.textOnWoodMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    StepProgressBar(
+                      totalSteps: totalSteps,
+                      currentStep: currentStep,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
+/// chargement/l'erreur — copie exacte du pattern des étapes 6/7/9.
+class _MinimalHeader extends StatelessWidget {
+  const _MinimalHeader({required this.onBack});
 
   final VoidCallback onBack;
 

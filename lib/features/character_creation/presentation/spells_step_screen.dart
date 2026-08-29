@@ -127,7 +127,7 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
             _MinimalHeader(onBack: _goBack),
             const Expanded(
               child: Center(
-                child: CircularProgressIndicator(color: AppColors.goldEnd),
+                child: CircularProgressIndicator(color: AppColors.woodMedium),
               ),
             ),
           ],

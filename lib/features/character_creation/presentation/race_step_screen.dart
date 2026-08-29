@@ -10,7 +10,6 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
-import '../../../core/widgets/wood_back_header.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/race_catalog.dart';
 import '../domain/race_step_selection.dart';
@@ -24,7 +23,17 @@ import 'providers/character_creation_providers.dart';
 ///
 /// En-tête bois plein (pas le dégradé "scène") : `Scaffold` classique plutôt
 /// que `SceneScaffold`, avec un bandeau `wood.medium` posé manuellement au
-/// sommet — voir `_Header` ci-dessous.
+/// sommet, portant le titre d'étape et la barre de progression — voir
+/// `_Header` ci-dessous.
+///
+/// N'utilise plus `core/widgets/wood_back_header.dart` (`WoodBackHeader`,
+/// utilisé par ex. par `character_detail_screen.dart`) : ce composant partagé
+/// n'affiche que retour + titre, sans titre d'étape ni `StepProgressBar` —
+/// insuffisant ici. `_Header`/`_MinimalHeader` sont donc dupliqués localement
+/// depuis `class_step_screen.dart`, comme les étapes 2 à 5, plutôt que
+/// d'étendre `WoodBackHeader` (dette de fond signalée par le chef de projet,
+/// pattern à ne pas factoriser dans `core/widgets` à cette occasion — voir
+/// le principe de duplication assumée documenté dans ce module).
 class RaceStepScreen extends ConsumerStatefulWidget {
   const RaceStepScreen({super.key});
 
@@ -125,16 +134,23 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
     final catalogAsync = ref.watch(raceCatalogProvider);
 
     return Scaffold(
-      body: Column(
-        children: [
-          WoodBackHeader(title: 'CRÉATION', onBack: _goToCharacterList),
-          Expanded(
-            child: catalogAsync.when(
-              data: _buildContent,
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.goldEnd),
+      body: catalogAsync.when(
+        data: _buildContent,
+        loading: () => Column(
+          children: [
+            _MinimalHeader(onBack: _goToCharacterList),
+            const Expanded(
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.woodMedium),
               ),
-              error: (error, stackTrace) => _ErrorState(
+            ),
+          ],
+        ),
+        error: (error, stackTrace) => Column(
+          children: [
+            _MinimalHeader(onBack: _goToCharacterList),
+            Expanded(
+              child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
                     : 'Impossible de charger les races disponibles. '
@@ -142,8 +158,8 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                 onRetry: () => ref.invalidate(raceCatalogProvider),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -161,145 +177,271 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
       selectedSubraceId: _selectedSubraceId,
     );
 
-    return SafeArea(
-      top: false,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              0,
-            ),
+    return Column(
+      children: [
+        _Header(
+          onBack: _goToCharacterList,
+          currentStep: 1,
+          totalSteps: _totalSteps,
+        ),
+        Expanded(
+          child: SafeArea(
+            top: false,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                    AppSpacing.lg,
+                    0,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Choisis l'ascendance de ton personnage.",
+                      style: AppTypography.body(fontSize: 14),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                      AppSpacing.md,
+                    ),
+                    children: [
+                      for (var i = 0; i < catalog.races.length; i++) ...[
+                        if (i > 0) const SizedBox(height: AppSpacing.sm),
+                        SelectableOptionTile(
+                          title: catalog.races[i].name,
+                          subtitle: catalog.races[i].summaryLine,
+                          selected:
+                              !_isCustomRaceSelected &&
+                              _selectedRaceId == catalog.races[i].id,
+                          leading: AccentIconBadge(
+                            index: i,
+                            icon: Icons.shield_rounded,
+                          ),
+                          onTap: () => _selectRace(catalog.races[i].id),
+                        ),
+                      ],
+                      if (subracesForSelectedRace.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          'Choisis une sous-race.',
+                          style: AppTypography.body(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        for (
+                          var i = 0;
+                          i < subracesForSelectedRace.length;
+                          i++
+                        ) ...[
+                          if (i > 0) const SizedBox(height: AppSpacing.sm),
+                          SelectableOptionTile(
+                            title: subracesForSelectedRace[i].name,
+                            subtitle: subracesForSelectedRace[i].summaryLine,
+                            selected:
+                                _selectedSubraceId ==
+                                subracesForSelectedRace[i].id,
+                            leading: AccentIconBadge(
+                              index: i,
+                              icon: Icons.shield_rounded,
+                            ),
+                            onTap: () =>
+                                _selectSubrace(subracesForSelectedRace[i].id),
+                          ),
+                        ],
+                      ],
+                      const SizedBox(height: AppSpacing.sm),
+                      SelectableOptionTile(
+                        title: 'Race personnalisée',
+                        selected: _isCustomRaceSelected,
+                        leading: const AccentIconBadge(
+                          index: -1,
+                          icon: Icons.shield_rounded,
+                          neutralIcon: Icons.edit_note,
+                        ),
+                        onTap: _selectCustomRace,
+                      ),
+                      if (_isCustomRaceSelected) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        TextField(
+                          controller: _customRaceController,
+                          decoration: const InputDecoration(
+                            hintText: 'Nom de la race personnalisée',
+                          ),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SecondaryButton(
+                          label: 'Retour',
+                          surface: SecondaryButtonSurface.parchment,
+                          onPressed: _goToCharacterList,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: PrimaryButton(
+                          label: 'Suivant',
+                          onPressed: canProceed ? _submit : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Bandeau bois plein en tête d'écran, avec le titre d'étape et la barre de
+/// progression — copié depuis `equipment_step_screen.dart`/
+/// `summary_step_screen.dart` (voir la documentation de classe de
+/// [RaceStepScreen] pour le rationale de ne plus utiliser `WoodBackHeader`
+/// ici).
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.onBack,
+    required this.currentStep,
+    required this.totalSteps,
+  });
+
+  final VoidCallback onBack;
+  final int currentStep;
+  final int totalSteps;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.woodMedium,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      '1. Race',
-                      style: AppTypography.body(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                    IconButton(
+                      onPressed: onBack,
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: AppColors.textOnWood,
                       ),
                     ),
                     Text(
-                      'Étape 1 / $_totalSteps',
-                      style: AppTypography.body(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
+                      'CRÉATION',
+                      style: AppTypography.display(
+                        fontSize: 11,
+                        color: AppColors.textOnWood,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                const StepProgressBar(totalSteps: _totalSteps, currentStep: 1),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  "Choisis l'ascendance de ton personnage.",
-                  style: AppTypography.body(fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.md,
               ),
-              children: [
-                for (var i = 0; i < catalog.races.length; i++) ...[
-                  if (i > 0) const SizedBox(height: AppSpacing.sm),
-                  SelectableOptionTile(
-                    title: catalog.races[i].name,
-                    subtitle: catalog.races[i].summaryLine,
-                    selected:
-                        !_isCustomRaceSelected &&
-                        _selectedRaceId == catalog.races[i].id,
-                    leading: AccentIconBadge(
-                      index: i,
-                      icon: Icons.shield_rounded,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '1. Race',
+                          style: AppTypography.body(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textOnWood,
+                          ),
+                        ),
+                        Text(
+                          'Étape $currentStep / $totalSteps',
+                          style: AppTypography.body(
+                            fontSize: 13,
+                            color: AppColors.textOnWoodMuted,
+                          ),
+                        ),
+                      ],
                     ),
-                    onTap: () => _selectRace(catalog.races[i].id),
-                  ),
-                ],
-                if (subracesForSelectedRace.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    'Choisis une sous-race.',
-                    style: AppTypography.body(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  for (var i = 0; i < subracesForSelectedRace.length; i++) ...[
-                    if (i > 0) const SizedBox(height: AppSpacing.sm),
-                    SelectableOptionTile(
-                      title: subracesForSelectedRace[i].name,
-                      subtitle: subracesForSelectedRace[i].summaryLine,
-                      selected:
-                          _selectedSubraceId == subracesForSelectedRace[i].id,
-                      leading: AccentIconBadge(
-                        index: i,
-                        icon: Icons.shield_rounded,
-                      ),
-                      onTap: () =>
-                          _selectSubrace(subracesForSelectedRace[i].id),
+                    const SizedBox(height: AppSpacing.sm),
+                    StepProgressBar(
+                      totalSteps: totalSteps,
+                      currentStep: currentStep,
                     ),
                   ],
-                ],
-                const SizedBox(height: AppSpacing.sm),
-                SelectableOptionTile(
-                  title: 'Race personnalisée',
-                  selected: _isCustomRaceSelected,
-                  leading: const AccentIconBadge(
-                    index: -1,
-                    icon: Icons.shield_rounded,
-                    neutralIcon: Icons.edit_note,
-                  ),
-                  onTap: _selectCustomRace,
                 ),
-                if (_isCustomRaceSelected) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  TextField(
-                    controller: _customRaceController,
-                    decoration: const InputDecoration(
-                      hintText: 'Nom de la race personnalisée',
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ],
-              ],
-            ),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'Retour',
-                    surface: SecondaryButtonSurface.parchment,
-                    onPressed: _goToCharacterList,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: PrimaryButton(
-                    label: 'Suivant',
-                    onPressed: canProceed ? _submit : null,
-                  ),
-                ),
-              ],
-            ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
+/// chargement/l'erreur — copie exacte du pattern des étapes 6/7/9.
+class _MinimalHeader extends StatelessWidget {
+  const _MinimalHeader({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.woodMedium,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
           ),
-        ],
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: onBack,
+                icon: const Icon(
+                  Icons.arrow_back_ios_new,
+                  color: AppColors.textOnWood,
+                ),
+              ),
+              Text(
+                'CRÉATION',
+                style: AppTypography.display(
+                  fontSize: 11,
+                  color: AppColors.textOnWood,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
