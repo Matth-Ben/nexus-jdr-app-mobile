@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<builder>
+
+<confLang>0</confLang>
+
+<character>
+<race>Conil</race>
+<class>Barde</class>
+<level>2</level>
+<background>Grand voyageur</background>
+
+<str>10</str>
+<dex>10</dex>
+<con>10</con>
+<int>14</int>
+<wis>13</wis>
+<cha>15</cha>
+
+<lvl lvl="1"><hp_brut>8</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="2"><hp_brut>5</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="3"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="4"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="5"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="6"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="7"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="8"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="9"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="10"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="11"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="12"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="13"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="14"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="15"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="16"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="17"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="18"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="19"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="20"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+
+<raceCustom></raceCustom>
+<styleCombat1></styleCombat1>
+<styleCombat2></styleCombat2>
+<favoredEnemy0></favoredEnemy0>
+<favoredEnemy6></favoredEnemy6>
+<favoredEnemy14></favoredEnemy14>
+<pack>2</pack>
+<backSpe>Vagabond</backSpe>
+
+<skillsProf id="0">12</skillsProf>
+<skillsProf id="1">17,16,0</skillsProf>
+<skillsProf id="2">8,17</skillsProf>
+<skillsProf id="3"></skillsProf>
+<toolsProf id="0"></toolsProf>
+<toolsProf id="1">flûte, luth, tambour</toolsProf>
+<toolsProf id="2">flûte</toolsProf>
+<toolsProf id="3"></toolsProf>
+<languages id="0">commun,sylvestre</languages>
+<languages id="1"></languages>
+<languages id="2">elfique</languages>
+<languages id="3"></languages>
+
+<knownSpell lvl="0">amis</knownSpell>
+<knownSpell lvl="0">lumière</knownSpell>
+<knownSpell lvl="0">prestidigitation</knownSpell>
+<knownSpell lvl="0">main de mage</knownSpell>
+<knownSpell lvl="0">protection contre les armes</knownSpell>
+<knownSpell lvl="1">charme-personne</knownSpell>
+<knownSpell lvl="1">fou rire de tasha</knownSpell>
+<knownSpell lvl="1">mot de guérison</knownSpell>
+<knownSpell lvl="1">soins</knownSpell>
+<knownSpell lvl="1">vague tonnante</knownSpell>
+<knownSpell lvl="1">sommeil</knownSpell>
+<knownSpell lvl="1">communication avec les animaux</knownSpell>
+
+<gp>5</gp>
+<pp>0</pp>
+<ep>0</ep>
+<sp>0</sp>
+<cp>0</cp>
+
+<armor>2</armor>
+<shield>0</shield>
+<weapon>32,3</weapon>
+<weaponQ>1,1</weaponQ>
+<tools>12,10</tools>
+
+<item>16,25,94,23,71,43,42,60,62,14,83,95</item>
+<itemQ>1,2,1,1,1,1,2,5,1,1,1,1</itemQ>
+<itemX>cartes grossièrement tracées, petit bijou valant 10 po</itemX>
+<name>Pip</name>
+<sexe>0</sexe>
+<age>20</age>
+<height>1,25 m</height>
+<weight>47.5 kg</weight>
+<alignment>6</alignment>
+<xp>0</xp>
+<eyes>vert amande</eyes>
+<skin>Teint porcelaine</skin>
+<hair>Châtains clairs</hair>
+
+<appearance>Pip a une silhouette svelte et élancée. Ses statistiques physiques moyennes (For 10, Dex 10, Con 10) montrent qu'il ne compte pas sur la force brute ni sur des pirouettes athlétiques pour s'en sortir (bien qu'il ait de bonnes notions d'Acrobaties pour esquiver le danger). Il porte des vêtements de voyage d'excellente facture mais usés par la route : une longue cape de voyageur vert forêt, des bottes souples et une veste en cuir souple parsemée de poches intérieures. Ce qui attire l'œil, ce sont ses instruments : son luth est solidement attaché dans son dos, son tambour pend à sa hanche, et plusieurs flûtes (en bois, en os, en roseau) dépassent de sa sacoche. Il dégage une aura de mystère exotique, celle de quelqu'un qui n'est définitivement pas "d'ici".</appearance>
+<traits>Je commence chaque conversation en posant des questions sur les coutumes locales, la nourriture ou les légendes de la région. Tout m'intéresse.</traits>
+<ideals>Découverte / Changement : "Le monde est un livre ouvert, et ceux qui restent au même endroit n'en lisent qu'une seule page. Le mouvement, c'est la vie."</ideals>
+<bonds>J'ai promis à un esprit sylvestre de retrouver une mélodie perdue qui a le pouvoir de faire fleurir un arbre millénaire.</bonds>
+<flaws>Curiosité maladive : Avec son intelligence élevée (Int 14) mais sa constitution normale, Conil ne peut pas s'empêcher de vouloir inspecter un vieux monument runique ou d'écouter une conversation secrète, quitte à se mettre en grand danger physique.</flaws>
+
+<backstory>Pip vient d'une contrée lointaine, un lieu où les frontières entre le monde matériel et le plan féerique (la Cour de Féerie) sont minces. Dès son plus jeune âge, il a été fasciné par les secrets cachés derrière l'horizon. Plutôt que d'étudier dans une académie fermée, il a choisi la route comme professeur. Il a passé des années à cartographier des sentiers oubliés, apprenant à survivre dans les milieux les plus hostiles (Survie) et à observer la faune et la flore (Perception).
+
+Son voyage l'a mené à travers des forêts anciennes où il a côtoyé des communautés elfiques et des créatures de la nature. C'est là qu'il a appris à parler couramment l'Elfique et le Sylvestre. Les fées et les esprits des bois lui ont enseigné que la musique n'est pas qu'un art, mais une langue magique capable d'influencer l'esprit. Ils lui ont offert ses premières flûtes sacrées.
+
+En arrivant dans les "terres civilisées", Pip a dû s'adapter. Pour un grand voyageur, les lois humaines sont parfois étranges. Il a appris à lire le cœur des gens pour éviter les ennuis (Intuition), mais aussi à broder la vérité, à raconter des histoires captivantes ou à utiliser de légers mensonges pour franchir les douanes et les portes des cités (Tromperie). Il est aujourd'hui un barde de niveau 2 : ses récits de voyage et ses mélodies lointaines commencent à éveiller une véritable magie narrative autour de lui.</backstory>
+<allies>Le Peuple Féerique & les Voyageurs : Pip a de petits alliés discrets un peu partout. Un satyre croisé dans un bois, un marchand de tapis itinérant, ou un érudit elfique. Il sait repérer les signes secrets laissés par les nomades sur les arbres ou les murs des tavernes pour trouver un refuge ou éviter un danger.</allies>
+<features>Chant de repos (Song of Rest) : Pendant un court repos, Pip peut jouer une douce mélodie à la flûte ou au luth. Sa musique imprégnée d'énergies sylvestres apaise les esprits et aide ses alliés à récupérer plus efficacement (ils regagnent 1d6 points de vie supplémentaires).</features>
+<treasure></treasure>
+
+</character>
+</builder>

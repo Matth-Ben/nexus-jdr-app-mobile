@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<builder>
+
+<confLang>0</confLang>
+
+<character>
+<race>Aasimar</race>
+<class>Paladin</class>
+<level>2</level>
+<background>Héros du peuple</background>
+
+<str>14</str>
+<dex>10</dex>
+<con>14</con>
+<int>10</int>
+<wis>10</wis>
+<cha>14</cha>
+
+<lvl lvl="1"><hp_brut>10</hp_brut><aug_carac0>5</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>5</aug_carac2></lvl>
+<lvl lvl="2"><hp_brut>6</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="3"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="4"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="5"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="6"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="7"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="8"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="9"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="10"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="11"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="12"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="13"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="14"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="15"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="16"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="17"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="18"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="19"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+<lvl lvl="20"><hp_brut>0</hp_brut><aug_carac0>-1</aug_carac0><aug_carac1>-1</aug_carac1><aug_carac2>-1</aug_carac2></lvl>
+
+<raceCustom>1</raceCustom>
+<styleCombat1>11</styleCombat1>
+<styleCombat2></styleCombat2>
+<favoredEnemy0></favoredEnemy0>
+<favoredEnemy6></favoredEnemy6>
+<favoredEnemy14></favoredEnemy14>
+<pack>16</pack>
+<backSpe>Recruté dans l'armée d'un seigneur, je suis devenu un leader et j'ai été félicité pour mon héroïsme</backSpe>
+
+<skillsProf id="0"></skillsProf>
+<skillsProf id="1">14,8</skillsProf>
+<skillsProf id="2">4,16</skillsProf>
+<skillsProf id="3"></skillsProf>
+<toolsProf id="0"></toolsProf>
+<toolsProf id="1"></toolsProf>
+<toolsProf id="2">matériel de peintre, véhicules (terrestres)</toolsProf>
+<toolsProf id="3"></toolsProf>
+<languages id="0">commun,céleste</languages>
+<languages id="1"></languages>
+<languages id="2"></languages>
+<languages id="3"></languages>
+
+<innateSpell lvl="0">lumière</innateSpell>
+<knownSpell lvl="1">bénédiction</knownSpell>
+<knownSpell lvl="1">bouclier de la foi</knownSpell>
+<knownSpell lvl="1">châtiment calcinant</knownSpell>
+<knownSpell lvl="1">détection de la magie</knownSpell>
+<knownSpell lvl="1">détection du mal et du bien</knownSpell>
+<knownSpell lvl="1">détection du poison et des maladies</knownSpell>
+<knownSpell lvl="1">faveur divine</knownSpell>
+<knownSpell lvl="1">injonction</knownSpell>
+<knownSpell lvl="1">protection contre le mal et le bien</knownSpell>
+<knownSpell lvl="1">soins</knownSpell>
+<knownSpell lvl="1">cérémonie</knownSpell>
+
+<gp>10</gp>
+<pp>0</pp>
+<ep>0</ep>
+<sp>0</sp>
+<cp>0</cp>
+
+<armor>10</armor>
+<shield>1</shield>
+<weapon>20,6</weapon>
+<weaponQ>1,5</weaponQ>
+<tools>0,32</tools>
+
+<item>56,88,80,19,6,5,76,39,63,74,92</item>
+<itemQ>1,1,1,1,10,1,2,1,1,1,1</itemQ>
+<itemX>boîte pour l'aumône, bâtonnets d'encens (2), encensoir, habits de cérémonie, bourse</itemX>
+<name>Solan Valerius</name>
+<sexe>0</sexe>
+<age>20</age>
+<height>1,90 m</height>
+<weight>80 kg</weight>
+<alignment>0</alignment>
+<xp>0</xp>
+<eyes>bleu azur</eyes>
+<skin>Teint halé</skin>
+<hair>Blancs argenté</hair>
+
+<appearance>Solan mesure près d'1m90. Il possède la carrure robuste d'un travailleur de la terre (For 14, Con 14), loin de la grâce artificielle de certains nobles. Il porte une armure de plaques de seconde main, volontairement entretenue mais marquée par les voyages. Ses vêtements sous l'armure sont simples, en lin rustique. Ce qui frappe chez lui, c'est le contraste entre sa présence imposante et la douceur de son regard. À sa ceinture pend une sacoche en cuir usé contenant son matériel de peinture, et il se déplace souvent avec un grand bâton de marche en bois de frêne qu'il a lui-même sculpté.</appearance>
+<traits>Je suis d'un calme olympien face aux animaux ou aux crises, je préfère observer et ressentir les intentions des gens avant de parler (Intuition).</traits>
+<ideals>Justice / Respect : "La loi doit être au service des gens, pas un outil pour que les puissants écrasent les faibles."</ideals>
+<bonds>Je dois la vie et ma liberté aux gens de mon village d'origine. Tout ce que je fais, je le fais pour qu'un jour ils puissent vivre sans peur.</bonds>
+<flaws>Manque de ruse : Avec 10 en Int et Sag, Solan est très direct. Il déteste les tactiques fourbes ou les plans complexes. Pour lui, si un problème se présente, on l'affronte de face, ce qui peut le jeter dans des pièges évidents.</flaws>
+
+<backstory>Solan a grandi dans les vallées fertiles, élevé par une famille de charretiers et de dresseurs de chevaux de trait (Outils : véhicules terrestres / Compétence : Dressage). Rien ne le prédestinait à la guerre. Enfant, il passait ses journées à dessiner le bétail et les paysages sur des morceaux de parchemin récupérés (Outils : matériel de peintre). Pourtant, il y avait ces moments étranges où, pris d'une inspiration soudaine, il peignait des figures ailées baignées de lumière, ou murmurait des prières dans une langue inconnue (Langue : Céleste).
+
+Sa vie a basculé le jour où un usurier sans scrupules, escorté de mercenaires, est venu saisir les terres et le bétail de son village, menaçant de brûler les récoltes. Face à la détresse de ses proches, une chaleur intense a envahi la poitrine de Solan. Son héritage céleste s'est éveillé : ses yeux ont brillé d'un éclat aveuglant, et une voix lointaine lui a murmuré des mots de justice. Saisissant une simple fourche de foin, transfiguré par une force divine naissante, il a tenu tête aux mercenaires, brisant leurs armes et les forçant à fuir.
+
+Ce jour-là, le peuple l'a acclamé comme son sauveur (Héros du peuple). Conscient que sa présence mettait désormais son village en danger face aux représailles, et poussé par le besoin de comprendre la divinité qui l'avait touché (Religion), Solan a pris la route. Il n'est pas encore un chevalier assermenté (Niveau 2), mais son bras est guidé par une foi brute et un désir viscéral de protéger les plus faibles.</backstory>
+<allies>L'Ordre naissant ou Guide Céleste : Solan n'appartient pas encore à un ordre de chevalerie formel. En revanche, il est lié à une entité céleste (un Deva ou un Archange) qui ne lui parle pas directement, mais lui envoie des visions de lieux à protéger ou de personnes à sauver à travers les peintures qu'il réalise pendant ses moments de transe.</allies>
+<features>Châtiment Divin (Divine Smite) : Lorsqu'il frappe avec son arme, Solan peut consumer un emplacement de sort pour libérer l'énergie céleste brute qui coule dans ses veines. Son arme s'illumine alors de la même lueur d'or blanc qui s'est éveillée le jour où il a sauvé son village, infligeant de lourds dégâts radiants.</features>
+<treasure></treasure>
+
+</character>
+</builder>

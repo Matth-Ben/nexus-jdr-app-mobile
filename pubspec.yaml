@@ -55,6 +55,9 @@ dependencies:
   go_router: ^18.0.0
   google_fonts: ^8.2.1
   image_picker: ^1.2.0
+  # Sélecteur de fichier natif pour l'import XML aidedd.org
+  # (`lib/features/xml_import/`) — `image_picker` ne gère que les images.
+  file_picker: ^8.1.7
   # File de synchro hors-ligne PV/XP (`core/network/connectivity_checker.dart`,
   # `core/cache/pending_character_write_queue.dart`) — voir
   # `docs/cahier-des-charges/01-architecture-technique.md`, section "Mode

@@ -398,24 +398,31 @@ void main() {
     },
   );
 
-  testWidgets(
-    'le bouton "Importer XML" affiche un message d\'information sans rien '
-    'importer',
-    (WidgetTester tester) async {
-      fakeCharacterRepository.charactersToReturn = const [];
+  testWidgets('le bouton "Importer XML" ouvre le sélecteur de fichier natif et '
+      'affiche un message d\'erreur si aucun plugin n\'est disponible '
+      '(environnement de test)', (WidgetTester tester) async {
+    // `file_picker` n'a pas d'implémentation de plateforme enregistrée
+    // sous `flutter test` (pas de mock de canal ici) : `pickFiles()` lève
+    // une `MissingPluginException`, capturée par
+    // `CharacterListScreen._startXmlImport` — ce test vérifie donc le
+    // chemin d'erreur réel de cet environnement plutôt que le chemin
+    // "sélection réussie" (nécessiterait de mocker le `MethodChannel` du
+    // plugin, hors périmètre de ce test ciblé sur `CharacterListScreen`
+    // elle-même ; voir `test/features/xml_import/` pour les tests de
+    // l'écran de vérification qui suit une sélection réussie).
+    fakeCharacterRepository.charactersToReturn = const [];
 
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.text('IMPORTER XML'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('IMPORTER XML'));
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Import XML disponible dans une prochaine version.'),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(
+      find.textContaining('Impossible de lire ce fichier'),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('le bouton "+ Créer" navigue vers l\'assistant de création', (
     WidgetTester tester,

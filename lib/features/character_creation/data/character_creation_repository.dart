@@ -2,6 +2,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/reference_data_cache.dart';
 import '../domain/ability_score_rules.dart';
+import '../domain/alignment_catalog.dart';
+import '../domain/alignment_option.dart';
 import '../domain/background_catalog.dart';
 import '../domain/background_option.dart';
 import '../domain/character_creation_draft.dart';
@@ -61,6 +63,9 @@ const String _itemCatalogErrorMessage =
 const String _skillCatalogErrorMessage =
     'Impossible de charger les compétences disponibles. Réessayez.';
 
+const String _alignmentCatalogErrorMessage =
+    'Impossible de charger les alignements disponibles. Réessayez.';
+
 const String _createCharacterErrorMessage =
     'Impossible de créer le personnage. Réessayez.';
 
@@ -75,6 +80,7 @@ const String _toolCatalogCacheKey = 'tool_catalog';
 const String _languageCatalogCacheKey = 'language_catalog';
 const String _itemCatalogCacheKey = 'item_catalog';
 const String _skillCatalogCacheKey = 'skill_catalog';
+const String _alignmentCatalogCacheKey = 'alignment_catalog';
 
 /// Passerelle vers les données de l'assistant de création de personnage.
 ///
@@ -150,6 +156,14 @@ abstract class CharacterCreationRepository {
   /// vers de vrais `skill_id` avant écriture dans
   /// `character_skill_proficiencies` (voir [createCharacter]).
   Future<SkillCatalog> fetchSkillCatalog();
+
+  /// Récupère l'intégralité des 9 alignements disponibles (`alignments`,
+  /// colonne `name` directe, pas de résolution `translations` — voir la
+  /// documentation de classe d'[AlignmentOption]) — utilisé par l'écran de
+  /// vérification de l'import XML aidedd.org (`features/xml_import/`),
+  /// jamais par l'assistant de création lui-même (`characters.alignment_id`
+  /// y reste toujours `null`, voir [createCharacter]).
+  Future<AlignmentCatalog> fetchAlignmentCatalog();
 
   /// Crée le personnage complet à partir du brouillon [draft] et des
   /// catalogues déjà résolus (déjà chargés par l'écran "Récapitulatif" pour
@@ -684,6 +698,50 @@ class SupabaseCharacterCreationRepository
     return SkillCatalog(
       skills: _rowsOf(payload['skills'])
           .map((row) => SkillRowMapper.toSkillOption(row, names: names))
+          .toList(),
+    );
+  }
+
+  @override
+  Future<AlignmentCatalog> fetchAlignmentCatalog() async {
+    try {
+      final alignmentRows = await _client
+          .from('alignments')
+          .select('id, name')
+          .order('id', ascending: true);
+
+      final payload = <String, dynamic>{'alignments': alignmentRows};
+      await _writeCacheBestEffort(_alignmentCatalogCacheKey, payload);
+      return _mapAlignmentCatalogPayload(payload);
+    } on PostgrestException catch (error) {
+      final cached = await _mappedFromCache(
+        _alignmentCatalogCacheKey,
+        _mapAlignmentCatalogPayload,
+      );
+      if (cached != null) return cached;
+      throw mapCharacterCreationError(
+        error,
+        fallbackMessage: _alignmentCatalogErrorMessage,
+      );
+    } catch (_) {
+      final cached = await _mappedFromCache(
+        _alignmentCatalogCacheKey,
+        _mapAlignmentCatalogPayload,
+      );
+      if (cached != null) return cached;
+      throw mapUnknownCharacterCreationError();
+    }
+  }
+
+  AlignmentCatalog _mapAlignmentCatalogPayload(Map<String, dynamic> payload) {
+    return AlignmentCatalog(
+      alignments: _rowsOf(payload['alignments'])
+          .map(
+            (row) => AlignmentOption(
+              id: (row['id'] as num).toInt(),
+              name: row['name'] as String? ?? '',
+            ),
+          )
           .toList(),
     );
   }

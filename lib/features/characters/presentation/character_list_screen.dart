@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -71,7 +74,7 @@ class CharacterListScreen extends ConsumerWidget {
                   Expanded(
                     child: SecondaryButton(
                       label: 'Importer XML',
-                      onPressed: () => _showImportNotAvailable(context),
+                      onPressed: () => _startXmlImport(context),
                     ),
                   ),
                 ],
@@ -96,10 +99,68 @@ class CharacterListScreen extends ConsumerWidget {
     context.push('/characters/new');
   }
 
-  void _showImportNotAvailable(BuildContext context) {
+  /// Ouvre le sélecteur de fichier natif (`file_picker`, seul package du
+  /// dépôt capable de choisir un fichier arbitraire — `image_picker` ne gère
+  /// que les images), lit le contenu du `.xml` choisi puis pousse l'écran de
+  /// vérification (`features/xml_import/presentation/xml_import_review_screen.dart`),
+  /// qui porte lui-même le parsing/la résolution (état "Chargement" de sa
+  /// spec visuelle) — voir la documentation de la route `/characters/import`
+  /// (`core/router/app_router.dart`) pour le choix de lui passer le contenu
+  /// déjà lu via `extra` plutôt que de reparser ici.
+  ///
+  /// `withData: true` : demande à `file_picker` de charger le contenu en
+  /// mémoire (`PlatformFile.bytes`) plutôt que de ne renvoyer qu'un chemin de
+  /// fichier (`PlatformFile.path`, non disponible sur web) — un export
+  /// aidedd.org est un petit fichier texte, charger tout son contenu en
+  /// mémoire d'un coup est un compromis sûr ici.
+  Future<void> _startXmlImport(BuildContext context) async {
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xml'],
+        withData: true,
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      _showImportError(context);
+      return;
+    }
+
+    // `result == null` : sélection annulée par l'utilisateur, rien à faire.
+    if (result == null || result.files.isEmpty) return;
+
+    final file = result.files.single;
+    final bytes = file.bytes;
+    if (bytes == null) {
+      if (!context.mounted) return;
+      _showImportError(context);
+      return;
+    }
+
+    final String xmlSource;
+    try {
+      xmlSource = utf8.decode(bytes);
+    } catch (_) {
+      if (!context.mounted) return;
+      _showImportError(context);
+      return;
+    }
+
+    if (!context.mounted) return;
+    context.push<void>(
+      '/characters/import',
+      extra: (fileName: file.name, xmlSource: xmlSource),
+    );
+  }
+
+  void _showImportError(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Import XML disponible dans une prochaine version.'),
+        content: Text(
+          "Impossible de lire ce fichier. Vérifiez qu'il s'agit bien d'un "
+          'export XML aidedd.org.',
+        ),
       ),
     );
   }

@@ -13,9 +13,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Ces tests couvrent la stratégie "réseau d'abord, cache en secours" du
 /// cache local (`ReferenceDataCache`, `lib/core/cache/`) sur
-/// `SupabaseCharacterCreationRepository`, pour les 8 catalogues
+/// `SupabaseCharacterCreationRepository`, pour les 9 catalogues
 /// `fetchXCatalog` (voir [_testCatalogCaching], appelé une fois par
-/// catalogue dans `main()`). Aucun double factice de `SupabaseClient`
+/// catalogue dans `main()` — `fetchAlignmentCatalog` ajouté après coup, pour
+/// `features/xml_import/`, voir la doc de classe d'`AlignmentOption`).
+/// Aucun double factice de `SupabaseClient`
 /// lui-même n'existait déjà dans ce dépôt avant cette tâche (voir
 /// `test_integration/README.md` : les repositories `Supabase*` sont
 /// d'ordinaire exercés contre un vrai stack Supabase local dans
@@ -290,6 +292,27 @@ void main() {
         expect(catalog.skills, hasLength(1));
         expect(catalog.skills.single.name, 'Perception');
         expect(catalog.skills.single.abilityId, 'wis');
+      },
+    );
+
+    // `alignments.name` est une colonne directe (pas de résolution
+    // `translations`, voir la doc de classe d'`AlignmentOption`) : pas de
+    // ligne `translations` dans `tableRows`, contrairement aux 8 catalogues
+    // ci-dessus.
+    _testCatalogCaching(
+      description: 'fetchAlignmentCatalog',
+      cacheKey: 'alignment_catalog',
+      cache: () => cache,
+      fetch: (repository) => repository.fetchAlignmentCatalog(),
+      tableRows: {
+        'alignments': [
+          {'id': 8, 'name': 'Loyal bon'},
+        ],
+      },
+      verifySuccess: (dynamic catalog) {
+        expect(catalog.alignments, hasLength(1));
+        expect(catalog.alignments.single.name, 'Loyal bon');
+        expect(catalog.alignments.single.id, 8);
       },
     );
   });

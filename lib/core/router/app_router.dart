@@ -17,6 +17,7 @@ import '../../features/character_creation/presentation/summary_step_screen.dart'
 import '../../features/characters/presentation/character_detail_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
 import '../../features/characters/presentation/level_up_screen.dart';
+import '../../features/xml_import/presentation/xml_import_review_screen.dart';
 import '../network/supabase_client_provider.dart';
 
 part 'app_router.g.dart';
@@ -93,6 +94,27 @@ GoRouter appRouter(Ref ref) {
         // base (voir `presentation/summary_step_screen.dart`).
         path: '/characters/new/step-9',
         builder: (context, state) => const SummaryStepScreen(),
+      ),
+      GoRoute(
+        // Écran de vérification de l'import XML aidedd.org
+        // (`features/xml_import/`) : poussée avec `extra` (nom de fichier +
+        // contenu XML déjà lu par le sélecteur de fichier natif,
+        // `CharacterListScreen._startXmlImport`) — premier usage d'`extra`
+        // dans ce dépôt (voir la doc de `LevelUpScreen`, qui avait
+        // volontairement évité `extra` au profit d'un paramètre de requête
+        // pour un flux plus simple) : un contenu de fichier XML entier
+        // n'a pas vocation à transiter par l'URL ni à être deep-linké,
+        // contrairement au niveau ciblé d'une montée de niveau — choix
+        // technique signalé au chef de projet plutôt qu'un des deux
+        // mécaniques déjà en place.
+        path: '/characters/import',
+        builder: (context, state) {
+          final args = state.extra! as ({String fileName, String xmlSource});
+          return XmlImportReviewScreen(
+            fileName: args.fileName,
+            xmlSource: args.xmlSource,
+          );
+        },
       ),
       GoRoute(
         path: '/characters/:id',

@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
+import 'package:personnages/features/character_creation/domain/alignment_catalog.dart';
 import 'package:personnages/features/character_creation/domain/background_catalog.dart';
 import 'package:personnages/features/character_creation/domain/background_option.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
@@ -81,6 +82,10 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   @override
   Future<SkillCatalog> fetchSkillCatalog() async =>
       const SkillCatalog(skills: []);
+
+  @override
+  Future<AlignmentCatalog> fetchAlignmentCatalog() async =>
+      const AlignmentCatalog(alignments: []);
 
   @override
   Future<String> createCharacter({
