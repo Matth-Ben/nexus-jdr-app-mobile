@@ -1,3 +1,4 @@
+import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/env_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -245,6 +246,23 @@ Future<ReferenceContent> fetchReferenceContent(SupabaseClient client) async {
     alignmentId: alignment.$1,
     alignmentName: alignment.$2,
   );
+}
+
+/// Toujours "connecté" — les tests d'intégration de ce dossier exercent le
+/// vrai chemin réseau contre le stack Supabase local, jamais le mode
+/// hors-ligne lui-même (couvert par les tests unitaires de
+/// `test/features/characters/data/character_repository_test.dart`, qui
+/// injectent un double entièrement contrôlé). Un `SupabaseCharacterRepository`
+/// construit avec ce double suit donc toujours le chemin réseau nominal pour
+/// `updateHp`/`addXp`.
+class AlwaysOnlineConnectivityChecker implements ConnectivityChecker {
+  const AlwaysOnlineConnectivityChecker();
+
+  @override
+  Future<bool> hasConnection() async => true;
+
+  @override
+  Stream<bool> get onConnectivityRestored => const Stream.empty();
 }
 
 Future<(Object, String)> _fetchFirstTranslatedName(

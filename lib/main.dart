@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/network/env_config.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/characters/presentation/providers/character_write_sync_coordinator.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,10 @@ class NexusJdrApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    // Instancie tôt (`keepAlive`) le coordinateur de synchro hors-ligne
+    // PV/XP, pour toute la durée de l'app — voir
+    // `character_write_sync_coordinator.dart`.
+    ref.watch(characterWriteSyncCoordinatorProvider);
 
     return MaterialApp.router(
       title: 'Nexus JDR — Personnages',

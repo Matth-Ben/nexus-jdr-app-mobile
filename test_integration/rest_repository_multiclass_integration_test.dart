@@ -1,6 +1,7 @@
 import "package:drift/native.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:personnages/core/cache/app_database.dart";
+import "package:personnages/core/cache/pending_character_write_queue.dart";
 import "package:personnages/core/cache/reference_data_cache.dart";
 import "package:personnages/features/characters/data/character_repository.dart";
 import "package:personnages/features/characters/domain/rest_type.dart";
@@ -49,6 +50,7 @@ void main() {
     // `ReferenceDataCache` en dependance.
     late AppDatabase cacheDb;
     late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
 
     late Object primaryClassId;
     late int primaryClassLevel;
@@ -66,6 +68,7 @@ void main() {
       ownerId = client.auth.currentUser!.id;
       cacheDb = AppDatabase(NativeDatabase.memory());
       cache = ReferenceDataCache(cacheDb);
+      pendingWrites = PendingCharacterWriteQueue(cacheDb);
 
       final rows = await client
           .from("class_features")
@@ -154,7 +157,12 @@ void main() {
         "uses_remaining": 0,
       });
 
-      final repository = SupabaseCharacterRepository(client, cache);
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        const AlwaysOnlineConnectivityChecker(),
+      );
       // `className` fictif : ce test porte sur character_feature_uses
       // (multiclassage), jamais sur character_spell_slots — voir
       // `rest_repository_integration_test.dart` pour les tests dédiés au

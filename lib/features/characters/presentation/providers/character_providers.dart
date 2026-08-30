@@ -1,8 +1,10 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/cache/cache_providers.dart';
+import '../../../../core/network/connectivity_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/character_repository.dart';
+import '../../data/pending_character_write_syncer.dart';
 import '../../domain/character_summary.dart';
 
 part 'character_providers.g.dart';
@@ -12,6 +14,20 @@ CharacterRepository characterRepository(Ref ref) {
   return SupabaseCharacterRepository(
     ref.watch(supabaseClientProvider),
     ref.watch(referenceDataCacheProvider),
+    ref.watch(pendingCharacterWriteQueueProvider),
+    ref.watch(connectivityCheckerProvider),
+  );
+}
+
+/// Vide, best-effort, la file d'attente PV/XP hors-ligne — voir
+/// `PendingCharacterWriteSyncer`. Seul consommateur :
+/// `character_write_sync_coordinator.dart` (déclenche [sync] au démarrage et
+/// à chaque retour de connectivité).
+@Riverpod(keepAlive: true)
+PendingCharacterWriteSyncer pendingCharacterWriteSyncer(Ref ref) {
+  return PendingCharacterWriteSyncer(
+    ref.watch(supabaseClientProvider),
+    ref.watch(pendingCharacterWriteQueueProvider),
   );
 }
 

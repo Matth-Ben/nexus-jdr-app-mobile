@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -6,9 +7,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:personnages/core/cache/app_database.dart';
+import 'package:personnages/core/cache/pending_character_write_queue.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
+import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
+import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
+import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Ces tests couvrent la stratégie "réseau d'abord, cache en secours" du
@@ -55,10 +60,12 @@ void main() {
     () {
       late AppDatabase db;
       late ReferenceDataCache cache;
+      late PendingCharacterWriteQueue pendingWrites;
 
       setUp(() {
         db = AppDatabase(NativeDatabase.memory());
         cache = ReferenceDataCache(db);
+        pendingWrites = PendingCharacterWriteQueue(db);
       });
 
       tearDown(() async {
@@ -217,7 +224,12 @@ void main() {
             ownerId: ownerId,
             tableRows: tableRows,
           );
-          final repository = SupabaseCharacterRepository(client, cache);
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _AlwaysOnlineConnectivityChecker(),
+          );
 
           final detail = await repository.fetchCharacterDetail(characterId);
 
@@ -239,6 +251,8 @@ void main() {
         final onlineRepository = SupabaseCharacterRepository(
           onlineClient,
           cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
         );
         final expectedDetail = await onlineRepository.fetchCharacterDetail(
           characterId,
@@ -251,6 +265,8 @@ void main() {
         final offlineRepository = SupabaseCharacterRepository(
           offlineClient,
           cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
         );
         final detail = await offlineRepository.fetchCharacterDetail(
           characterId,
@@ -289,7 +305,12 @@ void main() {
             ownerId: ownerId,
             throwOnRequest: true,
           );
-          final repository = SupabaseCharacterRepository(client, cache);
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _AlwaysOnlineConnectivityChecker(),
+          );
 
           await expectLater(
             repository.fetchCharacterDetail(characterId),
@@ -311,6 +332,8 @@ void main() {
           await SupabaseCharacterRepository(
             ownerOneClient,
             cache,
+            pendingWrites,
+            _AlwaysOnlineConnectivityChecker(),
           ).fetchCharacterDetail(characterId);
           expect(await cache.get(cacheKey), isNotNull);
 
@@ -327,6 +350,8 @@ void main() {
           final ownerTwoRepository = SupabaseCharacterRepository(
             ownerTwoClient,
             cache,
+            pendingWrites,
+            _AlwaysOnlineConnectivityChecker(),
           );
 
           await expectLater(
@@ -351,6 +376,301 @@ void main() {
       );
     },
   );
+
+  group('SupabaseCharacterRepository.updateHp/addXp (mode hors-ligne)', () {
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const characterId = 'char-1';
+    const ownerId = 'owner-1';
+
+    test('updateHp : connectivité absente -> met en file sans tenter le '
+        'réseau, retourne queued', () async {
+      // `throwOnRequest: true` : si le repository tentait malgré tout le
+      // réseau (bug), ce test échouerait avec une exception inattendue
+      // plutôt qu'un faux positif silencieux.
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        throwOnRequest: true,
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: false),
+      );
+
+      final outcome = await repository.updateHp(
+        characterId: characterId,
+        currentHp: 5,
+        temporaryHp: 0,
+      );
+
+      expect(outcome, WriteOutcome.queued);
+      final pending = await pendingWrites.allForOwner(ownerId);
+      expect(pending, hasLength(1));
+      expect(pending.single.characterId, characterId);
+      expect(pending.single.kind, PendingCharacterWriteKind.hp);
+      expect(pending.single.payload, {'currentHp': 5, 'temporaryHp': 0});
+    });
+
+    test('addXp : connectivité absente -> met en file sans tenter le réseau, '
+        'retourne queued', () async {
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        throwOnRequest: true,
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: false),
+      );
+
+      final outcome = await repository.addXp(
+        characterId: characterId,
+        newXp: 450,
+      );
+
+      expect(outcome, WriteOutcome.queued);
+      final pending = await pendingWrites.allForOwner(ownerId);
+      expect(pending, hasLength(1));
+      expect(pending.single.kind, PendingCharacterWriteKind.xp);
+      expect(pending.single.payload, {'newXp': 450});
+    });
+
+    test('updateHp : connectivité présente + écriture réussie -> retourne '
+        'synced, rien en file', () async {
+      final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: true),
+      );
+
+      final outcome = await repository.updateHp(
+        characterId: characterId,
+        currentHp: 5,
+        temporaryHp: 0,
+      );
+
+      expect(outcome, WriteOutcome.synced);
+      expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+    });
+
+    test('addXp : connectivité présente + écriture réussie -> retourne synced, '
+        'rien en file', () async {
+      final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: true),
+      );
+
+      final outcome = await repository.addXp(
+        characterId: characterId,
+        newXp: 450,
+      );
+
+      expect(outcome, WriteOutcome.synced);
+      expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+    });
+
+    test('updateHp : connectivité présente + écriture réseau en échec -> '
+        'relance l\'erreur normalement, rien en file (jamais un vrai bug '
+        'serveur masqué derrière une mise en file silencieuse)', () async {
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        failureStatusCode: 500,
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: true),
+      );
+
+      await expectLater(
+        repository.updateHp(
+          characterId: characterId,
+          currentHp: 5,
+          temporaryHp: 0,
+        ),
+        throwsA(isA<CharacterFailure>()),
+      );
+      expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+    });
+
+    test('addXp : connectivité présente + écriture réseau en échec -> relance '
+        'l\'erreur normalement, rien en file', () async {
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        failureStatusCode: 500,
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: true),
+      );
+
+      await expectLater(
+        repository.addXp(characterId: characterId, newXp: 450),
+        throwsA(isA<CharacterFailure>()),
+      );
+      expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+    });
+  });
+
+  group('PendingCharacterWriteSyncer.sync', () {
+    late AppDatabase db;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const characterId = 'char-1';
+    const ownerId = 'owner-1';
+
+    test('écriture réseau réussie -> supprime l\'entrée en attente et retourne '
+        'le characterId synchronisé', () async {
+      await pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': 12, 'temporaryHp': 0},
+      );
+      final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+      final syncer = PendingCharacterWriteSyncer(client, pendingWrites);
+
+      final synced = await syncer.sync();
+
+      expect(synced, {characterId});
+      expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+    });
+
+    test('écriture réseau en échec -> conserve l\'entrée pour une prochaine '
+        'tentative, ne l\'inclut pas dans le résultat', () async {
+      await pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.xp,
+        payload: {'newXp': 900},
+      );
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        failureStatusCode: 500,
+      );
+      final syncer = PendingCharacterWriteSyncer(client, pendingWrites);
+
+      final synced = await syncer.sync();
+
+      expect(synced, isEmpty);
+      final pending = await pendingWrites.allForOwner(ownerId);
+      expect(pending, hasLength(1));
+      expect(pending.single.characterId, characterId);
+    });
+
+    test('aucun utilisateur connecté -> ne tente rien, retourne un ensemble '
+        'vide', () async {
+      await pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': 12, 'temporaryHp': 0},
+      );
+      final anonymousClient = SupabaseClient(
+        'https://fake.supabase.test',
+        'fake-anon-key',
+      );
+      final syncer = PendingCharacterWriteSyncer(
+        anonymousClient,
+        pendingWrites,
+      );
+
+      final synced = await syncer.sync();
+
+      expect(synced, isEmpty);
+      expect(await pendingWrites.allForOwner(ownerId), hasLength(1));
+    });
+
+    test('isolation par utilisateur : ne synchronise jamais une écriture en '
+        'attente d\'un autre compte que celui actuellement connecté', () async {
+      const otherCharacterId = 'char-2';
+      const otherOwnerId = 'owner-2';
+      await pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': 12, 'temporaryHp': 0},
+      );
+      await pendingWrites.enqueue(
+        characterId: otherCharacterId,
+        ownerId: otherOwnerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': 30, 'temporaryHp': 0},
+      );
+      // Connecté en tant qu'owner-1 uniquement.
+      final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+      final syncer = PendingCharacterWriteSyncer(client, pendingWrites);
+
+      final synced = await syncer.sync();
+
+      expect(synced, {characterId});
+      expect(
+        await pendingWrites.allForOwner(otherOwnerId),
+        hasLength(1),
+        reason:
+            "l'entrée d'owner-2 doit rester intacte, jamais synchronisée "
+            'ni supprimée par la session d\'owner-1',
+      );
+    });
+  });
+}
+
+/// Toujours "connecté" — utilisé par les groupes de tests qui n'exercent pas
+/// le comportement hors-ligne lui-même (ex. le cache de secours de
+/// `fetchCharacterDetail`), pour que `updateHp`/`addXp` (quand appelées)
+/// suivent le chemin réseau nominal.
+class _AlwaysOnlineConnectivityChecker implements ConnectivityChecker {
+  @override
+  Future<bool> hasConnection() async => true;
+
+  @override
+  Stream<bool> get onConnectivityRestored => const Stream.empty();
+}
+
+/// Double entièrement contrôlé par le test — voir le groupe "mode
+/// hors-ligne" ci-dessus.
+class _FakeConnectivityChecker implements ConnectivityChecker {
+  _FakeConnectivityChecker({required this.connected});
+
+  final bool connected;
+
+  @override
+  Future<bool> hasConnection() async => connected;
+
+  @override
+  Stream<bool> get onConnectivityRestored => const Stream.empty();
 }
 
 /// Fabrique un `SupabaseClient` réel, mais dont le transport HTTP est

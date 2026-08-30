@@ -55,7 +55,70 @@ final class CharacterRepositoryProvider
 }
 
 String _$characterRepositoryHash() =>
-    r'1ad6dce7a5241343ed71f490559ece6b52c4fc3c';
+    r'208385b8ada01b47c8c2bb0331b74548ca6a9b80';
+
+/// Vide, best-effort, la file d'attente PV/XP hors-ligne — voir
+/// `PendingCharacterWriteSyncer`. Seul consommateur :
+/// `character_write_sync_coordinator.dart` (déclenche [sync] au démarrage et
+/// à chaque retour de connectivité).
+
+@ProviderFor(pendingCharacterWriteSyncer)
+final pendingCharacterWriteSyncerProvider =
+    PendingCharacterWriteSyncerProvider._();
+
+/// Vide, best-effort, la file d'attente PV/XP hors-ligne — voir
+/// `PendingCharacterWriteSyncer`. Seul consommateur :
+/// `character_write_sync_coordinator.dart` (déclenche [sync] au démarrage et
+/// à chaque retour de connectivité).
+
+final class PendingCharacterWriteSyncerProvider
+    extends
+        $FunctionalProvider<
+          PendingCharacterWriteSyncer,
+          PendingCharacterWriteSyncer,
+          PendingCharacterWriteSyncer
+        >
+    with $Provider<PendingCharacterWriteSyncer> {
+  /// Vide, best-effort, la file d'attente PV/XP hors-ligne — voir
+  /// `PendingCharacterWriteSyncer`. Seul consommateur :
+  /// `character_write_sync_coordinator.dart` (déclenche [sync] au démarrage et
+  /// à chaque retour de connectivité).
+  PendingCharacterWriteSyncerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'pendingCharacterWriteSyncerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$pendingCharacterWriteSyncerHash();
+
+  @$internal
+  @override
+  $ProviderElement<PendingCharacterWriteSyncer> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  PendingCharacterWriteSyncer create(Ref ref) {
+    return pendingCharacterWriteSyncer(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(PendingCharacterWriteSyncer value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<PendingCharacterWriteSyncer>(value),
+    );
+  }
+}
+
+String _$pendingCharacterWriteSyncerHash() =>
+    r'1fdd437867eb2afbdfee6c882ee08a97b7973222';
 
 /// Liste des personnages du joueur connecté, exposée à
 /// `CharacterListScreen`.

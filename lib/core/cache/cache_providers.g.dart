@@ -127,3 +127,63 @@ final class ReferenceDataCacheProvider
 
 String _$referenceDataCacheHash() =>
     r'ce85a456b746cdcad4e1419045d81db3ff9dd7df';
+
+/// File de synchro hors-ligne PV/XP (`PendingCharacterWrites`), consommée par
+/// `SupabaseCharacterRepository`/`PendingCharacterWriteSyncer` — voir
+/// `features/characters/presentation/providers/character_providers.dart`.
+
+@ProviderFor(pendingCharacterWriteQueue)
+final pendingCharacterWriteQueueProvider =
+    PendingCharacterWriteQueueProvider._();
+
+/// File de synchro hors-ligne PV/XP (`PendingCharacterWrites`), consommée par
+/// `SupabaseCharacterRepository`/`PendingCharacterWriteSyncer` — voir
+/// `features/characters/presentation/providers/character_providers.dart`.
+
+final class PendingCharacterWriteQueueProvider
+    extends
+        $FunctionalProvider<
+          PendingCharacterWriteQueue,
+          PendingCharacterWriteQueue,
+          PendingCharacterWriteQueue
+        >
+    with $Provider<PendingCharacterWriteQueue> {
+  /// File de synchro hors-ligne PV/XP (`PendingCharacterWrites`), consommée par
+  /// `SupabaseCharacterRepository`/`PendingCharacterWriteSyncer` — voir
+  /// `features/characters/presentation/providers/character_providers.dart`.
+  PendingCharacterWriteQueueProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'pendingCharacterWriteQueueProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$pendingCharacterWriteQueueHash();
+
+  @$internal
+  @override
+  $ProviderElement<PendingCharacterWriteQueue> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  PendingCharacterWriteQueue create(Ref ref) {
+    return pendingCharacterWriteQueue(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(PendingCharacterWriteQueue value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<PendingCharacterWriteQueue>(value),
+    );
+  }
+}
+
+String _$pendingCharacterWriteQueueHash() =>
+    r'd9cebe9c03623117fcd6f08438aaf07e1495091e';

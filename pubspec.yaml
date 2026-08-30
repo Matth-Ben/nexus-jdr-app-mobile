@@ -55,6 +55,11 @@ dependencies:
   go_router: ^18.0.0
   google_fonts: ^8.2.1
   image_picker: ^1.2.0
+  # File de synchro hors-ligne PV/XP (`core/network/connectivity_checker.dart`,
+  # `core/cache/pending_character_write_queue.dart`) — voir
+  # `docs/cahier-des-charges/01-architecture-technique.md`, section "Mode
+  # hors-ligne".
+  connectivity_plus: ^6.1.5
 
 dev_dependencies:
   flutter_test:

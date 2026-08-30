@@ -22,6 +22,7 @@ import 'package:personnages/features/characters/domain/level_up_apply_result.dar
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
+import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/core/widgets/portrait_frame.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
@@ -36,6 +37,7 @@ class _FakeCharacterRepository implements CharacterRepository {
   int? lastUpdatedCurrentHp;
   int? lastUpdatedTemporaryHp;
   int updateHpCallCount = 0;
+  WriteOutcome updateHpOutcomeToReturn = WriteOutcome.synced;
 
   String? lastRemovedPortraitUrl;
   int removePortraitCallCount = 0;
@@ -43,6 +45,7 @@ class _FakeCharacterRepository implements CharacterRepository {
   int? lastAddedXpNewXp;
   int addXpCallCount = 0;
   Object? addXpErrorToThrow;
+  WriteOutcome addXpOutcomeToReturn = WriteOutcome.synced;
 
   LevelUpLevelData? levelUpLevelDataToReturn;
   Object? levelUpLevelDataErrorToThrow;
@@ -68,7 +71,7 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> updateHp({
+  Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,
     required int temporaryHp,
@@ -76,6 +79,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     updateHpCallCount++;
     lastUpdatedCurrentHp = currentHp;
     lastUpdatedTemporaryHp = temporaryHp;
+    return updateHpOutcomeToReturn;
   }
 
   @override
@@ -94,10 +98,14 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> addXp({required String characterId, required int newXp}) async {
+  Future<WriteOutcome> addXp({
+    required String characterId,
+    required int newXp,
+  }) async {
     addXpCallCount++;
     if (addXpErrorToThrow != null) throw addXpErrorToThrow!;
     lastAddedXpNewXp = newXp;
+    return addXpOutcomeToReturn;
   }
 
   @override
@@ -453,6 +461,33 @@ void main() {
     expect(fakeRepository.lastUpdatedTemporaryHp, 0);
   });
 
+  testWidgets(
+    'updateHp mis en file (mode hors-ligne) : affiche le SnackBar hors '
+    'ligne, en gardant la valeur optimiste affichée',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+      fakeRepository.updateHpOutcomeToReturn = WriteOutcome.queued;
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.bySemanticsLabel('Augmenter'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Hors ligne : sera synchronisé dès que la connexion '
+          'revient.',
+        ),
+        findsOneWidget,
+      );
+      // La valeur optimiste (19) reste affichée : aucune raison de revenir
+      // à la valeur serveur, l'écriture n'a jamais échoué, elle est
+      // seulement en attente.
+      expect(find.text('19 / 30'), findsOneWidget);
+    },
+  );
+
   testWidgets('le bouton crayon PV ouvre la feuille d\'ajustement détaillée', (
     tester,
   ) async {
@@ -694,6 +729,50 @@ void main() {
           findsOneWidget,
         );
         expect(find.textContaining('Montée de niveau'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'addXp mis en file (mode hors-ligne) : affiche le SnackBar hors ligne '
+      "et ne déclenche jamais l'ouverture automatique de la montée de "
+      'niveau, même si le seuil serait franchi',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.addXpOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.ancestor(
+            of: find.byIcon(Icons.add),
+            matching: find.byType(IconButton),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // xp actuelle 7000, seuil niveau 6 = 14000 -> 7500 suffit à le
+        // franchir : si la mise en file déclenchait quand même la montée de
+        // niveau, ce test échouerait sur l'assertion `findsNothing`
+        // ci-dessous.
+        await tester.enterText(find.byType(TextFormField), '7500');
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('AJOUTER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.addXpCallCount, 1);
+        expect(
+          find.text(
+            'Hors ligne : sera synchronisé dès que la connexion '
+            'revient.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Montée de niveau'), findsNothing);
+        // Aucun rafraîchissement depuis le serveur pour un résultat mis en
+        // file (voir `_addXp` : `ref.invalidate` n'est appelé que pour
+        // `WriteOutcome.synced`).
+        expect(fakeRepository.fetchDetailCallCount, 1);
       },
     );
   });

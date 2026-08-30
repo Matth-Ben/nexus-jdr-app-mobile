@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'app_database.dart';
+import 'pending_character_write_queue.dart';
 import 'reference_data_cache.dart';
 
 part 'cache_providers.g.dart';
@@ -24,4 +25,12 @@ AppDatabase appDatabase(Ref ref) {
 @Riverpod(keepAlive: true)
 ReferenceDataCache referenceDataCache(Ref ref) {
   return ReferenceDataCache(ref.watch(appDatabaseProvider));
+}
+
+/// File de synchro hors-ligne PV/XP (`PendingCharacterWrites`), consommée par
+/// `SupabaseCharacterRepository`/`PendingCharacterWriteSyncer` — voir
+/// `features/characters/presentation/providers/character_providers.dart`.
+@Riverpod(keepAlive: true)
+PendingCharacterWriteQueue pendingCharacterWriteQueue(Ref ref) {
+  return PendingCharacterWriteQueue(ref.watch(appDatabaseProvider));
 }

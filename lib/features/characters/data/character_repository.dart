@@ -2,7 +2,9 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
+import '../../../core/network/connectivity_checker.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
 import '../domain/character_summary.dart';
@@ -14,6 +16,7 @@ import '../domain/level_up_subclass_option.dart';
 import '../domain/portrait_storage_path_resolver.dart';
 import '../domain/rest_type.dart';
 import '../domain/spell_slot_progression.dart';
+import '../domain/write_outcome.dart';
 import 'character_detail_row_mapper.dart';
 import 'character_error_mapper.dart';
 import 'character_inventory_row_mapper.dart';
@@ -55,7 +58,27 @@ abstract class CharacterRepository {
   /// PV temporaires, plafond à `max_hp`...) est fait en amont par
   /// `domain/hp_adjustment.dart`, cette méthode ne fait qu'écrire le
   /// résultat déjà calculé.
-  Future<void> updateHp({
+  ///
+  /// **Mode hors-ligne (voir `docs/cahier-des-charges/01-architecture-technique.md`,
+  /// section "Mode hors-ligne")** : vérifie la connectivité *avant* de
+  /// tenter la requête réseau (jamais deviné depuis le type d'exception
+  /// levée par un échec réseau — plus robuste, voir
+  /// `core/network/connectivity_checker.dart`).
+  /// - Connectivité absente : ne tente même pas le réseau, met directement
+  ///   l'écriture en file d'attente locale (`PendingCharacterWriteQueue`,
+  ///   upsert — une nouvelle écriture en attente pour ce personnage
+  ///   remplace la précédente, jamais un ajout à une liste) et retourne
+  ///   [WriteOutcome.queued], sans jamais lever d'exception pour ce cas : le
+  ///   joueur ne doit jamais voir une erreur pour une simple absence de
+  ///   réseau.
+  /// - Connectivité présente : tente l'écriture réseau normalement. Un échec
+  ///   à ce stade (vrai problème serveur, pas un souci de connectivité)
+  ///   relance une [CharacterFailure] normalement, **n'est jamais mis en
+  ///   file** — mettre en file un échec qui n'est pas dû à l'absence de
+  ///   réseau masquerait un vrai bug en le faisant échouer silencieusement
+  ///   en boucle à chaque tentative de synchro future. Un succès retourne
+  ///   [WriteOutcome.synced].
+  Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,
     required int temporaryHp,
@@ -85,7 +108,15 @@ abstract class CharacterRepository {
   /// l'appelant — `xp actuel + montant saisi`, voir
   /// `presentation/widgets/add_xp_sheet.dart`) : même principe que
   /// [updateHp], aucun calcul métier fait ici.
-  Future<void> addXp({required String characterId, required int newXp});
+  ///
+  /// Mode hors-ligne : mêmes règles exactement que [updateHp] (voir sa
+  /// documentation) — payload mis en file `{newXp: ...}` si la connectivité
+  /// est absente. Note pour l'appelant
+  /// (`presentation/character_detail_screen.dart::_addXp`) : ne jamais
+  /// déclencher l'ouverture automatique de l'écran de montée de niveau sur
+  /// un [WriteOutcome.queued], l'XP n'étant alors pas encore confirmée côté
+  /// serveur.
+  Future<WriteOutcome> addXp({required String characterId, required int newXp});
 
   /// Aptitudes/choix `class_features` de la classe [classId] au niveau
   /// [targetLevel] — écran "Montée de niveau"
@@ -234,10 +265,25 @@ abstract class CharacterRepository {
 /// le cache à la déconnexion : une clé scoped par `ownerId` suffit, un autre
 /// compte ne retombe jamais sur la même entrée.
 class SupabaseCharacterRepository implements CharacterRepository {
-  const SupabaseCharacterRepository(this._client, this._cache);
+  /// [_pendingWrites]/[_connectivityChecker] requis explicitement (pas de
+  /// valeur par défaut fabriquée en interne) : même philosophie que le reste
+  /// de ce dépôt ("échouer/exiger explicitement plutôt que deviner", voir
+  /// par ex. `_requireOwnerId`/`_applyAbilityScoreImprovement`) — et
+  /// nécessaire en pratique pour les tests, qui doivent pouvoir injecter un
+  /// [ConnectivityChecker] factice sans jamais toucher au canal de
+  /// plateforme réel de `connectivity_plus` (indisponible dans `flutter
+  /// test`).
+  SupabaseCharacterRepository(
+    this._client,
+    this._cache,
+    this._pendingWrites,
+    this._connectivityChecker,
+  );
 
   final SupabaseClient _client;
   final ReferenceDataCache _cache;
+  final PendingCharacterWriteQueue _pendingWrites;
+  final ConnectivityChecker _connectivityChecker;
 
   @override
   Future<List<CharacterSummary>> fetchCharacters() async {
@@ -370,18 +416,30 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> updateHp({
+  Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,
     required int temporaryHp,
   }) async {
     final ownerId = _requireOwnerId();
+
+    if (!await _connectivityChecker.hasConnection()) {
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': currentHp, 'temporaryHp': temporaryHp},
+      );
+      return WriteOutcome.queued;
+    }
+
     try {
       await _client
           .from('characters')
           .update({'current_hp': currentHp, 'temporary_hp': temporaryHp})
           .eq('id', characterId)
           .eq('owner_id', ownerId);
+      return WriteOutcome.synced;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (_) {
@@ -469,14 +527,29 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> addXp({required String characterId, required int newXp}) async {
+  Future<WriteOutcome> addXp({
+    required String characterId,
+    required int newXp,
+  }) async {
     final ownerId = _requireOwnerId();
+
+    if (!await _connectivityChecker.hasConnection()) {
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.xp,
+        payload: {'newXp': newXp},
+      );
+      return WriteOutcome.queued;
+    }
+
     try {
       await _client
           .from('characters')
           .update({'xp': newXp})
           .eq('id', characterId)
           .eq('owner_id', ownerId);
+      return WriteOutcome.synced;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (_) {

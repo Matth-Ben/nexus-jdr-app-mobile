@@ -34,14 +34,52 @@ class CachedReferenceEntries extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+/// File d'attente de synchronisation hors-ligne pour `updateHp`/`addXp`
+/// (`features/characters/data/character_repository.dart`) — voir
+/// `docs/cahier-des-charges/01-architecture-technique.md`, section "Mode
+/// hors-ligne". Table dédiée, séparée de [CachedReferenceEntries] : besoin
+/// différent (écriture + file d'attente à vider, pas un cache clé/valeur en
+/// lecture seule).
+///
+/// [characterId]/[kind] forment la clé primaire composite : une nouvelle
+/// écriture en attente pour un même personnage/type **remplace** la
+/// précédente (upsert, voir `PendingCharacterWriteQueue.enqueue`) plutôt que
+/// de s'ajouter à une liste — `updateHp`/`addXp` écrivent déjà des valeurs
+/// absolues, jamais des deltas, donc seule la toute dernière valeur en
+/// attente a besoin d'être synchronisée un jour.
+///
+/// [ownerId] permet de ne jamais tenter de synchroniser une écriture en
+/// attente qui n'appartient pas au joueur actuellement connecté (isolation
+/// par utilisateur, même principe que la clé de cache scopée par `ownerId`
+/// de [CachedReferenceEntries] côté lecture de la fiche — voir la doc de
+/// classe de `SupabaseCharacterRepository`) : sur un appareil partagé, un
+/// changement de compte ne doit jamais laisser une entrée en attente d'un
+/// autre compte bloquée en boucle d'échec RLS silencieux.
+///
+/// [kind] vaut `'hp'` ou `'xp'`, [payload] est le JSON du payload à écrire
+/// (`{"currentHp": ..., "temporaryHp": ...}` ou `{"newXp": ...}`) — voir
+/// `PendingCharacterWriteKind`/`PendingCharacterWrite`
+/// (`core/cache/pending_character_write_queue.dart`).
+class PendingCharacterWrites extends Table {
+  TextColumn get characterId => text()();
+  TextColumn get ownerId => text()();
+  TextColumn get kind => text()();
+  TextColumn get payload => text()();
+  DateTimeColumn get queuedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {characterId, kind};
+}
+
 /// Base SQLite locale de l'app (drift), pour l'instant dédiée au cache des
-/// données de référence en lecture seule (voir [CachedReferenceEntries]) —
-/// première persistance locale de ce dépôt (voir
+/// données de référence en lecture seule ([CachedReferenceEntries]) et à la
+/// file de synchro hors-ligne PV/XP ([PendingCharacterWrites]) — première
+/// persistance locale de ce dépôt (voir
 /// `docs/cahier-des-charges/01-architecture-technique.md`, section "Mode
 /// hors-ligne"). Un seul `AppDatabase` doit vivre pour toute la durée de
 /// l'app, exposé par `appDatabaseProvider` (`keepAlive`,
 /// `core/cache/cache_providers.dart`), jamais recréé par écran.
-@DriftDatabase(tables: [CachedReferenceEntries])
+@DriftDatabase(tables: [CachedReferenceEntries, PendingCharacterWrites])
 class AppDatabase extends _$AppDatabase {
   /// [executor] injectable pour les tests (ex. `NativeDatabase.memory()`,
   /// jamais un vrai fichier disque dans `flutter test`) — sinon, ouvre le
@@ -50,7 +88,24 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  // [PendingCharacterWrites] (schéma v2) a été ajoutée après la première
+  // version livrée de ce cache (v1, [CachedReferenceEntries] seule) : une
+  // stratégie de migration explicite évite qu'un appareil ayant déjà ouvert
+  // la base en v1 ne se retrouve avec la nouvelle table manquante (un simple
+  // bump de [schemaVersion] sans `onUpgrade` laisserait le schéma existant
+  // tel quel, `drift` ne recréant le schéma complet qu'au tout premier
+  // `onCreate`).
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(pendingCharacterWrites);
+      }
+    },
+  );
 }
 
 LazyDatabase _openConnection() {

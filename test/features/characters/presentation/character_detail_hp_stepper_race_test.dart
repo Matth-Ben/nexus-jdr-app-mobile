@@ -38,6 +38,7 @@ import 'package:personnages/features/characters/domain/level_up_apply_result.dar
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
+import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 
@@ -52,7 +53,7 @@ class _FakeRepository implements CharacterRepository {
       _detail;
 
   @override
-  Future<void> updateHp({
+  Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,
     required int temporaryHp,
@@ -63,6 +64,7 @@ class _FakeRepository implements CharacterRepository {
     // ce premier appel ne se termine et ne déclenche le refetch.
     await Future<void>.delayed(const Duration(milliseconds: 20));
     updatedCurrentHpValues.add(currentHp);
+    return WriteOutcome.synced;
   }
 
   @override
@@ -78,7 +80,10 @@ class _FakeRepository implements CharacterRepository {
   }) async {}
 
   @override
-  Future<void> addXp({required String characterId, required int newXp}) {
+  Future<WriteOutcome> addXp({
+    required String characterId,
+    required int newXp,
+  }) {
     throw UnimplementedError();
   }
 

@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/cache/app_database.dart';
+import 'package:personnages/core/cache/pending_character_write_queue.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -28,6 +29,7 @@ void main() {
     // `ReferenceDataCache` en dépendance.
     late AppDatabase cacheDb;
     late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
 
     setUpAll(() async {
       client = createTestSupabaseClient();
@@ -35,6 +37,7 @@ void main() {
       reference = await fetchReferenceContent(client);
       cacheDb = AppDatabase(NativeDatabase.memory());
       cache = ReferenceDataCache(cacheDb);
+      pendingWrites = PendingCharacterWriteQueue(cacheDb);
     });
 
     tearDownAll(() async {
@@ -68,7 +71,12 @@ void main() {
           'is_primary': true,
         });
 
-        final repository = SupabaseCharacterRepository(client, cache);
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          const AlwaysOnlineConnectivityChecker(),
+        );
         final characters = await repository.fetchCharacters();
 
         final fetched = characters.singleWhere((c) => c.id == characterId);

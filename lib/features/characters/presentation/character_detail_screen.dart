@@ -13,6 +13,7 @@ import '../domain/hp_adjustment.dart';
 import '../domain/proficiency_bonus.dart';
 import '../domain/rest_type.dart';
 import '../domain/saving_throw_calculator.dart';
+import '../domain/write_outcome.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
 import 'widgets/add_xp_sheet.dart';
@@ -138,7 +139,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     setState(() => _localHpState = newState);
 
     try {
-      await ref
+      final outcome = await ref
           .read(characterRepositoryProvider)
           .updateHp(
             characterId: widget.characterId,
@@ -154,6 +155,17 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // plutôt que de laisser cette écriture obsolète stand — voir
         // [_restGeneration].
         await _reassertCurrentHpState();
+        return;
+      }
+      if (outcome == WriteOutcome.queued) {
+        // Aucune écriture serveur à attendre (mode hors-ligne, voir
+        // `CharacterRepository.updateHp`) : le joueur ne doit jamais croire
+        // à tort que son changement est déjà confirmé — l'état optimiste
+        // local reste affiché tel quel, mais rien à invalider/rafraîchir
+        // depuis le serveur pour l'instant (voir
+        // `character_write_sync_coordinator.dart`, qui invalidera la fiche
+        // une fois la synchro effectivement réussie).
+        _showSnackBar(_offlineQueuedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -243,11 +255,22 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   Future<void> _addXp(CharacterDetail detail, int amount) async {
     final newXp = detail.xp + amount;
     try {
-      await ref
+      final outcome = await ref
           .read(characterRepositoryProvider)
           .addXp(characterId: widget.characterId, newXp: newXp);
-      ref.invalidate(characterDetailProvider(widget.characterId));
       if (!mounted) return;
+
+      if (outcome == WriteOutcome.queued) {
+        // Mode hors-ligne (voir `CharacterRepository.addXp`) : l'XP n'est
+        // pas encore confirmée côté serveur — ne jamais pousser
+        // automatiquement l'écran de montée de niveau ici, il a lui-même
+        // besoin du réseau (`fetchLevelUpLevelData`). Le déclenchement
+        // attendra une prochaine interaction manuelle une fois reconnecté.
+        _showSnackBar(_offlineQueuedMessage);
+        return;
+      }
+
+      ref.invalidate(characterDetailProvider(widget.characterId));
 
       final threshold = detail.nextLevelXpThreshold;
       if (threshold != null && newXp >= threshold) {
@@ -349,6 +372,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       '/characters/${widget.characterId}/level-up?level=$targetLevel',
     );
   }
+
+  /// Message affiché quand `updateHp`/`addXp` retourne [WriteOutcome.queued]
+  /// (mode hors-ligne) — voir `_applyHpState`/`_addXp`. Même registre que le
+  /// reste des messages de cet écran (ex. "Impossible d'ajouter l'XP.
+  /// Réessayez."), honnête sur le fait que le changement n'est pas encore
+  /// confirmé côté serveur.
+  static const _offlineQueuedMessage =
+      'Hors ligne : sera synchronisé dès que la connexion revient.';
 
   void _showSnackBar(String message) {
     if (!mounted) return;

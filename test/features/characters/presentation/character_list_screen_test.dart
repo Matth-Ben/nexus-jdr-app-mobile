@@ -22,6 +22,7 @@ import 'package:personnages/features/characters/domain/level_up_apply_result.dar
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
+import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/character_list_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_card.dart';
@@ -51,7 +52,7 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> updateHp({
+  Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,
     required int temporaryHp,
@@ -76,7 +77,10 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> addXp({required String characterId, required int newXp}) {
+  Future<WriteOutcome> addXp({
+    required String characterId,
+    required int newXp,
+  }) {
     throw UnimplementedError();
   }
 
