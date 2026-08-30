@@ -1,4 +1,7 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/cache/app_database.dart';
+import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
@@ -20,12 +23,25 @@ void main() {
     late SupabaseClient client;
     late ReferenceContent reference;
     late String ownerId;
+    // Base drift en mémoire : ce fichier n'exerce jamais le chemin de
+    // secours "cache" de `fetchCharacterDetail` (couvert par les tests
+    // unitaires de `character_repository_test.dart`), seulement le
+    // constructeur de `SupabaseCharacterRepository`, qui prend désormais un
+    // `ReferenceDataCache` en dépendance.
+    late AppDatabase cacheDb;
+    late ReferenceDataCache cache;
 
     setUpAll(() async {
       client = createTestSupabaseClient();
       await signUpTestUser(client);
       reference = await fetchReferenceContent(client);
       ownerId = client.auth.currentUser!.id;
+      cacheDb = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(cacheDb);
+    });
+
+    tearDownAll(() async {
+      await cacheDb.close();
     });
 
     test('addXp écrit characters.xp en base', () async {
@@ -43,7 +59,7 @@ void main() {
         await client.from('characters').delete().eq('id', characterId);
       });
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       await repository.addXp(characterId: characterId, newXp: 500);
 
       final row = await client
@@ -57,7 +73,7 @@ void main() {
     test('fetchLevelUpLevelData reflète exactement les lignes class_features '
         '(choice_type et aptitudes automatiques) du vrai schéma, noms résolus '
         'via translations', () async {
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
 
       final allRows = await client
           .from('class_features')
@@ -144,7 +160,7 @@ void main() {
         'is_primary': true,
       });
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       final result = await repository.applyLevelUp(
         characterId: characterId,
         // Nom de la classe de référence (`classes.id = 1`, "Barbare" côté
@@ -198,7 +214,7 @@ void main() {
         await client.from('characters').delete().eq('id', characterId);
       });
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
 
       await expectLater(
         repository.applyLevelUp(
@@ -216,7 +232,7 @@ void main() {
       test('fetchLevelUpLevelData résout availableSubclasses et '
           "choiceClassFeatureId pour un choice_type 'sous_classe', noms "
           'résolus via translations', () async {
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
 
         final subclassFeatureRow = await client
             .from('class_features')
@@ -300,7 +316,7 @@ void main() {
           {'character_id': characterId, 'ability_id': 'con', 'score': 12},
         ]);
 
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
         final result = await repository.applyLevelUp(
           characterId: characterId,
           className: reference.className,
@@ -328,8 +344,8 @@ void main() {
 
         // `ascending: true` explicite : le package `postgrest` (2.9.1) a un
         // défaut `ascending: false` contre-intuitif pour `.order(...)` —
-        // même piège déjà documenté sur `_fetchSkills`/`_fetchClassFeatures`
-        // de `character_repository.dart`.
+        // même piège déjà documenté sur `_buildCharacterDetailPayload`/
+        // `_mapCharacterDetailPayload` de `character_repository.dart`.
         final increaseRows = await client
             .from('character_ability_increases')
             .select('level, ability_id, increase, source')
@@ -385,7 +401,7 @@ void main() {
           'is_primary': true,
         });
 
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
         final result = await repository.applyLevelUp(
           characterId: characterId,
           // `className` n'a pas besoin de correspondre à `classId` ici :
@@ -460,7 +476,7 @@ void main() {
           'is_primary': true,
         });
 
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
         final choice = choiceType == 'style_combat'
             ? LevelUpChoiceSelection.fightingStyle(
                 classFeatureId: classFeatureId,
@@ -545,7 +561,7 @@ void main() {
           'is_primary': true,
         });
 
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
 
         // Niveau 1 -> 2 : Clerc niveau 2 = [3,0,...] (table
         // `SpellSlotProgression`). Aucune ligne `character_spell_slots`
@@ -629,7 +645,7 @@ void main() {
           'is_primary': true,
         });
 
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
         await repository.applyLevelUp(
           characterId: characterId,
           className: 'Clerc',
@@ -692,7 +708,7 @@ void main() {
           'is_primary': true,
         });
 
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
         await repository.applyLevelUp(
           characterId: characterId,
           className: 'Guerrier',
@@ -749,7 +765,7 @@ void main() {
 
       test('addXp appelé depuis la session d\'un autre joueur ne modifie '
           'jamais le personnage visé', () async {
-        final otherRepository = SupabaseCharacterRepository(otherClient);
+        final otherRepository = SupabaseCharacterRepository(otherClient, cache);
         try {
           await otherRepository.addXp(characterId: characterId, newXp: 99999);
         } catch (_) {
@@ -766,7 +782,7 @@ void main() {
 
       test('applyLevelUp appelé depuis la session d\'un autre joueur ne '
           'modifie jamais le personnage visé', () async {
-        final otherRepository = SupabaseCharacterRepository(otherClient);
+        final otherRepository = SupabaseCharacterRepository(otherClient, cache);
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
@@ -818,7 +834,7 @@ void main() {
           'score': 10,
         });
 
-        final otherRepository = SupabaseCharacterRepository(otherClient);
+        final otherRepository = SupabaseCharacterRepository(otherClient, cache);
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
@@ -858,7 +874,7 @@ void main() {
             .limit(1)
             .single();
 
-        final otherRepository = SupabaseCharacterRepository(otherClient);
+        final otherRepository = SupabaseCharacterRepository(otherClient, cache);
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
@@ -891,7 +907,7 @@ void main() {
             .limit(1)
             .single();
 
-        final otherRepository = SupabaseCharacterRepository(otherClient);
+        final otherRepository = SupabaseCharacterRepository(otherClient, cache);
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
@@ -950,7 +966,7 @@ void main() {
             .update({'class_id': clercId})
             .eq('character_id', characterId);
 
-        final otherRepository = SupabaseCharacterRepository(otherClient);
+        final otherRepository = SupabaseCharacterRepository(otherClient, cache);
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,

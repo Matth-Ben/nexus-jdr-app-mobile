@@ -111,7 +111,9 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// Inventaire résolu du personnage — onglet "Inventaire", liste de
     /// cartes. Comme [skills]/[classFeatures]/..., a besoin d'une requête
     /// PostgREST séparée (résolution des noms d'objets du catalogue via
-    /// `translations`), voir `SupabaseCharacterRepository._fetchInventory`.
+    /// `translations`), voir
+    /// `SupabaseCharacterRepository._buildCharacterDetailPayload`/
+    /// `_mapCharacterDetailPayload`.
     @Default(<CharacterInventoryItem>[]) List<CharacterInventoryItem> inventory,
 
     /// Les 7 champs "apparence physique" de l'onglet "Personnage" — voir

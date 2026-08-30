@@ -1,4 +1,7 @@
+import "package:drift/native.dart";
 import "package:flutter_test/flutter_test.dart";
+import "package:personnages/core/cache/app_database.dart";
+import "package:personnages/core/cache/reference_data_cache.dart";
 import "package:personnages/features/characters/data/character_repository.dart";
 import "package:personnages/features/characters/domain/rest_type.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
@@ -24,8 +27,9 @@ import "support/test_environment.dart";
 /// Ce n'etait pas un cas hypothetique : le modele de donnees supporte
 /// explicitement le multiclassage (02-modele-donnees.md), la Phase 3
 /// (import XML, roadmap.md) produira des personnages multiclasses des la
-/// prochaine phase, et la lecture de la fiche (_fetchClassFeatures,
-/// character_repository.dart) gere deja explicitement ce cas ("pour un
+/// prochaine phase, et la lecture de la fiche (_buildCharacterDetailPayload/
+/// _mapCharacterDetailPayload, character_repository.dart) gere deja
+/// explicitement ce cas ("pour un
 /// personnage multiclasse ou plusieurs class_id... sont melanges") -
 /// applyRest suit desormais la meme regle plutot que d'ignorer
 /// silencieusement les classes secondaires.
@@ -38,6 +42,13 @@ void main() {
       "(integration)", () {
     late SupabaseClient client;
     late String ownerId;
+    // Base drift en memoire : ce fichier n'exerce jamais le chemin de
+    // secours "cache" de `fetchCharacterDetail` (couvert par les tests
+    // unitaires de `character_repository_test.dart`), seulement le
+    // constructeur de `SupabaseCharacterRepository`, qui prend desormais un
+    // `ReferenceDataCache` en dependance.
+    late AppDatabase cacheDb;
+    late ReferenceDataCache cache;
 
     late Object primaryClassId;
     late int primaryClassLevel;
@@ -53,6 +64,8 @@ void main() {
       client = createTestSupabaseClient();
       await signUpTestUser(client);
       ownerId = client.auth.currentUser!.id;
+      cacheDb = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(cacheDb);
 
       final rows = await client
           .from("class_features")
@@ -93,6 +106,10 @@ void main() {
           ((secondary["uses_per_rest"] as Map<String, dynamic>)["amount"]
                   as num)
               .toInt();
+    });
+
+    tearDownAll(() async {
+      await cacheDb.close();
     });
 
     test("applyRest(long) reinitialise aussi les character_feature_uses de la "
@@ -137,7 +154,7 @@ void main() {
         "uses_remaining": 0,
       });
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       // `className` fictif : ce test porte sur character_feature_uses
       // (multiclassage), jamais sur character_spell_slots — voir
       // `rest_repository_integration_test.dart` pour les tests dédiés au

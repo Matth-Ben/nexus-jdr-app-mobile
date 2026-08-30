@@ -24,7 +24,8 @@ import 'character_inventory_stat_boxes_row.dart';
 /// non plus (les stat boxes de tête sont en lecture seule).
 ///
 /// Les objets sont affichés dans l'ordre renvoyé par la requête
-/// (`SupabaseCharacterRepository._fetchInventory`), sans tri ni
+/// (`SupabaseCharacterRepository._buildCharacterDetailPayload`/
+/// `_mapCharacterDetailPayload`), sans tri ni
 /// regroupement par catégorie : `character_inventory` n'a pas de colonne de
 /// tri naturelle côté schéma (vérifié contre les migrations réelles), et la
 /// maquette ne montre elle-même aucun regroupement visuel par catégorie.

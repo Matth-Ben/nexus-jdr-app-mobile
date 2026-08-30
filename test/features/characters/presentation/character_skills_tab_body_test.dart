@@ -102,7 +102,8 @@ void main() {
   testWidgets('affiche plusieurs aptitudes de classe (classes mélangées) dans '
       'l\'ordre reçu, sans les retrier ni les regrouper par classe — l\'ordre '
       'déterministe repose sur `.order(\'level\')` côté requête '
-      '(SupabaseCharacterRepository._fetchClassFeatures), ce widget ne fait '
+      '(SupabaseCharacterRepository._buildCharacterDetailPayload/'
+      '_mapCharacterDetailPayload), ce widget ne fait '
       'que refléter la liste telle que reçue', (tester) async {
     await _pump(
       tester,

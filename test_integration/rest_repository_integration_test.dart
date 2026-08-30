@@ -1,4 +1,7 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/cache/app_database.dart';
+import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -22,6 +25,13 @@ void main() {
   group('SupabaseCharacterRepository — repos (intégration)', () {
     late SupabaseClient client;
     late String ownerId;
+    // Base drift en mémoire : ce fichier n'exerce jamais le chemin de
+    // secours "cache" de `fetchCharacterDetail` (couvert par les tests
+    // unitaires de `character_repository_test.dart`), seulement le
+    // constructeur de `SupabaseCharacterRepository`, qui prend désormais un
+    // `ReferenceDataCache` en dépendance.
+    late AppDatabase cacheDb;
+    late ReferenceDataCache cache;
 
     // Classe/aptitude 'repos_court' à amount non nul.
     late Object shortRestClassId;
@@ -39,6 +49,8 @@ void main() {
       client = createTestSupabaseClient();
       await signUpTestUser(client);
       ownerId = client.auth.currentUser!.id;
+      cacheDb = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(cacheDb);
 
       final rows = await client
           .from('class_features')
@@ -96,6 +108,10 @@ void main() {
           ((longFeature['uses_per_rest'] as Map<String, dynamic>)['amount']
                   as num)
               .toInt();
+    });
+
+    tearDownAll(() async {
+      await cacheDb.close();
     });
 
     /// `classes.id` dont le nom traduit `fr` vaut exactement [name] — même
@@ -156,7 +172,7 @@ void main() {
           'is_primary': true,
         });
 
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
         // `className` volontairement fictif : ce test porte sur les PV et
         // les aptitudes, jamais sur `character_spell_slots` — un nom qui ne
         // correspond à aucune classe connue de `SpellSlotProgression`
@@ -236,7 +252,7 @@ void main() {
         'uses_remaining': 0,
       });
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       await repository.applyRest(
         characterId: characterId,
         type: RestType.long,
@@ -293,7 +309,7 @@ void main() {
         'uses_remaining': 0,
       });
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       await repository.applyRest(
         characterId: characterId,
         type: RestType.long,
@@ -347,7 +363,7 @@ void main() {
           'uses_remaining': 0,
         });
 
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
         // `className` sans effet pour un repos court (`_resetSpellSlots`
         // n'est appelé que pour `RestType.long`, voir `applyRest`).
         await repository.applyRest(
@@ -410,7 +426,7 @@ void main() {
         'uses_remaining': 0,
       });
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       await repository.applyRest(
         characterId: characterId,
         type: RestType.short,
@@ -482,7 +498,7 @@ void main() {
         'is_primary': true,
       });
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       await repository.applyRest(
         characterId: characterId,
         type: RestType.long,
@@ -536,7 +552,7 @@ void main() {
 
       test('applyRest(long) appelé depuis la session d\'un autre joueur ne '
           'modifie jamais le personnage visé', () async {
-        final otherRepository = SupabaseCharacterRepository(otherClient);
+        final otherRepository = SupabaseCharacterRepository(otherClient, cache);
         try {
           await otherRepository.applyRest(
             characterId: characterId,
@@ -565,7 +581,7 @@ void main() {
       test('applyRest(short) appelé depuis la session d\'un autre joueur '
           "n'insère jamais de ligne character_feature_uses pour le "
           'personnage visé', () async {
-        final otherRepository = SupabaseCharacterRepository(otherClient);
+        final otherRepository = SupabaseCharacterRepository(otherClient, cache);
         try {
           await otherRepository.applyRest(
             characterId: characterId,
@@ -623,7 +639,7 @@ void main() {
           'is_primary': true,
         });
 
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
         await repository.applyRest(
           characterId: characterId,
           type: RestType.long,
@@ -680,7 +696,7 @@ void main() {
           'slots_used': 1,
         });
 
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
         await repository.applyRest(
           characterId: characterId,
           type: RestType.long,

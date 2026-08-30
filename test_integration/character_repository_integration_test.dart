@@ -1,4 +1,7 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/cache/app_database.dart';
+import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -18,11 +21,24 @@ void main() {
   group('SupabaseCharacterRepository (intégration)', () {
     late SupabaseClient client;
     late ReferenceContent reference;
+    // Base drift en mémoire : ce fichier n'exerce jamais le chemin de
+    // secours "cache" de `fetchCharacterDetail` (couvert par les tests
+    // unitaires de `character_repository_test.dart`), seulement le
+    // constructeur de `SupabaseCharacterRepository`, qui prend désormais un
+    // `ReferenceDataCache` en dépendance.
+    late AppDatabase cacheDb;
+    late ReferenceDataCache cache;
 
     setUpAll(() async {
       client = createTestSupabaseClient();
       await signUpTestUser(client);
       reference = await fetchReferenceContent(client);
+      cacheDb = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(cacheDb);
+    });
+
+    tearDownAll(() async {
+      await cacheDb.close();
     });
 
     test(
@@ -52,7 +68,7 @@ void main() {
           'is_primary': true,
         });
 
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
         final characters = await repository.fetchCharacters();
 
         final fetched = characters.singleWhere((c) => c.id == characterId);

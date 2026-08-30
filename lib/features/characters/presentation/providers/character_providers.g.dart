@@ -55,7 +55,7 @@ final class CharacterRepositoryProvider
 }
 
 String _$characterRepositoryHash() =>
-    r'14fa9bc4cb41794be0089f9e7c151ca35c3e6fee';
+    r'1ad6dce7a5241343ed71f490559ece6b52c4fc3c';
 
 /// Liste des personnages du joueur connecté, exposée à
 /// `CharacterListScreen`.

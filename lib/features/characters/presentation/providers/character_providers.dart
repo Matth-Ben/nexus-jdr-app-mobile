@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/character_repository.dart';
 import '../../domain/character_summary.dart';
@@ -8,7 +9,10 @@ part 'character_providers.g.dart';
 
 @Riverpod(keepAlive: true)
 CharacterRepository characterRepository(Ref ref) {
-  return SupabaseCharacterRepository(ref.watch(supabaseClientProvider));
+  return SupabaseCharacterRepository(
+    ref.watch(supabaseClientProvider),
+    ref.watch(referenceDataCacheProvider),
+  );
 }
 
 /// Liste des personnages du joueur connecté, exposée à

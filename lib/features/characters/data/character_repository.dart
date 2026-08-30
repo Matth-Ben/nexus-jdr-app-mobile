@@ -2,12 +2,9 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../domain/character_class_feature.dart';
+import '../../../core/cache/reference_data_cache.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
-import '../domain/character_inventory_item.dart';
-import '../domain/character_skill_row.dart';
-import '../domain/character_spell_entry.dart';
 import '../domain/character_summary.dart';
 import '../domain/level_up_apply_result.dart';
 import '../domain/level_up_choice_kind.dart';
@@ -206,10 +203,41 @@ abstract class CharacterRepository {
 /// leurs `race_id`/`class_id` bruts), puis on résout les noms en une requête
 /// `translations` par type d'entité, filtrée sur les identifiants
 /// effectivement rencontrés.
+///
+/// ## Cache hors-ligne de la fiche personnage ouverte ([fetchCharacterDetail])
+///
+/// Même stratégie "réseau d'abord, cache en secours" que
+/// `SupabaseCharacterCreationRepository` (`character_creation/data/
+/// character_creation_repository.dart`, voir sa doc de classe pour le
+/// rationale détaillé) : [fetchCharacterDetail] regroupe toutes les lignes
+/// brutes nécessaires (row `characters` principal + toutes les
+/// sous-requêtes de traduction/résolution) dans un seul payload JSON, écrit
+/// dans [_cache] (best-effort) après un succès réseau, puis passe ce même
+/// payload par [_mapCharacterDetailPayload] — le mapper pur partagé par les
+/// deux chemins (réseau et cache), jamais de logique de parsing dupliquée.
+///
+/// Seule [fetchCharacterDetail] utilise ce cache : les autres méthodes de ce
+/// repository restent des appels réseau directs sans repli (écritures, ou
+/// lectures hors périmètre de la fiche elle-même comme
+/// [fetchLevelUpLevelData] — voir la consigne de la tâche qui a introduit ce
+/// cache).
+///
+/// **Isolation par utilisateur (décision chef de projet, non négociable)** :
+/// la clé de cache est `'character_detail:$ownerId:$characterId'`, jamais
+/// `'character_detail:$characterId'` seul. Contrairement aux catalogues de
+/// référence (données publiques), la fiche personnage est une donnée privée
+/// protégée par RLS — sans le `ownerId` dans la clé, un changement de compte
+/// sur le même appareil pourrait, dans un scénario improbable mais réel (un
+/// futur lien profond vers une route `characterId`, réseau indisponible à ce
+/// moment précis), faire relire les données mises en cache par un *autre*
+/// joueur, sans jamais repasser par la vérification RLS. Pas besoin de vider
+/// le cache à la déconnexion : une clé scoped par `ownerId` suffit, un autre
+/// compte ne retombe jamais sur la même entrée.
 class SupabaseCharacterRepository implements CharacterRepository {
-  const SupabaseCharacterRepository(this._client);
+  const SupabaseCharacterRepository(this._client, this._cache);
 
   final SupabaseClient _client;
+  final ReferenceDataCache _cache;
 
   @override
   Future<List<CharacterSummary>> fetchCharacters() async {
@@ -260,6 +288,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
   @override
   Future<CharacterDetail> fetchCharacterDetail(String characterId) async {
     final ownerId = _requireOwnerId();
+    // Scopée par ownerId — voir la documentation de classe
+    // ("Isolation par utilisateur").
+    final cacheKey = 'character_detail:$ownerId:$characterId';
 
     try {
       final row = await _client
@@ -316,54 +347,24 @@ class SupabaseCharacterRepository implements CharacterRepository {
         throw const CharacterFailure('Personnage introuvable.');
       }
 
-      final raceNames = await _fetchTranslatedNames(
-        entityType: 'race',
-        entityIds: CharacterDetailRowMapper.collectRaceIds(row),
-      );
-      final subraceNames = await _fetchTranslatedNames(
-        entityType: 'subrace',
-        entityIds: CharacterDetailRowMapper.collectSubraceIds(row),
-      );
-      final classNames = await _fetchTranslatedNames(
-        entityType: 'class',
-        entityIds: CharacterDetailRowMapper.collectClassIds(row),
-      );
-      final backgroundNames = await _fetchTranslatedNames(
-        entityType: 'background',
-        entityIds: CharacterDetailRowMapper.collectBackgroundIds(row),
-      );
-      final alignmentNames = await _fetchTranslatedNames(
-        entityType: 'alignment',
-        entityIds: CharacterDetailRowMapper.collectAlignmentIds(row),
-      );
-
-      final skills = await _fetchSkills(row);
-      final classFeatures = await _fetchClassFeatures(row);
-      final toolProficiencyNames = await _fetchToolProficiencyNames(row);
-      final knownLanguageNames = await _fetchLanguageNames(row);
-      final spells = await _fetchSpells(row);
-      final inventory = await _fetchInventory(row);
-
-      return CharacterDetailRowMapper.toCharacterDetail(
-        row,
-        raceNames: raceNames,
-        subraceNames: subraceNames,
-        classNames: classNames,
-        backgroundNames: backgroundNames,
-        alignmentNames: alignmentNames,
-        skills: skills,
-        classFeatures: classFeatures,
-        toolProficiencyNames: toolProficiencyNames,
-        knownLanguageNames: knownLanguageNames,
-        spells: spells,
-        spellSlots: CharacterDetailRowMapper.parseSpellSlots(row),
-        inventory: inventory,
-      );
+      final payload = await _buildCharacterDetailPayload(row);
+      await _writeCacheBestEffort(cacheKey, payload);
+      return _mapCharacterDetailPayload(payload);
     } on CharacterFailure {
       rethrow;
     } on PostgrestException catch (error) {
+      final cached = await _mappedFromCache(
+        cacheKey,
+        _mapCharacterDetailPayload,
+      );
+      if (cached != null) return cached;
       throw mapCharacterError(error);
     } catch (_) {
+      final cached = await _mappedFromCache(
+        cacheKey,
+        _mapCharacterDetailPayload,
+      );
+      if (cached != null) return cached;
       throw mapUnknownCharacterError();
     }
   }
@@ -737,9 +738,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // à la fois pour retrouver la classe primaire (repos long, recalcul
       // des emplacements de sorts) et pour réinitialiser les aptitudes de
       // *toutes* les classes (voir [_resetFeatureUses] : la lecture de la
-      // fiche, `_fetchClassFeatures`, gère déjà explicitement ce cas, un
-      // repos doit suivre la même règle plutôt qu'ignorer silencieusement
-      // les classes secondaires).
+      // fiche, `_buildCharacterDetailPayload`/`_mapCharacterDetailPayload`,
+      // gère déjà explicitement ce cas, un repos doit suivre la même règle
+      // plutôt qu'ignorer silencieusement les classes secondaires).
       final classRows = await _client
           .from('character_classes')
           .select('class_id, level, is_primary')
@@ -848,9 +849,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// atteintes par leur niveau respectif ([classLevels]) — personnage
   /// multiclassé inclus. Réutilise littéralement
   /// [ClassFeatureRowMapper.filterAttained], même règle de filtrage que la
-  /// lecture de la fiche (`_fetchClassFeatures`, qui gère déjà explicitement
-  /// ce cas pour la même raison : "pour un personnage multiclassé où
-  /// plusieurs `class_id`... sont mélangés").
+  /// lecture de la fiche (`_buildCharacterDetailPayload`/
+  /// `_mapCharacterDetailPayload`, qui gère déjà explicitement ce cas pour la
+  /// même raison : "pour un personnage multiclassé où plusieurs
+  /// `class_id`... sont mélangés").
   ///
   /// [onlyShortRest] détermine quelles aptitudes à usage limité sont
   /// rechargées (voir [_rechargedAmount]) : `false` pour un repos long
@@ -1176,208 +1178,367 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String fieldName,
     required Set<String> entityIds,
   }) async {
+    final rows = await _fetchTranslationRows(
+      entityType: entityType,
+      fieldName: fieldName,
+      entityIds: entityIds,
+    );
+    return CharacterRowMapper.parseTranslatedNames(rows);
+  }
+
+  /// Récupère les lignes brutes de `translations` (colonnes réelles
+  /// `entity_id`/`value`) pour [entityType]/[fieldName] dont l'identifiant
+  /// est dans [entityIds]. Retourne une liste vide sans requête si
+  /// [entityIds] est vide.
+  ///
+  /// Séparée de [_fetchTranslatedField] (qui l'appelle puis parse le
+  /// résultat) pour que [_buildCharacterDetailPayload] puisse mettre en
+  /// cache les lignes brutes plutôt que la map déjà résolue — même principe
+  /// que `SupabaseCharacterCreationRepository._fetchTranslationRows`
+  /// (`character_creation/data/character_creation_repository.dart`) : le
+  /// parsing reste le point unique partagé entre le chemin réseau et le
+  /// chemin cache (voir [_mapCharacterDetailPayload]).
+  Future<List<Map<String, dynamic>>> _fetchTranslationRows({
+    required String entityType,
+    required String fieldName,
+    required Set<String> entityIds,
+  }) async {
     if (entityIds.isEmpty) {
-      return const {};
+      return const [];
     }
 
-    final rows = await _client
+    return await _client
         .from('translations')
         .select('entity_id, value')
         .eq('entity_type', entityType)
         .eq('field_name', fieldName)
         .eq('locale', _locale)
         .inFilter('entity_id', entityIds.toList());
-
-    return CharacterRowMapper.parseTranslatedNames(rows);
   }
 
-  /// Les 18 [CharacterSkillRow] de l'onglet "Compétences" : `skills` est une
-  /// table de référence à peuplement fixe (pas liée à `characters`), donc
-  /// interrogée intégralement ici plutôt qu'embarquée dans le `select`
-  /// principal — contrairement à `character_skill_proficiencies`, qui l'est
-  /// (relation réelle vers `characters`).
-  Future<List<CharacterSkillRow>> _fetchSkills(Map<String, dynamic> row) async {
+  /// Construit le payload complet mis en cache par [fetchCharacterDetail] :
+  /// [row] (le row `characters` principal, avec ses relations déjà
+  /// imbriquées par le `select`) accompagné de toutes les lignes brutes de
+  /// sous-requêtes nécessaires à la reconstruction complète d'un
+  /// [CharacterDetail] (traductions, `skills`, `class_features`, `spells`).
+  /// Jamais de mapping ici (voir [_mapCharacterDetailPayload], le seul point
+  /// de mapping, partagé par le chemin réseau et le chemin cache).
+  Future<Map<String, dynamic>> _buildCharacterDetailPayload(
+    Map<String, dynamic> row,
+  ) async {
+    final raceNameRows = await _fetchTranslationRows(
+      entityType: 'race',
+      fieldName: 'name',
+      entityIds: CharacterDetailRowMapper.collectRaceIds(row),
+    );
+    final subraceNameRows = await _fetchTranslationRows(
+      entityType: 'subrace',
+      fieldName: 'name',
+      entityIds: CharacterDetailRowMapper.collectSubraceIds(row),
+    );
+    final classNameRows = await _fetchTranslationRows(
+      entityType: 'class',
+      fieldName: 'name',
+      entityIds: CharacterDetailRowMapper.collectClassIds(row),
+    );
+    final backgroundNameRows = await _fetchTranslationRows(
+      entityType: 'background',
+      fieldName: 'name',
+      entityIds: CharacterDetailRowMapper.collectBackgroundIds(row),
+    );
+    final alignmentNameRows = await _fetchTranslationRows(
+      entityType: 'alignment',
+      fieldName: 'name',
+      entityIds: CharacterDetailRowMapper.collectAlignmentIds(row),
+    );
+
+    // Les 18 [CharacterSkillRow] de l'onglet "Compétences" : `skills` est
+    // une table de référence à peuplement fixe (pas liée à `characters`),
+    // donc interrogée intégralement ici plutôt qu'embarquée dans le `select`
+    // principal — contrairement à `character_skill_proficiencies`, qui
+    // l'est (relation réelle vers `characters`).
+    //
     // `ascending: true` explicite : le package `postgrest` (2.9.1) a un
     // défaut `ascending: false` contre-intuitif pour `.order(...)` — bug
-    // trouvé en corrigeant le même défaut sur `_fetchClassFeatures`
-    // ci-dessous (revue QA) : sans ce paramètre, les 18 compétences
-    // ressortaient dans l'ordre alphabétique français *inversé* plutôt que
-    // l'ordre attendu (voir la maquette de
-    // `character_skills_card.dart`).
+    // trouvé en corrigeant le même défaut plus bas sur `class_features`
+    // (revue QA) : sans ce paramètre, les 18 compétences ressortaient dans
+    // l'ordre alphabétique français *inversé* plutôt que l'ordre attendu
+    // (voir la maquette de `character_skills_card.dart`).
     final skillRows = await _client
         .from('skills')
         .select('id, ability_id')
         .order('id', ascending: true);
-
-    final skillNames = await _fetchTranslatedNames(
+    final skillNameRows = await _fetchTranslationRows(
       entityType: 'skill',
+      fieldName: 'name',
       entityIds: CharacterSkillRowMapper.collectIds(skillRows),
     );
 
-    final proficiencies = CharacterSkillRowMapper.parseProficiencies(
-      CharacterDetailRowMapper.skillProficiencyRowsOf(row),
-    );
-
-    return CharacterSkillRowMapper.toCharacterSkillRows(
-      skillRows,
-      names: skillNames,
-      proficiencies: proficiencies,
-    );
-  }
-
-  /// Aptitudes de classe déjà atteintes par le niveau actuel du personnage,
-  /// carte "APTITUDES DE CLASSE" — `class_features` n'est pas liée
-  /// directement à `characters` (seulement via `classes`), donc interrogée
-  /// séparément, filtrée sur les `class_id` du personnage. Retourne une
-  /// liste vide sans requête si le personnage n'a aucune classe (brouillon
-  /// incomplet).
-  Future<List<CharacterClassFeature>> _fetchClassFeatures(
-    Map<String, dynamic> row,
-  ) async {
+    // Aptitudes de classe, carte "APTITUDES DE CLASSE" — `class_features`
+    // n'est pas liée directement à `characters` (seulement via `classes`),
+    // donc interrogée séparément, filtrée sur les `class_id` du personnage.
+    // Aucune requête (ni `class_features` ni `translations`) si le
+    // personnage n'a aucune classe (brouillon incomplet) : listes vides.
+    //
+    // `.order('level', ascending: true)` : affichage déterministe,
+    // important pour un personnage multiclassé où plusieurs `class_id`
+    // (donc plusieurs jeux d'aptitudes) sont mélangés dans une même
+    // requête — sans quoi PostgREST ne garantit aucun ordre particulier.
+    // Signalé en revue QA. `ascending: true` explicite, pas la valeur par
+    // défaut, même correctif que `skills` ci-dessus.
     final classIds = CharacterDetailRowMapper.collectClassIdsRaw(row);
-    if (classIds.isEmpty) {
-      return const [];
+    var classFeatureRows = const <Map<String, dynamic>>[];
+    var classFeatureNameRows = const <Map<String, dynamic>>[];
+    if (classIds.isNotEmpty) {
+      classFeatureRows = await _client
+          .from('class_features')
+          .select('id, class_id, level, uses_per_rest')
+          .inFilter('class_id', classIds.toList())
+          .order('level', ascending: true);
+      final attainedRows = ClassFeatureRowMapper.filterAttained(
+        classFeatureRows,
+        classLevels: CharacterDetailRowMapper.collectClassLevels(row),
+      );
+      classFeatureNameRows = await _fetchTranslationRows(
+        entityType: 'class_feature',
+        fieldName: 'name',
+        entityIds: ClassFeatureRowMapper.collectIds(attainedRows),
+      );
     }
 
-    // `.order('level', ascending: true)` : affichage déterministe, important
-    // pour un personnage multiclassé où plusieurs `class_id` (donc plusieurs
-    // jeux d'aptitudes) sont mélangés dans une même requête — sans quoi
-    // PostgREST ne garantit aucun ordre particulier. Signalé en revue QA.
-    // `ascending: true` explicite, pas la valeur par défaut : le package
-    // `postgrest` (2.9.1) défaut sur `ascending: false` pour `.order(...)`,
-    // contre-intuitif — repéré ici via le test d'intégration ajouté pour
-    // cette correction, qui a échoué avec un ordre descendant avant l'ajout
-    // du paramètre explicite (voir aussi `_fetchSkills` ci-dessus, même
-    // correctif appliqué au même défaut du package).
-    final featureRows = await _client
-        .from('class_features')
-        .select('id, class_id, level, uses_per_rest')
-        .inFilter('class_id', classIds.toList())
-        .order('level', ascending: true);
+    // Noms de maîtrise d'outils, carte "MAÎTRISES D'OUTILS" —
+    // `character_tool_proficiencies` est déjà embarquée dans [row] (relation
+    // réelle vers `characters`), seuls les noms d'outils du catalogue
+    // restent à résoudre via `translations`.
+    final toolNameRows = await _fetchTranslationRows(
+      entityType: 'tool',
+      fieldName: 'name',
+      entityIds: CharacterDetailRowMapper.collectToolIds(
+        CharacterDetailRowMapper.toolProficiencyRowsOf(row),
+      ).map((id) => id.toString()).toSet(),
+    );
 
-    final attainedRows = ClassFeatureRowMapper.filterAttained(
-      featureRows,
+    // Noms de langues connues, carte "LANGUES CONNUES" — même principe que
+    // les outils ci-dessus.
+    final languageNameRows = await _fetchTranslationRows(
+      entityType: 'language',
+      fieldName: 'name',
+      entityIds: CharacterDetailRowMapper.collectLanguageIds(
+        CharacterDetailRowMapper.languageRowsOf(row),
+      ).map((id) => id.toString()).toSet(),
+    );
+
+    // Sorts connus/préparés, section "SORTS" — `character_spells` est déjà
+    // embarquée dans [row], seuls `spells.level`/`school` et les noms
+    // restent à résoudre. Aucune requête si le personnage n'a aucun sort.
+    final spellIds = CharacterSpellRowMapper.collectSpellIds(
+      CharacterDetailRowMapper.characterSpellRowsOf(row),
+    );
+    var spellRows = const <Map<String, dynamic>>[];
+    var spellNameRows = const <Map<String, dynamic>>[];
+    if (spellIds.isNotEmpty) {
+      spellRows = await _client
+          .from('spells')
+          .select('id, level, school')
+          .inFilter('id', spellIds.toList());
+      spellNameRows = await _fetchTranslationRows(
+        entityType: 'spell',
+        fieldName: 'name',
+        entityIds: spellIds.map((id) => id.toString()).toSet(),
+      );
+    }
+
+    // Inventaire résolu, onglet "Inventaire" — `character_inventory` est
+    // déjà embarquée dans [row], `items` avec elle (relation de clé
+    // étrangère réelle, contrairement à `translations`) : seuls les noms
+    // d'objets du catalogue restent à résoudre via `translations`.
+    final itemNameRows = await _fetchTranslationRows(
+      entityType: 'item',
+      fieldName: 'name',
+      entityIds: CharacterInventoryRowMapper.collectItemIds(
+        CharacterInventoryRowMapper.rowsOf(row),
+      ),
+    );
+
+    return <String, dynamic>{
+      'row': row,
+      'raceNameRows': raceNameRows,
+      'subraceNameRows': subraceNameRows,
+      'classNameRows': classNameRows,
+      'backgroundNameRows': backgroundNameRows,
+      'alignmentNameRows': alignmentNameRows,
+      'skillRows': skillRows,
+      'skillNameRows': skillNameRows,
+      'classFeatureRows': classFeatureRows,
+      'classFeatureNameRows': classFeatureNameRows,
+      'toolNameRows': toolNameRows,
+      'languageNameRows': languageNameRows,
+      'spellRows': spellRows,
+      'spellNameRows': spellNameRows,
+      'itemNameRows': itemNameRows,
+    };
+  }
+
+  /// Reconstruit un [CharacterDetail] complet à partir d'un [payload] déjà
+  /// construit par [_buildCharacterDetailPayload] — jamais d'accès réseau
+  /// ici, seul point de mapping partagé par le chemin réseau (juste après un
+  /// succès) et le chemin cache (`_mappedFromCache`, dans
+  /// [fetchCharacterDetail]).
+  CharacterDetail _mapCharacterDetailPayload(Map<String, dynamic> payload) {
+    final row = Map<String, dynamic>.from(payload['row'] as Map);
+
+    final raceNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['raceNameRows']),
+    );
+    final subraceNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['subraceNameRows']),
+    );
+    final classNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['classNameRows']),
+    );
+    final backgroundNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['backgroundNameRows']),
+    );
+    final alignmentNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['alignmentNameRows']),
+    );
+
+    final skillNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['skillNameRows']),
+    );
+    final skills = CharacterSkillRowMapper.toCharacterSkillRows(
+      _rowsOf(payload['skillRows']),
+      names: skillNames,
+      proficiencies: CharacterSkillRowMapper.parseProficiencies(
+        CharacterDetailRowMapper.skillProficiencyRowsOf(row),
+      ),
+    );
+
+    final attainedFeatureRows = ClassFeatureRowMapper.filterAttained(
+      _rowsOf(payload['classFeatureRows']),
       classLevels: CharacterDetailRowMapper.collectClassLevels(row),
     );
-
-    final featureNames = await _fetchTranslatedNames(
-      entityType: 'class_feature',
-      entityIds: ClassFeatureRowMapper.collectIds(attainedRows),
+    final classFeatureNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['classFeatureNameRows']),
     );
-
     final usesRemaining = ClassFeatureRowMapper.parseUsesRemaining(
       CharacterDetailRowMapper.featureUsesRowsOf(row),
     );
-
-    return [
-      for (final featureRow in attainedRows)
+    final classFeatures = [
+      for (final featureRow in attainedFeatureRows)
         ClassFeatureRowMapper.toCharacterClassFeature(
           featureRow,
-          names: featureNames,
+          names: classFeatureNames,
           usesRemaining: usesRemaining,
         ),
     ];
-  }
 
-  /// Noms de maîtrise d'outils, carte "MAÎTRISES D'OUTILS" —
-  /// `character_tool_proficiencies` est déjà embarquée dans le `select`
-  /// principal (relation réelle vers `characters`), seuls les noms d'outils
-  /// du catalogue restent à résoudre via `translations`.
-  Future<List<String>> _fetchToolProficiencyNames(
-    Map<String, dynamic> row,
-  ) async {
-    final toolRows = CharacterDetailRowMapper.toolProficiencyRowsOf(row);
-    final toolNames = await _fetchTranslatedNames(
-      entityType: 'tool',
-      entityIds: CharacterDetailRowMapper.collectToolIds(toolRows)
-          .map((id) => id.toString())
-          .toSet(),
+    final toolNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['toolNameRows']),
     );
-    return CharacterDetailRowMapper.parseToolProficiencyNames(
-      toolRows,
-      toolNames: toolNames,
-    );
-  }
+    final toolProficiencyNames =
+        CharacterDetailRowMapper.parseToolProficiencyNames(
+          CharacterDetailRowMapper.toolProficiencyRowsOf(row),
+          toolNames: toolNames,
+        );
 
-  /// Noms de langues connues, carte "LANGUES CONNUES" — même principe que
-  /// [_fetchToolProficiencyNames].
-  Future<List<String>> _fetchLanguageNames(Map<String, dynamic> row) async {
-    final languageRows = CharacterDetailRowMapper.languageRowsOf(row);
-    final languageNames = await _fetchTranslatedNames(
-      entityType: 'language',
-      entityIds: CharacterDetailRowMapper.collectLanguageIds(languageRows)
-          .map((id) => id.toString())
-          .toSet(),
+    final languageNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['languageNameRows']),
     );
-    return CharacterDetailRowMapper.parseLanguageNames(
-      languageRows,
+    final knownLanguageNames = CharacterDetailRowMapper.parseLanguageNames(
+      CharacterDetailRowMapper.languageRowsOf(row),
       languageNames: languageNames,
     );
-  }
 
-  /// Sorts connus/préparés, section "SORTS" — `character_spells` est déjà
-  /// embarquée dans le `select` principal, seuls `spells.level`/`school` et
-  /// les noms restent à résoudre. Retourne une liste vide sans requête si le
-  /// personnage n'a aucun sort.
-  Future<List<CharacterSpellEntry>> _fetchSpells(
-    Map<String, dynamic> row,
-  ) async {
-    final characterSpellRows = CharacterDetailRowMapper.characterSpellRowsOf(
-      row,
+    final spellNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['spellNameRows']),
     );
-    final spellIds = CharacterSpellRowMapper.collectSpellIds(
-      characterSpellRows,
-    );
-    if (spellIds.isEmpty) {
-      return const [];
-    }
-
-    final spellRows = await _client
-        .from('spells')
-        .select('id, level, school')
-        .inFilter('id', spellIds.toList());
-
-    final spellNames = await _fetchTranslatedNames(
-      entityType: 'spell',
-      entityIds: spellIds.map((id) => id.toString()).toSet(),
-    );
-
-    return CharacterSpellRowMapper.toCharacterSpellEntries(
-      spellRows,
+    final spells = CharacterSpellRowMapper.toCharacterSpellEntries(
+      _rowsOf(payload['spellRows']),
       names: spellNames,
-      statuses: CharacterSpellRowMapper.parseStatuses(characterSpellRows),
+      statuses: CharacterSpellRowMapper.parseStatuses(
+        CharacterDetailRowMapper.characterSpellRowsOf(row),
+      ),
     );
-  }
 
-  /// Inventaire résolu, onglet "Inventaire" — `character_inventory` est déjà
-  /// embarquée dans le `select` principal, `items` avec elle (relation de
-  /// clé étrangère réelle `character_inventory.item_id -> items.id`,
-  /// contrairement à `translations`, table polymorphe que PostgREST ne peut
-  /// jamais embarquer automatiquement) : seuls les noms d'objets du
-  /// catalogue restent à résoudre via `translations`
-  /// (`entity_type = 'item'`). Retourne une liste vide sans requête
-  /// `translations` si le personnage n'a que des objets personnalisés (ou
-  /// aucun objet).
-  ///
-  /// Pas de `.order(...)` sur `character_inventory` : contrairement à
-  /// `skills`/`class_features`, cette table n'a aucune colonne de tri
-  /// naturelle (ni `created_at`, ni équivalent — vérifié contre le schéma
-  /// réel, `20260825090400_create_character_tables.sql` côté dépôt web) ;
-  /// les objets sont donc affichés dans l'ordre renvoyé par PostgREST, sans
-  /// garantie particulière ni regroupement/tri applicatif à cette itération
-  /// (voir la documentation de classe de
-  /// `presentation/widgets/character_inventory_tab_body.dart`).
-  Future<List<CharacterInventoryItem>> _fetchInventory(
-    Map<String, dynamic> row,
-  ) async {
-    final inventoryRows = CharacterInventoryRowMapper.rowsOf(row);
-    final itemNames = await _fetchTranslatedNames(
-      entityType: 'item',
-      entityIds: CharacterInventoryRowMapper.collectItemIds(inventoryRows),
+    final itemNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['itemNameRows']),
     );
-    return CharacterInventoryRowMapper.toCharacterInventoryItems(
-      inventoryRows,
+    final inventory = CharacterInventoryRowMapper.toCharacterInventoryItems(
+      CharacterInventoryRowMapper.rowsOf(row),
       names: itemNames,
     );
+
+    return CharacterDetailRowMapper.toCharacterDetail(
+      row,
+      raceNames: raceNames,
+      subraceNames: subraceNames,
+      classNames: classNames,
+      backgroundNames: backgroundNames,
+      alignmentNames: alignmentNames,
+      skills: skills,
+      classFeatures: classFeatures,
+      toolProficiencyNames: toolProficiencyNames,
+      knownLanguageNames: knownLanguageNames,
+      spells: spells,
+      spellSlots: CharacterDetailRowMapper.parseSpellSlots(row),
+      inventory: inventory,
+    );
+  }
+
+  /// Écrit [payload] dans [_cache] sous [key]. Best-effort : une écriture
+  /// cache en échec (ex. disque plein) ne doit jamais faire échouer un fetch
+  /// réseau qui a lui-même réussi — avalée silencieusement, même principe
+  /// que `SupabaseCharacterCreationRepository._writeCacheBestEffort`.
+  Future<void> _writeCacheBestEffort(
+    String key,
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      await _cache.put(key, payload);
+    } catch (_) {
+      // Best-effort : voir la documentation de cette méthode.
+    }
+  }
+
+  /// Relit [key] depuis [_cache] et la passe par [mapPayload]
+  /// ([_mapCharacterDetailPayload], le même mapper que le chemin réseau) si
+  /// une entrée existe. Retourne `null` si aucune entrée de cache n'existe,
+  /// ou si la lecture/le mapping échoue (cache corrompu, format inattendu) —
+  /// traité comme "pas de cache" par l'appelant, qui relance alors l'erreur
+  /// réseau d'origine plutôt que de propager une erreur de cache qui
+  /// masquerait la vraie cause. Même principe que
+  /// `SupabaseCharacterCreationRepository._mappedFromCache`.
+  Future<T?> _mappedFromCache<T>(
+    String key,
+    T Function(Map<String, dynamic> payload) mapPayload,
+  ) async {
+    try {
+      final cached = await _cache.get(key);
+      if (cached is Map<String, dynamic>) {
+        return mapPayload(cached);
+      }
+    } catch (_) {
+      // Traité comme "pas de cache" — voir la documentation de cette
+      // méthode.
+    }
+    return null;
+  }
+
+  /// Normalise une valeur potentiellement issue de `jsonDecode` (types
+  /// `dynamic` non garantis, notamment sur les maps imbriquées) ou
+  /// directement d'une réponse PostgREST (`List<Map<String, dynamic>>` déjà
+  /// bien typée) en `List<Map<String, dynamic>>`. Une valeur absente ou d'un
+  /// type inattendu retombe sur une liste vide plutôt que de crasher — même
+  /// principe défensif que
+  /// `SupabaseCharacterCreationRepository._rowsOf`.
+  static List<Map<String, dynamic>> _rowsOf(Object? value) {
+    if (value is! List) {
+      return const [];
+    }
+    return value
+        .whereType<Object>()
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
   }
 }

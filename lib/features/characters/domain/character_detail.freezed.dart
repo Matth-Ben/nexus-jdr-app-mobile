@@ -61,7 +61,9 @@ mixin _$CharacterDetail {
  int get currencyGp; int get currencyPp; int get currencyEp; int get currencySp; int get currencyCp;/// Inventaire résolu du personnage — onglet "Inventaire", liste de
 /// cartes. Comme [skills]/[classFeatures]/..., a besoin d'une requête
 /// PostgREST séparée (résolution des noms d'objets du catalogue via
-/// `translations`), voir `SupabaseCharacterRepository._fetchInventory`.
+/// `translations`), voir
+/// `SupabaseCharacterRepository._buildCharacterDetailPayload`/
+/// `_mapCharacterDetailPayload`.
  List<CharacterInventoryItem> get inventory;/// Les 7 champs "apparence physique" de l'onglet "Personnage" — voir
 /// `presentation/widgets/character_appearance_card.dart`. Colonnes
 /// `characters.sexe/age/height/weight/eyes/skin/hair`, `text` nullables
@@ -464,12 +466,16 @@ class _CharacterDetail extends CharacterDetail {
 /// Inventaire résolu du personnage — onglet "Inventaire", liste de
 /// cartes. Comme [skills]/[classFeatures]/..., a besoin d'une requête
 /// PostgREST séparée (résolution des noms d'objets du catalogue via
-/// `translations`), voir `SupabaseCharacterRepository._fetchInventory`.
+/// `translations`), voir
+/// `SupabaseCharacterRepository._buildCharacterDetailPayload`/
+/// `_mapCharacterDetailPayload`.
  final  List<CharacterInventoryItem> _inventory;
 /// Inventaire résolu du personnage — onglet "Inventaire", liste de
 /// cartes. Comme [skills]/[classFeatures]/..., a besoin d'une requête
 /// PostgREST séparée (résolution des noms d'objets du catalogue via
-/// `translations`), voir `SupabaseCharacterRepository._fetchInventory`.
+/// `translations`), voir
+/// `SupabaseCharacterRepository._buildCharacterDetailPayload`/
+/// `_mapCharacterDetailPayload`.
 @override@JsonKey() List<CharacterInventoryItem> get inventory {
   if (_inventory is EqualUnmodifiableListView) return _inventory;
   // ignore: implicit_dynamic_type

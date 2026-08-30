@@ -1,6 +1,9 @@
 import 'dart:typed_data';
 
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/cache/app_database.dart';
+import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -16,12 +19,28 @@ void main() {
     late SupabaseClient client;
     late ReferenceContent reference;
     late String ownerId;
+    // Base drift en mémoire : ce fichier n'exerce jamais le chemin de
+    // secours "cache" de `fetchCharacterDetail` (couvert par les tests
+    // unitaires de `character_repository_test.dart`), seulement le
+    // constructeur de `SupabaseCharacterRepository`, qui prend désormais un
+    // `ReferenceDataCache` en dépendance. Partagée entre `client` et
+    // `otherClient` (voir le groupe "isolation cross-utilisateur"
+    // ci-dessous) : sans conséquence, la clé de cache reste scopée par
+    // ownerId à l'intérieur du repository.
+    late AppDatabase cacheDb;
+    late ReferenceDataCache cache;
 
     setUpAll(() async {
       client = createTestSupabaseClient();
       await signUpTestUser(client);
       reference = await fetchReferenceContent(client);
       ownerId = client.auth.currentUser!.id;
+      cacheDb = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(cacheDb);
+    });
+
+    tearDownAll(() async {
+      await cacheDb.close();
     });
 
     test(
@@ -66,7 +85,7 @@ void main() {
             .eq('id', reference.classId)
             .single();
 
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
         final detail = await repository.fetchCharacterDetail(characterId);
 
         expect(detail.name, 'Test Intégration Fiche');
@@ -194,7 +213,7 @@ void main() {
         });
       }
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       final detail = await repository.fetchCharacterDetail(characterId);
 
       // Les 18 compétences sont toujours résolues (table de référence
@@ -213,7 +232,8 @@ void main() {
         containsAll(attainedFeatureRows.map((r) => r['id'] as int)),
       );
       // Ordre déterministe (`.order('level')` côté requête, voir
-      // `SupabaseCharacterRepository._fetchClassFeatures`) : les niveaux
+      // `SupabaseCharacterRepository._buildCharacterDetailPayload`/
+      // `_mapCharacterDetailPayload`) : les niveaux
       // affichés ne doivent jamais redescendre — signalé en revue QA
       // (dépendait auparavant de l'ordre non garanti renvoyé par
       // PostgREST).
@@ -291,7 +311,7 @@ void main() {
         },
       ]);
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       final detail = await repository.fetchCharacterDetail(characterId);
 
       expect(detail.currencyGp, 42);
@@ -358,7 +378,7 @@ void main() {
         await client.from('characters').delete().eq('id', characterId);
       });
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       final detail = await repository.fetchCharacterDetail(characterId);
 
       expect(detail.appearanceText, 'Cheveux argentés tressés.');
@@ -430,7 +450,7 @@ void main() {
         await client.from('characters').delete().eq('id', characterId);
       });
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       final detail = await repository.fetchCharacterDetail(characterId);
 
       expect(detail.sexe, 'Femme');
@@ -474,7 +494,7 @@ void main() {
       'fetchCharacterDetail lève une CharacterFailure "introuvable" pour un '
       'personnage inexistant ou appartenant à un autre joueur (RLS)',
       () async {
-        final repository = SupabaseCharacterRepository(client);
+        final repository = SupabaseCharacterRepository(client, cache);
 
         await expectLater(
           repository.fetchCharacterDetail(
@@ -508,7 +528,7 @@ void main() {
         await client.from('characters').delete().eq('id', characterId);
       });
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       await repository.updateHp(
         characterId: characterId,
         currentHp: 5,
@@ -537,7 +557,7 @@ void main() {
         await client.from('characters').delete().eq('id', characterId);
       });
 
-      final repository = SupabaseCharacterRepository(client);
+      final repository = SupabaseCharacterRepository(client, cache);
       final bytes = Uint8List.fromList([1, 2, 3, 4]);
 
       final publicUrl = await repository.uploadPortrait(
@@ -624,7 +644,7 @@ void main() {
       test('fetchCharacterDetail appelé depuis la session d\'un autre joueur '
           'lève une CharacterFailure "introuvable", jamais les données du '
           'personnage visé', () async {
-        final otherRepository = SupabaseCharacterRepository(otherClient);
+        final otherRepository = SupabaseCharacterRepository(otherClient, cache);
 
         await expectLater(
           otherRepository.fetchCharacterDetail(characterId),
@@ -640,7 +660,7 @@ void main() {
 
       test('updateHp appelé depuis la session d\'un autre joueur ne modifie '
           'jamais le personnage visé', () async {
-        final otherRepository = SupabaseCharacterRepository(otherClient);
+        final otherRepository = SupabaseCharacterRepository(otherClient, cache);
         try {
           await otherRepository.updateHp(
             characterId: characterId,
@@ -663,7 +683,7 @@ void main() {
 
       test('uploadPortrait appelé depuis la session d\'un autre joueur ne met '
           'jamais à jour portrait_url du personnage visé', () async {
-        final otherRepository = SupabaseCharacterRepository(otherClient);
+        final otherRepository = SupabaseCharacterRepository(otherClient, cache);
         try {
           await otherRepository.uploadPortrait(
             characterId: characterId,
@@ -689,7 +709,7 @@ void main() {
             .update({'portrait_url': existingUrl})
             .eq('id', characterId);
 
-        final otherRepository = SupabaseCharacterRepository(otherClient);
+        final otherRepository = SupabaseCharacterRepository(otherClient, cache);
         try {
           await otherRepository.removePortrait(
             characterId: characterId,

@@ -58,7 +58,8 @@ void main() {
 
     test('préserve l\'ordre des lignes reçues (ne trie jamais lui-même) : '
         'l\'affichage déterministe repose entièrement sur `.order(\'level\')` '
-        'côté requête (SupabaseCharacterRepository._fetchClassFeatures), pas '
+        'côté requête (SupabaseCharacterRepository._buildCharacterDetailPayload'
+        '/_mapCharacterDetailPayload), pas '
         'sur ce mapper — un personnage multiclassé (plusieurs class_id '
         'mélangés dans une même requête) dépend de cette garantie pour ne pas '
         'afficher un ordre différent à chaque rechargement', () {
