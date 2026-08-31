@@ -18,6 +18,7 @@ import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
 import 'widgets/add_xp_sheet.dart';
 import 'widgets/character_ability_score_grid.dart';
+import 'widgets/character_adventures_card.dart';
 import 'widgets/character_appearance_card.dart';
 import 'widgets/character_detail_tab_bar.dart';
 import 'widgets/character_identity_card.dart';
@@ -568,6 +569,10 @@ class _CharacterTabBody extends StatelessWidget {
         if (CharacterAppearanceCard.hasContent(detail)) ...[
           const SizedBox(height: AppSpacing.md),
           CharacterAppearanceCard(detail: detail),
+        ],
+        if (CharacterAdventuresCard.hasContent(detail)) ...[
+          const SizedBox(height: AppSpacing.md),
+          CharacterAdventuresCard(detail: detail),
         ],
       ],
     );

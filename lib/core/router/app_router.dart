@@ -17,6 +17,9 @@ import '../../features/character_creation/presentation/summary_step_screen.dart'
 import '../../features/characters/presentation/character_detail_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
 import '../../features/characters/presentation/level_up_screen.dart';
+import '../../features/join_story/presentation/join_character_step_screen.dart';
+import '../../features/join_story/presentation/join_code_step_screen.dart';
+import '../../features/join_story/presentation/join_confirmation_step_screen.dart';
 import '../../features/xml_import/presentation/xml_import_review_screen.dart';
 import '../network/supabase_client_provider.dart';
 
@@ -46,7 +49,11 @@ GoRouter appRouter(Ref ref) {
     refreshListenable: refreshListenable,
     redirect: (context, state) => computeAuthRedirect(
       isLoggedIn: client.auth.currentSession != null,
-      matchedLocation: state.matchedLocation,
+      // `state.uri` (pas `state.matchedLocation`, qui omet la query) : la
+      // reprise du parcours "Rejoindre une histoire" après connexion a
+      // besoin du code d'invitation porté par la query (`?code=...`), voir
+      // la documentation de [computeAuthRedirect].
+      location: state.uri.toString(),
     ),
     routes: [
       GoRoute(
@@ -133,23 +140,104 @@ GoRouter appRouter(Ref ref) {
           initialTargetLevel: int.parse(state.uri.queryParameters['level']!),
         ),
       ),
+      GoRoute(
+        // Flux "Rejoindre une histoire" (`features/join_story/`), 4 étapes
+        // — voir `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`
+        // section 7.1. Étape 1/4 : saisie du code, jamais atteinte via le
+        // deep link `nexus-jdr.app/join/{code}` (voir `/join/:code`
+        // ci-dessous, qui pousse directement l'étape 2/4).
+        path: '/join',
+        builder: (context, state) =>
+            JoinCodeStepScreen(initialCode: state.uri.queryParameters['code']),
+      ),
+      GoRoute(
+        // Étape 2/4 : confirmation (nom + couverture de l'histoire), avant
+        // tout engagement — `?code=...` plutôt qu'`extra`, même rationale
+        // que `/characters/:id/level-up` (`?level=...`) : un code
+        // d'invitation reste simple/inspectable, contrairement au contenu
+        // XML entier de `/characters/import`, seule route de ce dépôt à
+        // utiliser `extra` (voir sa documentation).
+        path: '/join/step-2',
+        builder: (context, state) => JoinConfirmationStepScreen(
+          code: state.uri.queryParameters['code']!,
+        ),
+      ),
+      GoRoute(
+        // Étape 3/4 : choix du personnage à rattacher. `code` toujours
+        // transmis en query, jamais reperdu entre les étapes (voir aussi
+        // `JoinCharacterStepScreen._startCharacterCreation`, qui le
+        // réinjecte dans la route de retour posée avant de lancer
+        // l'assistant de création).
+        path: '/join/step-3',
+        builder: (context, state) =>
+            JoinCharacterStepScreen(code: state.uri.queryParameters['code']!),
+      ),
+      GoRoute(
+        // Point d'entrée du deep link universel
+        // `nexus-jdr.app/join/{code}` (voir `docs/cahier-des-charges/
+        // 04-fonctionnalites-app-mobile.md` section 7.1 : "l'étape 1/4 est
+        // sautée entièrement, l'app pousse directement l'étape 2/4 avec le
+        // code déjà résolu") : même écran que `/join/step-2`, [code] est
+        // simplement résolu depuis le segment de chemin plutôt que depuis
+        // une query. Câblage `go_router` interne uniquement — la
+        // configuration native complète (association de domaine Android/
+        // iOS, fichiers `.well-known`) reste à faire, voir le rapport de la
+        // tâche qui a introduit cette route pour le détail de ce qui
+        // manque côté configuration native/serveur.
+        path: '/join/:code',
+        builder: (context, state) =>
+            JoinConfirmationStepScreen(code: state.pathParameters['code']!),
+      ),
     ],
   );
 }
 
 /// Logique pure de redirection auth, extraite de [appRouter] pour rester
 /// testable sans dépendre d'un [SupabaseClient] réel : non connecté → force
-/// `/login` ; connecté sur `/login` → renvoie vers `/`.
+/// `/login` ; connecté sur `/login` → renvoie vers la destination
+/// initialement visée (ou `/` à défaut).
+///
+/// **Reprise du parcours après connexion** (mécanisme générique, pas
+/// spécifique au flux "Rejoindre une histoire", mais requis explicitement
+/// par lui — `docs/cahier-des-charges/05-ux-navigation.md` : "si
+/// l'utilisateur ouvre le lien alors qu'il n'est pas connecté, l'écran de
+/// connexion s'affiche d'abord, puis reprend le parcours d'invitation là où
+/// il s'était arrêté", pas une nuance optionnelle) : quand [location] n'est
+/// pas déjà `/login` et que l'utilisateur n'est pas connecté, la
+/// destination initialement visée (chemin **et** query, ex.
+/// `/join/AB3F7K`) est encodée dans un paramètre `redirect` de l'URL de
+/// connexion (`/login?redirect=%2Fjoin%2FAB3F7K`) plutôt que perdue. Une
+/// fois connecté, `computeAuthRedirect` est réévalué (`GoRouter
+/// .refreshListenable`, voir [appRouter]) pour la même location `/login?
+/// redirect=...` — qui n'a pas changé entre-temps, [LoginScreen] ne navigue
+/// jamais lui-même — et relit ce paramètre pour reprendre exactement là où
+/// l'utilisateur s'était arrêté, au lieu de toujours atterrir sur `/`.
+///
+/// Cas particulier `location == '/'` : jamais encodé en `?redirect=...`
+/// (repli silencieux sur `/login` nu, comme avant) — `/` est de toute façon
+/// déjà la destination par défaut après connexion, un paramètre `redirect`
+/// n'apporterait rien ici et polluerait inutilement l'URL du cas le plus
+/// courant (premier lancement de l'app, non connecté).
 String? computeAuthRedirect({
   required bool isLoggedIn,
-  required String matchedLocation,
+  required String location,
 }) {
-  final isOnLoginRoute = matchedLocation == '/login';
+  final uri = Uri.parse(location);
+  final isOnLoginRoute = uri.path == '/login';
 
   if (!isLoggedIn) {
-    return isOnLoginRoute ? null : '/login';
+    if (isOnLoginRoute) return null;
+    if (location == '/') return '/login';
+    return Uri(
+      path: '/login',
+      queryParameters: {'redirect': location},
+    ).toString();
   }
   if (isOnLoginRoute) {
+    final redirectTarget = uri.queryParameters['redirect'];
+    if (redirectTarget != null && redirectTarget.isNotEmpty) {
+      return redirectTarget;
+    }
     return '/';
   }
   return null;

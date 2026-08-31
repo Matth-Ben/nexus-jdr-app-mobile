@@ -356,4 +356,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     required RestType type,
     required String className,
   }) async {}
+
+  @override
+  Future<void> leaveStory({required String characterCampaignId}) async {}
 }

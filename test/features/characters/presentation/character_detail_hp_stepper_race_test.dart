@@ -115,6 +115,11 @@ class _FakeRepository implements CharacterRepository {
   }) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> leaveStory({required String characterCampaignId}) {
+    throw UnimplementedError();
+  }
 }
 
 const _detail = CharacterDetail(

@@ -37,6 +37,7 @@ import 'package:personnages/features/character_creation/domain/spell_option.dart
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_creation_return_route_provider.dart';
 import 'package:personnages/features/character_creation/presentation/summary_step_screen.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
@@ -288,6 +289,16 @@ void main() {
           path: '/',
           builder: (context, state) => const Scaffold(
             body: Center(child: Text('Liste des personnages')),
+          ),
+        ),
+        GoRoute(
+          path: '/join/step-3',
+          builder: (context, state) => Scaffold(
+            body: Center(
+              child: Text(
+                'Étape 3 Rejoindre code=${state.uri.queryParameters['code']}',
+              ),
+            ),
           ),
         ),
       ],
@@ -647,6 +658,30 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Liste des personnages'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    '"Créer le personnage" navigue vers la route de retour posée par un '
+    'sous-flux (ex. étape 3/4 "Rejoindre une histoire") plutôt que "/", et '
+    'la consomme (remise à null)',
+    (WidgetTester tester) async {
+      container
+          .read(characterCreationReturnRouteControllerProvider.notifier)
+          .set('/join/step-3?code=AB3F7K');
+
+      await pumpSummaryStep(tester);
+      await tester.enterText(find.byType(TextFormField), 'Halltesse Ambrelune');
+      await tester.pump();
+      await tester.tap(find.text('CRÉER LE PERSONNAGE'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape 3 Rejoindre code=AB3F7K'), findsOneWidget);
+      expect(find.text('Liste des personnages'), findsNothing);
+      expect(
+        container.read(characterCreationReturnRouteControllerProvider),
+        isNull,
+      );
     },
   );
 

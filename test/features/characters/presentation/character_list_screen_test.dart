@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_creation_return_route_provider.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
@@ -112,6 +113,11 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> leaveStory({required String characterCampaignId}) {
+    throw UnimplementedError();
+  }
 }
 
 class _FakeAuthRepository implements AuthRepository {
@@ -164,6 +170,12 @@ void main() {
             body: Center(
               child: Text('Fiche personnage ${state.pathParameters['id']}'),
             ),
+          ),
+        ),
+        GoRoute(
+          path: '/join',
+          builder: (context, state) => const Scaffold(
+            body: Center(child: Text('Rejoindre une histoire — étape 1')),
           ),
         ),
       ],
@@ -424,6 +436,39 @@ void main() {
     );
   });
 
+  testWidgets(
+    'le bouton "Rejoindre" navigue vers le flux "Rejoindre une histoire"',
+    (WidgetTester tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('REJOINDRE'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Rejoindre une histoire — étape 1'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'le bouton "Rejoindre" expose le libellé accessible complet "Rejoindre '
+    'une histoire" malgré son texte visible raccourci ("Rejoindre") — voir '
+    'docs/cahier-des-charges/04-fonctionnalites-app-mobile.md section 7.1',
+    (WidgetTester tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      final node = tester.getSemantics(find.text('REJOINDRE'));
+      expect(node.tooltip, 'Rejoindre une histoire');
+
+      handle.dispose();
+    },
+  );
+
   testWidgets('le bouton "+ Créer" navigue vers l\'assistant de création', (
     WidgetTester tester,
   ) async {
@@ -440,7 +485,8 @@ void main() {
 
   testWidgets(
     'le bouton "+ Créer" réinitialise le brouillon de création en mémoire '
-    'avant de naviguer, pour ne jamais reprendre un brouillon abandonné',
+    'et efface toute route de retour laissée par une session "Rejoindre '
+    'une histoire" abandonnée, avant de naviguer',
     (WidgetTester tester) async {
       fakeCharacterRepository.charactersToReturn = const [];
 
@@ -457,6 +503,13 @@ void main() {
       container
           .read(characterCreationDraftControllerProvider.notifier)
           .setRace(raceId: 7, subraceId: 3);
+      // Simule une route de retour laissée par une session "Rejoindre une
+      // histoire" abandonnée avant l'étape 9 (voir la documentation de
+      // classe de `CharacterCreationReturnRouteController`) — une création
+      // lancée normalement depuis cet écran ne doit jamais la reprendre.
+      container
+          .read(characterCreationReturnRouteControllerProvider.notifier)
+          .set('/join/step-3?code=AB3F7K');
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -472,6 +525,10 @@ void main() {
       expect(
         container.read(characterCreationDraftControllerProvider),
         const CharacterCreationDraft(),
+      );
+      expect(
+        container.read(characterCreationReturnRouteControllerProvider),
+        isNull,
       );
     },
   );

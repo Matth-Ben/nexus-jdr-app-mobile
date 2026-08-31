@@ -213,6 +213,18 @@ abstract class CharacterRepository {
     required RestType type,
     required String className,
   });
+
+  /// Supprime le rattachement [characterCampaignId] (`character_campaigns`)
+  /// — lien "Quitter l'histoire", carte "Aventures" de l'onglet
+  /// "Personnage" (`presentation/widgets/character_adventures_card.dart`).
+  ///
+  /// Aucun filtre explicite sur `owner_id` ici contrairement au reste de ce
+  /// fichier : `character_campaigns` n'a pas de colonne `owner_id` propre
+  /// (voir `20260830100100_create_character_campaigns.sql` côté dépôt web),
+  /// la RLS (`owns_character(character_id)`) est donc la seule garantie
+  /// d'isolation pour cette écriture, pas un filet de sécurité redondant
+  /// côté client comme ailleurs dans ce fichier.
+  Future<void> leaveStory({required String characterCampaignId});
 }
 
 /// Implémentation réelle, basée sur `Supabase.instance.client`.
@@ -383,7 +395,8 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_spells(spell_id, status),
             character_spell_slots(slot_level, slots_total, slots_used),
             character_feature_uses(class_feature_id, uses_remaining),
-            character_inventory(id, item_id, custom_name, quantity, equipped, items(category, weight))
+            character_inventory(id, item_id, custom_name, quantity, equipped, items(category, weight)),
+            character_campaigns(id, story_id, stories(title, cover_image_path))
           ''')
           .eq('id', characterId)
           .eq('owner_id', ownerId)
@@ -864,6 +877,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
       }
     } on CharacterFailure {
       rethrow;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<void> leaveStory({required String characterCampaignId}) async {
+    // Garde-fou session — voir la documentation de
+    // [CharacterRepository.leaveStory] : ce filtre n'est *pas* réutilisé
+    // dans la requête ci-dessous (aucune colonne `owner_id` sur
+    // `character_campaigns`), la RLS reste la seule garantie réelle.
+    _requireOwnerId();
+    try {
+      await _client
+          .from('character_campaigns')
+          .delete()
+          .eq('id', characterCampaignId);
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (_) {
@@ -1542,6 +1574,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
       names: itemNames,
     );
 
+    final adventures = CharacterDetailRowMapper.parseAdventures(
+      row,
+      resolveCoverUrl: _resolveStoryCoverUrl,
+    );
+
     return CharacterDetailRowMapper.toCharacterDetail(
       row,
       raceNames: raceNames,
@@ -1556,7 +1593,23 @@ class SupabaseCharacterRepository implements CharacterRepository {
       spells: spells,
       spellSlots: CharacterDetailRowMapper.parseSpellSlots(row),
       inventory: inventory,
+      adventures: adventures,
     );
+  }
+
+  /// Bucket Storage des couvertures d'histoire (dépôt web,
+  /// `20260716212008_create_stories.sql`) — lecture publique, jamais écrit
+  /// depuis ce dépôt (voir `features/join_story/data/story_invite_repository.dart`,
+  /// qui résout la même URL pour le flux "Rejoindre une histoire").
+  static const String _storyCoversBucket = 'story-covers';
+
+  /// Résout `stories.cover_image_path` (chemin de stockage brut) en URL
+  /// publique — appelable même sur le chemin cache (pas d'accès réseau,
+  /// simple construction de chaîne à partir de l'URL du projet Supabase),
+  /// même principe que le reste de [_mapCharacterDetailPayload].
+  String? _resolveStoryCoverUrl(String? path) {
+    if (path == null || path.isEmpty) return null;
+    return _client.storage.from(_storyCoversBucket).getPublicUrl(path);
   }
 
   /// Écrit [payload] dans [_cache] sous [key]. Best-effort : une écriture

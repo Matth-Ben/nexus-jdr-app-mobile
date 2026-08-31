@@ -1,3 +1,4 @@
+import '../domain/character_adventure.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_detail_class_row.dart';
@@ -190,6 +191,50 @@ abstract final class CharacterDetailRowMapper {
     return raw?.cast<Map<String, dynamic>>() ?? const [];
   }
 
+  static List<Map<String, dynamic>> campaignRowsOf(Map<String, dynamic> row) {
+    final raw = row['character_campaigns'] as List<dynamic>?;
+    return raw?.cast<Map<String, dynamic>>() ?? const [];
+  }
+
+  /// Construit les [CharacterAdventure] de la carte "Aventures"
+  /// (`character_campaigns`, déjà embarquée sous `characters` via une
+  /// relation de clé étrangère réelle, `stories` embarquée avec elle) —
+  /// [resolveCoverUrl] est injecté plutôt qu'appelé en dur sur un
+  /// `SupabaseClient` : ce mapper reste pur/testable sans réseau, même
+  /// principe que le reste de ce fichier (voir `character_repository.dart`
+  /// pour l'implémentation réelle passée par l'appelant,
+  /// `SupabaseCharacterRepository._resolveStoryCoverUrl`).
+  ///
+  /// Une ligne dont `stories` est `null` est omise silencieusement plutôt
+  /// que d'afficher une aventure sans titre — voir la documentation de
+  /// classe de [CharacterAdventure] pour la limite RLS connue qui peut
+  /// produire ce cas (le joueur peut lire sa propre ligne
+  /// `character_campaigns`, mais pas encore la ligne `stories` associée tant
+  /// que la policy manquante côté dépôt web n'existe pas).
+  static List<CharacterAdventure> parseAdventures(
+    Map<String, dynamic> row, {
+    required String? Function(String? path) resolveCoverUrl,
+  }) {
+    final adventures = <CharacterAdventure>[];
+    for (final campaignRow in campaignRowsOf(row)) {
+      final id = campaignRow['id'] as String?;
+      final storyId = campaignRow['story_id'] as String?;
+      final story = campaignRow['stories'] as Map<String, dynamic>?;
+      if (id == null || storyId == null || story == null) continue;
+      final title = story['title'] as String?;
+      if (title == null) continue;
+      adventures.add(
+        CharacterAdventure(
+          characterCampaignId: id,
+          storyId: storyId,
+          storyTitle: title,
+          storyCoverUrl: resolveCoverUrl(story['cover_image_path'] as String?),
+        ),
+      );
+    }
+    return adventures;
+  }
+
   static List<Map<String, dynamic>> featureUsesRowsOf(
     Map<String, dynamic> row,
   ) {
@@ -305,6 +350,7 @@ abstract final class CharacterDetailRowMapper {
     List<CharacterSpellEntry> spells = const [],
     List<CharacterSpellSlot> spellSlots = const [],
     List<CharacterInventoryItem> inventory = const [],
+    List<CharacterAdventure> adventures = const [],
   }) {
     final raceId = row['race_id'];
     final subraceId = row['subrace_id'];
@@ -360,6 +406,7 @@ abstract final class CharacterDetailRowMapper {
       alliesText: (row['allies_text'] as String?) ?? '',
       featuresText: (row['features_text'] as String?) ?? '',
       treasureText: (row['treasure_text'] as String?) ?? '',
+      adventures: adventures,
     );
   }
 }

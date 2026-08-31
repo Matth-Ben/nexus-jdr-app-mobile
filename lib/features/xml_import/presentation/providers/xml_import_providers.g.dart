@@ -58,10 +58,10 @@ String _$xmlImportRepositoryHash() =>
     r'efbf7204f5e44fcb4ce57d83d0fd0edf3245d184';
 
 /// Charge, parse et résout un export XML aidedd.org [xmlSource] (contenu
-/// déjà lu par le sélecteur de fichier, voir
-/// `presentation/xml_import_file_entry_point.dart`), puis porte les
-/// corrections manuelles faites par l'utilisateur sur l'écran de
-/// vérification (bottom sheet de correction).
+/// déjà lu par le sélecteur de fichier natif, voir
+/// `features/characters/presentation/character_list_screen.dart::
+/// _startXmlImport`), puis porte les corrections manuelles faites par
+/// l'utilisateur sur l'écran de vérification (bottom sheet de correction).
 ///
 /// `family` par ([fileName], [xmlSource]) plutôt qu'un provider simple : un
 /// écran de vérification par fichier importé, jamais partagé entre deux
@@ -78,10 +78,10 @@ String _$xmlImportRepositoryHash() =>
 final xmlImportReviewControllerProvider = XmlImportReviewControllerFamily._();
 
 /// Charge, parse et résout un export XML aidedd.org [xmlSource] (contenu
-/// déjà lu par le sélecteur de fichier, voir
-/// `presentation/xml_import_file_entry_point.dart`), puis porte les
-/// corrections manuelles faites par l'utilisateur sur l'écran de
-/// vérification (bottom sheet de correction).
+/// déjà lu par le sélecteur de fichier natif, voir
+/// `features/characters/presentation/character_list_screen.dart::
+/// _startXmlImport`), puis porte les corrections manuelles faites par
+/// l'utilisateur sur l'écran de vérification (bottom sheet de correction).
 ///
 /// `family` par ([fileName], [xmlSource]) plutôt qu'un provider simple : un
 /// écran de vérification par fichier importé, jamais partagé entre deux
@@ -97,10 +97,10 @@ final class XmlImportReviewControllerProvider
     extends
         $AsyncNotifierProvider<XmlImportReviewController, XmlImportReviewData> {
   /// Charge, parse et résout un export XML aidedd.org [xmlSource] (contenu
-  /// déjà lu par le sélecteur de fichier, voir
-  /// `presentation/xml_import_file_entry_point.dart`), puis porte les
-  /// corrections manuelles faites par l'utilisateur sur l'écran de
-  /// vérification (bottom sheet de correction).
+  /// déjà lu par le sélecteur de fichier natif, voir
+  /// `features/characters/presentation/character_list_screen.dart::
+  /// _startXmlImport`), puis porte les corrections manuelles faites par
+  /// l'utilisateur sur l'écran de vérification (bottom sheet de correction).
   ///
   /// `family` par ([fileName], [xmlSource]) plutôt qu'un provider simple : un
   /// écran de vérification par fichier importé, jamais partagé entre deux
@@ -153,10 +153,10 @@ String _$xmlImportReviewControllerHash() =>
     r'5f8b9d16e825cad0570fded79a08666c7a395dc4';
 
 /// Charge, parse et résout un export XML aidedd.org [xmlSource] (contenu
-/// déjà lu par le sélecteur de fichier, voir
-/// `presentation/xml_import_file_entry_point.dart`), puis porte les
-/// corrections manuelles faites par l'utilisateur sur l'écran de
-/// vérification (bottom sheet de correction).
+/// déjà lu par le sélecteur de fichier natif, voir
+/// `features/characters/presentation/character_list_screen.dart::
+/// _startXmlImport`), puis porte les corrections manuelles faites par
+/// l'utilisateur sur l'écran de vérification (bottom sheet de correction).
 ///
 /// `family` par ([fileName], [xmlSource]) plutôt qu'un provider simple : un
 /// écran de vérification par fichier importé, jamais partagé entre deux
@@ -188,10 +188,10 @@ final class XmlImportReviewControllerFamily extends $Family
       );
 
   /// Charge, parse et résout un export XML aidedd.org [xmlSource] (contenu
-  /// déjà lu par le sélecteur de fichier, voir
-  /// `presentation/xml_import_file_entry_point.dart`), puis porte les
-  /// corrections manuelles faites par l'utilisateur sur l'écran de
-  /// vérification (bottom sheet de correction).
+  /// déjà lu par le sélecteur de fichier natif, voir
+  /// `features/characters/presentation/character_list_screen.dart::
+  /// _startXmlImport`), puis porte les corrections manuelles faites par
+  /// l'utilisateur sur l'écran de vérification (bottom sheet de correction).
   ///
   /// `family` par ([fileName], [xmlSource]) plutôt qu'un provider simple : un
   /// écran de vérification par fichier importé, jamais partagé entre deux
@@ -217,10 +217,10 @@ final class XmlImportReviewControllerFamily extends $Family
 }
 
 /// Charge, parse et résout un export XML aidedd.org [xmlSource] (contenu
-/// déjà lu par le sélecteur de fichier, voir
-/// `presentation/xml_import_file_entry_point.dart`), puis porte les
-/// corrections manuelles faites par l'utilisateur sur l'écran de
-/// vérification (bottom sheet de correction).
+/// déjà lu par le sélecteur de fichier natif, voir
+/// `features/characters/presentation/character_list_screen.dart::
+/// _startXmlImport`), puis porte les corrections manuelles faites par
+/// l'utilisateur sur l'écran de vérification (bottom sheet de correction).
 ///
 /// `family` par ([fileName], [xmlSource]) plutôt qu'un provider simple : un
 /// écran de vérification par fichier importé, jamais partagé entre deux

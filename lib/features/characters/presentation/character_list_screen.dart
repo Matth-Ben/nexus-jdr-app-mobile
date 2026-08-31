@@ -13,6 +13,7 @@ import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
+import '../../character_creation/presentation/providers/character_creation_return_route_provider.dart';
 import '../domain/character_failure.dart';
 import '../domain/character_summary.dart';
 import 'providers/character_providers.dart';
@@ -62,20 +63,36 @@ class CharacterListScreen extends ConsumerWidget {
                 AppSpacing.lg,
                 AppSpacing.lg,
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: PrimaryButton(
-                      label: '+ Créer',
-                      onPressed: () => _startCreation(context, ref),
-                    ),
+                  PrimaryButton(
+                    label: '+ Créer',
+                    onPressed: () => _startCreation(context, ref),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: SecondaryButton(
-                      label: 'Importer XML',
-                      onPressed: () => _startXmlImport(context),
-                    ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SecondaryButton(
+                          label: 'Importer XML',
+                          onPressed: () => _startXmlImport(context),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Tooltip(
+                          // Bouton compact ("Rejoindre" seul) : le libellé
+                          // complet reste disponible pour les lecteurs
+                          // d'écran (et en tooltip visuel à l'appui long) —
+                          // voir la spec de la tâche.
+                          message: 'Rejoindre une histoire',
+                          child: SecondaryButton(
+                            label: 'Rejoindre',
+                            onPressed: () => _startJoinStory(context),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -96,7 +113,21 @@ class CharacterListScreen extends ConsumerWidget {
   /// reprise silencieusement à la prochaine tentative de "+ Créer".
   void _startCreation(BuildContext context, WidgetRef ref) {
     ref.read(characterCreationDraftControllerProvider.notifier).reset();
+    // Filet de sécurité : efface toute route de retour laissée par une
+    // session "Rejoindre une histoire" abandonnée avant l'étape 9 (voir la
+    // documentation de classe de `CharacterCreationReturnRouteController`) —
+    // une création normale lancée depuis cet écran doit toujours atterrir
+    // sur `/` une fois terminée, jamais reprendre un retour paramétré d'une
+    // tentative précédente.
+    ref.read(characterCreationReturnRouteControllerProvider.notifier).set(null);
     context.push('/characters/new');
+  }
+
+  /// Démarre le flux "Rejoindre une histoire" (`features/join_story/`) —
+  /// voir `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`
+  /// section 7.1.
+  void _startJoinStory(BuildContext context) {
+    context.push('/join');
   }
 
   /// Ouvre le sélecteur de fichier natif (`file_picker`, seul package du

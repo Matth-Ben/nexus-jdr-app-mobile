@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Domaines associés pour le deep link universel "Rejoindre une histoire"
+  (nexus-jdr.app/join/{code}), voir
+  docs/cahier-des-charges/04-fonctionnalites-app-mobile.md section 7.1 et la
+  route /join/:code (core/router/app_router.dart, câblage go_router déjà
+  fait).
+
+  IMPORTANT — configuration native INCOMPLÈTE, ce fichier seul ne suffit
+  pas. Deux étapes restent à faire, hors du périmètre de ce dépôt/de cette
+  tâche (signalé au chef de projet plutôt que présenté comme fini) :
+  1. Référencer ce fichier dans les réglages de build Xcode du target
+     "Runner" (CODE_SIGN_ENTITLEMENTS, pour les configurations Debug/
+     Release/Profile) — nécessite Xcode (onglet "Signing & Capabilities" ->
+     "+ Capability" -> "Associated Domains") plutôt qu'une édition manuelle
+     de project.pbxproj (format fragile, non vérifiable sans Xcode installé
+     dans cet environnement).
+  2. Publier un fichier .well-known/apple-app-site-association sur
+     https://nexus-jdr.app (JSON listant l'App ID complet, {TEAMID}.
+     {bundleIdentifier}) pour qu'Apple valide l'association au moment de
+     l'installation ("Universal Links") — nécessite le Team ID du compte
+     développeur Apple utilisé pour signer les builds distribués et un accès
+     au serveur nexus-jdr.app, à coordonner avec qui gère ce domaine (dépôt
+     web) et la publication sur les stores
+     (13-depot-versioning-publication.md).
+
+  Sans ces deux étapes, un lien nexus-jdr.app/join/{code} tapé/ouvert sur iOS
+  n'ouvrira PAS directement l'app (comportement iOS : contrairement à
+  Android, il n'y a pas de repli "ouvrir avec" sans association Apple
+  validée).
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:nexus-jdr.app</string>
+	</array>
+</dict>
+</plist>

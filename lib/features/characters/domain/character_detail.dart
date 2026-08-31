@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'character_adventure.dart';
 import 'character_class_feature.dart';
 import 'character_detail_class_row.dart';
 import 'character_inventory_item.dart';
@@ -154,6 +155,14 @@ abstract class CharacterDetail with _$CharacterDetail {
     @Default('') String alliesText,
     @Default('') String featuresText,
     @Default('') String treasureText,
+
+    /// Histoires rattachées à ce personnage (`character_campaigns`, onglet
+    /// "Personnage", carte "Aventures") — voir
+    /// `presentation/widgets/character_adventures_card.dart` et la
+    /// documentation de classe de [CharacterAdventure] pour une limite RLS
+    /// connue qui peut faire disparaître silencieusement une ligne dont le
+    /// titre/couverture n'est pas encore résolvable.
+    @Default(<CharacterAdventure>[]) List<CharacterAdventure> adventures,
   }) = _CharacterDetail;
 
   /// Niveau total, somme de `character_classes.level` sur toutes les lignes

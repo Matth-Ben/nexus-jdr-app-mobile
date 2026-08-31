@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
+import 'package:personnages/features/characters/domain/character_adventure.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
@@ -58,6 +59,10 @@ class _FakeCharacterRepository implements CharacterRepository {
   String? lastAppliedRestClassName;
   int applyRestCallCount = 0;
   Object? applyRestErrorToThrow;
+
+  String? lastLeftCharacterCampaignId;
+  int leaveStoryCallCount = 0;
+  Object? leaveStoryErrorToThrow;
 
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
@@ -145,6 +150,13 @@ class _FakeCharacterRepository implements CharacterRepository {
     if (applyRestErrorToThrow != null) throw applyRestErrorToThrow!;
     lastAppliedRestType = type;
     lastAppliedRestClassName = className;
+  }
+
+  @override
+  Future<void> leaveStory({required String characterCampaignId}) async {
+    leaveStoryCallCount++;
+    lastLeftCharacterCampaignId = characterCampaignId;
+    if (leaveStoryErrorToThrow != null) throw leaveStoryErrorToThrow!;
   }
 }
 
@@ -415,6 +427,48 @@ void main() {
         find.text('APPARENCE PHYSIQUE'),
       );
       expect(appearancePosition.dy, greaterThan(savingThrowsPosition.dy));
+    },
+  );
+
+  testWidgets(
+    'affiche la carte "Aventures" seulement si au moins une histoire est '
+    'rattachée, après la carte "Apparence physique"',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('AVENTURES'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'la carte "Aventures" affiche une ligne par histoire rattachée, sous '
+    'la carte "Apparence physique"',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        sexe: 'Femme',
+        adventures: const [
+          CharacterAdventure(
+            characterCampaignId: 'cc-1',
+            storyId: 'story-1',
+            storyTitle: 'La Malédiction du Nord',
+          ),
+        ],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('AVENTURES'), findsOneWidget);
+      expect(find.text('La Malédiction du Nord'), findsOneWidget);
+
+      final appearancePosition = tester.getTopLeft(
+        find.text('APPARENCE PHYSIQUE'),
+      );
+      final adventuresPosition = tester.getTopLeft(find.text('AVENTURES'));
+      expect(adventuresPosition.dy, greaterThan(appearancePosition.dy));
     },
   );
 

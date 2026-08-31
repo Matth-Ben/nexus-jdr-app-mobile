@@ -18,6 +18,7 @@ import '../domain/final_ability_scores_resolver.dart';
 import '../domain/spellcasting_rules.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
+import 'providers/character_creation_return_route_provider.dart';
 
 /// Étape 9/9 de l'assistant de création de personnage : récapitulatif
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
@@ -196,7 +197,15 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
       // manuel — voir `features/characters/presentation/providers/character_providers.dart`.
       ref.invalidate(charactersProvider);
       if (!mounted) return;
-      context.go('/');
+      // Retour paramétrable (ex. étape 3/4 "Rejoindre une histoire") si un
+      // sous-flux en a posé un avant de lancer cet assistant — voir la
+      // documentation de classe de `CharacterCreationReturnRouteController`.
+      // Toujours consommé (jamais juste lu) : cette route de retour ne doit
+      // servir qu'une seule fois.
+      final returnRoute = ref
+          .read(characterCreationReturnRouteControllerProvider.notifier)
+          .consume();
+      context.go(returnRoute ?? '/');
     } on CharacterCreationFailure catch (failure) {
       if (!mounted) return;
       setState(() {

@@ -205,6 +205,11 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> leaveStory({required String characterCampaignId}) {
+    throw UnimplementedError();
+  }
 }
 
 const _elfe = RaceOption(id: 1, name: 'Elfe', abilityBonuses: {}, traits: []);
