@@ -1,0 +1,46 @@
+name: CI
+
+# Pipeline "CI" — docs/cahier-des-charges/13-depot-versioning-publication.md
+# section 5 : lancée sur chaque pull request vers main, aucun accès aux
+# secrets de signature. Vérifie lint, format, code généré à jour et tests.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: "stable"
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Vérifie que le code généré (freezed/riverpod/json_serializable) est à jour
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- '*.g.dart' '*.freezed.dart' || {
+            echo "::error::Du code généré n'est pas à jour avec sa source — lance 'dart run build_runner build --delete-conflicting-outputs' localement et commite le résultat."
+            exit 1
+          }
+
+      - name: dart format
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: flutter analyze
+        run: flutter analyze
+
+      - name: flutter test
+        run: flutter test
