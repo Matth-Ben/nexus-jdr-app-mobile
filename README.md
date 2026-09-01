@@ -11,10 +11,11 @@ indépendantes qui partagent les données d'un joueur.
 
 Un joueur peut créer un compte, se créer un ou plusieurs personnages avec un
 assistant de création complet (race, classe, historique, caractéristiques,
-compétences, sorts, équipement, apparence), et consulter leur fiche —
-**sans jamais avoir besoin de l'app web**. Le lien avec "Histoires"
-(rejoindre une partie via un code d'invitation, MJ consultant les
-personnages de ses joueurs) arrive dans une phase ultérieure.
+compétences, sorts, équipement, apparence), consulter et faire vivre leur
+fiche (montée de niveau, repos, PV) — **sans jamais avoir besoin de l'app
+web**. Un personnage peut aussi être importé depuis un export XML
+aidedd.org, ou rattaché à une histoire de l'app web via un code
+d'invitation (le MJ obtient alors un accès en lecture à la fiche).
 
 Le cahier des charges complet (vision, modèle de données, UX, design
 system, roadmap détaillée...) est la source de vérité du projet — voir
@@ -40,12 +41,15 @@ dans `docs/cahier-des-charges/08-direction-artistique.md` et
   8. Apparence et histoire personnelle ([`appearance_and_backstory_step_screen.dart`](lib/features/character_creation/presentation/appearance_and_backstory_step_screen.dart))
   9. Récapitulatif et création ([`summary_step_screen.dart`](lib/features/character_creation/presentation/summary_step_screen.dart)) — seule étape qui écrit en base
 - **Fiche personnage** ([`character_detail_screen.dart`](lib/features/characters/presentation/character_detail_screen.dart)) — 4 onglets, tous avec un contenu réel :
-  1. Personnage — identité, caractéristiques, jets de sauvegarde, points de vie ajustables, portrait avec recadrage.
+  1. Personnage — identité, caractéristiques, jets de sauvegarde, points de vie ajustables, apparence physique, portrait avec recadrage, repos court/long, montée de niveau, section "Aventures" (histoires rejointes, voir plus bas).
   2. Compétences ([`character_skills_tab_body.dart`](lib/features/characters/presentation/widgets/character_skills_tab_body.dart)) — aptitudes de classe, les 18 compétences avec bonus calculé, maîtrises d'outils, langues connues, sorts connus/préparés par niveau avec emplacements disponibles.
   3. Inventaire/Sac ([`character_inventory_tab_body.dart`](lib/features/characters/presentation/widgets/character_inventory_tab_body.dart)) — monnaie, liste des objets avec catégorie/poids/statut équipé.
   4. Histoire ([`character_story_tab_body.dart`](lib/features/characters/presentation/widgets/character_story_tab_body.dart)) — apparence, personnalité, idéaux/défauts, liens, histoire personnelle, alliés, particularités, trésor.
 
-  Les onglets Compétences/Inventaire/Histoire sont en **lecture seule** à ce stade : aucune action d'écriture (lancer un sort, équiper/utiliser/retirer un objet, ajuster la monnaie, décompte d'usage d'aptitude) n'est encore câblée — voir "Reste à faire".
+  Les onglets Compétences/Inventaire/Histoire restent en **lecture seule** à ce stade : les actions d'écriture au-delà de PV/XP/niveau/repos (lancer un sort, équiper/utiliser/retirer un objet, ajuster la monnaie, décompte d'usage d'aptitude) ne sont pas encore câblées — voir "Reste à faire".
+- **Montée de niveau** — déclenchement automatique dès que l'XP franchit un seuil, choix à faire selon la classe (caractéristiques/dons, sorts appris, etc.), calcul des PV et des emplacements de sorts, récapitulatif avant validation.
+- **Import de personnage XML** ([`xml_import_review_screen.dart`](lib/features/xml_import/presentation/xml_import_review_screen.dart)) — sélection d'un export aidedd.org, parsing et résolution des champs (par nom pour les champs en clair, par table de correspondance pour les champs codés — voir [`docs/xml-import-reference-mapping.md`](docs/xml-import-reference-mapping.md)), écran de vérification avec correction manuelle des champs non reconnus, sauvegarde comme un personnage créé manuellement.
+- **Rejoindre une histoire** ([`lib/features/join_story/`](lib/features/join_story/)) — parcours en 4 étapes (code d'invitation → confirmation → choix du personnage → validation) qui rattache un personnage à une histoire de l'app web "Histoires" via deux edge functions Supabase dédiées ; section "Aventures" sur la fiche personnage pour consulter/quitter les histoires rejointes.
 
 ### Maquettes
 
@@ -75,7 +79,7 @@ suit). La liste complète des 19 écrans maquettés vit dans ce document.
 - **Riverpod** (`flutter_riverpod` + `riverpod_generator`) pour la gestion d'état.
 - **go_router** pour la navigation déclarative (assistant par étapes, onglets de fiche).
 - **freezed** + `json_serializable` pour les modèles immuables.
-- **drift** (SQLite) prévu pour le cache offline — pas encore branché à ce stade.
+- **drift** (SQLite) pour le cache offline — données de référence (races/classes/sorts/objets...), lecture de la fiche personnage ouverte, et file de synchronisation pour les écritures PV/XP effectuées hors connexion.
 - Configuration par flavor (`dev` / `staging` / `prod`) via `--dart-define-from-file`, voir [`config/README.md`](config/README.md).
 
 ## Démarrer le projet
@@ -106,22 +110,24 @@ Suit la roadmap détaillée dans `docs/cahier-des-charges/06-roadmap.md`.
 
 - [x] Phase 0 — cadrage technique, bootstrap du projet Flutter, connexion Supabase, choix `drift` pour le cache offline, flavors dev/staging/prod.
 - [x] Phase 1 — socle de données D&D de base (races/sous-races, classes, historiques, compétences, alignements, sorts et objets du Manuel des Joueurs), modèle i18n générique (table `translations`).
-- [x] Authentification (compte partagé avec l'app web).
-- [x] Liste des personnages.
-- [x] Assistant de création de personnage complet (9 étapes, y compris gestion du multiclassage de sorts/non-sorts et calcul des points de vie/modificateurs).
-- [x] Fiche personnage complète, 4 onglets : Personnage (identité, caractéristiques, jets de sauvegarde, PV ajustables, portrait), Compétences (aptitudes, 18 compétences, outils/langues, sorts), Inventaire (monnaie, objets), Histoire (apparence, personnalité, backstory).
+- [x] Phase 2 — application mobile V1 :
+  - [x] Authentification (compte partagé avec l'app web).
+  - [x] Liste des personnages.
+  - [x] Assistant de création de personnage complet (9 étapes, y compris gestion du multiclassage de sorts/non-sorts et calcul des points de vie/modificateurs).
+  - [x] Fiche personnage complète, 4 onglets : Personnage (identité, caractéristiques, jets de sauvegarde, PV ajustables, apparence physique, portrait, repos court/long), Compétences (aptitudes, 18 compétences, outils/langues, sorts), Inventaire (monnaie, objets), Histoire (apparence, personnalité, backstory).
+  - [x] Montée de niveau (déclenchement automatique, choix selon la classe, PV, emplacements de sorts, récapitulatif).
+  - [x] Mode hors-ligne : cache local `drift` pour les données de référence et la fiche personnage ouverte, file de synchronisation pour les écritures PV/XP effectuées hors connexion.
+- [x] Phase 3 — import XML depuis aidedd.org : rétro-ingénierie complète des identifiants numériques ([`docs/xml-import-reference-mapping.md`](docs/xml-import-reference-mapping.md)), parseur, résolution des champs, écran de vérification/correction, sauvegarde comme un personnage manuel.
+- [x] Phase 4 — synchronisation avec l'app web "Histoires" : rejoindre une histoire par code d'invitation (4 étapes), section "Aventures" sur la fiche, MJ avec accès en lecture seule au personnage rattaché. Préalable côté dépôt web fait et déployé (colonnes `invite_code`/`invite_code_enabled`, table `character_campaigns` + RLS, edge functions `preview-story-invite`/`join-story`).
 
 ### Reste à faire
 
 - [ ] Actions d'écriture des onglets Compétences/Inventaire/Histoire : lancer un sort (consommation d'emplacement), décompte d'usage d'aptitude, équiper/déséquiper/utiliser/retirer un objet, ajuster la monnaie, ajouter un objet/une récompense, panneau "Infos" détaillé (sort/objet).
-- [ ] Section "apparence physique" (âge, taille, poids, yeux, peau, cheveux) sur l'onglet Personnage — prévue par la spec, pas encore ajoutée.
-- [ ] Titre de l'en-tête de fiche par onglet (actuellement statique "FICHE" quel que soit l'onglet actif).
-- [ ] Montée de niveau.
-- [ ] Phase 3 — import XML depuis aidedd.org (rétro-ingénierie des identifiants, écran d'import avec vérification/correction).
-- [ ] Phase 4 — synchronisation avec l'app web "Histoires" : rejoindre une histoire par code d'invitation, section "Aventures" sur la fiche, deep linking. Dépend d'un petit chantier côté dépôt web (colonnes `invite_code`/`invite_code_enabled` + edge function `join-story`).
+- [ ] Deep linking universel (`nexus-jdr.app/join/{code}` ouvre directement l'app) : le routage interne (`go_router`) et la config Android/iOS (`AndroidManifest.xml`, `Runner.entitlements`) sont en place, ainsi que les fichiers de vérification côté web (`assetlinks.json`, route `apple-app-site-association` — voir `DEEP_LINKING_SETUP.md` du dépôt web). **Bloqué sur 3 prérequis externes, aucun encore réuni** : domaine `nexus-jdr.app` pas encore hébergé, pas de keystore Android de production généré, pas de compte Apple Developer Program créé. Une fois ces 3 éléments réunis : remplacer les deux placeholders (empreinte SHA-256, Team ID) dans les fichiers de vérification web, puis raccorder `Runner.entitlements` à la signature Xcode (onglet "Signing & Capabilities", nécessite macOS/Xcode) — étapes détaillées dans `DEEP_LINKING_SETUP.md`.
+- [ ] Panneau web "Joueurs" dans l'écran d'une histoire (liste des personnages rattachés, génération/révocation du lien d'invitation côté MJ) — spec fonctionnelle prête (`12-partage-et-groupes.md` section 5.6), explicitement à la charge de l'équipe qui maintient l'app Next.js, pas construit depuis ce dépôt.
 - [ ] Phase 5 — extension du contenu D&D au-delà du Manuel des Joueurs (sous-classes, sorts/objets additionnels, dons, sous-races supplémentaires).
-- [ ] Phase 6 — fonctionnalités complémentaires : export XML compatible aidedd.org, système de groupes, gestion du multiclassage dans l'assistant, mode hors-ligne complet avec file de synchronisation.
-- [ ] Cache local `drift` : dépendance en place, intégration effective pas encore faite.
+- [ ] Phase 6 — fonctionnalités complémentaires : export XML compatible aidedd.org, système de groupes, gestion du multiclassage dans l'assistant, reste du mode hors-ligne (au-delà de PV/XP) si le besoin se confirme.
+- [ ] Publication sur les stores : comptes développeur (Apple/Google), génération des clés de signature, icônes/splash screen, CI/CD de release — voir `docs/cahier-des-charges/13-depot-versioning-publication.md` pour la checklist complète (rien de fait à ce stade).
 - [ ] Projets Supabase distincts pour `staging`/`prod` (actuellement les trois flavors pointent vers le même projet que le dev).
 
 ## Ressources Flutter
