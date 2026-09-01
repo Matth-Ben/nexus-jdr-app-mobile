@@ -24,6 +24,10 @@ on:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    # Secrets stockés dans l'environnement GitHub "PROD" (Settings ->
+    # Environments) plutôt qu'en secrets de dépôt classiques — ce job doit
+    # déclarer explicitement l'environnement pour y avoir accès.
+    environment: PROD
     steps:
       - uses: actions/checkout@v4
 
