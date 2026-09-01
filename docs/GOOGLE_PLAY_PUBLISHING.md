@@ -98,12 +98,21 @@ fois la fiche créée (section 2-4 ci-dessus faites) :
 
 ## 6. Secrets GitHub à configurer pour que `release-android.yml` fonctionne
 
-Dans le dépôt GitHub → Settings → Secrets and variables → Actions → "New
-repository secret" :
+**Fait le 2026-09-01** — rangés dans un **Environment** GitHub nommé `PROD`
+(Settings → Environments → PROD → Environment secrets), pas en secrets de
+dépôt classiques. Le job `build-and-release` de `release-android.yml`
+déclare `environment: PROD` pour y avoir accès — si tu renommes ou recrées
+cet environnement, pense à mettre à jour cette ligne dans le workflow.
+
+Pour PowerShell, générer le contenu de `ANDROID_KEYSTORE_BASE64` (copié
+directement dans le presse-papier, jamais collé dans une conversation) :
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("chemin\complet\vers\nexus-jdr-release.jks")) | Set-Clipboard
+```
 
 | Secret | Contenu |
 |---|---|
-| `ANDROID_KEYSTORE_BASE64` | `base64 -w0 android/nexus-jdr-release.jks` (Windows : `certutil -encode nexus-jdr-release.jks tmp.b64` puis retirer les lignes d'en-tête/pied de page) |
+| `ANDROID_KEYSTORE_BASE64` | Contenu binaire de `android/nexus-jdr-release.jks` encodé en base64 (voir commande PowerShell ci-dessus, ou `base64 -w0 android/nexus-jdr-release.jks` sous Linux/macOS) |
 | `ANDROID_KEYSTORE_PASSWORD` | Le mot de passe du keystore (`android/key.properties`, `storePassword`) |
 | `ANDROID_KEY_PASSWORD` | Le mot de passe de la clé (`android/key.properties`, `keyPassword`) |
 | `PROD_CONFIG_JSON` | Contenu entier de `config/prod.json` (actuellement identique à `config/dev.json`, voir `config/README.md`) |
@@ -119,8 +128,8 @@ de nuisible en leur absence (il échoue proprement).
       local, jamais commité).
 - [x] Workflows CI (`ci.yml`) et Release Android (`release-android.yml`) en
       place.
-- [ ] Secrets GitHub pas encore configurés (`release-android.yml` échouera
-      tant que ce n'est pas fait).
+- [x] Les 4 secrets Android/Supabase (hors `PLAY_SERVICE_ACCOUNT_JSON`)
+      configurés dans l'environnement GitHub `PROD`.
 - [ ] Compte développeur Google Play pas encore créé.
 - [ ] Fiche store (icône, captures, description, politique de
       confidentialité, data safety) pas encore préparée.
