@@ -37,6 +37,19 @@ jobs:
           channel: "stable"
           cache: true
 
+      - name: DEBUG — vérifie que les 4 secrets de l'environnement PROD arrivent bien non vides
+        env:
+          S1: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          S2: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          S3: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          S4: ${{ secrets.PROD_CONFIG_JSON }}
+        run: |
+          echo "ANDROID_KEYSTORE_BASE64 : ${#S1} caractères"
+          echo "ANDROID_KEYSTORE_PASSWORD : ${#S2} caractères"
+          echo "ANDROID_KEY_PASSWORD : ${#S3} caractères"
+          echo "PROD_CONFIG_JSON : ${#S4} caractères"
+          echo "GITHUB_REF utilisé pour ce run : $GITHUB_REF"
+
       - name: Restaure le keystore de production
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
