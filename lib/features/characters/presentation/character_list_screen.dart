@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -145,25 +146,17 @@ class CharacterListScreen extends ConsumerWidget {
   /// aidedd.org est un petit fichier texte, charger tout son contenu en
   /// mémoire d'un coup est un compromis sûr ici.
   Future<void> _startXmlImport(BuildContext context) async {
-    FilePickerResult? result;
+    PlatformFile? file;
+    Uint8List bytes;
     try {
-      result = await FilePicker.platform.pickFiles(
+      file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['xml'],
-        withData: true,
       );
+      // `file == null` : sélection annulée par l'utilisateur, rien à faire.
+      if (file == null) return;
+      bytes = await file.readAsBytes();
     } catch (_) {
-      if (!context.mounted) return;
-      _showImportError(context);
-      return;
-    }
-
-    // `result == null` : sélection annulée par l'utilisateur, rien à faire.
-    if (result == null || result.files.isEmpty) return;
-
-    final file = result.files.single;
-    final bytes = file.bytes;
-    if (bytes == null) {
       if (!context.mounted) return;
       _showImportError(context);
       return;
