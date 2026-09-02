@@ -24,6 +24,7 @@ class CharacterClassFeature {
     this.usesMax,
     this.usesRemaining,
     this.restType,
+    this.description = '',
   });
 
   final int id;
@@ -51,6 +52,10 @@ class CharacterClassFeature {
   /// `class_features.uses_per_rest->>'rest_type'` : 'repos_court' ou
   /// 'repos_long'.
   final String? restType;
+
+  /// `class_features.description`, chaîne vide si non renseignée — panneau
+  /// "Infos" (`presentation/widgets/class_feature_info_panel.dart`).
+  final String description;
 
   /// Vrai si l'aptitude n'a pas d'usage limité (`uses_per_rest` nul côté
   /// base) — affichée "Passive" plutôt qu'un compteur.

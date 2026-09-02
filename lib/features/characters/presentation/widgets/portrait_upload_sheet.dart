@@ -10,6 +10,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/destructive_button.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
+import '../../../../core/widgets/sheet_action_row.dart';
 import '../../data/portrait_url_fetcher.dart';
 import '../providers/character_detail_provider.dart';
 import '../providers/character_providers.dart';
@@ -124,28 +125,28 @@ class _PortraitUploadSheetContent extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _SheetRow(
+          SheetActionRow(
             icon: Icons.photo_camera_outlined,
             label: 'Prendre une photo',
             onTap: () =>
                 Navigator.of(context).pop(_PortraitUploadAction.camera),
           ),
-          const _SheetDivider(),
-          _SheetRow(
+          const SheetActionDivider(),
+          SheetActionRow(
             icon: Icons.image_outlined,
             label: 'Choisir dans la galerie',
             onTap: () =>
                 Navigator.of(context).pop(_PortraitUploadAction.gallery),
           ),
-          const _SheetDivider(),
-          _SheetRow(
+          const SheetActionDivider(),
+          SheetActionRow(
             icon: Icons.link,
             label: 'Utiliser une URL',
             onTap: () => Navigator.of(context).pop(_PortraitUploadAction.url),
           ),
           if (hasPortrait) ...[
-            const _SheetDivider(),
-            _SheetRow(
+            const SheetActionDivider(),
+            SheetActionRow(
               icon: Icons.delete_outline,
               label: 'Retirer le portrait',
               color: AppColors.accentBrick,
@@ -154,63 +155,6 @@ class _PortraitUploadSheetContent extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _SheetDivider extends StatelessWidget {
-  const _SheetDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Divider(height: 1, thickness: 1, color: Color(0xFFE0D2AB));
-  }
-}
-
-class _SheetRow extends StatelessWidget {
-  const _SheetRow({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final effectiveColor = color ?? AppColors.textPrimary;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                Icon(icon, color: effectiveColor, size: 20),
-                const SizedBox(width: AppSpacing.md),
-                Text(
-                  label,
-                  style: AppTypography.body(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: effectiveColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

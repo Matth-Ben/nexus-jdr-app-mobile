@@ -16,9 +16,12 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/wood_back_header.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_adventure.dart';
+import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
+import 'package:personnages/features/characters/domain/character_spell_entry.dart';
+import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
@@ -64,6 +67,18 @@ class _FakeCharacterRepository implements CharacterRepository {
   String? lastLeftCharacterCampaignId;
   int leaveStoryCallCount = 0;
   Object? leaveStoryErrorToThrow;
+
+  int? lastCastSlotLevel;
+  int? lastCastSlotsUsed;
+  int castSpellCallCount = 0;
+  Object? castSpellErrorToThrow;
+  WriteOutcome castSpellOutcomeToReturn = WriteOutcome.synced;
+
+  int? lastUsedClassFeatureId;
+  int? lastUsedFeatureRemaining;
+  int useClassFeatureCallCount = 0;
+  Object? useClassFeatureErrorToThrow;
+  WriteOutcome useClassFeatureOutcomeToReturn = WriteOutcome.synced;
 
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
@@ -158,6 +173,32 @@ class _FakeCharacterRepository implements CharacterRepository {
     leaveStoryCallCount++;
     lastLeftCharacterCampaignId = characterCampaignId;
     if (leaveStoryErrorToThrow != null) throw leaveStoryErrorToThrow!;
+  }
+
+  @override
+  Future<WriteOutcome> castSpell({
+    required String characterId,
+    required int slotLevel,
+    required int slotsUsed,
+  }) async {
+    castSpellCallCount++;
+    if (castSpellErrorToThrow != null) throw castSpellErrorToThrow!;
+    lastCastSlotLevel = slotLevel;
+    lastCastSlotsUsed = slotsUsed;
+    return castSpellOutcomeToReturn;
+  }
+
+  @override
+  Future<WriteOutcome> useClassFeature({
+    required String characterId,
+    required int classFeatureId,
+    required int usesRemaining,
+  }) async {
+    useClassFeatureCallCount++;
+    if (useClassFeatureErrorToThrow != null) throw useClassFeatureErrorToThrow!;
+    lastUsedClassFeatureId = classFeatureId;
+    lastUsedFeatureRemaining = usesRemaining;
+    return useClassFeatureOutcomeToReturn;
   }
 }
 
@@ -945,5 +986,252 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  group('lancer un sort (increment 1 — actions d\'écriture)', () {
+    Future<void> pumpSpellsTab(WidgetTester tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Bouclier',
+            level: 1,
+            school: 'Abjuration',
+            status: 'connu',
+          ),
+        ],
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SORTS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bouclier'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lancer'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'appelle castSpell avec le niveau retenu et le nouveau total consommé, '
+      'affiche une confirmation',
+      (tester) async {
+        await pumpSpellsTab(tester);
+
+        expect(fakeRepository.castSpellCallCount, 1);
+        expect(fakeRepository.lastCastSlotLevel, 1);
+        // 1 déjà consommé + 1 = 2.
+        expect(fakeRepository.lastCastSlotsUsed, 2);
+        expect(
+          find.text('Bouclier lancé (emplacement niveau 1).'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'hors ligne (queued) : message dédié (pas de promesse de synchro) et '
+      "revert de l'état optimiste, castSpell n'étant jamais mis en file",
+      (tester) async {
+        fakeRepository.castSpellOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpSpellsTab(tester);
+
+        expect(
+          find.text(
+            "Hors ligne : cette action n'a pas pu être enregistrée. "
+            'Réessayez une fois reconnecté.',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            'Hors ligne : sera synchronisé dès que la connexion revient.',
+          ),
+          findsNothing,
+        );
+        // Revert : l'état optimiste (1 restant) ne doit pas rester affiché
+        // puisque rien ne sera synchronisé plus tard.
+        expect(
+          find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 3'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('échec : affiche un message d\'erreur dédié', (tester) async {
+      fakeRepository.castSpellErrorToThrow = const CharacterFailure(
+        'Impossible de lancer ce sort. Réessayez.',
+      );
+
+      await pumpSpellsTab(tester);
+
+      expect(
+        find.text('Impossible de lancer ce sort. Réessayez.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      "échec : l'état optimiste revient à l'affichage d'avant (pastilles "
+      "d'emplacement), pas seulement le message d'erreur",
+      (tester) async {
+        fakeRepository.castSpellErrorToThrow = const CharacterFailure(
+          'Impossible de lancer ce sort. Réessayez.',
+        );
+
+        await pumpSpellsTab(tester);
+
+        // 1 déjà consommé sur 3 avant le tap : la bascule optimiste était
+        // passée à 2 consommés (1 restant) le temps de l'appel. Après
+        // l'échec, doit revenir à 2 restants sur 3 (état d'avant), pas rester
+        // sur la valeur optimiste jamais confirmée.
+        expect(
+          find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 3'),
+          findsOneWidget,
+          reason:
+              "L'état optimiste (1 restant) ne doit pas rester affiché après "
+              "l'échec de l'appel réseau.",
+        );
+        expect(
+          find.bySemanticsLabel('Emplacements de sorts : 1 restants sur 3'),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('sort niveau 0 : aucun appel réseau, confirmation immédiate', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Lumière',
+            level: 0,
+            school: 'Évocation',
+            status: 'connu',
+          ),
+        ],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SORTS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lumière'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lancer'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.castSpellCallCount, 0);
+      expect(find.text('Lumière lancé.'), findsOneWidget);
+    });
+  });
+
+  group('utiliser une aptitude de classe (increment 1 — actions '
+      'd\'écriture)', () {
+    Future<void> pumpSkillsTab(WidgetTester tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classFeatures: const [
+          CharacterClassFeature(
+            id: 7,
+            name: 'Rage',
+            level: 1,
+            usesMax: 2,
+            usesRemaining: 1,
+            restType: 'repos_long',
+          ),
+        ],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('COMP.'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rage'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Utiliser'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'appelle useClassFeature avec le nouveau total restant, affiche une '
+      'confirmation',
+      (tester) async {
+        await pumpSkillsTab(tester);
+
+        expect(fakeRepository.useClassFeatureCallCount, 1);
+        expect(fakeRepository.lastUsedClassFeatureId, 7);
+        expect(fakeRepository.lastUsedFeatureRemaining, 0);
+        expect(find.text('Rage utilisée.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'hors ligne (queued) : message dédié (pas de promesse de synchro) et '
+      "revert de l'état optimiste, useClassFeature n'étant jamais mis en "
+      'file',
+      (tester) async {
+        fakeRepository.useClassFeatureOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpSkillsTab(tester);
+
+        expect(
+          find.text(
+            "Hors ligne : cette action n'a pas pu être enregistrée. "
+            'Réessayez une fois reconnecté.',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            'Hors ligne : sera synchronisé dès que la connexion revient.',
+          ),
+          findsNothing,
+        );
+        // Revert : l'état optimiste (0 restant) ne doit pas rester affiché.
+        expect(find.text('1 / 2 · repos long'), findsOneWidget);
+      },
+    );
+
+    testWidgets('échec : affiche un message d\'erreur dédié', (tester) async {
+      fakeRepository.useClassFeatureErrorToThrow = const CharacterFailure(
+        "Impossible d'utiliser cette aptitude. Réessayez.",
+      );
+
+      await pumpSkillsTab(tester);
+
+      expect(
+        find.text("Impossible d'utiliser cette aptitude. Réessayez."),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      "échec : l'état optimiste revient au compteur d'usage d'avant, pas "
+      "seulement le message d'erreur",
+      (tester) async {
+        fakeRepository.useClassFeatureErrorToThrow = const CharacterFailure(
+          "Impossible d'utiliser cette aptitude. Réessayez.",
+        );
+
+        await pumpSkillsTab(tester);
+
+        // usesRemaining: 1 avant le tap : la bascule optimiste était passée à
+        // 0 ("0 / 2 · repos long") le temps de l'appel. Après l'échec, doit
+        // revenir à "1 / 2 · repos long" (état d'avant), pas rester sur la
+        // valeur optimiste jamais confirmée.
+        expect(
+          find.text('1 / 2 · repos long'),
+          findsOneWidget,
+          reason:
+              "L'état optimiste (0 / 2) ne doit pas rester affiché après "
+              "l'échec de l'appel réseau.",
+        );
+        expect(find.text('0 / 2 · repos long'), findsNothing);
+      },
+    );
   });
 }

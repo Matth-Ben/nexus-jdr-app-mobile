@@ -6,21 +6,26 @@ import '../../../../core/theme/app_typography.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/spells_by_level_grouper.dart';
 import 'character_spells_section.dart';
+import 'spell_action_sheet.dart';
 
 /// Contenu de l'onglet "Sorts" de la fiche personnage — scindé de l'onglet
 /// "Compétences" (voir `character_skills_tab_body.dart`) pour donner aux
 /// sorts leur propre onglet à part entière, spec validée par l'agent
 /// `direction-artistique`.
 ///
-/// Portée volontairement en lecture seule à cette itération, comme les
-/// autres onglets déjà livrés : aucune action d'écriture n'est câblée ici
-/// (pas de lancer de sort/consommation d'emplacement) — voir la
-/// documentation de classe de `character_spells_section.dart` pour le détail
-/// du report.
+/// [onCastSpell]/[actionsDisabled] délégués tels quels à
+/// [CharacterSpellsSection] — voir sa documentation de classe.
 class CharacterSpellsTabBody extends StatelessWidget {
-  const CharacterSpellsTabBody({required this.detail, super.key});
+  const CharacterSpellsTabBody({
+    required this.detail,
+    required this.onCastSpell,
+    this.actionsDisabled = false,
+    super.key,
+  });
 
   final CharacterDetail detail;
+  final CastSpellCallback onCastSpell;
+  final bool actionsDisabled;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +40,8 @@ class CharacterSpellsTabBody extends StatelessWidget {
         CharacterSpellsSection(
           groups: spellGroups,
           spellSlots: detail.spellSlots,
+          onCastSpell: onCastSpell,
+          actionsDisabled: actionsDisabled,
         ),
       ],
     );

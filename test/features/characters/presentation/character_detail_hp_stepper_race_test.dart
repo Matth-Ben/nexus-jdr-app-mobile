@@ -120,6 +120,24 @@ class _FakeRepository implements CharacterRepository {
   Future<void> leaveStory({required String characterCampaignId}) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<WriteOutcome> castSpell({
+    required String characterId,
+    required int slotLevel,
+    required int slotsUsed,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WriteOutcome> useClassFeature({
+    required String characterId,
+    required int classFeatureId,
+    required int usesRemaining,
+  }) {
+    throw UnimplementedError();
+  }
 }
 
 const _detail = CharacterDetail(

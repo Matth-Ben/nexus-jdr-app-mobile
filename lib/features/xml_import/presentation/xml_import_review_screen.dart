@@ -8,6 +8,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
+import '../../../core/widgets/sheet_header_bar.dart';
 import '../../character_creation/domain/ability_score_definitions.dart';
 import '../../character_creation/domain/character_creation_failure.dart';
 import '../../character_creation/domain/spell_option.dart';
@@ -1399,49 +1400,6 @@ class _AlertCard extends StatelessWidget {
   }
 }
 
-/// Barre de tête de bottom sheet (fond `wood.medium`, hauteur 56px, titre
-/// `font.display` majuscules, icône fermeture zone de tap 44×44) — voir la
-/// spec visuelle, partagée par [_CorrectionBottomSheet] et
-/// [_GroupCorrectionSheet].
-class _SheetHeaderBar extends StatelessWidget {
-  const _SheetHeaderBar({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 56,
-      color: AppColors.woodMedium,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-      child: Row(
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              child: Text(
-                title,
-                style: AppTypography.display(
-                  fontSize: 11,
-                  color: AppColors.textOnWood,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close, color: AppColors.textOnWood),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Bottom sheet "mode liste" pour un champ consolidé (plusieurs sous-éléments
 /// non reconnus simultanément, ex. plusieurs objets d'inventaire) — voir la
 /// spec visuelle : "une ligne par item, action 'Corriger' par ligne + 'Tout
@@ -1470,7 +1428,7 @@ class _GroupCorrectionSheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _SheetHeaderBar(title: 'CORRIGER : ${title.toUpperCase()}'),
+            SheetHeaderBar(title: 'CORRIGER : ${title.toUpperCase()}'),
             Flexible(
               child: ListView.separated(
                 shrinkWrap: true,
@@ -1620,7 +1578,7 @@ class _CorrectionBottomSheetState extends State<_CorrectionBottomSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _SheetHeaderBar(title: widget.title),
+              SheetHeaderBar(title: widget.title),
               Flexible(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(AppSpacing.lg),

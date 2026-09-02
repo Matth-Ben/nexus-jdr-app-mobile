@@ -91,6 +91,7 @@ abstract final class ClassFeatureRowMapper {
       usesMax: usesMax,
       usesRemaining: usesMax != null ? usesRemaining[id.toString()] : null,
       restType: usesPerRest?['rest_type'] as String?,
+      description: row['description'] as String? ?? '',
     );
   }
 }

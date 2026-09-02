@@ -7,8 +7,11 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
+import '../domain/character_spell_entry.dart';
+import '../domain/character_spell_slot.dart';
 import '../domain/hp_adjustment.dart';
 import '../domain/proficiency_bonus.dart';
 import '../domain/rest_type.dart';
@@ -68,22 +71,57 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// serveur potentiellement obsolète le temps d'un aller-retour réseau.
   HpState? _localHpState;
 
-  /// Compteur incrémenté uniquement par un repos long réussi ([_applyRest])
-  /// — sert à détecter qu'un ajustement PV resté en vol ([_applyHpState],
-  /// ex. le stepper "+"/"-" ou `HpAdjustmentSheet`) a été dépassé par un
-  /// repos long démarré entre-temps : sans ce garde-fou, l'écriture tardive
-  /// de l'ajustement obsolète écrasait silencieusement en base le résultat
-  /// du repos une fois son propre appel réseau enfin résolu (perte de
-  /// données confirmée en revue QA, voir
-  /// `test/features/characters/presentation/character_detail_rest_stale_hp_test.dart`).
+  /// Compteur incrémenté par tout repos réussi ([_applyRest], court ou
+  /// long) — sert à détecter qu'un ajustement resté en vol (PV via
+  /// [_applyHpState], emplacement de sort via [_castSpell], ou utilisation
+  /// d'aptitude via [_useClassFeature]) a été dépassé par un repos démarré
+  /// entre-temps : sans ce garde-fou, l'écriture tardive de l'ajustement
+  /// obsolète écrasait silencieusement en base le résultat du repos une fois
+  /// son propre appel réseau enfin résolu (perte de données confirmée en
+  /// revue QA, voir
+  /// `test/features/characters/presentation/character_detail_rest_stale_hp_test.dart`/
+  /// `character_detail_rest_stale_spell_slot_test.dart`/
+  /// `character_detail_rest_stale_feature_uses_test.dart`).
+  ///
+  /// Un seul compteur partagé plutôt qu'un par domaine (PV/emplacements de
+  /// sorts/aptitudes) : un repos (même court, qui ne touche ni les PV ni les
+  /// emplacements de sorts) reste un événement qui peut invalider *au moins
+  /// une* de ces trois surcouches optimistes (`character_feature_uses` est
+  /// réinitialisée par les deux types de repos, voir `_resetFeatureUses`
+  /// côté `CharacterRepository.applyRest`) — un domaine non concerné par un
+  /// repos donné se contente alors d'une réaffirmation sans effet (même
+  /// valeur réécrite), jamais incorrecte.
   ///
   /// Volontairement distinct d'un compteur générique incrémenté par *tout*
   /// ajustement PV : deux taps rapides successifs sur le stepper
   /// (`character_detail_hp_stepper_race_test.dart`) sont un cas normal déjà
   /// géré par l'accumulateur [_localHpState], pas une raison de déclencher
-  /// [_reassertCurrentHpState] — seul un repos long change les PV
+  /// [_reassertCurrentHpState] — seul un repos change ces valeurs
   /// indépendamment de la valeur locale déjà affichée à ce moment-là.
   int _restGeneration = 0;
+
+  /// `true` dès le début de l'appel réseau de [_castSpell] pour un sort
+  /// niveau ≥ 1 (jamais pour un sort niveau 0, aucun appel réseau), `false`
+  /// une fois résolu — désactive tout l'onglet "Sorts" le temps de cette
+  /// fenêtre (voir `CharacterSpellsTabBody.actionsDisabled`).
+  ///
+  /// Ferme une course trouvée en revue de code : `CharacterRepository
+  /// .castSpell` écrit une valeur *absolue* de `slots_used` (pas un
+  /// incrément atomique côté serveur) — sans ce verrou, deux lancers
+  /// rapprochés (même niveau ou non) pouvaient résoudre dans le désordre et
+  /// laisser l'un écraser silencieusement le résultat de l'autre, perdant un
+  /// emplacement consommé sans aucune erreur visible. Verrouiller tout
+  /// l'onglet le temps d'un lancer (plutôt que suivre une clé par niveau) est
+  /// le choix le plus simple qui reste correct dans tous les cas, même
+  /// principe que [_isApplyingRest] pour le repos.
+  bool _isCastingSpell = false;
+
+  /// `true` dès le début de l'appel réseau de [_useClassFeature], `false`
+  /// une fois résolu — même rationale et même verrouillage "toute la carte"
+  /// que [_isCastingSpell], voir sa documentation (`CharacterRepository
+  /// .useClassFeature` écrit lui aussi une valeur absolue de
+  /// `uses_remaining`).
+  bool _isUsingFeature = false;
 
   /// `true` dès le début de [_applyRest] (avant son appel réseau), `false`
   /// une fois résolu (succès ou échec) — désactive le stepper PV et le
@@ -103,6 +141,20 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// dépendre de cet ordre.
   bool _isApplyingRest = false;
 
+  /// État optimiste local des emplacements de sorts consommés
+  /// (`character_spell_slots.slots_used`), en avance sur la dernière valeur
+  /// serveur connue — `{niveau: slots_used}`, seuls les niveaux ayant un
+  /// lancer de sort en vol ou récemment résolu y figurent (jamais tous les
+  /// niveaux). Même principe que [_localHpState], généralisé à plusieurs clés
+  /// indépendantes : voir [_castSpell]/[_effectiveDetail].
+  Map<int, int> _localSpellSlotsUsed = {};
+
+  /// État optimiste local des utilisations restantes d'aptitudes de classe
+  /// (`character_feature_uses.uses_remaining`) — `{class_feature_id:
+  /// uses_remaining}`, même principe que [_localSpellSlotsUsed] mais pour
+  /// [CharacterClassFeature.id]. Voir [_useClassFeature]/[_effectiveDetail].
+  Map<int, int> _localFeatureUsesRemaining = {};
+
   void _goBack() {
     if (context.canPop()) {
       context.pop();
@@ -111,16 +163,59 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
-  /// Fusionne [_localHpState] (s'il existe) par-dessus [detail] : `max_hp`
-  /// vient toujours de la dernière donnée serveur connue (jamais modifié
-  /// localement), seuls `current_hp`/`temporary_hp` peuvent être en avance.
+  /// Fusionne [_localHpState]/[_localSpellSlotsUsed]/
+  /// [_localFeatureUsesRemaining] (s'ils existent) par-dessus [detail] :
+  /// `max_hp` vient toujours de la dernière donnée serveur connue (jamais
+  /// modifié localement), seuls `current_hp`/`temporary_hp` et les entrées
+  /// couvertes par ces deux maps peuvent être en avance.
   CharacterDetail _effectiveDetail(CharacterDetail detail) {
-    final local = _localHpState;
-    if (local == null) return detail;
-    return detail.copyWith(
-      currentHp: local.currentHp,
-      temporaryHp: local.temporaryHp,
-    );
+    var result = detail;
+
+    final localHp = _localHpState;
+    if (localHp != null) {
+      result = result.copyWith(
+        currentHp: localHp.currentHp,
+        temporaryHp: localHp.temporaryHp,
+      );
+    }
+
+    if (_localSpellSlotsUsed.isNotEmpty) {
+      result = result.copyWith(
+        spellSlots: [
+          for (final slot in result.spellSlots)
+            if (_localSpellSlotsUsed[slot.level] case final used?)
+              CharacterSpellSlot(
+                level: slot.level,
+                total: slot.total,
+                used: used,
+              )
+            else
+              slot,
+        ],
+      );
+    }
+
+    if (_localFeatureUsesRemaining.isNotEmpty) {
+      result = result.copyWith(
+        classFeatures: [
+          for (final feature in result.classFeatures)
+            if (_localFeatureUsesRemaining[feature.id] case final remaining?)
+              CharacterClassFeature(
+                id: feature.id,
+                name: feature.name,
+                level: feature.level,
+                usesMax: feature.usesMax,
+                usesRemaining: remaining,
+                restType: feature.restType,
+                description: feature.description,
+              )
+            else
+              feature,
+        ],
+      );
+    }
+
+    return result;
   }
 
   Future<void> _applyHpState(CharacterDetail detail, HpState newState) async {
@@ -247,6 +342,345 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Exécute le lancer de [spell] au niveau d'emplacement [slotLevel] (voir
+  /// `spell_action_sheet.dart::castSpellFlow` pour le calcul de ce niveau —
+  /// `null` pour un sort niveau 0, rien à persister) : suit EXACTEMENT le
+  /// même patron optimiste que [_applyHpState] (décrément immédiat de la
+  /// pastille du niveau concerné, appel repository, `ref.invalidate` au
+  /// succès), voir la spec de la tâche qui l'a introduit.
+  ///
+  /// [detail] doit déjà être la valeur *effective* (voir [_effectiveDetail]),
+  /// pas la dernière donnée serveur brute — même règle que
+  /// [_hpStateOf]/[_applyHpState] : un second lancer rapide sur le même
+  /// niveau doit repartir de la valeur déjà décrémentée par le premier, pas
+  /// d'une valeur serveur obsolète.
+  ///
+  /// Course concurrente avec un repos long (voir [_restGeneration]) : un
+  /// repos long réinitialise aussi les emplacements de sorts, donc un lancer
+  /// resté en vol peut voir son écriture (déjà résolue avec une valeur
+  /// devenue obsolète) écraser silencieusement le résultat du repos une fois
+  /// celui-ci déjà appliqué en base — même bug de fond que celui déjà corrigé
+  /// sur [_applyHpState]/[_applyRest], fermé ici avec le même jeton plutôt
+  /// qu'une nouvelle mécanique : en cas de mismatch,
+  /// [_reassertSpellSlotState] réécrit l'état actuellement affiché (déjà à
+  /// jour côté repos) par-dessus l'écriture obsolète.
+  Future<void> _castSpell(
+    CharacterDetail detail,
+    CharacterSpellEntry spell,
+    int? slotLevel,
+  ) async {
+    if (slotLevel == null) {
+      // Sort niveau 0 : rien à persister (spec de la tâche).
+      _showSnackBar('${spell.name} lancé.');
+      return;
+    }
+
+    CharacterSpellSlot? slot;
+    for (final candidate in detail.spellSlots) {
+      if (candidate.level == slotLevel) {
+        slot = candidate;
+        break;
+      }
+    }
+    // Ne devrait pas arriver : "Lancer" est désactivé en amont si aucun
+    // niveau éligible n'a d'emplacement disponible (voir
+    // `SpellCastEligibility`).
+    if (slot == null) return;
+
+    final newUsed = slot.used + 1;
+    final previousOverride = _localSpellSlotsUsed[slotLevel];
+    final myRestGeneration = _restGeneration;
+    setState(() {
+      _localSpellSlotsUsed = {..._localSpellSlotsUsed, slotLevel: newUsed};
+      _isCastingSpell = true;
+    });
+
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .castSpell(
+            characterId: widget.characterId,
+            slotLevel: slotLevel,
+            slotsUsed: newUsed,
+          );
+      if (_restGeneration != myRestGeneration) {
+        await _reassertSpellSlotState(slotLevel);
+        return;
+      }
+      if (outcome == WriteOutcome.queued) {
+        // Voir la documentation de `CharacterRepository.castSpell` : cette
+        // écriture n'est jamais mise en file, contrairement à `updateHp`/
+        // `addXp` — rien ne sera synchronisé plus tard, donc traité comme un
+        // échec du point de vue de l'état local (revert) avec un message
+        // honnête distinct de [_offlineQueuedMessage] (décision chef de
+        // projet, revue QA/code).
+        if (mounted && _restGeneration == myRestGeneration) {
+          setState(
+            () => _localSpellSlotsUsed = _withRevertedOverride(
+              _localSpellSlotsUsed,
+              slotLevel,
+              previousOverride,
+            ),
+          );
+        }
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar('${spell.name} lancé (emplacement niveau $slotLevel).');
+    } on CharacterFailure catch (failure) {
+      if (mounted && _restGeneration == myRestGeneration) {
+        setState(
+          () => _localSpellSlotsUsed = _withRevertedOverride(
+            _localSpellSlotsUsed,
+            slotLevel,
+            previousOverride,
+          ),
+        );
+      }
+      _showSnackBar(failure.message);
+    } catch (_) {
+      if (mounted && _restGeneration == myRestGeneration) {
+        setState(
+          () => _localSpellSlotsUsed = _withRevertedOverride(
+            _localSpellSlotsUsed,
+            slotLevel,
+            previousOverride,
+          ),
+        );
+      }
+      _showSnackBar('Impossible de lancer ce sort. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isCastingSpell = false);
+    }
+  }
+
+  /// Réécrit en base `character_spell_slots.slots_used` du niveau
+  /// [slotLevel] avec l'état actuellement affiché (dernière valeur locale
+  /// optimiste, ou dernière donnée serveur connue à défaut) — appelé
+  /// uniquement quand un lancer de sort resté en vol vient de résoudre après
+  /// qu'un repos long a déjà écrit son propre résultat en base (voir
+  /// [_restGeneration], appelé depuis [_castSpell]). Même principe que
+  /// [_reassertCurrentHpState] pour les PV.
+  Future<void> _reassertSpellSlotState(int slotLevel) async {
+    if (!mounted) return;
+    final latest = ref.read(characterDetailProvider(widget.characterId)).value;
+    if (latest == null) return;
+    final effective = _effectiveDetail(latest);
+    CharacterSpellSlot? slot;
+    for (final candidate in effective.spellSlots) {
+      if (candidate.level == slotLevel) {
+        slot = candidate;
+        break;
+      }
+    }
+    if (slot == null) return;
+
+    setState(() => _isApplyingRest = true);
+    try {
+      await ref
+          .read(characterRepositoryProvider)
+          .castSpell(
+            characterId: widget.characterId,
+            slotLevel: slotLevel,
+            slotsUsed: slot.used,
+          );
+    } on CharacterFailure catch (failure) {
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar(failure.message);
+    } catch (_) {
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar(
+        'Impossible de synchroniser les emplacements de sorts. Réessayez.',
+      );
+    } finally {
+      if (mounted) setState(() => _isApplyingRest = false);
+    }
+  }
+
+  /// Exécute l'utilisation de [feature] (aptitude de classe à usage limité) :
+  /// même patron optimiste que [_castSpell]/[_applyHpState] (décrément
+  /// immédiat, appel repository, `ref.invalidate` au succès, verrou
+  /// [_isUsingFeature] le temps de l'appel). Pas de sheet de choix
+  /// intermédiaire (un seul coût possible, contrairement au lancer de sort) :
+  /// [feature] est déjà le choix retenu.
+  ///
+  /// [detail] doit déjà être la valeur *effective* (voir [_effectiveDetail]),
+  /// même règle que [_castSpell].
+  ///
+  /// Course concurrente avec un repos (voir [_restGeneration]) : un repos
+  /// (court ou long) réinitialise `character_feature_uses.uses_remaining`
+  /// (voir `CharacterRepository.applyRest`/`_resetFeatureUses`), donc une
+  /// utilisation restée en vol peut voir son écriture (déjà résolue avec une
+  /// valeur devenue obsolète) écraser silencieusement le résultat du repos
+  /// une fois celui-ci déjà appliqué en base — même bug de fond que
+  /// [_castSpell], fermé ici avec le même jeton plutôt qu'une nouvelle
+  /// mécanique (trouvé par un test de mutation en revue QA).
+  Future<void> _useClassFeature(
+    CharacterDetail detail,
+    CharacterClassFeature feature,
+  ) async {
+    CharacterClassFeature? current;
+    for (final candidate in detail.classFeatures) {
+      if (candidate.id == feature.id) {
+        current = candidate;
+        break;
+      }
+    }
+    current ??= feature;
+    final remaining = current.usesRemaining ?? current.usesMax;
+    // Ne devrait pas arriver : "Utiliser" est désactivé en amont si
+    // `remaining <= 0` (voir la sheet d'actions d'aptitude).
+    if (remaining == null || remaining <= 0) return;
+
+    final newRemaining = remaining - 1;
+    final previousOverride = _localFeatureUsesRemaining[feature.id];
+    final myRestGeneration = _restGeneration;
+    setState(() {
+      _localFeatureUsesRemaining = {
+        ..._localFeatureUsesRemaining,
+        feature.id: newRemaining,
+      };
+      _isUsingFeature = true;
+    });
+
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .useClassFeature(
+            characterId: widget.characterId,
+            classFeatureId: feature.id,
+            usesRemaining: newRemaining,
+          );
+      if (_restGeneration != myRestGeneration) {
+        await _reassertFeatureUsesState(feature.id);
+        return;
+      }
+      if (outcome == WriteOutcome.queued) {
+        // Voir la documentation de `CharacterRepository.useClassFeature` et
+        // le commentaire équivalent de [_castSpell] : jamais mise en file,
+        // traité comme un échec côté état local, message distinct de
+        // [_offlineQueuedMessage].
+        if (mounted && _restGeneration == myRestGeneration) {
+          setState(
+            () => _localFeatureUsesRemaining = _withRevertedOverride(
+              _localFeatureUsesRemaining,
+              feature.id,
+              previousOverride,
+            ),
+          );
+        }
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar('${feature.name} utilisée.');
+    } on CharacterFailure catch (failure) {
+      if (mounted && _restGeneration == myRestGeneration) {
+        setState(
+          () => _localFeatureUsesRemaining = _withRevertedOverride(
+            _localFeatureUsesRemaining,
+            feature.id,
+            previousOverride,
+          ),
+        );
+      }
+      _showSnackBar(failure.message);
+    } catch (_) {
+      if (mounted && _restGeneration == myRestGeneration) {
+        setState(
+          () => _localFeatureUsesRemaining = _withRevertedOverride(
+            _localFeatureUsesRemaining,
+            feature.id,
+            previousOverride,
+          ),
+        );
+      }
+      _showSnackBar("Impossible d'utiliser cette aptitude. Réessayez.");
+    } finally {
+      if (mounted) setState(() => _isUsingFeature = false);
+    }
+  }
+
+  /// Réécrit en base `character_feature_uses.uses_remaining` de [featureId]
+  /// avec l'état actuellement affiché (dernière valeur locale optimiste, ou
+  /// dernière donnée serveur connue à défaut) — appelé uniquement quand une
+  /// utilisation d'aptitude restée en vol vient de résoudre après qu'un
+  /// repos a déjà écrit son propre résultat en base (voir [_restGeneration],
+  /// appelé depuis [_useClassFeature]). Même principe que
+  /// [_reassertSpellSlotState]/[_reassertCurrentHpState].
+  Future<void> _reassertFeatureUsesState(int featureId) async {
+    if (!mounted) return;
+    final latest = ref.read(characterDetailProvider(widget.characterId)).value;
+    if (latest == null) return;
+    final effective = _effectiveDetail(latest);
+    CharacterClassFeature? feature;
+    for (final candidate in effective.classFeatures) {
+      if (candidate.id == featureId) {
+        feature = candidate;
+        break;
+      }
+    }
+    if (feature == null) return;
+    final remaining = feature.usesRemaining ?? feature.usesMax;
+    if (remaining == null) return;
+
+    setState(() => _isApplyingRest = true);
+    try {
+      await ref
+          .read(characterRepositoryProvider)
+          .useClassFeature(
+            characterId: widget.characterId,
+            classFeatureId: featureId,
+            usesRemaining: remaining,
+          );
+    } on CharacterFailure catch (failure) {
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar(failure.message);
+    } catch (_) {
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar(
+        "Impossible de synchroniser les aptitudes de classe. Réessayez.",
+      );
+    } finally {
+      if (mounted) setState(() => _isApplyingRest = false);
+    }
+  }
+
+  /// Retourne [current] avec [key] remise à [previousValue] (ou retirée si
+  /// `null`) — factorisé pour [_castSpell]/[_useClassFeature] (même logique
+  /// de revert que le catch de [_applyHpState], généralisée à une map).
+  Map<int, int> _withRevertedOverride(
+    Map<int, int> current,
+    int key,
+    int? previousValue,
+  ) {
+    final updated = Map<int, int>.from(current);
+    if (previousValue == null) {
+      updated.remove(key);
+    } else {
+      updated[key] = previousValue;
+    }
+    return updated;
+  }
+
+  /// Retourne [current] privée des entrées pour lesquelles [isConfirmed]
+  /// (`(key, value) -> bool`) répond vrai — voir le `ref.listen` de [build]
+  /// (relâche [_localSpellSlotsUsed]/[_localFeatureUsesRemaining] une fois la
+  /// donnée serveur alignée, même principe que [_localHpState]).
+  Map<int, int> _confirmedEntriesRemoved(
+    Map<int, int> current,
+    bool Function(int key, int value) isConfirmed,
+  ) {
+    final result = <int, int>{};
+    for (final entry in current.entries) {
+      if (!isConfirmed(entry.key, entry.value)) {
+        result[entry.key] = entry.value;
+      }
+    }
+    return result;
+  }
+
   /// Ajoute [amount] XP (déjà saisi par le joueur dans `AddXpSheet`) à
   /// `detail.xp`, écrit le nouveau total en base
   /// (`CharacterRepository.addXp`), puis pousse immédiatement le flux de
@@ -312,23 +746,37 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// [_restGeneration] seul ne couvre pas).
   Future<void> _applyRest(CharacterDetail detail, RestType type) async {
     final previousLocal = _localHpState;
-    // Capturé avant l'appel réseau : `_restGeneration` peut ne pas encore
-    // avoir été avancé par cette tentative précise au moment de la capture
-    // (seul un repos long l'avance, voir ci-dessous) — comparé plus bas pour
-    // détecter si une tentative de repos plus récente l'a entre-temps
-    // dépassée, même principe que la garde symétrique posée sur
-    // [_applyHpState].
-    int? myRestGeneration;
+    // Un repos (court ou long) recharge des aptitudes rechargeables, et un
+    // repos long réinitialise en plus les emplacements de sorts : purge
+    // toute surcouche optimiste locale correspondante *avant* l'appel réseau,
+    // pour ne jamais laisser une valeur devenue obsolète masquer la donnée
+    // fraîchement resynchronisée une fois `ref.invalidate` résolu (sans
+    // cette purge, un lancer de sort/une utilisation d'aptitude encore
+    // affiché localement resterait visible tel quel malgré le repos). Revert
+    // vers ces valeurs pré-repos si l'appel échoue (voir le `catch`
+    // ci-dessous), même principe que [previousLocal].
+    final previousSpellSlotsOverride = _localSpellSlotsUsed;
+    final previousFeatureUsesOverride = _localFeatureUsesRemaining;
+    // Avancé pour TOUT repos (court ou long), capturé avant l'appel réseau —
+    // voir la documentation de [_restGeneration] : un repos court réinitialise
+    // aussi `character_feature_uses`, ce jeton doit donc détecter les deux
+    // types, pas seulement le repos long (correctif revue QA/code — un repos
+    // court n'avançait auparavant pas ce jeton, laissant passer la course sur
+    // [_useClassFeature]).
+    _restGeneration++;
+    final myRestGeneration = _restGeneration;
     if (type == RestType.long) {
-      _restGeneration++;
-      myRestGeneration = _restGeneration;
-      setState(
-        () => _localHpState = HpState(
+      setState(() {
+        _localHpState = HpState(
           currentHp: detail.maxHp,
           maxHp: detail.maxHp,
           temporaryHp: 0,
-        ),
-      );
+        );
+        _localSpellSlotsUsed = {};
+        _localFeatureUsesRemaining = {};
+      });
+    } else {
+      setState(() => _localFeatureUsesRemaining = {});
     }
     setState(() => _isApplyingRest = true);
 
@@ -351,14 +799,30 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       if (type == RestType.long &&
           mounted &&
           _restGeneration == myRestGeneration) {
-        setState(() => _localHpState = previousLocal);
+        setState(() {
+          _localHpState = previousLocal;
+          _localSpellSlotsUsed = previousSpellSlotsOverride;
+        });
+      }
+      if (mounted && _restGeneration == myRestGeneration) {
+        setState(
+          () => _localFeatureUsesRemaining = previousFeatureUsesOverride,
+        );
       }
       _showSnackBar(failure.message);
     } catch (_) {
       if (type == RestType.long &&
           mounted &&
           _restGeneration == myRestGeneration) {
-        setState(() => _localHpState = previousLocal);
+        setState(() {
+          _localHpState = previousLocal;
+          _localSpellSlotsUsed = previousSpellSlotsOverride;
+        });
+      }
+      if (mounted && _restGeneration == myRestGeneration) {
+        setState(
+          () => _localFeatureUsesRemaining = previousFeatureUsesOverride,
+        );
       }
       _showSnackBar("Impossible d'effectuer le repos. Réessayez.");
     } finally {
@@ -383,6 +847,21 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   static const _offlineQueuedMessage =
       'Hors ligne : sera synchronisé dès que la connexion revient.';
 
+  /// Message affiché quand `castSpell`/`useClassFeature` retourne
+  /// [WriteOutcome.queued] (mode hors-ligne) — voir `_castSpell`/
+  /// `_useClassFeature`. Distinct de [_offlineQueuedMessage] à dessein
+  /// (décision chef de projet, revue QA) : contrairement à `updateHp`/
+  /// `addXp`, ces deux écritures ne sont **jamais** mises en file
+  /// (`PendingCharacterWriteQueue` reste scopée à `hp`/`xp`) — rien ne sera
+  /// synchronisé automatiquement au retour du réseau, donc pas de promesse
+  /// de synchronisation ici. L'état optimiste local est aussi annulé dans ce
+  /// cas (revert), contrairement à [_offlineQueuedMessage] : laisser
+  /// affichée une pastille/un compteur décrémenté serait trompeur puisque
+  /// rien ne sera jamais synchronisé.
+  static const _offlineNotPersistedMessage =
+      "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
+      'fois reconnecté.';
+
   void _showSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -406,13 +885,51 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // sur une valeur serveur potentiellement encore en retard d'un aller-
     // retour réseau (voir la documentation de [_localHpState]).
     ref.listen(characterDetailProvider(widget.characterId), (previous, next) {
-      final local = _localHpState;
-      if (local == null) return;
       next.whenData((detail) {
-        if (detail.currentHp == local.currentHp &&
+        var shouldSetState = false;
+
+        final local = _localHpState;
+        if (local != null &&
+            detail.currentHp == local.currentHp &&
             detail.temporaryHp == local.temporaryHp) {
-          setState(() => _localHpState = null);
+          _localHpState = null;
+          shouldSetState = true;
         }
+
+        // Même principe que ci-dessus, généralisé aux maps
+        // [_localSpellSlotsUsed]/[_localFeatureUsesRemaining] : ne relâche
+        // que les entrées que [detail] confirme désormais exactement, jamais
+        // toute la map d'un coup (un autre lancer/une autre utilisation peut
+        // encore être en vol pour une autre clé).
+        if (_localSpellSlotsUsed.isNotEmpty) {
+          final remaining = _confirmedEntriesRemoved(
+            _localSpellSlotsUsed,
+            (level, used) => detail.spellSlots.any(
+              (slot) => slot.level == level && slot.used == used,
+            ),
+          );
+          if (remaining.length != _localSpellSlotsUsed.length) {
+            _localSpellSlotsUsed = remaining;
+            shouldSetState = true;
+          }
+        }
+
+        if (_localFeatureUsesRemaining.isNotEmpty) {
+          final remaining = _confirmedEntriesRemoved(
+            _localFeatureUsesRemaining,
+            (featureId, usesRemaining) => detail.classFeatures.any(
+              (feature) =>
+                  feature.id == featureId &&
+                  feature.usesRemaining == usesRemaining,
+            ),
+          );
+          if (remaining.length != _localFeatureUsesRemaining.length) {
+            _localFeatureUsesRemaining = remaining;
+            shouldSetState = true;
+          }
+        }
+
+        if (shouldSetState) setState(() {});
       });
     });
 
@@ -451,8 +968,18 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
 
   Widget _buildTabBody(CharacterDetail detail) {
     return switch (_tab) {
-      CharacterDetailTab.skills => CharacterSkillsTabBody(detail: detail),
-      CharacterDetailTab.spells => CharacterSpellsTabBody(detail: detail),
+      CharacterDetailTab.skills => CharacterSkillsTabBody(
+        detail: _effectiveDetail(detail),
+        onUseFeature: (feature) =>
+            _useClassFeature(_effectiveDetail(detail), feature),
+        actionsDisabled: _isApplyingRest || _isUsingFeature,
+      ),
+      CharacterDetailTab.spells => CharacterSpellsTabBody(
+        detail: _effectiveDetail(detail),
+        onCastSpell: (spell, slotLevel) =>
+            _castSpell(_effectiveDetail(detail), spell, slotLevel),
+        actionsDisabled: _isApplyingRest || _isCastingSpell,
+      ),
       CharacterDetailTab.inventory => CharacterInventoryTabBody(detail: detail),
       CharacterDetailTab.story => CharacterStoryTabBody(detail: detail),
       CharacterDetailTab.character => _CharacterTabBody(

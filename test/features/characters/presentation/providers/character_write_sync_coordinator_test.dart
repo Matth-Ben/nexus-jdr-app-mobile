@@ -359,4 +359,22 @@ class _FakeCharacterRepository implements CharacterRepository {
 
   @override
   Future<void> leaveStory({required String characterCampaignId}) async {}
+
+  @override
+  Future<WriteOutcome> castSpell({
+    required String characterId,
+    required int slotLevel,
+    required int slotsUsed,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WriteOutcome> useClassFeature({
+    required String characterId,
+    required int classFeatureId,
+    required int usesRemaining,
+  }) async {
+    throw UnimplementedError();
+  }
 }

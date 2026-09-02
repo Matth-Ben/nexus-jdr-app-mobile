@@ -118,6 +118,54 @@ abstract class CharacterRepository {
   /// serveur.
   Future<WriteOutcome> addXp({required String characterId, required int newXp});
 
+  /// Écrit directement `character_spell_slots.slots_used` pour
+  /// [characterId]/[slotLevel] avec [slotsUsed] (déjà calculé par l'appelant
+  /// — valeur actuelle + 1, voir
+  /// `presentation/character_detail_screen.dart::_castSpell`) : même
+  /// principe que [updateHp]/[addXp], aucun calcul métier fait ici. Action
+  /// "Lancer" d'un sort niveau ≥ 1 (sheet d'actions de sort,
+  /// `presentation/widgets/spell_action_sheet.dart`) — un sort niveau 0 ne
+  /// passe jamais par cette méthode (rien à persister, voir la spec de la
+  /// tâche qui l'a introduite).
+  ///
+  /// Mode hors-ligne (décision chef de projet) : contrairement à
+  /// [updateHp]/[addXp], cette écriture n'est **jamais** mise dans
+  /// [PendingCharacterWriteQueue] (scopée explicitement à `hp`/`xp`, voir sa
+  /// documentation de classe) — absence de connectivité détectée via
+  /// [ConnectivityChecker] retourne directement [WriteOutcome.queued] sans
+  /// tenter le réseau, mais **sans persister** l'intention nulle part : elle
+  /// n'est donc jamais synchronisée automatiquement au retour du réseau
+  /// (contrairement à ce que son nom pourrait suggérer). L'appelant affiche
+  /// tout de même le même message "hors ligne" que [updateHp]/[addXp] (même
+  /// [WriteOutcome], voir la spec de la tâche), par cohérence d'affichage —
+  /// **pas** parce que la donnée sera un jour synchronisée.
+  Future<WriteOutcome> castSpell({
+    required String characterId,
+    required int slotLevel,
+    required int slotsUsed,
+  });
+
+  /// Écrit (upsert) `character_feature_uses.uses_remaining` pour
+  /// [characterId]/[classFeatureId] avec [usesRemaining] (déjà calculé par
+  /// l'appelant — valeur actuelle - 1, voir
+  /// `presentation/character_detail_screen.dart::_useClassFeature`) : même
+  /// principe que [castSpell]. Action "Utiliser" d'une aptitude de classe à
+  /// usage limité (sheet d'actions d'aptitude,
+  /// `presentation/widgets/class_feature_action_sheet.dart`).
+  ///
+  /// Upsert (jamais un simple `UPDATE`) : même rationale que
+  /// `SupabaseCharacterRepository._resetFeatureUses` — une aptitude jamais
+  /// encore utilisée n'a pas de ligne `character_feature_uses` existante.
+  ///
+  /// Mode hors-ligne : mêmes règles exactement que [castSpell] (voir sa
+  /// documentation), y compris la limite assumée (pas de persistance/synchro
+  /// différée).
+  Future<WriteOutcome> useClassFeature({
+    required String characterId,
+    required int classFeatureId,
+    required int usesRemaining,
+  });
+
   /// Aptitudes/choix `class_features` de la classe [classId] au niveau
   /// [targetLevel] — écran "Montée de niveau"
   /// (`presentation/level_up_screen.dart`), étapes "Aptitudes de classe
@@ -563,6 +611,87 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .eq('id', characterId)
           .eq('owner_id', ownerId);
       return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> castSpell({
+    required String characterId,
+    required int slotLevel,
+    required int slotsUsed,
+  }) async {
+    final ownerId = _requireOwnerId();
+
+    // Voir la documentation de [CharacterRepository.castSpell] : jamais mis
+    // en file, ce cas retourne directement [WriteOutcome.queued] sans écrire
+    // nulle part.
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      final characterRow = await _client
+          .from('characters')
+          .select('id')
+          .eq('id', characterId)
+          .eq('owner_id', ownerId)
+          .maybeSingle();
+      if (characterRow == null) {
+        throw const CharacterFailure('Personnage introuvable.');
+      }
+
+      await _client
+          .from('character_spell_slots')
+          .update({'slots_used': slotsUsed})
+          .eq('character_id', characterId)
+          .eq('slot_level', slotLevel);
+      return WriteOutcome.synced;
+    } on CharacterFailure {
+      rethrow;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> useClassFeature({
+    required String characterId,
+    required int classFeatureId,
+    required int usesRemaining,
+  }) async {
+    final ownerId = _requireOwnerId();
+
+    // Voir la documentation de [CharacterRepository.useClassFeature]/
+    // [CharacterRepository.castSpell] : jamais mis en file.
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      final characterRow = await _client
+          .from('characters')
+          .select('id')
+          .eq('id', characterId)
+          .eq('owner_id', ownerId)
+          .maybeSingle();
+      if (characterRow == null) {
+        throw const CharacterFailure('Personnage introuvable.');
+      }
+
+      await _client.from('character_feature_uses').upsert({
+        'character_id': characterId,
+        'class_feature_id': classFeatureId,
+        'uses_remaining': usesRemaining,
+      }, onConflict: 'character_id,class_feature_id');
+      return WriteOutcome.synced;
+    } on CharacterFailure {
+      rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (_) {
@@ -1397,7 +1526,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     if (classIds.isNotEmpty) {
       classFeatureRows = await _client
           .from('class_features')
-          .select('id, class_id, level, uses_per_rest')
+          .select('id, class_id, level, uses_per_rest, description')
           .inFilter('class_id', classIds.toList())
           .order('level', ascending: true);
       final attainedRows = ClassFeatureRowMapper.filterAttained(
@@ -1444,7 +1573,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
     if (spellIds.isNotEmpty) {
       spellRows = await _client
           .from('spells')
-          .select('id, level, school')
+          .select(
+            'id, level, school, casting_time, range, components, '
+            'duration, concentration, description',
+          )
           .inFilter('id', spellIds.toList());
       spellNameRows = await _fetchTranslationRows(
         entityType: 'spell',

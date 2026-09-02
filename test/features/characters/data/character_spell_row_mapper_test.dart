@@ -68,5 +68,61 @@ void main() {
       // Aucun statut résolu : retombe sur 'connu'.
       expect(result.single.status, 'connu');
     });
+
+    test('résout castingTime/range/components/duration/concentration/'
+        'description', () {
+      final spellRows = [
+        {
+          'id': 1,
+          'level': 1,
+          'school': 'Abjuration',
+          'casting_time': '1 action',
+          'range': '9 mètres',
+          'components': {'verbal': true, 'somatic': true, 'material': false},
+          'duration': '1 minute',
+          'concentration': true,
+          'description': 'Une description complète.',
+        },
+      ];
+
+      final result = CharacterSpellRowMapper.toCharacterSpellEntries(
+        spellRows,
+        names: const {'1': 'Bouclier'},
+        statuses: const {1: 'connu'},
+      );
+
+      expect(result.single.castingTime, '1 action');
+      expect(result.single.range, '9 mètres');
+      expect(result.single.components, {
+        'verbal': true,
+        'somatic': true,
+        'material': false,
+      });
+      expect(result.single.duration, '1 minute');
+      expect(result.single.concentration, isTrue);
+      expect(result.single.description, 'Une description complète.');
+    });
+
+    test(
+      'champs techniques absents -> replis (chaînes vides, false, map vide)',
+      () {
+        final spellRows = [
+          {'id': 1, 'level': 0, 'school': ''},
+        ];
+
+        final result = CharacterSpellRowMapper.toCharacterSpellEntries(
+          spellRows,
+          names: const {},
+          statuses: const {},
+        );
+
+        expect(result.single.castingTime, '');
+        expect(result.single.range, '');
+        expect(result.single.components, isEmpty);
+        expect(result.single.duration, '');
+        expect(result.single.concentration, isFalse);
+        expect(result.single.description, '');
+      },
+    );
   });
 }

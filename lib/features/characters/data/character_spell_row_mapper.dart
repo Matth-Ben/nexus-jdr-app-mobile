@@ -38,11 +38,12 @@ abstract final class CharacterSpellRowMapper {
   }
 
   /// Construit les [CharacterSpellEntry] à partir des lignes brutes `spells`
-  /// (id, level, school) déjà filtrées sur les sorts du personnage, des
-  /// noms déjà résolus (`names`) et des statuts déjà résolus (`statuses`,
-  /// voir [parseStatuses]). Un sort sans statut résolu (ne devrait pas
-  /// arriver, `spellRows` est dérivé de `character_spells`) retombe sur
-  /// 'connu' plutôt que de crasher.
+  /// (id, level, school, casting_time, range, components, duration,
+  /// concentration, description) déjà filtrées sur les sorts du personnage,
+  /// des noms déjà résolus (`names`) et des statuts déjà résolus
+  /// (`statuses`, voir [parseStatuses]). Un sort sans statut résolu (ne
+  /// devrait pas arriver, `spellRows` est dérivé de `character_spells`)
+  /// retombe sur 'connu' plutôt que de crasher.
   static List<CharacterSpellEntry> toCharacterSpellEntries(
     List<Map<String, dynamic>> spellRows, {
     required Map<String, String> names,
@@ -51,6 +52,7 @@ abstract final class CharacterSpellRowMapper {
     final result = <CharacterSpellEntry>[];
     for (final row in spellRows) {
       final id = (row['id'] as num).toInt();
+      final components = row['components'];
       result.add(
         CharacterSpellEntry(
           id: id,
@@ -58,6 +60,14 @@ abstract final class CharacterSpellRowMapper {
           level: (row['level'] as num?)?.toInt() ?? 0,
           school: row['school'] as String? ?? '',
           status: statuses[id] ?? 'connu',
+          castingTime: row['casting_time'] as String? ?? '',
+          range: row['range'] as String? ?? '',
+          components: components is Map<String, dynamic>
+              ? components
+              : const {},
+          duration: row['duration'] as String? ?? '',
+          concentration: row['concentration'] == true,
+          description: row['description'] as String? ?? '',
         ),
       );
     }

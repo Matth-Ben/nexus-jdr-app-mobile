@@ -37,6 +37,24 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 
   @override
+  Future<WriteOutcome> castSpell({
+    required String characterId,
+    required int slotLevel,
+    required int slotsUsed,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WriteOutcome> useClassFeature({
+    required String characterId,
+    required int classFeatureId,
+    required int usesRemaining,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
 
   @override

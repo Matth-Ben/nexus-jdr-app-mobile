@@ -152,5 +152,26 @@ void main() {
 
       expect(feature.name, 'Aptitude #42');
     });
+
+    test('résout description quand présente, chaîne vide sinon', () {
+      final withDescription = ClassFeatureRowMapper.toCharacterClassFeature(
+        {
+          'id': 1,
+          'class_id': 5,
+          'level': 1,
+          'description': 'Une description complète.',
+        },
+        names: const {},
+        usesRemaining: const {},
+      );
+      expect(withDescription.description, 'Une description complète.');
+
+      final withoutDescription = ClassFeatureRowMapper.toCharacterClassFeature(
+        {'id': 2, 'class_id': 5, 'level': 1},
+        names: const {},
+        usesRemaining: const {},
+      );
+      expect(withoutDescription.description, '');
+    });
   });
 }

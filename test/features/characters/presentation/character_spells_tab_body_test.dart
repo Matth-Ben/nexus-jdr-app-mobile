@@ -34,7 +34,9 @@ CharacterDetail _detail({
 Future<void> _pump(WidgetTester tester, CharacterDetail detail) async {
   await tester.pumpWidget(
     MaterialApp(
-      home: Scaffold(body: CharacterSpellsTabBody(detail: detail)),
+      home: Scaffold(
+        body: CharacterSpellsTabBody(detail: detail, onCastSpell: (_, _) {}),
+      ),
     ),
   );
 }
@@ -101,4 +103,64 @@ void main() {
     expect(find.text('SORTS'), findsNothing);
     expect(find.byIcon(Icons.auto_fix_high_outlined), findsOneWidget);
   });
+
+  testWidgets(
+    'un sort est cliquable (chevron affiché) et ouvre la sheet d\'actions',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          spells: const [
+            CharacterSpellEntry(
+              id: 1,
+              name: 'Lumière',
+              level: 0,
+              school: 'Évocation',
+              status: 'connu',
+            ),
+          ],
+        ),
+      );
+
+      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+
+      await tester.tap(find.text('Lumière'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Infos'), findsOneWidget);
+      expect(find.text('Lancer'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'actionsDisabled désactive le tap sur les sorts (repos long en vol)',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CharacterSpellsTabBody(
+              detail: _detail(
+                spells: const [
+                  CharacterSpellEntry(
+                    id: 1,
+                    name: 'Lumière',
+                    level: 0,
+                    school: 'Évocation',
+                    status: 'connu',
+                  ),
+                ],
+              ),
+              onCastSpell: (_, _) {},
+              actionsDisabled: true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Lumière'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Infos'), findsNothing);
+    },
+  );
 }

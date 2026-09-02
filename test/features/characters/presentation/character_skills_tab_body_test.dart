@@ -44,7 +44,9 @@ CharacterDetail _detail({
 Future<void> _pump(WidgetTester tester, CharacterDetail detail) async {
   await tester.pumpWidget(
     MaterialApp(
-      home: Scaffold(body: CharacterSkillsTabBody(detail: detail)),
+      home: Scaffold(
+        body: CharacterSkillsTabBody(detail: detail, onUseFeature: (_) {}),
+      ),
     ),
   );
 }
@@ -137,6 +139,94 @@ void main() {
     expect(find.text('Défense sans armure'), findsOneWidget);
     expect(find.text('Passive'), findsOneWidget);
   });
+
+  testWidgets(
+    'une aptitude passive n\'est pas cliquable (pas de chevron, tap sans '
+    'effet)',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          classFeatures: const [
+            CharacterClassFeature(id: 2, name: 'Défense sans armure', level: 1),
+          ],
+        ),
+      );
+
+      expect(find.byIcon(Icons.chevron_right), findsNothing);
+
+      await tester.tap(find.text('Défense sans armure'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Infos'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'une aptitude à usage limité est cliquable (chevron affiché) et ouvre '
+    'la sheet d\'actions',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          classFeatures: const [
+            CharacterClassFeature(
+              id: 1,
+              name: 'Conduit divin',
+              level: 2,
+              usesMax: 1,
+              usesRemaining: 0,
+              restType: 'repos_court',
+            ),
+          ],
+        ),
+      );
+
+      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+
+      await tester.tap(find.text('Conduit divin'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Infos'), findsOneWidget);
+      expect(find.text('Utiliser'), findsOneWidget);
+      // Épuisée (0 restant) : "Utiliser" désactivée.
+      expect(find.text('Épuisée'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'actionsDisabled désactive le tap sur les aptitudes à usage limité '
+    '(repos en vol)',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CharacterSkillsTabBody(
+              detail: _detail(
+                classFeatures: const [
+                  CharacterClassFeature(
+                    id: 1,
+                    name: 'Conduit divin',
+                    level: 2,
+                    usesMax: 1,
+                    usesRemaining: 1,
+                    restType: 'repos_court',
+                  ),
+                ],
+              ),
+              onUseFeature: (_) {},
+              actionsDisabled: true,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Conduit divin'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Infos'), findsNothing);
+    },
+  );
 
   testWidgets('les cartes outils/langues n\'apparaissent pas quand vides', (
     tester,

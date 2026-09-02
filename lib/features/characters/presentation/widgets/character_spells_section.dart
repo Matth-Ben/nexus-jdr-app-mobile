@@ -6,21 +6,19 @@ import '../../../../core/theme/app_typography.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/spells_by_level_grouper.dart';
+import 'spell_action_sheet.dart';
 
 /// Section "SORTS" de l'onglet "Sorts" : les sorts connus/préparés du
 /// personnage, groupés par niveau (0 = "Sorts mineurs"), avec les
 /// emplacements disponibles du niveau affichés en pastilles à côté du titre
 /// de chaque niveau ≥ 1.
 ///
-/// Portée volontairement limitée à cette itération : affichage seul, en
-/// lecture seule. Chaque sort est une simple ligne (nom + école), **pas**
-/// cliquable — la spec du cahier des charges
-/// (`04-fonctionnalites-app-mobile.md`, section "Sorts — consultation et
-/// lancer") prévoit un panneau "Infos"/"Lancer" par sort (description
-/// complète, décompte d'emplacement à l'usage), explicitement reporté à une
-/// tâche ultérieure. Pas de `InkWell`/`GestureDetector` sur `_SpellRow` :
-/// à ajouter avec le panneau, pas avant, pour ne jamais laisser un item qui
-/// réagit au tap sans rien faire.
+/// Chaque sort (`_SpellRow`) est cliquable, ouvrant la sheet d'actions
+/// "Infos"/"Lancer" ([showSpellActionSheet]) — voir la spec visuelle de la
+/// tâche qui a introduit ce comportement (jusque-là en lecture seule).
+/// [onCastSpell] délègue toute la logique d'écriture (optimiste + réseau) à
+/// l'appelant (`character_detail_screen.dart::_castSpell`), même principe
+/// que `onTapAdjustHp`/`onTapRest` de `_CharacterTabBody`.
 ///
 /// N'affiche rien tant que [groups] est vide — appelant responsable de ne
 /// pas monter cette section dans ce cas (voir
@@ -29,14 +27,28 @@ class CharacterSpellsSection extends StatelessWidget {
   const CharacterSpellsSection({
     required this.groups,
     required this.spellSlots,
+    required this.onCastSpell,
+    this.actionsDisabled = false,
     super.key,
   });
 
   final List<SpellLevelGroup> groups;
 
   /// Emplacements de sorts par niveau — indexé par niveau dans [build] pour
-  /// afficher les pastilles du bon niveau à côté de chaque titre de groupe.
+  /// afficher les pastilles du bon niveau à côté de chaque titre de groupe,
+  /// et transmis tel quel à [showSpellActionSheet] (calcul d'éligibilité).
   final List<CharacterSpellSlot> spellSlots;
+
+  final CastSpellCallback onCastSpell;
+
+  /// `true` pendant qu'un repos long est en cours d'application (voir
+  /// `character_detail_screen.dart::_isApplyingRest`) : désactive le tap sur
+  /// chaque sort, un repos long réinitialisant les emplacements de sorts —
+  /// même verrou déjà appliqué au bandeau PV (`CharacterVitalsCard
+  /// .hpActionsDisabled`), ferme ici le même type de course qu'un lancer de
+  /// sort démarré pendant que le repos écrit encore en base (voir la
+  /// documentation de `_castSpell`).
+  final bool actionsDisabled;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +75,9 @@ class CharacterSpellsSection extends StatelessWidget {
             _SpellLevelGroupSection(
               group: group,
               slot: slotsByLevel[group.level],
+              spellSlots: spellSlots,
+              onCastSpell: onCastSpell,
+              actionsDisabled: actionsDisabled,
             ),
         ],
       ),
@@ -71,10 +86,19 @@ class CharacterSpellsSection extends StatelessWidget {
 }
 
 class _SpellLevelGroupSection extends StatelessWidget {
-  const _SpellLevelGroupSection({required this.group, required this.slot});
+  const _SpellLevelGroupSection({
+    required this.group,
+    required this.slot,
+    required this.spellSlots,
+    required this.onCastSpell,
+    required this.actionsDisabled,
+  });
 
   final SpellLevelGroup group;
   final CharacterSpellSlot? slot;
+  final List<CharacterSpellSlot> spellSlots;
+  final CastSpellCallback onCastSpell;
+  final bool actionsDisabled;
 
   @override
   Widget build(BuildContext context) {
@@ -101,12 +125,18 @@ class _SpellLevelGroupSection extends StatelessWidget {
               ),
               if (showPips) ...[
                 const SizedBox(width: AppSpacing.xs),
-                _SpellSlotDots(slot: slot!),
+                SpellSlotDots(slot: slot!),
               ],
             ],
           ),
           const SizedBox(height: AppSpacing.xs / 2),
-          for (final spell in group.spells) _SpellRow(spell: spell),
+          for (final spell in group.spells)
+            _SpellRow(
+              spell: spell,
+              spellSlots: spellSlots,
+              onCastSpell: onCastSpell,
+              enabled: !actionsDisabled,
+            ),
         ],
       ),
     );
@@ -125,8 +155,8 @@ class _SpellLevelGroupSection extends StatelessWidget {
 /// signalé en revue direction-artistique. [Semantics.label] porte une phrase
 /// lisible ("X restants sur Y") plutôt que le rendu en pastilles, plus
 /// adaptée à un lecteur d'écran qu'une suite de glyphes pleins/vides.
-class _SpellSlotDots extends StatelessWidget {
-  const _SpellSlotDots({required this.slot});
+class SpellSlotDots extends StatelessWidget {
+  const SpellSlotDots({required this.slot, super.key});
 
   final CharacterSpellSlot slot;
 
@@ -178,9 +208,17 @@ class _SpellSlotDot extends StatelessWidget {
 }
 
 class _SpellRow extends StatelessWidget {
-  const _SpellRow({required this.spell});
+  const _SpellRow({
+    required this.spell,
+    required this.spellSlots,
+    required this.onCastSpell,
+    required this.enabled,
+  });
 
   final CharacterSpellEntry spell;
+  final List<CharacterSpellSlot> spellSlots;
+  final CastSpellCallback onCastSpell;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -191,33 +229,55 @@ class _SpellRow extends StatelessWidget {
     // `find.text(...)` dans les tests de widget, et cohérent avec le
     // découpage nom/valeur des autres cartes de cet onglet (ex.
     // `character_skills_card.dart::_SkillRow`).
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs / 2),
-      child: Row(
-        children: [
-          Flexible(
-            child: Text(
-              spell.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.body(fontSize: 13),
-            ),
-          ),
-          if (school.isNotEmpty) ...[
-            const SizedBox(width: AppSpacing.xs / 2),
-            Flexible(
-              child: Text(
-                '($school)',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.body(
-                  fontSize: 12,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled
+            ? () => showSpellActionSheet(
+                context,
+                spell: spell,
+                spellSlots: spellSlots,
+                onCastSpell: onCastSpell,
+              )
+            : null,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs / 2),
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    spell.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.body(fontSize: 13),
+                  ),
+                ),
+                if (school.isNotEmpty) ...[
+                  const SizedBox(width: AppSpacing.xs / 2),
+                  Flexible(
+                    child: Text(
+                      '($school)',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.body(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(width: AppSpacing.xs / 2),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 18,
                   color: AppColors.textMuted,
                 ),
-              ),
+              ],
             ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }
