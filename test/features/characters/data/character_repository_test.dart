@@ -977,6 +977,162 @@ void main() {
     },
   );
 
+  group('SupabaseCharacterRepository.updateStoryFields (onglet "Histoire")', () {
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const characterId = 'char-1';
+    const ownerId = 'owner-1';
+
+    test(
+      'connectivité absente -> retourne queued sans tenter le réseau, '
+      'jamais mise en file (même règle que useInventoryItem/addReward)',
+      () async {
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          throwOnRequest: true,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: false),
+        );
+
+        final outcome = await repository.updateStoryFields(
+          characterId: characterId,
+          appearanceText: 'Cheveux argentés.',
+        );
+
+        expect(outcome, WriteOutcome.queued);
+        expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+      },
+    );
+
+    test(
+      'connectivité présente + écriture réussie -> synced, un seul UPDATE '
+      'sur `characters`',
+      () async {
+        var updateRequestCount = 0;
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          onRequest: (request) {
+            if (request.url.pathSegments.last == 'characters' &&
+                request.method == 'PATCH') {
+              updateRequestCount++;
+            }
+          },
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.updateStoryFields(
+          characterId: characterId,
+          appearanceText: 'Cheveux argentés.',
+          traitsText: "Curieuse jusqu'à l'imprudence.",
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(
+          updateRequestCount,
+          1,
+          reason: 'les 9 colonnes appartiennent à la même ligne `characters` '
+              ': un seul UPDATE doit couvrir les 9, jamais un par champ',
+        );
+      },
+    );
+
+    test(
+      'un champ vidé (`null`) est coalescé vers \'\' dans le payload envoyé, '
+      'jamais un `null` littéral (violerait la contrainte NOT NULL de '
+      '`characters.*_text`)',
+      () async {
+        String? capturedBody;
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          onRequest: (request) {
+            if (request.url.pathSegments.last == 'characters' &&
+                request.method == 'PATCH') {
+              capturedBody = request.body;
+            }
+          },
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.updateStoryFields(
+          characterId: characterId,
+          appearanceText: 'Cheveux argentés.',
+          // Tous les 8 autres champs restent `null` (vidés par le joueur).
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(capturedBody, isNotNull);
+        final payload = jsonDecode(capturedBody!) as Map<String, dynamic>;
+        expect(payload['appearance_text'], 'Cheveux argentés.');
+        expect(payload['traits_text'], '');
+        expect(payload['ideals_text'], '');
+        expect(payload['bonds_text'], '');
+        expect(payload['flaws_text'], '');
+        expect(payload['backstory_text'], '');
+        expect(payload['allies_text'], '');
+        expect(payload['features_text'], '');
+        expect(payload['treasure_text'], '');
+        expect(
+          payload.values,
+          isNot(contains(null)),
+          reason: 'aucune des 9 colonnes ne doit jamais recevoir `null` '
+              'littéral (colonnes `not null default \'\'` en base)',
+        );
+      },
+    );
+
+    test(
+      'connectivité présente + écriture réseau en échec -> relance '
+      'CharacterFailure, rien en file',
+      () async {
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          failureStatusCode: 500,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        await expectLater(
+          repository.updateStoryFields(
+            characterId: characterId,
+            appearanceText: 'Cheveux argentés.',
+          ),
+          throwsA(isA<CharacterFailure>()),
+        );
+        expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+      },
+    );
+  });
+
   group('PendingCharacterWriteSyncer.sync', () {
     late AppDatabase db;
     late PendingCharacterWriteQueue pendingWrites;

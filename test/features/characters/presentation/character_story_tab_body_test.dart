@@ -49,12 +49,21 @@ CharacterDetail _detail({
 // "TRÉSOR") sont autrement en dehors du `cacheExtent` par défaut d'un
 // `ListView` sur la taille d'écran de test standard (800×600) — mêmes
 // causes/remède que `character_detail_screen_test.dart::pumpDetail`.
-Future<void> _pump(WidgetTester tester, CharacterDetail detail) async {
+Future<void> _pump(
+  WidgetTester tester,
+  CharacterDetail detail, {
+  VoidCallback? onEdit,
+}) async {
   await tester.binding.setSurfaceSize(const Size(800, 2000));
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
     MaterialApp(
-      home: Scaffold(body: CharacterStoryTabBody(detail: detail)),
+      home: Scaffold(
+        body: CharacterStoryTabBody(
+          detail: detail,
+          onEdit: onEdit ?? () {},
+        ),
+      ),
     ),
   );
 }
@@ -173,4 +182,18 @@ void main() {
       expect(find.text(label), findsNothing);
     }
   });
+
+  testWidgets(
+    'état vide : le bouton "Renseigner mon histoire" appelle onEdit',
+    (tester) async {
+      var editCallCount = 0;
+      await _pump(tester, _detail(), onEdit: () => editCallCount++);
+
+      expect(find.text('RENSEIGNER MON HISTOIRE'), findsOneWidget);
+      await tester.tap(find.text('RENSEIGNER MON HISTOIRE'));
+      await tester.pumpAndSettle();
+
+      expect(editCallCount, 1);
+    },
+  );
 }

@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/wood_back_header.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_adventure.dart';
@@ -82,6 +83,10 @@ class _FakeCharacterRepository implements CharacterRepository {
   int useClassFeatureCallCount = 0;
   Object? useClassFeatureErrorToThrow;
   WriteOutcome useClassFeatureOutcomeToReturn = WriteOutcome.synced;
+
+  String? lastUpdatedStoryAppearanceText;
+  int updateStoryFieldsCallCount = 0;
+  WriteOutcome updateStoryFieldsOutcomeToReturn = WriteOutcome.synced;
 
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
@@ -176,6 +181,24 @@ class _FakeCharacterRepository implements CharacterRepository {
     leaveStoryCallCount++;
     lastLeftCharacterCampaignId = characterCampaignId;
     if (leaveStoryErrorToThrow != null) throw leaveStoryErrorToThrow!;
+  }
+
+  @override
+  Future<WriteOutcome> updateStoryFields({
+    required String characterId,
+    String? appearanceText,
+    String? traitsText,
+    String? idealsText,
+    String? bondsText,
+    String? flawsText,
+    String? backstoryText,
+    String? alliesText,
+    String? featuresText,
+    String? treasureText,
+  }) async {
+    updateStoryFieldsCallCount++;
+    lastUpdatedStoryAppearanceText = appearanceText;
+    return updateStoryFieldsOutcomeToReturn;
   }
 
   @override
@@ -782,6 +805,54 @@ void main() {
     expect(find.text('Halltesse Ambrelune'), findsOneWidget);
     expect(find.text('FICHE'), findsOneWidget);
   });
+
+  testWidgets(
+    'icône "Modifier" du bandeau bois : n\'apparaît que sur l\'onglet '
+    '"Histoire", ouvre la sheet d\'édition préremplie, un succès invalide '
+    'la fiche et affiche le SnackBar de confirmation',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        appearanceText: 'Cheveux argentés.',
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Modifier'), findsNothing);
+
+      await tester.tap(find.text('HIST.'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Modifier'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Modifier'));
+      await tester.pumpAndSettle();
+
+      expect(find.text("MODIFIER L'HISTOIRE"), findsOneWidget);
+      expect(
+        tester
+            .widgetList<TextFormField>(find.byType(TextFormField))
+            .first
+            .controller!
+            .text,
+        'Cheveux argentés.',
+      );
+
+      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.updateStoryFieldsCallCount, 1);
+      expect(
+        fakeRepository.lastUpdatedStoryAppearanceText,
+        'Cheveux argentés.',
+      );
+      expect(
+        fakeRepository.fetchDetailCallCount,
+        greaterThan(1),
+        reason: 'un succès doit invalider `characterDetailProvider`, '
+            'déclenchant un refetch',
+      );
+      expect(find.text('Histoire mise à jour.'), findsOneWidget);
+    },
+  );
 
   group('déclenchement de la montée de niveau (increment 1)', () {
     testWidgets(

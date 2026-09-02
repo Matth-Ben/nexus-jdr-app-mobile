@@ -12,9 +12,23 @@ import '../theme/app_typography.dart';
 /// système) : 3e usage identique (panneaux "Infos" sort/aptitude de la fiche
 /// personnage), factorisé ici plutôt que dupliqué une 3e fois.
 class SheetHeaderBar extends StatelessWidget {
-  const SheetHeaderBar({required this.title, super.key});
+  const SheetHeaderBar({
+    required this.title,
+    this.closeEnabled = true,
+    super.key,
+  });
 
   final String title;
+
+  /// Désactive le bouton de fermeture (X) sans rien changer visuellement au
+  /// reste de la barre — ajouté pour l'éditeur "Histoire" de la fiche
+  /// personnage (`presentation/widgets/character_story_edit_sheet.dart`),
+  /// qui doit empêcher un tap sur le X d'interrompre un `await` de
+  /// sauvegarde en cours (la sheet reste ouverte le temps de l'appel
+  /// réseau, voir sa documentation de classe). `true` par défaut :
+  /// rétrocompatible avec les usages existants, qui ne passent jamais ce
+  /// paramètre.
+  final bool closeEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +54,9 @@ class SheetHeaderBar extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: closeEnabled
+                  ? () => Navigator.of(context).pop()
+                  : null,
               icon: const Icon(Icons.close, color: AppColors.textOnWood),
             ),
           ),

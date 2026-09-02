@@ -157,6 +157,20 @@ class FakeRepository implements CharacterRepository {
   @override
   Future<void> leaveStory({required String characterCampaignId}) =>
       throw UnimplementedError();
+
+  @override
+  Future<WriteOutcome> updateStoryFields({
+    required String characterId,
+    String? appearanceText,
+    String? traitsText,
+    String? idealsText,
+    String? bondsText,
+    String? flawsText,
+    String? backstoryText,
+    String? alliesText,
+    String? featuresText,
+    String? treasureText,
+  }) => throw UnimplementedError();
 }
 
 const _dagger = InventoryCatalogItem(

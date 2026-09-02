@@ -125,6 +125,20 @@ class _FakeRepository implements CharacterRepository {
   }
 
   @override
+  Future<WriteOutcome> updateStoryFields({
+    required String characterId,
+    String? appearanceText,
+    String? traitsText,
+    String? idealsText,
+    String? bondsText,
+    String? flawsText,
+    String? backstoryText,
+    String? alliesText,
+    String? featuresText,
+    String? treasureText,
+  }) => throw UnimplementedError();
+
+  @override
   Future<WriteOutcome> useInventoryItem({
     required String characterId,
     required String inventoryId,

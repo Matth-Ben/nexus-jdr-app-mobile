@@ -366,6 +366,46 @@ abstract class CharacterRepository {
     required String className,
   });
 
+  /// Écrit les 9 colonnes texte libre de l'onglet "Histoire"
+  /// (`characters.appearance_text`/`traits_text`/`ideals_text`/`bonds_text`/
+  /// `flaws_text`/`backstory_text`/`allies_text`/`features_text`/
+  /// `treasure_text`) en un seul `UPDATE` — sheet d'édition
+  /// `presentation/widgets/character_story_edit_sheet.dart`. Contrairement à
+  /// [addReward] (`UPDATE` monnaie + `INSERT` objets distincts, risque
+  /// d'échec partiel documenté sur sa propre doc), les 9 colonnes ici
+  /// appartiennent toutes à la même ligne `characters` : un seul appel
+  /// réseau couvre tout, aucun risque d'échec partiel possible.
+  ///
+  /// Chaque paramètre est déjà `trim`é par l'appelant (la sheet d'édition),
+  /// `null` signifiant "champ vidé par le joueur" — même convention que
+  /// `AppearanceAndBackstoryStepScreen._submit` (étape 8/9 de l'assistant de
+  /// création). **Écart assumé avec cette convention côté écriture réseau** :
+  /// `characters.*_text` sont `not null default ''` en base (vérifié par
+  /// `CharacterCreationRepository.createCharacter`, voir son commentaire —
+  /// un premier essai avec une valeur `null` littérale a échoué avec "null
+  /// value ... violates not-null constraint") — écrire `null` ici ferait
+  /// donc échouer *chaque* sauvegarde d'un champ tout juste vidé. Cette
+  /// méthode coalesce donc chaque valeur `null` vers `''` juste avant
+  /// l'écriture, exactement comme `createCharacter` le fait déjà pour ces
+  /// mêmes colonnes : jamais un `null` littéral envoyé à PostgREST pour ces
+  /// 9 colonnes.
+  ///
+  /// Mode hors ligne : mêmes règles que [useInventoryItem] (jamais mise en
+  /// file — `PendingCharacterWriteQueue` reste scopée à `hp`/`xp`, voir la
+  /// documentation de classe de `PendingCharacterWriteKind`).
+  Future<WriteOutcome> updateStoryFields({
+    required String characterId,
+    String? appearanceText,
+    String? traitsText,
+    String? idealsText,
+    String? bondsText,
+    String? flawsText,
+    String? backstoryText,
+    String? alliesText,
+    String? featuresText,
+    String? treasureText,
+  });
+
   /// Supprime le rattachement [characterCampaignId] (`character_campaigns`)
   /// — lien "Quitter l'histoire", carte "Aventures" de l'onglet
   /// "Personnage" (`presentation/widgets/character_adventures_card.dart`).
@@ -1349,6 +1389,53 @@ class SupabaseCharacterRepository implements CharacterRepository {
       }
     } on CharacterFailure {
       rethrow;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> updateStoryFields({
+    required String characterId,
+    String? appearanceText,
+    String? traitsText,
+    String? idealsText,
+    String? bondsText,
+    String? flawsText,
+    String? backstoryText,
+    String? alliesText,
+    String? featuresText,
+    String? treasureText,
+  }) async {
+    final ownerId = _requireOwnerId();
+
+    // Voir la documentation de [CharacterRepository.updateStoryFields] :
+    // jamais mis en file, même règle que [useInventoryItem].
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('characters')
+          .update({
+            // Coalescé vers `''` (jamais `null` littéral) — voir la
+            // documentation de [CharacterRepository.updateStoryFields].
+            'appearance_text': appearanceText ?? '',
+            'traits_text': traitsText ?? '',
+            'ideals_text': idealsText ?? '',
+            'bonds_text': bondsText ?? '',
+            'flaws_text': flawsText ?? '',
+            'backstory_text': backstoryText ?? '',
+            'allies_text': alliesText ?? '',
+            'features_text': featuresText ?? '',
+            'treasure_text': treasureText ?? '',
+          })
+          .eq('id', characterId)
+          .eq('owner_id', ownerId);
+      return WriteOutcome.synced;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (_) {

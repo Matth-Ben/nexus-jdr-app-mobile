@@ -34,6 +34,7 @@ import 'widgets/character_inventory_tab_body.dart';
 import 'widgets/character_saving_throws_card.dart';
 import 'widgets/character_skills_tab_body.dart';
 import 'widgets/character_spells_tab_body.dart';
+import 'widgets/character_story_edit_sheet.dart';
 import 'widgets/character_story_tab_body.dart';
 import 'widgets/character_vitals_card.dart';
 import 'widgets/hp_adjustment_sheet.dart';
@@ -837,7 +838,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
 
   /// Ajout d'un objet du catalogue (sheet "Depuis le catalogue",
   /// `add_item_flow.dart`).
-  Future<void> _addInventoryItem(InventoryCatalogItem item, int quantity) async {
+  Future<void> _addInventoryItem(
+    InventoryCatalogItem item,
+    int quantity,
+  ) async {
     setState(() => _isWritingInventory = true);
     try {
       final outcome = await ref
@@ -1254,26 +1258,45 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           WoodBackHeader(
             title: _tab.headerTitle,
             onBack: _goBack,
-            trailing: _tab == CharacterDetailTab.inventory && currentDetail != null
-                ? SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: IconButton(
-                      tooltip: 'Ajouter une récompense',
-                      onPressed: _isWritingInventory
-                          ? null
-                          : () => showAddRewardSheet(
-                              context,
-                              onApply: (deltas, items) =>
-                                  _addReward(currentDetail, deltas, items),
-                            ),
-                      icon: const Icon(
-                        Icons.card_giftcard,
-                        color: AppColors.textOnWood,
+            trailing: currentDetail == null
+                ? null
+                : switch (_tab) {
+                    CharacterDetailTab.inventory => SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: IconButton(
+                        tooltip: 'Ajouter une récompense',
+                        onPressed: _isWritingInventory
+                            ? null
+                            : () => showAddRewardSheet(
+                                context,
+                                onApply: (deltas, items) =>
+                                    _addReward(currentDetail, deltas, items),
+                              ),
+                        icon: const Icon(
+                          Icons.card_giftcard,
+                          color: AppColors.textOnWood,
+                        ),
                       ),
                     ),
-                  )
-                : null,
+                    CharacterDetailTab.story => SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: IconButton(
+                        tooltip: 'Modifier',
+                        onPressed: () => showCharacterStoryEditSheet(
+                          context,
+                          characterId: widget.characterId,
+                          detail: currentDetail,
+                        ),
+                        icon: const Icon(
+                          Icons.edit_outlined,
+                          color: AppColors.textOnWood,
+                        ),
+                      ),
+                    ),
+                    _ => null,
+                  },
           ),
           Expanded(
             child: detailAsync.when(
@@ -1326,7 +1349,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onAddCustomInventoryItem: _addCustomInventoryItem,
         actionsDisabled: _isWritingInventory,
       ),
-      CharacterDetailTab.story => CharacterStoryTabBody(detail: detail),
+      CharacterDetailTab.story => CharacterStoryTabBody(
+        detail: detail,
+        onEdit: () => showCharacterStoryEditSheet(
+          context,
+          characterId: widget.characterId,
+          detail: detail,
+        ),
+      ),
       CharacterDetailTab.character => _CharacterTabBody(
         detail: detail,
         vitalsDetail: _effectiveDetail(detail),
