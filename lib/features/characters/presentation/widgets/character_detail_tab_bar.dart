@@ -3,12 +3,17 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 
-/// Les 4 onglets de la fiche personnage — voir
-/// `docs/cahier-des-charges/05-ux-navigation.md`. Les 4 ont désormais un
-/// contenu réel ([character]/[skills]/[inventory]/[story]).
+/// Les 5 onglets de la fiche personnage — voir
+/// `docs/cahier-des-charges/05-ux-navigation.md`. Les 5 ont désormais un
+/// contenu réel ([character]/[skills]/[spells]/[inventory]/[story]).
 enum CharacterDetailTab {
   character(icon: Icons.person, label: 'PERSO', headerTitle: 'FICHE'),
   skills(icon: Icons.star_outline, label: 'COMP.', headerTitle: 'COMPÉTENCES'),
+  spells(
+    icon: Icons.auto_fix_high_outlined,
+    label: 'SORTS',
+    headerTitle: 'SORTS',
+  ),
   inventory(
     icon: Icons.backpack_outlined,
     label: 'SAC',
@@ -34,8 +39,8 @@ enum CharacterDetailTab {
   final String headerTitle;
 }
 
-/// Barre de navigation à 4 onglets, en pied de la fiche personnage —
-/// composant partagé entre les 4 onglets de cet écran (spec visuelle
+/// Barre de navigation à 5 onglets, en pied de la fiche personnage —
+/// composant partagé entre les 5 onglets de cet écran (spec visuelle
 /// validée par l'agent `direction-artistique`).
 ///
 /// Libellés à 11px minimum (contrainte d'accessibilité stricte du design

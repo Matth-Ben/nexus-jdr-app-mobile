@@ -7,7 +7,7 @@ import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/spells_by_level_grouper.dart';
 
-/// Section "SORTS" de l'onglet "Compétences" : les sorts connus/préparés du
+/// Section "SORTS" de l'onglet "Sorts" : les sorts connus/préparés du
 /// personnage, groupés par niveau (0 = "Sorts mineurs"), avec les
 /// emplacements disponibles du niveau affichés en pastilles à côté du titre
 /// de chaque niveau ≥ 1.
@@ -24,7 +24,7 @@ import '../../domain/spells_by_level_grouper.dart';
 ///
 /// N'affiche rien tant que [groups] est vide — appelant responsable de ne
 /// pas monter cette section dans ce cas (voir
-/// `character_skills_tab_body.dart`).
+/// `character_spells_tab_body.dart`).
 class CharacterSpellsSection extends StatelessWidget {
   const CharacterSpellsSection({
     required this.groups,

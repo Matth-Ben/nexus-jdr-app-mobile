@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/widgets/wood_back_header.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_adventure.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
@@ -605,9 +606,11 @@ void main() {
     expect(find.text('Portrait retiré.'), findsOneWidget);
   });
 
-  testWidgets('la navigation entre les 4 onglets fonctionne : "Personnage", '
-      '"Compétences", "Inventaire" et "Histoire" ont chacun un vrai contenu, '
-      'avec le titre du bandeau qui suit l\'onglet actif', (tester) async {
+  testWidgets('la navigation entre les 5 onglets fonctionne : "Personnage", '
+      '"Compétences", "Sorts", "Inventaire" et "Histoire" ont chacun un vrai '
+      'contenu, avec le titre du bandeau qui suit l\'onglet actif', (
+    tester,
+  ) async {
     fakeRepository.detailToReturn = _baseDetail.copyWith(
       appearanceText: 'Cheveux argentés.',
     );
@@ -624,6 +627,26 @@ void main() {
     expect(find.text('Halltesse Ambrelune'), findsNothing);
     expect(find.text('COMPÉTENCES'), findsOneWidget);
     expect(find.text('FICHE'), findsNothing);
+
+    await tester.tap(find.text('SORTS'));
+    await tester.pumpAndSettle();
+    // Preuve que l'onglet a bien basculé sur `CharacterSpellsTabBody` (voir
+    // `character_spells_tab_body_test.dart` pour le détail de ce contenu) :
+    // aucun sort sur `_baseDetail` -> état vide de l'onglet Sorts. Le
+    // libellé de l'onglet et le titre du bandeau sont tous les deux "SORTS"
+    // (seul onglet dans ce cas, voir `CharacterDetailTab.spells`) : 2
+    // occurrences de "SORTS" à ce stade (bouton actif + bandeau), le titre
+    // du bandeau est vérifié précisément via `WoodBackHeader`.
+    expect(find.text('AUCUN SORT'), findsOneWidget);
+    expect(find.text('LES 18 COMPÉTENCES'), findsNothing);
+    expect(find.text('SORTS'), findsNWidgets(2));
+    expect(
+      find.descendant(
+        of: find.byType(WoodBackHeader),
+        matching: find.text('SORTS'),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('SAC'));
     await tester.pumpAndSettle();

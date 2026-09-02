@@ -25,6 +25,7 @@ import 'widgets/character_identity_card.dart';
 import 'widgets/character_inventory_tab_body.dart';
 import 'widgets/character_saving_throws_card.dart';
 import 'widgets/character_skills_tab_body.dart';
+import 'widgets/character_spells_tab_body.dart';
 import 'widgets/character_story_tab_body.dart';
 import 'widgets/character_vitals_card.dart';
 import 'widgets/hp_adjustment_sheet.dart';
@@ -32,10 +33,10 @@ import 'widgets/portrait_upload_sheet.dart';
 import 'widgets/rest_sheet.dart';
 
 /// Fiche personnage, route `/characters/:id` — remplace
-/// `CharacterDetailPlaceholderScreen`. Les 4 onglets (voir
+/// `CharacterDetailPlaceholderScreen`. Les 5 onglets (voir
 /// `CharacterDetailTab`) ont désormais tous un vrai contenu (même approche
 /// "un onglet à la fois" que l'assistant de création : "Personnage",
-/// "Compétences", "Inventaire" puis "Histoire" livrés séparément).
+/// "Compétences", "Sorts", "Inventaire" puis "Histoire" livrés séparément).
 class CharacterDetailScreen extends ConsumerStatefulWidget {
   const CharacterDetailScreen({required this.characterId, super.key});
 
@@ -449,55 +450,52 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   }
 
   Widget _buildTabBody(CharacterDetail detail) {
-    if (_tab == CharacterDetailTab.skills) {
-      return CharacterSkillsTabBody(detail: detail);
-    }
-    if (_tab == CharacterDetailTab.inventory) {
-      return CharacterInventoryTabBody(detail: detail);
-    }
-    if (_tab == CharacterDetailTab.story) {
-      return CharacterStoryTabBody(detail: detail);
-    }
-    return _CharacterTabBody(
-      detail: detail,
-      vitalsDetail: _effectiveDetail(detail),
-      onTapPortrait: () => showPortraitUploadSheet(
-        context,
-        ref: ref,
-        characterId: widget.characterId,
-        portraitUrl: detail.portraitUrl,
-      ),
-      onTapAdjustHp: () => showHpAdjustmentSheet(
-        context,
-        state: _hpStateOf(detail),
-        onApply: (newState) => _applyHpState(detail, newState),
-      ),
-      onQuickHeal: () => _applyHpState(
-        detail,
-        HpAdjustmentCalculator.applyHeal(_hpStateOf(detail), 1),
-      ),
-      onQuickDamage: () => _applyHpState(
-        detail,
-        HpAdjustmentCalculator.applyDamage(_hpStateOf(detail), 1),
-      ),
-      onTapAddXp: () => showAddXpSheet(
-        context,
-        currentXp: detail.xp,
-        nextLevelXpThreshold: detail.nextLevelXpThreshold,
-        onApply: (amount) => _addXp(detail, amount),
-      ),
-      onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
-      onTapRest: () {
-        final effective = _effectiveDetail(detail);
-        showRestSheet(
+    return switch (_tab) {
+      CharacterDetailTab.skills => CharacterSkillsTabBody(detail: detail),
+      CharacterDetailTab.spells => CharacterSpellsTabBody(detail: detail),
+      CharacterDetailTab.inventory => CharacterInventoryTabBody(detail: detail),
+      CharacterDetailTab.story => CharacterStoryTabBody(detail: detail),
+      CharacterDetailTab.character => _CharacterTabBody(
+        detail: detail,
+        vitalsDetail: _effectiveDetail(detail),
+        onTapPortrait: () => showPortraitUploadSheet(
           context,
-          currentHp: effective.currentHp,
-          maxHp: effective.maxHp,
-          onApply: (type) => _applyRest(detail, type),
-        );
-      },
-      hpActionsDisabled: _isApplyingRest,
-    );
+          ref: ref,
+          characterId: widget.characterId,
+          portraitUrl: detail.portraitUrl,
+        ),
+        onTapAdjustHp: () => showHpAdjustmentSheet(
+          context,
+          state: _hpStateOf(detail),
+          onApply: (newState) => _applyHpState(detail, newState),
+        ),
+        onQuickHeal: () => _applyHpState(
+          detail,
+          HpAdjustmentCalculator.applyHeal(_hpStateOf(detail), 1),
+        ),
+        onQuickDamage: () => _applyHpState(
+          detail,
+          HpAdjustmentCalculator.applyDamage(_hpStateOf(detail), 1),
+        ),
+        onTapAddXp: () => showAddXpSheet(
+          context,
+          currentXp: detail.xp,
+          nextLevelXpThreshold: detail.nextLevelXpThreshold,
+          onApply: (amount) => _addXp(detail, amount),
+        ),
+        onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
+        onTapRest: () {
+          final effective = _effectiveDetail(detail);
+          showRestSheet(
+            context,
+            currentHp: effective.currentHp,
+            maxHp: effective.maxHp,
+            onApply: (type) => _applyRest(detail, type),
+          );
+        },
+        hpActionsDisabled: _isApplyingRest,
+      ),
+    };
   }
 }
 

@@ -138,17 +138,15 @@ void main() {
     expect(find.text('Passive'), findsOneWidget);
   });
 
-  testWidgets(
-    'les cartes outils/langues/sorts n\'apparaissent pas quand vides',
-    (tester) async {
-      await _pump(tester, _detail());
+  testWidgets('les cartes outils/langues n\'apparaissent pas quand vides', (
+    tester,
+  ) async {
+    await _pump(tester, _detail());
 
-      expect(find.text("MAÎTRISES D'OUTILS"), findsNothing);
-      expect(find.text('LANGUES CONNUES'), findsNothing);
-      expect(find.text('SORTS'), findsNothing);
-      expect(find.text('APTITUDES DE CLASSE'), findsNothing);
-    },
-  );
+    expect(find.text("MAÎTRISES D'OUTILS"), findsNothing);
+    expect(find.text('LANGUES CONNUES'), findsNothing);
+    expect(find.text('APTITUDES DE CLASSE'), findsNothing);
+  });
 
   testWidgets('la carte outils affiche les noms quand non vide', (
     tester,
@@ -162,6 +160,36 @@ void main() {
     expect(find.text('Outils de forgeron'), findsOneWidget);
   });
 
+  testWidgets(
+    "la scission des onglets \"Compétences\"/\"Sorts\" est étanche : des "
+    'sorts non vides sur `detail` ne font fuiter aucun contenu "Sorts" dans '
+    'CharacterSkillsTabBody — voir `character_spells_tab_body_test.dart` '
+    'pour la contrepartie (les sorts vivent désormais uniquement dans '
+    "`CharacterSpellsTabBody`), régression garde-fou pour la scission de "
+    "l'onglet \"Compétences\" en 2 (\"Compétences\" + \"Sorts\").",
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          spells: const [
+            CharacterSpellEntry(
+              id: 1,
+              name: 'Lumière',
+              level: 0,
+              school: 'Évocation',
+              status: 'connu',
+            ),
+          ],
+          spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],
+        ),
+      );
+
+      expect(find.text('SORTS'), findsNothing);
+      expect(find.text('Lumière'), findsNothing);
+      expect(find.text('Sorts mineurs'), findsNothing);
+    },
+  );
+
   testWidgets('la carte langues affiche les noms quand non vide', (
     tester,
   ) async {
@@ -169,57 +197,5 @@ void main() {
 
     expect(find.text('LANGUES CONNUES'), findsOneWidget);
     expect(find.text('Nain'), findsOneWidget);
-  });
-
-  testWidgets('la section sorts regroupe par niveau avec les pastilles '
-      'd\'emplacement', (tester) async {
-    // find.bySemanticsLabel a besoin d'un arbre de sémantique actif — pas
-    // construit par défaut dans un test de widget. `dispose()` doit être
-    // appelé explicitement en fin de test (pas via `addTearDown`, qui
-    // s'exécute trop tard par rapport à la vérification "handle actif" du
-    // framework en fin de `testWidgets`).
-    final semanticsHandle = tester.ensureSemantics();
-
-    await _pump(
-      tester,
-      _detail(
-        spells: const [
-          CharacterSpellEntry(
-            id: 1,
-            name: 'Lumière',
-            level: 0,
-            school: 'Évocation',
-            status: 'connu',
-          ),
-          CharacterSpellEntry(
-            id: 2,
-            name: 'Bouclier',
-            level: 1,
-            school: 'Abjuration',
-            status: 'connu',
-          ),
-        ],
-        spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],
-      ),
-    );
-
-    expect(find.text('SORTS'), findsOneWidget);
-    expect(find.text('Sorts mineurs'), findsOneWidget);
-    expect(find.text('Lumière'), findsOneWidget);
-    expect(find.text('(Évocation)'), findsOneWidget);
-    expect(find.text('Niveau 1'), findsOneWidget);
-    expect(find.text('Bouclier'), findsOneWidget);
-    expect(find.text('(Abjuration)'), findsOneWidget);
-    // Les emplacements de sorts sont rendus en pastilles graphiques (cercles
-    // pleins/vides), pas en glyphe Unicode coloré (contraste insuffisant,
-    // corrigé en revue direction-artistique — voir
-    // `character_spells_section.dart::_SpellSlotDots`) : on vérifie le
-    // libellé d'accessibilité plutôt qu'un `find.text` sur un caractère.
-    expect(
-      find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 3'),
-      findsOneWidget,
-    );
-
-    semanticsHandle.dispose();
   });
 }
