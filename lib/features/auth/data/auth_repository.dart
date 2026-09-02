@@ -18,6 +18,19 @@ abstract class AuthRepository {
   /// Déconnecte l'utilisateur courant (ex. action "Se déconnecter" du menu
   /// profil de la liste des personnages).
   Future<void> signOut();
+
+  /// Déclenche l'envoi d'un e-mail de réinitialisation de mot de passe.
+  ///
+  /// Le lien reçu ouvre `https://nexus-jdr.app/update-password`, page déjà
+  /// fonctionnelle de l'app web "Histoires" (compte unique entre les deux
+  /// apps) — ce dépôt ne construit aucun écran de réinitialisation, il ne
+  /// fait que déclencher l'envoi de l'e-mail.
+  ///
+  /// Côté UI, l'appelant doit rester neutre sur le résultat (succès ou
+  /// échec) : ne jamais confirmer ou infirmer qu'un compte existe pour
+  /// [email], même principe que `requestPasswordReset` côté web
+  /// (`apps/web/app/(auth)/actions.ts`).
+  Future<void> resetPasswordForEmail({required String email});
 }
 
 /// Implémentation réelle, basée sur `Supabase.instance.client.auth`.
@@ -60,6 +73,20 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     try {
       await _client.auth.signOut();
+    } on AuthException catch (error) {
+      throw mapAuthException(error);
+    } catch (_) {
+      throw mapUnknownError();
+    }
+  }
+
+  @override
+  Future<void> resetPasswordForEmail({required String email}) async {
+    try {
+      await _client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'https://nexus-jdr.app/update-password',
+      );
     } on AuthException catch (error) {
       throw mapAuthException(error);
     } catch (_) {

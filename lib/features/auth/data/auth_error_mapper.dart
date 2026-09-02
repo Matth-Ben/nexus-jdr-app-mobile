@@ -19,6 +19,19 @@ const String _genericErrorMessage = 'Une erreur est survenue. Réessayez.';
 /// avec un repli sur le contenu de `error.message` quand le code n'est pas
 /// renseigné (certaines erreurs, notamment réseau, n'en portent pas).
 AuthFailure mapAuthException(AuthException error) {
+  // `AuthRetryableFetchException` : type dédié du SDK pour toute erreur
+  // survenue *avant* la réception d'une réponse HTTP (ex. absence de réseau,
+  // CORS) — voir `package:gotrue/src/fetch.dart` (`_handleRequest`), qui
+  // l'utilise pour envelopper systématiquement les exceptions de transport,
+  // avant même qu'elles puissent atteindre le `catch` générique
+  // (`mapUnknownError`) de ce dépôt. Sans ce cas particulier, un échec
+  // réseau afficherait le message brut de l'exception Dart sous-jacente
+  // (ex. "Exception: Failed host lookup") au lieu du message français
+  // attendu.
+  if (error is AuthRetryableFetchException) {
+    return mapUnknownError();
+  }
+
   final code = error.code;
   final message = error.message.toLowerCase();
 

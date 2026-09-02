@@ -9,6 +9,7 @@ import '../../../core/widgets/scene_scaffold.dart';
 import '../domain/auth_failure.dart';
 import '../domain/auth_validators.dart';
 import 'providers/auth_providers.dart';
+import 'widgets/forgot_password_dialog.dart';
 
 /// Mode du formulaire : connexion ou inscription, basculés sur un même
 /// écran (voir maquette `00_connexion.png`) plutôt que deux écrans séparés.
@@ -45,6 +46,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _openForgotPasswordDialog() {
+    return showForgotPasswordDialog(
+      context,
+      ref: ref,
+      initialEmail: _emailController.text.trim(),
+    );
   }
 
   void _switchMode() {
@@ -145,6 +154,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     confirmPasswordController: _confirmPasswordController,
                     onSubmit: _submit,
                     onSwitchMode: _switchMode,
+                    onForgotPassword: _openForgotPasswordDialog,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
@@ -180,6 +190,7 @@ class _AuthCard extends StatelessWidget {
     required this.confirmPasswordController,
     required this.onSubmit,
     required this.onSwitchMode,
+    required this.onForgotPassword,
   });
 
   final GlobalKey<FormState> formKey;
@@ -191,6 +202,7 @@ class _AuthCard extends StatelessWidget {
   final TextEditingController confirmPasswordController;
   final VoidCallback onSubmit;
   final VoidCallback onSwitchMode;
+  final VoidCallback onForgotPassword;
 
   @override
   Widget build(BuildContext context) {
@@ -254,6 +266,34 @@ class _AuthCard extends StatelessWidget {
               validator: AuthValidators.password,
               onFieldSubmitted: isSignUp ? null : (_) => onSubmit(),
             ),
+            if (!isSignUp) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: isSubmitting ? null : onForgotPassword,
+                  child: Padding(
+                    // Élargit la zone de tap à au moins 44x44px (section 7
+                    // "Accessibilité" du design system) sans agrandir le
+                    // texte lui-même, même principe que le lien
+                    // "Créer un compte"/"Se connecter" ci-dessous.
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                      vertical: 14,
+                    ),
+                    child: Text(
+                      'Mot de passe oublié ?',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.woodDark,
+                      ).copyWith(decoration: TextDecoration.underline),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (isSignUp) ...[
               const SizedBox(height: AppSpacing.md),
               _FieldLabel('Confirmer le mot de passe'),

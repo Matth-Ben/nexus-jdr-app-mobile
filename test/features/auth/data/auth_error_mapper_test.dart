@@ -170,6 +170,19 @@ void main() {
 
       expect(mapAuthException(error).message, isNotEmpty);
     });
+
+    test(
+      'AuthRetryableFetchException (échec avant réponse HTTP, ex. absence '
+      'de réseau) -> même message que mapUnknownError, pas le message brut '
+      "de l'exception Dart sous-jacente",
+      () {
+        final error = AuthRetryableFetchException(
+          message: 'Exception: Failed host lookup',
+        );
+
+        expect(mapAuthException(error).message, mapUnknownError().message);
+      },
+    );
   });
 
   test('mapUnknownError renvoie un message réseau explicite', () {

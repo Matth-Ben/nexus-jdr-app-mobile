@@ -66,6 +66,9 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     signOutCallCount++;
   }
+
+  @override
+  Future<void> resetPasswordForEmail({required String email}) async {}
 }
 
 void main() {
@@ -110,6 +113,21 @@ void main() {
 
     expect(find.text("Même compte que l'app Histoires"), findsOneWidget);
   });
+
+  testWidgets(
+    'affiche le lien "Mot de passe oublié ?" en mode connexion, absent en '
+    'mode inscription',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(buildTestWidget());
+
+      expect(find.text('Mot de passe oublié ?'), findsOneWidget);
+
+      await tester.tap(find.text('Créer un compte'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mot de passe oublié ?'), findsNothing);
+    },
+  );
 
   testWidgets(
     'bascule vers le mode inscription et affiche le champ de confirmation',
