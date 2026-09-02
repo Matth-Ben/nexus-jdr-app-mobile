@@ -27,6 +27,7 @@ import 'package:personnages/features/characters/domain/level_up_level_data.dart'
 import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
+import 'package:personnages/core/router/route_observer_provider.dart';
 import 'package:personnages/features/characters/presentation/character_list_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_card.dart';
@@ -241,6 +242,9 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     signOutCallCount++;
   }
+
+  @override
+  Future<void> resetPasswordForEmail({required String email}) async {}
 }
 
 void main() {
@@ -252,9 +256,10 @@ void main() {
     fakeAuthRepository = _FakeAuthRepository();
   });
 
-  GoRouter buildTestRouter() {
+  GoRouter buildTestRouter({List<NavigatorObserver> observers = const []}) {
     return GoRouter(
       initialLocation: '/',
+      observers: observers,
       routes: [
         GoRoute(
           path: '/',
@@ -268,9 +273,24 @@ void main() {
         ),
         GoRoute(
           path: '/characters/:id',
+          // Un bouton "Retour" explicite (plutôt que de compter sur la
+          // flèche `AppBar` par défaut, absente ici) : simule le pop vers
+          // `CharacterListScreen` déclenché en vrai depuis
+          // `character_detail_screen.dart` — voir les tests
+          // "RouteAware.didPopNext" plus bas, qui vérifient que ce pop
+          // relance `charactersProvider`.
           builder: (context, state) => Scaffold(
             body: Center(
-              child: Text('Fiche personnage ${state.pathParameters['id']}'),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Fiche personnage ${state.pathParameters['id']}'),
+                  TextButton(
+                    onPressed: () => context.pop(),
+                    child: const Text('Retour'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -284,13 +304,17 @@ void main() {
     );
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({RouteObserver<PageRoute<dynamic>>? routeObserver}) {
+    final observer = routeObserver ?? RouteObserver<PageRoute<dynamic>>();
     return ProviderScope(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeCharacterRepository),
         authRepositoryProvider.overrideWithValue(fakeAuthRepository),
+        routeObserverProvider.overrideWithValue(observer),
       ],
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        routerConfig: buildTestRouter(observers: [observer]),
+      ),
     );
   }
 
@@ -654,6 +678,153 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Fiche personnage 42'), findsOneWidget);
+    },
+  );
+
+  group(
+    'RouteAware.didPopNext (rafraîchissement au retour d\'un écran poussé '
+    'par-dessus la liste, ex. fiche personnage/montée de niveau)',
+    () {
+      testWidgets(
+        'revenir de la fiche personnage (pop) relance charactersProvider, '
+        'même sans aucune interaction explicite de rafraîchissement',
+        (WidgetTester tester) async {
+          fakeCharacterRepository.charactersToReturn = const [
+            CharacterSummary(
+              id: '42',
+              name: 'Halltesse Ambrelune',
+              level: 5,
+              xp: 7000,
+            ),
+          ];
+          final observer = RouteObserver<PageRoute<dynamic>>();
+
+          await tester.pumpWidget(buildTestWidget(routeObserver: observer));
+          await tester.pumpAndSettle();
+          expect(fakeCharacterRepository.fetchCallCount, 1);
+
+          await tester.tap(find.byType(CharacterCard));
+          await tester.pumpAndSettle();
+          expect(find.text('Fiche personnage 42'), findsOneWidget);
+
+          // Simule un level-up (ou toute autre écriture) appliqué depuis la
+          // fiche : la prochaine requête réseau renverrait un niveau à jour,
+          // exactement comme le ferait Supabase après une écriture réussie.
+          fakeCharacterRepository.charactersToReturn = const [
+            CharacterSummary(
+              id: '42',
+              name: 'Halltesse Ambrelune',
+              level: 6,
+              xp: 14000,
+            ),
+          ];
+
+          await tester.tap(find.text('Retour'));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Elfe · Magicienne · Niv. 6'), findsNothing);
+          expect(find.text('Niv. 6'), findsOneWidget);
+          expect(
+            fakeCharacterRepository.fetchCallCount,
+            2,
+            reason:
+                'le retour de la fiche (pop) doit déclencher un nouveau '
+                'fetch, sans quoi la carte resterait sur le niveau '
+                'obsolète (Niv. 5)',
+          );
+        },
+      );
+
+      testWidgets(
+        'un pop en cascade depuis un écran poussé par-dessus la fiche '
+        '(ex. "Montée de niveau") relance aussi charactersProvider une '
+        'fois revenu sur la liste',
+        (WidgetTester tester) async {
+          fakeCharacterRepository.charactersToReturn = const [
+            CharacterSummary(id: '42', name: 'Borgan Pierrefort', level: 3, xp: 900),
+          ];
+          final observer = RouteObserver<PageRoute<dynamic>>();
+
+          await tester.pumpWidget(buildTestWidget(routeObserver: observer));
+          await tester.pumpAndSettle();
+          expect(fakeCharacterRepository.fetchCallCount, 1);
+
+          await tester.tap(find.byType(CharacterCard));
+          await tester.pumpAndSettle();
+          expect(find.text('Fiche personnage 42'), findsOneWidget);
+
+          fakeCharacterRepository.charactersToReturn = const [
+            CharacterSummary(id: '42', name: 'Borgan Pierrefort', level: 4, xp: 2700),
+          ];
+
+          // Pop direct de la fiche vers la liste (le flux réel "Montée de
+          // niveau" empile une route supplémentaire par-dessus la fiche puis
+          // dépile jusqu'à la liste ; `didPopNext` se déclenche de la même
+          // façon dans les deux cas — seul compte le fait que cet écran
+          // redevienne visible après un pop, peu importe la profondeur de la
+          // pile dépilée, voir la documentation de classe de
+          // `CharacterListScreen`).
+          await tester.tap(find.text('Retour'));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Niv. 4'), findsOneWidget);
+          expect(fakeCharacterRepository.fetchCallCount, 2);
+        },
+      );
+
+      testWidgets(
+        'un simple retour depuis la fiche personnage SANS aucune écriture '
+        'ne casse rien : refetch inoffensif (redondant mais sans effet '
+        "visible), pas de crash au démontage de l'écran",
+        (WidgetTester tester) async {
+          const unchanged = [
+            CharacterSummary(
+              id: '42',
+              name: 'Halltesse Ambrelune',
+              level: 5,
+              xp: 7000,
+            ),
+          ];
+          fakeCharacterRepository.charactersToReturn = unchanged;
+          final observer = RouteObserver<PageRoute<dynamic>>();
+
+          await tester.pumpWidget(buildTestWidget(routeObserver: observer));
+          await tester.pumpAndSettle();
+          expect(fakeCharacterRepository.fetchCallCount, 1);
+
+          await tester.tap(find.byType(CharacterCard));
+          await tester.pumpAndSettle();
+          expect(find.text('Fiche personnage 42'), findsOneWidget);
+
+          // Aucune écriture simulée ici (`charactersToReturn` inchangé) :
+          // simple consultation de la fiche puis retour immédiat.
+          await tester.tap(find.text('Retour'));
+          await tester.pumpAndSettle();
+
+          // Refetch quand même déclenché (comportement voulu, documenté sur
+          // `CharacterListScreen` : pas d'optimisation pour éviter un
+          // refetch inutile), mais sans régression visible : la carte
+          // affiche toujours les mêmes données, aucune exception levée
+          // pendant le pop (ce test échouerait sinon, `tester.pumpAndSettle`
+          // remonte toute exception non interceptée).
+          expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+          expect(find.text('Niv. 5'), findsOneWidget);
+          expect(fakeCharacterRepository.fetchCallCount, 2);
+        },
+      );
+
+      testWidgets(
+        'ne relance pas charactersProvider au premier affichage (pas de '
+        'pop encore survenu)',
+        (WidgetTester tester) async {
+          fakeCharacterRepository.charactersToReturn = const [];
+
+          await tester.pumpWidget(buildTestWidget());
+          await tester.pumpAndSettle();
+
+          expect(fakeCharacterRepository.fetchCallCount, 1);
+        },
+      );
     },
   );
 

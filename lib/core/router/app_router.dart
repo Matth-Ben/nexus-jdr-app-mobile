@@ -22,6 +22,7 @@ import '../../features/join_story/presentation/join_code_step_screen.dart';
 import '../../features/join_story/presentation/join_confirmation_step_screen.dart';
 import '../../features/xml_import/presentation/xml_import_review_screen.dart';
 import '../network/supabase_client_provider.dart';
+import 'route_observer_provider.dart';
 
 part 'app_router.g.dart';
 
@@ -47,6 +48,12 @@ GoRouter appRouter(Ref ref) {
   return GoRouter(
     initialLocation: '/',
     refreshListenable: refreshListenable,
+    // Voir `route_observer_provider.dart` : permet à `CharacterListScreen`
+    // (et tout futur écran équivalent) de se rafraîchir via
+    // `RouteAware.didPopNext` au retour d'une route poussée par-dessus lui,
+    // sans avoir à chasser chaque point d'écriture qui pourrait la rendre
+    // obsolète.
+    observers: [ref.watch(routeObserverProvider)],
     redirect: (context, state) => computeAuthRedirect(
       isLoggedIn: client.auth.currentSession != null,
       // `state.uri` (pas `state.matchedLocation`, qui omet la query) : la

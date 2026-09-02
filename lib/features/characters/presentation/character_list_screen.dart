@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/route_observer_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -23,11 +24,64 @@ import 'widgets/character_card.dart';
 /// Écran d'accueil listant les personnages du joueur connecté
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 2,
 /// maquette `01_liste_personnages.png`).
-class CharacterListScreen extends ConsumerWidget {
+///
+/// `ConsumerStatefulWidget` + `RouteAware` (plutôt que `ConsumerWidget`) :
+/// `character_detail_screen.dart` (fiche personnage) et `level_up_screen.dart`
+/// écrivent en base depuis de nombreux endroits (PV/XP, repos, montée de
+/// niveau, portrait, sorts, inventaire, histoire...) sans jamais invalider
+/// `charactersProvider` eux-mêmes — chasser chaque point d'écriture serait
+/// fragile (un futur oubli reproduirait le même bug). [didPopNext] se
+/// déclenche à chaque retour au premier plan de cet écran suite à un `pop`
+/// d'une route poussée par-dessus lui (retour direct de la fiche, ou retour
+/// en cascade depuis "Montée de niveau" via la fiche), peu importe la cause
+/// — voir `route_observer_provider.dart`. Un refetch systématique au retour
+/// (même si rien n'a changé) est acceptable ici, cohérent avec la stratégie
+/// "réseau d'abord" déjà en place ailleurs dans ce dépôt : pas besoin
+/// d'optimiser pour éviter un refetch inutile.
+class CharacterListScreen extends ConsumerStatefulWidget {
   const CharacterListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CharacterListScreen> createState() =>
+      _CharacterListScreenState();
+}
+
+class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
+    with RouteAware {
+  // Résolu via `ref.read` dans [didChangeDependencies] puis conservé ici :
+  // `ref` n'est plus utilisable en toute sécurité dans [dispose] (le widget
+  // est en cours de démontage, voir la documentation de
+  // `ConsumerStatefulElement.read`) — sans ce champ, `unsubscribe` lèverait
+  // un `StateError` à chaque fermeture de cet écran.
+  RouteObserver<PageRoute<dynamic>>? _routeObserver;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute<dynamic>) {
+      final observer = ref.read(routeObserverProvider);
+      observer.subscribe(this, route);
+      _routeObserver = observer;
+    }
+  }
+
+  @override
+  void dispose() {
+    _routeObserver?.unsubscribe(this);
+    super.dispose();
+  }
+
+  /// Appelé par le [RouteObserver] quand une route poussée par-dessus cet
+  /// écran est dépilée et que celui-ci redevient visible — voir la
+  /// documentation de classe de [CharacterListScreen].
+  @override
+  void didPopNext() {
+    ref.invalidate(charactersProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final charactersAsync = ref.watch(charactersProvider);
 
     return SceneScaffold(
