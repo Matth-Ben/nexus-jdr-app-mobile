@@ -8,6 +8,8 @@ import '../../../core/network/connectivity_checker.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
 import '../domain/character_summary.dart';
+import '../domain/currency_kind.dart';
+import '../domain/inventory_catalog_item.dart';
 import '../domain/level_up_apply_result.dart';
 import '../domain/level_up_choice_kind.dart';
 import '../domain/level_up_choice_selection.dart';
@@ -15,6 +17,7 @@ import '../domain/level_up_level_data.dart';
 import '../domain/level_up_subclass_option.dart';
 import '../domain/portrait_storage_path_resolver.dart';
 import '../domain/rest_type.dart';
+import '../domain/reward_item_draft.dart';
 import '../domain/spell_slot_progression.dart';
 import '../domain/write_outcome.dart';
 import 'character_detail_row_mapper.dart';
@@ -24,6 +27,7 @@ import 'character_row_mapper.dart';
 import 'character_skill_row_mapper.dart';
 import 'character_spell_row_mapper.dart';
 import 'class_feature_row_mapper.dart';
+import 'inventory_catalog_row_mapper.dart';
 import 'level_up_choice_row_mapper.dart';
 
 /// Langue d'affichage des noms de race/classe, en dur pour l'instant : l'app
@@ -165,6 +169,106 @@ abstract class CharacterRepository {
     required int classFeatureId,
     required int usesRemaining,
   });
+
+  /// Action "Utiliser" un objet consommable de l'onglet "Inventaire" (sheet
+  /// d'actions d'objet, `presentation/widgets/item_action_sheet.dart`) :
+  /// écrit `character_inventory.quantity = newQuantity` si
+  /// `newQuantity > 0`, ou supprime la ligne si `newQuantity <= 0` —
+  /// décision UX tranchée par le chef de projet : une quantité tombée à 0
+  /// n'est jamais conservée telle quelle, la ligne disparaît de
+  /// l'inventaire. [newQuantity] est déjà calculé par l'appelant (quantité
+  /// actuelle - 1), même principe que [castSpell]/[useClassFeature].
+  ///
+  /// Mode hors ligne : mêmes règles exactement que [castSpell]/
+  /// [useClassFeature] (jamais mise en file, voir leur documentation) —
+  /// décision chef de projet explicite pour toutes les écritures de
+  /// l'onglet "Inventaire" introduites avec cette méthode.
+  Future<WriteOutcome> useInventoryItem({
+    required String characterId,
+    required String inventoryId,
+    required int newQuantity,
+  });
+
+  /// Action "Équiper"/"Déséquiper" — écrit `character_inventory.equipped`
+  /// tel quel, aucun calcul ici (même principe que [updateHp]). Ne touche
+  /// jamais un champ de classe d'armure (n'existe nulle part dans
+  /// [CharacterDetail] à cette itération, voir la spec de la tâche).
+  ///
+  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  Future<WriteOutcome> setInventoryItemEquipped({
+    required String characterId,
+    required String inventoryId,
+    required bool equipped,
+  });
+
+  /// Action "Retirer" (avec confirmation côté sheet) — supprime la ligne
+  /// `character_inventory` [inventoryId].
+  ///
+  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  Future<WriteOutcome> removeInventoryItem({
+    required String characterId,
+    required String inventoryId,
+  });
+
+  /// Ajustement de monnaie (sheet déclenchée par une stat box de tête
+  /// d'onglet, `presentation/widgets/currency_adjustment_sheet.dart`) :
+  /// écrit la nouvelle valeur *absolue* [newAmount] déjà calculée par
+  /// l'appelant pour la colonne `characters.currency_*` de [currency] — même
+  /// principe que [updateHp]/[addXp].
+  ///
+  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  Future<WriteOutcome> adjustCurrency({
+    required String characterId,
+    required CurrencyKind currency,
+    required int newAmount,
+  });
+
+  /// Ajout d'un objet du catalogue (sheet "Depuis le catalogue",
+  /// `presentation/widgets/add_item_flow.dart`) — insère une nouvelle ligne
+  /// `character_inventory` pour [itemId]/[quantity]. Insère toujours une
+  /// nouvelle ligne plutôt que de fusionner avec une ligne existante du même
+  /// [itemId] (pas demandé par la spec de la tâche, et deux lots distincts
+  /// du même objet — ex. équipé vs non équipé — doivent pouvoir coexister).
+  ///
+  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  Future<WriteOutcome> addInventoryItem({
+    required String characterId,
+    required int itemId,
+    required int quantity,
+  });
+
+  /// Ajout d'un objet personnalisé (sheet "Objet personnalisé") — insère une
+  /// nouvelle ligne `character_inventory` avec `custom_name`, `item_id`
+  /// nul.
+  ///
+  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  Future<WriteOutcome> addCustomInventoryItem({
+    required String characterId,
+    required String customName,
+    required int quantity,
+  });
+
+  /// Ajoute une récompense (bouton "cadeau" du bandeau de l'onglet
+  /// "Inventaire", `presentation/widgets/add_reward_sheet.dart`) : au plus
+  /// un `UPDATE` (monnaie, si [newCurrencyTotals] est non vide — valeurs
+  /// déjà calculées par l'appelant, mêmes principe que [adjustCurrency]) et
+  /// un `INSERT` batché (tous les [items] en un seul appel, jamais un par
+  /// ligne — spec de la tâche : "un seul appel réseau à la validation").
+  ///
+  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  Future<WriteOutcome> addReward({
+    required String characterId,
+    required Map<CurrencyKind, int> newCurrencyTotals,
+    required List<RewardItemDraft> items,
+  });
+
+  /// Catalogue complet des objets `items` (nom résolu, catégorie, coût,
+  /// poids) — sheets "Depuis le catalogue" (onglet "Inventaire" et sheet
+  /// "Ajouter une récompense", même flux réutilisé en mode collecte locale,
+  /// voir `presentation/widgets/add_item_flow.dart`). Aucun filtre par
+  /// catégorie côté requête : le regroupement/tri par catégorie est fait
+  /// côté écran, même principe que `equipment_step_screen.dart::_shopSection`.
+  Future<List<InventoryCatalogItem>> fetchInventoryCatalog();
 
   /// Aptitudes/choix `class_features` de la classe [classId] au niveau
   /// [targetLevel] — écran "Montée de niveau"
@@ -443,7 +547,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_spells(spell_id, status),
             character_spell_slots(slot_level, slots_total, slots_used),
             character_feature_uses(class_feature_id, uses_remaining),
-            character_inventory(id, item_id, custom_name, quantity, equipped, items(category, weight)),
+            character_inventory(
+              id, item_id, custom_name, quantity, equipped, notes,
+              items(
+                category, weight, cost, rarity, requires_attunement, consumable,
+                weapon_properties(damage_dice, damage_type, properties, range),
+                armor_properties(ac_base, ac_dex_bonus, strength_requirement, stealth_disadvantage)
+              )
+            ),
             character_campaigns(id, story_id, stories(title, cover_image_path))
           ''')
           .eq('id', characterId)
@@ -692,6 +803,238 @@ class SupabaseCharacterRepository implements CharacterRepository {
       return WriteOutcome.synced;
     } on CharacterFailure {
       rethrow;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> useInventoryItem({
+    required String characterId,
+    required String inventoryId,
+    required int newQuantity,
+  }) async {
+    // Session uniquement — voir la documentation de classe ("Isolation
+    // cross-utilisateur") : `character_inventory` n'a pas de colonne
+    // `owner_id` propre, la RLS (`owns_character(character_id)`) est la
+    // garantie d'isolation, même principe que [leaveStory]. Le filtre
+    // `.eq('character_id', characterId)` ci-dessous reste une redondance
+    // défensive côté client, pas un filet de sécurité indispensable.
+    _requireOwnerId();
+
+    // Voir la documentation de [CharacterRepository.useInventoryItem] :
+    // jamais mis en file.
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      if (newQuantity <= 0) {
+        await _client
+            .from('character_inventory')
+            .delete()
+            .eq('id', inventoryId)
+            .eq('character_id', characterId);
+      } else {
+        await _client
+            .from('character_inventory')
+            .update({'quantity': newQuantity})
+            .eq('id', inventoryId)
+            .eq('character_id', characterId);
+      }
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> setInventoryItemEquipped({
+    required String characterId,
+    required String inventoryId,
+    required bool equipped,
+  }) async {
+    _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('character_inventory')
+          .update({'equipped': equipped})
+          .eq('id', inventoryId)
+          .eq('character_id', characterId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> removeInventoryItem({
+    required String characterId,
+    required String inventoryId,
+  }) async {
+    _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('character_inventory')
+          .delete()
+          .eq('id', inventoryId)
+          .eq('character_id', characterId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> adjustCurrency({
+    required String characterId,
+    required CurrencyKind currency,
+    required int newAmount,
+  }) async {
+    // `characters` porte bien `owner_id` (contrairement à
+    // `character_inventory`) : même filtre explicite que [updateHp]/[addXp].
+    final ownerId = _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('characters')
+          .update({currency.columnName: newAmount})
+          .eq('id', characterId)
+          .eq('owner_id', ownerId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> addInventoryItem({
+    required String characterId,
+    required int itemId,
+    required int quantity,
+  }) async {
+    _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client.from('character_inventory').insert({
+        'character_id': characterId,
+        'item_id': itemId,
+        'quantity': quantity,
+      });
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> addCustomInventoryItem({
+    required String characterId,
+    required String customName,
+    required int quantity,
+  }) async {
+    _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client.from('character_inventory').insert({
+        'character_id': characterId,
+        'custom_name': customName,
+        'quantity': quantity,
+      });
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> addReward({
+    required String characterId,
+    required Map<CurrencyKind, int> newCurrencyTotals,
+    required List<RewardItemDraft> items,
+  }) async {
+    final ownerId = _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      if (newCurrencyTotals.isNotEmpty) {
+        await _client
+            .from('characters')
+            .update({
+              for (final entry in newCurrencyTotals.entries)
+                entry.key.columnName: entry.value,
+            })
+            .eq('id', characterId)
+            .eq('owner_id', ownerId);
+      }
+
+      if (items.isNotEmpty) {
+        await _client.from('character_inventory').insert([
+          for (final item in items)
+            {
+              'character_id': characterId,
+              if (item.itemId != null) 'item_id': item.itemId,
+              if (item.customName != null) 'custom_name': item.customName,
+              'quantity': item.quantity,
+            },
+        ]);
+      }
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<List<InventoryCatalogItem>> fetchInventoryCatalog() async {
+    try {
+      final rows = await _client
+          .from('items')
+          .select('id, category, weight, cost')
+          .order('id', ascending: true);
+      final names = await _fetchTranslatedNames(
+        entityType: 'item',
+        entityIds: InventoryCatalogRowMapper.collectIds(rows),
+      );
+      return InventoryCatalogRowMapper.toInventoryCatalogItems(
+        rows,
+        names: names,
+      );
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (_) {
@@ -1565,23 +1908,34 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // Sorts connus/préparés, section "SORTS" — `character_spells` est déjà
     // embarquée dans [row], seuls `spells.level`/`school` et les noms
     // restent à résoudre. Aucune requête si le personnage n'a aucun sort.
+    // `spells` n'a pas de colonne `description` directe (vérifié contre
+    // `20260825090300_create_reference_spells_items_tables.sql` côté dépôt
+    // web) — elle vit dans `translations` au même titre que le nom, même
+    // pattern que `itemDescriptionRows` ci-dessous pour les objets.
     final spellIds = CharacterSpellRowMapper.collectSpellIds(
       CharacterDetailRowMapper.characterSpellRowsOf(row),
     );
     var spellRows = const <Map<String, dynamic>>[];
     var spellNameRows = const <Map<String, dynamic>>[];
+    var spellDescriptionRows = const <Map<String, dynamic>>[];
     if (spellIds.isNotEmpty) {
       spellRows = await _client
           .from('spells')
           .select(
             'id, level, school, casting_time, range, components, '
-            'duration, concentration, description',
+            'duration, concentration',
           )
           .inFilter('id', spellIds.toList());
+      final spellIdStrings = spellIds.map((id) => id.toString()).toSet();
       spellNameRows = await _fetchTranslationRows(
         entityType: 'spell',
         fieldName: 'name',
-        entityIds: spellIds.map((id) => id.toString()).toSet(),
+        entityIds: spellIdStrings,
+      );
+      spellDescriptionRows = await _fetchTranslationRows(
+        entityType: 'spell',
+        fieldName: 'description',
+        entityIds: spellIdStrings,
       );
     }
 
@@ -1589,12 +1943,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // déjà embarquée dans [row], `items` avec elle (relation de clé
     // étrangère réelle, contrairement à `translations`) : seuls les noms
     // d'objets du catalogue restent à résoudre via `translations`.
+    final inventoryItemIds = CharacterInventoryRowMapper.collectItemIds(
+      CharacterInventoryRowMapper.rowsOf(row),
+    );
     final itemNameRows = await _fetchTranslationRows(
       entityType: 'item',
       fieldName: 'name',
-      entityIds: CharacterInventoryRowMapper.collectItemIds(
-        CharacterInventoryRowMapper.rowsOf(row),
-      ),
+      entityIds: inventoryItemIds,
+    );
+    // Description de chaque objet du catalogue présent dans l'inventaire —
+    // même pattern de résolution que `itemNameRows` : `items` n'a pas de
+    // colonne `description` directe (contrairement à `weight`/`cost`/
+    // `rarity`...), elle vit dans `translations` (vérifié contre
+    // `20260825091000_seed_items_equipment.sql` côté dépôt web, chaque
+    // objet y insère sa description via `translations` au même titre que
+    // son nom).
+    final itemDescriptionRows = await _fetchTranslationRows(
+      entityType: 'item',
+      fieldName: 'description',
+      entityIds: inventoryItemIds,
     );
 
     return <String, dynamic>{
@@ -1612,7 +1979,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
       'languageNameRows': languageNameRows,
       'spellRows': spellRows,
       'spellNameRows': spellNameRows,
+      'spellDescriptionRows': spellDescriptionRows,
       'itemNameRows': itemNameRows,
+      'itemDescriptionRows': itemDescriptionRows,
     };
   }
 
@@ -1690,9 +2059,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final spellNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['spellNameRows']),
     );
+    final spellDescriptions = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['spellDescriptionRows']),
+    );
     final spells = CharacterSpellRowMapper.toCharacterSpellEntries(
       _rowsOf(payload['spellRows']),
       names: spellNames,
+      descriptions: spellDescriptions,
       statuses: CharacterSpellRowMapper.parseStatuses(
         CharacterDetailRowMapper.characterSpellRowsOf(row),
       ),
@@ -1701,9 +2074,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final itemNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['itemNameRows']),
     );
+    final itemDescriptions = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['itemDescriptionRows']),
+    );
     final inventory = CharacterInventoryRowMapper.toCharacterInventoryItems(
       CharacterInventoryRowMapper.rowsOf(row),
       names: itemNames,
+      descriptions: itemDescriptions,
     );
 
     final adventures = CharacterDetailRowMapper.parseAdventures(

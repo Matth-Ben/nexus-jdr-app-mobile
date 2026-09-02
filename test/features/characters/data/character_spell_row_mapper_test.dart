@@ -42,6 +42,7 @@ void main() {
       final result = CharacterSpellRowMapper.toCharacterSpellEntries(
         spellRows,
         names: const {'1': 'Boule de feu'},
+        descriptions: const {},
         statuses: const {1: 'connu'},
       );
 
@@ -60,6 +61,7 @@ void main() {
       final result = CharacterSpellRowMapper.toCharacterSpellEntries(
         spellRows,
         names: const {},
+        descriptions: const {},
         statuses: const {},
       );
 
@@ -81,13 +83,13 @@ void main() {
           'components': {'verbal': true, 'somatic': true, 'material': false},
           'duration': '1 minute',
           'concentration': true,
-          'description': 'Une description complète.',
         },
       ];
 
       final result = CharacterSpellRowMapper.toCharacterSpellEntries(
         spellRows,
         names: const {'1': 'Bouclier'},
+        descriptions: const {'1': 'Une description complète.'},
         statuses: const {1: 'connu'},
       );
 
@@ -113,6 +115,7 @@ void main() {
         final result = CharacterSpellRowMapper.toCharacterSpellEntries(
           spellRows,
           names: const {},
+          descriptions: const {},
           statuses: const {},
         );
 

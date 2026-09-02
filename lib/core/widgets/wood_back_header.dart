@@ -16,7 +16,12 @@ import '../theme/app_typography.dart';
 /// paramétrable ("CRÉATION", "FICHE", "RECADRAGE"...) là où l'original avait
 /// "CRÉATION" en dur.
 class WoodBackHeader extends StatelessWidget {
-  const WoodBackHeader({required this.title, required this.onBack, super.key});
+  const WoodBackHeader({
+    required this.title,
+    required this.onBack,
+    this.trailing,
+    super.key,
+  });
 
   /// Libellé affiché à droite de la flèche retour, déjà en majuscules
   /// (`font.display` ne transforme pas la casse automatiquement — voir
@@ -24,6 +29,15 @@ class WoodBackHeader extends StatelessWidget {
   final String title;
 
   final VoidCallback onBack;
+
+  /// Widget optionnel affiché à l'extrémité droite du bandeau (ex. un
+  /// `IconButton` "Ajouter une récompense" sur l'onglet "Inventaire" de la
+  /// fiche personnage, `presentation/character_detail_screen.dart`) — `null`
+  /// par défaut, comportement inchangé pour tous les usages existants
+  /// (`CRÉATION`/`FICHE`/`RECADRAGE`...). [title] reste enveloppé dans un
+  /// `Expanded` que [trailing] soit fourni ou non, pour ne rien changer à sa
+  /// position/son ellipsis quand ce dernier est absent.
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -45,13 +59,18 @@ class WoodBackHeader extends StatelessWidget {
                   color: AppColors.textOnWood,
                 ),
               ),
-              Text(
-                title,
-                style: AppTypography.display(
-                  fontSize: 11,
-                  color: AppColors.textOnWood,
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.display(
+                    fontSize: 11,
+                    color: AppColors.textOnWood,
+                  ),
                 ),
               ),
+              ?trailing,
             ],
           ),
         ),

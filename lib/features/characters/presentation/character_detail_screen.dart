@@ -10,15 +10,20 @@ import '../../../core/widgets/wood_back_header.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
+import '../domain/character_inventory_item.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
+import '../domain/currency_kind.dart';
 import '../domain/hp_adjustment.dart';
+import '../domain/inventory_catalog_item.dart';
 import '../domain/proficiency_bonus.dart';
 import '../domain/rest_type.dart';
+import '../domain/reward_item_draft.dart';
 import '../domain/saving_throw_calculator.dart';
 import '../domain/write_outcome.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
+import 'widgets/add_reward_sheet.dart';
 import 'widgets/add_xp_sheet.dart';
 import 'widgets/character_ability_score_grid.dart';
 import 'widgets/character_adventures_card.dart';
@@ -122,6 +127,68 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// .useClassFeature` écrit lui aussi une valeur absolue de
   /// `uses_remaining`).
   bool _isUsingFeature = false;
+
+  /// `true` dès le début de l'appel réseau de toute écriture de l'onglet
+  /// "Inventaire" (Utiliser/Équiper/Retirer un objet, ajuster une monnaie,
+  /// ajouter un objet du catalogue/personnalisé, ajouter une récompense),
+  /// `false` seulement une fois la fiche effectivement rafraîchie depuis le
+  /// serveur (voir [_refreshCharacterDetail], appelée par chacune de ces
+  /// méthodes juste avant de rendre la main à leur `finally`) — désactive
+  /// tout l'onglet le temps de cette fenêtre (voir
+  /// `CharacterInventoryTabBody.actionsDisabled`), même principe que
+  /// [_isCastingSpell]/[_isUsingFeature].
+  ///
+  /// **Volontairement pas de garde-fou [_restGeneration] ici** (à la
+  /// différence de [_castSpell]/[_useClassFeature]) : vérifié contre
+  /// `CharacterRepository.applyRest`, aucun repos (court ou long) ne touche
+  /// `character_inventory` ni les colonnes `characters.currency_*` — un
+  /// repos ne peut donc jamais entrer en course avec une écriture de cet
+  /// onglet, contrairement aux emplacements de sorts/utilisations
+  /// d'aptitudes qu'un repos réinitialise.
+  ///
+  /// Pas d'état optimiste local (contrairement à [_localSpellSlotsUsed]/
+  /// [_localFeatureUsesRemaining]) : **attention**, contrairement à ce
+  /// qu'affirmait une version précédente de ce commentaire, le verrou ne
+  /// suffit *pas* à lui seul à empêcher tout second tap concurrent de
+  /// réconcilier une donnée périmée — `characterDetailProvider` a
+  /// `skipLoadingOnRefresh: true` (réglage par défaut de Riverpod), donc
+  /// juste après un simple `ref.invalidate`, `detailAsync.when(data: ...)`
+  /// continue de renvoyer l'ancienne valeur tant que le refetch qu'il
+  /// déclenche n'a pas résolu. Relâcher [_isWritingInventory] dès la fin de
+  /// l'appel d'écriture (sans attendre ce refetch) laissait donc une
+  /// fenêtre, même brève, où un second tap immédiat repartait encore du
+  /// `detail` désormais périmé — perdant silencieusement un décrément de
+  /// quantité par exemple (bug confirmé en revue de code, voir
+  /// `character_detail_inventory_actions_test.dart`, test "double-tap
+  /// ... après résolution du 1er appel"). [_refreshCharacterDetail] attend
+  /// désormais la résolution effective du refetch avant de rendre la main,
+  /// ce qui ferme cette fenêtre sans avoir besoin d'un état optimiste local
+  /// dédié : au plus un seul appel d'écriture de cet onglet est jamais en
+  /// vol à la fois, refetch inclus.
+  bool _isWritingInventory = false;
+
+  /// Invalide [characterDetailProvider] puis attend que le refetch qu'il
+  /// déclenche résolve avant de retourner, plutôt qu'un simple
+  /// `ref.invalidate` "tire et oublie" — voir la documentation de
+  /// [_isWritingInventory] pour la fenêtre de donnée périmée que ceci ferme.
+  /// Utilisée par toutes les écritures de l'onglet "Inventaire" (voir leur
+  /// `finally`, qui ne relâche [_isWritingInventory] qu'après cet appel).
+  ///
+  /// Une erreur du refetch lui-même est volontairement avalée ici plutôt que
+  /// remontée à l'appelant : `characterDetailProvider` la porte de toute
+  /// façon pour le prochain `build()` (voir `detailAsync.error`), pas la
+  /// peine de la traiter une deuxième fois côté appelant — ce helper existe
+  /// uniquement pour fermer la fenêtre de staleness décrite ci-dessus, pas
+  /// pour décider quel message d'erreur afficher (déjà décidé par
+  /// l'appelant, qui vient de réussir ou d'échouer sa propre écriture).
+  Future<void> _refreshCharacterDetail() async {
+    ref.invalidate(characterDetailProvider(widget.characterId));
+    try {
+      await ref.read(characterDetailProvider(widget.characterId).future);
+    } catch (_) {
+      // Voir la documentation ci-dessus : ignoré volontairement.
+    }
+  }
 
   /// `true` dès le début de [_applyRest] (avant son appel réseau), `false`
   /// une fois résolu (succès ou échec) — désactive le stepper PV et le
@@ -647,6 +714,246 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Action "Utiliser" un objet consommable (sheet d'actions d'objet,
+  /// `item_action_sheet.dart`) : décrémente [item.quantity] de 1, ou
+  /// supprime la ligne côté serveur si la nouvelle quantité atteint 0
+  /// (décision UX tranchée par le chef de projet — voir
+  /// `CharacterRepository.useInventoryItem`). Verrouille tout l'onglet le
+  /// temps de l'appel réseau, refetch inclus (voir [_isWritingInventory]).
+  Future<void> _useInventoryItem(CharacterInventoryItem item) async {
+    final newQuantity = item.quantity - 1;
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .useInventoryItem(
+            characterId: widget.characterId,
+            inventoryId: item.id,
+            newQuantity: newQuantity,
+          );
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      await _refreshCharacterDetail();
+      _showSnackBar(
+        newQuantity <= 0
+            ? '${item.name} utilisé — retiré de l\'inventaire.'
+            : '${item.name} utilisé.',
+      );
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar("Impossible d'utiliser cet objet. Réessayez.");
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
+  /// Action "Équiper"/"Déséquiper" (sheet d'actions d'objet) : bascule
+  /// [item.equipped], aucune confirmation. Ne touche à aucun champ de
+  /// classe d'armure (n'existe nulle part dans [CharacterDetail], voir la
+  /// spec de la tâche).
+  Future<void> _toggleInventoryItemEquipped(CharacterInventoryItem item) async {
+    final newEquipped = !item.equipped;
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .setInventoryItemEquipped(
+            characterId: widget.characterId,
+            inventoryId: item.id,
+            equipped: newEquipped,
+          );
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      await _refreshCharacterDetail();
+      _showSnackBar(
+        newEquipped ? '${item.name} équipé.' : '${item.name} déséquipé.',
+      );
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar('Impossible de mettre à jour cet objet. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
+  /// Action "Retirer" (déjà confirmée par le dialogue de la sheet d'actions
+  /// d'objet, voir `item_action_sheet.dart::removeItemFlow`).
+  Future<void> _removeInventoryItem(CharacterInventoryItem item) async {
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .removeInventoryItem(
+            characterId: widget.characterId,
+            inventoryId: item.id,
+          );
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      await _refreshCharacterDetail();
+      _showSnackBar('${item.name} retiré de l\'inventaire.');
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar('Impossible de retirer cet objet. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
+  /// Ajustement de monnaie (stat box de tête d'onglet,
+  /// `currency_adjustment_sheet.dart`) : [newAmount] est déjà le nouveau
+  /// montant absolu, calculé par la sheet elle-même.
+  Future<void> _adjustCurrency(CurrencyKind currency, int newAmount) async {
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .adjustCurrency(
+            characterId: widget.characterId,
+            currency: currency,
+            newAmount: newAmount,
+          );
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      await _refreshCharacterDetail();
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar("Impossible d'ajuster la monnaie. Réessayez.");
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
+  /// Ajout d'un objet du catalogue (sheet "Depuis le catalogue",
+  /// `add_item_flow.dart`).
+  Future<void> _addInventoryItem(InventoryCatalogItem item, int quantity) async {
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .addInventoryItem(
+            characterId: widget.characterId,
+            itemId: item.id,
+            quantity: quantity,
+          );
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      await _refreshCharacterDetail();
+      _showSnackBar('${item.name} ajouté à l\'inventaire.');
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar("Impossible d'ajouter cet objet. Réessayez.");
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
+  /// Ajout d'un objet personnalisé (sheet "Objet personnalisé").
+  Future<void> _addCustomInventoryItem(String customName, int quantity) async {
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .addCustomInventoryItem(
+            characterId: widget.characterId,
+            customName: customName,
+            quantity: quantity,
+          );
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      await _refreshCharacterDetail();
+      _showSnackBar('$customName ajouté à l\'inventaire.');
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar("Impossible d'ajouter cet objet. Réessayez.");
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
+  /// Ajoute une récompense (`add_reward_sheet.dart`) : [currencyDeltas] sont
+  /// des montants à *ajouter* (pas des valeurs absolues, contrairement à
+  /// [_adjustCurrency]) — recalculés ici en valeurs absolues à partir de
+  /// [detail] (dernière fiche connue au moment de l'ouverture de la sheet)
+  /// avant l'appel repository, même principe que [_addXp] (delta calculé
+  /// côté appelant, jamais côté repository).
+  ///
+  /// `CharacterRepository.addReward` enchaîne deux requêtes (UPDATE
+  /// `characters` pour la monnaie, puis INSERT batché `character_inventory`
+  /// pour les objets) : si la première réussit et la seconde échoue,
+  /// l'exception qui remonte ici correspond à un échec *partiel* — la
+  /// monnaie a déjà été persistée en base. Sans rafraîchir [detail] sur ce
+  /// chemin d'échec (bug confirmé en revue de code), un retry immédiat avec
+  /// les mêmes valeurs recalculait [newCurrencyTotals] depuis ce [detail]
+  /// désormais périmé et ajoutait la monnaie une seconde fois en base —
+  /// perte de cohérence silencieuse. [_refreshCharacterDetail] est donc
+  /// appelée aussi bien au succès qu'à l'échec, pour que tout retry reparte
+  /// d'un état serveur frais plutôt que du [detail] qui a causé le
+  /// double-ajout (voir
+  /// `character_detail_inventory_actions_test.dart`, test "retry après
+  /// échec partiel").
+  Future<void> _addReward(
+    CharacterDetail detail,
+    Map<CurrencyKind, int> currencyDeltas,
+    List<RewardItemDraft> items,
+  ) async {
+    final newCurrencyTotals = <CurrencyKind, int>{
+      for (final entry in currencyDeltas.entries)
+        entry.key: _currentCurrencyAmount(detail, entry.key) + entry.value,
+    };
+
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .addReward(
+            characterId: widget.characterId,
+            newCurrencyTotals: newCurrencyTotals,
+            items: items,
+          );
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      await _refreshCharacterDetail();
+      _showSnackBar('Récompense ajoutée.');
+    } on CharacterFailure catch (failure) {
+      await _refreshCharacterDetail();
+      _showSnackBar(failure.message);
+    } catch (_) {
+      await _refreshCharacterDetail();
+      _showSnackBar("Impossible d'ajouter la récompense. Réessayez.");
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
+  int _currentCurrencyAmount(CharacterDetail detail, CurrencyKind currency) =>
+      switch (currency) {
+        CurrencyKind.platinum => detail.currencyPp,
+        CurrencyKind.gold => detail.currencyGp,
+        CurrencyKind.electrum => detail.currencyEp,
+        CurrencyKind.silver => detail.currencySp,
+        CurrencyKind.copper => detail.currencyCp,
+      };
+
   /// Retourne [current] avec [key] remise à [previousValue] (ou retirée si
   /// `null`) — factorisé pour [_castSpell]/[_useClassFeature] (même logique
   /// de revert que le catch de [_applyHpState], généralisée à une map).
@@ -934,11 +1241,40 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     });
 
     final detailAsync = ref.watch(characterDetailProvider(widget.characterId));
+    // `AsyncValue.value` (riverpod 3.x) est déjà nullable — voir la
+    // documentation de [_reassertCurrentHpState]. Utilisé ici pour activer
+    // le bouton `trailing` "Ajouter une récompense" du bandeau bois
+    // uniquement quand une fiche est effectivement chargée (jamais pendant
+    // le chargement/une erreur).
+    final currentDetail = detailAsync.value;
 
     return Scaffold(
       body: Column(
         children: [
-          WoodBackHeader(title: _tab.headerTitle, onBack: _goBack),
+          WoodBackHeader(
+            title: _tab.headerTitle,
+            onBack: _goBack,
+            trailing: _tab == CharacterDetailTab.inventory && currentDetail != null
+                ? SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: IconButton(
+                      tooltip: 'Ajouter une récompense',
+                      onPressed: _isWritingInventory
+                          ? null
+                          : () => showAddRewardSheet(
+                              context,
+                              onApply: (deltas, items) =>
+                                  _addReward(currentDetail, deltas, items),
+                            ),
+                      icon: const Icon(
+                        Icons.card_giftcard,
+                        color: AppColors.textOnWood,
+                      ),
+                    ),
+                  )
+                : null,
+          ),
           Expanded(
             child: detailAsync.when(
               data: (detail) => _buildTabBody(detail),
@@ -980,7 +1316,16 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             _castSpell(_effectiveDetail(detail), spell, slotLevel),
         actionsDisabled: _isApplyingRest || _isCastingSpell,
       ),
-      CharacterDetailTab.inventory => CharacterInventoryTabBody(detail: detail),
+      CharacterDetailTab.inventory => CharacterInventoryTabBody(
+        detail: detail,
+        onUseItem: _useInventoryItem,
+        onToggleItemEquipped: _toggleInventoryItemEquipped,
+        onRemoveItem: _removeInventoryItem,
+        onAdjustCurrency: _adjustCurrency,
+        onAddInventoryItem: _addInventoryItem,
+        onAddCustomInventoryItem: _addCustomInventoryItem,
+        actionsDisabled: _isWritingInventory,
+      ),
       CharacterDetailTab.story => CharacterStoryTabBody(detail: detail),
       CharacterDetailTab.character => _CharacterTabBody(
         detail: detail,

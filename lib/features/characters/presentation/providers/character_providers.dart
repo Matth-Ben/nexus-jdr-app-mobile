@@ -6,6 +6,7 @@ import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/character_repository.dart';
 import '../../data/pending_character_write_syncer.dart';
 import '../../domain/character_summary.dart';
+import '../../domain/inventory_catalog_item.dart';
 
 part 'character_providers.g.dart';
 
@@ -49,6 +50,17 @@ PendingCharacterWriteSyncer pendingCharacterWriteSyncer(Ref ref) {
 @Riverpod(retry: _noRetry)
 Future<List<CharacterSummary>> characters(Ref ref) {
   return ref.watch(characterRepositoryProvider).fetchCharacters();
+}
+
+/// Catalogue complet des objets `items`, exposé aux sheets "Depuis le
+/// catalogue" de l'onglet "Inventaire" (`presentation/widgets
+/// /add_item_flow.dart`) — voir `CharacterRepository.fetchInventoryCatalog`.
+///
+/// `autoDispose` par défaut : ce catalogue n'a pas besoin de survivre à la
+/// fermeture de la sheet qui l'affiche, même rationale que [characters].
+@Riverpod(retry: _noRetry)
+Future<List<InventoryCatalogItem>> inventoryCatalog(Ref ref) {
+  return ref.watch(characterRepositoryProvider).fetchInventoryCatalog();
 }
 
 Duration? _noRetry(int retryCount, Object error) => null;

@@ -33,10 +33,13 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
+import 'package:personnages/features/characters/domain/currency_kind.dart';
+import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
+import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/xml_import/data/xml_import_repository.dart';
@@ -208,6 +211,73 @@ class _FakeCharacterRepository implements CharacterRepository {
 
   @override
   Future<void> leaveStory({required String characterCampaignId}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WriteOutcome> useInventoryItem({
+    required String characterId,
+    required String inventoryId,
+    required int newQuantity,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WriteOutcome> setInventoryItemEquipped({
+    required String characterId,
+    required String inventoryId,
+    required bool equipped,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WriteOutcome> removeInventoryItem({
+    required String characterId,
+    required String inventoryId,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WriteOutcome> adjustCurrency({
+    required String characterId,
+    required CurrencyKind currency,
+    required int newAmount,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WriteOutcome> addInventoryItem({
+    required String characterId,
+    required int itemId,
+    required int quantity,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WriteOutcome> addCustomInventoryItem({
+    required String characterId,
+    required String customName,
+    required int quantity,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WriteOutcome> addReward({
+    required String characterId,
+    required Map<CurrencyKind, int> newCurrencyTotals,
+    required List<RewardItemDraft> items,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<InventoryCatalogItem>> fetchInventoryCatalog() {
     throw UnimplementedError();
   }
 

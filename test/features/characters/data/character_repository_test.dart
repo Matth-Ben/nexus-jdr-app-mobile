@@ -13,6 +13,8 @@ import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
+import 'package:personnages/features/characters/domain/currency_kind.dart';
+import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -320,6 +322,80 @@ void main() {
       );
 
       test(
+        'régression commit 7c5ab70 : la requête .select() sur `spells` ne '
+        'référence jamais `description` (colonne inexistante sur cette '
+        'table — vit dans `translations`), et la description d\'un sort '
+        'est bien résolue de bout en bout via `translations` (jamais '
+        'vide, jamais confondue avec le nom)',
+        () async {
+          String? capturedSpellsSelect;
+          const spellDescription = 'Crée une barrière magique invisible.';
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            tableRows: tableRows,
+            onRequest: (request) {
+              if (request.url.pathSegments.last == 'spells') {
+                capturedSpellsSelect = request.url.queryParameters['select'];
+              }
+            },
+            // Le double par défaut (`tableRows`) sert la même liste
+            // `translations` pour toute résolution (name/description
+            // confondus, voir le commentaire au-dessus de `tableRows` en
+            // tête de ce fichier) : insuffisant ici pour distinguer un bug
+            // où la description proviendrait par erreur de la carte des
+            // noms. On route donc explicitement `field_name=description`
+            // vers une valeur différente du nom ('Bouclier').
+            rowsOverride: (request) {
+              if (request.url.pathSegments.last == 'translations' &&
+                  // PostgREST encode un filtre `.eq('field_name', ...)`
+                  // sous la forme `field_name=eq.description` — jamais la
+                  // valeur brute seule.
+                  request.url.queryParameters['field_name'] ==
+                      'eq.description') {
+                return [
+                  {'entity_id': '20', 'value': spellDescription},
+                ];
+              }
+              return null;
+            },
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _AlwaysOnlineConnectivityChecker(),
+          );
+
+          final detail = await repository.fetchCharacterDetail(characterId);
+
+          expect(
+            capturedSpellsSelect,
+            isNotNull,
+            reason: 'le personnage de la fixture a un sort connu : la '
+                'table `spells` doit bien être interrogée',
+          );
+          expect(
+            capturedSpellsSelect,
+            isNot(contains('description')),
+            reason: '`spells` n\'a pas de colonne `description` (vérifié '
+                'contre les migrations du dépôt web) — sélectionner cette '
+                'colonne directement lève une `PostgrestException` en '
+                'production (régression réelle poussée sur `main` par le '
+                'commit 7c5ab70, non détectée par la suite de tests '
+                "d'alors faute d'assertion sur cette requête).",
+          );
+          expect(
+            detail.spells.single.description,
+            spellDescription,
+            reason: 'doit provenir de `translations` '
+                '(entity_type=spell, field_name=description), jamais de '
+                '`spells.description` (colonne inexistante) ni retomber '
+                'silencieusement sur le nom du sort ou une chaîne vide',
+          );
+        },
+      );
+
+      test(
         'isolation par utilisateur : un changement de compte sur le même '
         'appareil ne peut jamais lire l\'entrée de cache d\'un autre joueur',
         () async {
@@ -535,6 +611,372 @@ void main() {
     });
   });
 
+  group(
+    'SupabaseCharacterRepository (écritures de l\'onglet "Inventaire")',
+    () {
+      late AppDatabase db;
+      late ReferenceDataCache cache;
+      late PendingCharacterWriteQueue pendingWrites;
+
+      setUp(() {
+        db = AppDatabase(NativeDatabase.memory());
+        cache = ReferenceDataCache(db);
+        pendingWrites = PendingCharacterWriteQueue(db);
+      });
+
+      tearDown(() async {
+        await db.close();
+      });
+
+      const characterId = 'char-1';
+      const ownerId = 'owner-1';
+      const inventoryId = 'inv-1';
+
+      test(
+        'useInventoryItem : connectivité absente -> retourne queued sans '
+        'tenter le réseau, jamais mise en file (même règle que castSpell/'
+        'useClassFeature)',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            throwOnRequest: true,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: false),
+          );
+
+          final outcome = await repository.useInventoryItem(
+            characterId: characterId,
+            inventoryId: inventoryId,
+            newQuantity: 1,
+          );
+
+          expect(outcome, WriteOutcome.queued);
+          expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+        },
+      );
+
+      test(
+        'useInventoryItem : connectivité présente + écriture réussie -> '
+        'synced',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
+
+          final outcome = await repository.useInventoryItem(
+            characterId: characterId,
+            inventoryId: inventoryId,
+            newQuantity: 0,
+          );
+
+          expect(outcome, WriteOutcome.synced);
+        },
+      );
+
+      test(
+        'setInventoryItemEquipped : connectivité présente + écriture '
+        'réussie -> synced',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
+
+          final outcome = await repository.setInventoryItemEquipped(
+            characterId: characterId,
+            inventoryId: inventoryId,
+            equipped: true,
+          );
+
+          expect(outcome, WriteOutcome.synced);
+        },
+      );
+
+      test(
+        'removeInventoryItem : connectivité présente + écriture réussie -> '
+        'synced',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
+
+          final outcome = await repository.removeInventoryItem(
+            characterId: characterId,
+            inventoryId: inventoryId,
+          );
+
+          expect(outcome, WriteOutcome.synced);
+        },
+      );
+
+      test(
+        'adjustCurrency : connectivité absente -> retourne queued sans '
+        'tenter le réseau, jamais mise en file',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            throwOnRequest: true,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: false),
+          );
+
+          final outcome = await repository.adjustCurrency(
+            characterId: characterId,
+            currency: CurrencyKind.gold,
+            newAmount: 42,
+          );
+
+          expect(outcome, WriteOutcome.queued);
+          expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+        },
+      );
+
+      test(
+        'adjustCurrency : connectivité présente + écriture réussie -> '
+        'synced',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
+
+          final outcome = await repository.adjustCurrency(
+            characterId: characterId,
+            currency: CurrencyKind.silver,
+            newAmount: 12,
+          );
+
+          expect(outcome, WriteOutcome.synced);
+        },
+      );
+
+      test(
+        'adjustCurrency : connectivité présente + écriture réseau en échec '
+        '-> relance CharacterFailure',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            failureStatusCode: 500,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
+
+          await expectLater(
+            repository.adjustCurrency(
+              characterId: characterId,
+              currency: CurrencyKind.gold,
+              newAmount: 1,
+            ),
+            throwsA(isA<CharacterFailure>()),
+          );
+        },
+      );
+
+      test(
+        'addInventoryItem : connectivité présente + écriture réussie -> '
+        'synced',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
+
+          final outcome = await repository.addInventoryItem(
+            characterId: characterId,
+            itemId: 5,
+            quantity: 2,
+          );
+
+          expect(outcome, WriteOutcome.synced);
+        },
+      );
+
+      test(
+        'addCustomInventoryItem : connectivité présente + écriture réussie '
+        '-> synced',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
+
+          final outcome = await repository.addCustomInventoryItem(
+            characterId: characterId,
+            customName: 'Amulette de famille',
+            quantity: 1,
+          );
+
+          expect(outcome, WriteOutcome.synced);
+        },
+      );
+
+      test(
+        'addReward : connectivité absente -> retourne queued sans tenter le '
+        'réseau, jamais mise en file',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            throwOnRequest: true,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: false),
+          );
+
+          final outcome = await repository.addReward(
+            characterId: characterId,
+            newCurrencyTotals: const {CurrencyKind.gold: 50},
+            items: const [
+              RewardItemDraft(itemId: 5, displayName: 'Dague', quantity: 1),
+            ],
+          );
+
+          expect(outcome, WriteOutcome.queued);
+          expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+        },
+      );
+
+      test(
+        'addReward : connectivité présente, monnaie et objets -> un appel '
+        'currency + un appel batché objets, synced',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
+
+          final outcome = await repository.addReward(
+            characterId: characterId,
+            newCurrencyTotals: const {CurrencyKind.gold: 50, CurrencyKind.silver: 5},
+            items: const [
+              RewardItemDraft(itemId: 5, displayName: 'Dague', quantity: 1),
+              RewardItemDraft(
+                customName: 'Amulette',
+                displayName: 'Amulette',
+                quantity: 1,
+              ),
+            ],
+          );
+
+          expect(outcome, WriteOutcome.synced);
+        },
+      );
+
+      test(
+        'addReward : ni monnaie ni objets (les deux vides) -> aucune '
+        'écriture, synced quand même (aucun côté indésirable)',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            throwOnRequest: true,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
+
+          final outcome = await repository.addReward(
+            characterId: characterId,
+            newCurrencyTotals: const {},
+            items: const [],
+          );
+
+          // Aucun appel réseau émis (throwOnRequest ne se déclenche jamais)
+          // -> confirme qu'aucune requête vide n'est envoyée.
+          expect(outcome, WriteOutcome.synced);
+        },
+      );
+
+      test('fetchInventoryCatalog : résout id/nom/catégorie/coût/poids '
+          'depuis items+translations', () async {
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: {
+            'items': [
+              {
+                'id': 1,
+                'category': 'arme',
+                'weight': 0.5,
+                'cost': {'amount': 2, 'currency': 'gp'},
+              },
+            ],
+            'translations': [
+              {'entity_id': '1', 'value': 'Dague'},
+            ],
+          },
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final catalog = await repository.fetchInventoryCatalog();
+
+        expect(catalog, hasLength(1));
+        expect(catalog.single.id, 1);
+        expect(catalog.single.name, 'Dague');
+        expect(catalog.single.category, 'arme');
+        expect(catalog.single.costAmount, 2);
+        expect(catalog.single.weight, 0.5);
+      });
+    },
+  );
+
   group('PendingCharacterWriteSyncer.sync', () {
     late AppDatabase db;
     late PendingCharacterWriteQueue pendingWrites;
@@ -689,8 +1131,22 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
   Map<String, List<Map<String, dynamic>>> tableRows = const {},
   bool throwOnRequest = false,
   int? failureStatusCode,
+  // Observateur best-effort de chaque requête sortante — sert par ex. à
+  // capturer la query string `select` réellement envoyée pour une table
+  // donnée (voir le test de non-régression "la requête .select() sur
+  // `spells` ne référence que des colonnes réelles" ci-dessous), sans
+  // avoir à dupliquer tout ce double pour un seul test.
+  void Function(http.Request request)? onRequest,
+  // Permet à un test de router une requête précise vers des lignes
+  // différentes de [tableRows] selon sa query string (ex. `field_name` sur
+  // `translations`, que le routage par défaut ci-dessous ignore
+  // volontairement — voir la doc de ce double). Retourne `null` pour
+  // retomber sur [tableRows] sans rien changer au comportement des tests
+  // existants qui ne fournissent pas ce paramètre.
+  List<Map<String, dynamic>>? Function(http.Request request)? rowsOverride,
 }) async {
   Future<http.Response> handler(http.Request request) async {
+    onRequest?.call(request);
     if (throwOnRequest) {
       throw const SocketException('Pas de réseau (double de test).');
     }
@@ -706,7 +1162,10 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
       );
     }
     final table = request.url.pathSegments.last;
-    final rows = tableRows[table] ?? const <Map<String, dynamic>>[];
+    final rows =
+        rowsOverride?.call(request) ??
+        tableRows[table] ??
+        const <Map<String, dynamic>>[];
     return http.Response(
       jsonEncode(rows),
       200,

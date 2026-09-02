@@ -39,14 +39,17 @@ abstract final class CharacterSpellRowMapper {
 
   /// Construit les [CharacterSpellEntry] à partir des lignes brutes `spells`
   /// (id, level, school, casting_time, range, components, duration,
-  /// concentration, description) déjà filtrées sur les sorts du personnage,
-  /// des noms déjà résolus (`names`) et des statuts déjà résolus
-  /// (`statuses`, voir [parseStatuses]). Un sort sans statut résolu (ne
-  /// devrait pas arriver, `spellRows` est dérivé de `character_spells`)
-  /// retombe sur 'connu' plutôt que de crasher.
+  /// concentration) déjà filtrées sur les sorts du personnage, des noms déjà
+  /// résolus (`names`), des descriptions déjà résolues (`descriptions` —
+  /// `spells` n'a pas de colonne `description` directe, elle vit dans
+  /// `translations` comme le nom, voir `data/character_repository.dart`) et
+  /// des statuts déjà résolus (`statuses`, voir [parseStatuses]). Un sort
+  /// sans statut résolu (ne devrait pas arriver, `spellRows` est dérivé de
+  /// `character_spells`) retombe sur 'connu' plutôt que de crasher.
   static List<CharacterSpellEntry> toCharacterSpellEntries(
     List<Map<String, dynamic>> spellRows, {
     required Map<String, String> names,
+    required Map<String, String> descriptions,
     required Map<int, String> statuses,
   }) {
     final result = <CharacterSpellEntry>[];
@@ -67,7 +70,7 @@ abstract final class CharacterSpellRowMapper {
               : const {},
           duration: row['duration'] as String? ?? '',
           concentration: row['concentration'] == true,
-          description: row['description'] as String? ?? '',
+          description: descriptions[id.toString()] ?? '',
         ),
       );
     }

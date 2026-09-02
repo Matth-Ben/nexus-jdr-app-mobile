@@ -3,7 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../domain/currency_kind.dart';
 import '../../domain/inventory_stat_box.dart';
+
+/// Callback de tap sur une stat box de monnaie (toutes sauf "KG") — ouvre la
+/// sheet d'ajustement de cette monnaie, voir
+/// `character_inventory_tab_body.dart`/`currency_adjustment_sheet.dart`.
+typedef AdjustCurrencyTapCallback = void Function(CurrencyKind currency);
 
 /// Rangée de "stat boxes" en tête de l'onglet "Inventaire" — voir
 /// `domain/inventory_stat_boxes_resolver.dart` pour leur construction.
@@ -12,10 +18,21 @@ import '../../domain/inventory_stat_box.dart';
 /// simple : [boxes] peut compter jusqu'à 6 entrées (platine et électrum
 /// affichées en plus des 4 boxes de la maquette quand non nulles), qui ne
 /// tiendraient pas toutes sur la largeur d'un écran de téléphone.
+///
+/// Chaque box de monnaie ([InventoryStatBox.currency] non nul) est
+/// cliquable ([onTapCurrency]), pas la box "KG" (poids, pas une monnaie
+/// ajustable) — voir la spec visuelle du Flux 2 "Ajustement de monnaie".
+/// [onTapCurrency] `null` désactive le tap sur toutes les boxes (verrou
+/// `actionsDisabled` de tout l'onglet) sans changer leur rendu au repos.
 class CharacterInventoryStatBoxesRow extends StatelessWidget {
-  const CharacterInventoryStatBoxesRow({required this.boxes, super.key});
+  const CharacterInventoryStatBoxesRow({
+    required this.boxes,
+    this.onTapCurrency,
+    super.key,
+  });
 
   final List<InventoryStatBox> boxes;
+  final AdjustCurrencyTapCallback? onTapCurrency;
 
   static const double _boxWidth = 76;
 
@@ -27,7 +44,7 @@ class CharacterInventoryStatBoxesRow extends StatelessWidget {
         children: [
           for (var i = 0; i < boxes.length; i++) ...[
             if (i > 0) const SizedBox(width: AppSpacing.sm),
-            _StatBox(box: boxes[i]),
+            _StatBox(box: boxes[i], onTapCurrency: onTapCurrency),
           ],
         ],
       ),
@@ -36,9 +53,10 @@ class CharacterInventoryStatBoxesRow extends StatelessWidget {
 }
 
 class _StatBox extends StatelessWidget {
-  const _StatBox({required this.box});
+  const _StatBox({required this.box, required this.onTapCurrency});
 
   final InventoryStatBox box;
+  final AdjustCurrencyTapCallback? onTapCurrency;
 
   @override
   Widget build(BuildContext context) {
@@ -50,8 +68,9 @@ class _StatBox extends StatelessWidget {
     // sur la position (ex. "toujours la 1re box") n'aurait donc pas de sens
     // stable.
     final emphasized = box.unit == 'PO';
+    final currency = box.currency;
 
-    return Container(
+    final content = Container(
       width: CharacterInventoryStatBoxesRow._boxWidth,
       padding: const EdgeInsets.symmetric(
         vertical: AppSpacing.sm,
@@ -95,6 +114,26 @@ class _StatBox extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+
+    if (currency == null) {
+      // Box "KG" : jamais cliquable, voir la documentation de classe.
+      return content;
+    }
+
+    // `InkWell` enveloppe tout le `Container` (76px de large) plutôt que
+    // seulement son texte, pour une zone de tap ≥44×44 conforme (consigne
+    // d'accessibilité explicite de la tâche) — la box mesure déjà 76px de
+    // large, seule sa hauteur (déterminée par son contenu) doit être
+    // vérifiée en pratique, mais l'enveloppe complète est de toute façon la
+    // seule façon de couvrir toute la surface visuelle cliquable.
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: onTapCurrency != null ? () => onTapCurrency!(currency) : null,
+        child: content,
       ),
     );
   }

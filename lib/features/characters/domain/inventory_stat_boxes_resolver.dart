@@ -1,4 +1,5 @@
 import 'character_detail.dart';
+import 'currency_kind.dart';
 import 'inventory_stat_box.dart';
 import 'inventory_weight_calculator.dart';
 import 'weight_formatter.dart';
@@ -33,14 +34,44 @@ abstract final class InventoryStatBoxesResolver {
     final boxes = <InventoryStatBox>[];
 
     if (detail.currencyPp != 0) {
-      boxes.add(InventoryStatBox(value: '${detail.currencyPp}', unit: 'PP'));
+      boxes.add(
+        InventoryStatBox(
+          value: '${detail.currencyPp}',
+          unit: 'PP',
+          currency: CurrencyKind.platinum,
+        ),
+      );
     }
-    boxes.add(InventoryStatBox(value: '${detail.currencyGp}', unit: 'PO'));
+    boxes.add(
+      InventoryStatBox(
+        value: '${detail.currencyGp}',
+        unit: 'PO',
+        currency: CurrencyKind.gold,
+      ),
+    );
     if (detail.currencyEp != 0) {
-      boxes.add(InventoryStatBox(value: '${detail.currencyEp}', unit: 'PE'));
+      boxes.add(
+        InventoryStatBox(
+          value: '${detail.currencyEp}',
+          unit: 'PE',
+          currency: CurrencyKind.electrum,
+        ),
+      );
     }
-    boxes.add(InventoryStatBox(value: '${detail.currencySp}', unit: 'PA'));
-    boxes.add(InventoryStatBox(value: '${detail.currencyCp}', unit: 'PC'));
+    boxes.add(
+      InventoryStatBox(
+        value: '${detail.currencySp}',
+        unit: 'PA',
+        currency: CurrencyKind.silver,
+      ),
+    );
+    boxes.add(
+      InventoryStatBox(
+        value: '${detail.currencyCp}',
+        unit: 'PC',
+        currency: CurrencyKind.copper,
+      ),
+    );
 
     // "KG", pas "LBS" comme la maquette : `items.weight` est stocké en
     // kilogrammes côté base, voir la documentation de

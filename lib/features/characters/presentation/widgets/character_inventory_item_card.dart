@@ -12,60 +12,69 @@ import '../../domain/weight_formatter.dart';
 /// Une carte de l'onglet "Inventaire" — badge de catégorie, nom, sous-titre
 /// "{catégorie} · x{quantité}", et un poids ou un badge "ÉQUIPÉ" à droite.
 ///
-/// Portée volontairement limitée à cette itération : affichage seul, en
-/// lecture seule. **Pas** cliquable — la spec du cahier des charges
-/// (`04-fonctionnalites-app-mobile.md`) prévoit un panneau
-/// "Infos"/"Équiper-Déséquiper"/"Utiliser"/"Retirer" par objet, explicitement
-/// reporté à une tâche ultérieure (même rationale que
-/// `character_spells_section.dart` côté sorts). Pas de `InkWell`/
-/// `GestureDetector` ici : à ajouter avec le panneau, pas avant, pour ne
-/// jamais laisser une carte qui réagit au tap sans rien faire.
+/// Cliquable : ouvre la sheet d'actions "Infos"/"Utiliser"/"Équiper-
+/// Déséquiper"/"Retirer" (`item_action_sheet.dart::showItemActionSheet`) —
+/// voir [onTap], `null` désactive le tap (verrou `actionsDisabled` de tout
+/// l'onglet, `character_inventory_tab_body.dart`) sans changer le rendu au
+/// repos, même convention que `_SpellRow`/`_FeatureRow` côté sorts/aptitudes.
 class CharacterInventoryItemCard extends StatelessWidget {
-  const CharacterInventoryItemCard({required this.item, super.key});
+  const CharacterInventoryItemCard({required this.item, this.onTap, super.key});
 
   final CharacterInventoryItem item;
 
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.parchmentCard,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
-      ),
-      child: Row(
-        children: [
-          _CategoryBadge(category: item.category),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.body(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  '${InventoryCategoryRules.labelFor(item.category)} · x${item.quantity}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.body(
-                    fontSize: 12,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: AppColors.parchmentCard,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: AppColors.woodLight,
+              width: AppBorders.card,
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
-          _Trailing(item: item),
-        ],
+          child: Row(
+            children: [
+              _CategoryBadge(category: item.category),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.body(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      '${InventoryCategoryRules.labelFor(item.category)} · x${item.quantity}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.body(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _Trailing(item: item),
+            ],
+          ),
+        ),
       ),
     );
   }

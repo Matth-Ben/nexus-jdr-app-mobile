@@ -207,3 +207,64 @@ final class CharactersProvider
 }
 
 String _$charactersHash() => r'3a8e32a7a9df2817331ea519b8e72b7ca49ec5ad';
+
+/// Catalogue complet des objets `items`, exposé aux sheets "Depuis le
+/// catalogue" de l'onglet "Inventaire" (`presentation/widgets
+/// /add_item_flow.dart`) — voir `CharacterRepository.fetchInventoryCatalog`.
+///
+/// `autoDispose` par défaut : ce catalogue n'a pas besoin de survivre à la
+/// fermeture de la sheet qui l'affiche, même rationale que [characters].
+
+@ProviderFor(inventoryCatalog)
+final inventoryCatalogProvider = InventoryCatalogProvider._();
+
+/// Catalogue complet des objets `items`, exposé aux sheets "Depuis le
+/// catalogue" de l'onglet "Inventaire" (`presentation/widgets
+/// /add_item_flow.dart`) — voir `CharacterRepository.fetchInventoryCatalog`.
+///
+/// `autoDispose` par défaut : ce catalogue n'a pas besoin de survivre à la
+/// fermeture de la sheet qui l'affiche, même rationale que [characters].
+
+final class InventoryCatalogProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<InventoryCatalogItem>>,
+          List<InventoryCatalogItem>,
+          FutureOr<List<InventoryCatalogItem>>
+        >
+    with
+        $FutureModifier<List<InventoryCatalogItem>>,
+        $FutureProvider<List<InventoryCatalogItem>> {
+  /// Catalogue complet des objets `items`, exposé aux sheets "Depuis le
+  /// catalogue" de l'onglet "Inventaire" (`presentation/widgets
+  /// /add_item_flow.dart`) — voir `CharacterRepository.fetchInventoryCatalog`.
+  ///
+  /// `autoDispose` par défaut : ce catalogue n'a pas besoin de survivre à la
+  /// fermeture de la sheet qui l'affiche, même rationale que [characters].
+  InventoryCatalogProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'inventoryCatalogProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$inventoryCatalogHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<InventoryCatalogItem>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<InventoryCatalogItem>> create(Ref ref) {
+    return inventoryCatalog(ref);
+  }
+}
+
+String _$inventoryCatalogHash() => r'cf03e8663cfa931f2fa404a89e9ee49862f5f24c';

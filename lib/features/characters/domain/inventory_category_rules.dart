@@ -64,6 +64,23 @@ abstract final class InventoryCategoryRules {
 
   static const Color _fallbackColor = AppColors.woodMedium;
 
+  /// Ordre d'affichage des sections de la sheet "Depuis le catalogue"
+  /// (`presentation/widgets/add_item_flow.dart`) — mêmes clés que
+  /// [_frenchLabels], dans le même ordre que celui-ci (pas d'ordre distinct
+  /// à maintenir). Une catégorie sans objet correspondant dans le contenu
+  /// peuplé (ex. `objet_magique`) est simplement absente de la sheet, jamais
+  /// affichée comme section vide — même principe que
+  /// `EquipmentCategoryRules.shopSectionOrder`.
+  static const List<String> categoryOrder = [
+    'arme',
+    'armure',
+    'bouclier',
+    'outil',
+    'equipement_general',
+    'objet_magique',
+    'monture_vehicule',
+  ];
+
   /// Libellé FR affiché en sous-titre de carte ("{libellé} · x{quantité}").
   /// `null` (objet personnalisé) -> "Objet personnalisé", distinct du
   /// libellé générique "Équipement" utilisé par
