@@ -122,17 +122,51 @@ Sans ces secrets, `release-android.yml` échoue à l'étape de signature —
 c'est attendu tant qu'ils ne sont pas configurés, le workflow ne fera rien
 de nuisible en leur absence (il échoue proprement).
 
-## État au 2026-09-01
+## État au 2026-09-02
 
 - [x] Keystore Android de production généré et testé (`android/key.properties`
       local, jamais commité).
 - [x] Workflows CI (`ci.yml`) et Release Android (`release-android.yml`) en
       place.
 - [x] Les 4 secrets Android/Supabase (hors `PLAY_SERVICE_ACCOUNT_JSON`)
-      configurés dans l'environnement GitHub `PROD`.
+      configurés dans l'environnement GitHub `PROD` (**en tant que
+      "Environment secrets", pas "Environment variables"** — piège qui a
+      fait échouer silencieusement plusieurs essais, voir note ci-dessous).
+- [x] **Pipeline de release Android testé de bout en bout** : le tag `v1.0.0`
+      a produit avec succès une [Release GitHub](https://github.com/Matth-Ben/nexus-jdr-app-mobile/releases/tag/v1.0.0)
+      avec un App Bundle signé (59,8 Mo) en pièce jointe.
 - [ ] Compte développeur Google Play pas encore créé.
 - [ ] Fiche store (icône, captures, description, politique de
       confidentialité, data safety) pas encore préparée.
-- [ ] Premier upload manuel pas encore fait.
+- [ ] Premier upload manuel pas encore fait — le `.aab` de la Release
+      `v1.0.0` ci-dessus peut être téléchargé et uploadé tel quel une fois
+      la fiche prête (section 4).
 - [ ] Compte de service Play (pour l'automatisation complète) pas encore
       créé — dépend du point précédent.
+
+### Note pour la suite : piège "Environment secrets" vs "Environment variables"
+
+Sur GitHub, un Environment (Settings → Environments → PROD) a deux sections
+distinctes : **Environment secrets** (chiffrés, jamais affichés en clair,
+lus via `${{ secrets.NOM }}`) et **Environment variables** (stockées en
+clair, lues via `${{ vars.NOM }}`). Une valeur mise dans "Variables" alors
+que le workflow lit `secrets.NOM` ne provoque **aucune erreur** — GitHub
+résout silencieusement une chaîne vide, ce qui a fait échouer plusieurs
+tentatives de release avec un message d'erreur trompeur ("Tag number over
+30 is not supported", qui ressemblait à un problème de format de keystore
+alors que c'était juste un fichier vide). Toute nouvelle valeur sensible à
+ajouter plus tard (ex. `PLAY_SERVICE_ACCOUNT_JSON`) doit aller dans
+**Environment secrets**, jamais "Variables".
+
+### ⚠️ Le premier keystore généré a été exposé, remplacé
+
+Le tout premier fichier `.jks` généré le 2026-09-01 et son mot de passe sont
+tous les deux apparus dans la conversation avec l'assistant IA pendant le
+débogage (contenu base64 collé par erreur pour investiguer un problème qui
+s'est finalement avéré être ce piège Environment secrets/variables). Ce
+keystore est donc à considérer comme potentiellement compromis. Aucune app
+n'ayant jamais été publiée avec, le remplacer ne coûte rien — recommandé
+avant toute publication réelle sur le Play Store (voir section 1 pour
+regénérer : `keytool -genkeypair -storetype JKS ...`, puis refaire les
+étapes de la section 6 et mettre à jour `assetlinks.json` côté web avec la
+nouvelle empreinte SHA-256).
