@@ -21,12 +21,15 @@ class LevelUpHeader extends StatelessWidget {
     super.key,
   });
 
-  /// "MONTÉE DE NIVEAU" (déclenchement normal) ou "NIVEAU ATTEINT" (écran de
-  /// blocage en cours de chaînage, voir la spec visuelle section 6).
+  /// "MONTÉE DE NIVEAU" dans tout le flux, y compris l'annonce et l'écran
+  /// de blocage — l'annonce ayant toujours déjà montré ce niveau juste
+  /// avant, aucun eyebrow distinct n'est plus nécessaire pour le blocage
+  /// (spec visuelle direction-artistique, "Montée de niveau (style
+  /// scène)").
   final String eyebrow;
 
-  /// "NIVEAU {n}", `null` seulement pour l'écran de blocage immédiat (aucun
-  /// niveau validé dans cette session).
+  /// "NIVEAU {n}" — le niveau visé par [eyebrow], y compris sur l'écran de
+  /// blocage (`NIVEAU $_targetLevel`, pas le dernier niveau validé).
   final String? levelLabel;
 
   /// "Étape X sur 3 · {nom de l'étape}", affiché uniquement aux étapes 1 et

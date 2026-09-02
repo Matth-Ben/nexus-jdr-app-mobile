@@ -29,7 +29,7 @@ import 'widgets/level_up_header.dart';
 
 enum _HpMethod { roll, average }
 
-enum _LevelUpPhase { hitPoints, abilities, choice, spells, summary }
+enum _LevelUpPhase { announcement, hitPoints, abilities, choice, spells, summary }
 
 /// Budget de points de l'étape "Choix à faire", variante amélioration de
 /// caractéristique (règle 5e standard : "+2 sur une caractéristique" OU
@@ -50,8 +50,8 @@ const int _abilityScoreImprovementBudget = 2;
 /// silencieusement.
 ///
 /// Un seul écran (pas une route par étape, contrairement à l'assistant de
-/// création) : les 6 "vues" du flux (points de vie/aptitudes/choix/sorts/
-/// récapitulatif/blocage) sont de simples changements de contenu à
+/// création) : les 7 "vues" du flux (annonce/points de vie/aptitudes/choix/
+/// sorts/récapitulatif/blocage) sont de simples changements de contenu à
 /// l'intérieur du même widget, piloté par [_LevelUpPhase] — plus simple à
 /// orchestrer ici que des routes distinctes, puisque le chaînage
 /// multi-niveaux doit pouvoir revenir à l'étape "Points de vie" pour un
@@ -81,7 +81,13 @@ class LevelUpScreen extends ConsumerStatefulWidget {
 
 class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   late int _targetLevel;
-  _LevelUpPhase _phase = _LevelUpPhase.hitPoints;
+  _LevelUpPhase _phase = _LevelUpPhase.announcement;
+
+  /// Nombre de niveaux réellement sauvegardés (écriture en base réussie)
+  /// depuis l'ouverture de l'écran — permet à [_buildBlocked] de distinguer
+  /// un blocage immédiat (premier niveau de la session) d'un blocage après
+  /// un ou plusieurs niveaux du chaînage déjà validés (voir sa
+  /// documentation).
   int _levelsAppliedThisSession = 0;
 
   _HpMethod _hpMethod = _HpMethod.roll;
@@ -261,7 +267,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       // pré-vérifier ici, `blockReason` fait déjà partie de [LevelUpStepData].
       setState(() {
         _targetLevel = result.newLevel + 1;
-        _phase = _LevelUpPhase.hitPoints;
+        _phase = _LevelUpPhase.announcement;
         _hpMethod = _HpMethod.roll;
         _resetChoiceState();
         _isApplying = false;
@@ -339,16 +345,128 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   }
 
   Widget _buildData(LevelUpStepData data) {
+    // L'annonce passe *avant* la vérification de `blockReason` : le joueur a
+    // atteint ce niveau indépendamment de la capacité de l'app à
+    // l'accompagner sur l'étape suivante (spec visuelle direction-artistique,
+    // "Montée de niveau (style scène)").
+    if (_phase == _LevelUpPhase.announcement) {
+      return _buildAnnouncement(data);
+    }
     if (data.blockReason != null) {
       return _buildBlocked(data);
     }
     return switch (_phase) {
+      _LevelUpPhase.announcement => _buildAnnouncement(data),
       _LevelUpPhase.hitPoints => _buildHpStep(data),
       _LevelUpPhase.abilities => _buildAbilitiesStep(data),
       _LevelUpPhase.choice => _buildChoiceStep(data),
       _LevelUpPhase.spells => _buildSpellsStep(data),
       _LevelUpPhase.summary => _buildSummary(data),
     };
+  }
+
+  /// Annonce affichée avant les étapes de chaque niveau du chaînage
+  /// ("Vous passez au niveau N !", résumé de ce qui est gagné) — spec
+  /// visuelle direction-artistique, "Montée de niveau (style scène)" :
+  /// header (icône bouclier déjà intégrée à [LevelUpHeader]) suivi
+  /// directement de la carte parchemin, sans sous-titre ni icône
+  /// supplémentaire entre les deux.
+  ///
+  /// a) Aptitudes de classe automatiques : détail complet, gains purs déjà
+  /// calculés — même [GainRow]/état vide que l'étape "Aptitudes".
+  /// b) Étapes à venir (Choix/Sorts) : simple teaser de présence, jamais de
+  /// résultat — voir [_UpcomingStepRow].
+  /// c) Points de vie : volontairement absent, le gain dépend d'un choix
+  /// (jet/moyenne) pas encore fait à ce stade.
+  Widget _buildAnnouncement(LevelUpStepData data) {
+    // `blockReason` prime sur `choiceKind`/`spellSlotChanges` : ces deux
+    // champs sont calculés indépendamment du blocage (voir
+    // `level_up_provider.dart`), et peuvent donc être non nuls/non vides
+    // pour un niveau qui va justement bloquer juste après cette annonce —
+    // auquel cas l'étape correspondante ne sera jamais atteinte cette
+    // session (l'écran de blocage qui suit gère déjà la communication de ce
+    // cas, voir [_buildBlocked]).
+    final hasUpcoming =
+        data.blockReason == null &&
+        (data.choiceKind != null || data.spellSlotChanges.isNotEmpty);
+
+    return Column(
+      children: [
+        LevelUpHeader(
+          eyebrow: 'MONTÉE DE NIVEAU',
+          levelLabel: 'NIVEAU $_targetLevel',
+          remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: _ParchmentCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (data.automaticFeatures.isEmpty)
+                    const _EmptyFeaturesState()
+                  else
+                    for (
+                      var i = 0;
+                      i < data.automaticFeatures.length;
+                      i++
+                    ) ...[
+                      if (i > 0) const SizedBox(height: AppSpacing.md),
+                      GainRow(
+                        icon: Icons.star,
+                        color: AppColors.accentTeal,
+                        title: 'Nouvelle aptitude',
+                        subtitle: data.automaticFeatures[i].name,
+                      ),
+                    ],
+                  if (hasUpcoming) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'À venir dans les prochaines étapes',
+                      style: AppTypography.body(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    if (data.choiceKind != null) ...[
+                      _UpcomingStepRow(
+                        icon: Icons.checklist,
+                        color: AppColors.accentBlue,
+                        label:
+                            'Un choix de '
+                            '${_choiceStepLabel(data.choiceKind!)} '
+                            'vous attendra',
+                      ),
+                      if (data.spellSlotChanges.isNotEmpty)
+                        const SizedBox(height: AppSpacing.sm),
+                    ],
+                    if (data.spellSlotChanges.isNotEmpty)
+                      const _UpcomingStepRow(
+                        icon: Icons.auto_awesome,
+                        color: AppColors.accentViolet,
+                        label: 'Vos emplacements de sorts vont évoluer',
+                      ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: PrimaryButton(
+            label: 'Continuer',
+            // `blockReason` n'est volontairement pas testé ici : le
+            // prochain `_buildData` s'en charge une fois `_phase` sorti de
+            // `announcement` (voir la documentation ci-dessus).
+            onPressed: () => setState(() => _phase = _LevelUpPhase.hitPoints),
+          ),
+        ),
+      ],
+    );
   }
 
   /// 3, 4 ou 5 selon les étapes déclenchées à ce niveau — spec visuelle
@@ -987,6 +1105,16 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     );
   }
 
+  /// L'annonce (voir [_buildAnnouncement]) vient de montrer `NIVEAU
+  /// $_targetLevel`, mais ce niveau *bloqué* n'est justement jamais atteint
+  /// (aucune écriture en base — voir la documentation de classe) : il ne
+  /// faut donc pas confondre ce cas avec un niveau réellement validé.
+  /// [isImmediate] distingue le blocage dès le premier niveau de la session
+  /// (aucun niveau sauvegardé pour l'instant, en-tête neutre) d'un blocage
+  /// survenant après un ou plusieurs niveaux du chaînage déjà validés avec
+  /// succès (en-tête "NIVEAU ATTEINT" sur le dernier niveau *réellement*
+  /// sauvegardé, `_targetLevel - 1` — signal explicite que la progression
+  /// précédente a bien été enregistrée, même si celle-ci s'arrête ici).
   Widget _buildBlocked(LevelUpStepData data) {
     final isImmediate = _levelsAppliedThisSession == 0;
     return Column(
@@ -1102,6 +1230,44 @@ class _EmptyFeaturesState extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Ligne teaser du bloc "À venir dans les prochaines étapes" de l'annonce de
+/// niveau ([_LevelUpScreenState._buildAnnouncement]) — gabarit léger,
+/// volontairement plus simple que [GainRow] : jamais de résultat, seulement
+/// la présence d'une étape à venir (spec visuelle direction-artistique,
+/// "Montée de niveau (style scène)").
+class _UpcomingStepRow extends StatelessWidget {
+  const _UpcomingStepRow({
+    required this.icon,
+    required this.color,
+    required this.label,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTypography.body(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

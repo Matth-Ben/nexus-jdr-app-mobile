@@ -321,6 +321,17 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Navigue jusqu'au flux, puis franchit l'annonce de niveau (increment 4)
+  /// via son unique bouton "Continuer" — pour tous les tests qui exercent
+  /// les étapes de saisie (points de vie/aptitudes/choix/sorts/récapitulatif)
+  /// ou l'écran de blocage, sans porter sur l'annonce elle-même (voir le
+  /// groupe "annonce de niveau" ci-dessous pour ces derniers).
+  Future<void> pushPastAnnouncement(WidgetTester tester, int level) async {
+    await pushLevelUp(tester, level);
+    await tester.tap(find.text('CONTINUER'));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('affiche un indicateur de chargement pendant la récupération', (
     tester,
   ) async {
@@ -374,7 +385,7 @@ void main() {
           ),
         };
 
-        await pushLevelUp(tester, 5);
+        await pushPastAnnouncement(tester, 5);
 
         expect(find.text('Niveau 5 : choix requis'), findsOneWidget);
         expect(
@@ -406,7 +417,7 @@ void main() {
       'étape "Points de vie" : bascule sur "Valeur moyenne" affiche la '
       'valeur déterministe et l\'aperçu "Points de vie maximum"',
       (tester) async {
-        await pushLevelUp(tester, 5);
+        await pushPastAnnouncement(tester, 5);
 
         expect(find.text('NIVEAU 5'), findsOneWidget);
         expect(find.text('Étape 1 sur 3 · Points de vie'), findsOneWidget);
@@ -434,7 +445,7 @@ void main() {
       'étape "Aptitudes de classe automatiques" affiche les aptitudes '
       'résolues, l\'état vide sinon',
       (tester) async {
-        await pushLevelUp(tester, 5);
+        await pushPastAnnouncement(tester, 5);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -455,7 +466,7 @@ void main() {
           5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
         };
 
-        await pushLevelUp(tester, 5);
+        await pushPastAnnouncement(tester, 5);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -470,7 +481,7 @@ void main() {
       '"Retour" de l\'étape "Aptitudes" ramène à l\'étape "Points de vie" '
       '(même écran, pas de navigation)',
       (tester) async {
-        await pushLevelUp(tester, 5);
+        await pushPastAnnouncement(tester, 5);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -485,7 +496,7 @@ void main() {
       '"Retour" de l\'étape "Points de vie" (première étape) revient à la '
       'fiche personnage',
       (tester) async {
-        await pushLevelUp(tester, 5);
+        await pushPastAnnouncement(tester, 5);
 
         await tester.tap(find.text('RETOUR'));
         await tester.pumpAndSettle();
@@ -505,7 +516,7 @@ void main() {
           newCurrentHp: 32,
         );
 
-        await pushLevelUp(tester, 5);
+        await pushPastAnnouncement(tester, 5);
         await tester.tap(find.text('VALEUR MOYENNE'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('CONTINUER'));
@@ -552,18 +563,30 @@ void main() {
       };
 
       await pushLevelUp(tester, 5);
+      // Annonce du niveau 5 : remainingLevelsLabel déjà visible dessus.
       expect(find.text('Encore 1 niveau à valider ensuite'), findsOneWidget);
 
-      await tester.tap(find.text('CONTINUER'));
+      await tester.tap(find.text('CONTINUER')); // annonce 5 -> Points de vie
       await tester.pumpAndSettle();
-      await tester.tap(find.text('CONTINUER'));
+      await tester.tap(find.text('CONTINUER')); // Points de vie -> Aptitudes
       await tester.pumpAndSettle();
-      await tester.tap(find.text('CONTINUER'));
+      await tester.tap(find.text('CONTINUER')); // Aptitudes -> Récapitulatif
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER')); // applique, enchaîne niveau 6
       await tester.pumpAndSettle();
 
       expect(fakeRepository.applyLevelUpCalls, hasLength(1));
       // Toujours sur le flux, jamais revenu à la fiche.
       expect(find.text('Fiche personnage'), findsNothing);
+      // Le chaînage réaffiche une nouvelle annonce pour le niveau 6, pas
+      // directement l'étape "Points de vie" (voir le groupe "annonce de
+      // niveau" pour le détail de son contenu).
+      expect(find.text('NIVEAU 6'), findsOneWidget);
+      expect(find.text('Étape 1 sur 3 · Points de vie'), findsNothing);
+
+      await tester.tap(find.text('CONTINUER')); // annonce 6 -> Points de vie
+      await tester.pumpAndSettle();
+
       expect(find.text('NIVEAU 6'), findsOneWidget);
       expect(find.text('Étape 1 sur 3 · Points de vie'), findsOneWidget);
     });
@@ -592,21 +615,35 @@ void main() {
           ),
         };
 
-        await pushLevelUp(tester, 7);
+        await pushPastAnnouncement(tester, 7);
+        // Annonce déjà franchie, mais son `remainingLevelsLabel` reste
+        // affiché sur l'étape "Points de vie" (voir `LevelUpHeader`).
         expect(find.text('Encore 1 niveau à valider ensuite'), findsOneWidget);
 
         await tester.tap(find.text('VALEUR MOYENNE'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('CONTINUER'));
+        await tester.tap(find.text('CONTINUER')); // Points de vie -> Aptitudes
         await tester.pumpAndSettle();
-        await tester.tap(find.text('CONTINUER'));
+        await tester.tap(find.text('CONTINUER')); // Aptitudes -> Récapitulatif
         await tester.pumpAndSettle();
-        await tester.tap(find.text('CONTINUER'));
+        await tester.tap(find.text('CONTINUER')); // applique, enchaîne niveau 8
         await tester.pumpAndSettle();
 
         // Le niveau 7 a bien été appliqué (écrit une seule fois) avant que
         // le chaînage ne bute sur le niveau 8 bloqué.
         expect(fakeRepository.applyLevelUpCalls, hasLength(1));
+
+        // Le chaînage réaffiche d'abord l'annonce du niveau 8 (avant même de
+        // savoir qu'il est bloqué, voir `_buildData`) : le joueur a atteint
+        // ce niveau, indépendamment de la capacité de l'app à l'accompagner
+        // sur son étape "Choix à faire".
+        expect(find.text('Fiche personnage'), findsNothing);
+        expect(find.text('MONTÉE DE NIVEAU'), findsOneWidget);
+        expect(find.text('NIVEAU 8'), findsOneWidget);
+        expect(find.text('Niveau 8 : choix requis'), findsNothing);
+
+        await tester.tap(find.text('CONTINUER')); // annonce 8 -> blocage
+        await tester.pumpAndSettle();
 
         // Jamais revenu à la fiche : le flux reste affiché sur l'écran de
         // blocage du niveau 8, pas de perte silencieuse du niveau validé.
@@ -634,7 +671,7 @@ void main() {
         'Impossible de sauvegarder. Réessayez.',
       );
 
-      await pushLevelUp(tester, 5);
+      await pushPastAnnouncement(tester, 5);
       await tester.tap(find.text('CONTINUER'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('CONTINUER'));
@@ -650,11 +687,347 @@ void main() {
     });
   });
 
+  group('annonce de niveau (increment 4)', () {
+    testWidgets(
+      "s'affiche en premier, avant l'étape \"Points de vie\" : détail des "
+      'aptitudes automatiques, aucun contenu des étapes suivantes',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.levelDataByLevel = {
+          5: const LevelUpLevelData(
+            choiceType: null,
+            automaticFeatures: [
+              CharacterClassFeature(
+                id: 10,
+                name: 'Attaque supplémentaire',
+                level: 5,
+              ),
+            ],
+          ),
+        };
+
+        await pushLevelUp(tester, 5);
+
+        expect(find.text('MONTÉE DE NIVEAU'), findsOneWidget);
+        expect(find.text('NIVEAU 5'), findsOneWidget);
+        // Aucun `stepLabel` sur l'annonce (précède l'étape 1) et header
+        // suivi directement de la carte de gains, sans sous-titre
+        // intermédiaire.
+        expect(find.textContaining('Étape'), findsNothing);
+        expect(find.text('Nouvelle aptitude'), findsOneWidget);
+        expect(find.text('Attaque supplémentaire'), findsOneWidget);
+        // Rien de l'étape "Points de vie" (pas encore atteinte) : le gain
+        // de PV dépend d'un choix jet/moyenne pas encore fait.
+        expect(find.text('Dé de vie de la classe : d10'), findsNothing);
+        expect(find.text('Points de vie maximum'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'état vide du bloc "aptitudes automatiques" : réutilise '
+      '_EmptyFeaturesState tel quel',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.levelDataByLevel = {
+          5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+
+        await pushLevelUp(tester, 5);
+
+        expect(
+          find.text('Aucune nouvelle aptitude de classe à ce niveau.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      '"Continuer" transitionne vers l\'étape "Points de vie" quand le '
+      'niveau n\'est pas bloqué',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.levelDataByLevel = {
+          5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+
+        await pushLevelUp(tester, 5);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 1 sur 3 · Points de vie'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '"Continuer" transitionne vers l\'écran de blocage quand le niveau '
+      "l'est — l'annonce reste affichée en premier malgré le blocage "
+      '(le joueur a atteint ce niveau, indépendamment du blocage)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.levelDataByLevel = {
+          5: const LevelUpLevelData(
+            choiceType: 'sort_domaine',
+            automaticFeatures: [],
+          ),
+        };
+
+        await pushLevelUp(tester, 5);
+
+        // L'annonce s'affiche d'abord, avant toute mention du blocage.
+        expect(find.text('MONTÉE DE NIVEAU'), findsOneWidget);
+        expect(find.text('Niveau 5 : choix requis'), findsNothing);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Niveau 5 : choix requis'), findsOneWidget);
+        expect(
+          find.text('Guerrier niveau 5 : Sort de domaine'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    group('teasers "à venir dans les prochaines étapes"', () {
+      testWidgets(
+        'absents quand ni choix ni changement d\'emplacements de sorts à ce '
+        'niveau',
+        (tester) async {
+          fakeRepository.detailToReturn = _baseDetail;
+          fakeRepository.levelDataByLevel = {
+            5: const LevelUpLevelData(
+              choiceType: null,
+              automaticFeatures: [],
+            ),
+          };
+
+          await pushLevelUp(tester, 5);
+
+          expect(
+            find.text('À venir dans les prochaines étapes'),
+            findsNothing,
+          );
+        },
+      );
+
+      testWidgets(
+        'teaser "choix" seul (niveau ASI, classe non lanceuse) : libellé '
+        'générique, jamais la valeur choisie (pas encore choisie), teaser '
+        '"sorts" absent',
+        (tester) async {
+          fakeRepository.detailToReturn = _baseDetail;
+          fakeRepository.levelDataByLevel = {
+            8: const LevelUpLevelData(
+              choiceType: null,
+              automaticFeatures: [],
+            ),
+          };
+
+          await pushLevelUp(tester, 8);
+
+          expect(
+            find.text('À venir dans les prochaines étapes'),
+            findsOneWidget,
+          );
+          expect(
+            find.text(
+              'Un choix de Amélioration de caractéristique vous attendra',
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.text('Vos emplacements de sorts vont évoluer'),
+            findsNothing,
+          );
+        },
+      );
+
+      testWidgets(
+        'teaser "sorts" seul (classe lanceuse, palier débloqué, pas de '
+        'niveau ASI) : libellé générique, jamais les deltas exacts, teaser '
+        '"choix" absent',
+        (tester) async {
+          fakeRepository.detailToReturn = _baseDetail.copyWith(
+            classes: [
+              const CharacterDetailClassRow(
+                classId: 3,
+                hitDie: 8,
+                className: 'Clerc',
+                level: 4,
+                isPrimary: true,
+                savingThrowProficiencies: [],
+              ),
+            ],
+            xp: 0,
+          );
+          fakeRepository.levelDataByLevel = {
+            5: const LevelUpLevelData(
+              choiceType: null,
+              automaticFeatures: [],
+            ),
+          };
+
+          await pushLevelUp(tester, 5);
+
+          expect(
+            find.text('À venir dans les prochaines étapes'),
+            findsOneWidget,
+          );
+          expect(
+            find.text('Vos emplacements de sorts vont évoluer'),
+            findsOneWidget,
+          );
+          expect(find.textContaining('Un choix de'), findsNothing);
+          // Jamais les deltas exacts (redondant avec l'étape "Sorts" qui
+          // suit immédiatement) : ni "Niveau 3 débloqué" ni les wordings
+          // spécifiques de `_spellSlotGainRow`.
+          expect(find.text('Niveau 3 débloqué'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'les deux teasers ensemble (niveau ASI ET changement '
+        "d'emplacements de sorts au même niveau, classe lanceuse)",
+        (tester) async {
+          fakeRepository.detailToReturn = _baseDetail.copyWith(
+            classes: [
+              const CharacterDetailClassRow(
+                classId: 3,
+                hitDie: 8,
+                className: 'Clerc',
+                level: 3,
+                isPrimary: true,
+                savingThrowProficiencies: [],
+              ),
+            ],
+            xp: 0,
+          );
+          fakeRepository.levelDataByLevel = {
+            4: const LevelUpLevelData(
+              choiceType: null,
+              automaticFeatures: [],
+            ),
+          };
+
+          await pushLevelUp(tester, 4);
+
+          expect(
+            find.text(
+              'Un choix de Amélioration de caractéristique vous attendra',
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.text('Vos emplacements de sorts vont évoluer'),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'aucun teaser quand le niveau va en fait bloquer, même si '
+        'spellSlotChanges est non vide (Barde niveau 2, classe "à sorts '
+        'connus" bloquée par `LevelUpBlockRules` — `spellSlotChanges` est '
+        'calculé indépendamment du blocage, voir `level_up_provider.dart` : '
+        "l'étape \"Sorts\" ne sera jamais atteinte cette session, l'annonce "
+        'ne doit donc promettre aucune étape à venir)',
+        (tester) async {
+          fakeRepository.detailToReturn = _baseDetail.copyWith(
+            classes: [
+              const CharacterDetailClassRow(
+                classId: 2,
+                hitDie: 8,
+                className: 'Barde',
+                level: 1,
+                isPrimary: true,
+                savingThrowProficiencies: [],
+              ),
+            ],
+            xp: 0,
+          );
+          fakeRepository.levelDataByLevel = {
+            2: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+          };
+
+          await pushLevelUp(tester, 2);
+
+          // L'annonce s'affiche (le joueur a bien atteint ce niveau), mais
+          // sans aucun teaser d'étape à venir : le niveau 2 va bloquer juste
+          // après (classe "à sorts connus"), l'étape "Sorts" ne sera jamais
+          // atteinte cette session malgré `spellSlotChanges.isNotEmpty`.
+          expect(find.text('MONTÉE DE NIVEAU'), findsOneWidget);
+          expect(find.text('NIVEAU 2'), findsOneWidget);
+          expect(
+            find.text('À venir dans les prochaines étapes'),
+            findsNothing,
+          );
+          expect(
+            find.text('Vos emplacements de sorts vont évoluer'),
+            findsNothing,
+          );
+          expect(find.textContaining('Un choix de'), findsNothing);
+        },
+      );
+    });
+
+    testWidgets(
+      'chaînage multi-niveaux : une nouvelle annonce, avec son propre '
+      'contenu, est réaffichée pour chaque niveau (pas seulement au '
+      'premier)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(xp: 14000);
+        fakeRepository.applyResultToReturn = const LevelUpApplyResult(
+          newLevel: 5,
+          newMaxHp: 36,
+          newCurrentHp: 32,
+        );
+        fakeRepository.levelDataByLevel = {
+          5: const LevelUpLevelData(
+            choiceType: null,
+            automaticFeatures: [
+              CharacterClassFeature(
+                id: 10,
+                name: 'Attaque supplémentaire',
+                level: 5,
+              ),
+            ],
+          ),
+          6: const LevelUpLevelData(
+            choiceType: null,
+            automaticFeatures: [
+              CharacterClassFeature(id: 11, name: 'Aptitude niveau 6', level: 6),
+            ],
+          ),
+        };
+
+        await pushLevelUp(tester, 5);
+        // Annonce du niveau 5 : son propre contenu.
+        expect(find.text('NIVEAU 5'), findsOneWidget);
+        expect(find.text('Attaque supplémentaire'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER')); // annonce -> Points de vie
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // Points de vie -> Aptitudes
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // Aptitudes -> Récapitulatif
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // applique, enchaîne
+        await tester.pumpAndSettle();
+
+        // Nouvelle annonce pour le niveau 6, avec son propre contenu — pas
+        // un résidu de celle du niveau 5.
+        expect(find.text('NIVEAU 6'), findsOneWidget);
+        expect(find.text('Aptitude niveau 6'), findsOneWidget);
+        expect(find.text('Attaque supplémentaire'), findsNothing);
+      },
+    );
+  });
+
   group('étape "Choix à faire" (increment 2)', () {
     /// Navigue jusqu'à l'étape "Choix à faire" en franchissant les étapes
     /// "Points de vie"/"Aptitudes" avec leurs valeurs par défaut.
     Future<void> pushToChoiceStep(WidgetTester tester, int level) async {
-      await pushLevelUp(tester, level);
+      await pushPastAnnouncement(tester, level);
       await tester.tap(find.text('CONTINUER'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('CONTINUER'));
@@ -671,7 +1044,7 @@ void main() {
 
       testWidgets('totalSteps passe à 4, étape affichée avec instruction et '
           'compteur de points restants', (tester) async {
-        await pushLevelUp(tester, 8);
+        await pushPastAnnouncement(tester, 8);
         expect(find.text('Étape 1 sur 4 · Points de vie'), findsOneWidget);
 
         await tester.tap(find.text('CONTINUER'));
@@ -1039,11 +1412,13 @@ void main() {
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
-        // Chaînage direct vers le niveau 6 (xp 14000 déverrouille déjà ce
-        // niveau) : repasse par "Points de vie"/"Aptitudes" avant de
-        // ré-atteindre l'étape "Choix à faire", cette fois pour
+        // Chaînage direct vers le niveau 6 : une nouvelle annonce d'abord
+        // (increment 4), puis repasse par "Points de vie"/"Aptitudes" avant
+        // de ré-atteindre l'étape "Choix à faire", cette fois pour
         // "ennemi_jure".
         expect(find.text('NIVEAU 6'), findsOneWidget);
+        await tester.tap(find.text('CONTINUER')); // annonce -> Points de vie
+        await tester.pumpAndSettle();
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('CONTINUER'));
@@ -1112,8 +1487,12 @@ void main() {
         await tester.pumpAndSettle();
 
         // Chaînage forcé vers le niveau 8 (résultat truqué newLevel: 7,
-        // xp 34000 déverrouille déjà le niveau 8).
+        // xp 34000 déverrouille déjà le niveau 8) : une nouvelle annonce
+        // d'abord (increment 4), avant de repasser par "Points de
+        // vie"/"Aptitudes".
         expect(find.text('NIVEAU 8'), findsOneWidget);
+        await tester.tap(find.text('CONTINUER')); // annonce -> Points de vie
+        await tester.pumpAndSettle();
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('CONTINUER'));
@@ -1176,7 +1555,7 @@ void main() {
           newCurrentHp: 26,
         );
 
-        await pushLevelUp(tester, 5);
+        await pushPastAnnouncement(tester, 5);
         expect(find.text('Étape 1 sur 4 · Points de vie'), findsOneWidget);
 
         await tester.tap(find.text('CONTINUER'));
@@ -1238,7 +1617,7 @@ void main() {
           3: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
         };
 
-        await pushLevelUp(tester, 3);
+        await pushPastAnnouncement(tester, 3);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('CONTINUER'));
@@ -1264,7 +1643,7 @@ void main() {
           5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
         };
 
-        await pushLevelUp(tester, 5);
+        await pushPastAnnouncement(tester, 5);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('CONTINUER'));
@@ -1291,7 +1670,7 @@ void main() {
           14: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
         };
 
-        await pushLevelUp(tester, 14);
+        await pushPastAnnouncement(tester, 14);
         // Niveau 14 : ni ASI (4/8/12/16/19), ni choice_type -> pas d'étape
         // "Choix à faire" non plus. totalSteps == 3 confirme qu'aucune étape
         // "Sorts" n'est comptée (sinon 4).
@@ -1331,7 +1710,7 @@ void main() {
           newCurrentHp: 26,
         );
 
-        await pushLevelUp(tester, 4);
+        await pushPastAnnouncement(tester, 4);
         expect(find.text('Étape 1 sur 5 · Points de vie'), findsOneWidget);
 
         await tester.tap(find.text('CONTINUER'));
