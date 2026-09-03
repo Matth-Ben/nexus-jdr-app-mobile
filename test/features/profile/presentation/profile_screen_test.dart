@@ -31,7 +31,10 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
-  Future<void> signUp({required String email, required String password}) async {}
+  Future<void> signUp({
+    required String email,
+    required String password,
+  }) async {}
 
   @override
   Future<void> signOut() async {
@@ -121,42 +124,35 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets(
-    'affiche le nom (`user_metadata[\'full_name\']`) et l\'e-mail de '
-    '`currentUserProvider`',
-    (tester) async {
-      await pumpProfile(
-        tester,
-        user: _fakeUser(
-          fullName: 'Aranea Nightsong',
-          email: 'aranea@exemple.com',
-        ),
-      );
+  testWidgets('affiche le nom (`user_metadata[\'full_name\']`) et l\'e-mail de '
+      '`currentUserProvider`', (tester) async {
+    await pumpProfile(
+      tester,
+      user: _fakeUser(
+        fullName: 'Aranea Nightsong',
+        email: 'aranea@exemple.com',
+      ),
+    );
 
-      expect(find.text('PROFIL'), findsOneWidget);
-      expect(find.text('Aranea Nightsong'), findsOneWidget);
-      expect(find.text('aranea@exemple.com'), findsOneWidget);
-    },
-  );
+    expect(find.text('PROFIL'), findsOneWidget);
+    expect(find.text('Aranea Nightsong'), findsOneWidget);
+    expect(find.text('aranea@exemple.com'), findsOneWidget);
+  });
 
-  testWidgets(
-    'affiche "Aventurier" quand `full_name` est absent — fallback '
-    "d'affichage uniquement, jamais une valeur stockée",
-    (tester) async {
-      await pumpProfile(tester, user: _fakeUser());
+  testWidgets('affiche "Aventurier" quand `full_name` est absent — fallback '
+      "d'affichage uniquement, jamais une valeur stockée", (tester) async {
+    await pumpProfile(tester, user: _fakeUser());
 
-      expect(find.text('Aventurier'), findsOneWidget);
-    },
-  );
+    expect(find.text('Aventurier'), findsOneWidget);
+  });
 
-  testWidgets(
-    'affiche "Aventurier" quand `full_name` est une chaîne blanche',
-    (tester) async {
-      await pumpProfile(tester, user: _fakeUser(fullName: '   '));
+  testWidgets('affiche "Aventurier" quand `full_name` est une chaîne blanche', (
+    tester,
+  ) async {
+    await pumpProfile(tester, user: _fakeUser(fullName: '   '));
 
-      expect(find.text('Aventurier'), findsOneWidget);
-    },
-  );
+    expect(find.text('Aventurier'), findsOneWidget);
+  });
 
   testWidgets('affiche le bandeau "Compte lié à l\'app Histoires"', (
     tester,
@@ -166,26 +162,27 @@ void main() {
     expect(find.text("Compte lié à l'app Histoires"), findsOneWidget);
   });
 
-  testWidgets(
-    'affiche les 4 lignes de menu avec leurs icônes dédiées',
-    (tester) async {
-      await pumpProfile(tester, user: _fakeUser());
+  testWidgets('affiche les 5 lignes de menu avec leurs icônes dédiées', (
+    tester,
+  ) async {
+    await pumpProfile(tester, user: _fakeUser());
 
-      for (final label in const [
-        'Modifier le profil',
-        'Notifications',
-        'Confidentialité et données',
-        'Aide et support',
-      ]) {
-        expect(find.text(label), findsOneWidget);
-      }
-      expect(find.byIcon(Icons.person_outline), findsOneWidget);
-      expect(find.byIcon(Icons.notifications_none), findsOneWidget);
-      expect(find.byIcon(Icons.privacy_tip_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.help_outline), findsOneWidget);
-      expect(find.byIcon(Icons.chevron_right), findsNWidgets(4));
-    },
-  );
+    for (final label in const [
+      'Modifier le profil',
+      'Notifications',
+      'Confidentialité et données',
+      'Aide et support',
+      'Signaler un bug',
+    ]) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.byIcon(Icons.person_outline), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_none), findsOneWidget);
+    expect(find.byIcon(Icons.privacy_tip_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.help_outline), findsOneWidget);
+    expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right), findsNWidgets(5));
+  });
 
   testWidgets(
     'taper "Modifier le profil" ouvre la sheet "MODIFIER LE PROFIL"',
@@ -199,40 +196,51 @@ void main() {
     },
   );
 
+  testWidgets('taper "Signaler un bug" ouvre la sheet "SIGNALER UN BUG"', (
+    tester,
+  ) async {
+    await pumpProfile(tester, user: _fakeUser());
+
+    await tester.ensureVisible(find.text('Signaler un bug'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Signaler un bug'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SIGNALER UN BUG'), findsOneWidget);
+  });
+
   for (final label in const [
     'Notifications',
     'Confidentialité et données',
     'Aide et support',
   ]) {
-    testWidgets(
-      'taper "$label" affiche le SnackBar "Bientôt disponible"',
-      (tester) async {
-        await pumpProfile(tester, user: _fakeUser());
-
-        await tester.tap(find.text(label));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Bientôt disponible'), findsOneWidget);
-      },
-    );
-  }
-
-  testWidgets(
-    'le bouton "Se déconnecter" appelle `AuthRepository.signOut`',
-    (tester) async {
+    testWidgets('taper "$label" affiche le SnackBar "Bientôt disponible"', (
+      tester,
+    ) async {
       await pumpProfile(tester, user: _fakeUser());
 
-      // Le contenu scrollable dépasse la hauteur du viewport de test :
-      // s'assure que le bouton (en bas de la liste) est bien visible avant
-      // de taper dessus.
-      await tester.ensureVisible(find.text('Se déconnecter'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Se déconnecter'));
+      await tester.tap(find.text(label));
       await tester.pumpAndSettle();
 
-      expect(fakeAuthRepository.signOutCallCount, 1);
-    },
-  );
+      expect(find.text('Bientôt disponible'), findsOneWidget);
+    });
+  }
+
+  testWidgets('le bouton "Se déconnecter" appelle `AuthRepository.signOut`', (
+    tester,
+  ) async {
+    await pumpProfile(tester, user: _fakeUser());
+
+    // Le contenu scrollable dépasse la hauteur du viewport de test :
+    // s'assure que le bouton (en bas de la liste) est bien visible avant
+    // de taper dessus.
+    await tester.ensureVisible(find.text('Se déconnecter'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Se déconnecter'));
+    await tester.pumpAndSettle();
+
+    expect(fakeAuthRepository.signOutCallCount, 1);
+  });
 
   testWidgets('le bandeau bois "PROFIL" propose un retour fonctionnel', (
     tester,
@@ -246,19 +254,13 @@ void main() {
     expect(find.text('Ouvrir le profil'), findsOneWidget);
   });
 
-  testWidgets(
-    'le pied de page affiche la version lue dynamiquement '
-    '(`package_info_plus`, mockée ici via `setMockInitialValues`)',
-    (tester) async {
-      await pumpProfile(tester, user: _fakeUser());
+  testWidgets('le pied de page affiche la version lue dynamiquement '
+      '(`package_info_plus`, mockée ici via `setMockInitialValues`)', (
+    tester,
+  ) async {
+    await pumpProfile(tester, user: _fakeUser());
 
-      await tester.ensureVisible(
-        find.text('Nexus JDR — Personnages · v1.0.0'),
-      );
-      expect(
-        find.text('Nexus JDR — Personnages · v1.0.0'),
-        findsOneWidget,
-      );
-    },
-  );
+    await tester.ensureVisible(find.text('Nexus JDR — Personnages · v1.0.0'));
+    expect(find.text('Nexus JDR — Personnages · v1.0.0'), findsOneWidget);
+  });
 }

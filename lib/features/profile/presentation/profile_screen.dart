@@ -11,6 +11,7 @@ import '../../../core/widgets/wood_back_header.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import 'providers/package_info_provider.dart';
 import 'widgets/edit_display_name_sheet.dart';
+import 'widgets/report_bug_sheet.dart';
 
 /// Écran "Profil / paramètres du compte", route `/profile` — dernier écran
 /// de la navigation principale (bouton profil rond de
@@ -114,6 +115,12 @@ class ProfileScreen extends ConsumerWidget {
                     label: 'Aide et support',
                     onTap: () => _showComingSoon(context),
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _MenuTile(
+                    icon: Icons.bug_report_outlined,
+                    label: 'Signaler un bug',
+                    onTap: () => showReportBugSheet(context),
+                  ),
                   const SizedBox(height: AppSpacing.lg),
                   DestructiveButton(
                     label: 'Se déconnecter',
@@ -187,13 +194,13 @@ class _ProfileAvatar extends StatelessWidget {
   }
 }
 
-/// Une des 4 lignes de menu ("Modifier le profil", "Notifications",
-/// "Confidentialité et données", "Aide et support") — 4 cartes visuellement
-/// indépendantes (spec direction-artistique de la tâche, en écart assumé
-/// avec le texte actuel de `10-design-system.md` section 4, "Liste de
-/// réglages", qui décrit une carte groupée à séparateurs : tranché en faveur
-/// de la maquette réelle par le chef de projet, voir le rapport de la tâche
-/// qui a introduit ce fichier).
+/// Une des 5 lignes de menu ("Modifier le profil", "Notifications",
+/// "Confidentialité et données", "Aide et support", "Signaler un bug") — 5
+/// cartes visuellement indépendantes (spec direction-artistique de la tâche,
+/// en écart assumé avec le texte actuel de `10-design-system.md` section 4,
+/// "Liste de réglages", qui décrit une carte groupée à séparateurs : tranché
+/// en faveur de la maquette réelle par le chef de projet, voir le rapport de
+/// la tâche qui a introduit ce fichier).
 class _MenuTile extends StatelessWidget {
   const _MenuTile({
     required this.icon,
