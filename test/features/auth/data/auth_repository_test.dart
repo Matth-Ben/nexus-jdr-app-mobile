@@ -247,25 +247,213 @@ void main() {
       },
     );
   });
+  group('SupabaseAuthRepository.updateDisplayName', () {
+    Future<http.Response> Function(http.Request request) buildUpdateUserHandler({
+      required Map<String, dynamic> initialUserMetadata,
+      required void Function(http.Request request) onCapture,
+    }) {
+      return (request) async {
+        if (request.url.path.endsWith('/token')) {
+          return http.Response(
+            jsonEncode(
+              _fakeSessionJson(userMetadata: initialUserMetadata),
+            ),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.endsWith('/user')) {
+          onCapture(request);
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            jsonEncode({
+              ..._fakeUserJson(userMetadata: initialUserMetadata),
+              'user_metadata': body['data'],
+            }),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      };
+    }
+
+    test(
+      "fusionne `full_name` dans `user_metadata` existant sans l'écraser "
+      '(clé déjà présente, ex. stockée par un tiers un jour côté web)',
+      () async {
+        http.Request? capturedRequest;
+        final client = _buildFakeSupabaseClient(
+          buildUpdateUserHandler(
+            initialUserMetadata: {'some_other_key': 'valeur préexistante'},
+            onCapture: (request) => capturedRequest = request,
+          ),
+        );
+
+        await client.auth.signInWithPassword(
+          email: 'joueur@exemple.com',
+          password: 'password1234',
+        );
+
+        await SupabaseAuthRepository(
+          client,
+        ).updateDisplayName(displayName: '  Aranea Nightsong  ');
+
+        expect(capturedRequest, isNotNull);
+        expect(capturedRequest!.url.path, endsWith('/user'));
+        final body =
+            jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+        final data = body['data'] as Map<String, dynamic>;
+        expect(
+          data['full_name'],
+          'Aranea Nightsong',
+          reason: 'la valeur envoyée doit être trimée',
+        );
+        expect(
+          data['some_other_key'],
+          'valeur préexistante',
+          reason:
+              '`user_metadata` existant ne doit jamais être écrasé, '
+              'seule la clé `full_name` doit être affectée',
+        );
+      },
+    );
+
+    test(
+      'displayName `null` retire la clé `full_name` de `user_metadata` sans '
+      'toucher aux autres clés existantes',
+      () async {
+        http.Request? capturedRequest;
+        final client = _buildFakeSupabaseClient(
+          buildUpdateUserHandler(
+            initialUserMetadata: {
+              'full_name': 'Ancien nom',
+              'some_other_key': 'valeur préexistante',
+            },
+            onCapture: (request) => capturedRequest = request,
+          ),
+        );
+
+        await client.auth.signInWithPassword(
+          email: 'joueur@exemple.com',
+          password: 'password1234',
+        );
+
+        await SupabaseAuthRepository(client).updateDisplayName(
+          displayName: null,
+        );
+
+        final body =
+            jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+        final data = body['data'] as Map<String, dynamic>;
+        expect(data.containsKey('full_name'), isFalse);
+        expect(data['some_other_key'], 'valeur préexistante');
+      },
+    );
+
+    test(
+      'displayName vide/blanc après trim est traité comme `null` (retire '
+      '`full_name`), même coalescing que la sheet appelante',
+      () async {
+        http.Request? capturedRequest;
+        final client = _buildFakeSupabaseClient(
+          buildUpdateUserHandler(
+            initialUserMetadata: {'full_name': 'Ancien nom'},
+            onCapture: (request) => capturedRequest = request,
+          ),
+        );
+
+        await client.auth.signInWithPassword(
+          email: 'joueur@exemple.com',
+          password: 'password1234',
+        );
+
+        await SupabaseAuthRepository(client).updateDisplayName(
+          displayName: '   ',
+        );
+
+        final body =
+            jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+        final data = body['data'] as Map<String, dynamic>;
+        expect(data.containsKey('full_name'), isFalse);
+      },
+    );
+
+    test(
+      "remonte un message réseau générique quand l'appel échoue sans "
+      'réponse HTTP (ex. absence de réseau) - même mécanisme '
+      '`AuthRetryableFetchException` que les autres méthodes de ce dépôt',
+      () async {
+        final client = _buildFakeSupabaseClient((request) async {
+          if (request.url.path.endsWith('/token')) {
+            return http.Response(
+              jsonEncode(_fakeSessionJson(userMetadata: const {})),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          throw Exception('Pas de réseau (double de test).');
+        });
+
+        await client.auth.signInWithPassword(
+          email: 'joueur@exemple.com',
+          password: 'password1234',
+        );
+
+        await expectLater(
+          SupabaseAuthRepository(
+            client,
+          ).updateDisplayName(displayName: 'Aranea'),
+          throwsA(
+            isA<AuthFailure>().having(
+              (failure) => failure.message,
+              'message',
+              contains('connexion internet'),
+            ),
+          ),
+        );
+      },
+    );
+  });
 }
 
 /// JSON minimal d'une session GoTrue valide (`access_token`/`user.id`
 /// requis par `Session.fromJson`/`User.fromJson`, voir
-/// `package:gotrue/src/types/session.dart` et `.../types/user.dart`) - sert
-/// uniquement à établir une session active dans le test `signOut` ci-dessus
-/// (le contenu exact des autres champs n'a pas d'importance ici).
-Map<String, dynamic> _fakeSessionJson() {
+/// `package:gotrue/src/types/session.dart` et `.../types/user.dart`) - sert à
+/// établir une session active (`signOut`, `updateDisplayName` : ce dernier
+/// exige un `accessToken` courant, voir `GoTrueClient.updateUser`).
+/// [userMetadata] permet aux tests `updateDisplayName` de simuler un
+/// `user_metadata` préexistant (le contenu exact des autres champs n'a pas
+/// d'importance ici).
+Map<String, dynamic> _fakeSessionJson({
+  Map<String, dynamic> userMetadata = const {},
+}) {
   return {
     'access_token': 'fake-access-token',
     'token_type': 'bearer',
     'expires_in': 3600,
     'refresh_token': 'fake-refresh-token',
-    'user': {
-      'id': 'fake-user-id',
-      'aud': 'authenticated',
-      'app_metadata': <String, dynamic>{},
-      'created_at': '2026-01-01T00:00:00Z',
-    },
+    'user': _fakeUserJson(userMetadata: userMetadata),
+  };
+}
+
+/// JSON minimal d'un `user` GoTrue valide — factorisé hors de
+/// [_fakeSessionJson] pour être aussi réutilisé comme corps de la réponse
+/// `PUT /user` simulée par `buildUpdateUserHandler`
+/// (`SupabaseAuthRepository.updateDisplayName`, groupe de tests dédié
+/// ci-dessus).
+Map<String, dynamic> _fakeUserJson({
+  Map<String, dynamic> userMetadata = const {},
+}) {
+  return {
+    'id': 'fake-user-id',
+    'aud': 'authenticated',
+    'app_metadata': <String, dynamic>{},
+    'user_metadata': userMetadata,
+    'created_at': '2026-01-01T00:00:00Z',
   };
 }
 

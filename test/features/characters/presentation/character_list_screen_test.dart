@@ -245,6 +245,9 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> resetPasswordForEmail({required String email}) async {}
+
+  @override
+  Future<void> updateDisplayName({required String? displayName}) async {}
 }
 
 void main() {
@@ -298,6 +301,19 @@ void main() {
           path: '/join',
           builder: (context, state) => const Scaffold(
             body: Center(child: Text('Rejoindre une histoire — étape 1')),
+          ),
+        ),
+        GoRoute(
+          // Cible du bouton profil rond de l'en-tête
+          // (`character_list_screen.dart::_ProfileButton`) — voir le test
+          // "le bouton profil navigue vers l'écran Profil" plus bas.
+          // `ProfileScreen` réel non utilisé ici : ce fichier ne teste que
+          // la navigation déclenchée par `CharacterListScreen`, pas le
+          // contenu de l'écran de destination (voir
+          // `test/features/profile/presentation/profile_screen_test.dart`).
+          path: '/profile',
+          builder: (context, state) => const Scaffold(
+            body: Center(child: Text('Écran Profil')),
           ),
         ),
       ],
@@ -829,7 +845,9 @@ void main() {
   );
 
   testWidgets(
-    'le menu profil propose de se déconnecter et appelle le dépôt auth',
+    'le bouton profil rond navigue vers l\'écran "Profil" (route /profile) '
+    '— remplace l\'ancien menu minimal "Se déconnecter" (déplacé sur cet '
+    'écran, voir `test/features/profile/presentation/profile_screen_test.dart`)',
     (WidgetTester tester) async {
       fakeCharacterRepository.charactersToReturn = const [];
 
@@ -839,12 +857,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.person_outline));
       await tester.pumpAndSettle();
 
-      expect(find.text('Se déconnecter'), findsOneWidget);
-
-      await tester.tap(find.text('Se déconnecter'));
-      await tester.pumpAndSettle();
-
-      expect(fakeAuthRepository.signOutCallCount, 1);
+      expect(find.text('Écran Profil'), findsOneWidget);
     },
   );
 }

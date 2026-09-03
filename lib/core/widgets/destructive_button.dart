@@ -10,12 +10,12 @@ import '../theme/app_typography.dart';
 /// `accent.brick`, texte `font.body` 700 en `accent.brick` — "Réservé aux
 /// actions irréversibles (déconnexion, suppression de personnage)".
 ///
-/// Premier composant partagé dédié à ce token (jusqu'ici, l'action
-/// "Se déconnecter" de `character_list_screen.dart` reste un simple
-/// `ListTile` texte en `accent.brick`, pas ce vrai bouton) : introduit à
-/// l'occasion de la confirmation "Retirer le portrait" de la fiche
-/// personnage (`presentation/widgets/portrait_upload_sheet.dart`),
-/// réutilisable tel quel pour la suppression de personnage à venir.
+/// Premier composant partagé dédié à ce token, introduit à l'occasion de
+/// la confirmation "Retirer le portrait" de la fiche personnage
+/// (`presentation/widgets/portrait_upload_sheet.dart`) — depuis, aussi
+/// utilisé pour l'action "Se déconnecter" de l'écran Profil
+/// (`features/profile/presentation/profile_screen.dart`), et réutilisable
+/// tel quel pour la suppression de personnage à venir.
 ///
 /// Contrairement à [PrimaryButton]/[SecondaryButton], le texte n'est **pas**
 /// en `font.display`/majuscules : le design système précise explicitement

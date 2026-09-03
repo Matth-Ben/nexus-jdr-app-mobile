@@ -109,3 +109,87 @@ final class AuthStateChangesProvider
 }
 
 String _$authStateChangesHash() => r'835d2fbd587c51600562fad9086c24998aeb8039';
+
+/// Utilisateur Supabase actuellement connecté — seul point d'accès à
+/// `Supabase.instance.client.auth.currentUser` dans ce dépôt (jamais un accès
+/// direct/statique depuis un widget), pour que les tests de widgets (écran de
+/// profil, `features/profile/presentation/profile_screen.dart`) puissent
+/// overrider ce provider avec un `User` construit à la main, sans jamais
+/// fabriquer de vrai `SupabaseClient` — même rationale que [AuthRepository].
+///
+/// `ref.watch(authStateChanges)` (plutôt qu'une simple lecture non réactive)
+/// pour que ce provider se recalcule à chaque événement d'auth, en
+/// particulier `AuthChangeEvent.userUpdated` émis par
+/// `SupabaseAuthRepository.updateDisplayName` : l'écran de profil reflète
+/// ainsi un nom d'affichage tout juste modifié sans qu'aucun code appelant
+/// n'ait besoin d'invalider ce provider explicitement (contrairement au reste
+/// du dépôt, ex. `characterDetailProvider`).
+
+@ProviderFor(currentUser)
+final currentUserProvider = CurrentUserProvider._();
+
+/// Utilisateur Supabase actuellement connecté — seul point d'accès à
+/// `Supabase.instance.client.auth.currentUser` dans ce dépôt (jamais un accès
+/// direct/statique depuis un widget), pour que les tests de widgets (écran de
+/// profil, `features/profile/presentation/profile_screen.dart`) puissent
+/// overrider ce provider avec un `User` construit à la main, sans jamais
+/// fabriquer de vrai `SupabaseClient` — même rationale que [AuthRepository].
+///
+/// `ref.watch(authStateChanges)` (plutôt qu'une simple lecture non réactive)
+/// pour que ce provider se recalcule à chaque événement d'auth, en
+/// particulier `AuthChangeEvent.userUpdated` émis par
+/// `SupabaseAuthRepository.updateDisplayName` : l'écran de profil reflète
+/// ainsi un nom d'affichage tout juste modifié sans qu'aucun code appelant
+/// n'ait besoin d'invalider ce provider explicitement (contrairement au reste
+/// du dépôt, ex. `characterDetailProvider`).
+
+final class CurrentUserProvider extends $FunctionalProvider<User?, User?, User?>
+    with $Provider<User?> {
+  /// Utilisateur Supabase actuellement connecté — seul point d'accès à
+  /// `Supabase.instance.client.auth.currentUser` dans ce dépôt (jamais un accès
+  /// direct/statique depuis un widget), pour que les tests de widgets (écran de
+  /// profil, `features/profile/presentation/profile_screen.dart`) puissent
+  /// overrider ce provider avec un `User` construit à la main, sans jamais
+  /// fabriquer de vrai `SupabaseClient` — même rationale que [AuthRepository].
+  ///
+  /// `ref.watch(authStateChanges)` (plutôt qu'une simple lecture non réactive)
+  /// pour que ce provider se recalcule à chaque événement d'auth, en
+  /// particulier `AuthChangeEvent.userUpdated` émis par
+  /// `SupabaseAuthRepository.updateDisplayName` : l'écran de profil reflète
+  /// ainsi un nom d'affichage tout juste modifié sans qu'aucun code appelant
+  /// n'ait besoin d'invalider ce provider explicitement (contrairement au reste
+  /// du dépôt, ex. `characterDetailProvider`).
+  CurrentUserProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentUserProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentUserHash();
+
+  @$internal
+  @override
+  $ProviderElement<User?> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  User? create(Ref ref) {
+    return currentUser(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(User? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<User?>(value),
+    );
+  }
+}
+
+String _$currentUserHash() => r'18cf8d7a817a4acbffe7f9b1c912490aee4f8e93';

@@ -24,3 +24,23 @@ Stream<AuthState> authStateChanges(Ref ref) {
   final client = ref.watch(supabaseClientProvider);
   return client.auth.onAuthStateChange;
 }
+
+/// Utilisateur Supabase actuellement connecté — seul point d'accès à
+/// `Supabase.instance.client.auth.currentUser` dans ce dépôt (jamais un accès
+/// direct/statique depuis un widget), pour que les tests de widgets (écran de
+/// profil, `features/profile/presentation/profile_screen.dart`) puissent
+/// overrider ce provider avec un `User` construit à la main, sans jamais
+/// fabriquer de vrai `SupabaseClient` — même rationale que [AuthRepository].
+///
+/// `ref.watch(authStateChanges)` (plutôt qu'une simple lecture non réactive)
+/// pour que ce provider se recalcule à chaque événement d'auth, en
+/// particulier `AuthChangeEvent.userUpdated` émis par
+/// `SupabaseAuthRepository.updateDisplayName` : l'écran de profil reflète
+/// ainsi un nom d'affichage tout juste modifié sans qu'aucun code appelant
+/// n'ait besoin d'invalider ce provider explicitement (contrairement au reste
+/// du dépôt, ex. `characterDetailProvider`).
+@Riverpod(keepAlive: true)
+User? currentUser(Ref ref) {
+  ref.watch(authStateChangesProvider);
+  return ref.watch(supabaseClientProvider).auth.currentUser;
+}

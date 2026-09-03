@@ -13,7 +13,6 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
-import '../../auth/presentation/providers/auth_providers.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
 import '../../character_creation/presentation/providers/character_creation_return_route_provider.dart';
 import '../domain/character_failure.dart';
@@ -244,11 +243,11 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   }
 }
 
-class _Header extends ConsumerWidget {
+class _Header extends StatelessWidget {
   const _Header();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -259,21 +258,20 @@ class _Header extends ConsumerWidget {
             color: AppColors.textOnWood,
           ),
         ),
-        _ProfileButton(
-          onSignOut: () => ref.read(authRepositoryProvider).signOut(),
-        ),
+        const _ProfileButton(),
       ],
     );
   }
 }
 
-/// Icône profil ronde en haut à droite : ouvre un menu minimal ne proposant
-/// pour l'instant que "Se déconnecter" (pas d'écran de profil complet, hors
-/// périmètre de cet écran — voir la consigne de la tâche qui l'a produit).
+/// Icône profil ronde en haut à droite : navigue vers l'écran "Profil"
+/// (`features/profile/presentation/profile_screen.dart`, route `/profile`)
+/// — remplace l'ancien menu minimal réduit à "Se déconnecter" (pas d'écran
+/// de profil complet à l'époque, voir l'historique git de ce fichier). Le
+/// bouton "Se déconnecter" vit désormais sur cet écran, toujours via
+/// `authRepositoryProvider.signOut()`.
 class _ProfileButton extends StatelessWidget {
-  const _ProfileButton({required this.onSignOut});
-
-  final VoidCallback onSignOut;
+  const _ProfileButton();
 
   @override
   Widget build(BuildContext context) {
@@ -282,7 +280,7 @@ class _ProfileButton extends StatelessWidget {
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
-        onTap: () => _openMenu(context),
+        onTap: () => context.push('/profile'),
         child: Container(
           width: 44,
           height: 44,
@@ -302,31 +300,6 @@ class _ProfileButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  void _openMenu(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.parchmentCard,
-      builder: (context) {
-        return SafeArea(
-          child: ListTile(
-            leading: const Icon(Icons.logout, color: AppColors.accentBrick),
-            title: Text(
-              'Se déconnecter',
-              style: AppTypography.body(
-                fontWeight: FontWeight.w700,
-                color: AppColors.accentBrick,
-              ),
-            ),
-            onTap: () {
-              Navigator.of(context).pop();
-              onSignOut();
-            },
-          ),
-        );
-      },
     );
   }
 }

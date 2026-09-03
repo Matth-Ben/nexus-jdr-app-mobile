@@ -20,6 +20,7 @@ import '../../features/characters/presentation/level_up_screen.dart';
 import '../../features/join_story/presentation/join_character_step_screen.dart';
 import '../../features/join_story/presentation/join_code_step_screen.dart';
 import '../../features/join_story/presentation/join_confirmation_step_screen.dart';
+import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/xml_import/presentation/xml_import_review_screen.dart';
 import '../network/supabase_client_provider.dart';
 import 'route_observer_provider.dart';
@@ -129,6 +130,15 @@ GoRouter appRouter(Ref ref) {
             xmlSource: args.xmlSource,
           );
         },
+      ),
+      GoRoute(
+        // Écran "Profil / paramètres du compte" (`features/profile/`),
+        // poussée depuis l'icône profil ronde de l'en-tête de la liste des
+        // personnages (`character_list_screen.dart::_ProfileButton`), qui
+        // ouvrait auparavant un bottom sheet minimal réduit à "Se
+        // déconnecter" — voir la doc de classe de `ProfileScreen`.
+        path: '/profile',
+        builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
         path: '/characters/:id',

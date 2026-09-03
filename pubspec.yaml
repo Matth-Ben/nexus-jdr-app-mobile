@@ -63,6 +63,11 @@ dependencies:
   # `docs/cahier-des-charges/01-architecture-technique.md`, section "Mode
   # hors-ligne".
   connectivity_plus: ^6.1.5
+  # Lit dynamiquement le numéro de version affiché en pied de page de l'écran
+  # "Profil" (`features/profile/presentation/profile_screen.dart`) — jamais
+  # une version codée en dur, qui se désynchroniserait de `pubspec.yaml`
+  # (`version:` en tête de ce fichier) à chaque publication.
+  package_info_plus: ^10.2.1
 
 dev_dependencies:
   flutter_test:
