@@ -78,5 +78,88 @@ void main() {
       expect(await cache.get('spell_catalog:1'), {'spells': 'classe 1'});
       expect(await cache.get('spell_catalog:2'), {'spells': 'classe 2'});
     });
+
+    group('getFresh (TTL)', () {
+      test('retourne null pour une clé jamais mise en cache', () async {
+        final result = await cache.getFresh(
+          'inconnue',
+          maxAge: const Duration(hours: 48),
+        );
+
+        expect(result, isNull);
+      });
+
+      test(
+        'retourne le payload décodé pour une entrée plus récente que maxAge',
+        () async {
+          await cache.put('race_catalog', {'races': []});
+
+          final result = await cache.getFresh(
+            'race_catalog',
+            maxAge: const Duration(hours: 48),
+          );
+
+          expect(result, {'races': []});
+        },
+      );
+
+      test('retourne null pour une entrée plus vieille que maxAge, sans la '
+          'supprimer du cache (get la retrouve toujours)', () async {
+        // Écrit directement la ligne drift avec un `cachedAt` déjà périmé,
+        // plutôt que d'attendre 48h réelles dans le test — `put` fixe
+        // toujours `cachedAt: DateTime.now()` (voir sa doc), donc
+        // inutilisable ici pour fabriquer une entrée déjà vieille.
+        await db
+            .into(db.cachedReferenceEntries)
+            .insertOnConflictUpdate(
+              CachedReferenceEntriesCompanion.insert(
+                key: 'race_catalog',
+                payload: '{"races":[]}',
+                cachedAt: DateTime.now().subtract(const Duration(hours: 49)),
+              ),
+            );
+
+        final freshResult = await cache.getFresh(
+          'race_catalog',
+          maxAge: const Duration(hours: 48),
+        );
+        final staleResult = await cache.get('race_catalog');
+
+        expect(
+          freshResult,
+          isNull,
+          reason:
+              'une entrée de plus de 48h ne doit jamais être considérée '
+              'comme fraîche',
+        );
+        expect(
+          staleResult,
+          {'races': []},
+          reason:
+              'le TTL ne doit jamais faire disparaître une entrée de '
+              'cache existante, seulement décider si elle est fraîche',
+        );
+      });
+
+      test('une entrée pile à la limite de maxAge est encore considérée '
+          'fraîche (comparaison stricte, pas inclusive)', () async {
+        await db
+            .into(db.cachedReferenceEntries)
+            .insertOnConflictUpdate(
+              CachedReferenceEntriesCompanion.insert(
+                key: 'race_catalog',
+                payload: '{"races":[]}',
+                cachedAt: DateTime.now().subtract(const Duration(hours: 1)),
+              ),
+            );
+
+        final result = await cache.getFresh(
+          'race_catalog',
+          maxAge: const Duration(hours: 48),
+        );
+
+        expect(result, {'races': []});
+      });
+    });
   });
 }

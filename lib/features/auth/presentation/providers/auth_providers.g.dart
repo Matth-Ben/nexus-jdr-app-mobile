@@ -50,6 +50,59 @@ final class AuthRepositoryProvider
 
 String _$authRepositoryHash() => r'157dd73bdf6ec0879936e7c10d1b03f5bf9bed55';
 
+/// [AuthStateStream] partagé par toute l'app — voir sa doc de classe pour le
+/// rationale ("piège `Ref.listen`") qui le distingue d'[authStateChanges]
+/// ci-dessous. `keepAlive` : même rationale que [authRepositoryProvider].
+
+@ProviderFor(authStateStream)
+final authStateStreamProvider = AuthStateStreamProvider._();
+
+/// [AuthStateStream] partagé par toute l'app — voir sa doc de classe pour le
+/// rationale ("piège `Ref.listen`") qui le distingue d'[authStateChanges]
+/// ci-dessous. `keepAlive` : même rationale que [authRepositoryProvider].
+
+final class AuthStateStreamProvider
+    extends
+        $FunctionalProvider<AuthStateStream, AuthStateStream, AuthStateStream>
+    with $Provider<AuthStateStream> {
+  /// [AuthStateStream] partagé par toute l'app — voir sa doc de classe pour le
+  /// rationale ("piège `Ref.listen`") qui le distingue d'[authStateChanges]
+  /// ci-dessous. `keepAlive` : même rationale que [authRepositoryProvider].
+  AuthStateStreamProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'authStateStreamProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$authStateStreamHash();
+
+  @$internal
+  @override
+  $ProviderElement<AuthStateStream> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  AuthStateStream create(Ref ref) {
+    return authStateStream(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AuthStateStream value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AuthStateStream>(value),
+    );
+  }
+}
+
+String _$authStateStreamHash() => r'530d0a3282b0af1210c4088c0e857dd6c78432da';
+
 /// État d'authentification exposé de façon centralisée via Riverpod plutôt
 /// que de l'état local dispersé dans chaque écran — n'importe quelle
 /// fonctionnalité peut `ref.watch` ce provider pour réagir à une

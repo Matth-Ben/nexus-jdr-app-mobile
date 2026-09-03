@@ -3,12 +3,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/auth_repository.dart';
+import '../../data/auth_state_stream.dart';
 
 part 'auth_providers.g.dart';
 
 @Riverpod(keepAlive: true)
 AuthRepository authRepository(Ref ref) {
   return SupabaseAuthRepository(ref.watch(supabaseClientProvider));
+}
+
+/// [AuthStateStream] partagé par toute l'app — voir sa doc de classe pour le
+/// rationale ("piège `Ref.listen`") qui le distingue d'[authStateChanges]
+/// ci-dessous. `keepAlive` : même rationale que [authRepositoryProvider].
+@Riverpod(keepAlive: true)
+AuthStateStream authStateStream(Ref ref) {
+  return SupabaseAuthStateStream(ref.watch(supabaseClientProvider));
 }
 
 /// État d'authentification exposé de façon centralisée via Riverpod plutôt

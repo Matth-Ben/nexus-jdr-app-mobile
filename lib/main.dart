@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/network/env_config.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/character_creation/presentation/providers/character_creation_catalog_preloader.dart';
 import 'features/characters/presentation/providers/character_write_sync_coordinator.dart';
 
 Future<void> main() async {
@@ -40,6 +41,10 @@ class NexusJdrApp extends ConsumerWidget {
     // PV/XP, pour toute la durée de l'app — voir
     // `character_write_sync_coordinator.dart`.
     ref.watch(characterWriteSyncCoordinatorProvider);
+    // Instancie tôt (`keepAlive`) le préchargeur des catalogues de
+    // référence de l'assistant de création, pour toute la durée de l'app —
+    // voir `character_creation_catalog_preloader.dart`.
+    ref.watch(characterCreationCatalogPreloaderProvider);
 
     return MaterialApp.router(
       title: 'Nexus JDR — Personnages',

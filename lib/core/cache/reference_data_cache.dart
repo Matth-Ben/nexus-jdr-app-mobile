@@ -33,14 +33,41 @@ class ReferenceDataCache {
         );
   }
 
-  /// `null` si [key] n'a jamais été mise en cache.
+  /// `null` si [key] n'a jamais été mise en cache. Retourne l'entrée quel
+  /// que soit son âge (contrairement à [getFresh]) — utilisé par la
+  /// stratégie "réseau d'abord, cache en secours" de
+  /// `SupabaseCharacterCreationRepository`, qui doit pouvoir retomber sur un
+  /// cache périmé plutôt que sur rien du tout si le réseau échoue.
   Future<Object?> get(String key) async {
-    final row = await (_db.select(
-      _db.cachedReferenceEntries,
-    )..where((row) => row.key.equals(key))).getSingleOrNull();
+    final row = await _selectRow(key);
     if (row == null) {
       return null;
     }
     return jsonDecode(row.payload);
+  }
+
+  /// `null` si [key] n'a jamais été mise en cache **ou** si l'entrée
+  /// existante a plus de [maxAge] (calculé par rapport à `DateTime.now()`) —
+  /// utilisé par la stratégie "cache d'abord si frais" des catalogues de
+  /// référence de `SupabaseCharacterCreationRepository` : une entrée fraîche
+  /// évite tout appel réseau, une entrée absente ou périmée laisse
+  /// l'appelant retomber sur son comportement réseau-d'abord habituel (voir
+  /// [get] pour le repli sur un cache périmé en cas d'échec réseau).
+  Future<Object?> getFresh(String key, {required Duration maxAge}) async {
+    final row = await _selectRow(key);
+    if (row == null) {
+      return null;
+    }
+    final age = DateTime.now().difference(row.cachedAt);
+    if (age > maxAge) {
+      return null;
+    }
+    return jsonDecode(row.payload);
+  }
+
+  Future<CachedReferenceEntry?> _selectRow(String key) {
+    return (_db.select(
+      _db.cachedReferenceEntries,
+    )..where((row) => row.key.equals(key))).getSingleOrNull();
   }
 }

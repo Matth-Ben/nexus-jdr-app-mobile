@@ -316,6 +316,85 @@ void main() {
       },
     );
   });
+
+  group(
+    'SupabaseCharacterCreationRepository (TTL cache d\'abord si frais)',
+    () {
+      late AppDatabase db;
+      late ReferenceDataCache cache;
+
+      setUp(() {
+        db = AppDatabase(NativeDatabase.memory());
+        cache = ReferenceDataCache(db);
+      });
+
+      tearDown(() async {
+        await db.close();
+      });
+
+      // Couvre le mécanisme générique (`_mappedFromFreshCache`, identique
+      // pour les 9 catalogues) sur un catalogue représentatif non paramétré
+      // (fetchRaceCatalog, le plus complexe : plusieurs sous-requêtes) et sur
+      // le catalogue paramétré par classId (fetchSpellCatalog), plutôt que de
+      // répéter les 4 scénarios sur les 9 catalogues comme le fait le groupe
+      // "cache de secours" ci-dessus (qui, lui, vérifie surtout le mapping
+      // spécifique à chaque catalogue — non concerné par ce chantier TTL).
+      _testCatalogTtl(
+        description: 'fetchRaceCatalog',
+        cacheKey: 'race_catalog',
+        db: () => db,
+        cache: () => cache,
+        fetch: (repository) => repository.fetchRaceCatalog(),
+        tableRows: {
+          'races': [
+            {
+              'id': 1,
+              'ability_bonuses': {'dex': 2},
+              'traits': <Map<String, dynamic>>[],
+            },
+          ],
+          'subraces': [
+            {
+              'id': 11,
+              'race_id': 1,
+              'ability_bonuses': {'int': 1},
+              'traits': <Map<String, dynamic>>[],
+            },
+          ],
+          'translations': [
+            {'entity_id': '1', 'value': 'Humain'},
+            {'entity_id': '11', 'value': 'Humain des vallées'},
+          ],
+        },
+      );
+
+      _testCatalogTtl(
+        description:
+            'fetchSpellCatalog (clé de cache paramétrée par classId, même '
+            'TTL)',
+        cacheKey: 'spell_catalog:1',
+        db: () => db,
+        cache: () => cache,
+        fetch: (repository) => repository.fetchSpellCatalog(classId: 1),
+        tableRows: {
+          'spell_classes': [
+            {'spell_id': 5},
+          ],
+          'spells': [
+            {
+              'id': 5,
+              'level': 1,
+              'school': 'évocation',
+              'casting_time': '1 action',
+            },
+          ],
+          'translations': [
+            {'entity_id': '5', 'value': 'Projectile magique'},
+          ],
+        },
+      );
+    },
+  );
 }
 
 /// Génère les 3 tests communs à tous les catalogues `fetchXCatalog` (voir la
@@ -392,6 +471,145 @@ void _testCatalogCaching({
   });
 }
 
+/// Génère les 3 tests du groupe "TTL (cache d'abord si frais)" pour un
+/// catalogue donné, sur le même principe que [_testCatalogCaching] : cache
+/// frais (< 48h) sert directement le cache sans le moindre appel réseau ;
+/// cache périmé (>= 48h) déclenche malgré tout une nouvelle tentative
+/// réseau (qui réécrit le cache avec un `cachedAt` frais) ; réseau en échec
+/// + cache périmé existant retombe quand même dessus plutôt que de ne rien
+/// retourner (non-régression explicite du comportement "cache de secours"
+/// déjà couvert par [_testCatalogCaching], mais avec un cache volontairement
+/// périmé cette fois — voir la consigne de la tâche qui a introduit ce TTL :
+/// "le TTL ne doit jamais faire disparaître un cache existant").
+void _testCatalogTtl({
+  required String description,
+  required String cacheKey,
+  required AppDatabase Function() db,
+  required ReferenceDataCache Function() cache,
+  required Future<dynamic> Function(CharacterCreationRepository repository)
+  fetch,
+  required Map<String, List<Map<String, dynamic>>> tableRows,
+}) {
+  group(description, () {
+    test('cache frais (< 48h) : retourne le cache directement, sans le '
+        'moindre appel réseau', () async {
+      final onlineRepository = SupabaseCharacterCreationRepository(
+        _buildFakeSupabaseClient(tableRows: tableRows),
+        cache(),
+      );
+      final expectedCatalog = await fetch(onlineRepository);
+
+      var networkCallCount = 0;
+      final repositoryWithFreshCache = SupabaseCharacterCreationRepository(
+        _buildFakeSupabaseClient(
+          tableRows: tableRows,
+          onRequest: () => networkCallCount++,
+        ),
+        cache(),
+      );
+      final catalog = await fetch(repositoryWithFreshCache);
+
+      expect(catalog, expectedCatalog);
+      expect(
+        networkCallCount,
+        0,
+        reason:
+            'une entrée de cache fraîche (< 48h) ne doit déclencher '
+            'aucune requête réseau',
+      );
+    });
+
+    test('cache périmé (>= 48h) : retente le réseau, ce qui réécrit une '
+        'entrée de cache fraîche', () async {
+      final onlineRepository = SupabaseCharacterCreationRepository(
+        _buildFakeSupabaseClient(tableRows: tableRows),
+        cache(),
+      );
+      await fetch(onlineRepository);
+      await _backdateCacheEntry(
+        db(),
+        cacheKey,
+        olderThan: const Duration(hours: 49),
+      );
+      expect(
+        await cache().getFresh(cacheKey, maxAge: const Duration(hours: 48)),
+        isNull,
+        reason: 'le backdatage de test doit avoir rendu l\'entrée périmée',
+      );
+
+      final repositoryWithStaleCache = SupabaseCharacterCreationRepository(
+        _buildFakeSupabaseClient(tableRows: tableRows),
+        cache(),
+      );
+      await fetch(repositoryWithStaleCache);
+
+      expect(
+        await cache().getFresh(cacheKey, maxAge: const Duration(hours: 48)),
+        isNotNull,
+        reason:
+            'un cache périmé doit avoir déclenché une nouvelle tentative '
+            'réseau, qui réécrit le cache avec un cachedAt frais (comme '
+            'avant ce chantier TTL, voir _writeCacheBestEffort)',
+      );
+    });
+
+    test('réseau en échec + cache périmé existant : retombe dessus quand même '
+        'plutôt que de ne rien retourner', () async {
+      final onlineRepository = SupabaseCharacterCreationRepository(
+        _buildFakeSupabaseClient(tableRows: tableRows),
+        cache(),
+      );
+      final expectedCatalog = await fetch(onlineRepository);
+      await _backdateCacheEntry(
+        db(),
+        cacheKey,
+        olderThan: const Duration(hours: 49),
+      );
+
+      final offlineRepository = SupabaseCharacterCreationRepository(
+        _buildFakeSupabaseClient(failureStatusCode: 500),
+        cache(),
+      );
+      final catalog = await fetch(offlineRepository);
+
+      expect(
+        catalog,
+        expectedCatalog,
+        reason:
+            'le TTL ne doit jamais faire disparaître un cache existant, '
+            'seulement décider s\'il faut le rafraîchir en priorité',
+      );
+    });
+  });
+}
+
+/// Réécrit directement (hors `ReferenceDataCache`, en accédant à [db]) le
+/// `cachedAt` de l'entrée [key] pour qu'elle paraisse plus vieille que
+/// [olderThan] — `ReferenceDataCache.put` fixe toujours `cachedAt:
+/// DateTime.now()` (voir sa doc), donc inutilisable ici pour fabriquer une
+/// entrée déjà périmée sans attendre 48h réelles. Suppose qu'une entrée pour
+/// [key] existe déjà (typiquement écrite par un premier fetch réseau réussi
+/// dans le test appelant) : conserve son payload tel quel, ne change que
+/// [cachedAt].
+Future<void> _backdateCacheEntry(
+  AppDatabase db,
+  String key, {
+  required Duration olderThan,
+}) async {
+  final existing = await (db.select(
+    db.cachedReferenceEntries,
+  )..where((row) => row.key.equals(key))).getSingle();
+  await db
+      .into(db.cachedReferenceEntries)
+      .insertOnConflictUpdate(
+        CachedReferenceEntriesCompanion.insert(
+          key: key,
+          payload: existing.payload,
+          cachedAt: DateTime.now().subtract(olderThan),
+        ),
+      );
+}
+
 /// Fabrique un `SupabaseClient` réel, mais dont le transport HTTP est
 /// entièrement fabriqué (`MockClient`, voir la doc de classe en tête de ce
 /// fichier). [tableRows] route chaque requête par le dernier segment de son
@@ -416,8 +634,15 @@ SupabaseClient _buildFakeSupabaseClient({
   Map<String, List<Map<String, dynamic>>> tableRows = const {},
   bool throwOnRequest = false,
   int? failureStatusCode,
+  // Invoqué pour **chaque** requête HTTP effectivement émise par le
+  // `SupabaseClient` construit ici, avant toute décision de réponse
+  // (succès/échec) — permet aux tests TTL de compter précisément les appels
+  // réseau, notamment pour prouver qu'un cache frais n'en déclenche
+  // strictement aucun (voir le groupe "TTL (cache d'abord si frais)").
+  void Function()? onRequest,
 }) {
   Future<http.Response> handler(http.Request request) async {
+    onRequest?.call();
     if (throwOnRequest) {
       throw const SocketException('Pas de réseau (double de test).');
     }

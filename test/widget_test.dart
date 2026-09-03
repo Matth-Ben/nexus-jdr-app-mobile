@@ -8,18 +8,20 @@
 // minimal (un simple `Scaffold` de test, sans dépendre d'un écran réel de
 // l'app), plutôt que d'initialiser Supabase pour de vrai.
 //
-// `characterWriteSyncCoordinatorProvider` (`NexusJdrApp.build`) est surchargé
-// pour la même raison : son provider "réel" déclenche `start()` dès sa
-// construction (tentative de synchro immédiate, voir sa doc de classe), qui
-// lit à son tour `supabaseClientProvider` -> `Supabase.instance.client`, non
-// initialisé ici. L'override ci-dessous construit le coordinateur sans
-// appeler `start()`, pour ne jamais déclencher cette lecture.
+// `characterWriteSyncCoordinatorProvider`/`characterCreationCatalogPreloaderProvider`
+// (`NexusJdrApp.build`) sont surchargés pour la même raison : leur provider
+// "réel" déclenche `start()` dès sa construction (tentative de synchro/
+// préchargement immédiate, voir leur doc de classe), qui lit à son tour
+// `supabaseClientProvider` -> `Supabase.instance.client`, non initialisé
+// ici. Les overrides ci-dessous construisent chaque coordinateur/préchargeur
+// sans jamais appeler `start()`, pour ne jamais déclencher cette lecture.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/router/app_router.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_creation_catalog_preloader.dart';
 import 'package:personnages/features/characters/presentation/providers/character_write_sync_coordinator.dart';
 import 'package:personnages/main.dart';
 
@@ -44,6 +46,9 @@ void main() {
           appRouterProvider.overrideWithValue(testRouter),
           characterWriteSyncCoordinatorProvider.overrideWith(
             (ref) => CharacterWriteSyncCoordinator(ref),
+          ),
+          characterCreationCatalogPreloaderProvider.overrideWith(
+            (ref) => CharacterCreationCatalogPreloader(ref),
           ),
         ],
         child: const NexusJdrApp(),

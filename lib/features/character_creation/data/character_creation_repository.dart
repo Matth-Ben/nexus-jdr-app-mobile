@@ -208,24 +208,42 @@ abstract class CharacterCreationRepository {
 ///
 /// ## Cache hors-ligne des catalogues (`fetchXxxCatalog`)
 ///
-/// Stratégie "réseau d'abord, cache en secours" (décision chef de projet,
-/// voir la tâche qui a introduit [_cache]) : chaque méthode `fetchXxxCatalog`
-/// tente d'abord la requête réseau comme avant ; si elle réussit, les
-/// **lignes brutes** (`List<Map<String, dynamic>>`, avant tout mapping) sont
-/// aussi écrites dans [_cache] (best-effort, voir [_writeCacheBestEffort]),
-/// en plus d'être mappées et retournées comme aujourd'hui. Si le réseau
-/// échoue (`PostgrestException` ou n'importe quelle autre exception), une
-/// entrée de cache existante est relue et passée par le **même mapper** que
-/// le chemin réseau (voir [_mappedFromCache]) — jamais de logique de parsing
-/// dupliquée entre les deux chemins. Si aucune entrée de cache n'existe non
-/// plus, l'erreur d'origine est relancée (comportement inchangé par rapport
-/// à avant l'introduction du cache).
+/// Stratégie à deux niveaux (le second ajouté par la tâche de performance
+/// perçue qui a introduit [_catalogCacheTtl] ; le premier est la stratégie
+/// d'origine, inchangée) :
 ///
-/// Pas de vérification de version : un upsert à chaque succès réseau suffit
-/// à garder le cache raisonnablement à jour (volume de données de référence
-/// trop faible pour justifier davantage — voir la consigne de la tâche).
-/// Aucune file de synchro d'écritures ici : ces 8 catalogues sont en lecture
-/// seule côté client (voir la doc de classe de [CharacterCreationRepository]).
+/// 1. **"Cache d'abord si frais"** : si une entrée de cache existe pour la
+///    clé de ce catalogue et a moins de [_catalogCacheTtl], elle est
+///    retournée directement (voir [_mappedFromFreshCache]) — **aucun appel
+///    réseau**. Sûr spécifiquement parce que ces catalogues sont des données
+///    de référence D&D en lecture seule, jamais modifiées côté client (voir
+///    la doc de classe de [CharacterCreationRepository]) : contrairement à
+///    la fiche personnage (`CharacterRepository.fetchCharacterDetail`, qui
+///    reste volontairement réseau-d'abord), aucun risque de servir une
+///    valeur obsolète qu'un autre utilisateur/appareil aurait modifiée entre
+///    temps.
+/// 2. **"Réseau d'abord, cache en secours"** (décision chef de projet, voir
+///    la tâche qui a introduit [_cache]) : si aucune entrée fraîche
+///    n'existe (absente, ou plus vieille que [_catalogCacheTtl]), chaque
+///    méthode `fetchXxxCatalog` tente d'abord la requête réseau comme avant ;
+///    si elle réussit, les **lignes brutes** (`List<Map<String, dynamic>>`,
+///    avant tout mapping) sont aussi écrites dans [_cache] (best-effort, voir
+///    [_writeCacheBestEffort], avec un nouveau `cachedAt`), en plus d'être
+///    mappées et retournées comme aujourd'hui. Si le réseau échoue
+///    (`PostgrestException` ou n'importe quelle autre exception), une entrée
+///    de cache existante — même périmée au sens de [_catalogCacheTtl] — est
+///    relue et passée par le **même mapper** que le chemin réseau (voir
+///    [_mappedFromCache]) — jamais de logique de parsing dupliquée entre les
+///    deux chemins. Si aucune entrée de cache n'existe non plus, l'erreur
+///    d'origine est relancée (comportement inchangé par rapport à avant
+///    l'introduction du cache).
+///
+/// Pas de vérification de version au-delà de ce TTL : un upsert à chaque
+/// succès réseau suffit à garder le cache raisonnablement à jour (volume de
+/// données de référence trop faible pour justifier davantage — voir la
+/// consigne de la tâche). Aucune file de synchro d'écritures ici : ces 9
+/// catalogues sont en lecture seule côté client (voir la doc de classe de
+/// [CharacterCreationRepository]).
 class SupabaseCharacterCreationRepository
     implements CharacterCreationRepository {
   const SupabaseCharacterCreationRepository(this._client, this._cache);
@@ -233,8 +251,20 @@ class SupabaseCharacterCreationRepository
   final SupabaseClient _client;
   final ReferenceDataCache _cache;
 
+  /// Durée de fraîcheur d'une entrée de cache de catalogue avant de retenter
+  /// le réseau en priorité (voir la doc de classe, point 1) — 48h, valeur
+  /// demandée par la tâche de performance perçue qui a introduit ce TTL :
+  /// ces données de référence D&D changent rarement, un cache d'un jour ou
+  /// deux reste largement acceptable pour l'assistant de création.
+  static const Duration _catalogCacheTtl = Duration(hours: 48);
+
   @override
   Future<RaceCatalog> fetchRaceCatalog() async {
+    final freshCached = await _mappedFromFreshCache(
+      _raceCatalogCacheKey,
+      _mapRaceCatalogPayload,
+    );
+    if (freshCached != null) return freshCached;
     try {
       final raceRows = await _client
           .from('races')
@@ -300,6 +330,11 @@ class SupabaseCharacterCreationRepository
 
   @override
   Future<ClassCatalog> fetchClassCatalog() async {
+    final freshCached = await _mappedFromFreshCache(
+      _classCatalogCacheKey,
+      _mapClassCatalogPayload,
+    );
+    if (freshCached != null) return freshCached;
     try {
       final classRows = await _client
           .from('classes')
@@ -366,6 +401,11 @@ class SupabaseCharacterCreationRepository
 
   @override
   Future<BackgroundCatalog> fetchBackgroundCatalog() async {
+    final freshCached = await _mappedFromFreshCache(
+      _backgroundCatalogCacheKey,
+      _mapBackgroundCatalogPayload,
+    );
+    if (freshCached != null) return freshCached;
     try {
       final backgroundRows = await _client
           .from('backgrounds')
@@ -444,6 +484,11 @@ class SupabaseCharacterCreationRepository
 
   @override
   Future<ToolCatalog> fetchToolCatalog() async {
+    final freshCached = await _mappedFromFreshCache(
+      _toolCatalogCacheKey,
+      _mapToolCatalogPayload,
+    );
+    if (freshCached != null) return freshCached;
     try {
       final toolRows = await _client
           .from('tools')
@@ -494,6 +539,11 @@ class SupabaseCharacterCreationRepository
 
   @override
   Future<LanguageCatalog> fetchLanguageCatalog() async {
+    final freshCached = await _mappedFromFreshCache(
+      _languageCatalogCacheKey,
+      _mapLanguageCatalogPayload,
+    );
+    if (freshCached != null) return freshCached;
     try {
       final languageRows = await _client
           .from('languages')
@@ -548,6 +598,11 @@ class SupabaseCharacterCreationRepository
     // globaux) : une entrée de cache distincte par classe, voir la doc de
     // classe de `SupabaseCharacterCreationRepository`.
     final cacheKey = 'spell_catalog:$classId';
+    final freshCached = await _mappedFromFreshCache(
+      cacheKey,
+      _mapSpellCatalogPayload,
+    );
+    if (freshCached != null) return freshCached;
     try {
       final spellClassRows = await _client
           .from('spell_classes')
@@ -604,6 +659,11 @@ class SupabaseCharacterCreationRepository
 
   @override
   Future<ItemCatalog> fetchItemCatalog() async {
+    final freshCached = await _mappedFromFreshCache(
+      _itemCatalogCacheKey,
+      _mapItemCatalogPayload,
+    );
+    if (freshCached != null) return freshCached;
     try {
       final itemRows = await _client
           .from('items')
@@ -654,6 +714,11 @@ class SupabaseCharacterCreationRepository
 
   @override
   Future<SkillCatalog> fetchSkillCatalog() async {
+    final freshCached = await _mappedFromFreshCache(
+      _skillCatalogCacheKey,
+      _mapSkillCatalogPayload,
+    );
+    if (freshCached != null) return freshCached;
     try {
       final skillRows = await _client
           .from('skills')
@@ -704,6 +769,11 @@ class SupabaseCharacterCreationRepository
 
   @override
   Future<AlignmentCatalog> fetchAlignmentCatalog() async {
+    final freshCached = await _mappedFromFreshCache(
+      _alignmentCatalogCacheKey,
+      _mapAlignmentCatalogPayload,
+    );
+    if (freshCached != null) return freshCached;
     try {
       final alignmentRows = await _client
           .from('alignments')
@@ -1041,6 +1111,29 @@ class SupabaseCharacterCreationRepository
       }
     } catch (_) {
       // Traité comme "pas de cache" — voir la documentation de cette
+      // méthode.
+    }
+    return null;
+  }
+
+  /// Relit [key] depuis [_cache] via [ReferenceDataCache.getFresh]
+  /// ([_catalogCacheTtl]) et la passe par [mapPayload] si une entrée fraîche
+  /// existe — voir la doc de classe, point 1 ("cache d'abord si frais").
+  /// Retourne `null` si aucune entrée fraîche n'existe (absente ou périmée)
+  /// ou si la lecture/le mapping échoue (même traitement défensif que
+  /// [_mappedFromCache]) : dans tous ces cas, l'appelant retombe simplement
+  /// sur son comportement réseau-d'abord habituel, inchangé.
+  Future<T?> _mappedFromFreshCache<T>(
+    String key,
+    T Function(Map<String, dynamic> payload) mapPayload,
+  ) async {
+    try {
+      final cached = await _cache.getFresh(key, maxAge: _catalogCacheTtl);
+      if (cached is Map<String, dynamic>) {
+        return mapPayload(cached);
+      }
+    } catch (_) {
+      // Traité comme "pas de cache frais" — voir la documentation de cette
       // méthode.
     }
     return null;
