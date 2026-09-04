@@ -124,7 +124,7 @@ Suit la roadmap détaillée dans `docs/cahier-des-charges/06-roadmap.md`.
   - [x] Écran Profil / paramètres du compte complet : modifier le profil (avatar, nom, email, mot de passe), confidentialité et données (export, suppression de compte, permissions appareil), aide et support (contact par email), signalement de bug (issues GitHub).
 - [x] Phase 3 — import XML depuis aidedd.org : rétro-ingénierie complète des identifiants numériques ([`docs/xml-import-reference-mapping.md`](docs/xml-import-reference-mapping.md)), parseur, résolution des champs, écran de vérification/correction, sauvegarde comme un personnage manuel.
 - [x] Phase 4 — synchronisation avec l'app web "Histoires" : rejoindre une histoire par code d'invitation (4 étapes), section "Aventures" sur la fiche, MJ avec accès en lecture seule au personnage rattaché. Préalable côté dépôt web fait et déployé (colonnes `invite_code`/`invite_code_enabled`, table `character_campaigns` + RLS, edge functions `preview-story-invite`/`join-story`).
-- [x] Phase 5 — extension du contenu D&D au-delà du strict Manuel des Joueurs : sorts (57 → 477), sous-classes (12 → 103, nom/description pour les 91 nouvelles — sans détail mécanique par niveau), historiques (13 → 15), depuis une base de contenu externe fusionnée avec les sources déjà en place.
+- [x] Phase 5 — extension du contenu D&D au-delà du strict Manuel des Joueurs : sorts (57 → 477), sous-classes (12 → 103, chacune avec au moins une aptitude signature au niveau où elle devient disponible — texte entièrement reformulé pour les 91 sous-classes issues d'extensions hors licence SRD/CC-BY, voir note légale ci-dessous), historiques (13 → 15), depuis une base de contenu externe fusionnée avec les sources déjà en place.
 
 ### Reste à faire
 
@@ -138,7 +138,6 @@ Suit la roadmap détaillée dans `docs/cahier-des-charges/06-roadmap.md`.
 
 **Fonctionnalités et contenu :**
 - [ ] Notifications push/email (`15-profil-parametres.md` section 3) — nécessite une infrastructure Firebase Cloud Messaging/APNs et un arbitrage produit (contenu, fréquence) non faits.
-- [ ] Détail mécanique par niveau (`class_features`) des 91 sous-classes ajoutées en Phase 5 — un joueur qui en choisit une au-delà des 12 "iconiques" du Manuel des Joueurs n'a pas encore ses aptitudes dans l'app.
 - [ ] Contenu D&D manquant qui bloque certains choix de montée de niveau : sorts de niveau 2+ (seuls niveaux 0/1 sont peuplés, empêchant les classes "à sorts connus" — Barde/Ensorceleur/Occultiste/Rôdeur — de choisir un nouveau sort au-delà du niveau 1), dons (`feats`, alternative à l'augmentation de caractéristiques), invocations occultistes (`invocations`).
 - [ ] Suivi des dés de vie dépensés/disponibles (nécessaire pour "dépenser un dé de vie" au repos court, RAW 5e) — gap de schéma, nécessite une migration côté dépôt web.
 - [ ] Panneau web "Joueurs" dans l'écran d'une histoire (liste des personnages rattachés, génération/révocation du lien d'invitation côté MJ) — spec fonctionnelle prête (`12-partage-et-groupes.md` section 5.6), explicitement à la charge de l'équipe qui maintient l'app Next.js, pas construit depuis ce dépôt.
