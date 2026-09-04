@@ -1,17 +1,25 @@
-// Tests de widget de la sheet "Actions de sort"
-// (`presentation/widgets/spell_action_sheet.dart`) et de la sheet de choix de
-// niveau d'emplacement qu'elle peut ouvrir — même patron que
-// `rest_sheet_test.dart` : la sheet est ouverte depuis un `Builder` minimal,
-// `onCastSpell` est un simple callback synchrone enregistrant ses appels
-// (toute la logique d'écriture réseau vit dans
+// Tests de widget du panneau "Infos" d'un sort
+// (`presentation/widgets/spell_info_panel.dart`) et de la sheet de choix de
+// niveau d'emplacement que son bouton "Lancer" peut ouvrir
+// (`presentation/widgets/spell_action_sheet.dart::castSpellFlow`) — même
+// patron que `rest_sheet_test.dart` : le panneau est ouvert depuis un
+// `Builder` minimal, `onCastSpell` est un simple callback synchrone
+// enregistrant ses appels (toute la logique d'écriture réseau vit dans
 // `character_detail_screen.dart`, hors périmètre de ce fichier).
+//
+// Remplace l'ancien `spell_action_sheet_test.dart` : le tap sur une ligne de
+// sort de l'onglet "Sorts" ouvrait jusque-là une sheet intermédiaire
+// "Infos"/"Lancer" (`showSpellActionSheet`) avant d'atteindre ce panneau —
+// retirée (retour utilisateur : "Lancer" étant déjà accessible depuis
+// "Infos", l'étape intermédiaire n'ajoutait qu'un aller-retour), le tap
+// ouvre désormais directement ce panneau ([showSpellInfoPanel]).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
-import 'package:personnages/features/characters/presentation/widgets/spell_action_sheet.dart';
+import 'package:personnages/features/characters/presentation/widgets/spell_info_panel.dart';
 
 const _cantrip = CharacterSpellEntry(
   id: 1,
@@ -44,7 +52,7 @@ void main() {
   List<CharacterSpellEntry> castCalls = [];
   List<int?> castLevels = [];
 
-  Future<void> pumpSheet(
+  Future<void> pumpPanel(
     WidgetTester tester, {
     required CharacterSpellEntry spell,
     required List<CharacterSpellSlot> spellSlots,
@@ -57,7 +65,7 @@ void main() {
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(
-                onPressed: () => showSpellActionSheet(
+                onPressed: () => showSpellInfoPanel(
                   context,
                   spell: spell,
                   spellSlots: spellSlots,
@@ -77,41 +85,61 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('affiche le nom, le sous-titre "École · Sort mineur" pour un '
-      'cantrip, et "Lancer" jamais désactivé', (tester) async {
-    await pumpSheet(tester, spell: _cantrip, spellSlots: const []);
+  testWidgets(
+    'tap direct : affiche immédiatement le détail technique complet et la '
+    'description, sans sheet "Infos"/"Lancer" intermédiaire',
+    (tester) async {
+      await pumpPanel(
+        tester,
+        spell: _fireball,
+        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 0)],
+      );
 
-    expect(find.text('Lumière'), findsOneWidget);
-    expect(find.text('Évocation · Sort mineur'), findsOneWidget);
-    expect(find.text('Infos'), findsOneWidget);
-    expect(find.text('Lancer'), findsOneWidget);
-    expect(find.text('Aucun emplacement'), findsNothing);
-  });
+      expect(find.text('BOULE DE FEU'), findsOneWidget);
+      expect(find.text('Évocation · Niveau 3'), findsOneWidget);
+      expect(find.text("Temps d'incantation"), findsOneWidget);
+      expect(find.text('1 action'), findsOneWidget);
+      expect(find.text('Portée'), findsOneWidget);
+      expect(find.text('45 mètres'), findsOneWidget);
+      expect(find.text('Composantes'), findsOneWidget);
+      expect(find.text('V, S, M — du guano'), findsOneWidget);
+      expect(find.text('Durée'), findsOneWidget);
+      expect(find.text('Instantanée'), findsOneWidget);
+      expect(find.text('Concentration'), findsOneWidget);
+      expect(find.text('Non'), findsOneWidget);
+      expect(find.text('DESCRIPTION'), findsOneWidget);
+      expect(find.text('Une sphère de feu explose.'), findsOneWidget);
+      // Ni "Infos" ni sheet intermédiaire : un seul bouton d'action, "Lancer".
+      expect(find.text('Infos'), findsNothing);
+      expect(find.widgetWithText(PrimaryButton, 'LANCER'), findsOneWidget);
+    },
+  );
 
   testWidgets('un cantrip : "Lancer" exécute directement sans sheet de choix, '
       'slotLevel null', (tester) async {
-    await pumpSheet(tester, spell: _cantrip, spellSlots: const []);
+    await pumpPanel(tester, spell: _cantrip, spellSlots: const []);
 
-    await tester.tap(find.text('Lancer'));
+    expect(find.text('LUMIÈRE'), findsOneWidget);
+    await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
     await tester.pumpAndSettle();
 
     expect(castCalls, [_cantrip]);
     expect(castLevels, [null]);
-    // La sheet est refermée.
-    expect(find.text('Lumière'), findsNothing);
+    // Le panneau est refermé.
+    expect(find.text('LUMIÈRE'), findsNothing);
   });
 
   testWidgets(
     'un seul niveau éligible : "Lancer" exécute directement ce niveau, sans '
     'sheet de choix',
     (tester) async {
-      await pumpSheet(
+      await pumpPanel(
         tester,
         spell: _fireball,
         spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 0)],
       );
 
-      await tester.tap(find.text('Lancer'));
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
       await tester.pumpAndSettle();
 
       expect(castCalls, [_fireball]);
@@ -127,7 +155,7 @@ void main() {
     'plusieurs niveaux éligibles : "Lancer" ouvre une sheet de choix, un '
     'niveau épuisé reste listé mais non sélectionnable',
     (tester) async {
-      await pumpSheet(
+      await pumpPanel(
         tester,
         spell: _fireball,
         spellSlots: const [
@@ -136,7 +164,7 @@ void main() {
         ],
       );
 
-      await tester.tap(find.text('Lancer'));
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
       await tester.pumpAndSettle();
 
       expect(find.text('Lancer Boule de feu'), findsOneWidget);
@@ -162,59 +190,22 @@ void main() {
   );
 
   testWidgets(
-    'aucun niveau éligible disponible : "Lancer" est désactivé, libellé '
-    '"Aucun emplacement"',
+    'aucun niveau éligible disponible : "Lancer" est désactivé',
     (tester) async {
-      await pumpSheet(
+      await pumpPanel(
         tester,
         spell: _fireball,
         spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 2)],
       );
 
-      expect(find.text('Aucun emplacement'), findsOneWidget);
-
-      await tester.tap(find.text('Lancer'), warnIfMissed: false);
-      await tester.pumpAndSettle();
+      final button = tester.widget<PrimaryButton>(
+        find.widgetWithText(PrimaryButton, 'LANCER'),
+      );
+      expect(button.onPressed, isNull);
 
       expect(castCalls, isEmpty);
-      // La sheet reste ouverte (le tap n'a rien déclenché).
-      expect(find.text('Boule de feu'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    '"Infos" ouvre le panneau avec le détail technique et la description, '
-    'et son bouton "Lancer" délègue au même flux',
-    (tester) async {
-      await pumpSheet(
-        tester,
-        spell: _fireball,
-        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 0)],
-      );
-
-      await tester.tap(find.text('Infos'));
-      await tester.pumpAndSettle();
-
+      // Le panneau reste ouvert.
       expect(find.text('BOULE DE FEU'), findsOneWidget);
-      expect(find.text('Évocation · Niveau 3'), findsOneWidget);
-      expect(find.text("Temps d'incantation"), findsOneWidget);
-      expect(find.text('1 action'), findsOneWidget);
-      expect(find.text('Portée'), findsOneWidget);
-      expect(find.text('45 mètres'), findsOneWidget);
-      expect(find.text('Composantes'), findsOneWidget);
-      expect(find.text('V, S, M — du guano'), findsOneWidget);
-      expect(find.text('Durée'), findsOneWidget);
-      expect(find.text('Instantanée'), findsOneWidget);
-      expect(find.text('Concentration'), findsOneWidget);
-      expect(find.text('Non'), findsOneWidget);
-      expect(find.text('DESCRIPTION'), findsOneWidget);
-      expect(find.text('Une sphère de feu explose.'), findsOneWidget);
-
-      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
-      await tester.pumpAndSettle();
-
-      expect(castCalls, [_fireball]);
-      expect(castLevels, [3]);
     },
   );
 }

@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
@@ -286,18 +287,21 @@ void main() {
       await tester.tap(find.text('SORTS'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Bouclier'));
+      // Le tap sur la ligne de sort ouvre directement le panneau "Infos"
+      // (plus de sheet intermédiaire "Infos"/"Lancer") : "Lancer" y est un
+      // `PrimaryButton`, rendu en majuscules.
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Lancer'));
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
       // `pumpAndSettle()` ici ne dépend pas de la résolution de
       // `castSpellGate` (jamais tiré par une animation) : elle règle la
-      // fermeture de la sheet, laissant le temps au verrou de se poser côté
+      // fermeture du panneau, laissant le temps au verrou de se poser côté
       // écran pendant que l'appel réseau reste en vol en arrière-plan.
       await tester.pumpAndSettle();
 
       expect(repository.castSpellCallCount, 1);
 
       // Le tap sur la ligne de sort (verrouillée) ne doit rien déclencher :
-      // ni ouverture de sheet, ni second appel réseau.
+      // ni réouverture du panneau, ni second appel réseau.
       await tester.tap(find.text('Bouclier'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
@@ -309,7 +313,7 @@ void main() {
             'jamais déclencher un second appel réseau (risque '
             'd\'écrasement silencieux, écriture à valeur absolue).',
       );
-      expect(find.text('Infos'), findsNothing);
+      expect(find.text('BOUCLIER'), findsNothing);
 
       repository.castSpellGate.complete();
       await tester.pumpAndSettle();

@@ -105,7 +105,8 @@ void main() {
   });
 
   testWidgets(
-    'un sort est cliquable (chevron affiché) et ouvre la sheet d\'actions',
+    'un sort est cliquable (chevron affiché) et ouvre directement le '
+    'panneau "Infos" (plus de sheet intermédiaire "Infos"/"Lancer")',
     (tester) async {
       await _pump(
         tester,
@@ -127,8 +128,9 @@ void main() {
       await tester.tap(find.text('Lumière'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Infos'), findsOneWidget);
-      expect(find.text('Lancer'), findsOneWidget);
+      expect(find.text('LUMIÈRE'), findsOneWidget);
+      expect(find.text('LANCER'), findsOneWidget);
+      expect(find.text('Infos'), findsNothing);
     },
   );
 
@@ -160,7 +162,7 @@ void main() {
       await tester.tap(find.text('Lumière'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
-      expect(find.text('Infos'), findsNothing);
+      expect(find.text('LUMIÈRE'), findsNothing);
     },
   );
 }

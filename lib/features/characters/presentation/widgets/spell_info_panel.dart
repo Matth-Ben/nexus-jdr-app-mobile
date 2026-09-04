@@ -16,8 +16,11 @@ import 'spell_action_sheet.dart';
 /// Ouvre le panneau "Infos" d'un sort — gabarit B ([SheetHeaderBar], contenu
 /// scrollable, pied fixe) : détail technique complet (temps d'incantation,
 /// portée, composantes, durée, concentration) puis description, avec un
-/// bouton "Lancer" en pied qui délègue à [castSpellFlow] (mêmes états/
-/// logique que la sheet d'actions, pour éviter l'aller-retour).
+/// bouton "Lancer" en pied qui délègue à [castSpellFlow]. Point d'entrée
+/// direct depuis une ligne de sort de l'onglet "Sorts"
+/// (`character_spells_section.dart::_SpellRow`) : plus de sheet
+/// intermédiaire "Infos"/"Lancer" à traverser au préalable (retirée, "Lancer"
+/// étant de toute façon déjà accessible ici).
 Future<void> showSpellInfoPanel(
   BuildContext context, {
   required CharacterSpellEntry spell,

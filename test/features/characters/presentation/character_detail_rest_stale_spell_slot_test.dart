@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
@@ -282,8 +283,11 @@ void main() {
       await tester.tap(find.text('SORTS'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Bouclier'));
+      // Le tap sur la ligne de sort ouvre directement le panneau "Infos"
+      // (plus de sheet intermédiaire "Infos"/"Lancer") : "Lancer" y est un
+      // `PrimaryButton`, rendu en majuscules.
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Lancer'));
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
       await tester.pumpAndSettle();
 
       expect(repository.castSpellCallCount, 1);

@@ -7,18 +7,22 @@ import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/spells_by_level_grouper.dart';
 import 'spell_action_sheet.dart';
+import 'spell_info_panel.dart';
 
 /// Section "SORTS" de l'onglet "Sorts" : les sorts connus/préparés du
 /// personnage, groupés par niveau (0 = "Sorts mineurs"), avec les
 /// emplacements disponibles du niveau affichés en pastilles à côté du titre
 /// de chaque niveau ≥ 1.
 ///
-/// Chaque sort (`_SpellRow`) est cliquable, ouvrant la sheet d'actions
-/// "Infos"/"Lancer" ([showSpellActionSheet]) — voir la spec visuelle de la
-/// tâche qui a introduit ce comportement (jusque-là en lecture seule).
-/// [onCastSpell] délègue toute la logique d'écriture (optimiste + réseau) à
-/// l'appelant (`character_detail_screen.dart::_castSpell`), même principe
-/// que `onTapAdjustHp`/`onTapRest` de `_CharacterTabBody`.
+/// Chaque sort (`_SpellRow`) est cliquable, ouvrant directement le panneau
+/// "Infos" ([showSpellInfoPanel], qui porte déjà son propre bouton
+/// "Lancer" en pied) — la sheet intermédiaire "Infos"/"Lancer" qui précédait
+/// ce panneau a été retirée : elle n'ajoutait qu'un aller-retour, "Lancer"
+/// étant de toute façon accessible depuis le panneau "Infos" (retour
+/// utilisateur). [onCastSpell] délègue toute la logique
+/// d'écriture (optimiste + réseau) à l'appelant
+/// (`character_detail_screen.dart::_castSpell`), même principe que
+/// `onTapAdjustHp`/`onTapRest` de `_CharacterTabBody`.
 ///
 /// N'affiche rien tant que [groups] est vide — appelant responsable de ne
 /// pas monter cette section dans ce cas (voir
@@ -36,7 +40,7 @@ class CharacterSpellsSection extends StatelessWidget {
 
   /// Emplacements de sorts par niveau — indexé par niveau dans [build] pour
   /// afficher les pastilles du bon niveau à côté de chaque titre de groupe,
-  /// et transmis tel quel à [showSpellActionSheet] (calcul d'éligibilité).
+  /// et transmis tel quel à [showSpellInfoPanel] (calcul d'éligibilité).
   final List<CharacterSpellSlot> spellSlots;
 
   final CastSpellCallback onCastSpell;
@@ -233,7 +237,7 @@ class _SpellRow extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: enabled
-            ? () => showSpellActionSheet(
+            ? () => showSpellInfoPanel(
                 context,
                 spell: spell,
                 spellSlots: spellSlots,

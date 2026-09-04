@@ -16,12 +16,15 @@ typedef UseClassFeatureCallback = void Function(CharacterClassFeature feature);
 
 /// Ouvre la sheet "Actions d'aptitude" (tap sur une ligne d'aptitude à usage
 /// limité de la carte "APTITUDES DE CLASSE",
-/// `character_class_features_card.dart::_FeatureRow`) — gabarit A, mêmes
-/// principes que [showSpellActionSheet]
-/// (`spell_action_sheet.dart`)/`showPortraitUploadSheet` : deux actions,
-/// "Infos" (ouvre [showClassFeatureInfoPanel]) et "Utiliser" (appelle
-/// directement [onUseFeature], pas de sheet de choix intermédiaire — un seul
-/// coût possible, contrairement au lancer de sort).
+/// `character_class_features_card.dart::_FeatureRow`) — gabarit A, même
+/// principe que `showPortraitUploadSheet` : deux actions, "Infos" (ouvre
+/// [showClassFeatureInfoPanel]) et "Utiliser" (appelle directement
+/// [onUseFeature], pas de sheet de choix intermédiaire — un seul coût
+/// possible, contrairement au lancer de sort). Contrairement à l'onglet
+/// "Sorts" (`spell_action_sheet.dart`, dont la sheet intermédiaire a été
+/// retirée au profit d'un accès direct au panneau "Infos"), cette
+/// intermédiaire est conservée ici : pas de retour utilisateur demandant le
+/// même raccourci pour les aptitudes de classe.
 Future<void> showClassFeatureActionSheet(
   BuildContext context, {
   required CharacterClassFeature feature,

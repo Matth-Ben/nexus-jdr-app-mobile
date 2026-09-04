@@ -6,11 +6,9 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/selectable_option_tile.dart';
-import '../../../../core/widgets/sheet_action_row.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/spell_cast_eligibility.dart';
-import '../../domain/spell_subtitle_formatter.dart';
 import 'character_spells_section.dart';
 import 'spell_info_panel.dart';
 
@@ -23,54 +21,12 @@ typedef CastSpellCallback = void Function(
   int? slotLevel,
 );
 
-/// Ouvre la sheet "Actions de sort" (tap sur une ligne de sort de l'onglet
-/// "Sorts", `character_spells_section.dart::_SpellRow`) — gabarit A
-/// (`parchmentCard`, pas de bandeau bois) : deux actions, "Infos" (ouvre
-/// [showSpellInfoPanel]) et "Lancer" (voir [castSpellFlow]).
-///
-/// Même patron que `showPortraitUploadSheet` : la sheet elle-même ne fait que
-/// retourner l'action choisie (`_SpellSheetAction`), toute la suite du flux
-/// (ouverture du panneau "Infos"/de la sheet de choix de niveau) est
-/// orchestrée ici sur le [context] appelant (stable), jamais sur celui —
-/// éphémère — de la sheet une fois refermée.
-Future<void> showSpellActionSheet(
-  BuildContext context, {
-  required CharacterSpellEntry spell,
-  required List<CharacterSpellSlot> spellSlots,
-  required CastSpellCallback onCastSpell,
-}) async {
-  final action = await showModalBottomSheet<_SpellSheetAction>(
-    context: context,
-    backgroundColor: AppColors.parchmentCard,
-    isScrollControlled: true,
-    builder: (sheetContext) =>
-        _SpellActionSheetContent(spell: spell, spellSlots: spellSlots),
-  );
-  if (action == null || !context.mounted) return;
-
-  switch (action) {
-    case _SpellSheetAction.info:
-      await showSpellInfoPanel(
-        context,
-        spell: spell,
-        spellSlots: spellSlots,
-        onCastSpell: onCastSpell,
-      );
-    case _SpellSheetAction.cast:
-      await castSpellFlow(
-        context,
-        spell: spell,
-        spellSlots: spellSlots,
-        onCastSpell: onCastSpell,
-      );
-  }
-}
-
-/// Orchestre l'action "Lancer" (bouton de [showSpellActionSheet] ou pied du
-/// panneau "Infos", [showSpellInfoPanel]) : appelle directement [onCastSpell]
-/// quand un seul niveau d'emplacement est éligible (ou pour un sort niveau
-/// 0, `slotLevel: null`), ouvre sinon une sheet de choix de niveau
-/// ([_SpellSlotChoiceSheetContent]).
+/// Orchestre l'action "Lancer" (bouton en pied du panneau "Infos",
+/// [showSpellInfoPanel] — seul point d'entrée depuis l'onglet "Sorts", voir
+/// `character_spells_section.dart::_SpellRow`) : appelle directement
+/// [onCastSpell] quand un seul niveau d'emplacement est éligible (ou pour un
+/// sort niveau 0, `slotLevel: null`), ouvre sinon une sheet de choix de
+/// niveau ([_SpellSlotChoiceSheetContent]).
 ///
 /// Niveaux éligibles = tous les `L >= spell.level` de [spellSlots],
 /// indépendamment de `remaining` (voir [SpellCastEligibility.eligibleSlots])
@@ -108,73 +64,6 @@ Future<void> castSpellFlow(
   );
   if (chosenLevel == null) return;
   onCastSpell(spell, chosenLevel);
-}
-
-enum _SpellSheetAction { info, cast }
-
-class _SpellActionSheetContent extends StatelessWidget {
-  const _SpellActionSheetContent({
-    required this.spell,
-    required this.spellSlots,
-  });
-
-  final CharacterSpellEntry spell;
-  final List<CharacterSpellSlot> spellSlots;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasSlot = SpellCastEligibility.hasAvailableSlot(
-      spellSlots: spellSlots,
-      spellLevel: spell.level,
-    );
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          AppSpacing.xs,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              spell.name,
-              style: AppTypography.body(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              SpellSubtitleFormatter.format(spell),
-              style: AppTypography.body(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const Divider(height: 1, thickness: 1, color: Color(0xFFE0D2AB)),
-            SheetActionRow(
-              icon: Icons.info_outline,
-              label: 'Infos',
-              onTap: () => Navigator.of(context).pop(_SpellSheetAction.info),
-            ),
-            SheetActionRow(
-              icon: Icons.auto_fix_high_outlined,
-              label: 'Lancer',
-              enabled: hasSlot,
-              trailingText: hasSlot ? null : 'Aucun emplacement',
-              trailingTextColor: AppColors.accentBrick,
-              onTap: () => Navigator.of(context).pop(_SpellSheetAction.cast),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _SpellSlotChoiceSheetContent extends StatefulWidget {

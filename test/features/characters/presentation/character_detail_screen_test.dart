@@ -1150,7 +1150,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Bouclier'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Lancer'));
+      // Le tap sur la ligne de sort ouvre directement le panneau "Infos"
+      // (`showSpellInfoPanel`, plus de sheet intermédiaire "Infos"/"Lancer")
+      // — son bouton "Lancer" est un `PrimaryButton`, rendu en majuscules.
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
       await tester.pumpAndSettle();
     }
 
@@ -1263,7 +1266,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Lumière'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Lancer'));
+      // Le tap sur la ligne de sort ouvre directement le panneau "Infos"
+      // (`showSpellInfoPanel`, plus de sheet intermédiaire "Infos"/"Lancer")
+      // — son bouton "Lancer" est un `PrimaryButton`, rendu en majuscules.
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
       await tester.pumpAndSettle();
 
       expect(fakeRepository.castSpellCallCount, 0);
