@@ -94,6 +94,31 @@ abstract class AuthRepository {
   /// retire la clé `avatar_url` de `user_metadata` (fusion, jamais un
   /// écrasement).
   Future<void> removeAvatar();
+
+  /// Supprime définitivement le compte connecté — étape 2/2 de la sheet
+  /// "Supprimer mon compte"
+  /// (`features/profile/presentation/widgets/delete_account_sheet.dart`),
+  /// appelée uniquement après reconfirmation du mot de passe par
+  /// [signInWithPassword] (voir la documentation de classe de la sheet pour
+  /// le flux complet).
+  ///
+  /// Appelle l'edge function Supabase `delete-account` (déployée côté dépôt
+  /// web, jamais une migration/RLS gérée depuis ce dépôt) : `POST` authentifié
+  /// (jeton déjà géré automatiquement par `functions.invoke`, aucun corps
+  /// requis), qui supprime `auth.users` via `admin.deleteUser` — la
+  /// suppression cascade automatiquement en base vers tous les personnages/
+  /// inventaire/sorts/rattachements du joueur (contrainte de clé étrangère
+  /// côté dépôt web, jamais reproduite ici). Un code 200 (`{ deleted: true
+  /// }`) est le seul succès reconnu ; toute autre situation (401 non
+  /// authentifié, 500 erreur serveur, exception réseau) lève une
+  /// [AuthFailure].
+  ///
+  /// Ne déconnecte **pas** le joueur elle-même : c'est à l'appelant
+  /// d'enchaîner avec [signOut] une fois cette méthode résolue avec succès
+  /// (voir la doc de classe de `_DeleteAccountSheetContent`), pour que la
+  /// séquence "supprimer puis déconnecter" reste explicite et visible d'un
+  /// seul coup d'œil côté UI plutôt que cachée dans ce repository.
+  Future<void> deleteAccount();
 }
 
 /// Implémentation réelle, basée sur `Supabase.instance.client.auth`.
@@ -290,6 +315,24 @@ class SupabaseAuthRepository implements AuthRepository {
       );
     } on AuthException catch (error) {
       throw mapAuthException(error);
+    } catch (_) {
+      throw mapUnknownError();
+    }
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      // Aucun corps requis (voir la doc de
+      // `AuthRepository.deleteAccount`) : le jeton d'authentification déjà
+      // géré automatiquement par `functions.invoke` suffit à l'edge function
+      // pour identifier le compte à supprimer.
+      await _client.functions.invoke('delete-account');
+    } on FunctionException catch (error) {
+      // Couvre `FunctionsHttpException` (401/500...) comme
+      // `FunctionsFetchException`/`FunctionsRelayException` (pas de réponse
+      // HTTP reçue) — voir [mapDeleteAccountError] pour le détail du mapping.
+      throw mapDeleteAccountError(error);
     } catch (_) {
       throw mapUnknownError();
     }

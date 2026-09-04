@@ -39,6 +39,9 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> deleteAccount() async {}
+
+  @override
   Future<void> signInWithPassword({
     required String email,
     required String password,

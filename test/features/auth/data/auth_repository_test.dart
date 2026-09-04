@@ -28,6 +28,7 @@
 // un test VM pur) : sous flux implicite, cette méthode renvoie `null`
 // immédiatement sans jamais toucher au stockage.
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -903,6 +904,99 @@ void main() {
               (failure) => failure.message,
               'message',
               contains('connexion internet'),
+            ),
+          ),
+        );
+      },
+    );
+  });
+  group('SupabaseAuthRepository.deleteAccount', () {
+    test(
+      "appelle l'edge function `delete-account` sans corps requis",
+      () async {
+        http.Request? capturedRequest;
+        final client = _buildFakeSupabaseClient((request) async {
+          if (request.url.path.contains('/functions/v1/delete-account')) {
+            capturedRequest = request;
+            return http.Response(
+              jsonEncode({'deleted': true}),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('{}', 200, request: request);
+        });
+
+        await expectLater(
+          SupabaseAuthRepository(client).deleteAccount(),
+          completes,
+        );
+        expect(capturedRequest, isNotNull);
+      },
+    );
+
+    test('401 non authentifié -> lève une AuthFailure', () async {
+      final client = _buildFakeSupabaseClient((request) async {
+        return http.Response(
+          jsonEncode({'error': 'unauthorized', 'message': 'Non connecté.'}),
+          401,
+          request: request,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      await expectLater(
+        SupabaseAuthRepository(client).deleteAccount(),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.message,
+            'message',
+            'Non connecté.',
+          ),
+        ),
+      );
+    });
+
+    test(
+      '500 erreur serveur sans `message` exploitable -> AuthFailure générique',
+      () async {
+        final client = _buildFakeSupabaseClient((request) async {
+          return http.Response(
+            jsonEncode({'error': 'internal_error'}),
+            500,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        await expectLater(
+          SupabaseAuthRepository(client).deleteAccount(),
+          throwsA(
+            isA<AuthFailure>().having(
+              (failure) => failure.message,
+              'message',
+              'Impossible de supprimer le compte. Réessayez.',
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      'exception réseau (pas de réponse reçue) -> AuthFailure générique',
+      () async {
+        final client = _buildFakeSupabaseClient((request) async {
+          throw const SocketException('Pas de réseau (double de test).');
+        });
+
+        await expectLater(
+          SupabaseAuthRepository(client).deleteAccount(),
+          throwsA(
+            isA<AuthFailure>().having(
+              (failure) => failure.message,
+              'message',
+              'Impossible de supprimer le compte. Réessayez.',
             ),
           ),
         );

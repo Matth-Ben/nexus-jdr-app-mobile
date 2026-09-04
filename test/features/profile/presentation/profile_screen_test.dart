@@ -22,11 +22,15 @@ import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/presentation/profile_edit_screen.dart';
+import 'package:personnages/features/profile/presentation/profile_privacy_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   int signOutCallCount = 0;
+
+  @override
+  Future<void> deleteAccount() async {}
 
   @override
   Future<void> signInWithPassword({
@@ -135,6 +139,10 @@ void main() {
             GoRoute(
               path: '/profile/edit',
               builder: (context, state) => const ProfileEditScreen(),
+            ),
+            GoRoute(
+              path: '/profile/privacy',
+              builder: (context, state) => const ProfilePrivacyScreen(),
             ),
           ],
         ),
@@ -285,11 +293,7 @@ void main() {
     expect(find.text('SIGNALER UN BUG'), findsOneWidget);
   });
 
-  for (final label in const [
-    'Notifications',
-    'Confidentialité et données',
-    'Aide et support',
-  ]) {
+  for (final label in const ['Notifications', 'Aide et support']) {
     testWidgets('taper "$label" affiche le SnackBar "Bientôt disponible"', (
       tester,
     ) async {
@@ -301,6 +305,23 @@ void main() {
       expect(find.text('Bientôt disponible'), findsOneWidget);
     });
   }
+
+  testWidgets(
+    'taper "Confidentialité et données" pousse `ProfilePrivacyScreen` '
+    '(`/profile/privacy`)',
+    (tester) async {
+      await pumpProfile(tester, user: _fakeUser());
+
+      await tester.tap(find.text('Confidentialité et données'));
+      await tester.pumpAndSettle();
+
+      // `ProfilePrivacyScreen` (route `/profile/privacy`) : bandeau bois
+      // "CONFIDENTIALITÉ ET DONNÉES" + ses 3 tuiles, voir
+      // `profile_privacy_screen_test.dart` pour le détail de cet écran.
+      expect(find.text('CONFIDENTIALITÉ ET DONNÉES'), findsOneWidget);
+      expect(find.text('Export de mes données'), findsOneWidget);
+    },
+  );
 
   testWidgets('le bouton "Se déconnecter" appelle `AuthRepository.signOut`', (
     tester,

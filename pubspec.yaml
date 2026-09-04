@@ -68,6 +68,17 @@ dependencies:
   # une version codée en dur, qui se désynchroniserait de `pubspec.yaml`
   # (`version:` en tête de ce fichier) à chaque publication.
   package_info_plus: ^10.2.1
+  # Propose au partage/enregistrement le fichier JSON généré par "Export de
+  # mes données" (`features/profile/presentation/widgets/export_data_sheet.dart`)
+  # — voir `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, écran
+  # Profil / Confidentialité et données.
+  share_plus: ^13.3.0
+  # Ouvre les réglages système de l'app pour "Gestion des autorisations
+  # appareil" (`features/profile/presentation/widgets/device_permissions_sheet.dart`)
+  # — texte statique, aucune lecture d'état de permission (décision chef de
+  # projet), donc `app_settings` plutôt que le plus lourd
+  # `permission_handler`.
+  app_settings: ^9.0.0
 
 dev_dependencies:
   flutter_test:
@@ -99,6 +110,14 @@ dev_dependencies:
   # `supabase`/`postgrest`/`gotrue`, déclaré explicitement puisqu'importé
   # directement par du code de test de ce dépôt.
   http: ^1.6.0
+  # `PathProviderPlatform.instance` — utilisé uniquement par
+  # `test/features/profile/data/data_export_repository_test.dart` pour
+  # fabriquer un répertoire temporaire de test sans jamais passer par le
+  # vrai canal de plateforme de `path_provider` (indisponible dans `flutter
+  # test`). Déjà résolu transitivement par `path_provider`, déclaré
+  # explicitement puisqu'importé directement par du code de test de ce
+  # dépôt.
+  path_provider_platform_interface: ^2.1.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

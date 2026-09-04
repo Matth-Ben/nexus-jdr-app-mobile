@@ -227,6 +227,9 @@ class _FakeAuthRepository implements AuthRepository {
   int signOutCallCount = 0;
 
   @override
+  Future<void> deleteAccount() async {}
+
+  @override
   Future<void> signInWithPassword({
     required String email,
     required String password,

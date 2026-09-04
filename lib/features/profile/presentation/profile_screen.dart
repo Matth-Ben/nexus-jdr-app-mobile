@@ -107,7 +107,7 @@ class ProfileScreen extends ConsumerWidget {
                   _MenuTile(
                     icon: Icons.privacy_tip_outlined,
                     label: 'Confidentialité et données',
-                    onTap: () => _showComingSoon(context),
+                    onTap: () => context.push('/profile/privacy'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   _MenuTile(
@@ -149,11 +149,16 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 
-  /// Tap sur "Notifications"/"Confidentialité et données"/"Aide et support" —
-  /// aucun de ces 3 écrans n'existe encore (spec direction-artistique de la
-  /// tâche) : même texte exact que
+  /// Tap sur "Notifications"/"Aide et support" — aucun de ces 2 écrans
+  /// n'existe encore (spec direction-artistique de la tâche) : même texte
+  /// exact que
   /// `appearance_and_backstory_step_screen.dart::_showPortraitComingSoon`,
-  /// réutilisé mot pour mot plutôt qu'une nouvelle constante.
+  /// réutilisé mot pour mot plutôt qu'une nouvelle constante. "Confidentialité
+  /// et données" ne passe plus par cette méthode depuis l'incrément B du
+  /// chantier "Profil/Paramètres" (voir `ProfilePrivacyScreen`, route
+  /// `/profile/privacy`) — sa propre tuile "Politique de confidentialité"
+  /// réutilise en revanche ce même texte, indépendamment de cette méthode
+  /// (voir `ProfilePrivacyScreen._showComingSoon`).
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Bientôt disponible')));

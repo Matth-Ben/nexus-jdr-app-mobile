@@ -21,6 +21,7 @@ import '../../features/join_story/presentation/join_character_step_screen.dart';
 import '../../features/join_story/presentation/join_code_step_screen.dart';
 import '../../features/join_story/presentation/join_confirmation_step_screen.dart';
 import '../../features/profile/presentation/profile_edit_screen.dart';
+import '../../features/profile/presentation/profile_privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/xml_import/presentation/xml_import_review_screen.dart';
 import '../network/supabase_client_provider.dart';
@@ -147,6 +148,13 @@ GoRouter appRouter(Ref ref) {
         // `ProfileScreen` — voir la doc de classe de `ProfileEditScreen`.
         path: '/profile/edit',
         builder: (context, state) => const ProfileEditScreen(),
+      ),
+      GoRoute(
+        // Sous-écran "Confidentialité et données" (`features/profile/`),
+        // poussé depuis la tuile éponyme de `ProfileScreen` — voir la doc de
+        // classe de `ProfilePrivacyScreen`.
+        path: '/profile/privacy',
+        builder: (context, state) => const ProfilePrivacyScreen(),
       ),
       GoRoute(
         path: '/characters/:id',
