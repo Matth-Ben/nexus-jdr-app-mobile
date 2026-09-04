@@ -5,6 +5,7 @@ import '../../../../core/network/connectivity_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/alert_banner.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/selectable_option_tile.dart';
@@ -234,7 +235,7 @@ class _ReportBugSheetContentState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (_errorMessage != null) ...[
-                          _AlertBanner(message: _errorMessage!),
+                          AlertBanner(message: _errorMessage!),
                           const SizedBox(height: AppSpacing.md),
                         ],
                         // Pendant l'envoi : champs texte + sélecteur de
@@ -361,55 +362,6 @@ class _ReportBugSheetContentState
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// "Bandeau d'alerte inline" du design système — copie de
-/// `character_story_edit_sheet.dart::_AlertBanner` (même rationale de
-/// duplication déjà en place ailleurs dans ce dépôt : chaque sheet garde sa
-/// propre copie privée plutôt qu'un composant partagé introduit pour un 2e
-/// usage).
-class _AlertBanner extends StatelessWidget {
-  const _AlertBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.alertBannerBackground,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: AppColors.accentBrick,
-          width: AppBorders.card,
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: AppColors.accentBrick,
-            size: 20,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTypography.body(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

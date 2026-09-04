@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/alert_banner.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
@@ -294,7 +295,7 @@ class _CharacterStoryEditSheetContentState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (_errorMessage != null) ...[
-                          _AlertBanner(message: _errorMessage!),
+                          AlertBanner(message: _errorMessage!),
                           const SizedBox(height: AppSpacing.md),
                         ],
                         for (var i = 0; i < _fieldSpecs.length; i++) ...[
@@ -379,56 +380,6 @@ class _StoryTextFieldBlock extends StatelessWidget {
           decoration: InputDecoration(hintText: spec.hint),
         ),
       ],
-    );
-  }
-}
-
-/// "Bandeau d'alerte inline" du design système — dupliqué depuis
-/// `summary_step_screen.dart::_AlertBanner` (`AppColors.alertBannerBackground`,
-/// bordure 2px `AppColors.accentBrick`, `Icons.warning_amber_rounded`),
-/// même rationale de duplication que le reste de ce module (chaque écran
-/// garde sa propre copie privée plutôt qu'un composant partagé introduit
-/// pour un 2e usage).
-class _AlertBanner extends StatelessWidget {
-  const _AlertBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.alertBannerBackground,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: AppColors.accentBrick,
-          width: AppBorders.card,
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: AppColors.accentBrick,
-            size: 20,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTypography.body(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

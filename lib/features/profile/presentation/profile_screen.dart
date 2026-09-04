@@ -10,7 +10,6 @@ import '../../../core/widgets/info_banner.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import 'providers/package_info_provider.dart';
-import 'widgets/edit_display_name_sheet.dart';
 import 'widgets/report_bug_sheet.dart';
 
 /// Écran "Profil / paramètres du compte", route `/profile` — dernier écran
@@ -48,6 +47,7 @@ class ProfileScreen extends ConsumerWidget {
         ? 'Aventurier'
         : rawDisplayName;
     final email = user?.email ?? '';
+    final avatarUrl = user?.userMetadata?['avatar_url'] as String?;
 
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,
@@ -60,7 +60,7 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               child: Column(
                 children: [
-                  const _ProfileAvatar(),
+                  _ProfileAvatar(avatarUrl: avatarUrl),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     displayName,
@@ -95,7 +95,7 @@ class ProfileScreen extends ConsumerWidget {
                   _MenuTile(
                     icon: Icons.person_outline,
                     label: 'Modifier le profil',
-                    onTap: () => showEditDisplayNameSheet(context),
+                    onTap: () => context.push('/profile/edit'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   _MenuTile(
@@ -163,14 +163,24 @@ class ProfileScreen extends ConsumerWidget {
 /// "Avatar de profil" du design système (section 4) : cercle 76×76px,
 /// bordure 3px `gold-end` + halo 1px `wood.dark` (même technique de halo que
 /// `PortraitFrame` : `boxShadow` non flouté, `spreadRadius` égal à
-/// `AppBorders.cardEmphasisHalo`), fond `wood.light`, silhouette
-/// `Icons.person` centrée. Statique — aucun flux d'upload, pas d'`InkWell`
-/// (non interactif, distinct du portrait de personnage qui a le sien).
+/// `AppBorders.cardEmphasisHalo`) — conservés dans tous les cas, avec ou
+/// sans photo (spec direction-artistique du flux "Modifier le profil").
+/// Sans [avatarUrl] : fond `wood.light` + silhouette `Icons.person`
+/// (comportement historique, inchangé). Avec [avatarUrl] : `ClipOval` +
+/// `Image.network` (`BoxFit.cover`) remplit le cercle — jamais le
+/// traitement "cadre bois sculpté" du portrait de personnage (bordure
+/// `wood.light`, coins `radius.md`), qui reste distinct.
+///
+/// Non interactif ici (pas d'`InkWell`) : le flux d'upload/retrait se fait
+/// depuis `ProfileEditScreen`, pas directement sur cet écran.
 class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar();
+  const _ProfileAvatar({required this.avatarUrl});
+
+  final String? avatarUrl;
 
   @override
   Widget build(BuildContext context) {
+    final url = avatarUrl;
     return Container(
       width: 76,
       height: 76,
@@ -189,7 +199,26 @@ class _ProfileAvatar extends StatelessWidget {
           ),
         ],
       ),
-      child: const Icon(Icons.person, size: 40, color: AppColors.textOnWood),
+      child: url == null || url.isEmpty
+          ? const Icon(Icons.person, size: 40, color: AppColors.textOnWood)
+          : ClipOval(
+              child: Image.network(
+                url,
+                width: 76,
+                height: 76,
+                fit: BoxFit.cover,
+                // Même repli que `PortraitFrame` : ne jamais laisser un
+                // espace vide/une icône d'erreur brute si le chargement
+                // réseau échoue (avatar pas encore retéléchargé, URL
+                // périmée...), retombe silencieusement sur la silhouette par
+                // défaut.
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.person,
+                  size: 40,
+                  color: AppColors.textOnWood,
+                ),
+              ),
+            ),
     );
   }
 }

@@ -1,9 +1,10 @@
-// Tests de widget de la sheet "Modifier le profil"
-// (`presentation/widgets/edit_display_name_sheet.dart`) — pattern
-// autoportant calqué sur `character_story_edit_sheet_test.dart` (voir ce
-// fichier pour le modèle de référence) : préremplissage depuis
-// `currentUserProvider`, sauvegarde (succès/échec réseau/hors-ligne), texte
-// saisi préservé sur échec, `closeEnabled` désactivé pendant la sauvegarde.
+// Tests de widget de la sheet "Mot de passe"
+// (`presentation/widgets/change_password_sheet.dart`) — pattern autoportant
+// calqué sur `edit_display_name_sheet_test.dart`/`report_bug_sheet_test.dart`
+// (voir ces fichiers pour le modèle de référence), avec en plus la
+// validation de `Form` (`AutovalidateMode.onUserInteraction`, comme
+// `login_screen_test.dart`) : mot de passe trop court, confirmation
+// différente, jamais d'appel réseau tant que le formulaire est invalide.
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -19,22 +20,21 @@ import 'package:personnages/core/widgets/sheet_header_bar.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
-import 'package:personnages/features/profile/presentation/widgets/edit_display_name_sheet.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:personnages/features/profile/presentation/widgets/change_password_sheet.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   final Completer<void> gate = Completer<void>();
-  bool gateUpdateDisplayName = false;
+  bool gateUpdatePassword = false;
 
-  int updateDisplayNameCallCount = 0;
-  String? lastDisplayName;
+  int updatePasswordCallCount = 0;
+  String? lastPassword;
   Object? errorToThrow;
 
   @override
-  Future<void> updateDisplayName({required String? displayName}) async {
-    updateDisplayNameCallCount++;
-    lastDisplayName = displayName;
-    if (gateUpdateDisplayName) await gate.future;
+  Future<void> updatePassword({required String newPassword}) async {
+    updatePasswordCallCount++;
+    lastPassword = newPassword;
+    if (gateUpdatePassword) await gate.future;
     final error = errorToThrow;
     if (error != null) throw error;
   }
@@ -55,7 +55,7 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> resetPasswordForEmail({required String email}) async {}
 
   @override
-  Future<void> updatePassword({required String newPassword}) async {}
+  Future<void> updateDisplayName({required String? displayName}) async {}
 
   @override
   Future<void> updateEmail({required String newEmail}) async {}
@@ -79,20 +79,8 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
   Stream<bool> get onConnectivityRestored => const Stream.empty();
 }
 
-User _fakeUser({String? fullName}) {
-  return User(
-    id: 'fake-user-id',
-    appMetadata: const {},
-    userMetadata: fullName == null ? const {} : {'full_name': fullName},
-    aud: 'authenticated',
-    email: 'joueur@exemple.com',
-    createdAt: '2026-01-01T00:00:00Z',
-  );
-}
-
 Future<_FakeAuthRepository> _pumpSheet(
   WidgetTester tester, {
-  User? user,
   bool connected = true,
 }) async {
   final repository = _FakeAuthRepository();
@@ -100,7 +88,6 @@ Future<_FakeAuthRepository> _pumpSheet(
     ProviderScope(
       overrides: [
         authRepositoryProvider.overrideWithValue(repository),
-        currentUserProvider.overrideWithValue(user ?? _fakeUser()),
         connectivityCheckerProvider.overrideWithValue(
           _FakeConnectivityChecker(connected: connected),
         ),
@@ -110,7 +97,7 @@ Future<_FakeAuthRepository> _pumpSheet(
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(
-                onPressed: () => showEditDisplayNameSheet(context),
+                onPressed: () => showChangePasswordSheet(context),
                 child: const Text('Ouvrir'),
               ),
             ),
@@ -124,77 +111,87 @@ Future<_FakeAuthRepository> _pumpSheet(
   return repository;
 }
 
+Finder _passwordField() => find.byType(TextFormField).first;
+Finder _confirmField() => find.byType(TextFormField).last;
+
 void main() {
-  testWidgets(
-    'préremplit le champ depuis `user_metadata[\'full_name\']` quand '
-    'présent',
-    (tester) async {
-      await _pumpSheet(tester, user: _fakeUser(fullName: 'Aranea'));
+  testWidgets('affiche le titre et les 2 champs', (tester) async {
+    await _pumpSheet(tester);
 
-      expect(find.text('PSEUDO'), findsOneWidget);
-      expect(find.text("NOM D'AFFICHAGE"), findsOneWidget);
-      final field = tester.widget<TextFormField>(find.byType(TextFormField));
-      expect(field.controller!.text, 'Aranea');
+    expect(find.text('MOT DE PASSE'), findsOneWidget);
+    expect(find.text('NOUVEAU MOT DE PASSE'), findsOneWidget);
+    expect(find.text('CONFIRMER LE MOT DE PASSE'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(2));
+  });
+
+  testWidgets(
+    'mot de passe trop court : erreur inline sous le champ, jamais d\'appel '
+    'réseau',
+    (tester) async {
+      final repository = await _pumpSheet(tester);
+
+      await tester.enterText(_passwordField(), '123');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Le mot de passe doit contenir au moins 6 caractères.'),
+        findsOneWidget,
+      );
+      expect(repository.updatePasswordCallCount, 0);
     },
   );
 
   testWidgets(
-    'champ vide (jamais prérempli avec le fallback d\'affichage '
-    '"Aventurier") quand `full_name` est absent',
+    'confirmation différente : erreur inline sous le champ, jamais d\'appel '
+    'réseau',
     (tester) async {
-      await _pumpSheet(tester, user: _fakeUser());
+      final repository = await _pumpSheet(tester);
 
-      final field = tester.widget<TextFormField>(find.byType(TextFormField));
-      expect(field.controller!.text, isEmpty);
+      await tester.enterText(_passwordField(), 'motdepasse123');
+      await tester.enterText(_confirmField(), 'different123');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Les mots de passe ne correspondent pas.'),
+        findsOneWidget,
+      );
+      expect(repository.updatePasswordCallCount, 0);
     },
   );
 
   testWidgets(
-    '"Enregistrer" : envoie la valeur trimée, ferme la sheet et laisse '
+    'formulaire valide : envoie le mot de passe, ferme la sheet, laisse '
     'l\'appelant afficher le SnackBar de confirmation',
     (tester) async {
       final repository = await _pumpSheet(tester);
 
-      await tester.enterText(
-        find.byType(TextFormField),
-        '  Nouveau nom  ',
-      );
+      await tester.enterText(_passwordField(), 'motdepasse123');
+      await tester.enterText(_confirmField(), 'motdepasse123');
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
       await tester.pumpAndSettle();
 
-      expect(repository.updateDisplayNameCallCount, 1);
-      expect(repository.lastDisplayName, 'Nouveau nom');
+      expect(repository.updatePasswordCallCount, 1);
+      expect(repository.lastPassword, 'motdepasse123');
       expect(find.byType(TextFormField), findsNothing);
-      expect(find.text('Pseudo mis à jour.'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'champ vidé (texte blanc après trim) envoie `null`, équivalent à '
-    '"non défini"',
-    (tester) async {
-      final repository = await _pumpSheet(
-        tester,
-        user: _fakeUser(fullName: 'Ancien nom'),
-      );
-
-      await tester.enterText(find.byType(TextFormField), '   ');
-      await tester.pump();
-      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
-      await tester.pumpAndSettle();
-
-      expect(repository.lastDisplayName, isNull);
+      expect(find.text('Mot de passe mis à jour.'), findsOneWidget);
     },
   );
 
   testWidgets(
     'pendant la sauvegarde : "Enregistrer" en isLoading, "Annuler" et le X '
-    'du SheetHeaderBar désactivés (closeEnabled: false)',
+    'du SheetHeaderBar désactivés',
     (tester) async {
       final repository = await _pumpSheet(tester);
-      repository.gateUpdateDisplayName = true;
+      repository.gateUpdatePassword = true;
 
+      await tester.enterText(_passwordField(), 'motdepasse123');
+      await tester.enterText(_confirmField(), 'motdepasse123');
+      await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
       await tester.pump();
 
@@ -217,15 +214,13 @@ void main() {
   );
 
   testWidgets(
-    'aucune connexion réseau : bandeau hors-ligne honnête, sheet reste '
-    'ouverte, texte saisi préservé, aucun appel réseau tenté',
+    'aucune connexion réseau : bandeau hors-ligne, sheet reste ouverte, '
+    'saisie préservée, aucun appel réseau tenté',
     (tester) async {
       final repository = await _pumpSheet(tester, connected: false);
 
-      await tester.enterText(
-        find.byType(TextFormField),
-        'Nom pas encore enregistré.',
-      );
+      await tester.enterText(_passwordField(), 'motdepasse123');
+      await tester.enterText(_confirmField(), 'motdepasse123');
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
       await tester.pumpAndSettle();
@@ -234,54 +229,47 @@ void main() {
         find.textContaining("n'a pas pu être enregistrée"),
         findsOneWidget,
       );
-      expect(find.byType(TextFormField), findsOneWidget);
+      expect(find.byType(TextFormField), findsNWidgets(2));
       expect(
-        tester.widget<TextFormField>(find.byType(TextFormField)).controller!.text,
-        'Nom pas encore enregistré.',
+        tester.widget<TextFormField>(_passwordField()).controller!.text,
+        'motdepasse123',
       );
-      expect(
-        repository.updateDisplayNameCallCount,
-        0,
-        reason:
-            'sans connectivité, aucune tentative réseau ne doit être '
-            'faite (`AuthRepository.updateDisplayName` n\'a pas de file '
-            "d'attente hors-ligne)",
-      );
+      expect(repository.updatePasswordCallCount, 0);
     },
   );
 
   testWidgets(
     'AuthFailure : bandeau d\'alerte inline affiche `failure.message`, '
-    'sheet reste ouverte, texte saisi préservé',
+    'sheet reste ouverte, saisie préservée',
     (tester) async {
       final repository = await _pumpSheet(tester);
       repository.errorToThrow = const AuthFailure('Erreur serveur.');
 
-      await tester.enterText(find.byType(TextFormField), 'En cours de saisie.');
+      await tester.enterText(_passwordField(), 'motdepasse123');
+      await tester.enterText(_confirmField(), 'motdepasse123');
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
       await tester.pumpAndSettle();
 
       expect(find.text('Erreur serveur.'), findsOneWidget);
-      expect(
-        tester.widget<TextFormField>(find.byType(TextFormField)).controller!.text,
-        'En cours de saisie.',
-      );
+      expect(find.byType(TextFormField), findsNWidgets(2));
     },
   );
 
   testWidgets(
-    'échec inattendu (pas une AuthFailure) : bandeau générique '
-    '"Impossible d\'enregistrer les modifications. Réessayez."',
+    'échec inattendu (pas une AuthFailure) : bandeau générique fixe',
     (tester) async {
       final repository = await _pumpSheet(tester);
       repository.errorToThrow = Exception('boom');
 
+      await tester.enterText(_passwordField(), 'motdepasse123');
+      await tester.enterText(_confirmField(), 'motdepasse123');
+      await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
       await tester.pumpAndSettle();
 
       expect(
-        find.text("Impossible d'enregistrer les modifications. Réessayez."),
+        find.text('Impossible de mettre à jour le mot de passe. Réessayez.'),
         findsOneWidget,
       );
     },
@@ -292,27 +280,20 @@ void main() {
     'voile ne ferment la sheet',
     (tester) async {
       final repository = await _pumpSheet(tester);
-      repository.gateUpdateDisplayName = true;
+      repository.gateUpdatePassword = true;
 
+      await tester.enterText(_passwordField(), 'motdepasse123');
+      await tester.enterText(_confirmField(), 'motdepasse123');
+      await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
       await tester.pump();
 
       await tester.binding.handlePopRoute();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(
-        find.byType(TextFormField),
-        findsOneWidget,
-        reason:
-            'le geste retour ne doit pas fermer la sheet pendant la '
-            'sauvegarde',
-      );
+      expect(find.byType(TextFormField), findsNWidgets(2));
 
-      await tester.tapAt(const Offset(400, 10));
-      await tester.pump();
-      expect(find.byType(TextFormField), findsOneWidget);
-
-      expect(repository.updateDisplayNameCallCount, 1);
+      expect(repository.updatePasswordCallCount, 1);
 
       repository.gate.complete();
       await tester.pumpAndSettle();

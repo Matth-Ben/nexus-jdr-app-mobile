@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/alert_banner.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
@@ -215,7 +216,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                   ),
                 ),
               if (_saveErrorMessage != null) ...[
-                _AlertBanner(message: _saveErrorMessage!),
+                AlertBanner(message: _saveErrorMessage!),
                 const SizedBox(height: AppSpacing.sm),
               ],
               PrimaryButton(
@@ -242,7 +243,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
   /// l'assistant de création manuel ne permet déjà pas de créer un
   /// personnage sans classe choisie dans un catalogue réel. Pas de dialogue
   /// de confirmation pour ce cas : un blocage direct (message réutilisant
-  /// [_AlertBanner], même widget que l'échec de sauvegarde) invitant à
+  /// [AlertBanner], même widget que l'échec de sauvegarde) invitant à
   /// corriger, la sauvegarde n'est même pas tentée.
   Future<void> _handleValidate(
     BuildContext context,
@@ -1321,10 +1322,9 @@ class _InfoCard extends StatelessWidget {
 
 /// Bandeau d'alerte inline tappable (design système section 4, "utilisé pour
 /// signaler un champ d'import XML non reconnu") — réutilisation directe des
-/// tokens visuels déjà appliqués par `_AlertBanner` de
-/// `character_creation/presentation/summary_step_screen.dart`, avec en plus
-/// un tap (ouvre la bottom sheet de correction) et un chevron indiquant
-/// l'affordance.
+/// tokens visuels déjà appliqués par `AlertBanner`
+/// (`core/widgets/alert_banner.dart`), avec en plus un tap (ouvre la bottom
+/// sheet de correction) et un chevron indiquant l'affordance.
 class _AlertCard extends StatelessWidget {
   const _AlertCard({
     required this.title,
@@ -1795,54 +1795,6 @@ class _NetworkErrorState extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Bandeau d'alerte inline non tappable pour le message d'échec de sauvegarde
-/// — dupliqué depuis `_AlertBanner` de
-/// `character_creation/presentation/summary_step_screen.dart`, même
-/// rationale de duplication que le reste de ce module.
-class _AlertBanner extends StatelessWidget {
-  const _AlertBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.alertBannerBackground,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: AppColors.accentBrick,
-          width: AppBorders.card,
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: AppColors.accentBrick,
-            size: 20,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTypography.body(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

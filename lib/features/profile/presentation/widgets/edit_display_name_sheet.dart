@@ -5,18 +5,25 @@ import '../../../../core/network/connectivity_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/alert_banner.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../../auth/domain/auth_failure.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 
-/// Ouvre la sheet "Modifier le profil" (tuile "Modifier le profil" de
+/// Ouvre la sheet "Pseudo" (ligne "Pseudo" de `profile_edit_screen.dart`,
+/// sous-écran poussé depuis la tuile "Modifier le profil" de
 /// `profile_screen.dart`) — sheet autoportante calquée sur
 /// `character_story_edit_sheet.dart` (voir sa documentation de classe pour le
 /// rationale complet du pattern "attend le résultat réseau sur place"), mais
 /// réduite à un seul champ mono-ligne : le nom d'affichage
 /// (`user_metadata['full_name']`).
+///
+/// Titre `SheetHeaderBar`/message de confirmation renommés "PSEUDO"/"Pseudo
+/// mis à jour." (spec direction-artistique du flux "Modifier le profil" à 4
+/// lignes) — anciennement "MODIFIER LE PROFIL"/"Profil mis à jour.", quand
+/// cette sheet était le seul contenu de la tuile "Modifier le profil".
 ///
 /// Même split de responsabilité que `showCharacterStoryEditSheet` : cette
 /// fonction ouvrante affiche le `SnackBar` de confirmation une fois la sheet
@@ -37,7 +44,7 @@ Future<void> showEditDisplayNameSheet(BuildContext context) async {
   );
   if (saved != true || !context.mounted) return;
   ScaffoldMessenger.of(context)
-      .showSnackBar(const SnackBar(content: Text('Profil mis à jour.')));
+      .showSnackBar(const SnackBar(content: Text('Pseudo mis à jour.')));
 }
 
 /// Message hors-ligne — texte identique à
@@ -159,10 +166,7 @@ class _EditDisplayNameSheetContentState
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SheetHeaderBar(
-                  title: 'MODIFIER LE PROFIL',
-                  closeEnabled: !_isSaving,
-                ),
+                SheetHeaderBar(title: 'PSEUDO', closeEnabled: !_isSaving),
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Column(
@@ -170,7 +174,7 @@ class _EditDisplayNameSheetContentState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (_errorMessage != null) ...[
-                        _AlertBanner(message: _errorMessage!),
+                        AlertBanner(message: _errorMessage!),
                         const SizedBox(height: AppSpacing.md),
                       ],
                       Text(
@@ -226,55 +230,6 @@ class _EditDisplayNameSheetContentState
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// "Bandeau d'alerte inline" du design système — copie de
-/// `character_story_edit_sheet.dart::_AlertBanner` (même rationale de
-/// duplication déjà en place ailleurs dans ce dépôt : chaque sheet garde sa
-/// propre copie privée plutôt qu'un composant partagé introduit pour un 2e
-/// usage).
-class _AlertBanner extends StatelessWidget {
-  const _AlertBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.alertBannerBackground,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: AppColors.accentBrick,
-          width: AppBorders.card,
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: AppColors.accentBrick,
-            size: 20,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTypography.body(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/accent_icon_badge.dart';
+import '../../../core/widgets/alert_banner.dart';
 import '../../../core/widgets/checkable_option_tile.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
@@ -231,7 +232,7 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                   child: Column(
                     children: [
                       if (isPurchaseTab && isOverBudget)
-                        _AlertBanner(
+                        AlertBanner(
                           message:
                               'Budget dépassé de '
                               '${GoldAmountFormatter.format(-remainingGold)} po',
@@ -461,57 +462,6 @@ class _GoldBanner extends StatelessWidget {
               fontSize: 18,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// "Bandeau d'alerte inline" du design système (section 4) : fond
-/// `AppColors.alertBannerBackground`, bordure 2px `accent.brick`, icône
-/// d'avertissement — remplace [_GoldBanner] sur l'onglet "Acheter" tant que
-/// le budget est dépassé. Premier usage de ce composant sur le dépôt,
-/// gardé privé à cet écran plutôt que promu dans `core/widgets/` (pas
-/// d'autre écran ne l'utilise encore, voir la consigne d'origine) : à
-/// extraire s'il devient réutilisé.
-class _AlertBanner extends StatelessWidget {
-  const _AlertBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.alertBannerBackground,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: AppColors.accentBrick,
-          width: AppBorders.card,
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: AppColors.accentBrick,
-            size: 20,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTypography.body(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
             ),
           ),
         ],

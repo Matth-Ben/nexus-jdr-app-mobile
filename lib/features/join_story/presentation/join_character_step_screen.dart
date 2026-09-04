@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/alert_banner.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
 import '../../character_creation/presentation/providers/character_creation_return_route_provider.dart';
@@ -160,7 +161,7 @@ class _JoinCharacterStepScreenState
       child: Column(
         children: [
           if (_bannerMessage != null) ...[
-            _AlertBanner(message: _bannerMessage!),
+            AlertBanner(message: _bannerMessage!),
             const SizedBox(height: AppSpacing.sm),
           ],
           Expanded(
@@ -184,53 +185,6 @@ class _JoinCharacterStepScreenState
             label: '+ Créer un nouveau personnage',
             surface: SecondaryButtonSurface.parchment,
             onPressed: _isJoining ? null : _startCharacterCreation,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Bandeau d'alerte inline non tappable — même patron visuel que le reste de
-/// l'app (`_AlertBanner`, dupliqué dans plusieurs modules, voir par ex.
-/// `character_creation/presentation/summary_step_screen.dart`).
-class _AlertBanner extends StatelessWidget {
-  const _AlertBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.alertBannerBackground,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: AppColors.accentBrick,
-          width: AppBorders.card,
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: AppColors.accentBrick,
-            size: 20,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTypography.body(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
           ),
         ],
       ),
