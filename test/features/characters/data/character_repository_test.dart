@@ -396,6 +396,77 @@ void main() {
       );
 
       test(
+        'régression commit 7c5ab70 (variante `class_features`, non '
+        'couverte par le test ci-dessus) : la requête .select() sur '
+        '`class_features` ne référence jamais `description` (colonne '
+        'inexistante sur cette table — vit dans `translations`, même '
+        'principe que `spells`), et la description d\'une aptitude de '
+        'classe est bien résolue de bout en bout via `translations` '
+        '(jamais vide, jamais confondue avec le nom)',
+        () async {
+          String? capturedClassFeaturesSelect;
+          const featureDescription =
+              'Rend 1d10 + niveau de guerrier points de vie.';
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            tableRows: tableRows,
+            onRequest: (request) {
+              if (request.url.pathSegments.last == 'class_features') {
+                capturedClassFeaturesSelect =
+                    request.url.queryParameters['select'];
+              }
+            },
+            rowsOverride: (request) {
+              if (request.url.pathSegments.last == 'translations' &&
+                  request.url.queryParameters['field_name'] ==
+                      'eq.description') {
+                return [
+                  {'entity_id': '50', 'value': featureDescription},
+                ];
+              }
+              return null;
+            },
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _AlwaysOnlineConnectivityChecker(),
+          );
+
+          final detail = await repository.fetchCharacterDetail(characterId);
+
+          expect(
+            capturedClassFeaturesSelect,
+            isNotNull,
+            reason: 'le personnage de la fixture a une classe : la table '
+                '`class_features` doit bien être interrogée',
+          );
+          expect(
+            capturedClassFeaturesSelect,
+            isNot(contains('description')),
+            reason: '`class_features` n\'a pas de colonne `description` '
+                '(vérifié contre les migrations du dépôt web) — la '
+                'sélectionner directement lève une `PostgrestException` '
+                '(42703) en production : régression réelle poussée sur '
+                '`main` par le commit 7c5ab70, faisant échouer *tout* '
+                'fetch de fiche pour un personnage classé (repli '
+                'silencieux sur un cache périmé, signalée en retour '
+                'utilisateur).',
+          );
+          expect(
+            detail.classFeatures.single.description,
+            featureDescription,
+            reason: 'doit provenir de `translations` (entity_type='
+                'class_feature, field_name=description), jamais de '
+                '`class_features.description` (colonne inexistante) ni '
+                'retomber silencieusement sur le nom de l\'aptitude ou '
+                'une chaîne vide',
+          );
+        },
+      );
+
+      test(
         'isolation par utilisateur : un changement de compte sur le même '
         'appareil ne peut jamais lire l\'entrée de cache d\'un autre joueur',
         () async {

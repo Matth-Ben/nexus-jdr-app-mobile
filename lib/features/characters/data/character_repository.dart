@@ -1136,9 +1136,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
             ClassFeatureRowMapper.toCharacterClassFeature(
               row,
               names: featureNames,
-              // Aucune utilisation à afficher ici (pas la carte "Aptitudes
-              // de classe" de l'onglet Compétences) : map vide, jamais
-              // consommée puisque ces aptitudes viennent d'être obtenues.
+              // Ni description ni utilisation à afficher ici (pas la carte
+              // "Aptitudes de classe" de l'onglet Compétences, juste le
+              // récapitulatif de montée de niveau) : maps vides, jamais
+              // consommées puisque ces aptitudes viennent d'être obtenues.
+              descriptions: const {},
               usesRemaining: const {},
             ),
         ],
@@ -1953,20 +1955,33 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final classIds = CharacterDetailRowMapper.collectClassIdsRaw(row);
     var classFeatureRows = const <Map<String, dynamic>>[];
     var classFeatureNameRows = const <Map<String, dynamic>>[];
+    var classFeatureDescriptionRows = const <Map<String, dynamic>>[];
     if (classIds.isNotEmpty) {
+      // Pas de colonne `description` directe sur `class_features` (vérifié
+      // contre le schéma réel — une régression avait supposé le contraire,
+      // faisant échouer *tout* fetch de fiche avec un personnage classé :
+      // 42703 `column class_features.description does not exist`, PostgREST
+      // ne renvoyant alors qu'un replis silencieux sur le cache). Elle vit
+      // dans `translations`, même pattern que `spells`/`items` ci-dessous.
       classFeatureRows = await _client
           .from('class_features')
-          .select('id, class_id, level, uses_per_rest, description')
+          .select('id, class_id, level, uses_per_rest')
           .inFilter('class_id', classIds.toList())
           .order('level', ascending: true);
       final attainedRows = ClassFeatureRowMapper.filterAttained(
         classFeatureRows,
         classLevels: CharacterDetailRowMapper.collectClassLevels(row),
       );
+      final attainedIds = ClassFeatureRowMapper.collectIds(attainedRows);
       classFeatureNameRows = await _fetchTranslationRows(
         entityType: 'class_feature',
         fieldName: 'name',
-        entityIds: ClassFeatureRowMapper.collectIds(attainedRows),
+        entityIds: attainedIds,
+      );
+      classFeatureDescriptionRows = await _fetchTranslationRows(
+        entityType: 'class_feature',
+        fieldName: 'description',
+        entityIds: attainedIds,
       );
     }
 
@@ -2062,6 +2077,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       'skillNameRows': skillNameRows,
       'classFeatureRows': classFeatureRows,
       'classFeatureNameRows': classFeatureNameRows,
+      'classFeatureDescriptionRows': classFeatureDescriptionRows,
       'toolNameRows': toolNameRows,
       'languageNameRows': languageNameRows,
       'spellRows': spellRows,
@@ -2114,6 +2130,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final classFeatureNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['classFeatureNameRows']),
     );
+    final classFeatureDescriptions = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['classFeatureDescriptionRows']),
+    );
     final usesRemaining = ClassFeatureRowMapper.parseUsesRemaining(
       CharacterDetailRowMapper.featureUsesRowsOf(row),
     );
@@ -2122,6 +2141,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         ClassFeatureRowMapper.toCharacterClassFeature(
           featureRow,
           names: classFeatureNames,
+          descriptions: classFeatureDescriptions,
           usesRemaining: usesRemaining,
         ),
     ];

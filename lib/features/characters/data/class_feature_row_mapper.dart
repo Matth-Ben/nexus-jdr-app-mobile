@@ -70,14 +70,17 @@ abstract final class ClassFeatureRowMapper {
   }
 
   /// Construit un [CharacterClassFeature] à partir d'une ligne brute
-  /// `class_features` (déjà filtrée par [filterAttained]), des noms déjà
-  /// résolus (`names`, voir [collectIds]) et des utilisations déjà résolues
+  /// `class_features` (déjà filtrée par [filterAttained]), des noms et
+  /// descriptions déjà résolus (`names`/`descriptions`, voir [collectIds] —
+  /// ni l'un ni l'autre n'est une colonne directe de `class_features`, les
+  /// deux vivent dans `translations`) et des utilisations déjà résolues
   /// (`usesRemaining`, voir [parseUsesRemaining]). `uses_per_rest` absent ou
   /// de forme inattendue retombe sur une aptitude passive plutôt que de
   /// crasher.
   static CharacterClassFeature toCharacterClassFeature(
     Map<String, dynamic> row, {
     required Map<String, String> names,
+    required Map<String, String> descriptions,
     required Map<String, int> usesRemaining,
   }) {
     final id = (row['id'] as num).toInt();
@@ -91,7 +94,7 @@ abstract final class ClassFeatureRowMapper {
       usesMax: usesMax,
       usesRemaining: usesMax != null ? usesRemaining[id.toString()] : null,
       restType: usesPerRest?['rest_type'] as String?,
-      description: row['description'] as String? ?? '',
+      description: descriptions[id.toString()] ?? '',
     );
   }
 }

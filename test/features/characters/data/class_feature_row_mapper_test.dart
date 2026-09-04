@@ -115,6 +115,7 @@ void main() {
       final feature = ClassFeatureRowMapper.toCharacterClassFeature(
         row,
         names: const {'1': 'Conduit divin'},
+        descriptions: const {},
         usesRemaining: const {'1': 0},
       );
 
@@ -133,6 +134,7 @@ void main() {
       final feature = ClassFeatureRowMapper.toCharacterClassFeature(
         row,
         names: const {'2': 'Défense sans armure'},
+        descriptions: const {},
         usesRemaining: const {},
       );
 
@@ -147,31 +149,36 @@ void main() {
       final feature = ClassFeatureRowMapper.toCharacterClassFeature(
         row,
         names: const {},
+        descriptions: const {},
         usesRemaining: const {},
       );
 
       expect(feature.name, 'Aptitude #42');
     });
 
-    test('résout description quand présente, chaîne vide sinon', () {
-      final withDescription = ClassFeatureRowMapper.toCharacterClassFeature(
-        {
-          'id': 1,
-          'class_id': 5,
-          'level': 1,
-          'description': 'Une description complète.',
-        },
-        names: const {},
-        usesRemaining: const {},
-      );
-      expect(withDescription.description, 'Une description complète.');
+    test(
+      'résout description depuis la map résolue (translations), chaîne '
+      'vide sinon — pas de colonne `description` directe sur '
+      '`class_features` (voir SupabaseCharacterRepository, régression '
+      '42703 corrigée)',
+      () {
+        final withDescription = ClassFeatureRowMapper.toCharacterClassFeature(
+          {'id': 1, 'class_id': 5, 'level': 1},
+          names: const {},
+          descriptions: const {'1': 'Une description complète.'},
+          usesRemaining: const {},
+        );
+        expect(withDescription.description, 'Une description complète.');
 
-      final withoutDescription = ClassFeatureRowMapper.toCharacterClassFeature(
-        {'id': 2, 'class_id': 5, 'level': 1},
-        names: const {},
-        usesRemaining: const {},
-      );
-      expect(withoutDescription.description, '');
-    });
+        final withoutDescription =
+            ClassFeatureRowMapper.toCharacterClassFeature(
+              {'id': 2, 'class_id': 5, 'level': 1},
+              names: const {},
+              descriptions: const {},
+              usesRemaining: const {},
+            );
+        expect(withoutDescription.description, '');
+      },
+    );
   });
 }
