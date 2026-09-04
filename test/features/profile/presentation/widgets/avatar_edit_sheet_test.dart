@@ -44,7 +44,10 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
-  Future<void> signUp({required String email, required String password}) async {}
+  Future<void> signUp({
+    required String email,
+    required String password,
+  }) async {}
 
   @override
   Future<void> signOut() async {}
@@ -124,26 +127,23 @@ void main() {
     expect(find.text('Retirer la photo'), findsOneWidget);
   });
 
-  testWidgets(
-    '"Retirer la photo" ouvre la confirmation "Retirer la photo ?", '
-    '"Annuler" ne fait aucun appel réseau',
-    (tester) async {
-      final repository = await _pumpSheet(
-        tester,
-        avatarUrl: 'https://exemple.com/avatar.png',
-      );
+  testWidgets('"Retirer la photo" ouvre la confirmation "Retirer la photo ?", '
+      '"Annuler" ne fait aucun appel réseau', (tester) async {
+    final repository = await _pumpSheet(
+      tester,
+      avatarUrl: 'https://exemple.com/avatar.png',
+    );
 
-      await tester.tap(find.text('Retirer la photo'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Retirer la photo'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Retirer la photo ?'), findsOneWidget);
+    expect(find.text('Retirer la photo ?'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(SecondaryButton, 'ANNULER'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(SecondaryButton, 'ANNULER'));
+    await tester.pumpAndSettle();
 
-      expect(repository.removeAvatarCallCount, 0);
-    },
-  );
+    expect(repository.removeAvatarCallCount, 0);
+  });
 
   testWidgets(
     'confirmer "Retirer" appelle `AuthRepository.removeAvatar` et affiche '

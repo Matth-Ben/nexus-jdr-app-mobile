@@ -18,17 +18,24 @@ typedef UseInventoryItemCallback = void Function(CharacterInventoryItem item);
 /// Callback d'exécution de l'action "Équiper"/"Déséquiper" — délègue toute
 /// la logique d'écriture à l'appelant, voir
 /// `character_detail_screen.dart::_toggleInventoryItemEquipped`.
-typedef ToggleInventoryItemEquippedCallback =
-    void Function(CharacterInventoryItem item);
+typedef ToggleInventoryItemEquippedCallback = void Function(
+  CharacterInventoryItem item,
+);
 
 /// Callback d'exécution de l'action "Retirer" (déjà confirmée, voir
 /// [removeItemFlow]) — délègue toute la logique d'écriture à l'appelant, voir
 /// `character_detail_screen.dart::_removeInventoryItem`.
-typedef RemoveInventoryItemCallback = void Function(CharacterInventoryItem item);
+typedef RemoveInventoryItemCallback = void Function(
+  CharacterInventoryItem item,
+);
 
 /// Catégories pour lesquelles l'action "Équiper"/"Déséquiper" a un sens —
 /// voir la spec visuelle de la tâche.
-const Set<String> equippableInventoryCategories = {'arme', 'armure', 'bouclier'};
+const Set<String> equippableInventoryCategories = {
+  'arme',
+  'armure',
+  'bouclier',
+};
 
 /// Ouvre la sheet "Actions d'objet" (tap sur une carte de l'onglet
 /// "Inventaire", `character_inventory_item_card.dart`) — même gabarit A que

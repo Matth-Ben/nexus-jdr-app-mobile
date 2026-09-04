@@ -723,23 +723,20 @@ void main() {
       },
     );
 
-    testWidgets(
-      'état vide du bloc "aptitudes automatiques" : réutilise '
-      '_EmptyFeaturesState tel quel',
-      (tester) async {
-        fakeRepository.detailToReturn = _baseDetail;
-        fakeRepository.levelDataByLevel = {
-          5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
-        };
+    testWidgets('état vide du bloc "aptitudes automatiques" : réutilise '
+        '_EmptyFeaturesState tel quel', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+      fakeRepository.levelDataByLevel = {
+        5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
 
-        await pushLevelUp(tester, 5);
+      await pushLevelUp(tester, 5);
 
-        expect(
-          find.text('Aucune nouvelle aptitude de classe à ce niveau.'),
-          findsOneWidget,
-        );
-      },
-    );
+      expect(
+        find.text('Aucune nouvelle aptitude de classe à ce niveau.'),
+        findsOneWidget,
+      );
+    });
 
     testWidgets(
       '"Continuer" transitionne vers l\'étape "Points de vie" quand le '
@@ -795,18 +792,12 @@ void main() {
         (tester) async {
           fakeRepository.detailToReturn = _baseDetail;
           fakeRepository.levelDataByLevel = {
-            5: const LevelUpLevelData(
-              choiceType: null,
-              automaticFeatures: [],
-            ),
+            5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
           };
 
           await pushLevelUp(tester, 5);
 
-          expect(
-            find.text('À venir dans les prochaines étapes'),
-            findsNothing,
-          );
+          expect(find.text('À venir dans les prochaines étapes'), findsNothing);
         },
       );
 
@@ -817,10 +808,7 @@ void main() {
         (tester) async {
           fakeRepository.detailToReturn = _baseDetail;
           fakeRepository.levelDataByLevel = {
-            8: const LevelUpLevelData(
-              choiceType: null,
-              automaticFeatures: [],
-            ),
+            8: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
           };
 
           await pushLevelUp(tester, 8);
@@ -861,10 +849,7 @@ void main() {
             xp: 0,
           );
           fakeRepository.levelDataByLevel = {
-            5: const LevelUpLevelData(
-              choiceType: null,
-              automaticFeatures: [],
-            ),
+            5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
           };
 
           await pushLevelUp(tester, 5);
@@ -885,89 +870,79 @@ void main() {
         },
       );
 
-      testWidgets(
-        'les deux teasers ensemble (niveau ASI ET changement '
-        "d'emplacements de sorts au même niveau, classe lanceuse)",
-        (tester) async {
-          fakeRepository.detailToReturn = _baseDetail.copyWith(
-            classes: [
-              const CharacterDetailClassRow(
-                classId: 3,
-                hitDie: 8,
-                className: 'Clerc',
-                level: 3,
-                isPrimary: true,
-                savingThrowProficiencies: [],
-              ),
-            ],
-            xp: 0,
-          );
-          fakeRepository.levelDataByLevel = {
-            4: const LevelUpLevelData(
-              choiceType: null,
-              automaticFeatures: [],
+      testWidgets('les deux teasers ensemble (niveau ASI ET changement '
+          "d'emplacements de sorts au même niveau, classe lanceuse)", (
+        tester,
+      ) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 3,
+              hitDie: 8,
+              className: 'Clerc',
+              level: 3,
+              isPrimary: true,
+              savingThrowProficiencies: [],
             ),
-          };
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          4: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
 
-          await pushLevelUp(tester, 4);
+        await pushLevelUp(tester, 4);
 
-          expect(
-            find.text(
-              'Un choix de Amélioration de caractéristique vous attendra',
+        expect(
+          find.text(
+            'Un choix de Amélioration de caractéristique vous attendra',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Vos emplacements de sorts vont évoluer'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('aucun teaser quand le niveau va en fait bloquer, même si '
+          'spellSlotChanges est non vide (Barde niveau 2, classe "à sorts '
+          'connus" bloquée par `LevelUpBlockRules` — `spellSlotChanges` est '
+          'calculé indépendamment du blocage, voir `level_up_provider.dart` : '
+          "l'étape \"Sorts\" ne sera jamais atteinte cette session, l'annonce "
+          'ne doit donc promettre aucune étape à venir)', (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 2,
+              hitDie: 8,
+              className: 'Barde',
+              level: 1,
+              isPrimary: true,
+              savingThrowProficiencies: [],
             ),
-            findsOneWidget,
-          );
-          expect(
-            find.text('Vos emplacements de sorts vont évoluer'),
-            findsOneWidget,
-          );
-        },
-      );
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          2: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
 
-      testWidgets(
-        'aucun teaser quand le niveau va en fait bloquer, même si '
-        'spellSlotChanges est non vide (Barde niveau 2, classe "à sorts '
-        'connus" bloquée par `LevelUpBlockRules` — `spellSlotChanges` est '
-        'calculé indépendamment du blocage, voir `level_up_provider.dart` : '
-        "l'étape \"Sorts\" ne sera jamais atteinte cette session, l'annonce "
-        'ne doit donc promettre aucune étape à venir)',
-        (tester) async {
-          fakeRepository.detailToReturn = _baseDetail.copyWith(
-            classes: [
-              const CharacterDetailClassRow(
-                classId: 2,
-                hitDie: 8,
-                className: 'Barde',
-                level: 1,
-                isPrimary: true,
-                savingThrowProficiencies: [],
-              ),
-            ],
-            xp: 0,
-          );
-          fakeRepository.levelDataByLevel = {
-            2: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
-          };
+        await pushLevelUp(tester, 2);
 
-          await pushLevelUp(tester, 2);
-
-          // L'annonce s'affiche (le joueur a bien atteint ce niveau), mais
-          // sans aucun teaser d'étape à venir : le niveau 2 va bloquer juste
-          // après (classe "à sorts connus"), l'étape "Sorts" ne sera jamais
-          // atteinte cette session malgré `spellSlotChanges.isNotEmpty`.
-          expect(find.text('MONTÉE DE NIVEAU'), findsOneWidget);
-          expect(find.text('NIVEAU 2'), findsOneWidget);
-          expect(
-            find.text('À venir dans les prochaines étapes'),
-            findsNothing,
-          );
-          expect(
-            find.text('Vos emplacements de sorts vont évoluer'),
-            findsNothing,
-          );
-          expect(find.textContaining('Un choix de'), findsNothing);
-        },
-      );
+        // L'annonce s'affiche (le joueur a bien atteint ce niveau), mais
+        // sans aucun teaser d'étape à venir : le niveau 2 va bloquer juste
+        // après (classe "à sorts connus"), l'étape "Sorts" ne sera jamais
+        // atteinte cette session malgré `spellSlotChanges.isNotEmpty`.
+        expect(find.text('MONTÉE DE NIVEAU'), findsOneWidget);
+        expect(find.text('NIVEAU 2'), findsOneWidget);
+        expect(find.text('À venir dans les prochaines étapes'), findsNothing);
+        expect(
+          find.text('Vos emplacements de sorts vont évoluer'),
+          findsNothing,
+        );
+        expect(find.textContaining('Un choix de'), findsNothing);
+      });
     });
 
     testWidgets(
@@ -995,7 +970,11 @@ void main() {
           6: const LevelUpLevelData(
             choiceType: null,
             automaticFeatures: [
-              CharacterClassFeature(id: 11, name: 'Aptitude niveau 6', level: 6),
+              CharacterClassFeature(
+                id: 11,
+                name: 'Aptitude niveau 6',
+                level: 6,
+              ),
             ],
           ),
         };

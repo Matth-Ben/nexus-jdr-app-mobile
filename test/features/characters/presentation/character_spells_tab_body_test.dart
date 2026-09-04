@@ -104,35 +104,34 @@ void main() {
     expect(find.byIcon(Icons.auto_fix_high_outlined), findsOneWidget);
   });
 
-  testWidgets(
-    'un sort est cliquable (chevron affiché) et ouvre directement le '
-    'panneau "Infos" (plus de sheet intermédiaire "Infos"/"Lancer")',
-    (tester) async {
-      await _pump(
-        tester,
-        _detail(
-          spells: const [
-            CharacterSpellEntry(
-              id: 1,
-              name: 'Lumière',
-              level: 0,
-              school: 'Évocation',
-              status: 'connu',
-            ),
-          ],
-        ),
-      );
+  testWidgets('un sort est cliquable (chevron affiché) et ouvre directement le '
+      'panneau "Infos" (plus de sheet intermédiaire "Infos"/"Lancer")', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _detail(
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Lumière',
+            level: 0,
+            school: 'Évocation',
+            status: 'connu',
+          ),
+        ],
+      ),
+    );
 
-      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
 
-      await tester.tap(find.text('Lumière'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Lumière'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('LUMIÈRE'), findsOneWidget);
-      expect(find.text('LANCER'), findsOneWidget);
-      expect(find.text('Infos'), findsNothing);
-    },
-  );
+    expect(find.text('LUMIÈRE'), findsOneWidget);
+    expect(find.text('LANCER'), findsOneWidget);
+    expect(find.text('Infos'), findsNothing);
+  });
 
   testWidgets(
     'actionsDisabled désactive le tap sur les sorts (repos long en vol)',

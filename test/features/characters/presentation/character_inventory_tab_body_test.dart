@@ -255,19 +255,18 @@ void main() {
       expect(find.text('Retirer'), findsOneWidget);
     });
 
-    testWidgets(
-      '"Utiliser" (objet consommable) appelle onUseItem',
-      (tester) async {
-        final recorder = await _pump(tester, _detail(inventory: const [_potion]));
+    testWidgets('"Utiliser" (objet consommable) appelle onUseItem', (
+      tester,
+    ) async {
+      final recorder = await _pump(tester, _detail(inventory: const [_potion]));
 
-        await tester.tap(find.text('Potion de soins'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Utiliser'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Potion de soins'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Utiliser'));
+      await tester.pumpAndSettle();
 
-        expect(recorder.useCalls, [_potion]);
-      },
-    );
+      expect(recorder.useCalls, [_potion]);
+    });
 
     testWidgets('"Équiper" (arme non équipée) appelle onToggleItemEquipped', (
       tester,
@@ -288,7 +287,10 @@ void main() {
       '"Retirer" ouvre une confirmation, "Retirer" du dialogue appelle '
       'onRemoveItem',
       (tester) async {
-        final recorder = await _pump(tester, _detail(inventory: const [_dagger]));
+        final recorder = await _pump(
+          tester,
+          _detail(inventory: const [_dagger]),
+        );
 
         await tester.tap(find.text('Dague'));
         await tester.pumpAndSettle();
@@ -346,11 +348,7 @@ void main() {
     testWidgets('actionsDisabled: le tap sur une stat box n\'ouvre rien', (
       tester,
     ) async {
-      await _pump(
-        tester,
-        _detail(currencyGp: 10),
-        actionsDisabled: true,
-      );
+      await _pump(tester, _detail(currencyGp: 10), actionsDisabled: true);
 
       await tester.tap(find.text('PO'), warnIfMissed: false);
       await tester.pumpAndSettle();

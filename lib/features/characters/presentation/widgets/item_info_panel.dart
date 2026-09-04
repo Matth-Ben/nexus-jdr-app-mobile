@@ -78,7 +78,10 @@ class _ItemInfoPanelContent extends StatelessWidget {
             value: '${weapon.damageDice} ${weapon.damageType}',
           ),
         if (weapon.properties.isNotEmpty)
-          _ItemInfoRow(label: 'Propriétés', value: weapon.properties.join(', ')),
+          _ItemInfoRow(
+            label: 'Propriétés',
+            value: weapon.properties.join(', '),
+          ),
         if (weapon.rangeNormal case final rangeNormal?)
           _ItemInfoRow(
             label: 'Portée',
@@ -95,10 +98,7 @@ class _ItemInfoPanelContent extends StatelessWidget {
           value: InventoryArmorDexBonusFormatter.format(armor.acDexBonus),
         ),
         if (armor.strengthRequirement case final strengthRequirement?)
-          _ItemInfoRow(
-            label: 'Force requise',
-            value: '$strengthRequirement',
-          ),
+          _ItemInfoRow(label: 'Force requise', value: '$strengthRequirement'),
         _ItemInfoRow(
           label: 'Désavantage discrétion',
           value: armor.stealthDisadvantage ? 'Oui' : 'Non',
@@ -108,7 +108,10 @@ class _ItemInfoPanelContent extends StatelessWidget {
         // Texte en `textPrimary`, jamais doré — voir la spec de la tâche
         // (contrainte de contraste déjà documentée ailleurs dans ce dépôt,
         // ex. `character_inventory_stat_boxes_row.dart`).
-        _ItemInfoRow(label: 'Rareté', value: InventoryRarityFormatter.format(rarity)),
+        _ItemInfoRow(
+          label: 'Rareté',
+          value: InventoryRarityFormatter.format(rarity),
+        ),
         _ItemInfoRow(
           label: 'Attunement requis',
           value: item.requiresAttunement ? 'Oui' : 'Non',
@@ -134,7 +137,8 @@ class _ItemInfoPanelContent extends StatelessWidget {
                       if (infoRows.isNotEmpty)
                         for (var i = 0; i < infoRows.length; i++) ...[
                           infoRows[i],
-                          if (i < infoRows.length - 1) const SheetActionDivider(),
+                          if (i < infoRows.length - 1)
+                            const SheetActionDivider(),
                         ],
                       if (infoRows.isNotEmpty)
                         const SizedBox(height: AppSpacing.md),
@@ -180,9 +184,9 @@ class _ItemInfoPanelContent extends StatelessWidget {
                   ),
                   child: PrimaryButton(
                     label: item.equipped ? 'Déséquiper' : 'Équiper',
-                    onPressed: () => Navigator.of(
-                      context,
-                    ).pop(_ItemInfoPanelAction.toggleEquipped),
+                    onPressed: () =>
+                        Navigator.of(context)
+                            .pop(_ItemInfoPanelAction.toggleEquipped),
                   ),
                 ),
             ],

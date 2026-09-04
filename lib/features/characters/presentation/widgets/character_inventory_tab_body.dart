@@ -61,8 +61,7 @@ class CharacterInventoryTabBody extends StatelessWidget {
   onAddInventoryItem;
 
   /// Reçoit le nom saisi et la quantité (sheet "Objet personnalisé").
-  final void Function(String customName, int quantity)
-  onAddCustomInventoryItem;
+  final void Function(String customName, int quantity) onAddCustomInventoryItem;
 
   /// `true` pendant qu'une écriture de cet onglet est en vol (voir
   /// `character_detail_screen.dart::_isWritingInventory`) : désactive le tap
@@ -172,11 +171,7 @@ class _EmptyInventoryState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.backpack,
-              size: 48,
-              color: AppColors.textMuted,
-            ),
+            const Icon(Icons.backpack, size: 48, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.md),
             Text(
               'INVENTAIRE VIDE',

@@ -156,29 +156,25 @@ void main() {
       expect(feature.name, 'Aptitude #42');
     });
 
-    test(
-      'résout description depuis la map résolue (translations), chaîne '
-      'vide sinon — pas de colonne `description` directe sur '
-      '`class_features` (voir SupabaseCharacterRepository, régression '
-      '42703 corrigée)',
-      () {
-        final withDescription = ClassFeatureRowMapper.toCharacterClassFeature(
-          {'id': 1, 'class_id': 5, 'level': 1},
-          names: const {},
-          descriptions: const {'1': 'Une description complète.'},
-          usesRemaining: const {},
-        );
-        expect(withDescription.description, 'Une description complète.');
+    test('résout description depuis la map résolue (translations), chaîne '
+        'vide sinon — pas de colonne `description` directe sur '
+        '`class_features` (voir SupabaseCharacterRepository, régression '
+        '42703 corrigée)', () {
+      final withDescription = ClassFeatureRowMapper.toCharacterClassFeature(
+        {'id': 1, 'class_id': 5, 'level': 1},
+        names: const {},
+        descriptions: const {'1': 'Une description complète.'},
+        usesRemaining: const {},
+      );
+      expect(withDescription.description, 'Une description complète.');
 
-        final withoutDescription =
-            ClassFeatureRowMapper.toCharacterClassFeature(
-              {'id': 2, 'class_id': 5, 'level': 1},
-              names: const {},
-              descriptions: const {},
-              usesRemaining: const {},
-            );
-        expect(withoutDescription.description, '');
-      },
-    );
+      final withoutDescription = ClassFeatureRowMapper.toCharacterClassFeature(
+        {'id': 2, 'class_id': 5, 'level': 1},
+        names: const {},
+        descriptions: const {},
+        usesRemaining: const {},
+      );
+      expect(withoutDescription.description, '');
+    });
   });
 }

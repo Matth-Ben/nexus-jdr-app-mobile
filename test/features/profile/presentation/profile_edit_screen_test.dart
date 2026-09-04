@@ -31,7 +31,10 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
-  Future<void> signUp({required String email, required String password}) async {}
+  Future<void> signUp({
+    required String email,
+    required String password,
+  }) async {}
 
   @override
   Future<void> signOut() async {}
@@ -167,10 +170,7 @@ void main() {
   );
 
   testWidgets('ligne "Email" : affiche l\'adresse courante', (tester) async {
-    await _pumpScreen(
-      tester,
-      user: _fakeUser(email: 'aranea@exemple.com'),
-    );
+    await _pumpScreen(tester, user: _fakeUser(email: 'aranea@exemple.com'));
     expect(find.text('Email'), findsOneWidget);
     expect(find.text('aranea@exemple.com'), findsOneWidget);
   });
@@ -236,9 +236,7 @@ void main() {
     expect(find.text('ADRESSE EMAIL'), findsOneWidget);
   });
 
-  testWidgets('le bandeau bois propose un retour fonctionnel', (
-    tester,
-  ) async {
+  testWidgets('le bandeau bois propose un retour fonctionnel', (tester) async {
     await _pumpScreen(tester, user: _fakeUser());
     expect(find.text('Ouvrir'), findsNothing);
 

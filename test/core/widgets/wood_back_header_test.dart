@@ -9,10 +9,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: WoodBackHeader(
-            title: 'FICHE',
-            onBack: () => backTapped = true,
-          ),
+          body: WoodBackHeader(title: 'FICHE', onBack: () => backTapped = true),
         ),
       ),
     );

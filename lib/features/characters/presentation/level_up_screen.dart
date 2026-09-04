@@ -30,7 +30,14 @@ import 'widgets/level_up_header.dart';
 
 enum _HpMethod { roll, average }
 
-enum _LevelUpPhase { announcement, hitPoints, abilities, choice, spells, summary }
+enum _LevelUpPhase {
+  announcement,
+  hitPoints,
+  abilities,
+  choice,
+  spells,
+  summary,
+}
 
 /// Budget de points de l'étape "Choix à faire", variante amélioration de
 /// caractéristique (règle 5e standard : "+2 sur une caractéristique" OU
@@ -408,11 +415,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   if (data.automaticFeatures.isEmpty)
                     const _EmptyFeaturesState()
                   else
-                    for (
-                      var i = 0;
-                      i < data.automaticFeatures.length;
-                      i++
-                    ) ...[
+                    for (var i = 0; i < data.automaticFeatures.length; i++) ...[
                       if (i > 0) const SizedBox(height: AppSpacing.md),
                       GainRow(
                         icon: Icons.star,

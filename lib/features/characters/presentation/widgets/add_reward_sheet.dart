@@ -62,13 +62,13 @@ class _AddRewardSheetContent extends StatefulWidget {
   final AddRewardCallback onApply;
 
   @override
-  State<_AddRewardSheetContent> createState() =>
-      _AddRewardSheetContentState();
+  State<_AddRewardSheetContent> createState() => _AddRewardSheetContentState();
 }
 
 class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
   final Map<CurrencyKind, TextEditingController> _controllers = {
-    for (final currency in _currencyFieldsOrder) currency: TextEditingController(),
+    for (final currency in _currencyFieldsOrder)
+      currency: TextEditingController(),
   };
   final List<RewardItemDraft> _items = [];
 
@@ -164,7 +164,8 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
                             Expanded(
                               child: _CurrencyField(
                                 currency: _currencyFieldsOrder[i],
-                                controller: _controllers[_currencyFieldsOrder[i]]!,
+                                controller:
+                                    _controllers[_currencyFieldsOrder[i]]!,
                               ),
                             ),
                           ],
@@ -178,7 +179,8 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
                             Expanded(
                               child: _CurrencyField(
                                 currency: _currencyFieldsOrder[i],
-                                controller: _controllers[_currencyFieldsOrder[i]]!,
+                                controller:
+                                    _controllers[_currencyFieldsOrder[i]]!,
                               ),
                             ),
                           ],
@@ -293,7 +295,10 @@ class _RewardItemRow extends StatelessWidget {
               '${item.displayName} × ${item.quantity}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.body(fontSize: 14, fontWeight: FontWeight.w700),
+              style: AppTypography.body(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           // Zone de tap 44×44 explicite (consigne d'accessibilité de la

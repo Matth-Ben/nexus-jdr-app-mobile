@@ -67,8 +67,6 @@ abstract final class InventoryCatalogRowMapper {
     List<Map<String, dynamic>> rows, {
     required Map<String, String> names,
   }) {
-    return [
-      for (final row in rows) toInventoryCatalogItem(row, names: names),
-    ];
+    return [for (final row in rows) toInventoryCatalogItem(row, names: names)];
   }
 }

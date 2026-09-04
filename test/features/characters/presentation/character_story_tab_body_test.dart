@@ -59,10 +59,7 @@ Future<void> _pump(
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
-        body: CharacterStoryTabBody(
-          detail: detail,
-          onEdit: onEdit ?? () {},
-        ),
+        body: CharacterStoryTabBody(detail: detail, onEdit: onEdit ?? () {}),
       ),
     ),
   );

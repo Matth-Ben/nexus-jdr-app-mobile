@@ -70,7 +70,10 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
-  Future<void> signUp({required String email, required String password}) async {}
+  Future<void> signUp({
+    required String email,
+    required String password,
+  }) async {}
 
   @override
   Future<void> signOut() async {}
@@ -178,35 +181,34 @@ void main() {
     },
   );
 
-  testWidgets(
-    "pendant l'envoi : Valider en isLoading, Annuler desactive",
-    (tester) async {
-      final repository = await _pumpScreen(tester);
-      repository.gateUpdateAvatar = true;
+  testWidgets("pendant l'envoi : Valider en isLoading, Annuler desactive", (
+    tester,
+  ) async {
+    final repository = await _pumpScreen(tester);
+    repository.gateUpdateAvatar = true;
 
-      await tester.runAsync(() async {
-        await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
-        await tester.pump();
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-        await tester.pump();
-      });
+    await tester.runAsync(() async {
+      await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
+      await tester.pump();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await tester.pump();
+    });
 
-      expect(repository.updateAvatarCallCount, 1);
+    expect(repository.updateAvatarCallCount, 1);
 
-      final primaryButton = tester.widget<PrimaryButton>(
-        find.byType(PrimaryButton),
-      );
-      expect(primaryButton.isLoading, isTrue);
+    final primaryButton = tester.widget<PrimaryButton>(
+      find.byType(PrimaryButton),
+    );
+    expect(primaryButton.isLoading, isTrue);
 
-      final secondaryButton = tester.widget<SecondaryButton>(
-        find.widgetWithText(SecondaryButton, 'ANNULER'),
-      );
-      expect(secondaryButton.onPressed, isNull);
+    final secondaryButton = tester.widget<SecondaryButton>(
+      find.widgetWithText(SecondaryButton, 'ANNULER'),
+    );
+    expect(secondaryButton.onPressed, isNull);
 
-      repository.gate.complete();
-      await tester.pumpAndSettle();
-    },
-  );
+    repository.gate.complete();
+    await tester.pumpAndSettle();
+  });
 
   testWidgets(
     "succes : envoie les octets captures a AuthRepository.updateAvatar, "
@@ -223,19 +225,16 @@ void main() {
     },
   );
 
-  testWidgets(
-    "AuthFailure : bandeau d'alerte inline affiche failure.message, "
-    "l'ecran reste ouvert",
-    (tester) async {
-      final repository = await _pumpScreen(tester);
-      repository.errorToThrow = const AuthFailure('Erreur serveur.');
+  testWidgets("AuthFailure : bandeau d'alerte inline affiche failure.message, "
+      "l'ecran reste ouvert", (tester) async {
+    final repository = await _pumpScreen(tester);
+    repository.errorToThrow = const AuthFailure('Erreur serveur.');
 
-      await _tapValiderAndSettle(tester);
+    await _tapValiderAndSettle(tester);
 
-      expect(find.text('Erreur serveur.'), findsOneWidget);
-      expect(find.text('RECADRAGE'), findsOneWidget);
-    },
-  );
+    expect(find.text('Erreur serveur.'), findsOneWidget);
+    expect(find.text('RECADRAGE'), findsOneWidget);
+  });
 
   testWidgets(
     'echec inattendu (pas une AuthFailure) : bandeau generique fixe',
@@ -253,31 +252,28 @@ void main() {
     },
   );
 
-  testWidgets(
-    "le bouton retour visible (WoodBackHeader) reste garde par "
-    "isUploading : aucun effet pendant l'envoi",
-    (tester) async {
-      final repository = await _pumpScreen(tester);
-      repository.gateUpdateAvatar = true;
+  testWidgets("le bouton retour visible (WoodBackHeader) reste garde par "
+      "isUploading : aucun effet pendant l'envoi", (tester) async {
+    final repository = await _pumpScreen(tester);
+    repository.gateUpdateAvatar = true;
 
-      await tester.runAsync(() async {
-        await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
-        await tester.pump();
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-        await tester.pump();
-      });
-
-      expect(repository.updateAvatarCallCount, 1);
-
-      await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+    await tester.runAsync(() async {
+      await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
       await tester.pump();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await tester.pump();
+    });
 
-      expect(find.text('RECADRAGE'), findsOneWidget);
+    expect(repository.updateAvatarCallCount, 1);
 
-      repository.gate.complete();
-      await tester.pumpAndSettle();
-    },
-  );
+    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+    await tester.pump();
+
+    expect(find.text('RECADRAGE'), findsOneWidget);
+
+    repository.gate.complete();
+    await tester.pumpAndSettle();
+  });
 
   testWidgets(
     'alignement avec les 3 sheets de la meme tache (mot de passe/email/'

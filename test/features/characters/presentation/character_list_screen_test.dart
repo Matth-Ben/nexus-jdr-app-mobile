@@ -327,9 +327,8 @@ void main() {
           // contenu de l'écran de destination (voir
           // `test/features/profile/presentation/profile_screen_test.dart`).
           path: '/profile',
-          builder: (context, state) => const Scaffold(
-            body: Center(child: Text('Écran Profil')),
-          ),
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('Écran Profil'))),
         ),
       ],
     );
@@ -712,152 +711,156 @@ void main() {
     },
   );
 
-  group(
-    'RouteAware.didPopNext (rafraîchissement au retour d\'un écran poussé '
-    'par-dessus la liste, ex. fiche personnage/montée de niveau)',
-    () {
-      testWidgets(
-        'revenir de la fiche personnage (pop) relance charactersProvider, '
-        'même sans aucune interaction explicite de rafraîchissement',
-        (WidgetTester tester) async {
-          fakeCharacterRepository.charactersToReturn = const [
-            CharacterSummary(
-              id: '42',
-              name: 'Halltesse Ambrelune',
-              level: 5,
-              xp: 7000,
-            ),
-          ];
-          final observer = RouteObserver<PageRoute<dynamic>>();
+  group('RouteAware.didPopNext (rafraîchissement au retour d\'un écran poussé '
+      'par-dessus la liste, ex. fiche personnage/montée de niveau)', () {
+    testWidgets(
+      'revenir de la fiche personnage (pop) relance charactersProvider, '
+      'même sans aucune interaction explicite de rafraîchissement',
+      (WidgetTester tester) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(
+            id: '42',
+            name: 'Halltesse Ambrelune',
+            level: 5,
+            xp: 7000,
+          ),
+        ];
+        final observer = RouteObserver<PageRoute<dynamic>>();
 
-          await tester.pumpWidget(buildTestWidget(routeObserver: observer));
-          await tester.pumpAndSettle();
-          expect(fakeCharacterRepository.fetchCallCount, 1);
+        await tester.pumpWidget(buildTestWidget(routeObserver: observer));
+        await tester.pumpAndSettle();
+        expect(fakeCharacterRepository.fetchCallCount, 1);
 
-          await tester.tap(find.byType(CharacterCard));
-          await tester.pumpAndSettle();
-          expect(find.text('Fiche personnage 42'), findsOneWidget);
+        await tester.tap(find.byType(CharacterCard));
+        await tester.pumpAndSettle();
+        expect(find.text('Fiche personnage 42'), findsOneWidget);
 
-          // Simule un level-up (ou toute autre écriture) appliqué depuis la
-          // fiche : la prochaine requête réseau renverrait un niveau à jour,
-          // exactement comme le ferait Supabase après une écriture réussie.
-          fakeCharacterRepository.charactersToReturn = const [
-            CharacterSummary(
-              id: '42',
-              name: 'Halltesse Ambrelune',
-              level: 6,
-              xp: 14000,
-            ),
-          ];
+        // Simule un level-up (ou toute autre écriture) appliqué depuis la
+        // fiche : la prochaine requête réseau renverrait un niveau à jour,
+        // exactement comme le ferait Supabase après une écriture réussie.
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(
+            id: '42',
+            name: 'Halltesse Ambrelune',
+            level: 6,
+            xp: 14000,
+          ),
+        ];
 
-          await tester.tap(find.text('Retour'));
-          await tester.pumpAndSettle();
+        await tester.tap(find.text('Retour'));
+        await tester.pumpAndSettle();
 
-          expect(find.text('Elfe · Magicienne · Niv. 6'), findsNothing);
-          expect(find.text('Niv. 6'), findsOneWidget);
-          expect(
-            fakeCharacterRepository.fetchCallCount,
-            2,
-            reason:
-                'le retour de la fiche (pop) doit déclencher un nouveau '
-                'fetch, sans quoi la carte resterait sur le niveau '
-                'obsolète (Niv. 5)',
-          );
-        },
-      );
+        expect(find.text('Elfe · Magicienne · Niv. 6'), findsNothing);
+        expect(find.text('Niv. 6'), findsOneWidget);
+        expect(
+          fakeCharacterRepository.fetchCallCount,
+          2,
+          reason:
+              'le retour de la fiche (pop) doit déclencher un nouveau '
+              'fetch, sans quoi la carte resterait sur le niveau '
+              'obsolète (Niv. 5)',
+        );
+      },
+    );
 
-      testWidgets(
-        'un pop en cascade depuis un écran poussé par-dessus la fiche '
+    testWidgets('un pop en cascade depuis un écran poussé par-dessus la fiche '
         '(ex. "Montée de niveau") relance aussi charactersProvider une '
-        'fois revenu sur la liste',
-        (WidgetTester tester) async {
-          fakeCharacterRepository.charactersToReturn = const [
-            CharacterSummary(id: '42', name: 'Borgan Pierrefort', level: 3, xp: 900),
-          ];
-          final observer = RouteObserver<PageRoute<dynamic>>();
+        'fois revenu sur la liste', (WidgetTester tester) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(
+          id: '42',
+          name: 'Borgan Pierrefort',
+          level: 3,
+          xp: 900,
+        ),
+      ];
+      final observer = RouteObserver<PageRoute<dynamic>>();
 
-          await tester.pumpWidget(buildTestWidget(routeObserver: observer));
-          await tester.pumpAndSettle();
-          expect(fakeCharacterRepository.fetchCallCount, 1);
+      await tester.pumpWidget(buildTestWidget(routeObserver: observer));
+      await tester.pumpAndSettle();
+      expect(fakeCharacterRepository.fetchCallCount, 1);
 
-          await tester.tap(find.byType(CharacterCard));
-          await tester.pumpAndSettle();
-          expect(find.text('Fiche personnage 42'), findsOneWidget);
+      await tester.tap(find.byType(CharacterCard));
+      await tester.pumpAndSettle();
+      expect(find.text('Fiche personnage 42'), findsOneWidget);
 
-          fakeCharacterRepository.charactersToReturn = const [
-            CharacterSummary(id: '42', name: 'Borgan Pierrefort', level: 4, xp: 2700),
-          ];
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(
+          id: '42',
+          name: 'Borgan Pierrefort',
+          level: 4,
+          xp: 2700,
+        ),
+      ];
 
-          // Pop direct de la fiche vers la liste (le flux réel "Montée de
-          // niveau" empile une route supplémentaire par-dessus la fiche puis
-          // dépile jusqu'à la liste ; `didPopNext` se déclenche de la même
-          // façon dans les deux cas — seul compte le fait que cet écran
-          // redevienne visible après un pop, peu importe la profondeur de la
-          // pile dépilée, voir la documentation de classe de
-          // `CharacterListScreen`).
-          await tester.tap(find.text('Retour'));
-          await tester.pumpAndSettle();
+      // Pop direct de la fiche vers la liste (le flux réel "Montée de
+      // niveau" empile une route supplémentaire par-dessus la fiche puis
+      // dépile jusqu'à la liste ; `didPopNext` se déclenche de la même
+      // façon dans les deux cas — seul compte le fait que cet écran
+      // redevienne visible après un pop, peu importe la profondeur de la
+      // pile dépilée, voir la documentation de classe de
+      // `CharacterListScreen`).
+      await tester.tap(find.text('Retour'));
+      await tester.pumpAndSettle();
 
-          expect(find.text('Niv. 4'), findsOneWidget);
-          expect(fakeCharacterRepository.fetchCallCount, 2);
-        },
-      );
+      expect(find.text('Niv. 4'), findsOneWidget);
+      expect(fakeCharacterRepository.fetchCallCount, 2);
+    });
 
-      testWidgets(
-        'un simple retour depuis la fiche personnage SANS aucune écriture '
-        'ne casse rien : refetch inoffensif (redondant mais sans effet '
-        "visible), pas de crash au démontage de l'écran",
-        (WidgetTester tester) async {
-          const unchanged = [
-            CharacterSummary(
-              id: '42',
-              name: 'Halltesse Ambrelune',
-              level: 5,
-              xp: 7000,
-            ),
-          ];
-          fakeCharacterRepository.charactersToReturn = unchanged;
-          final observer = RouteObserver<PageRoute<dynamic>>();
+    testWidgets(
+      'un simple retour depuis la fiche personnage SANS aucune écriture '
+      'ne casse rien : refetch inoffensif (redondant mais sans effet '
+      "visible), pas de crash au démontage de l'écran",
+      (WidgetTester tester) async {
+        const unchanged = [
+          CharacterSummary(
+            id: '42',
+            name: 'Halltesse Ambrelune',
+            level: 5,
+            xp: 7000,
+          ),
+        ];
+        fakeCharacterRepository.charactersToReturn = unchanged;
+        final observer = RouteObserver<PageRoute<dynamic>>();
 
-          await tester.pumpWidget(buildTestWidget(routeObserver: observer));
-          await tester.pumpAndSettle();
-          expect(fakeCharacterRepository.fetchCallCount, 1);
+        await tester.pumpWidget(buildTestWidget(routeObserver: observer));
+        await tester.pumpAndSettle();
+        expect(fakeCharacterRepository.fetchCallCount, 1);
 
-          await tester.tap(find.byType(CharacterCard));
-          await tester.pumpAndSettle();
-          expect(find.text('Fiche personnage 42'), findsOneWidget);
+        await tester.tap(find.byType(CharacterCard));
+        await tester.pumpAndSettle();
+        expect(find.text('Fiche personnage 42'), findsOneWidget);
 
-          // Aucune écriture simulée ici (`charactersToReturn` inchangé) :
-          // simple consultation de la fiche puis retour immédiat.
-          await tester.tap(find.text('Retour'));
-          await tester.pumpAndSettle();
+        // Aucune écriture simulée ici (`charactersToReturn` inchangé) :
+        // simple consultation de la fiche puis retour immédiat.
+        await tester.tap(find.text('Retour'));
+        await tester.pumpAndSettle();
 
-          // Refetch quand même déclenché (comportement voulu, documenté sur
-          // `CharacterListScreen` : pas d'optimisation pour éviter un
-          // refetch inutile), mais sans régression visible : la carte
-          // affiche toujours les mêmes données, aucune exception levée
-          // pendant le pop (ce test échouerait sinon, `tester.pumpAndSettle`
-          // remonte toute exception non interceptée).
-          expect(find.text('Halltesse Ambrelune'), findsOneWidget);
-          expect(find.text('Niv. 5'), findsOneWidget);
-          expect(fakeCharacterRepository.fetchCallCount, 2);
-        },
-      );
+        // Refetch quand même déclenché (comportement voulu, documenté sur
+        // `CharacterListScreen` : pas d'optimisation pour éviter un
+        // refetch inutile), mais sans régression visible : la carte
+        // affiche toujours les mêmes données, aucune exception levée
+        // pendant le pop (ce test échouerait sinon, `tester.pumpAndSettle`
+        // remonte toute exception non interceptée).
+        expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+        expect(find.text('Niv. 5'), findsOneWidget);
+        expect(fakeCharacterRepository.fetchCallCount, 2);
+      },
+    );
 
-      testWidgets(
-        'ne relance pas charactersProvider au premier affichage (pas de '
-        'pop encore survenu)',
-        (WidgetTester tester) async {
-          fakeCharacterRepository.charactersToReturn = const [];
+    testWidgets(
+      'ne relance pas charactersProvider au premier affichage (pas de '
+      'pop encore survenu)',
+      (WidgetTester tester) async {
+        fakeCharacterRepository.charactersToReturn = const [];
 
-          await tester.pumpWidget(buildTestWidget());
-          await tester.pumpAndSettle();
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
 
-          expect(fakeCharacterRepository.fetchCallCount, 1);
-        },
-      );
-    },
-  );
+        expect(fakeCharacterRepository.fetchCallCount, 1);
+      },
+    );
+  });
 
   testWidgets(
     'le bouton profil rond navigue vers l\'écran "Profil" (route /profile) '

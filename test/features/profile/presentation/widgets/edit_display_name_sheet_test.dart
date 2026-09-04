@@ -49,7 +49,10 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
-  Future<void> signUp({required String email, required String password}) async {}
+  Future<void> signUp({
+    required String email,
+    required String password,
+  }) async {}
 
   @override
   Future<void> signOut() async {}
@@ -128,29 +131,23 @@ Future<_FakeAuthRepository> _pumpSheet(
 }
 
 void main() {
-  testWidgets(
-    'préremplit le champ depuis `user_metadata[\'full_name\']` quand '
-    'présent',
-    (tester) async {
-      await _pumpSheet(tester, user: _fakeUser(fullName: 'Aranea'));
+  testWidgets('préremplit le champ depuis `user_metadata[\'full_name\']` quand '
+      'présent', (tester) async {
+    await _pumpSheet(tester, user: _fakeUser(fullName: 'Aranea'));
 
-      expect(find.text('PSEUDO'), findsOneWidget);
-      expect(find.text("NOM D'AFFICHAGE"), findsOneWidget);
-      final field = tester.widget<TextFormField>(find.byType(TextFormField));
-      expect(field.controller!.text, 'Aranea');
-    },
-  );
+    expect(find.text('PSEUDO'), findsOneWidget);
+    expect(find.text("NOM D'AFFICHAGE"), findsOneWidget);
+    final field = tester.widget<TextFormField>(find.byType(TextFormField));
+    expect(field.controller!.text, 'Aranea');
+  });
 
-  testWidgets(
-    'champ vide (jamais prérempli avec le fallback d\'affichage '
-    '"Aventurier") quand `full_name` est absent',
-    (tester) async {
-      await _pumpSheet(tester, user: _fakeUser());
+  testWidgets('champ vide (jamais prérempli avec le fallback d\'affichage '
+      '"Aventurier") quand `full_name` est absent', (tester) async {
+    await _pumpSheet(tester, user: _fakeUser());
 
-      final field = tester.widget<TextFormField>(find.byType(TextFormField));
-      expect(field.controller!.text, isEmpty);
-    },
-  );
+    final field = tester.widget<TextFormField>(find.byType(TextFormField));
+    expect(field.controller!.text, isEmpty);
+  });
 
   testWidgets(
     '"Enregistrer" : envoie la valeur trimée, ferme la sheet et laisse '
@@ -158,10 +155,7 @@ void main() {
     (tester) async {
       final repository = await _pumpSheet(tester);
 
-      await tester.enterText(
-        find.byType(TextFormField),
-        '  Nouveau nom  ',
-      );
+      await tester.enterText(find.byType(TextFormField), '  Nouveau nom  ');
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
       await tester.pumpAndSettle();
@@ -173,23 +167,20 @@ void main() {
     },
   );
 
-  testWidgets(
-    'champ vidé (texte blanc après trim) envoie `null`, équivalent à '
-    '"non défini"',
-    (tester) async {
-      final repository = await _pumpSheet(
-        tester,
-        user: _fakeUser(fullName: 'Ancien nom'),
-      );
+  testWidgets('champ vidé (texte blanc après trim) envoie `null`, équivalent à '
+      '"non défini"', (tester) async {
+    final repository = await _pumpSheet(
+      tester,
+      user: _fakeUser(fullName: 'Ancien nom'),
+    );
 
-      await tester.enterText(find.byType(TextFormField), '   ');
-      await tester.pump();
-      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
-      await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), '   ');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+    await tester.pumpAndSettle();
 
-      expect(repository.lastDisplayName, isNull);
-    },
-  );
+    expect(repository.lastDisplayName, isNull);
+  });
 
   testWidgets(
     'pendant la sauvegarde : "Enregistrer" en isLoading, "Annuler" et le X '
@@ -239,7 +230,10 @@ void main() {
       );
       expect(find.byType(TextFormField), findsOneWidget);
       expect(
-        tester.widget<TextFormField>(find.byType(TextFormField)).controller!.text,
+        tester
+            .widget<TextFormField>(find.byType(TextFormField))
+            .controller!
+            .text,
         'Nom pas encore enregistré.',
       );
       expect(
@@ -267,28 +261,30 @@ void main() {
 
       expect(find.text('Erreur serveur.'), findsOneWidget);
       expect(
-        tester.widget<TextFormField>(find.byType(TextFormField)).controller!.text,
+        tester
+            .widget<TextFormField>(find.byType(TextFormField))
+            .controller!
+            .text,
         'En cours de saisie.',
       );
     },
   );
 
-  testWidgets(
-    'échec inattendu (pas une AuthFailure) : bandeau générique '
-    '"Impossible d\'enregistrer les modifications. Réessayez."',
-    (tester) async {
-      final repository = await _pumpSheet(tester);
-      repository.errorToThrow = Exception('boom');
+  testWidgets('échec inattendu (pas une AuthFailure) : bandeau générique '
+      '"Impossible d\'enregistrer les modifications. Réessayez."', (
+    tester,
+  ) async {
+    final repository = await _pumpSheet(tester);
+    repository.errorToThrow = Exception('boom');
 
-      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text("Impossible d'enregistrer les modifications. Réessayez."),
-        findsOneWidget,
-      );
-    },
-  );
+    expect(
+      find.text("Impossible d'enregistrer les modifications. Réessayez."),
+      findsOneWidget,
+    );
+  });
 
   testWidgets(
     'pendant la sauvegarde : ni le geste retour Android, ni un tap sur le '

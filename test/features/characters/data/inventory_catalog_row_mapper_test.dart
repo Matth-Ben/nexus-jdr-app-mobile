@@ -60,10 +60,12 @@ void main() {
     });
 
     test('un id sans traduction résolue retombe sur un libellé générique', () {
-      final result = InventoryCatalogRowMapper.toInventoryCatalogItem(
-        {'id': 42, 'category': 'outil', 'weight': null, 'cost': null},
-        names: const {},
-      );
+      final result = InventoryCatalogRowMapper.toInventoryCatalogItem({
+        'id': 42,
+        'category': 'outil',
+        'weight': null,
+        'cost': null,
+      }, names: const {});
 
       expect(result.name, 'Objet #42');
       expect(result.weight, isNull);
@@ -72,10 +74,11 @@ void main() {
 
     test('une catégorie manquante/inattendue retombe sur '
         "'equipement_general'", () {
-      final result = InventoryCatalogRowMapper.toInventoryCatalogItem(
-        {'id': 1, 'weight': null, 'cost': null},
-        names: const {},
-      );
+      final result = InventoryCatalogRowMapper.toInventoryCatalogItem({
+        'id': 1,
+        'weight': null,
+        'cost': null,
+      }, names: const {});
 
       expect(result.category, 'equipement_general');
     });

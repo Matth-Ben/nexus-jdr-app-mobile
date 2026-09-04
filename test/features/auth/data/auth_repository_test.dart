@@ -50,9 +50,8 @@ void main() {
           return http.Response('{}', 200, request: request);
         });
 
-        await SupabaseAuthRepository(
-          client,
-        ).resetPasswordForEmail(email: 'joueur@exemple.com');
+        await SupabaseAuthRepository(client)
+            .resetPasswordForEmail(email: 'joueur@exemple.com');
 
         expect(capturedRequest, isNotNull);
         expect(capturedRequest!.url.path, endsWith('/recover'));
@@ -60,125 +59,110 @@ void main() {
           capturedRequest!.url.queryParameters['redirect_to'],
           'https://nexus-jdr.app/update-password',
         );
-        final body =
-            jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+        final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
         expect(body['email'], 'joueur@exemple.com');
       },
     );
 
-    test(
-      'traduit une AuthException (ex. rate limit) en AuthFailure, même '
-      'gestion que les autres méthodes du dépôt',
-      () async {
-        final client = _buildFakeSupabaseClient((request) async {
-          return http.Response(
-            jsonEncode({
-              'error_code': 'over_email_send_rate_limit',
-              'msg': 'Email rate limit exceeded',
-            }),
-            429,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        });
-
-        await expectLater(
-          SupabaseAuthRepository(
-            client,
-          ).resetPasswordForEmail(email: 'joueur@exemple.com'),
-          throwsA(isA<AuthFailure>()),
+    test('traduit une AuthException (ex. rate limit) en AuthFailure, même '
+        'gestion que les autres méthodes du dépôt', () async {
+      final client = _buildFakeSupabaseClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'error_code': 'over_email_send_rate_limit',
+            'msg': 'Email rate limit exceeded',
+          }),
+          429,
+          request: request,
+          headers: {'content-type': 'application/json'},
         );
-      },
-    );
+      });
 
-    test(
-      "remonte un message réseau générique quand l'appel échoue sans "
-      'réponse HTTP (ex. absence de réseau) — le SDK enveloppe déjà ce cas '
-      'dans une `AuthRetryableFetchException` (`AuthException`), traitée '
-      'par `mapAuthException` (voir `auth_error_mapper_test.dart`), jamais '
-      "par le `catch` générique de ce dépôt (`mapUnknownError` n'est donc "
-      'pas atteint directement ici, seulement via le message identique '
-      'qu\'il produit)',
-      () async {
-        final client = _buildFakeSupabaseClient((request) async {
-          throw Exception('Pas de réseau (double de test).');
-        });
+      await expectLater(
+        SupabaseAuthRepository(client)
+            .resetPasswordForEmail(email: 'joueur@exemple.com'),
+        throwsA(isA<AuthFailure>()),
+      );
+    });
 
-        await expectLater(
-          SupabaseAuthRepository(
-            client,
-          ).resetPasswordForEmail(email: 'joueur@exemple.com'),
-          throwsA(
-            isA<AuthFailure>().having(
-              (failure) => failure.message,
-              'message',
-              contains('connexion internet'),
-            ),
+    test("remonte un message réseau générique quand l'appel échoue sans "
+        'réponse HTTP (ex. absence de réseau) — le SDK enveloppe déjà ce cas '
+        'dans une `AuthRetryableFetchException` (`AuthException`), traitée '
+        'par `mapAuthException` (voir `auth_error_mapper_test.dart`), jamais '
+        "par le `catch` générique de ce dépôt (`mapUnknownError` n'est donc "
+        'pas atteint directement ici, seulement via le message identique '
+        'qu\'il produit)', () async {
+      final client = _buildFakeSupabaseClient((request) async {
+        throw Exception('Pas de réseau (double de test).');
+      });
+
+      await expectLater(
+        SupabaseAuthRepository(client)
+            .resetPasswordForEmail(email: 'joueur@exemple.com'),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.message,
+            'message',
+            contains('connexion internet'),
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   });
 
   group('SupabaseAuthRepository.signInWithPassword', () {
-    test(
-      "remonte un message réseau générique quand l'appel échoue sans "
-      'réponse HTTP (ex. absence de réseau) - même mécanisme '
-      '`AuthRetryableFetchException` que `resetPasswordForEmail` ci-dessus, '
-      "vérifié ici directement sur `signInWithPassword` plutôt que déduit "
-      'par analogie',
-      () async {
-        final client = _buildFakeSupabaseClient((request) async {
-          throw Exception('Pas de réseau (double de test).');
-        });
+    test("remonte un message réseau générique quand l'appel échoue sans "
+        'réponse HTTP (ex. absence de réseau) - même mécanisme '
+        '`AuthRetryableFetchException` que `resetPasswordForEmail` ci-dessus, '
+        "vérifié ici directement sur `signInWithPassword` plutôt que déduit "
+        'par analogie', () async {
+      final client = _buildFakeSupabaseClient((request) async {
+        throw Exception('Pas de réseau (double de test).');
+      });
 
-        await expectLater(
-          SupabaseAuthRepository(client).signInWithPassword(
-            email: 'joueur@exemple.com',
-            password: 'password1234',
+      await expectLater(
+        SupabaseAuthRepository(client).signInWithPassword(
+          email: 'joueur@exemple.com',
+          password: 'password1234',
+        ),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.message,
+            'message',
+            contains('connexion internet'),
           ),
-          throwsA(
-            isA<AuthFailure>().having(
-              (failure) => failure.message,
-              'message',
-              contains('connexion internet'),
-            ),
-          ),
+        ),
+      );
+    });
+
+    test('traduit une AuthException (identifiants invalides) en AuthFailure '
+        'avec le message dédié', () async {
+      final client = _buildFakeSupabaseClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'error_code': 'invalid_credentials',
+            'msg': 'Invalid login credentials',
+          }),
+          400,
+          request: request,
+          headers: {'content-type': 'application/json'},
         );
-      },
-    );
+      });
 
-    test(
-      'traduit une AuthException (identifiants invalides) en AuthFailure '
-      'avec le message dédié',
-      () async {
-        final client = _buildFakeSupabaseClient((request) async {
-          return http.Response(
-            jsonEncode({
-              'error_code': 'invalid_credentials',
-              'msg': 'Invalid login credentials',
-            }),
-            400,
-            request: request,
-            headers: {'content-type': 'application/json'},
-          );
-        });
-
-        await expectLater(
-          SupabaseAuthRepository(client).signInWithPassword(
-            email: 'joueur@exemple.com',
-            password: 'mauvais-mot-de-passe',
+      await expectLater(
+        SupabaseAuthRepository(client).signInWithPassword(
+          email: 'joueur@exemple.com',
+          password: 'mauvais-mot-de-passe',
+        ),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.message,
+            'message',
+            'Adresse e-mail ou mot de passe incorrect.',
           ),
-          throwsA(
-            isA<AuthFailure>().having(
-              (failure) => failure.message,
-              'message',
-              'Adresse e-mail ou mot de passe incorrect.',
-            ),
-          ),
-        );
-      },
-    );
+        ),
+      );
+    });
   });
 
   group('SupabaseAuthRepository.signUp', () {
@@ -193,10 +177,8 @@ void main() {
         });
 
         await expectLater(
-          SupabaseAuthRepository(client).signUp(
-            email: 'nouveau@exemple.com',
-            password: 'password1234',
-          ),
+          SupabaseAuthRepository(client)
+              .signUp(email: 'nouveau@exemple.com', password: 'password1234'),
           throwsA(
             isA<AuthFailure>().having(
               (failure) => failure.message,
@@ -257,16 +239,15 @@ void main() {
     );
   });
   group('SupabaseAuthRepository.updateDisplayName', () {
-    Future<http.Response> Function(http.Request request) buildUpdateUserHandler({
+    Future<http.Response> Function(http.Request request)
+    buildUpdateUserHandler({
       required Map<String, dynamic> initialUserMetadata,
       required void Function(http.Request request) onCapture,
     }) {
       return (request) async {
         if (request.url.path.endsWith('/token')) {
           return http.Response(
-            jsonEncode(
-              _fakeSessionJson(userMetadata: initialUserMetadata),
-            ),
+            jsonEncode(_fakeSessionJson(userMetadata: initialUserMetadata)),
             200,
             request: request,
             headers: {'content-type': 'application/json'},
@@ -306,14 +287,12 @@ void main() {
           password: 'password1234',
         );
 
-        await SupabaseAuthRepository(
-          client,
-        ).updateDisplayName(displayName: '  Aranea Nightsong  ');
+        await SupabaseAuthRepository(client)
+            .updateDisplayName(displayName: '  Aranea Nightsong  ');
 
         expect(capturedRequest, isNotNull);
         expect(capturedRequest!.url.path, endsWith('/user'));
-        final body =
-            jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+        final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
         final data = body['data'] as Map<String, dynamic>;
         expect(
           data['full_name'],
@@ -330,65 +309,54 @@ void main() {
       },
     );
 
-    test(
-      'displayName `null` retire la clé `full_name` de `user_metadata` sans '
-      'toucher aux autres clés existantes',
-      () async {
-        http.Request? capturedRequest;
-        final client = _buildFakeSupabaseClient(
-          buildUpdateUserHandler(
-            initialUserMetadata: {
-              'full_name': 'Ancien nom',
-              'some_other_key': 'valeur préexistante',
-            },
-            onCapture: (request) => capturedRequest = request,
-          ),
-        );
+    test('displayName `null` retire la clé `full_name` de `user_metadata` sans '
+        'toucher aux autres clés existantes', () async {
+      http.Request? capturedRequest;
+      final client = _buildFakeSupabaseClient(
+        buildUpdateUserHandler(
+          initialUserMetadata: {
+            'full_name': 'Ancien nom',
+            'some_other_key': 'valeur préexistante',
+          },
+          onCapture: (request) => capturedRequest = request,
+        ),
+      );
 
-        await client.auth.signInWithPassword(
-          email: 'joueur@exemple.com',
-          password: 'password1234',
-        );
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
 
-        await SupabaseAuthRepository(client).updateDisplayName(
-          displayName: null,
-        );
+      await SupabaseAuthRepository(client).updateDisplayName(displayName: null);
 
-        final body =
-            jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
-        final data = body['data'] as Map<String, dynamic>;
-        expect(data.containsKey('full_name'), isFalse);
-        expect(data['some_other_key'], 'valeur préexistante');
-      },
-    );
+      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>;
+      expect(data.containsKey('full_name'), isFalse);
+      expect(data['some_other_key'], 'valeur préexistante');
+    });
 
-    test(
-      'displayName vide/blanc après trim est traité comme `null` (retire '
-      '`full_name`), même coalescing que la sheet appelante',
-      () async {
-        http.Request? capturedRequest;
-        final client = _buildFakeSupabaseClient(
-          buildUpdateUserHandler(
-            initialUserMetadata: {'full_name': 'Ancien nom'},
-            onCapture: (request) => capturedRequest = request,
-          ),
-        );
+    test('displayName vide/blanc après trim est traité comme `null` (retire '
+        '`full_name`), même coalescing que la sheet appelante', () async {
+      http.Request? capturedRequest;
+      final client = _buildFakeSupabaseClient(
+        buildUpdateUserHandler(
+          initialUserMetadata: {'full_name': 'Ancien nom'},
+          onCapture: (request) => capturedRequest = request,
+        ),
+      );
 
-        await client.auth.signInWithPassword(
-          email: 'joueur@exemple.com',
-          password: 'password1234',
-        );
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
 
-        await SupabaseAuthRepository(client).updateDisplayName(
-          displayName: '   ',
-        );
+      await SupabaseAuthRepository(client)
+          .updateDisplayName(displayName: '   ');
 
-        final body =
-            jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
-        final data = body['data'] as Map<String, dynamic>;
-        expect(data.containsKey('full_name'), isFalse);
-      },
-    );
+      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>;
+      expect(data.containsKey('full_name'), isFalse);
+    });
 
     test(
       "remonte un message réseau générique quand l'appel échoue sans "
@@ -413,9 +381,8 @@ void main() {
         );
 
         await expectLater(
-          SupabaseAuthRepository(
-            client,
-          ).updateDisplayName(displayName: 'Aranea'),
+          SupabaseAuthRepository(client)
+              .updateDisplayName(displayName: 'Aranea'),
           throwsA(
             isA<AuthFailure>().having(
               (failure) => failure.message,
@@ -457,9 +424,8 @@ void main() {
         password: 'password1234',
       );
 
-      await SupabaseAuthRepository(
-        client,
-      ).updatePassword(newPassword: 'nouveauMotDePasse123');
+      await SupabaseAuthRepository(client)
+          .updatePassword(newPassword: 'nouveauMotDePasse123');
 
       expect(capturedRequest, isNotNull);
       final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
@@ -489,9 +455,8 @@ void main() {
         );
 
         await expectLater(
-          SupabaseAuthRepository(
-            client,
-          ).updatePassword(newPassword: 'nouveauMotDePasse123'),
+          SupabaseAuthRepository(client)
+              .updatePassword(newPassword: 'nouveauMotDePasse123'),
           throwsA(
             isA<AuthFailure>().having(
               (failure) => failure.message,
@@ -533,9 +498,8 @@ void main() {
         password: 'password1234',
       );
 
-      await SupabaseAuthRepository(
-        client,
-      ).updateEmail(newEmail: 'nouveau@exemple.com');
+      await SupabaseAuthRepository(client)
+          .updateEmail(newEmail: 'nouveau@exemple.com');
 
       expect(capturedRequest, isNotNull);
       final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
@@ -565,9 +529,8 @@ void main() {
         );
 
         await expectLater(
-          SupabaseAuthRepository(
-            client,
-          ).updateEmail(newEmail: 'nouveau@exemple.com'),
+          SupabaseAuthRepository(client)
+              .updateEmail(newEmail: 'nouveau@exemple.com'),
           throwsA(
             isA<AuthFailure>().having(
               (failure) => failure.message,
@@ -581,334 +544,315 @@ void main() {
   });
 
   group('SupabaseAuthRepository.updateAvatar', () {
-    test(
-      'envoie les octets au bucket `character-portraits` sous '
-      '`{ownerId}/avatar/...`, puis fusionne `avatar_url` dans '
-      '`user_metadata` existant sans l\'écraser',
-      () async {
-        http.Request? uploadRequest;
-        http.Request? userRequest;
-        final client = _buildFakeSupabaseClient((request) async {
-          if (request.url.path.endsWith('/token')) {
-            return http.Response(
-              jsonEncode(
-                _fakeSessionJson(
-                  userMetadata: {'some_other_key': 'valeur préexistante'},
-                ),
+    test('envoie les octets au bucket `character-portraits` sous '
+        '`{ownerId}/avatar/...`, puis fusionne `avatar_url` dans '
+        '`user_metadata` existant sans l\'écraser', () async {
+      http.Request? uploadRequest;
+      http.Request? userRequest;
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          return http.Response(
+            jsonEncode(
+              _fakeSessionJson(
+                userMetadata: {'some_other_key': 'valeur préexistante'},
               ),
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          if (request.url.path.contains('/storage/v1/object/')) {
-            uploadRequest = request;
-            return http.Response(
-              jsonEncode({'Key': 'character-portraits/fake-user-id/avatar/1.png'}),
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          if (request.url.path.endsWith('/user')) {
-            userRequest = request;
-            final body = jsonDecode(request.body) as Map<String, dynamic>;
-            return http.Response(
-              jsonEncode({
-                ..._fakeUserJson(
-                  userMetadata: {'some_other_key': 'valeur préexistante'},
-                ),
-                'user_metadata': body['data'],
-              }),
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          return http.Response('{}', 200, request: request);
-        });
-
-        await client.auth.signInWithPassword(
-          email: 'joueur@exemple.com',
-          password: 'password1234',
-        );
-
-        final publicUrl = await SupabaseAuthRepository(
-          client,
-        ).updateAvatar(bytes: Uint8List.fromList([1, 2, 3]));
-
-        expect(uploadRequest, isNotNull);
-        expect(
-          uploadRequest!.url.path,
-          contains('/object/character-portraits/fake-user-id/avatar/'),
-        );
-        expect(uploadRequest!.url.path, endsWith('.png'));
-
-        expect(userRequest, isNotNull);
-        final body = jsonDecode(userRequest!.body) as Map<String, dynamic>;
-        final data = body['data'] as Map<String, dynamic>;
-        expect(data['avatar_url'], publicUrl);
-        expect(
-          data['some_other_key'],
-          'valeur préexistante',
-          reason:
-              '`user_metadata` existant ne doit jamais être écrasé, seule '
-              'la clé `avatar_url` doit être affectée',
-        );
-      },
-    );
-
-    test(
-      'échec de l\'upload (StorageException) : AuthFailure avec le message '
-      'du serveur',
-      () async {
-        final client = _buildFakeSupabaseClient((request) async {
-          if (request.url.path.endsWith('/token')) {
-            return http.Response(
-              jsonEncode(_fakeSessionJson()),
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          if (request.url.path.contains('/storage/v1/object/')) {
-            return http.Response(
-              jsonEncode({'message': 'Bucket introuvable.'}),
-              400,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          return http.Response('{}', 200, request: request);
-        });
-
-        await client.auth.signInWithPassword(
-          email: 'joueur@exemple.com',
-          password: 'password1234',
-        );
-
-        await expectLater(
-          SupabaseAuthRepository(
-            client,
-          ).updateAvatar(bytes: Uint8List.fromList([1, 2, 3])),
-          throwsA(
-            isA<AuthFailure>().having(
-              (failure) => failure.message,
-              'message',
-              'Bucket introuvable.',
             ),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.contains('/storage/v1/object/')) {
+          uploadRequest = request;
+          return http.Response(
+            jsonEncode({
+              'Key': 'character-portraits/fake-user-id/avatar/1.png',
+            }),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.endsWith('/user')) {
+          userRequest = request;
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            jsonEncode({
+              ..._fakeUserJson(
+                userMetadata: {'some_other_key': 'valeur préexistante'},
+              ),
+              'user_metadata': body['data'],
+            }),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      });
+
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
+
+      final publicUrl = await SupabaseAuthRepository(client)
+          .updateAvatar(bytes: Uint8List.fromList([1, 2, 3]));
+
+      expect(uploadRequest, isNotNull);
+      expect(
+        uploadRequest!.url.path,
+        contains('/object/character-portraits/fake-user-id/avatar/'),
+      );
+      expect(uploadRequest!.url.path, endsWith('.png'));
+
+      expect(userRequest, isNotNull);
+      final body = jsonDecode(userRequest!.body) as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>;
+      expect(data['avatar_url'], publicUrl);
+      expect(
+        data['some_other_key'],
+        'valeur préexistante',
+        reason:
+            '`user_metadata` existant ne doit jamais être écrasé, seule '
+            'la clé `avatar_url` doit être affectée',
+      );
+    });
+
+    test('échec de l\'upload (StorageException) : AuthFailure avec le message '
+        'du serveur', () async {
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          return http.Response(
+            jsonEncode(_fakeSessionJson()),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.contains('/storage/v1/object/')) {
+          return http.Response(
+            jsonEncode({'message': 'Bucket introuvable.'}),
+            400,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      });
+
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
+
+      await expectLater(
+        SupabaseAuthRepository(client)
+            .updateAvatar(bytes: Uint8List.fromList([1, 2, 3])),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.message,
+            'message',
+            'Bucket introuvable.',
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
 
-    test(
-      "remonte un message réseau générique quand l'appel échoue sans "
-      'réponse HTTP (ex. absence de réseau)',
-      () async {
-        final client = _buildFakeSupabaseClient((request) async {
-          if (request.url.path.endsWith('/token')) {
-            return http.Response(
-              jsonEncode(_fakeSessionJson()),
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          throw Exception('Pas de réseau (double de test).');
-        });
+    test("remonte un message réseau générique quand l'appel échoue sans "
+        'réponse HTTP (ex. absence de réseau)', () async {
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          return http.Response(
+            jsonEncode(_fakeSessionJson()),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        throw Exception('Pas de réseau (double de test).');
+      });
 
-        await client.auth.signInWithPassword(
-          email: 'joueur@exemple.com',
-          password: 'password1234',
-        );
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
 
-        await expectLater(
-          SupabaseAuthRepository(
-            client,
-          ).updateAvatar(bytes: Uint8List.fromList([1, 2, 3])),
-          throwsA(
-            isA<AuthFailure>().having(
-              (failure) => failure.message,
-              'message',
-              contains('connexion internet'),
-            ),
+      await expectLater(
+        SupabaseAuthRepository(client)
+            .updateAvatar(bytes: Uint8List.fromList([1, 2, 3])),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.message,
+            'message',
+            contains('connexion internet'),
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   });
 
   group('SupabaseAuthRepository.removeAvatar', () {
-    test(
-      'supprime le fichier correspondant à `avatar_url` du bucket puis '
-      'retire la clé `avatar_url` de `user_metadata` sans toucher aux '
-      'autres clés existantes',
-      () async {
-        http.Request? deleteRequest;
-        http.Request? userRequest;
-        const avatarUrl =
-            'https://fake.supabase.test/storage/v1/object/public/'
-            'character-portraits/fake-user-id/avatar/1.png';
-        final client = _buildFakeSupabaseClient((request) async {
-          if (request.url.path.endsWith('/token')) {
-            return http.Response(
-              jsonEncode(
-                _fakeSessionJson(
-                  userMetadata: {
-                    'avatar_url': avatarUrl,
-                    'some_other_key': 'valeur préexistante',
-                  },
-                ),
+    test('supprime le fichier correspondant à `avatar_url` du bucket puis '
+        'retire la clé `avatar_url` de `user_metadata` sans toucher aux '
+        'autres clés existantes', () async {
+      http.Request? deleteRequest;
+      http.Request? userRequest;
+      const avatarUrl =
+          'https://fake.supabase.test/storage/v1/object/public/'
+          'character-portraits/fake-user-id/avatar/1.png';
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          return http.Response(
+            jsonEncode(
+              _fakeSessionJson(
+                userMetadata: {
+                  'avatar_url': avatarUrl,
+                  'some_other_key': 'valeur préexistante',
+                },
               ),
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          if (request.method == 'DELETE' &&
-              request.url.path.contains('/storage/v1/object/')) {
-            deleteRequest = request;
-            return http.Response(
-              '[]',
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          if (request.url.path.endsWith('/user')) {
-            userRequest = request;
-            return http.Response(
-              jsonEncode(_fakeUserJson()),
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          return http.Response('{}', 200, request: request);
-        });
-
-        await client.auth.signInWithPassword(
-          email: 'joueur@exemple.com',
-          password: 'password1234',
-        );
-
-        await SupabaseAuthRepository(client).removeAvatar();
-
-        expect(deleteRequest, isNotNull);
-        final deleteBody =
-            jsonDecode(deleteRequest!.body) as Map<String, dynamic>;
-        expect(
-          (deleteBody['prefixes'] as List).single,
-          'fake-user-id/avatar/1.png',
-        );
-
-        expect(userRequest, isNotNull);
-        final body = jsonDecode(userRequest!.body) as Map<String, dynamic>;
-        final data = body['data'] as Map<String, dynamic>;
-        expect(data.containsKey('avatar_url'), isFalse);
-        expect(data['some_other_key'], 'valeur préexistante');
-      },
-    );
-
-    test(
-      "aucun `avatar_url` en cours : aucune requête de suppression tentée, "
-      'seule la mise à jour de `user_metadata` est envoyée',
-      () async {
-        var deleteCallCount = 0;
-        http.Request? userRequest;
-        final client = _buildFakeSupabaseClient((request) async {
-          if (request.url.path.endsWith('/token')) {
-            return http.Response(
-              jsonEncode(
-                _fakeSessionJson(
-                  userMetadata: {'some_other_key': 'valeur préexistante'},
-                ),
-              ),
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          if (request.method == 'DELETE' &&
-              request.url.path.contains('/storage/v1/object/')) {
-            deleteCallCount++;
-            return http.Response(
-              '[]',
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          if (request.url.path.endsWith('/user')) {
-            userRequest = request;
-            return http.Response(
-              jsonEncode(_fakeUserJson()),
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          return http.Response('{}', 200, request: request);
-        });
-
-        await client.auth.signInWithPassword(
-          email: 'joueur@exemple.com',
-          password: 'password1234',
-        );
-
-        await SupabaseAuthRepository(client).removeAvatar();
-
-        expect(deleteCallCount, 0);
-        expect(userRequest, isNotNull);
-        final body = jsonDecode(userRequest!.body) as Map<String, dynamic>;
-        final data = body['data'] as Map<String, dynamic>;
-        expect(data['some_other_key'], 'valeur préexistante');
-      },
-    );
-
-    test(
-      "remonte un message réseau générique quand l'appel échoue sans "
-      'réponse HTTP (ex. absence de réseau)',
-      () async {
-        final client = _buildFakeSupabaseClient((request) async {
-          if (request.url.path.endsWith('/token')) {
-            return http.Response(
-              jsonEncode(
-                _fakeSessionJson(
-                  userMetadata: {
-                    'avatar_url':
-                        'https://fake.supabase.test/storage/v1/object/'
-                        'public/character-portraits/fake-user-id/avatar/'
-                        '1.png',
-                  },
-                ),
-              ),
-              200,
-              request: request,
-              headers: {'content-type': 'application/json'},
-            );
-          }
-          throw Exception('Pas de réseau (double de test).');
-        });
-
-        await client.auth.signInWithPassword(
-          email: 'joueur@exemple.com',
-          password: 'password1234',
-        );
-
-        await expectLater(
-          SupabaseAuthRepository(client).removeAvatar(),
-          throwsA(
-            isA<AuthFailure>().having(
-              (failure) => failure.message,
-              'message',
-              contains('connexion internet'),
             ),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.method == 'DELETE' &&
+            request.url.path.contains('/storage/v1/object/')) {
+          deleteRequest = request;
+          return http.Response(
+            '[]',
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.endsWith('/user')) {
+          userRequest = request;
+          return http.Response(
+            jsonEncode(_fakeUserJson()),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      });
+
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
+
+      await SupabaseAuthRepository(client).removeAvatar();
+
+      expect(deleteRequest, isNotNull);
+      final deleteBody =
+          jsonDecode(deleteRequest!.body) as Map<String, dynamic>;
+      expect(
+        (deleteBody['prefixes'] as List).single,
+        'fake-user-id/avatar/1.png',
+      );
+
+      expect(userRequest, isNotNull);
+      final body = jsonDecode(userRequest!.body) as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>;
+      expect(data.containsKey('avatar_url'), isFalse);
+      expect(data['some_other_key'], 'valeur préexistante');
+    });
+
+    test("aucun `avatar_url` en cours : aucune requête de suppression tentée, "
+        'seule la mise à jour de `user_metadata` est envoyée', () async {
+      var deleteCallCount = 0;
+      http.Request? userRequest;
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          return http.Response(
+            jsonEncode(
+              _fakeSessionJson(
+                userMetadata: {'some_other_key': 'valeur préexistante'},
+              ),
+            ),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.method == 'DELETE' &&
+            request.url.path.contains('/storage/v1/object/')) {
+          deleteCallCount++;
+          return http.Response(
+            '[]',
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.endsWith('/user')) {
+          userRequest = request;
+          return http.Response(
+            jsonEncode(_fakeUserJson()),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      });
+
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
+
+      await SupabaseAuthRepository(client).removeAvatar();
+
+      expect(deleteCallCount, 0);
+      expect(userRequest, isNotNull);
+      final body = jsonDecode(userRequest!.body) as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>;
+      expect(data['some_other_key'], 'valeur préexistante');
+    });
+
+    test("remonte un message réseau générique quand l'appel échoue sans "
+        'réponse HTTP (ex. absence de réseau)', () async {
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          return http.Response(
+            jsonEncode(
+              _fakeSessionJson(
+                userMetadata: {
+                  'avatar_url':
+                      'https://fake.supabase.test/storage/v1/object/'
+                      'public/character-portraits/fake-user-id/avatar/'
+                      '1.png',
+                },
+              ),
+            ),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        throw Exception('Pas de réseau (double de test).');
+      });
+
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
+
+      await expectLater(
+        SupabaseAuthRepository(client).removeAvatar(),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.message,
+            'message',
+            contains('connexion internet'),
           ),
-        );
-      },
-    );
+        ),
+      );
+    });
   });
   group('SupabaseAuthRepository.deleteAccount', () {
     test(

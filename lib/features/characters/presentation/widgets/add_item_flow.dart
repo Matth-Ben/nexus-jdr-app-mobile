@@ -102,8 +102,7 @@ class _AddItemEntrySheetContent extends StatelessWidget {
           SheetActionRow(
             icon: Icons.search,
             label: 'Depuis le catalogue',
-            onTap: () =>
-                Navigator.of(context).pop(AddItemEntryChoice.catalog),
+            onTap: () => Navigator.of(context).pop(AddItemEntryChoice.catalog),
           ),
           const SheetActionDivider(),
           SheetActionRow(
@@ -203,10 +202,7 @@ class _ItemCatalogPickerContentState
                   controller: _searchController,
                   decoration: const InputDecoration(
                     hintText: 'Rechercher un objet...',
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: AppColors.textMuted,
-                    ),
+                    prefixIcon: Icon(Icons.search, color: AppColors.textMuted),
                   ),
                 ),
               ),
@@ -423,8 +419,7 @@ class _ItemQuantitySheetContent extends StatefulWidget {
       _ItemQuantitySheetContentState();
 }
 
-class _ItemQuantitySheetContentState
-    extends State<_ItemQuantitySheetContent> {
+class _ItemQuantitySheetContentState extends State<_ItemQuantitySheetContent> {
   int _quantity = 1;
 
   @override

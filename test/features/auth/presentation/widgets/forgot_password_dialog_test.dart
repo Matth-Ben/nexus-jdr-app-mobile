@@ -52,7 +52,10 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
-  Future<void> signUp({required String email, required String password}) async {}
+  Future<void> signUp({
+    required String email,
+    required String password,
+  }) async {}
 
   @override
   Future<void> signOut() async {}
@@ -102,20 +105,24 @@ void main() {
     );
   }
 
-  Future<void> openDialog(WidgetTester tester, {String initialEmail = ''}) async {
+  Future<void> openDialog(
+    WidgetTester tester, {
+    String initialEmail = '',
+  }) async {
     await tester.pumpWidget(buildTestWidget(initialEmail: initialEmail));
     await tester.tap(find.text('Ouvrir'));
     await tester.pumpAndSettle();
   }
 
-  testWidgets('préremplit le champ avec l\'e-mail déjà saisi sur le formulaire de connexion', (
-    WidgetTester tester,
-  ) async {
-    await openDialog(tester, initialEmail: 'nom@exemple.com');
+  testWidgets(
+    'préremplit le champ avec l\'e-mail déjà saisi sur le formulaire de connexion',
+    (WidgetTester tester) async {
+      await openDialog(tester, initialEmail: 'nom@exemple.com');
 
-    final field = tester.widget<TextFormField>(find.byType(TextFormField));
-    expect(field.controller?.text, 'nom@exemple.com');
-  });
+      final field = tester.widget<TextFormField>(find.byType(TextFormField));
+      expect(field.controller?.text, 'nom@exemple.com');
+    },
+  );
 
   testWidgets('affiche le champ vide si aucun e-mail n\'était saisi', (
     WidgetTester tester,

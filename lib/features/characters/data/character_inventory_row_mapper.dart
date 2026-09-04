@@ -190,9 +190,7 @@ abstract final class CharacterInventoryRowMapper {
           equipped: row['equipped'] == true,
           totalWeight: hasKnownWeight ? unitWeight * quantity : null,
           unitWeight: unitWeight,
-          costAmount: itemId != null
-              ? parseCostAmount(itemRow?['cost'])
-              : null,
+          costAmount: itemId != null ? parseCostAmount(itemRow?['cost']) : null,
           description: itemId != null ? descriptions[itemId.toString()] : null,
           rarity: itemRow?['rarity'] as String?,
           requiresAttunement: itemRow?['requires_attunement'] == true,

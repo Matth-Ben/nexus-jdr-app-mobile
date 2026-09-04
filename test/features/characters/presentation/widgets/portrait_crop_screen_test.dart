@@ -108,7 +108,10 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<WriteOutcome> addXp({required String characterId, required int newXp}) {
+  Future<WriteOutcome> addXp({
+    required String characterId,
+    required int newXp,
+  }) {
     throw UnimplementedError();
   }
 
@@ -302,52 +305,48 @@ void main() {
     expect(find.widgetWithText(PrimaryButton, 'VALIDER'), findsOneWidget);
   });
 
-  testWidgets(
-    "pendant l'envoi : Valider en isLoading, Annuler desactive",
-    (tester) async {
-      final repository = await _pumpScreen(tester);
-      repository.gateUploadPortrait = true;
+  testWidgets("pendant l'envoi : Valider en isLoading, Annuler desactive", (
+    tester,
+  ) async {
+    final repository = await _pumpScreen(tester);
+    repository.gateUploadPortrait = true;
 
-      await tester.runAsync(() async {
-        await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
-        await tester.pump();
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-        await tester.pump();
-      });
+    await tester.runAsync(() async {
+      await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
+      await tester.pump();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await tester.pump();
+    });
 
-      expect(repository.uploadPortraitCallCount, 1);
+    expect(repository.uploadPortraitCallCount, 1);
 
-      final primaryButton = tester.widget<PrimaryButton>(
-        find.byType(PrimaryButton),
-      );
-      expect(primaryButton.isLoading, isTrue);
+    final primaryButton = tester.widget<PrimaryButton>(
+      find.byType(PrimaryButton),
+    );
+    expect(primaryButton.isLoading, isTrue);
 
-      final secondaryButton = tester.widget<SecondaryButton>(
-        find.widgetWithText(SecondaryButton, 'ANNULER'),
-      );
-      expect(secondaryButton.onPressed, isNull);
+    final secondaryButton = tester.widget<SecondaryButton>(
+      find.widgetWithText(SecondaryButton, 'ANNULER'),
+    );
+    expect(secondaryButton.onPressed, isNull);
 
-      repository.gate.complete();
-      await tester.pumpAndSettle();
-    },
-  );
+    repository.gate.complete();
+    await tester.pumpAndSettle();
+  });
 
-  testWidgets(
-    "succes : envoie les octets captures a "
-    "CharacterRepository.uploadPortrait pour le bon characterId, "
-    "ferme l'ecran (pop(true))",
-    (tester) async {
-      final repository = await _pumpScreen(tester);
+  testWidgets("succes : envoie les octets captures a "
+      "CharacterRepository.uploadPortrait pour le bon characterId, "
+      "ferme l'ecran (pop(true))", (tester) async {
+    final repository = await _pumpScreen(tester);
 
-      await _tapValiderAndSettle(tester);
+    await _tapValiderAndSettle(tester);
 
-      expect(repository.uploadPortraitCallCount, 1);
-      expect(repository.lastCharacterId, 'char-1');
-      expect(repository.lastBytes, isNotNull);
-      expect(repository.lastBytes!.isNotEmpty, isTrue);
-      expect(find.text('RECADRAGE'), findsNothing);
-    },
-  );
+    expect(repository.uploadPortraitCallCount, 1);
+    expect(repository.lastCharacterId, 'char-1');
+    expect(repository.lastBytes, isNotNull);
+    expect(repository.lastBytes!.isNotEmpty, isTrue);
+    expect(find.text('RECADRAGE'), findsNothing);
+  });
 
   testWidgets(
     "CharacterFailure : bandeau d'alerte inline affiche failure.message, "
@@ -379,31 +378,28 @@ void main() {
     },
   );
 
-  testWidgets(
-    "le bouton retour visible (WoodBackHeader) reste garde par "
-    "isUploading : aucun effet pendant l'envoi",
-    (tester) async {
-      final repository = await _pumpScreen(tester);
-      repository.gateUploadPortrait = true;
+  testWidgets("le bouton retour visible (WoodBackHeader) reste garde par "
+      "isUploading : aucun effet pendant l'envoi", (tester) async {
+    final repository = await _pumpScreen(tester);
+    repository.gateUploadPortrait = true;
 
-      await tester.runAsync(() async {
-        await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
-        await tester.pump();
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-        await tester.pump();
-      });
-
-      expect(repository.uploadPortraitCallCount, 1);
-
-      await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+    await tester.runAsync(() async {
+      await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
       await tester.pump();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await tester.pump();
+    });
 
-      expect(find.text('RECADRAGE'), findsOneWidget);
+    expect(repository.uploadPortraitCallCount, 1);
 
-      repository.gate.complete();
-      await tester.pumpAndSettle();
-    },
-  );
+    await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+    await tester.pump();
+
+    expect(find.text('RECADRAGE'), findsOneWidget);
+
+    repository.gate.complete();
+    await tester.pumpAndSettle();
+  });
 
   testWidgets(
     'PopScope(canPop: !_isUploading) : le geste retour Android (systeme) '

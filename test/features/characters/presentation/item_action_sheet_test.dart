@@ -111,20 +111,19 @@ void main() {
   }
 
   group('sheet d\'actions', () {
-    testWidgets(
-      'un objet personnalisé n\'a que "Infos" et "Retirer"',
-      (tester) async {
-        await pumpSheet(tester, item: _customItem);
+    testWidgets('un objet personnalisé n\'a que "Infos" et "Retirer"', (
+      tester,
+    ) async {
+      await pumpSheet(tester, item: _customItem);
 
-        expect(find.text('Petit sac de sable'), findsOneWidget);
-        expect(find.text('Objet personnalisé · x1'), findsOneWidget);
-        expect(find.text('Infos'), findsOneWidget);
-        expect(find.text('Utiliser'), findsNothing);
-        expect(find.text('Équiper'), findsNothing);
-        expect(find.text('Déséquiper'), findsNothing);
-        expect(find.text('Retirer'), findsOneWidget);
-      },
-    );
+      expect(find.text('Petit sac de sable'), findsOneWidget);
+      expect(find.text('Objet personnalisé · x1'), findsOneWidget);
+      expect(find.text('Infos'), findsOneWidget);
+      expect(find.text('Utiliser'), findsNothing);
+      expect(find.text('Équiper'), findsNothing);
+      expect(find.text('Déséquiper'), findsNothing);
+      expect(find.text('Retirer'), findsOneWidget);
+    });
 
     testWidgets(
       'une arme non équipée : "Équiper" (pas "Utiliser", pas consommable)',
@@ -190,19 +189,16 @@ void main() {
       },
     );
 
-    testWidgets(
-      '"Retirer" confirmé appelle onRemoveItem',
-      (tester) async {
-        await pumpSheet(tester, item: _sword);
+    testWidgets('"Retirer" confirmé appelle onRemoveItem', (tester) async {
+      await pumpSheet(tester, item: _sword);
 
-        await tester.tap(find.text('Retirer'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Retirer'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Retirer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Retirer'));
+      await tester.pumpAndSettle();
 
-        expect(removeCalls, [_sword]);
-      },
-    );
+      expect(removeCalls, [_sword]);
+    });
   });
 
   group('panneau "Infos"', () {

@@ -51,8 +51,7 @@ class _ForgotPasswordDialog extends ConsumerStatefulWidget {
       _ForgotPasswordDialogState();
 }
 
-class _ForgotPasswordDialogState
-    extends ConsumerState<_ForgotPasswordDialog> {
+class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _emailController;
   bool _isLoading = false;

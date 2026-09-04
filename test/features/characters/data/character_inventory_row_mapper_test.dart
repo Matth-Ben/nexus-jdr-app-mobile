@@ -100,7 +100,9 @@ void main() {
         "d'arme (weapon_properties absente)", () {
       expect(CharacterInventoryRowMapper.parseWeaponProperties(null), isNull);
       expect(
-        CharacterInventoryRowMapper.parseWeaponProperties({'category': 'outil'}),
+        CharacterInventoryRowMapper.parseWeaponProperties({
+          'category': 'outil',
+        }),
         isNull,
       );
     });

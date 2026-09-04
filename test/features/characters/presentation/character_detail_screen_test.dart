@@ -847,7 +847,8 @@ void main() {
       expect(
         fakeRepository.fetchDetailCallCount,
         greaterThan(1),
-        reason: 'un succès doit invalider `characterDetailProvider`, '
+        reason:
+            'un succès doit invalider `characterDetailProvider`, '
             'déclenchant un refetch',
       );
       expect(find.text('Histoire mise à jour.'), findsOneWidget);

@@ -189,23 +189,22 @@ void main() {
     },
   );
 
-  testWidgets(
-    'aucun niveau éligible disponible : "Lancer" est désactivé',
-    (tester) async {
-      await pumpPanel(
-        tester,
-        spell: _fireball,
-        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 2)],
-      );
+  testWidgets('aucun niveau éligible disponible : "Lancer" est désactivé', (
+    tester,
+  ) async {
+    await pumpPanel(
+      tester,
+      spell: _fireball,
+      spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 2)],
+    );
 
-      final button = tester.widget<PrimaryButton>(
-        find.widgetWithText(PrimaryButton, 'LANCER'),
-      );
-      expect(button.onPressed, isNull);
+    final button = tester.widget<PrimaryButton>(
+      find.widgetWithText(PrimaryButton, 'LANCER'),
+    );
+    expect(button.onPressed, isNull);
 
-      expect(castCalls, isEmpty);
-      // Le panneau reste ouvert.
-      expect(find.text('BOULE DE FEU'), findsOneWidget);
-    },
-  );
+    expect(castCalls, isEmpty);
+    // Le panneau reste ouvert.
+    expect(find.text('BOULE DE FEU'), findsOneWidget);
+  });
 }

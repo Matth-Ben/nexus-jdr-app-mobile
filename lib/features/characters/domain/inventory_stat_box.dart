@@ -10,7 +10,11 @@ import '../domain/currency_kind.dart';
 /// `CharacterSpellEntry`/`CharacterInventoryItem` : donnée en lecture seule
 /// déjà entièrement formatée par l'appelant, affichée telle quelle.
 class InventoryStatBox {
-  const InventoryStatBox({required this.value, required this.unit, this.currency});
+  const InventoryStatBox({
+    required this.value,
+    required this.unit,
+    this.currency,
+  });
 
   /// Montant déjà formaté (voir `GoldAmountFormatter`/`WeightFormatter`
   /// selon le cas), affiché en gros dans la box.

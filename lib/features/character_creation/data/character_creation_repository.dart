@@ -827,15 +827,10 @@ class SupabaseCharacterCreationRepository
           row['entity_id'] as String: row['value'] as String,
     };
     return AlignmentCatalog(
-      alignments: _rowsOf(payload['alignments'])
-          .map((row) {
-            final id = (row['id'] as num).toInt();
-            return AlignmentOption(
-              id: id,
-              name: names[id.toString()] ?? '',
-            );
-          })
-          .toList(),
+      alignments: _rowsOf(payload['alignments']).map((row) {
+        final id = (row['id'] as num).toInt();
+        return AlignmentOption(id: id, name: names[id.toString()] ?? '');
+      }).toList(),
     );
   }
 

@@ -233,7 +233,9 @@ void main() {
     await tester.enterText(find.byType(TextFormField).first, '50');
     await tester.pump();
 
-    await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER LA RÉCOMPENSE'));
+    await tester.tap(
+      find.widgetWithText(PrimaryButton, 'AJOUTER LA RÉCOMPENSE'),
+    );
     await tester.pumpAndSettle();
 
     expect(lastCurrencyDeltas, {CurrencyKind.gold: 50});
@@ -251,7 +253,10 @@ void main() {
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextFormField).last, 'Amulette de famille');
+      await tester.enterText(
+        find.byType(TextFormField).last,
+        'Amulette de famille',
+      );
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
       await tester.pumpAndSettle();
@@ -276,31 +281,30 @@ void main() {
     },
   );
 
-  testWidgets(
-    'validation avec un objet personnalisé : onApply reçoit la liste '
-    'complète, un seul appel',
-    (tester) async {
-      await _pumpSheet(tester);
+  testWidgets('validation avec un objet personnalisé : onApply reçoit la liste '
+      'complète, un seul appel', (tester) async {
+    await _pumpSheet(tester);
 
-      await tester.tap(find.text('Ajouter un objet'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Objet personnalisé'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField).last, 'Amulette');
-      await tester.pump();
-      await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Ajouter un objet'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Objet personnalisé'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).last, 'Amulette');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER LA RÉCOMPENSE'));
-      await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithText(PrimaryButton, 'AJOUTER LA RÉCOMPENSE'),
+    );
+    await tester.pumpAndSettle();
 
-      expect(lastCurrencyDeltas, isEmpty);
-      expect(lastItems, hasLength(1));
-      expect(lastItems!.single.customName, 'Amulette');
-      expect(lastItems!.single.quantity, 1);
-      expect(lastItems!.single.isCustom, isTrue);
-    },
-  );
+    expect(lastCurrencyDeltas, isEmpty);
+    expect(lastItems, hasLength(1));
+    expect(lastItems!.single.customName, 'Amulette');
+    expect(lastItems!.single.quantity, 1);
+    expect(lastItems!.single.isCustom, isTrue);
+  });
 
   testWidgets(
     '"+ Ajouter un objet" -> "Depuis le catalogue" ajoute une ligne à la '

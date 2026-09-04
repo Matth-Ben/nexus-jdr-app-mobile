@@ -204,7 +204,9 @@ class FakeRepository implements CharacterRepository {
         currencyCp:
             newCurrencyTotals[CurrencyKind.copper] ?? current.currencyCp,
       );
-      throw const CharacterFailure('Objets non ajoutés (échec partiel simulé).');
+      throw const CharacterFailure(
+        'Objets non ajoutés (échec partiel simulé).',
+      );
     }
     return outcomeToReturn;
   }
@@ -364,8 +366,9 @@ Future<FakeRepository> pumpDetail(WidgetTester tester) async {
           routes: [
             GoRoute(
               path: '/characters/:id',
-              builder: (context, state) =>
-                  CharacterDetailScreen(characterId: state.pathParameters['id']!),
+              builder: (context, state) => CharacterDetailScreen(
+                characterId: state.pathParameters['id']!,
+              ),
             ),
           ],
         ),
@@ -509,7 +512,9 @@ void main() {
       // celui de l'or.
       await tester.enterText(find.byType(TextFormField).first, '5');
       await tester.pump();
-      await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER LA RÉCOMPENSE'));
+      await tester.tap(
+        find.widgetWithText(PrimaryButton, 'AJOUTER LA RÉCOMPENSE'),
+      );
       await tester.pumpAndSettle();
 
       expect(repository.addRewardCallCount, 1);
@@ -632,12 +637,17 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField).first, '5');
       await tester.pump();
-      await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER LA RÉCOMPENSE'));
+      await tester.tap(
+        find.widgetWithText(PrimaryButton, 'AJOUTER LA RÉCOMPENSE'),
+      );
       await tester.pumpAndSettle();
 
       expect(repository.addRewardCallCount, 1);
       expect(repository.lastRewardCurrencyTotals, {CurrencyKind.gold: 15});
-      expect(find.text('Objets non ajoutés (échec partiel simulé).'), findsOneWidget);
+      expect(
+        find.text('Objets non ajoutés (échec partiel simulé).'),
+        findsOneWidget,
+      );
 
       // Sans le correctif (invalidation aussi sur le chemin d'échec), la
       // fiche affichée resterait périvée à 10 PO : un retry avec le même
@@ -648,7 +658,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField).first, '5');
       await tester.pump();
-      await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER LA RÉCOMPENSE'));
+      await tester.tap(
+        find.widgetWithText(PrimaryButton, 'AJOUTER LA RÉCOMPENSE'),
+      );
       await tester.pumpAndSettle();
 
       expect(repository.addRewardCallCount, 2);

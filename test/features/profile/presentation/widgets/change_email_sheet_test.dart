@@ -48,7 +48,10 @@ class _FakeAuthRepository implements AuthRepository {
   }) async {}
 
   @override
-  Future<void> signUp({required String email, required String password}) async {}
+  Future<void> signUp({
+    required String email,
+    required String password,
+  }) async {}
 
   @override
   Future<void> signOut() async {}
@@ -214,10 +217,7 @@ void main() {
     (tester) async {
       final repository = await _pumpSheet(tester, connected: false);
 
-      await tester.enterText(
-        find.byType(TextFormField),
-        'nouveau@exemple.com',
-      );
+      await tester.enterText(find.byType(TextFormField), 'nouveau@exemple.com');
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
       await tester.pumpAndSettle();
@@ -228,7 +228,10 @@ void main() {
       );
       expect(find.byType(TextFormField), findsOneWidget);
       expect(
-        tester.widget<TextFormField>(find.byType(TextFormField)).controller!.text,
+        tester
+            .widget<TextFormField>(find.byType(TextFormField))
+            .controller!
+            .text,
         'nouveau@exemple.com',
       );
       expect(repository.updateEmailCallCount, 0);
@@ -242,10 +245,7 @@ void main() {
       final repository = await _pumpSheet(tester);
       repository.errorToThrow = const AuthFailure('Erreur serveur.');
 
-      await tester.enterText(
-        find.byType(TextFormField),
-        'nouveau@exemple.com',
-      );
+      await tester.enterText(find.byType(TextFormField), 'nouveau@exemple.com');
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
       await tester.pumpAndSettle();
@@ -261,10 +261,7 @@ void main() {
       final repository = await _pumpSheet(tester);
       repository.errorToThrow = Exception('boom');
 
-      await tester.enterText(
-        find.byType(TextFormField),
-        'nouveau@exemple.com',
-      );
+      await tester.enterText(find.byType(TextFormField), 'nouveau@exemple.com');
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
       await tester.pumpAndSettle();
@@ -283,10 +280,7 @@ void main() {
       final repository = await _pumpSheet(tester);
       repository.gateUpdateEmail = true;
 
-      await tester.enterText(
-        find.byType(TextFormField),
-        'nouveau@exemple.com',
-      );
+      await tester.enterText(find.byType(TextFormField), 'nouveau@exemple.com');
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
       await tester.pump();
