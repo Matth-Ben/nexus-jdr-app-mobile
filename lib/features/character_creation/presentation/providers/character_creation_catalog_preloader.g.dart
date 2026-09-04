@@ -62,6 +62,16 @@ part of 'character_creation_catalog_preloader.dart';
 /// échoué) avant que l'utilisateur n'atteigne l'assistant de création, les
 /// providers `fetchXxxCatalog` habituels prennent simplement le relais,
 /// exactement comme avant ce chantier.
+///
+/// Compromis assumé : si l'utilisateur atteint l'assistant de création
+/// pendant qu'un catalogue est encore en cours de préchargement, deux
+/// requêtes réseau indépendantes partent pour la même donnée (celle du
+/// préchargeur et celle du provider d'écran habituel, aucune garde
+/// anti-doublon). Sans danger — `ReferenceDataCache.put` est un upsert
+/// atomique par appel, dernier écrivain gagne — juste un aller-retour réseau
+/// superflu dans cette fenêtre de recouvrement, jugé négligeable au vu de sa
+/// rareté (fenêtre de quelques centaines de ms typiquement) face à la
+/// complexité d'une garde dédiée.
 
 @ProviderFor(characterCreationCatalogPreloader)
 final characterCreationCatalogPreloaderProvider =
@@ -121,6 +131,16 @@ final characterCreationCatalogPreloaderProvider =
 /// échoué) avant que l'utilisateur n'atteigne l'assistant de création, les
 /// providers `fetchXxxCatalog` habituels prennent simplement le relais,
 /// exactement comme avant ce chantier.
+///
+/// Compromis assumé : si l'utilisateur atteint l'assistant de création
+/// pendant qu'un catalogue est encore en cours de préchargement, deux
+/// requêtes réseau indépendantes partent pour la même donnée (celle du
+/// préchargeur et celle du provider d'écran habituel, aucune garde
+/// anti-doublon). Sans danger — `ReferenceDataCache.put` est un upsert
+/// atomique par appel, dernier écrivain gagne — juste un aller-retour réseau
+/// superflu dans cette fenêtre de recouvrement, jugé négligeable au vu de sa
+/// rareté (fenêtre de quelques centaines de ms typiquement) face à la
+/// complexité d'une garde dédiée.
 
 final class CharacterCreationCatalogPreloaderProvider
     extends
@@ -184,6 +204,16 @@ final class CharacterCreationCatalogPreloaderProvider
   /// échoué) avant que l'utilisateur n'atteigne l'assistant de création, les
   /// providers `fetchXxxCatalog` habituels prennent simplement le relais,
   /// exactement comme avant ce chantier.
+  ///
+  /// Compromis assumé : si l'utilisateur atteint l'assistant de création
+  /// pendant qu'un catalogue est encore en cours de préchargement, deux
+  /// requêtes réseau indépendantes partent pour la même donnée (celle du
+  /// préchargeur et celle du provider d'écran habituel, aucune garde
+  /// anti-doublon). Sans danger — `ReferenceDataCache.put` est un upsert
+  /// atomique par appel, dernier écrivain gagne — juste un aller-retour réseau
+  /// superflu dans cette fenêtre de recouvrement, jugé négligeable au vu de sa
+  /// rareté (fenêtre de quelques centaines de ms typiquement) face à la
+  /// complexité d'une garde dédiée.
   CharacterCreationCatalogPreloaderProvider._()
     : super(
         from: null,
