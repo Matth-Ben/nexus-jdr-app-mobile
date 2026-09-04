@@ -2,9 +2,11 @@
 // avatar (statique/dynamique selon `user_metadata['avatar_url']`)/nom/e-mail
 // (fallback "Aventurier" quand `user_metadata['full_name']` est absent/vide),
 // bandeau "Compte lié à l'app Histoires", les 5 lignes de menu (navigation
-// vers `ProfileEditScreen` pour "Modifier le profil", `SnackBar` "Bientôt
-// disponible" pour les 3 non implémentées), bouton "Se déconnecter", pied de
-// page version.
+// vers `ProfileEditScreen` pour "Modifier le profil",
+// `ProfilePrivacyScreen` pour "Confidentialité et données",
+// `ProfileHelpScreen` pour "Aide et support", `SnackBar` "Bientôt
+// disponible" pour "Notifications", seule tuile encore non implémentée),
+// bouton "Se déconnecter", pied de page version.
 //
 // `currentUserProvider`/`authRepositoryProvider` injectés via
 // `overrideWithValue`, jamais `Supabase.instance.client` — même stratégie que
@@ -22,6 +24,7 @@ import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/presentation/profile_edit_screen.dart';
+import 'package:personnages/features/profile/presentation/profile_help_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_privacy_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -144,6 +147,10 @@ void main() {
               path: '/profile/privacy',
               builder: (context, state) => const ProfilePrivacyScreen(),
             ),
+            GoRoute(
+              path: '/profile/help',
+              builder: (context, state) => const ProfileHelpScreen(),
+            ),
           ],
         ),
       ),
@@ -233,15 +240,14 @@ void main() {
     },
   );
 
-  testWidgets(
-    'avatar : silhouette par défaut sans `avatar_url`',
-    (tester) async {
-      await pumpProfile(tester, user: _fakeUser());
+  testWidgets('avatar : silhouette par défaut sans `avatar_url`', (
+    tester,
+  ) async {
+    await pumpProfile(tester, user: _fakeUser());
 
-      expect(find.byIcon(Icons.person), findsOneWidget);
-      expect(find.byType(ClipOval), findsNothing);
-    },
-  );
+    expect(find.byIcon(Icons.person), findsOneWidget);
+    expect(find.byType(ClipOval), findsNothing);
+  });
 
   testWidgets(
     'avatar : image réseau configurée sur `avatar_url` quand défini — '
@@ -265,20 +271,19 @@ void main() {
     },
   );
 
-  testWidgets(
-    'avatar : URL inaccessible (échec réseau/décodage) replie sur la '
-    'silhouette par défaut plutôt que de laisser une icône d\'erreur brute',
-    (tester) async {
-      const url = 'https://exemple.com/avatar-introuvable.png';
-      await pumpProfile(tester, user: _fakeUser(avatarUrl: url));
-      // Laisse le temps à l'échec réseau simulé de se propager — voir
-      // `portrait_frame_test.dart` pour le rationale détaillé de ce
-      // `pumpAndSettle` supplémentaire.
-      await tester.pumpAndSettle();
+  testWidgets('avatar : URL inaccessible (échec réseau/décodage) replie sur la '
+      'silhouette par défaut plutôt que de laisser une icône d\'erreur brute', (
+    tester,
+  ) async {
+    const url = 'https://exemple.com/avatar-introuvable.png';
+    await pumpProfile(tester, user: _fakeUser(avatarUrl: url));
+    // Laisse le temps à l'échec réseau simulé de se propager — voir
+    // `portrait_frame_test.dart` pour le rationale détaillé de ce
+    // `pumpAndSettle` supplémentaire.
+    await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.person), findsOneWidget);
-    },
-  );
+    expect(find.byIcon(Icons.person), findsOneWidget);
+  });
 
   testWidgets('taper "Signaler un bug" ouvre la sheet "SIGNALER UN BUG"', (
     tester,
@@ -293,18 +298,15 @@ void main() {
     expect(find.text('SIGNALER UN BUG'), findsOneWidget);
   });
 
-  for (final label in const ['Notifications', 'Aide et support']) {
-    testWidgets('taper "$label" affiche le SnackBar "Bientôt disponible"', (
-      tester,
-    ) async {
-      await pumpProfile(tester, user: _fakeUser());
+  testWidgets('taper "Notifications" affiche le SnackBar "Bientôt '
+      'disponible"', (tester) async {
+    await pumpProfile(tester, user: _fakeUser());
 
-      await tester.tap(find.text(label));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Notifications'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Bientôt disponible'), findsOneWidget);
-    });
-  }
+    expect(find.text('Bientôt disponible'), findsOneWidget);
+  });
 
   testWidgets(
     'taper "Confidentialité et données" pousse `ProfilePrivacyScreen` '
@@ -320,6 +322,22 @@ void main() {
       // `profile_privacy_screen_test.dart` pour le détail de cet écran.
       expect(find.text('CONFIDENTIALITÉ ET DONNÉES'), findsOneWidget);
       expect(find.text('Export de mes données'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'taper "Aide et support" pousse `ProfileHelpScreen` (`/profile/help`)',
+    (tester) async {
+      await pumpProfile(tester, user: _fakeUser());
+
+      await tester.tap(find.text('Aide et support'));
+      await tester.pumpAndSettle();
+
+      // `ProfileHelpScreen` (route `/profile/help`) : bandeau bois "AIDE ET
+      // SUPPORT" + ses 3 tuiles, voir `profile_help_screen_test.dart` pour
+      // le détail de cet écran.
+      expect(find.text('AIDE ET SUPPORT'), findsOneWidget);
+      expect(find.text('Contacter le support'), findsOneWidget);
     },
   );
 

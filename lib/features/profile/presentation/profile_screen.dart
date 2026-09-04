@@ -7,6 +7,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/destructive_button.dart';
 import '../../../core/widgets/info_banner.dart';
+import '../../../core/widgets/menu_tile.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import 'providers/package_info_provider.dart';
@@ -92,31 +93,31 @@ class ProfileScreen extends ConsumerWidget {
                     message: "Compte lié à l'app Histoires",
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  _MenuTile(
+                  MenuTile(
                     icon: Icons.person_outline,
                     label: 'Modifier le profil',
                     onTap: () => context.push('/profile/edit'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  _MenuTile(
+                  MenuTile(
                     icon: Icons.notifications_none,
                     label: 'Notifications',
                     onTap: () => _showComingSoon(context),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  _MenuTile(
+                  MenuTile(
                     icon: Icons.privacy_tip_outlined,
                     label: 'Confidentialité et données',
                     onTap: () => context.push('/profile/privacy'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  _MenuTile(
+                  MenuTile(
                     icon: Icons.help_outline,
                     label: 'Aide et support',
-                    onTap: () => _showComingSoon(context),
+                    onTap: () => context.push('/profile/help'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  _MenuTile(
+                  MenuTile(
                     icon: Icons.bug_report_outlined,
                     label: 'Signaler un bug',
                     onTap: () => showReportBugSheet(context),
@@ -149,16 +150,15 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 
-  /// Tap sur "Notifications"/"Aide et support" — aucun de ces 2 écrans
-  /// n'existe encore (spec direction-artistique de la tâche) : même texte
-  /// exact que
+  /// Tap sur "Notifications" — seul écran encore inexistant de cette liste
+  /// (spec direction-artistique de la tâche) : même texte exact que
   /// `appearance_and_backstory_step_screen.dart::_showPortraitComingSoon`,
-  /// réutilisé mot pour mot plutôt qu'une nouvelle constante. "Confidentialité
-  /// et données" ne passe plus par cette méthode depuis l'incrément B du
-  /// chantier "Profil/Paramètres" (voir `ProfilePrivacyScreen`, route
-  /// `/profile/privacy`) — sa propre tuile "Politique de confidentialité"
-  /// réutilise en revanche ce même texte, indépendamment de cette méthode
-  /// (voir `ProfilePrivacyScreen._showComingSoon`).
+  /// réutilisé mot pour mot plutôt qu'une nouvelle constante.
+  /// "Confidentialité et données" (incrément B, `ProfilePrivacyScreen`) puis
+  /// "Aide et support" (incrément C, `ProfileHelpScreen`) ne passent plus par
+  /// cette méthode — leurs propres tuiles "Politique de confidentialité"/
+  /// "FAQ / Centre d'aide"/"Mentions légales / CGU" réutilisent en revanche
+  /// ce même texte, indépendamment de cette méthode.
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Bientôt disponible')));
@@ -224,71 +224,6 @@ class _ProfileAvatar extends StatelessWidget {
                 ),
               ),
             ),
-    );
-  }
-}
-
-/// Une des 5 lignes de menu ("Modifier le profil", "Notifications",
-/// "Confidentialité et données", "Aide et support", "Signaler un bug") — 5
-/// cartes visuellement indépendantes (spec direction-artistique de la tâche,
-/// en écart assumé avec le texte actuel de `10-design-system.md` section 4,
-/// "Liste de réglages", qui décrit une carte groupée à séparateurs : tranché
-/// en faveur de la maquette réelle par le chef de projet, voir le rapport de
-/// la tâche qui a introduit ce fichier).
-class _MenuTile extends StatelessWidget {
-  const _MenuTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.parchmentCard,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.md,
-            ),
-            child: Row(
-              children: [
-                Icon(icon, color: AppColors.textSecondary, size: 22),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: AppTypography.body(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  color: AppColors.textMuted,
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

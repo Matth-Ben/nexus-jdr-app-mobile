@@ -21,6 +21,7 @@ import '../../features/join_story/presentation/join_character_step_screen.dart';
 import '../../features/join_story/presentation/join_code_step_screen.dart';
 import '../../features/join_story/presentation/join_confirmation_step_screen.dart';
 import '../../features/profile/presentation/profile_edit_screen.dart';
+import '../../features/profile/presentation/profile_help_screen.dart';
 import '../../features/profile/presentation/profile_privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/xml_import/presentation/xml_import_review_screen.dart';
@@ -155,6 +156,13 @@ GoRouter appRouter(Ref ref) {
         // classe de `ProfilePrivacyScreen`.
         path: '/profile/privacy',
         builder: (context, state) => const ProfilePrivacyScreen(),
+      ),
+      GoRoute(
+        // Sous-écran "Aide et support" (`features/profile/`), poussé depuis
+        // la tuile éponyme de `ProfileScreen` — voir la doc de classe de
+        // `ProfileHelpScreen`.
+        path: '/profile/help',
+        builder: (context, state) => const ProfileHelpScreen(),
       ),
       GoRoute(
         path: '/characters/:id',

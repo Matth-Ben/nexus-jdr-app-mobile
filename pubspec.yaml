@@ -79,6 +79,12 @@ dependencies:
   # projet), donc `app_settings` plutôt que le plus lourd
   # `permission_handler`.
   app_settings: ^9.0.0
+  # Ouvre le client e-mail natif (URI `mailto:`) pour "Contacter le support"
+  # de l'écran "Aide et support"
+  # (`features/profile/presentation/profile_help_screen.dart`) — voir aussi
+  # le bloc `<queries>` ajouté à `android/app/src/main/AndroidManifest.xml`
+  # (Android 11+/API 30+ masque `canLaunchUrl` sans cette déclaration).
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
