@@ -775,12 +775,29 @@ class SupabaseCharacterCreationRepository
     );
     if (freshCached != null) return freshCached;
     try {
+      // Pas de colonne `name` directe sur `alignments` (vérifié contre le
+      // schéma réel — la doc `02-modele-donnees.md` la documente à tort
+      // comme une exception : une régression avait supposé le contraire,
+      // faisant échouer l'import XML avec 42703 `column alignments.name
+      // does not exist`). Résolue via `translations`, même pattern que
+      // `skills`/`races`/`classes`/`backgrounds` ci-dessus.
       final alignmentRows = await _client
           .from('alignments')
-          .select('id, name')
+          .select('id')
           .order('id', ascending: true);
+      final alignmentIds = <String>{
+        for (final row in alignmentRows)
+          if (row['id'] != null) row['id'].toString(),
+      };
+      final alignmentNameRows = await _fetchTranslationRows(
+        entityType: 'alignment',
+        entityIds: alignmentIds,
+      );
 
-      final payload = <String, dynamic>{'alignments': alignmentRows};
+      final payload = <String, dynamic>{
+        'alignments': alignmentRows,
+        'alignmentNames': alignmentNameRows,
+      };
       await _writeCacheBestEffort(_alignmentCatalogCacheKey, payload);
       return _mapAlignmentCatalogPayload(payload);
     } on PostgrestException catch (error) {
@@ -804,14 +821,20 @@ class SupabaseCharacterCreationRepository
   }
 
   AlignmentCatalog _mapAlignmentCatalogPayload(Map<String, dynamic> payload) {
+    final names = <String, String>{
+      for (final row in _rowsOf(payload['alignmentNames']))
+        if (row['entity_id'] is String && row['value'] is String)
+          row['entity_id'] as String: row['value'] as String,
+    };
     return AlignmentCatalog(
       alignments: _rowsOf(payload['alignments'])
-          .map(
-            (row) => AlignmentOption(
-              id: (row['id'] as num).toInt(),
-              name: row['name'] as String? ?? '',
-            ),
-          )
+          .map((row) {
+            final id = (row['id'] as num).toInt();
+            return AlignmentOption(
+              id: id,
+              name: names[id.toString()] ?? '',
+            );
+          })
           .toList(),
     );
   }

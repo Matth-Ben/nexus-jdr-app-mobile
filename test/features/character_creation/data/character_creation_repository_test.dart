@@ -295,10 +295,6 @@ void main() {
       },
     );
 
-    // `alignments.name` est une colonne directe (pas de résolution
-    // `translations`, voir la doc de classe d'`AlignmentOption`) : pas de
-    // ligne `translations` dans `tableRows`, contrairement aux 8 catalogues
-    // ci-dessus.
     _testCatalogCaching(
       description: 'fetchAlignmentCatalog',
       cacheKey: 'alignment_catalog',
@@ -306,13 +302,50 @@ void main() {
       fetch: (repository) => repository.fetchAlignmentCatalog(),
       tableRows: {
         'alignments': [
-          {'id': 8, 'name': 'Loyal bon'},
+          {'id': 8},
+        ],
+        'translations': [
+          {'entity_id': '8', 'value': 'Loyal bon'},
         ],
       },
       verifySuccess: (dynamic catalog) {
         expect(catalog.alignments, hasLength(1));
         expect(catalog.alignments.single.name, 'Loyal bon');
         expect(catalog.alignments.single.id, 8);
+      },
+    );
+
+    test(
+      'régression : la requête .select() sur `alignments` ne référence '
+      'jamais `name` (colonne inexistante sur cette table — vit dans '
+      '`translations`, même principe que les 8 autres catalogues '
+      'ci-dessus) — `02-modele-donnees.md` la documente à tort comme une '
+      'exception, régression réelle poussée sur `main` faisant échouer '
+      'l\'import XML avec `column alignments.name does not exist` (42703)',
+      () async {
+        String? capturedAlignmentsSelect;
+        final client = _buildFakeSupabaseClient(
+          tableRows: {
+            'alignments': [
+              {'id': 8},
+            ],
+            'translations': [
+              {'entity_id': '8', 'value': 'Loyal bon'},
+            ],
+          },
+          onRequest: (request) {
+            if (request.url.pathSegments.last == 'alignments') {
+              capturedAlignmentsSelect = request.url.queryParameters['select'];
+            }
+          },
+        );
+        final repository = SupabaseCharacterCreationRepository(client, cache);
+
+        final catalog = await repository.fetchAlignmentCatalog();
+
+        expect(capturedAlignmentsSelect, isNotNull);
+        expect(capturedAlignmentsSelect, isNot(contains('name')));
+        expect(catalog.alignments.single.name, 'Loyal bon');
       },
     );
   });
@@ -503,7 +536,7 @@ void _testCatalogTtl({
       final repositoryWithFreshCache = SupabaseCharacterCreationRepository(
         _buildFakeSupabaseClient(
           tableRows: tableRows,
-          onRequest: () => networkCallCount++,
+          onRequest: (_) => networkCallCount++,
         ),
         cache(),
       );
@@ -638,11 +671,14 @@ SupabaseClient _buildFakeSupabaseClient({
   // `SupabaseClient` construit ici, avant toute décision de réponse
   // (succès/échec) — permet aux tests TTL de compter précisément les appels
   // réseau, notamment pour prouver qu'un cache frais n'en déclenche
-  // strictement aucun (voir le groupe "TTL (cache d'abord si frais)").
-  void Function()? onRequest,
+  // strictement aucun (voir le groupe "TTL (cache d'abord si frais)"), et
+  // aux tests de régression de colonne d'inspecter la query string
+  // `select=...` réellement envoyée (voir la régression `alignments.name`
+  // ci-dessus, même principe que `character_repository_test.dart`).
+  void Function(http.Request request)? onRequest,
 }) {
   Future<http.Response> handler(http.Request request) async {
-    onRequest?.call();
+    onRequest?.call(request);
     if (throwOnRequest) {
       throw const SocketException('Pas de réseau (double de test).');
     }
