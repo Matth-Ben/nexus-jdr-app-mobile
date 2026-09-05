@@ -141,6 +141,8 @@ class _FakeCharacterRepository implements CharacterRepository {
     required String characterId,
     required RestType type,
     required String className,
+    int diceSpent = 0,
+    int appliedGain = 0,
   }) {
     throw UnimplementedError();
   }

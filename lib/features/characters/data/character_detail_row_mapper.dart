@@ -295,6 +295,7 @@ abstract final class CharacterDetailRowMapper {
             nestedClass?['saving_throw_proficiencies'],
           ),
           hitDie: (nestedClass?['hit_die'] as num?)?.toInt(),
+          hitDiceSpent: (classRow['hit_dice_spent'] as num?)?.toInt() ?? 0,
         ),
       );
     }

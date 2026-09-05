@@ -17,6 +17,7 @@ class CharacterDetailClassRow {
     required this.isPrimary,
     required this.savingThrowProficiencies,
     required this.hitDie,
+    this.hitDiceSpent = 0,
   });
 
   /// Identifiant de la classe (`classes.id`, entier côté Supabase, gardé en
@@ -50,6 +51,20 @@ class CharacterDetailClassRow {
   /// `character_creation/data/class_row_mapper.dart`, qui plante plutôt que
   /// deviner pour cette même colonne.
   final int? hitDie;
+
+  /// `character_classes.hit_dice_spent` : nombre de dés de vie déjà dépensés
+  /// pour cette classe (repos court, voir `domain/rest_type.dart`/
+  /// `presentation/widgets/rest_sheet.dart`). Dés de vie disponibles =
+  /// [level] - [hitDiceSpent] (le total de dés de vie d'une classe est
+  /// toujours égal à son niveau, RAW 5e). Valeur par défaut `0` (plutôt
+  /// qu'un champ requis comme [hitDie]) : contrairement à [hitDie], cette
+  /// valeur par défaut ne peut jamais produire un calcul faux et indétectable
+  /// (au pire, une fiche déjà ancienne sans cette colonne resynchronisée
+  /// affiche "tous les dés disponibles", un état sûr) — ne nécessite donc
+  /// pas de faire planter tous les sites de construction directe déjà
+  /// existants (tests) comme la migration au null-safety de [hitDie] l'a
+  /// exigé en son temps.
+  final int hitDiceSpent;
 
   /// Vrai pour la classe de départ (`character_classes.is_primary`).
   final bool isPrimary;

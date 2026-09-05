@@ -62,15 +62,16 @@ void main() {
   });
 
   group('CharacterDetailRowMapper.parseClasses', () {
-    test('résout le nom de classe, les maîtrises de jets de sauvegarde et le '
+    test('résout le nom de classe, les maîtrises de jets de sauvegarde, le '
         'dé de vie embarqués (relation classes.saving_throw_proficiencies/'
-        'hit_die)', () {
+        'hit_die) et hit_dice_spent', () {
       final row = _row(
         characterClasses: [
           {
             'class_id': 5,
             'level': 3,
             'is_primary': true,
+            'hit_dice_spent': 2,
             'classes': {
               'saving_throw_proficiencies': ['str', 'con'],
               'hit_die': 10,
@@ -90,11 +91,13 @@ void main() {
       expect(classes.first.isPrimary, isTrue);
       expect(classes.first.savingThrowProficiencies, ['str', 'con']);
       expect(classes.first.hitDie, 10);
+      expect(classes.first.hitDiceSpent, 2);
     });
 
     test('un id sans nom résolu retombe sur un libellé générique, un dé de '
         'vie manquant reste null (jamais deviné, voir '
-        'CharacterDetailClassRow.hitDie)', () {
+        'CharacterDetailClassRow.hitDie), hit_dice_spent absent retombe '
+        'sur 0', () {
       final row = _row(
         characterClasses: const [
           {'class_id': 99, 'level': 1, 'is_primary': true},
@@ -107,6 +110,7 @@ void main() {
       expect(classes.first.className, 'Classe #99');
       expect(classes.first.savingThrowProficiencies, isEmpty);
       expect(classes.first.hitDie, isNull);
+      expect(classes.first.hitDiceSpent, 0);
     });
 
     test('ignore une ligne sans class_id exploitable', () {

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -335,15 +336,50 @@ abstract class CharacterRepository {
   ///   `characters.temporary_hp = 0` ; recalcule (upsert) tous les
   ///   `character_spell_slots` de la classe primaire pour son niveau actuel
   ///   (`slots_used` toujours remis à 0), même fonction de progression que
-  ///   [applyLevelUp] ; et réinitialise (upsert)
+  ///   [applyLevelUp] ; réinitialise (upsert)
   ///   `character_feature_uses.uses_remaining` pour toutes les
   ///   `class_features` de **toutes** les classes du personnage
   ///   (multiclassage inclus) atteintes par leur niveau respectif, quel que
-  ///   soit leur `rest_type`.
+  ///   soit leur `rest_type` ; et récupère (RAW 5e) des dés de vie sur la
+  ///   classe primaire : `character_classes.hit_dice_spent = max(0,
+  ///   hit_dice_spent - max(1, level ~/ 2))`. Purement silencieux côté UI
+  ///   (aucun retour transporté par cette méthode ne le reflète) — voir la
+  ///   spec visuelle direction-artistique de `rest_sheet.dart`.
   /// - [RestType.short] : réinitialise uniquement (upsert) les
   ///   `character_feature_uses` (toutes classes, multiclassage inclus)
-  ///   dont le `rest_type` correspondant vaut `'repos_court'`. Ne touche ni
-  ///   les PV ni `character_spell_slots`.
+  ///   dont le `rest_type` correspondant vaut `'repos_court'`. Ne touche à
+  ///   `characters.current_hp`/`character_classes.hit_dice_spent` que si
+  ///   [diceSpent] est strictement positif (règle RAW 5e "dépenser un dé de
+  ///   vie", déjà entièrement calculée côté appelant — voir [diceSpent]/
+  ///   [appliedGain] ci-dessous) ; ne touche jamais
+  ///   `character_spell_slots`.
+  ///
+  /// [diceSpent] : nombre de dés de vie dépensés à ce repos (toujours 0 pour
+  /// un repos long, voir `RestSheetResult`) — incrémente
+  /// `character_classes.hit_dice_spent` de la classe primaire d'autant
+  /// (plafonné à `level`, cohérent avec la contrainte SQL
+  /// `hit_dice_spent <= level`), **même si [appliedGain] vaut 0** (RAW : un
+  /// dé de vie dépensé reste dépensé même si le jet ne restaure aucun PV,
+  /// ex. PV déjà au maximum).
+  ///
+  /// [appliedGain] : delta de PV déjà calculé par l'appelant
+  /// (`HitDiceSpendCalculator.appliedGain`, déjà plafonné à `max_hp` à
+  /// partir de la valeur locale connue) — cette méthode ne fait qu'ajouter
+  /// ce delta à la valeur *serveur* de `characters.current_hp` (jamais un
+  /// `UPDATE` en valeur absolue), puis reclampe à `max_hp` par sécurité :
+  /// même principe que [applyLevelUp] (`hpGain` ajouté à une lecture fraîche
+  /// de `current_hp`), pour ne jamais écraser silencieusement un ajustement
+  /// PV plus à jour qu'une simple réaffirmation de la valeur locale
+  /// n'aurait pas vu passer. Compromis assumé identique à [applyLevelUp]
+  /// (pas de RPC Postgres atomique, écritures séquentielles côté client) :
+  /// la lecture de `current_hp`/`max_hp` qui alimente ce calcul est donc
+  /// placée en dernier, juste avant l'`UPDATE` qui la consomme — les autres
+  /// étapes internes (lecture de `character_classes`, écriture de
+  /// `hit_dice_spent`) sont faites avant elle plutôt qu'après, pour réduire
+  /// la fenêtre de course à un seul aller-retour réseau au lieu de
+  /// plusieurs. Même discipline appliquée à la relecture de `max_hp` du
+  /// repos long, bien que son écriture (`current_hp = max_hp`) soit
+  /// idempotente et donc moins exposée.
   ///
   /// [className] : même rôle et même rationale que sur [applyLevelUp] (voir
   /// sa documentation) — nécessaire au recalcul de
@@ -355,7 +391,9 @@ abstract class CharacterRepository {
   /// initialisées à la création de personnage (gaps pré-existants
   /// documentés) : un personnage sans aucune classe ou sans aucune ligne
   /// préexistante n'a simplement rien à réinitialiser sur ces tables,
-  /// jamais une erreur.
+  /// jamais une erreur. Même chose pour `hit_dice_spent`/dés de vie : un
+  /// personnage sans classe primaire identifiable n'a simplement aucune
+  /// écriture supplémentaire à faire pour cette partie.
   ///
   /// Isolation cross-utilisateur : même garantie que le reste de ce
   /// fichier (vérification explicite de `characters.owner_id`, RLS en
@@ -364,6 +402,8 @@ abstract class CharacterRepository {
     required String characterId,
     required RestType type,
     required String className,
+    int diceSpent = 0,
+    int appliedGain = 0,
   });
 
   /// Écrit les 9 colonnes texte libre de l'onglet "Histoire"
@@ -579,7 +619,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             allies_text,
             features_text,
             treasure_text,
-            character_classes(class_id, level, is_primary, classes(saving_throw_proficiencies, hit_die)),
+            character_classes(class_id, level, is_primary, hit_dice_spent, classes(saving_throw_proficiencies, hit_die)),
             character_ability_scores(ability_id, score),
             character_skill_proficiencies(skill_id, proficiency),
             character_tool_proficiencies(tool_id, custom_text),
@@ -1314,6 +1354,8 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String characterId,
     required RestType type,
     required String className,
+    int diceSpent = 0,
+    int appliedGain = 0,
   }) async {
     final ownerId = _requireOwnerId();
     try {
@@ -1323,53 +1365,142 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // requête filtrée sur `owner_id`, ne reposant que sur la RLS de
       // `character_classes`/`class_features` (lecture seule) pour
       // l'isolation — insuffisant pour l'écriture `character_feature_uses`
-      // qui suit. Récupère aussi `max_hp`, nécessaire au repos long.
-      final characterRow = await _client
+      // qui suit. Existence/`owner_id` uniquement à ce stade : `current_hp`/
+      // `max_hp` sont relus juste avant chaque écriture de `current_hp` (plus
+      // bas), pas ici — voir la note sur la fenêtre de course dans la
+      // documentation de [applyRest], pour que les étapes qui n'en dépendent
+      // pas (`character_classes`, dés de vie) soient faites en premier.
+      final ownerCheck = await _client
           .from('characters')
-          .select('max_hp')
+          .select('id')
           .eq('id', characterId)
           .eq('owner_id', ownerId)
           .maybeSingle();
-      if (characterRow == null) {
+      if (ownerCheck == null) {
         throw const CharacterFailure('Personnage introuvable.');
       }
 
       // Toutes les classes du personnage (multiclassage inclus) — utilisées
-      // à la fois pour retrouver la classe primaire (repos long, recalcul
-      // des emplacements de sorts) et pour réinitialiser les aptitudes de
-      // *toutes* les classes (voir [_resetFeatureUses] : la lecture de la
-      // fiche, `_buildCharacterDetailPayload`/`_mapCharacterDetailPayload`,
-      // gère déjà explicitement ce cas, un repos doit suivre la même règle
-      // plutôt qu'ignorer silencieusement les classes secondaires).
+      // à la fois pour retrouver la classe primaire (repos long/court,
+      // recalcul des emplacements de sorts et suivi des dés de vie) et pour
+      // réinitialiser les aptitudes de *toutes* les classes (voir
+      // [_resetFeatureUses] : la lecture de la fiche,
+      // `_buildCharacterDetailPayload`/`_mapCharacterDetailPayload`, gère
+      // déjà explicitement ce cas, un repos doit suivre la même règle plutôt
+      // qu'ignorer silencieusement les classes secondaires).
       final classRows = await _client
           .from('character_classes')
-          .select('class_id, level, is_primary')
+          .select('id, class_id, level, is_primary, hit_dice_spent')
           .eq('character_id', characterId);
 
-      if (type == RestType.long) {
-        final maxHp = (characterRow['max_hp'] as num).toInt();
-        await _client
-            .from('characters')
-            .update({'current_hp': maxHp, 'temporary_hp': 0})
-            .eq('id', characterId)
-            .eq('owner_id', ownerId);
+      // Classe primaire uniquement pour tout ce qui suit dans cette
+      // méthode (emplacements de sorts, dés de vie) : pas de calcul
+      // multiclassé, même convention déjà établie pour les emplacements de
+      // sorts à la montée de niveau ([applyLevelUp] rejette d'ailleurs
+      // explicitement un personnage multiclassé) — contrairement à la
+      // réinitialisation des aptitudes ci-dessous, qui doit couvrir toutes
+      // les classes. Reste une map vide (jamais `null`) si aucune classe
+      // n'est marquée primaire : chaque site d'utilisation ci-dessous garde
+      // déjà cette garde (`isNotEmpty`).
+      final primaryClassRow = classRows.firstWhere(
+        (row) => row['is_primary'] == true,
+        orElse: () => const <String, dynamic>{},
+      );
 
-        // Recalcul des emplacements de sorts : classe primaire uniquement
-        // (pas de calcul multiclassé), même convention déjà établie pour
-        // les emplacements de sorts à la montée de niveau ([applyLevelUp]
-        // rejette d'ailleurs explicitement un personnage multiclassé) —
-        // contrairement à la réinitialisation des aptitudes ci-dessous, qui
-        // doit couvrir toutes les classes.
-        final primaryClassRow = classRows.firstWhere(
-          (row) => row['is_primary'] == true,
-          orElse: () => const <String, dynamic>{},
-        );
+      if (type == RestType.long) {
         if (primaryClassRow.isNotEmpty) {
           await _resetSpellSlots(
             characterId: characterId,
             className: className,
             totalLevel: (primaryClassRow['level'] as num).toInt(),
           );
+
+          // Récupération RAW 5e des dés de vie : la moitié du niveau de la
+          // classe primaire (arrondie à l'inférieur), au moins 1 — jamais en
+          // dessous de 0 dé dépensé restant. Silencieux côté UI (voir la
+          // documentation de [applyRest]) : aucune écriture si le personnage
+          // n'a déjà aucun dé dépensé, pour ne pas générer un `UPDATE`
+          // inutile. Faite avant la relecture de `max_hp` ci-dessous
+          // (indépendante de `characters`) — même discipline que le repos
+          // court : les étapes qui ne dépendent pas de `current_hp`/`max_hp`
+          // sont faites en premier, pour minimiser la fenêtre entre la
+          // lecture et l'écriture finale de `current_hp`.
+          final level = (primaryClassRow['level'] as num).toInt();
+          final hitDiceSpent =
+              (primaryClassRow['hit_dice_spent'] as num?)?.toInt() ?? 0;
+          final restored = math.max(1, level ~/ 2);
+          final newHitDiceSpent = math.max(0, hitDiceSpent - restored);
+          if (newHitDiceSpent != hitDiceSpent) {
+            await _client
+                .from('character_classes')
+                .update({'hit_dice_spent': newHitDiceSpent})
+                .eq('id', primaryClassRow['id']);
+          }
+        }
+
+        // Relecture de `max_hp` juste avant l'écriture de `current_hp` —
+        // dernière chose lue avant cette écriture, voir la documentation de
+        // [applyRest]. Moins critique que le delta du repos court
+        // (`current_hp = max_hp` reste idempotent quel que soit l'ordre
+        // d'arrivée d'écritures concurrentes), mais même discipline
+        // appliquée par cohérence.
+        final characterRow = await _client
+            .from('characters')
+            .select('max_hp')
+            .eq('id', characterId)
+            .eq('owner_id', ownerId)
+            .maybeSingle();
+        if (characterRow == null) {
+          throw const CharacterFailure('Personnage introuvable.');
+        }
+        final maxHp = (characterRow['max_hp'] as num).toInt();
+
+        await _client
+            .from('characters')
+            .update({'current_hp': maxHp, 'temporary_hp': 0})
+            .eq('id', characterId)
+            .eq('owner_id', ownerId);
+      } else if (diceSpent > 0) {
+        // Repos court avec dépense de dés de vie (règle RAW 5e) : les dés
+        // sont dépensés que le jet restaure ou non des PV (ex. PV déjà au
+        // maximum, voir `rest_sheet.dart`) — ces deux écritures sont donc
+        // indépendantes l'une de l'autre.
+        if (primaryClassRow.isNotEmpty) {
+          final level = (primaryClassRow['level'] as num).toInt();
+          final hitDiceSpent =
+              (primaryClassRow['hit_dice_spent'] as num?)?.toInt() ?? 0;
+          final newHitDiceSpent = math.min(level, hitDiceSpent + diceSpent);
+          await _client
+              .from('character_classes')
+              .update({'hit_dice_spent': newHitDiceSpent})
+              .eq('id', primaryClassRow['id']);
+        }
+
+        if (appliedGain > 0) {
+          // Relit `current_hp`/`max_hp` ici, juste avant le calcul et
+          // l'écriture du delta — dernière chose lue avant cette écriture,
+          // après l'étape ci-dessus (dés de vie) qui n'en dépend pas. Ajoute
+          // ensuite [appliedGain] à cette valeur *serveur* fraîchement lue
+          // (jamais un `UPDATE` en valeur absolue) puis reclampe à `max_hp`
+          // par sécurité — voir la documentation de [applyRest] pour la
+          // rationale (même principe que [applyLevelUp]).
+          final characterRow = await _client
+              .from('characters')
+              .select('current_hp, max_hp')
+              .eq('id', characterId)
+              .eq('owner_id', ownerId)
+              .maybeSingle();
+          if (characterRow == null) {
+            throw const CharacterFailure('Personnage introuvable.');
+          }
+          final currentHp = (characterRow['current_hp'] as num).toInt();
+          final maxHp = (characterRow['max_hp'] as num).toInt();
+          final newCurrentHp = math.min(currentHp + appliedGain, maxHp);
+          await _client
+              .from('characters')
+              .update({'current_hp': newCurrentHp})
+              .eq('id', characterId)
+              .eq('owner_id', ownerId);
         }
       }
 

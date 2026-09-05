@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../character_creation/domain/ability_score_rules.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
@@ -312,13 +315,13 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             temporaryHp: newState.temporaryHp,
           );
       if (_restGeneration != myRestGeneration) {
-        // Un repos long a démarré (et déjà écrit son propre résultat en
-        // base) pendant que cet appel réseau était en vol : l'écriture
-        // ci-dessus vient malgré tout de réussir, avec des valeurs
-        // désormais obsolètes. Regagne la cohérence serveur en réaffirmant
-        // l'état PV actuellement affiché (déjà mis à jour par le repos)
-        // plutôt que de laisser cette écriture obsolète stand — voir
-        // [_restGeneration].
+        // Un repos (court avec restauration de PV via des dés de vie, ou
+        // long) a démarré (et déjà écrit son propre résultat en base)
+        // pendant que cet appel réseau était en vol : l'écriture ci-dessus
+        // vient malgré tout de réussir, avec des valeurs désormais
+        // obsolètes. Regagne la cohérence serveur en réaffirmant l'état PV
+        // actuellement affiché (déjà mis à jour par le repos) plutôt que de
+        // laisser cette écriture obsolète stand — voir [_restGeneration].
         await _reassertCurrentHpState();
         return;
       }
@@ -344,9 +347,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       // L'écriture a échoué : cette tentative n'a jamais été persistée,
       // revient à l'état local d'avant pour ne pas laisser un futur tap
       // accumuler depuis une valeur fantôme jamais écrite en base — sauf si
-      // un repos long a entre-temps déjà établi un nouvel état local plus
-      // récent : le revert écraserait alors son résultat avec la valeur
-      // pré-repos (même garde-fou que le chemin de succès ci-dessus).
+      // un repos (court ou long) a entre-temps déjà établi un nouvel état
+      // local plus récent : le revert écraserait alors son résultat avec la
+      // valeur pré-repos (même garde-fou que le chemin de succès ci-dessus).
       if (mounted && _restGeneration == myRestGeneration) {
         setState(() => _localHpState = previousLocal);
       }
@@ -362,8 +365,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// Réécrit en base l'état PV actuellement affiché (dernière valeur locale
   /// optimiste, ou dernière donnée serveur connue à défaut) — appelé
   /// uniquement quand un ajustement PV resté en vol vient de résoudre après
-  /// qu'un repos long a déjà écrit son propre résultat en base (voir
-  /// [_restGeneration], appelé depuis [_applyHpState]).
+  /// qu'un repos (court avec restauration de PV via des dés de vie, ou long)
+  /// a déjà écrit son propre résultat en base (voir [_restGeneration], appelé
+  /// depuis [_applyHpState]).
   ///
   /// Si cette réaffirmation échoue à son tour, le bug d'origine (PV
   /// incohérents en base) peut resurgir sans que rien ne le signale —
@@ -382,8 +386,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     if (latest == null) return;
     final state = _hpStateOf(latest);
     // Verrouille aussi les déclencheurs pendant cette écriture (même
-    // mécanisme que [_applyRest]) : sans ça, un nouveau repos long pourrait
-    // démarrer pendant que cette réaffirmation est encore en vol, résoudre
+    // mécanisme que [_applyRest]) : sans ça, un nouveau repos (court ou
+    // long) pourrait démarrer pendant que cette réaffirmation est encore en
+    // vol, résoudre
     // avant elle, et se faire écraser à son tour par cette écriture
     // désormais obsolète — reproduction du bug d'origine un niveau plus
     // profond (trouvé en revue de code). Fermer cette fenêtre-ci suffit en
@@ -1050,12 +1055,29 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// [_restGeneration] : marque comme obsolète tout ajustement PV encore en
   /// vol (voir la documentation de [_restGeneration]).
   ///
+  /// [diceSpent]/[appliedGain] (`RestSheetResult`, voir `rest_sheet.dart`)
+  /// portent l'effet de la dépense de dés de vie au repos court (règle RAW
+  /// 5e), déjà entièrement calculé côté sheet — cette méthode ne fait
+  /// qu'écrire le résultat déjà calculé, même principe que [_applyHpState]/
+  /// `CharacterRepository.applyLevelUp`. Toujours 0 pour un repos long (voir
+  /// `RestSheetResult`). Quand [appliedGain] est strictement positif, bascule
+  /// optimiste immédiate de [_localHpState] pour ce repos court aussi — même
+  /// rationale que pour le repos long ci-dessus, mais calculée à partir de
+  /// [_hpStateOf] (qui fusionne déjà tout état optimiste PV encore en vol)
+  /// plutôt que directement `detail.maxHp`, puisque le résultat dépend ici
+  /// de la valeur courante des PV, pas seulement du maximum.
+  ///
   /// Fait aussi passer [_isApplyingRest] à `true` le temps de l'appel réseau
   /// (`finally`, succès ou échec) : verrouille les actions PV de
   /// `CharacterVitalsCard` pendant toute la durée de ce repos, voir sa
   /// documentation pour le sens de course que ce verrou ferme (celui que
   /// [_restGeneration] seul ne couvre pas).
-  Future<void> _applyRest(CharacterDetail detail, RestType type) async {
+  Future<void> _applyRest(
+    CharacterDetail detail,
+    RestType type, {
+    int diceSpent = 0,
+    int appliedGain = 0,
+  }) async {
     final previousLocal = _localHpState;
     // Un repos (court ou long) recharge des aptitudes rechargeables, et un
     // repos long réinitialise en plus les emplacements de sorts : purge
@@ -1076,6 +1098,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // [_useClassFeature]).
     _restGeneration++;
     final myRestGeneration = _restGeneration;
+    // Un repos long touche toujours les PV (restauration au maximum) ; un
+    // repos court seulement s'il restaure effectivement des PV via une
+    // dépense de dés de vie (voir la documentation ci-dessus) — dans les
+    // deux cas, [_localSpellSlotsUsed] doit être reverti avec [_localHpState]
+    // en cas d'échec puisque le repos long touche les deux ensemble.
+    final touchesHp = type == RestType.long || appliedGain > 0;
     if (type == RestType.long) {
       setState(() {
         _localHpState = HpState(
@@ -1087,7 +1115,20 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _localFeatureUsesRemaining = {};
       });
     } else {
-      setState(() => _localFeatureUsesRemaining = {});
+      setState(() {
+        _localFeatureUsesRemaining = {};
+        if (appliedGain > 0) {
+          final baseState = _hpStateOf(detail);
+          _localHpState = HpState(
+            currentHp: math.min(
+              baseState.currentHp + appliedGain,
+              baseState.maxHp,
+            ),
+            maxHp: baseState.maxHp,
+            temporaryHp: baseState.temporaryHp,
+          );
+        }
+      });
     }
     setState(() => _isApplyingRest = true);
 
@@ -1098,18 +1139,21 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             characterId: widget.characterId,
             type: type,
             className: detail.primaryClass?.className ?? '',
+            diceSpent: diceSpent,
+            appliedGain: appliedGain,
           );
       ref.invalidate(characterDetailProvider(widget.characterId));
       if (!mounted) return;
       _showSnackBar(
         type == RestType.long
             ? 'Repos long effectué. PV restaurés au maximum.'
+            : diceSpent > 0
+            ? 'Repos court effectué. +$appliedGain PV ($diceSpent dé(s) de '
+                  'vie dépensé(s)).'
             : 'Repos court effectué.',
       );
     } on CharacterFailure catch (failure) {
-      if (type == RestType.long &&
-          mounted &&
-          _restGeneration == myRestGeneration) {
+      if (touchesHp && mounted && _restGeneration == myRestGeneration) {
         setState(() {
           _localHpState = previousLocal;
           _localSpellSlotsUsed = previousSpellSlotsOverride;
@@ -1122,9 +1166,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       }
       _showSnackBar(failure.message);
     } catch (_) {
-      if (type == RestType.long &&
-          mounted &&
-          _restGeneration == myRestGeneration) {
+      if (touchesHp && mounted && _restGeneration == myRestGeneration) {
         setState(() {
           _localHpState = previousLocal;
           _localSpellSlotsUsed = previousSpellSlotsOverride;
@@ -1392,7 +1434,18 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             context,
             currentHp: effective.currentHp,
             maxHp: effective.maxHp,
-            onApply: (type) => _applyRest(detail, type),
+            hitDie: detail.primaryClass?.hitDie,
+            hitDiceTotal: detail.primaryClass?.level ?? 0,
+            hitDiceSpent: detail.primaryClass?.hitDiceSpent ?? 0,
+            constitutionModifier: AbilityScoreRules.abilityModifier(
+              effective.abilityScores['con'] ?? 10,
+            ),
+            onApply: (result) => _applyRest(
+              detail,
+              result.type,
+              diceSpent: result.diceSpent,
+              appliedGain: result.appliedGain,
+            ),
           );
         },
         hpActionsDisabled: _isApplyingRest,

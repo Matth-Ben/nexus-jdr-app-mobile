@@ -92,12 +92,23 @@ class FakeRepository implements CharacterRepository {
     required String characterId,
     required RestType type,
     required String className,
+    int diceSpent = 0,
+    int appliedGain = 0,
   }) async {
     applyRestCallCount++;
     final gate = applyRestGate;
     if (gate != null) await gate.future;
     if (type == RestType.long) {
       current = current.copyWith(currentHp: current.maxHp, temporaryHp: 0);
+    } else if (appliedGain > 0) {
+      // Même principe que `SupabaseCharacterRepository.applyRest` : ajoute
+      // le delta à la valeur *serveur* (`current`), jamais un `UPDATE` en
+      // valeur absolue, reclampé à `maxHp` par sécurité.
+      final newCurrentHp = (current.currentHp + appliedGain).clamp(
+        0,
+        current.maxHp,
+      );
+      current = current.copyWith(currentHp: newCurrentHp);
     }
   }
 
@@ -327,6 +338,73 @@ void main() {
         reason:
             "L ecran doit afficher 30/30 (resultat du repos long), pas la "
             "valeur pre-repos.",
+      );
+    },
+  );
+
+  testWidgets(
+    "un ajustement PV encore en vol au moment d un repos court avec gain de "
+    "PV (dépense de dés de vie) ne l écrase plus une fois qu il résout, "
+    "même principe que le repos long ci-dessus (couvre le nouveau cas "
+    "repos-court-avec-gain-PV)",
+    (tester) async {
+      final repository = await pumpDetail(tester);
+
+      await tester.tap(find.bySemanticsLabel("Augmenter"));
+      await tester.pump();
+
+      await tester.tap(find.text("Prendre un repos"));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("REPOS COURT"));
+      await tester.pumpAndSettle();
+
+      // Dé de vie de la classe primaire de [detail] : d8, niveau 1, 0 dé
+      // déjà dépensé -> 1 dé disponible. Scopé à `BottomSheet` : le
+      // stepper PV de `CharacterVitalsCard` (même composant `StepperCounter`,
+      // même libellé "Augmenter") reste présent sous la feuille modale.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.bySemanticsLabel("Augmenter"),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // "Valeur moyenne" (déterministe) plutôt que "Lancer les dés" (défaut) :
+      // d8 -> moyenne 5, +0 modificateur de Constitution (non renseigné,
+      // valeur par défaut 10) -> +5 PV.
+      await tester.tap(find.text("VALEUR MOYENNE"));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text("APPLIQUER"));
+      await tester.pumpAndSettle();
+
+      // Valeur *serveur* (FakeRepository.current, jamais l'état optimiste
+      // client) : 18 (PV d'origine, l'ajustement PV +1 est toujours en vol
+      // côté serveur) + 5 (dé de vie moyen) = 23.
+      expect(repository.current.currentHp, 23);
+
+      repository.updateHpGate.complete();
+      await tester.pumpAndSettle();
+
+      // Une fois la réassertion jouée (`_reassertCurrentHpState`), l'état
+      // réellement affiché/voulu par le joueur reprend le dessus : 18 + 1
+      // (soin rapide, resté en vol) + 5 (dé de vie) = 24 — jamais 23 (qui
+      // aurait perdu le soin rapide) ni 19 (qui aurait perdu le repos).
+      expect(
+        repository.current.currentHp,
+        24,
+        reason:
+            "L ajustement PV reste en vol doit être réaffirmé une fois le "
+            "repos court résolu, sans perdre ni l un ni l autre : "
+            "current_hp = ${repository.current.currentHp} en base au lieu "
+            "de 24.",
+      );
+      expect(
+        find.text("24 / 30"),
+        findsWidgets,
+        reason:
+            "L ecran doit afficher 24/30 (soin rapide + repos court "
+            "combinés), pas une valeur qui en perd un des deux.",
       );
     },
   );
