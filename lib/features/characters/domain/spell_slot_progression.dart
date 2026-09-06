@@ -283,6 +283,20 @@ abstract final class SpellSlotProgression {
     return multiclassSlotsForCombinedLevel(combinedCasterLevel(casters));
   }
 
+  /// Plus haut niveau de sort ayant un total strictement positif dans
+  /// [totals] (9 entiers, index 0 = niveau de sort 1 — voir
+  /// [totalsForClasses]), 0 si aucun. Utilisé pour filtrer le catalogue de
+  /// l'étape "Sorts" généralisée de la montée de niveau
+  /// (`presentation/level_up_screen.dart`) au niveau de sort réellement
+  /// castable par le personnage à ce niveau de classe — jamais pertinent
+  /// pour l'Occultiste (magie de pacte, voir [pactMagicFor] à la place).
+  static int maxCastableSpellLevel(List<int> totals) {
+    for (var i = totals.length - 1; i >= 0; i--) {
+      if (totals[i] > 0) return i + 1;
+    }
+    return 0;
+  }
+
   /// Combine les primitives ci-dessus pour déterminer les changements
   /// d'emplacements de sorts induits par une montée de niveau, personnage
   /// multiclassé ou non — voir [totalsForClasses].

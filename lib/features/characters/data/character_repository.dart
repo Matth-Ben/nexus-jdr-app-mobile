@@ -15,6 +15,8 @@ import '../domain/inventory_catalog_item.dart';
 import '../domain/level_up_apply_result.dart';
 import '../domain/level_up_choice_kind.dart';
 import '../domain/level_up_choice_selection.dart';
+import '../domain/level_up_feat_option.dart';
+import '../domain/level_up_invocation_option.dart';
 import '../domain/level_up_level_data.dart';
 import '../domain/level_up_subclass_option.dart';
 import '../domain/multiclass_prerequisites.dart';
@@ -32,6 +34,8 @@ import 'character_spell_row_mapper.dart';
 import 'class_feature_row_mapper.dart';
 import 'inventory_catalog_row_mapper.dart';
 import 'level_up_choice_row_mapper.dart';
+import 'level_up_feat_row_mapper.dart';
+import 'level_up_invocation_row_mapper.dart';
 
 /// Langue d'affichage des noms de race/classe, en dur pour l'instant : l'app
 /// démarre en français uniquement (`docs/cahier-des-charges/07-source-donnees-i18n.md`),
@@ -283,6 +287,28 @@ abstract class CharacterRepository {
     required int targetLevel,
   });
 
+  /// Dons `feats` NON déjà possédés par [characterId] (`character_feats`),
+  /// triés alphabétiquement (cohérent avec le catalogue de sorts) — étape
+  /// "Choix à faire" de la montée de niveau, sous-mode "don" (niveaux ASI
+  /// 4/8/12/16/19, voir `domain/level_up_choice_kind.dart`). Nom/description
+  /// résolus via `translations` (`entity_type = 'feat'`), prérequis textuel
+  /// extrait de `feats.prerequisites->>'text'` (`null` si absent) — voir
+  /// `domain/level_up_feat_option.dart`.
+  Future<List<LevelUpFeatOption>> fetchAvailableFeats({
+    required String characterId,
+  });
+
+  /// Invocations occultistes `invocations` NON déjà connues de
+  /// [characterId] (`character_invocations`), triées alphabétiquement — étape
+  /// "Invocations" de la montée de niveau (Occultiste, voir
+  /// `domain/invocations_known_progression.dart`). Même résolution que
+  /// [fetchAvailableFeats] (`entity_type = 'invocation'`,
+  /// `invocations.prerequisites->>'text'`) — voir
+  /// `domain/level_up_invocation_option.dart`.
+  Future<List<LevelUpInvocationOption>> fetchAvailableInvocations({
+    required String characterId,
+  });
+
   /// Applique une montée de niveau déjà validée par le joueur (écran
   /// "Montée de niveau", récapitulatif). Deux branches, selon
   /// [isMulticlassing] :
@@ -311,13 +337,20 @@ abstract class CharacterRepository {
   /// classe précise — voir `domain/level_up_apply_result.dart::LevelUpApplyResult.newLevel`,
   /// même convention), et écrit [choice] s'il est fourni (étape "Choix à
   /// faire") :
-  /// - [LevelUpChoiceKind.abilityScoreImprovement] : upsert
-  ///   `character_ability_scores.score` (score final = score actuel +
-  ///   allocation) **et** insert `character_ability_increases` (une ligne
-  ///   par caractéristique augmentée, `source: 'asi'`, `level` = niveau
-  ///   interne à la classe qui progresse — jamais le niveau total) — les
-  ///   deux tables doivent être écrites, voir la documentation de
-  ///   [LevelUpChoiceSelection.abilityAllocations].
+  /// - [LevelUpChoiceKind.abilityScoreImprovement] : deux variantes
+  ///   mutuellement exclusives, selon [LevelUpChoiceSelection.featId] :
+  ///   - `null` (répartition de caractéristiques, comportement historique) :
+  ///     upsert `character_ability_scores.score` (score final = score actuel
+  ///     + allocation) **et** insert `character_ability_increases` (une
+  ///     ligne par caractéristique augmentée, `source: 'asi'`, `level` =
+  ///     niveau interne à la classe qui progresse — jamais le niveau total)
+  ///     — les deux tables doivent être écrites, voir la documentation de
+  ///     [LevelUpChoiceSelection.abilityAllocations].
+  ///   - non nul (don choisi en alternative à l'ASI, spec visuelle
+  ///     direction-artistique section 1) : insert `character_feats`
+  ///     (`character_id`, `feat_id`, `level_taken` = niveau interne à la
+  ///     classe qui progresse) — ni `character_ability_scores` ni
+  ///     `character_ability_increases` ne sont touchées dans ce cas.
   /// - [LevelUpChoiceKind.subclass] : `character_classes.subclass_id`,
   ///   combiné dans le même `UPDATE`/`INSERT` que `level` (sur la ligne
   ///   fraîchement créée en cas de multiclassage, pas sur la classe
@@ -332,13 +365,30 @@ abstract class CharacterRepository {
   /// dès que le personnage compte 2 classes lanceuses "non-pacte" après ce
   /// niveau, sinon comportement mono-classe historique inchangé.
   ///
-  /// [initialSpellIds] : sorts de départ à écrire dans `character_spells`
-  /// pour une nouvelle classe "à sorts connus" démarrée au niveau 1
-  /// (Barde/Ensorceleur/Occultiste/Rôdeur, voir
-  /// `LevelUpStepData.requiresInitialSpellSelection`) — déjà résolus en
-  /// identifiants par l'appelant (le catalogue de sorts est déjà chargé côté
-  /// écran, voir `presentation/providers/level_up_provider.dart`). Toujours
-  /// vide hors de ce cas précis.
+  /// [initialSpellIds] : sorts/cantrips nouvellement appris à écrire dans
+  /// `character_spells` (`status` dérivé de [className] via
+  /// `SpellcastingRules.statusFor`, `source_class_id: classId`) — déjà
+  /// résolus en identifiants par l'appelant (le catalogue de sorts est déjà
+  /// chargé côté écran, voir `presentation/providers/level_up_provider.dart`).
+  /// **Nom conservé tel quel malgré la généralisation** (chantier "sorts
+  /// connus par niveau", voir `domain/spells_known_progression.dart`) : ce
+  /// paramètre couvrait à l'origine uniquement les sorts de départ d'une
+  /// nouvelle classe "à sorts connus" démarrée au niveau 1
+  /// (`LevelUpStepData.requiresSpellSelection`, multiclassage), il couvre
+  /// désormais aussi les nouveaux sorts/cantrips appris à N'IMPORTE QUEL
+  /// niveau > 1 d'une classe "à sorts connus" continuée — la mécanique
+  /// d'écriture est rigoureusement identique dans les deux cas (même table,
+  /// mêmes colonnes), seul l'appelant change la provenance des identifiants.
+  /// Renommer aurait forcé une mise à jour mécanique des ~18 doubles de test
+  /// qui implémentent cette interface pour un gain de clarté marginal — non
+  /// fait, décision à valider par le chef de projet si le nom prête à
+  /// confusion. Toujours vide hors de ces deux cas.
+  ///
+  /// [invocationIds] : invocations occultistes nouvellement choisies à
+  /// écrire dans `character_invocations` (`character_id`, `invocation_id`)
+  /// — étape "Invocations" (Occultiste, voir
+  /// `domain/invocations_known_progression.dart`), déjà résolues en
+  /// identifiants par l'appelant. Toujours vide hors de ce cas.
   ///
   /// [hpRolled] et [hpGain] sont déjà calculés par l'appelant (voir
   /// `domain/level_up_hit_points_calculator.dart`), cette méthode ne fait
@@ -358,6 +408,7 @@ abstract class CharacterRepository {
     required int hpGain,
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
+    List<int> invocationIds = const [],
   });
 
   /// Applique un repos (lien "Prendre un repos", onglet "Personnage" —
@@ -1259,6 +1310,94 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   @override
+  Future<List<LevelUpFeatOption>> fetchAvailableFeats({
+    required String characterId,
+  }) async {
+    try {
+      final ownedRows = await _client
+          .from('character_feats')
+          .select('feat_id')
+          .eq('character_id', characterId);
+      final ownedIds = {
+        for (final row in ownedRows) (row['feat_id'] as num).toInt(),
+      };
+
+      final allRows = await _client.from('feats').select('id, prerequisites');
+      final availableRows = [
+        for (final row in allRows)
+          if (!ownedIds.contains((row['id'] as num).toInt())) row,
+      ];
+
+      final ids = LevelUpFeatRowMapper.collectFeatIds(availableRows);
+      final names = await _fetchTranslatedNames(
+        entityType: 'feat',
+        entityIds: ids,
+      );
+      final descriptions = await _fetchTranslatedField(
+        entityType: 'feat',
+        fieldName: 'description',
+        entityIds: ids,
+      );
+
+      return LevelUpFeatRowMapper.toFeatOptions(
+        availableRows,
+        names: names,
+        descriptions: descriptions,
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<List<LevelUpInvocationOption>> fetchAvailableInvocations({
+    required String characterId,
+  }) async {
+    try {
+      final ownedRows = await _client
+          .from('character_invocations')
+          .select('invocation_id')
+          .eq('character_id', characterId);
+      final ownedIds = {
+        for (final row in ownedRows) (row['invocation_id'] as num).toInt(),
+      };
+
+      final allRows = await _client
+          .from('invocations')
+          .select('id, prerequisites');
+      final availableRows = [
+        for (final row in allRows)
+          if (!ownedIds.contains((row['id'] as num).toInt())) row,
+      ];
+
+      final ids = LevelUpInvocationRowMapper.collectInvocationIds(
+        availableRows,
+      );
+      final names = await _fetchTranslatedNames(
+        entityType: 'invocation',
+        entityIds: ids,
+      );
+      final descriptions = await _fetchTranslatedField(
+        entityType: 'invocation',
+        fieldName: 'description',
+        entityIds: ids,
+      );
+
+      return LevelUpInvocationRowMapper.toInvocationOptions(
+        availableRows,
+        names: names,
+        descriptions: descriptions,
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -1269,6 +1408,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required int hpGain,
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
+    List<int> invocationIds = const [],
   }) async {
     final ownerId = _requireOwnerId();
     try {
@@ -1503,6 +1643,18 @@ class SupabaseCharacterRepository implements CharacterRepository {
               'status': status,
               'source_class_id': classId,
             },
+        ]);
+      }
+
+      if (invocationIds.isNotEmpty) {
+        // Invocations occultistes nouvellement choisies (étape
+        // "Invocations", voir la documentation de
+        // [CharacterRepository.applyLevelUp]) — quota déjà appliqué côté
+        // écran (quota effectif, voir `domain/invocations_known_progression.dart`),
+        // cette méthode se contente d'écrire les identifiants reçus.
+        await _client.from('character_invocations').insert([
+          for (final invocationId in invocationIds)
+            {'character_id': characterId, 'invocation_id': invocationId},
         ]);
       }
 
@@ -2019,6 +2171,18 @@ class SupabaseCharacterRepository implements CharacterRepository {
       case LevelUpChoiceKind.subclass:
         return;
       case LevelUpChoiceKind.abilityScoreImprovement:
+        if (choice.featId != null) {
+          // Don choisi en alternative à l'ASI (spec visuelle
+          // direction-artistique section 1) — mutuellement exclusif avec
+          // `character_ability_scores`/`character_ability_increases`, voir
+          // la documentation de [LevelUpChoiceSelection.featId].
+          await _client.from('character_feats').insert({
+            'character_id': characterId,
+            'feat_id': choice.featId,
+            'level_taken': level,
+          });
+          return;
+        }
         await _applyAbilityScoreImprovement(
           characterId: characterId,
           level: level,

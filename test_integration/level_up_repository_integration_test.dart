@@ -1499,5 +1499,308 @@ void main() {
         );
       });
     });
+
+    group('sorts/dons/invocations (intégration)', () {
+      late SupabaseClient otherClient;
+
+      setUpAll(() async {
+        otherClient = createTestSupabaseClient();
+        await signUpTestUser(otherClient);
+      });
+
+      Future<int> classIdByName(String name) async {
+        final translation = await client
+            .from('translations')
+            .select('entity_id')
+            .eq('entity_type', 'class')
+            .eq('field_name', 'name')
+            .eq('locale', 'fr')
+            .eq('value', name)
+            .maybeSingle();
+        expect(
+          translation,
+          isNotNull,
+          reason:
+              'Aucune classe "$name" trouvée côté seed — vérifier '
+              'supabase db reset côté dépôt web.',
+        );
+        return int.parse(translation!['entity_id'] as String);
+      }
+
+      Future<String> createCharacterWithClass({
+        required int classId,
+        required int level,
+      }) async {
+        final character = await client
+            .from('characters')
+            .insert({
+              'owner_id': ownerId,
+              'name': 'Test Intégration Sorts/Dons/Invocations',
+              'max_hp': 10,
+              'current_hp': 10,
+            })
+            .select('id')
+            .single();
+        final characterId = character['id'] as String;
+        addTearDown(() async {
+          await client.from('characters').delete().eq('id', characterId);
+        });
+
+        await client.from('character_classes').insert({
+          'character_id': characterId,
+          'class_id': classId,
+          'level': level,
+          'is_primary': true,
+        });
+
+        return characterId;
+      }
+
+      test('choisir un don en alternative à l\'ASI écrit character_feats '
+          '(level_taken correct), jamais character_ability_scores', () async {
+        final guerrierId = await classIdByName('Guerrier');
+        final characterId = await createCharacterWithClass(
+          classId: guerrierId,
+          level: 3,
+        );
+        final featRow = await client
+            .from('feats')
+            .select('id')
+            .limit(1)
+            .single();
+        final featId = (featRow['id'] as num).toInt();
+
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          const AlwaysOnlineConnectivityChecker(),
+        );
+        await repository.applyLevelUp(
+          characterId: characterId,
+          classId: guerrierId,
+          className: 'Guerrier',
+          isMulticlassing: false,
+          hpRolled: 7,
+          hpMethod: 'lance',
+          hpGain: 7,
+          choice: LevelUpChoiceSelection.feat(featId),
+        );
+
+        final featRows = await client
+            .from('character_feats')
+            .select('feat_id, level_taken')
+            .eq('character_id', characterId);
+        expect(featRows, hasLength(1));
+        expect(featRows.single['feat_id'], featId);
+        expect(featRows.single['level_taken'], 4);
+
+        final scoreRows = await client
+            .from('character_ability_scores')
+            .select('ability_id')
+            .eq('character_id', characterId);
+        expect(
+          scoreRows,
+          isEmpty,
+          reason: 'ASI et don sont mutuellement exclusifs',
+        );
+      });
+
+      test('fetchAvailableFeats exclut les dons déjà possédés', () async {
+        final guerrierId = await classIdByName('Guerrier');
+        final characterId = await createCharacterWithClass(
+          classId: guerrierId,
+          level: 4,
+        );
+        final allFeats = await client.from('feats').select('id');
+        expect(allFeats.length, greaterThanOrEqualTo(2));
+        final ownedFeatId = (allFeats.first['id'] as num).toInt();
+        await client.from('character_feats').insert({
+          'character_id': characterId,
+          'feat_id': ownedFeatId,
+          'level_taken': 4,
+        });
+
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          const AlwaysOnlineConnectivityChecker(),
+        );
+        final available = await repository.fetchAvailableFeats(
+          characterId: characterId,
+        );
+
+        expect(
+          available.any((f) => f.id == ownedFeatId),
+          isFalse,
+          reason: 'le don déjà possédé ne doit plus apparaître',
+        );
+        expect(available.length, allFeats.length - 1);
+      });
+
+      test(
+        'choisir une invocation occultiste écrit character_invocations',
+        () async {
+          final occultisteId = await classIdByName('Occultiste');
+          final characterId = await createCharacterWithClass(
+            classId: occultisteId,
+            level: 4,
+          );
+          final invocationRow = await client
+              .from('invocations')
+              .select('id')
+              .limit(1)
+              .single();
+          final invocationId = (invocationRow['id'] as num).toInt();
+
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            const AlwaysOnlineConnectivityChecker(),
+          );
+          await repository.applyLevelUp(
+            characterId: characterId,
+            classId: occultisteId,
+            className: 'Occultiste',
+            isMulticlassing: false,
+            hpRolled: 5,
+            hpMethod: 'lance',
+            hpGain: 5,
+            invocationIds: [invocationId],
+          );
+
+          final rows = await client
+              .from('character_invocations')
+              .select('invocation_id')
+              .eq('character_id', characterId);
+          expect(rows, hasLength(1));
+          expect(rows.single['invocation_id'], invocationId);
+        },
+      );
+
+      test(
+        'fetchAvailableInvocations exclut les invocations déjà connues',
+        () async {
+          final occultisteId = await classIdByName('Occultiste');
+          final characterId = await createCharacterWithClass(
+            classId: occultisteId,
+            level: 4,
+          );
+          final allInvocations = await client.from('invocations').select('id');
+          expect(allInvocations.length, greaterThanOrEqualTo(2));
+          final knownId = (allInvocations.first['id'] as num).toInt();
+          await client.from('character_invocations').insert({
+            'character_id': characterId,
+            'invocation_id': knownId,
+          });
+
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            const AlwaysOnlineConnectivityChecker(),
+          );
+          final available = await repository.fetchAvailableInvocations(
+            characterId: characterId,
+          );
+
+          expect(available.any((i) => i.id == knownId), isFalse);
+          expect(available.length, allInvocations.length - 1);
+        },
+      );
+
+      test('nouveaux sorts appris à une montée de niveau > 1 (pas un '
+          'multiclassage) écrivent character_spells avec le bon '
+          'source_class_id/status', () async {
+        final bardeId = await classIdByName('Barde');
+        final characterId = await createCharacterWithClass(
+          classId: bardeId,
+          level: 1,
+        );
+        final spellRows = await client
+            .from('spells')
+            .select('id')
+            .eq('level', 1)
+            .limit(1);
+        final spellId = (spellRows.single['id'] as num).toInt();
+
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          const AlwaysOnlineConnectivityChecker(),
+        );
+        // Barde niveau 1 -> 2 : continuation normale, PAS un multiclassage —
+        // vérifie que le mécanisme d'écriture des sorts (généralisé par ce
+        // chantier, plus seulement pour le niveau 1 d'une classe
+        // multiclassée) fonctionne aussi sur ce chemin.
+        await repository.applyLevelUp(
+          characterId: characterId,
+          classId: bardeId,
+          className: 'Barde',
+          isMulticlassing: false,
+          hpRolled: 5,
+          hpMethod: 'lance',
+          hpGain: 5,
+          initialSpellIds: [spellId],
+        );
+
+        final rows = await client
+            .from('character_spells')
+            .select('spell_id, status, source_class_id')
+            .eq('character_id', characterId);
+        expect(rows, hasLength(1));
+        expect(rows.single['spell_id'], spellId);
+        expect(rows.single['status'], 'connu');
+        expect(rows.single['source_class_id'], bardeId);
+      });
+
+      test("applyLevelUp avec un choix de don, appelé depuis la session "
+          "d'un autre joueur, n'insère jamais de ligne character_feats pour "
+          'le personnage visé', () async {
+        final guerrierId = await classIdByName('Guerrier');
+        final characterId = await createCharacterWithClass(
+          classId: guerrierId,
+          level: 3,
+        );
+        final featRow = await client
+            .from('feats')
+            .select('id')
+            .limit(1)
+            .single();
+        final featId = (featRow['id'] as num).toInt();
+
+        final otherRepository = SupabaseCharacterRepository(
+          otherClient,
+          cache,
+          pendingWrites,
+          const AlwaysOnlineConnectivityChecker(),
+        );
+        try {
+          await otherRepository.applyLevelUp(
+            characterId: characterId,
+            classId: guerrierId,
+            className: 'Guerrier',
+            isMulticlassing: false,
+            hpRolled: 7,
+            hpMethod: 'lance',
+            hpGain: 7,
+            choice: LevelUpChoiceSelection.feat(featId),
+          );
+        } catch (_) {
+          // Attendu : RLS `owns_character` bloque déjà le SELECT
+          // `character_classes` en tout début d'`applyLevelUp` pour
+          // `otherClient` — seul compte qu'aucune écriture n'a eu lieu.
+        }
+
+        final rows = await client
+            .from('character_feats')
+            .select('feat_id')
+            .eq('character_id', characterId);
+        expect(rows, isEmpty);
+      });
+    });
   });
 }

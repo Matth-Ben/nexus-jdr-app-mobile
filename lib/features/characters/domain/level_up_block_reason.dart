@@ -1,4 +1,3 @@
-import '../../character_creation/domain/spellcasting_rules.dart';
 import 'character_failure.dart';
 import 'class_feature_choice_label_formatter.dart';
 
@@ -33,30 +32,55 @@ class LevelUpBlockReason {
 /// [abilityScoreImprovementLevels] ne bloquent plus le flux : ils mènent
 /// désormais à l'étape "Choix à faire" (voir
 /// `domain/level_up_choice_kind.dart::LevelUpPendingChoiceResolver`, appelée
-/// une fois [evaluate] revenu à `null`). Continuent de bloquer : tout autre
-/// `choice_type` non nul (ex. `'invocation'`, table `invocations` vide en
-/// base — toujours hors périmètre), et l'extension "classes à sorts connus"
-/// ci-dessous (inchangée).
+/// une fois [evaluate] revenu à `null`).
+///
+/// **Chantier "sorts/dons/invocations" (increment suivant)** : deux
+/// changements supplémentaires.
+/// - `'invocation'` a rejoint [resolvedChoiceTypes] : la nouvelle étape
+///   "Invocations" (`domain/invocations_known_progression.dart`, basée sur le
+///   delta de la table RAW à CHAQUE niveau concerné — 2, 5, 7, 9, 12, 15, 18)
+///   couvre désormais ce cas mieux que le simple `choice_type` (qui n'existe
+///   en base qu'au niveau 2) — voir
+///   `domain/level_up_choice_kind.dart::LevelUpPendingChoiceResolver.resolve`,
+///   qui ne mappe volontairement PAS `'invocation'` vers un
+///   `LevelUpChoiceKind` (l'étape "Invocations" est distincte de l'étape
+///   "Choix à faire").
+/// - L'ancienne condition 3 ("classes à sorts connus bloquées à tout niveau
+///   > 1", voir l'historique de ce fichier) est entièrement **supprimée** :
+///   la nouvelle étape "Sorts" généralisée
+///   (`domain/spells_known_progression.dart`) gère désormais correctement ce
+///   cas à n'importe quel niveau (delta calculé, étape absente si delta nul
+///   des deux côtés — jamais un blocage).
 ///
 /// Un niveau qui reste bloqué bloque tout le flux *avant* même l'étape
-/// "Points de vie" (jamais de jet de dé pour rien).
+/// "Points de vie" (jamais de jet de dé pour rien) — ne reste concerné que
+/// tout `class_features.choice_type` non nul et encore inconnu de
+/// [resolvedChoiceTypes] (aucune valeur de ce type peuplée en base à ce jour,
+/// voir `20260825090700_seed_classes_subclasses_features.sql` côté dépôt web
+/// : les 4 valeurs peuplées — `sous_classe`/`style_combat`/`ennemi_jure`/
+/// `invocation` — y sont toutes désormais présentes).
 abstract final class LevelUpBlockRules {
-  /// Niveaux d'augmentation de caractéristique/don, règle standard 5e —
-  /// codés en dur (pas de colonne dédiée en base), sans exception de classe
-  /// gérée à cet incrément (ex. Guerrier/Voleur, qui en ont RAW davantage :
-  /// hors périmètre de cet incrément, décision produit explicite). Depuis
-  /// l'increment 2, seule la répartition de caractéristiques est couverte à
-  /// l'étape "Choix à faire" — l'alternative "don" reste hors périmètre
-  /// (table `feats` vide en base).
+  /// Niveaux d'augmentation de caractéristique OU choix d'un don en
+  /// alternative, règle standard 5e — codés en dur (pas de colonne dédiée en
+  /// base), sans exception de classe gérée (ex. Guerrier/Voleur, qui en ont
+  /// RAW davantage : hors périmètre, décision produit explicite). Les deux
+  /// sous-choix (répartition de caractéristiques / don, voir
+  /// `domain/level_up_choice_selection.dart::LevelUpChoiceSelection.featId`)
+  /// partagent le même `LevelUpChoiceKind.abilityScoreImprovement` et donc le
+  /// même niveau de déclenchement.
   static const Set<int> abilityScoreImprovementLevels = {4, 8, 12, 16, 19};
 
-  /// `class_features.choice_type` désormais gérés par l'étape "Choix à
-  /// faire" (increment 2) plutôt que bloqués — voir
-  /// `domain/level_up_choice_kind.dart`.
+  /// `class_features.choice_type` désormais gérés sans jamais bloquer le
+  /// flux — `'sous_classe'`/`'style_combat'`/`'ennemi_jure'` mènent à l'étape
+  /// "Choix à faire" (increment 2, voir `domain/level_up_choice_kind.dart`),
+  /// `'invocation'` à la nouvelle étape "Invocations" (voir la doc de classe
+  /// ci-dessus) — ce dernier ne passe PAS par
+  /// [LevelUpPendingChoiceResolver.resolve] vers un [LevelUpChoiceKind].
   static const Set<String> resolvedChoiceTypes = {
     'sous_classe',
     'style_combat',
     'ennemi_jure',
+    'invocation',
   };
 
   /// Évalue si [targetLevel] doit bloquer tout le flux de montée de niveau,
@@ -64,17 +88,13 @@ abstract final class LevelUpBlockRules {
   /// matche) :
   ///
   /// 1. [classFeatureChoiceType] non nul ET **pas** dans
-  ///    [resolvedChoiceTypes] (ex. `'invocation'`, `'sort_domaine'`, ou toute
-  ///    valeur future non encore gérée) -> bloque avec le libellé résolu par
+  ///    [resolvedChoiceTypes] (aucune valeur peuplée en base à ce jour, voir
+  ///    la doc de classe — filet de sécurité pour toute valeur future non
+  ///    encore gérée) -> bloque avec le libellé résolu par
   ///    [ClassFeatureChoiceLabelFormatter].
-  /// 2. [targetLevel] ∈ [abilityScoreImprovementLevels] -> ne bloque **pas**
-  ///    (étape "Choix à faire", répartition de caractéristiques). Priorité
-  ///    sur la condition 3 ci-dessous, comme à l'increment 1 (retour
-  ///    immédiat sans évaluer la condition 3) : un personnage d'une classe
-  ///    "à sorts connus" qui atteint un niveau ASI n'est jamais bloqué pour
-  ///    cette seule raison, même si ce niveau apprend aussi un nouveau sort
-  ///    (limitation déjà acceptée avant cet incrément, seulement reformulée
-  ///    ici).
+  /// 2. [targetLevel] ∈ [abilityScoreImprovementLevels] -> ne bloque
+  ///    **jamais** (étape "Choix à faire", répartition de caractéristiques
+  ///    ou don).
   ///
   ///    **Cas défensif** (jamais rencontré dans les données actuelles,
   ///    vérifié : tous les `choice_type` peuplés sont aux niveaux 1-3, les
@@ -84,36 +104,14 @@ abstract final class LevelUpBlockRules {
   ///    à la fois — plutôt que de deviner lequel des deux traiter et
   ///    d'ignorer l'autre silencieusement, cette méthode lève une
   ///    [CharacterFailure] explicite.
-  /// 3. **Extension chef de projet** : [className] est l'une des 4 classes
-  ///    "à sorts connus" (Barde, Ensorceleur, Occultiste, Rôdeur —
-  ///    `SpellcastingRules.statusFor(className) == 'connu'` ET
-  ///    `SpellcastingRules.isSpellcastingClass(className)`, les deux
-  ///    conditions sont nécessaires : `statusFor` retombe sur `'connu'` par
-  ///    défaut pour toute classe non listée, y compris une classe non
-  ///    lanceuse de sorts, donc `isSpellcastingClass` seul distingue les 4
-  ///    classes réellement concernées) ET [targetLevel] > 1. Ces classes
-  ///    apprennent fréquemment un nouveau sort connu à la montée de niveau,
-  ///    mécanisme non couvert par `class_features.choice_type` et pour
-  ///    lequel ce dépôt n'a aujourd'hui aucune table de progression "sorts
-  ///    connus par niveau" au-delà du niveau 1 (`SpellcastingRules` ne
-  ///    couvre que la création). Blocage délibérément conservateur : limite
-  ///    l'utilité de cet incrément pour ces 4 classes précises jusqu'à ce
-  ///    que l'étape "Sorts" de la montée de niveau soit construite (hors
-  ///    périmètre ici), plutôt que de risquer de laisser passer une montée
-  ///    de niveau qui aurait dû exiger un choix de sort.
   ///
-  ///    **Décision increment 2, non explicitement couverte par la tâche** :
-  ///    cette condition est évaluée même quand [classFeatureChoiceType] est
-  ///    dans [resolvedChoiceTypes] (donc ne bloque pas via la condition 1) —
-  ///    un `choice_type` résolu (ex. sous-classe) à un niveau qui apprend
-  ///    *aussi* un nouveau sort connu reste bloqué : le nouveau sort n'est
-  ///    toujours pas gérable, indépendamment du fait que la sous-classe le
-  ///    soit désormais. Concrètement (vérifié en base) : Barde niveau 3
-  ///    (sous-classe) et Rôdeur niveaux 2/3 (style de combat/sous-classe)
-  ///    restent bloqués par cette condition, inchangé depuis l'increment 1 —
-  ///    seuls les niveaux/classes qui n'ont pas ce chevauchement (Guerrier,
-  ///    Paladin, Clerc, Druide, Magicien, Moine, Roublard, Barbare...)
-  ///    profitent de l'étape "Choix à faire" à cet incrément.
+  /// **Ancienne condition 3 supprimée** (chantier "sorts/dons/invocations",
+  /// voir la doc de classe) : une classe "à sorts connus" n'est plus jamais
+  /// bloquée pour cette seule raison, quel que soit [targetLevel] — la
+  /// nouvelle étape "Sorts" généralisée (`domain/spells_known_progression.dart`)
+  /// gère désormais ce cas à la place (étape simplement absente quand le
+  /// delta de sorts/cantrips connus est nul aux deux niveaux, voir
+  /// `presentation/level_up_screen.dart`).
   static LevelUpBlockReason? evaluate({
     required int targetLevel,
     required String className,
@@ -138,21 +136,6 @@ abstract final class LevelUpBlockRules {
         '$className niveau $targetLevel : ce niveau nécessite deux choix '
         'simultanés (${ClassFeatureChoiceLabelFormatter.labelFor(classFeatureChoiceType)} '
         'et amélioration de caractéristique), non pris en charge.',
-      );
-    }
-
-    if (isAsiLevel) {
-      return null;
-    }
-
-    final isKnownCasterClass =
-        SpellcastingRules.isSpellcastingClass(className) &&
-        SpellcastingRules.statusFor(className) == 'connu';
-    if (targetLevel > 1 && isKnownCasterClass) {
-      return LevelUpBlockReason(
-        detail:
-            '$className niveau $targetLevel : nouveau sort à choisir '
-            '(pas encore disponible)',
       );
     }
 

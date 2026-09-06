@@ -21,6 +21,8 @@ import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
+import 'package:personnages/features/characters/domain/level_up_feat_option.dart';
+import 'package:personnages/features/characters/domain/level_up_invocation_option.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
@@ -185,6 +187,16 @@ class FakeRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<List<LevelUpFeatOption>> fetchAvailableFeats({
+    required String characterId,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<List<LevelUpInvocationOption>> fetchAvailableInvocations({
+    required String characterId,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -195,6 +207,7 @@ class FakeRepository implements CharacterRepository {
     required int hpGain,
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
+    List<int> invocationIds = const [],
   }) => throw UnimplementedError();
 
   @override

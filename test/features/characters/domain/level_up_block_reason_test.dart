@@ -6,18 +6,7 @@ void main() {
   group(
     'LevelUpBlockRules.evaluate — condition 1 (choice_type non résolu)',
     () {
-      test('un choice_type non résolu (ex. invocation) bloque, quel que soit '
-          'le niveau', () {
-        final reason = LevelUpBlockRules.evaluate(
-          targetLevel: 2,
-          className: 'Occultiste',
-          classFeatureChoiceType: 'invocation',
-        );
-        expect(reason, isNotNull);
-        expect(reason!.detail, 'Occultiste niveau 2 : Invocation occulte');
-      });
-
-      test('une valeur de choice_type future/inconnue bloque aussi, avec '
+      test('une valeur de choice_type future/inconnue bloque, avec '
           "l'humanisation générique de ClassFeatureChoiceLabelFormatter", () {
         final reason = LevelUpBlockRules.evaluate(
           targetLevel: 6,
@@ -29,17 +18,29 @@ void main() {
           'Clerc niveau 6 : Nouveau Choix Pas Encore Repertorie',
         );
       });
+
+      test("'invocation' ne bloque plus (chantier sorts/dons/invocations) "
+          '— rejoint resolvedChoiceTypes, mène désormais à la nouvelle '
+          'étape "Invocations", jamais à l\'étape "Choix à faire"', () {
+        final reason = LevelUpBlockRules.evaluate(
+          targetLevel: 2,
+          className: 'Occultiste',
+          classFeatureChoiceType: 'invocation',
+        );
+        expect(reason, isNull);
+      });
     },
   );
 
   group('LevelUpBlockRules.evaluate — increment 2 : resolvedChoiceTypes ne '
       'bloquent plus', () {
     test('resolvedChoiceTypes contient exactement sous_classe/'
-        'style_combat/ennemi_jure', () {
+        'style_combat/ennemi_jure/invocation', () {
       expect(LevelUpBlockRules.resolvedChoiceTypes, {
         'sous_classe',
         'style_combat',
         'ennemi_jure',
+        'invocation',
       });
     });
 
@@ -60,7 +61,7 @@ void main() {
   group('LevelUpBlockRules.evaluate — increment 2 : niveaux ASI ne bloquent '
       'plus', () {
     test('les niveaux 4/8/12/16/19 ne bloquent plus (étape "Choix à '
-        'faire", répartition de caractéristiques)', () {
+        'faire", répartition de caractéristiques ou don)', () {
       for (final level in [4, 8, 12, 16, 19]) {
         final reason = LevelUpBlockRules.evaluate(
           targetLevel: level,
@@ -114,97 +115,39 @@ void main() {
     });
   });
 
-  group('LevelUpBlockRules.evaluate — condition 3 (classes à sorts connus, '
-      'extension chef de projet)', () {
-    test('bloque Barde/Ensorceleur/Occultiste/Rôdeur au-delà du niveau 1', () {
+  group('LevelUpBlockRules.evaluate — ancienne condition 3 supprimée (chantier '
+      'sorts/dons/invocations)', () {
+    test('ne bloque plus jamais les classes "à sorts connus" '
+        '(Barde/Ensorceleur/Occultiste/Rôdeur) au-delà du niveau 1 — la '
+        'nouvelle étape "Sorts" généralisée gère désormais ce cas', () {
       for (final className in [
         'Barde',
         'Ensorceleur',
         'Occultiste',
         'Rôdeur',
       ]) {
-        final reason = LevelUpBlockRules.evaluate(
-          targetLevel: 3,
-          className: className,
-          classFeatureChoiceType: null,
-        );
-        expect(
-          reason?.detail,
-          '$className niveau 3 : nouveau sort à choisir '
-          '(pas encore disponible)',
-          reason: '$className devrait bloquer au niveau 3',
-        );
+        for (final level in [2, 3, 5, 10, 20]) {
+          final reason = LevelUpBlockRules.evaluate(
+            targetLevel: level,
+            className: className,
+            classFeatureChoiceType: null,
+          );
+          expect(
+            reason,
+            isNull,
+            reason: '$className niveau $level ne devrait plus bloquer',
+          );
+        }
       }
     });
 
-    test('bloque Barde au niveau 2 (borne exacte : le tout premier niveau '
-        'de montée après la création, cas explicitement cité dans la tâche '
-        'de la fonctionnalité)', () {
-      final reason = LevelUpBlockRules.evaluate(
-        targetLevel: 2,
-        className: 'Barde',
-        classFeatureChoiceType: null,
-      );
-      expect(
-        reason?.detail,
-        'Barde niveau 2 : nouveau sort à choisir (pas encore disponible)',
-      );
-    });
-
-    test('ne bloque jamais ces classes au niveau 1 (création, hors '
-        'périmètre de la montée de niveau)', () {
-      final reason = LevelUpBlockRules.evaluate(
-        targetLevel: 1,
-        className: 'Barde',
-        classFeatureChoiceType: null,
-      );
-      expect(reason, isNull);
-    });
-
-    test('ne bloque jamais une classe "préparée" (Clerc/Druide/Magicien/'
-        'Paladin) via cette condition', () {
-      final reason = LevelUpBlockRules.evaluate(
-        targetLevel: 3,
-        className: 'Magicien',
-        classFeatureChoiceType: null,
-      );
-      expect(reason, isNull);
-    });
-
-    test('ne bloque jamais une classe non lanceuse de sorts (le repli par '
-        'défaut de SpellcastingRules.statusFor ne doit jamais faire '
-        'croire à une classe "connu")', () {
-      final reason = LevelUpBlockRules.evaluate(
-        targetLevel: 3,
-        className: 'Guerrier',
-        classFeatureChoiceType: null,
-      );
-      expect(reason, isNull);
-    });
-
-    test('increment 2, décision documentée : un choice_type résolu (ex. '
-        'sous-classe) à un niveau qui apprend AUSSI un nouveau sort connu '
-        'reste bloqué (le nouveau sort n\'est toujours pas gérable) — '
+    test('un choice_type résolu (ex. style_combat) à un niveau qui '
+        'apprend aussi un nouveau sort connu ne bloque plus non plus — '
         'vérifié en base : Rôdeur niveau 2 (style de combat)', () {
       final reason = LevelUpBlockRules.evaluate(
         targetLevel: 2,
         className: 'Rôdeur',
         classFeatureChoiceType: 'style_combat',
-      );
-      expect(
-        reason?.detail,
-        'Rôdeur niveau 2 : nouveau sort à choisir (pas encore disponible)',
-      );
-    });
-
-    test('à l\'inverse, un choice_type résolu à un niveau <= 1 pour une '
-        'classe "à sorts connus" ne bloque pas (condition 3 exige '
-        'targetLevel > 1) — vérifié en base : Occultiste niveau 1 '
-        '(sous-classe)', () {
-      final reason = LevelUpBlockRules.evaluate(
-        targetLevel: 1,
-        className: 'Occultiste',
-        classFeatureChoiceType: 'sous_classe',
       );
       expect(reason, isNull);
     });

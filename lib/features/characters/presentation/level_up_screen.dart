@@ -27,23 +27,36 @@ import '../domain/level_up_choice_kind.dart';
 import '../domain/level_up_choice_options.dart';
 import '../domain/level_up_choice_selection.dart';
 import '../domain/level_up_hit_points_calculator.dart';
+import '../domain/level_up_invocation_option.dart';
 import '../domain/level_up_multiclass_option.dart';
 import '../domain/signed_modifier_formatter.dart';
 import '../domain/spell_slot_change.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
 import 'providers/level_up_provider.dart';
+import 'widgets/feat_info_panel.dart';
 import 'widgets/level_up_header.dart';
 
 enum _HpMethod { roll, average }
 
-/// Onglet actif de la sélection de sorts de départ (étape "Sorts" en branche
-/// multiclasse) — même rôle que `_SpellTab` de
+/// Sous-mode de l'étape "Choix à faire" quand
+/// `LevelUpChoiceKind.abilityScoreImprovement` est déclenché (niveaux ASI
+/// 4/8/12/16/19) — spec visuelle direction-artistique section 1 :
+/// `SegmentedToggle` 2 segments, même registre que [_HpMethod]. Indépendant
+/// de `_LevelUpScreenState._abilityAllocations`/`_selectedListOptionId` (le
+/// don choisi réutilise ce dernier, voir sa documentation) : basculer d'un
+/// mode à l'autre ne doit jamais effacer la sélection de l'autre mode.
+enum _AsiMethod { allocate, feat }
+
+/// Onglet actif de la sélection de nouveaux sorts/cantrips connus (étape
+/// "Sorts", généralisée à toute montée de niveau qui en apprend — pas
+/// seulement le niveau 1 d'une classe multiclassée, voir
+/// `domain/spells_known_progression.dart`) — même rôle que `_SpellTab` de
 /// `character_creation/presentation/spells_step_screen.dart`, dupliqué ici
 /// plutôt que partagé (même rationale que les autres duplicatas de ce
 /// dépôt : ne jamais coupler la montée de niveau à l'assistant de création
 /// pour un bout de logique/état d'écran spécifique à chacun).
-enum _InitialSpellTab { cantrip, levelOne }
+enum _SpellSelectionTab { cantrip, spells }
 
 enum _LevelUpPhase {
   /// Nouvelle phase (multiclassage), en tête — voir [_buildClassDecision] et
@@ -57,12 +70,16 @@ enum _LevelUpPhase {
   abilities,
   choice,
   spells,
+
+  /// Occultiste uniquement (`LevelUpStepData.requiresInvocationSelection`),
+  /// entre [spells] et [summary] — voir [_buildInvocationsStep].
+  invocations,
   summary,
 }
 
-/// Budget de points de l'étape "Choix à faire", variante amélioration de
-/// caractéristique (règle 5e standard : "+2 sur une caractéristique" OU
-/// "+1/+1 sur deux", jamais l'alternative "don" — voir la documentation de
+/// Budget de points de l'étape "Choix à faire", sous-mode [_AsiMethod.allocate]
+/// (règle 5e standard : "+2 sur une caractéristique" OU "+1/+1 sur deux" —
+/// voir la documentation de
 /// `domain/level_up_choice_kind.dart::LevelUpChoiceKind.abilityScoreImprovement`).
 const int _abilityScoreImprovementBudget = 2;
 
@@ -132,14 +149,25 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   int? _rolledForLevel;
 
   // État de l'étape "Choix à faire" (increment 2). Un seul jeu de champs
-  // pour les 3 variantes "liste" (sous-classe/style de combat/ennemi juré) :
-  // jamais simultanées pour un même niveau (voir
+  // pour les 4 variantes "liste" (sous-classe/style de combat/ennemi juré/don,
+  // voir la spec visuelle direction-artistique section 2) : jamais
+  // simultanées pour un même niveau (voir
   // `domain/level_up_choice_kind.dart::LevelUpChoiceKind`, un seul
-  // `LevelUpChoiceKind` par niveau). [_selectedListOptionId] porte
-  // l'`Object` sélectionné (un `subclasses.id` pour la sous-classe, la
-  // chaîne elle-même pour style de combat/ennemi juré, voir
-  // `domain/level_up_choice_options.dart`).
+  // `LevelUpChoiceKind` par niveau — le don et l'allocation de
+  // caractéristiques partagent `LevelUpChoiceKind.abilityScoreImprovement`
+  // mais restent mutuellement exclusifs via [_asiMethod]).
+  // [_selectedListOptionId] porte l'`Object` sélectionné (un `subclasses.id`
+  // pour la sous-classe, la chaîne elle-même pour style de combat/ennemi
+  // juré, un `feats.id` pour un don — voir `domain/level_up_choice_options.dart`).
   Object? _selectedListOptionId;
+
+  /// Sous-mode de l'étape "Choix à faire" quand le kind est
+  /// [LevelUpChoiceKind.abilityScoreImprovement] — voir [_AsiMethod].
+  /// Présélectionné sur [_AsiMethod.allocate] (spec visuelle
+  /// direction-artistique section 1), reset uniquement par
+  /// [_resetChoiceState] : indépendant de [_abilityAllocations]/
+  /// [_selectedListOptionId], basculer ne doit jamais effacer l'autre mode.
+  _AsiMethod _asiMethod = _AsiMethod.allocate;
 
   /// Points alloués par caractéristique (0 à 2, clé
   /// `ability_score_definitions.dart`), variante amélioration de
@@ -169,12 +197,19 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// actuelle (comportement historique).
   Object? _committedMulticlassClassId;
 
-  /// État de la sélection de sorts de départ (étape "Sorts" en branche
-  /// multiclasse, `LevelUpStepData.requiresInitialSpellSelection`) — même
-  /// patron que `SpellsStepScreen` (étape 6/9 de l'assistant de création).
-  List<String> _selectedInitialCantrips = [];
-  List<String> _selectedInitialLevelOneSpells = [];
-  _InitialSpellTab? _initialSpellActiveTab;
+  /// État de la sélection de nouveaux sorts/cantrips connus (étape "Sorts",
+  /// généralisée — voir [_SpellSelectionTab]) — même patron que
+  /// `SpellsStepScreen` (étape 6/9 de l'assistant de création).
+  List<String> _selectedNewCantrips = [];
+  List<String> _selectedNewSpells = [];
+  _SpellSelectionTab? _spellSelectionActiveTab;
+
+  /// État de la sélection d'invocations occultistes (étape "Invocations") —
+  /// clés `invocation.id.toString()` (voir [_buildInvocationIds]), pour
+  /// réutiliser directement `SpellsStepSelection.toggle`/`.isChoiceLocked`
+  /// (génériques sur `List<String>` + quota, voir la spec visuelle
+  /// direction-artistique section 3).
+  List<String> _selectedInvocationIds = [];
 
   @override
   void initState() {
@@ -193,51 +228,76 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     _committedMulticlassClassId = null;
   }
 
-  /// Remet à zéro la sélection de sorts de départ — même rationale que
+  /// Remet à zéro la sélection de sorts/cantrips connus — même rationale que
   /// [_resetClassDecisionState] (chaînage vers un nouveau niveau).
-  void _resetInitialSpellSelectionState() {
-    _selectedInitialCantrips = [];
-    _selectedInitialLevelOneSpells = [];
-    _initialSpellActiveTab = null;
+  void _resetSpellSelectionState() {
+    _selectedNewCantrips = [];
+    _selectedNewSpells = [];
+    _spellSelectionActiveTab = null;
   }
 
-  void _toggleInitialCantrip(String name, int quota) {
+  /// Remet à zéro la sélection d'invocations — même rationale que
+  /// [_resetSpellSelectionState].
+  void _resetInvocationSelectionState() {
+    _selectedInvocationIds = [];
+  }
+
+  void _toggleNewCantrip(String name, int quota) {
     setState(() {
-      _selectedInitialCantrips = SpellsStepSelection.toggle(
-        current: _selectedInitialCantrips,
+      _selectedNewCantrips = SpellsStepSelection.toggle(
+        current: _selectedNewCantrips,
         value: name,
         quota: quota,
       );
     });
   }
 
-  void _toggleInitialLevelOneSpell(String name, int quota) {
+  void _toggleNewSpell(String name, int quota) {
     setState(() {
-      _selectedInitialLevelOneSpells = SpellsStepSelection.toggle(
-        current: _selectedInitialLevelOneSpells,
+      _selectedNewSpells = SpellsStepSelection.toggle(
+        current: _selectedNewSpells,
         value: name,
         quota: quota,
       );
     });
   }
 
-  /// Identifiants de sorts prêts pour `CharacterRepository.applyLevelUp` —
-  /// réutilise `SpellSelectionResolver.resolve` (même mécanisme que l'étape
-  /// 9/9 "Récapitulatif" de l'assistant de création), qui ne fait ici que
-  /// dédupliquer et résoudre les noms choisis en identifiants via le
-  /// catalogue déjà chargé : `status` n'est pas utilisé (le statut
-  /// `'connu'`/`'préparé'` est recalculé par le repository depuis
-  /// `className`, jamais transporté ici). Liste vide si ce niveau ne
-  /// déclenche aucune sélection de sorts de départ.
-  List<int> _buildInitialSpellIds(LevelUpStepData data) {
-    if (!data.requiresInitialSpellSelection) return const [];
+  void _toggleInvocation(String invocationId, int quota) {
+    setState(() {
+      _selectedInvocationIds = SpellsStepSelection.toggle(
+        current: _selectedInvocationIds,
+        value: invocationId,
+        quota: quota,
+      );
+    });
+  }
+
+  /// Identifiants de sorts prêts pour `CharacterRepository.applyLevelUp`
+  /// (paramètre `initialSpellIds`, nom conservé malgré la généralisation —
+  /// voir sa documentation) — réutilise `SpellSelectionResolver.resolve`
+  /// (même mécanisme que l'étape 9/9 "Récapitulatif" de l'assistant de
+  /// création), qui ne fait ici que dédupliquer et résoudre les noms choisis
+  /// en identifiants via le catalogue déjà chargé : `status` n'est pas
+  /// utilisé (le statut `'connu'`/`'préparé'` est recalculé par le
+  /// repository depuis `className`, jamais transporté ici). Liste vide si ce
+  /// niveau ne déclenche aucune sélection de sorts.
+  List<int> _buildNewSpellIds(LevelUpStepData data) {
+    if (!data.requiresSpellSelection) return const [];
     final rows = SpellSelectionResolver.resolve(
-      cantripNames: _selectedInitialCantrips,
-      levelOneSpellNames: _selectedInitialLevelOneSpells,
-      catalog: data.initialSpellCatalog!,
+      cantripNames: _selectedNewCantrips,
+      levelOneSpellNames: _selectedNewSpells,
+      catalog: data.spellSelectionCatalog!,
       className: data.className,
     );
     return [for (final row in rows) row.spellId];
+  }
+
+  /// Identifiants d'invocations prêts pour `CharacterRepository.applyLevelUp`
+  /// (paramètre `invocationIds`) — simple reconversion de
+  /// [_selectedInvocationIds] (`String`, voir sa documentation) en `int`.
+  List<int> _buildInvocationIds(LevelUpStepData data) {
+    if (!data.requiresInvocationSelection) return const [];
+    return [for (final id in _selectedInvocationIds) int.parse(id)];
   }
 
   /// Remet à zéro l'état de l'étape "Choix à faire" — appelé au chaînage
@@ -247,6 +307,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   void _resetChoiceState() {
     _selectedListOptionId = null;
     _abilityAllocations = null;
+    _asiMethod = _AsiMethod.allocate;
   }
 
   /// Initialise [_abilityAllocations] à 0 pour les 6 caractéristiques, une
@@ -321,10 +382,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return switch (data.choiceKind) {
       null => null,
       LevelUpChoiceKind.abilityScoreImprovement =>
-        LevelUpChoiceSelection.abilityScoreImprovement({
-          for (final entry in _ensureAbilityAllocationsInitialized().entries)
-            if (entry.value > 0) entry.key: entry.value,
-        }),
+        _asiMethod == _AsiMethod.feat
+            ? LevelUpChoiceSelection.feat(_selectedListOptionId!)
+            : LevelUpChoiceSelection.abilityScoreImprovement({
+                for (final entry
+                    in _ensureAbilityAllocationsInitialized().entries)
+                  if (entry.value > 0) entry.key: entry.value,
+              }),
       LevelUpChoiceKind.subclass => LevelUpChoiceSelection.subclass(
         _selectedListOptionId!,
       ),
@@ -364,7 +428,8 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         hpMethod: hpMethod,
         hpGain: hpGain,
         choice: _buildChoiceSelection(data),
-        initialSpellIds: _buildInitialSpellIds(data),
+        initialSpellIds: _buildNewSpellIds(data),
+        invocationIds: _buildInvocationIds(data),
       );
 
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -396,7 +461,8 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         _hpMethod = _HpMethod.roll;
         _resetChoiceState();
         _resetClassDecisionState();
-        _resetInitialSpellSelectionState();
+        _resetSpellSelectionState();
+        _resetInvocationSelectionState();
         _isApplying = false;
       });
     } on CharacterFailure catch (failure) {
@@ -505,6 +571,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       _LevelUpPhase.abilities => _buildAbilitiesStep(data),
       _LevelUpPhase.choice => _buildChoiceStep(data),
       _LevelUpPhase.spells => _buildSpellsStep(data),
+      _LevelUpPhase.invocations => _buildInvocationsStep(data),
       _LevelUpPhase.summary => _buildSummary(data),
     };
   }
@@ -652,7 +719,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     // cas, voir [_buildBlocked]).
     final hasUpcoming =
         data.blockReason == null &&
-        (data.choiceKind != null || _hasSpellsStep(data));
+        (data.choiceKind != null ||
+            _hasSpellsStep(data) ||
+            _hasInvocationsStep(data));
 
     return Column(
       children: [
@@ -703,11 +772,26 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                       if (_hasSpellsStep(data))
                         const SizedBox(height: AppSpacing.sm),
                     ],
-                    if (_hasSpellsStep(data))
+                    if (_hasSpellsStep(data)) ...[
                       const _UpcomingStepRow(
                         icon: Icons.auto_awesome,
                         color: AppColors.accentViolet,
                         label: 'Vos emplacements de sorts vont évoluer',
+                      ),
+                      if (_hasInvocationsStep(data))
+                        const SizedBox(height: AppSpacing.sm),
+                    ],
+                    // Décision assumée au-delà de la spec visuelle littérale
+                    // (qui ne couvrait que les sections "Choix à faire"/
+                    // "Sorts" de cette annonce) : même traitement "teaser"
+                    // pour l'étape "Invocations", par cohérence avec les deux
+                    // autres — à valider par le chef de projet si un
+                    // désaccord existe sur ce point.
+                    if (_hasInvocationsStep(data))
+                      const _UpcomingStepRow(
+                        icon: Icons.remove_red_eye,
+                        color: AppColors.accentViolet,
+                        label: 'De nouvelles invocations vous attendront',
                       ),
                   ],
                 ],
@@ -731,34 +815,67 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
 
   /// `true` si l'étape "Sorts" doit être affichée à ce niveau : soit un
   /// changement d'emplacements est calculé (increment 3, inchangé), soit une
-  /// sélection de sorts de départ est requise (multiclassage dans une classe
-  /// à sorts connus, voir [LevelUpStepData.requiresInitialSpellSelection]) —
-  /// les deux ne s'excluent pas mutuellement dans l'affichage (une nouvelle
-  /// classe demi-lanceuse comme le Rôdeur peut n'avoir *aucun* changement
-  /// d'emplacements à son niveau interne 1 tout en nécessitant malgré tout
-  /// une sélection de sorts connus, voir `domain/spellcasting_rules.dart`).
+  /// sélection de nouveaux sorts/cantrips connus est requise — TOUTE montée
+  /// de niveau d'une classe "à sorts connus" qui en apprend (multiclassage
+  /// niveau 1 OU classe continuée > niveau 1, voir
+  /// [LevelUpStepData.requiresSpellSelection] et
+  /// `domain/spells_known_progression.dart`) — les deux ne s'excluent pas
+  /// mutuellement dans l'affichage (une nouvelle classe demi-lanceuse comme
+  /// le Rôdeur peut n'avoir *aucun* changement d'emplacements à son niveau
+  /// interne 1 tout en nécessitant malgré tout une sélection de sorts
+  /// connus, voir `character_creation/domain/spellcasting_rules.dart`).
   bool _hasSpellsStep(LevelUpStepData data) =>
-      data.spellSlotChanges.isNotEmpty || data.requiresInitialSpellSelection;
+      data.spellSlotChanges.isNotEmpty || data.requiresSpellSelection;
 
-  /// 3, 4 ou 5 selon les étapes déclenchées à ce niveau — spec visuelle
-  /// direction-artistique section 1 (étape "Sorts", increment 3) :
-  /// [LevelUpStepData.choiceKind] non nul ajoute l'étape "Choix à faire"
-  /// (increment 2, inchangé), [_hasSpellsStep] ajoute l'étape "Sorts".
+  /// `true` si l'étape "Invocations" doit être affichée à ce niveau —
+  /// Occultiste uniquement, voir [LevelUpStepData.requiresInvocationSelection].
+  bool _hasInvocationsStep(LevelUpStepData data) =>
+      data.requiresInvocationSelection;
+
+  /// 3 à 6 selon les étapes déclenchées à ce niveau — spec visuelle
+  /// direction-artistique : [LevelUpStepData.choiceKind] non nul ajoute
+  /// l'étape "Choix à faire" (increment 2, inchangé), [_hasSpellsStep]
+  /// ajoute l'étape "Sorts", [_hasInvocationsStep] ajoute l'étape
+  /// "Invocations".
   int _totalSteps(LevelUpStepData data) =>
-      3 + (data.choiceKind != null ? 1 : 0) + (_hasSpellsStep(data) ? 1 : 0);
+      3 +
+      (data.choiceKind != null ? 1 : 0) +
+      (_hasSpellsStep(data) ? 1 : 0) +
+      (_hasInvocationsStep(data) ? 1 : 0);
 
   /// Étape suivante une fois "Aptitudes"/"Choix à faire" franchies : l'étape
-  /// "Sorts" si ce niveau la déclenche ([_hasSpellsStep]), le récapitulatif
-  /// sinon — même logique de chaînage conditionnel que [LevelUpChoiceKind]
-  /// pour l'étape "Choix à faire". Couvre aussi le cas défensif "condition
-  /// d'affichage vraie mais 0 changement calculé" (spec visuelle
-  /// direction-artistique section 4) : ce cas ne devrait jamais se produire
-  /// en pratique pour la branche mono-classe historique (voir
+  /// "Sorts" si ce niveau la déclenche ([_hasSpellsStep]), sinon l'étape
+  /// "Invocations" si ce niveau la déclenche ([_hasInvocationsStep]), le
+  /// récapitulatif sinon — même logique de chaînage conditionnel que
+  /// [LevelUpChoiceKind] pour l'étape "Choix à faire". Couvre aussi le cas
+  /// défensif "condition d'affichage vraie mais 0 changement calculé" (spec
+  /// visuelle direction-artistique section 4) : ce cas ne devrait jamais se
+  /// produire en pratique pour la branche mono-classe historique (voir
   /// `domain/spell_slot_progression.dart::SpellSlotProgression.changesFor`),
   /// mais une liste vide retombe naturellement ici sur le récapitulatif,
   /// sans code dédié supplémentaire.
-  _LevelUpPhase _phaseAfterChoiceOrAbilities(LevelUpStepData data) =>
-      _hasSpellsStep(data) ? _LevelUpPhase.spells : _LevelUpPhase.summary;
+  _LevelUpPhase _phaseAfterChoiceOrAbilities(LevelUpStepData data) {
+    if (_hasSpellsStep(data)) return _LevelUpPhase.spells;
+    if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
+    return _LevelUpPhase.summary;
+  }
+
+  /// Étape suivante une fois "Sorts" franchie : l'étape "Invocations" si ce
+  /// niveau la déclenche ([_hasInvocationsStep]), le récapitulatif sinon.
+  _LevelUpPhase _phaseAfterSpells(LevelUpStepData data) =>
+      _hasInvocationsStep(data)
+      ? _LevelUpPhase.invocations
+      : _LevelUpPhase.summary;
+
+  /// Étape précédente de "Invocations" ("Retour") : l'étape "Sorts" si ce
+  /// niveau la déclenche ([_hasSpellsStep]), sinon "Choix à faire" si
+  /// déclenchée, sinon "Aptitudes" — même logique de repli que le "Retour"
+  /// existant de l'étape "Sorts".
+  _LevelUpPhase _phaseBeforeInvocations(LevelUpStepData data) {
+    if (_hasSpellsStep(data)) return _LevelUpPhase.spells;
+    if (data.choiceKind != null) return _LevelUpPhase.choice;
+    return _LevelUpPhase.abilities;
+  }
 
   Widget _buildHpStep(LevelUpStepData data) {
     final hpRolled = _hpRolledValue(data.hitDie);
@@ -1073,8 +1190,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// pour le contexte de blocage, voir sa documentation).
   String _choiceStepLabel(LevelUpChoiceKind kind) {
     return switch (kind) {
-      LevelUpChoiceKind.abilityScoreImprovement =>
-        'Amélioration de caractéristique',
+      LevelUpChoiceKind.abilityScoreImprovement => 'Amélioration ou don',
       LevelUpChoiceKind.subclass => 'Sous-classe',
       LevelUpChoiceKind.fightingStyle => 'Style de combat',
       LevelUpChoiceKind.favoredEnemy => 'Ennemi juré',
@@ -1083,6 +1199,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
 
   bool _canContinueChoiceStep(LevelUpStepData data, LevelUpChoiceKind kind) {
     if (kind == LevelUpChoiceKind.abilityScoreImprovement) {
+      if (_asiMethod == _AsiMethod.feat) {
+        return _selectedListOptionId != null;
+      }
       final allocations = _ensureAbilityAllocationsInitialized();
       final spent = allocations.values.fold(0, (sum, value) => sum + value);
       return spent == _abilityScoreImprovementBudget;
@@ -1096,9 +1215,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
 
   Widget _buildChoiceBody(LevelUpStepData data, LevelUpChoiceKind kind) {
     return switch (kind) {
-      LevelUpChoiceKind.abilityScoreImprovement => _buildAbilityAllocationBody(
-        data,
-      ),
+      LevelUpChoiceKind.abilityScoreImprovement => _buildAsiOrFeatBody(data),
       LevelUpChoiceKind.subclass => _buildOptionListBody(
         instruction: 'Choisissez une sous-classe.',
         icon: Icons.auto_awesome,
@@ -1110,6 +1227,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
               subtitle: (subclass.description?.isNotEmpty ?? false)
                   ? subclass.description
                   : null,
+              onInfoTap: null,
             ),
         ],
       ),
@@ -1118,7 +1236,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         icon: Icons.security,
         options: [
           for (final style in LevelUpChoiceOptions.fightingStyles)
-            (id: style, title: style, subtitle: null),
+            (id: style, title: style, subtitle: null, onInfoTap: null),
         ],
       ),
       LevelUpChoiceKind.favoredEnemy => _buildOptionListBody(
@@ -1126,19 +1244,98 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         icon: Icons.gps_fixed,
         options: [
           for (final enemy in LevelUpChoiceOptions.favoredEnemies)
-            (id: enemy, title: enemy, subtitle: null),
+            (id: enemy, title: enemy, subtitle: null, onInfoTap: null),
         ],
       ),
     };
   }
 
-  /// Variante liste (sous-classe/style de combat/ennemi juré) — pas de carte
-  /// englobante (chaque [SelectableOptionTile] est déjà sa propre carte),
-  /// sauf état vide (spec visuelle direction-artistique section 2).
+  /// Sous-état ASI-ou-don de l'étape "Choix à faire" — spec visuelle
+  /// direction-artistique section 1 : instruction, `SegmentedToggle` 2
+  /// segments (présélection [_AsiMethod.allocate]), puis le corps du mode
+  /// choisi. Mode allocation = [_buildAbilityAllocationBody] inchangé. Mode
+  /// don = [_buildOptionListBody] (réutilisation intégrale, voir section 2 de
+  /// la spec).
+  Widget _buildAsiOrFeatBody(LevelUpStepData data) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            0,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Choisissez comment progresser.',
+                style: AppTypography.body(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textOnWood,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SegmentedToggle<_AsiMethod>(
+                options: const [
+                  SegmentedToggleOption(
+                    value: _AsiMethod.allocate,
+                    label: 'Répartir +2',
+                  ),
+                  SegmentedToggleOption(
+                    value: _AsiMethod.feat,
+                    label: 'Choisir un don',
+                  ),
+                ],
+                value: _asiMethod,
+                onChanged: (method) => setState(() => _asiMethod = method),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _asiMethod == _AsiMethod.allocate
+              ? _buildAbilityAllocationBody(data)
+              : _buildOptionListBody(
+                  instruction: 'Choisissez un don.',
+                  icon: Icons.military_tech,
+                  options: [
+                    for (final feat in data.availableFeats)
+                      (
+                        id: feat.id,
+                        title: feat.name,
+                        subtitle: feat.prerequisiteText,
+                        onInfoTap: () => showFeatInfoPanel(context, feat: feat),
+                      ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  /// Variante liste (sous-classe/style de combat/ennemi juré/don) — pas de
+  /// carte englobante (chaque [SelectableOptionTile] est déjà sa propre
+  /// carte), sauf état vide (spec visuelle direction-artistique section 2).
+  ///
+  /// [onInfoTap] (option) : bouton "i" additionnel affiché à côté de la
+  /// tuile, ouvrant un panneau "Infos" — jamais consommé par
+  /// [SelectableOptionTile] lui-même (composant partagé, pas de slot dédié) :
+  /// une zone de tap séparée à sa droite plutôt qu'une modification de ce
+  /// composant, seul usage à ce jour (liste de dons, section 2 de la spec
+  /// visuelle direction-artistique) — le tap sur le reste de la ligne
+  /// sélectionne l'option normalement.
   Widget _buildOptionListBody({
     required String instruction,
     required IconData icon,
-    required List<({Object id, String title, String? subtitle})> options,
+    required List<
+      ({Object id, String title, String? subtitle, VoidCallback? onInfoTap})
+    >
+    options,
   }) {
     if (options.isEmpty) {
       return const Center(
@@ -1170,13 +1367,36 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           const SizedBox(height: AppSpacing.sm),
           for (var i = 0; i < options.length; i++) ...[
             if (i > 0) const SizedBox(height: AppSpacing.sm),
-            SelectableOptionTile(
-              title: options[i].title,
-              subtitle: options[i].subtitle,
-              selected: _selectedListOptionId == options[i].id,
-              onTap: () =>
-                  setState(() => _selectedListOptionId = options[i].id),
-              leading: AccentIconBadge(index: i, icon: icon),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: SelectableOptionTile(
+                    title: options[i].title,
+                    subtitle: options[i].subtitle,
+                    selected: _selectedListOptionId == options[i].id,
+                    onTap: () =>
+                        setState(() => _selectedListOptionId = options[i].id),
+                    leading: AccentIconBadge(index: i, icon: icon),
+                  ),
+                ),
+                if (options[i].onInfoTap != null) ...[
+                  const SizedBox(width: AppSpacing.xs),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 44,
+                    ),
+                    child: IconButton(
+                      onPressed: options[i].onInfoTap,
+                      icon: const Icon(
+                        Icons.info_outline,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ],
@@ -1268,21 +1488,23 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   }
 
   /// Étape "Sorts", affichée uniquement quand [_hasSpellsStep] vaut `true`
-  /// (increment 3, et maintenant multiclassage — voir [_totalSteps] et
-  /// [_phaseAfterChoiceOrAbilities]). Numérotation "Étape 3" si l'étape
-  /// "Choix à faire" n'existait pas à ce niveau, "Étape 4" sinon (spec
-  /// visuelle direction-artistique section 0) — toujours juste avant le
+  /// (increment 3, et généralisée depuis le chantier "sorts/dons/
+  /// invocations" — voir [_totalSteps] et [_phaseAfterChoiceOrAbilities]).
+  /// Numérotation "Étape 3" si l'étape "Choix à faire" n'existait pas à ce
+  /// niveau, "Étape 4" sinon (spec visuelle direction-artistique section 0)
+  /// — toujours juste avant l'étape "Invocations" si elle existe, sinon le
   /// récapitulatif.
   ///
-  /// Deux variantes : sélection de sorts de départ pour une nouvelle classe
-  /// "à sorts connus" démarrée au niveau 1 (multiclassage, voir
-  /// [_buildInitialSpellSelectionStep]), ou simple recalcul automatique
-  /// d'emplacements (comportement historique de l'increment 3, ci-dessous).
+  /// Deux variantes : sélection de nouveaux sorts/cantrips connus (voir
+  /// [_buildSpellSelectionStep] — plus seulement le niveau 1 d'une classe
+  /// multiclassée, généralisé à toute montée de niveau qui en apprend), ou
+  /// simple recalcul automatique d'emplacements (comportement historique de
+  /// l'increment 3, ci-dessous).
   Widget _buildSpellsStep(LevelUpStepData data) {
     final stepNumber = data.choiceKind != null ? 4 : 3;
 
-    if (data.requiresInitialSpellSelection) {
-      return _buildInitialSpellSelectionStep(data, stepNumber);
+    if (data.requiresSpellSelection) {
+      return _buildSpellSelectionStep(data, stepNumber);
     }
 
     return Column(
@@ -1345,47 +1567,65 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           }),
           // Toujours actif : pur recalcul automatique, rien à valider (spec
           // visuelle direction-artistique section 0).
-          onContinue: () => setState(() => _phase = _LevelUpPhase.summary),
+          onContinue: () => setState(() => _phase = _phaseAfterSpells(data)),
         ),
       ],
     );
   }
 
-  /// Variante multiclasse de l'étape "Sorts" : sélection de sorts de départ
-  /// pour une nouvelle classe "à sorts connus" (Barde/Ensorceleur/Occultiste/
-  /// Rôdeur) démarrée au niveau 1 — même patron que `SpellsStepScreen`
-  /// (étape 6/9 de l'assistant de création), spec visuelle
-  /// direction-artistique section 5.
-  Widget _buildInitialSpellSelectionStep(LevelUpStepData data, int stepNumber) {
-    final catalog = data.initialSpellCatalog!;
-    final cantripQuota = data.initialCantripQuota;
-    final levelOneQuota = data.initialLevelOneSpellQuota;
+  /// Étape "Sorts" généralisée : sélection de nouveaux sorts/cantrips connus
+  /// — niveau 1 d'une nouvelle classe multiclassée "à sorts connus"
+  /// (Barde/Ensorceleur/Occultiste/Rôdeur) OU tout niveau > 1 d'une telle
+  /// classe continuée qui en apprend (voir
+  /// `domain/spells_known_progression.dart`) — même patron que
+  /// `SpellsStepScreen` (étape 6/9 de l'assistant de création), spec
+  /// visuelle direction-artistique section 4.
+  ///
+  /// **Simplification assumée** : cette étape ne couvre QUE l'ajout de
+  /// nouveaux sorts/cantrips, jamais l'échange d'un sort déjà connu contre un
+  /// autre (RAW 5e : Barde/Ensorceleur/Rôdeur/Occultiste peuvent tous
+  /// échanger un sort connu à chaque montée de niveau) — le joueur peut
+  /// toujours modifier ses sorts connus manuellement depuis l'onglet Sorts
+  /// existant de la fiche (déjà éditable) si besoin.
+  Widget _buildSpellSelectionStep(LevelUpStepData data, int stepNumber) {
+    final catalog = data.spellSelectionCatalog!;
+    final cantripQuota = data.newCantripQuota;
+    final spellQuota = data.newSpellQuota;
     final showCantripTab = cantripQuota > 0;
-    final showLevelOneTab = levelOneQuota > 0;
+    final showSpellsTab = spellQuota > 0;
 
     // Onglet par défaut, déterminé une seule fois (même précédent que
     // `SpellsStepScreen._activeTab`) : "Mineurs" s'il est visible, sinon
-    // "Niveau 1".
-    _initialSpellActiveTab ??= showCantripTab
-        ? _InitialSpellTab.cantrip
-        : _InitialSpellTab.levelOne;
-    final activeTab = _initialSpellActiveTab!;
-    final showTabSelector = showCantripTab && showLevelOneTab;
+    // "Sorts".
+    _spellSelectionActiveTab ??= showCantripTab
+        ? _SpellSelectionTab.cantrip
+        : _SpellSelectionTab.spells;
+    final activeTab = _spellSelectionActiveTab!;
+    final showTabSelector = showCantripTab && showSpellsTab;
 
     final cantrips = [
       for (final spell in catalog.spells)
         if (spell.level == 0) spell,
     ];
-    final levelOneSpells = [
-      for (final spell in catalog.spells)
-        if (spell.level == 1) spell,
-    ];
+    // Liste PLATE couvrant tous les niveaux de sort castables à ce niveau de
+    // classe (pas de sous-onglets par niveau de sort, spec visuelle
+    // direction-artistique section 4) — triée par niveau de sort puis
+    // alphabétiquement.
+    final spells =
+        [
+          for (final spell in catalog.spells)
+            if (spell.level >= 1 && spell.level <= data.maxCastableSpellLevel)
+              spell,
+        ]..sort((a, b) {
+          final byLevel = a.level.compareTo(b.level);
+          return byLevel != 0 ? byLevel : a.name.compareTo(b.name);
+        });
 
     final canProceed = SpellsStepSelection.canProceed(
       cantripQuota: cantripQuota,
-      selectedCantrips: _selectedInitialCantrips,
-      levelOneSpellQuota: levelOneQuota,
-      selectedLevelOneSpells: _selectedInitialLevelOneSpells,
+      selectedCantrips: _selectedNewCantrips,
+      levelOneSpellQuota: spellQuota,
+      selectedLevelOneSpells: _selectedNewSpells,
     );
 
     return Column(
@@ -1398,19 +1638,19 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         ),
         if (showTabSelector) ...[
           const SizedBox(height: AppSpacing.sm),
-          SpellLevelTabSelector<_InitialSpellTab>(
+          SpellLevelTabSelector<_SpellSelectionTab>(
             options: const [
               SpellLevelTabOption(
-                value: _InitialSpellTab.cantrip,
+                value: _SpellSelectionTab.cantrip,
                 label: 'Mineurs',
               ),
               SpellLevelTabOption(
-                value: _InitialSpellTab.levelOne,
-                label: 'Niveau 1',
+                value: _SpellSelectionTab.spells,
+                label: 'Sorts',
               ),
             ],
             value: activeTab,
-            onChanged: (tab) => setState(() => _initialSpellActiveTab = tab),
+            onChanged: (tab) => setState(() => _spellSelectionActiveTab = tab),
           ),
         ],
         Expanded(
@@ -1420,23 +1660,32 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: AppSpacing.sm),
-                _multiclassInfoBanner(data),
-                const SizedBox(height: AppSpacing.md),
-                if (activeTab == _InitialSpellTab.cantrip)
-                  _initialSpellSection(
+                // Correctif structurel (bug latent) : conditionné à
+                // `data.isMulticlassing` comme partout ailleurs dans cet
+                // écran — cet appel était auparavant inconditionnel, ce qui
+                // affichait à tort "Nouvelle classe : ... (niveau 1)" pour
+                // une montée de niveau normale (classe continuée).
+                if (data.isMulticlassing) ...[
+                  _multiclassInfoBanner(data),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                if (activeTab == _SpellSelectionTab.cantrip)
+                  _spellSelectionSection(
                     title: 'SORTS MINEURS CONNUS',
                     quota: cantripQuota,
-                    selected: _selectedInitialCantrips,
+                    selected: _selectedNewCantrips,
                     candidates: cantrips,
-                    onToggle: _toggleInitialCantrip,
+                    onToggle: _toggleNewCantrip,
+                    showLevelSuffix: false,
                   )
                 else
-                  _initialSpellSection(
-                    title: 'SORTS DE NIVEAU 1 CONNUS',
-                    quota: levelOneQuota,
-                    selected: _selectedInitialLevelOneSpells,
-                    candidates: levelOneSpells,
-                    onToggle: _toggleInitialLevelOneSpell,
+                  _spellSelectionSection(
+                    title: 'NOUVEAUX SORTS CONNUS',
+                    quota: spellQuota,
+                    selected: _selectedNewSpells,
+                    candidates: spells,
+                    onToggle: _toggleNewSpell,
+                    showLevelSuffix: true,
                   ),
                 const SizedBox(height: AppSpacing.md),
                 _ParchmentCard(
@@ -1482,27 +1731,28 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                 ? _LevelUpPhase.choice
                 : _LevelUpPhase.abilities;
           }),
-          // Désactivé tant que les quotas cantrips/niveau 1 ne sont pas
+          // Désactivé tant que les quotas cantrips/sorts ne sont pas
           // atteints — même garde que l'étape 6/9 de l'assistant de création
           // (`SpellsStepSelection.canProceed`), spec visuelle
-          // direction-artistique section 5.
+          // direction-artistique section 4.
           onContinue: canProceed
-              ? () => setState(() => _phase = _LevelUpPhase.summary)
+              ? () => setState(() => _phase = _phaseAfterSpells(data))
               : null,
         ),
       ],
     );
   }
 
-  /// Contenu d'un onglet de [_buildInitialSpellSelectionStep] : titre de
-  /// section + badge de quota, puis un [_initialSpellTile] par sort candidat
-  /// — même patron que `SpellsStepScreen._spellSection`.
-  Widget _initialSpellSection({
+  /// Contenu d'un onglet de [_buildSpellSelectionStep] : titre de section +
+  /// badge de quota, puis une [_spellSelectionTile] par sort candidat — même
+  /// patron que `SpellsStepScreen._spellSection`.
+  Widget _spellSelectionSection({
     required String title,
     required int quota,
     required List<String> selected,
     required List<SpellOption> candidates,
     required void Function(String name, int quota) onToggle,
+    required bool showLevelSuffix,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1524,12 +1774,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         const SizedBox(height: AppSpacing.sm),
         for (var i = 0; i < candidates.length; i++) ...[
           if (i > 0) const SizedBox(height: AppSpacing.xs),
-          _initialSpellTile(
+          _spellSelectionTile(
             candidates[i],
             index: i,
             selected: selected,
             quota: quota,
             onToggle: onToggle,
+            showLevelSuffix: showLevelSuffix,
           ),
         ],
       ],
@@ -1537,18 +1788,25 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   }
 
   /// Une tuile de sort candidat — même patron que
-  /// `SpellsStepScreen._spellTile`.
-  Widget _initialSpellTile(
+  /// `SpellsStepScreen._spellTile`. [showLevelSuffix] ajoute le niveau de
+  /// sort au `subtitle` (ex. "Évocation · 1 action (niveau 2)") — pertinent
+  /// uniquement pour la section "NOUVEAUX SORTS CONNUS" (liste plate
+  /// multi-niveaux, spec visuelle direction-artistique section 4), jamais
+  /// pour les cantrips (toujours niveau 0, non affiché).
+  Widget _spellSelectionTile(
     SpellOption spell, {
     required int index,
     required List<String> selected,
     required int quota,
     required void Function(String name, int quota) onToggle,
+    required bool showLevelSuffix,
   }) {
     final isSelected = selected.contains(spell.name);
     return CheckableOptionTile(
       title: spell.name,
-      subtitle: spell.metaLine,
+      subtitle: showLevelSuffix
+          ? '${spell.metaLine} (niveau ${spell.level})'
+          : spell.metaLine,
       leading: AccentIconBadge(index: index, icon: Icons.auto_awesome),
       checked: isSelected,
       enabled: !SpellsStepSelection.isChoiceLocked(
@@ -1558,6 +1816,133 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       ),
       onTap: () => onToggle(spell.name, quota),
     );
+  }
+
+  /// Étape "Invocations", affichée uniquement quand [_hasInvocationsStep]
+  /// vaut `true` (Occultiste, voir `domain/invocations_known_progression.dart`)
+  /// — spec visuelle direction-artistique section 3. Pas de bandeau
+  /// multiclassage sur cette étape (un multiclassage en Occultiste démarre
+  /// toujours au niveau 1, les invocations RAW commencent au niveau 2 — cette
+  /// condition ne peut jamais être vraie ici).
+  ///
+  /// **Simplification assumée** (même esprit que l'étape "Sorts", voir son
+  /// commentaire "pas d'échange de sort déjà connu") : cette étape ne couvre
+  /// QUE l'ajout de nouvelles invocations, jamais l'échange d'une invocation
+  /// déjà connue contre une autre — RAW 5e, l'Occultiste peut pourtant le
+  /// faire à chaque montée de niveau, comme les 4 classes "à sorts connus"
+  /// pour leurs sorts. Le joueur peut toujours ajuster ses invocations
+  /// connues manuellement si besoin (aucun onglet dédié aujourd'hui, mais
+  /// rien n'empêche une correction en base par un futur écran).
+  Widget _buildInvocationsStep(LevelUpStepData data) {
+    final stepNumber = _invocationsStepNumber(data);
+    final quota = data.invocationQuota;
+    final selected = _selectedInvocationIds;
+
+    return Column(
+      children: [
+        LevelUpHeader(
+          eyebrow: 'MONTÉE DE NIVEAU',
+          levelLabel: 'NIVEAU $_targetLevel',
+          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Invocations',
+          remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'INVOCATIONS CONNUES',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    _QuotaBadge(text: '${selected.length} / $quota'),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                if (data.availableInvocations.isEmpty)
+                  const _ParchmentCard(
+                    child: _EmptyChoiceState(
+                      message:
+                          'Vous connaissez déjà toutes les invocations '
+                          'occultistes disponibles.',
+                    ),
+                  )
+                else
+                  for (
+                    var i = 0;
+                    i < data.availableInvocations.length;
+                    i++
+                  ) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.xs),
+                    _invocationTile(
+                      data.availableInvocations[i],
+                      index: i,
+                      quota: quota,
+                    ),
+                  ],
+              ],
+            ),
+          ),
+        ),
+        _StepFooter(
+          onBack: () => setState(() => _phase = _phaseBeforeInvocations(data)),
+          // Actif dès que le quota EFFECTIF est atteint (voir la doc de
+          // [LevelUpStepData.invocationQuota]) — toujours vrai quand la liste
+          // de candidats est vide (quota effectif 0, déjà atteint), spec
+          // visuelle direction-artistique section 3.
+          onContinue: selected.length == quota
+              ? () => setState(() => _phase = _LevelUpPhase.summary)
+              : null,
+        ),
+      ],
+    );
+  }
+
+  /// Une tuile d'invocation candidate — réutilise directement
+  /// `SpellsStepSelection.toggle`/`.isChoiceLocked` (déjà génériques sur
+  /// `List<String>` + quota, voir [_selectedInvocationIds]). Couleur
+  /// d'accent fixe [AppColors.accentViolet] (distinct du cycle générique de
+  /// [AccentIconBadge], spec visuelle direction-artistique section 3).
+  Widget _invocationTile(
+    LevelUpInvocationOption invocation, {
+    required int index,
+    required int quota,
+  }) {
+    final id = invocation.id.toString();
+    final isSelected = _selectedInvocationIds.contains(id);
+    return CheckableOptionTile(
+      title: invocation.name,
+      subtitle: invocation.prerequisiteText,
+      leading: AccentIconBadge(
+        index: index,
+        icon: Icons.remove_red_eye,
+        color: AppColors.accentViolet,
+      ),
+      checked: isSelected,
+      enabled: !SpellsStepSelection.isChoiceLocked(
+        isSelected: isSelected,
+        selectedCount: _selectedInvocationIds.length,
+        quota: quota,
+      ),
+      onTap: () => _toggleInvocation(id, quota),
+    );
+  }
+
+  /// 3, 4, 5 ou 6 selon les étapes déclenchées avant "Invocations" à ce
+  /// niveau — même principe que le calcul de `stepNumber` de
+  /// [_buildSpellsStep].
+  int _invocationsStepNumber(LevelUpStepData data) {
+    final spellsStepNumber = data.choiceKind != null ? 4 : 3;
+    return _hasSpellsStep(data) ? spellsStepNumber + 1 : spellsStepNumber;
   }
 
   /// Une ligne de gain de l'étape "Sorts", et du bloc "Sorts" du
@@ -1590,23 +1975,51 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
 
   /// Ligne de récapitulatif du choix fait à l'étape "Choix à faire", `null`
   /// si ce niveau n'en déclenchait aucun — voir la spec visuelle
-  /// direction-artistique section C.
+  /// direction-artistique section C. Titre dynamique pour
+  /// [LevelUpChoiceKind.abilityScoreImprovement] selon le sous-choix réel
+  /// (spec visuelle direction-artistique section 5, point 1) : mode
+  /// allocation, titre inchangé `'Amélioration de caractéristique'` ; mode
+  /// don, titre `'Don'` et subtitle = nom du don choisi. Icône/couleur
+  /// inchangées dans les deux cas.
   GainRow? _choiceSummaryGainRow(LevelUpStepData data) {
     final kind = data.choiceKind;
     if (kind == null) return null;
 
-    final subtitle = switch (kind) {
-      LevelUpChoiceKind.abilityScoreImprovement => [
+    if (kind == LevelUpChoiceKind.abilityScoreImprovement) {
+      if (_asiMethod == _AsiMethod.feat) {
+        final featName = data.availableFeats
+            .firstWhere((option) => option.id == _selectedListOptionId)
+            .name;
+        return GainRow(
+          icon: Icons.checklist,
+          color: AppColors.accentBlue,
+          title: 'Don',
+          subtitle: featName,
+        );
+      }
+      final subtitle = [
         for (final definition in abilityScoreDefinitions)
           if ((_abilityAllocations?[definition.key] ?? 0) > 0)
             '${definition.label} +${_abilityAllocations![definition.key]}',
-      ].join(', '),
+      ].join(', ');
+      return GainRow(
+        icon: Icons.checklist,
+        color: AppColors.accentBlue,
+        title: 'Amélioration de caractéristique',
+        subtitle: subtitle,
+      );
+    }
+
+    final subtitle = switch (kind) {
       LevelUpChoiceKind.subclass =>
         data.availableSubclasses
             .firstWhere((option) => option.id == _selectedListOptionId)
             .name,
       LevelUpChoiceKind.fightingStyle ||
       LevelUpChoiceKind.favoredEnemy => _selectedListOptionId! as String,
+      LevelUpChoiceKind.abilityScoreImprovement => throw StateError(
+        'unreachable : traité ci-dessus',
+      ),
     };
 
     return GainRow(
@@ -1614,6 +2027,53 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       color: AppColors.accentBlue,
       title: _choiceStepLabel(kind),
       subtitle: subtitle,
+    );
+  }
+
+  /// Lignes de récapitulatif du bloc "Sorts appris" (cantrips/sorts, une
+  /// [GainRow] par liste non vide) — spec visuelle direction-artistique
+  /// section 5, point 2 : lacune préexistante corrigée avec ce chantier (ce
+  /// bloc était absent du récapitulatif, y compris pour la branche
+  /// multiclasse déjà livrée). Insérées dans [_buildSummary] après le bloc
+  /// "Choix à faire", avant les [GainRow] de changement d'emplacements.
+  List<GainRow> _spellsKnownSummaryGainRows(LevelUpStepData data) {
+    return [
+      if (_selectedNewCantrips.isNotEmpty)
+        GainRow(
+          icon: Icons.auto_awesome,
+          color: AppColors.accentViolet,
+          title: 'Nouveaux sorts mineurs',
+          subtitle: _selectedNewCantrips.join(', '),
+        ),
+      if (_selectedNewSpells.isNotEmpty)
+        GainRow(
+          icon: Icons.auto_awesome,
+          color: AppColors.accentViolet,
+          title: 'Nouveaux sorts appris',
+          subtitle: _selectedNewSpells.join(', '),
+        ),
+    ];
+  }
+
+  /// Ligne de récapitulatif du bloc "Invocation(s)" (Occultiste), `null` si
+  /// aucune invocation n'a été choisie à ce niveau — spec visuelle
+  /// direction-artistique section 5, point 3 : titre accordé singulier/
+  /// pluriel, subtitle = noms joints par ", ". Insérée dans [_buildSummary]
+  /// après les blocs "Sorts", avant le bandeau d'erreur.
+  GainRow? _invocationSummaryGainRow(LevelUpStepData data) {
+    if (_selectedInvocationIds.isEmpty) return null;
+    final names = [
+      for (final id in _selectedInvocationIds)
+        data.availableInvocations
+            .firstWhere((option) => option.id.toString() == id)
+            .name,
+    ];
+    final plural = names.length > 1 ? 's' : '';
+    return GainRow(
+      icon: Icons.remove_red_eye,
+      color: AppColors.accentViolet,
+      title: 'Nouvelle$plural invocation$plural occultiste$plural',
+      subtitle: names.join(', '),
     );
   }
 
@@ -1662,11 +2122,22 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         const SizedBox(height: AppSpacing.md),
                         gainRow,
                       ],
-                      for (final spellGainRow in _spellSlotSummaryGainRows(
+                      for (final spellGainRow in _spellsKnownSummaryGainRows(
                         data,
                       )) ...[
                         const SizedBox(height: AppSpacing.md),
                         spellGainRow,
+                      ],
+                      for (final spellSlotGainRow in _spellSlotSummaryGainRows(
+                        data,
+                      )) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        spellSlotGainRow,
+                      ],
+                      if (_invocationSummaryGainRow(data)
+                          case final invocationRow?) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        invocationRow,
                       ],
                     ],
                   ),
@@ -1873,8 +2344,19 @@ class _UpcomingStepRow extends StatelessWidget {
 /// liste de 0 option ne devrait normalement pas arriver) — patron
 /// `_EmptyFeaturesState` ci-dessus, hébergé dans une `_ParchmentCard` par
 /// l'appelant (spec visuelle direction-artistique section "États").
+///
+/// [message] : personnalisable depuis le chantier "sorts/dons/invocations"
+/// (étape "Invocations", message spécifique "Vous connaissez déjà toutes les
+/// invocations occultistes disponibles." — voir la spec visuelle
+/// direction-artistique section 3, un cas attendu et non défensif pour cette
+/// étape précise, contrairement aux 3 autres usages de ce widget). Retombe
+/// sur le texte générique historique si non fourni.
 class _EmptyChoiceState extends StatelessWidget {
-  const _EmptyChoiceState();
+  const _EmptyChoiceState({
+    this.message = 'Aucune option disponible pour ce choix.',
+  });
+
+  final String message;
 
   @override
   Widget build(BuildContext context) {
@@ -1884,7 +2366,7 @@ class _EmptyChoiceState extends StatelessWidget {
         const Icon(Icons.info_outline, size: 40, color: AppColors.textMuted),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'Aucune option disponible pour ce choix.',
+          message,
           textAlign: TextAlign.center,
           style: AppTypography.body(fontSize: 13, color: AppColors.textMuted),
         ),
@@ -1997,11 +2479,12 @@ class _StepFooter extends StatelessWidget {
   }
 }
 
-/// Badge "X / Y" de [_LevelUpScreenState._initialSpellSection] — même patron
-/// que `_QuotaBadge` de `character_creation/presentation/spells_step_screen.dart`,
-/// dupliqué ici plutôt que partagé (même rationale que le reste des
-/// duplicatas de ce dépôt entre l'assistant de création et la montée de
-/// niveau).
+/// Badge "X / Y" de [_LevelUpScreenState._spellSelectionSection] et de
+/// l'étape "Invocations" ([_LevelUpScreenState._buildInvocationsStep]) —
+/// même patron que `_QuotaBadge` de
+/// `character_creation/presentation/spells_step_screen.dart`, dupliqué ici
+/// plutôt que partagé (même rationale que le reste des duplicatas de ce
+/// dépôt entre l'assistant de création et la montée de niveau).
 class _QuotaBadge extends StatelessWidget {
   const _QuotaBadge({required this.text});
 

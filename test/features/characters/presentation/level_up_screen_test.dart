@@ -34,6 +34,8 @@ import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
+import 'package:personnages/features/characters/domain/level_up_feat_option.dart';
+import 'package:personnages/features/characters/domain/level_up_invocation_option.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_kind.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
@@ -54,6 +56,7 @@ class _AppliedLevelUp {
     required this.hpGain,
     required this.choice,
     required this.initialSpellIds,
+    required this.invocationIds,
   });
 
   final Object classId;
@@ -64,6 +67,7 @@ class _AppliedLevelUp {
   final int hpGain;
   final LevelUpChoiceSelection? choice;
   final List<int> initialSpellIds;
+  final List<int> invocationIds;
 }
 
 /// Fake minimal de `CharacterCreationRepository` — seul
@@ -138,6 +142,12 @@ class _FakeCharacterRepository implements CharacterRepository {
   Object? applyErrorToThrow;
   final List<_AppliedLevelUp> applyLevelUpCalls = [];
 
+  // Vide par défaut (comportement neutre pour l'immense majorité des tests
+  // de ce fichier, qui n'exercent ni le sous-mode "don" ni l'étape
+  // "Invocations") — overridable par test comme `levelDataByLevel`.
+  List<LevelUpFeatOption> featsToReturn = const [];
+  List<LevelUpInvocationOption> invocationsToReturn = const [];
+
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
 
@@ -161,6 +171,16 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 
   @override
+  Future<List<LevelUpFeatOption>> fetchAvailableFeats({
+    required String characterId,
+  }) async => featsToReturn;
+
+  @override
+  Future<List<LevelUpInvocationOption>> fetchAvailableInvocations({
+    required String characterId,
+  }) async => invocationsToReturn;
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -171,6 +191,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     required int hpGain,
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
+    List<int> invocationIds = const [],
   }) async {
     applyLevelUpCalls.add(
       _AppliedLevelUp(
@@ -182,6 +203,7 @@ class _FakeCharacterRepository implements CharacterRepository {
         hpGain: hpGain,
         choice: choice,
         initialSpellIds: initialSpellIds,
+        invocationIds: invocationIds,
       ),
     );
     if (applyErrorToThrow != null) throw applyErrorToThrow!;
@@ -797,14 +819,16 @@ void main() {
           newCurrentHp: 40,
         );
         // Niveau 7 : ni choice_type, ni niveau ASI -> pas de blocage.
-        // Niveau 8 : choice_type non résolu (`invocation`) -> reste bloqué,
-        // indépendamment du fait que 8 soit aussi un niveau ASI (la
-        // condition 1 est évaluée en premier, voir
-        // `LevelUpBlockRules.evaluate`).
+        // Niveau 8 : choice_type non résolu (`sort_domaine`, valeur fictive
+        // représentant tout `choice_type` futur non encore géré — `invocation`
+        // ne peut plus servir cet exemple depuis que ce chantier l'a ajouté à
+        // `resolvedChoiceTypes`) -> reste bloqué, indépendamment du fait que 8
+        // soit aussi un niveau ASI (la condition 1 est évaluée en premier,
+        // voir `LevelUpBlockRules.evaluate`).
         fakeRepository.levelDataByLevel = {
           7: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
           8: const LevelUpLevelData(
-            choiceType: 'invocation',
+            choiceType: 'sort_domaine',
             automaticFeatures: [],
           ),
         };
@@ -849,7 +873,7 @@ void main() {
         expect(find.text('NIVEAU 7'), findsOneWidget);
         expect(find.text('Niveau 8 : choix requis'), findsOneWidget);
         expect(
-          find.text('Guerrier niveau 8 : Invocation occulte'),
+          find.text('Guerrier niveau 8 : Sort de domaine'),
           findsOneWidget,
         );
 
@@ -1012,9 +1036,7 @@ void main() {
             findsOneWidget,
           );
           expect(
-            find.text(
-              'Un choix de Amélioration de caractéristique vous attendra',
-            ),
+            find.text('Un choix de Amélioration ou don vous attendra'),
             findsOneWidget,
           );
           expect(
@@ -1088,9 +1110,7 @@ void main() {
         await pushLevelUp(tester, 4);
 
         expect(
-          find.text(
-            'Un choix de Amélioration de caractéristique vous attendra',
-          ),
+          find.text('Un choix de Amélioration ou don vous attendra'),
           findsOneWidget,
         );
         expect(
@@ -1100,18 +1120,21 @@ void main() {
       });
 
       testWidgets('aucun teaser quand le niveau va en fait bloquer, même si '
-          'spellSlotChanges est non vide (Barde niveau 2, classe "à sorts '
-          'connus" bloquée par `LevelUpBlockRules` — `spellSlotChanges` est '
-          'calculé indépendamment du blocage, voir `level_up_provider.dart` : '
+          'spellSlotChanges est non vide (Clerc niveau 3, `choice_type` '
+          'fictif non résolu — `sort_domaine`, valeur qui n\'existe pas '
+          'vraiment en base, remplace l\'ancien exemple "Barde niveau 2" '
+          'devenu obsolète depuis que ce chantier a levé le blocage des 4 '
+          'classes "à sorts connus" — `spellSlotChanges` est calculé '
+          'indépendamment du blocage, voir `level_up_provider.dart` : '
           "l'étape \"Sorts\" ne sera jamais atteinte cette session, l'annonce "
           'ne doit donc promettre aucune étape à venir)', (tester) async {
         fakeRepository.detailToReturn = _baseDetail.copyWith(
           classes: [
             const CharacterDetailClassRow(
-              classId: 2,
+              classId: 3,
               hitDie: 8,
-              className: 'Barde',
-              level: 1,
+              className: 'Clerc',
+              level: 2,
               isPrimary: true,
               savingThrowProficiencies: [],
             ),
@@ -1119,17 +1142,21 @@ void main() {
           xp: 0,
         );
         fakeRepository.levelDataByLevel = {
-          2: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+          3: const LevelUpLevelData(
+            choiceType: 'sort_domaine',
+            automaticFeatures: [],
+          ),
         };
 
-        await pushLevelUp(tester, 2);
+        await pushLevelUp(tester, 3);
 
         // L'annonce s'affiche (le joueur a bien atteint ce niveau), mais
-        // sans aucun teaser d'étape à venir : le niveau 2 va bloquer juste
-        // après (classe "à sorts connus"), l'étape "Sorts" ne sera jamais
-        // atteinte cette session malgré `spellSlotChanges.isNotEmpty`.
+        // sans aucun teaser d'étape à venir : le niveau 3 va bloquer juste
+        // après (`choice_type` non résolu), l'étape "Sorts" ne sera jamais
+        // atteinte cette session malgré `spellSlotChanges.isNotEmpty` (Clerc
+        // niveau 2 -> 3 débloque bien le palier de sorts de niveau 2).
         expect(find.text('MONTÉE DE NIVEAU'), findsOneWidget);
-        expect(find.text('NIVEAU 2'), findsOneWidget);
+        expect(find.text('NIVEAU 3'), findsOneWidget);
         expect(find.text('À venir dans les prochaines étapes'), findsNothing);
         expect(
           find.text('Vos emplacements de sorts vont évoluer'),
@@ -1231,7 +1258,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text('Étape 3 sur 4 · Amélioration de caractéristique'),
+          find.text('Étape 3 sur 4 · Amélioration ou don'),
           findsOneWidget,
         );
         expect(
@@ -1253,7 +1280,7 @@ void main() {
           await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
           await tester.pumpAndSettle();
           expect(
-            find.text('Étape 3 sur 4 · Amélioration de caractéristique'),
+            find.text('Étape 3 sur 4 · Amélioration ou don'),
             findsOneWidget,
           );
 
@@ -1674,7 +1701,7 @@ void main() {
         // `_abilityAllocations` n'avait pas été remis à `null`, le budget
         // du niveau 4 (déjà entièrement dépensé) resterait épuisé ici.
         expect(
-          find.text('Étape 3 sur 4 · Amélioration de caractéristique'),
+          find.text('Étape 3 sur 4 · Amélioration ou don'),
           findsOneWidget,
         );
         expect(find.text('Points restants : 2/2'), findsOneWidget);
@@ -1895,7 +1922,7 @@ void main() {
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
         expect(
-          find.text('Étape 3 sur 5 · Amélioration de caractéristique'),
+          find.text('Étape 3 sur 5 · Amélioration ou don'),
           findsOneWidget,
         );
 
@@ -1921,7 +1948,7 @@ void main() {
         await tester.tap(find.text('RETOUR'));
         await tester.pumpAndSettle();
         expect(
-          find.text('Étape 3 sur 5 · Amélioration de caractéristique'),
+          find.text('Étape 3 sur 5 · Amélioration ou don'),
           findsOneWidget,
         );
         expect(find.text('Tous les points sont répartis.'), findsOneWidget);
@@ -2281,7 +2308,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Étape 3 sur 4 · Sorts'), findsOneWidget);
 
-        await tester.tap(find.text('Niveau 1'));
+        await tester.tap(find.text('Sorts'));
         await tester.pumpAndSettle();
         for (final spell in [
           'Charme-personne',
@@ -2451,6 +2478,349 @@ void main() {
         expect(find.text('NIVEAU 6'), findsOneWidget); // niveau TOTAL, inchangé
         expect(find.text('Vrai niveau 5 (Guerrier)'), findsOneWidget);
         expect(find.text('Faux niveau 6 (bug)'), findsNothing);
+      },
+    );
+  });
+
+  group('sous-mode "don" (alternative a l\'ASI)', () {
+    const featOption = LevelUpFeatOption(
+      id: 55,
+      name: 'Robuste',
+      description:
+          'Votre total de points de vie maximum augmente de 2, et '
+          'augmente de 2 supplementaires a chaque fois que vous gagnez un '
+          'niveau dans cette classe.',
+    );
+
+    Future<void> pushToChoiceStep(WidgetTester tester, int level) async {
+      await pushPastAnnouncement(tester, level);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+    }
+
+    setUp(() {
+      fakeRepository.detailToReturn = _baseDetailAtLevel(7);
+      fakeRepository.levelDataByLevel = {
+        8: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+      fakeRepository.featsToReturn = const [featOption];
+    });
+    testWidgets(
+      'toggle "Choisir un don" : Continuer desactive tant qu aucun don '
+      'n est selectionne, puis ecrit LevelUpChoiceSelection.feat (jamais '
+      'une repartition de caracteristiques) ; recapitulatif titre "Don"',
+      (tester) async {
+        await pushToChoiceStep(tester, 8);
+
+        expect(find.text('Etape 3 sur 4 . Amelioration ou don'), findsNothing);
+        expect(
+          find.text('Étape 3 sur 4 · Amélioration ou don'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Répartissez 2 points entre vos caractéristiques.'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CHOISIR UN DON'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Choisissez un don.'), findsOneWidget);
+        expect(find.text('Robuste'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Choisissez un don.'), findsOneWidget);
+
+        await tester.tap(find.text('Robuste'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Don'), findsOneWidget);
+        expect(find.text('Robuste'), findsOneWidget);
+        expect(find.text('Amélioration de caractéristique'), findsNothing);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final choice = fakeRepository.applyLevelUpCalls.single.choice!;
+        expect(choice.kind, LevelUpChoiceKind.abilityScoreImprovement);
+        expect(choice.featId, 55);
+        expect(choice.abilityAllocations, isNull);
+      },
+    );
+    testWidgets(
+      'basculer entre Repartir +2 et Choisir un don preserve la selection '
+      'de chacun (les deux sous-choix restent en memoire simultanement, '
+      'jamais effaces par la bascule)',
+      (tester) async {
+        await pushToChoiceStep(tester, 8);
+
+        await tester.tap(find.byIcon(Icons.add).first);
+        await tester.pumpAndSettle();
+        expect(find.text('Points restants : 1/2'), findsOneWidget);
+
+        await tester.tap(find.text('CHOISIR UN DON'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Robuste'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('RÉPARTIR +2'));
+        await tester.pumpAndSettle();
+        expect(find.text('Points restants : 1/2'), findsOneWidget);
+
+        await tester.tap(find.text('CHOISIR UN DON'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 4 · Amélioration ou don'), findsNothing);
+        expect(find.text('Don'), findsOneWidget);
+        expect(find.text('Robuste'), findsOneWidget);
+      },
+    );
+    testWidgets(
+      'bouton info ouvre le panneau Infos du don (description complete, '
+      'prerequis) ; sa fermeture ne modifie pas la selection en cours',
+      (tester) async {
+        fakeRepository.featsToReturn = const [
+          LevelUpFeatOption(
+            id: 60,
+            name: 'Vigilant',
+            description:
+                'Vous ne pouvez jamais etre surpris tant que vous etes '
+                'conscient.',
+            prerequisiteText: 'Sagesse 13 ou plus',
+          ),
+        ];
+
+        await pushToChoiceStep(tester, 8);
+        await tester.tap(find.text('CHOISIR UN DON'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.info_outline));
+        await tester.pumpAndSettle();
+
+        expect(find.text('VIGILANT'), findsOneWidget);
+        expect(
+          find.text(
+            'Vous ne pouvez jamais etre surpris tant que vous etes '
+            'conscient.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Prérequis : Sagesse 13 ou plus'), findsOneWidget);
+
+        await tester.tap(find.byIcon(Icons.close));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Choisissez un don.'), findsOneWidget);
+        await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Choisissez un don.'), findsOneWidget);
+      },
+    );
+  });
+  group('etape "Invocations" (Occultiste)', () {
+    CharacterDetailClassRow occultisteClass({required int level}) =>
+        CharacterDetailClassRow(
+          classId: 9,
+          hitDie: 8,
+          className: 'Occultiste',
+          level: level,
+          isPrimary: true,
+          savingThrowProficiencies: const [],
+        );
+
+    testWidgets(
+      'niveau 2 (choice_type invocation en base, jamais bloquant, jamais '
+      'une etape Choix a faire) : enchaine Sorts (delta positif) puis '
+      'Invocations, quota effectif 2, pluriel au recapitulatif, '
+      'applyLevelUp recoit les 2 invocationIds ET le sort choisi',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [occultisteClass(level: 1)],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          2: const LevelUpLevelData(
+            choiceType: 'invocation',
+            automaticFeatures: [],
+          ),
+        };
+        fakeCreationRepository.spellCatalogByClassId = {
+          9: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 300,
+                name: 'Armure de mage',
+                level: 1,
+                school: 'Abjuration',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+        fakeRepository.invocationsToReturn = const [
+          LevelUpInvocationOption(
+            id: 401,
+            name: 'Agile esquive',
+            description: '',
+          ),
+          LevelUpInvocationOption(
+            id: 402,
+            name: 'Bete familiere',
+            description: '',
+          ),
+          LevelUpInvocationOption(
+            id: 403,
+            name: 'Vue dans les tenebres',
+            description: '',
+          ),
+        ];
+
+        await pushPastAnnouncement(tester, 2);
+        expect(find.text('Étape 1 sur 5 · Points de vie'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 5 · Sorts'), findsOneWidget);
+        await tester.tap(find.text('Armure de mage'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Invocations'), findsOneWidget);
+        expect(find.text('0 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Étape 4 sur 5 · Invocations'), findsOneWidget);
+
+        await tester.tap(find.text('Agile esquive'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Vue dans les tenebres'));
+        await tester.pumpAndSettle();
+        expect(find.text('2 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nouveaux sorts appris'), findsOneWidget);
+        expect(find.text('Armure de mage'), findsOneWidget);
+        expect(find.text('Nouvelles invocations occultistes'), findsOneWidget);
+        expect(
+          find.text('Agile esquive, Vue dans les tenebres'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Occultiste');
+        expect(applied.initialSpellIds, [300]);
+        expect(applied.invocationIds.toSet(), {401, 403});
+      },
+    );
+    testWidgets(
+      'niveau 18 (delta 1, pas etape Sorts a ce niveau) : quota effectif '
+      '1, Continuer desactive puis active, singulier au recapitulatif',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [occultisteClass(level: 17)],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          18: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.invocationsToReturn = const [
+          LevelUpInvocationOption(
+            id: 501,
+            name: 'Ailes du diable',
+            description: '',
+          ),
+          LevelUpInvocationOption(
+            id: 502,
+            name: 'Vision dans les tenebres',
+            description: '',
+          ),
+        ];
+
+        await pushPastAnnouncement(tester, 18);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 4 · Invocations'), findsOneWidget);
+        expect(find.text('0 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Étape 3 sur 4 · Invocations'), findsOneWidget);
+
+        await tester.tap(find.text('Ailes du diable'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nouvelle invocation occultiste'), findsOneWidget);
+        expect(find.text('Ailes du diable'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.invocationIds, [501]);
+      },
+    );
+
+    testWidgets(
+      'quota effectif 0 (personnage ayant epuise toutes les invocations en '
+      'base) : etat vide affiche, Continuer actif immediatement, aucune '
+      'invocation ecrite',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [occultisteClass(level: 17)],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          18: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.invocationsToReturn = const [];
+
+        await pushPastAnnouncement(tester, 18);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('0 / 0'), findsOneWidget);
+        expect(
+          find.text(
+            'Vous connaissez déjà toutes les invocations occultistes '
+            'disponibles.',
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('invocation occultiste'), findsNothing);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.invocationIds, isEmpty);
       },
     );
   });

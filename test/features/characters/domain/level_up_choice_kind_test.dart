@@ -33,12 +33,27 @@ void main() {
       );
     });
 
-    test('un choice_type non résolu (ex. invocation) ne renvoie rien ici : '
-        "l'appelant ne devrait jamais appeler resolve() pour un niveau que "
-        'LevelUpBlockRules.evaluate a bloqué', () {
+    test("'invocation' ne renvoie jamais de LevelUpChoiceKind (chantier "
+        'sorts/dons/invocations) : ce choice_type est dans '
+        'resolvedChoiceTypes (ne bloque plus le flux), mais mène à la '
+        'nouvelle étape "Invocations" dédiée, jamais à l\'étape "Choix à '
+        'faire"', () {
       expect(
         LevelUpPendingChoiceResolver.resolve(
           targetLevel: 2,
+          classFeatureChoiceType: 'invocation',
+        ),
+        isNull,
+      );
+    });
+
+    test("'invocation' reste prioritaire sur un niveau ASI (jamais "
+        'rencontré en pratique — vérifié en base, la seule ligne '
+        "'invocation' est au niveau 2 — mais couvre le cas où ce ne serait "
+        'plus vrai un jour)', () {
+      expect(
+        LevelUpPendingChoiceResolver.resolve(
+          targetLevel: 4,
           classFeatureChoiceType: 'invocation',
         ),
         isNull,

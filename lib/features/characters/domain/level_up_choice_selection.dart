@@ -14,36 +14,59 @@ class LevelUpChoiceSelection {
     : kind = LevelUpChoiceKind.abilityScoreImprovement,
       subclassId = null,
       classFeatureId = null,
+      chosenValue = null,
+      featId = null;
+
+  /// Don choisi en alternative à la répartition de caractéristiques (même
+  /// [kind], voir la spec visuelle direction-artistique section 1 de
+  /// `presentation/level_up_screen.dart` : `SegmentedToggle` "Répartir +2" /
+  /// "Choisir un don") — mutuellement exclusif avec
+  /// [abilityAllocations] (jamais les deux non nuls à la fois).
+  const LevelUpChoiceSelection.feat(this.featId)
+    : kind = LevelUpChoiceKind.abilityScoreImprovement,
+      abilityAllocations = null,
+      subclassId = null,
+      classFeatureId = null,
       chosenValue = null;
 
   const LevelUpChoiceSelection.subclass(this.subclassId)
     : kind = LevelUpChoiceKind.subclass,
       abilityAllocations = null,
       classFeatureId = null,
-      chosenValue = null;
+      chosenValue = null,
+      featId = null;
 
   const LevelUpChoiceSelection.fightingStyle({
     required this.classFeatureId,
     required this.chosenValue,
   }) : kind = LevelUpChoiceKind.fightingStyle,
        abilityAllocations = null,
-       subclassId = null;
+       subclassId = null,
+       featId = null;
 
   const LevelUpChoiceSelection.favoredEnemy({
     required this.classFeatureId,
     required this.chosenValue,
   }) : kind = LevelUpChoiceKind.favoredEnemy,
        abilityAllocations = null,
-       subclassId = null;
+       subclassId = null,
+       featId = null;
 
   final LevelUpChoiceKind kind;
 
-  /// [kind] == [LevelUpChoiceKind.abilityScoreImprovement] uniquement :
-  /// clés 'str'/'dex'/'con'/'int'/'wis'/'cha' -> points alloués (1 ou 2),
-  /// seules les caractéristiques effectivement augmentées sont présentes
-  /// (budget total 2, jamais d'entrée à 0 — voir
+  /// [kind] == [LevelUpChoiceKind.abilityScoreImprovement] ET [featId] est
+  /// `null` (sous-mode "répartir +2") uniquement : clés
+  /// 'str'/'dex'/'con'/'int'/'wis'/'cha' -> points alloués (1 ou 2), seules
+  /// les caractéristiques effectivement augmentées sont présentes (budget
+  /// total 2, jamais d'entrée à 0 — voir
   /// `presentation/level_up_screen.dart::_AllocationRow`).
   final Map<String, int>? abilityAllocations;
+
+  /// [kind] == [LevelUpChoiceKind.abilityScoreImprovement] uniquement,
+  /// sous-mode "don" — `feats.id` choisi, écrit dans `character_feats`
+  /// (voir `data/character_repository.dart::applyLevelUp`). Mutuellement
+  /// exclusif avec [abilityAllocations] : `null` en sous-mode "répartir +2".
+  final Object? featId;
 
   /// [kind] == [LevelUpChoiceKind.subclass] uniquement : `subclasses.id`
   /// choisi, écrit dans `character_classes.subclass_id`.

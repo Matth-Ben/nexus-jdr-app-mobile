@@ -2,18 +2,21 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../character_creation/domain/ability_score_rules.dart';
 import '../../../character_creation/domain/spell_catalog.dart';
-import '../../../character_creation/domain/spellcasting_rules.dart';
 import '../../../character_creation/presentation/providers/character_creation_providers.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/character_failure.dart';
+import '../../domain/invocations_known_progression.dart';
 import '../../domain/level_up_block_reason.dart';
 import '../../domain/level_up_choice_kind.dart';
+import '../../domain/level_up_feat_option.dart';
+import '../../domain/level_up_invocation_option.dart';
 import '../../domain/level_up_multiclass_option.dart';
 import '../../domain/level_up_subclass_option.dart';
 import '../../domain/multiclass_prerequisites.dart';
 import '../../domain/multiclass_proficiencies.dart';
 import '../../domain/spell_slot_change.dart';
 import '../../domain/spell_slot_progression.dart';
+import '../../domain/spells_known_progression.dart';
 import 'character_detail_provider.dart';
 import 'character_providers.dart';
 
@@ -62,6 +65,15 @@ typedef LevelUpStepData = ({
   /// [LevelUpChoiceKind.subclass].
   List<LevelUpSubclassOption> availableSubclasses,
 
+  /// Dons NON déjà possédés par le personnage — non vide seulement pour
+  /// [LevelUpChoiceKind.abilityScoreImprovement] (sous-mode "don", voir
+  /// `domain/level_up_choice_selection.dart::LevelUpChoiceSelection.featId`
+  /// et la spec visuelle direction-artistique section 2 de
+  /// `presentation/level_up_screen.dart`). Vide pour tout autre
+  /// [choiceKind] (aucune requête réseau supplémentaire dans ce cas, voir
+  /// `levelUpStepData`).
+  List<LevelUpFeatOption> availableFeats,
+
   /// Scores de caractéristiques actuels (`character_ability_scores`),
   /// nécessaires à l'étape "Choix à faire" variante
   /// [LevelUpChoiceKind.abilityScoreImprovement] (affichage "score actuel →
@@ -103,31 +115,62 @@ typedef LevelUpStepData = ({
   /// `domain/multiclass_proficiencies.dart`.
   List<String> multiclassProficiencies,
 
-  /// `true` si l'étape "Sorts" doit proposer une sélection de sorts de
-  /// départ (nouvelle classe "à sorts connus" — Barde/Ensorceleur/Occultiste
-  /// — démarrée au niveau 1 par multiclassage), plutôt qu'un simple recalcul
-  /// automatique d'emplacements. `false` pour toute classe continuée (jamais
-  /// de nouvelle sélection de sorts hors création : voir
-  /// `domain/level_up_block_reason.dart`, ces classes restent bloquées passé
-  /// le niveau 1 pour cette raison), pour toute nouvelle classe "préparée"
-  /// (Clerc/Druide/Paladin/Magicien — pas de sélection de sorts *connus* à
-  /// faire, seulement un recalcul d'emplacements), et pour le Rôdeur (RAW 5e,
-  /// aucun sort/emplacement au niveau 1 — voir
-  /// `_requiresInitialSpellSelectionFor`).
-  bool requiresInitialSpellSelection,
+  /// `true` si l'étape "Sorts" doit proposer une sélection de nouveaux
+  /// sorts/cantrips connus — TOUTE montée de niveau (continuée ou
+  /// multiclassée) d'une classe "à sorts connus" (Barde/Ensorceleur/
+  /// Occultiste/Rôdeur) qui augmente le nombre de sorts et/ou de cantrips
+  /// connus à ce niveau précis (voir
+  /// `domain/spells_known_progression.dart::SpellsKnownProgression`).
+  /// Couvrait uniquement le niveau 1 d'une nouvelle classe multiclassée
+  /// avant ce chantier ("sorts/dons/invocations") — généralisé depuis, voir
+  /// `domain/level_up_block_reason.dart` (ancienne condition de blocage
+  /// "classes à sorts connus > niveau 1", supprimée). `false` pour toute
+  /// classe non "à sorts connus" (préparée, ou non lanceuse), et pour tout
+  /// niveau à delta nul (ex. Rôdeur niveau 1, RAW 5e sans aucun sort/
+  /// emplacement à ce niveau).
+  bool requiresSpellSelection,
 
-  /// Catalogue de sorts de [className] pour la sélection de départ — non nul
-  /// seulement si [requiresInitialSpellSelection]. Réutilise
-  /// `character_creation`'s `spellCatalogProvider`/`SpellCatalog` (même
-  /// catalogue que l'étape 6/9 de l'assistant de création), voir la doc de
-  /// classe de ce fichier.
-  SpellCatalog? initialSpellCatalog,
+  /// Catalogue de sorts de [className] pour la sélection — non nul
+  /// seulement si [requiresSpellSelection]. Réutilise `character_creation`'s
+  /// `spellCatalogProvider`/`SpellCatalog` (même catalogue que l'étape 6/9
+  /// de l'assistant de création, TOUS niveaux de sort confondus — le filtre
+  /// par niveau est fait côté écran), voir la doc de classe de ce fichier.
+  SpellCatalog? spellSelectionCatalog,
 
-  /// Quota de sorts mineurs/niveau 1 pour la sélection de départ — 0 si
-  /// [requiresInitialSpellSelection] est `false`, voir
-  /// `character_creation/domain/spellcasting_rules.dart`.
-  int initialCantripQuota,
-  int initialLevelOneSpellQuota,
+  /// Nouveaux cantrips/sorts connus à ce niveau (deltas de
+  /// [SpellsKnownProgression]) — 0 si [requiresSpellSelection] est `false`.
+  int newCantripQuota,
+  int newSpellQuota,
+
+  /// Plus haut niveau de sort castable par [className] à ce niveau de
+  /// classe (pour filtrer le catalogue de la section "Sorts" de l'étape —
+  /// voir `domain/spell_slot_progression.dart::SpellSlotProgression.maxCastableSpellLevel`
+  /// et [SpellSlotProgression.pactMagicFor] pour l'Occultiste), 0 si
+  /// [requiresSpellSelection] est `false`.
+  int maxCastableSpellLevel,
+
+  /// `true` si l'étape "Invocations" doit être affichée à ce niveau —
+  /// Occultiste uniquement, delta strictement positif de
+  /// `domain/invocations_known_progression.dart::InvocationsKnownProgression`
+  /// (niveaux 2, 5, 7, 9, 12, 15, 18 RAW). Indépendant de [choiceKind] : le
+  /// `class_features.choice_type = 'invocation'` en base (niveau 2
+  /// uniquement) ne mène plus à l'étape "Choix à faire" (voir
+  /// `domain/level_up_choice_kind.dart::LevelUpPendingChoiceResolver`), cette
+  /// étape dédiée couvre tous les niveaux concernés.
+  bool requiresInvocationSelection,
+
+  /// Invocations NON déjà connues du personnage — non vide seulement si
+  /// [requiresInvocationSelection] (peut néanmoins être vide : personnage
+  /// haut niveau ayant épuisé les 32 invocations en base, voir
+  /// [invocationQuota]).
+  List<LevelUpInvocationOption> availableInvocations,
+
+  /// Quota EFFECTIF d'invocations à choisir à ce niveau — `min(delta RAW,
+  /// availableInvocations.length)`, jamais le delta RAW brut (spec visuelle
+  /// direction-artistique section 3 : l'app ne doit jamais promettre un
+  /// quota qu'elle ne peut pas tenir). 0 si [requiresInvocationSelection] est
+  /// `false`.
+  int invocationQuota,
 });
 
 /// Options de multiclassage disponibles pour [detail] à cet instant — calcul
@@ -180,29 +223,6 @@ String _abilityLabel(String abilityId) => switch (abilityId) {
   'cha' => 'Charisme',
   _ => abilityId,
 };
-
-/// Les 4 classes "à sorts connus" (Barde, Ensorceleur, Occultiste, Rôdeur) —
-/// même détection que `LevelUpBlockRules` (`domain/level_up_block_reason.dart`),
-/// dont la logique de blocage `> 1` reste inchangée et indépendante de cette
-/// fonction.
-bool _isKnownCasterClass(String className) =>
-    SpellcastingRules.isSpellcastingClass(className) &&
-    SpellcastingRules.statusFor(className) == 'connu';
-
-/// `true` si un multiclassage au niveau 1 dans [className] doit déclencher
-/// une sélection de sorts de départ (voir
-/// [LevelUpStepData.requiresInitialSpellSelection]) — les classes "à sorts
-/// connus" ([_isKnownCasterClass]) À L'EXCEPTION du Rôdeur : RAW 5e, le
-/// Rôdeur n'a AUCUN sort/emplacement au niveau 1 (voir
-/// `SpellSlotProgression._halfCasterSlots[1]`, tous à zéro — sa magie démarre
-/// au niveau 2), donc l'étape "Sorts" ne doit pas apparaître pour ce cas.
-/// `SpellcastingRules.levelOneSpellQuotaFor('Rôdeur')` (= 2) est une
-/// simplification documentée comme propre à l'assistant de CRÉATION (voir le
-/// commentaire de classe de `character_creation/domain/spellcasting_rules.dart`)
-/// — elle ne s'applique pas ici : faire disparaître "Sorts" pour un Rôdeur
-/// multiclassé niveau 1 est le comportement RAW correct, pas un défaut.
-bool _requiresInitialSpellSelectionFor(String className) =>
-    _isKnownCasterClass(className) && className != 'Rôdeur';
 
 /// Même rationale que [characterDetailProvider] : `autoDispose` par défaut,
 /// `retry: null` pour ne jamais masquer une erreur persistante derrière des
@@ -359,20 +379,70 @@ Future<LevelUpStepData> levelUpStepData(
     afterClasses: afterClasses,
   );
 
-  final requiresInitialSpellSelection =
-      isMulticlassing && _requiresInitialSpellSelectionFor(effectiveClassName);
-  SpellCatalog? initialSpellCatalog;
-  var initialCantripQuota = 0;
-  var initialLevelOneSpellQuota = 0;
-  if (requiresInitialSpellSelection) {
-    initialSpellCatalog = await ref.watch(
+  // Nouveaux sorts/cantrips connus à ce niveau — voir la doc de
+  // [LevelUpStepData.requiresSpellSelection] : delta RAW de
+  // `SpellsKnownProgression`, plus seulement pertinent pour le niveau 1
+  // d'une nouvelle classe multiclassée (couvre désormais tout niveau > 1
+  // d'une classe "à sorts connus" continuée).
+  final newCantripQuota = SpellsKnownProgression.newCantripsAt(
+    effectiveClassName,
+    effectiveTargetLevel,
+  );
+  final newSpellQuota = SpellsKnownProgression.newSpellsKnownAt(
+    effectiveClassName,
+    effectiveTargetLevel,
+  );
+  final requiresSpellSelection = newCantripQuota > 0 || newSpellQuota > 0;
+  SpellCatalog? spellSelectionCatalog;
+  var maxCastableSpellLevel = 0;
+  if (requiresSpellSelection) {
+    spellSelectionCatalog = await ref.watch(
       spellCatalogProvider(classId: (effectiveClassId as num).toInt()).future,
     );
-    initialCantripQuota = SpellcastingRules.cantripQuotaFor(effectiveClassName);
-    initialLevelOneSpellQuota = SpellcastingRules.levelOneSpellQuotaFor(
-      effectiveClassName,
-    );
+    // Magie de pacte de l'Occultiste : mécanisme séparé, jamais dans
+    // `SpellSlotProgression.totalsForClasses` (voir sa documentation) — le
+    // niveau de sort max castable est directement celui de la charge de
+    // pacte à ce niveau de classe (jamais combiné avec d'autres classes,
+    // RAW). Pour les 3 autres classes "à sorts connus" (non-pacte), réutilise
+    // le total combiné déjà calculé ci-dessus pour [spellSlotChanges].
+    maxCastableSpellLevel = effectiveClassName == 'Occultiste'
+        ? (SpellSlotProgression.pactMagicFor(effectiveTargetLevel)?.slotLevel ??
+              0)
+        : SpellSlotProgression.maxCastableSpellLevel(
+            SpellSlotProgression.totalsForClasses(afterClasses),
+          );
   }
+
+  // Invocations occultistes — étape "Invocations", indépendante de
+  // [choiceKind] (voir `domain/level_up_block_reason.dart` et
+  // `domain/level_up_choice_kind.dart::LevelUpPendingChoiceResolver`).
+  final invocationDelta = effectiveClassName == 'Occultiste'
+      ? InvocationsKnownProgression.newInvocationsAt(effectiveTargetLevel)
+      : 0;
+  final requiresInvocationSelection = invocationDelta > 0;
+  var availableInvocations = const <LevelUpInvocationOption>[];
+  var invocationQuota = 0;
+  if (requiresInvocationSelection) {
+    availableInvocations = await ref
+        .watch(characterRepositoryProvider)
+        .fetchAvailableInvocations(characterId: characterId);
+    // Quota EFFECTIF (spec visuelle direction-artistique section 3) : jamais
+    // le delta RAW brut, un personnage haut niveau peut avoir épuisé les 32
+    // invocations peuplées en base.
+    invocationQuota = invocationDelta < availableInvocations.length
+        ? invocationDelta
+        : availableInvocations.length;
+  }
+
+  // Dons — étape "Choix à faire", sous-mode "don" (voir
+  // `domain/level_up_choice_selection.dart::LevelUpChoiceSelection.featId`) :
+  // une seule requête réseau supplémentaire, uniquement quand ce niveau
+  // déclenche effectivement le choix ASI-ou-don.
+  final availableFeats = choiceKind == LevelUpChoiceKind.abilityScoreImprovement
+      ? await ref
+            .watch(characterRepositoryProvider)
+            .fetchAvailableFeats(characterId: characterId)
+      : const <LevelUpFeatOption>[];
 
   return (
     classId: effectiveClassId,
@@ -389,6 +459,7 @@ Future<LevelUpStepData> levelUpStepData(
     choiceKind: choiceKind,
     choiceClassFeatureId: levelData.choiceClassFeatureId,
     availableSubclasses: levelData.availableSubclasses,
+    availableFeats: availableFeats,
     abilityScores: detail.abilityScores,
     spellSlotChanges: spellSlotChanges,
     multiclassOptions: multiclassOptions,
@@ -397,10 +468,14 @@ Future<LevelUpStepData> levelUpStepData(
     multiclassProficiencies: isMulticlassing
         ? MulticlassProficiencies.multiclassProficienciesFor(effectiveClassName)
         : const <String>[],
-    requiresInitialSpellSelection: requiresInitialSpellSelection,
-    initialSpellCatalog: initialSpellCatalog,
-    initialCantripQuota: initialCantripQuota,
-    initialLevelOneSpellQuota: initialLevelOneSpellQuota,
+    requiresSpellSelection: requiresSpellSelection,
+    spellSelectionCatalog: spellSelectionCatalog,
+    newCantripQuota: newCantripQuota,
+    newSpellQuota: newSpellQuota,
+    maxCastableSpellLevel: maxCastableSpellLevel,
+    requiresInvocationSelection: requiresInvocationSelection,
+    availableInvocations: availableInvocations,
+    invocationQuota: invocationQuota,
   );
 }
 
