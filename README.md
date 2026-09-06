@@ -143,10 +143,6 @@ Suit la roadmap détaillée dans `docs/cahier-des-charges/06-roadmap.md`.
 - [ ] Une classe multiclassée reste bloquée au niveau 1 : aucun mécanisme pour choisir "quelle classe progresse" à une montée de niveau ultérieure (seule la classe primaire peut continuer pour l'instant). Maîtrises de multiclassage affichées une seule fois (étape Aptitudes), pas reflétées durablement dans l'onglet Compétences. Magie de pacte de l'Occultiste jamais écrite en base (gap pré-existant).
 - [ ] Phase 6 — fonctionnalités complémentaires : export XML compatible aidedd.org, système de groupes, reste du mode hors-ligne (au-delà de PV/XP) si le besoin se confirme.
 
-**Dette technique connue (non bloquante) :**
-- [ ] Une quarantaine de fichiers pré-existants échouent `dart format` sur `main` (trouvé en revue, jamais nettoyé) — peut faire échouer la vérification format de la CI indépendamment de tout nouveau travail.
-- [ ] Branches distantes `claude/*` orphelines sur GitHub (contenu déjà intégré à `main` par cherry-pick) — à supprimer côté GitHub.
-
 ## Ressources Flutter
 
 - [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
