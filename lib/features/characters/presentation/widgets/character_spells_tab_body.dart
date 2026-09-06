@@ -40,6 +40,7 @@ class CharacterSpellsTabBody extends StatelessWidget {
         CharacterSpellsSection(
           groups: spellGroups,
           spellSlots: detail.spellSlots,
+          pactSlot: detail.pactSpellSlot,
           onCastSpell: onCastSpell,
           actionsDisabled: actionsDisabled,
         ),

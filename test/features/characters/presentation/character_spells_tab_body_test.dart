@@ -16,6 +16,7 @@ import 'package:personnages/features/characters/presentation/widgets/character_s
 CharacterDetail _detail({
   List<CharacterSpellEntry> spells = const [],
   List<CharacterSpellSlot> spellSlots = const [],
+  CharacterSpellSlot? pactSpellSlot,
 }) {
   return CharacterDetail(
     id: '1',
@@ -28,6 +29,7 @@ CharacterDetail _detail({
     abilityScores: const {},
     spells: spells,
     spellSlots: spellSlots,
+    pactSpellSlot: pactSpellSlot,
   );
 }
 
@@ -132,6 +134,97 @@ void main() {
     expect(find.text('LANCER'), findsOneWidget);
     expect(find.text('Infos'), findsNothing);
   });
+
+  testWidgets(
+    'bloc "Magie de pacte" affiché quand pactSpellSlot non nul (total > 0), '
+    'pips en accentTeal',
+    (tester) async {
+      final semanticsHandle = tester.ensureSemantics();
+
+      await _pump(
+        tester,
+        _detail(
+          spells: const [
+            CharacterSpellEntry(
+              id: 1,
+              name: 'Malédiction',
+              level: 1,
+              school: 'Enchantement',
+              status: 'connu',
+            ),
+          ],
+          pactSpellSlot: const CharacterSpellSlot(
+            level: 2,
+            total: 2,
+            used: 1,
+            isPact: true,
+          ),
+        ),
+      );
+
+      expect(find.text('Magie de pacte — Niveau 2'), findsOneWidget);
+      expect(find.byIcon(Icons.local_fire_department), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(
+          'Emplacements de pacte : 1 restants sur 2 (niveau 2)',
+        ),
+        findsOneWidget,
+      );
+
+      semanticsHandle.dispose();
+    },
+  );
+
+  testWidgets('bloc "Magie de pacte" absent quand pactSpellSlot est null', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _detail(
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Lumière',
+            level: 0,
+            school: 'Évocation',
+            status: 'connu',
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('Magie de pacte'), findsNothing);
+    expect(find.byIcon(Icons.local_fire_department), findsNothing);
+  });
+
+  testWidgets(
+    'bloc "Magie de pacte" absent quand pactSpellSlot.total vaut 0 (garde '
+    'défensive)',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          spells: const [
+            CharacterSpellEntry(
+              id: 1,
+              name: 'Lumière',
+              level: 0,
+              school: 'Évocation',
+              status: 'connu',
+            ),
+          ],
+          pactSpellSlot: const CharacterSpellSlot(
+            level: 1,
+            total: 0,
+            used: 0,
+            isPact: true,
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.local_fire_department), findsNothing);
+    },
+  );
 
   testWidgets(
     'actionsDisabled désactive le tap sur les sorts (repos long en vol)',

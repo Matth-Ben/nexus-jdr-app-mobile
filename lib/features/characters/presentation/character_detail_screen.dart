@@ -226,6 +226,16 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// [CharacterClassFeature.id]. Voir [_useClassFeature]/[_effectiveDetail].
   Map<int, int> _localFeatureUsesRemaining = {};
 
+  /// État optimiste local des charges de pacte consommées
+  /// (`character_pact_slots.slots_used`), en avance sur la dernière valeur
+  /// serveur connue — `null` tant qu'aucun lancer via ce pool n'est en vol ou
+  /// récemment résolu. Un champ simple plutôt qu'une map comme
+  /// [_localSpellSlotsUsed] : un seul pool de pacte possible par personnage
+  /// (`character_pact_slots`, clé primaire `character_id` seul — voir
+  /// `domain/spell_slot_progression.dart`), jamais besoin de distinguer
+  /// plusieurs niveaux. Voir [_castSpell]/[_effectiveDetail].
+  int? _localPactSlotUsed;
+
   void _goBack() {
     if (context.canPop()) {
       context.pop();
@@ -263,6 +273,19 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             else
               slot,
         ],
+      );
+    }
+
+    final localPactUsed = _localPactSlotUsed;
+    if (localPactUsed != null && result.pactSpellSlot != null) {
+      final pact = result.pactSpellSlot!;
+      result = result.copyWith(
+        pactSpellSlot: CharacterSpellSlot(
+          level: pact.level,
+          total: pact.total,
+          used: localPactUsed,
+          isPact: true,
+        ),
       );
     }
 
@@ -415,18 +438,24 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
-  /// Exécute le lancer de [spell] au niveau d'emplacement [slotLevel] (voir
-  /// `spell_action_sheet.dart::castSpellFlow` pour le calcul de ce niveau —
-  /// `null` pour un sort niveau 0, rien à persister) : suit EXACTEMENT le
-  /// même patron optimiste que [_applyHpState] (décrément immédiat de la
-  /// pastille du niveau concerné, appel repository, `ref.invalidate` au
-  /// succès), voir la spec de la tâche qui l'a introduit.
+  /// Exécute le lancer de [spell] avec l'emplacement [slot] (voir
+  /// `spell_action_sheet.dart::castSpellFlow` pour son calcul — `null` pour
+  /// un sort niveau 0, rien à persister) : suit EXACTEMENT le même patron
+  /// optimiste que [_applyHpState] (décrément immédiat de la pastille du
+  /// niveau concerné, appel repository, `ref.invalidate` au succès), voir la
+  /// spec de la tâche qui l'a introduit.
   ///
   /// [detail] doit déjà être la valeur *effective* (voir [_effectiveDetail]),
   /// pas la dernière donnée serveur brute — même règle que
   /// [_hpStateOf]/[_applyHpState] : un second lancer rapide sur le même
   /// niveau doit repartir de la valeur déjà décrémentée par le premier, pas
   /// d'une valeur serveur obsolète.
+  ///
+  /// Branche sur [CharacterSpellSlot.isPact] : un emplacement de pacte
+  /// (`character_pact_slots`) suit un chemin parallèle dédié
+  /// ([_castPactSpell], `_localPactSlotUsed`) plutôt que
+  /// [_localSpellSlotsUsed] — les deux tables restent toujours séparées (voir
+  /// `domain/spell_slot_progression.dart`).
   ///
   /// Course concurrente avec un repos long (voir [_restGeneration]) : un
   /// repos long réinitialise aussi les emplacements de sorts, donc un lancer
@@ -440,27 +469,33 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   Future<void> _castSpell(
     CharacterDetail detail,
     CharacterSpellEntry spell,
-    int? slotLevel,
+    CharacterSpellSlot? slot,
   ) async {
-    if (slotLevel == null) {
+    if (slot == null) {
       // Sort niveau 0 : rien à persister (spec de la tâche).
       _showSnackBar('${spell.name} lancé.');
       return;
     }
 
-    CharacterSpellSlot? slot;
+    if (slot.isPact) {
+      await _castPactSpell(detail, spell);
+      return;
+    }
+
+    final slotLevel = slot.level;
+    CharacterSpellSlot? current;
     for (final candidate in detail.spellSlots) {
       if (candidate.level == slotLevel) {
-        slot = candidate;
+        current = candidate;
         break;
       }
     }
     // Ne devrait pas arriver : "Lancer" est désactivé en amont si aucun
     // niveau éligible n'a d'emplacement disponible (voir
     // `SpellCastEligibility`).
-    if (slot == null) return;
+    if (current == null) return;
 
-    final newUsed = slot.used + 1;
+    final newUsed = current.used + 1;
     final previousOverride = _localSpellSlotsUsed[slotLevel];
     final myRestGeneration = _restGeneration;
     setState(() {
@@ -528,6 +563,70 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Équivalent de la branche classique de [_castSpell] pour un emplacement
+  /// de pacte (`character_pact_slots.slots_used`, `CharacterRepository
+  /// .castSpell(isPactSlot: true)`) — même patron optimiste, mais avec
+  /// [_localPactSlotUsed] (champ simple, un seul pool de pacte possible)
+  /// plutôt qu'une entrée de [_localSpellSlotsUsed].
+  Future<void> _castPactSpell(
+    CharacterDetail detail,
+    CharacterSpellEntry spell,
+  ) async {
+    final pact = detail.pactSpellSlot;
+    // Ne devrait pas arriver : `slot.isPact` implique que `detail` porte un
+    // `pactSpellSlot` non nul (c'est de là que cet emplacement a été
+    // construit, voir `castSpellFlow`).
+    if (pact == null) return;
+
+    final newUsed = pact.used + 1;
+    final previousOverride = _localPactSlotUsed;
+    final myRestGeneration = _restGeneration;
+    setState(() {
+      _localPactSlotUsed = newUsed;
+      _isCastingSpell = true;
+    });
+
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .castSpell(
+            characterId: widget.characterId,
+            slotLevel: pact.level,
+            slotsUsed: newUsed,
+            isPactSlot: true,
+          );
+      if (_restGeneration != myRestGeneration) {
+        await _reassertPactSlotState();
+        return;
+      }
+      if (outcome == WriteOutcome.queued) {
+        // Voir la documentation de `CharacterRepository.castSpell` : même
+        // règle que la branche classique ci-dessus, jamais mise en file.
+        if (mounted && _restGeneration == myRestGeneration) {
+          setState(() => _localPactSlotUsed = previousOverride);
+        }
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar(
+        '${spell.name} lancé (emplacement de pacte niveau ${pact.level}).',
+      );
+    } on CharacterFailure catch (failure) {
+      if (mounted && _restGeneration == myRestGeneration) {
+        setState(() => _localPactSlotUsed = previousOverride);
+      }
+      _showSnackBar(failure.message);
+    } catch (_) {
+      if (mounted && _restGeneration == myRestGeneration) {
+        setState(() => _localPactSlotUsed = previousOverride);
+      }
+      _showSnackBar('Impossible de lancer ce sort. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isCastingSpell = false);
+    }
+  }
+
   /// Réécrit en base `character_spell_slots.slots_used` du niveau
   /// [slotLevel] avec l'état actuellement affiché (dernière valeur locale
   /// optimiste, ou dernière donnée serveur connue à défaut) — appelé
@@ -557,6 +656,43 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             characterId: widget.characterId,
             slotLevel: slotLevel,
             slotsUsed: slot.used,
+          );
+    } on CharacterFailure catch (failure) {
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar(failure.message);
+    } catch (_) {
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar(
+        'Impossible de synchroniser les emplacements de sorts. Réessayez.',
+      );
+    } finally {
+      if (mounted) setState(() => _isApplyingRest = false);
+    }
+  }
+
+  /// Réécrit en base `character_pact_slots.slots_used` avec l'état
+  /// actuellement affiché (dernière valeur locale optimiste, ou dernière
+  /// donnée serveur connue à défaut) — appelé uniquement quand un lancer via
+  /// la magie de pacte resté en vol vient de résoudre après qu'un repos a
+  /// déjà écrit son propre résultat en base (voir [_restGeneration], appelé
+  /// depuis [_castPactSpell]). Même principe que [_reassertSpellSlotState].
+  Future<void> _reassertPactSlotState() async {
+    if (!mounted) return;
+    final latest = ref.read(characterDetailProvider(widget.characterId)).value;
+    if (latest == null) return;
+    final effective = _effectiveDetail(latest);
+    final pact = effective.pactSpellSlot;
+    if (pact == null) return;
+
+    setState(() => _isApplyingRest = true);
+    try {
+      await ref
+          .read(characterRepositoryProvider)
+          .castSpell(
+            characterId: widget.characterId,
+            slotLevel: pact.level,
+            slotsUsed: pact.used,
+            isPactSlot: true,
           );
     } on CharacterFailure catch (failure) {
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -1090,6 +1226,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // ci-dessous), même principe que [previousLocal].
     final previousSpellSlotsOverride = _localSpellSlotsUsed;
     final previousFeatureUsesOverride = _localFeatureUsesRemaining;
+    // Magie de pacte : recharge au repos COURT ET long (RAW 5e unique à
+    // l'Occultiste, contrairement aux emplacements classiques ci-dessus) —
+    // purgée/revertie dans les deux branches ci-dessous, jamais seulement la
+    // branche `RestType.long`.
+    final previousPactSlotOverride = _localPactSlotUsed;
     // Avancé pour TOUT repos (court ou long), capturé avant l'appel réseau —
     // voir la documentation de [_restGeneration] : un repos court réinitialise
     // aussi `character_feature_uses`, ce jeton doit donc détecter les deux
@@ -1113,10 +1254,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         );
         _localSpellSlotsUsed = {};
         _localFeatureUsesRemaining = {};
+        _localPactSlotUsed = null;
       });
     } else {
       setState(() {
         _localFeatureUsesRemaining = {};
+        _localPactSlotUsed = null;
         if (appliedGain > 0) {
           final baseState = _hpStateOf(detail);
           _localHpState = HpState(
@@ -1160,9 +1303,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         });
       }
       if (mounted && _restGeneration == myRestGeneration) {
-        setState(
-          () => _localFeatureUsesRemaining = previousFeatureUsesOverride,
-        );
+        setState(() {
+          _localFeatureUsesRemaining = previousFeatureUsesOverride;
+          _localPactSlotUsed = previousPactSlotOverride;
+        });
       }
       _showSnackBar(failure.message);
     } catch (_) {
@@ -1173,9 +1317,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         });
       }
       if (mounted && _restGeneration == myRestGeneration) {
-        setState(
-          () => _localFeatureUsesRemaining = previousFeatureUsesOverride,
-        );
+        setState(() {
+          _localFeatureUsesRemaining = previousFeatureUsesOverride;
+          _localPactSlotUsed = previousPactSlotOverride;
+        });
       }
       _showSnackBar("Impossible d'effectuer le repos. Réessayez.");
     } finally {
@@ -1282,6 +1427,15 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           }
         }
 
+        // Même principe que ci-dessus, pour [_localPactSlotUsed] (champ
+        // simple plutôt qu'une map, un seul pool de pacte possible).
+        final localPactUsed = _localPactSlotUsed;
+        if (localPactUsed != null &&
+            detail.pactSpellSlot?.used == localPactUsed) {
+          _localPactSlotUsed = null;
+          shouldSetState = true;
+        }
+
         if (shouldSetState) setState(() {});
       });
     });
@@ -1377,8 +1531,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       ),
       CharacterDetailTab.spells => CharacterSpellsTabBody(
         detail: _effectiveDetail(detail),
-        onCastSpell: (spell, slotLevel) =>
-            _castSpell(_effectiveDetail(detail), spell, slotLevel),
+        onCastSpell: (spell, slot) =>
+            _castSpell(_effectiveDetail(detail), spell, slot),
         actionsDisabled: _isApplyingRest || _isCastingSpell,
       ),
       CharacterDetailTab.inventory => CharacterInventoryTabBody(

@@ -150,10 +150,18 @@ abstract class CharacterRepository {
   /// tout de même le même message "hors ligne" que [updateHp]/[addXp] (même
   /// [WriteOutcome], voir la spec de la tâche), par cohérence d'affichage —
   /// **pas** parce que la donnée sera un jour synchronisée.
+  ///
+  /// [isPactSlot] : `true` si [slotLevel]/[slotsUsed] concernent la magie de
+  /// pacte de l'Occultiste (`character_pact_slots`) plutôt qu'un emplacement
+  /// classique (`character_spell_slots`, comportement par défaut) — voir
+  /// `domain/spell_slot_progression.dart` pour le rationale de la séparation
+  /// des deux tables. Même principe d'écriture dans les deux cas (valeur
+  /// absolue déjà calculée par l'appelant), seule la table cible change.
   Future<WriteOutcome> castSpell({
     required String characterId,
     required int slotLevel,
     required int slotsUsed,
+    bool isPactSlot = false,
   });
 
   /// Écrit (upsert) `character_feature_uses.uses_remaining` pour
@@ -477,6 +485,12 @@ abstract class CharacterRepository {
   /// personnage sans classe primaire identifiable n'a simplement aucune
   /// écriture supplémentaire à faire pour cette partie.
   ///
+  /// `character_pact_slots` (magie de pacte de l'Occultiste, voir
+  /// [_resetPactSlot]) : recalculée pour les DEUX types de repos
+  /// (contrairement à `character_spell_slots`, repos long uniquement), et
+  /// résolue depuis **toutes** les classes du personnage (l'Occultiste peut
+  /// être une classe secondaire), pas seulement la primaire.
+  ///
   /// Isolation cross-utilisateur : même garantie que le reste de ce
   /// fichier (vérification explicite de `characters.owner_id`, RLS en
   /// filet de sécurité).
@@ -708,6 +722,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_languages(language_id),
             character_spells(spell_id, status),
             character_spell_slots(slot_level, slots_total, slots_used),
+            character_pact_slots(slot_level, slots_total, slots_used),
             character_feature_uses(class_feature_id, uses_remaining),
             character_inventory(
               id, item_id, custom_name, quantity, equipped, notes,
@@ -896,6 +911,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String characterId,
     required int slotLevel,
     required int slotsUsed,
+    bool isPactSlot = false,
   }) async {
     final ownerId = _requireOwnerId();
 
@@ -918,7 +934,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       }
 
       await _client
-          .from('character_spell_slots')
+          .from(isPactSlot ? 'character_pact_slots' : 'character_spell_slots')
           .update({'slots_used': slotsUsed})
           .eq('character_id', characterId)
           .eq('slot_level', slotLevel);
@@ -1615,6 +1631,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
         characterId: characterId,
         afterClasses: afterClasses,
       );
+      await _upsertPactSlot(
+        characterId: characterId,
+        afterClasses: afterClasses,
+      );
 
       if (choice != null) {
         await _applyChoice(
@@ -1836,6 +1856,38 @@ class SupabaseCharacterRepository implements CharacterRepository {
               .update({'current_hp': newCurrentHp})
               .eq('id', characterId)
               .eq('owner_id', ownerId);
+        }
+      }
+
+      // Magie de pacte de l'Occultiste (RAW 5e) : recharge au repos COURT ET
+      // long, contrairement aux emplacements classiques ci-dessus (repos long
+      // uniquement) — placé ici, en dehors du `if/else` ci-dessus, pour
+      // s'exécuter dans les deux cas. L'Occultiste peut être une classe
+      // SECONDAIRE (contrairement à [primaryClassRow], qui ne couvre que la
+      // classe primaire pour les emplacements classiques/dés de vie
+      // ci-dessus) : résolue depuis [classRows] (TOUTES les classes), les noms
+      // étant résolus via [_fetchTranslatedNames] (même méthode privée
+      // qu'[applyLevelUp]).
+      if (classRows.isNotEmpty) {
+        final restClassNames = await _fetchTranslatedNames(
+          entityType: 'class',
+          entityIds: {
+            for (final row in classRows) (row['class_id'] as Object).toString(),
+          },
+        );
+        Map<String, dynamic>? occultisteRow;
+        for (final row in classRows) {
+          if (restClassNames[(row['class_id'] as Object).toString()] ==
+              'Occultiste') {
+            occultisteRow = row;
+            break;
+          }
+        }
+        if (occultisteRow != null) {
+          await _resetPactSlot(
+            characterId: characterId,
+            occultisteLevel: (occultisteRow['level'] as num).toInt(),
+          );
         }
       }
 
@@ -2156,6 +2208,80 @@ class SupabaseCharacterRepository implements CharacterRepository {
       'slots_total': total,
       'slots_used': used,
     };
+  }
+
+  /// Recalcule `character_pact_slots` (magie de pacte de l'Occultiste, table
+  /// séparée de `character_spell_slots` — voir
+  /// `domain/spell_slot_progression.dart`) pour [afterClasses] (TOUTES les
+  /// classes du personnage après ce niveau). Ne fait rien si le personnage
+  /// n'a pas (ou plus) la classe Occultiste parmi [afterClasses], ou si
+  /// [SpellSlotProgression.pactMagicFor] retourne `null` pour son niveau
+  /// (défensif, ne devrait pas arriver pour un niveau 1-20 valide).
+  ///
+  /// Préserve `slots_used` d'une ligne déjà existante (clampé à
+  /// `min(existingUsed, charges)`), même filet de sécurité que
+  /// [_spellSlotUpsertRow] — factorisé séparément plutôt que réutilisé
+  /// littéralement : la table cible est différente et sa clé primaire
+  /// (`character_id` seul, une seule ligne par personnage — jamais deux fois
+  /// la classe Occultiste, jamais deux niveaux de charge de pacte actifs à la
+  /// fois, voir la documentation de la table côté dépôt web) rend un helper
+  /// dédié plus simple qu'une généralisation du helper existant.
+  Future<void> _upsertPactSlot({
+    required String characterId,
+    required List<({String className, int level})> afterClasses,
+  }) async {
+    ({String className, int level})? occultisteEntry;
+    for (final entry in afterClasses) {
+      if (entry.className == 'Occultiste') {
+        occultisteEntry = entry;
+        break;
+      }
+    }
+    if (occultisteEntry == null) return;
+
+    final pact = SpellSlotProgression.pactMagicFor(occultisteEntry.level);
+    if (pact == null) return;
+
+    final existingRow = await _client
+        .from('character_pact_slots')
+        .select('slots_used')
+        .eq('character_id', characterId)
+        .maybeSingle();
+    final existingUsed = (existingRow?['slots_used'] as num?)?.toInt() ?? 0;
+    final used = existingUsed > pact.charges ? pact.charges : existingUsed;
+
+    await _client.from('character_pact_slots').upsert({
+      'character_id': characterId,
+      'slot_level': pact.slotLevel,
+      'slots_total': pact.charges,
+      'slots_used': used,
+    }, onConflict: 'character_id');
+  }
+
+  /// Réinitialise complètement `character_pact_slots` pour l'Occultiste au
+  /// niveau [occultisteLevel] — appelée par [applyRest] pour les DEUX types
+  /// de repos (court ET long, RAW 5e unique à l'Occultiste : contrairement
+  /// aux emplacements classiques, la magie de pacte recharge aussi au repos
+  /// court). Recalcul complet depuis zéro (`slots_used` toujours remis à 0,
+  /// `slots_total` recalculé via [SpellSlotProgression.pactMagicFor]), même
+  /// philosophie que [_resetSpellSlots] (repos long, emplacements
+  /// classiques) — upsert plutôt qu'un simple `UPDATE`, la ligne pouvant ne
+  /// pas encore exister (gap assumé documenté sur
+  /// [CharacterDetail.pactSpellSlot]). Ne fait rien si [occultisteLevel] est
+  /// hors 1-20 (défensif).
+  Future<void> _resetPactSlot({
+    required String characterId,
+    required int occultisteLevel,
+  }) async {
+    final pact = SpellSlotProgression.pactMagicFor(occultisteLevel);
+    if (pact == null) return;
+
+    await _client.from('character_pact_slots').upsert({
+      'character_id': characterId,
+      'slot_level': pact.slotLevel,
+      'slots_total': pact.charges,
+      'slots_used': 0,
+    }, onConflict: 'character_id');
   }
 
   /// Écrit [choice] pour la table concernée — voir la documentation de

@@ -25,14 +25,18 @@ Future<void> showSpellInfoPanel(
   BuildContext context, {
   required CharacterSpellEntry spell,
   required List<CharacterSpellSlot> spellSlots,
+  CharacterSpellSlot? pactSlot,
   required CastSpellCallback onCastSpell,
 }) async {
   final shouldCast = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (sheetContext) =>
-        _SpellInfoPanelContent(spell: spell, spellSlots: spellSlots),
+    builder: (sheetContext) => _SpellInfoPanelContent(
+      spell: spell,
+      spellSlots: spellSlots,
+      pactSlot: pactSlot,
+    ),
   );
   if (shouldCast != true || !context.mounted) return;
 
@@ -40,20 +44,26 @@ Future<void> showSpellInfoPanel(
     context,
     spell: spell,
     spellSlots: spellSlots,
+    pactSlot: pactSlot,
     onCastSpell: onCastSpell,
   );
 }
 
 class _SpellInfoPanelContent extends StatelessWidget {
-  const _SpellInfoPanelContent({required this.spell, required this.spellSlots});
+  const _SpellInfoPanelContent({
+    required this.spell,
+    required this.spellSlots,
+    this.pactSlot,
+  });
 
   final CharacterSpellEntry spell;
   final List<CharacterSpellSlot> spellSlots;
+  final CharacterSpellSlot? pactSlot;
 
   @override
   Widget build(BuildContext context) {
     final hasSlot = SpellCastEligibility.hasAvailableSlot(
-      spellSlots: spellSlots,
+      spellSlots: [...spellSlots, ?pactSlot],
       spellLevel: spell.level,
     );
     final components = SpellComponentsFormatter.format(spell.components);

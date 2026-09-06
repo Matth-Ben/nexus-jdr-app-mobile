@@ -48,3 +48,50 @@ class SpellSlotChange {
       'SpellSlotChange(spellLevel: $spellLevel, oldTotal: $oldTotal, '
       'newTotal: $newTotal)';
 }
+
+/// Changement de la magie de pacte de l'Occultiste (charges/niveau de
+/// charge), entre le niveau de personnage précédent et le niveau ciblé —
+/// équivalent de [SpellSlotChange] pour ce mécanisme séparé (voir
+/// `domain/spell_slot_progression.dart::SpellSlotProgression.pactChangeFor`).
+///
+/// Volontairement une classe simple (pas `freezed`), même précédent que
+/// [SpellSlotChange].
+class PactSlotChange {
+  const PactSlotChange({
+    required this.oldCharges,
+    required this.newCharges,
+    required this.oldSlotLevel,
+    required this.newSlotLevel,
+  });
+
+  /// Nombre de charges avant ce niveau, 0 si l'Occultiste vient d'être
+  /// multiclassé ce niveau précis (pas de niveau antérieur dans cette
+  /// classe).
+  final int oldCharges;
+
+  final int newCharges;
+
+  /// Niveau des charges de pacte avant ce niveau, 0 si l'Occultiste vient
+  /// d'être multiclassé ce niveau précis — jamais un vrai niveau de sort 0
+  /// (voir [PactSlotChange.oldCharges]).
+  final int oldSlotLevel;
+
+  final int newSlotLevel;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PactSlotChange &&
+      other.oldCharges == oldCharges &&
+      other.newCharges == newCharges &&
+      other.oldSlotLevel == oldSlotLevel &&
+      other.newSlotLevel == newSlotLevel;
+
+  @override
+  int get hashCode =>
+      Object.hash(oldCharges, newCharges, oldSlotLevel, newSlotLevel);
+
+  @override
+  String toString() =>
+      'PactSlotChange(oldCharges: $oldCharges, newCharges: $newCharges, '
+      'oldSlotLevel: $oldSlotLevel, newSlotLevel: $newSlotLevel)';
+}

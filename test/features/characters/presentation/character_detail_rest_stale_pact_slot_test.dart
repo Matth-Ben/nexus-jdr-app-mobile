@@ -1,18 +1,16 @@
-// Test de non-régression (revue QA — trouvé par un test de mutation) : même
-// classe de course que `character_detail_rest_stale_spell_slot_test.dart`
-// (voir sa documentation de tête pour le rationale détaillé), appliquée à
-// `character_feature_uses.uses_remaining` — une utilisation d'aptitude
-// restée en vol au moment d'un repos peut voir son écriture (déjà résolue
-// avec une valeur devenue obsolète) écraser silencieusement le résultat du
-// repos une fois celui-ci déjà appliqué en base.
+// Equivalent de `character_detail_rest_stale_spell_slot_test.dart` pour la
+// magie de pacte de l'Occultiste (`character_pact_slots`, table separee de
+// `character_spell_slots` - voir `domain/spell_slot_progression.dart`) :
+// verifie que `_reassertPactSlotState` protege un lancer de sort de pacte
+// reste en vol au moment d'un repos (COURT ou LONG - la magie de pacte
+// recharge aux deux, contrairement aux emplacements classiques), avec la
+// meme classe de garde ([_restGeneration]) que le reste de l'ecran.
 //
-// Utilise volontairement un REPOS COURT (pas long) : `character_feature_uses`
-// est réinitialisée par les deux types de repos
-// (`CharacterRepository.applyRest`/`_resetFeatureUses`), contrairement aux PV
-// et aux emplacements de sorts (repos long seulement) — avant correctif,
-// [_restGeneration] n'avançait que pour un repos long, laissant passer cette
-// course précise pour un repos court. CORRIGÉ dans `character_detail_screen
-// .dart` ([_restGeneration] avancé pour tout repos + [_reassertFeatureUsesState]).
+// Ajoute par qa-testeur : ce scenario (repos court/long en course avec un
+// lancer de pacte en vol) n'avait aucune couverture avant ce fichier - voir
+// `spell_info_panel_test.dart` pour la selection de l'emplacement de pacte
+// dans la sheet, et `pact_slot_repository_integration_test.dart` pour le
+// repository seul (sans le patron optimiste de l'ecran).
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -21,17 +19,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
-import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
+import 'package:personnages/features/characters/domain/character_spell_entry.dart';
+import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
+import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_feat_option.dart';
 import 'package:personnages/features/characters/domain/level_up_invocation_option.dart';
-import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
@@ -41,7 +41,10 @@ import 'package:personnages/features/characters/presentation/providers/character
 
 class FakeRepository implements CharacterRepository {
   CharacterDetail current = detail;
-  final Completer<void> useFeatureGate = Completer<void>();
+  final Completer<void> castSpellGate = Completer<void>();
+
+  int castSpellCallCount = 0;
+  bool? lastIsPactSlot;
 
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
@@ -51,23 +54,22 @@ class FakeRepository implements CharacterRepository {
       current;
 
   @override
-  Future<WriteOutcome> useClassFeature({
+  Future<WriteOutcome> castSpell({
     required String characterId,
-    required int classFeatureId,
-    required int usesRemaining,
+    required int slotLevel,
+    required int slotsUsed,
+    bool isPactSlot = false,
   }) async {
-    await useFeatureGate.future;
+    castSpellCallCount++;
+    lastIsPactSlot = isPactSlot;
+    await castSpellGate.future;
     current = current.copyWith(
-      classFeatures: [
-        CharacterClassFeature(
-          id: classFeatureId,
-          name: 'Rage',
-          level: 1,
-          usesMax: 2,
-          usesRemaining: usesRemaining,
-          restType: 'repos_court',
-        ),
-      ],
+      pactSpellSlot: CharacterSpellSlot(
+        level: slotLevel,
+        total: 2,
+        used: slotsUsed,
+        isPact: true,
+      ),
     );
     return WriteOutcome.synced;
   }
@@ -80,20 +82,16 @@ class FakeRepository implements CharacterRepository {
     int diceSpent = 0,
     int appliedGain = 0,
   }) async {
-    // `_resetFeatureUses` (dépôt réel) réinitialise les aptitudes dont le
-    // `rest_type` correspond, pour un repos COURT comme pour un repos long —
-    // reproduit ici pour le seul champ pertinent à ce test.
+    // RAW 5e : la magie de pacte recharge au repos COURT ET long -
+    // contrairement aux emplacements classiques, jamais seulement au repos
+    // long (voir SupabaseCharacterRepository._resetPactSlot).
     current = current.copyWith(
-      classFeatures: [
-        const CharacterClassFeature(
-          id: 7,
-          name: 'Rage',
-          level: 1,
-          usesMax: 2,
-          usesRemaining: 2,
-          restType: 'repos_court',
-        ),
-      ],
+      pactSpellSlot: const CharacterSpellSlot(
+        level: 2,
+        total: 2,
+        used: 0,
+        isPact: true,
+      ),
     );
   }
 
@@ -238,11 +236,10 @@ class FakeRepository implements CharacterRepository {
   }
 
   @override
-  Future<WriteOutcome> castSpell({
+  Future<WriteOutcome> useClassFeature({
     required String characterId,
-    required int slotLevel,
-    required int slotsUsed,
-    bool isPactSlot = false,
+    required int classFeatureId,
+    required int usesRemaining,
   }) => throw UnimplementedError();
 }
 
@@ -252,28 +249,33 @@ const detail = CharacterDetail(
   classes: [
     CharacterDetailClassRow(
       classId: 1,
-      hitDie: 10,
-      className: 'Barbare',
+      hitDie: 8,
+      className: 'Occultiste',
       level: 3,
       isPrimary: true,
       savingThrowProficiencies: [],
     ),
   ],
   xp: 0,
-  currentHp: 30,
-  maxHp: 30,
+  currentHp: 18,
+  maxHp: 24,
   temporaryHp: 0,
   abilityScores: {},
-  classFeatures: [
-    CharacterClassFeature(
-      id: 7,
-      name: 'Rage',
+  spells: [
+    CharacterSpellEntry(
+      id: 1,
+      name: 'Rayon de givre',
       level: 1,
-      usesMax: 2,
-      usesRemaining: 1,
-      restType: 'repos_court',
+      school: 'Evocation',
+      status: 'connu',
     ),
   ],
+  // Occultiste "pur" : aucun emplacement classique, seulement le pool de
+  // pacte (voir SpellSlotProgression.slotsForLevel pour cette classe) -
+  // l'unique emplacement eligible pour le sort ci-dessus, donc castSpellFlow
+  // appelle directement onCastSpell sans ouvrir de sheet de choix.
+  spellSlots: [],
+  pactSpellSlot: CharacterSpellSlot(level: 2, total: 2, used: 0, isPact: true),
 );
 
 Future<FakeRepository> pumpDetail(WidgetTester tester) async {
@@ -305,46 +307,87 @@ Future<FakeRepository> pumpDetail(WidgetTester tester) async {
 
 void main() {
   testWidgets(
-    'une utilisation d\'aptitude restée en vol au moment d\'un repos court '
-    'ne doit plus écraser le résultat du repos une fois qu\'elle résout '
-    '(CORRIGÉ)',
+    'un lancer de sort de pacte reste en vol au moment d un repos LONG ne '
+    'doit pas ecraser le resultat du repos une fois qu il resout',
     (tester) async {
       final repository = await pumpDetail(tester);
 
-      // Utilise "Rage" (1 restant) : appel réseau gaté, reste en vol.
-      await tester.tap(find.text('COMP.'));
+      await tester.tap(find.text('SORTS'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Rage'));
+      await tester.tap(find.text('Rayon de givre'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Utiliser'));
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
       await tester.pumpAndSettle();
 
-      // Un repos court démarre et résout pendant que l'utilisation
-      // précédente est toujours en vol.
+      expect(repository.castSpellCallCount, 1);
+      expect(repository.lastIsPactSlot, isTrue);
+
+      // Un repos long demarre et resout pendant que le lancer de pacte
+      // precedent est toujours en vol.
+      await tester.tap(find.text('PERSO'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Prendre un repos'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(repository.current.pactSpellSlot!.used, 0);
+
+      // Le lancer reste en vol resout enfin (avec la valeur pre-repos,
+      // desormais obsolete).
+      repository.castSpellGate.complete();
+      await tester.pumpAndSettle();
+
+      expect(
+        repository.current.pactSpellSlot!.used,
+        0,
+        reason:
+            'Le lancer de pacte reste en vol ne doit pas ecraser le repos '
+            'long : slots_used = '
+            '${repository.current.pactSpellSlot!.used} en base au lieu de 0.',
+      );
+    },
+  );
+
+  testWidgets(
+    'un lancer de sort de pacte reste en vol au moment d un repos COURT ne '
+    'doit pas ecraser le resultat du repos une fois qu il resout (la magie '
+    'de pacte recharge aussi au repos court, contrairement aux emplacements '
+    'classiques)',
+    (tester) async {
+      final repository = await pumpDetail(tester);
+
+      await tester.tap(find.text('SORTS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rayon de givre'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.pumpAndSettle();
+
+      expect(repository.castSpellCallCount, 1);
+      expect(repository.lastIsPactSlot, isTrue);
+
       await tester.tap(find.text('PERSO'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Prendre un repos'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('REPOS COURT'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('APPLIQUER'));
+      await tester.tap(find.widgetWithText(PrimaryButton, 'APPLIQUER'));
       await tester.pumpAndSettle();
 
-      expect(repository.current.classFeatures.single.usesRemaining, 2);
+      expect(repository.current.pactSpellSlot!.used, 0);
 
-      // L'utilisation restée en vol résout enfin (avec la valeur pré-repos,
-      // désormais obsolète : 0).
-      repository.useFeatureGate.complete();
+      repository.castSpellGate.complete();
       await tester.pumpAndSettle();
 
       expect(
-        repository.current.classFeatures.single.usesRemaining,
-        2,
+        repository.current.pactSpellSlot!.used,
+        0,
         reason:
-            "L'utilisation restée en vol ne doit plus écraser le repos "
-            'court : uses_remaining = '
-            '${repository.current.classFeatures.single.usesRemaining} en '
-            'base au lieu de 2.',
+            'Le lancer de pacte reste en vol ne doit pas ecraser le repos '
+            'court : slots_used = '
+            '${repository.current.pactSpellSlot!.used} en base au lieu de 0.',
       );
     },
   );

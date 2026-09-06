@@ -92,6 +92,15 @@ typedef LevelUpStepData = ({
   /// indépendamment de [blockReason].
   List<SpellSlotChange> spellSlotChanges,
 
+  /// Changement de magie de pacte de l'Occultiste déclenché par ce niveau
+  /// (voir `domain/spell_slot_progression.dart::SpellSlotProgression
+  /// .pactChangeFor`) — `null` si le personnage n'a pas la classe Occultiste
+  /// après ce niveau, ou si rien ne change à ce niveau précis. Toujours
+  /// indépendant de [spellSlotChanges] (mécanisme séparé, jamais combiné) :
+  /// un personnage peut porter les deux à la fois (Occultiste multiclassé
+  /// avec un autre lanceur "non-pacte").
+  PactSlotChange? pactSlotChange,
+
   /// Classes actuellement possédées (au moins une des classes du personnage)
   /// éligibles au multiclassage à ce niveau — voir
   /// `domain/multiclass_prerequisites.dart`. Vide dans l'immense majorité des
@@ -435,6 +444,31 @@ Future<LevelUpStepData> levelUpStepData(
     afterClasses: afterClasses,
   );
 
+  // Magie de pacte de l'Occultiste — mécanisme séparé, jamais combiné avec
+  // [spellSlotChanges] (voir `SpellSlotProgression.pactMagicFor`). Niveau
+  // AVANT ce niveau : `0` si l'Occultiste vient d'être multiclassé ce niveau
+  // précis (absent de [beforeClasses]).
+  int? occultisteBeforeLevel;
+  for (final entry in beforeClasses) {
+    if (entry.className == 'Occultiste') {
+      occultisteBeforeLevel = entry.level;
+      break;
+    }
+  }
+  int? occultisteAfterLevel;
+  for (final entry in afterClasses) {
+    if (entry.className == 'Occultiste') {
+      occultisteAfterLevel = entry.level;
+      break;
+    }
+  }
+  final pactSlotChange = occultisteAfterLevel == null
+      ? null
+      : SpellSlotProgression.pactChangeFor(
+          oldCharacterLevel: occultisteBeforeLevel ?? 0,
+          newCharacterLevel: occultisteAfterLevel,
+        );
+
   // Nouveaux sorts/cantrips connus à ce niveau — voir la doc de
   // [LevelUpStepData.requiresSpellSelection] : delta RAW de
   // `SpellsKnownProgression`, plus seulement pertinent pour le niveau 1
@@ -518,6 +552,7 @@ Future<LevelUpStepData> levelUpStepData(
     availableFeats: availableFeats,
     abilityScores: detail.abilityScores,
     spellSlotChanges: spellSlotChanges,
+    pactSlotChange: pactSlotChange,
     multiclassOptions: multiclassOptions,
     continueOptions: continueOptions,
     isMulticlassing: isMulticlassing,

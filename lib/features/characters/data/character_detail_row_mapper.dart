@@ -265,6 +265,41 @@ abstract final class CharacterDetailRowMapper {
     return slots;
   }
 
+  /// Parse la ligne brute `character_pact_slots` (relation 1-1, clé primaire
+  /// = clé étrangère `character_id` seule) embarquée sous `characters` —
+  /// `null` si le personnage n'a pas de ligne (pas d'Occultiste, ou jamais
+  /// recalculée depuis, voir la doc de [CharacterDetail.pactSpellSlot]).
+  ///
+  /// Défensif sur la forme JSON reçue : PostgREST renvoie un objet unique
+  /// pour cette relation 1-1 (vérifié contre le stack Supabase local), mais
+  /// ce parseur accepte aussi un tableau à un seul élément par prudence
+  /// (cardinalité potentiellement ambiguë selon les versions de PostgREST),
+  /// même discipline défensive que le reste de ce fichier — jamais de crash
+  /// sur un type inattendu.
+  static CharacterSpellSlot? parsePactSpellSlot(Map<String, dynamic> row) {
+    final raw = row['character_pact_slots'];
+    Map<String, dynamic>? pactRow;
+    if (raw is Map) {
+      pactRow = raw.cast<String, dynamic>();
+    } else if (raw is List && raw.isNotEmpty) {
+      final first = raw.first;
+      if (first is Map) {
+        pactRow = first.cast<String, dynamic>();
+      }
+    }
+    if (pactRow == null) return null;
+
+    final level = (pactRow['slot_level'] as num?)?.toInt();
+    if (level == null) return null;
+
+    return CharacterSpellSlot(
+      level: level,
+      total: (pactRow['slots_total'] as num?)?.toInt() ?? 0,
+      used: (pactRow['slots_used'] as num?)?.toInt() ?? 0,
+      isPact: true,
+    );
+  }
+
   /// Parse `classes.saving_throw_proficiencies` (jsonb, ex. `["wis",
   /// "cha"]`) embarqué sous la clé `classes` d'une ligne `character_classes`.
   /// `null`/type inattendu retombe sur une liste vide plutôt que de crasher.
@@ -475,6 +510,7 @@ abstract final class CharacterDetailRowMapper {
       knownLanguageNames: knownLanguageNames,
       spells: spells,
       spellSlots: spellSlots,
+      pactSpellSlot: parsePactSpellSlot(row),
       currencyGp: (row['currency_gp'] as num?)?.toInt() ?? 0,
       currencyPp: (row['currency_pp'] as num?)?.toInt() ?? 0,
       currencyEp: (row['currency_ep'] as num?)?.toInt() ?? 0,

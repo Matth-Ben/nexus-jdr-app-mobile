@@ -940,7 +940,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// interne 1 tout en nécessitant malgré tout une sélection de sorts
   /// connus, voir `character_creation/domain/spellcasting_rules.dart`).
   bool _hasSpellsStep(LevelUpStepData data) =>
-      data.spellSlotChanges.isNotEmpty || data.requiresSpellSelection;
+      data.spellSlotChanges.isNotEmpty ||
+      data.requiresSpellSelection ||
+      data.pactSlotChange != null;
 
   /// `true` si l'étape "Invocations" doit être affichée à ce niveau —
   /// Occultiste uniquement, voir [LevelUpStepData.requiresInvocationSelection].
@@ -1663,6 +1665,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         if (i > 0) const SizedBox(height: AppSpacing.md),
                         _spellSlotGainRow(data.spellSlotChanges[i]),
                       ],
+                      if (data.pactSlotChange case final pactChange?) ...[
+                        if (data.spellSlotChanges.isNotEmpty)
+                          const SizedBox(height: AppSpacing.md),
+                        _pactSlotGainRow(pactChange),
+                      ],
                     ],
                   ),
                 ),
@@ -1816,7 +1823,8 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      if (data.spellSlotChanges.isEmpty)
+                      if (data.spellSlotChanges.isEmpty &&
+                          data.pactSlotChange == null)
                         Text(
                           'Aucun emplacement de sorts à ce niveau.',
                           style: AppTypography.body(
@@ -1824,7 +1832,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                             color: AppColors.textMuted,
                           ),
                         )
-                      else
+                      else ...[
                         for (
                           var i = 0;
                           i < data.spellSlotChanges.length;
@@ -1833,6 +1841,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                           if (i > 0) const SizedBox(height: AppSpacing.md),
                           _spellSlotGainRow(data.spellSlotChanges[i]),
                         ],
+                        if (data.pactSlotChange case final pactChange?) ...[
+                          if (data.spellSlotChanges.isNotEmpty)
+                            const SizedBox(height: AppSpacing.md),
+                          _pactSlotGainRow(pactChange),
+                        ],
+                      ],
                     ],
                   ),
                 ),
@@ -2083,10 +2097,56 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// Lignes de récapitulatif du bloc "Sorts" (increment 3), 0 à 2 éléments —
   /// voir la spec visuelle direction-artistique section 3. Insérées dans
   /// [_buildSummary] après le bloc "Choix à faire" existant, même ordre
-  /// visuel que les étapes (PV -> Aptitudes -> Choix -> Sorts).
+  /// visuel que les étapes (PV -> Aptitudes -> Choix -> Sorts). La ligne de
+  /// magie de pacte ([_pactSlotGainRow], s'il y en a une) est toujours
+  /// ajoutée APRÈS toutes les [GainRow] d'emplacements classiques, jamais
+  /// interclassée par niveau de sort.
   List<GainRow> _spellSlotSummaryGainRows(LevelUpStepData data) => [
     for (final change in data.spellSlotChanges) _spellSlotGainRow(change),
+    if (data.pactSlotChange case final pactChange?)
+      _pactSlotGainRow(pactChange),
   ];
+
+  /// Une ligne de gain de magie de pacte (Occultiste) — 4 formulations selon
+  /// ce qui change (spec visuelle direction-artistique) : déblocage (dip),
+  /// charges renforcées à niveau de charge inchangé, niveau de charge amélioré
+  /// à charges inchangées, ou les deux à la fois. Icône/couleur dédiées
+  /// (`Icons.local_fire_department`/`AppColors.accentTeal`), jamais celles des
+  /// emplacements classiques (`Icons.auto_awesome`/`AppColors.accentViolet`).
+  GainRow _pactSlotGainRow(PactSlotChange change) {
+    final String title;
+    final String subtitle;
+    if (change.oldCharges == 0) {
+      title = 'Magie de pacte débloquée';
+      subtitle =
+          'Niveau ${change.newSlotLevel} · ${change.newCharges} '
+          'charge(s)';
+    } else if (change.oldSlotLevel == change.newSlotLevel &&
+        change.oldCharges != change.newCharges) {
+      title = 'Charges de pacte renforcées';
+      subtitle =
+          '${change.oldCharges} → ${change.newCharges} charges '
+          '(niveau ${change.newSlotLevel})';
+    } else if (change.oldCharges == change.newCharges &&
+        change.oldSlotLevel != change.newSlotLevel) {
+      title = 'Charges de pacte améliorées';
+      subtitle =
+          'Niveau ${change.oldSlotLevel} → ${change.newSlotLevel} '
+          '(${change.newCharges} charges)';
+    } else {
+      title = 'Charges de pacte renforcées';
+      subtitle =
+          '${change.oldCharges} → ${change.newCharges} charges, '
+          'niveau ${change.oldSlotLevel} → ${change.newSlotLevel}';
+    }
+
+    return GainRow(
+      icon: Icons.local_fire_department,
+      color: AppColors.accentTeal,
+      title: title,
+      subtitle: subtitle,
+    );
+  }
 
   /// Ligne de récapitulatif du choix fait à l'étape "Choix à faire", `null`
   /// si ce niveau n'en déclenchait aucun — voir la spec visuelle

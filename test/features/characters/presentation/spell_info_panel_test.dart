@@ -51,14 +51,17 @@ const _fireball = CharacterSpellEntry(
 void main() {
   List<CharacterSpellEntry> castCalls = [];
   List<int?> castLevels = [];
+  List<CharacterSpellSlot?> castSlots = [];
 
   Future<void> pumpPanel(
     WidgetTester tester, {
     required CharacterSpellEntry spell,
     required List<CharacterSpellSlot> spellSlots,
+    CharacterSpellSlot? pactSlot,
   }) async {
     castCalls = [];
     castLevels = [];
+    castSlots = [];
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
@@ -69,9 +72,11 @@ void main() {
                   context,
                   spell: spell,
                   spellSlots: spellSlots,
-                  onCastSpell: (castSpell, level) {
+                  pactSlot: pactSlot,
+                  onCastSpell: (castSpell, slot) {
                     castCalls.add(castSpell);
-                    castLevels.add(level);
+                    castLevels.add(slot?.level);
+                    castSlots.add(slot);
                   },
                 ),
                 child: const Text('Ouvrir'),
@@ -188,6 +193,72 @@ void main() {
       expect(castLevels, [4]);
     },
   );
+
+  testWidgets(
+    'un emplacement de pacte ET un emplacement classique au même niveau '
+    'numérique : les 2 options sont listées et sélectionnables '
+    'indépendamment (identité d\'objet, pas comparaison de niveau)',
+    (tester) async {
+      await pumpPanel(
+        tester,
+        spell: _fireball,
+        spellSlots: const [CharacterSpellSlot(level: 3, total: 1, used: 0)],
+        pactSlot: const CharacterSpellSlot(
+          level: 3,
+          total: 1,
+          used: 0,
+          isPact: true,
+        ),
+      );
+
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.pumpAndSettle();
+
+      // Deux options distinctes affichées malgré le même niveau numérique.
+      expect(find.text('Niveau 3'), findsOneWidget);
+      expect(find.text('Niveau 3 (pacte)'), findsOneWidget);
+
+      // Sélectionne explicitement l'option de pacte.
+      await tester.tap(find.text('Niveau 3 (pacte)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.pumpAndSettle();
+
+      expect(castCalls, [_fireball]);
+      expect(castSlots, hasLength(1));
+      expect(castSlots.single!.isPact, isTrue);
+      expect(castSlots.single!.level, 3);
+    },
+  );
+
+  testWidgets('même cas, mais l\'option classique (non pacte) est choisie', (
+    tester,
+  ) async {
+    await pumpPanel(
+      tester,
+      spell: _fireball,
+      spellSlots: const [CharacterSpellSlot(level: 3, total: 1, used: 0)],
+      pactSlot: const CharacterSpellSlot(
+        level: 3,
+        total: 1,
+        used: 0,
+        isPact: true,
+      ),
+    );
+
+    await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Niveau 3'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+    await tester.pumpAndSettle();
+
+    expect(castCalls, [_fireball]);
+    expect(castSlots, hasLength(1));
+    expect(castSlots.single!.isPact, isFalse);
+    expect(castSlots.single!.level, 3);
+  });
 
   testWidgets('aucun niveau éligible disponible : "Lancer" est désactivé', (
     tester,

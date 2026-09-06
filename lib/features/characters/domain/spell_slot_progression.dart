@@ -153,6 +153,44 @@ abstract final class SpellSlotProgression {
   static ({int charges, int slotLevel})? pactMagicFor(int characterLevel) =>
       _pactMagicSlots[characterLevel];
 
+  /// Changement de magie de pacte entre [oldCharacterLevel] (niveau de
+  /// l'Occultiste AVANT ce niveau, `0` s'il vient d'être multiclassé ce
+  /// niveau précis — jamais un niveau hors 1-20 par ailleurs) et
+  /// [newCharacterLevel] — `null` si rien ne change (charges ET niveau de
+  /// charge identiques des deux côtés), sinon un [PactSlotChange].
+  ///
+  /// `oldCharacterLevel <= 0` est traité explicitement comme "aucune magie de
+  /// pacte avant ce niveau" (`charges: 0, slotLevel: 0`) plutôt que délégué
+  /// à [pactMagicFor] : `pactMagicFor(0)` retourne déjà `null` (voir sa
+  /// documentation), donc ce traitement explicite est redondant en pratique,
+  /// mais reste un filet de sécurité si jamais un niveau négatif était passé
+  /// par erreur.
+  static PactSlotChange? pactChangeFor({
+    required int oldCharacterLevel,
+    required int newCharacterLevel,
+  }) {
+    final oldPact = oldCharacterLevel <= 0
+        ? null
+        : pactMagicFor(oldCharacterLevel);
+    final newPact = pactMagicFor(newCharacterLevel);
+
+    final oldCharges = oldPact?.charges ?? 0;
+    final oldSlotLevel = oldPact?.slotLevel ?? 0;
+    final newCharges = newPact?.charges ?? 0;
+    final newSlotLevel = newPact?.slotLevel ?? 0;
+
+    if (oldCharges == newCharges && oldSlotLevel == newSlotLevel) {
+      return null;
+    }
+
+    return PactSlotChange(
+      oldCharges: oldCharges,
+      newCharges: newCharges,
+      oldSlotLevel: oldSlotLevel,
+      newSlotLevel: newSlotLevel,
+    );
+  }
+
   /// Changements de total d'emplacements de sorts entre `targetLevel - 1` et
   /// `targetLevel` pour [className], triés par niveau de sort croissant (1 à
   /// 9) — une entrée par niveau de sort dont le total change, jamais

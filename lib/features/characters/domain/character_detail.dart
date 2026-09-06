@@ -108,6 +108,15 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// section "SORTS".
     @Default(<CharacterSpellSlot>[]) List<CharacterSpellSlot> spellSlots,
 
+    /// Magie de pacte de l'Occultiste (`character_pact_slots`, table séparée
+    /// de [spellSlots] — voir `domain/spell_slot_progression.dart`), `null`
+    /// si le personnage n'a pas de ligne `character_pact_slots` (pas
+    /// d'Occultiste, ou jamais recalculée depuis — même gap assumé que
+    /// [spellSlots], voir la doc de
+    /// `data/character_repository.dart::_resetSpellSlots`). Toujours
+    /// `isPact: true` quand non `null`.
+    CharacterSpellSlot? pactSpellSlot,
+
     /// Monnaie du personnage (`characters.currency_gp/pp/ep/sp/cp`) — onglet
     /// "Inventaire", rangée de stat boxes (voir
     /// `domain/inventory_stat_boxes_resolver.dart`). `@Default(0)` comme les

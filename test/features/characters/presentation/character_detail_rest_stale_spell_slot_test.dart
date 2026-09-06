@@ -55,6 +55,7 @@ class FakeRepository implements CharacterRepository {
     required String characterId,
     required int slotLevel,
     required int slotsUsed,
+    bool isPactSlot = false,
   }) async {
     castSpellCallCount++;
     await castSpellGate.future;

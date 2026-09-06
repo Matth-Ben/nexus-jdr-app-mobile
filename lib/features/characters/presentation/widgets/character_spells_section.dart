@@ -32,6 +32,7 @@ class CharacterSpellsSection extends StatelessWidget {
     required this.groups,
     required this.spellSlots,
     required this.onCastSpell,
+    this.pactSlot,
     this.actionsDisabled = false,
     super.key,
   });
@@ -42,6 +43,13 @@ class CharacterSpellsSection extends StatelessWidget {
   /// afficher les pastilles du bon niveau à côté de chaque titre de groupe,
   /// et transmis tel quel à [showSpellInfoPanel] (calcul d'éligibilité).
   final List<CharacterSpellSlot> spellSlots;
+
+  /// Magie de pacte de l'Occultiste (`CharacterDetail.pactSpellSlot`), `null`
+  /// si non applicable — affiche le bloc dédié "Magie de pacte" juste
+  /// au-dessus de la boucle des groupes de sorts par niveau (voir
+  /// [_PactSlotBanner]), et transmis à [showSpellInfoPanel] comme source
+  /// d'emplacements supplémentaire pour le calcul d'éligibilité.
+  final CharacterSpellSlot? pactSlot;
 
   final CastSpellCallback onCastSpell;
 
@@ -75,11 +83,22 @@ class CharacterSpellsSection extends StatelessWidget {
               color: AppColors.textSecondary,
             ),
           ),
+          // Bloc de section (pas un groupe de sorts) affiché une seule fois,
+          // uniquement pour un Occultiste (ou un Occultiste multiclassé) —
+          // même garde défensive que `showPips` ci-dessous (`total > 0`).
+          if (pactSlot != null && pactSlot!.total > 0) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _PactSlotBanner(slot: pactSlot!),
+            const SizedBox(height: AppSpacing.sm),
+            Container(height: 1, color: AppColors.gaugeTrack),
+            const SizedBox(height: AppSpacing.sm),
+          ],
           for (final group in groups)
             _SpellLevelGroupSection(
               group: group,
               slot: slotsByLevel[group.level],
               spellSlots: spellSlots,
+              pactSlot: pactSlot,
               onCastSpell: onCastSpell,
               actionsDisabled: actionsDisabled,
             ),
@@ -89,11 +108,45 @@ class CharacterSpellsSection extends StatelessWidget {
   }
 }
 
+/// Bloc de section "Magie de pacte" (increment magie de pacte de
+/// l'Occultiste) : icône + libellé "Magie de pacte — Niveau {L}" + pips de
+/// pacte, spec visuelle direction-artistique. Jamais coloré en
+/// [AppColors.accentTeal] pour le texte du libellé (contraste ~4,9:1 sur
+/// [AppColors.parchmentCard], marge trop faible pour du texte porteur
+/// d'info) — [AppColors.accentTeal] réservé à l'icône et au remplissage des
+/// pips (seuil non-textuel 3:1, largement respecté).
+class _PactSlotBanner extends StatelessWidget {
+  const _PactSlotBanner({required this.slot});
+
+  final CharacterSpellSlot slot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(
+          Icons.local_fire_department,
+          size: 14,
+          color: AppColors.accentTeal,
+        ),
+        const SizedBox(width: AppSpacing.xs / 2),
+        Text(
+          'Magie de pacte — Niveau ${slot.level}',
+          style: AppTypography.body(fontSize: 13, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        SpellSlotDots(slot: slot, filledColor: AppColors.accentTeal),
+      ],
+    );
+  }
+}
+
 class _SpellLevelGroupSection extends StatelessWidget {
   const _SpellLevelGroupSection({
     required this.group,
     required this.slot,
     required this.spellSlots,
+    this.pactSlot,
     required this.onCastSpell,
     required this.actionsDisabled,
   });
@@ -101,6 +154,7 @@ class _SpellLevelGroupSection extends StatelessWidget {
   final SpellLevelGroup group;
   final CharacterSpellSlot? slot;
   final List<CharacterSpellSlot> spellSlots;
+  final CharacterSpellSlot? pactSlot;
   final CastSpellCallback onCastSpell;
   final bool actionsDisabled;
 
@@ -138,6 +192,7 @@ class _SpellLevelGroupSection extends StatelessWidget {
             _SpellRow(
               spell: spell,
               spellSlots: spellSlots,
+              pactSlot: pactSlot,
               onCastSpell: onCastSpell,
               enabled: !actionsDisabled,
             ),
@@ -160,17 +215,30 @@ class _SpellLevelGroupSection extends StatelessWidget {
 /// lisible ("X restants sur Y") plutôt que le rendu en pastilles, plus
 /// adaptée à un lecteur d'écran qu'une suite de glyphes pleins/vides.
 class SpellSlotDots extends StatelessWidget {
-  const SpellSlotDots({required this.slot, super.key});
+  const SpellSlotDots({
+    required this.slot,
+    this.filledColor = AppColors.goldEnd,
+    super.key,
+  });
 
   final CharacterSpellSlot slot;
+
+  /// Couleur de remplissage des pastilles pleines — `AppColors.goldEnd` par
+  /// défaut (emplacements classiques), `AppColors.accentTeal` pour la magie
+  /// de pacte de l'Occultiste (voir `_PactSlotBanner`).
+  final Color filledColor;
 
   @override
   Widget build(BuildContext context) {
     final total = slot.total < 0 ? 0 : slot.total;
     final remaining = slot.remaining;
+    final label = slot.isPact
+        ? 'Emplacements de pacte : $remaining restants sur $total '
+              '(niveau ${slot.level})'
+        : 'Emplacements de sorts : $remaining restants sur $total';
 
     return Semantics(
-      label: 'Emplacements de sorts : $remaining restants sur $total',
+      label: label,
       // `container: true` : ce noeud de sémantique ne doit jamais fusionner
       // dans celui du `Text` voisin (le libellé de niveau, ex. "Niveau 1")
       // — sans quoi le libellé ci-dessus disparaîtrait, absorbé dans le
@@ -182,7 +250,7 @@ class SpellSlotDots extends StatelessWidget {
         children: [
           for (var i = 0; i < total; i++) ...[
             if (i > 0) const SizedBox(width: 2),
-            _SpellSlotDot(filled: i < remaining),
+            _SpellSlotDot(filled: i < remaining, filledColor: filledColor),
           ],
         ],
       ),
@@ -191,9 +259,10 @@ class SpellSlotDots extends StatelessWidget {
 }
 
 class _SpellSlotDot extends StatelessWidget {
-  const _SpellSlotDot({required this.filled});
+  const _SpellSlotDot({required this.filled, required this.filledColor});
 
   final bool filled;
+  final Color filledColor;
 
   @override
   Widget build(BuildContext context) {
@@ -202,7 +271,7 @@ class _SpellSlotDot extends StatelessWidget {
       height: 8,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: filled ? AppColors.goldEnd : Colors.transparent,
+        color: filled ? filledColor : Colors.transparent,
         border: filled
             ? null
             : Border.all(color: AppColors.woodLight, width: 1.5),
@@ -215,12 +284,14 @@ class _SpellRow extends StatelessWidget {
   const _SpellRow({
     required this.spell,
     required this.spellSlots,
+    this.pactSlot,
     required this.onCastSpell,
     required this.enabled,
   });
 
   final CharacterSpellEntry spell;
   final List<CharacterSpellSlot> spellSlots;
+  final CharacterSpellSlot? pactSlot;
   final CastSpellCallback onCastSpell;
   final bool enabled;
 
@@ -241,6 +312,7 @@ class _SpellRow extends StatelessWidget {
                 context,
                 spell: spell,
                 spellSlots: spellSlots,
+                pactSlot: pactSlot,
                 onCastSpell: onCastSpell,
               )
             : null,

@@ -480,6 +480,104 @@ void main() {
     });
   });
 
+  group('SpellSlotProgression.pactChangeFor', () {
+    test('dip Occultiste (oldCharacterLevel = 0) : déblocage niveau 1, 1 '
+        'charge', () {
+      final change = SpellSlotProgression.pactChangeFor(
+        oldCharacterLevel: 0,
+        newCharacterLevel: 1,
+      );
+      expect(
+        change,
+        const PactSlotChange(
+          oldCharges: 0,
+          newCharges: 1,
+          oldSlotLevel: 0,
+          newSlotLevel: 1,
+        ),
+      );
+    });
+
+    test('niveau 1 -> 2 : charges renforcées (1 -> 2), niveau de charge '
+        'inchangé (1)', () {
+      final change = SpellSlotProgression.pactChangeFor(
+        oldCharacterLevel: 1,
+        newCharacterLevel: 2,
+      );
+      expect(
+        change,
+        const PactSlotChange(
+          oldCharges: 1,
+          newCharges: 2,
+          oldSlotLevel: 1,
+          newSlotLevel: 1,
+        ),
+      );
+    });
+
+    test('niveau 2 -> 3 : niveau de charge amélioré (1 -> 2), charges '
+        'inchangées (2)', () {
+      final change = SpellSlotProgression.pactChangeFor(
+        oldCharacterLevel: 2,
+        newCharacterLevel: 3,
+      );
+      expect(
+        change,
+        const PactSlotChange(
+          oldCharges: 2,
+          newCharges: 2,
+          oldSlotLevel: 1,
+          newSlotLevel: 2,
+        ),
+      );
+    });
+
+    test('les deux changent à la fois (charges ET niveau de charge) : '
+        'niveau 1 -> 3', () {
+      final change = SpellSlotProgression.pactChangeFor(
+        oldCharacterLevel: 1,
+        newCharacterLevel: 3,
+      );
+      // Niveau 1 : 1 charge, niveau 1. Niveau 3 : 2 charges, niveau 2.
+      expect(
+        change,
+        const PactSlotChange(
+          oldCharges: 1,
+          newCharges: 2,
+          oldSlotLevel: 1,
+          newSlotLevel: 2,
+        ),
+      );
+    });
+
+    test('rien ne change (charges ET niveau de charge identiques) -> null', () {
+      expect(
+        SpellSlotProgression.pactChangeFor(
+          oldCharacterLevel: 3,
+          newCharacterLevel: 4,
+        ),
+        isNull,
+      );
+    });
+
+    test('oldCharacterLevel négatif (défensif) traité comme 0 (aucune magie '
+        'de pacte avant)', () {
+      final change = SpellSlotProgression.pactChangeFor(
+        oldCharacterLevel: -1,
+        newCharacterLevel: 1,
+      );
+      expect(
+        change,
+        const PactSlotChange(
+          oldCharges: 0,
+          newCharges: 1,
+          oldSlotLevel: 0,
+          newSlotLevel: 1,
+        ),
+      );
+    });
+  });
+
   group('SpellSlotProgression.resolveChangesForLevelUp - multiclassage', () {
     test('multiclassage frais (niveau 1 dans une nouvelle classe lanceuse) '
         'depuis une seule classe deja lanceuse : bascule sur le total '

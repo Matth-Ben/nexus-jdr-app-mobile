@@ -407,6 +407,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     required String characterId,
     required int slotLevel,
     required int slotsUsed,
+    bool isPactSlot = false,
   }) {
     throw UnimplementedError();
   }
@@ -3061,6 +3062,203 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(fakeRepository.applyLevelUpCalls.single.invocationIds, isEmpty);
+      },
+    );
+  });
+
+  group('magie de pacte (Occultiste) - etape Sorts', () {
+    CharacterDetailClassRow occultisteClass({required int level}) =>
+        CharacterDetailClassRow(
+          classId: 9,
+          hitDie: 8,
+          className: 'Occultiste',
+          level: level,
+          isPrimary: true,
+          savingThrowProficiencies: const [],
+        );
+
+    testWidgets(
+      'niveau 2 -> 3 : "Charges de pacte ameliorees" (niveau de charge '
+      'ameliore, charges inchangees), ligne de pacte affichee dans l etape '
+      'Sorts ET dans le recapitulatif',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [occultisteClass(level: 2)],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeCreationRepository.spellCatalogByClassId = {
+          9: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 310,
+                name: 'Fleche acide de Melf',
+                level: 2,
+                school: 'Evocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 4 · Sorts'), findsOneWidget);
+        expect(find.text('Charges de pacte améliorées'), findsOneWidget);
+        expect(find.text('Niveau 1 → 2 (2 charges)'), findsOneWidget);
+
+        await tester.tap(find.text('Fleche acide de Melf'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Charges de pacte améliorées'), findsOneWidget);
+        expect(find.text('Niveau 1 → 2 (2 charges)'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.className, 'Occultiste');
+      },
+    );
+
+    testWidgets(
+      'niveau 10 -> 11 : "Charges de pacte renforcees" (charges augmentees, '
+      'niveau de charge inchange)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [occultisteClass(level: 10)],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          11: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeCreationRepository.spellCatalogByClassId = {
+          9: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 311,
+                name: 'Contresort',
+                level: 3,
+                school: 'Abjuration',
+                castingTime: '1 reaction',
+              ),
+            ],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, 11);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Charges de pacte renforcées'), findsOneWidget);
+        expect(find.text('2 → 3 charges (niveau 5)'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'dip Occultiste (multiclassage niveau 1) : "Magie de pacte debloquee", '
+      '1 charge de niveau 1',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          abilityScores: {'str': 15, 'cha': 14, 'con': 14},
+        );
+        fakeCreationRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [
+            ClassOption(id: 1, name: 'Guerrier', description: '', hitDie: 10),
+            ClassOption(id: 9, name: 'Occultiste', description: '', hitDie: 8),
+          ],
+        );
+        fakeRepository.levelDataByLevel = {
+          1: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeCreationRepository.spellCatalogByClassId = {
+          9: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 320,
+                name: 'Rayon de fleau',
+                level: 1,
+                school: 'Necromancie',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 321,
+                name: 'Blessures cruelles',
+                level: 1,
+                school: 'Necromancie',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 322,
+                name: 'Trait de feu',
+                level: 0,
+                school: 'Evocation',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 323,
+                name: 'Lumiere',
+                level: 0,
+                school: 'Evocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/char-1/level-up?level=5');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Se multiclasser en Occultiste'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Trait de feu'), findsOneWidget);
+        await tester.tap(find.text('Trait de feu'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Lumiere'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Sorts'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Rayon de fleau'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Blessures cruelles'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Magie de pacte débloquée'), findsOneWidget);
+        expect(find.text('Niveau 1 · 1 charge(s)'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Magie de pacte débloquée'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Occultiste');
+        expect(applied.isMulticlassing, isTrue);
       },
     );
   });

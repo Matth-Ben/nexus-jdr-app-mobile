@@ -12,32 +12,49 @@ import '../../domain/spell_cast_eligibility.dart';
 import 'character_spells_section.dart';
 import 'spell_info_panel.dart';
 
-/// Callback d'exécution d'un lancer de sort, appelé une fois le niveau
-/// d'emplacement retenu (ou `null` pour un sort niveau 0, rien à persister)
-/// — délègue toute la logique d'écriture (optimiste + réseau + message) à
-/// l'appelant, voir `character_detail_screen.dart::_castSpell`.
+/// Callback d'exécution d'un lancer de sort, appelé une fois l'emplacement
+/// retenu (ou `null` pour un sort niveau 0, rien à persister) — délègue
+/// toute la logique d'écriture (optimiste + réseau + message) à l'appelant,
+/// voir `character_detail_screen.dart::_castSpell`.
+///
+/// Porte l'objet [CharacterSpellSlot] complet (pas seulement son `level`) :
+/// un Occultiste multiclassé peut avoir un emplacement de pacte ET un
+/// emplacement classique combiné au même `level` numérique simultanément (les
+/// deux tables restent toujours séparées, voir
+/// `domain/spell_slot_progression.dart`) — un simple `int` ne suffirait pas à
+/// identifier sans ambiguïté quel pool a été choisi.
 typedef CastSpellCallback = void Function(
   CharacterSpellEntry spell,
-  int? slotLevel,
+  CharacterSpellSlot? slot,
 );
 
 /// Orchestre l'action "Lancer" (bouton en pied du panneau "Infos",
 /// [showSpellInfoPanel] — seul point d'entrée depuis l'onglet "Sorts", voir
 /// `character_spells_section.dart::_SpellRow`) : appelle directement
-/// [onCastSpell] quand un seul niveau d'emplacement est éligible (ou pour un
-/// sort niveau 0, `slotLevel: null`), ouvre sinon une sheet de choix de
-/// niveau ([_SpellSlotChoiceSheetContent]).
+/// [onCastSpell] quand un seul emplacement est éligible (ou pour un sort
+/// niveau 0, `slot: null`), ouvre sinon une sheet de choix
+/// ([_SpellSlotChoiceSheetContent]).
 ///
-/// Niveaux éligibles = tous les `L >= spell.level` de [spellSlots],
+/// [pactSlot] (magie de pacte de l'Occultiste, `null` si non applicable —
+/// voir `CharacterDetail.pactSpellSlot`) est fusionné avec [spellSlots] AVANT
+/// de calculer l'éligibilité : RAW 5e, un sort connu peut être lancé avec
+/// n'importe quel emplacement disponible (pacte OU classique) dont le niveau
+/// est `>= niveau du sort`, aucune règle "ce sort doit utiliser le pool de sa
+/// classe d'origine" — les deux pools sont donc de simples sources
+/// d'emplacements interchangeables une fois fusionnées.
+///
+/// Éligibles = tous les emplacements `L >= spell.level` de la liste fusionnée,
 /// indépendamment de `remaining` (voir [SpellCastEligibility.eligibleSlots])
-/// — ne devrait jamais être appelée pour un sort dont aucun niveau éligible
-/// n'a `remaining > 0` (l'action "Lancer" est désactivée en amont dans ce
-/// cas, voir [SpellCastEligibility.hasAvailableSlot]), mais reste sans effet
-/// si [spellSlots] ne contient aucun niveau éligible du tout (garde-fou).
+/// — ne devrait jamais être appelée pour un sort dont aucun emplacement
+/// éligible n'a `remaining > 0` (l'action "Lancer" est désactivée en amont
+/// dans ce cas, voir [SpellCastEligibility.hasAvailableSlot]), mais reste
+/// sans effet si la liste fusionnée ne contient aucun niveau éligible du tout
+/// (garde-fou).
 Future<void> castSpellFlow(
   BuildContext context, {
   required CharacterSpellEntry spell,
   required List<CharacterSpellSlot> spellSlots,
+  CharacterSpellSlot? pactSlot,
   required CastSpellCallback onCastSpell,
 }) async {
   if (spell.level <= 0) {
@@ -45,25 +62,26 @@ Future<void> castSpellFlow(
     return;
   }
 
+  final combinedSlots = [...spellSlots, ?pactSlot];
   final eligible = SpellCastEligibility.eligibleSlots(
-    spellSlots: spellSlots,
+    spellSlots: combinedSlots,
     spellLevel: spell.level,
   );
   if (eligible.isEmpty) return;
   if (eligible.length == 1) {
-    onCastSpell(spell, eligible.single.level);
+    onCastSpell(spell, eligible.single);
     return;
   }
 
-  final chosenLevel = await showModalBottomSheet<int>(
+  final chosenSlot = await showModalBottomSheet<CharacterSpellSlot>(
     context: context,
     backgroundColor: AppColors.parchmentCard,
     isScrollControlled: true,
     builder: (sheetContext) =>
         _SpellSlotChoiceSheetContent(spell: spell, eligible: eligible),
   );
-  if (chosenLevel == null) return;
-  onCastSpell(spell, chosenLevel);
+  if (chosenSlot == null) return;
+  onCastSpell(spell, chosenSlot);
 }
 
 class _SpellSlotChoiceSheetContent extends StatefulWidget {
@@ -82,10 +100,21 @@ class _SpellSlotChoiceSheetContent extends StatefulWidget {
 
 class _SpellSlotChoiceSheetContentState
     extends State<_SpellSlotChoiceSheetContent> {
-  late int? _selectedLevel = SpellCastEligibility.defaultSelectedLevel(
-    spellSlots: widget.eligible,
-    spellLevel: widget.spell.level,
-  );
+  /// Présélectionné par identité d'objet (pas par `level`, voir la doc de
+  /// [_selectedSlot]) : le premier emplacement de [widget.eligible] (déjà
+  /// trié par niveau croissant, voir `castSpellFlow`) avec `remaining > 0` —
+  /// même règle de repli que [SpellCastEligibility.defaultSelectedLevel],
+  /// réimplémentée ici plutôt que réutilisée : cette dernière ne retourne
+  /// qu'un `int`, insuffisant pour distinguer deux emplacements partageant le
+  /// même niveau numérique (un de pacte, un classique).
+  late CharacterSpellSlot? _selectedSlot = _defaultSelectedSlot();
+
+  CharacterSpellSlot? _defaultSelectedSlot() {
+    for (final slot in widget.eligible) {
+      if (slot.remaining > 0) return slot;
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,8 +149,14 @@ class _SpellSlotChoiceSheetContentState
             for (final slot in widget.eligible) ...[
               _SpellSlotOptionRow(
                 slot: slot,
-                selected: _selectedLevel == slot.level,
-                onSelect: () => setState(() => _selectedLevel = slot.level),
+                // Identité d'objet, jamais `==`/comparaison de `.level` :
+                // `widget.eligible` est construite une seule fois par
+                // `castSpellFlow` et transmise telle quelle, l'identité reste
+                // stable pendant la durée de vie de cette sheet — seule façon
+                // fiable de distinguer un emplacement de pacte d'un
+                // emplacement classique partageant le même niveau numérique.
+                selected: identical(_selectedSlot, slot),
+                onSelect: () => setState(() => _selectedSlot = slot),
               ),
               if (slot != widget.eligible.last)
                 const SizedBox(height: AppSpacing.xs),
@@ -140,8 +175,8 @@ class _SpellSlotChoiceSheetContentState
                 Expanded(
                   child: PrimaryButton(
                     label: 'Lancer',
-                    onPressed: _selectedLevel != null
-                        ? () => Navigator.of(context).pop(_selectedLevel)
+                    onPressed: _selectedSlot != null
+                        ? () => Navigator.of(context).pop(_selectedSlot)
                         : null,
                   ),
                 ),
@@ -194,7 +229,12 @@ class _SpellSlotOptionRow extends StatelessWidget {
     final tile = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 44),
       child: SelectableOptionTile(
-        title: 'Niveau ${slot.level}',
+        // Suffixe "(pacte)" pour distinguer un emplacement de pacte d'un
+        // emplacement classique quand les deux partagent le même niveau
+        // numérique (voir la doc de [CastSpellCallback]).
+        title: slot.isPact
+            ? 'Niveau ${slot.level} (pacte)'
+            : 'Niveau ${slot.level}',
         selected: selected,
         leading: leading,
         // No-op explicite (pas `null`) pour un niveau épuisé : voir la spec

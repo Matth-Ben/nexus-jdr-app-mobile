@@ -609,6 +609,63 @@ void main() {
 
       expect(CharacterDetailRowMapper.parseSpellSlots(row), isEmpty);
     });
+
+    test('parsePactSpellSlot construit un CharacterSpellSlot(isPact: true) '
+        'depuis un objet unique (forme JSON réelle PostgREST pour cette '
+        'relation 1-1, vérifiée contre le stack Supabase local)', () {
+      final row = _row();
+      row['character_pact_slots'] = {
+        'slot_level': 2,
+        'slots_total': 2,
+        'slots_used': 1,
+      };
+
+      final slot = CharacterDetailRowMapper.parsePactSpellSlot(row);
+
+      expect(slot, isNotNull);
+      expect(slot!.level, 2);
+      expect(slot.total, 2);
+      expect(slot.used, 1);
+      expect(slot.isPact, isTrue);
+    });
+
+    test('parsePactSpellSlot accepte aussi un tableau à un seul élément '
+        '(défensif, cardinalité potentiellement ambiguë selon la version de '
+        'PostgREST)', () {
+      final row = _row();
+      row['character_pact_slots'] = [
+        {'slot_level': 1, 'slots_total': 1, 'slots_used': 0},
+      ];
+
+      final slot = CharacterDetailRowMapper.parsePactSpellSlot(row);
+
+      expect(slot, isNotNull);
+      expect(slot!.level, 1);
+      expect(slot.isPact, isTrue);
+    });
+
+    test('parsePactSpellSlot retourne null si character_pact_slots est '
+        'absent (pas d\'Occultiste, ou jamais recalculée)', () {
+      final row = _row();
+
+      expect(CharacterDetailRowMapper.parsePactSpellSlot(row), isNull);
+    });
+
+    test('parsePactSpellSlot retourne null si character_pact_slots est un '
+        'tableau vide', () {
+      final row = _row();
+      row['character_pact_slots'] = <Map<String, dynamic>>[];
+
+      expect(CharacterDetailRowMapper.parsePactSpellSlot(row), isNull);
+    });
+
+    test('parsePactSpellSlot retourne null si slot_level est absent '
+        '(défensif, ne devrait jamais arriver)', () {
+      final row = _row();
+      row['character_pact_slots'] = {'slots_total': 2, 'slots_used': 0};
+
+      expect(CharacterDetailRowMapper.parsePactSpellSlot(row), isNull);
+    });
   });
 
   group('CharacterDetailRowMapper — onglet Histoire (9 champs texte)', () {
