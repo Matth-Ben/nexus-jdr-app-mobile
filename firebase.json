@@ -1,0 +1,1 @@
+{"flutter":{"platforms":{"android":{"default":{"projectId":"nexus-jdr","appId":"1:315814084339:android:3ad14580e856fa12e94186","fileOutput":"android/app/src/prod/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"nexus-jdr","configurations":{"android":"1:315814084339:android:3ad14580e856fa12e94186"}}}}}}

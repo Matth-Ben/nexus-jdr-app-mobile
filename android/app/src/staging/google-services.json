@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "315814084339",
+    "project_id": "nexus-jdr",
+    "storage_bucket": "nexus-jdr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:315814084339:android:3ad14580e856fa12e94186",
+        "android_client_info": {
+          "package_name": "com.nexusjdr.personnages"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOaVXxTLxT7OWKAmKQXhAZwCJZDCQr94c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:315814084339:android:be437da3ee7580efe94186",
+        "android_client_info": {
+          "package_name": "com.nexusjdr.personnages.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOaVXxTLxT7OWKAmKQXhAZwCJZDCQr94c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:315814084339:android:4298ba3cc6e45f2ae94186",
+        "android_client_info": {
+          "package_name": "com.nexusjdr.personnages.staging"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOaVXxTLxT7OWKAmKQXhAZwCJZDCQr94c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

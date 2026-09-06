@@ -85,6 +85,8 @@ dependencies:
   # le bloc `<queries>` ajouté à `android/app/src/main/AndroidManifest.xml`
   # (Android 11+/API 30+ masque `canLaunchUrl` sans cette déclaration).
   url_launcher: ^6.3.2
+  firebase_core: ^4.14.0
+  firebase_messaging: ^16.6.0
 
 dev_dependencies:
   flutter_test:
