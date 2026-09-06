@@ -17,6 +17,11 @@ import '../../features/character_creation/presentation/summary_step_screen.dart'
 import '../../features/characters/presentation/character_detail_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
 import '../../features/characters/presentation/level_up_screen.dart';
+import '../../features/groups/presentation/group_create_screen.dart';
+import '../../features/groups/presentation/group_join_character_step_screen.dart';
+import '../../features/groups/presentation/group_join_code_step_screen.dart';
+import '../../features/groups/presentation/group_join_confirmation_step_screen.dart';
+import '../../features/groups/presentation/group_screen.dart';
 import '../../features/join_story/presentation/join_character_step_screen.dart';
 import '../../features/join_story/presentation/join_code_step_screen.dart';
 import '../../features/join_story/presentation/join_confirmation_step_screen.dart';
@@ -238,6 +243,40 @@ GoRouter appRouter(Ref ref) {
         path: '/join/:code',
         builder: (context, state) =>
             JoinConfirmationStepScreen(code: state.pathParameters['code']!),
+      ),
+      GoRoute(
+        // Écran "Créer un groupe" (`features/groups/`) — voir
+        // `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.
+        path: '/groups/new',
+        builder: (context, state) => const GroupCreateScreen(),
+      ),
+      GoRoute(
+        // Flux "Rejoindre un groupe" (`features/groups/`), 3 étapes — calque
+        // du flux "Rejoindre une histoire" (`/join`, `/join/step-2`,
+        // `/join/step-3`), sans deep link universel dédié pour ce flux.
+        path: '/groups/join',
+        builder: (context, state) => GroupJoinCodeStepScreen(
+          initialCode: state.uri.queryParameters['code'],
+        ),
+      ),
+      GoRoute(
+        path: '/groups/join/step-2',
+        builder: (context, state) => GroupJoinConfirmationStepScreen(
+          code: state.uri.queryParameters['code']!,
+        ),
+      ),
+      GoRoute(
+        path: '/groups/join/step-3',
+        builder: (context, state) => GroupJoinCharacterStepScreen(
+          code: state.uri.queryParameters['code']!,
+        ),
+      ),
+      GoRoute(
+        // Écran "Groupe" (`features/groups/`), onglets Membres/Butin — voir
+        // `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2.
+        path: '/groups/:id',
+        builder: (context, state) =>
+            GroupScreen(groupId: state.pathParameters['id']!),
       ),
     ],
   );

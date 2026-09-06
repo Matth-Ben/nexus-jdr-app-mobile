@@ -15,6 +15,9 @@ import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
 import '../../character_creation/presentation/providers/character_creation_return_route_provider.dart';
+import '../../groups/domain/group_summary.dart';
+import '../../groups/presentation/providers/group_providers.dart';
+import '../../groups/presentation/widgets/group_entry_sheet.dart';
 import '../domain/character_failure.dart';
 import '../domain/character_summary.dart';
 import 'providers/character_providers.dart';
@@ -258,8 +261,127 @@ class _Header extends StatelessWidget {
             color: AppColors.textOnWood,
           ),
         ),
-        const _ProfileButton(),
+        const Row(
+          children: [
+            _ProfileButton(),
+            SizedBox(width: AppSpacing.sm),
+            _GroupsButton(),
+          ],
+        ),
       ],
+    );
+  }
+}
+
+/// Icône groupes ronde en haut à droite (`Icons.groups_outlined`), à côté du
+/// bouton profil — voir `docs/cahier-des-charges/12-partage-et-groupes.md`
+/// section 2 : point d'entrée du système de groupe, comportement au tap
+/// selon le nombre de groupes dont le joueur est membre (un joueur peut être
+/// membre de plusieurs groupes simultanément, avec des personnages
+/// différents) :
+/// - 0 groupe -> sheet "GROUPE" ([showGroupEntrySheet]) ;
+/// - 1 groupe -> navigue directement vers l'écran "Groupe" de ce groupe ;
+/// - 2+ groupes -> sheet listant les groupes ([showGroupListSheet]) avant
+///   navigation.
+///
+/// `ConsumerStatefulWidget` (plutôt qu'un simple tap synchrone comme
+/// `_ProfileButton`) : la décision ci-dessus dépend d'un appel réseau
+/// (`myGroupsProvider`), qui n'a pas vocation à être précalculé en
+/// permanence en arrière-plan pour un bouton qui peut ne jamais être
+/// pressé — l'état [_isLoading] affiche un petit indicateur à la place de
+/// l'icône le temps de cet appel.
+class _GroupsButton extends ConsumerStatefulWidget {
+  const _GroupsButton();
+
+  @override
+  ConsumerState<_GroupsButton> createState() => _GroupsButtonState();
+}
+
+class _GroupsButtonState extends ConsumerState<_GroupsButton> {
+  bool _isLoading = false;
+
+  Future<void> _handleTap() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
+    // [_isLoading] ne couvre volontairement QUE l'appel réseau
+    // (`myGroupsProvider`), jamais l'ouverture d'une sheet ensuite : une
+    // sheet peut rester ouverte indéfiniment tant que le joueur n'a pas agi
+    // (aucun bug en soi), mais le petit spinner de ce bouton (voir [build])
+    // est un indicateur *indéterminé* — le laisser actif pendant qu'une
+    // sheet reste ouverte empêcherait à tort tout `pumpAndSettle` de se
+    // terminer dans les tests, et n'aurait de toute façon aucun sens
+    // visuel une fois la sheet affichée.
+    final List<GroupSummary> groups;
+    try {
+      groups = await ref.read(myGroupsProvider.future);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible de charger vos groupes. Réessayez.'),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (groups.isEmpty) {
+      final action = await showGroupEntrySheet(context);
+      if (action == null || !mounted) return;
+      switch (action) {
+        case GroupEntryAction.create:
+          context.push('/groups/new');
+        case GroupEntryAction.join:
+          context.push('/groups/join');
+      }
+    } else if (groups.length == 1) {
+      context.push('/groups/${groups.first.id}');
+    } else {
+      final selectedId = await showGroupListSheet(context, groups);
+      if (selectedId == null || !mounted) return;
+      context.push('/groups/$selectedId');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: _handleTap,
+        child: Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.woodMedium,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: AppColors.woodLight,
+              width: AppBorders.card,
+            ),
+          ),
+          child: _isLoading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.textOnWood,
+                  ),
+                )
+              : const Icon(
+                  Icons.groups_outlined,
+                  color: AppColors.textOnWood,
+                  size: 22,
+                ),
+        ),
+      ),
     );
   }
 }

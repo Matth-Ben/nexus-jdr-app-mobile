@@ -57,6 +57,16 @@ abstract class CharacterDetail with _$CharacterDetail {
     required int maxHp,
     required int temporaryHp,
 
+    /// `characters.is_dead` — statut "mort" manuel (flag simple, sans
+    /// simulation des règles de mort complètes, voir
+    /// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2).
+    /// Bascule via le lien "Marquer comme mort"/"Ressusciter" de l'onglet
+    /// "Personnage" (`CharacterVitalsCard`) — voir
+    /// `CharacterRepository.setDead`. `@Default(false)` comme les autres
+    /// champs ajoutés après la première version de ce modèle (voir la
+    /// remarque sur [currencyGp] ci-dessous).
+    @Default(false) bool isDead,
+
     /// Scores finaux par caractéristique (`character_ability_scores`), clé
     /// 'str'/'dex'/'con'/'int'/'wis'/'cha' — déjà le score final en base,
     /// aucun bonus racial à recalculer ici (voir

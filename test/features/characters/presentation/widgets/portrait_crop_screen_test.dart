@@ -93,6 +93,14 @@ class _FakeCharacterRepository implements CharacterRepository {
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
 
   @override
+  Future<WriteOutcome> setDead({
+    required String characterId,
+    required bool isDead,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,

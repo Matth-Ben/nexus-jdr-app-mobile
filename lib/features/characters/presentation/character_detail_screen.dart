@@ -1171,6 +1171,33 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Bascule `characters.is_dead` (lien "Marquer comme mort"/"Ressusciter",
+  /// `CharacterVitalsCard`) — écriture simple, réversible, sans confirmation
+  /// à double étape (spec de la tâche "Système de groupe",
+  /// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2).
+  Future<void> _toggleDead(CharacterDetail detail) async {
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .setDead(characterId: widget.characterId, isDead: !detail.isDead);
+      if (!mounted) return;
+      if (outcome == WriteOutcome.queued) {
+        // Voir la documentation de `CharacterRepository.setDead` : cette
+        // écriture n'est jamais mise en file (même catégorie que
+        // `castSpell`/`useClassFeature`), donc jamais synchronisée plus
+        // tard — message honnête distinct de [_offlineQueuedMessage], même
+        // convention que `_castSpell`/`_useClassFeature`.
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      ref.invalidate(characterDetailProvider(widget.characterId));
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar('Impossible de mettre à jour le statut. Réessayez.');
+    }
+  }
+
   /// Applique un repos (`RestSheet`) : écrit l'effet en base
   /// (`CharacterRepository.applyRest`), rafraîchit la fiche, puis affiche
   /// une confirmation — spec visuelle section 4 : contrairement à
@@ -1582,6 +1609,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           onApply: (amount) => _addXp(detail, amount),
         ),
         onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
+        onTapToggleDead: () => _toggleDead(detail),
         onTapRest: () {
           final effective = _effectiveDetail(detail);
           showRestSheet(
@@ -1618,6 +1646,7 @@ class _CharacterTabBody extends StatelessWidget {
     required this.onQuickDamage,
     required this.onTapAddXp,
     required this.onTapLevelUp,
+    required this.onTapToggleDead,
     required this.onTapRest,
     required this.hpActionsDisabled,
   });
@@ -1638,6 +1667,10 @@ class _CharacterTabBody extends StatelessWidget {
   final VoidCallback onQuickDamage;
   final VoidCallback onTapAddXp;
   final VoidCallback onTapLevelUp;
+
+  /// Lien "Marquer comme mort"/"Ressusciter" — voir
+  /// `_CharacterDetailScreenState._toggleDead`.
+  final VoidCallback onTapToggleDead;
   final VoidCallback onTapRest;
 
   /// Voir `_CharacterDetailScreenState._isApplyingRest`.
@@ -1666,6 +1699,7 @@ class _CharacterTabBody extends StatelessWidget {
           onQuickDamage: onQuickDamage,
           onTapAddXp: onTapAddXp,
           onTapLevelUp: onTapLevelUp,
+          onTapToggleDead: onTapToggleDead,
           onTapRest: onTapRest,
           hpActionsDisabled: hpActionsDisabled,
         ),

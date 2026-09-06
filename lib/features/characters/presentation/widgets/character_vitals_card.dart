@@ -16,6 +16,7 @@ class CharacterVitalsCard extends StatelessWidget {
     required this.onQuickDamage,
     required this.onTapAddXp,
     required this.onTapLevelUp,
+    required this.onTapToggleDead,
     required this.onTapRest,
     this.hpActionsDisabled = false,
     super.key,
@@ -68,6 +69,12 @@ class CharacterVitalsCard extends StatelessWidget {
   /// (voir `character_detail_screen.dart`).
   final VoidCallback onTapRest;
 
+  /// Lien "Marquer comme mort"/"Ressusciter" — bascule `characters.is_dead`
+  /// (chantier "Système de groupe",
+  /// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2). Voir
+  /// `_CharacterDetailScreenState._toggleDead`.
+  final VoidCallback onTapToggleDead;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -97,6 +104,10 @@ class CharacterVitalsCard extends StatelessWidget {
           const Divider(height: 1, thickness: 1, color: AppColors.gaugeTrack),
           const SizedBox(height: AppSpacing.sm),
           _RestLink(onTap: hpActionsDisabled ? null : onTapRest),
+          _DeathToggleLink(
+            isDead: detail.isDead,
+            onTap: hpActionsDisabled ? null : onTapToggleDead,
+          ),
         ],
       ),
     );
@@ -131,6 +142,51 @@ class _RestLink extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 'Prendre un repos',
+                style: AppTypography.body(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lien texte "Marquer comme mort"/"Ressusciter" — calque exact de
+/// [_RestLink]/`_ManualLevelUpLink` (`Icons.call_split` 14px, `body` 700/13
+/// `textSecondary`, zone de tap 44px min-height) : contrôle manuel du statut
+/// "mort" affiché sur l'écran "Groupe" (badge, voir
+/// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2) —
+/// réversible, sans confirmation à double étape.
+class _DeathToggleLink extends StatelessWidget {
+  const _DeathToggleLink({required this.isDead, required this.onTap});
+
+  final bool isDead;
+
+  /// `null` pendant qu'un repos (ou sa réaffirmation PV différée) est déjà en
+  /// vol — même verrou que [_RestLink].
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onTap == null;
+    final color = disabled ? AppColors.textMuted : AppColors.textSecondary;
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.call_split, size: 14, color: color),
+              const SizedBox(width: 4),
+              Text(
+                isDead ? 'Ressusciter' : 'Marquer comme mort',
                 style: AppTypography.body(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,

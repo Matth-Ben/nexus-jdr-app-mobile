@@ -501,6 +501,7 @@ abstract final class CharacterDetailRowMapper {
       currentHp: (row['current_hp'] as num?)?.toInt() ?? 0,
       maxHp: (row['max_hp'] as num?)?.toInt() ?? 0,
       temporaryHp: (row['temporary_hp'] as num?)?.toInt() ?? 0,
+      isDead: (row['is_dead'] as bool?) ?? false,
       abilityScores: parseAbilityScores(row),
       skills: skills,
       classFeatures: classFeatures,

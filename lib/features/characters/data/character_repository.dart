@@ -95,6 +95,22 @@ abstract class CharacterRepository {
     required int temporaryHp,
   });
 
+  /// Écrit directement `characters.is_dead` — lien "Marquer comme
+  /// mort"/"Ressusciter" de l'onglet "Personnage" (`CharacterVitalsCard`,
+  /// chantier "Système de groupe",
+  /// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2) :
+  /// bascule manuelle, réversible, sans confirmation à double étape (spec de
+  /// la tâche). Aucun calcul métier ici, même principe que [updateHp].
+  ///
+  /// Mode hors ligne : mêmes règles que [useInventoryItem] (jamais mise en
+  /// file — écriture jugée suffisamment secondaire pour ne pas mériter sa
+  /// propre entrée dans `PendingCharacterWriteQueue`, même choix que le
+  /// reste des écritures de l'onglet "Inventaire").
+  Future<WriteOutcome> setDead({
+    required String characterId,
+    required bool isDead,
+  });
+
   /// Envoie [bytes] (déjà recadrées en carré, voir
   /// `presentation/widgets/portrait_crop_screen.dart`) dans le bucket
   /// `character-portraits` (RLS écriture restreinte à `{user_id}/...`,
@@ -692,6 +708,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             current_hp,
             max_hp,
             temporary_hp,
+            is_dead,
             race_id,
             subrace_id,
             race_custom_text,
@@ -789,6 +806,30 @@ class SupabaseCharacterRepository implements CharacterRepository {
       await _client
           .from('characters')
           .update({'current_hp': currentHp, 'temporary_hp': temporaryHp})
+          .eq('id', characterId)
+          .eq('owner_id', ownerId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> setDead({
+    required String characterId,
+    required bool isDead,
+  }) async {
+    final ownerId = _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('characters')
+          .update({'is_dead': isDead})
           .eq('id', characterId)
           .eq('owner_id', ownerId);
       return WriteOutcome.synced;

@@ -90,6 +90,11 @@ class _FakeCharacterRepository implements CharacterRepository {
   int updateStoryFieldsCallCount = 0;
   WriteOutcome updateStoryFieldsOutcomeToReturn = WriteOutcome.synced;
 
+  bool? lastSetDeadValue;
+  int setDeadCallCount = 0;
+  WriteOutcome setDeadOutcomeToReturn = WriteOutcome.synced;
+  Object? setDeadErrorToThrow;
+
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
 
@@ -99,6 +104,17 @@ class _FakeCharacterRepository implements CharacterRepository {
     if (detailCompleter != null) return detailCompleter!.future;
     if (detailErrorToThrow != null) throw detailErrorToThrow!;
     return detailToReturn ?? _baseDetail;
+  }
+
+  @override
+  Future<WriteOutcome> setDead({
+    required String characterId,
+    required bool isDead,
+  }) async {
+    setDeadCallCount++;
+    lastSetDeadValue = isDead;
+    if (setDeadErrorToThrow != null) throw setDeadErrorToThrow!;
+    return setDeadOutcomeToReturn;
   }
 
   @override
@@ -695,6 +711,113 @@ void main() {
       expect(find.text('19 / 30'), findsOneWidget);
     },
   );
+
+  group('Marquer comme mort / Ressusciter (CharacterVitalsCard)', () {
+    testWidgets(
+      'affiche "Marquer comme mort" pour un personnage vivant, appelle '
+      'setDead(isDead: true) au tap',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Marquer comme mort'), findsOneWidget);
+        expect(find.text('Ressusciter'), findsNothing);
+
+        await tester.tap(find.text('Marquer comme mort'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.setDeadCallCount, 1);
+        expect(fakeRepository.lastSetDeadValue, isTrue);
+      },
+    );
+
+    testWidgets(
+      'affiche "Ressusciter" pour un personnage déjà marqué mort, appelle '
+      'setDead(isDead: false) au tap',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(isDead: true);
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Ressusciter'), findsOneWidget);
+        expect(find.text('Marquer comme mort'), findsNothing);
+
+        await tester.tap(find.text('Ressusciter'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.setDeadCallCount, 1);
+        expect(fakeRepository.lastSetDeadValue, isFalse);
+      },
+    );
+
+    testWidgets(
+      'setDead mis en file (mode hors-ligne) : ne doit PAS promettre une '
+      "synchronisation qui n'aura jamais lieu — CharacterRepository.setDead "
+      'documente explicitement ne jamais mettre cette écriture en file '
+      '(même catégorie que castSpell/useClassFeature, voir '
+      '_offlineNotPersistedMessage), le message affiché doit donc être '
+      'celui-là et non _offlineQueuedMessage ("sera synchronisé"), qui '
+      'induirait le joueur en erreur en lui laissant croire que son '
+      "personnage sera marqué mort/ressuscité au retour du réseau alors que "
+      'rien ne sera jamais écrit.',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.setDeadOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Marquer comme mort'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            "Hors ligne : cette action n'a pas pu être enregistrée. "
+            'Réessayez une fois reconnecté.',
+          ),
+          findsOneWidget,
+          reason:
+              "setDead() n'étant jamais mis en file côté repository, le "
+              'message doit être celui qui ne promet aucune synchro '
+              '(convention déjà appliquée à castSpell/useClassFeature) — pas '
+              '"sera synchronisé dès que la connexion revient", qui est '
+              'trompeur ici.',
+        );
+        expect(
+          find.text(
+            'Hors ligne : sera synchronisé dès que la connexion revient.',
+          ),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'setDead échoue (CharacterFailure) : affiche le message du repository, '
+      'le lien reste "Marquer comme mort" (aucun changement local)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.setDeadErrorToThrow = const CharacterFailure(
+          'Impossible de mettre à jour le statut.',
+        );
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Marquer comme mort'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Impossible de mettre à jour le statut.'),
+          findsOneWidget,
+        );
+        expect(find.text('Marquer comme mort'), findsOneWidget);
+      },
+    );
+  });
 
   testWidgets('le bouton crayon PV ouvre la feuille d\'ajustement détaillée', (
     tester,

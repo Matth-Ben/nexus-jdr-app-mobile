@@ -311,6 +311,12 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 
   @override
+  Future<WriteOutcome> setDead({
+    required String characterId,
+    required bool isDead,
+  }) async => WriteOutcome.synced;
+
+  @override
   Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,
