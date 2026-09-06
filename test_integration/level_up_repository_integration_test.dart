@@ -181,11 +181,13 @@ void main() {
       );
       final result = await repository.applyLevelUp(
         characterId: characterId,
+        classId: reference.classId,
         // Nom de la classe de référence (`classes.id = 1`, "Barbare" côté
         // seed actuel) : non lanceuse de sorts, donc sans effet sur
         // `character_spell_slots` ici — ce test ne porte pas sur l'étape
         // "Sorts" (increment 3, voir le groupe dédié plus bas).
         className: reference.className,
+        isMulticlassing: false,
         hpRolled: 6,
         hpMethod: 'lance',
         hpGain: 8,
@@ -220,8 +222,8 @@ void main() {
       expect(levelHpRows.single['method'], 'lance');
     });
 
-    test('applyLevelUp lève une CharacterFailure si le personnage n\'a pas '
-        'exactement une ligne character_classes (aucune classe ici)', () async {
+    test('applyLevelUp lève une CharacterFailure si le personnage n\'a '
+        'aucune ligne character_classes', () async {
       final character = await client
           .from('characters')
           .insert({'owner_id': ownerId, 'name': 'Test Intégration Sans classe'})
@@ -242,7 +244,9 @@ void main() {
       await expectLater(
         repository.applyLevelUp(
           characterId: characterId,
+          classId: reference.classId,
           className: reference.className,
+          isMulticlassing: false,
           hpRolled: 5,
           hpMethod: 'moyenne',
           hpGain: 5,
@@ -352,7 +356,9 @@ void main() {
         );
         final result = await repository.applyLevelUp(
           characterId: characterId,
+          classId: reference.classId,
           className: reference.className,
+          isMulticlassing: false,
           hpRolled: 6,
           hpMethod: 'lance',
           hpGain: 8,
@@ -442,10 +448,12 @@ void main() {
         );
         final result = await repository.applyLevelUp(
           characterId: characterId,
+          classId: classId,
           // `className` n'a pas besoin de correspondre à `classId` ici :
           // seul son effet sur `character_spell_slots` en dépend (increment
           // 3), hors périmètre de ce test (sous-classe).
           className: reference.className,
+          isMulticlassing: false,
           hpRolled: 5,
           hpMethod: 'moyenne',
           hpGain: 5,
@@ -532,7 +540,9 @@ void main() {
 
         await repository.applyLevelUp(
           characterId: characterId,
+          classId: classId,
           className: reference.className,
+          isMulticlassing: false,
           hpRolled: 5,
           hpMethod: 'moyenne',
           hpGain: 5,
@@ -574,7 +584,14 @@ void main() {
               'supabase db reset côté dépôt web (ce nom est attendu tel '
               'quel par domain/spell_slot_progression.dart).',
         );
-        return translation!['entity_id'] as Object;
+        // `translations.entity_id` est `text` (clé générique partagée par
+        // toutes les entités traduites), mais `classes.id`/
+        // `character_classes.class_id` sont des `integer` côté schéma réel —
+        // `applyLevelUp`/`_classIdAsInt` s'attendent à un `num`, jamais un
+        // `String`, comme c'est toujours le cas en production (lu depuis une
+        // colonne entière, jamais depuis `translations`). Parser ici plutôt
+        // que de propager un `String` qui ferait échouer le cast interne.
+        return int.parse(translation!['entity_id'] as String);
       }
 
       test('recalcule character_spell_slots pour un lanceur complet (Clerc) : '
@@ -616,7 +633,9 @@ void main() {
         // préexistante : `slots_used` démarre à 0.
         await repository.applyLevelUp(
           characterId: characterId,
+          classId: clercId,
           className: 'Clerc',
+          isMulticlassing: false,
           hpRolled: 5,
           hpMethod: 'moyenne',
           hpGain: 5,
@@ -646,7 +665,9 @@ void main() {
         // aucune ligne préexistante).
         await repository.applyLevelUp(
           characterId: characterId,
+          classId: clercId,
           className: 'Clerc',
+          isMulticlassing: false,
           hpRolled: 5,
           hpMethod: 'moyenne',
           hpGain: 5,
@@ -701,7 +722,9 @@ void main() {
         );
         await repository.applyLevelUp(
           characterId: characterId,
+          classId: clercId,
           className: 'Clerc',
+          isMulticlassing: false,
           hpRolled: 5,
           hpMethod: 'moyenne',
           hpGain: 5,
@@ -718,7 +741,9 @@ void main() {
 
         await repository.applyLevelUp(
           characterId: characterId,
+          classId: clercId,
           className: 'Clerc',
+          isMulticlassing: false,
           hpRolled: 5,
           hpMethod: 'moyenne',
           hpGain: 5,
@@ -769,7 +794,9 @@ void main() {
         );
         await repository.applyLevelUp(
           characterId: characterId,
+          classId: guerrierId,
           className: 'Guerrier',
+          isMulticlassing: false,
           hpRolled: 8,
           hpMethod: 'lance',
           hpGain: 8,
@@ -854,7 +881,9 @@ void main() {
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
+            classId: reference.classId,
             className: reference.className,
+            isMulticlassing: false,
             hpRolled: 8,
             hpMethod: 'lance',
             hpGain: 8,
@@ -911,7 +940,9 @@ void main() {
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
+            classId: reference.classId,
             className: reference.className,
+            isMulticlassing: false,
             hpRolled: 8,
             hpMethod: 'lance',
             hpGain: 8,
@@ -956,7 +987,9 @@ void main() {
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
+            classId: reference.classId,
             className: reference.className,
+            isMulticlassing: false,
             hpRolled: 8,
             hpMethod: 'lance',
             hpGain: 8,
@@ -994,7 +1027,9 @@ void main() {
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
+            classId: reference.classId,
             className: reference.className,
+            isMulticlassing: false,
             hpRolled: 8,
             hpMethod: 'lance',
             hpGain: 8,
@@ -1042,7 +1077,12 @@ void main() {
               'Aucune classe "Clerc" trouvée côté seed — vérifier '
               'supabase db reset côté dépôt web.',
         );
-        final clercId = clercTranslation!['entity_id'] as Object;
+        // `entity_id` est `text` (voir la note équivalente sur
+        // `classIdByName` plus haut) — parsé en `int` pour rester cohérent
+        // avec `classes.id`/`character_classes.class_id`, même si ce test
+        // précis n'aurait pas détecté l'incohérence (l'exception attendue,
+        // due à l'isolation, aurait masqué un éventuel échec de cast).
+        final clercId = int.parse(clercTranslation!['entity_id'] as String);
 
         await client
             .from('character_classes')
@@ -1058,7 +1098,9 @@ void main() {
         try {
           await otherRepository.applyLevelUp(
             characterId: characterId,
+            classId: clercId,
             className: 'Clerc',
+            isMulticlassing: false,
             hpRolled: 8,
             hpMethod: 'lance',
             hpGain: 8,
@@ -1072,6 +1114,389 @@ void main() {
             .select('slot_level')
             .eq('character_id', characterId);
         expect(slotRows, isEmpty);
+      });
+    });
+
+    group('multiclassage (intégration)', () {
+      // `otherClient` propre à ce groupe (pas partagé avec le groupe
+      // "isolation cross-utilisateur" ci-dessus, qui le scope à lui-même) —
+      // seul le dernier test de ce groupe en a besoin.
+      late SupabaseClient otherClient;
+
+      setUpAll(() async {
+        otherClient = createTestSupabaseClient();
+        await signUpTestUser(otherClient);
+      });
+
+      /// Même rationale que `classIdByName` du groupe "Sorts" ci-dessus
+      /// (`translations.entity_id` est `text`, `applyLevelUp` attend un
+      /// `num`) — dupliqué ici plutôt que promu en helper partagé, cohérent
+      /// avec le choix déjà fait de scoper ce genre d'utilitaire par groupe
+      /// plutôt que globalement dans ce fichier.
+      Future<int> classIdByName(String name) async {
+        final translation = await client
+            .from('translations')
+            .select('entity_id')
+            .eq('entity_type', 'class')
+            .eq('field_name', 'name')
+            .eq('locale', 'fr')
+            .eq('value', name)
+            .maybeSingle();
+        expect(
+          translation,
+          isNotNull,
+          reason:
+              'Aucune classe "$name" trouvée côté seed — vérifier '
+              'supabase db reset côté dépôt web.',
+        );
+        return int.parse(translation!['entity_id'] as String);
+      }
+
+      Future<String> createCharacterWithClass({
+        required int classId,
+        required int level,
+        required Map<String, int> abilityScores,
+      }) async {
+        final character = await client
+            .from('characters')
+            .insert({
+              'owner_id': ownerId,
+              'name': 'Test Intégration Multiclassage',
+              'max_hp': 10,
+              'current_hp': 10,
+            })
+            .select('id')
+            .single();
+        final characterId = character['id'] as String;
+        addTearDown(() async {
+          await client.from('characters').delete().eq('id', characterId);
+        });
+
+        await client.from('character_classes').insert({
+          'character_id': characterId,
+          'class_id': classId,
+          'level': level,
+          'is_primary': true,
+        });
+
+        await client.from('character_ability_scores').insert([
+          for (final entry in abilityScores.entries)
+            {
+              'character_id': characterId,
+              'ability_id': entry.key,
+              'score': entry.value,
+            },
+        ]);
+
+        return characterId;
+      }
+
+      test('multiclasser dans une nouvelle classe insère une ligne '
+          'character_classes niveau 1 (is_primary: false, hit_dice_spent: '
+          '0), sans toucher à la classe existante, et incrémente le niveau '
+          'total du personnage', () async {
+        final guerrierId = await classIdByName('Guerrier');
+        final roublardId = await classIdByName('Roublard');
+        final characterId = await createCharacterWithClass(
+          classId: guerrierId,
+          level: 3,
+          // Guerrier : Force 13 OU Dextérité 13 (ici les deux, sans
+          // conséquence) ; Roublard : Dextérité 13.
+          abilityScores: {'str': 15, 'dex': 14},
+        );
+
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          const AlwaysOnlineConnectivityChecker(),
+        );
+        final result = await repository.applyLevelUp(
+          characterId: characterId,
+          classId: roublardId,
+          className: 'Roublard',
+          isMulticlassing: true,
+          hpRolled: 6,
+          hpMethod: 'lance',
+          hpGain: 6,
+        );
+
+        expect(
+          result.newLevel,
+          4,
+        ); // 3 (Guerrier) + 1 (Roublard) = niveau total 4.
+
+        final classRows = await client
+            .from('character_classes')
+            .select('class_id, level, is_primary, hit_dice_spent')
+            .eq('character_id', characterId)
+            .order('level', ascending: false);
+        expect(classRows, hasLength(2));
+        final guerrierRow = classRows.firstWhere(
+          (row) => row['class_id'] == guerrierId,
+        );
+        expect(guerrierRow['level'], 3, reason: 'classe existante inchangée');
+        expect(guerrierRow['is_primary'], true);
+        final roublardRow = classRows.firstWhere(
+          (row) => row['class_id'] == roublardId,
+        );
+        expect(roublardRow['level'], 1);
+        expect(roublardRow['is_primary'], false);
+        expect(roublardRow['hit_dice_spent'], 0);
+
+        final levelHpRow = await client
+            .from('character_level_hp')
+            .select('level')
+            .eq('character_id', characterId)
+            .single();
+        expect(levelHpRow['level'], 4);
+      });
+
+      test('rejette le multiclassage si le prérequis de caractéristique de '
+          'la NOUVELLE classe n\'est pas rempli (défense en profondeur, pas '
+          'seulement côté UI) : aucune écriture', () async {
+        final guerrierId = await classIdByName('Guerrier');
+        final magicienId = await classIdByName('Magicien');
+        final characterId = await createCharacterWithClass(
+          classId: guerrierId,
+          level: 2,
+          abilityScores: {'str': 15, 'int': 8}, // Magicien exige Int 13.
+        );
+
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          const AlwaysOnlineConnectivityChecker(),
+        );
+
+        await expectLater(
+          repository.applyLevelUp(
+            characterId: characterId,
+            classId: magicienId,
+            className: 'Magicien',
+            isMulticlassing: true,
+            hpRolled: 4,
+            hpMethod: 'lance',
+            hpGain: 4,
+          ),
+          throwsA(isA<CharacterFailure>()),
+        );
+
+        final classRows = await client
+            .from('character_classes')
+            .select('class_id')
+            .eq('character_id', characterId);
+        expect(
+          classRows,
+          hasLength(1),
+          reason: 'aucune nouvelle classe insérée',
+        );
+
+        final characterRow = await client
+            .from('characters')
+            .select('max_hp, current_hp')
+            .eq('id', characterId)
+            .single();
+        expect(characterRow['max_hp'], 10, reason: 'PV jamais touchés');
+      });
+
+      test('rejette le multiclassage si le prérequis d\'une classe DÉJÀ '
+          'possédée n\'est plus rempli (cas rare, ex. score de '
+          'caractéristique redescendu depuis) — même si le prérequis de la '
+          'nouvelle classe est rempli', () async {
+        final roublardId = await classIdByName('Roublard');
+        final guerrierId = await classIdByName('Guerrier');
+        final characterId = await createCharacterWithClass(
+          classId: roublardId,
+          level: 2,
+          abilityScores: {'dex': 13, 'str': 15},
+        );
+        // Le score de Dextérité redescend sous le prérequis du Roublard
+        // (13) après coup — scénario défensif rare mais réel (drain de
+        // caractéristique, erreur de saisie corrigée...).
+        await client
+            .from('character_ability_scores')
+            .update({'score': 10})
+            .eq('character_id', characterId)
+            .eq('ability_id', 'dex');
+
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          const AlwaysOnlineConnectivityChecker(),
+        );
+
+        await expectLater(
+          repository.applyLevelUp(
+            characterId: characterId,
+            classId: guerrierId,
+            className: 'Guerrier',
+            isMulticlassing: true,
+            hpRolled: 6,
+            hpMethod: 'lance',
+            hpGain: 6,
+          ),
+          throwsA(
+            isA<CharacterFailure>().having(
+              (f) => f.message,
+              'message',
+              contains('Roublard'),
+            ),
+          ),
+        );
+
+        final classRows = await client
+            .from('character_classes')
+            .select('class_id')
+            .eq('character_id', characterId);
+        expect(
+          classRows,
+          hasLength(1),
+          reason: 'aucune nouvelle classe insérée',
+        );
+      });
+
+      test('multiclasser dans une classe "à sorts connus" écrit les sorts de '
+          'départ (character_spells, status "connu", source_class_id de la '
+          'nouvelle classe)', () async {
+        final guerrierId = await classIdByName('Guerrier');
+        final bardeId = await classIdByName('Barde');
+        final characterId = await createCharacterWithClass(
+          classId: guerrierId,
+          level: 2,
+          abilityScores: {'str': 15, 'cha': 14}, // Barde exige Charisme 13.
+        );
+        final spellRows = await client
+            .from('spells')
+            .select('id')
+            .eq('level', 0)
+            .limit(2);
+        final spellIds = [for (final row in spellRows) row['id'] as int];
+        expect(
+          spellIds,
+          hasLength(2),
+          reason: 'au moins 2 sorts mineurs attendus côté seed',
+        );
+
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          const AlwaysOnlineConnectivityChecker(),
+        );
+        await repository.applyLevelUp(
+          characterId: characterId,
+          classId: bardeId,
+          className: 'Barde',
+          isMulticlassing: true,
+          hpRolled: 5,
+          hpMethod: 'lance',
+          hpGain: 5,
+          initialSpellIds: spellIds,
+        );
+
+        final spellRowsWritten = await client
+            .from('character_spells')
+            .select('spell_id, status, source_class_id')
+            .eq('character_id', characterId);
+        expect(spellRowsWritten, hasLength(2));
+        for (final row in spellRowsWritten) {
+          expect(row['status'], 'connu');
+          expect(row['source_class_id'], bardeId);
+          expect(spellIds, contains(row['spell_id']));
+        }
+      });
+
+      test('emplacements de sorts combinés multiclasse : demi-lanceur '
+          'existant (Paladin niveau 4) + lanceur complet fraîchement '
+          'multiclassé (Clerc niveau 1) -> niveau de lanceur combiné 3 '
+          '(floor(4/2) + 1), table lanceur complet standard', () async {
+        final paladinId = await classIdByName('Paladin');
+        final clercId = await classIdByName('Clerc');
+        final characterId = await createCharacterWithClass(
+          classId: paladinId,
+          level: 4,
+          // Paladin : Force 13 ET Charisme 13. Clerc : Sagesse 13.
+          abilityScores: {'str': 13, 'cha': 13, 'wis': 14},
+        );
+
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          const AlwaysOnlineConnectivityChecker(),
+        );
+        await repository.applyLevelUp(
+          characterId: characterId,
+          classId: clercId,
+          className: 'Clerc',
+          isMulticlassing: true,
+          hpRolled: 5,
+          hpMethod: 'lance',
+          hpGain: 5,
+        );
+
+        final slotRows = await client
+            .from('character_spell_slots')
+            .select('slot_level, slots_total')
+            .eq('character_id', characterId)
+            .order('slot_level');
+        // Niveau de lanceur combiné 3 -> table lanceur complet : [4, 2, 0...].
+        final totalsByLevel = {
+          for (final row in slotRows)
+            (row['slot_level'] as num).toInt(): (row['slots_total'] as num)
+                .toInt(),
+        };
+        expect(totalsByLevel[1], 4);
+        expect(totalsByLevel[2], 2);
+        expect(totalsByLevel.containsKey(3), isFalse);
+      });
+
+      test("applyLevelUp(isMulticlassing: true) appelé depuis la session "
+          "d'un autre joueur n'insère jamais de nouvelle ligne "
+          'character_classes pour le personnage visé', () async {
+        final guerrierId = await classIdByName('Guerrier');
+        final roublardId = await classIdByName('Roublard');
+        final characterId = await createCharacterWithClass(
+          classId: guerrierId,
+          level: 2,
+          abilityScores: {'str': 15, 'dex': 14},
+        );
+
+        final otherRepository = SupabaseCharacterRepository(
+          otherClient,
+          cache,
+          pendingWrites,
+          const AlwaysOnlineConnectivityChecker(),
+        );
+        try {
+          await otherRepository.applyLevelUp(
+            characterId: characterId,
+            classId: roublardId,
+            className: 'Roublard',
+            isMulticlassing: true,
+            hpRolled: 6,
+            hpMethod: 'lance',
+            hpGain: 6,
+          );
+        } catch (_) {
+          // Attendu : la RLS `owns_character` bloque déjà le SELECT
+          // `character_classes` en tout début d'`applyLevelUp` pour
+          // `otherClient` — peu importe l'exception précise, seul compte
+          // qu'aucune écriture n'a eu lieu (assertions ci-dessous).
+        }
+
+        final classRows = await client
+            .from('character_classes')
+            .select('class_id')
+            .eq('character_id', characterId);
+        expect(
+          classRows,
+          hasLength(1),
+          reason: 'aucune classe ajoutée par un autre utilisateur',
+        );
       });
     });
   });

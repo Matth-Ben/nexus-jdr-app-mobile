@@ -13,8 +13,18 @@ class LevelUpApplyResult {
     required this.newCurrentHp,
   });
 
-  /// Nouveau niveau de la classe primaire (`character_classes.level`) après
-  /// écriture.
+  /// Nouveau niveau TOTAL du personnage (somme de `character_classes.level`
+  /// sur toutes les lignes) après écriture — **jamais** le niveau interne à
+  /// la seule classe qui vient de progresser : depuis le multiclassage
+  /// (`data/character_repository.dart::applyLevelUp`), une classe fraîchement
+  /// multiclassée démarre à son niveau 1 alors que le niveau total du
+  /// personnage peut être bien plus élevé. [LevelUpScreen] a besoin du niveau
+  /// TOTAL pour enchaîner correctement sur le seuil XP suivant
+  /// (`domain/level_up_chain_resolver.dart`) et l'afficher dans son en-tête
+  /// ("NIVEAU N") — jamais du niveau interne à une classe précise. Pour un
+  /// personnage à une seule classe (tous les personnages avant cet
+  /// incrément), niveau total == niveau de cette classe, comportement
+  /// inchangé.
   final int newLevel;
 
   final int newMaxHp;

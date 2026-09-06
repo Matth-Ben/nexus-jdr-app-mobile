@@ -143,11 +143,14 @@ class FakeRepository implements CharacterRepository {
   @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
+    required Object classId,
     required String className,
+    required bool isMulticlassing,
     required int hpRolled,
     required String hpMethod,
     required int hpGain,
     LevelUpChoiceSelection? choice,
+    List<int> initialSpellIds = const [],
   }) {
     throw UnimplementedError();
   }

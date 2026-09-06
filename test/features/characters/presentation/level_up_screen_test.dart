@@ -10,6 +10,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
+import 'package:personnages/features/character_creation/domain/alignment_catalog.dart';
+import 'package:personnages/features/character_creation/domain/background_catalog.dart';
+import 'package:personnages/features/character_creation/domain/background_option.dart';
+import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
+import 'package:personnages/features/character_creation/domain/class_catalog.dart';
+import 'package:personnages/features/character_creation/domain/class_option.dart';
+import 'package:personnages/features/character_creation/domain/item_catalog.dart';
+import 'package:personnages/features/character_creation/domain/language_catalog.dart';
+import 'package:personnages/features/character_creation/domain/race_catalog.dart';
+import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
+import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
+import 'package:personnages/features/character_creation/domain/spell_option.dart';
+import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
@@ -31,18 +46,82 @@ import 'package:personnages/features/characters/presentation/providers/character
 
 class _AppliedLevelUp {
   const _AppliedLevelUp({
+    required this.classId,
     required this.className,
+    required this.isMulticlassing,
     required this.hpRolled,
     required this.hpMethod,
     required this.hpGain,
     required this.choice,
+    required this.initialSpellIds,
   });
 
+  final Object classId;
   final String className;
+  final bool isMulticlassing;
   final int hpRolled;
   final String hpMethod;
   final int hpGain;
   final LevelUpChoiceSelection? choice;
+  final List<int> initialSpellIds;
+}
+
+/// Fake minimal de `CharacterCreationRepository` — seul
+/// `fetchClassCatalog`/`fetchSpellCatalog` sont réellement exercés par
+/// `levelUpStepDataProvider` (calcul des options de multiclassage et de la
+/// sélection de sorts de départ, voir `presentation/providers/level_up_provider.dart`).
+/// Catalogue de classes vide par défaut : la quasi-totalité des tests de ce
+/// fichier ne portent pas sur le multiclassage, et une classe vide garantit
+/// qu'aucune classe n'est jamais proposée comme option de multiclassage
+/// (l'étape `classDecision` reste alors invisible), quels que soient les
+/// scores de caractéristiques du personnage testé.
+class _FakeCharacterCreationRepository implements CharacterCreationRepository {
+  ClassCatalog classCatalogToReturn = const ClassCatalog(classes: []);
+  Map<int, SpellCatalog> spellCatalogByClassId = {};
+
+  @override
+  Future<ClassCatalog> fetchClassCatalog() async => classCatalogToReturn;
+
+  @override
+  Future<SpellCatalog> fetchSpellCatalog({required int classId}) async =>
+      spellCatalogByClassId[classId] ?? const SpellCatalog(spells: []);
+
+  @override
+  Future<RaceCatalog> fetchRaceCatalog() => throw UnimplementedError();
+
+  @override
+  Future<BackgroundCatalog> fetchBackgroundCatalog() =>
+      throw UnimplementedError();
+
+  @override
+  Future<ToolCatalog> fetchToolCatalog() => throw UnimplementedError();
+
+  @override
+  Future<LanguageCatalog> fetchLanguageCatalog() => throw UnimplementedError();
+
+  @override
+  Future<ItemCatalog> fetchItemCatalog() => throw UnimplementedError();
+
+  @override
+  Future<SkillCatalog> fetchSkillCatalog() => throw UnimplementedError();
+
+  @override
+  Future<AlignmentCatalog> fetchAlignmentCatalog() =>
+      throw UnimplementedError();
+
+  @override
+  Future<String> createCharacter({
+    required CharacterCreationDraft draft,
+    required String characterName,
+    required RaceCatalog raceCatalog,
+    required ClassOption classOption,
+    required BackgroundOption backgroundOption,
+    required SkillCatalog skillCatalog,
+    required ToolCatalog toolCatalog,
+    required LanguageCatalog languageCatalog,
+    required SpellCatalog spellCatalog,
+    required ItemCatalog itemCatalog,
+  }) => throw UnimplementedError();
 }
 
 class _FakeCharacterRepository implements CharacterRepository {
@@ -84,22 +163,90 @@ class _FakeCharacterRepository implements CharacterRepository {
   @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
+    required Object classId,
     required String className,
+    required bool isMulticlassing,
     required int hpRolled,
     required String hpMethod,
     required int hpGain,
     LevelUpChoiceSelection? choice,
+    List<int> initialSpellIds = const [],
   }) async {
     applyLevelUpCalls.add(
       _AppliedLevelUp(
+        classId: classId,
         className: className,
+        isMulticlassing: isMulticlassing,
         hpRolled: hpRolled,
         hpMethod: hpMethod,
         hpGain: hpGain,
         choice: choice,
+        initialSpellIds: initialSpellIds,
       ),
     );
     if (applyErrorToThrow != null) throw applyErrorToThrow!;
+    // Simule la persistance réelle (`character_repository.dart::applyLevelUp`
+    // écrit la nouvelle valeur de `character_classes.level` en base) : le
+    // véritable `CharacterRepository` renverrait cette valeur mise à jour au
+    // prochain `fetchCharacterDetail`, ce que l'écran déclenche bien via
+    // `ref.invalidate(characterDetailProvider(...))` juste après cet appel
+    // (voir `level_up_screen.dart::_continueFromSummary`). Nécessaire depuis
+    // que `levelUpStepDataProvider` calcule le niveau interne de la classe
+    // continuée depuis `primaryClass.level` plutôt que depuis `targetLevel`
+    // (le niveau TOTAL) — sans cette mise à jour, un chaînage de plusieurs
+    // niveaux dans les tests interrogerait indéfiniment le même niveau.
+    final detail = detailToReturn;
+    if (detail != null) {
+      final targetClassId = (classId as num).toInt();
+      final matched = detail.classes.any(
+        (row) => (row.classId as num).toInt() == targetClassId,
+      );
+      // Reconstruit explicitement (pas de `copyWith` sur une classe simple) :
+      // incrémente la classe continuée, ou ajoute la nouvelle classe de
+      // multiclassage à son niveau 1.
+      // Pour un personnage à une seule classe, `applyResultToReturn.newLevel`
+      // (niveau TOTAL, voir sa doc de classe) est aussi le niveau de CETTE
+      // classe (total == niveau de l'unique classe) : réutiliser cette
+      // valeur plutôt qu'un simple `+ 1` permet aux quelques tests de ce
+      // fichier qui forcent volontairement un grand saut de niveau via
+      // `applyResultToReturn` (chaînage "forcé", XP très en avance) de rester
+      // cohérents avec la classe primaire refetchée. Pour un personnage
+      // multiclassé qui continue sa primaire, `newLevel` (TOTAL) ne
+      // correspond plus au niveau de la seule classe primaire : `+ 1` reste
+      // le seul calcul correct dans ce cas (une montée de niveau n'incrémente
+      // jamais une classe de plus d'un niveau à la fois).
+      final singleClassContinue =
+          !isMulticlassing && detail.classes.length == 1;
+      final newClasses = [
+        for (final row in detail.classes)
+          if ((row.classId as num).toInt() == targetClassId)
+            CharacterDetailClassRow(
+              classId: row.classId,
+              className: row.className,
+              level: isMulticlassing
+                  ? 1
+                  : singleClassContinue
+                  ? applyResultToReturn!.newLevel
+                  : row.level + 1,
+              isPrimary: row.isPrimary,
+              savingThrowProficiencies: row.savingThrowProficiencies,
+              hitDie: row.hitDie,
+              hitDiceSpent: row.hitDiceSpent,
+            )
+          else
+            row,
+        if (!matched)
+          CharacterDetailClassRow(
+            classId: classId,
+            className: className,
+            level: 1,
+            isPrimary: false,
+            savingThrowProficiencies: const [],
+            hitDie: null,
+          ),
+      ];
+      detailToReturn = detail.copyWith(classes: newClasses);
+    }
     return applyResultToReturn!;
   }
 
@@ -272,16 +419,43 @@ const _baseDetail = CharacterDetail(
   abilityScores: {'con': 14},
 );
 
+/// [_baseDetail] avec sa classe primaire (Guerrier) au niveau [level] plutôt
+/// que 4 — nécessaire depuis que `levelUpStepDataProvider` calcule le niveau
+/// interne de la classe continuée depuis `primaryClass.level` (voir la
+/// correction de la branche "continuer" de `level_up_provider.dart`) : un
+/// test qui pousse directement `targetLevel: N` (sans simuler les N-5
+/// montées de niveau intermédiaires depuis le niveau 4 par défaut) doit
+/// désormais fournir une fiche dont la classe primaire est déjà à `N - 1`,
+/// sans quoi `fetchLevelUpLevelData`/`LevelUpBlockRules.evaluate` seraient
+/// appelés avec un niveau différent de celui réellement testé.
+CharacterDetail _baseDetailAtLevel(int level) => _baseDetail.copyWith(
+  classes: [
+    CharacterDetailClassRow(
+      classId: 1,
+      hitDie: 10,
+      className: 'Guerrier',
+      level: level,
+      isPrimary: true,
+      savingThrowProficiencies: const [],
+    ),
+  ],
+);
+
 void main() {
   late _FakeCharacterRepository fakeRepository;
+  late _FakeCharacterCreationRepository fakeCreationRepository;
   late ProviderContainer container;
   late GoRouter router;
 
   setUp(() {
     fakeRepository = _FakeCharacterRepository();
+    fakeCreationRepository = _FakeCharacterCreationRepository();
     container = ProviderContainer(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeRepository),
+        characterCreationRepositoryProvider.overrideWithValue(
+          fakeCreationRepository,
+        ),
       ],
     );
   });
@@ -316,11 +490,28 @@ void main() {
     );
   }
 
+  /// Instruction de l'étape `classDecision` (multiclassage) — voir
+  /// [_LevelUpScreenState._buildClassDecision] côté écran.
+  const classDecisionInstruction = "Choisissez comment ce niveau s'applique.";
+
   Future<void> pushLevelUp(WidgetTester tester, int level) async {
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
     router.push('/characters/char-1/level-up?level=$level');
     await tester.pumpAndSettle();
+    // Auto-saute l'étape `classDecision` si elle s'affiche (sélection par
+    // défaut "Continuer", voir `_continueCurrentClassSentinel`) : la quasi-
+    // totalité des tests de ce fichier ne portent pas sur le multiclassage
+    // (catalogue de classes vide par défaut, voir
+    // `_FakeCharacterCreationRepository`), mais quelques-uns exercent des
+    // scores de caractéristiques élevés pour une autre raison (ex. le
+    // plafond ASI à 20) qui peuvent accessoirement satisfaire un prérequis
+    // de multiclassage réel — ce garde-fou les laisse inchangés plutôt que de
+    // les faire échouer sur une étape non liée à ce qu'ils exercent.
+    if (find.text(classDecisionInstruction).evaluate().isNotEmpty) {
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+    }
   }
 
   /// Navigue jusqu'au flux, puis franchit l'annonce de niveau (increment 4)
@@ -598,7 +789,8 @@ void main() {
       'choice_type non résolu), le flux s\'arrête proprement dessus SANS '
       'perdre le niveau déjà validé juste avant',
       (tester) async {
-        fakeRepository.detailToReturn = _baseDetail.copyWith(xp: 34000);
+        fakeRepository.detailToReturn = _baseDetailAtLevel(6)
+            .copyWith(xp: 34000);
         fakeRepository.applyResultToReturn = const LevelUpApplyResult(
           newLevel: 7,
           newMaxHp: 44,
@@ -808,7 +1000,7 @@ void main() {
         'générique, jamais la valeur choisie (pas encore choisie), teaser '
         '"sorts" absent',
         (tester) async {
-          fakeRepository.detailToReturn = _baseDetail;
+          fakeRepository.detailToReturn = _baseDetailAtLevel(7);
           fakeRepository.levelDataByLevel = {
             8: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
           };
@@ -1017,7 +1209,7 @@ void main() {
 
     group('variante amélioration de caractéristique (ASI)', () {
       setUp(() {
-        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.detailToReturn = _baseDetailAtLevel(7);
         fakeRepository.levelDataByLevel = {
           8: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
         };
@@ -1139,9 +1331,8 @@ void main() {
         'même s\'il reste du budget — docs/cahier-des-charges '
         '04-fonctionnalites-app-mobile.md section 6 point 3.',
         (tester) async {
-          fakeRepository.detailToReturn = _baseDetail.copyWith(
-            abilityScores: {'str': 19, 'con': 14},
-          );
+          fakeRepository.detailToReturn = _baseDetailAtLevel(7)
+              .copyWith(abilityScores: {'str': 19, 'con': 14});
 
           await pushToChoiceStep(tester, 8);
 
@@ -1166,9 +1357,8 @@ void main() {
         'être incrémentée du tout, même si le budget est entièrement '
         'disponible.',
         (tester) async {
-          fakeRepository.detailToReturn = _baseDetail.copyWith(
-            abilityScores: {'wis': 20, 'con': 14},
-          );
+          fakeRepository.detailToReturn = _baseDetailAtLevel(7)
+              .copyWith(abilityScores: {'wis': 20, 'con': 14});
 
           await pushToChoiceStep(tester, 8);
 
@@ -1190,7 +1380,7 @@ void main() {
 
     group('variante sous-classe', () {
       setUp(() {
-        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.detailToReturn = _baseDetailAtLevel(2);
         fakeRepository.levelDataByLevel = {
           3: const LevelUpLevelData(
             choiceType: 'sous_classe',
@@ -1242,7 +1432,7 @@ void main() {
 
     group('variante style de combat', () {
       setUp(() {
-        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.detailToReturn = _baseDetailAtLevel(1);
         fakeRepository.levelDataByLevel = {
           2: const LevelUpLevelData(
             choiceType: 'style_combat',
@@ -1292,7 +1482,7 @@ void main() {
 
     group('variante ennemi juré', () {
       setUp(() {
-        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.detailToReturn = _baseDetailAtLevel(5);
         fakeRepository.levelDataByLevel = {
           6: const LevelUpLevelData(
             choiceType: 'ennemi_jure',
@@ -1339,7 +1529,7 @@ void main() {
       'état vide (cas défensif, 0 sous-classe disponible) : message dédié, '
       '"Continuer" durablement désactivé',
       (tester) async {
-        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.detailToReturn = _baseDetailAtLevel(2);
         fakeRepository.levelDataByLevel = {
           3: const LevelUpLevelData(
             choiceType: 'sous_classe',
@@ -1444,7 +1634,8 @@ void main() {
       "chaînage forcé via applyResultToReturn) — l'allocation repart de "
       "zéro pour le 2e niveau (_resetChoiceState)",
       (tester) async {
-        fakeRepository.detailToReturn = _baseDetail.copyWith(xp: 34000);
+        fakeRepository.detailToReturn = _baseDetailAtLevel(3)
+            .copyWith(xp: 34000);
         fakeRepository.levelDataByLevel = {
           4: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
           8: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
@@ -1753,6 +1944,513 @@ void main() {
         final applied = fakeRepository.applyLevelUpCalls.single;
         expect(applied.className, 'Clerc');
         expect(applied.choice!.kind, LevelUpChoiceKind.abilityScoreImprovement);
+      },
+    );
+  });
+
+  group('étape classDecision (multiclassage)', () {
+    testWidgets(
+      'invisible (saut direct à l\'annonce) quand aucune classe n\'est '
+      'éligible au multiclassage (catalogue vide, comportement par défaut '
+      'de tous les autres tests de ce fichier)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          abilityScores: {'str': 18, 'con': 14},
+        );
+        fakeRepository.levelDataByLevel = {
+          5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        // Catalogue vide (défaut de `_FakeCharacterCreationRepository`) :
+        // même avec Force 18 (Guerrier remplit son propre prérequis), aucune
+        // classe candidate ne peut jamais être proposée.
+
+        await pushLevelUp(tester, 5);
+
+        expect(
+          find.text(classDecisionInstruction),
+          findsNothing,
+          reason:
+              'pushLevelUp aurait déjà tapé "Continuer" si cette étape '
+              "s'était affichée, mais on vérifie explicitement qu'elle "
+              "n'apparaît jamais.",
+        );
+        expect(find.text('MONTÉE DE NIVEAU'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'une classe éligible : tuiles "Continuer"/"Se multiclasser" affichées, '
+      '"Continuer" présélectionné par défaut',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          abilityScores: {'str': 15, 'con': 14},
+        );
+        fakeCreationRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [
+            ClassOption(id: 1, name: 'Guerrier', description: '', hitDie: 10),
+            ClassOption(id: 2, name: 'Barbare', description: '', hitDie: 12),
+          ],
+        );
+        fakeRepository.levelDataByLevel = {
+          5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+          1: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/char-1/level-up?level=5');
+        await tester.pumpAndSettle();
+
+        expect(find.text(classDecisionInstruction), findsOneWidget);
+        expect(find.text('Continuer en Guerrier'), findsOneWidget);
+        expect(
+          find.text('Vous progressez dans votre voie actuelle (niveau 4 → 5).'),
+          findsOneWidget,
+        );
+        expect(find.text('Se multiclasser en Barbare'), findsOneWidget);
+        expect(
+          find.text(
+            'Vous débutez au niveau 1 dans cette classe. Prérequis rempli : '
+            'Force.',
+          ),
+          findsOneWidget,
+        );
+        // Pas de `stepLabel` ("Étape X sur N") sur cette phase.
+        expect(find.textContaining('Étape'), findsNothing);
+
+        // "Continuer" présélectionné : valider directement mène à l'annonce
+        // (comportement historique, classe primaire).
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        expect(find.text('NIVEAU 5'), findsOneWidget);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        expect(find.text('Dé de vie de la classe : d10'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'plusieurs classes éligibles : une tuile par classe candidate',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          abilityScores: {'str': 15, 'dex': 15, 'con': 14},
+        );
+        fakeCreationRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [
+            ClassOption(id: 1, name: 'Guerrier', description: '', hitDie: 10),
+            ClassOption(id: 2, name: 'Barbare', description: '', hitDie: 12),
+            ClassOption(id: 6, name: 'Roublard', description: '', hitDie: 8),
+          ],
+        );
+        fakeRepository.levelDataByLevel = {
+          5: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/char-1/level-up?level=5');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Se multiclasser en Barbare'), findsOneWidget);
+        expect(find.text('Se multiclasser en Roublard'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'sélectionner "Se multiclasser" adapte les étapes PV/Aptitudes à la '
+      'nouvelle classe (dé de vie, bandeau de contexte, maîtrises de '
+      'multiclassage) et applyLevelUp reçoit classId/isMulticlassing '
+      'corrects',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          abilityScores: {'str': 15, 'con': 14},
+        );
+        fakeCreationRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [
+            ClassOption(id: 1, name: 'Guerrier', description: '', hitDie: 10),
+            ClassOption(id: 2, name: 'Barbare', description: '', hitDie: 12),
+          ],
+        );
+        fakeRepository.levelDataByLevel = {
+          1: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.applyResultToReturn = const LevelUpApplyResult(
+          newLevel: 5,
+          newMaxHp: 34,
+          newCurrentHp: 30,
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/char-1/level-up?level=5');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Se multiclasser en Barbare'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // classDecision -> annonce
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('CONTINUER')); // annonce -> Points de vie
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 1 sur 3 · Points de vie'), findsOneWidget);
+        expect(
+          find.text('Dé de vie de Barbare (niveau 1) : d12'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Nouvelle classe : Barbare (niveau 1)'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CONTINUER')); // Points de vie -> Aptitudes
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Étape 2 sur 3 · Aptitudes & maîtrises'),
+          findsOneWidget,
+        );
+        expect(find.text('Maîtrises de multiclassage :'), findsOneWidget);
+        expect(find.text('Nouvelle maîtrise'), findsWidgets);
+        expect(find.text('Maîtrise des boucliers'), findsOneWidget);
+        expect(
+          find.text('Maîtrise des armes courantes et de guerre'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CONTINUER')); // Aptitudes -> Récapitulatif
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Nouvelle classe : Barbare (niveau 1)'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CONTINUER')); // applique
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.classId, 2);
+        expect(applied.className, 'Barbare');
+        expect(applied.isMulticlassing, isTrue);
+      },
+    );
+
+    testWidgets(
+      'écran de blocage en branche multiclasse : le niveau interpolé est '
+      'celui DANS la nouvelle classe (1), jamais le niveau total du '
+      'personnage',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          abilityScores: {'str': 15, 'wis': 15, 'con': 14},
+        );
+        fakeCreationRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [
+            ClassOption(id: 1, name: 'Guerrier', description: '', hitDie: 10),
+            ClassOption(id: 3, name: 'Clerc', description: '', hitDie: 8),
+          ],
+        );
+        fakeRepository.levelDataByLevel = {
+          1: const LevelUpLevelData(
+            choiceType: 'sort_domaine',
+            automaticFeatures: [],
+          ),
+        };
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/char-1/level-up?level=5');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Se multiclasser en Clerc'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // classDecision -> annonce
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // annonce -> blocage
+        await tester.pumpAndSettle();
+
+        expect(find.text('Niveau 1 : choix requis'), findsOneWidget);
+        expect(find.text('Clerc niveau 1 : Sort de domaine'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'sélection de sorts de départ (multiclassage dans une classe "à sorts '
+      'connus") : "Continuer" désactivé tant que les quotas ne sont pas '
+      'atteints, applyLevelUp reçoit les identifiants de sorts choisis',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          abilityScores: {'str': 15, 'cha': 15, 'con': 14},
+        );
+        fakeCreationRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [
+            ClassOption(id: 1, name: 'Guerrier', description: '', hitDie: 10),
+            ClassOption(id: 5, name: 'Barde', description: '', hitDie: 8),
+          ],
+        );
+        fakeCreationRepository.spellCatalogByClassId = {
+          5: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 100,
+                name: 'Lumières dansantes',
+                level: 0,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 101,
+                name: 'Prestidigitation',
+                level: 0,
+                school: 'Transmutation',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 200,
+                name: 'Charme-personne',
+                level: 1,
+                school: 'Enchantement',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 201,
+                name: 'Détection de la magie',
+                level: 1,
+                school: 'Divination',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 202,
+                name: 'Sommeil',
+                level: 1,
+                school: 'Enchantement',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 203,
+                name: 'Vague tonnante',
+                level: 1,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+        fakeRepository.levelDataByLevel = {
+          1: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.applyResultToReturn = const LevelUpApplyResult(
+          newLevel: 5,
+          newMaxHp: 30,
+          newCurrentHp: 26,
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/char-1/level-up?level=5');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Se multiclasser en Barde'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // classDecision -> annonce
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // annonce -> Points de vie
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // Points de vie -> Aptitudes
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // Aptitudes -> Sorts
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 4 · Sorts'), findsOneWidget);
+        expect(find.text('SORTS MINEURS CONNUS'), findsOneWidget);
+        expect(find.text('0 / 2'), findsOneWidget);
+
+        // "Continuer" désactivé initialement (aucun sort choisi).
+        await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Étape 3 sur 4 · Sorts'), findsOneWidget);
+
+        await tester.tap(find.text('Lumières dansantes'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Prestidigitation'));
+        await tester.pumpAndSettle();
+        expect(find.text('2 / 2'), findsOneWidget);
+
+        // Quota cantrips atteint, mais pas encore le quota niveau 1 : le
+        // bouton reste désactivé.
+        await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Étape 3 sur 4 · Sorts'), findsOneWidget);
+
+        await tester.tap(find.text('Niveau 1'));
+        await tester.pumpAndSettle();
+        for (final spell in [
+          'Charme-personne',
+          'Détection de la magie',
+          'Sommeil',
+          'Vague tonnante',
+        ]) {
+          await tester.ensureVisible(find.text(spell));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(spell));
+          await tester.pumpAndSettle();
+        }
+        expect(find.text('4 / 4'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // applique
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Barde');
+        expect(applied.initialSpellIds.toSet(), {100, 101, 200, 201, 202, 203});
+      },
+    );
+
+    testWidgets(
+      'multiclassage en Rôdeur niveau 1 : PAS de sélection de sorts de '
+      'départ (contrairement à Barde/Ensorceleur/Occultiste) — RAW 5e, le '
+      'Rôdeur n\'a aucun sort/emplacement au niveau 1 (sa magie démarre au '
+      'niveau 2), le quota de 2 de `SpellcastingRules.levelOneSpellQuotaFor` '
+      "est une simplification propre à l'assistant de création qui ne "
+      "s'applique pas ici : étape \"Sorts\" absente, totalSteps cohérent "
+      'sans elle (3, comme pour une classe "préparée")',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          abilityScores: {'str': 15, 'dex': 15, 'wis': 15, 'con': 14},
+        );
+        fakeCreationRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [
+            ClassOption(id: 1, name: 'Guerrier', description: '', hitDie: 10),
+            ClassOption(id: 7, name: 'Rôdeur', description: '', hitDie: 10),
+          ],
+        );
+        fakeRepository.levelDataByLevel = {
+          1: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.applyResultToReturn = const LevelUpApplyResult(
+          newLevel: 5,
+          newMaxHp: 30,
+          newCurrentHp: 26,
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/char-1/level-up?level=5');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Se multiclasser en Rôdeur'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // classDecision -> annonce
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // annonce -> Points de vie
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 1 sur 3 · Points de vie'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER')); // Points de vie -> Aptitudes
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Étape 2 sur 3 · Aptitudes & maîtrises'),
+          findsOneWidget,
+        );
+
+        await tester.tap(
+          find.text('CONTINUER'),
+        ); // Aptitudes -> Récapitulatif (jamais "Sorts")
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Sorts'), findsNothing);
+        expect(
+          find.text('Nouvelle classe : Rôdeur (niveau 1)'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CONTINUER')); // applique
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Rôdeur');
+        expect(applied.initialSpellIds, isEmpty);
+      },
+    );
+  });
+
+  group('régression : continuer la classe primaire après un multiclassage', () {
+    testWidgets(
+      '"Continuer" sur la classe primaire interroge le vrai niveau interne '
+      'suivant de la primaire (niveau actuel + 1), jamais le niveau TOTAL + 1 '
+      'du personnage, dès qu\'une classe secondaire existe déjà — chemin de '
+      'jeu normal après tout multiclassage, pas un cas limite',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: const [
+            CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 4,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+            CharacterDetailClassRow(
+              classId: 6,
+              hitDie: 8,
+              className: 'Roublard',
+              level: 1,
+              isPrimary: false,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        // Niveau TOTAL du personnage = 4 (Guerrier) + 1 (Roublard) = 5 :
+        // l'appelant réel (liste des personnages) passerait donc
+        // `initialTargetLevel: 6` (total + 1) pour la prochaine montée de
+        // niveau — alors que le vrai niveau suivant DANS la classe primaire
+        // (Guerrier) est 5 (4 + 1), pas 6. Seul le niveau 5 doit être
+        // interrogé/affiché pour la classe qui progresse réellement.
+        fakeRepository.levelDataByLevel = {
+          5: const LevelUpLevelData(
+            choiceType: null,
+            automaticFeatures: [
+              CharacterClassFeature(
+                id: 20,
+                name: 'Vrai niveau 5 (Guerrier)',
+                level: 5,
+              ),
+            ],
+          ),
+          6: const LevelUpLevelData(
+            choiceType: null,
+            automaticFeatures: [
+              CharacterClassFeature(
+                id: 21,
+                name: 'Faux niveau 6 (bug)',
+                level: 6,
+              ),
+            ],
+          ),
+        };
+
+        await pushLevelUp(tester, 6);
+
+        // Catalogue de classes vide (défaut) : aucune option de
+        // multiclassage n'est proposée, "Continuer" est le seul chemin —
+        // exactement le cas décrit par la régression.
+        expect(find.text(classDecisionInstruction), findsNothing);
+
+        expect(
+          fakeRepository.fetchLevelUpLevelDataCalls,
+          [5],
+          reason:
+              'le niveau interrogé doit être celui DANS la classe primaire '
+              '(4 + 1 = 5), jamais le niveau TOTAL + 1 du personnage (6).',
+        );
+        expect(find.text('NIVEAU 6'), findsOneWidget); // niveau TOTAL, inchangé
+        expect(find.text('Vrai niveau 5 (Guerrier)'), findsOneWidget);
+        expect(find.text('Faux niveau 6 (bug)'), findsNothing);
       },
     );
   });

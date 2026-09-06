@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/network/connectivity_checker.dart';
+import '../../character_creation/domain/spellcasting_rules.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
 import '../domain/character_summary.dart';
@@ -16,6 +17,7 @@ import '../domain/level_up_choice_kind.dart';
 import '../domain/level_up_choice_selection.dart';
 import '../domain/level_up_level_data.dart';
 import '../domain/level_up_subclass_option.dart';
+import '../domain/multiclass_prerequisites.dart';
 import '../domain/portrait_storage_path_resolver.dart';
 import '../domain/rest_type.dart';
 import '../domain/reward_item_draft.dart';
@@ -282,31 +284,61 @@ abstract class CharacterRepository {
   });
 
   /// Applique une montée de niveau déjà validée par le joueur (écran
-  /// "Montée de niveau", récapitulatif) : incrémente
-  /// `character_classes.level`, ajoute [hpGain] à `characters.max_hp`/
-  /// `current_hp`, insère une ligne `character_level_hp`, et — depuis
-  /// l'increment 2 — écrit [choice] s'il est fourni (étape "Choix à faire") :
+  /// "Montée de niveau", récapitulatif). Deux branches, selon
+  /// [isMulticlassing] :
+  /// - `false` (continuer, comportement historique) : incrémente
+  ///   `character_classes.level` de la ligne dont `class_id` vaut [classId]
+  ///   (identifiée explicitement, plutôt que de supposer une seule ligne —
+  ///   voir le changement de comportement ci-dessous).
+  /// - `true` (multiclasser) : insère une NOUVELLE ligne `character_classes`
+  ///   (`character_id`, `class_id: classId`, `level: 1`, `is_primary: false`,
+  ///   `hit_dice_spent: 0`) — [className] doit être le nom de CETTE nouvelle
+  ///   classe. Revérifie [MulticlassPrerequisites.meetsRequirement] pour la
+  ///   nouvelle classe ET pour toutes les classes déjà possédées (défense en
+  ///   profondeur : l'UI filtre déjà ces options en amont, mais cette
+  ///   méthode ne fait jamais confiance uniquement à l'UI pour une écriture,
+  ///   même discipline que le plafond ASI à 20 ci-dessous) — lève une
+  ///   [CharacterFailure] explicite si un prérequis n'est pas rempli, ou si
+  ///   le personnage possède déjà cette classe.
+  ///
+  /// **Changement de comportement (multiclassage)** : accepte désormais un
+  /// personnage avec plusieurs lignes `character_classes` — l'ancien filet de
+  /// sécurité ("exactement une ligne, sinon `CharacterFailure`") a été levé.
+  ///
+  /// Dans les deux branches : ajoute [hpGain] à `characters.max_hp`/
+  /// `current_hp`, insère une ligne `character_level_hp` (`level` = niveau
+  /// TOTAL du personnage après écriture, jamais le niveau interne à une
+  /// classe précise — voir `domain/level_up_apply_result.dart::LevelUpApplyResult.newLevel`,
+  /// même convention), et écrit [choice] s'il est fourni (étape "Choix à
+  /// faire") :
   /// - [LevelUpChoiceKind.abilityScoreImprovement] : upsert
   ///   `character_ability_scores.score` (score final = score actuel +
   ///   allocation) **et** insert `character_ability_increases` (une ligne
-  ///   par caractéristique augmentée, `source: 'asi'`) — les deux tables
-  ///   doivent être écrites, voir la documentation de
+  ///   par caractéristique augmentée, `source: 'asi'`, `level` = niveau
+  ///   interne à la classe qui progresse — jamais le niveau total) — les
+  ///   deux tables doivent être écrites, voir la documentation de
   ///   [LevelUpChoiceSelection.abilityAllocations].
   /// - [LevelUpChoiceKind.subclass] : `character_classes.subclass_id`,
-  ///   combiné dans le même `UPDATE` que `level`.
+  ///   combiné dans le même `UPDATE`/`INSERT` que `level` (sur la ligne
+  ///   fraîchement créée en cas de multiclassage, pas sur la classe
+  ///   primaire).
   /// - [LevelUpChoiceKind.fightingStyle]/[LevelUpChoiceKind.favoredEnemy] :
   ///   insert `character_class_options`.
   ///
-  /// Depuis l'increment 3 (étape "Sorts") : recalcule aussi
-  /// `character_spell_slots` pour la classe primaire, depuis zéro (upsert
-  /// complet pour le nouveau niveau, jamais un delta — voir
-  /// `domain/spell_slot_progression.dart::SpellSlotProgression.slotsForLevel`
-  /// et la documentation de [_upsertSpellSlots]). [className] est requis
-  /// pour ce recalcul (déjà résolu par l'appelant, voir `LevelUpStepData`
-  /// côté `presentation/providers/level_up_provider.dart`) : ni
-  /// `character_classes` ni `classes` ne portent le nom de classe
-  /// directement exploitable ici (résolu via `translations`, voir la
-  /// documentation de classe de [SupabaseCharacterRepository]).
+  /// Recalcule aussi `character_spell_slots`, depuis zéro (upsert complet
+  /// pour le nouveau niveau, jamais un delta — voir
+  /// `domain/spell_slot_progression.dart::SpellSlotProgression.resolveChangesForLevelUp`
+  /// et la documentation de [_upsertSpellSlots]) : calcul combiné multiclasse
+  /// dès que le personnage compte 2 classes lanceuses "non-pacte" après ce
+  /// niveau, sinon comportement mono-classe historique inchangé.
+  ///
+  /// [initialSpellIds] : sorts de départ à écrire dans `character_spells`
+  /// pour une nouvelle classe "à sorts connus" démarrée au niveau 1
+  /// (Barde/Ensorceleur/Occultiste/Rôdeur, voir
+  /// `LevelUpStepData.requiresInitialSpellSelection`) — déjà résolus en
+  /// identifiants par l'appelant (le catalogue de sorts est déjà chargé côté
+  /// écran, voir `presentation/providers/level_up_provider.dart`). Toujours
+  /// vide hors de ce cas précis.
   ///
   /// [hpRolled] et [hpGain] sont déjà calculés par l'appelant (voir
   /// `domain/level_up_hit_points_calculator.dart`), cette méthode ne fait
@@ -316,17 +348,16 @@ abstract class CharacterRepository {
   /// [addXp] (déclenchement automatique au franchissement d'un seuil), soit
   /// le déclenchement est manuel et l'XP ne doit pas bouger (voir la spec de
   /// la tâche qui a produit cette méthode).
-  ///
-  /// Lève une [CharacterFailure] si le personnage n'a pas exactement une
-  /// ligne `character_classes` (aucune classe, ou multiclassage — non pris
-  /// en charge par la montée de niveau automatique à cet incrément).
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
+    required Object classId,
     required String className,
+    required bool isMulticlassing,
     required int hpRolled,
     required String hpMethod,
     required int hpGain,
     LevelUpChoiceSelection? choice,
+    List<int> initialSpellIds = const [],
   });
 
   /// Applique un repos (lien "Prendre un repos", onglet "Personnage" —
@@ -1230,26 +1261,105 @@ class SupabaseCharacterRepository implements CharacterRepository {
   @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
+    required Object classId,
     required String className,
+    required bool isMulticlassing,
     required int hpRolled,
     required String hpMethod,
     required int hpGain,
     LevelUpChoiceSelection? choice,
+    List<int> initialSpellIds = const [],
   }) async {
     final ownerId = _requireOwnerId();
     try {
       final classRows = await _client
           .from('character_classes')
-          .select('id, level')
+          .select('id, class_id, level')
           .eq('character_id', characterId);
-      if (classRows.length != 1) {
+      if (classRows.isEmpty) {
         throw const CharacterFailure(
-          'Montée de niveau non prise en charge pour un personnage '
-          'multiclassé, ou personnage sans classe.',
+          'Aucune classe trouvée pour ce personnage : impossible de monter '
+          'de niveau.',
         );
       }
-      final classRow = classRows.single;
-      final newLevel = (classRow['level'] as num).toInt() + 1;
+
+      final targetClassIdInt = _classIdAsInt(classId);
+      Map<String, dynamic>? existingTargetRow;
+      for (final row in classRows) {
+        if (_classIdAsInt(row['class_id'] as Object) == targetClassIdInt) {
+          existingTargetRow = row;
+          break;
+        }
+      }
+
+      if (isMulticlassing) {
+        if (existingTargetRow != null) {
+          throw const CharacterFailure(
+            'Ce personnage possède déjà cette classe : impossible de la '
+            'multiclasser à nouveau.',
+          );
+        }
+        // Défense en profondeur : revérifie les prérequis RAW pour la
+        // nouvelle classe ET pour toutes les classes déjà possédées (voir la
+        // documentation de [CharacterRepository.applyLevelUp]) — l'UI filtre
+        // déjà ces options en amont (`multiclassOptions`,
+        // `presentation/providers/level_up_provider.dart`), mais cette
+        // méthode ne doit jamais faire confiance uniquement à l'UI pour une
+        // écriture, même discipline que le plafond ASI à 20
+        // ([_applyAbilityScoreImprovement]).
+        final abilityScores = await _fetchAllAbilityScores(characterId);
+        if (!MulticlassPrerequisites.meetsRequirement(
+          className,
+          abilityScores,
+        )) {
+          throw CharacterFailure(
+            "Prérequis de caractéristique non rempli pour '$className' : "
+            'multiclassage refusé.',
+          );
+        }
+        final existingClassIds = {
+          for (final row in classRows) row['class_id'] as Object,
+        };
+        final existingClassNames = await _fetchTranslatedNames(
+          entityType: 'class',
+          entityIds: {for (final id in existingClassIds) id.toString()},
+        );
+        for (final row in classRows) {
+          final existingName =
+              existingClassNames[(row['class_id'] as Object).toString()];
+          if (existingName == null) {
+            // Ne devrait pas arriver (chaque classe possédée a une
+            // traduction résolue), mais fail-closed comme partout ailleurs
+            // dans cette méthode : impossible de revérifier le prérequis
+            // d'une classe déjà possédée sans son nom, donc on refuse le
+            // multiclassage par prudence plutôt que de le laisser passer
+            // silencieusement sans avoir revérifié son prérequis.
+            throw const CharacterFailure(
+              "Impossible de vérifier les prérequis d'une classe déjà "
+              'possédée : multiclassage refusé par prudence.',
+            );
+          }
+          if (!MulticlassPrerequisites.meetsRequirement(
+            existingName,
+            abilityScores,
+          )) {
+            throw CharacterFailure(
+              "Prérequis de caractéristique non rempli pour la classe déjà "
+              "possédée '$existingName' : multiclassage refusé.",
+            );
+          }
+        }
+      } else if (existingTargetRow == null) {
+        throw const CharacterFailure(
+          'Classe introuvable pour ce personnage : impossible de monter de '
+          'niveau.',
+        );
+      }
+
+      final beforeClassLevel = existingTargetRow == null
+          ? 0
+          : (existingTargetRow['level'] as num).toInt();
+      final newClassLevel = beforeClassLevel + 1;
 
       final characterRow = await _client
           .from('characters')
@@ -1270,26 +1380,23 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // les dégâts d'un échec partiel :
       // 1. `characters` d'abord (si cet update échoue, rien d'autre n'a
       //    encore été écrit) ;
-      // 2. `character_classes.level` (si celui-ci échoue après le premier,
-      //    l'incohérence reste limitée à un `max_hp`/`current_hp` déjà
-      //    incrémentés sans changement de niveau ni d'historique — visible
-      //    et corrigible manuellement, jamais un personnage fantôme).
-      //    Increment 2 : le choix `subclass_id` est combiné dans ce même
-      //    `UPDATE` quand [choice] est une sous-classe, plutôt qu'un appel
-      //    séparé — même écriture, même niveau de risque, une requête de
-      //    moins.
-      // 3. `character_spell_slots` (increment 3, étape "Sorts" — voir
-      //    [_upsertSpellSlots]), placé ici plutôt qu'après le choix : ce
-      //    recalcul ne dépend que de `className`/`newLevel`, jamais de
-      //    [choice], donc rien ne justifie de le faire attendre derrière un
-      //    choix optionnel. Même donnée de jeu vivante que le choix
-      //    ci-dessous (pas un pur historique) : un échec à cette étape doit
-      //    laisser le niveau déjà incrémenté (visible, corrigible), même
-      //    rationale que 4.
-      // 4. Le choix restant (ASI ou `character_class_options`), s'il y en a
-      //    un — placé ici (juste après le niveau, avant l'historique PV) car
-      //    c'est une donnée de jeu vivante au moins aussi significative que
-      //    le niveau lui-même (contrairement à `character_level_hp`, pur
+      // 2. `character_classes` (`UPDATE` du niveau si on continue, `INSERT`
+      //    d'une nouvelle ligne si on multiclasse) : le choix `subclass_id`
+      //    est combiné dans cette même écriture quand [choice] est une
+      //    sous-classe, plutôt qu'un appel séparé — même écriture, même
+      //    niveau de risque, une requête de moins.
+      // 3. `character_spell_slots` (voir [_upsertSpellSlots]), placé ici
+      //    plutôt qu'après le choix : ce recalcul ne dépend que des classes/
+      //    niveaux déjà écrits à l'étape 2, jamais de [choice], donc rien ne
+      //    justifie de le faire attendre derrière un choix optionnel. Même
+      //    donnée de jeu vivante que le choix ci-dessous (pas un pur
+      //    historique) : un échec à cette étape doit laisser le niveau déjà
+      //    incrémenté (visible, corrigible), même rationale que 4.
+      // 4. Le choix restant (ASI ou `character_class_options`) et les sorts
+      //    de départ d'une nouvelle classe à sorts connus, s'il y en a —
+      //    placés ici (juste après le niveau, avant l'historique PV) car ce
+      //    sont des données de jeu vivantes au moins aussi significatives
+      //    que le niveau lui-même (contrairement à `character_level_hp`, pur
       //    historique) : mieux vaut qu'un échec à cette étape laisse le
       //    niveau déjà incrémenté (visible, corrigible) plutôt que de la
       //    reporter après l'historique, qui doit rester la toute dernière
@@ -1298,45 +1405,121 @@ class SupabaseCharacterRepository implements CharacterRepository {
       //    dernier. Contrairement à `createCharacter`, aucun nettoyage
       //    ("best effort") n'est possible ici : il n'y a pas de ligne
       //    fraîchement créée à supprimer, seulement des colonnes déjà
-      //    existantes mises à jour.
+      //    existantes mises à jour (ou une nouvelle ligne `character_classes`
+      //    déjà insérée, cas multiclassage).
       await _client
           .from('characters')
           .update({'max_hp': newMaxHp, 'current_hp': newCurrentHp})
           .eq('id', characterId)
           .eq('owner_id', ownerId);
 
-      final classUpdate = <String, dynamic>{'level': newLevel};
-      if (choice != null && choice.kind == LevelUpChoiceKind.subclass) {
-        classUpdate['subclass_id'] = choice.subclassId;
+      if (isMulticlassing) {
+        final insertPayload = <String, dynamic>{
+          'character_id': characterId,
+          'class_id': classId,
+          'level': 1,
+          'is_primary': false,
+          'hit_dice_spent': 0,
+        };
+        if (choice != null && choice.kind == LevelUpChoiceKind.subclass) {
+          insertPayload['subclass_id'] = choice.subclassId;
+        }
+        await _client.from('character_classes').insert(insertPayload);
+      } else {
+        final classUpdate = <String, dynamic>{'level': newClassLevel};
+        if (choice != null && choice.kind == LevelUpChoiceKind.subclass) {
+          classUpdate['subclass_id'] = choice.subclassId;
+        }
+        await _client
+            .from('character_classes')
+            .update(classUpdate)
+            .eq('id', existingTargetRow!['id']);
       }
-      await _client
-          .from('character_classes')
-          .update(classUpdate)
-          .eq('id', classRow['id']);
+
+      // Classes du personnage avant/après ce niveau, toutes classes
+      // confondues — nécessaire au calcul combiné multiclasse des
+      // emplacements de sorts (voir [_upsertSpellSlots]). Les noms des
+      // classes déjà possédées ont déjà été résolus ci-dessus dans la
+      // branche multiclassage ; sinon (branche "continuer"), il faut encore
+      // les résoudre ici pour les éventuelles AUTRES classes du personnage
+      // (multiclassage antérieur).
+      final coClassIds = {
+        for (final row in classRows)
+          if (_classIdAsInt(row['class_id'] as Object) != targetClassIdInt)
+            row['class_id'] as Object,
+      };
+      final coClassNames = await _fetchTranslatedNames(
+        entityType: 'class',
+        entityIds: {for (final id in coClassIds) id.toString()},
+      );
+      final beforeClasses = [
+        for (final row in classRows)
+          (
+            className:
+                _classIdAsInt(row['class_id'] as Object) == targetClassIdInt
+                ? className
+                : (coClassNames[(row['class_id'] as Object).toString()] ?? ''),
+            level: (row['level'] as num).toInt(),
+          ),
+      ];
+      final afterClasses = isMulticlassing
+          ? [...beforeClasses, (className: className, level: 1)]
+          : [
+              for (final entry in beforeClasses)
+                entry.className == className
+                    ? (className: className, level: newClassLevel)
+                    : entry,
+            ];
 
       await _upsertSpellSlots(
         characterId: characterId,
-        className: className,
-        newLevel: newLevel,
+        afterClasses: afterClasses,
       );
 
       if (choice != null) {
         await _applyChoice(
           characterId: characterId,
-          level: newLevel,
+          level: newClassLevel,
           choice: choice,
         );
       }
 
+      if (initialSpellIds.isNotEmpty) {
+        // Sorts de départ d'une nouvelle classe "à sorts connus" démarrée au
+        // niveau 1 (Barde/Ensorceleur/Occultiste/Rôdeur) — même forme de
+        // ligne (`character_spells`, `source_class_id`) que
+        // `CharacterCreationRepository.createCharacter` pour les sorts
+        // initiaux à la création (voir la documentation de
+        // [CharacterRepository.applyLevelUp]) : réutilise la même règle de
+        // statut (`SpellcastingRules.statusFor`), sans dupliquer de logique
+        // de quotas ici (déjà appliquée côté écran avant d'arriver jusqu'à
+        // cette méthode).
+        final status = SpellcastingRules.statusFor(className);
+        await _client.from('character_spells').insert([
+          for (final spellId in initialSpellIds)
+            {
+              'character_id': characterId,
+              'spell_id': spellId,
+              'status': status,
+              'source_class_id': classId,
+            },
+        ]);
+      }
+
+      final newTotalLevel = afterClasses.fold(
+        0,
+        (sum, entry) => sum + entry.level,
+      );
+
       await _client.from('character_level_hp').insert({
         'character_id': characterId,
-        'level': newLevel,
+        'level': newTotalLevel,
         'hp_rolled': hpRolled,
         'method': hpMethod,
       });
 
       return LevelUpApplyResult(
-        newLevel: newLevel,
+        newLevel: newTotalLevel,
         newMaxHp: newMaxHp,
         newCurrentHp: newCurrentHp,
       );
@@ -1728,14 +1911,15 @@ class SupabaseCharacterRepository implements CharacterRepository {
     return (usesPerRest['amount'] as num?)?.toInt();
   }
 
-  /// Recalcule `character_spell_slots` pour la classe primaire au nouveau
-  /// niveau [newLevel] — increment 3, étape "Sorts". **Recalcul complet
-  /// depuis zéro** (upsert de tous les paliers dont le total théorique à
-  /// [newLevel] est `> 0`), jamais un delta incrémental : contrairement au
-  /// reste de cette méthode, `character_spell_slots` n'est écrit nulle part
-  /// ailleurs dans ce dépôt (ni à la création de personnage), donc l'état
-  /// antérieur en base n'est pas fiable comme point de départ (voir le point
-  /// critique de la spec visuelle direction-artistique de l'étape "Sorts",
+  /// Recalcule `character_spell_slots` pour [afterClasses] (TOUTES les
+  /// classes du personnage après ce niveau, multiclassage inclus — voir
+  /// [SpellSlotProgression.totalsForClasses]). **Recalcul complet depuis
+  /// zéro** (upsert de tous les paliers dont le total théorique est `> 0`),
+  /// jamais un delta incrémental : contrairement au reste de cette méthode,
+  /// `character_spell_slots` n'est écrit nulle part ailleurs dans ce dépôt
+  /// (ni à la création de personnage), donc l'état antérieur en base n'est
+  /// pas fiable comme point de départ (voir le point critique de la spec
+  /// visuelle direction-artistique de l'étape "Sorts",
   /// `presentation/level_up_screen.dart`).
   ///
   /// Aucune ligne écrite pour un niveau de sort à 0 — même convention que la
@@ -1746,19 +1930,22 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// déjà consommé des emplacements avant de monter de niveau) tant qu'il
   /// reste cohérent avec le nouveau total (`slots_used <= slots_total`) ; le
   /// replie sur `slots_total` sinon plutôt que de laisser une valeur
-  /// incohérente ou de planter — ne devrait jamais arriver en pratique (les
-  /// totaux ne font que croître avec le niveau).
+  /// incohérente ou de planter — ne devrait jamais arriver en pratique pour
+  /// une classe continuée (les totaux ne font que croître avec le niveau),
+  /// mais reste un filet de sécurité valide aussi pour le passage au calcul
+  /// combiné multiclasse (le total combiné ne décroît jamais non plus quand
+  /// un niveau s'ajoute, RAW ou pas).
   ///
-  /// Ne fait rien pour une classe non lanceuse ou l'Occultiste (magie de
-  /// pacte, mécanisme différent, hors périmètre visuel de cet incrément) :
-  /// [SpellSlotProgression.slotsForLevel] retourne alors 9 zéros, donc
-  /// [nonZeroLevels] est vide.
+  /// Ne fait rien si aucune classe de [afterClasses] n'est lanceuse
+  /// "non-pacte" ([SpellSlotProgression.isNonPactCasterClass]) — classe non
+  /// lanceuse ou Occultiste seul (magie de pacte, mécanisme différent, hors
+  /// périmètre) : [SpellSlotProgression.totalsForClasses] retourne alors 9
+  /// zéros, donc [nonZeroLevels] est vide.
   Future<void> _upsertSpellSlots({
     required String characterId,
-    required String className,
-    required int newLevel,
+    required List<({String className, int level})> afterClasses,
   }) async {
-    final totals = SpellSlotProgression.slotsForLevel(className, newLevel);
+    final totals = SpellSlotProgression.totalsForClasses(afterClasses);
     final nonZeroLevels = [
       for (var i = 0; i < totals.length; i++)
         if (totals[i] > 0) i + 1,
@@ -1936,6 +2123,30 @@ class SupabaseCharacterRepository implements CharacterRepository {
       });
     }
   }
+
+  /// Tous les scores de caractéristiques finaux de [characterId]
+  /// (`character_ability_scores.score`, clé `ability_id`) — nécessaire à la
+  /// revérification des prérequis de multiclassage
+  /// (`domain/multiclass_prerequisites.dart::MulticlassPrerequisites.meetsRequirement`)
+  /// côté écriture ([applyLevelUp]), qui doit connaître TOUTES les
+  /// caractéristiques (pas seulement celles d'une classe précise, calculée à
+  /// l'avance côté UI) pour couvrir n'importe quelle classe candidate.
+  Future<Map<String, int>> _fetchAllAbilityScores(String characterId) async {
+    final rows = await _client
+        .from('character_ability_scores')
+        .select('ability_id, score')
+        .eq('character_id', characterId);
+    return {
+      for (final row in rows)
+        row['ability_id'] as String: (row['score'] as num).toInt(),
+    };
+  }
+
+  /// Normalise un `classId` (`Object`, toujours un entier côté Supabase en
+  /// pratique — voir `CharacterDetailClassRow.classId`) en `int`, pour
+  /// comparer deux identifiants de classe indépendamment de leur type Dart
+  /// exact (`int` vs `num`) — voir [applyLevelUp].
+  int _classIdAsInt(Object classId) => (classId as num).toInt();
 
   /// Identifiant du joueur connecté, ou lève une [CharacterFailure] "session
   /// expirée" — factorisé depuis [fetchCharacters] pour être réutilisé par

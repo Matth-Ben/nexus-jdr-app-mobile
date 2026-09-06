@@ -12,6 +12,15 @@ part of 'level_up_provider.dart';
 /// `retry: null` pour ne jamais masquer une erreur persistante derrière des
 /// tentatives automatiques silencieuses (l'écran expose son propre bouton
 /// "Réessayer").
+///
+/// [multiclassClassId] : `null` (défaut) pour continuer la classe primaire
+/// (comportement historique, avant le multiclassage) ; sinon, `classes.id`
+/// de la classe choisie à l'étape `classDecision` pour multiclasser — doit
+/// alors être un `classId` présent dans [LevelUpStepData.multiclassOptions]
+/// calculé pour le même personnage, sans quoi une [CharacterFailure] est
+/// levée (cas défensif : une classe qui a cessé d'être éligible entre
+/// l'affichage de `classDecision` et cet appel, ex. un score de
+/// caractéristique modifié entre-temps par un autre appareil).
 
 @ProviderFor(levelUpStepData)
 final levelUpStepDataProvider = LevelUpStepDataFamily._();
@@ -20,6 +29,15 @@ final levelUpStepDataProvider = LevelUpStepDataFamily._();
 /// `retry: null` pour ne jamais masquer une erreur persistante derrière des
 /// tentatives automatiques silencieuses (l'écran expose son propre bouton
 /// "Réessayer").
+///
+/// [multiclassClassId] : `null` (défaut) pour continuer la classe primaire
+/// (comportement historique, avant le multiclassage) ; sinon, `classes.id`
+/// de la classe choisie à l'étape `classDecision` pour multiclasser — doit
+/// alors être un `classId` présent dans [LevelUpStepData.multiclassOptions]
+/// calculé pour le même personnage, sans quoi une [CharacterFailure] est
+/// levée (cas défensif : une classe qui a cessé d'être éligible entre
+/// l'affichage de `classDecision` et cet appel, ex. un score de
+/// caractéristique modifié entre-temps par un autre appareil).
 
 final class LevelUpStepDataProvider
     extends
@@ -33,9 +51,19 @@ final class LevelUpStepDataProvider
   /// `retry: null` pour ne jamais masquer une erreur persistante derrière des
   /// tentatives automatiques silencieuses (l'écran expose son propre bouton
   /// "Réessayer").
+  ///
+  /// [multiclassClassId] : `null` (défaut) pour continuer la classe primaire
+  /// (comportement historique, avant le multiclassage) ; sinon, `classes.id`
+  /// de la classe choisie à l'étape `classDecision` pour multiclasser — doit
+  /// alors être un `classId` présent dans [LevelUpStepData.multiclassOptions]
+  /// calculé pour le même personnage, sans quoi une [CharacterFailure] est
+  /// levée (cas défensif : une classe qui a cessé d'être éligible entre
+  /// l'affichage de `classDecision` et cet appel, ex. un score de
+  /// caractéristique modifié entre-temps par un autre appareil).
   LevelUpStepDataProvider._({
     required LevelUpStepDataFamily super.from,
-    required ({String characterId, int targetLevel}) super.argument,
+    required ({String characterId, int targetLevel, Object? multiclassClassId})
+    super.argument,
   }) : super(
          retry: _noRetry,
          name: r'levelUpStepDataProvider',
@@ -62,11 +90,18 @@ final class LevelUpStepDataProvider
 
   @override
   FutureOr<LevelUpStepData> create(Ref ref) {
-    final argument = this.argument as ({String characterId, int targetLevel});
+    final argument =
+        this.argument
+            as ({
+              String characterId,
+              int targetLevel,
+              Object? multiclassClassId,
+            });
     return levelUpStepData(
       ref,
       characterId: argument.characterId,
       targetLevel: argument.targetLevel,
+      multiclassClassId: argument.multiclassClassId,
     );
   }
 
@@ -81,18 +116,27 @@ final class LevelUpStepDataProvider
   }
 }
 
-String _$levelUpStepDataHash() => r'3f8961c0c569eb08f7e0a0b2be1a4b1d6f0fcbdf';
+String _$levelUpStepDataHash() => r'f06fde908c360295805106b684dfbdcde34210a4';
 
 /// Même rationale que [characterDetailProvider] : `autoDispose` par défaut,
 /// `retry: null` pour ne jamais masquer une erreur persistante derrière des
 /// tentatives automatiques silencieuses (l'écran expose son propre bouton
 /// "Réessayer").
+///
+/// [multiclassClassId] : `null` (défaut) pour continuer la classe primaire
+/// (comportement historique, avant le multiclassage) ; sinon, `classes.id`
+/// de la classe choisie à l'étape `classDecision` pour multiclasser — doit
+/// alors être un `classId` présent dans [LevelUpStepData.multiclassOptions]
+/// calculé pour le même personnage, sans quoi une [CharacterFailure] est
+/// levée (cas défensif : une classe qui a cessé d'être éligible entre
+/// l'affichage de `classDecision` et cet appel, ex. un score de
+/// caractéristique modifié entre-temps par un autre appareil).
 
 final class LevelUpStepDataFamily extends $Family
     with
         $FunctionalFamilyOverride<
           FutureOr<LevelUpStepData>,
-          ({String characterId, int targetLevel})
+          ({String characterId, int targetLevel, Object? multiclassClassId})
         > {
   LevelUpStepDataFamily._()
     : super(
@@ -107,12 +151,26 @@ final class LevelUpStepDataFamily extends $Family
   /// `retry: null` pour ne jamais masquer une erreur persistante derrière des
   /// tentatives automatiques silencieuses (l'écran expose son propre bouton
   /// "Réessayer").
+  ///
+  /// [multiclassClassId] : `null` (défaut) pour continuer la classe primaire
+  /// (comportement historique, avant le multiclassage) ; sinon, `classes.id`
+  /// de la classe choisie à l'étape `classDecision` pour multiclasser — doit
+  /// alors être un `classId` présent dans [LevelUpStepData.multiclassOptions]
+  /// calculé pour le même personnage, sans quoi une [CharacterFailure] est
+  /// levée (cas défensif : une classe qui a cessé d'être éligible entre
+  /// l'affichage de `classDecision` et cet appel, ex. un score de
+  /// caractéristique modifié entre-temps par un autre appareil).
 
   LevelUpStepDataProvider call({
     required String characterId,
     required int targetLevel,
+    Object? multiclassClassId,
   }) => LevelUpStepDataProvider._(
-    argument: (characterId: characterId, targetLevel: targetLevel),
+    argument: (
+      characterId: characterId,
+      targetLevel: targetLevel,
+      multiclassClassId: multiclassClassId,
+    ),
     from: this,
   );
 
