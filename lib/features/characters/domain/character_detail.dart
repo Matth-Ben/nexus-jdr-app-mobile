@@ -77,6 +77,18 @@ abstract class CharacterDetail with _$CharacterDetail {
     @Default(<CharacterClassFeature>[])
     List<CharacterClassFeature> classFeatures,
 
+    /// Tokens de maîtrise d'armures, fusionnés/dédupliqués sur toutes les
+    /// classes du personnage — onglet "Compétences", carte "MAÎTRISES
+    /// D'ARMURES". Voir `data/character_detail_row_mapper.dart`
+    /// (`mergeArmorProficiencyNames`) pour l'algorithme de fusion (classe
+    /// primaire d'abord, puis les classes secondaires via les tables RAW de
+    /// multiclassage, jamais retirées une fois acquises).
+    @Default(<String>[]) List<String> armorProficiencyNames,
+
+    /// Même principe que [armorProficiencyNames], pour les maîtrises d'armes
+    /// — carte "MAÎTRISES D'ARMES".
+    @Default(<String>[]) List<String> weaponProficiencyNames,
+
     /// Noms des outils dont le personnage est compétent (texte libre inclus)
     /// — onglet "Compétences", carte "MAÎTRISES D'OUTILS".
     @Default(<String>[]) List<String> toolProficiencyNames,

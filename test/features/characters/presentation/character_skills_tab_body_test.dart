@@ -18,6 +18,8 @@ import 'package:personnages/features/characters/presentation/widgets/character_s
 CharacterDetail _detail({
   List<CharacterSkillRow> skills = const [],
   List<CharacterClassFeature> classFeatures = const [],
+  List<String> armorProficiencyNames = const [],
+  List<String> weaponProficiencyNames = const [],
   List<String> toolProficiencyNames = const [],
   List<String> knownLanguageNames = const [],
   List<CharacterSpellEntry> spells = const [],
@@ -34,6 +36,8 @@ CharacterDetail _detail({
     abilityScores: const {'dex': 16, 'int': 10},
     skills: skills,
     classFeatures: classFeatures,
+    armorProficiencyNames: armorProficiencyNames,
+    weaponProficiencyNames: weaponProficiencyNames,
     toolProficiencyNames: toolProficiencyNames,
     knownLanguageNames: knownLanguageNames,
     spells: spells,
@@ -228,15 +232,72 @@ void main() {
     },
   );
 
-  testWidgets('les cartes outils/langues n\'apparaissent pas quand vides', (
+  testWidgets(
+    'les cartes armures/armes/outils/langues n\'apparaissent pas quand '
+    'vides',
+    (tester) async {
+      await _pump(tester, _detail());
+
+      expect(find.text("MAÎTRISES D'ARMURES"), findsNothing);
+      expect(find.text("MAÎTRISES D'ARMES"), findsNothing);
+      expect(find.text("MAÎTRISES D'OUTILS"), findsNothing);
+      expect(find.text('LANGUES CONNUES'), findsNothing);
+      expect(find.text('APTITUDES DE CLASSE'), findsNothing);
+    },
+  );
+
+  testWidgets('la carte armures affiche les tokens quand non vide', (
     tester,
   ) async {
-    await _pump(tester, _detail());
+    await _pump(
+      tester,
+      _detail(armorProficiencyNames: const ['légère', 'boucliers']),
+    );
 
-    expect(find.text("MAÎTRISES D'OUTILS"), findsNothing);
-    expect(find.text('LANGUES CONNUES'), findsNothing);
-    expect(find.text('APTITUDES DE CLASSE'), findsNothing);
+    expect(find.text("MAÎTRISES D'ARMURES"), findsOneWidget);
+    expect(find.text('légère'), findsOneWidget);
+    expect(find.text('boucliers'), findsOneWidget);
   });
+
+  testWidgets('la carte armes affiche les tokens quand non vide', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _detail(weaponProficiencyNames: const ['courantes', 'martiales']),
+    );
+
+    expect(find.text("MAÎTRISES D'ARMES"), findsOneWidget);
+    expect(find.text('courantes'), findsOneWidget);
+    expect(find.text('martiales'), findsOneWidget);
+  });
+
+  testWidgets(
+    'les cartes s\'affichent dans l\'ordre Compétences -> Armures -> Armes '
+    '-> Outils -> Langues',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          armorProficiencyNames: const ['légère'],
+          weaponProficiencyNames: const ['courantes'],
+          toolProficiencyNames: const ['Outils de forgeron'],
+          knownLanguageNames: const ['Nain'],
+        ),
+      );
+
+      final skillsY = tester.getTopLeft(find.text('LES 18 COMPÉTENCES')).dy;
+      final armorY = tester.getTopLeft(find.text("MAÎTRISES D'ARMURES")).dy;
+      final weaponY = tester.getTopLeft(find.text("MAÎTRISES D'ARMES")).dy;
+      final toolY = tester.getTopLeft(find.text("MAÎTRISES D'OUTILS")).dy;
+      final languageY = tester.getTopLeft(find.text('LANGUES CONNUES')).dy;
+
+      expect(skillsY, lessThan(armorY));
+      expect(armorY, lessThan(weaponY));
+      expect(weaponY, lessThan(toolY));
+      expect(toolY, lessThan(languageY));
+    },
+  );
 
   testWidgets('la carte outils affiche les noms quand non vide', (
     tester,

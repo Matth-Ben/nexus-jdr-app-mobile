@@ -46,4 +46,82 @@ void main() {
       );
     });
   });
+
+  group('MulticlassProficiencies.multiclassArmorProficiencyTokensFor', () {
+    const expectedByClassName = {
+      'Barbare': ['boucliers'],
+      'Barde': ['légère'],
+      'Clerc': ['légère', 'intermédiaire', 'boucliers'],
+      'Druide': [
+        'légère',
+        'intermédiaire (non métallique)',
+        'boucliers (non métalliques)',
+      ],
+      'Guerrier': ['légère', 'intermédiaire', 'boucliers'],
+      'Moine': <String>[],
+      'Paladin': ['légère', 'intermédiaire', 'boucliers'],
+      'Rôdeur': ['légère', 'intermédiaire', 'boucliers'],
+      'Roublard': ['légère'],
+      'Ensorceleur': <String>[],
+      'Occultiste': ['légère'],
+      'Magicien': <String>[],
+    };
+
+    for (final entry in expectedByClassName.entries) {
+      test('${entry.key} -> ${entry.value}', () {
+        expect(
+          MulticlassProficiencies.multiclassArmorProficiencyTokensFor(
+            entry.key,
+          ),
+          entry.value,
+        );
+      });
+    }
+
+    test('classe absente de la table -> liste vide, jamais une exception', () {
+      expect(
+        MulticlassProficiencies.multiclassArmorProficiencyTokensFor(
+          'ClasseInconnue',
+        ),
+        isEmpty,
+      );
+    });
+  });
+
+  group('MulticlassProficiencies.multiclassWeaponProficiencyTokensFor', () {
+    const expectedByClassName = {
+      'Barbare': ['courantes', 'martiales'],
+      'Barde': <String>[],
+      'Clerc': <String>[],
+      'Druide': <String>[],
+      'Guerrier': ['courantes', 'martiales'],
+      'Moine': ['courantes', 'épées courtes'],
+      'Paladin': ['courantes', 'martiales'],
+      'Rôdeur': ['courantes', 'martiales'],
+      'Roublard': <String>[],
+      'Ensorceleur': <String>[],
+      'Occultiste': ['courantes'],
+      'Magicien': <String>[],
+    };
+
+    for (final entry in expectedByClassName.entries) {
+      test('${entry.key} -> ${entry.value}', () {
+        expect(
+          MulticlassProficiencies.multiclassWeaponProficiencyTokensFor(
+            entry.key,
+          ),
+          entry.value,
+        );
+      });
+    }
+
+    test('classe absente de la table -> liste vide, jamais une exception', () {
+      expect(
+        MulticlassProficiencies.multiclassWeaponProficiencyTokensFor(
+          'ClasseInconnue',
+        ),
+        isEmpty,
+      );
+    });
+  });
 }

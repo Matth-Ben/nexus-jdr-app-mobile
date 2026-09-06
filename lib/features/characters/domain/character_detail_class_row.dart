@@ -18,6 +18,8 @@ class CharacterDetailClassRow {
     required this.savingThrowProficiencies,
     required this.hitDie,
     this.hitDiceSpent = 0,
+    this.armorProficiencies = const [],
+    this.weaponProficiencies = const [],
   });
 
   /// Identifiant de la classe (`classes.id`, entier côté Supabase, gardé en
@@ -77,4 +79,20 @@ class CharacterDetailClassRow {
   /// `domain/saving_throw_calculator.dart` et la spec de la tâche qui a
   /// tranché ce point.
   final List<String> savingThrowProficiencies;
+
+  /// Tokens d'armures dont cette classe accorde la maîtrise
+  /// (`classes.armor_proficiencies`, jsonb — ex. `["légère", "intermédiaire",
+  /// "boucliers"]`), tels quels, prêts à l'affichage. Seuls ceux de la classe
+  /// [isPrimary] correspondent à un vrai départ dans la classe ; ceux d'une
+  /// classe secondaire (multiclassage) sont volontairement plus restreints
+  /// RAW 5e et ne sont donc PAS lus depuis ce champ pour une classe
+  /// secondaire — voir `domain/multiclass_proficiencies.dart`
+  /// (`multiclassArmorProficiencyTokensFor`) et
+  /// `data/character_detail_row_mapper.dart` (fusion en une liste
+  /// dédupliquée pour l'onglet "Compétences", carte "MAÎTRISES D'ARMURES").
+  final List<String> armorProficiencies;
+
+  /// Même principe que [armorProficiencies], pour
+  /// `classes.weapon_proficiencies` (carte "MAÎTRISES D'ARMES").
+  final List<String> weaponProficiencies;
 }

@@ -4,10 +4,12 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/proficiency_bonus.dart';
 import '../../domain/skill_bonus_calculator.dart';
+import 'character_armor_proficiencies_card.dart';
 import 'character_class_features_card.dart';
 import 'character_languages_card.dart';
 import 'character_skills_card.dart';
 import 'character_tool_proficiencies_card.dart';
+import 'character_weapon_proficiencies_card.dart';
 import 'class_feature_action_sheet.dart';
 
 /// Contenu de l'onglet "Compétences" de la fiche personnage — voir
@@ -55,6 +57,16 @@ class CharacterSkillsTabBody extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
         ],
         CharacterSkillsCard(results: skillResults),
+        if (detail.armorProficiencyNames.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          CharacterArmorProficienciesCard(names: detail.armorProficiencyNames),
+        ],
+        if (detail.weaponProficiencyNames.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          CharacterWeaponProficienciesCard(
+            names: detail.weaponProficiencyNames,
+          ),
+        ],
         if (detail.toolProficiencyNames.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           CharacterToolProficienciesCard(names: detail.toolProficiencyNames),

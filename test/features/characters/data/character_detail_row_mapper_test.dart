@@ -124,6 +124,195 @@ void main() {
         isEmpty,
       );
     });
+
+    test('résout armor_proficiencies/weapon_proficiencies embarqués '
+        '(relation classes.armor_proficiencies/weapon_proficiencies)', () {
+      final row = _row(
+        characterClasses: [
+          {
+            'class_id': 5,
+            'level': 3,
+            'is_primary': true,
+            'classes': {
+              'armor_proficiencies': ['légère', 'intermédiaire', 'boucliers'],
+              'weapon_proficiencies': ['courantes', 'martiales'],
+            },
+          },
+        ],
+      );
+
+      final classes = CharacterDetailRowMapper.parseClasses(
+        row,
+        classNames: const {'5': 'Guerrier'},
+      );
+
+      expect(classes.first.armorProficiencies, [
+        'légère',
+        'intermédiaire',
+        'boucliers',
+      ]);
+      expect(classes.first.weaponProficiencies, ['courantes', 'martiales']);
+    });
+
+    test('armor_proficiencies/weapon_proficiencies absents/de type '
+        'inattendu replient sur une liste vide', () {
+      final row = _row(
+        characterClasses: const [
+          {'class_id': 5, 'level': 3, 'is_primary': true},
+        ],
+      );
+      final classes = CharacterDetailRowMapper.parseClasses(
+        row,
+        classNames: const {'5': 'Guerrier'},
+      );
+      expect(classes.first.armorProficiencies, isEmpty);
+      expect(classes.first.weaponProficiencies, isEmpty);
+    });
+  });
+
+  group('CharacterDetailRowMapper.mergeArmorProficiencyNames / '
+      'mergeWeaponProficiencyNames', () {
+    test('classe unique -> ses propres tokens, dans l\'ordre du tableau '
+        'source', () {
+      final classes = CharacterDetailRowMapper.parseClasses(
+        _row(
+          characterClasses: [
+            {
+              'class_id': 5,
+              'level': 3,
+              'is_primary': true,
+              'classes': {
+                'armor_proficiencies': ['légère', 'intermédiaire'],
+                'weapon_proficiencies': ['courantes', 'martiales'],
+              },
+            },
+          ],
+        ),
+        classNames: const {'5': 'Guerrier'},
+      );
+
+      expect(CharacterDetailRowMapper.mergeArmorProficiencyNames(classes), [
+        'légère',
+        'intermédiaire',
+      ]);
+      expect(CharacterDetailRowMapper.mergeWeaponProficiencyNames(classes), [
+        'courantes',
+        'martiales',
+      ]);
+    });
+
+    test('multiclasse : tokens de la classe primaire d\'abord, puis les '
+        'tokens de multiclassage des classes secondaires non déjà '
+        'présents (dédup par égalité de chaîne exacte)', () {
+      // Barde (primaire) : armor ['légère'], weapon [] (classe elle-même).
+      // Guerrier (secondaire) : multiclassage ajoute armor
+      // ['légère', 'intermédiaire', 'boucliers'] et weapon
+      // ['courantes', 'martiales'] — 'légère' déjà présent doit être
+      // dédupliqué, le reste ajouté dans l'ordre de la table.
+      final classes = CharacterDetailRowMapper.parseClasses(
+        _row(
+          characterClasses: [
+            {
+              'class_id': 1,
+              'level': 3,
+              'is_primary': true,
+              'classes': {
+                'armor_proficiencies': ['légère'],
+                'weapon_proficiencies': <String>[],
+              },
+            },
+            {
+              'class_id': 2,
+              'level': 2,
+              'is_primary': false,
+              'classes': {
+                'armor_proficiencies': ['légère'],
+                'weapon_proficiencies': ['courantes', 'martiales'],
+              },
+            },
+          ],
+        ),
+        classNames: const {'1': 'Barde', '2': 'Guerrier'},
+      );
+
+      expect(CharacterDetailRowMapper.mergeArmorProficiencyNames(classes), [
+        'légère',
+        'intermédiaire',
+        'boucliers',
+      ]);
+      expect(CharacterDetailRowMapper.mergeWeaponProficiencyNames(classes), [
+        'courantes',
+        'martiales',
+      ]);
+    });
+
+    test('3 classes : la primaire d\'abord, puis chaque secondaire ajoute '
+        'ses propres tokens de multiclassage non déjà présents (dédup '
+        'croisée entre 2 classes secondaires)', () {
+      // Occultiste (primaire) : armor ['légère'], weapon ['courantes'].
+      // Guerrier (secondaire 1) : multiclassage ajoute
+      // ['intermédiaire', 'boucliers'] (armor, 'légère' déjà présent) et
+      // ['martiales'] (weapon, 'courantes' déjà présent).
+      // Moine (secondaire 2) : multiclassage n'ajoute rien en armure
+      // (liste vide) et ajoute 'épées courtes' en arme ('courantes' déjà
+      // présent depuis la primaire).
+      final classes = CharacterDetailRowMapper.parseClasses(
+        _row(
+          characterClasses: [
+            {
+              'class_id': 1,
+              'level': 5,
+              'is_primary': true,
+              'classes': {
+                'armor_proficiencies': ['légère'],
+                'weapon_proficiencies': ['courantes'],
+              },
+            },
+            {
+              'class_id': 2,
+              'level': 2,
+              'is_primary': false,
+              'classes': {
+                'armor_proficiencies': ['légère', 'intermédiaire', 'lourde'],
+                'weapon_proficiencies': ['courantes', 'martiales'],
+              },
+            },
+            {
+              'class_id': 3,
+              'level': 1,
+              'is_primary': false,
+              'classes': {
+                'armor_proficiencies': <String>[],
+                'weapon_proficiencies': ['courantes', 'épées courtes'],
+              },
+            },
+          ],
+        ),
+        classNames: const {'1': 'Occultiste', '2': 'Guerrier', '3': 'Moine'},
+      );
+
+      expect(CharacterDetailRowMapper.mergeArmorProficiencyNames(classes), [
+        'légère',
+        'intermédiaire',
+        'boucliers',
+      ]);
+      expect(CharacterDetailRowMapper.mergeWeaponProficiencyNames(classes), [
+        'courantes',
+        'martiales',
+        'épées courtes',
+      ]);
+    });
+
+    test('liste vide si aucune classe', () {
+      expect(
+        CharacterDetailRowMapper.mergeArmorProficiencyNames(const []),
+        isEmpty,
+      );
+      expect(
+        CharacterDetailRowMapper.mergeWeaponProficiencyNames(const []),
+        isEmpty,
+      );
+    });
   });
 
   group('CharacterDetailRowMapper.parseAbilityScores', () {
@@ -285,6 +474,49 @@ void main() {
       );
       expect(detail.toolProficiencyNames, ['Outils de forgeron']);
       expect(detail.knownLanguageNames, ['Nain']);
+    });
+
+    test('armorProficiencyNames/weaponProficiencyNames sont calculés à '
+        'partir des classes embarquées (fusion multiclasse dédupliquée), '
+        'sans requête ni paramètre supplémentaire', () {
+      final row = _row(
+        characterClasses: [
+          {
+            'class_id': 1,
+            'level': 3,
+            'is_primary': true,
+            'classes': {
+              'armor_proficiencies': ['légère'],
+              'weapon_proficiencies': <String>[],
+            },
+          },
+          {
+            'class_id': 2,
+            'level': 2,
+            'is_primary': false,
+            'classes': {
+              'armor_proficiencies': ['légère'],
+              'weapon_proficiencies': ['courantes', 'martiales'],
+            },
+          },
+        ],
+      );
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {'1': 'Barde', '2': 'Guerrier'},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.armorProficiencyNames, [
+        'légère',
+        'intermédiaire',
+        'boucliers',
+      ]);
+      expect(detail.weaponProficiencyNames, ['courantes', 'martiales']);
     });
   });
 

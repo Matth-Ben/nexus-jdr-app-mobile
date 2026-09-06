@@ -701,7 +701,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             allies_text,
             features_text,
             treasure_text,
-            character_classes(class_id, level, is_primary, hit_dice_spent, classes(saving_throw_proficiencies, hit_die)),
+            character_classes(class_id, level, is_primary, hit_dice_spent, classes(saving_throw_proficiencies, hit_die, armor_proficiencies, weapon_proficiencies)),
             character_ability_scores(ability_id, score),
             character_skill_proficiencies(skill_id, proficiency),
             character_tool_proficiencies(tool_id, custom_text),

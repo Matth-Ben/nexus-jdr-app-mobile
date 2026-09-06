@@ -6,6 +6,7 @@ import '../domain/character_inventory_item.dart';
 import '../domain/character_skill_row.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
+import '../domain/multiclass_proficiencies.dart';
 
 /// Fonctions de mapping pures entre la ligne brute `characters` (avec ses
 /// relations imbriquées `character_classes`/`character_ability_scores`)
@@ -272,6 +273,77 @@ abstract final class CharacterDetailRowMapper {
     return raw.whereType<String>().toList();
   }
 
+  /// Parse `classes.armor_proficiencies` (jsonb, tokens FR prêts à
+  /// l'affichage, ex. `["légère", "intermédiaire", "boucliers"]`) embarqué
+  /// sous la clé `classes` d'une ligne `character_classes` — même modèle que
+  /// [parseSavingThrowProficiencies], `null`/type inattendu retombe sur une
+  /// liste vide plutôt que de crasher.
+  static List<String> parseArmorProficiencies(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList();
+  }
+
+  /// Même principe que [parseArmorProficiencies], pour
+  /// `classes.weapon_proficiencies`.
+  static List<String> parseWeaponProficiencies(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw.whereType<String>().toList();
+  }
+
+  /// Fusionne les maîtrises d'armures de toutes les classes du personnage
+  /// (multiclassage RAW 5e : jamais retirées une fois acquises) en une seule
+  /// liste dédupliquée, sans distinguer la classe d'origine — d'abord les
+  /// tokens propres de la classe primaire ([CharacterDetailClassRow.armorProficiencies],
+  /// dans l'ordre du tableau source), puis pour chaque classe secondaire
+  /// (dans l'ordre de [classes], c'est-à-dire l'ordre `character_classes`
+  /// renvoyé par PostgREST), les tokens que le multiclassage dans cette
+  /// classe ajoute en plus (`MulticlassProficiencies.multiclassArmorProficiencyTokensFor`),
+  /// uniquement s'ils ne sont pas déjà présents (dédoublonnage par égalité de
+  /// chaîne exacte). Liste vide si [classes] est vide.
+  static List<String> mergeArmorProficiencyNames(
+    List<CharacterDetailClassRow> classes,
+  ) => _mergeProficiencyNames(
+    classes,
+    primaryTokensOf: (row) => row.armorProficiencies,
+    multiclassTokensFor:
+        MulticlassProficiencies.multiclassArmorProficiencyTokensFor,
+  );
+
+  /// Même principe que [mergeArmorProficiencyNames], pour
+  /// [CharacterDetailClassRow.weaponProficiencies]/
+  /// `MulticlassProficiencies.multiclassWeaponProficiencyTokensFor`.
+  static List<String> mergeWeaponProficiencyNames(
+    List<CharacterDetailClassRow> classes,
+  ) => _mergeProficiencyNames(
+    classes,
+    primaryTokensOf: (row) => row.weaponProficiencies,
+    multiclassTokensFor:
+        MulticlassProficiencies.multiclassWeaponProficiencyTokensFor,
+  );
+
+  static List<String> _mergeProficiencyNames(
+    List<CharacterDetailClassRow> classes, {
+    required List<String> Function(CharacterDetailClassRow primary)
+    primaryTokensOf,
+    required List<String> Function(String className) multiclassTokensFor,
+  }) {
+    if (classes.isEmpty) return const [];
+    var primaryIndex = classes.indexWhere((row) => row.isPrimary);
+    if (primaryIndex == -1) primaryIndex = 0;
+
+    final merged = <String>[];
+    for (final token in primaryTokensOf(classes[primaryIndex])) {
+      if (!merged.contains(token)) merged.add(token);
+    }
+    for (var i = 0; i < classes.length; i++) {
+      if (i == primaryIndex) continue;
+      for (final token in multiclassTokensFor(classes[i].className)) {
+        if (!merged.contains(token)) merged.add(token);
+      }
+    }
+    return merged;
+  }
+
   /// Construit les [CharacterDetailClassRow] d'un personnage à partir de ses
   /// lignes `character_classes` brutes et des noms de classe déjà résolus.
   /// Une ligne sans `class_id` exploitable est ignorée plutôt que de faire
@@ -297,6 +369,12 @@ abstract final class CharacterDetailRowMapper {
           ),
           hitDie: (nestedClass?['hit_die'] as num?)?.toInt(),
           hitDiceSpent: (classRow['hit_dice_spent'] as num?)?.toInt() ?? 0,
+          armorProficiencies: parseArmorProficiencies(
+            nestedClass?['armor_proficiencies'],
+          ),
+          weaponProficiencies: parseWeaponProficiencies(
+            nestedClass?['weapon_proficiencies'],
+          ),
         ),
       );
     }
@@ -338,6 +416,14 @@ abstract final class CharacterDetailRowMapper {
   /// texte de l'onglet "Histoire" (`appearance_text`/`traits_text`/...), à
   /// l'inverse, sont de simples colonnes de `characters` : résolues
   /// directement ici, même règle que [xp]/[currentHp].
+  ///
+  /// `armorProficiencyNames`/`weaponProficiencyNames` (cartes "MAÎTRISES
+  /// D'ARMURES"/"MAÎTRISES D'ARMES") sont un cas à part : ni une simple
+  /// colonne de `characters`, ni une liste apportée par une requête
+  /// séparée de l'appelant — elles sont entièrement calculées ici à partir
+  /// de [parseClasses] (déjà embarqué via `character_classes(classes(...))`,
+  /// aucun accès réseau supplémentaire nécessaire), voir
+  /// [mergeArmorProficiencyNames]/[mergeWeaponProficiencyNames].
   static CharacterDetail toCharacterDetail(
     Map<String, dynamic> row, {
     required Map<String, String> raceNames,
@@ -358,6 +444,7 @@ abstract final class CharacterDetailRowMapper {
     final subraceId = row['subrace_id'];
     final backgroundId = row['background_id'];
     final alignmentId = row['alignment_id'];
+    final parsedClasses = parseClasses(row, classNames: classNames);
 
     return CharacterDetail(
       id: row['id'] as String,
@@ -374,7 +461,7 @@ abstract final class CharacterDetailRowMapper {
       alignmentName: alignmentId != null
           ? alignmentNames[alignmentId.toString()]
           : null,
-      classes: parseClasses(row, classNames: classNames),
+      classes: parsedClasses,
       xp: (row['xp'] as num?)?.toInt() ?? 0,
       currentHp: (row['current_hp'] as num?)?.toInt() ?? 0,
       maxHp: (row['max_hp'] as num?)?.toInt() ?? 0,
@@ -382,6 +469,8 @@ abstract final class CharacterDetailRowMapper {
       abilityScores: parseAbilityScores(row),
       skills: skills,
       classFeatures: classFeatures,
+      armorProficiencyNames: mergeArmorProficiencyNames(parsedClasses),
+      weaponProficiencyNames: mergeWeaponProficiencyNames(parsedClasses),
       toolProficiencyNames: toolProficiencyNames,
       knownLanguageNames: knownLanguageNames,
       spells: spells,
