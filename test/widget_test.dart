@@ -8,18 +8,20 @@
 // minimal (un simple `Scaffold` de test, sans dépendre d'un écran réel de
 // l'app), plutôt que d'initialiser Supabase pour de vrai.
 //
-// `characterWriteSyncCoordinatorProvider`/`characterCreationCatalogPreloaderProvider`
-// (`NexusJdrApp.build`) sont surchargés pour la même raison : leur provider
-// "réel" déclenche `start()` dès sa construction (tentative de synchro/
-// préchargement immédiate, voir leur doc de classe), qui lit à son tour
-// `supabaseClientProvider` -> `Supabase.instance.client`, non initialisé
-// ici. Les overrides ci-dessous construisent chaque coordinateur/préchargeur
-// sans jamais appeler `start()`, pour ne jamais déclencher cette lecture.
+// `characterWriteSyncCoordinatorProvider`/`characterCreationCatalogPreloaderProvider`/
+// `pushTokenRegistrarProvider` (`NexusJdrApp.build`) sont surchargés pour la
+// même raison : leur provider "réel" déclenche `start()` dès sa construction
+// (tentative de synchro/préchargement/enregistrement du jeton FCM immédiate,
+// voir leur doc de classe), qui lit à son tour `supabaseClientProvider` ->
+// `Supabase.instance.client`, non initialisé ici. Les overrides ci-dessous
+// construisent chaque coordinateur/préchargeur/registrar sans jamais appeler
+// `start()`, pour ne jamais déclencher cette lecture.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/notifications/push_token_registrar.dart';
 import 'package:personnages/core/router/app_router.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_catalog_preloader.dart';
 import 'package:personnages/features/characters/presentation/providers/character_write_sync_coordinator.dart';
@@ -49,6 +51,9 @@ void main() {
           ),
           characterCreationCatalogPreloaderProvider.overrideWith(
             (ref) => CharacterCreationCatalogPreloader(ref),
+          ),
+          pushTokenRegistrarProvider.overrideWith(
+            (ref) => PushTokenRegistrar(ref),
           ),
         ],
         child: const NexusJdrApp(),

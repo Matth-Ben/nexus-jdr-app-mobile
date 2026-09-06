@@ -102,7 +102,7 @@ class ProfileScreen extends ConsumerWidget {
                   MenuTile(
                     icon: Icons.notifications_none,
                     label: 'Notifications',
-                    onTap: () => _showComingSoon(context),
+                    onTap: () => context.push('/profile/notifications'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   MenuTile(
@@ -148,20 +148,6 @@ class ProfileScreen extends ConsumerWidget {
     } else {
       context.go('/');
     }
-  }
-
-  /// Tap sur "Notifications" — seul écran encore inexistant de cette liste
-  /// (spec direction-artistique de la tâche) : même texte exact que
-  /// `appearance_and_backstory_step_screen.dart::_showPortraitComingSoon`,
-  /// réutilisé mot pour mot plutôt qu'une nouvelle constante.
-  /// "Confidentialité et données" (incrément B, `ProfilePrivacyScreen`) puis
-  /// "Aide et support" (incrément C, `ProfileHelpScreen`) ne passent plus par
-  /// cette méthode — leurs propres tuiles "Politique de confidentialité"/
-  /// "FAQ / Centre d'aide"/"Mentions légales / CGU" réutilisent en revanche
-  /// ce même texte, indépendamment de cette méthode.
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Bientôt disponible')));
   }
 }
 

@@ -22,6 +22,7 @@ import '../../features/join_story/presentation/join_code_step_screen.dart';
 import '../../features/join_story/presentation/join_confirmation_step_screen.dart';
 import '../../features/profile/presentation/profile_edit_screen.dart';
 import '../../features/profile/presentation/profile_help_screen.dart';
+import '../../features/profile/presentation/profile_notifications_screen.dart';
 import '../../features/profile/presentation/profile_privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/xml_import/presentation/xml_import_review_screen.dart';
@@ -163,6 +164,15 @@ GoRouter appRouter(Ref ref) {
         // `ProfileHelpScreen`.
         path: '/profile/help',
         builder: (context, state) => const ProfileHelpScreen(),
+      ),
+      GoRoute(
+        // Sous-écran "Préférences de notifications" (`features/profile/`,
+        // chantier "Notifications" —
+        // `docs/cahier-des-charges/15-profil-parametres.md` section 3),
+        // poussé depuis la tuile "Notifications" de `ProfileScreen` — voir
+        // la doc de classe de `ProfileNotificationsScreen`.
+        path: '/profile/notifications',
+        builder: (context, state) => const ProfileNotificationsScreen(),
       ),
       GoRoute(
         path: '/characters/:id',

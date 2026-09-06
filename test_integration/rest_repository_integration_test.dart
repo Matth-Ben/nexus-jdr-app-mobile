@@ -187,6 +187,7 @@ void main() {
         // garantit qu'aucun emplacement de sorts n'est recalculé, sans
         // dépendre du statut lanceur réel de `longRestClassId` (résolue sur
         // un tout autre critère, voir `classIdByName` ci-dessus).
+        final beforeCall = DateTime.now().toUtc();
         await repository.applyRest(
           characterId: characterId,
           type: RestType.long,
@@ -195,11 +196,25 @@ void main() {
 
         final characterRow = await client
             .from('characters')
-            .select('current_hp, temporary_hp')
+            .select('current_hp, temporary_hp, last_long_rest_at')
             .eq('id', characterId)
             .single();
         expect(characterRow['current_hp'], 22);
         expect(characterRow['temporary_hp'], 0);
+        // `last_long_rest_at` (chantier "Notifications" —
+        // `docs/cahier-des-charges/15-profil-parametres.md` section 3) :
+        // horodatage écrit dans la même requête `UPDATE characters` que
+        // `current_hp`/`temporary_hp` ci-dessus, jamais un aller-retour
+        // réseau séparé — voir `character_repository.dart::applyRest`.
+        final lastLongRestAt = DateTime.parse(
+          characterRow['last_long_rest_at'] as String,
+        );
+        expect(
+          lastLongRestAt.isAfter(
+            beforeCall.subtract(const Duration(minutes: 1)),
+          ),
+          isTrue,
+        );
 
         // Aucune ligne character_spell_slots créée : `className` fictif
         // (voir plus haut), aucune classe lanceuse ne correspond, donc

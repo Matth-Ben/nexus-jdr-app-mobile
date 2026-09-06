@@ -423,7 +423,10 @@ abstract class CharacterRepository {
   /// `presentation/widgets/rest_sheet.dart`), voir [RestType] pour l'effet
   /// exact de chaque valeur :
   /// - [RestType.long] : `characters.current_hp = max_hp`,
-  ///   `characters.temporary_hp = 0` ; recalcule (upsert) tous les
+  ///   `characters.temporary_hp = 0`, `characters.last_long_rest_at = now()`
+  ///   (chantier "Notifications" —
+  ///   `docs/cahier-des-charges/15-profil-parametres.md` section 3, alimente
+  ///   le rappel de repos long côté backend) ; recalcule (upsert) tous les
   ///   `character_spell_slots` de la classe primaire pour son niveau actuel
   ///   (`slots_used` toujours remis à 0), même fonction de progression que
   ///   [applyLevelUp] ; réinitialise (upsert)
@@ -1812,7 +1815,17 @@ class SupabaseCharacterRepository implements CharacterRepository {
 
         await _client
             .from('characters')
-            .update({'current_hp': maxHp, 'temporary_hp': 0})
+            .update({
+              'current_hp': maxHp,
+              'temporary_hp': 0,
+              // `characters.last_long_rest_at` (chantier "Notifications" —
+              // `docs/cahier-des-charges/15-profil-parametres.md` section 3) :
+              // alimente le rappel de repos long côté backend
+              // (edge function/table `notification_preferences`, dépôt web).
+              // Même requête que `current_hp`/`temporary_hp` ci-dessus, jamais
+              // un aller-retour réseau séparé.
+              'last_long_rest_at': DateTime.now().toUtc().toIso8601String(),
+            })
             .eq('id', characterId)
             .eq('owner_id', ownerId);
       } else if (diceSpent > 0) {

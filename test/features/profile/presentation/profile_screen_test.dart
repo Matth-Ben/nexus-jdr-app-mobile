@@ -3,10 +3,10 @@
 // (fallback "Aventurier" quand `user_metadata['full_name']` est absent/vide),
 // bandeau "Compte lié à l'app Histoires", les 5 lignes de menu (navigation
 // vers `ProfileEditScreen` pour "Modifier le profil",
+// `ProfileNotificationsScreen` pour "Notifications",
 // `ProfilePrivacyScreen` pour "Confidentialité et données",
-// `ProfileHelpScreen` pour "Aide et support", `SnackBar` "Bientôt
-// disponible" pour "Notifications", seule tuile encore non implémentée),
-// bouton "Se déconnecter", pied de page version.
+// `ProfileHelpScreen` pour "Aide et support"), bouton "Se déconnecter", pied
+// de page version.
 //
 // `currentUserProvider`/`authRepositoryProvider` injectés via
 // `overrideWithValue`, jamais `Supabase.instance.client` — même stratégie que
@@ -23,11 +23,34 @@ import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
+import 'package:personnages/features/profile/data/notification_preferences_repository.dart';
+import 'package:personnages/features/profile/domain/notification_preferences.dart';
 import 'package:personnages/features/profile/presentation/profile_edit_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_help_screen.dart';
+import 'package:personnages/features/profile/presentation/profile_notifications_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_privacy_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_screen.dart';
+import 'package:personnages/features/profile/presentation/providers/notification_preferences_providers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Double minimal — seul `fetch` est exercé ici : cette suite ne fait que
+/// vérifier que "Notifications" pousse bien `ProfileNotificationsScreen`,
+/// jamais son contenu détaillé (couvert par
+/// `profile_notifications_screen_test.dart`).
+class _FakeNotificationPreferencesRepository
+    implements NotificationPreferencesRepository {
+  @override
+  Future<NotificationPreferences> fetch() async =>
+      const NotificationPreferences.defaults();
+
+  @override
+  Future<NotificationPreferences> update({
+    bool? pushEnabled,
+    bool? pushRestReminder,
+    bool? pushAccessRevoked,
+    bool? emailDigestEnabled,
+  }) async => const NotificationPreferences.defaults();
+}
 
 class _FakeAuthRepository implements AuthRepository {
   int signOutCallCount = 0;
@@ -119,6 +142,9 @@ void main() {
         connectivityCheckerProvider.overrideWithValue(
           _AlwaysOnlineConnectivityChecker(),
         ),
+        notificationPreferencesRepositoryProvider.overrideWithValue(
+          _FakeNotificationPreferencesRepository(),
+        ),
       ],
       child: MaterialApp.router(
         routerConfig: GoRouter(
@@ -150,6 +176,10 @@ void main() {
             GoRoute(
               path: '/profile/help',
               builder: (context, state) => const ProfileHelpScreen(),
+            ),
+            GoRoute(
+              path: '/profile/notifications',
+              builder: (context, state) => const ProfileNotificationsScreen(),
             ),
           ],
         ),
@@ -298,14 +328,18 @@ void main() {
     expect(find.text('SIGNALER UN BUG'), findsOneWidget);
   });
 
-  testWidgets('taper "Notifications" affiche le SnackBar "Bientôt '
-      'disponible"', (tester) async {
+  testWidgets('taper "Notifications" pousse `ProfileNotificationsScreen` '
+      '(`/profile/notifications`)', (tester) async {
     await pumpProfile(tester, user: _fakeUser());
 
     await tester.tap(find.text('Notifications'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Bientôt disponible'), findsOneWidget);
+    // `ProfileNotificationsScreen` (route `/profile/notifications`) :
+    // bandeau bois "NOTIFICATIONS", voir
+    // `profile_notifications_screen_test.dart` pour le détail de cet
+    // écran.
+    expect(find.text('NOTIFICATIONS'), findsOneWidget);
   });
 
   testWidgets(
