@@ -2404,6 +2404,246 @@ void main() {
     );
   });
 
+  group('étape classDecision : continuer une classe SECONDAIRE (personnage déjà '
+      'multiclassé) — lève la limite "toujours la primaire, jamais la '
+      'secondaire"', () {
+    testWidgets(
+      'personnage multiclassé (2 classes), catalogue de multiclassage vide '
+      ': une tuile "Continuer" par classe possédée (primaire incluse), la '
+      'primaire reste présélectionnée par défaut',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: const [
+            CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 4,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+            CharacterDetailClassRow(
+              classId: 6,
+              hitDie: 8,
+              className: 'Roublard',
+              level: 2,
+              isPrimary: false,
+              savingThrowProficiencies: [],
+            ),
+          ],
+        );
+        // Catalogue de classes vide (défaut de
+        // `_FakeCharacterCreationRepository`) : aucune option de
+        // multiclassage supplémentaire, seules les 2 tuiles "Continuer"
+        // (une par classe déjà possédée) sont attendues.
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/char-1/level-up?level=7');
+        await tester.pumpAndSettle();
+
+        expect(find.text(classDecisionInstruction), findsOneWidget);
+        expect(find.text('Continuer en Guerrier'), findsOneWidget);
+        expect(
+          find.text('Vous progressez dans votre voie actuelle (niveau 4 → 5).'),
+          findsOneWidget,
+        );
+        expect(find.text('Continuer en Roublard'), findsOneWidget);
+        expect(
+          find.text('Vous progressez dans votre voie actuelle (niveau 2 → 3).'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Se multiclasser'), findsNothing);
+
+        // Aucune tuile secondaire tapée : "Continuer" reste présélectionné
+        // sur la primaire (comportement historique, voir
+        // `_ensureClassDecisionSelected` côté écran).
+        await tester.tap(find.text('CONTINUER')); // classDecision -> annonce
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // annonce -> Points de vie
+        await tester.pumpAndSettle();
+
+        expect(find.text('Dé de vie de la classe : d10'), findsOneWidget);
+      },
+    );
+
+    testWidgets('choisir de continuer la classe secondaire fait progresser SON '
+        'niveau (pas celui de la primaire) : dé de vie de la bonne classe à '
+        "l'étape Points de vie, applyLevelUp reçoit le classId de la classe "
+        'secondaire ET isMulticlassing=false (continuer n\'est pas '
+        'multiclasser)', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: const [
+          CharacterDetailClassRow(
+            classId: 1,
+            hitDie: 10,
+            className: 'Guerrier',
+            level: 4,
+            isPrimary: true,
+            savingThrowProficiencies: [],
+          ),
+          CharacterDetailClassRow(
+            classId: 6,
+            hitDie: 8,
+            className: 'Roublard',
+            level: 2,
+            isPrimary: false,
+            savingThrowProficiencies: [],
+          ),
+        ],
+      );
+      fakeRepository.applyResultToReturn = const LevelUpApplyResult(
+        newLevel: 7,
+        newMaxHp: 40,
+        newCurrentHp: 36,
+      );
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+      router.push('/characters/char-1/level-up?level=7');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Continuer en Roublard'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER')); // classDecision -> annonce
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER')); // annonce -> Points de vie
+      await tester.pumpAndSettle();
+
+      // Dé de vie du Roublard (d8), jamais celui du Guerrier (d10) : la
+      // classe réellement ciblée par `data` est bien la secondaire.
+      expect(find.text('Dé de vie de la classe : d8'), findsOneWidget);
+      // Pas de bandeau "Nouvelle classe" : continuer une classe déjà
+      // possédée n'est pas un multiclassage (`isMulticlassing` reste
+      // faux), contrairement à "Se multiclasser".
+      expect(find.textContaining('Nouvelle classe'), findsNothing);
+
+      await tester.tap(find.text('CONTINUER')); // Points de vie -> Aptitudes
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER')); // Aptitudes -> Récapitulatif
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER')); // applique
+      await tester.pumpAndSettle();
+
+      final applied = fakeRepository.applyLevelUpCalls.single;
+      expect(applied.classId, 6);
+      expect(applied.className, 'Roublard');
+      expect(applied.isMulticlassing, isFalse);
+    });
+
+    testWidgets(
+      '3 classes possédées : les 3 apparaissent comme options "Continuer"',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: const [
+            CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 3,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+            CharacterDetailClassRow(
+              classId: 6,
+              hitDie: 8,
+              className: 'Roublard',
+              level: 2,
+              isPrimary: false,
+              savingThrowProficiencies: [],
+            ),
+            CharacterDetailClassRow(
+              classId: 4,
+              hitDie: 6,
+              className: 'Magicien',
+              level: 1,
+              isPrimary: false,
+              savingThrowProficiencies: [],
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/char-1/level-up?level=7');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Continuer en Guerrier'), findsOneWidget);
+        expect(find.text('Continuer en Roublard'), findsOneWidget);
+        expect(find.text('Continuer en Magicien'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'classe secondaire choisie bloquée à SON niveau suivant : le message '
+      'de blocage cite le niveau et le nom de la classe secondaire, jamais '
+      'ceux de la primaire (même logique déjà établie pour la primaire, '
+      'généralisée ici — voir `domain/level_up_block_reason.dart`)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: const [
+            CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 4,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+            CharacterDetailClassRow(
+              classId: 6,
+              hitDie: 8,
+              className: 'Roublard',
+              level: 2,
+              isPrimary: false,
+              savingThrowProficiencies: [],
+            ),
+          ],
+        );
+        // Niveau 3 = niveau interne SUIVANT du Roublard (2 + 1) : un
+        // `choice_type` non résolu à ce niveau doit bloquer en citant le
+        // Roublard, jamais le Guerrier (qui resterait à son niveau 4 ce
+        // tour-ci, la primaire n'étant pas la classe choisie).
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(
+            choiceType: 'sort_domaine',
+            automaticFeatures: [],
+          ),
+        };
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/char-1/level-up?level=7');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Continuer en Roublard'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // classDecision -> annonce
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // annonce -> blocage
+        await tester.pumpAndSettle();
+
+        expect(
+          fakeRepository.fetchLevelUpLevelDataCalls,
+          [5, 3],
+          reason:
+              "premier appel (5) : previsualisation par defaut de la primaire "
+              "(Guerrier niveau 4 + 1) avant tout commit, pour le sous-titre "
+              "'bloque' eventuel de sa tuile -- voir '_continueOptionTile' "
+              "cote ecran. Second appel (3), apres avoir commis le Roublard : "
+              "le niveau interne interroge doit alors etre celui DANS le "
+              "Roublard (2 + 1 = 3), jamais un niveau du Guerrier.",
+        );
+        expect(find.text('Niveau 3 : choix requis'), findsOneWidget);
+        expect(
+          find.text('Roublard niveau 3 : Sort de domaine'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Guerrier niveau'), findsNothing);
+      },
+    );
+  });
+
   group('régression : continuer la classe primaire après un multiclassage', () {
     testWidgets(
       '"Continuer" sur la classe primaire interroge le vrai niveau interne '

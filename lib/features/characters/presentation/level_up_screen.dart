@@ -26,6 +26,7 @@ import '../domain/level_up_chain_resolver.dart';
 import '../domain/level_up_choice_kind.dart';
 import '../domain/level_up_choice_options.dart';
 import '../domain/level_up_choice_selection.dart';
+import '../domain/level_up_continue_option.dart';
 import '../domain/level_up_hit_points_calculator.dart';
 import '../domain/level_up_invocation_option.dart';
 import '../domain/level_up_multiclass_option.dart';
@@ -83,13 +84,29 @@ enum _LevelUpPhase {
 /// `domain/level_up_choice_kind.dart::LevelUpChoiceKind.abilityScoreImprovement`).
 const int _abilityScoreImprovementBudget = 2;
 
-/// Sentinel désignant "continuer la classe actuelle" dans
-/// [_LevelUpScreenState._classDecisionSelection] — un simple `Object()`
-/// plutôt que `null`, pour que "Continuer" soit présélectionné dès
-/// l'affichage de l'étape `classDecision` sans confondre cet état avec
-/// "aucune sélection encore faite" (spec visuelle direction-artistique
-/// section 1).
-final Object _continueCurrentClassSentinel = Object();
+/// Sélection courante de l'étape `classDecision`, portée par
+/// [_LevelUpScreenState._classDecisionSelection] — généralisation de l'ancien
+/// sentinel "continuer la classe actuelle" (qui supposait implicitement la
+/// primaire) : porte désormais le `classId` choisi ainsi que la liste dont il
+/// provient ([LevelUpStepData.continueOptions] ou
+/// [LevelUpStepData.multiclassOptions]), les deux listes pouvant en théorie
+/// contenir des `classId` numériquement égaux à des types Dart différents
+/// (voir `presentation/providers/level_up_provider.dart::_sameClassId`) —
+/// jamais le cas en pratique (une classe possédée ne peut pas aussi être une
+/// classe de multiclassage), mais porter le "type de liste" en plus du
+/// `classId` lève toute ambiguïté sans reposer sur cette hypothèse.
+///
+/// Volontairement une seule classe à constructeurs nommés (pas une hiérarchie
+/// scellée) : même précédent que `domain/level_up_choice_selection.dart`.
+class _ClassDecisionSelection {
+  const _ClassDecisionSelection.continueClass(this.classId)
+    : isMulticlass = false;
+
+  const _ClassDecisionSelection.multiclass(this.classId) : isMulticlass = true;
+
+  final Object classId;
+  final bool isMulticlass;
+}
 
 /// Flux "Montée de niveau"
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 6,
@@ -181,11 +198,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   bool _isApplying = false;
   String? _applyError;
 
-  /// État de l'étape `classDecision` (multiclassage). [_classDecisionSelection]
-  /// porte l'`Object` sélectionné : [_continueCurrentClassSentinel] (défaut,
-  /// "Continuer") ou le `classId` d'une [LevelUpMulticlassOption]. Reset dans
+  /// État de l'étape `classDecision` (multiclassage/choix de la classe
+  /// continuée). `null` tant que l'étape n'a pas encore été construite pour
+  /// ce niveau (voir [_ensureClassDecisionSelected], même précédent que
+  /// [_abilityAllocations]) ; ensuite toujours non nul, présélectionné sur
+  /// la classe primaire dans [LevelUpStepData.continueOptions]. Reset dans
   /// [_resetClassDecisionState].
-  Object? _classDecisionSelection;
+  _ClassDecisionSelection? _classDecisionSelection;
 
   /// `classes.id` de la classe choisie pour multiclasser CE niveau, figé au
   /// moment où le joueur quitte l'étape `classDecision` (bouton "Continuer")
@@ -193,9 +212,20 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// l'étape est affichée) : c'est cette valeur, pas la sélection en cours,
   /// qui est transmise à `levelUpStepDataProvider` (voir [build]) pour que
   /// toutes les étapes suivantes du niveau restent stables même si l'étape
-  /// `classDecision` n'est plus affichée. `null` = continuer la classe
-  /// actuelle (comportement historique).
+  /// `classDecision` n'est plus affichée. `null` = ne multiclasse pas ce
+  /// niveau (comportement historique, voir aussi
+  /// [_committedContinueClassId]).
   Object? _committedMulticlassClassId;
+
+  /// `classes.id` de la classe déjà possédée à CONTINUER ce niveau (primaire
+  /// ou secondaire), figé au moment où le joueur quitte l'étape
+  /// `classDecision` — même rôle que [_committedMulticlassClassId] côté
+  /// "continuer" plutôt que "multiclasser" (les deux ne sont jamais commis
+  /// simultanément, voir [_buildClassDecision]). `null` = continuer la classe
+  /// primaire (comportement historique) : reste `null` si le joueur n'a
+  /// jamais choisi explicitement une classe secondaire, y compris quand
+  /// l'étape `classDecision` est invisible (voir [_buildData]).
+  Object? _committedContinueClassId;
 
   /// État de la sélection de nouveaux sorts/cantrips connus (étape "Sorts",
   /// généralisée — voir [_SpellSelectionTab]) — même patron que
@@ -218,14 +248,17 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     _resetClassDecisionState();
   }
 
-  /// Remet à zéro l'état de l'étape `classDecision` — "Continuer" reste
-  /// présélectionné par défaut (voir [_continueCurrentClassSentinel]).
-  /// Appelée dans [initState] et dans [_continueFromSummary] (chaînage vers
-  /// un nouveau niveau : l'éligibilité au multiclassage doit être
-  /// réévaluée à chaque niveau, jamais héritée du niveau précédent).
+  /// Remet à zéro l'état de l'étape `classDecision` — [_classDecisionSelection]
+  /// remis à `null` (présélection sur la primaire recalculée au prochain
+  /// affichage de l'étape, voir [_ensureClassDecisionSelected]). Appelée dans
+  /// [initState] et dans [_continueFromSummary] (chaînage vers un nouveau
+  /// niveau : l'éligibilité au multiclassage/la liste des classes à
+  /// continuer doivent être réévaluées à chaque niveau, jamais héritées du
+  /// niveau précédent).
   void _resetClassDecisionState() {
-    _classDecisionSelection = _continueCurrentClassSentinel;
+    _classDecisionSelection = null;
     _committedMulticlassClassId = null;
+    _committedContinueClassId = null;
   }
 
   /// Remet à zéro la sélection de sorts/cantrips connus — même rationale que
@@ -488,6 +521,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         characterId: widget.characterId,
         targetLevel: _targetLevel,
         multiclassClassId: _committedMulticlassClassId,
+        continueClassId: _committedContinueClassId,
       ),
     );
 
@@ -527,6 +561,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         characterId: widget.characterId,
                         targetLevel: _targetLevel,
                         multiclassClassId: _committedMulticlassClassId,
+                        continueClassId: _committedContinueClassId,
                       ),
                     );
                   },
@@ -539,16 +574,28 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     );
   }
 
+  /// `true` si l'étape `classDecision` doit être affichée : au moins une
+  /// vraie décision à prendre, soit "continuer QUELLE classe" (personnage
+  /// multiclassé, `continueOptions.length > 1`), soit "continuer ou
+  /// multiclasser" (`multiclassOptions` non vide, comportement historique).
+  /// `false` dans l'immense majorité des cas (personnage mono-classé sans
+  /// classe éligible au multiclassage) : `continueOptions` contient alors
+  /// toujours exactement une entrée (la primaire), voir
+  /// `presentation/providers/level_up_provider.dart::LevelUpStepData.continueOptions`.
+  bool _hasClassDecision(LevelUpStepData data) =>
+      data.continueOptions.length > 1 || data.multiclassOptions.isNotEmpty;
+
   Widget _buildData(LevelUpStepData data) {
     // `classDecision` passe avant *tout le reste*, y compris `blockReason` :
     // un niveau où la classe actuelle est bloquée peut redevenir jouable si
     // le joueur choisit de multiclasser (la nouvelle classe démarre à son
-    // niveau 1, jamais bloqué pour cette raison) — spec visuelle
+    // niveau 1, jamais bloqué pour cette raison), ou en continuant une AUTRE
+    // classe déjà possédée non bloquée à ce niveau — spec visuelle
     // direction-artistique section 1. Invisible (mutation sans `setState`,
-    // même précédent que [_ensureRolled]) dès que
-    // `data.multiclassOptions` est vide, cas de loin le plus fréquent.
+    // même précédent que [_ensureRolled]) dès que [_hasClassDecision] est
+    // faux, cas de loin le plus fréquent.
     if (_phase == _LevelUpPhase.classDecision) {
-      if (data.multiclassOptions.isEmpty) {
+      if (!_hasClassDecision(data)) {
         _phase = _LevelUpPhase.announcement;
       } else {
         return _buildClassDecision(data);
@@ -576,13 +623,36 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     };
   }
 
-  /// Étape `classDecision` (multiclassage RAW) — affichée uniquement quand
-  /// `data.multiclassOptions` n'est pas vide (voir [_buildData]). Réutilise
-  /// [SelectableOptionTile] (choix exclusif), posé directement sur le fond
-  /// scène, sans carte parchemin englobante — spec visuelle
-  /// direction-artistique section 2. Pas de `stepLabel` (même statut que
-  /// l'annonce/le récapitulatif : cette étape n'est pas numérotée).
+  /// Présélectionne [_classDecisionSelection] sur la classe primaire de
+  /// [data.continueOptions] au premier affichage de l'étape `classDecision`
+  /// pour ce niveau — simple mutation de champ (pas de `setState`), même
+  /// précédent que [_ensureRolled]/[_ensureAbilityAllocationsInitialized] :
+  /// sûr tant qu'aucun rebuild n'est requis pour ce seul effet de bord.
+  /// `orElse` défensif (ne devrait jamais arriver : une des entrées de
+  /// `continueOptions` est toujours marquée `isPrimary`, voir
+  /// `domain/character_detail.dart::CharacterDetail.primaryClass`).
+  _ClassDecisionSelection _ensureClassDecisionSelected(LevelUpStepData data) {
+    return _classDecisionSelection ??= _ClassDecisionSelection.continueClass(
+      data.continueOptions
+          .firstWhere(
+            (option) => option.isPrimary,
+            orElse: () => data.continueOptions.first,
+          )
+          .classId,
+    );
+  }
+
+  /// Étape `classDecision` — affichée uniquement quand [_hasClassDecision]
+  /// est vrai (voir [_buildData]). Réutilise [SelectableOptionTile] (choix
+  /// exclusif), posé directement sur le fond scène, sans carte parchemin
+  /// englobante — spec visuelle direction-artistique section 2. Pas de
+  /// `stepLabel` (même statut que l'annonce/le récapitulatif : cette étape
+  /// n'est pas numérotée). Une tuile "Continuer en {classe}" par entrée de
+  /// [LevelUpStepData.continueOptions] (primaire incluse, plus jamais un cas
+  /// spécial câblé en dur), suivie d'une tuile "Se multiclasser en {classe}"
+  /// par entrée de [LevelUpStepData.multiclassOptions] (inchangé).
   Widget _buildClassDecision(LevelUpStepData data) {
+    _ensureClassDecisionSelected(data);
     return Column(
       children: [
         LevelUpHeader(
@@ -605,7 +675,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                _continueCurrentClassTile(data),
+                for (var i = 0; i < data.continueOptions.length; i++) ...[
+                  if (i > 0) const SizedBox(height: AppSpacing.sm),
+                  _continueOptionTile(data, data.continueOptions[i]),
+                ],
                 for (var i = 0; i < data.multiclassOptions.length; i++) ...[
                   const SizedBox(height: AppSpacing.sm),
                   _multiclassOptionTile(data.multiclassOptions[i], index: i),
@@ -616,13 +689,33 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         ),
         _StepFooter(
           onBack: _goBackToSheet,
-          // Toujours actif : "Continuer" est présélectionné par défaut (voir
-          // [_continueCurrentClassSentinel]), spec visuelle section 2.
+          // Toujours actif : la primaire est présélectionnée par défaut (voir
+          // [_ensureClassDecisionSelected]), spec visuelle section 2.
           onContinue: () => setState(() {
-            _committedMulticlassClassId =
-                _classDecisionSelection == _continueCurrentClassSentinel
-                ? null
-                : _classDecisionSelection;
+            final selection = _classDecisionSelection!;
+            if (selection.isMulticlass) {
+              _committedMulticlassClassId = selection.classId;
+              _committedContinueClassId = null;
+            } else {
+              _committedMulticlassClassId = null;
+              // `null` plutôt que `selection.classId` quand la primaire est
+              // choisie (comportement historique, voir la doc de
+              // [_committedContinueClassId]) : `data` reflète déjà "continuer
+              // la primaire" par défaut tant que rien n'a été commis, donc
+              // committer explicitement son `classId` ne changerait aucune
+              // donnée mais forcerait `levelUpStepDataProvider` à réévaluer
+              // sous une nouvelle clé (argument différent), et donc à
+              // reformuler une requête réseau identique pour rien —
+              // uniquement les classes SECONDAIRES ont besoin d'un
+              // `continueClassId` explicite.
+              final isPrimarySelection = data.continueOptions.any(
+                (option) =>
+                    option.isPrimary && option.classId == selection.classId,
+              );
+              _committedContinueClassId = isPrimarySelection
+                  ? null
+                  : selection.classId;
+            }
             _phase = _LevelUpPhase.announcement;
           }),
         ),
@@ -630,33 +723,49 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     );
   }
 
-  /// Tuile "Continuer en {classe actuelle}" de l'étape `classDecision`.
+  /// Une tuile "Continuer en {classe}" de l'étape `classDecision` — une par
+  /// entrée de [LevelUpStepData.continueOptions] (primaire incluse).
   ///
   /// **Amélioration recommandée par la direction artistique (appliquée)** :
-  /// si la classe actuelle est bloquée à ce niveau (`data.blockReason`, non
-  /// nul quand `multiclassClassId` vaut `null` — voir
-  /// `presentation/providers/level_up_provider.dart`), le sous-titre change
-  /// pour signaler le blocage à venir *avant* que le joueur ne valide
-  /// "Continuer" et ne tombe sur l'écran de blocage — pour que l'alternative
-  /// "multiclasser" soit visible en premier. Le badge passe alors en
-  /// `Icons.lock_outline`/`accent.brick` (adaptation : le composant partagé
-  /// [SelectableOptionTile] n'a pas de slot d'icône dédié à droite de la
-  /// ligne, contrairement au balisage suggéré par la spec visuelle — un
-  /// changement du badge [leading] déjà existant reste le compromis le plus
-  /// proche sans modifier ce composant partagé, à valider par le chef de
-  /// projet si un slot dédié est souhaité).
-  Widget _continueCurrentClassTile(LevelUpStepData data) {
-    final isBlocked = data.blockReason != null;
+  /// si la classe PRIMAIRE est bloquée à ce niveau (`data.blockReason`, non
+  /// nul quand le personnage n'est pas en train de multiclasser — voir
+  /// `presentation/providers/level_up_provider.dart` : `data` reflète
+  /// toujours "continuer la primaire" tant que ce niveau n'a pas encore été
+  /// commis, voir [_committedContinueClassId]), le sous-titre DE LA TUILE
+  /// PRIMAIRE change pour signaler le blocage à venir *avant* que le joueur
+  /// ne valide "Continuer" et ne tombe sur l'écran de blocage — pour que
+  /// l'alternative "multiclasser" (ou continuer une autre classe) soit
+  /// visible en premier. Le badge passe alors en `Icons.lock_outline`/
+  /// `accent.brick` (adaptation : le composant partagé [SelectableOptionTile]
+  /// n'a pas de slot d'icône dédié à droite de la ligne, contrairement au
+  /// balisage suggéré par la spec visuelle — un changement du badge
+  /// [leading] déjà existant reste le compromis le plus proche sans modifier
+  /// ce composant partagé, à valider par le chef de projet si un slot dédié
+  /// est souhaité). Aucune information de blocage n'est en revanche
+  /// disponible pour une tuile "Continuer" secondaire tant qu'elle n'a pas
+  /// été commise (le blocage d'une classe secondaire ne peut être vérifié
+  /// qu'après avoir explicitement choisi de la continuer, sur l'étape
+  /// suivante — voir [_buildBlocked]).
+  Widget _continueOptionTile(
+    LevelUpStepData data,
+    LevelUpContinueOption option,
+  ) {
+    final isBlocked =
+        option.isPrimary && !data.isMulticlassing && data.blockReason != null;
     return SelectableOptionTile(
-      title: 'Continuer en ${data.className}',
+      title: 'Continuer en ${option.className}',
       subtitle: isBlocked
           ? 'Ce niveau nécessite un choix pas encore disponible dans '
                 "l'app."
           : 'Vous progressez dans votre voie actuelle (niveau '
-                '${data.currentLevel} → ${data.currentLevel + 1}).',
-      selected: _classDecisionSelection == _continueCurrentClassSentinel,
+                '${option.currentLevel} → ${option.currentLevel + 1}).',
+      selected:
+          !_classDecisionSelection!.isMulticlass &&
+          _classDecisionSelection!.classId == option.classId,
       onTap: () => setState(
-        () => _classDecisionSelection = _continueCurrentClassSentinel,
+        () => _classDecisionSelection = _ClassDecisionSelection.continueClass(
+          option.classId,
+        ),
       ),
       leading: isBlocked
           ? const AccentIconBadge(
@@ -677,8 +786,14 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       subtitle:
           'Vous débutez au niveau 1 dans cette classe. Prérequis rempli : '
           '${option.satisfiedAbilityLabels.join(', ')}.',
-      selected: _classDecisionSelection == option.classId,
-      onTap: () => setState(() => _classDecisionSelection = option.classId),
+      selected:
+          _classDecisionSelection!.isMulticlass &&
+          _classDecisionSelection!.classId == option.classId,
+      onTap: () => setState(
+        () => _classDecisionSelection = _ClassDecisionSelection.multiclass(
+          option.classId,
+        ),
+      ),
       leading: AccentIconBadge(index: index, icon: Icons.call_split),
     );
   }

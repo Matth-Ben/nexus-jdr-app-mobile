@@ -8,6 +8,7 @@ import '../../domain/character_failure.dart';
 import '../../domain/invocations_known_progression.dart';
 import '../../domain/level_up_block_reason.dart';
 import '../../domain/level_up_choice_kind.dart';
+import '../../domain/level_up_continue_option.dart';
 import '../../domain/level_up_feat_option.dart';
 import '../../domain/level_up_invocation_option.dart';
 import '../../domain/level_up_multiclass_option.dart';
@@ -35,9 +36,11 @@ part 'level_up_provider.g.dart';
 /// ciblé, pour la classe qui progresse effectivement ce niveau) — même
 /// pattern combinateur que les `*StepData` de l'assistant de création.
 typedef LevelUpStepData = ({
-  /// Classe qui progresse CE niveau : la classe primaire si le joueur
-  /// continue (`isMulticlassing == false`), ou la nouvelle classe choisie à
-  /// l'étape `classDecision` sinon.
+  /// Classe qui progresse CE niveau : la classe possédée choisie à l'étape
+  /// `classDecision` (primaire par défaut, ou une classe secondaire si
+  /// [continueClassId] a été transmis — voir la doc de [levelUpStepData])
+  /// si le joueur continue (`isMulticlassing == false`), ou la nouvelle
+  /// classe choisie à cette même étape sinon.
   Object classId,
   String className,
   int hitDie,
@@ -98,8 +101,19 @@ typedef LevelUpStepData = ({
   /// uniquement la classe "continuée" par défaut).
   List<LevelUpMulticlassOption> multiclassOptions,
 
+  /// Classes déjà possédées par le personnage, éligibles comme option
+  /// "Continuer" à l'étape `classDecision` — une entrée PAR classe possédée,
+  /// primaire incluse (voir `domain/level_up_continue_option.dart`). Jamais
+  /// vide pour un personnage ayant au moins une classe (déjà garanti par la
+  /// vérification de [levelUpStepData] ci-dessous). Contrairement à
+  /// [multiclassOptions] (souvent vide), toujours non vide : c'est cette
+  /// liste qui pilote l'affichage des tuiles "Continuer" de la phase
+  /// `classDecision`, plus jamais une tuile unique câblée en dur sur la
+  /// primaire.
+  List<LevelUpContinueOption> continueOptions,
+
   /// `true` si ce niveau multiclasse dans une NOUVELLE classe plutôt que de
-  /// continuer la classe primaire — déterminé par
+  /// continuer une classe déjà possédée — déterminé par
   /// [multiclassClassId] passé à [levelUpStepData], pas par un champ dérivé
   /// des données de fiche.
   bool isMulticlassing,
@@ -229,20 +243,32 @@ String _abilityLabel(String abilityId) => switch (abilityId) {
 /// tentatives automatiques silencieuses (l'écran expose son propre bouton
 /// "Réessayer").
 ///
-/// [multiclassClassId] : `null` (défaut) pour continuer la classe primaire
-/// (comportement historique, avant le multiclassage) ; sinon, `classes.id`
-/// de la classe choisie à l'étape `classDecision` pour multiclasser — doit
-/// alors être un `classId` présent dans [LevelUpStepData.multiclassOptions]
-/// calculé pour le même personnage, sans quoi une [CharacterFailure] est
-/// levée (cas défensif : une classe qui a cessé d'être éligible entre
-/// l'affichage de `classDecision` et cet appel, ex. un score de
-/// caractéristique modifié entre-temps par un autre appareil).
+/// [multiclassClassId] : `null` (défaut) pour continuer une classe déjà
+/// possédée (voir [continueClassId]) ; sinon, `classes.id` de la classe
+/// choisie à l'étape `classDecision` pour multiclasser — doit alors être un
+/// `classId` présent dans [LevelUpStepData.multiclassOptions] calculé pour le
+/// même personnage, sans quoi une [CharacterFailure] est levée (cas
+/// défensif : une classe qui a cessé d'être éligible entre l'affichage de
+/// `classDecision` et cet appel, ex. un score de caractéristique modifié
+/// entre-temps par un autre appareil).
+///
+/// [continueClassId] : ignoré si [multiclassClassId] est non nul (branche
+/// multiclassage, inchangée). Sinon, `null` (défaut, comportement historique)
+/// pour continuer la classe primaire (`detail.primaryClass`) ; sinon,
+/// `classes.id` d'une classe déjà possédée (primaire OU secondaire — voir
+/// `domain/level_up_continue_option.dart`) pour la continuer À LA PLACE de la
+/// primaire, ex. un personnage Guerrier 4/Magicien 1 qui choisit de faire
+/// progresser son Magicien plutôt que son Guerrier à ce niveau. Doit alors
+/// être un `classId` présent dans `detail.classes` pour le même personnage,
+/// sans quoi une [CharacterFailure] est levée (même rationale défensive que
+/// [multiclassClassId] ci-dessus).
 @Riverpod(retry: _noRetry)
 Future<LevelUpStepData> levelUpStepData(
   Ref ref, {
   required String characterId,
   required int targetLevel,
   Object? multiclassClassId,
+  Object? continueClassId,
 }) async {
   final detail = await ref.watch(characterDetailProvider(characterId).future);
   final primaryClass = detail.primaryClass;
@@ -264,6 +290,20 @@ Future<LevelUpStepData> levelUpStepData(
         (id: option.id, name: option.name),
     ],
   );
+
+  // Une option "Continuer" par classe possédée, primaire incluse — voir la
+  // doc de [LevelUpStepData.continueOptions]. Jamais vide : `detail.classes`
+  // contient au moins la primaire (sans quoi l'exception ci-dessus aurait
+  // déjà été levée).
+  final continueOptions = [
+    for (final row in detail.classes)
+      LevelUpContinueOption(
+        classId: row.classId,
+        className: row.className,
+        currentLevel: row.level,
+        isPrimary: row.isPrimary,
+      ),
+  ];
 
   final isMulticlassing = multiclassClassId != null;
 
@@ -293,7 +333,22 @@ Future<LevelUpStepData> levelUpStepData(
     effectiveClassLevel = 0;
     effectiveTargetLevel = 1;
   } else {
-    final hitDie = primaryClass.hitDie;
+    // Classe CONTINUÉE (pas multiclassée) : la primaire par défaut, ou une
+    // classe déjà possédée précise si [continueClassId] a été transmis (voir
+    // la doc de [levelUpStepData]) — un personnage multiclassé peut ainsi
+    // faire progresser n'importe laquelle de ses classes, pas seulement la
+    // primaire.
+    final targetClass = continueClassId == null
+        ? primaryClass
+        : detail.classes.firstWhere(
+            (row) => _sameClassId(row.classId, continueClassId),
+            orElse: () => throw const CharacterFailure(
+              'Cette classe ne peut plus être continuée (elle a peut-être '
+              'été retirée entre-temps) : revenez en arrière et choisissez '
+              'à nouveau.',
+            ),
+          );
+    final hitDie = targetClass.hitDie;
     if (hitDie == null) {
       // Voir le commentaire de `CharacterDetailClassRow.hitDie` : ce champ
       // alimente une écriture irréversible (PV/character_level_hp), donc on
@@ -303,25 +358,26 @@ Future<LevelUpStepData> levelUpStepData(
         'de calculer la montée de niveau.',
       );
     }
-    effectiveClassId = primaryClass.classId;
-    effectiveClassName = primaryClass.className;
+    effectiveClassId = targetClass.classId;
+    effectiveClassName = targetClass.className;
     effectiveHitDie = hitDie;
-    // `primaryClass.level + 1`, jamais `targetLevel` (paramètre de ce
+    // `targetClass.level + 1`, jamais `targetLevel` (paramètre de ce
     // provider) : `targetLevel` est le niveau TOTAL du personnage + 1
     // (`_targetLevel` de l'écran = `currentTotalLevel + 1`), qui ne
-    // correspond au véritable niveau suivant de la classe primaire QUE tant
-    // qu'aucune classe secondaire n'existe. Dès qu'un multiclassage a eu
-    // lieu (une classe secondaire au niveau 1 — le seul cas possible avec ce
-    // chantier), `totalLevel = primaryClass.level + niveaux secondaires`,
-    // donc `targetLevel` diverge du vrai niveau suivant de la primaire dès
-    // la PROCHAINE montée de niveau — c'est le chemin de jeu normal après
-    // tout multiclassage, pas un cas limite. `character_repository.dart`
-    // (`applyLevelUp`) calcule lui-même `newClassLevel` depuis la vraie
-    // ligne DB (`primaryClass.level + 1`) : utiliser la même source ici
-    // garantit que les données affichées (blocage ASI, aptitudes,
+    // correspond au véritable niveau suivant de la classe continuée QUE tant
+    // qu'aucune autre classe n'existe. Dès qu'un multiclassage a eu lieu,
+    // `totalLevel = somme des niveaux de toutes les classes`, donc
+    // `targetLevel` diverge du vrai niveau suivant de CETTE classe (primaire
+    // ou secondaire) dès la PROCHAINE montée de niveau — c'est le chemin de
+    // jeu normal après tout multiclassage, pas un cas limite.
+    // `character_repository.dart` (`applyLevelUp`) calcule lui-même
+    // `newClassLevel` depuis la vraie ligne DB (`existingTargetRow['level'] +
+    // 1`, pour LA ligne dont le `class_id` correspond à `classId` — jamais
+    // câblée sur la primaire, voir sa documentation) : utiliser la même
+    // source ici garantit que les données affichées (blocage ASI, aptitudes,
     // sous-classes proposées) correspondent à ce qui sera réellement écrit.
-    effectiveClassLevel = primaryClass.level;
-    effectiveTargetLevel = primaryClass.level + 1;
+    effectiveClassLevel = targetClass.level;
+    effectiveTargetLevel = targetClass.level + 1;
   }
 
   final levelData = await ref
@@ -463,6 +519,7 @@ Future<LevelUpStepData> levelUpStepData(
     abilityScores: detail.abilityScores,
     spellSlotChanges: spellSlotChanges,
     multiclassOptions: multiclassOptions,
+    continueOptions: continueOptions,
     isMulticlassing: isMulticlassing,
     multiclassClassName: isMulticlassing ? effectiveClassName : null,
     multiclassProficiencies: isMulticlassing
