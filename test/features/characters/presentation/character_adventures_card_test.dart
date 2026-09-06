@@ -283,6 +283,31 @@ void main() {
     },
   );
 
+  testWidgets(
+    'affiche "MJ : {nom}" sous le titre quand gmDisplayName est renseigné, '
+    'absent sinon',
+    (tester) async {
+      const adventures = [
+        CharacterAdventure(
+          characterCampaignId: 'cc-1',
+          storyId: 'story-1',
+          storyTitle: 'La Malédiction du Nord',
+          gmDisplayName: 'Alarik',
+        ),
+        CharacterAdventure(
+          characterCampaignId: 'cc-2',
+          storyId: 'story-2',
+          storyTitle: 'Les Ombres de Faerûn',
+        ),
+      ];
+
+      await _pump(tester, _detail(adventures: adventures), fakeRepository);
+
+      expect(find.text('MJ : Alarik'), findsOneWidget);
+      expect(find.textContaining('MJ :'), findsOneWidget);
+    },
+  );
+
   testWidgets('se réduit à SizedBox.shrink (filet de sécurité) quand aucune '
       'aventure n\'est rattachée', (tester) async {
     await _pump(tester, _detail(), fakeRepository);

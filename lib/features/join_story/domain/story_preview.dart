@@ -7,9 +7,9 @@ part 'story_preview.freezed.dart';
 /// section 7.1) — avant tout engagement, aucun rattachement créé côté
 /// serveur à ce stade.
 ///
-/// Volontairement minimal (pas de nom de MJ) : décision produit actée par le
-/// chef de projet, voir la consigne de la tâche — aucune notion de profil
-/// utilisateur n'existe dans le schéma web actuel.
+/// `gmDisplayName` : nom d'affichage choisi par le MJ, renvoyé tel quel par
+/// `preview-story-invite` — `null` tant que le MJ n'a renseigné aucun nom
+/// (aucune UI web ne le permet encore à ce jour), jamais une chaîne vide.
 @freezed
 abstract class StoryPreview with _$StoryPreview {
   const factory StoryPreview({
@@ -21,5 +21,9 @@ abstract class StoryPreview with _$StoryPreview {
     /// (`data/story_invite_repository.dart`), même principe que
     /// `characters.portrait_url`.
     String? coverUrl,
+
+    /// Nom d'affichage du MJ, `null` si non renseigné — voir la
+    /// documentation de classe.
+    String? gmDisplayName,
   }) = _StoryPreview;
 }

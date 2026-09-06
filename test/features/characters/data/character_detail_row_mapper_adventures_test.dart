@@ -19,6 +19,7 @@ void main() {
             'stories': {
               'title': 'La Malédiction du Nord',
               'cover_image_path': 'a/b.png',
+              'gm_display_name': 'Alarik',
             },
           },
           {
@@ -27,6 +28,7 @@ void main() {
             'stories': {
               'title': 'Les Ombres de Faerûn',
               'cover_image_path': null,
+              'gm_display_name': null,
             },
           },
         ],
@@ -43,7 +45,9 @@ void main() {
       expect(adventures[0].storyId, 'story-1');
       expect(adventures[0].storyTitle, 'La Malédiction du Nord');
       expect(adventures[0].storyCoverUrl, 'https://cdn.test/a/b.png');
+      expect(adventures[0].gmDisplayName, 'Alarik');
       expect(adventures[1].storyCoverUrl, isNull);
+      expect(adventures[1].gmDisplayName, isNull);
     });
 
     test(

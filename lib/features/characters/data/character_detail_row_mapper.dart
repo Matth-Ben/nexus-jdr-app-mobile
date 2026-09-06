@@ -229,6 +229,7 @@ abstract final class CharacterDetailRowMapper {
           storyId: storyId,
           storyTitle: title,
           storyCoverUrl: resolveCoverUrl(story['cover_image_path'] as String?),
+          gmDisplayName: story['gm_display_name'] as String?,
         ),
       );
     }

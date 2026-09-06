@@ -7,14 +7,12 @@ part 'character_adventure.freezed.dart';
 /// — voir `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`
 /// section 7.2, `12-partage-et-groupes.md` section 5.
 ///
-/// **Pas de nom de MJ, alors que la section 7.2 du cahier des charges le
-/// liste explicitement** ("nom, couverture, nom du MJ") : même décision
-/// produit actée par le chef de projet que pour `StoryPreview`
-/// (`features/join_story/domain/story_preview.dart`, étape 2/4 "Confirmation"
-/// du flux "Rejoindre une histoire") — aucune notion de profil
-/// utilisateur/nom d'affichage n'existe dans le schéma web actuel, donc
-/// aucun nom de MJ à résoudre ici non plus, pour exactement la même raison.
-/// Volontaire, pas un oubli.
+/// [gmDisplayName] : nom d'affichage choisi par le MJ, résolu via la colonne
+/// calculée PostgREST `stories_gm_display_name` (fonction Postgres
+/// `security definer`, migration web
+/// `20260906000000_add_stories_gm_display_name.sql`) — `null` tant que le MJ
+/// n'a renseigné aucun nom (aucune UI web ne le permet encore à ce jour),
+/// jamais une chaîne vide.
 ///
 /// **Limite RLS connue (signalée au chef de projet, pas de son ressort)** :
 /// [storyTitle]/[storyCoverUrl] ne sont résolvables que si la policy select
@@ -34,5 +32,6 @@ abstract class CharacterAdventure with _$CharacterAdventure {
     required String storyId,
     required String storyTitle,
     String? storyCoverUrl,
+    String? gmDisplayName,
   }) = _CharacterAdventure;
 }

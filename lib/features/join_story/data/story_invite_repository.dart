@@ -55,6 +55,7 @@ class SupabaseStoryInviteRepository implements StoryInviteRepository {
       return StoryPreview(
         title: (data['title'] as String?) ?? '',
         coverUrl: _resolveCoverUrl(data['cover_image_path'] as String?),
+        gmDisplayName: data['gm_display_name'] as String?,
       );
     } on FunctionException catch (error) {
       throw mapStoryInviteError(error);

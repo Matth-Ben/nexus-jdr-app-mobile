@@ -127,6 +127,34 @@ void main() {
     },
   );
 
+  testWidgets(
+    'affiche "MJ : {nom}" sous le titre quand gmDisplayName est renseigné',
+    (tester) async {
+      fakeRepository.previewToReturn = const StoryPreview(
+        title: 'La Malédiction du Nord',
+        gmDisplayName: 'Alarik',
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+
+      expect(find.text('MJ : Alarik'), findsOneWidget);
+    },
+  );
+
+  testWidgets('n\'affiche aucune ligne "MJ" quand gmDisplayName est null', (
+    tester,
+  ) async {
+    fakeRepository.previewToReturn = const StoryPreview(
+      title: 'La Malédiction du Nord',
+    );
+
+    await tester.pumpWidget(_buildTestWidget(fakeRepository));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('MJ :'), findsNothing);
+  });
+
   testWidgets('code invalide : affiche le message dédié et "Modifier le code" '
       'repousse l\'étape 1/4 avec le code pré-rempli', (tester) async {
     fakeRepository.previewErrorToThrow = const StoryInviteFailure(

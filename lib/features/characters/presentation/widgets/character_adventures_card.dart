@@ -122,11 +122,10 @@ class CharacterAdventuresCard extends ConsumerWidget {
   }
 }
 
-/// Une ligne = portrait de substitution + nom de l'histoire + "Quitter" —
-/// **pas de "MJ : {nom}"**, volontairement : voir la documentation de classe
-/// de [CharacterAdventure] pour la décision produit actée (même rationale
-/// que `StoryPreview` de l'étape 2/4 "Confirmation" du flux "Rejoindre une
-/// histoire").
+/// Une ligne = portrait de substitution + nom de l'histoire (+ "MJ : {nom}"
+/// si renseigné) + "Quitter" — `gmDisplayName` `null` : la ligne "MJ" est
+/// simplement absente, voir la documentation de classe de
+/// [CharacterAdventure].
 class _AdventureRow extends StatelessWidget {
   const _AdventureRow({required this.adventure, required this.onLeave});
 
@@ -146,12 +145,26 @@ class _AdventureRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(
-              adventure.storyTitle,
-              style: AppTypography.body(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  adventure.storyTitle,
+                  style: AppTypography.body(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (adventure.gmDisplayName != null)
+                  Text(
+                    'MJ : ${adventure.gmDisplayName}',
+                    style: AppTypography.body(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+              ],
             ),
           ),
           SizedBox(

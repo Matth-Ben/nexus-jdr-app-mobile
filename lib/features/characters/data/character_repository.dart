@@ -666,7 +666,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
                 armor_properties(ac_base, ac_dex_bonus, strength_requirement, stealth_disadvantage)
               )
             ),
-            character_campaigns(id, story_id, stories(title, cover_image_path))
+            character_campaigns(id, story_id, stories(title, cover_image_path, gm_display_name:stories_gm_display_name))
           ''')
           .eq('id', characterId)
           .eq('owner_id', ownerId)

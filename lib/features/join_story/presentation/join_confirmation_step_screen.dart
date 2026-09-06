@@ -122,6 +122,17 @@ class JoinConfirmationStepScreen extends ConsumerWidget {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
+                    if (preview.gmDisplayName != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'MJ : ${preview.gmDisplayName}',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.body(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

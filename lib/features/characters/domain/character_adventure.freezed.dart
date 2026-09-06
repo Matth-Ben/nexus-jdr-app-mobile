@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$CharacterAdventure {
 
- String get characterCampaignId; String get storyId; String get storyTitle; String? get storyCoverUrl;
+ String get characterCampaignId; String get storyId; String get storyTitle; String? get storyCoverUrl; String? get gmDisplayName;
 /// Create a copy of CharacterAdventure
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +26,16 @@ $CharacterAdventureCopyWith<CharacterAdventure> get copyWith => _$CharacterAdven
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterAdventure&&(identical(other.characterCampaignId, characterCampaignId) || other.characterCampaignId == characterCampaignId)&&(identical(other.storyId, storyId) || other.storyId == storyId)&&(identical(other.storyTitle, storyTitle) || other.storyTitle == storyTitle)&&(identical(other.storyCoverUrl, storyCoverUrl) || other.storyCoverUrl == storyCoverUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterAdventure&&(identical(other.characterCampaignId, characterCampaignId) || other.characterCampaignId == characterCampaignId)&&(identical(other.storyId, storyId) || other.storyId == storyId)&&(identical(other.storyTitle, storyTitle) || other.storyTitle == storyTitle)&&(identical(other.storyCoverUrl, storyCoverUrl) || other.storyCoverUrl == storyCoverUrl)&&(identical(other.gmDisplayName, gmDisplayName) || other.gmDisplayName == gmDisplayName));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,characterCampaignId,storyId,storyTitle,storyCoverUrl);
+int get hashCode => Object.hash(runtimeType,characterCampaignId,storyId,storyTitle,storyCoverUrl,gmDisplayName);
 
 @override
 String toString() {
-  return 'CharacterAdventure(characterCampaignId: $characterCampaignId, storyId: $storyId, storyTitle: $storyTitle, storyCoverUrl: $storyCoverUrl)';
+  return 'CharacterAdventure(characterCampaignId: $characterCampaignId, storyId: $storyId, storyTitle: $storyTitle, storyCoverUrl: $storyCoverUrl, gmDisplayName: $gmDisplayName)';
 }
 
 
@@ -46,7 +46,7 @@ abstract mixin class $CharacterAdventureCopyWith<$Res>  {
   factory $CharacterAdventureCopyWith(CharacterAdventure value, $Res Function(CharacterAdventure) _then) = _$CharacterAdventureCopyWithImpl;
 @useResult
 $Res call({
- String characterCampaignId, String storyId, String storyTitle, String? storyCoverUrl
+ String characterCampaignId, String storyId, String storyTitle, String? storyCoverUrl, String? gmDisplayName
 });
 
 
@@ -63,12 +63,13 @@ class _$CharacterAdventureCopyWithImpl<$Res>
 
 /// Create a copy of CharacterAdventure
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? characterCampaignId = null,Object? storyId = null,Object? storyTitle = null,Object? storyCoverUrl = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? characterCampaignId = null,Object? storyId = null,Object? storyTitle = null,Object? storyCoverUrl = freezed,Object? gmDisplayName = freezed,}) {
   return _then(CharacterAdventure(
 characterCampaignId: null == characterCampaignId ? _self.characterCampaignId : characterCampaignId // ignore: cast_nullable_to_non_nullable
 as String,storyId: null == storyId ? _self.storyId : storyId // ignore: cast_nullable_to_non_nullable
 as String,storyTitle: null == storyTitle ? _self.storyTitle : storyTitle // ignore: cast_nullable_to_non_nullable
 as String,storyCoverUrl: freezed == storyCoverUrl ? _self.storyCoverUrl : storyCoverUrl // ignore: cast_nullable_to_non_nullable
+as String?,gmDisplayName: freezed == gmDisplayName ? _self.gmDisplayName : gmDisplayName // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -154,10 +155,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String characterCampaignId,  String storyId,  String storyTitle,  String? storyCoverUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String characterCampaignId,  String storyId,  String storyTitle,  String? storyCoverUrl,  String? gmDisplayName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CharacterAdventure() when $default != null:
-return $default(_that.characterCampaignId,_that.storyId,_that.storyTitle,_that.storyCoverUrl);case _:
+return $default(_that.characterCampaignId,_that.storyId,_that.storyTitle,_that.storyCoverUrl,_that.gmDisplayName);case _:
   return orElse();
 
 }
@@ -175,10 +176,10 @@ return $default(_that.characterCampaignId,_that.storyId,_that.storyTitle,_that.s
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String characterCampaignId,  String storyId,  String storyTitle,  String? storyCoverUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String characterCampaignId,  String storyId,  String storyTitle,  String? storyCoverUrl,  String? gmDisplayName)  $default,) {final _that = this;
 switch (_that) {
 case _CharacterAdventure():
-return $default(_that.characterCampaignId,_that.storyId,_that.storyTitle,_that.storyCoverUrl);case _:
+return $default(_that.characterCampaignId,_that.storyId,_that.storyTitle,_that.storyCoverUrl,_that.gmDisplayName);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -195,10 +196,10 @@ return $default(_that.characterCampaignId,_that.storyId,_that.storyTitle,_that.s
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String characterCampaignId,  String storyId,  String storyTitle,  String? storyCoverUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String characterCampaignId,  String storyId,  String storyTitle,  String? storyCoverUrl,  String? gmDisplayName)?  $default,) {final _that = this;
 switch (_that) {
 case _CharacterAdventure() when $default != null:
-return $default(_that.characterCampaignId,_that.storyId,_that.storyTitle,_that.storyCoverUrl);case _:
+return $default(_that.characterCampaignId,_that.storyId,_that.storyTitle,_that.storyCoverUrl,_that.gmDisplayName);case _:
   return null;
 
 }
@@ -210,13 +211,14 @@ return $default(_that.characterCampaignId,_that.storyId,_that.storyTitle,_that.s
 
 
 class _CharacterAdventure implements CharacterAdventure {
-  const _CharacterAdventure({required this.characterCampaignId, required this.storyId, required this.storyTitle, this.storyCoverUrl});
+  const _CharacterAdventure({required this.characterCampaignId, required this.storyId, required this.storyTitle, this.storyCoverUrl, this.gmDisplayName});
   
 
 @override final  String characterCampaignId;
 @override final  String storyId;
 @override final  String storyTitle;
 @override final  String? storyCoverUrl;
+@override final  String? gmDisplayName;
 
 /// Create a copy of CharacterAdventure
 /// with the given fields replaced by the non-null parameter values.
@@ -228,16 +230,16 @@ _$CharacterAdventureCopyWith<_CharacterAdventure> get copyWith => __$CharacterAd
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterAdventure&&(identical(other.characterCampaignId, characterCampaignId) || other.characterCampaignId == characterCampaignId)&&(identical(other.storyId, storyId) || other.storyId == storyId)&&(identical(other.storyTitle, storyTitle) || other.storyTitle == storyTitle)&&(identical(other.storyCoverUrl, storyCoverUrl) || other.storyCoverUrl == storyCoverUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterAdventure&&(identical(other.characterCampaignId, characterCampaignId) || other.characterCampaignId == characterCampaignId)&&(identical(other.storyId, storyId) || other.storyId == storyId)&&(identical(other.storyTitle, storyTitle) || other.storyTitle == storyTitle)&&(identical(other.storyCoverUrl, storyCoverUrl) || other.storyCoverUrl == storyCoverUrl)&&(identical(other.gmDisplayName, gmDisplayName) || other.gmDisplayName == gmDisplayName));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,characterCampaignId,storyId,storyTitle,storyCoverUrl);
+int get hashCode => Object.hash(runtimeType,characterCampaignId,storyId,storyTitle,storyCoverUrl,gmDisplayName);
 
 @override
 String toString() {
-  return 'CharacterAdventure(characterCampaignId: $characterCampaignId, storyId: $storyId, storyTitle: $storyTitle, storyCoverUrl: $storyCoverUrl)';
+  return 'CharacterAdventure(characterCampaignId: $characterCampaignId, storyId: $storyId, storyTitle: $storyTitle, storyCoverUrl: $storyCoverUrl, gmDisplayName: $gmDisplayName)';
 }
 
 
@@ -248,7 +250,7 @@ abstract mixin class _$CharacterAdventureCopyWith<$Res> implements $CharacterAdv
   factory _$CharacterAdventureCopyWith(_CharacterAdventure value, $Res Function(_CharacterAdventure) _then) = __$CharacterAdventureCopyWithImpl;
 @override @useResult
 $Res call({
- String characterCampaignId, String storyId, String storyTitle, String? storyCoverUrl
+ String characterCampaignId, String storyId, String storyTitle, String? storyCoverUrl, String? gmDisplayName
 });
 
 
@@ -265,12 +267,13 @@ class __$CharacterAdventureCopyWithImpl<$Res>
 
 /// Create a copy of CharacterAdventure
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? characterCampaignId = null,Object? storyId = null,Object? storyTitle = null,Object? storyCoverUrl = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? characterCampaignId = null,Object? storyId = null,Object? storyTitle = null,Object? storyCoverUrl = freezed,Object? gmDisplayName = freezed,}) {
   return _then(_CharacterAdventure(
 characterCampaignId: null == characterCampaignId ? _self.characterCampaignId : characterCampaignId // ignore: cast_nullable_to_non_nullable
 as String,storyId: null == storyId ? _self.storyId : storyId // ignore: cast_nullable_to_non_nullable
 as String,storyTitle: null == storyTitle ? _self.storyTitle : storyTitle // ignore: cast_nullable_to_non_nullable
 as String,storyCoverUrl: freezed == storyCoverUrl ? _self.storyCoverUrl : storyCoverUrl // ignore: cast_nullable_to_non_nullable
+as String?,gmDisplayName: freezed == gmDisplayName ? _self.gmDisplayName : gmDisplayName // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

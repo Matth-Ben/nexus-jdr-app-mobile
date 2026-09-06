@@ -20,7 +20,9 @@ mixin _$StoryPreview {
 /// function (`cover_image_path`), résolu côté dépôt
 /// (`data/story_invite_repository.dart`), même principe que
 /// `characters.portrait_url`.
- String? get coverUrl;
+ String? get coverUrl;/// Nom d'affichage du MJ, `null` si non renseigné — voir la
+/// documentation de classe.
+ String? get gmDisplayName;
 /// Create a copy of StoryPreview
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -31,16 +33,16 @@ $StoryPreviewCopyWith<StoryPreview> get copyWith => _$StoryPreviewCopyWithImpl<S
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is StoryPreview&&(identical(other.title, title) || other.title == title)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is StoryPreview&&(identical(other.title, title) || other.title == title)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.gmDisplayName, gmDisplayName) || other.gmDisplayName == gmDisplayName));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,title,coverUrl);
+int get hashCode => Object.hash(runtimeType,title,coverUrl,gmDisplayName);
 
 @override
 String toString() {
-  return 'StoryPreview(title: $title, coverUrl: $coverUrl)';
+  return 'StoryPreview(title: $title, coverUrl: $coverUrl, gmDisplayName: $gmDisplayName)';
 }
 
 
@@ -51,7 +53,7 @@ abstract mixin class $StoryPreviewCopyWith<$Res>  {
   factory $StoryPreviewCopyWith(StoryPreview value, $Res Function(StoryPreview) _then) = _$StoryPreviewCopyWithImpl;
 @useResult
 $Res call({
- String title, String? coverUrl
+ String title, String? coverUrl, String? gmDisplayName
 });
 
 
@@ -68,10 +70,11 @@ class _$StoryPreviewCopyWithImpl<$Res>
 
 /// Create a copy of StoryPreview
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? title = null,Object? coverUrl = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? title = null,Object? coverUrl = freezed,Object? gmDisplayName = freezed,}) {
   return _then(StoryPreview(
 title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,coverUrl: freezed == coverUrl ? _self.coverUrl : coverUrl // ignore: cast_nullable_to_non_nullable
+as String?,gmDisplayName: freezed == gmDisplayName ? _self.gmDisplayName : gmDisplayName // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -157,10 +160,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String title,  String? coverUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String title,  String? coverUrl,  String? gmDisplayName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _StoryPreview() when $default != null:
-return $default(_that.title,_that.coverUrl);case _:
+return $default(_that.title,_that.coverUrl,_that.gmDisplayName);case _:
   return orElse();
 
 }
@@ -178,10 +181,10 @@ return $default(_that.title,_that.coverUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String title,  String? coverUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String title,  String? coverUrl,  String? gmDisplayName)  $default,) {final _that = this;
 switch (_that) {
 case _StoryPreview():
-return $default(_that.title,_that.coverUrl);case _:
+return $default(_that.title,_that.coverUrl,_that.gmDisplayName);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +201,10 @@ return $default(_that.title,_that.coverUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String title,  String? coverUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String title,  String? coverUrl,  String? gmDisplayName)?  $default,) {final _that = this;
 switch (_that) {
 case _StoryPreview() when $default != null:
-return $default(_that.title,_that.coverUrl);case _:
+return $default(_that.title,_that.coverUrl,_that.gmDisplayName);case _:
   return null;
 
 }
@@ -213,7 +216,7 @@ return $default(_that.title,_that.coverUrl);case _:
 
 
 class _StoryPreview implements StoryPreview {
-  const _StoryPreview({required this.title, this.coverUrl});
+  const _StoryPreview({required this.title, this.coverUrl, this.gmDisplayName});
   
 
 @override final  String title;
@@ -223,6 +226,9 @@ class _StoryPreview implements StoryPreview {
 /// (`data/story_invite_repository.dart`), même principe que
 /// `characters.portrait_url`.
 @override final  String? coverUrl;
+/// Nom d'affichage du MJ, `null` si non renseigné — voir la
+/// documentation de classe.
+@override final  String? gmDisplayName;
 
 /// Create a copy of StoryPreview
 /// with the given fields replaced by the non-null parameter values.
@@ -234,16 +240,16 @@ _$StoryPreviewCopyWith<_StoryPreview> get copyWith => __$StoryPreviewCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _StoryPreview&&(identical(other.title, title) || other.title == title)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _StoryPreview&&(identical(other.title, title) || other.title == title)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.gmDisplayName, gmDisplayName) || other.gmDisplayName == gmDisplayName));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,title,coverUrl);
+int get hashCode => Object.hash(runtimeType,title,coverUrl,gmDisplayName);
 
 @override
 String toString() {
-  return 'StoryPreview(title: $title, coverUrl: $coverUrl)';
+  return 'StoryPreview(title: $title, coverUrl: $coverUrl, gmDisplayName: $gmDisplayName)';
 }
 
 
@@ -254,7 +260,7 @@ abstract mixin class _$StoryPreviewCopyWith<$Res> implements $StoryPreviewCopyWi
   factory _$StoryPreviewCopyWith(_StoryPreview value, $Res Function(_StoryPreview) _then) = __$StoryPreviewCopyWithImpl;
 @override @useResult
 $Res call({
- String title, String? coverUrl
+ String title, String? coverUrl, String? gmDisplayName
 });
 
 
@@ -271,10 +277,11 @@ class __$StoryPreviewCopyWithImpl<$Res>
 
 /// Create a copy of StoryPreview
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? title = null,Object? coverUrl = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? title = null,Object? coverUrl = freezed,Object? gmDisplayName = freezed,}) {
   return _then(_StoryPreview(
 title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,coverUrl: freezed == coverUrl ? _self.coverUrl : coverUrl // ignore: cast_nullable_to_non_nullable
+as String?,gmDisplayName: freezed == gmDisplayName ? _self.gmDisplayName : gmDisplayName // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
