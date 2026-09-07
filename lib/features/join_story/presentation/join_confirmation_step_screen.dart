@@ -133,6 +133,17 @@ class JoinConfirmationStepScreen extends ConsumerWidget {
                         ),
                       ),
                     ],
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'En rejoignant, ton personnage sera visible par le MJ '
+                      '(lecture seule). Tu pourras quitter l\'histoire à '
+                      'tout moment depuis sa fiche.',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.body(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
                   ],
                 ),
               ),
