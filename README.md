@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/IconAppStore@1x.png" alt="Logo Nexus JDR — Personnages" width="160">
+  <img src="./docs/assets/IconAppStore@1x.png" alt="Logo Nexus JDR — Personnages" width="160">
 </p>
 
 <h1 align="center">Nexus JDR — Personnages</h1>
