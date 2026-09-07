@@ -66,11 +66,17 @@ class PrimaryButton extends StatelessWidget {
                           color: AppColors.woodDark,
                         ),
                       )
-                    : Text(
-                        label.toUpperCase(),
-                        style: AppTypography.display(
-                          fontSize: 11,
-                          color: AppColors.woodDark,
+                    : Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                        ),
+                        child: Text(
+                          label.toUpperCase(),
+                          textAlign: TextAlign.center,
+                          style: AppTypography.display(
+                            fontSize: 11,
+                            color: AppColors.woodDark,
+                          ),
                         ),
                       ),
               ),

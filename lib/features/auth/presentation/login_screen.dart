@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/app_brand_badge.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../domain/auth_failure.dart';
@@ -125,11 +126,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const SizedBox(height: AppSpacing.lg),
-                  const Icon(
-                    Icons.shield_rounded,
-                    size: 56,
-                    color: AppColors.goldEnd,
-                  ),
+                  const AppBrandBadge(size: 72),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     'NEXUS JDR',
@@ -204,173 +201,201 @@ class _AuthCard extends StatelessWidget {
   final VoidCallback onSwitchMode;
   final VoidCallback onForgotPassword;
 
+  /// Petits "clous" décoratifs aux 4 coins de la carte (voir maquette
+  /// `docs/cahier-des-charges/09-maquettes-captures.md`, section "Écran de
+  /// connexion") — absents du design system écrit à ce jour, ajoutés ici en
+  /// suivant fidèlement la maquette plutôt qu'extraits en composant partagé
+  /// tant qu'on n'a pas confirmé ce motif sur d'autres écrans "parchemin".
+  static const _rivetInset = 10.0;
+
+  Widget _rivet() => Container(
+    width: 6,
+    height: 6,
+    decoration: const BoxDecoration(
+      color: AppColors.woodDark,
+      shape: BoxShape.circle,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.parchmentCard,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: AppColors.woodMedium,
-          width: AppBorders.cardEmphasis,
-        ),
-        // Halo net (pas de flou) autour de la bordure, conformément au
-        // token `border.card-emphasis` de la section 3 du design system :
-        // un `BoxShadow` sans `blurRadius` et avec `spreadRadius` égal à
-        // l'épaisseur voulue dessine un contour net plutôt qu'une ombre.
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.woodDark,
-            blurRadius: 0,
-            spreadRadius: AppBorders.cardEmphasisHalo,
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.parchmentCard,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: AppColors.woodMedium,
+              width: AppBorders.cardEmphasis,
+            ),
+            // Halo net (pas de flou) autour de la bordure, conformément au
+            // token `border.card-emphasis` de la section 3 du design system :
+            // un `BoxShadow` sans `blurRadius` et avec `spreadRadius` égal à
+            // l'épaisseur voulue dessine un contour net plutôt qu'une ombre.
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.woodDark,
+                blurRadius: 0,
+                spreadRadius: AppBorders.cardEmphasisHalo,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Form(
-        key: formKey,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              isSignUp ? 'CRÉER UN COMPTE' : 'ENTRER DANS LA TAVERNE',
-              textAlign: TextAlign.center,
-              style: AppTypography.display(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _FieldLabel('Adresse e-mail'),
-            const SizedBox(height: AppSpacing.xs),
-            TextFormField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              autocorrect: false,
-              decoration: const InputDecoration(hintText: 'nom@exemple.com'),
-              validator: AuthValidators.email,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _FieldLabel('Mot de passe'),
-            const SizedBox(height: AppSpacing.xs),
-            TextFormField(
-              controller: passwordController,
-              obscureText: true,
-              textInputAction: isSignUp
-                  ? TextInputAction.next
-                  : TextInputAction.done,
-              decoration: const InputDecoration(hintText: '••••••••'),
-              validator: AuthValidators.password,
-              onFieldSubmitted: isSignUp ? null : (_) => onSubmit(),
-            ),
-            if (!isSignUp) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Align(
-                alignment: Alignment.centerRight,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: isSubmitting ? null : onForgotPassword,
-                  child: Padding(
-                    // Élargit la zone de tap à au moins 44x44px (section 7
-                    // "Accessibilité" du design system) sans agrandir le
-                    // texte lui-même, même principe que le lien
-                    // "Créer un compte"/"Se connecter" ci-dessous.
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xs,
-                      vertical: 14,
-                    ),
-                    child: Text(
-                      'Mot de passe oublié ?',
-                      style: AppTypography.body(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.woodDark,
-                      ).copyWith(decoration: TextDecoration.underline),
-                    ),
+          child: Form(
+            key: formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  isSignUp ? 'CRÉER UN COMPTE' : 'ENTRER DANS LA TAVERNE',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.display(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
                   ),
                 ),
-              ),
-            ],
-            if (isSignUp) ...[
-              const SizedBox(height: AppSpacing.md),
-              _FieldLabel('Confirmer le mot de passe'),
-              const SizedBox(height: AppSpacing.xs),
-              TextFormField(
-                controller: confirmPasswordController,
-                obscureText: true,
-                textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(hintText: '••••••••'),
-                validator: (value) => AuthValidators.passwordConfirmation(
-                  value,
-                  passwordController.text,
-                ),
-                onFieldSubmitted: (_) => onSubmit(),
-              ),
-            ],
-            if (errorMessage != null) ...[
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                errorMessage!,
-                style: AppTypography.body(
-                  fontSize: 12,
-                  color: AppColors.accentBrick,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.md),
-            PrimaryButton(
-              label: isSignUp ? 'Créer le compte' : 'Entrer',
-              isLoading: isSubmitting,
-              onPressed: isSubmitting ? null : onSubmit,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Center(
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                // Centre verticalement le lien (dont la zone de tap est
-                // agrandie ci-dessous) par rapport au texte simple voisin,
-                // pour que la ligne reste visuellement cohérente malgré la
-                // différence de hauteur entre les deux éléments.
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    isSignUp ? 'Déjà un compte ? ' : 'Pas encore de compte ? ',
-                    style: AppTypography.body(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
-                    ),
+                const SizedBox(height: AppSpacing.md),
+                _FieldLabel('Adresse e-mail'),
+                const SizedBox(height: AppSpacing.xs),
+                TextFormField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    hintText: 'nom@exemple.com',
                   ),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: isSubmitting ? null : onSwitchMode,
-                    child: Padding(
-                      // Élargit la zone de tap à au moins 44x44px (section 7
-                      // "Accessibilité" du design system) sans agrandir le
-                      // texte lui-même.
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xs,
-                        vertical: 14,
-                      ),
-                      child: Text(
-                        isSignUp ? 'Se connecter' : 'Créer un compte',
-                        style: AppTypography.body(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.woodDark,
-                        ).copyWith(decoration: TextDecoration.underline),
+                  validator: AuthValidators.email,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _FieldLabel('Mot de passe'),
+                const SizedBox(height: AppSpacing.xs),
+                TextFormField(
+                  controller: passwordController,
+                  obscureText: true,
+                  textInputAction: isSignUp
+                      ? TextInputAction.next
+                      : TextInputAction.done,
+                  decoration: const InputDecoration(hintText: '••••••••'),
+                  validator: AuthValidators.password,
+                  onFieldSubmitted: isSignUp ? null : (_) => onSubmit(),
+                ),
+                if (!isSignUp) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: isSubmitting ? null : onForgotPassword,
+                      child: Padding(
+                        // Élargit la zone de tap à au moins 44x44px (section 7
+                        // "Accessibilité" du design system) sans agrandir le
+                        // texte lui-même, même principe que le lien
+                        // "Créer un compte"/"Se connecter" ci-dessous.
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xs,
+                          vertical: 14,
+                        ),
+                        child: Text(
+                          'Mot de passe oublié ?',
+                          style: AppTypography.body(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.goldEnd,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ],
-              ),
+                if (isSignUp) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _FieldLabel('Confirmer le mot de passe'),
+                  const SizedBox(height: AppSpacing.xs),
+                  TextFormField(
+                    controller: confirmPasswordController,
+                    obscureText: true,
+                    textInputAction: TextInputAction.done,
+                    decoration: const InputDecoration(hintText: '••••••••'),
+                    validator: (value) => AuthValidators.passwordConfirmation(
+                      value,
+                      passwordController.text,
+                    ),
+                    onFieldSubmitted: (_) => onSubmit(),
+                  ),
+                ],
+                if (errorMessage != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    errorMessage!,
+                    style: AppTypography.body(
+                      fontSize: 12,
+                      color: AppColors.accentBrick,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.md),
+                PrimaryButton(
+                  label: isSignUp ? 'Créer le compte' : 'Entrer',
+                  isLoading: isSubmitting,
+                  onPressed: isSubmitting ? null : onSubmit,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Center(
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    // Centre verticalement le lien (dont la zone de tap est
+                    // agrandie ci-dessous) par rapport au texte simple voisin,
+                    // pour que la ligne reste visuellement cohérente malgré la
+                    // différence de hauteur entre les deux éléments.
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        isSignUp
+                            ? 'Déjà un compte ? '
+                            : 'Pas encore de compte ? ',
+                        style: AppTypography.body(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: isSubmitting ? null : onSwitchMode,
+                        child: Padding(
+                          // Élargit la zone de tap à au moins 44x44px (section 7
+                          // "Accessibilité" du design system) sans agrandir le
+                          // texte lui-même.
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.xs,
+                            vertical: 14,
+                          ),
+                          child: Text(
+                            isSignUp ? 'Se connecter' : 'Créer un compte',
+                            style: AppTypography.body(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.goldEnd,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        Positioned(top: _rivetInset, left: _rivetInset, child: _rivet()),
+        Positioned(top: _rivetInset, right: _rivetInset, child: _rivet()),
+        Positioned(bottom: _rivetInset, left: _rivetInset, child: _rivet()),
+        Positioned(bottom: _rivetInset, right: _rivetInset, child: _rivet()),
+      ],
     );
   }
 }
