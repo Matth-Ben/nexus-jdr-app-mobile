@@ -67,6 +67,16 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// remarque sur [currencyGp] ci-dessous).
     @Default(false) bool isDead,
 
+    /// `characters.share_token` — jeton de partage en lecture seule
+    /// (`docs/cahier-des-charges/12-partage-et-groupes.md` section 1),
+    /// `null` si le partage n'a jamais été activé ou a été désactivé. Ne
+    /// jamais écrire directement : régénéré via
+    /// `CharacterSharingRepository.regenerateShareToken` (génération
+    /// côté serveur, `public.regenerate_character_share_token`), désactivé
+    /// via `disableShareToken` (`share_token = null`). Consommé côté lecteur
+    /// anonyme par `public.get_shared_character(p_token)`.
+    String? shareToken,
+
     /// Scores finaux par caractéristique (`character_ability_scores`), clé
     /// 'str'/'dex'/'con'/'int'/'wis'/'cha' — déjà le score final en base,
     /// aucun bonus racial à recalculer ici (voir

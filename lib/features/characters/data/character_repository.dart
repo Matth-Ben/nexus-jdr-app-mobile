@@ -709,6 +709,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             max_hp,
             temporary_hp,
             is_dead,
+            share_token,
             race_id,
             subrace_id,
             race_custom_text,

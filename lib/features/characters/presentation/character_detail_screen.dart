@@ -1519,18 +1519,37 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                         ),
                       ),
                     ),
-                    CharacterDetailTab.character => SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: IconButton(
-                        tooltip: 'Exporter en XML',
-                        onPressed: () =>
-                            exportCharacterAsXml(context, currentDetail),
-                        icon: const Icon(
-                          Icons.ios_share,
-                          color: AppColors.textOnWood,
+                    CharacterDetailTab.character => Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: IconButton(
+                            tooltip: 'Partager',
+                            onPressed: () => context.push(
+                              '/characters/${widget.characterId}/share',
+                            ),
+                            icon: const Icon(
+                              Icons.link,
+                              color: AppColors.textOnWood,
+                            ),
+                          ),
                         ),
-                      ),
+                        SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: IconButton(
+                            tooltip: 'Exporter en XML',
+                            onPressed: () =>
+                                exportCharacterAsXml(context, currentDetail),
+                            icon: const Icon(
+                              Icons.ios_share,
+                              color: AppColors.textOnWood,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     _ => null,
                   },

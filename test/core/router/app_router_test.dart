@@ -175,5 +175,22 @@ void main() {
         expect(backToOriginal, original);
       });
     });
+
+    group('/p/* (vue en lecture seule d\'un personnage partagé) : jamais '
+        'derrière le mur d\'authentification', () {
+      test('non connecté sur /p/{token} ne redirige pas vers /login', () {
+        expect(
+          computeAuthRedirect(isLoggedIn: false, location: '/p/abc123'),
+          isNull,
+        );
+      });
+
+      test('connecté sur /p/{token} ne redirige pas non plus', () {
+        expect(
+          computeAuthRedirect(isLoggedIn: true, location: '/p/abc123'),
+          isNull,
+        );
+      });
+    });
   });
 }

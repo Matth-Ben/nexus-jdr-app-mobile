@@ -14,6 +14,8 @@ import '../../features/character_creation/presentation/race_step_screen.dart';
 import '../../features/character_creation/presentation/skills_and_tools_step_screen.dart';
 import '../../features/character_creation/presentation/spells_step_screen.dart';
 import '../../features/character_creation/presentation/summary_step_screen.dart';
+import '../../features/character_sharing/presentation/character_share_screen.dart';
+import '../../features/character_sharing/presentation/shared_character_view_screen.dart';
 import '../../features/characters/presentation/character_detail_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
 import '../../features/characters/presentation/level_up_screen.dart';
@@ -197,6 +199,28 @@ GoRouter appRouter(Ref ref) {
         ),
       ),
       GoRoute(
+        // Écran "Partager le personnage" (gérer le lien de partage en
+        // lecture seule), voir `docs/cahier-des-charges/
+        // 12-partage-et-groupes.md` section 1 —
+        // `character_sharing/presentation/character_share_screen.dart`.
+        path: '/characters/:id/share',
+        builder: (context, state) => CharacterShareScreen(
+          characterId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        // Point d'entrée du deep link universel `nexus-jdr.app/p/{token}`
+        // (vue en lecture seule d'un personnage partagé) — même convention
+        // que `/join/:code` ci-dessous, mais **jamais** derrière le mur
+        // d'authentification (voir [computeAuthRedirect], qui exempte
+        // explicitement ce préfixe) : c'est tout l'intérêt de ce lien,
+        // consultable sans compte Nexus JDR.
+        path: '/p/:token',
+        builder: (context, state) => SharedCharacterViewScreen(
+          token: state.pathParameters['token']!,
+        ),
+      ),
+      GoRoute(
         // Flux "Rejoindre une histoire" (`features/join_story/`), 4 étapes
         // — voir `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`
         // section 7.1. Étape 1/4 : saisie du code, jamais atteinte via le
@@ -308,12 +332,20 @@ GoRouter appRouter(Ref ref) {
 /// déjà la destination par défaut après connexion, un paramètre `redirect`
 /// n'apporterait rien ici et polluerait inutilement l'URL du cas le plus
 /// courant (premier lancement de l'app, non connecté).
+///
+/// Cas particulier `/p/*` (vue en lecture seule d'un personnage partagé,
+/// voir `SharedCharacterViewScreen`) : **jamais** redirigé vers `/login`,
+/// connecté ou non — c'est tout l'intérêt de ce lien (`public
+/// .get_shared_character` côté dépôt web, conçu pour être consultable sans
+/// authentification), contrairement à `/join/*` (deep link "Rejoindre une
+/// histoire") qui exige bien un compte au bout du parcours.
 String? computeAuthRedirect({
   required bool isLoggedIn,
   required String location,
 }) {
   final uri = Uri.parse(location);
   final isOnLoginRoute = uri.path == '/login';
+  if (uri.path.startsWith('/p/')) return null;
 
   if (!isLoggedIn) {
     if (isOnLoginRoute) return null;
