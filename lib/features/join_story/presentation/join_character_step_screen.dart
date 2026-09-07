@@ -160,6 +160,19 @@ class _JoinCharacterStepScreenState
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         children: [
+          if (characters.isNotEmpty) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "Quel personnage rejoint l'aventure ?",
+                style: AppTypography.body(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
           if (_bannerMessage != null) ...[
             AlertBanner(message: _bannerMessage!),
             const SizedBox(height: AppSpacing.sm),
