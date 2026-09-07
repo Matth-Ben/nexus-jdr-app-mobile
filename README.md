@@ -59,7 +59,9 @@ dans `docs/cahier-des-charges/08-direction-artistique.md` et
 Ci-dessous quelques maquettes issues de `docs/cahier-des-charges/09-maquettes-captures.md`
 (rendu statique généré avec Claude Design pendant le cadrage — pas des
 captures de l'app réelle, mais la référence visuelle que l'implémentation
-suit). La liste complète des 19 écrans maquettés vit dans ce document.
+suit). La liste complète des 46 écrans maquettés (parcours de création,
+fiche personnage, profil, rejoindre une histoire, partage, groupes,
+lancement, états vides et erreurs) vit dans ce document.
 
 <table>
   <tr>
