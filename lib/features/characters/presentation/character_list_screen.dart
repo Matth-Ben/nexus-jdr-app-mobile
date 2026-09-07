@@ -10,6 +10,7 @@ import '../../../core/router/route_observer_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/dashed_border_painter.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
@@ -122,35 +123,25 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
               ),
               child: Column(
                 children: [
-                  PrimaryButton(
-                    label: '+ Créer',
-                    onPressed: () => _startCreation(context, ref),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
                   Row(
                     children: [
+                      Expanded(
+                        child: PrimaryButton(
+                          label: '+ Créer',
+                          onPressed: () => _startCreation(context, ref),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: SecondaryButton(
                           label: 'Importer XML',
                           onPressed: () => _startXmlImport(context),
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Tooltip(
-                          // Bouton compact ("Rejoindre" seul) : le libellé
-                          // complet reste disponible pour les lecteurs
-                          // d'écran (et en tooltip visuel à l'appui long) —
-                          // voir la spec de la tâche.
-                          message: 'Rejoindre une histoire',
-                          child: SecondaryButton(
-                            label: 'Rejoindre',
-                            onPressed: () => _startJoinStory(context),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _JoinStoryButton(onPressed: () => _startJoinStory(context)),
                 ],
               ),
             ),
@@ -240,6 +231,50 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
         content: Text(
           "Impossible de lire ce fichier. Vérifiez qu'il s'agit bien d'un "
           'export XML aidedd.org.',
+        ),
+      ),
+    );
+  }
+}
+
+/// Bouton "Rejoindre une histoire" pleine largeur, bordure pointillée (voir
+/// maquette `docs/cahier-des-charges/09-maquettes-captures.md`, section
+/// "Liste des personnages") — distinct des boutons `PrimaryButton`/
+/// `SecondaryButton` du design système (aucun n'a de variante pointillée),
+/// scopé à cet écran tant qu'aucun autre écran n'a besoin du même style.
+class _JoinStoryButton extends StatelessWidget {
+  const _JoinStoryButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: const DashedBorderPainter(color: AppColors.woodLight),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          onTap: onPressed,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.login, size: 16, color: AppColors.textOnWood),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  'REJOINDRE UNE HISTOIRE',
+                  style: AppTypography.display(
+                    fontSize: 11,
+                    color: AppColors.textOnWood,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -359,7 +394,6 @@ class _GroupsButtonState extends ConsumerState<_GroupsButton> {
           height: 44,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: AppColors.woodMedium,
             shape: BoxShape.circle,
             border: Border.all(
               color: AppColors.woodLight,
@@ -377,7 +411,7 @@ class _GroupsButtonState extends ConsumerState<_GroupsButton> {
                 )
               : const Icon(
                   Icons.groups_outlined,
-                  color: AppColors.textOnWood,
+                  color: AppColors.textOnWoodMuted,
                   size: 22,
                 ),
         ),
@@ -407,13 +441,9 @@ class _ProfileButton extends StatelessWidget {
           width: 44,
           height: 44,
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: AppColors.woodMedium,
+          decoration: const BoxDecoration(
+            color: AppColors.woodLight,
             shape: BoxShape.circle,
-            border: Border.all(
-              color: AppColors.woodLight,
-              width: AppBorders.card,
-            ),
           ),
           child: const Icon(
             Icons.person_outline,

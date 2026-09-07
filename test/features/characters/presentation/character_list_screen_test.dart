@@ -750,35 +750,18 @@ void main() {
   });
 
   testWidgets(
-    'le bouton "Rejoindre" navigue vers le flux "Rejoindre une histoire"',
+    'le bouton "Rejoindre une histoire" navigue vers le flux "Rejoindre une '
+    'histoire"',
     (WidgetTester tester) async {
       fakeCharacterRepository.charactersToReturn = const [];
 
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('REJOINDRE'));
+      await tester.tap(find.text('REJOINDRE UNE HISTOIRE'));
       await tester.pumpAndSettle();
 
       expect(find.text('Rejoindre une histoire — étape 1'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'le bouton "Rejoindre" expose le libellé accessible complet "Rejoindre '
-    'une histoire" malgré son texte visible raccourci ("Rejoindre") — voir '
-    'docs/cahier-des-charges/04-fonctionnalites-app-mobile.md section 7.1',
-    (WidgetTester tester) async {
-      fakeCharacterRepository.charactersToReturn = const [];
-      final handle = tester.ensureSemantics();
-
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
-
-      final node = tester.getSemantics(find.text('REJOINDRE'));
-      expect(node.tooltip, 'Rejoindre une histoire');
-
-      handle.dispose();
     },
   );
 
