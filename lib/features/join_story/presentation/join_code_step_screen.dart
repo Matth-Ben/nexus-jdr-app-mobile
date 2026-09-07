@@ -73,6 +73,56 @@ class _JoinCodeStepScreenState extends State<JoinCodeStepScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            Container(
+                              width: 72,
+                              height: 72,
+                              alignment: Alignment.center,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.fromBorderSide(
+                                  BorderSide(
+                                    color: AppColors.woodLight,
+                                    width: AppBorders.card,
+                                  ),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.assignment_turned_in_outlined,
+                                size: 32,
+                                color: AppColors.woodMedium,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              "As-tu un code d'invitation ?",
+                              textAlign: TextAlign.center,
+                              style: AppTypography.body(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              "Ton MJ te l'a partagé depuis l'app Histoires "
+                              'pour rejoindre sa campagne.',
+                              textAlign: TextAlign.center,
+                              style: AppTypography.body(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                "Code d'invitation",
+                                style: AppTypography.body(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
                             TextField(
                               controller: _controller,
                               autofocus: true,
