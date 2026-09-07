@@ -486,9 +486,10 @@ class _CharacterList extends StatelessWidget {
   }
 }
 
-/// État vide (aucun personnage) : non couvert par la maquette
-/// `01_liste_personnages.png`, à valider par la direction artistique — voir
-/// le rapport de la tâche qui a introduit cet écran.
+/// État vide (aucun personnage) — copie et icône alignées sur la maquette
+/// `docs/cahier-des-charges/09-maquettes-captures.md`, section "État vide —
+/// Liste de personnages" (absente du cahier des charges d'origine au moment
+/// où cet écran a été introduit, ajoutée depuis).
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
@@ -500,10 +501,21 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.shield_moon_outlined,
-              size: 56,
-              color: AppColors.goldEnd,
+            Container(
+              width: 88,
+              height: 88,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.fromBorderSide(
+                  BorderSide(color: AppColors.textOnWoodMuted, width: 1.5),
+                ),
+              ),
+              child: const Icon(
+                Icons.shield_moon_outlined,
+                size: 40,
+                color: AppColors.goldEnd,
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
@@ -516,8 +528,8 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Créez votre premier personnage pour commencer '
-              'l\'aventure.',
+              "Crée ton premier personnage, importe-le depuis aidedd.org, "
+              "ou rejoins l'histoire d'un ami pour commencer l'aventure.",
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textOnWoodMuted),
             ),
