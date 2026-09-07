@@ -10,6 +10,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
+import '../../xml_export/presentation/character_xml_export_action.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
@@ -1514,6 +1515,19 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                         ),
                         icon: const Icon(
                           Icons.edit_outlined,
+                          color: AppColors.textOnWood,
+                        ),
+                      ),
+                    ),
+                    CharacterDetailTab.character => SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: IconButton(
+                        tooltip: 'Exporter en XML',
+                        onPressed: () =>
+                            exportCharacterAsXml(context, currentDetail),
+                        icon: const Icon(
+                          Icons.ios_share,
                           color: AppColors.textOnWood,
                         ),
                       ),
