@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/app_brand_badge.dart';
 
 /// En-tête commun à tout le flux "Montée de niveau"
 /// (`presentation/level_up_screen.dart`) : icône bouclier, eyebrow, niveau
@@ -51,7 +52,7 @@ class LevelUpHeader extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.shield_outlined, size: 64, color: AppColors.goldEnd),
+          const AppBrandBadge(size: 64),
           const SizedBox(height: AppSpacing.sm),
           Text(
             eyebrow,
