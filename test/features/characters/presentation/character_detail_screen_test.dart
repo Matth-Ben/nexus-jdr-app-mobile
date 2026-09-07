@@ -889,6 +889,24 @@ void main() {
   ) async {
     fakeRepository.detailToReturn = _baseDetail.copyWith(
       appearanceText: 'Cheveux argentés.',
+      // `className` réaliste ("Magicien", forme canonique stockée en base —
+      // voir `character_detail_row_mapper.dart`, jamais une forme genrée
+      // comme "Magicienne" du reste de `_baseDetail`, pure fantaisie
+      // narrative de ce fixture partagé) : nécessaire ici pour que l'onglet
+      // "Sorts" retombe sur l'état vide générique "AUCUN SORT" attendu par ce
+      // test plutôt que sur l'état "cette classe ne lance pas de sorts" (voir
+      // `character_spells_tab_body.dart`, qui reconnaît les classes lanceuses
+      // par leur nom canonique).
+      classes: const [
+        CharacterDetailClassRow(
+          classId: 1,
+          hitDie: 8,
+          className: 'Magicien',
+          level: 5,
+          isPrimary: true,
+          savingThrowProficiencies: ['int', 'wis'],
+        ),
+      ],
     );
 
     await pumpDetail(tester);

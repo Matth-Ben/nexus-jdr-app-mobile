@@ -9,19 +9,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
+import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_spells_tab_body.dart';
+
+/// Classe de départ par défaut : lanceuse de sorts (Magicien), pour que les
+/// tests portant sur le contenu/l'état vide "générique" (`AUCUN SORT`)
+/// n'atterrissent jamais sur l'état "cette classe ne lance pas de sorts" par
+/// défaut — voir le test dédié à ce second état ci-dessous.
+const _defaultClasses = [
+  CharacterDetailClassRow(
+    classId: 1,
+    className: 'Magicien',
+    level: 1,
+    isPrimary: true,
+    savingThrowProficiencies: [],
+    hitDie: 6,
+  ),
+];
 
 CharacterDetail _detail({
   List<CharacterSpellEntry> spells = const [],
   List<CharacterSpellSlot> spellSlots = const [],
   CharacterSpellSlot? pactSpellSlot,
+  List<CharacterDetailClassRow> classes = _defaultClasses,
 }) {
   return CharacterDetail(
     id: '1',
     name: 'Test',
-    classes: const [],
+    classes: classes,
     xp: 0,
     currentHp: 10,
     maxHp: 10,
@@ -105,6 +122,32 @@ void main() {
     expect(find.text('SORTS'), findsNothing);
     expect(find.byIcon(Icons.auto_fix_high_outlined), findsOneWidget);
   });
+
+  testWidgets(
+    'affiche un état vide distinct pour une classe non lanceuse de sorts '
+    '(ex. Guerrier) — voir maquette "État vide — Sorts"',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          classes: const [
+            CharacterDetailClassRow(
+              classId: 2,
+              className: 'Guerrier',
+              level: 1,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+              hitDie: 10,
+            ),
+          ],
+        ),
+      );
+
+      expect(find.text('Cette classe ne lance pas de sorts'), findsOneWidget);
+      expect(find.textContaining('Test est Guerrier'), findsOneWidget);
+      expect(find.text('AUCUN SORT'), findsNothing);
+    },
+  );
 
   testWidgets('un sort est cliquable (chevron affiché) et ouvre directement le '
       'panneau "Infos" (plus de sheet intermédiaire "Infos"/"Lancer")', (
