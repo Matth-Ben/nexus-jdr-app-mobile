@@ -1139,4 +1139,188 @@ void main() {
       },
     );
   });
+
+  group('recherche/filtre (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section 2)', () {
+    const characters = [
+      CharacterSummary(
+        id: '1',
+        name: 'Halltesse Ambrelune',
+        className: 'Magicien',
+        level: 5,
+        xp: 7000,
+      ),
+      CharacterSummary(
+        id: '2',
+        name: 'Borgan Pierrefort',
+        className: 'Guerrier',
+        level: 3,
+        xp: 1200,
+      ),
+      CharacterSummary(
+        id: '3',
+        name: 'Sylvi Aubefeuille',
+        className: 'Roublard',
+        level: 1,
+        xp: 0,
+      ),
+    ];
+
+    testWidgets(
+      'taper dans le champ de recherche ne garde que les personnages dont '
+      'le nom correspond',
+      (WidgetTester tester) async {
+        fakeCharacterRepository.charactersToReturn = characters;
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Rechercher un personnage'),
+          'borgan',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Halltesse Ambrelune'), findsNothing);
+        expect(find.text('Borgan Pierrefort'), findsOneWidget);
+        expect(find.text('Sylvi Aubefeuille'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'aucun résultat pour la recherche : affiche l\'état dédié avec la '
+      'requête, "Réinitialiser" restaure la liste complète',
+      (WidgetTester tester) async {
+        fakeCharacterRepository.charactersToReturn = characters;
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Rechercher un personnage'),
+          'Zar',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('AUCUN RÉSULTAT POUR « ZAR »'), findsOneWidget);
+        expect(find.text('Halltesse Ambrelune'), findsNothing);
+
+        await tester.tap(find.text('RÉINITIALISER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+        expect(find.text('Borgan Pierrefort'), findsOneWidget);
+        expect(find.text('Sylvi Aubefeuille'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'icône "×" du champ efface la recherche et restaure la liste complète',
+      (WidgetTester tester) async {
+        fakeCharacterRepository.charactersToReturn = characters;
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Rechercher un personnage'),
+          'borgan',
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Halltesse Ambrelune'), findsNothing);
+
+        await tester.tap(find.byIcon(Icons.close));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+        expect(find.text('Borgan Pierrefort'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'icône filtre : ouvre la sheet "FILTRER PAR CLASSE", cocher une '
+      'classe puis "Appliquer" ne garde que les personnages de cette classe',
+      (WidgetTester tester) async {
+        fakeCharacterRepository.charactersToReturn = characters;
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.filter_list));
+        await tester.pumpAndSettle();
+
+        expect(find.text('FILTRER PAR CLASSE'), findsOneWidget);
+        expect(find.text('Magicien'), findsOneWidget);
+        expect(find.text('Guerrier'), findsOneWidget);
+        expect(find.text('Roublard'), findsOneWidget);
+
+        await tester.tap(find.text('Guerrier'));
+        await tester.tap(find.text('APPLIQUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Halltesse Ambrelune'), findsNothing);
+        expect(find.text('Borgan Pierrefort'), findsOneWidget);
+        expect(find.text('Sylvi Aubefeuille'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'sheet de filtre : "Réinitialiser" vide la sélection avant même de '
+      'fermer la sheet',
+      (WidgetTester tester) async {
+        fakeCharacterRepository.charactersToReturn = characters;
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.filter_list));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Guerrier'));
+        await tester.tap(find.text('APPLIQUER'));
+        await tester.pumpAndSettle();
+        expect(find.text('Halltesse Ambrelune'), findsNothing);
+
+        await tester.tap(find.byIcon(Icons.filter_list));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('RÉINITIALISER'));
+        await tester.tap(find.text('APPLIQUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+        expect(find.text('Borgan Pierrefort'), findsOneWidget);
+        expect(find.text('Sylvi Aubefeuille'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'recherche ET filtre de classe combinés (intersection)',
+      (WidgetTester tester) async {
+        fakeCharacterRepository.charactersToReturn = characters;
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.filter_list));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Roublard'));
+        await tester.tap(find.text('APPLIQUER'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Rechercher un personnage'),
+          'Sylvi',
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Sylvi Aubefeuille'), findsOneWidget);
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Rechercher un personnage'),
+          'Borgan',
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Borgan Pierrefort'), findsNothing);
+        expect(find.textContaining('AUCUN RÉSULTAT'), findsOneWidget);
+      },
+    );
+  });
 }

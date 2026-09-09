@@ -20,9 +20,11 @@ import '../../groups/domain/group_summary.dart';
 import '../../groups/presentation/providers/group_providers.dart';
 import '../../groups/presentation/widgets/group_entry_sheet.dart';
 import '../domain/character_failure.dart';
+import '../domain/character_list_filter.dart';
 import '../domain/character_summary.dart';
 import 'providers/character_providers.dart';
 import 'widgets/character_card.dart';
+import 'widgets/character_class_filter_sheet.dart';
 
 /// Écran d'accueil listant les personnages du joueur connecté
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 2,
@@ -58,6 +60,23 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   // un `StateError` à chaque fermeture de cet écran.
   RouteObserver<PageRoute<dynamic>>? _routeObserver;
 
+  /// Voir `character_list_filter.dart::CharacterListFilter.apply`. Un
+  /// `TextEditingController` (plutôt qu'un simple `String` d'état) : même
+  /// convention que `add_item_flow.dart` (recherche dans le catalogue
+  /// d'objets), seul autre champ de recherche existant dans ce dépôt.
+  final TextEditingController _searchController = TextEditingController();
+  Set<String> _selectedClassNames = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_handleSearchChanged);
+  }
+
+  void _handleSearchChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -72,7 +91,26 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   @override
   void dispose() {
     _routeObserver?.unsubscribe(this);
+    _searchController.removeListener(_handleSearchChanged);
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _resetSearch() {
+    setState(() {
+      _searchController.clear();
+      _selectedClassNames = {};
+    });
+  }
+
+  Future<void> _openClassFilterSheet(List<CharacterSummary> characters) async {
+    final result = await showCharacterClassFilterSheet(
+      context,
+      availableClassNames: CharacterListFilter.distinctClassNames(characters),
+      selectedClassNames: _selectedClassNames,
+    );
+    if (result == null || !mounted) return;
+    setState(() => _selectedClassNames = result);
   }
 
   /// Appelé par le [RouteObserver] quand une route poussée par-dessus cet
@@ -91,18 +129,45 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
       body: SafeArea(
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
                 AppSpacing.md,
                 AppSpacing.lg,
                 AppSpacing.md,
               ),
-              child: _Header(),
+              child: Column(
+                children: [
+                  const _Header(),
+                  const SizedBox(height: AppSpacing.sm),
+                  _SearchRow(
+                    controller: _searchController,
+                    filterActive: _selectedClassNames.isNotEmpty,
+                    // `null` (chargement/erreur) : bouton filtre sans effet,
+                    // rien à filtrer tant que la liste n'a pas résolu.
+                    onTapFilter: charactersAsync.value == null
+                        ? null
+                        : () => _openClassFilterSheet(charactersAsync.value!),
+                  ),
+                ],
+              ),
             ),
             Expanded(
               child: charactersAsync.when(
-                data: (characters) => _CharacterList(characters: characters),
+                data: (characters) {
+                  final visible = CharacterListFilter.apply(
+                    characters: characters,
+                    query: _searchController.text,
+                    classNames: _selectedClassNames,
+                  );
+                  if (characters.isNotEmpty && visible.isEmpty) {
+                    return _SearchEmptyState(
+                      query: _searchController.text.trim(),
+                      onReset: _resetSearch,
+                    );
+                  }
+                  return _CharacterList(characters: visible);
+                },
                 loading: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.goldEnd),
                 ),
@@ -308,6 +373,125 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// Barre de recherche + icône filtre, sous l'en-tête — voir
+/// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md` section 2 et la
+/// maquette "Liste des personnages" (`09-maquettes-captures.md`).
+///
+/// Champ de recherche `TextField` nu (pas de `TextFormField`/validation,
+/// aucun champ de ce dépôt n'a jamais besoin d'être validé pour une simple
+/// recherche) : l'habillage (fond `parchment.card`, bordure `wood.light`)
+/// vient entièrement de `AppTheme.light.inputDecorationTheme`, comme pour
+/// tous les autres champs de ce dépôt — aucun style en dur ici.
+class _SearchRow extends StatelessWidget {
+  const _SearchRow({
+    required this.controller,
+    required this.filterActive,
+    required this.onTapFilter,
+  });
+
+  final TextEditingController controller;
+
+  /// `true` si au moins une classe est actuellement filtrée — affiche un
+  /// point doré sur l'icône entonnoir (rappel visuel qu'un filtre est actif,
+  /// même si la sheet n'est pas ouverte).
+  final bool filterActive;
+
+  final VoidCallback? onTapFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            style: AppTypography.body(color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Rechercher un personnage',
+              prefixIcon: const Icon(
+                Icons.search,
+                color: AppColors.textMuted,
+              ),
+              suffixIcon: controller.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Effacer',
+                      icon: const Icon(
+                        Icons.close,
+                        color: AppColors.textMuted,
+                      ),
+                      onPressed: controller.clear,
+                    ),
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        _FilterButton(active: filterActive, onTap: onTapFilter),
+      ],
+    );
+  }
+}
+
+class _FilterButton extends StatelessWidget {
+  const _FilterButton({required this.active, required this.onTap});
+
+  final bool active;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.parchmentCard,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        onTap: onTap,
+        child: Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border.all(
+              color: AppColors.woodLight,
+              width: AppBorders.card,
+            ),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(Icons.filter_list, color: AppColors.textSecondary),
+              if (active)
+                const Positioned(
+                  top: 6,
+                  right: 6,
+                  child: _FilterActiveDot(),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterActiveDot extends StatelessWidget {
+  const _FilterActiveDot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: const BoxDecoration(
+        color: AppColors.goldEnd,
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+}
+
 /// Icône groupes ronde en haut à droite (`Icons.groups_outlined`), à côté du
 /// bouton profil — voir `docs/cahier-des-charges/12-partage-et-groupes.md`
 /// section 2 : point d'entrée du système de groupe, comportement au tap
@@ -482,6 +666,77 @@ class _CharacterList extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// État "recherche sans résultat" — distinct de [_EmptyState] (liste
+/// réellement vide côté serveur) : au moins un personnage existe, mais
+/// aucun ne correspond à la recherche/au filtre de classe actuellement actif
+/// (voir `character_list_screen.dart::build`). Copie exacte de
+/// `docs/cahier-des-charges/16-textes-a-rediger.md` section 5 pour le cas
+/// [query] non vide ; variante générique si seul un filtre de classe est
+/// actif (aucune copie dédiée à ce sous-cas dans le cahier des charges, qui
+/// ne documente que la recherche textuelle).
+class _SearchEmptyState extends StatelessWidget {
+  const _SearchEmptyState({required this.query, required this.onReset});
+
+  final String query;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.fromBorderSide(
+                  BorderSide(color: AppColors.textOnWoodMuted, width: 1.5),
+                ),
+              ),
+              child: const Icon(
+                Icons.search,
+                size: 40,
+                color: AppColors.goldEnd,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              query.isEmpty
+                  ? 'AUCUN RÉSULTAT'
+                  : 'AUCUN RÉSULTAT POUR « ${query.toUpperCase()} »',
+              textAlign: TextAlign.center,
+              style: AppTypography.display(
+                fontSize: 11,
+                color: AppColors.textOnWood,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              query.isEmpty
+                  ? "Aucun personnage ne correspond à ce filtre. Réinitialise "
+                        'pour retrouver tous tes personnages.'
+                  : "Vérifie l'orthographe, ou réinitialise la recherche pour "
+                        'retrouver tous tes personnages.',
+              textAlign: TextAlign.center,
+              style: AppTypography.body(color: AppColors.textOnWoodMuted),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 220),
+              child: SecondaryButton(label: 'Réinitialiser', onPressed: onReset),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

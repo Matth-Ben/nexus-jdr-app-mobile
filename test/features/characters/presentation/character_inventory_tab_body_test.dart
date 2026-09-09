@@ -2,13 +2,13 @@
 // `docs/cahier-des-charges/09-maquettes-captures.md`, section "Onglet
 // Inventaire".
 //
-// `CharacterInventoryTabBody` reste un `StatelessWidget` pur (pas de
-// Riverpod, pas de réseau) : les sheets qu'il ouvre le sont aussi, à
-// l'exception de la sheet "Depuis le catalogue" (`add_item_flow.dart`, qui a
-// besoin de `inventoryCatalogProvider`) — volontairement pas exercée ici
-// (elle a son test dédié), ce fichier se limite au chemin "Objet
-// personnalisé" pour rester sans `ProviderScope`, même approche que
-// `character_skills_tab_body_test.dart`.
+// `CharacterInventoryTabBody` n'a pas de dépendance Riverpod/réseau (l'état
+// interne de la bascule de filtre mis à part) : les sheets qu'il ouvre le
+// sont aussi, à l'exception de la sheet "Depuis le catalogue"
+// (`add_item_flow.dart`, qui a besoin de `inventoryCatalogProvider`) —
+// volontairement pas exercée ici (elle a son test dédié), ce fichier se
+// limite au chemin "Objet personnalisé" pour rester sans `ProviderScope`,
+// même approche que `character_skills_tab_body_test.dart`.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -388,6 +388,121 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Depuis le catalogue'), findsNothing);
+    });
+  });
+
+  group('filtre "Tout"/"Armes"/"Consomm." (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section 3)', () {
+    testWidgets('la bascule de filtre est absente d\'un inventaire vide', (
+      tester,
+    ) async {
+      await _pump(tester, _detail());
+
+      expect(find.text('TOUT'), findsNothing);
+      expect(find.text('ARMES'), findsNothing);
+    });
+
+    testWidgets(
+      '"Tout" (par défaut) affiche tous les objets, quelle que soit leur '
+      'catégorie',
+      (tester) async {
+        await _pump(
+          tester,
+          _detail(inventory: const [_dagger, _potion, _customItem]),
+        );
+
+        expect(find.text('Dague'), findsOneWidget);
+        expect(find.text('Potion de soins'), findsOneWidget);
+        expect(find.text('Petit sac de sable'), findsOneWidget);
+      },
+    );
+
+    testWidgets('"Armes" ne garde que les objets de catégorie "arme"', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _detail(inventory: const [_dagger, _potion, _customItem]),
+      );
+
+      await tester.tap(find.text('ARMES'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dague'), findsOneWidget);
+      expect(find.text('Potion de soins'), findsNothing);
+      expect(find.text('Petit sac de sable'), findsNothing);
+    });
+
+    testWidgets('"Consomm." ne garde que les objets consommables, quelle que '
+        'soit leur catégorie', (tester) async {
+      await _pump(
+        tester,
+        _detail(inventory: const [_dagger, _potion, _customItem]),
+      );
+
+      await tester.tap(find.text('CONSOMM.'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Potion de soins'), findsOneWidget);
+      expect(find.text('Dague'), findsNothing);
+      expect(find.text('Petit sac de sable'), findsNothing);
+    });
+
+    testWidgets(
+      'aucun objet de la catégorie filtrée : affiche un message dédié, '
+      'pas l\'état "INVENTAIRE VIDE" (l\'inventaire n\'est pas vide)',
+      (tester) async {
+        await _pump(tester, _detail(inventory: const [_customItem]));
+
+        await tester.tap(find.text('ARMES'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Aucun objet dans cette catégorie.'), findsOneWidget);
+        expect(find.text('INVENTAIRE VIDE'), findsNothing);
+      },
+    );
+
+    testWidgets('revenir sur "Tout" restaure la liste complète', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _detail(inventory: const [_dagger, _potion, _customItem]),
+      );
+
+      await tester.tap(find.text('ARMES'));
+      await tester.pumpAndSettle();
+      expect(find.text('Potion de soins'), findsNothing);
+
+      await tester.tap(find.text('TOUT'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dague'), findsOneWidget);
+      expect(find.text('Potion de soins'), findsOneWidget);
+      expect(find.text('Petit sac de sable'), findsOneWidget);
+    });
+
+    testWidgets('la tuile "Ajouter un objet" reste visible et fonctionnelle '
+        'même quand le filtre actif ne montre aucun objet', (tester) async {
+      final recorder = await _pump(
+        tester,
+        _detail(inventory: const [_customItem]),
+      );
+
+      await tester.tap(find.text('ARMES'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ajouter un objet'), findsOneWidget);
+
+      await tester.tap(find.text('Ajouter un objet'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Objet personnalisé'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'Corde');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
+      await tester.pumpAndSettle();
+
+      expect(recorder.addCustomItemCalls, [('Corde', 1)]);
     });
   });
 }

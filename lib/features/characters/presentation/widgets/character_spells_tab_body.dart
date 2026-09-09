@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/character_detail.dart';
+import '../../domain/spell_name_filter.dart';
 import '../../domain/spellcasting_class_names.dart';
 import '../../domain/spells_by_level_grouper.dart';
 import 'character_spells_section.dart';
@@ -16,7 +17,13 @@ import 'spell_action_sheet.dart';
 ///
 /// [onCastSpell]/[actionsDisabled] délégués tels quels à
 /// [CharacterSpellsSection] — voir sa documentation de classe.
-class CharacterSpellsTabBody extends StatelessWidget {
+///
+/// `StatefulWidget` (depuis l'ajout du champ de recherche, voir
+/// `domain/spell_name_filter.dart`) plutôt qu'un état soulevé chez
+/// l'appelant : cette recherche est un pur confort d'affichage local à
+/// l'onglet, sans rien à persister ni à partager avec le reste de la fiche —
+/// même choix que la recherche de `character_list_screen.dart`.
+class CharacterSpellsTabBody extends StatefulWidget {
   const CharacterSpellsTabBody({
     required this.detail,
     required this.onCastSpell,
@@ -29,9 +36,34 @@ class CharacterSpellsTabBody extends StatelessWidget {
   final bool actionsDisabled;
 
   @override
+  State<CharacterSpellsTabBody> createState() =>
+      _CharacterSpellsTabBodyState();
+}
+
+class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_handleSearchChanged);
+  }
+
+  void _handleSearchChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_handleSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final spellGroups = SpellsByLevelGrouper.group(detail.spells);
-    if (spellGroups.isEmpty) {
+    final detail = widget.detail;
+    if (detail.spells.isEmpty) {
       final isSpellcaster = detail.classes.any(
         (classRow) => spellcastingClassNames.contains(classRow.className),
       );
@@ -43,17 +75,91 @@ class CharacterSpellsTabBody extends StatelessWidget {
             );
     }
 
+    final filteredSpells = SpellNameFilter.apply(
+      spells: detail.spells,
+      query: _searchController.text,
+    );
+    final spellGroups = SpellsByLevelGrouper.group(filteredSpells);
+
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        CharacterSpellsSection(
-          groups: spellGroups,
-          spellSlots: detail.spellSlots,
-          pactSlot: detail.pactSpellSlot,
-          onCastSpell: onCastSpell,
-          actionsDisabled: actionsDisabled,
-        ),
+        _SpellSearchField(controller: _searchController),
+        const SizedBox(height: AppSpacing.md),
+        if (spellGroups.isEmpty)
+          _NoSearchMatchState(query: _searchController.text.trim())
+        else
+          CharacterSpellsSection(
+            groups: spellGroups,
+            spellSlots: detail.spellSlots,
+            pactSlot: detail.pactSpellSlot,
+            onCastSpell: widget.onCastSpell,
+            actionsDisabled: widget.actionsDisabled,
+          ),
       ],
+    );
+  }
+}
+
+/// Champ "Rechercher un sort" — voir la maquette "Fiche — Sorts"
+/// (`docs/cahier-des-charges/09-maquettes-captures.md`). Habillage entièrement
+/// porté par `AppTheme.light.inputDecorationTheme`, même convention que
+/// `character_list_screen.dart::_SearchRow`.
+class _SpellSearchField extends StatelessWidget {
+  const _SpellSearchField({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      style: AppTypography.body(color: AppColors.textPrimary),
+      decoration: InputDecoration(
+        hintText: 'Rechercher un sort',
+        prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+        suffixIcon: controller.text.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Effacer',
+                icon: const Icon(Icons.close, color: AppColors.textMuted),
+                onPressed: controller.clear,
+              ),
+      ),
+    );
+  }
+}
+
+/// État "recherche sans résultat" au sein de l'onglet — distinct de
+/// [_EmptySpellsState] (aucun sort du tout sur la fiche) : le personnage a
+/// des sorts, mais aucun ne correspond à la recherche en cours. Pas de
+/// bouton "Réinitialiser" dédié (contrairement à
+/// `character_list_screen.dart::_SearchEmptyState`) : effacer le champ
+/// au-dessus suffit et reste visible dans le même écran, sans navigation ni
+/// second geste nécessaire.
+class _NoSearchMatchState extends StatelessWidget {
+  const _NoSearchMatchState({required this.query});
+
+  final String query;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.search_off, size: 40, color: AppColors.textMuted),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Aucun sort pour « $query ».',
+              textAlign: TextAlign.center,
+              style: AppTypography.body(color: AppColors.textMuted),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

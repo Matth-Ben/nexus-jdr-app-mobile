@@ -2,9 +2,10 @@
 // l'onglet "Compétences" (voir `character_skills_tab_body_test.dart`), spec
 // validée par l'agent `direction-artistique`.
 //
-// `CharacterSpellsTabBody` est un `StatelessWidget` pur (pas de Riverpod, pas
-// de réseau) : même approche que `character_skills_tab_body_test.dart`, un
-// simple `MaterialApp(home: ...)` suffit à le monter.
+// `CharacterSpellsTabBody` n'a pas de dépendance Riverpod/réseau (l'état
+// interne du champ de recherche mis à part) : même approche que
+// `character_skills_tab_body_test.dart`, un simple `MaterialApp(home: ...)`
+// suffit à le monter.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -300,4 +301,93 @@ void main() {
       expect(find.text('LUMIÈRE'), findsNothing);
     },
   );
+
+  group('recherche (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section 3)', () {
+    const spells = [
+      CharacterSpellEntry(
+        id: 1,
+        name: 'Boule de feu',
+        level: 3,
+        school: 'Évocation',
+        status: 'connu',
+      ),
+      CharacterSpellEntry(
+        id: 2,
+        name: 'Bouclier',
+        level: 1,
+        school: 'Abjuration',
+        status: 'connu',
+      ),
+    ];
+
+    testWidgets('le champ de recherche est affiché dès qu\'au moins un sort '
+        'existe', (tester) async {
+      await _pump(tester, _detail(spells: spells));
+
+      expect(
+        find.widgetWithText(TextField, 'Rechercher un sort'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('le champ de recherche est absent des états vides (aucun '
+        'sort du tout)', (tester) async {
+      await _pump(tester, _detail());
+
+      expect(find.byType(TextField), findsNothing);
+    });
+
+    testWidgets(
+      'taper dans le champ ne garde que les sorts dont le nom correspond',
+      (tester) async {
+        await _pump(tester, _detail(spells: spells));
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Rechercher un sort'),
+          'boule',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Boule de feu'), findsOneWidget);
+        expect(find.text('Bouclier'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'aucun sort ne correspond à la recherche : affiche un message dédié, '
+      'sans afficher la section "SORTS"',
+      (tester) async {
+        await _pump(tester, _detail(spells: spells));
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Rechercher un sort'),
+          'zzzzz',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Aucun sort pour « zzzzz ».'), findsOneWidget);
+        expect(find.text('SORTS'), findsNothing);
+      },
+    );
+
+    testWidgets('icône "×" efface la recherche et restaure la liste complète', (
+      tester,
+    ) async {
+      await _pump(tester, _detail(spells: spells));
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Rechercher un sort'),
+        'boule',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Bouclier'), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Boule de feu'), findsOneWidget);
+      expect(find.text('Bouclier'), findsOneWidget);
+    });
+  });
 }
