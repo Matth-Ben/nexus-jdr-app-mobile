@@ -54,6 +54,10 @@ CharacterDetail mapSharedCharacterJson(Map<String, dynamic> json) {
     maxHp: _asInt(character['max_hp']),
     temporaryHp: _asInt(character['temporary_hp']),
     isDead: character['is_dead'] == true,
+    inspiration: character['inspiration'] == true,
+    speed: character['race_speed'] is num
+        ? (character['race_speed'] as num).toInt()
+        : null,
     abilityScores: _mapAbilityScores(json['ability_scores']),
     skills: _mapSkills(json['skill_proficiencies']),
     classFeatures: [

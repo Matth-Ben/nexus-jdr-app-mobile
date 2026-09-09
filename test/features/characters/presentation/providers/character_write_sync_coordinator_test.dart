@@ -323,6 +323,12 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) async => WriteOutcome.synced;
 
   @override
+  Future<WriteOutcome> setInspiration({
+    required String characterId,
+    required bool inspiration,
+  }) async => WriteOutcome.synced;
+
+  @override
   Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,

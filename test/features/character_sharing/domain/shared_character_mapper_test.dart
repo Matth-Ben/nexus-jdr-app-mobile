@@ -22,6 +22,8 @@ void main() {
           'max_hp': 30,
           'temporary_hp': 2,
           'is_dead': false,
+          'inspiration': true,
+          'race_speed': 9,
         },
         'classes': [
           {
@@ -53,6 +55,8 @@ void main() {
       expect(detail.maxHp, 30);
       expect(detail.temporaryHp, 2);
       expect(detail.isDead, false);
+      expect(detail.inspiration, true);
+      expect(detail.speed, 9);
       expect(detail.classes, hasLength(1));
       expect(detail.classes.single.className, 'Magicienne');
       expect(detail.classes.single.level, 5);
@@ -199,6 +203,8 @@ void main() {
       expect(detail.skills, hasLength(18));
       expect(detail.spells, isEmpty);
       expect(detail.inventory, isEmpty);
+      expect(detail.inspiration, isFalse);
+      expect(detail.speed, isNull);
     });
   });
 }

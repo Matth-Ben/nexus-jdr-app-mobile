@@ -148,6 +148,34 @@ void main() {
     },
   );
 
+  testWidgets(
+    'affiche la rangée Vitesse/Classe d\'Armure/Inspiration, tuile '
+    '"Inspiration" non tappable (lecture seule, aucun repository de '
+    'partage n\'expose de setInspiration)',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        speed: 9,
+        inspiration: true,
+      );
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('VITESSE'), findsOneWidget);
+      expect(find.text('9 m'), findsOneWidget);
+      expect(find.text("CLASSE D'ARMURE"), findsOneWidget);
+      expect(find.text('INSPIRATION'), findsOneWidget);
+      expect(find.text('✓'), findsOneWidget);
+
+      // Tap sans effet : pas d'InkWell/Material tappable pour cette tuile
+      // en lecture seule (`onTapInspiration` non fourni par cet écran).
+      await tester.tap(find.text('INSPIRATION'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(find.text('✓'), findsOneWidget);
+    },
+  );
+
   testWidgets('changer d\'onglet affiche le contenu de l\'onglet Compétences '
       'en lecture seule', (tester) async {
     fakeRepository.detailToReturn = _baseDetail;

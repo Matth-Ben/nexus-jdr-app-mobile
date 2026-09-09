@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'armor_class_calculator.dart';
 import 'character_adventure.dart';
 import 'character_class_feature.dart';
 import 'character_detail_class_row.dart';
@@ -73,6 +74,24 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// de l'onglet "Personnage" (`CharacterVitalsCard`) — voir
     /// `CharacterRepository.setArchived`.
     @Default(false) bool isArchived,
+
+    /// `characters.inspiration` — jeton d'Inspiration D&D 5e, accordé
+    /// manuellement par le MJ (`docs/cahier-des-charges/`
+    /// 11-fonctionnalites-a-ajouter.md, section "Onglet Personnage"). Même
+    /// principe que [isDead]/[isArchived] : un flag simple, sans
+    /// modélisation d'une transaction MJ↔joueur. Bascule via la pastille
+    /// "Inspiration" de l'onglet "Personnage"
+    /// (`CharacterStatPillsRow`) — voir `CharacterRepository.setInspiration`.
+    @Default(false) bool inspiration,
+
+    /// Vitesse de déplacement en mètres (`races.speed`), `null` si la race
+    /// n'a pas pu être résolue (race personnalisée/non renseignée) — voir
+    /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
+    /// "Onglet Personnage". Affichée telle quelle sans ajustement (armure
+    /// lourde trop forte pour la Force, traits raciaux conditionnels...),
+    /// même principe que [isDead] ("reste un simple affichage, sans
+    /// simulation des règles complètes").
+    int? speed,
 
     /// `characters.share_token` — jeton de partage en lecture seule
     /// (`docs/cahier-des-charges/12-partage-et-groupes.md` section 1),
@@ -265,4 +284,12 @@ abstract class CharacterDetail with _$CharacterDetail {
     if (maxHp <= 0) return 0;
     return (currentHp / maxHp).clamp(0, 1).toDouble();
   }
+
+  /// Classe d'Armure, calculée à la volée depuis [abilityScores]/[inventory]
+  /// — jamais stockée en base. Voir `ArmorClassCalculator` pour le détail
+  /// des règles couvertes.
+  int get armorClass => ArmorClassCalculator.compute(
+    abilityScores: abilityScores,
+    inventory: inventory,
+  );
 }

@@ -38,6 +38,7 @@ import 'package:personnages/core/widgets/portrait_frame.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_ability_score_grid.dart';
+import 'package:personnages/features/characters/presentation/widgets/character_stat_pills_row.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   CharacterDetail? detailToReturn;
@@ -100,6 +101,11 @@ class _FakeCharacterRepository implements CharacterRepository {
   WriteOutcome setArchivedOutcomeToReturn = WriteOutcome.synced;
   Object? setArchivedErrorToThrow;
 
+  bool? lastSetInspirationValue;
+  int setInspirationCallCount = 0;
+  WriteOutcome setInspirationOutcomeToReturn = WriteOutcome.synced;
+  Object? setInspirationErrorToThrow;
+
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
 
@@ -131,6 +137,17 @@ class _FakeCharacterRepository implements CharacterRepository {
     lastSetArchivedValue = isArchived;
     if (setArchivedErrorToThrow != null) throw setArchivedErrorToThrow!;
     return setArchivedOutcomeToReturn;
+  }
+
+  @override
+  Future<WriteOutcome> setInspiration({
+    required String characterId,
+    required bool inspiration,
+  }) async {
+    setInspirationCallCount++;
+    lastSetInspirationValue = inspiration;
+    if (setInspirationErrorToThrow != null) throw setInspirationErrorToThrow!;
+    return setInspirationOutcomeToReturn;
   }
 
   @override
@@ -923,6 +940,102 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Archiver ce personnage'), findsOneWidget);
+      },
+    );
+  });
+
+  group('Vitesse / Classe d\'Armure / Inspiration (CharacterStatPillsRow)', () {
+    testWidgets(
+      'affiche la vitesse résolue (speed), la CA calculée depuis Dex sans '
+      'armure équipée (10 + modificateur), et "—" pour une inspiration '
+      'inactive',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(speed: 9);
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        expect(find.text('VITESSE'), findsOneWidget);
+        expect(find.text('9 m'), findsOneWidget);
+        expect(find.text("CLASSE D'ARMURE"), findsOneWidget);
+        // dex 14 -> modificateur +2, aucune armure équipée -> 10 + 2 = 12.
+        // Recherche restreinte à la rangée de tuiles : "12" est aussi la
+        // valeur de la caractéristique CON de _baseDetail, affichée par la
+        // grille de caractéristiques plus bas sur le même onglet.
+        expect(
+          find.descendant(
+            of: find.byType(CharacterStatPillsRow),
+            matching: find.text('12'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('INSPIRATION'), findsOneWidget);
+        expect(find.text('—'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'speed non résolu (race personnalisée/non renseignée) affiche "—" '
+      'plutôt qu\'une fausse valeur',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail; // speed: null par défaut
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        expect(find.text('VITESSE'), findsOneWidget);
+        // Deux "—" attendus ici : vitesse ET inspiration inactive.
+        expect(find.text('—'), findsNWidgets(2));
+      },
+    );
+
+    testWidgets('inspiration active affiche "✓"', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(inspiration: true);
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('✓'), findsOneWidget);
+    });
+
+    testWidgets(
+      'taper la tuile "Inspiration" appelle setInspiration avec la valeur '
+      'inverse de l\'état courant',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('INSPIRATION'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.setInspirationCallCount, 1);
+        expect(fakeRepository.lastSetInspirationValue, isTrue);
+      },
+    );
+
+    testWidgets(
+      'setInspiration mis en file (mode hors-ligne) : même convention que '
+      'setDead/setArchived — jamais mis en file côté repository, message '
+      'sans promesse de synchronisation ultérieure',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.setInspirationOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('INSPIRATION'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            "Hors ligne : cette action n'a pas pu être enregistrée. "
+            'Réessayez une fois reconnecté.',
+          ),
+          findsOneWidget,
+        );
       },
     );
   });

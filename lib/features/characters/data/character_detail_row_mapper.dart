@@ -474,6 +474,7 @@ abstract final class CharacterDetailRowMapper {
     List<CharacterSpellSlot> spellSlots = const [],
     List<CharacterInventoryItem> inventory = const [],
     List<CharacterAdventure> adventures = const [],
+    int? speed,
   }) {
     final raceId = row['race_id'];
     final subraceId = row['subrace_id'];
@@ -503,6 +504,8 @@ abstract final class CharacterDetailRowMapper {
       temporaryHp: (row['temporary_hp'] as num?)?.toInt() ?? 0,
       isDead: (row['is_dead'] as bool?) ?? false,
       isArchived: (row['is_archived'] as bool?) ?? false,
+      inspiration: (row['inspiration'] as bool?) ?? false,
+      speed: speed,
       shareToken: row['share_token'] as String?,
       abilityScores: parseAbilityScores(row),
       skills: skills,

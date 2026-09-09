@@ -21,6 +21,7 @@ import '../../characters/presentation/widgets/character_inventory_tab_body.dart'
 import '../../characters/presentation/widgets/character_saving_throws_card.dart';
 import '../../characters/presentation/widgets/character_skills_tab_body.dart';
 import '../../characters/presentation/widgets/character_spells_tab_body.dart';
+import '../../characters/presentation/widgets/character_stat_pills_row.dart';
 import '../../characters/presentation/widgets/character_story_tab_body.dart';
 import 'providers/character_sharing_providers.dart';
 
@@ -184,6 +185,12 @@ class _CharacterTabBody extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         _SharedIdentityCard(detail: detail),
+        const SizedBox(height: AppSpacing.md),
+        CharacterStatPillsRow(
+          speed: detail.speed,
+          armorClass: detail.armorClass,
+          inspiration: detail.inspiration,
+        ),
         const SizedBox(height: AppSpacing.md),
         _SharedVitalsCard(detail: detail),
         const SizedBox(height: AppSpacing.md),

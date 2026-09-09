@@ -36,6 +36,7 @@ import 'widgets/character_detail_tab_bar.dart';
 import 'widgets/character_identity_card.dart';
 import 'widgets/character_inventory_tab_body.dart';
 import 'widgets/character_saving_throws_card.dart';
+import 'widgets/character_stat_pills_row.dart';
 import 'widgets/character_skills_tab_body.dart';
 import 'widgets/character_spells_tab_body.dart';
 import 'widgets/character_story_edit_sheet.dart';
@@ -1227,6 +1228,34 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Bascule `characters.inspiration` (tuile "Inspiration",
+  /// `CharacterStatPillsRow`) — même contrat que [_toggleDead]/
+  /// [_toggleArchived], voir `docs/cahier-des-charges/`
+  /// 11-fonctionnalites-a-ajouter.md, section "Onglet Personnage".
+  Future<void> _toggleInspiration(CharacterDetail detail) async {
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .setInspiration(
+            characterId: widget.characterId,
+            inspiration: !detail.inspiration,
+          );
+      if (!mounted) return;
+      if (outcome == WriteOutcome.queued) {
+        // Voir la documentation de `CharacterRepository.setInspiration` :
+        // même convention que [_toggleDead]/[_toggleArchived] (jamais mis en
+        // file).
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      ref.invalidate(characterDetailProvider(widget.characterId));
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar('Impossible de mettre à jour le statut. Réessayez.');
+    }
+  }
+
   /// Applique un repos (`RestSheet`) : écrit l'effet en base
   /// (`CharacterRepository.applyRest`), rafraîchit la fiche, puis affiche
   /// une confirmation — spec visuelle section 4 : contrairement à
@@ -1672,6 +1701,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
         onTapToggleDead: () => _toggleDead(detail),
         onTapToggleArchived: () => _toggleArchived(detail),
+        onTapToggleInspiration: () => _toggleInspiration(detail),
         onTapRest: () {
           final effective = _effectiveDetail(detail);
           showRestSheet(
@@ -1710,6 +1740,7 @@ class _CharacterTabBody extends StatelessWidget {
     required this.onTapLevelUp,
     required this.onTapToggleDead,
     required this.onTapToggleArchived,
+    required this.onTapToggleInspiration,
     required this.onTapRest,
     required this.hpActionsDisabled,
   });
@@ -1738,6 +1769,10 @@ class _CharacterTabBody extends StatelessWidget {
   /// Lien "Archiver ce personnage"/"Désarchiver" — voir
   /// `_CharacterDetailScreenState._toggleArchived`.
   final VoidCallback onTapToggleArchived;
+
+  /// Tuile "Inspiration" (`CharacterStatPillsRow`) — voir
+  /// `_CharacterDetailScreenState._toggleInspiration`.
+  final VoidCallback onTapToggleInspiration;
   final VoidCallback onTapRest;
 
   /// Voir `_CharacterDetailScreenState._isApplyingRest`.
@@ -1758,6 +1793,13 @@ class _CharacterTabBody extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
         CharacterIdentityCard(detail: detail, onTapPortrait: onTapPortrait),
+        const SizedBox(height: AppSpacing.md),
+        CharacterStatPillsRow(
+          speed: detail.speed,
+          armorClass: detail.armorClass,
+          inspiration: detail.inspiration,
+          onTapInspiration: onTapToggleInspiration,
+        ),
         const SizedBox(height: AppSpacing.md),
         CharacterVitalsCard(
           detail: vitalsDetail,

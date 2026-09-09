@@ -787,4 +787,72 @@ void main() {
       expect(detail.hair, '');
     });
   });
+
+  group('CharacterDetailRowMapper — is_dead/is_archived/inspiration/speed '
+      '(onglet Personnage)', () {
+    test('is_dead/is_archived/inspiration absents de la ligne -> false '
+        '(repli sûr)', () {
+      final row = _row();
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.isDead, isFalse);
+      expect(detail.isArchived, isFalse);
+      expect(detail.inspiration, isFalse);
+    });
+
+    test('is_dead/is_archived/inspiration à true sont bien remontés', () {
+      final row = _row();
+      row['is_dead'] = true;
+      row['is_archived'] = true;
+      row['inspiration'] = true;
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.isDead, isTrue);
+      expect(detail.isArchived, isTrue);
+      expect(detail.inspiration, isTrue);
+    });
+
+    test('speed n\'est jamais lu depuis la ligne characters (colonne '
+        'races.speed, résolue séparément par le dépôt) : toujours transmis '
+        'tel quel via le paramètre [speed]', () {
+      final row = _row();
+
+      final withSpeed = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+        speed: 9,
+      );
+      final withoutSpeed = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(withSpeed.speed, 9);
+      expect(withoutSpeed.speed, isNull);
+    });
+  });
 }

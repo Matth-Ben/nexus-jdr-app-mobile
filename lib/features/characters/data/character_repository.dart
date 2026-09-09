@@ -121,6 +121,15 @@ abstract class CharacterRepository {
     required bool isArchived,
   });
 
+  /// Écrit directement `characters.inspiration` — pastille "Inspiration" de
+  /// l'onglet "Personnage" (`CharacterStatPillsRow`) — même contrat que
+  /// [setDead]/[setArchived] (mode hors-ligne inclus, voir la documentation
+  /// de [setDead]), simple flag sans effet sur le reste de la fiche.
+  Future<WriteOutcome> setInspiration({
+    required String characterId,
+    required bool inspiration,
+  });
+
   /// Envoie [bytes] (déjà recadrées en carré, voir
   /// `presentation/widgets/portrait_crop_screen.dart`) dans le bucket
   /// `character-portraits` (RLS écriture restreinte à `{user_id}/...`,
@@ -722,6 +731,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             temporary_hp,
             is_dead,
             is_archived,
+            inspiration,
             share_token,
             race_id,
             subrace_id,
@@ -868,6 +878,30 @@ class SupabaseCharacterRepository implements CharacterRepository {
       await _client
           .from('characters')
           .update({'is_archived': isArchived})
+          .eq('id', characterId)
+          .eq('owner_id', ownerId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> setInspiration({
+    required String characterId,
+    required bool inspiration,
+  }) async {
+    final ownerId = _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('characters')
+          .update({'inspiration': inspiration})
           .eq('id', characterId)
           .eq('owner_id', ownerId);
       return WriteOutcome.synced;
@@ -2621,6 +2655,20 @@ class SupabaseCharacterRepository implements CharacterRepository {
       fieldName: 'name',
       entityIds: CharacterDetailRowMapper.collectRaceIds(row),
     );
+    // Vitesse de déplacement (onglet "Personnage", `CharacterStatPillsRow`)
+    // : contrairement au nom de race (résolu via `translations` ci-dessus),
+    // `speed` est une colonne directe de `races` — requête dédiée plutôt
+    // qu'un ajout à `_fetchTranslationRows` (qui ne connaît que la table
+    // `translations`). `race_id` est unique par personnage (pas un ensemble
+    // comme les classes), un simple `.maybeSingle()` suffit.
+    final raceId = row['race_id'];
+    final raceRow = raceId == null
+        ? null
+        : await _client
+              .from('races')
+              .select('id, speed')
+              .eq('id', raceId)
+              .maybeSingle();
     final subraceNameRows = await _fetchTranslationRows(
       entityType: 'subrace',
       fieldName: 'name',
@@ -2792,6 +2840,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
 
     return <String, dynamic>{
       'row': row,
+      'raceRow': raceRow,
       'raceNameRows': raceNameRows,
       'subraceNameRows': subraceNameRows,
       'classNameRows': classNameRows,
@@ -2919,8 +2968,12 @@ class SupabaseCharacterRepository implements CharacterRepository {
       resolveCoverUrl: _resolveStoryCoverUrl,
     );
 
+    final raceRow = payload['raceRow'] as Map<String, dynamic>?;
+    final speed = (raceRow?['speed'] as num?)?.toInt();
+
     return CharacterDetailRowMapper.toCharacterDetail(
       row,
+      speed: speed,
       raceNames: raceNames,
       subraceNames: subraceNames,
       classNames: classNames,
