@@ -684,4 +684,59 @@ void main() {
       );
     },
   );
+
+  group('aide contextuelle / abandon (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section 3)', () {
+    testWidgets('icône "?" du bandeau ouvre l\'aide de l\'étape 1 "Race"', (
+      tester,
+    ) async {
+      fakeRepository.catalogToReturn = const RaceCatalog(
+        races: [_elfe],
+        subraces: [],
+      );
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.help_outline));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1. RACE'), findsOneWidget);
+    });
+
+    testWidgets(
+      'icône croix ouvre la confirmation d\'abandon ; confirmer '
+      'réinitialise le brouillon et revient à la liste',
+      (tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe],
+          subraces: [],
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        // Simule un choix déjà fait à une étape précédente (le brouillon
+        // n'est mis à jour par cet écran qu'au tap "Suivant", voir
+        // `RaceStepScreen._submit` — écrit directement dans le provider
+        // pour vérifier que l'abandon l'efface, sans naviguer hors de cet
+        // écran comme le ferait "Suivant").
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setClass(classId: 1);
+
+        expect(readDraft(), isNot(const CharacterCreationDraft()));
+
+        await tester.tap(find.byIcon(Icons.close));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+
+        await tester.tap(find.text('Abandonner'));
+        await tester.pumpAndSettle();
+
+        expect(readDraft(), const CharacterCreationDraft());
+        expect(find.text('Liste des personnages'), findsOneWidget);
+      },
+    );
+  });
 }

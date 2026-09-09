@@ -12,11 +12,14 @@ import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/spell_level_tab_selector.dart';
 import '../../../core/widgets/step_progress_bar.dart';
 import '../domain/character_creation_failure.dart';
+import '../domain/creation_step_help.dart';
 import '../domain/spell_option.dart';
 import '../domain/spellcasting_rules.dart';
 import '../domain/spells_step_selection.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
+import 'widgets/abandon_creation_flow.dart';
+import 'widgets/step_help_sheet.dart';
 
 /// Étape 6/9 de l'assistant de création de personnage : sorts
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
@@ -124,7 +127,11 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
         data: _buildContent,
         loading: () => Column(
           children: [
-            _MinimalHeader(onBack: _goBack),
+            _MinimalHeader(
+              onBack: _goBack,
+              onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
+              onAbandon: () => abandonCharacterCreation(context, ref),
+            ),
             const Expanded(
               child: Center(
                 child: CircularProgressIndicator(color: AppColors.woodMedium),
@@ -134,7 +141,11 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
         ),
         error: (error, stackTrace) => Column(
           children: [
-            _MinimalHeader(onBack: _goBack),
+            _MinimalHeader(
+              onBack: _goBack,
+              onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
+              onAbandon: () => abandonCharacterCreation(context, ref),
+            ),
             Expanded(
               child: _ErrorState(
                 message: error is CharacterCreationFailure
@@ -214,6 +225,8 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
           onBack: _goBack,
           currentStep: 6,
           totalSteps: _totalSteps,
+          onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
+          onAbandon: () => abandonCharacterCreation(context, ref),
           showCantripTab: showCantripTab,
           showLevelOneTab: showLevelOneTab,
           activeTab: activeTab,
@@ -407,6 +420,8 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.currentStep,
     required this.totalSteps,
+    required this.onHelp,
+    required this.onAbandon,
     required this.showCantripTab,
     required this.showLevelOneTab,
     required this.activeTab,
@@ -416,6 +431,8 @@ class _Header extends StatelessWidget {
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
+  final VoidCallback onHelp;
+  final VoidCallback onAbandon;
   final bool showCantripTab;
   final bool showLevelOneTab;
   final _SpellTab activeTab;
@@ -454,6 +471,20 @@ class _Header extends StatelessWidget {
                         fontSize: 11,
                         color: AppColors.textOnWood,
                       ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: onHelp,
+                      tooltip: 'Aide',
+                      icon: const Icon(
+                        Icons.help_outline,
+                        color: AppColors.textOnWood,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: onAbandon,
+                      tooltip: 'Abandonner la création',
+                      icon: const Icon(Icons.close, color: AppColors.textOnWood),
                     ),
                   ],
                 ),
@@ -521,9 +552,15 @@ class _Header extends StatelessWidget {
 /// impossible d'afficher le titre/la barre de progression/les onglets sur le
 /// bandeau (voir la documentation de classe de [SpellsStepScreen]).
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({required this.onBack});
+  const _MinimalHeader({
+    required this.onBack,
+    required this.onHelp,
+    required this.onAbandon,
+  });
 
   final VoidCallback onBack;
+  final VoidCallback onHelp;
+  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -551,6 +588,17 @@ class _MinimalHeader extends StatelessWidget {
                   fontSize: 11,
                   color: AppColors.textOnWood,
                 ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: onHelp,
+                tooltip: 'Aide',
+                icon: const Icon(Icons.help_outline, color: AppColors.textOnWood),
+              ),
+              IconButton(
+                onPressed: onAbandon,
+                tooltip: 'Abandonner la création',
+                icon: const Icon(Icons.close, color: AppColors.textOnWood),
               ),
             ],
           ),

@@ -618,4 +618,37 @@ void main() {
       expect(find.textContaining('Classe introuvable'), findsOneWidget);
     },
   );
+
+  group('aide contextuelle / abandon (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section 3)', () {
+    setUp(() {
+      fakeRepository.classCatalogToReturn = const ClassCatalog(
+        classes: [_barde],
+      );
+      fakeRepository.spellCatalogToReturn = _bardeSpellCatalog;
+      selectClass(2);
+    });
+
+    testWidgets('icône "?" du bandeau ouvre l\'aide de l\'étape 6 "Sorts"', (
+      tester,
+    ) async {
+      await pumpSpellsStep(tester);
+
+      await tester.tap(find.byIcon(Icons.help_outline));
+      await tester.pumpAndSettle();
+
+      expect(find.text('6. SORTS'), findsOneWidget);
+    });
+
+    testWidgets('icône croix ouvre la confirmation d\'abandon', (
+      tester,
+    ) async {
+      await pumpSpellsStep(tester);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Abandonner la création ?'), findsOneWidget);
+    });
+  });
 }

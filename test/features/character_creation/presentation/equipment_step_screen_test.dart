@@ -556,4 +556,30 @@ void main() {
     expect(find.text('Symbole sacré'), findsOneWidget);
     expect(find.text('Dague'), findsOneWidget);
   });
+
+  group('aide contextuelle / abandon (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section 3)', () {
+    testWidgets(
+      'icône "?" du bandeau ouvre l\'aide de l\'étape 7 "Équipement"',
+      (tester) async {
+        await pumpEquipmentStep(tester);
+
+        await tester.tap(find.byIcon(Icons.help_outline));
+        await tester.pumpAndSettle();
+
+        expect(find.text('7. ÉQUIPEMENT'), findsOneWidget);
+      },
+    );
+
+    testWidgets('icône croix ouvre la confirmation d\'abandon', (
+      tester,
+    ) async {
+      await pumpEquipmentStep(tester);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Abandonner la création ?'), findsOneWidget);
+    });
+  });
 }

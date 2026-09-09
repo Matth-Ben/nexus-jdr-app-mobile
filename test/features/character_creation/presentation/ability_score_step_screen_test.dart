@@ -484,4 +484,30 @@ void main() {
       expect(find.text('8'), findsOneWidget);
     },
   );
+
+  group('aide contextuelle / abandon (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section 3)', () {
+    testWidgets(
+      'icône "?" du bandeau ouvre l\'aide de l\'étape 4 "Caractéristiques"',
+      (tester) async {
+        await pumpAbilityScoreStep(tester);
+
+        await tester.tap(find.byIcon(Icons.help_outline));
+        await tester.pumpAndSettle();
+
+        expect(find.text('4. CARACTÉRISTIQUES'), findsOneWidget);
+      },
+    );
+
+    testWidgets('icône croix ouvre la confirmation d\'abandon', (
+      tester,
+    ) async {
+      await pumpAbilityScoreStep(tester);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Abandonner la création ?'), findsOneWidget);
+    });
+  });
 }

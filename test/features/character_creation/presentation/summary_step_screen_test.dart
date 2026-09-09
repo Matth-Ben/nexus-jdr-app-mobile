@@ -706,4 +706,30 @@ void main() {
     expect(button.onPressed, isNotNull);
     expect(find.text('Étape Histoire'), findsNothing);
   });
+
+  group('aide contextuelle / abandon (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section 3)', () {
+    testWidgets(
+      'icône "?" du bandeau ouvre l\'aide de l\'étape 9 "Récapitulatif"',
+      (tester) async {
+        await pumpSummaryStep(tester);
+
+        await tester.tap(find.byIcon(Icons.help_outline));
+        await tester.pumpAndSettle();
+
+        expect(find.text('9. RÉCAPITULATIF'), findsOneWidget);
+      },
+    );
+
+    testWidgets('icône croix ouvre la confirmation d\'abandon', (
+      tester,
+    ) async {
+      await pumpSummaryStep(tester);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Abandonner la création ?'), findsOneWidget);
+    });
+  });
 }

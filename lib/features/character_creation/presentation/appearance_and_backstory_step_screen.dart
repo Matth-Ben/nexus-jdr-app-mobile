@@ -9,7 +9,10 @@ import '../../../core/widgets/dashed_border_painter.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../domain/creation_step_help.dart';
 import 'providers/character_creation_draft_provider.dart';
+import 'widgets/abandon_creation_flow.dart';
+import 'widgets/step_help_sheet.dart';
 
 /// Étape 8/9 de l'assistant de création de personnage : apparence, histoire
 /// et portrait (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`
@@ -186,7 +189,13 @@ class _AppearanceAndBackstoryStepScreenState
     return Scaffold(
       body: Column(
         children: [
-          _Header(onBack: _goBack, currentStep: 8, totalSteps: _totalSteps),
+          _Header(
+          onBack: _goBack,
+          currentStep: 8,
+          totalSteps: _totalSteps,
+          onHelp: () => showStepHelpSheet(context, CreationStepHelp.appearanceAndBackstory),
+          onAbandon: () => abandonCharacterCreation(context, ref),
+        ),
           Expanded(child: _buildContent()),
         ],
       ),
@@ -402,11 +411,15 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.currentStep,
     required this.totalSteps,
+    required this.onHelp,
+    required this.onAbandon,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
+  final VoidCallback onHelp;
+  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -439,6 +452,20 @@ class _Header extends StatelessWidget {
                         fontSize: 11,
                         color: AppColors.textOnWood,
                       ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: onHelp,
+                      tooltip: 'Aide',
+                      icon: const Icon(
+                        Icons.help_outline,
+                        color: AppColors.textOnWood,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: onAbandon,
+                      tooltip: 'Abandonner la création',
+                      icon: const Icon(Icons.close, color: AppColors.textOnWood),
                     ),
                   ],
                 ),

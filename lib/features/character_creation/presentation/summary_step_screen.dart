@@ -14,12 +14,15 @@ import '../../characters/presentation/providers/character_providers.dart';
 import '../domain/ability_score_definitions.dart';
 import '../domain/character_creation_draft.dart';
 import '../domain/character_creation_failure.dart';
+import '../domain/creation_step_help.dart';
 import '../domain/equipment_choice_tab.dart';
 import '../domain/final_ability_scores_resolver.dart';
 import '../domain/spellcasting_rules.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'providers/character_creation_return_route_provider.dart';
+import 'widgets/abandon_creation_flow.dart';
+import 'widgets/step_help_sheet.dart';
 
 /// Étape 9/9 de l'assistant de création de personnage : récapitulatif
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
@@ -230,13 +233,23 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
       body: dataAsync.when(
         data: (data) => Column(
           children: [
-            _Header(onBack: _goBack, currentStep: 9, totalSteps: _totalSteps),
+            _Header(
+          onBack: _goBack,
+          currentStep: 9,
+          totalSteps: _totalSteps,
+          onHelp: () => showStepHelpSheet(context, CreationStepHelp.summary),
+          onAbandon: () => abandonCharacterCreation(context, ref),
+        ),
             Expanded(child: _buildContent(data)),
           ],
         ),
         loading: () => Column(
           children: [
-            _MinimalHeader(onBack: _goBack),
+            _MinimalHeader(
+              onBack: _goBack,
+              onHelp: () => showStepHelpSheet(context, CreationStepHelp.summary),
+              onAbandon: () => abandonCharacterCreation(context, ref),
+            ),
             const Expanded(
               child: Center(
                 child: CircularProgressIndicator(color: AppColors.woodMedium),
@@ -246,7 +259,11 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
         ),
         error: (error, stackTrace) => Column(
           children: [
-            _MinimalHeader(onBack: _goBack),
+            _MinimalHeader(
+              onBack: _goBack,
+              onHelp: () => showStepHelpSheet(context, CreationStepHelp.summary),
+              onAbandon: () => abandonCharacterCreation(context, ref),
+            ),
             Expanded(
               child: _ErrorState(
                 message: error is CharacterCreationFailure
@@ -716,11 +733,15 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.currentStep,
     required this.totalSteps,
+    required this.onHelp,
+    required this.onAbandon,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
+  final VoidCallback onHelp;
+  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -753,6 +774,20 @@ class _Header extends StatelessWidget {
                         fontSize: 11,
                         color: AppColors.textOnWood,
                       ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: onHelp,
+                      tooltip: 'Aide',
+                      icon: const Icon(
+                        Icons.help_outline,
+                        color: AppColors.textOnWood,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: onAbandon,
+                      tooltip: 'Abandonner la création',
+                      icon: const Icon(Icons.close, color: AppColors.textOnWood),
                     ),
                   ],
                 ),
@@ -801,9 +836,15 @@ class _Header extends StatelessWidget {
 /// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
 /// chargement/l'erreur — copie exacte du pattern des étapes précédentes.
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({required this.onBack});
+  const _MinimalHeader({
+    required this.onBack,
+    required this.onHelp,
+    required this.onAbandon,
+  });
 
   final VoidCallback onBack;
+  final VoidCallback onHelp;
+  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -831,6 +872,17 @@ class _MinimalHeader extends StatelessWidget {
                   fontSize: 11,
                   color: AppColors.textOnWood,
                 ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: onHelp,
+                tooltip: 'Aide',
+                icon: const Icon(Icons.help_outline, color: AppColors.textOnWood),
+              ),
+              IconButton(
+                onPressed: onAbandon,
+                tooltip: 'Abandonner la création',
+                icon: const Icon(Icons.close, color: AppColors.textOnWood),
               ),
             ],
           ),

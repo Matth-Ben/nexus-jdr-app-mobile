@@ -1068,4 +1068,32 @@ void main() {
       },
     );
   });
+
+  group('aide contextuelle / abandon (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section 3)', () {
+    testWidgets(
+      'icône "?" du bandeau ouvre l\'aide de l\'étape 5 "Compétences"',
+      (tester) async {
+        selectClassAndBackground(classId: 1, backgroundId: 10);
+        await pumpSkillsAndToolsStep(tester);
+
+        await tester.tap(find.byIcon(Icons.help_outline));
+        await tester.pumpAndSettle();
+
+        expect(find.text('5. COMPÉTENCES'), findsOneWidget);
+      },
+    );
+
+    testWidgets('icône croix ouvre la confirmation d\'abandon', (
+      tester,
+    ) async {
+      selectClassAndBackground(classId: 1, backgroundId: 10);
+      await pumpSkillsAndToolsStep(tester);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Abandonner la création ?'), findsOneWidget);
+    });
+  });
 }

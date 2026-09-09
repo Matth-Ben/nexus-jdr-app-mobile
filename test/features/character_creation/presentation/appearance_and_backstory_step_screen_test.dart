@@ -356,4 +356,34 @@ void main() {
 
     expect(backButton.surface, SecondaryButtonSurface.parchment);
   });
+
+  group('aide contextuelle / abandon (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section 3)', () {
+    testWidgets(
+      'icône "?" du bandeau ouvre l\'aide de l\'étape 8 "Apparence, '
+      'histoire et portrait"',
+      (tester) async {
+        await pumpStep(tester);
+
+        await tester.tap(find.byIcon(Icons.help_outline));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('8. APPARENCE, HISTOIRE ET PORTRAIT'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('icône croix ouvre la confirmation d\'abandon', (
+      tester,
+    ) async {
+      await pumpStep(tester);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Abandonner la création ?'), findsOneWidget);
+    });
+  });
 }
