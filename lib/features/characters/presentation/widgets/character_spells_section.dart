@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
+import '../../domain/spell_status_formatter.dart';
 import '../../domain/spells_by_level_grouper.dart';
 import 'spell_action_sheet.dart';
 import 'spell_info_panel.dart';
@@ -24,6 +25,13 @@ import 'spell_info_panel.dart';
 /// (`character_detail_screen.dart::_castSpell`), même principe que
 /// `onTapAdjustHp`/`onTapRest` de `_CharacterTabBody`.
 ///
+/// Section "FAVORIS" (voir [favorites]) affichée en tête, avant même le
+/// bloc "Magie de pacte" — voir `docs/cahier-des-charges/`
+/// 11-fonctionnalites-a-ajouter.md, section "Onglet Sorts" : "Favoris /
+/// épinglage des sorts fréquemment utilisés (accès rapide en combat)".
+/// Absente du tout quand [favorites] est vide (aucun favori épinglé), même
+/// principe que le bloc "Magie de pacte".
+///
 /// N'affiche rien tant que [groups] est vide — appelant responsable de ne
 /// pas monter cette section dans ce cas (voir
 /// `character_spells_tab_body.dart`).
@@ -32,12 +40,21 @@ class CharacterSpellsSection extends StatelessWidget {
     required this.groups,
     required this.spellSlots,
     required this.onCastSpell,
+    required this.onToggleFavorite,
+    required this.onTogglePrepared,
+    this.favorites = const [],
     this.pactSlot,
     this.actionsDisabled = false,
     super.key,
   });
 
   final List<SpellLevelGroup> groups;
+
+  /// Sorts épinglés (`CharacterSpellEntry.isFavorite`), toutes classes/tous
+  /// niveaux confondus — voir la documentation de classe, section
+  /// "FAVORIS". Déjà filtré par l'appelant (recherche active incluse, voir
+  /// `character_spells_tab_body.dart`).
+  final List<CharacterSpellEntry> favorites;
 
   /// Emplacements de sorts par niveau — indexé par niveau dans [build] pour
   /// afficher les pastilles du bon niveau à côté de chaque titre de groupe,
@@ -53,13 +70,25 @@ class CharacterSpellsSection extends StatelessWidget {
 
   final CastSpellCallback onCastSpell;
 
+  /// Étoile de [_SpellRow] — voir `CharacterRepository.setSpellFavorite`.
+  final ToggleSpellFlagCallback onToggleFavorite;
+
+  /// Bascule "Préparer ce sort"/"Ne plus préparer" du panneau "Infos" — voir
+  /// `CharacterRepository.setSpellPrepared`. Jamais appelée pour un sort dont
+  /// [SpellStatusFormatter.canTogglePrepared] est faux (le panneau masque
+  /// alors cette action).
+  final ToggleSpellFlagCallback onTogglePrepared;
+
   /// `true` pendant qu'un repos long est en cours d'application (voir
   /// `character_detail_screen.dart::_isApplyingRest`) : désactive le tap sur
   /// chaque sort, un repos long réinitialisant les emplacements de sorts —
   /// même verrou déjà appliqué au bandeau PV (`CharacterVitalsCard
   /// .hpActionsDisabled`), ferme ici le même type de course qu'un lancer de
   /// sort démarré pendant que le repos écrit encore en base (voir la
-  /// documentation de `_castSpell`).
+  /// documentation de `_castSpell`). N'affecte pas [onToggleFavorite]/
+  /// [onTogglePrepared] : épingler un sort ou basculer sa préparation
+  /// n'entre jamais en course avec un repos, contrairement au lancer d'un
+  /// sort.
   final bool actionsDisabled;
 
   @override
@@ -83,6 +112,20 @@ class CharacterSpellsSection extends StatelessWidget {
               color: AppColors.textSecondary,
             ),
           ),
+          if (favorites.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _FavoritesSection(
+              favorites: favorites,
+              spellSlots: spellSlots,
+              pactSlot: pactSlot,
+              onCastSpell: onCastSpell,
+              onToggleFavorite: onToggleFavorite,
+              onTogglePrepared: onTogglePrepared,
+              enabled: !actionsDisabled,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Container(height: 1, color: AppColors.gaugeTrack),
+          ],
           // Bloc de section (pas un groupe de sorts) affiché une seule fois,
           // uniquement pour un Occultiste (ou un Occultiste multiclassé) —
           // même garde défensive que `showPips` ci-dessous (`total > 0`).
@@ -100,7 +143,79 @@ class CharacterSpellsSection extends StatelessWidget {
               spellSlots: spellSlots,
               pactSlot: pactSlot,
               onCastSpell: onCastSpell,
+              onToggleFavorite: onToggleFavorite,
+              onTogglePrepared: onTogglePrepared,
               actionsDisabled: actionsDisabled,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Section "FAVORIS" — carte à bordure/emphase dorée (même token que
+/// l'emplacement "PO" de `character_inventory_stat_boxes_row.dart`), une
+/// [_SpellRow] par sort épinglé avec `showLevelInSubtitle: true` (les
+/// favoris mélangent des sorts de plusieurs niveaux, contrairement aux
+/// groupes par niveau ci-dessous où le niveau est déjà porté par le titre de
+/// section).
+class _FavoritesSection extends StatelessWidget {
+  const _FavoritesSection({
+    required this.favorites,
+    required this.spellSlots,
+    this.pactSlot,
+    required this.onCastSpell,
+    required this.onToggleFavorite,
+    required this.onTogglePrepared,
+    required this.enabled,
+  });
+
+  final List<CharacterSpellEntry> favorites;
+  final List<CharacterSpellSlot> spellSlots;
+  final CharacterSpellSlot? pactSlot;
+  final CastSpellCallback onCastSpell;
+  final ToggleSpellFlagCallback onToggleFavorite;
+  final ToggleSpellFlagCallback onTogglePrepared;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.parchmentCardAlt,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.goldEnd, width: AppBorders.cardEmphasis),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.star, size: 14, color: AppColors.goldEnd),
+              const SizedBox(width: AppSpacing.xs / 2),
+              Text(
+                'FAVORIS',
+                style: AppTypography.display(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          for (final spell in favorites)
+            _SpellRow(
+              spell: spell,
+              spellSlots: spellSlots,
+              pactSlot: pactSlot,
+              onCastSpell: onCastSpell,
+              onToggleFavorite: onToggleFavorite,
+              onTogglePrepared: onTogglePrepared,
+              enabled: enabled,
+              showLevelInSubtitle: true,
             ),
         ],
       ),
@@ -148,6 +263,8 @@ class _SpellLevelGroupSection extends StatelessWidget {
     required this.spellSlots,
     this.pactSlot,
     required this.onCastSpell,
+    required this.onToggleFavorite,
+    required this.onTogglePrepared,
     required this.actionsDisabled,
   });
 
@@ -156,6 +273,8 @@ class _SpellLevelGroupSection extends StatelessWidget {
   final List<CharacterSpellSlot> spellSlots;
   final CharacterSpellSlot? pactSlot;
   final CastSpellCallback onCastSpell;
+  final ToggleSpellFlagCallback onToggleFavorite;
+  final ToggleSpellFlagCallback onTogglePrepared;
   final bool actionsDisabled;
 
   @override
@@ -194,6 +313,8 @@ class _SpellLevelGroupSection extends StatelessWidget {
               spellSlots: spellSlots,
               pactSlot: pactSlot,
               onCastSpell: onCastSpell,
+              onToggleFavorite: onToggleFavorite,
+              onTogglePrepared: onTogglePrepared,
               enabled: !actionsDisabled,
             ),
         ],
@@ -286,18 +407,32 @@ class _SpellRow extends StatelessWidget {
     required this.spellSlots,
     this.pactSlot,
     required this.onCastSpell,
+    required this.onToggleFavorite,
+    required this.onTogglePrepared,
     required this.enabled,
+    this.showLevelInSubtitle = false,
   });
 
   final CharacterSpellEntry spell;
   final List<CharacterSpellSlot> spellSlots;
   final CharacterSpellSlot? pactSlot;
   final CastSpellCallback onCastSpell;
+  final ToggleSpellFlagCallback onToggleFavorite;
+  final ToggleSpellFlagCallback onTogglePrepared;
   final bool enabled;
+
+  /// `true` dans la section "FAVORIS" (mélange plusieurs niveaux, le niveau
+  /// doit donc être précisé) — `false` dans un groupe par niveau, où le
+  /// niveau est déjà porté par le titre de section ("Niveau 1"...).
+  final bool showLevelInSubtitle;
 
   @override
   Widget build(BuildContext context) {
     final school = spell.school.trim();
+    final statusText = SpellStatusFormatter.subtitle(spell);
+    final subtitle = showLevelInSubtitle
+        ? ['niv. ${spell.level}', ?statusText].join(' · ')
+        : statusText;
 
     // Deux `Text` distincts (nom, puis école entre parenthèses) plutôt qu'un
     // seul `Text.rich`/`TextSpan` : plus simple à cibler par
@@ -314,44 +449,94 @@ class _SpellRow extends StatelessWidget {
                 spellSlots: spellSlots,
                 pactSlot: pactSlot,
                 onCastSpell: onCastSpell,
+                onTogglePrepared: onTogglePrepared,
               )
             : null,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs / 2),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Flexible(
-                  child: Text(
-                    spell.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.body(fontSize: 13),
-                  ),
-                ),
-                if (school.isNotEmpty) ...[
-                  const SizedBox(width: AppSpacing.xs / 2),
-                  Flexible(
-                    child: Text(
-                      '($school)',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.body(
-                        fontSize: 12,
-                        color: AppColors.textMuted,
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        spell.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.body(fontSize: 13),
                       ),
                     ),
-                  ),
-                ],
-                const SizedBox(width: AppSpacing.xs / 2),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 18,
-                  color: AppColors.textMuted,
+                    if (school.isNotEmpty) ...[
+                      const SizedBox(width: AppSpacing.xs / 2),
+                      Flexible(
+                        child: Text(
+                          '($school)',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    _FavoriteStar(
+                      isFavorite: spell.isFavorite,
+                      onTap: enabled ? () => onToggleFavorite(spell) : null,
+                    ),
+                    const SizedBox(width: AppSpacing.xs / 2),
+                    const Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: AppColors.textMuted,
+                    ),
+                  ],
                 ),
+                if (subtitle != null)
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.body(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Étoile de favori, zone de tap indépendante de celle de la ligne (voir
+/// [_SpellRow.onTap]) — `Icons.star`/`AppColors.goldEnd` épinglé,
+/// `Icons.star_border`/`AppColors.textMuted` sinon.
+class _FavoriteStar extends StatelessWidget {
+  const _FavoriteStar({required this.isFavorite, required this.onTap});
+
+  final bool isFavorite;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xs / 2),
+          child: Icon(
+            isFavorite ? Icons.star : Icons.star_border,
+            size: 18,
+            color: isFavorite ? AppColors.goldEnd : AppColors.textMuted,
           ),
         ),
       ),

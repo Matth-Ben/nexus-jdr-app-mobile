@@ -37,6 +37,21 @@ abstract final class CharacterSpellRowMapper {
     return statuses;
   }
 
+  /// `{spell_id: is_favorite}` — même principe que [parseStatuses]. Une
+  /// ligne sans `spell_id`/`is_favorite` exploitable est ignorée (repli sur
+  /// `false` dans [toCharacterSpellEntries]).
+  static Map<int, bool> parseFavorites(List<Map<String, dynamic>> rows) {
+    final favorites = <int, bool>{};
+    for (final row in rows) {
+      final spellId = row['spell_id'];
+      final isFavorite = row['is_favorite'];
+      if (spellId is num && isFavorite is bool) {
+        favorites[spellId.toInt()] = isFavorite;
+      }
+    }
+    return favorites;
+  }
+
   /// Construit les [CharacterSpellEntry] à partir des lignes brutes `spells`
   /// (id, level, school, casting_time, range, components, duration,
   /// concentration) déjà filtrées sur les sorts du personnage, des noms déjà
@@ -51,6 +66,7 @@ abstract final class CharacterSpellRowMapper {
     required Map<String, String> names,
     required Map<String, String> descriptions,
     required Map<int, String> statuses,
+    Map<int, bool> favorites = const {},
   }) {
     final result = <CharacterSpellEntry>[];
     for (final row in spellRows) {
@@ -71,6 +87,7 @@ abstract final class CharacterSpellRowMapper {
           duration: row['duration'] as String? ?? '',
           concentration: row['concentration'] == true,
           description: descriptions[id.toString()] ?? '',
+          isFavorite: favorites[id] ?? false,
         ),
       );
     }

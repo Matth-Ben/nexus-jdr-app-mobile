@@ -104,6 +104,20 @@ class FakeRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<WriteOutcome> setSpellFavorite({
+    required String characterId,
+    required int spellId,
+    required bool isFavorite,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<WriteOutcome> setSpellPrepared({
+    required String characterId,
+    required int spellId,
+    required bool prepared,
+  }) => throw UnimplementedError();
+
+  @override
   Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,
@@ -275,7 +289,9 @@ const detail = CharacterDetail(
       name: 'Bouclier',
       level: 1,
       school: 'Abjuration',
-      status: 'connu',
+      // 'préparé' : ce test porte sur le flux de lancer (repos vs. lancer en
+      // vol), qui exige désormais `SpellStatusFormatter.canCast`.
+      status: 'préparé',
     ),
   ],
   spellSlots: [CharacterSpellSlot(level: 1, total: 3, used: 1)],

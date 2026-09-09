@@ -256,6 +256,7 @@ CharacterSpellEntry _mapSpell(Map<String, dynamic> row) {
     duration: row['duration'] as String? ?? '',
     concentration: row['concentration'] == true,
     description: row['description'] as String? ?? '',
+    isFavorite: row['is_favorite'] == true,
   );
 }
 

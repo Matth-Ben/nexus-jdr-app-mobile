@@ -106,6 +106,18 @@ class _FakeCharacterRepository implements CharacterRepository {
   WriteOutcome setInspirationOutcomeToReturn = WriteOutcome.synced;
   Object? setInspirationErrorToThrow;
 
+  int? lastFavoritedSpellId;
+  bool? lastSetSpellFavoriteValue;
+  int setSpellFavoriteCallCount = 0;
+  WriteOutcome setSpellFavoriteOutcomeToReturn = WriteOutcome.synced;
+  Object? setSpellFavoriteErrorToThrow;
+
+  int? lastPreparedSpellId;
+  bool? lastSetSpellPreparedValue;
+  int setSpellPreparedCallCount = 0;
+  WriteOutcome setSpellPreparedOutcomeToReturn = WriteOutcome.synced;
+  Object? setSpellPreparedErrorToThrow;
+
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
 
@@ -148,6 +160,32 @@ class _FakeCharacterRepository implements CharacterRepository {
     lastSetInspirationValue = inspiration;
     if (setInspirationErrorToThrow != null) throw setInspirationErrorToThrow!;
     return setInspirationOutcomeToReturn;
+  }
+
+  @override
+  Future<WriteOutcome> setSpellFavorite({
+    required String characterId,
+    required int spellId,
+    required bool isFavorite,
+  }) async {
+    setSpellFavoriteCallCount++;
+    lastFavoritedSpellId = spellId;
+    lastSetSpellFavoriteValue = isFavorite;
+    if (setSpellFavoriteErrorToThrow != null) throw setSpellFavoriteErrorToThrow!;
+    return setSpellFavoriteOutcomeToReturn;
+  }
+
+  @override
+  Future<WriteOutcome> setSpellPrepared({
+    required String characterId,
+    required int spellId,
+    required bool prepared,
+  }) async {
+    setSpellPreparedCallCount++;
+    lastPreparedSpellId = spellId;
+    lastSetSpellPreparedValue = prepared;
+    if (setSpellPreparedErrorToThrow != null) throw setSpellPreparedErrorToThrow!;
+    return setSpellPreparedOutcomeToReturn;
   }
 
   @override
@@ -1549,7 +1587,9 @@ void main() {
             name: 'Bouclier',
             level: 1,
             school: 'Abjuration',
-            status: 'connu',
+            // 'préparé' : ce groupe de tests porte sur le flux de lancer, qui
+            // exige désormais `SpellStatusFormatter.canCast`.
+            status: 'préparé',
           ),
         ],
         spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],
@@ -1686,6 +1726,114 @@ void main() {
       expect(fakeRepository.castSpellCallCount, 0);
       expect(find.text('Lumière lancé.'), findsOneWidget);
     });
+  });
+
+  group('favoris de sorts, distinction connu/préparé (increment 6 — actions '
+      'd\'écriture)', () {
+    Future<void> pumpSpellsTab(WidgetTester tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Bouclier',
+            level: 1,
+            school: 'Abjuration',
+            status: 'connu',
+          ),
+        ],
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SORTS'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      "taper l'étoile d'un sort appelle setSpellFavorite avec le spellId et "
+      "la valeur inverse de l'état courant",
+      (tester) async {
+        await pumpSpellsTab(tester);
+
+        await tester.tap(find.byIcon(Icons.star_border));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.setSpellFavoriteCallCount, 1);
+        expect(fakeRepository.lastFavoritedSpellId, 1);
+        expect(fakeRepository.lastSetSpellFavoriteValue, isTrue);
+      },
+    );
+
+    testWidgets(
+      'setSpellFavorite mis en file (mode hors-ligne) : même convention que '
+      'setInspiration — jamais mis en file côté repository',
+      (tester) async {
+        fakeRepository.setSpellFavoriteOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpSpellsTab(tester);
+
+        await tester.tap(find.byIcon(Icons.star_border));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            "Hors ligne : cette action n'a pas pu être enregistrée. "
+            'Réessayez une fois reconnecté.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'taper "Préparer ce sort" dans le panneau "Infos" appelle '
+      'setSpellPrepared(prepared: true) pour un sort \'connu\'',
+      (tester) async {
+        await pumpSpellsTab(tester);
+
+        await tester.tap(find.text('Bouclier'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Préparer ce sort'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.setSpellPreparedCallCount, 1);
+        expect(fakeRepository.lastPreparedSpellId, 1);
+        expect(fakeRepository.lastSetSpellPreparedValue, isTrue);
+      },
+    );
+
+    testWidgets(
+      'un sort déjà \'préparé\' : "Ne plus préparer" appelle '
+      'setSpellPrepared(prepared: false)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          spells: const [
+            CharacterSpellEntry(
+              id: 1,
+              name: 'Bouclier',
+              level: 1,
+              school: 'Abjuration',
+              status: 'préparé',
+            ),
+          ],
+          spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],
+        );
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SORTS'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Bouclier'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Ne plus préparer'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.setSpellPreparedCallCount, 1);
+        expect(fakeRepository.lastPreparedSpellId, 1);
+        expect(fakeRepository.lastSetSpellPreparedValue, isFalse);
+      },
+    );
   });
 
   group('utiliser une aptitude de classe (increment 1 — actions '

@@ -28,6 +28,13 @@ typedef CastSpellCallback = void Function(
   CharacterSpellSlot? slot,
 );
 
+/// Callback de bascule "Favoris"/"Préparer ce sort" — délègue toute la
+/// logique d'écriture (optimiste + réseau + message) à l'appelant, même
+/// principe que [CastSpellCallback], voir
+/// `character_detail_screen.dart::_toggleSpellFavorite`/
+/// `_toggleSpellPrepared`.
+typedef ToggleSpellFlagCallback = void Function(CharacterSpellEntry spell);
+
 /// Orchestre l'action "Lancer" (bouton en pied du panneau "Infos",
 /// [showSpellInfoPanel] — seul point d'entrée depuis l'onglet "Sorts", voir
 /// `character_spells_section.dart::_SpellRow`) : appelle directement

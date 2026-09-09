@@ -1256,6 +1256,61 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Bascule `character_spells.is_favorite` (étoile de `_SpellRow`,
+  /// `character_spells_section.dart`) — voir
+  /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
+  /// "Onglet Sorts". Même contrat que [_toggleDead]/[_toggleArchived]
+  /// (jamais mis en file d'attente hors-ligne), mais sur
+  /// `character_spells` (identifié par [CharacterSpellEntry.id], le
+  /// `spells.id`) plutôt que `characters`.
+  Future<void> _toggleSpellFavorite(CharacterSpellEntry spell) async {
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .setSpellFavorite(
+            characterId: widget.characterId,
+            spellId: spell.id,
+            isFavorite: !spell.isFavorite,
+          );
+      if (!mounted) return;
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      ref.invalidate(characterDetailProvider(widget.characterId));
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar('Impossible de mettre à jour le statut. Réessayez.');
+    }
+  }
+
+  /// Bascule `character_spells.status` ('connu' ↔ 'préparé') — lien
+  /// "Préparer ce sort"/"Ne plus préparer" du panneau "Infos"
+  /// (`spell_info_panel.dart`), voir `domain/spell_status_formatter.dart`.
+  /// Même contrat que [_toggleSpellFavorite].
+  Future<void> _toggleSpellPrepared(CharacterSpellEntry spell) async {
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .setSpellPrepared(
+            characterId: widget.characterId,
+            spellId: spell.id,
+            prepared: spell.status != 'préparé',
+          );
+      if (!mounted) return;
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      ref.invalidate(characterDetailProvider(widget.characterId));
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar('Impossible de mettre à jour le statut. Réessayez.');
+    }
+  }
+
   /// Applique un repos (`RestSheet`) : écrit l'effet en base
   /// (`CharacterRepository.applyRest`), rafraîchit la fiche, puis affiche
   /// une confirmation — spec visuelle section 4 : contrairement à
@@ -1650,6 +1705,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         detail: _effectiveDetail(detail),
         onCastSpell: (spell, slot) =>
             _castSpell(_effectiveDetail(detail), spell, slot),
+        onToggleFavorite: _toggleSpellFavorite,
+        onTogglePrepared: _toggleSpellPrepared,
         actionsDisabled: _isApplyingRest || _isCastingSpell,
       ),
       CharacterDetailTab.inventory => CharacterInventoryTabBody(

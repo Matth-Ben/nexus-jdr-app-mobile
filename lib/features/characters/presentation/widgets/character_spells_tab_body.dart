@@ -27,12 +27,16 @@ class CharacterSpellsTabBody extends StatefulWidget {
   const CharacterSpellsTabBody({
     required this.detail,
     required this.onCastSpell,
+    required this.onToggleFavorite,
+    required this.onTogglePrepared,
     this.actionsDisabled = false,
     super.key,
   });
 
   final CharacterDetail detail;
   final CastSpellCallback onCastSpell;
+  final ToggleSpellFlagCallback onToggleFavorite;
+  final ToggleSpellFlagCallback onTogglePrepared;
   final bool actionsDisabled;
 
   @override
@@ -80,6 +84,11 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
       query: _searchController.text,
     );
     final spellGroups = SpellsByLevelGrouper.group(filteredSpells);
+    // Filtrés par la même recherche : un favori qui ne correspond pas à la
+    // requête en cours n'a pas plus sa place ici que dans les groupes par
+    // niveau ci-dessous — voir la documentation de classe de
+    // `CharacterSpellsSection`.
+    final favorites = filteredSpells.where((spell) => spell.isFavorite).toList();
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -91,9 +100,12 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
         else
           CharacterSpellsSection(
             groups: spellGroups,
+            favorites: favorites,
             spellSlots: detail.spellSlots,
             pactSlot: detail.pactSpellSlot,
             onCastSpell: widget.onCastSpell,
+            onToggleFavorite: widget.onToggleFavorite,
+            onTogglePrepared: widget.onTogglePrepared,
             actionsDisabled: widget.actionsDisabled,
           ),
       ],

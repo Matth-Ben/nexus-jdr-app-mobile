@@ -76,6 +76,20 @@ class _FakeRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<WriteOutcome> setSpellFavorite({
+    required String characterId,
+    required int spellId,
+    required bool isFavorite,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<WriteOutcome> setSpellPrepared({
+    required String characterId,
+    required int spellId,
+    required bool prepared,
+  }) => throw UnimplementedError();
+
+  @override
   Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,

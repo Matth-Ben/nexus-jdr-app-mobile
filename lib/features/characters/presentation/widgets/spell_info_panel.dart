@@ -10,6 +10,7 @@ import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/spell_cast_eligibility.dart';
 import '../../domain/spell_components_formatter.dart';
+import '../../domain/spell_status_formatter.dart';
 import '../../domain/spell_subtitle_formatter.dart';
 import 'spell_action_sheet.dart';
 
@@ -21,12 +22,21 @@ import 'spell_action_sheet.dart';
 /// (`character_spells_section.dart::_SpellRow`) : plus de sheet
 /// intermédiaire "Infos"/"Lancer" à traverser au préalable (retirée, "Lancer"
 /// étant de toute façon déjà accessible ici).
+///
+/// [onTogglePrepared] : voir `domain/spell_status_formatter.dart`. Le tap
+/// ferme directement la sheet (comme un simple lien "Marquer comme
+/// mort"/"Archiver ce personnage" ailleurs sur la fiche) plutôt que de garder
+/// la sheet ouverte à jour avec l'état réseau en cours — le prochain tap sur
+/// la ligne de sort rouvrira ce panneau avec l'état déjà à jour, une fois le
+/// tableau de sorts rafraîchi par l'appelant (voir
+/// `character_detail_screen.dart::_toggleSpellPrepared`).
 Future<void> showSpellInfoPanel(
   BuildContext context, {
   required CharacterSpellEntry spell,
   required List<CharacterSpellSlot> spellSlots,
   CharacterSpellSlot? pactSlot,
   required CastSpellCallback onCastSpell,
+  required ToggleSpellFlagCallback onTogglePrepared,
 }) async {
   final shouldCast = await showModalBottomSheet<bool>(
     context: context,
@@ -36,6 +46,10 @@ Future<void> showSpellInfoPanel(
       spell: spell,
       spellSlots: spellSlots,
       pactSlot: pactSlot,
+      onTogglePrepared: () {
+        onTogglePrepared(spell);
+        Navigator.of(sheetContext).pop(false);
+      },
     ),
   );
   if (shouldCast != true || !context.mounted) return;
@@ -54,11 +68,13 @@ class _SpellInfoPanelContent extends StatelessWidget {
     required this.spell,
     required this.spellSlots,
     this.pactSlot,
+    required this.onTogglePrepared,
   });
 
   final CharacterSpellEntry spell;
   final List<CharacterSpellSlot> spellSlots;
   final CharacterSpellSlot? pactSlot;
+  final VoidCallback onTogglePrepared;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +82,7 @@ class _SpellInfoPanelContent extends StatelessWidget {
       spellSlots: [...spellSlots, ?pactSlot],
       spellLevel: spell.level,
     );
+    final canCast = hasSlot && SpellStatusFormatter.canCast(spell);
     final components = SpellComponentsFormatter.format(spell.components);
 
     final infoRows = <Widget>[
@@ -105,6 +122,13 @@ class _SpellInfoPanelContent extends StatelessWidget {
                           color: AppColors.textSecondary,
                         ),
                       ),
+                      if (SpellStatusFormatter.canTogglePrepared(spell)) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        _TogglePreparedLink(
+                          prepared: spell.status == 'préparé',
+                          onTap: onTogglePrepared,
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.md),
                       for (var i = 0; i < infoRows.length; i++) ...[
                         infoRows[i],
@@ -136,13 +160,55 @@ class _SpellInfoPanelContent extends StatelessWidget {
                 ),
                 child: PrimaryButton(
                   label: 'Lancer',
-                  onPressed: hasSlot
+                  onPressed: canCast
                       ? () => Navigator.of(context).pop(true)
                       : null,
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lien "Préparer ce sort"/"Ne plus préparer" — calque de
+/// `character_vitals_card.dart::_DeathToggleLink`/`_RestLink` (`body` 700/13,
+/// zone de tap 44px min-height), icône dépendante de l'état (comme
+/// `_ArchiveToggleLink`) : `Icons.bookmark_add_outlined` pour préparer,
+/// `Icons.bookmark_remove_outlined` pour retirer de la préparation.
+class _TogglePreparedLink extends StatelessWidget {
+  const _TogglePreparedLink({required this.prepared, required this.onTap});
+
+  final bool prepared;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Row(
+          children: [
+            Icon(
+              prepared
+                  ? Icons.bookmark_remove_outlined
+                  : Icons.bookmark_add_outlined,
+              size: 14,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              prepared ? 'Ne plus préparer' : 'Préparer ce sort',
+              style: AppTypography.body(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );

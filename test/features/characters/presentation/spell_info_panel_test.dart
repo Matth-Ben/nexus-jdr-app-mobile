@@ -34,7 +34,10 @@ const _fireball = CharacterSpellEntry(
   name: 'Boule de feu',
   level: 3,
   school: 'Évocation',
-  status: 'connu',
+  // 'préparé' (et non 'connu') : ces tests portent sur le flux de lancer, qui
+  // exige désormais `SpellStatusFormatter.canCast` — voir
+  // `spell_status_formatter_test.dart` pour les tests dédiés au statut lui-même.
+  status: 'préparé',
   castingTime: '1 action',
   range: '45 mètres',
   components: {
@@ -52,6 +55,7 @@ void main() {
   List<CharacterSpellEntry> castCalls = [];
   List<int?> castLevels = [];
   List<CharacterSpellSlot?> castSlots = [];
+  List<CharacterSpellEntry> preparedToggleCalls = [];
 
   Future<void> pumpPanel(
     WidgetTester tester, {
@@ -62,6 +66,7 @@ void main() {
     castCalls = [];
     castLevels = [];
     castSlots = [];
+    preparedToggleCalls = [];
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
@@ -78,6 +83,7 @@ void main() {
                     castLevels.add(slot?.level);
                     castSlots.add(slot);
                   },
+                  onTogglePrepared: preparedToggleCalls.add,
                 ),
                 child: const Text('Ouvrir'),
               ),
@@ -277,5 +283,107 @@ void main() {
     expect(castCalls, isEmpty);
     // Le panneau reste ouvert.
     expect(find.text('BOULE DE FEU'), findsOneWidget);
+  });
+
+  group('distinction connu/préparé (SpellStatusFormatter)', () {
+    const knownSpell = CharacterSpellEntry(
+      id: 3,
+      name: 'Toile d\'araignée',
+      level: 2,
+      school: 'Conjuration',
+      status: 'connu',
+    );
+
+    const preparedSpell = CharacterSpellEntry(
+      id: 4,
+      name: 'Immobilisation de personne',
+      level: 2,
+      school: 'Enchantement',
+      status: 'préparé',
+    );
+
+    testWidgets(
+      'un sort niveau >= 1 \'connu\' (non préparé) : "Lancer" est '
+      'désactivé et le lien affiche "Préparer ce sort"',
+      (tester) async {
+        await pumpPanel(
+          tester,
+          spell: knownSpell,
+          spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+        );
+
+        final button = tester.widget<PrimaryButton>(
+          find.widgetWithText(PrimaryButton, 'LANCER'),
+        );
+        expect(button.onPressed, isNull);
+        expect(find.text('Préparer ce sort'), findsOneWidget);
+        expect(find.text('Ne plus préparer'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'taper "Préparer ce sort" appelle onTogglePrepared avec le sort et '
+      'referme le panneau, sans lancer castSpell',
+      (tester) async {
+        await pumpPanel(
+          tester,
+          spell: knownSpell,
+          spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+        );
+
+        await tester.tap(find.text('Préparer ce sort'));
+        await tester.pumpAndSettle();
+
+        expect(preparedToggleCalls, [knownSpell]);
+        expect(castCalls, isEmpty);
+        expect(find.text('TOILE D\'ARAIGNÉE'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'un sort niveau >= 1 \'préparé\' : "Lancer" est actif et le lien '
+      'affiche "Ne plus préparer"',
+      (tester) async {
+        await pumpPanel(
+          tester,
+          spell: preparedSpell,
+          spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+        );
+
+        final button = tester.widget<PrimaryButton>(
+          find.widgetWithText(PrimaryButton, 'LANCER'),
+        );
+        expect(button.onPressed, isNotNull);
+        expect(find.text('Ne plus préparer'), findsOneWidget);
+        expect(find.text('Préparer ce sort'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'taper "Ne plus préparer" appelle onTogglePrepared avec le sort',
+      (tester) async {
+        await pumpPanel(
+          tester,
+          spell: preparedSpell,
+          spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+        );
+
+        await tester.tap(find.text('Ne plus préparer'));
+        await tester.pumpAndSettle();
+
+        expect(preparedToggleCalls, [preparedSpell]);
+      },
+    );
+
+    testWidgets(
+      'un cantrip (niveau 0) : aucun lien de bascule de préparation '
+      '(canTogglePrepared toujours faux)',
+      (tester) async {
+        await pumpPanel(tester, spell: _cantrip, spellSlots: const []);
+
+        expect(find.text('Préparer ce sort'), findsNothing);
+        expect(find.text('Ne plus préparer'), findsNothing);
+      },
+    );
   });
 }

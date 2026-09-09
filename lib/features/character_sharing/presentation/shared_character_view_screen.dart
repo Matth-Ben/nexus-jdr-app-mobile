@@ -130,6 +130,8 @@ class _SharedCharacterViewScreenState
       CharacterDetailTab.spells => CharacterSpellsTabBody(
         detail: detail,
         onCastSpell: (spell, slot) {},
+        onToggleFavorite: (spell) {},
+        onTogglePrepared: (spell) {},
         actionsDisabled: true,
       ),
       CharacterDetailTab.inventory => CharacterInventoryTabBody(

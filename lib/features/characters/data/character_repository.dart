@@ -199,6 +199,33 @@ abstract class CharacterRepository {
     bool isPactSlot = false,
   });
 
+  /// Écrit directement `character_spells.is_favorite` — étoile de
+  /// `_SpellRow` (`presentation/widgets/character_spells_section.dart`),
+  /// épinglage pour accès rapide en combat
+  /// (`docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
+  /// "Onglet Sorts"). Même contrat que [setDead]/[setArchived] (mode
+  /// hors-ligne inclus) : simple flag, jamais mis en file d'attente.
+  Future<WriteOutcome> setSpellFavorite({
+    required String characterId,
+    required int spellId,
+    required bool isFavorite,
+  });
+
+  /// Écrit directement `character_spells.status` ('connu' ↔ 'préparé') —
+  /// bascule "Préparer ce sort"/"Ne plus préparer" du panneau "Infos"
+  /// (`presentation/widgets/spell_info_panel.dart`), voir
+  /// `domain/spell_status_formatter.dart` pour les règles (jamais appelée
+  /// pour un sort mineur ou inné). Aucune limite quotidienne de sorts
+  /// préparés n'est vérifiée ici (modificateur de caractéristique + niveau,
+  /// règle 5e) : reste un simple flag, sans simulation des règles complètes
+  /// — même principe que le statut "mort"
+  /// (`docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2).
+  Future<WriteOutcome> setSpellPrepared({
+    required String characterId,
+    required int spellId,
+    required bool prepared,
+  });
+
   /// Écrit (upsert) `character_feature_uses.uses_remaining` pour
   /// [characterId]/[classFeatureId] avec [usesRemaining] (déjà calculé par
   /// l'appelant — valeur actuelle - 1, voir
@@ -764,7 +791,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_skill_proficiencies(skill_id, proficiency),
             character_tool_proficiencies(tool_id, custom_text),
             character_languages(language_id),
-            character_spells(spell_id, status),
+            character_spells(spell_id, status, is_favorite),
             character_spell_slots(slot_level, slots_total, slots_used),
             character_pact_slots(slot_level, slots_total, slots_used),
             character_feature_uses(class_feature_id, uses_remaining),
@@ -1057,6 +1084,60 @@ class SupabaseCharacterRepository implements CharacterRepository {
       return WriteOutcome.synced;
     } on CharacterFailure {
       rethrow;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> setSpellFavorite({
+    required String characterId,
+    required int spellId,
+    required bool isFavorite,
+  }) async {
+    // `character_spells` n'a pas de colonne `owner_id` propre, la RLS
+    // (`owns_character(character_id)`) est la garantie d'isolation — même
+    // principe que [useInventoryItem]. `_requireOwnerId()` sert uniquement à
+    // s'assurer qu'une session existe.
+    _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('character_spells')
+          .update({'is_favorite': isFavorite})
+          .eq('character_id', characterId)
+          .eq('spell_id', spellId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> setSpellPrepared({
+    required String characterId,
+    required int spellId,
+    required bool prepared,
+  }) async {
+    _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('character_spells')
+          .update({'status': prepared ? 'préparé' : 'connu'})
+          .eq('character_id', characterId)
+          .eq('spell_id', spellId);
+      return WriteOutcome.synced;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (_) {
@@ -2947,6 +3028,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
       names: spellNames,
       descriptions: spellDescriptions,
       statuses: CharacterSpellRowMapper.parseStatuses(
+        CharacterDetailRowMapper.characterSpellRowsOf(row),
+      ),
+      favorites: CharacterSpellRowMapper.parseFavorites(
         CharacterDetailRowMapper.characterSpellRowsOf(row),
       ),
     );

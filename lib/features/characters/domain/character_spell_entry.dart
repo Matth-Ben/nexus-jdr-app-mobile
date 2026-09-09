@@ -18,6 +18,7 @@ class CharacterSpellEntry {
     this.duration = '',
     this.concentration = false,
     this.description = '',
+    this.isFavorite = false,
   });
 
   final int id;
@@ -29,9 +30,10 @@ class CharacterSpellEntry {
   /// `spells.school`, chaîne vide si non renseignée côté base.
   final String school;
 
-  /// `character_spells.status` : 'connu'/'préparé'/'inné'. Pas encore
-  /// affiché à cette itération (voir la documentation de classe de
-  /// `character_spells_section.dart`), gardé disponible pour la suite.
+  /// `character_spells.status` : 'connu'/'préparé'/'inné' — voir
+  /// `domain/spell_status_formatter.dart` pour sa mise en forme à
+  /// l'affichage et les règles dérivées (éligibilité de "Lancer",
+  /// bascule "Préparer").
   final String status;
 
   /// `spells.casting_time`, chaîne vide si non renseigné — panneau "Infos"
@@ -55,4 +57,11 @@ class CharacterSpellEntry {
 
   /// `spells.description`, chaîne vide si non renseignée.
   final String description;
+
+  /// `character_spells.is_favorite` — épinglage pour accès rapide en combat,
+  /// voir `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
+  /// "Onglet Sorts". Bascule via l'étoile de `_SpellRow`
+  /// (`presentation/widgets/character_spells_section.dart`) — voir
+  /// `CharacterRepository.setSpellFavorite`.
+  final bool isFavorite;
 }
