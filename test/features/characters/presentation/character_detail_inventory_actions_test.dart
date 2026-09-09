@@ -39,6 +39,7 @@ class FakeRepository implements CharacterRepository {
 
   int useInventoryItemCallCount = 0;
   int setEquippedCallCount = 0;
+  int setAttunedCallCount = 0;
   int removeInventoryItemCallCount = 0;
   int adjustCurrencyCallCount = 0;
   int addCustomInventoryItemCallCount = 0;
@@ -48,6 +49,7 @@ class FakeRepository implements CharacterRepository {
   String? lastInventoryId;
   int? lastNewQuantity;
   bool? lastEquipped;
+  bool? lastAttuned;
   CurrencyKind? lastCurrency;
   int? lastNewAmount;
   String? lastCustomName;
@@ -132,6 +134,45 @@ class FakeRepository implements CharacterRepository {
     setEquippedCallCount++;
     lastInventoryId = inventoryId;
     lastEquipped = equipped;
+    return outcomeToReturn;
+  }
+
+  @override
+  Future<WriteOutcome> setInventoryItemAttuned({
+    required String characterId,
+    required String inventoryId,
+    required bool attuned,
+  }) async {
+    setAttunedCallCount++;
+    lastInventoryId = inventoryId;
+    lastAttuned = attuned;
+    current = current.copyWith(
+      inventory: [
+        for (final item in current.inventory)
+          if (item.id == inventoryId)
+            CharacterInventoryItem(
+              id: item.id,
+              itemId: item.itemId,
+              name: item.name,
+              category: item.category,
+              quantity: item.quantity,
+              equipped: item.equipped,
+              totalWeight: item.totalWeight,
+              unitWeight: item.unitWeight,
+              costAmount: item.costAmount,
+              description: item.description,
+              rarity: item.rarity,
+              requiresAttunement: item.requiresAttunement,
+              isAttuned: attuned,
+              consumable: item.consumable,
+              notes: item.notes,
+              weaponProperties: item.weaponProperties,
+              armorProperties: item.armorProperties,
+            )
+          else
+            item,
+      ],
+    );
     return outcomeToReturn;
   }
 
@@ -381,6 +422,18 @@ const _rations = CharacterInventoryItem(
   consumable: true,
 );
 
+/// Objet harmonisable (contrairement aux 3 précédents) — voir le groupe de
+/// tests "harmoniser un objet" ci-dessous.
+const _ring = CharacterInventoryItem(
+  id: 'inv-4',
+  itemId: 4,
+  name: 'Anneau de protection',
+  category: 'objet_magique',
+  quantity: 1,
+  equipped: false,
+  requiresAttunement: true,
+);
+
 const detail = CharacterDetail(
   id: '1',
   name: 'Test',
@@ -400,11 +453,15 @@ const detail = CharacterDetail(
   temporaryHp: 0,
   abilityScores: {},
   currencyGp: 10,
-  inventory: [_dagger, _potion, _rations],
+  inventory: [_dagger, _potion, _rations, _ring],
 );
 
-Future<FakeRepository> pumpDetail(WidgetTester tester) async {
+Future<FakeRepository> pumpDetail(
+  WidgetTester tester, {
+  CharacterDetail? initialDetail,
+}) async {
   final repository = FakeRepository();
+  if (initialDetail != null) repository.current = initialDetail;
   await tester.binding.setSurfaceSize(const Size(800, 2400));
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -454,6 +511,112 @@ void main() {
       expect(find.text('Dague équipé.'), findsOneWidget);
     },
   );
+
+  group('harmoniser un objet (charge portée, harmonisation suivie, tri par '
+      'catégorie — increment 7)', () {
+    testWidgets(
+      '"Harmoniser cet objet" appelle setInventoryItemAttuned(attuned: '
+      'true), snackbar "harmonisé."',
+      (tester) async {
+        final repository = await pumpDetail(tester);
+        await openInventoryTab(tester);
+
+        await tester.tap(find.text('Anneau de protection'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Harmoniser cet objet'));
+        await tester.pumpAndSettle();
+
+        expect(repository.setAttunedCallCount, 1);
+        expect(repository.lastInventoryId, 'inv-4');
+        expect(repository.lastAttuned, isTrue);
+        expect(find.text('Anneau de protection harmonisé.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'un objet déjà harmonisé : "Ne plus harmoniser" appelle '
+      'setInventoryItemAttuned(attuned: false)',
+      (tester) async {
+        final repository = await pumpDetail(
+          tester,
+          initialDetail: detail.copyWith(
+            inventory: [
+              _dagger,
+              _potion,
+              _rations,
+              const CharacterInventoryItem(
+                id: 'inv-4',
+                itemId: 4,
+                name: 'Anneau de protection',
+                category: 'objet_magique',
+                quantity: 1,
+                equipped: false,
+                requiresAttunement: true,
+                isAttuned: true,
+              ),
+            ],
+          ),
+        );
+        await openInventoryTab(tester);
+
+        await tester.tap(find.text('Anneau de protection'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Ne plus harmoniser'));
+        await tester.pumpAndSettle();
+
+        expect(repository.setAttunedCallCount, 1);
+        expect(repository.lastAttuned, isFalse);
+        expect(
+          find.text('Anneau de protection n\'est plus harmonisé.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'plafond de 3 objets harmonisés atteint : "Harmoniser cet objet" est '
+      'désactivée (libellé de fin "Limite (3) atteinte"), aucun appel au tap',
+      (tester) async {
+        CharacterInventoryItem attunedItem(String id, String name) =>
+            CharacterInventoryItem(
+              id: id,
+              itemId: int.parse(id.split('-').last),
+              name: name,
+              category: 'objet_magique',
+              quantity: 1,
+              equipped: false,
+              requiresAttunement: true,
+              isAttuned: true,
+            );
+
+        final repository = await pumpDetail(
+          tester,
+          initialDetail: detail.copyWith(
+            inventory: [
+              attunedItem('inv-10', 'Amulette A'),
+              attunedItem('inv-11', 'Amulette B'),
+              attunedItem('inv-12', 'Amulette C'),
+              _ring,
+            ],
+          ),
+        );
+        await openInventoryTab(tester);
+
+        await tester.tap(find.text('Anneau de protection'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Harmoniser cet objet'), findsOneWidget);
+        expect(find.text('Limite (3) atteinte'), findsOneWidget);
+
+        await tester.tap(find.text('Harmoniser cet objet'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+
+        expect(repository.setAttunedCallCount, 0);
+        // La sheet reste ouverte (tap ignoré, pas de fermeture ni d'appel).
+        expect(find.text('Limite (3) atteinte'), findsOneWidget);
+      },
+    );
+  });
 
   testWidgets(
     '"Utiliser" une potion à quantité 1 : useInventoryItem(0), snackbar '

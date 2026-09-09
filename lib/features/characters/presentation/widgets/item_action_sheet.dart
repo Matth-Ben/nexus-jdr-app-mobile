@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/destructive_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
+import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/inventory_category_rules.dart';
 import 'item_info_panel.dart';
@@ -19,6 +20,13 @@ typedef UseInventoryItemCallback = void Function(CharacterInventoryItem item);
 /// la logique d'écriture à l'appelant, voir
 /// `character_detail_screen.dart::_toggleInventoryItemEquipped`.
 typedef ToggleInventoryItemEquippedCallback = void Function(
+  CharacterInventoryItem item,
+);
+
+/// Callback d'exécution de l'action "Harmoniser cet objet"/"Ne plus
+/// harmoniser" — délègue toute la logique d'écriture à l'appelant, voir
+/// `character_detail_screen.dart::_toggleInventoryItemAttuned`.
+typedef ToggleInventoryItemAttunedCallback = void Function(
   CharacterInventoryItem item,
 );
 
@@ -47,21 +55,31 @@ const Set<String> equippableInventoryCategories = {
 /// [SheetActionDivider], couleur `accentBrick`).
 ///
 /// Un objet personnalisé ([CharacterInventoryItem.isCustom]) n'a jamais
-/// "Utiliser" ni "Équiper"/"Déséquiper" (pas de `consumable`/`category`
-/// résolus, voir la documentation de ces champs) : seulement "Infos" et
-/// "Retirer".
+/// "Utiliser" ni "Équiper"/"Déséquiper" ni "Harmoniser" (pas de
+/// `consumable`/`category`/`requiresAttunement` résolus, voir la
+/// documentation de ces champs) : seulement "Infos" et "Retirer".
+///
+/// "Harmoniser cet objet" n'apparaît que pour un objet
+/// [CharacterInventoryItem.requiresAttunement] — désactivée (grisée, avec
+/// un libellé de fin "Limite (3) atteinte") si [attunedCount] a déjà atteint
+/// `CharacterDetail.attunementCap` et que l'objet n'est pas déjà harmonisé
+/// (le retirer de l'harmonisation reste toujours possible, voir
+/// `CharacterDetail.attunementCap`).
 Future<void> showItemActionSheet(
   BuildContext context, {
   required CharacterInventoryItem item,
   required UseInventoryItemCallback onUseItem,
   required ToggleInventoryItemEquippedCallback onToggleEquipped,
+  required ToggleInventoryItemAttunedCallback onToggleAttuned,
   required RemoveInventoryItemCallback onRemoveItem,
+  required int attunedCount,
 }) async {
   final action = await showModalBottomSheet<_ItemSheetAction>(
     context: context,
     backgroundColor: AppColors.parchmentCard,
     isScrollControlled: true,
-    builder: (sheetContext) => _ItemActionSheetContent(item: item),
+    builder: (sheetContext) =>
+        _ItemActionSheetContent(item: item, attunedCount: attunedCount),
   );
   if (action == null || !context.mounted) return;
 
@@ -72,11 +90,15 @@ Future<void> showItemActionSheet(
         item: item,
         onUseItem: onUseItem,
         onToggleEquipped: onToggleEquipped,
+        onToggleAttuned: onToggleAttuned,
+        attunedCount: attunedCount,
       );
     case _ItemSheetAction.use:
       onUseItem(item);
     case _ItemSheetAction.toggleEquipped:
       onToggleEquipped(item);
+    case _ItemSheetAction.toggleAttuned:
+      onToggleAttuned(item);
     case _ItemSheetAction.remove:
       await removeItemFlow(context, item: item, onRemoveItem: onRemoveItem);
   }
@@ -100,18 +122,22 @@ Future<void> removeItemFlow(
   onRemoveItem(item);
 }
 
-enum _ItemSheetAction { info, use, toggleEquipped, remove }
+enum _ItemSheetAction { info, use, toggleEquipped, toggleAttuned, remove }
 
 class _ItemActionSheetContent extends StatelessWidget {
-  const _ItemActionSheetContent({required this.item});
+  const _ItemActionSheetContent({required this.item, required this.attunedCount});
 
   final CharacterInventoryItem item;
+  final int attunedCount;
 
   @override
   Widget build(BuildContext context) {
     final equippable =
         !item.isCustom && equippableInventoryCategories.contains(item.category);
     final usable = !item.isCustom && item.consumable;
+    final attunable = !item.isCustom && item.requiresAttunement;
+    final atAttunementCap =
+        !item.isAttuned && attunedCount >= CharacterDetail.attunementCap;
 
     return SafeArea(
       child: Padding(
@@ -160,6 +186,19 @@ class _ItemActionSheetContent extends StatelessWidget {
                 label: item.equipped ? 'Déséquiper' : 'Équiper',
                 onTap: () =>
                     Navigator.of(context).pop(_ItemSheetAction.toggleEquipped),
+              ),
+            if (attunable)
+              SheetActionRow(
+                icon: item.isAttuned ? Icons.link_off : Icons.link,
+                label: item.isAttuned
+                    ? 'Ne plus harmoniser'
+                    : 'Harmoniser cet objet',
+                enabled: !atAttunementCap,
+                trailingText: atAttunementCap
+                    ? 'Limite (${CharacterDetail.attunementCap}) atteinte'
+                    : null,
+                onTap: () =>
+                    Navigator.of(context).pop(_ItemSheetAction.toggleAttuned),
               ),
             const SheetActionDivider(),
             SheetActionRow(

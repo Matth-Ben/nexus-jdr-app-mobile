@@ -763,6 +763,25 @@ void main() {
         expect(outcome, WriteOutcome.synced);
       });
 
+      test('setInventoryItemAttuned : connectivité présente + écriture '
+          'réussie -> synced', () async {
+        final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.setInventoryItemAttuned(
+          characterId: characterId,
+          inventoryId: inventoryId,
+          attuned: true,
+        );
+
+        expect(outcome, WriteOutcome.synced);
+      });
+
       test('removeInventoryItem : connectivité présente + écriture réussie -> '
           'synced', () async {
         final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);

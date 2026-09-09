@@ -174,6 +174,8 @@ void main() {
             'quantity': 1,
             'equipped': true,
             'weight': 1.5,
+            'requires_attunement': true,
+            'is_attuned': true,
             'weapon_properties': {
               'damage_dice': '1d8',
               'damage_type': 'tranchant',
@@ -189,6 +191,8 @@ void main() {
       expect(item.name, 'Épée longue');
       expect(item.equipped, true);
       expect(item.totalWeight, 1.5);
+      expect(item.requiresAttunement, isTrue);
+      expect(item.isAttuned, isTrue);
       expect(item.weaponProperties?.damageDice, '1d8');
       expect(item.weaponProperties?.properties, ['versatile']);
     });

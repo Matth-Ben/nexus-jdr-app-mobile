@@ -926,6 +926,42 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Action "Harmoniser cet objet"/"Ne plus harmoniser" (sheet d'actions ou
+  /// panneau "Infos" d'objet) : bascule [item.isAttuned], aucune
+  /// confirmation — même contrat que [_toggleInventoryItemEquipped]. Le
+  /// plafond de `CharacterDetail.attunementCap` est vérifié côté UI avant
+  /// même d'atteindre cette méthode (voir `item_action_sheet.dart`/
+  /// `item_info_panel.dart`), jamais ici.
+  Future<void> _toggleInventoryItemAttuned(CharacterInventoryItem item) async {
+    final newAttuned = !item.isAttuned;
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .setInventoryItemAttuned(
+            characterId: widget.characterId,
+            inventoryId: item.id,
+            attuned: newAttuned,
+          );
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      await _refreshCharacterDetail();
+      _showSnackBar(
+        newAttuned
+            ? '${item.name} harmonisé.'
+            : '${item.name} n\'est plus harmonisé.',
+      );
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar('Impossible de mettre à jour cet objet. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
   /// Action "Retirer" (déjà confirmée par le dialogue de la sheet d'actions
   /// d'objet, voir `item_action_sheet.dart::removeItemFlow`).
   Future<void> _removeInventoryItem(CharacterInventoryItem item) async {
@@ -1713,6 +1749,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         detail: detail,
         onUseItem: _useInventoryItem,
         onToggleItemEquipped: _toggleInventoryItemEquipped,
+        onToggleItemAttuned: _toggleInventoryItemAttuned,
         onRemoveItem: _removeInventoryItem,
         onAdjustCurrency: _adjustCurrency,
         onAddInventoryItem: _addInventoryItem,

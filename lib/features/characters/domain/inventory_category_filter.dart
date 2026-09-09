@@ -1,38 +1,50 @@
 import 'character_inventory_item.dart';
 
-/// Filtre "Tout"/"Armes"/"Consomm." de l'onglet Inventaire — voir
-/// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md` section 3,
-/// "Tri / filtre de l'inventaire par type", et la maquette "Fiche —
-/// Inventaire" (`09-maquettes-captures.md`, bascule segmentée sous les stat
-/// boxes de monnaie).
+/// Filtre "Tout"/"Armes"/"Armures"/"Consomm."/"Divers" de l'onglet
+/// Inventaire — voir `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`
+/// section 3, "Tri / filtre de l'inventaire par type", et la maquette
+/// "Fiche — Inventaire" (`09-maquettes-captures.md`, bascule segmentée sous
+/// les stat boxes de monnaie).
 ///
-/// Seulement 3 segments (pas les 4 évoqués par le cahier des charges —
-/// "armes, armures, consommables, divers") : la maquette n'en montre que 3
-/// (`Tout`/`Armes`/`Consomm.`) dans une bascule segmentée
-/// (`core/widgets/segmented_toggle.dart`, conçue pour 2-3 segments), et
-/// c'est elle qui prime pour la fidélité visuelle — écart assumé plutôt que
-/// deviné, à discuter si "Armures"/"Divers" s'avèrent nécessaires en
-/// pratique.
+/// Les 4 segments du cahier des charges ("armes, armures, consommables,
+/// divers"), pas seulement les 3 montrés par la maquette (`Tout`/`Armes`/
+/// `Consomm.`) — écart précédemment assumé, levé maintenant que le tri par
+/// catégorie est explicitement demandé. `core/widgets/segmented_toggle.dart`
+/// n'impose aucune limite de segments (voir sa documentation de classe).
 enum InventoryCategoryFilter {
   all('Tout'),
   weapons('Armes'),
-  consumables('Consomm.');
+  armor('Armures'),
+  consumables('Consomm.'),
+  misc('Divers');
 
   const InventoryCategoryFilter(this.label);
 
   final String label;
 
-  /// `items.category == 'arme'` pour [weapons] ;
-  /// `CharacterInventoryItem.consumable` pour [consumables] — un objet
-  /// consommable ET de catégorie 'arme' (aucun cas réel connu à ce jour)
-  /// n'apparaîtrait alors que sous [weapons], jamais sous les deux à la
-  /// fois : chaque segment applique son propre test indépendamment, aucune
-  /// hiérarchie de priorité entre eux n'est nécessaire puisqu'un seul
-  /// segment est actif à la fois (bascule à choix unique).
+  /// `items.category == 'arme'` pour [weapons] ; `category` ∈
+  /// {'armure', 'bouclier'} pour [armor] ;
+  /// `CharacterInventoryItem.consumable` pour [consumables] ; ce qui ne
+  /// correspond à aucun des trois précédents pour [misc] (`outil`,
+  /// `equipement_general`, `objet_magique` non consommable,
+  /// `monture_vehicule`, et tout objet personnalisé) — chaque segment
+  /// applique son propre test indépendamment (sauf [misc], qui exclut
+  /// explicitement les trois autres) : un objet consommable ET de catégorie
+  /// 'arme' (aucun cas réel connu à ce jour) apparaîtrait alors sous
+  /// [weapons] ET [consumables], jamais sous [misc], aucune hiérarchie de
+  /// priorité n'étant nécessaire puisqu'un seul segment est actif à la fois
+  /// (bascule à choix unique).
   bool matches(CharacterInventoryItem item) => switch (this) {
     InventoryCategoryFilter.all => true,
     InventoryCategoryFilter.weapons => item.category == 'arme',
+    InventoryCategoryFilter.armor =>
+      item.category == 'armure' || item.category == 'bouclier',
     InventoryCategoryFilter.consumables => item.consumable,
+    InventoryCategoryFilter.misc =>
+      item.category != 'arme' &&
+          item.category != 'armure' &&
+          item.category != 'bouclier' &&
+          !item.consumable,
   };
 
   static List<CharacterInventoryItem> apply(

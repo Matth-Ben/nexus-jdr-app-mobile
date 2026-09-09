@@ -12,6 +12,7 @@ import '../../domain/inventory_catalog_item.dart';
 import '../../domain/inventory_category_filter.dart';
 import '../../domain/inventory_stat_boxes_resolver.dart';
 import 'add_item_flow.dart';
+import 'character_inventory_capacity_gauge.dart';
 import 'character_inventory_item_card.dart';
 import 'character_inventory_stat_boxes_row.dart';
 import 'currency_adjustment_sheet.dart';
@@ -36,14 +37,20 @@ import 'item_action_sheet.dart';
 /// maquette ne montre elle-même aucun regroupement visuel par catégorie.
 ///
 /// `StatefulWidget` (depuis l'ajout de la bascule de filtre "Tout"/"Armes"/
-/// "Consomm.", voir `domain/inventory_category_filter.dart`) : même
-/// rationale que `CharacterSpellsTabBody` (confort d'affichage purement
-/// local, rien à persister).
+/// "Armures"/"Consomm."/"Divers", voir `domain/inventory_category_filter.dart`)
+/// : même rationale que `CharacterSpellsTabBody` (confort d'affichage
+/// purement local, rien à persister).
+///
+/// [CharacterInventoryCapacityGauge] (charge portée vs. capacité de
+/// transport dérivée de la Force) est affichée juste sous les stat boxes de
+/// monnaie, toujours présente (même inventaire vide) — voir sa
+/// documentation de classe.
 class CharacterInventoryTabBody extends StatefulWidget {
   const CharacterInventoryTabBody({
     required this.detail,
     required this.onUseItem,
     required this.onToggleItemEquipped,
+    required this.onToggleItemAttuned,
     required this.onRemoveItem,
     required this.onAdjustCurrency,
     required this.onAddInventoryItem,
@@ -56,6 +63,7 @@ class CharacterInventoryTabBody extends StatefulWidget {
 
   final UseInventoryItemCallback onUseItem;
   final ToggleInventoryItemEquippedCallback onToggleItemEquipped;
+  final ToggleInventoryItemAttunedCallback onToggleItemAttuned;
   final RemoveInventoryItemCallback onRemoveItem;
 
   /// Reçoit la monnaie ajustée et le nouveau montant *absolu* déjà calculé
@@ -97,7 +105,9 @@ class _CharacterInventoryTabBodyState
       item: item,
       onUseItem: widget.onUseItem,
       onToggleEquipped: widget.onToggleItemEquipped,
+      onToggleAttuned: widget.onToggleItemAttuned,
       onRemoveItem: widget.onRemoveItem,
+      attunedCount: widget.detail.attunedItemCount,
     );
   }
 
@@ -153,6 +163,8 @@ class _CharacterInventoryTabBodyState
               ? null
               : (currency) => _openCurrencyAdjustment(context, currency),
         ),
+        const SizedBox(height: AppSpacing.md),
+        CharacterInventoryCapacityGauge(detail: detail),
         if (!isEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           SegmentedToggle<InventoryCategoryFilter>(
@@ -191,8 +203,8 @@ class _CharacterInventoryTabBodyState
 
 /// État "aucun objet dans cette catégorie" — distinct de
 /// [_EmptyInventoryState] (inventaire réellement vide) : au moins un objet
-/// existe, mais aucun ne correspond au filtre "Tout"/"Armes"/"Consomm."
-/// actuellement actif (voir `domain/inventory_category_filter.dart`). Même
+/// existe, mais aucun ne correspond au filtre actuellement actif (voir
+/// `domain/inventory_category_filter.dart`). Même
 /// agencement compact que
 /// `character_spells_tab_body.dart::_NoSearchMatchState`.
 class _NoFilterMatchState extends StatelessWidget {

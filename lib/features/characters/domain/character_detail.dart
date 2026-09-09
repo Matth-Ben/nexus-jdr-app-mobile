@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'armor_class_calculator.dart';
+import 'carrying_capacity_calculator.dart';
 import 'character_adventure.dart';
 import 'character_class_feature.dart';
 import 'character_detail_class_row.dart';
@@ -8,6 +9,7 @@ import 'character_inventory_item.dart';
 import 'character_skill_row.dart';
 import 'character_spell_entry.dart';
 import 'character_spell_slot.dart';
+import 'inventory_weight_calculator.dart';
 import 'xp_table.dart';
 
 part 'character_detail.freezed.dart';
@@ -292,4 +294,32 @@ abstract class CharacterDetail with _$CharacterDetail {
     abilityScores: abilityScores,
     inventory: inventory,
   );
+
+  /// Poids total de [inventory], en kilogrammes — voir
+  /// `InventoryWeightCalculator`.
+  double get inventoryWeight => InventoryWeightCalculator.totalOf(inventory);
+
+  /// Capacité de transport, en kilogrammes, dérivée du score de Force —
+  /// voir `CarryingCapacityCalculator`. Score de Force par défaut à 10
+  /// (modificateur nul) si absent de [abilityScores], même repli que
+  /// [armorClass]/`ArmorClassCalculator` pour le score de Dextérité.
+  double get carryingCapacity =>
+      CarryingCapacityCalculator.capacityOf(abilityScores['str'] ?? 10);
+
+  /// `true` si [inventoryWeight] dépasse [carryingCapacity] — jauge/alerte
+  /// "SURCHARGÉ" de l'onglet "Inventaire"
+  /// (`presentation/widgets/character_inventory_tab_body.dart`).
+  bool get isOverloaded => inventoryWeight > carryingCapacity;
+
+  /// Nombre d'objets actuellement harmonisés (`CharacterInventoryItem
+  /// .isAttuned`) — voir [attunementCap].
+  int get attunedItemCount => inventory.where((item) => item.isAttuned).length;
+
+  /// Limite RAW 5e du nombre d'objets harmonisables simultanément (Manuel
+  /// des Joueurs). Utilisée par `item_action_sheet.dart`/
+  /// `item_info_panel.dart` pour désactiver la bascule "Harmoniser cet
+  /// objet" une fois atteinte (harmoniser un objet déjà harmonisé — la
+  /// bascule inverse — reste toujours possible, elle ne fait jamais
+  /// augmenter ce compte).
+  static const int attunementCap = 3;
 }

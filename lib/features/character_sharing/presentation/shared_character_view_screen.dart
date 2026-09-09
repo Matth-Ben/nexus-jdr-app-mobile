@@ -138,6 +138,7 @@ class _SharedCharacterViewScreenState
         detail: detail,
         onUseItem: (_) {},
         onToggleItemEquipped: (_) {},
+        onToggleItemAttuned: (_) {},
         onRemoveItem: (_) {},
         onAdjustCurrency: (currency, newAmount) {},
         onAddInventoryItem: (item, quantity) {},

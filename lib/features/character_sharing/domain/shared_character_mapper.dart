@@ -309,6 +309,7 @@ CharacterInventoryItem _mapInventoryItem(Map<String, dynamic> row) {
     description: row['description'] as String?,
     rarity: row['rarity'] as String?,
     requiresAttunement: row['requires_attunement'] == true,
+    isAttuned: row['is_attuned'] == true,
     consumable: row['consumable'] == true,
     notes: row['notes'] as String?,
     weaponProperties: _mapWeaponProperties(_mapOf(row['weapon_properties'])),

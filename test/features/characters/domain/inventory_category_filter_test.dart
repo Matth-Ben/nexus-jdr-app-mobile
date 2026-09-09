@@ -21,6 +21,8 @@ void main() {
     final sword = _item('1', 'Épée longue', category: 'arme');
     final potion = _item('2', 'Potion de soin', category: 'objet_magique', consumable: true);
     final backpack = _item('3', "Sac à dos d'érudit", category: 'equipement_general');
+    final armor = _item('5', 'Chemise de mailles', category: 'armure');
+    final shield = _item('6', 'Bouclier', category: 'bouclier');
     final items = [sword, potion, backpack];
 
     test('all.matches renvoie toujours vrai, quel que soit l\'objet', () {
@@ -72,6 +74,45 @@ void main() {
       expect(InventoryCategoryFilter.weapons.matches(custom), isFalse);
       expect(InventoryCategoryFilter.consumables.matches(custom), isFalse);
       expect(InventoryCategoryFilter.all.matches(custom), isTrue);
+    });
+
+    test('armor.matches ne retient que category ∈ {"armure", "bouclier"}', () {
+      expect(InventoryCategoryFilter.armor.matches(armor), isTrue);
+      expect(InventoryCategoryFilter.armor.matches(shield), isTrue);
+      expect(InventoryCategoryFilter.armor.matches(sword), isFalse);
+      expect(InventoryCategoryFilter.armor.matches(backpack), isFalse);
+    });
+
+    test('misc.matches ne retient que ce qui n\'est ni arme, ni armure/'
+        'bouclier, ni consommable — y compris un objet personnalisé', () {
+      final custom = _item('4', 'Petit sac de sable');
+      expect(InventoryCategoryFilter.misc.matches(backpack), isTrue);
+      expect(InventoryCategoryFilter.misc.matches(custom), isTrue);
+      expect(InventoryCategoryFilter.misc.matches(sword), isFalse);
+      expect(InventoryCategoryFilter.misc.matches(armor), isFalse);
+      expect(InventoryCategoryFilter.misc.matches(shield), isFalse);
+      expect(InventoryCategoryFilter.misc.matches(potion), isFalse);
+    });
+
+    test('apply(armor) ne garde que armure/bouclier', () {
+      expect(
+        InventoryCategoryFilter.apply(
+          [...items, armor, shield],
+          InventoryCategoryFilter.armor,
+        ),
+        [armor, shield],
+      );
+    });
+
+    test('apply(misc) ne garde que ce qui n\'est ni arme/armure/bouclier ni '
+        'consommable', () {
+      expect(
+        InventoryCategoryFilter.apply(
+          [...items, armor, shield],
+          InventoryCategoryFilter.misc,
+        ),
+        [backpack],
+      );
     });
   });
 }

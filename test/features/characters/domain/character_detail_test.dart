@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
+import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 
 CharacterDetail _detail({
   List<CharacterDetailClassRow> classes = const [],
@@ -8,6 +9,8 @@ CharacterDetail _detail({
   int currentHp = 10,
   int maxHp = 10,
   int temporaryHp = 0,
+  Map<String, int> abilityScores = const {},
+  List<CharacterInventoryItem> inventory = const [],
 }) {
   return CharacterDetail(
     id: '1',
@@ -17,7 +20,8 @@ CharacterDetail _detail({
     currentHp: currentHp,
     maxHp: maxHp,
     temporaryHp: temporaryHp,
-    abilityScores: const {},
+    abilityScores: abilityScores,
+    inventory: inventory,
   );
 }
 
@@ -150,6 +154,112 @@ void main() {
       );
       expect(detail.xpProgress, 1);
       expect(detail.nextLevelXpThreshold, isNull);
+    });
+  });
+
+  group('CharacterDetail.inventoryWeight / carryingCapacity / isOverloaded', () {
+    test('capacité = Force x 7,5 kg, Force par défaut 10 (absente)', () {
+      expect(_detail().carryingCapacity, 75);
+    });
+
+    test('capacité dérivée du score de Force réel', () {
+      expect(_detail(abilityScores: const {'str': 16}).carryingCapacity, 120);
+    });
+
+    test('poids total agrège CharacterInventoryItem.totalWeight', () {
+      final detail = _detail(
+        inventory: const [
+          CharacterInventoryItem(
+            id: '1',
+            name: 'A',
+            quantity: 1,
+            equipped: false,
+            totalWeight: 3,
+          ),
+          CharacterInventoryItem(
+            id: '2',
+            name: 'B',
+            quantity: 1,
+            equipped: false,
+            totalWeight: 4,
+          ),
+        ],
+      );
+      expect(detail.inventoryWeight, 7);
+    });
+
+    test('isOverloaded faux quand le poids reste sous la capacité', () {
+      final detail = _detail(
+        abilityScores: const {'str': 10}, // capacité 75
+        inventory: const [
+          CharacterInventoryItem(
+            id: '1',
+            name: 'A',
+            quantity: 1,
+            equipped: false,
+            totalWeight: 50,
+          ),
+        ],
+      );
+      expect(detail.isOverloaded, isFalse);
+    });
+
+    test('isOverloaded vrai quand le poids dépasse la capacité', () {
+      final detail = _detail(
+        abilityScores: const {'str': 8}, // capacité 60
+        inventory: const [
+          CharacterInventoryItem(
+            id: '1',
+            name: 'A',
+            quantity: 1,
+            equipped: false,
+            totalWeight: 100,
+          ),
+        ],
+      );
+      expect(detail.isOverloaded, isTrue);
+    });
+  });
+
+  group('CharacterDetail.attunedItemCount / attunementCap', () {
+    test('attunementCap vaut 3 (RAW 5e)', () {
+      expect(CharacterDetail.attunementCap, 3);
+    });
+
+    test('compte uniquement les objets isAttuned', () {
+      final detail = _detail(
+        inventory: const [
+          CharacterInventoryItem(
+            id: '1',
+            name: 'Anneau',
+            quantity: 1,
+            equipped: false,
+            requiresAttunement: true,
+            isAttuned: true,
+          ),
+          CharacterInventoryItem(
+            id: '2',
+            name: 'Amulette',
+            quantity: 1,
+            equipped: false,
+            requiresAttunement: true,
+            isAttuned: false,
+          ),
+          CharacterInventoryItem(
+            id: '3',
+            name: 'Bâton',
+            quantity: 1,
+            equipped: false,
+            requiresAttunement: true,
+            isAttuned: true,
+          ),
+        ],
+      );
+      expect(detail.attunedItemCount, 2);
+    });
+
+    test('vaut 0 sur un inventaire vide', () {
+      expect(_detail().attunedItemCount, 0);
     });
   });
 }

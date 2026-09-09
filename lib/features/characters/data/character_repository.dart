@@ -278,6 +278,20 @@ abstract class CharacterRepository {
     required bool equipped,
   });
 
+  /// Action "Harmoniser cet objet"/"Ne plus harmoniser" — écrit
+  /// `character_inventory.is_attuned` tel quel, aucun calcul ici (même
+  /// principe que [setInventoryItemEquipped]). Le plafond de
+  /// `CharacterDetail.attunementCap` (3, RAW 5e) est vérifié côté UI avant
+  /// l'appel (voir `presentation/widgets/item_action_sheet.dart`/
+  /// `item_info_panel.dart`), jamais ici.
+  ///
+  /// Mode hors ligne : mêmes règles que [useInventoryItem].
+  Future<WriteOutcome> setInventoryItemAttuned({
+    required String characterId,
+    required String inventoryId,
+    required bool attuned,
+  });
+
   /// Action "Retirer" (avec confirmation côté sheet) — supprime la ligne
   /// `character_inventory` [inventoryId].
   ///
@@ -796,7 +810,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_pact_slots(slot_level, slots_total, slots_used),
             character_feature_uses(class_feature_id, uses_remaining),
             character_inventory(
-              id, item_id, custom_name, quantity, equipped, notes,
+              id, item_id, custom_name, quantity, equipped, is_attuned, notes,
               items(
                 category, weight, cost, rarity, requires_attunement, consumable,
                 weapon_properties(damage_dice, damage_type, properties, range),
@@ -1242,6 +1256,31 @@ class SupabaseCharacterRepository implements CharacterRepository {
       await _client
           .from('character_inventory')
           .update({'equipped': equipped})
+          .eq('id', inventoryId)
+          .eq('character_id', characterId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> setInventoryItemAttuned({
+    required String characterId,
+    required String inventoryId,
+    required bool attuned,
+  }) async {
+    _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('character_inventory')
+          .update({'is_attuned': attuned})
           .eq('id', inventoryId)
           .eq('character_id', characterId);
       return WriteOutcome.synced;

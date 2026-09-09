@@ -77,14 +77,17 @@ const _magicItem = CharacterInventoryItem(
 void main() {
   List<CharacterInventoryItem> useCalls = [];
   List<CharacterInventoryItem> toggleCalls = [];
+  List<CharacterInventoryItem> toggleAttunedCalls = [];
   List<CharacterInventoryItem> removeCalls = [];
 
   Future<void> pumpSheet(
     WidgetTester tester, {
     required CharacterInventoryItem item,
+    int attunedCount = 0,
   }) async {
     useCalls = [];
     toggleCalls = [];
+    toggleAttunedCalls = [];
     removeCalls = [];
     await tester.pumpWidget(
       MaterialApp(
@@ -97,7 +100,9 @@ void main() {
                   item: item,
                   onUseItem: useCalls.add,
                   onToggleEquipped: toggleCalls.add,
+                  onToggleAttuned: toggleAttunedCalls.add,
                   onRemoveItem: removeCalls.add,
+                  attunedCount: attunedCount,
                 ),
                 child: const Text('Ouvrir'),
               ),
@@ -199,6 +204,72 @@ void main() {
 
       expect(removeCalls, [_sword]);
     });
+
+    testWidgets(
+      'un objet requérant harmonisation : "Harmoniser cet objet" appelle '
+      'onToggleAttuned',
+      (tester) async {
+        await pumpSheet(tester, item: _magicItem);
+
+        expect(find.text('Harmoniser cet objet'), findsOneWidget);
+
+        await tester.tap(find.text('Harmoniser cet objet'));
+        await tester.pumpAndSettle();
+
+        expect(toggleAttunedCalls, [_magicItem]);
+      },
+    );
+
+    testWidgets(
+      'un objet déjà harmonisé : libellé "Ne plus harmoniser"',
+      (tester) async {
+        const attuned = CharacterInventoryItem(
+          id: 'inv-magic-attuned',
+          itemId: 5,
+          name: 'Bague harmonisée',
+          category: 'objet_magique',
+          quantity: 1,
+          equipped: false,
+          requiresAttunement: true,
+          isAttuned: true,
+        );
+        await pumpSheet(tester, item: attuned);
+
+        expect(find.text('Ne plus harmoniser'), findsOneWidget);
+        expect(find.text('Harmoniser cet objet'), findsNothing);
+
+        await tester.tap(find.text('Ne plus harmoniser'));
+        await tester.pumpAndSettle();
+
+        expect(toggleAttunedCalls, [attuned]);
+      },
+    );
+
+    testWidgets(
+      'plafond de 3 objets harmonisés atteint : "Harmoniser cet objet" est '
+      'désactivée, libellé de fin "Limite (3) atteinte", tap sans effet',
+      (tester) async {
+        await pumpSheet(tester, item: _magicItem, attunedCount: 3);
+
+        expect(find.text('Limite (3) atteinte'), findsOneWidget);
+
+        await tester.tap(find.text('Harmoniser cet objet'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+
+        expect(toggleAttunedCalls, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'un objet ne requérant pas d\'harmonisation : action absente de la '
+      'sheet',
+      (tester) async {
+        await pumpSheet(tester, item: _sword);
+
+        expect(find.text('Harmoniser cet objet'), findsNothing);
+        expect(find.text('Ne plus harmoniser'), findsNothing);
+      },
+    );
   });
 
   group('panneau "Infos"', () {
@@ -253,8 +324,10 @@ void main() {
       expect(find.widgetWithText(PrimaryButton, 'DÉSÉQUIPER'), findsOneWidget);
     });
 
-    testWidgets('un objet magique : rareté et attunement affichés, jamais '
-        'en doré (texte textPrimary)', (tester) async {
+    testWidgets('un objet magique : rareté affichée, jamais en doré (texte '
+        'textPrimary), lien "Harmoniser cet objet" (requiert harmonisation)', (
+      tester,
+    ) async {
       await pumpSheet(tester, item: _magicItem);
 
       await tester.tap(find.text('Infos'));
@@ -262,11 +335,39 @@ void main() {
 
       expect(find.text('Rareté'), findsOneWidget);
       expect(find.text('Rare'), findsOneWidget);
-      expect(find.text('Attunement requis'), findsOneWidget);
-      expect(find.text('Oui'), findsOneWidget);
+      expect(find.text('Harmoniser cet objet'), findsOneWidget);
       // Ni consommable ni équipable -> aucun bouton en pied.
       expect(find.byType(PrimaryButton), findsNothing);
+
+      await tester.tap(find.text('Harmoniser cet objet'));
+      await tester.pumpAndSettle();
+
+      expect(toggleAttunedCalls, [_magicItem]);
+      // Le panneau se referme (même principe que la bascule
+      // "Préparer ce sort" de l'onglet Sorts).
+      expect(find.text('AMULETTE DE VITALITÉ'), findsNothing);
     });
+
+    testWidgets(
+      'plafond de 3 objets harmonisés atteint : le lien du panneau est '
+      'désactivé (grisé), légende affichée',
+      (tester) async {
+        await pumpSheet(tester, item: _magicItem, attunedCount: 3);
+
+        await tester.tap(find.text('Infos'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Limite de 3 objets harmonisés atteinte.'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Harmoniser cet objet'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+
+        expect(toggleAttunedCalls, isEmpty);
+      },
+    );
 
     testWidgets('description absente affiche un texte de repli', (
       tester,

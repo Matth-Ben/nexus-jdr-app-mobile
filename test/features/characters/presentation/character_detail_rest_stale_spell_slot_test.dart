@@ -209,6 +209,15 @@ class FakeRepository implements CharacterRepository {
   }
 
   @override
+  Future<WriteOutcome> setInventoryItemAttuned({
+    required String characterId,
+    required String inventoryId,
+    required bool attuned,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<WriteOutcome> removeInventoryItem({
     required String characterId,
     required String inventoryId,

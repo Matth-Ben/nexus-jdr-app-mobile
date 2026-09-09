@@ -24,11 +24,18 @@ import 'weight_formatter.dart';
 ///   standard D&D (pp > gp > ep > sp > cp), pas explicitement montré par la
 ///   maquette (qui n'affiche jamais les deux) mais le plus prévisible pour
 ///   un joueur habitué au jeu ;
-/// - la box "poids" est toujours affichée en dernier, même à 0.
+/// - la box "poids" est toujours affichée en dernier, sauf si au moins un
+///   objet harmonisable existe dans l'inventaire, auquel cas une box
+///   "HARM." (nombre d'objets harmonisés / [CharacterDetail.attunementCap])
+///   la suit — même logique d'affichage conditionnel que platine/électrum,
+///   mais sur la présence d'un objet harmonisable plutôt que sur une valeur
+///   non nulle (voir `docs/cahier-des-charges/`
+///   11-fonctionnalites-a-ajouter.md, section "Onglet Inventaire").
 ///
-/// La rangée peut dépasser 4 boxes (jusqu'à 6 : pp, gp, ep, sp, cp, poids) —
-/// c'est au widget de rendu (`character_inventory_stat_boxes_row.dart`) de
-/// la rendre défilable horizontalement dans ce cas, pas à ce resolver.
+/// La rangée peut dépasser 4 boxes (jusqu'à 7 : pp, gp, ep, sp, cp, poids,
+/// harm.) — c'est au widget de rendu
+/// (`character_inventory_stat_boxes_row.dart`) de la rendre défilable
+/// horizontalement dans ce cas, pas à ce resolver.
 abstract final class InventoryStatBoxesResolver {
   static List<InventoryStatBox> resolve(CharacterDetail detail) {
     final boxes = <InventoryStatBox>[];
@@ -80,6 +87,22 @@ abstract final class InventoryStatBoxesResolver {
     boxes.add(
       InventoryStatBox(value: WeightFormatter.format(totalWeight), unit: 'KG'),
     );
+
+    // "HARM." (objets harmonisés) : seulement si au moins un objet de
+    // l'inventaire peut être harmonisé — même principe que platine/électrum
+    // ci-dessus ("ne pas surcharger l'écran d'un compteur toujours à 0/0
+    // pour un personnage qui ne croise jamais d'objet magique").
+    final attunableCount = detail.inventory
+        .where((item) => item.requiresAttunement)
+        .length;
+    if (attunableCount > 0) {
+      boxes.add(
+        InventoryStatBox(
+          value: '${detail.attunedItemCount}/${CharacterDetail.attunementCap}',
+          unit: 'HARM.',
+        ),
+      );
+    }
 
     return boxes;
   }

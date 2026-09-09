@@ -194,6 +194,7 @@ abstract final class CharacterInventoryRowMapper {
           description: itemId != null ? descriptions[itemId.toString()] : null,
           rarity: itemRow?['rarity'] as String?,
           requiresAttunement: itemRow?['requires_attunement'] == true,
+          isAttuned: row['is_attuned'] == true,
           consumable: itemRow?['consumable'] == true,
           notes: row['notes'] as String?,
           weaponProperties: parseWeaponProperties(itemRow),

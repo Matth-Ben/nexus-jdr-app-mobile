@@ -18,6 +18,7 @@ import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
+import 'package:personnages/features/characters/presentation/widgets/character_inventory_item_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_inventory_tab_body.dart';
 
 /// `find` sur un `CustomPaint` peint par [DashedBorderPainter] — plus fiable
@@ -35,6 +36,7 @@ CharacterDetail _detail({
   int currencySp = 0,
   int currencyCp = 0,
   List<CharacterInventoryItem> inventory = const [],
+  Map<String, int> abilityScores = const {},
 }) {
   return CharacterDetail(
     id: '1',
@@ -44,7 +46,7 @@ CharacterDetail _detail({
     currentHp: 10,
     maxHp: 10,
     temporaryHp: 0,
-    abilityScores: const {},
+    abilityScores: abilityScores,
     currencyGp: currencyGp,
     currencyPp: currencyPp,
     currencyEp: currencyEp,
@@ -57,6 +59,7 @@ CharacterDetail _detail({
 class _Recorder {
   final List<CharacterInventoryItem> useCalls = [];
   final List<CharacterInventoryItem> toggleCalls = [];
+  final List<CharacterInventoryItem> toggleAttunedCalls = [];
   final List<CharacterInventoryItem> removeCalls = [];
   final List<(CurrencyKind, int)> adjustCurrencyCalls = [];
   final List<(InventoryCatalogItem, int)> addItemCalls = [];
@@ -77,6 +80,7 @@ Future<_Recorder> _pump(
           actionsDisabled: actionsDisabled,
           onUseItem: recorder.useCalls.add,
           onToggleItemEquipped: recorder.toggleCalls.add,
+          onToggleItemAttuned: recorder.toggleAttunedCalls.add,
           onRemoveItem: recorder.removeCalls.add,
           onAdjustCurrency: (currency, amount) =>
               recorder.adjustCurrencyCalls.add((currency, amount)),
@@ -114,6 +118,34 @@ const _potion = CharacterInventoryItem(
 const _customItem = CharacterInventoryItem(
   id: 'inv-3',
   name: 'Petit sac de sable',
+  quantity: 1,
+  equipped: false,
+);
+
+const _ring = CharacterInventoryItem(
+  id: 'inv-4',
+  itemId: 4,
+  name: 'Anneau de protection',
+  category: 'objet_magique',
+  quantity: 1,
+  equipped: false,
+  requiresAttunement: true,
+);
+
+const _plateArmor = CharacterInventoryItem(
+  id: 'inv-5',
+  itemId: 5,
+  name: 'Armure de plates',
+  category: 'armure',
+  quantity: 1,
+  equipped: false,
+);
+
+const _rope = CharacterInventoryItem(
+  id: 'inv-6',
+  itemId: 6,
+  name: 'Corde',
+  category: 'equipement_general',
   quantity: 1,
   equipped: false,
 );
@@ -226,7 +258,16 @@ void main() {
       );
 
       expect(find.text('Objet sans poids connu'), findsOneWidget);
-      expect(find.textContaining('kg'), findsNothing);
+      // Recherche restreinte à la carte de l'objet : la jauge "CHARGE"
+      // affiche elle aussi un texte "... kg" (capacité de transport),
+      // indépendant du poids (inconnu) de cet objet précis.
+      expect(
+        find.descendant(
+          of: find.byType(CharacterInventoryItemCard),
+          matching: find.textContaining('kg'),
+        ),
+        findsNothing,
+      );
       expect(find.text('ÉQUIPÉ'), findsNothing);
     },
   );
@@ -391,8 +432,8 @@ void main() {
     });
   });
 
-  group('filtre "Tout"/"Armes"/"Consomm." (docs/cahier-des-charges/'
-      '11-fonctionnalites-a-ajouter.md section 3)', () {
+  group('filtre "Tout"/"Armes"/"Armures"/"Consomm."/"Divers" (docs/cahier-des-'
+      'charges/11-fonctionnalites-a-ajouter.md section 3)', () {
     testWidgets('la bascule de filtre est absente d\'un inventaire vide', (
       tester,
     ) async {
@@ -449,6 +490,45 @@ void main() {
     });
 
     testWidgets(
+      '"Armures" ne garde que les objets de catégorie "armure"',
+      (tester) async {
+        await _pump(
+          tester,
+          _detail(inventory: const [_dagger, _plateArmor, _customItem]),
+        );
+
+        await tester.tap(find.text('ARMURES'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Armure de plates'), findsOneWidget);
+        expect(find.text('Dague'), findsNothing);
+        expect(find.text('Petit sac de sable'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      '"Divers" ne garde que les objets hors arme/armure/consommable '
+      '(y compris les objets personnalisés)',
+      (tester) async {
+        await _pump(
+          tester,
+          _detail(
+            inventory: const [_dagger, _plateArmor, _potion, _rope, _customItem],
+          ),
+        );
+
+        await tester.tap(find.text('DIVERS'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Corde'), findsOneWidget);
+        expect(find.text('Petit sac de sable'), findsOneWidget);
+        expect(find.text('Dague'), findsNothing);
+        expect(find.text('Armure de plates'), findsNothing);
+        expect(find.text('Potion de soins'), findsNothing);
+      },
+    );
+
+    testWidgets(
       'aucun objet de la catégorie filtrée : affiche un message dédié, '
       'pas l\'état "INVENTAIRE VIDE" (l\'inventaire n\'est pas vide)',
       (tester) async {
@@ -459,6 +539,34 @@ void main() {
 
         expect(find.text('Aucun objet dans cette catégorie.'), findsOneWidget);
         expect(find.text('INVENTAIRE VIDE'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'les 5 segments (TOUT/ARMES/ARMURES/CONSOMM./DIVERS) tiennent sans '
+      'débordement sur une largeur d\'écran étroite (360 — Android bas de '
+      'gamme courant)',
+      (tester) async {
+        final originalSize = tester.view.physicalSize;
+        final originalRatio = tester.view.devicePixelRatio;
+        tester.view.physicalSize = const Size(360, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(() {
+          tester.view.physicalSize = originalSize;
+          tester.view.devicePixelRatio = originalRatio;
+        });
+
+        await _pump(
+          tester,
+          _detail(inventory: const [_dagger, _potion, _customItem]),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('TOUT'), findsOneWidget);
+        expect(find.text('ARMES'), findsOneWidget);
+        expect(find.text('ARMURES'), findsOneWidget);
+        expect(find.text('CONSOMM.'), findsOneWidget);
+        expect(find.text('DIVERS'), findsOneWidget);
       },
     );
 
@@ -503,6 +611,177 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(recorder.addCustomItemCalls, [('Corde', 1)]);
+    });
+  });
+
+  group('harmonisation (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section 3)', () {
+    testWidgets('"Harmoniser cet objet" appelle onToggleItemAttuned', (
+      tester,
+    ) async {
+      final recorder = await _pump(tester, _detail(inventory: const [_ring]));
+
+      await tester.tap(find.text('Anneau de protection'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Harmoniser cet objet'));
+      await tester.pumpAndSettle();
+
+      expect(recorder.toggleAttunedCalls, [_ring]);
+    });
+
+    testWidgets(
+      'plafond de 3 objets déjà harmonisés : "Harmoniser cet objet" est '
+      'désactivée avec le libellé "Limite (3) atteinte", aucun appel au tap',
+      (tester) async {
+        CharacterInventoryItem attunedItem(String id, String name) =>
+            CharacterInventoryItem(
+              id: id,
+              itemId: int.parse(id.split('-').last),
+              name: name,
+              category: 'objet_magique',
+              quantity: 1,
+              equipped: false,
+              requiresAttunement: true,
+              isAttuned: true,
+            );
+
+        final recorder = await _pump(
+          tester,
+          _detail(
+            inventory: [
+              attunedItem('inv-10', 'Amulette A'),
+              attunedItem('inv-11', 'Amulette B'),
+              attunedItem('inv-12', 'Amulette C'),
+              _ring,
+            ],
+          ),
+        );
+
+        await tester.tap(find.text('Anneau de protection'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Limite (3) atteinte'), findsOneWidget);
+
+        await tester.tap(find.text('Harmoniser cet objet'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+
+        expect(recorder.toggleAttunedCalls, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'un objet déjà harmonisé reste bascule-able ("Ne plus harmoniser") '
+      'même au plafond',
+      (tester) async {
+        CharacterInventoryItem attunedItem(String id, String name) =>
+            CharacterInventoryItem(
+              id: id,
+              itemId: int.parse(id.split('-').last),
+              name: name,
+              category: 'objet_magique',
+              quantity: 1,
+              equipped: false,
+              requiresAttunement: true,
+              isAttuned: true,
+            );
+
+        final recorder = await _pump(
+          tester,
+          _detail(
+            inventory: [
+              attunedItem('inv-10', 'Amulette A'),
+              attunedItem('inv-11', 'Amulette B'),
+              attunedItem('inv-12', 'Amulette C'),
+            ],
+          ),
+        );
+
+        await tester.tap(find.text('Amulette A'));
+        await tester.pumpAndSettle();
+        expect(find.text('Limite (3) atteinte'), findsNothing);
+
+        await tester.tap(find.text('Ne plus harmoniser'));
+        await tester.pumpAndSettle();
+
+        expect(recorder.toggleAttunedCalls, hasLength(1));
+        expect(recorder.toggleAttunedCalls.single.id, 'inv-10');
+      },
+    );
+
+    testWidgets(
+      'un objet ne nécessitant pas d\'harmonisation n\'a pas cette action '
+      'dans la sheet',
+      (tester) async {
+        await _pump(tester, _detail(inventory: const [_dagger]));
+
+        await tester.tap(find.text('Dague'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Harmoniser cet objet'), findsNothing);
+      },
+    );
+  });
+
+  group('capacité de transport (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section 3)', () {
+    testWidgets(
+      'jauge "CHARGE" toujours affichée, même inventaire vide (capacité = '
+      'Force x 7,5 kg, Force par défaut 10 -> 75 kg)',
+      (tester) async {
+        await _pump(tester, _detail());
+
+        expect(find.text('CHARGE'), findsOneWidget);
+        expect(find.text('0 / 75 kg'), findsOneWidget);
+      },
+    );
+
+    testWidgets('capacité dérivée du score de Force réel (16 -> 120 kg)', (
+      tester,
+    ) async {
+      await _pump(tester, _detail(abilityScores: const {'str': 16}));
+
+      expect(find.text('0 / 120 kg'), findsOneWidget);
+    });
+
+    testWidgets(
+      'poids total supérieur à la capacité : alerte "Surchargé" affichée',
+      (tester) async {
+        await _pump(
+          tester,
+          _detail(
+            abilityScores: const {'str': 8},
+            inventory: const [
+              CharacterInventoryItem(
+                id: 'inv-1',
+                itemId: 1,
+                name: 'Enclume',
+                category: 'equipement_general',
+                quantity: 1,
+                equipped: false,
+                totalWeight: 100,
+              ),
+            ],
+          ),
+        );
+
+        expect(find.text('0 / 60 kg'), findsNothing);
+        expect(find.text('100 / 60 kg'), findsOneWidget);
+        expect(
+          find.text('Surchargé — poids supérieur à la capacité de transport.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('poids sous la capacité : aucune alerte "Surchargé"', (
+      tester,
+    ) async {
+      await _pump(tester, _detail(inventory: const [_dagger]));
+
+      expect(
+        find.text('Surchargé — poids supérieur à la capacité de transport.'),
+        findsNothing,
+      );
     });
   });
 }

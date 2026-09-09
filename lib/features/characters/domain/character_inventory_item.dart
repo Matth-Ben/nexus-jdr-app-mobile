@@ -22,6 +22,7 @@ class CharacterInventoryItem {
     this.description,
     this.rarity,
     this.requiresAttunement = false,
+    this.isAttuned = false,
     this.consumable = false,
     this.notes,
     this.weaponProperties,
@@ -107,8 +108,26 @@ class CharacterInventoryItem {
   final String? rarity;
 
   /// `items.requires_attunement` — toujours `false` pour un objet
-  /// personnalisé (aucune ligne `items`).
+  /// personnalisé (aucune ligne `items`). Capacité statique de l'objet
+  /// (peut-il être harmonisé), à ne pas confondre avec [isAttuned] (est-il
+  /// *actuellement* harmonisé par ce personnage).
   final bool requiresAttunement;
+
+  /// `character_inventory.is_attuned` — vrai si ce personnage a
+  /// actuellement harmonisé cet objet (voir
+  /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
+  /// "Onglet Inventaire" : "Suivi du nombre d'objets harmonisés (attunement,
+  /// limite de 3 en 5e)"). Aucune contrainte côté base ne garantit que ce
+  /// champ reste `false` quand [requiresAttunement] est faux — c'est
+  /// l'interface qui ne propose jamais la bascule dans ce cas (voir
+  /// `item_action_sheet.dart`/`item_info_panel.dart`), même principe que
+  /// les autres invariants "portés par l'UI" de ce dépôt. Bascule via
+  /// `_ToggleAttunedLink` du panneau "Infos"
+  /// (`presentation/widgets/item_info_panel.dart`), voir
+  /// `CharacterRepository.setInventoryItemAttuned`. Le nombre total d'objets
+  /// harmonisés du personnage se lit sur
+  /// `CharacterDetail.attunedItemCount`.
+  final bool isAttuned;
 
   /// `items.consumable` — conditionne l'affichage de l'action "Utiliser"
   /// (voir `presentation/widgets/item_action_sheet.dart`). Toujours `false`

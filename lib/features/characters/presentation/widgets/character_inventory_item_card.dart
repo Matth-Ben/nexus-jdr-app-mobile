@@ -9,8 +9,11 @@ import '../../domain/character_inventory_item.dart';
 import '../../domain/inventory_category_rules.dart';
 import '../../domain/weight_formatter.dart';
 
-/// Une carte de l'onglet "Inventaire" — badge de catégorie, nom, sous-titre
-/// "{catégorie} · x{quantité}", et un poids ou un badge "ÉQUIPÉ" à droite.
+/// Une carte de l'onglet "Inventaire" — badge de catégorie, nom (précédé
+/// d'une petite icône `Icons.link` doré si [CharacterInventoryItem.isAttuned]
+/// — voir `item_info_panel.dart::_ToggleAttunedLink` pour la bascule), sous-
+/// titre "{catégorie} · x{quantité}", et un poids ou un badge "ÉQUIPÉ" à
+/// droite.
 ///
 /// Cliquable : ouvre la sheet d'actions "Infos"/"Utiliser"/"Équiper-
 /// Déséquiper"/"Retirer" (`item_action_sheet.dart::showItemActionSheet`) —
@@ -49,14 +52,28 @@ class CharacterInventoryItemCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      item.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.body(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Row(
+                      children: [
+                        if (item.isAttuned) ...[
+                          const Icon(
+                            Icons.link,
+                            size: 12,
+                            color: AppColors.goldEnd,
+                          ),
+                          const SizedBox(width: 2),
+                        ],
+                        Flexible(
+                          child: Text(
+                            item.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.body(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     Text(
                       '${InventoryCategoryRules.labelFor(item.category)} · x${item.quantity}',

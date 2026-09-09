@@ -91,5 +91,58 @@ void main() {
       final weightBox = boxes.singleWhere((b) => b.unit == 'KG');
       expect(weightBox.value, '6');
     });
+
+    test('box "HARM." absente sans objet harmonisable dans l\'inventaire', () {
+      final boxes = InventoryStatBoxesResolver.resolve(
+        _detail(
+          inventory: const [
+            CharacterInventoryItem(
+              id: '1',
+              itemId: 1,
+              name: 'Dague',
+              category: 'arme',
+              quantity: 1,
+              equipped: false,
+            ),
+          ],
+        ),
+      );
+
+      expect(boxes.where((b) => b.unit == 'HARM.'), isEmpty);
+    });
+
+    test('box "HARM." affichée dès qu\'un objet harmonisable existe, compte '
+        'sur 3 (plafond RAW 5e)', () {
+      final boxes = InventoryStatBoxesResolver.resolve(
+        _detail(
+          inventory: const [
+            CharacterInventoryItem(
+              id: '1',
+              itemId: 1,
+              name: 'Anneau',
+              category: 'objet_magique',
+              quantity: 1,
+              equipped: false,
+              requiresAttunement: true,
+              isAttuned: true,
+            ),
+            CharacterInventoryItem(
+              id: '2',
+              itemId: 2,
+              name: 'Amulette',
+              category: 'objet_magique',
+              quantity: 1,
+              equipped: false,
+              requiresAttunement: true,
+            ),
+          ],
+        ),
+      );
+
+      final harmBox = boxes.singleWhere((b) => b.unit == 'HARM.');
+      expect(harmBox.value, '1/3');
+      // Toujours en dernier (après la box "KG").
+      expect(boxes.last.unit, 'HARM.');
+    });
   });
 }

@@ -335,6 +335,7 @@ void main() {
           'item_id': 7,
           'quantity': 1,
           'equipped': false,
+          'is_attuned': true,
           'items': {
             'category': 'objet_magique',
             'weight': 1.0,
@@ -355,8 +356,30 @@ void main() {
       expect(result.single.costAmount, 500);
       expect(result.single.rarity, 'rare');
       expect(result.single.requiresAttunement, isTrue);
+      expect(result.single.isAttuned, isTrue);
       expect(result.single.consumable, isFalse);
       expect(result.single.description, 'Une amulette protectrice.');
+    });
+
+    test('is_attuned absent/faux -> isAttuned faux (objet du catalogue non '
+        'harmonisé)', () {
+      final rows = [
+        {
+          'id': 'inv-6b',
+          'item_id': 7,
+          'quantity': 1,
+          'equipped': false,
+          'items': {'category': 'objet_magique', 'requires_attunement': true},
+        },
+      ];
+
+      final result = CharacterInventoryRowMapper.toCharacterInventoryItems(
+        rows,
+        names: const {},
+        descriptions: const {},
+      );
+
+      expect(result.single.isAttuned, isFalse);
     });
 
     test('résout weapon_properties/armor_properties embarquées sous items', () {
