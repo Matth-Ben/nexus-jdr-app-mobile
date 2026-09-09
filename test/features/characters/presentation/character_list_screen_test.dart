@@ -34,15 +34,6 @@ import 'package:personnages/features/characters/presentation/character_list_scre
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_card.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
-import 'package:personnages/features/groups/data/group_repository.dart';
-import 'package:personnages/features/groups/domain/created_group.dart';
-import 'package:personnages/features/groups/domain/group_detail.dart';
-import 'package:personnages/features/groups/domain/group_preview.dart';
-import 'package:personnages/features/groups/domain/group_summary.dart';
-import 'package:personnages/features/groups/domain/group_treasure.dart';
-import 'package:personnages/features/groups/domain/group_treasure_item.dart';
-import 'package:personnages/features/groups/domain/joined_group.dart';
-import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   int fetchCallCount = 0;
@@ -326,93 +317,6 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 }
 
-/// Double minimal de `GroupRepository` — seul `fetchMyGroups` est exercé par
-/// les tests de `_GroupsButton` (`character_list_screen.dart`) ci-dessous,
-/// tout le reste lève `UnimplementedError` (jamais appelé depuis cet écran).
-class _FakeGroupRepository implements GroupRepository {
-  List<GroupSummary>? groupsToReturn;
-  Object? errorToThrow;
-
-  @override
-  Future<List<GroupSummary>> fetchMyGroups() async {
-    if (errorToThrow != null) throw errorToThrow!;
-    return groupsToReturn ?? const [];
-  }
-
-  @override
-  Future<CreatedGroup> createGroup({
-    required String name,
-    required String characterId,
-  }) => throw UnimplementedError();
-
-  @override
-  Future<GroupPreview> previewGroupInvite(String code) =>
-      throw UnimplementedError();
-
-  @override
-  Future<JoinedGroup> joinGroup({
-    required String code,
-    required String characterId,
-  }) => throw UnimplementedError();
-
-  @override
-  Future<GroupDetail> fetchGroupDetail(String groupId) =>
-      throw UnimplementedError();
-
-  @override
-  Future<void> renameGroup({required String groupId, required String name}) =>
-      throw UnimplementedError();
-
-  @override
-  Future<String> regenerateInviteCode(String groupId) =>
-      throw UnimplementedError();
-
-  @override
-  Future<void> dissolveGroup(String groupId) => throw UnimplementedError();
-
-  @override
-  Future<void> leaveGroup(String groupId) => throw UnimplementedError();
-
-  @override
-  Future<void> removeMember({
-    required String groupId,
-    required String characterId,
-  }) => throw UnimplementedError();
-
-  @override
-  Future<GroupTreasure> fetchGroupTreasure(String groupId) =>
-      throw UnimplementedError();
-
-  @override
-  Future<void> addToTreasure({
-    required String groupId,
-    required Map<CurrencyKind, int> newCurrencyTotals,
-    required List<GroupTreasureItem> newItems,
-  }) => throw UnimplementedError();
-
-  @override
-  Future<bool> claimTreasureCurrency({
-    required String groupId,
-    required String characterId,
-    required CurrencyKind currency,
-    required int amount,
-  }) => throw UnimplementedError();
-
-  @override
-  Future<void> claimTreasureItem({
-    required String groupId,
-    required String characterId,
-    required GroupTreasureItem item,
-    required int quantity,
-  }) => throw UnimplementedError();
-
-  @override
-  GroupRealtimeSubscription subscribeToMemberUpdates({
-    required List<String> characterIds,
-    required void Function() onChanged,
-  }) => throw UnimplementedError();
-}
-
 class _FakeAuthRepository implements AuthRepository {
   int signOutCallCount = 0;
 
@@ -458,12 +362,10 @@ class _FakeAuthRepository implements AuthRepository {
 void main() {
   late _FakeCharacterRepository fakeCharacterRepository;
   late _FakeAuthRepository fakeAuthRepository;
-  late _FakeGroupRepository fakeGroupRepository;
 
   setUp(() {
     fakeCharacterRepository = _FakeCharacterRepository();
     fakeAuthRepository = _FakeAuthRepository();
-    fakeGroupRepository = _FakeGroupRepository();
   });
 
   GoRouter buildTestRouter({List<NavigatorObserver> observers = const []}) {
@@ -523,35 +425,16 @@ void main() {
               const Scaffold(body: Center(child: Text('Écran Profil'))),
         ),
         GoRoute(
-          // Cible de "Créer un groupe" (sheet "GROUPE", 0 groupe). Déclarée
-          // AVANT `/groups/:id` ci-dessous : `go_router` fait correspondre
-          // les routes dans l'ordre de déclaration, un `/groups/:id` déclaré
-          // en premier absorberait `/groups/new` (id = "new") avant que ce
-          // literal n'ait sa chance — même ordre que `core/router/
-          // app_router.dart`.
-          path: '/groups/new',
-          builder: (context, state) =>
-              const Scaffold(body: Center(child: Text('Créer un groupe'))),
-        ),
-        GoRoute(
-          // Cible de "Rejoindre un groupe" (sheet "GROUPE", 0 groupe).
-          path: '/groups/join',
-          builder: (context, state) =>
-              const Scaffold(body: Center(child: Text('Rejoindre un groupe'))),
-        ),
-        GoRoute(
           // Cible du bouton "groupes" de l'en-tête
-          // (`character_list_screen.dart::_GroupsButton`) quand le joueur
-          // est déjà membre d'exactement un groupe (navigation directe) ou
-          // choisit un groupe dans la sheet listant plusieurs groupes —
-          // écran "Groupe" réel non utilisé ici (voir les tests
-          // dédiés de `features/groups/`).
-          path: '/groups/:id',
-          builder: (context, state) => Scaffold(
-            body: Center(
-              child: Text('Écran Groupe ${state.pathParameters['id']}'),
-            ),
-          ),
+          // (`character_list_screen.dart::_GroupsButton`) — navigue
+          // TOUJOURS ici, quel que soit le nombre de groupes du joueur.
+          // Écran "Groupes" réel non utilisé ici (voir les tests dédiés
+          // `test/features/groups/presentation/group_list_screen_test.dart`) :
+          // ce fichier ne teste que la navigation déclenchée par
+          // `CharacterListScreen`, pas le contenu de l'écran de destination.
+          path: '/groups',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('Écran Groupes'))),
         ),
       ],
     );
@@ -563,7 +446,6 @@ void main() {
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeCharacterRepository),
         authRepositoryProvider.overrideWithValue(fakeAuthRepository),
-        groupRepositoryProvider.overrideWithValue(fakeGroupRepository),
         routeObserverProvider.overrideWithValue(observer),
       ],
       child: MaterialApp.router(
@@ -1088,10 +970,11 @@ void main() {
 
   group('bouton "groupes" (_GroupsButton)', () {
     testWidgets(
-      '0 groupe : ouvre la sheet "GROUPE" avec les 2 actions Créer/Rejoindre',
+      'navigue toujours vers l\'écran "Groupes" (/groups), quel que soit '
+      'le nombre de groupes du joueur (voir les tests dédiés de '
+      'group_list_screen_test.dart pour le contenu de cet écran)',
       (WidgetTester tester) async {
         fakeCharacterRepository.charactersToReturn = const [];
-        fakeGroupRepository.groupsToReturn = const [];
 
         await tester.pumpWidget(buildTestWidget());
         await tester.pumpAndSettle();
@@ -1099,110 +982,7 @@ void main() {
         await tester.tap(find.byIcon(Icons.groups_outlined));
         await tester.pumpAndSettle();
 
-        expect(find.text('GROUPE'), findsOneWidget);
-        expect(find.text('CRÉER UN GROUPE'), findsOneWidget);
-        expect(find.text('REJOINDRE UN GROUPE'), findsOneWidget);
-      },
-    );
-
-    testWidgets('0 groupe : "Créer un groupe" navigue vers /groups/new', (
-      WidgetTester tester,
-    ) async {
-      fakeCharacterRepository.charactersToReturn = const [];
-      fakeGroupRepository.groupsToReturn = const [];
-
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.groups_outlined));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('CRÉER UN GROUPE'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Créer un groupe'), findsOneWidget);
-    });
-
-    testWidgets('0 groupe : "Rejoindre un groupe" navigue vers /groups/join', (
-      WidgetTester tester,
-    ) async {
-      fakeCharacterRepository.charactersToReturn = const [];
-      fakeGroupRepository.groupsToReturn = const [];
-
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.groups_outlined));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('REJOINDRE UN GROUPE'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Rejoindre un groupe'), findsOneWidget);
-    });
-
-    testWidgets(
-      '1 groupe : navigue directement vers l\'écran "Groupe" de ce groupe, '
-      'sans sheet intermédiaire',
-      (WidgetTester tester) async {
-        fakeCharacterRepository.charactersToReturn = const [];
-        fakeGroupRepository.groupsToReturn = const [
-          GroupSummary(id: 'group-1', name: 'Les Lames', memberCount: 2),
-        ];
-
-        await tester.pumpWidget(buildTestWidget());
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.byIcon(Icons.groups_outlined));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Écran Groupe group-1'), findsOneWidget);
-        expect(find.text('GROUPE'), findsNothing);
-      },
-    );
-
-    testWidgets(
-      '2+ groupes : ouvre une sheet listant les groupes (nom + membres), '
-      'taper une ligne navigue vers son écran "Groupe"',
-      (WidgetTester tester) async {
-        fakeCharacterRepository.charactersToReturn = const [];
-        fakeGroupRepository.groupsToReturn = const [
-          GroupSummary(id: 'group-1', name: 'Les Lames', memberCount: 2),
-          GroupSummary(id: 'group-2', name: 'Les Ombres', memberCount: 4),
-        ];
-
-        await tester.pumpWidget(buildTestWidget());
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.byIcon(Icons.groups_outlined));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Les Lames'), findsOneWidget);
-        expect(find.text('2 membres'), findsOneWidget);
-        expect(find.text('Les Ombres'), findsOneWidget);
-        expect(find.text('4 membres'), findsOneWidget);
-
-        await tester.tap(find.text('Les Ombres'));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Écran Groupe group-2'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'échec réseau : affiche un SnackBar générique, sans navigation',
-      (WidgetTester tester) async {
-        fakeCharacterRepository.charactersToReturn = const [];
-        fakeGroupRepository.errorToThrow = Exception('boom');
-
-        await tester.pumpWidget(buildTestWidget());
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.byIcon(Icons.groups_outlined));
-        await tester.pumpAndSettle();
-
-        expect(
-          find.text('Impossible de charger vos groupes. Réessayez.'),
-          findsOneWidget,
-        );
+        expect(find.text('Écran Groupes'), findsOneWidget);
       },
     );
   });

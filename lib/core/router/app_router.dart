@@ -23,6 +23,7 @@ import '../../features/groups/presentation/group_create_screen.dart';
 import '../../features/groups/presentation/group_join_character_step_screen.dart';
 import '../../features/groups/presentation/group_join_code_step_screen.dart';
 import '../../features/groups/presentation/group_join_confirmation_step_screen.dart';
+import '../../features/groups/presentation/group_list_screen.dart';
 import '../../features/groups/presentation/group_screen.dart';
 import '../../features/join_story/presentation/join_character_step_screen.dart';
 import '../../features/join_story/presentation/join_code_step_screen.dart';
@@ -267,6 +268,16 @@ GoRouter appRouter(Ref ref) {
         path: '/join/:code',
         builder: (context, state) =>
             JoinConfirmationStepScreen(code: state.pathParameters['code']!),
+      ),
+      GoRoute(
+        // Écran "Groupes" (`features/groups/`) — point d'entrée unique du
+        // bouton "groupes" de `character_list_screen.dart`, liste les
+        // groupes déjà rejoints et propose toujours "Créer"/"Rejoindre".
+        // Déclarée AVANT `/groups/new`/`/groups/join`/`/groups/:id` par
+        // simple cohérence de lecture (littéral le plus court en premier),
+        // `go_router` ne les confondrait de toute façon pas entre eux.
+        path: '/groups',
+        builder: (context, state) => const GroupListScreen(),
       ),
       GoRoute(
         // Écran "Créer un groupe" (`features/groups/`) — voir
