@@ -95,6 +95,11 @@ class _FakeCharacterRepository implements CharacterRepository {
   WriteOutcome setDeadOutcomeToReturn = WriteOutcome.synced;
   Object? setDeadErrorToThrow;
 
+  bool? lastSetArchivedValue;
+  int setArchivedCallCount = 0;
+  WriteOutcome setArchivedOutcomeToReturn = WriteOutcome.synced;
+  Object? setArchivedErrorToThrow;
+
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
 
@@ -115,6 +120,17 @@ class _FakeCharacterRepository implements CharacterRepository {
     lastSetDeadValue = isDead;
     if (setDeadErrorToThrow != null) throw setDeadErrorToThrow!;
     return setDeadOutcomeToReturn;
+  }
+
+  @override
+  Future<WriteOutcome> setArchived({
+    required String characterId,
+    required bool isArchived,
+  }) async {
+    setArchivedCallCount++;
+    lastSetArchivedValue = isArchived;
+    if (setArchivedErrorToThrow != null) throw setArchivedErrorToThrow!;
+    return setArchivedOutcomeToReturn;
   }
 
   @override
@@ -815,6 +831,98 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Marquer comme mort'), findsOneWidget);
+      },
+    );
+  });
+
+  group('Archiver ce personnage / Désarchiver (CharacterVitalsCard)', () {
+    testWidgets(
+      'affiche "Archiver ce personnage" pour un personnage actif, appelle '
+      'setArchived(isArchived: true) au tap',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Archiver ce personnage'), findsOneWidget);
+        expect(find.text('Désarchiver'), findsNothing);
+
+        await tester.tap(find.text('Archiver ce personnage'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.setArchivedCallCount, 1);
+        expect(fakeRepository.lastSetArchivedValue, isTrue);
+      },
+    );
+
+    testWidgets(
+      'affiche "Désarchiver" pour un personnage déjà archivé, appelle '
+      'setArchived(isArchived: false) au tap',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          isArchived: true,
+        );
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Désarchiver'), findsOneWidget);
+        expect(find.text('Archiver ce personnage'), findsNothing);
+
+        await tester.tap(find.text('Désarchiver'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.setArchivedCallCount, 1);
+        expect(fakeRepository.lastSetArchivedValue, isFalse);
+      },
+    );
+
+    testWidgets(
+      'setArchived mis en file (mode hors-ligne) : même convention que '
+      'setDead — jamais mis en file côté repository, le message affiché ne '
+      'doit donc jamais promettre une synchronisation ultérieure',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.setArchivedOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Archiver ce personnage'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            "Hors ligne : cette action n'a pas pu être enregistrée. "
+            'Réessayez une fois reconnecté.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'setArchived échoue (CharacterFailure) : affiche le message du '
+      'repository, le lien reste "Archiver ce personnage" (aucun changement '
+      'local)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.setArchivedErrorToThrow = const CharacterFailure(
+          'Impossible de mettre à jour le statut.',
+        );
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Archiver ce personnage'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Impossible de mettre à jour le statut.'),
+          findsOneWidget,
+        );
+        expect(find.text('Archiver ce personnage'), findsOneWidget);
       },
     );
   });

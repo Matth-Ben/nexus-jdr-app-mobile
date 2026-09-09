@@ -108,6 +108,8 @@ abstract final class CharacterRowMapper {
       // ne jamais afficher une jauge XP ni un libellé de niveau absurdes.
       level: totalLevel > 0 ? totalLevel : 1,
       xp: (row['xp'] as num?)?.toInt() ?? 0,
+      isDead: row['is_dead'] == true,
+      isArchived: row['is_archived'] == true,
     );
   }
 }

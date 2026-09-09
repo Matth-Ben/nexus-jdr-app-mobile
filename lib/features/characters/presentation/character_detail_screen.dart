@@ -1199,6 +1199,34 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Bascule `characters.is_archived` (lien "Archiver ce
+  /// personnage"/"Désarchiver", `CharacterVitalsCard`) — même contrat que
+  /// [_toggleDead] (flag simple, réversible, sans confirmation à double
+  /// étape), voir `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`
+  /// section 2.
+  Future<void> _toggleArchived(CharacterDetail detail) async {
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .setArchived(
+            characterId: widget.characterId,
+            isArchived: !detail.isArchived,
+          );
+      if (!mounted) return;
+      if (outcome == WriteOutcome.queued) {
+        // Voir la documentation de `CharacterRepository.setArchived` : même
+        // convention que [_toggleDead] (jamais mis en file d'attente).
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      ref.invalidate(characterDetailProvider(widget.characterId));
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar('Impossible de mettre à jour le statut. Réessayez.');
+    }
+  }
+
   /// Applique un repos (`RestSheet`) : écrit l'effet en base
   /// (`CharacterRepository.applyRest`), rafraîchit la fiche, puis affiche
   /// une confirmation — spec visuelle section 4 : contrairement à
@@ -1643,6 +1671,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         ),
         onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
         onTapToggleDead: () => _toggleDead(detail),
+        onTapToggleArchived: () => _toggleArchived(detail),
         onTapRest: () {
           final effective = _effectiveDetail(detail);
           showRestSheet(
@@ -1680,6 +1709,7 @@ class _CharacterTabBody extends StatelessWidget {
     required this.onTapAddXp,
     required this.onTapLevelUp,
     required this.onTapToggleDead,
+    required this.onTapToggleArchived,
     required this.onTapRest,
     required this.hpActionsDisabled,
   });
@@ -1704,6 +1734,10 @@ class _CharacterTabBody extends StatelessWidget {
   /// Lien "Marquer comme mort"/"Ressusciter" — voir
   /// `_CharacterDetailScreenState._toggleDead`.
   final VoidCallback onTapToggleDead;
+
+  /// Lien "Archiver ce personnage"/"Désarchiver" — voir
+  /// `_CharacterDetailScreenState._toggleArchived`.
+  final VoidCallback onTapToggleArchived;
   final VoidCallback onTapRest;
 
   /// Voir `_CharacterDetailScreenState._isApplyingRest`.
@@ -1733,6 +1767,7 @@ class _CharacterTabBody extends StatelessWidget {
           onTapAddXp: onTapAddXp,
           onTapLevelUp: onTapLevelUp,
           onTapToggleDead: onTapToggleDead,
+          onTapToggleArchived: onTapToggleArchived,
           onTapRest: onTapRest,
           hpActionsDisabled: hpActionsDisabled,
         ),

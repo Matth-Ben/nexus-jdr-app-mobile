@@ -67,6 +67,13 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// remarque sur [currencyGp] ci-dessous).
     @Default(false) bool isDead,
 
+    /// `characters.is_archived` — voir `CharacterSummary.isArchived` pour le
+    /// rationale complet (statut "archivé" manuel, même principe que
+    /// [isDead]). Bascule via le lien "Archiver ce personnage"/"Désarchiver"
+    /// de l'onglet "Personnage" (`CharacterVitalsCard`) — voir
+    /// `CharacterRepository.setArchived`.
+    @Default(false) bool isArchived,
+
     /// `characters.share_token` — jeton de partage en lecture seule
     /// (`docs/cahier-des-charges/12-partage-et-groupes.md` section 1),
     /// `null` si le partage n'a jamais été activé ou a été désactivé. Ne

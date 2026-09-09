@@ -58,6 +58,12 @@ class _FakeInventoryCatalogRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<WriteOutcome> setArchived({
+    required String characterId,
+    required bool isArchived,
+  }) => throw UnimplementedError();
+
+  @override
   Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,

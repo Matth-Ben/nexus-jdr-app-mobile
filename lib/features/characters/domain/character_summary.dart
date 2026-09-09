@@ -41,6 +41,22 @@ abstract class CharacterSummary with _$CharacterSummary {
 
     /// XP cumulée actuelle (`characters.xp`).
     required int xp,
+
+    /// `characters.is_dead` — voir `CharacterDetail.isDead` pour le
+    /// rationale complet (statut "mort" manuel). Surfacé ici pour le badge
+    /// "MORT" de la carte personnage (`presentation/widgets/character_card.dart`),
+    /// voir `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`
+    /// section 2. `@Default(false)` : ajouté après la première version de ce
+    /// modèle.
+    @Default(false) bool isDead,
+
+    /// `characters.is_archived` — statut "archivé" manuel (même principe que
+    /// [isDead] : un flag simple, sans effet caché sur le reste de la fiche,
+    /// voir `docs/cahier-des-charges/10-design-system.md` section 4, "Carte
+    /// personnage", variante "archivé"). Bascule via le lien "Archiver ce
+    /// personnage"/"Désarchiver" de l'onglet "Personnage"
+    /// (`CharacterVitalsCard`) — voir `CharacterRepository.setArchived`.
+    @Default(false) bool isArchived,
   }) = _CharacterSummary;
 
   /// XP cumulée requise pour le niveau suivant, `null` si [level] est déjà

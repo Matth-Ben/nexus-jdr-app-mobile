@@ -17,6 +17,7 @@ class CharacterVitalsCard extends StatelessWidget {
     required this.onTapAddXp,
     required this.onTapLevelUp,
     required this.onTapToggleDead,
+    required this.onTapToggleArchived,
     required this.onTapRest,
     this.hpActionsDisabled = false,
     super.key,
@@ -75,6 +76,15 @@ class CharacterVitalsCard extends StatelessWidget {
   /// `_CharacterDetailScreenState._toggleDead`.
   final VoidCallback onTapToggleDead;
 
+  /// Lien "Archiver ce personnage"/"Désarchiver" — bascule
+  /// `characters.is_archived` (chantier "Statuts ARCHIVÉ/MORT sur la carte
+  /// personnage de la liste",
+  /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md` section 2),
+  /// même principe que [onTapToggleDead] : flag simple, réversible, sans
+  /// confirmation à double étape. Voir
+  /// `_CharacterDetailScreenState._toggleArchived`.
+  final VoidCallback onTapToggleArchived;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -104,6 +114,10 @@ class CharacterVitalsCard extends StatelessWidget {
           const Divider(height: 1, thickness: 1, color: AppColors.gaugeTrack),
           const SizedBox(height: AppSpacing.sm),
           _RestLink(onTap: hpActionsDisabled ? null : onTapRest),
+          _ArchiveToggleLink(
+            isArchived: detail.isArchived,
+            onTap: hpActionsDisabled ? null : onTapToggleArchived,
+          ),
           _DeathToggleLink(
             isDead: detail.isDead,
             onTap: hpActionsDisabled ? null : onTapToggleDead,
@@ -142,6 +156,57 @@ class _RestLink extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 'Prendre un repos',
+                style: AppTypography.body(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lien texte "Archiver ce personnage"/"Désarchiver" — calque de
+/// [_RestLink]/[_DeathToggleLink] (`body` 700/13 `textSecondary`, zone de
+/// tap 44px min-height), icône dépendante de l'état (`archive_outlined` pour
+/// archiver, `unarchive_outlined` pour désarchiver) plutôt qu'une icône fixe
+/// — plus lisible qu'un simple changement de libellé pour ce statut, qui n'a
+/// pas d'équivalent visuel déjà établi ailleurs sur la fiche (contrairement
+/// à [_DeathToggleLink], qui réutilise l'icône `call_split` d'un lien
+/// préexistant).
+class _ArchiveToggleLink extends StatelessWidget {
+  const _ArchiveToggleLink({required this.isArchived, required this.onTap});
+
+  final bool isArchived;
+
+  /// `null` pendant qu'un repos (ou sa réaffirmation PV différée) est déjà en
+  /// vol — même verrou que [_RestLink]/[_DeathToggleLink].
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onTap == null;
+    final color = disabled ? AppColors.textMuted : AppColors.textSecondary;
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
+                size: 14,
+                color: color,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isArchived ? 'Désarchiver' : 'Archiver ce personnage',
                 style: AppTypography.body(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,

@@ -317,6 +317,12 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) async => WriteOutcome.synced;
 
   @override
+  Future<WriteOutcome> setArchived({
+    required String characterId,
+    required bool isArchived,
+  }) async => WriteOutcome.synced;
+
+  @override
   Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,

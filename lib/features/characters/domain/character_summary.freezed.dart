@@ -26,7 +26,19 @@ mixin _$CharacterSummary {
 /// multiclassage de façon simple : un personnage niveau 3/2 est affiché
 /// "Niv. 5").
  int get level;/// XP cumulée actuelle (`characters.xp`).
- int get xp;
+ int get xp;/// `characters.is_dead` — voir `CharacterDetail.isDead` pour le
+/// rationale complet (statut "mort" manuel). Surfacé ici pour le badge
+/// "MORT" de la carte personnage (`presentation/widgets/character_card.dart`),
+/// voir `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`
+/// section 2. `@Default(false)` : ajouté après la première version de ce
+/// modèle.
+ bool get isDead;/// `characters.is_archived` — statut "archivé" manuel (même principe que
+/// [isDead] : un flag simple, sans effet caché sur le reste de la fiche,
+/// voir `docs/cahier-des-charges/10-design-system.md` section 4, "Carte
+/// personnage", variante "archivé"). Bascule via le lien "Archiver ce
+/// personnage"/"Désarchiver" de l'onglet "Personnage"
+/// (`CharacterVitalsCard`) — voir `CharacterRepository.setArchived`.
+ bool get isArchived;
 /// Create a copy of CharacterSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -37,16 +49,16 @@ $CharacterSummaryCopyWith<CharacterSummary> get copyWith => _$CharacterSummaryCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.className, className) || other.className == className)&&(identical(other.level, level) || other.level == level)&&(identical(other.xp, xp) || other.xp == xp));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CharacterSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.className, className) || other.className == className)&&(identical(other.level, level) || other.level == level)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.isDead, isDead) || other.isDead == isDead)&&(identical(other.isArchived, isArchived) || other.isArchived == isArchived));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,portraitUrl,raceName,className,level,xp);
+int get hashCode => Object.hash(runtimeType,id,name,portraitUrl,raceName,className,level,xp,isDead,isArchived);
 
 @override
 String toString() {
-  return 'CharacterSummary(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, className: $className, level: $level, xp: $xp)';
+  return 'CharacterSummary(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, className: $className, level: $level, xp: $xp, isDead: $isDead, isArchived: $isArchived)';
 }
 
 
@@ -57,7 +69,7 @@ abstract mixin class $CharacterSummaryCopyWith<$Res>  {
   factory $CharacterSummaryCopyWith(CharacterSummary value, $Res Function(CharacterSummary) _then) = _$CharacterSummaryCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String? portraitUrl, String? raceName, String? className, int level, int xp
+ String id, String name, String? portraitUrl, String? raceName, String? className, int level, int xp, bool isDead, bool isArchived
 });
 
 
@@ -74,7 +86,7 @@ class _$CharacterSummaryCopyWithImpl<$Res>
 
 /// Create a copy of CharacterSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = null,Object? xp = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = null,Object? xp = null,Object? isDead = null,Object? isArchived = null,}) {
   return _then(CharacterSummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -83,7 +95,9 @@ as String?,raceName: freezed == raceName ? _self.raceName : raceName // ignore: 
 as String?,className: freezed == className ? _self.className : className // ignore: cast_nullable_to_non_nullable
 as String?,level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
 as int,xp: null == xp ? _self.xp : xp // ignore: cast_nullable_to_non_nullable
-as int,
+as int,isDead: null == isDead ? _self.isDead : isDead // ignore: cast_nullable_to_non_nullable
+as bool,isArchived: null == isArchived ? _self.isArchived : isArchived // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -168,10 +182,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int xp)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int xp,  bool isDead,  bool isArchived)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CharacterSummary() when $default != null:
-return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.xp);case _:
+return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.xp,_that.isDead,_that.isArchived);case _:
   return orElse();
 
 }
@@ -189,10 +203,10 @@ return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.class
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int xp)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int xp,  bool isDead,  bool isArchived)  $default,) {final _that = this;
 switch (_that) {
 case _CharacterSummary():
-return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.xp);case _:
+return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.xp,_that.isDead,_that.isArchived);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -209,10 +223,10 @@ return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.class
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int xp)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int xp,  bool isDead,  bool isArchived)?  $default,) {final _that = this;
 switch (_that) {
 case _CharacterSummary() when $default != null:
-return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.xp);case _:
+return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.xp,_that.isDead,_that.isArchived);case _:
   return null;
 
 }
@@ -224,7 +238,7 @@ return $default(_that.id,_that.name,_that.portraitUrl,_that.raceName,_that.class
 
 
 class _CharacterSummary extends CharacterSummary {
-  const _CharacterSummary({required this.id, required this.name, this.portraitUrl, this.raceName, this.className, required this.level, required this.xp}): super._();
+  const _CharacterSummary({required this.id, required this.name, this.portraitUrl, this.raceName, this.className, required this.level, required this.xp, this.isDead = false, this.isArchived = false}): super._();
   
 
 @override final  String id;
@@ -245,6 +259,20 @@ class _CharacterSummary extends CharacterSummary {
 @override final  int level;
 /// XP cumulée actuelle (`characters.xp`).
 @override final  int xp;
+/// `characters.is_dead` — voir `CharacterDetail.isDead` pour le
+/// rationale complet (statut "mort" manuel). Surfacé ici pour le badge
+/// "MORT" de la carte personnage (`presentation/widgets/character_card.dart`),
+/// voir `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`
+/// section 2. `@Default(false)` : ajouté après la première version de ce
+/// modèle.
+@override@JsonKey() final  bool isDead;
+/// `characters.is_archived` — statut "archivé" manuel (même principe que
+/// [isDead] : un flag simple, sans effet caché sur le reste de la fiche,
+/// voir `docs/cahier-des-charges/10-design-system.md` section 4, "Carte
+/// personnage", variante "archivé"). Bascule via le lien "Archiver ce
+/// personnage"/"Désarchiver" de l'onglet "Personnage"
+/// (`CharacterVitalsCard`) — voir `CharacterRepository.setArchived`.
+@override@JsonKey() final  bool isArchived;
 
 /// Create a copy of CharacterSummary
 /// with the given fields replaced by the non-null parameter values.
@@ -256,16 +284,16 @@ _$CharacterSummaryCopyWith<_CharacterSummary> get copyWith => __$CharacterSummar
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.className, className) || other.className == className)&&(identical(other.level, level) || other.level == level)&&(identical(other.xp, xp) || other.xp == xp));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CharacterSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.portraitUrl, portraitUrl) || other.portraitUrl == portraitUrl)&&(identical(other.raceName, raceName) || other.raceName == raceName)&&(identical(other.className, className) || other.className == className)&&(identical(other.level, level) || other.level == level)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.isDead, isDead) || other.isDead == isDead)&&(identical(other.isArchived, isArchived) || other.isArchived == isArchived));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,portraitUrl,raceName,className,level,xp);
+int get hashCode => Object.hash(runtimeType,id,name,portraitUrl,raceName,className,level,xp,isDead,isArchived);
 
 @override
 String toString() {
-  return 'CharacterSummary(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, className: $className, level: $level, xp: $xp)';
+  return 'CharacterSummary(id: $id, name: $name, portraitUrl: $portraitUrl, raceName: $raceName, className: $className, level: $level, xp: $xp, isDead: $isDead, isArchived: $isArchived)';
 }
 
 
@@ -276,7 +304,7 @@ abstract mixin class _$CharacterSummaryCopyWith<$Res> implements $CharacterSumma
   factory _$CharacterSummaryCopyWith(_CharacterSummary value, $Res Function(_CharacterSummary) _then) = __$CharacterSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String? portraitUrl, String? raceName, String? className, int level, int xp
+ String id, String name, String? portraitUrl, String? raceName, String? className, int level, int xp, bool isDead, bool isArchived
 });
 
 
@@ -293,7 +321,7 @@ class __$CharacterSummaryCopyWithImpl<$Res>
 
 /// Create a copy of CharacterSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = null,Object? xp = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = null,Object? xp = null,Object? isDead = null,Object? isArchived = null,}) {
   return _then(_CharacterSummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -302,7 +330,9 @@ as String?,raceName: freezed == raceName ? _self.raceName : raceName // ignore: 
 as String?,className: freezed == className ? _self.className : className // ignore: cast_nullable_to_non_nullable
 as String?,level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
 as int,xp: null == xp ? _self.xp : xp // ignore: cast_nullable_to_non_nullable
-as int,
+as int,isDead: null == isDead ? _self.isDead : isDead // ignore: cast_nullable_to_non_nullable
+as bool,isArchived: null == isArchived ? _self.isArchived : isArchived // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

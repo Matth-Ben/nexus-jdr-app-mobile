@@ -111,6 +111,16 @@ abstract class CharacterRepository {
     required bool isDead,
   });
 
+  /// Écrit directement `characters.is_archived` — lien "Archiver ce
+  /// personnage"/"Désarchiver" de l'onglet "Personnage"
+  /// (`CharacterVitalsCard`) — même contrat que [setDead] (mode hors-ligne
+  /// inclus, voir sa documentation), simple flag sans effet sur le reste de
+  /// la fiche.
+  Future<WriteOutcome> setArchived({
+    required String characterId,
+    required bool isArchived,
+  });
+
   /// Envoie [bytes] (déjà recadrées en carré, voir
   /// `presentation/widgets/portrait_crop_screen.dart`) dans le bucket
   /// `character-portraits` (RLS écriture restreinte à `{user_id}/...`,
@@ -656,6 +666,8 @@ class SupabaseCharacterRepository implements CharacterRepository {
             name,
             portrait_url,
             xp,
+            is_dead,
+            is_archived,
             race_id,
             character_classes(class_id, level, is_primary)
           ''')
@@ -709,6 +721,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             max_hp,
             temporary_hp,
             is_dead,
+            is_archived,
             share_token,
             race_id,
             subrace_id,
@@ -831,6 +844,30 @@ class SupabaseCharacterRepository implements CharacterRepository {
       await _client
           .from('characters')
           .update({'is_dead': isDead})
+          .eq('id', characterId)
+          .eq('owner_id', ownerId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> setArchived({
+    required String characterId,
+    required bool isArchived,
+  }) async {
+    final ownerId = _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('characters')
+          .update({'is_archived': isArchived})
           .eq('id', characterId)
           .eq('owner_id', ownerId);
       return WriteOutcome.synced;
