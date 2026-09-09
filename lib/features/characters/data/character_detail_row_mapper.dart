@@ -2,7 +2,9 @@ import '../domain/character_adventure.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_detail_class_row.dart';
+import '../domain/character_gallery_photo.dart';
 import '../domain/character_inventory_item.dart';
+import '../domain/character_journal_entry.dart';
 import '../domain/character_skill_row.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
@@ -235,6 +237,61 @@ abstract final class CharacterDetailRowMapper {
       );
     }
     return adventures;
+  }
+
+  /// Construit les [CharacterGalleryPhoto] de la carte "Galerie" de l'onglet
+  /// "Histoire" (`character_photos`, déjà embarquée sous `characters` via
+  /// une relation de clé étrangère réelle). Triées du plus récent au plus
+  /// ancien (`created_at` décroissant) : ni `character_photos` ni le
+  /// `jsonb_agg` de `get_shared_character` ne garantissent d'ordre, le tri
+  /// est donc fait ici plutôt que supposé côté serveur — voir
+  /// `shared_character_mapper.dart` pour le même tri côté partage en lecture
+  /// seule. Une ligne sans `id`/`url`/`created_at` exploitable est ignorée
+  /// plutôt que de faire échouer tout le mapping (ne devrait pas arriver,
+  /// ces 3 colonnes sont `not null` côté base).
+  static List<CharacterGalleryPhoto> parseGalleryPhotos(
+    Map<String, dynamic> row,
+  ) {
+    final raw = row['character_photos'] as List<dynamic>?;
+    final rows = raw?.cast<Map<String, dynamic>>() ?? const [];
+    final photos = <CharacterGalleryPhoto>[];
+    for (final photoRow in rows) {
+      final id = photoRow['id'] as String?;
+      final url = photoRow['url'] as String?;
+      final createdAt = DateTime.tryParse(
+        photoRow['created_at'] as String? ?? '',
+      );
+      if (id == null || url == null || createdAt == null) continue;
+      photos.add(
+        CharacterGalleryPhoto(id: id, url: url, createdAt: createdAt),
+      );
+    }
+    photos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return photos;
+  }
+
+  /// Construit les [CharacterJournalEntry] de la carte "Journal de campagne"
+  /// de l'onglet "Histoire" (`character_journal_entries`) — mêmes règles de
+  /// tri/robustesse que [parseGalleryPhotos].
+  static List<CharacterJournalEntry> parseJournalEntries(
+    Map<String, dynamic> row,
+  ) {
+    final raw = row['character_journal_entries'] as List<dynamic>?;
+    final rows = raw?.cast<Map<String, dynamic>>() ?? const [];
+    final entries = <CharacterJournalEntry>[];
+    for (final entryRow in rows) {
+      final id = entryRow['id'] as String?;
+      final body = entryRow['body'] as String?;
+      final createdAt = DateTime.tryParse(
+        entryRow['created_at'] as String? ?? '',
+      );
+      if (id == null || body == null || createdAt == null) continue;
+      entries.add(
+        CharacterJournalEntry(id: id, body: body, createdAt: createdAt),
+      );
+    }
+    entries.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return entries;
   }
 
   static List<Map<String, dynamic>> featureUsesRowsOf(
@@ -540,6 +597,8 @@ abstract final class CharacterDetailRowMapper {
       featuresText: (row['features_text'] as String?) ?? '',
       treasureText: (row['treasure_text'] as String?) ?? '',
       adventures: adventures,
+      galleryPhotos: parseGalleryPhotos(row),
+      journalEntries: parseJournalEntries(row),
     );
   }
 }

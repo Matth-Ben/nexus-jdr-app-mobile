@@ -147,6 +147,38 @@ class FakeRepository implements CharacterRepository {
   }) async {}
 
   @override
+  Future<void> addGalleryPhoto({
+    required String characterId,
+    required Uint8List bytes,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> removeGalleryPhoto({
+    required String characterId,
+    required String photoId,
+    required String url,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<WriteOutcome> addJournalEntry({
+    required String characterId,
+    required String body,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<WriteOutcome> updateJournalEntry({
+    required String characterId,
+    required String entryId,
+    required String body,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<WriteOutcome> removeJournalEntry({
+    required String characterId,
+    required String entryId,
+  }) => throw UnimplementedError();
+
+  @override
   Future<WriteOutcome> addXp({
     required String characterId,
     required int newXp,

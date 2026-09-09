@@ -1170,6 +1170,83 @@ void main() {
         );
         expect(await pendingWrites.allForOwner(ownerId), isEmpty);
       });
+
+      test('addJournalEntry : connectivité absente -> retourne queued sans '
+          'tenter le réseau, jamais mise en file', () async {
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          throwOnRequest: true,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: false),
+        );
+
+        final outcome = await repository.addJournalEntry(
+          characterId: characterId,
+          body: 'Note de séance.',
+        );
+
+        expect(outcome, WriteOutcome.queued);
+        expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+      });
+
+      test('addJournalEntry : connectivité présente + écriture réussie -> '
+          'synced', () async {
+        final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.addJournalEntry(
+          characterId: characterId,
+          body: 'Note de séance.',
+        );
+
+        expect(outcome, WriteOutcome.synced);
+      });
+
+      test('updateJournalEntry : connectivité présente + écriture réussie '
+          '-> synced', () async {
+        final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.updateJournalEntry(
+          characterId: characterId,
+          entryId: 'entry-1',
+          body: 'Note modifiée.',
+        );
+
+        expect(outcome, WriteOutcome.synced);
+      });
+
+      test('removeJournalEntry : connectivité présente + écriture réussie '
+          '-> synced', () async {
+        final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.removeJournalEntry(
+          characterId: characterId,
+          entryId: 'entry-1',
+        );
+
+        expect(outcome, WriteOutcome.synced);
+      });
     },
   );
 

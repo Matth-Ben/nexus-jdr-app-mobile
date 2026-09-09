@@ -855,4 +855,130 @@ void main() {
       expect(withoutSpeed.speed, isNull);
     });
   });
+
+  group('CharacterDetailRowMapper.parseGalleryPhotos', () {
+    test('mappe les lignes character_photos, triées du plus récent au plus '
+        'ancien', () {
+      final row = _row();
+      row['character_photos'] = [
+        {
+          'id': 'photo-1',
+          'url': 'https://example.com/1.png',
+          'created_at': '2026-09-01T10:00:00Z',
+        },
+        {
+          'id': 'photo-2',
+          'url': 'https://example.com/2.png',
+          'created_at': '2026-09-05T10:00:00Z',
+        },
+      ];
+
+      final photos = CharacterDetailRowMapper.parseGalleryPhotos(row);
+
+      expect(photos, hasLength(2));
+      expect(photos[0].id, 'photo-2');
+      expect(photos[1].id, 'photo-1');
+    });
+
+    test('absent de la ligne -> liste vide', () {
+      expect(CharacterDetailRowMapper.parseGalleryPhotos(_row()), isEmpty);
+    });
+
+    test('une ligne sans id/url/created_at exploitable est ignorée', () {
+      final row = _row();
+      row['character_photos'] = [
+        {'id': 'photo-1', 'url': null, 'created_at': '2026-09-01T10:00:00Z'},
+        {'id': null, 'url': 'https://example.com/2.png', 'created_at': '2026-09-01T10:00:00Z'},
+        {'id': 'photo-3', 'url': 'https://example.com/3.png', 'created_at': null},
+      ];
+
+      expect(CharacterDetailRowMapper.parseGalleryPhotos(row), isEmpty);
+    });
+
+    test('toCharacterDetail expose bien galleryPhotos depuis la ligne', () {
+      final row = _row();
+      row['character_photos'] = [
+        {
+          'id': 'photo-1',
+          'url': 'https://example.com/1.png',
+          'created_at': '2026-09-01T10:00:00Z',
+        },
+      ];
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.galleryPhotos, hasLength(1));
+      expect(detail.galleryPhotos.single.url, 'https://example.com/1.png');
+    });
+  });
+
+  group('CharacterDetailRowMapper.parseJournalEntries', () {
+    test('mappe les lignes character_journal_entries, triées du plus '
+        'récent au plus ancien', () {
+      final row = _row();
+      row['character_journal_entries'] = [
+        {
+          'id': 'entry-1',
+          'body': 'Première note.',
+          'created_at': '2026-09-01T10:00:00Z',
+        },
+        {
+          'id': 'entry-2',
+          'body': 'Seconde note.',
+          'created_at': '2026-09-05T10:00:00Z',
+        },
+      ];
+
+      final entries = CharacterDetailRowMapper.parseJournalEntries(row);
+
+      expect(entries, hasLength(2));
+      expect(entries[0].id, 'entry-2');
+      expect(entries[1].id, 'entry-1');
+    });
+
+    test('absent de la ligne -> liste vide', () {
+      expect(CharacterDetailRowMapper.parseJournalEntries(_row()), isEmpty);
+    });
+
+    test('une ligne sans id/body/created_at exploitable est ignorée', () {
+      final row = _row();
+      row['character_journal_entries'] = [
+        {'id': 'entry-1', 'body': null, 'created_at': '2026-09-01T10:00:00Z'},
+        {'id': null, 'body': 'Note.', 'created_at': '2026-09-01T10:00:00Z'},
+        {'id': 'entry-3', 'body': 'Note.', 'created_at': null},
+      ];
+
+      expect(CharacterDetailRowMapper.parseJournalEntries(row), isEmpty);
+    });
+
+    test('toCharacterDetail expose bien journalEntries depuis la ligne', () {
+      final row = _row();
+      row['character_journal_entries'] = [
+        {
+          'id': 'entry-1',
+          'body': 'Première note.',
+          'created_at': '2026-09-01T10:00:00Z',
+        },
+      ];
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.journalEntries, hasLength(1));
+      expect(detail.journalEntries.single.body, 'Première note.');
+    });
+  });
 }

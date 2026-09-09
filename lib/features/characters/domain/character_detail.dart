@@ -5,7 +5,9 @@ import 'carrying_capacity_calculator.dart';
 import 'character_adventure.dart';
 import 'character_class_feature.dart';
 import 'character_detail_class_row.dart';
+import 'character_gallery_photo.dart';
 import 'character_inventory_item.dart';
+import 'character_journal_entry.dart';
 import 'character_skill_row.dart';
 import 'character_spell_entry.dart';
 import 'character_spell_slot.dart';
@@ -232,6 +234,18 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// connue qui peut faire disparaître silencieusement une ligne dont le
     /// titre/couverture n'est pas encore résolvable.
     @Default(<CharacterAdventure>[]) List<CharacterAdventure> adventures,
+
+    /// Galerie de photos complémentaires de l'onglet "Histoire"
+    /// (`character_photos`), triée du plus récent au plus ancien (voir
+    /// `data/character_detail_row_mapper.dart::parseGalleryPhotos`) — voir
+    /// `presentation/widgets/character_gallery_card.dart`.
+    @Default(<CharacterGalleryPhoto>[]) List<CharacterGalleryPhoto> galleryPhotos,
+
+    /// Journal de campagne / notes de séance de l'onglet "Histoire"
+    /// (`character_journal_entries`), même ordre que [galleryPhotos] — voir
+    /// `presentation/widgets/character_journal_card.dart`.
+    @Default(<CharacterJournalEntry>[])
+    List<CharacterJournalEntry> journalEntries,
   }) = _CharacterDetail;
 
   /// Niveau total, somme de `character_classes.level` sur toutes les lignes

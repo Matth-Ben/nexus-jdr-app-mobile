@@ -8,6 +8,7 @@
 // `MaterialApp(home: ...)` suffit à le monter.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_story_tab_body.dart';
@@ -53,13 +54,26 @@ Future<void> _pump(
   WidgetTester tester,
   CharacterDetail detail, {
   VoidCallback? onEdit,
+  bool actionsDisabled = false,
 }) async {
   await tester.binding.setSurfaceSize(const Size(800, 2000));
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
-    MaterialApp(
-      home: Scaffold(
-        body: CharacterStoryTabBody(detail: detail, onEdit: onEdit ?? () {}),
+    // `ProviderScope` sans override : `CharacterGalleryCard`/
+    // `CharacterJournalCard` sont des `ConsumerWidget`, mais ne lisent
+    // `characterRepositoryProvider` que dans leurs callbacks d'interaction,
+    // jamais pendant `build` — inutile ici, ce fichier ne tape jamais sur
+    // leurs tuiles/lignes (couvert par `character_gallery_card_test.dart`/
+    // `character_journal_card_test.dart`).
+    ProviderScope(
+      child: MaterialApp(
+        home: Scaffold(
+          body: CharacterStoryTabBody(
+            detail: detail,
+            onEdit: onEdit ?? () {},
+            actionsDisabled: actionsDisabled,
+          ),
+        ),
       ),
     ),
   );
@@ -193,4 +207,48 @@ void main() {
       expect(editCallCount, 1);
     },
   );
+
+  group('galerie de photos / journal de campagne (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section "Onglet Histoire")', () {
+    testWidgets(
+      'les cartes GALERIE et JOURNAL DE CAMPAGNE sont affichées même quand '
+      'les 9 champs de texte sont vides',
+      (tester) async {
+        await _pump(tester, _detail());
+
+        expect(find.text('AUCUNE HISTOIRE RENSEIGNÉE'), findsOneWidget);
+        expect(find.text('GALERIE'), findsOneWidget);
+        expect(find.text('JOURNAL DE CAMPAGNE'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'les cartes GALERIE et JOURNAL DE CAMPAGNE sont affichées quand les '
+      '9 champs de texte sont renseignés',
+      (tester) async {
+        await _pump(tester, _detail(appearanceText: 'Cheveux argentés.'));
+
+        expect(find.text('GALERIE'), findsOneWidget);
+        expect(find.text('JOURNAL DE CAMPAGNE'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'actionsDisabled + 9 champs vides : ni sous-titre ni bouton '
+      '"Renseigner mon histoire", GALERIE/JOURNAL absentes elles aussi '
+      '(rien à ajouter, rien à montrer)',
+      (tester) async {
+        await _pump(tester, _detail(), actionsDisabled: true);
+
+        expect(find.text('AUCUNE HISTOIRE RENSEIGNÉE'), findsOneWidget);
+        expect(find.text('RENSEIGNER MON HISTOIRE'), findsNothing);
+        expect(
+          find.textContaining("raconte l'histoire de ton personnage"),
+          findsNothing,
+        );
+        expect(find.text('GALERIE'), findsNothing);
+        expect(find.text('JOURNAL DE CAMPAGNE'), findsNothing);
+      },
+    );
+  });
 }

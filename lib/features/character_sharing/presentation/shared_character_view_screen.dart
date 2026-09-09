@@ -11,7 +11,6 @@ import '../../../core/widgets/wood_back_header.dart';
 import '../../characters/domain/character_detail.dart';
 import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_identity_formatter.dart';
-import '../../characters/domain/character_story_fields_resolver.dart';
 import '../../characters/domain/proficiency_bonus.dart';
 import '../../characters/domain/saving_throw_calculator.dart';
 import '../../characters/presentation/widgets/character_ability_score_grid.dart';
@@ -145,21 +144,18 @@ class _SharedCharacterViewScreenState
         onAddCustomInventoryItem: (customName, quantity) {},
         actionsDisabled: true,
       ),
-      CharacterDetailTab.story => _buildStoryTabBody(detail),
+      // `actionsDisabled: true` couvre les 9 champs de texte (état vide sans
+      // bouton "Renseigner mon histoire", inapproprié pour un lecteur
+      // anonyme) ET la galerie/le journal de campagne (voir la
+      // documentation de classe de `CharacterStoryTabBody.actionsDisabled`)
+      // — un seul et même flag pour toute la carte, plus besoin d'un état
+      // vide dédié à cet écran.
+      CharacterDetailTab.story => CharacterStoryTabBody(
+        detail: detail,
+        onEdit: () {},
+        actionsDisabled: true,
+      ),
     };
-  }
-
-  /// [CharacterStoryTabBody] est directement réutilisable pour le cas
-  /// "au moins un champ renseigné" (aucune action d'écriture visible dans
-  /// ce cas, voir sa documentation de classe), mais son état vide propose un
-  /// bouton "Renseigner mon histoire" — inapproprié pour un lecteur
-  /// anonyme : ce cas-ci passe par [_EmptyStorySharedState] à la place.
-  Widget _buildStoryTabBody(CharacterDetail detail) {
-    final rows = CharacterStoryFieldsResolver.resolveRows(detail);
-    if (rows.isEmpty) {
-      return const _EmptyStorySharedState();
-    }
-    return CharacterStoryTabBody(detail: detail, onEdit: () {});
   }
 }
 
@@ -391,42 +387,6 @@ class _Gauge extends StatelessWidget {
           alignment: Alignment.centerLeft,
           widthFactor: ratio,
           child: DecoratedBox(decoration: BoxDecoration(gradient: gradient)),
-        ),
-      ),
-    );
-  }
-}
-
-/// État vide de l'onglet "Histoire" pour un lecteur anonyme — calque de
-/// `character_story_tab_body.dart::_EmptyStoryState`, sans le bouton
-/// "Renseigner mon histoire" (action d'écriture, hors de portée d'un lecteur
-/// anonyme).
-class _EmptyStorySharedState extends StatelessWidget {
-  const _EmptyStorySharedState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.description_outlined,
-              size: 48,
-              color: AppColors.textMuted,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'AUCUNE HISTOIRE RENSEIGNÉE',
-              textAlign: TextAlign.center,
-              style: AppTypography.display(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -1,7 +1,9 @@
 import '../../characters/domain/character_class_feature.dart';
 import '../../characters/domain/character_detail.dart';
 import '../../characters/domain/character_detail_class_row.dart';
+import '../../characters/domain/character_gallery_photo.dart';
 import '../../characters/domain/character_inventory_item.dart';
+import '../../characters/domain/character_journal_entry.dart';
 import '../../characters/domain/character_skill_row.dart';
 import '../../characters/domain/character_spell_entry.dart';
 import '../../characters/domain/character_spell_slot.dart';
@@ -35,6 +37,12 @@ import 'shared_character_skill_catalog.dart';
 /// - [CharacterDetail.skills] : reconstruit à partir des 18 compétences
 ///   D&D 5e (voir [SharedCharacterSkillCatalog]), le RPC ne renvoyant que les
 ///   compétences effectivement maîtrisées (voir sa doc de classe).
+///
+/// [CharacterDetail.galleryPhotos]/[CharacterDetail.journalEntries] sont, eux,
+/// bien renvoyés par le RPC (`photos`/`journal_entries`, ajoutés par
+/// `20260909180000_add_photos_journal_to_shared_character.sql`) : la galerie
+/// et le journal de campagne sont visibles dans la vue en lecture seule, au
+/// même titre que les 9 champs *_text déjà exposés.
 CharacterDetail mapSharedCharacterJson(Map<String, dynamic> json) {
   final character = _mapOf(json['character']) ?? const {};
   final classes = _listOfMaps(json['classes']);
@@ -112,7 +120,40 @@ CharacterDetail mapSharedCharacterJson(Map<String, dynamic> json) {
     treasureText: character['treasure_text'] as String? ?? '',
     // adventures : jamais renvoyé par get_shared_character, voir la doc de
     // classe de cette fonction ci-dessus — reste au défaut (liste vide).
+    galleryPhotos: _mapGalleryPhotos(json['photos']),
+    journalEntries: _mapJournalEntries(json['journal_entries']),
   );
+}
+
+/// Tri du plus récent au plus ancien — même règle que
+/// `CharacterDetailRowMapper.parseGalleryPhotos` côté fiche authentifiée
+/// (`jsonb_agg` ne garantit aucun ordre côté RPC, voir la doc de classe de
+/// cette fonction-là).
+List<CharacterGalleryPhoto> _mapGalleryPhotos(dynamic raw) {
+  final photos = <CharacterGalleryPhoto>[];
+  for (final row in _listOfMaps(raw)) {
+    final id = row['id'] as String?;
+    final url = row['url'] as String?;
+    final createdAt = DateTime.tryParse(row['created_at'] as String? ?? '');
+    if (id == null || url == null || createdAt == null) continue;
+    photos.add(CharacterGalleryPhoto(id: id, url: url, createdAt: createdAt));
+  }
+  photos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  return photos;
+}
+
+/// Même règle que [_mapGalleryPhotos].
+List<CharacterJournalEntry> _mapJournalEntries(dynamic raw) {
+  final entries = <CharacterJournalEntry>[];
+  for (final row in _listOfMaps(raw)) {
+    final id = row['id'] as String?;
+    final body = row['body'] as String?;
+    final createdAt = DateTime.tryParse(row['created_at'] as String? ?? '');
+    if (id == null || body == null || createdAt == null) continue;
+    entries.add(CharacterJournalEntry(id: id, body: body, createdAt: createdAt));
+  }
+  entries.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  return entries;
 }
 
 Map<String, dynamic>? _mapOf(dynamic value) =>

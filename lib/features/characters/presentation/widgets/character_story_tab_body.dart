@@ -7,6 +7,8 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_story_field.dart';
 import '../../domain/character_story_fields_resolver.dart';
+import 'character_gallery_card.dart';
+import 'character_journal_card.dart';
 
 /// Contenu de l'onglet "Histoire" de la fiche personnage — voir
 /// `docs/cahier-des-charges/09-maquettes-captures.md`, section "Onglet
@@ -30,10 +32,23 @@ import '../../domain/character_story_fields_resolver.dart';
 /// principe que les cartes optionnelles de l'onglet "Compétences" (outils/
 /// langues masquées si vides, voir `character_skills_tab_body.dart`). Voir
 /// [_EmptyStoryState] pour le cas où les 9 champs sont vides.
+///
+/// [CharacterGalleryCard]/[CharacterJournalCard] (galerie de photos,
+/// journal de campagne — voir `docs/cahier-des-charges/`
+/// 11-fonctionnalites-a-ajouter.md, section "Onglet Histoire") sont
+/// affichées en pied de liste dès que l'une des deux a quelque chose à
+/// montrer (voir `CharacterGalleryCard.hasVisibleContent`) — y compris
+/// quand [_EmptyStoryState] occupe la place des 9 champs de texte,
+/// contrairement à ceux-ci ce sont des cartes actionnables (leur propre
+/// tuile "+"/"Ajouter") qui restent visibles vides tant qu'on peut y
+/// ajouter du contenu ; seule la vue de partage en lecture seule
+/// ([actionsDisabled]) les masque entièrement quand elles sont vides
+/// (rien à ajouter, rien à montrer).
 class CharacterStoryTabBody extends StatelessWidget {
   const CharacterStoryTabBody({
     required this.detail,
     required this.onEdit,
+    this.actionsDisabled = false,
     super.key,
   });
 
@@ -46,19 +61,42 @@ class CharacterStoryTabBody extends StatelessWidget {
   /// l'onglet "Inventaire").
   final VoidCallback onEdit;
 
+  /// `true` sur la vue de partage en lecture seule
+  /// (`character_sharing/presentation/shared_character_view_screen.dart`,
+  /// où [onEdit] est déjà un no-op) : désactive les actions d'ajout/édition/
+  /// suppression de [CharacterGalleryCard]/[CharacterJournalCard] — un
+  /// lecteur anonyme peut voir la galerie/le journal, jamais les modifier
+  /// (voir `CharacterInventoryTabBody.actionsDisabled` pour le même
+  /// principe sur un autre onglet).
+  final bool actionsDisabled;
+
   @override
   Widget build(BuildContext context) {
     final rows = CharacterStoryFieldsResolver.resolveRows(detail);
-    if (rows.isEmpty) {
-      return _EmptyStoryState(onEdit: onEdit);
-    }
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        for (var i = 0; i < rows.length; i++) ...[
-          if (i > 0) const SizedBox(height: AppSpacing.md),
-          _StoryFieldRow(fields: rows[i]),
+        if (rows.isEmpty)
+          _EmptyStoryState(onEdit: onEdit, actionsDisabled: actionsDisabled)
+        else
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.md),
+            _StoryFieldRow(fields: rows[i]),
+          ],
+        if (CharacterGalleryCard.hasVisibleContent(
+          detail,
+          actionsDisabled: actionsDisabled,
+        )) ...[
+          const SizedBox(height: AppSpacing.md),
+          CharacterGalleryCard(detail: detail, actionsDisabled: actionsDisabled),
+        ],
+        if (CharacterJournalCard.hasVisibleContent(
+          detail,
+          actionsDisabled: actionsDisabled,
+        )) ...[
+          const SizedBox(height: AppSpacing.md),
+          CharacterJournalCard(detail: detail, actionsDisabled: actionsDisabled),
         ],
       ],
     );
@@ -145,11 +183,18 @@ class _StoryFieldCard extends StatelessWidget {
 /// Depuis le chantier qui a introduit [onEdit], ce n'est plus un simple
 /// panneau d'information : un bouton "Renseigner mon histoire" ouvre la même
 /// sheet d'édition que l'icône crayon du bandeau bois (voir la documentation
-/// de classe de [CharacterStoryTabBody]).
+/// de classe de [CharacterStoryTabBody]) — sauf sur la vue de partage en
+/// lecture seule ([actionsDisabled]), qui n'affiche alors plus que l'icône
+/// et le titre (sous-titre/bouton retirés, un bouton inerte pour un lecteur
+/// anonyme serait trompeur) : c'est cette variante réduite qui remplace
+/// l'ancien `_EmptyStorySharedState` propre à
+/// `shared_character_view_screen.dart`, désormais fusionné ici plutôt que
+/// dupliqué.
 class _EmptyStoryState extends StatelessWidget {
-  const _EmptyStoryState({required this.onEdit});
+  const _EmptyStoryState({required this.onEdit, required this.actionsDisabled});
 
   final VoidCallback onEdit;
+  final bool actionsDisabled;
 
   @override
   Widget build(BuildContext context) {
@@ -173,15 +218,20 @@ class _EmptyStoryState extends StatelessWidget {
                 color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              "Apparence, traits, idéaux... raconte l'histoire de ton "
-              'personnage quand tu veux.',
-              textAlign: TextAlign.center,
-              style: AppTypography.body(color: AppColors.textMuted),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            PrimaryButton(label: 'Renseigner mon histoire', onPressed: onEdit),
+            if (!actionsDisabled) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                "Apparence, traits, idéaux... raconte l'histoire de ton "
+                'personnage quand tu veux.',
+                textAlign: TextAlign.center,
+                style: AppTypography.body(color: AppColors.textMuted),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              PrimaryButton(
+                label: 'Renseigner mon histoire',
+                onPressed: onEdit,
+              ),
+            ],
           ],
         ),
       ),

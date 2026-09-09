@@ -11,6 +11,7 @@ import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
 import '../domain/character_summary.dart';
 import '../domain/currency_kind.dart';
+import '../domain/gallery_photo_storage_path_resolver.dart';
 import '../domain/inventory_catalog_item.dart';
 import '../domain/level_up_apply_result.dart';
 import '../domain/level_up_choice_kind.dart';
@@ -148,6 +149,66 @@ abstract class CharacterRepository {
   Future<void> removePortrait({
     required String characterId,
     required String portraitUrl,
+  });
+
+  /// Envoie [bytes] dans le bucket `character-gallery-photos` (RLS écriture
+  /// restreinte à `{user_id}/...`, lecture publique — voir
+  /// `domain/gallery_photo_storage_path_resolver.dart`), puis insère une
+  /// ligne `character_photos` avec l'URL publique résultante. Contrairement
+  /// à [uploadPortrait] : un nouvel `INSERT` (jamais un remplacement),
+  /// [bytes] ne sont jamais recadrées en amont (pas de crop imposé, la
+  /// galerie accepte des photos de toute proportion — voir la spec de la
+  /// tâche "Galerie de photos", `docs/cahier-des-charges/`
+  /// 11-fonctionnalites-a-ajouter.md section "Onglet Histoire").
+  ///
+  /// Mode hors-ligne : aucune gestion dédiée, même principe que
+  /// [uploadPortrait] (upload binaire, ne se prête pas à
+  /// [PendingCharacterWriteQueue]) — l'appel réseau échoue simplement,
+  /// remonté comme n'importe quelle autre [CharacterFailure].
+  Future<void> addGalleryPhoto({
+    required String characterId,
+    required Uint8List bytes,
+  });
+
+  /// Supprime le fichier [url] du bucket (best-effort, même principe que
+  /// [removePortrait] pour une URL externe non reconnue) puis la ligne
+  /// `character_photos` [photoId].
+  Future<void> removeGalleryPhoto({
+    required String characterId,
+    required String photoId,
+    required String url,
+  });
+
+  /// Insère une nouvelle entrée `character_journal_entries` — voir
+  /// `presentation/widgets/character_journal_entry_edit_sheet.dart`.
+  ///
+  /// Mode hors ligne : mêmes règles que [useInventoryItem] (retourne
+  /// [WriteOutcome.queued] sans persister nulle part, jamais synchronisé
+  /// automatiquement — décision chef de projet, même périmètre volontairement
+  /// restreint de [PendingCharacterWriteQueue] que le reste de la fiche en
+  /// dehors de PV/XP).
+  Future<WriteOutcome> addJournalEntry({
+    required String characterId,
+    required String body,
+  });
+
+  /// Remplace le texte de l'entrée [entryId] par [body] — même sheet que
+  /// [addJournalEntry] (mode édition plutôt qu'ajout).
+  ///
+  /// Mode hors ligne : mêmes règles que [addJournalEntry].
+  Future<WriteOutcome> updateJournalEntry({
+    required String characterId,
+    required String entryId,
+    required String body,
+  });
+
+  /// Supprime l'entrée [entryId] (avec confirmation côté sheet d'actions,
+  /// même principe que [removeInventoryItem]).
+  ///
+  /// Mode hors ligne : mêmes règles que [addJournalEntry].
+  Future<WriteOutcome> removeJournalEntry({
+    required String characterId,
+    required String entryId,
   });
 
   /// Écrit directement `characters.xp` avec [newXp] (déjà calculé par
@@ -817,7 +878,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
                 armor_properties(ac_base, ac_dex_bonus, strength_requirement, stealth_disadvantage)
               )
             ),
-            character_campaigns(id, story_id, stories(title, cover_image_path, gm_display_name:stories_gm_display_name))
+            character_campaigns(id, story_id, stories(title, cover_image_path, gm_display_name:stories_gm_display_name)),
+            character_photos(id, url, created_at),
+            character_journal_entries(id, body, created_at)
           ''')
           .eq('id', characterId)
           .eq('owner_id', ownerId)
@@ -1025,6 +1088,152 @@ class SupabaseCharacterRepository implements CharacterRepository {
             ? error.message
             : 'Impossible de retirer le portrait. Réessayez.',
       );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<void> addGalleryPhoto({
+    required String characterId,
+    required Uint8List bytes,
+  }) async {
+    final ownerId = _requireOwnerId();
+    // Nom de fichier horodaté, même principe que [uploadPortrait] — chaque
+    // appel ajoute un nouveau fichier, jamais de remplacement (`upsert`
+    // laissé à sa valeur par défaut `false`, contrairement à
+    // [uploadPortrait]).
+    final path =
+        '$ownerId/$characterId/${DateTime.now().millisecondsSinceEpoch}.png';
+
+    try {
+      await _client.storage
+          .from(GalleryPhotoStoragePathResolver.bucket)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(contentType: 'image/png'),
+          );
+      final publicUrl = _client.storage
+          .from(GalleryPhotoStoragePathResolver.bucket)
+          .getPublicUrl(path);
+
+      await _client.from('character_photos').insert({
+        'character_id': characterId,
+        'url': publicUrl,
+      });
+    } on StorageException catch (error) {
+      throw CharacterFailure(
+        error.message.isNotEmpty
+            ? error.message
+            : "Impossible d'envoyer la photo. Réessayez.",
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<void> removeGalleryPhoto({
+    required String characterId,
+    required String photoId,
+    required String url,
+  }) async {
+    _requireOwnerId();
+    try {
+      final path = GalleryPhotoStoragePathResolver.resolve(url);
+      if (path != null) {
+        await _client.storage
+            .from(GalleryPhotoStoragePathResolver.bucket)
+            .remove([path]);
+      }
+      await _client
+          .from('character_photos')
+          .delete()
+          .eq('id', photoId)
+          .eq('character_id', characterId);
+    } on StorageException catch (error) {
+      throw CharacterFailure(
+        error.message.isNotEmpty
+            ? error.message
+            : 'Impossible de retirer cette photo. Réessayez.',
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> addJournalEntry({
+    required String characterId,
+    required String body,
+  }) async {
+    _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client.from('character_journal_entries').insert({
+        'character_id': characterId,
+        'body': body,
+      });
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> updateJournalEntry({
+    required String characterId,
+    required String entryId,
+    required String body,
+  }) async {
+    _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('character_journal_entries')
+          .update({'body': body})
+          .eq('id', entryId)
+          .eq('character_id', characterId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> removeJournalEntry({
+    required String characterId,
+    required String entryId,
+  }) async {
+    _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('character_journal_entries')
+          .delete()
+          .eq('id', entryId)
+          .eq('character_id', characterId);
+      return WriteOutcome.synced;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (_) {

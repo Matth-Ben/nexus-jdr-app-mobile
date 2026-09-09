@@ -209,6 +209,46 @@ void main() {
       expect(detail.inventory, isEmpty);
       expect(detail.inspiration, isFalse);
       expect(detail.speed, isNull);
+      expect(detail.galleryPhotos, isEmpty);
+      expect(detail.journalEntries, isEmpty);
+    });
+
+    test('mappe la galerie de photos et le journal de campagne, triés du '
+        'plus récent au plus ancien', () {
+      final detail = mapSharedCharacterJson({
+        'character': {'id': 'char-1', 'name': 'Test'},
+        'photos': [
+          {
+            'id': 'photo-1',
+            'url': 'https://example.com/1.png',
+            'created_at': '2026-09-01T10:00:00Z',
+          },
+          {
+            'id': 'photo-2',
+            'url': 'https://example.com/2.png',
+            'created_at': '2026-09-05T10:00:00Z',
+          },
+        ],
+        'journal_entries': [
+          {
+            'id': 'entry-1',
+            'body': 'Première note.',
+            'created_at': '2026-09-01T10:00:00Z',
+          },
+          {
+            'id': 'entry-2',
+            'body': 'Seconde note.',
+            'created_at': '2026-09-05T10:00:00Z',
+          },
+        ],
+      });
+
+      expect(detail.galleryPhotos, hasLength(2));
+      expect(detail.galleryPhotos[0].id, 'photo-2');
+      expect(detail.galleryPhotos[1].id, 'photo-1');
+      expect(detail.journalEntries, hasLength(2));
+      expect(detail.journalEntries[0].id, 'entry-2');
+      expect(detail.journalEntries[1].id, 'entry-1');
     });
   });
 }

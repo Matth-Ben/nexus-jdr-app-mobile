@@ -16,6 +16,7 @@
 // super() les exige, mais sync() override ne les touche jamais).
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -360,6 +361,38 @@ class _FakeCharacterRepository implements CharacterRepository {
     required String characterId,
     required String portraitUrl,
   }) async {}
+
+  @override
+  Future<void> addGalleryPhoto({
+    required String characterId,
+    required Uint8List bytes,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> removeGalleryPhoto({
+    required String characterId,
+    required String photoId,
+    required String url,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<WriteOutcome> addJournalEntry({
+    required String characterId,
+    required String body,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<WriteOutcome> updateJournalEntry({
+    required String characterId,
+    required String entryId,
+    required String body,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<WriteOutcome> removeJournalEntry({
+    required String characterId,
+    required String entryId,
+  }) => throw UnimplementedError();
 
   @override
   Future<WriteOutcome> addXp({

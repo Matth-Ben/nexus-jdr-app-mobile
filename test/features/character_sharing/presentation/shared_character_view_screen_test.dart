@@ -15,6 +15,8 @@ import 'package:personnages/features/character_sharing/presentation/shared_chara
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
+import 'package:personnages/features/characters/domain/character_gallery_photo.dart';
+import 'package:personnages/features/characters/domain/character_journal_entry.dart';
 
 class _FakeCharacterSharingRepository implements CharacterSharingRepository {
   CharacterDetail? detailToReturn;
@@ -187,6 +189,62 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('COMPÉTENCES'), findsOneWidget);
+  });
+
+  group('onglet Histoire (docs/cahier-des-charges/'
+      '11-fonctionnalites-a-ajouter.md section "Onglet Histoire")', () {
+    testWidgets(
+      'galerie/journal affichés en lecture seule (contenu présent), sans '
+      'tuile "+"/"Ajouter une note"',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          galleryPhotos: [
+            CharacterGalleryPhoto(
+              id: 'photo-1',
+              url: 'https://example.com/1.png',
+              createdAt: DateTime(2026, 9, 1),
+            ),
+          ],
+          journalEntries: [
+            CharacterJournalEntry(
+              id: 'entry-1',
+              body: 'Première séance.',
+              createdAt: DateTime(2026, 9, 1, 20, 0),
+            ),
+          ],
+        );
+
+        await pumpSharedView(tester);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('HIST.'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('GALERIE'), findsOneWidget);
+        expect(find.text('JOURNAL DE CAMPAGNE'), findsOneWidget);
+        expect(find.text('Première séance.'), findsOneWidget);
+        expect(find.byIcon(Icons.add), findsNothing);
+        expect(find.text('Ajouter une note'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'aucun champ, aucune photo, aucune entrée : bandeau "AUCUNE HISTOIRE '
+      'RENSEIGNÉE" sans sous-titre/bouton, GALERIE/JOURNAL absentes (rien '
+      'à ajouter/montrer en lecture seule)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpSharedView(tester);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('HIST.'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('AUCUNE HISTOIRE RENSEIGNÉE'), findsOneWidget);
+        expect(find.text('RENSEIGNER MON HISTOIRE'), findsNothing);
+        expect(find.text('GALERIE'), findsNothing);
+        expect(find.text('JOURNAL DE CAMPAGNE'), findsNothing);
+      },
+    );
   });
 
   testWidgets(
