@@ -572,6 +572,35 @@ void main() {
   });
 
   testWidgets(
+    'taper une tuile de la grille de caractéristiques ouvre le mini lancer '
+    'de dé virtuel avec le nom complet de la caractéristique et son '
+    'modificateur brut (docs/cahier-des-charges/'
+    '11-fonctionnalites-a-ajouter.md, section "Onglet Compétences")',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      // int: 18 -> modificateur +4, aucun bonus de maîtrise pour un jet de
+      // caractéristique brut (contrairement à un jet de compétence).
+      await tester.tap(
+        find.descendant(
+          of: find.byType(CharacterAbilityScoreGrid),
+          matching: find.text('INTELLIGENCE'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // "INTELLIGENCE" apparaît maintenant deux fois (la tuile de la grille,
+      // toujours montée sous la sheet modale, ET le titre de la sheet
+      // elle-même) : seule la ligne de détail du jet, propre à la sheet,
+      // identifie sans ambiguïté qu'elle s'est bien ouverte.
+      expect(find.textContaining('+4 ='), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'la carte "Jets de sauvegarde" affiche les 6 caractéristiques, maîtrisées '
     'depuis la classe principale uniquement',
     (tester) async {

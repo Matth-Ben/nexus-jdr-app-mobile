@@ -81,6 +81,36 @@ void main() {
     expect(find.text('+5'), findsOneWidget);
   });
 
+  testWidgets(
+    'taper une ligne de compétence ouvre le mini lancer de dé virtuel avec '
+    'le nom de la compétence et son bonus déjà calculé (docs/'
+    'cahier-des-charges/11-fonctionnalites-a-ajouter.md, section "Onglet '
+    'Compétences")',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          skills: const [
+            CharacterSkillRow(
+              id: 1,
+              name: 'Acrobaties',
+              abilityId: 'dex',
+              proficiency: 'competente',
+            ),
+          ],
+        ),
+      );
+
+      await tester.tap(find.text('Acrobaties'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ACROBATIES'), findsOneWidget);
+      // Même bonus +5 que la ligne (mod dex +3 + maîtrise +2), retrouvé dans
+      // la ligne de détail du jet ("d20 (X) +5 = ...").
+      expect(find.textContaining('+5 ='), findsOneWidget);
+    },
+  );
+
   testWidgets('affiche une aptitude à usage limité avec son compteur', (
     tester,
   ) async {

@@ -6,12 +6,21 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../character_creation/domain/ability_score_definitions.dart';
 import '../../../character_creation/domain/ability_score_rules.dart';
 import '../../domain/signed_modifier_formatter.dart';
+import 'dice_roll_sheet.dart';
 
 /// Grille 3×2 des 6 caractéristiques (For/Dex/Con puis Int/Sag/Cha) de
 /// l'onglet "Personnage" — réutilise tel quel le mapping icône/couleur de
 /// `character_creation/domain/ability_score_definitions.dart` (déjà validé
 /// par la direction artistique), score déjà final dans
 /// `character_ability_scores` (aucun recalcul de bonus racial ici).
+///
+/// Chaque tuile est tappable : ouvre `showDiceRollSheet` (mini lancer de dé
+/// virtuel, `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`,
+/// section "Onglet Compétences" — le jet de caractéristique brut y est cité
+/// au même titre que le jet de compétence) avec le modificateur de
+/// caractéristique seul, sans bonus de maîtrise (un jet de caractéristique
+/// n'en a jamais). Jamais désactivé (voir la documentation de classe de
+/// `CharacterSkillsCard` pour le même choix et son rationale).
 class CharacterAbilityScoreGrid extends StatelessWidget {
   const CharacterAbilityScoreGrid({required this.abilityScores, super.key});
 
@@ -48,50 +57,65 @@ class _AbilityScoreCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final modifier = AbilityScoreRules.abilityModifier(score);
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.parchmentCard,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(definition.icon, size: 22, color: definition.accentColor),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            definition.label.toUpperCase(),
-            style: AppTypography.body(
-              // Plancher d'accessibilité strict du design système (section
-              // 7 : "taille de police minimale 11px, jamais en dessous") —
-              // l'emporte sur la recommandation 9-10px de la section 4
-              // ("Icône de caractéristique"), contradiction interne notée
-              // pour la prochaine resynchronisation de
-              // `docs/cahier-des-charges/10-design-system.md`.
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
+        onTap: () => showDiceRollSheet(
+          context,
+          label: definition.label,
+          modifier: modifier,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: AppColors.parchmentCard,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: AppColors.woodLight,
+              width: AppBorders.card,
             ),
           ),
-          Text(
-            '$score',
-            style: AppTypography.body(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-            ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(definition.icon, size: 22, color: definition.accentColor),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                definition.label.toUpperCase(),
+                style: AppTypography.body(
+                  // Plancher d'accessibilité strict du design système
+                  // (section 7 : "taille de police minimale 11px, jamais
+                  // en dessous") — l'emporte sur la recommandation 9-10px
+                  // de la section 4 ("Icône de caractéristique"),
+                  // contradiction interne notée pour la prochaine
+                  // resynchronisation de
+                  // `docs/cahier-des-charges/10-design-system.md`.
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              Text(
+                '$score',
+                style: AppTypography.body(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                SignedModifierFormatter.format(modifier),
+                style: AppTypography.body(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: modifier < 0
+                      ? AppColors.accentBrick
+                      : AppColors.textSecondary,
+                ),
+              ),
+            ],
           ),
-          Text(
-            SignedModifierFormatter.format(modifier),
-            style: AppTypography.body(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: modifier < 0
-                  ? AppColors.accentBrick
-                  : AppColors.textSecondary,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
