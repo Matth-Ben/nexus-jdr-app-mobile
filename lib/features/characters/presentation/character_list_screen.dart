@@ -10,7 +10,6 @@ import '../../../core/router/route_observer_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/widgets/dashed_border_painter.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
@@ -183,27 +182,32 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
                 AppSpacing.lg,
                 AppSpacing.lg,
               ),
-              child: Column(
+              // Le bouton "Rejoindre une histoire" (`_JoinStoryButton`,
+              // flux `features/join_story/`) est volontairement masqué ici :
+              // cette fonctionnalité est mise de côté le temps de terminer
+              // le reste du recettage direction-artistique (section non
+              // encore traitée). Le flux et ses routes (`/join`, `/join/
+              // step-2`, `/join/step-3`, `/join/:code`) restent en place
+              // dans le code, simplement plus atteignables depuis l'UI —
+              // aucune configuration native de deep link n'est de toute
+              // façon encore branchée pour `/join/:code` (voir
+              // `app_router.dart`), donc ce retrait masque bien
+              // intégralement la fonctionnalité pour l'instant.
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: PrimaryButton(
-                          label: '+ Créer',
-                          onPressed: () => _startCreation(context, ref),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: SecondaryButton(
-                          label: 'Importer XML',
-                          onPressed: () => _startXmlImport(context),
-                        ),
-                      ),
-                    ],
+                  Expanded(
+                    child: PrimaryButton(
+                      label: '+ Créer',
+                      onPressed: () => _startCreation(context, ref),
+                    ),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _JoinStoryButton(onPressed: () => _startJoinStory(context)),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: SecondaryButton(
+                      label: 'Importer XML',
+                      onPressed: () => _startXmlImport(context),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -231,13 +235,6 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
     // tentative précédente.
     ref.read(characterCreationReturnRouteControllerProvider.notifier).set(null);
     context.push('/characters/new');
-  }
-
-  /// Démarre le flux "Rejoindre une histoire" (`features/join_story/`) —
-  /// voir `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`
-  /// section 7.1.
-  void _startJoinStory(BuildContext context) {
-    context.push('/join');
   }
 
   /// Ouvre le sélecteur de fichier natif (`file_picker`, seul package du
@@ -293,50 +290,6 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
         content: Text(
           "Impossible de lire ce fichier. Vérifiez qu'il s'agit bien d'un "
           'export XML aidedd.org.',
-        ),
-      ),
-    );
-  }
-}
-
-/// Bouton "Rejoindre une histoire" pleine largeur, bordure pointillée (voir
-/// maquette `docs/cahier-des-charges/09-maquettes-captures.md`, section
-/// "Liste des personnages") — distinct des boutons `PrimaryButton`/
-/// `SecondaryButton` du design système (aucun n'a de variante pointillée),
-/// scopé à cet écran tant qu'aucun autre écran n'a besoin du même style.
-class _JoinStoryButton extends StatelessWidget {
-  const _JoinStoryButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: const DashedBorderPainter(color: AppColors.woodLight),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          onTap: onPressed,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
-            alignment: Alignment.center,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.login, size: 16, color: AppColors.textOnWood),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  'REJOINDRE UNE HISTOIRE',
-                  style: AppTypography.display(
-                    fontSize: 11,
-                    color: AppColors.textOnWood,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -704,8 +657,11 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              "Crée ton premier personnage, importe-le depuis aidedd.org, "
-              "ou rejoins l'histoire d'un ami pour commencer l'aventure.",
+              // "ou rejoins l'histoire d'un ami" volontairement retiré :
+              // voir le commentaire sur le masquage du bouton "Rejoindre
+              // une histoire" plus haut dans ce fichier (`build`).
+              'Crée ton premier personnage, ou importe-le depuis aidedd.org, '
+              'pour commencer l\'aventure.',
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textOnWoodMuted),
             ),

@@ -699,18 +699,16 @@ void main() {
   });
 
   testWidgets(
-    'le bouton "Rejoindre une histoire" navigue vers le flux "Rejoindre une '
-    'histoire"',
+    'le bouton "Rejoindre une histoire" est masqué (fonctionnalité mise de '
+    'côté le temps du reste du recettage direction-artistique — voir le '
+    'commentaire de `character_list_screen.dart::build`)',
     (WidgetTester tester) async {
       fakeCharacterRepository.charactersToReturn = const [];
 
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('REJOINDRE UNE HISTOIRE'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Rejoindre une histoire — étape 1'), findsOneWidget);
+      expect(find.text('REJOINDRE UNE HISTOIRE'), findsNothing);
     },
   );
 
