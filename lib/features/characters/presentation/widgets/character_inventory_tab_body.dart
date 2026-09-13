@@ -55,7 +55,9 @@ class CharacterInventoryTabBody extends StatefulWidget {
     required this.onAdjustCurrency,
     required this.onAddInventoryItem,
     required this.onAddCustomInventoryItem,
+    this.onAddReward,
     this.actionsDisabled = false,
+    this.filterAnchorKey,
     super.key,
   });
 
@@ -78,6 +80,15 @@ class CharacterInventoryTabBody extends StatefulWidget {
   /// Reçoit le nom saisi et la quantité (sheet "Objet personnalisé").
   final void Function(String customName, int quantity) onAddCustomInventoryItem;
 
+  /// Ouvre `showAddRewardSheet` (recettage direction-artistique du 13/09) —
+  /// relogé depuis l'icône `Icons.card_giftcard` du bandeau bois (retirée,
+  /// voir `character_detail_screen.dart`) en pied de liste, à côté du
+  /// bouton "+ Objet" (voir [_AddRowButtons]). `null` masque entièrement le
+  /// bouton "Récompense" (ex. vue en lecture seule
+  /// `shared_character_view_screen.dart`, où ajouter une récompense n'a pas
+  /// de sens).
+  final VoidCallback? onAddReward;
+
   /// `true` pendant qu'une écriture de cet onglet est en vol (voir
   /// `character_detail_screen.dart::_isWritingInventory`) : désactive le tap
   /// sur chaque carte d'objet, chaque stat box de monnaie et la tuile
@@ -87,13 +98,19 @@ class CharacterInventoryTabBody extends StatefulWidget {
   /// "Compétences" qui doivent aussi se verrouiller pendant un repos.
   final bool actionsDisabled;
 
+  /// Clé posée sur la bascule de filtre par catégorie ([SegmentedToggle])
+  /// pour que l'icône filtre du bandeau bois (`character_detail_screen.dart`)
+  /// puisse y faire défiler la vue (`Scrollable.ensureVisible`) — `null`
+  /// laisse ce comportement de côté (ex. `shared_character_view_screen.dart`,
+  /// qui n'a pas cette icône).
+  final GlobalKey? filterAnchorKey;
+
   @override
   State<CharacterInventoryTabBody> createState() =>
       _CharacterInventoryTabBodyState();
 }
 
-class _CharacterInventoryTabBodyState
-    extends State<CharacterInventoryTabBody> {
+class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
   InventoryCategoryFilter _filter = InventoryCategoryFilter.all;
 
   Future<void> _openItemActions(
@@ -167,13 +184,16 @@ class _CharacterInventoryTabBodyState
         CharacterInventoryCapacityGauge(detail: detail),
         if (!isEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          SegmentedToggle<InventoryCategoryFilter>(
-            options: [
-              for (final option in InventoryCategoryFilter.values)
-                SegmentedToggleOption(value: option, label: option.label),
-            ],
-            value: _filter,
-            onChanged: (value) => setState(() => _filter = value),
+          KeyedSubtree(
+            key: widget.filterAnchorKey,
+            child: SegmentedToggle<InventoryCategoryFilter>(
+              options: [
+                for (final option in InventoryCategoryFilter.values)
+                  SegmentedToggleOption(value: option, label: option.label),
+              ],
+              value: _filter,
+              onChanged: (value) => setState(() => _filter = value),
+            ),
           ),
         ],
         const SizedBox(height: AppSpacing.md),
@@ -192,11 +212,98 @@ class _CharacterInventoryTabBodyState
             const SizedBox(height: AppSpacing.sm),
           ],
         if (isEmpty) const SizedBox(height: AppSpacing.md),
-        DashedAddTile(
-          label: 'Ajouter un objet',
-          onTap: widget.actionsDisabled ? null : () => _openAddItem(context),
+        _AddRowButtons(
+          onAddItem: widget.actionsDisabled
+              ? null
+              : () => _openAddItem(context),
+          onAddReward: widget.actionsDisabled ? null : widget.onAddReward,
         ),
       ],
+    );
+  }
+}
+
+/// Pied de liste de l'onglet "Inventaire" (recettage direction-artistique du
+/// 13/09) : deux boutons de largeur égale, "+ Objet" (tuile pointillée
+/// existante, [DashedAddTile], comportement inchangé) et "Récompense"
+/// (bouton secondaire avec icône cadeau, relogé depuis l'icône du bandeau
+/// bois — voir [CharacterInventoryTabBody.onAddReward]).
+class _AddRowButtons extends StatelessWidget {
+  const _AddRowButtons({required this.onAddItem, required this.onAddReward});
+
+  final VoidCallback? onAddItem;
+  final VoidCallback? onAddReward;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: DashedAddTile(label: '+ Objet', onTap: onAddItem),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(child: _RewardButton(onTap: onAddReward)),
+      ],
+    );
+  }
+}
+
+/// Bouton "Récompense" — même gabarit que
+/// `core/widgets/secondary_button.dart::SecondaryButton` (surface
+/// [SecondaryButtonSurface.parchment]), avec une icône cadeau en plus (non
+/// supporté par ce composant partagé) : dupliqué localement plutôt que
+/// d'étendre `SecondaryButton` pour un seul usage à ce jour.
+class _RewardButton extends StatelessWidget {
+  const _RewardButton({required this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return Opacity(
+      opacity: enabled ? 1 : 0.6,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.parchmentCardAlt,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: AppColors.woodLight,
+            width: AppBorders.card,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            onTap: onTap,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.card_giftcard,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      'RÉCOMPENSE',
+                      style: AppTypography.display(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

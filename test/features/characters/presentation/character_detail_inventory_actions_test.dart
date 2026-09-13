@@ -565,45 +565,42 @@ void main() {
       },
     );
 
-    testWidgets(
-      'un objet déjà harmonisé : "Ne plus harmoniser" appelle '
-      'setInventoryItemAttuned(attuned: false)',
-      (tester) async {
-        final repository = await pumpDetail(
-          tester,
-          initialDetail: detail.copyWith(
-            inventory: [
-              _dagger,
-              _potion,
-              _rations,
-              const CharacterInventoryItem(
-                id: 'inv-4',
-                itemId: 4,
-                name: 'Anneau de protection',
-                category: 'objet_magique',
-                quantity: 1,
-                equipped: false,
-                requiresAttunement: true,
-                isAttuned: true,
-              ),
-            ],
-          ),
-        );
-        await openInventoryTab(tester);
+    testWidgets('un objet déjà harmonisé : "Ne plus harmoniser" appelle '
+        'setInventoryItemAttuned(attuned: false)', (tester) async {
+      final repository = await pumpDetail(
+        tester,
+        initialDetail: detail.copyWith(
+          inventory: [
+            _dagger,
+            _potion,
+            _rations,
+            const CharacterInventoryItem(
+              id: 'inv-4',
+              itemId: 4,
+              name: 'Anneau de protection',
+              category: 'objet_magique',
+              quantity: 1,
+              equipped: false,
+              requiresAttunement: true,
+              isAttuned: true,
+            ),
+          ],
+        ),
+      );
+      await openInventoryTab(tester);
 
-        await tester.tap(find.text('Anneau de protection'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Ne plus harmoniser'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Anneau de protection'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ne plus harmoniser'));
+      await tester.pumpAndSettle();
 
-        expect(repository.setAttunedCallCount, 1);
-        expect(repository.lastAttuned, isFalse);
-        expect(
-          find.text('Anneau de protection n\'est plus harmonisé.'),
-          findsOneWidget,
-        );
-      },
-    );
+      expect(repository.setAttunedCallCount, 1);
+      expect(repository.lastAttuned, isFalse);
+      expect(
+        find.text('Anneau de protection n\'est plus harmonisé.'),
+        findsOneWidget,
+      );
+    });
 
     testWidgets(
       'plafond de 3 objets harmonisés atteint : "Harmoniser cet objet" est '
@@ -640,7 +637,10 @@ void main() {
         expect(find.text('Harmoniser cet objet'), findsOneWidget);
         expect(find.text('Limite (3) atteinte'), findsOneWidget);
 
-        await tester.tap(find.text('Harmoniser cet objet'), warnIfMissed: false);
+        await tester.tap(
+          find.text('Harmoniser cet objet'),
+          warnIfMissed: false,
+        );
         await tester.pumpAndSettle();
 
         expect(repository.setAttunedCallCount, 0);
@@ -721,7 +721,7 @@ void main() {
       final repository = await pumpDetail(tester);
       await openInventoryTab(tester);
 
-      await tester.tap(find.text('Ajouter un objet'));
+      await tester.tap(find.text('+ Objet'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();
@@ -742,13 +742,13 @@ void main() {
   );
 
   testWidgets(
-    'bouton "Ajouter une récompense" du bandeau : addReward reçoit le total '
+    'bouton "Récompense" du pied de liste : addReward reçoit le total '
     'absolu de monnaie (10 + 5 = 15) et les objets ajoutés',
     (tester) async {
       final repository = await pumpDetail(tester);
       await openInventoryTab(tester);
 
-      await tester.tap(find.byTooltip('Ajouter une récompense'));
+      await tester.tap(find.text('RÉCOMPENSE'));
       await tester.pumpAndSettle();
 
       expect(find.text('AJOUTER UNE RÉCOMPENSE'), findsOneWidget);
@@ -879,7 +879,7 @@ void main() {
 
       // Premier essai : +5 PO, échoue après que la monnaie a déjà été
       // persistée côté serveur (10 -> 15, simulé par `failNextAddReward`).
-      await tester.tap(find.byTooltip('Ajouter une récompense'));
+      await tester.tap(find.text('RÉCOMPENSE'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField).first, '5');
       await tester.pump();
@@ -900,7 +900,7 @@ void main() {
       // delta (+5) recalculerait 10 + 5 = 15, un total identique à celui
       // déjà persisté par l'essai précédent — perdant silencieusement ce
       // second +5 au lieu de l'ajouter par-dessus le total déjà en base.
-      await tester.tap(find.byTooltip('Ajouter une récompense'));
+      await tester.tap(find.text('RÉCOMPENSE'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField).first, '5');
       await tester.pump();
@@ -921,19 +921,20 @@ void main() {
   );
 
   testWidgets(
-    'le bouton "Ajouter une récompense" du bandeau n\'apparaît que sur '
-    'l\'onglet "Inventaire"',
+    'le bouton "Récompense" du pied de liste n\'apparaît que sur l\'onglet '
+    '"Inventaire" (recettage direction-artistique du 13/09 : relogé depuis '
+    'l\'icône du bandeau bois, retirée)',
     (tester) async {
       await pumpDetail(tester);
 
-      expect(find.byTooltip('Ajouter une récompense'), findsNothing);
+      expect(find.text('RÉCOMPENSE'), findsNothing);
 
       await openInventoryTab(tester);
-      expect(find.byTooltip('Ajouter une récompense'), findsOneWidget);
+      expect(find.text('RÉCOMPENSE'), findsOneWidget);
 
       await tester.tap(find.text('PERSO'));
       await tester.pumpAndSettle();
-      expect(find.byTooltip('Ajouter une récompense'), findsNothing);
+      expect(find.text('RÉCOMPENSE'), findsNothing);
     },
   );
 }

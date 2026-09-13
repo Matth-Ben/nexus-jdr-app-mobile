@@ -272,12 +272,12 @@ void main() {
     },
   );
 
-  testWidgets('inventaire vide : état "INVENTAIRE VIDE", tuile "Ajouter un '
-      'objet" et stat boxes restent visibles', (tester) async {
+  testWidgets('inventaire vide : état "INVENTAIRE VIDE", bouton "+ Objet" '
+      'et stat boxes restent visibles', (tester) async {
     await _pump(tester, _detail(currencyGp: 5));
 
     expect(find.text('INVENTAIRE VIDE'), findsOneWidget);
-    expect(find.text('Ajouter un objet'), findsOneWidget);
+    expect(find.text('+ Objet'), findsOneWidget);
     expect(find.text('PO'), findsOneWidget);
   });
 
@@ -398,12 +398,12 @@ void main() {
     });
   });
 
-  group('"+ Ajouter un objet" -> flux "Objet personnalisé"', () {
+  group('"+ Objet" -> flux "Objet personnalisé"', () {
     testWidgets('ouvre la sheet à 2 choix, "Objet personnalisé" -> saisie -> '
         'onAddCustomInventoryItem', (tester) async {
       final recorder = await _pump(tester, _detail());
 
-      await tester.tap(find.text('Ajouter un objet'));
+      await tester.tap(find.text('+ Objet'));
       await tester.pumpAndSettle();
 
       expect(find.text('Depuis le catalogue'), findsOneWidget);
@@ -425,11 +425,60 @@ void main() {
     ) async {
       await _pump(tester, _detail(), actionsDisabled: true);
 
-      await tester.tap(find.text('Ajouter un objet'), warnIfMissed: false);
+      await tester.tap(find.text('+ Objet'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(find.text('Depuis le catalogue'), findsNothing);
     });
+  });
+
+  group('bouton "Récompense" du pied de liste (recettage '
+      'direction-artistique du 13/09)', () {
+    testWidgets('appelle onAddReward, absent quand onAddReward est null', (
+      tester,
+    ) async {
+      var rewardTapCount = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CharacterInventoryTabBody(
+              detail: _detail(),
+              onUseItem: (_) {},
+              onToggleItemEquipped: (_) {},
+              onToggleItemAttuned: (_) {},
+              onRemoveItem: (_) {},
+              onAdjustCurrency: (_, _) {},
+              onAddInventoryItem: (_, _) {},
+              onAddCustomInventoryItem: (_, _) {},
+              onAddReward: () => rewardTapCount++,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('RÉCOMPENSE'), findsOneWidget);
+      await tester.tap(find.text('RÉCOMPENSE'));
+      await tester.pumpAndSettle();
+
+      expect(rewardTapCount, 1);
+    });
+
+    testWidgets(
+      'onAddReward null (ex. vue de partage) : le bouton reste affiché mais '
+      'désactivé',
+      (tester) async {
+        await _pump(tester, _detail());
+
+        // `onAddReward` non fourni par [_pump] (`null` par défaut) : le
+        // bouton "Récompense" reste rendu (parité visuelle avec "+ Objet"),
+        // simplement inerte.
+        expect(find.text('RÉCOMPENSE'), findsOneWidget);
+        await tester.tap(find.text('RÉCOMPENSE'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+
+        expect(find.text('AJOUTER UNE RÉCOMPENSE'), findsNothing);
+      },
+    );
   });
 
   group('filtre "Tout"/"Armes"/"Armures"/"Consomm."/"Divers" (docs/cahier-des-'
@@ -489,44 +538,40 @@ void main() {
       expect(find.text('Petit sac de sable'), findsNothing);
     });
 
-    testWidgets(
-      '"Armures" ne garde que les objets de catégorie "armure"',
-      (tester) async {
-        await _pump(
-          tester,
-          _detail(inventory: const [_dagger, _plateArmor, _customItem]),
-        );
+    testWidgets('"Armures" ne garde que les objets de catégorie "armure"', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _detail(inventory: const [_dagger, _plateArmor, _customItem]),
+      );
 
-        await tester.tap(find.text('ARMURES'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('ARMURES'));
+      await tester.pumpAndSettle();
 
-        expect(find.text('Armure de plates'), findsOneWidget);
-        expect(find.text('Dague'), findsNothing);
-        expect(find.text('Petit sac de sable'), findsNothing);
-      },
-    );
+      expect(find.text('Armure de plates'), findsOneWidget);
+      expect(find.text('Dague'), findsNothing);
+      expect(find.text('Petit sac de sable'), findsNothing);
+    });
 
-    testWidgets(
-      '"Divers" ne garde que les objets hors arme/armure/consommable '
-      '(y compris les objets personnalisés)',
-      (tester) async {
-        await _pump(
-          tester,
-          _detail(
-            inventory: const [_dagger, _plateArmor, _potion, _rope, _customItem],
-          ),
-        );
+    testWidgets('"Divers" ne garde que les objets hors arme/armure/consommable '
+        '(y compris les objets personnalisés)', (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          inventory: const [_dagger, _plateArmor, _potion, _rope, _customItem],
+        ),
+      );
 
-        await tester.tap(find.text('DIVERS'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('DIVERS'));
+      await tester.pumpAndSettle();
 
-        expect(find.text('Corde'), findsOneWidget);
-        expect(find.text('Petit sac de sable'), findsOneWidget);
-        expect(find.text('Dague'), findsNothing);
-        expect(find.text('Armure de plates'), findsNothing);
-        expect(find.text('Potion de soins'), findsNothing);
-      },
-    );
+      expect(find.text('Corde'), findsOneWidget);
+      expect(find.text('Petit sac de sable'), findsOneWidget);
+      expect(find.text('Dague'), findsNothing);
+      expect(find.text('Armure de plates'), findsNothing);
+      expect(find.text('Potion de soins'), findsNothing);
+    });
 
     testWidgets(
       'aucun objet de la catégorie filtrée : affiche un message dédié, '
@@ -590,7 +635,7 @@ void main() {
       expect(find.text('Petit sac de sable'), findsOneWidget);
     });
 
-    testWidgets('la tuile "Ajouter un objet" reste visible et fonctionnelle '
+    testWidgets('le bouton "+ Objet" reste visible et fonctionnel '
         'même quand le filtre actif ne montre aucun objet', (tester) async {
       final recorder = await _pump(
         tester,
@@ -599,9 +644,9 @@ void main() {
 
       await tester.tap(find.text('ARMES'));
       await tester.pumpAndSettle();
-      expect(find.text('Ajouter un objet'), findsOneWidget);
+      expect(find.text('+ Objet'), findsOneWidget);
 
-      await tester.tap(find.text('Ajouter un objet'));
+      await tester.tap(find.text('+ Objet'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();
@@ -662,7 +707,10 @@ void main() {
 
         expect(find.text('Limite (3) atteinte'), findsOneWidget);
 
-        await tester.tap(find.text('Harmoniser cet objet'), warnIfMissed: false);
+        await tester.tap(
+          find.text('Harmoniser cet objet'),
+          warnIfMissed: false,
+        );
         await tester.pumpAndSettle();
 
         expect(recorder.toggleAttunedCalls, isEmpty);
