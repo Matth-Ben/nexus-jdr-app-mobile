@@ -70,6 +70,7 @@ Future<void> showRestSheet(
   int hitDiceTotal = 0,
   int hitDiceSpent = 0,
   int constitutionModifier = 0,
+  RestType initialType = RestType.long,
   required ValueChanged<RestSheetResult> onApply,
 }) {
   return showModalBottomSheet<void>(
@@ -83,6 +84,7 @@ Future<void> showRestSheet(
       hitDiceTotal: hitDiceTotal,
       hitDiceSpent: hitDiceSpent,
       constitutionModifier: constitutionModifier,
+      initialType: initialType,
       onApply: onApply,
     ),
   );
@@ -96,6 +98,7 @@ class _RestSheetContent extends StatefulWidget {
     required this.hitDiceTotal,
     required this.hitDiceSpent,
     required this.constitutionModifier,
+    required this.initialType,
     required this.onApply,
   });
 
@@ -105,6 +108,14 @@ class _RestSheetContent extends StatefulWidget {
   final int hitDiceTotal;
   final int hitDiceSpent;
   final int constitutionModifier;
+
+  /// Segment présélectionné à l'ouverture — "Repos long" par défaut (spec
+  /// visuelle direction-artistique d'origine), ou le type déjà choisi par le
+  /// joueur quand la sheet est ouverte depuis l'un des deux boutons "Repos
+  /// court"/"Repos long" de `character_vitals_card.dart` (recettage
+  /// direction-artistique du 13/09) plutôt que le lien texte unique qu'ils
+  /// remplacent.
+  final RestType initialType;
   final ValueChanged<RestSheetResult> onApply;
 
   @override
@@ -112,8 +123,7 @@ class _RestSheetContent extends StatefulWidget {
 }
 
 class _RestSheetContentState extends State<_RestSheetContent> {
-  // Valeur par défaut "Repos long" — spec visuelle direction-artistique.
-  RestType _type = RestType.long;
+  late RestType _type = widget.initialType;
 
   int _diceToSpend = 0;
   HitDieMethod _method = HitDieMethod.roll;

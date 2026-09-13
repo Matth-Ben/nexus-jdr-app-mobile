@@ -182,14 +182,15 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// Tap qui déclenche une vraie écriture disque (voir la note d'en-tête de
-  /// fichier) : passe par `tester.runAsync`, puis laisse une marge
-  /// (`Future.delayed`, toujours dans le vrai event loop) pour que la chaîne
-  /// asynchrone complète (écriture + `SharePlus.instance.share`) ait le
-  /// temps de s'exécuter avant le `pumpAndSettle` final.
-  Future<void> tapAndAwaitRealIo(WidgetTester tester, Finder finder) async {
+  /// Ouvre le menu "…" du bandeau bois ET tape "Exporter en XML" dans le
+  /// **même** `runAsync` (voir la note d'en-tête de fichier sur l'affinité
+  /// de zone) : déclenche une vraie écriture disque, personnage
+  /// mono-classe (aucun avertissement intermédiaire).
+  Future<void> openHeaderMenuAndExport(WidgetTester tester) async {
     await tester.runAsync(() async {
-      await tester.tap(finder);
+      await tester.tap(find.byTooltip('Plus d\'options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Exporter en XML'));
       await Future<void>.delayed(const Duration(milliseconds: 200));
     });
     await tester.pumpAndSettle();
@@ -211,9 +212,18 @@ void main() {
   /// finirait par s'écrire bien après la fin du test (constaté par un
   /// verrou de fichier au moment du nettoyage), jamais avant l'assertion —
   /// piège rencontré et diagnostiqué pendant l'écriture de ce fichier.
+  /// Ouvre le menu "…" du bandeau bois de l'onglet "Personnage" (recettage
+  /// direction-artistique du 13/09 : "Exporter en XML" y a été relogé
+  /// depuis sa propre icône, voir `character_detail_screen.dart`).
+  Future<void> openCharacterHeaderMenu(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('Plus d\'options'));
+    await tester.pumpAndSettle();
+  }
+
   Future<void> openMulticlassDialogAndConfirm(WidgetTester tester) async {
     await tester.runAsync(() async {
-      await tester.tap(find.byTooltip('Exporter en XML'));
+      await openCharacterHeaderMenu(tester);
+      await tester.tap(find.text('Exporter en XML'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('EXPORTER QUAND MÊME'));
       await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -222,12 +232,15 @@ void main() {
   }
 
   testWidgets(
-    'onglet "Personnage" : bouton "Exporter en XML" présent dans l\'en-tête',
+    'onglet "Personnage" : entrée "Exporter en XML" présente dans le menu '
+    '"…" du bandeau',
     (tester) async {
       fakeRepository.detailToReturn = _monoClasseDetail;
       await pumpDetail(tester, '1');
 
-      expect(find.byTooltip('Exporter en XML'), findsOneWidget);
+      await openCharacterHeaderMenu(tester);
+
+      expect(find.text('Exporter en XML'), findsOneWidget);
     },
   );
 
@@ -238,7 +251,7 @@ void main() {
       fakeRepository.detailToReturn = _monoClasseDetail;
       await pumpDetail(tester, '1');
 
-      await tapAndAwaitRealIo(tester, find.byTooltip('Exporter en XML'));
+      await openHeaderMenuAndExport(tester);
 
       expect(find.text('Personnage multiclassé'), findsNothing);
       expect(shareCalls, hasLength(1));
@@ -264,7 +277,8 @@ void main() {
 
     // Le dialogue d'avertissement lui-même ne touche pas au disque —
     // pas besoin de `runAsync` pour cette étape.
-    await tester.tap(find.byTooltip('Exporter en XML'));
+    await openCharacterHeaderMenu(tester);
+    await tester.tap(find.text('Exporter en XML'));
     await tester.pumpAndSettle();
 
     expect(find.text('Personnage multiclassé'), findsOneWidget);

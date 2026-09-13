@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/primary_button.dart';
+import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/stepper_counter.dart';
 import '../../domain/character_detail.dart';
+import '../../domain/rest_type.dart';
 
 /// Carte combinant les bandeaux PV et XP de l'onglet "Personnage" — voir la
 /// spec visuelle de la tâche qui a produit ce fichier.
@@ -16,8 +19,6 @@ class CharacterVitalsCard extends StatelessWidget {
     required this.onQuickDamage,
     required this.onTapAddXp,
     required this.onTapLevelUp,
-    required this.onTapToggleDead,
-    required this.onTapToggleArchived,
     required this.onTapRest,
     this.hpActionsDisabled = false,
     super.key,
@@ -39,16 +40,16 @@ class CharacterVitalsCard extends StatelessWidget {
   /// différée qu'un repos peut déclencher, voir
   /// `_CharacterDetailScreenState._reassertCurrentHpState` — est en vol côté
   /// réseau. Désactive le stepper PV (+/-), le bouton crayon "Ajuster PV" ET
-  /// le lien "Prendre un repos" lui-même (jamais masqués, juste avec un
-  /// callback `null`, pour que la fiche reste lisible) le temps de cette
-  /// fenêtre.
+  /// les boutons "Repos court"/"Repos long" eux-mêmes (jamais masqués, juste
+  /// avec un callback `null`, pour que la fiche reste lisible) le temps de
+  /// cette fenêtre.
   ///
   /// Ferme la course résiduelle confirmée en revue de code : sans le verrou
   /// sur le stepper/crayon, un ajustement PV démarré *pendant* qu'un repos
   /// long écrit encore en base pourrait résoudre *avant* lui et se faire
   /// écraser silencieusement par l'écriture `current_hp = max_hp` du repos,
-  /// arrivée après coup. Sans le verrou sur le lien "Prendre un repos"
-  /// lui-même, un second repos pourrait de la même façon démarrer et
+  /// arrivée après coup. Sans le verrou sur les boutons "Repos court"/"Repos
+  /// long" eux-mêmes, un second repos pourrait de la même façon démarrer et
   /// résoudre pendant qu'une réaffirmation PV différée (déclenchée par
   /// [_restGeneration]/`_reassertCurrentHpState`, l'autre sens de la course :
   /// un ajustement PV démarré *avant* le repos et résolu après lui) est
@@ -57,7 +58,9 @@ class CharacterVitalsCard extends StatelessWidget {
   /// (`character_detail_screen.dart`) pour le détail des deux mécanismes.
   final bool hpActionsDisabled;
 
-  /// `IconButton` "+" de fin de ligne d'en-tête XP : ouvre `AddXpSheet`.
+  /// `PrimaryButton` pleine largeur "+ XP" sous la jauge XP (recettage
+  /// direction-artistique du 13/09, remplace l'ancien `IconButton` "+" de
+  /// l'en-tête) : ouvre `AddXpSheet`.
   final VoidCallback onTapAddXp;
 
   /// Lien discret "Monter de niveau manuellement" (XP sous le seuil) ou
@@ -66,24 +69,12 @@ class CharacterVitalsCard extends StatelessWidget {
   /// voir `character_detail_screen.dart`.
   final VoidCallback onTapLevelUp;
 
-  /// Lien texte "Prendre un repos", en fin de carte — ouvre `RestSheet`
-  /// (voir `character_detail_screen.dart`).
-  final VoidCallback onTapRest;
-
-  /// Lien "Marquer comme mort"/"Ressusciter" — bascule `characters.is_dead`
-  /// (chantier "Système de groupe",
-  /// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2). Voir
-  /// `_CharacterDetailScreenState._toggleDead`.
-  final VoidCallback onTapToggleDead;
-
-  /// Lien "Archiver ce personnage"/"Désarchiver" — bascule
-  /// `characters.is_archived` (chantier "Statuts ARCHIVÉ/MORT sur la carte
-  /// personnage de la liste",
-  /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md` section 2),
-  /// même principe que [onTapToggleDead] : flag simple, réversible, sans
-  /// confirmation à double étape. Voir
-  /// `_CharacterDetailScreenState._toggleArchived`.
-  final VoidCallback onTapToggleArchived;
+  /// Ouvre `RestSheet` pré-filtrée sur le [RestType] passé (recettage
+  /// direction-artistique du 13/09 : remplace l'ancien lien texte unique
+  /// "Prendre un repos" par deux `SecondaryButton` côte à côte "Repos
+  /// court"/"Repos long", voir [_RestButtonsRow]) — voir
+  /// `character_detail_screen.dart`.
+  final ValueChanged<RestType> onTapRest;
 
   @override
   Widget build(BuildContext context) {
@@ -105,22 +96,14 @@ class CharacterVitalsCard extends StatelessWidget {
             actionsDisabled: hpActionsDisabled,
           ),
           const SizedBox(height: AppSpacing.sm),
+          _RestButtonsRow(onTap: hpActionsDisabled ? null : onTapRest),
+          const SizedBox(height: AppSpacing.sm),
+          const Divider(height: 1, thickness: 1, color: AppColors.gaugeTrack),
+          const SizedBox(height: AppSpacing.sm),
           _XpSection(
             detail: detail,
             onTapAddXp: onTapAddXp,
             onTapLevelUp: onTapLevelUp,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          const Divider(height: 1, thickness: 1, color: AppColors.gaugeTrack),
-          const SizedBox(height: AppSpacing.sm),
-          _RestLink(onTap: hpActionsDisabled ? null : onTapRest),
-          _ArchiveToggleLink(
-            isArchived: detail.isArchived,
-            onTap: hpActionsDisabled ? null : onTapToggleArchived,
-          ),
-          _DeathToggleLink(
-            isDead: detail.isDead,
-            onTap: hpActionsDisabled ? null : onTapToggleDead,
           ),
         ],
       ),
@@ -128,140 +111,42 @@ class CharacterVitalsCard extends StatelessWidget {
   }
 }
 
-/// Lien texte pleine largeur, centré, "Prendre un repos" — ouvre `RestSheet`
-/// (spec visuelle direction-artistique). Volontairement un lien de fin de
-/// carte plutôt qu'un second bouton icône dans l'en-tête PV (risque de
-/// mistap à côté du crayon existant, voir `_HpSection`).
-class _RestLink extends StatelessWidget {
-  const _RestLink({required this.onTap});
+/// Rangée "Repos court"/"Repos long" — remplace le lien texte unique
+/// "Prendre un repos" (recettage direction-artistique du 13/09) : deux
+/// `SecondaryButton` de largeur égale, chacun ouvrant directement `RestSheet`
+/// pré-filtrée sur le type correspondant (voir
+/// [CharacterVitalsCard.onTapRest]) plutôt que de toujours démarrer sur
+/// "Repos long" (comportement précédent du lien unique).
+class _RestButtonsRow extends StatelessWidget {
+  const _RestButtonsRow({required this.onTap});
 
   /// `null` pendant qu'un repos (ou sa réaffirmation PV différée, voir
   /// `_CharacterDetailScreenState._isApplyingRest`) est déjà en vol — évite
-  /// qu'un second repos parte avant que le premier n'ait fini d'écrire.
-  final VoidCallback? onTap;
+  /// qu'un second repos parte avant que le premier n'ait fini d'écrire, même
+  /// verrou que l'ancien `_RestLink`.
+  final ValueChanged<RestType>? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final disabled = onTap == null;
-    final color = disabled ? AppColors.textMuted : AppColors.textSecondary;
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.local_fire_department, size: 14, color: color),
-              const SizedBox(width: 4),
-              Text(
-                'Prendre un repos',
-                style: AppTypography.body(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
-              ),
-            ],
+    final tap = onTap;
+    return Row(
+      children: [
+        Expanded(
+          child: SecondaryButton(
+            label: 'Repos court',
+            surface: SecondaryButtonSurface.parchment,
+            onPressed: tap == null ? null : () => tap(RestType.short),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Lien texte "Archiver ce personnage"/"Désarchiver" — calque de
-/// [_RestLink]/[_DeathToggleLink] (`body` 700/13 `textSecondary`, zone de
-/// tap 44px min-height), icône dépendante de l'état (`archive_outlined` pour
-/// archiver, `unarchive_outlined` pour désarchiver) plutôt qu'une icône fixe
-/// — plus lisible qu'un simple changement de libellé pour ce statut, qui n'a
-/// pas d'équivalent visuel déjà établi ailleurs sur la fiche (contrairement
-/// à [_DeathToggleLink], qui réutilise l'icône `call_split` d'un lien
-/// préexistant).
-class _ArchiveToggleLink extends StatelessWidget {
-  const _ArchiveToggleLink({required this.isArchived, required this.onTap});
-
-  final bool isArchived;
-
-  /// `null` pendant qu'un repos (ou sa réaffirmation PV différée) est déjà en
-  /// vol — même verrou que [_RestLink]/[_DeathToggleLink].
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final disabled = onTap == null;
-    final color = disabled ? AppColors.textMuted : AppColors.textSecondary;
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
-                size: 14,
-                color: color,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                isArchived ? 'Désarchiver' : 'Archiver ce personnage',
-                style: AppTypography.body(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
-              ),
-            ],
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: SecondaryButton(
+            label: 'Repos long',
+            surface: SecondaryButtonSurface.parchment,
+            onPressed: tap == null ? null : () => tap(RestType.long),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Lien texte "Marquer comme mort"/"Ressusciter" — calque exact de
-/// [_RestLink]/`_ManualLevelUpLink` (`Icons.call_split` 14px, `body` 700/13
-/// `textSecondary`, zone de tap 44px min-height) : contrôle manuel du statut
-/// "mort" affiché sur l'écran "Groupe" (badge, voir
-/// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2) —
-/// réversible, sans confirmation à double étape.
-class _DeathToggleLink extends StatelessWidget {
-  const _DeathToggleLink({required this.isDead, required this.onTap});
-
-  final bool isDead;
-
-  /// `null` pendant qu'un repos (ou sa réaffirmation PV différée) est déjà en
-  /// vol — même verrou que [_RestLink].
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final disabled = onTap == null;
-    final color = disabled ? AppColors.textMuted : AppColors.textSecondary;
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.call_split, size: 14, color: color),
-              const SizedBox(width: 4),
-              Text(
-                isDead ? 'Ressusciter' : 'Marquer comme mort',
-                style: AppTypography.body(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      ],
     );
   }
 }
@@ -473,19 +358,6 @@ class _XpSection extends StatelessWidget {
                 color: AppColors.textSecondary,
               ),
             ),
-            SizedBox(
-              width: 44,
-              height: 44,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                onPressed: onTapAddXp,
-                icon: const Icon(
-                  Icons.add,
-                  size: 18,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ),
           ],
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -508,6 +380,11 @@ class _XpSection extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: AppSpacing.sm),
+        // `PrimaryButton` pleine largeur "+ XP" — remplace l'`IconButton`
+        // "+" de l'en-tête ci-dessus (recettage direction-artistique du
+        // 13/09), même callback [onTapAddXp] (ouvre `AddXpSheet`).
+        PrimaryButton(label: '+ XP', onPressed: onTapAddXp),
         const SizedBox(height: AppSpacing.xs),
         if (thresholdReached)
           _LevelUpAvailableBanner(

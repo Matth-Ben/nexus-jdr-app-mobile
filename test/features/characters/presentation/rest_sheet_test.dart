@@ -25,6 +25,7 @@ void main() {
     int hitDiceTotal = 0,
     int hitDiceSpent = 0,
     int constitutionModifier = 0,
+    RestType initialType = RestType.long,
     required ValueChanged<RestSheetResult> onApply,
   }) async {
     await tester.pumpWidget(
@@ -41,6 +42,7 @@ void main() {
                   hitDiceTotal: hitDiceTotal,
                   hitDiceSpent: hitDiceSpent,
                   constitutionModifier: constitutionModifier,
+                  initialType: initialType,
                   onApply: onApply,
                 ),
                 child: const Text('Ouvrir'),
@@ -493,6 +495,26 @@ void main() {
       expect(applied, RestType.long);
     },
   );
+
+  testWidgets('initialType présélectionne le segment à l\'ouverture (recettage '
+      'direction-artistique du 13/09 : boutons "Repos court"/"Repos long" de '
+      '`character_vitals_card.dart`, qui ouvrent cette sheet déjà filtrée sur '
+      'le type demandé)', (tester) async {
+    RestType? applied;
+    await pumpSheet(
+      tester,
+      currentHp: 12,
+      maxHp: 30,
+      initialType: RestType.short,
+      onApply: (result) => applied = result.type,
+    );
+
+    // Pas besoin de retaper "REPOS COURT" : déjà présélectionné.
+    await tester.tap(find.text('APPLIQUER'));
+    await tester.pumpAndSettle();
+
+    expect(applied, RestType.short);
+  });
 
   testWidgets('"Annuler" ferme la feuille sans appeler onApply', (
     tester,

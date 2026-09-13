@@ -31,7 +31,6 @@ import 'widgets/add_reward_sheet.dart';
 import 'widgets/add_xp_sheet.dart';
 import 'widgets/character_ability_score_grid.dart';
 import 'widgets/character_adventures_card.dart';
-import 'widgets/character_appearance_card.dart';
 import 'widgets/character_detail_tab_bar.dart';
 import 'widgets/character_identity_card.dart';
 import 'widgets/character_inventory_tab_body.dart';
@@ -45,6 +44,13 @@ import 'widgets/character_vitals_card.dart';
 import 'widgets/hp_adjustment_sheet.dart';
 import 'widgets/portrait_upload_sheet.dart';
 import 'widgets/rest_sheet.dart';
+
+/// Actions du menu "…" du bandeau bois de l'onglet "Personnage" (recettage
+/// direction-artistique du 13/09) — regroupe "Exporter en XML" (déjà
+/// existant, précédemment sa propre icône) et les liens "Archiver ce
+/// personnage"/"Désarchiver"/"Marquer comme mort"/"Ressusciter" (relogés
+/// depuis le pied de `CharacterVitalsCard`, voir sa documentation de classe).
+enum _CharacterHeaderMenuAction { exportXml, toggleArchived, toggleDead }
 
 /// Fiche personnage, route `/characters/:id` — remplace
 /// `CharacterDetailPlaceholderScreen`. Les 5 onglets (voir
@@ -63,6 +69,28 @@ class CharacterDetailScreen extends ConsumerStatefulWidget {
 
 class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   CharacterDetailTab _tab = CharacterDetailTab.character;
+
+  /// Focus programmatique du champ de recherche de l'onglet "Compétences"
+  /// (icône loupe du bandeau bois, recettage direction-artistique du
+  /// 13/09) — voir `CharacterSkillsTabBody.searchFocusNode`.
+  final FocusNode _skillsSearchFocusNode = FocusNode();
+
+  /// Focus programmatique du champ "Rechercher un sort" de l'onglet "Sorts"
+  /// (icône loupe du bandeau bois, recettage direction-artistique du
+  /// 13/09) — voir `CharacterSpellsTabBody.searchFocusNode`.
+  final FocusNode _spellsSearchFocusNode = FocusNode();
+
+  /// Ancre de la bascule de filtre par catégorie de l'onglet "Inventaire"
+  /// (icône filtre du bandeau bois, recettage direction-artistique du
+  /// 13/09) — voir `CharacterInventoryTabBody.filterAnchorKey`.
+  final GlobalKey _inventoryFilterKey = GlobalKey();
+
+  @override
+  void dispose() {
+    _skillsSearchFocusNode.dispose();
+    _spellsSearchFocusNode.dispose();
+    super.dispose();
+  }
 
   /// État PV optimiste local, en avance sur la dernière valeur confirmée par
   /// le serveur (`detail.currentHp`/`temporaryHp`) — `null` tant qu'aucune
@@ -1633,40 +1661,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             trailing: currentDetail == null
                 ? null
                 : switch (_tab) {
-                    CharacterDetailTab.inventory => SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: IconButton(
-                        tooltip: 'Ajouter une récompense',
-                        onPressed: _isWritingInventory
-                            ? null
-                            : () => showAddRewardSheet(
-                                context,
-                                onApply: (deltas, items) =>
-                                    _addReward(currentDetail, deltas, items),
-                              ),
-                        icon: const Icon(
-                          Icons.card_giftcard,
-                          color: AppColors.textOnWood,
-                        ),
-                      ),
-                    ),
-                    CharacterDetailTab.story => SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: IconButton(
-                        tooltip: 'Modifier',
-                        onPressed: () => showCharacterStoryEditSheet(
-                          context,
-                          characterId: widget.characterId,
-                          detail: currentDetail,
-                        ),
-                        icon: const Icon(
-                          Icons.edit_outlined,
-                          color: AppColors.textOnWood,
-                        ),
-                      ),
-                    ),
+                    // "Modifier"/crayon volontairement absent ici : aucun
+                    // écran/sheet d'édition de l'identité (nom, portrait...)
+                    // n'existe encore dans ce dépôt (recherché avant
+                    // d'inventer quoi que ce soit, voir le rapport de la
+                    // tâche qui a introduit ce recettage) — à trancher par le
+                    // chef de projet plutôt que d'improviser un nouvel écran.
                     CharacterDetailTab.character => Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -1687,19 +1687,97 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                         SizedBox(
                           width: 44,
                           height: 44,
-                          child: IconButton(
-                            tooltip: 'Exporter en XML',
-                            onPressed: () =>
-                                exportCharacterAsXml(context, currentDetail),
+                          child: PopupMenuButton<_CharacterHeaderMenuAction>(
+                            tooltip: 'Plus d\'options',
                             icon: const Icon(
-                              Icons.ios_share,
+                              Icons.more_vert,
                               color: AppColors.textOnWood,
                             ),
+                            onSelected: (action) => switch (action) {
+                              _CharacterHeaderMenuAction.exportXml =>
+                                exportCharacterAsXml(context, currentDetail),
+                              _CharacterHeaderMenuAction.toggleArchived =>
+                                _toggleArchived(currentDetail),
+                              _CharacterHeaderMenuAction.toggleDead =>
+                                _toggleDead(currentDetail),
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: _CharacterHeaderMenuAction.exportXml,
+                                child: Text('Exporter en XML'),
+                              ),
+                              PopupMenuItem(
+                                value:
+                                    _CharacterHeaderMenuAction.toggleArchived,
+                                child: Text(
+                                  currentDetail.isArchived
+                                      ? 'Désarchiver'
+                                      : 'Archiver ce personnage',
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: _CharacterHeaderMenuAction.toggleDead,
+                                child: Text(
+                                  currentDetail.isDead
+                                      ? 'Ressusciter'
+                                      : 'Marquer comme mort',
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    _ => null,
+                    CharacterDetailTab.skills => SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: IconButton(
+                        tooltip: 'Rechercher',
+                        onPressed: () => _skillsSearchFocusNode.requestFocus(),
+                        icon: const Icon(
+                          Icons.search,
+                          color: AppColors.textOnWood,
+                        ),
+                      ),
+                    ),
+                    CharacterDetailTab.spells => SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: IconButton(
+                        tooltip: 'Rechercher',
+                        onPressed: () => _spellsSearchFocusNode.requestFocus(),
+                        icon: const Icon(
+                          Icons.search,
+                          color: AppColors.textOnWood,
+                        ),
+                      ),
+                    ),
+                    CharacterDetailTab.inventory => SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: IconButton(
+                        tooltip: 'Filtrer',
+                        onPressed: () {
+                          final anchorContext =
+                              _inventoryFilterKey.currentContext;
+                          if (anchorContext != null) {
+                            Scrollable.ensureVisible(
+                              anchorContext,
+                              duration: const Duration(milliseconds: 250),
+                            );
+                          }
+                        },
+                        icon: const Icon(
+                          Icons.filter_list,
+                          color: AppColors.textOnWood,
+                        ),
+                      ),
+                    ),
+                    // Aucune icône sur l'onglet "Histoire" : le crayon
+                    // "Modifier" a été retiré du bandeau — chaque carte de
+                    // champ ouvre désormais la même sheet d'édition
+                    // directement (voir `character_story_tab_body.dart`).
+                    CharacterDetailTab.story => null,
                   },
           ),
           Expanded(
@@ -1736,6 +1814,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onUseFeature: (feature) =>
             _useClassFeature(_effectiveDetail(detail), feature),
         actionsDisabled: _isApplyingRest || _isUsingFeature,
+        onNavigateToSpells: () =>
+            setState(() => _tab = CharacterDetailTab.spells),
+        searchFocusNode: _skillsSearchFocusNode,
       ),
       CharacterDetailTab.spells => CharacterSpellsTabBody(
         detail: _effectiveDetail(detail),
@@ -1743,7 +1824,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             _castSpell(_effectiveDetail(detail), spell, slot),
         onToggleFavorite: _toggleSpellFavorite,
         onTogglePrepared: _toggleSpellPrepared,
-        actionsDisabled: _isApplyingRest || _isCastingSpell,
+        onUseFeature: (feature) =>
+            _useClassFeature(_effectiveDetail(detail), feature),
+        actionsDisabled: _isApplyingRest || _isCastingSpell || _isUsingFeature,
+        searchFocusNode: _spellsSearchFocusNode,
       ),
       CharacterDetailTab.inventory => CharacterInventoryTabBody(
         detail: detail,
@@ -1754,7 +1838,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onAdjustCurrency: _adjustCurrency,
         onAddInventoryItem: _addInventoryItem,
         onAddCustomInventoryItem: _addCustomInventoryItem,
+        onAddReward: () => showAddRewardSheet(
+          context,
+          onApply: (deltas, items) => _addReward(detail, deltas, items),
+        ),
         actionsDisabled: _isWritingInventory,
+        filterAnchorKey: _inventoryFilterKey,
       ),
       CharacterDetailTab.story => CharacterStoryTabBody(
         detail: detail,
@@ -1793,10 +1882,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           onApply: (amount) => _addXp(detail, amount),
         ),
         onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
-        onTapToggleDead: () => _toggleDead(detail),
-        onTapToggleArchived: () => _toggleArchived(detail),
         onTapToggleInspiration: () => _toggleInspiration(detail),
-        onTapRest: () {
+        onTapRest: (initialType) {
           final effective = _effectiveDetail(detail);
           showRestSheet(
             context,
@@ -1808,6 +1895,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             constitutionModifier: AbilityScoreRules.abilityModifier(
               effective.abilityScores['con'] ?? 10,
             ),
+            initialType: initialType,
             onApply: (result) => _applyRest(
               detail,
               result.type,
@@ -1832,8 +1920,6 @@ class _CharacterTabBody extends StatelessWidget {
     required this.onQuickDamage,
     required this.onTapAddXp,
     required this.onTapLevelUp,
-    required this.onTapToggleDead,
-    required this.onTapToggleArchived,
     required this.onTapToggleInspiration,
     required this.onTapRest,
     required this.hpActionsDisabled,
@@ -1856,18 +1942,10 @@ class _CharacterTabBody extends StatelessWidget {
   final VoidCallback onTapAddXp;
   final VoidCallback onTapLevelUp;
 
-  /// Lien "Marquer comme mort"/"Ressusciter" — voir
-  /// `_CharacterDetailScreenState._toggleDead`.
-  final VoidCallback onTapToggleDead;
-
-  /// Lien "Archiver ce personnage"/"Désarchiver" — voir
-  /// `_CharacterDetailScreenState._toggleArchived`.
-  final VoidCallback onTapToggleArchived;
-
   /// Tuile "Inspiration" (`CharacterStatPillsRow`) — voir
   /// `_CharacterDetailScreenState._toggleInspiration`.
   final VoidCallback onTapToggleInspiration;
-  final VoidCallback onTapRest;
+  final ValueChanged<RestType> onTapRest;
 
   /// Voir `_CharacterDetailScreenState._isApplyingRest`.
   final bool hpActionsDisabled;
@@ -1902,8 +1980,6 @@ class _CharacterTabBody extends StatelessWidget {
           onQuickDamage: onQuickDamage,
           onTapAddXp: onTapAddXp,
           onTapLevelUp: onTapLevelUp,
-          onTapToggleDead: onTapToggleDead,
-          onTapToggleArchived: onTapToggleArchived,
           onTapRest: onTapRest,
           hpActionsDisabled: hpActionsDisabled,
         ),
@@ -1911,10 +1987,13 @@ class _CharacterTabBody extends StatelessWidget {
         CharacterAbilityScoreGrid(abilityScores: detail.abilityScores),
         const SizedBox(height: AppSpacing.md),
         CharacterSavingThrowsCard(results: savingThrows),
-        if (CharacterAppearanceCard.hasContent(detail)) ...[
-          const SizedBox(height: AppSpacing.md),
-          CharacterAppearanceCard(detail: detail),
-        ],
+        // `CharacterAppearanceCard` (7 champs Sexe/Âge/Taille/Poids/Yeux/
+        // Peau/Cheveux) n'est plus insérée ici depuis le recettage
+        // direction-artistique du 13/09 — absente de la maquette actuelle de
+        // cet onglet. Réintégrée dans l'onglet "Histoire" à la place (voir
+        // `character_story_tab_body.dart`), pas perdue pour le propriétaire :
+        // seul ce point d'insertion précis, propre à l'onglet "Personnage",
+        // est retiré.
         if (CharacterAdventuresCard.hasContent(detail)) ...[
           const SizedBox(height: AppSpacing.md),
           CharacterAdventuresCard(detail: detail),

@@ -21,6 +21,7 @@ import 'package:personnages/features/characters/domain/character_class_feature.d
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
+import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
@@ -171,7 +172,9 @@ class _FakeCharacterRepository implements CharacterRepository {
     setSpellFavoriteCallCount++;
     lastFavoritedSpellId = spellId;
     lastSetSpellFavoriteValue = isFavorite;
-    if (setSpellFavoriteErrorToThrow != null) throw setSpellFavoriteErrorToThrow!;
+    if (setSpellFavoriteErrorToThrow != null) {
+      throw setSpellFavoriteErrorToThrow!;
+    }
     return setSpellFavoriteOutcomeToReturn;
   }
 
@@ -184,7 +187,9 @@ class _FakeCharacterRepository implements CharacterRepository {
     setSpellPreparedCallCount++;
     lastPreparedSpellId = spellId;
     lastSetSpellPreparedValue = prepared;
-    if (setSpellPreparedErrorToThrow != null) throw setSpellPreparedErrorToThrow!;
+    if (setSpellPreparedErrorToThrow != null) {
+      throw setSpellPreparedErrorToThrow!;
+    }
     return setSpellPreparedOutcomeToReturn;
   }
 
@@ -699,10 +704,13 @@ void main() {
   );
 
   testWidgets(
-    'affiche la carte "Apparence physique" seulement si au moins un des 7 '
-    'champs est renseigné',
+    'la carte "Apparence physique" (données structurées) n\'est plus '
+    'affichée sur l\'onglet "Personnage" depuis le recettage '
+    'direction-artistique du 13/09 — absente de la maquette actuelle de cet '
+    'onglet ; réintégrée dans l\'onglet "Histoire" à la place (voir '
+    '`character_story_tab_body_test.dart`), pas perdue pour le propriétaire',
     (tester) async {
-      fakeRepository.detailToReturn = _baseDetail;
+      fakeRepository.detailToReturn = _baseDetail.copyWith(sexe: 'Femme');
 
       await pumpDetail(tester);
       await tester.pumpAndSettle();
@@ -712,38 +720,32 @@ void main() {
   );
 
   testWidgets(
-    'la carte "Apparence physique" affiche les champs renseignés, sous la '
-    'carte "Jets de sauvegarde"',
+    'la carte "Apparence physique" (données structurées) est affichée sur '
+    'l\'onglet "Histoire", à côté du champ texte libre du même nom (voir '
+    '`character_story_tab_body_test.dart` pour le détail de ce contenu)',
     (tester) async {
-      fakeRepository.detailToReturn = _baseDetail.copyWith(
-        sexe: 'Femme',
-        eyes: 'Argentés',
-      );
+      fakeRepository.detailToReturn = _baseDetail.copyWith(sexe: 'Femme');
 
       await pumpDetail(tester);
       await tester.pumpAndSettle();
 
+      await tester.tap(find.text('HIST.'));
+      await tester.pumpAndSettle();
+
+      // "APPARENCE PHYSIQUE" apparaît deux fois : le titre de la carte
+      // structurée (7 champs, ici seul "Sexe" est renseigné) et le titre de
+      // la carte de champ texte libre (masquée ici, `appearanceText` vide
+      // sur `_baseDetail`) ne coexistent que si les deux ont du contenu —
+      // seul le champ structuré est renseigné ici, donc une seule occurrence.
       expect(find.text('APPARENCE PHYSIQUE'), findsOneWidget);
       expect(find.text('Sexe'), findsOneWidget);
       expect(find.text('Femme'), findsOneWidget);
-      expect(find.text('Yeux'), findsOneWidget);
-      expect(find.text('Argentés'), findsOneWidget);
-      // Champs non renseignés omis.
-      expect(find.text('Taille'), findsNothing);
-
-      final savingThrowsPosition = tester.getTopLeft(
-        find.text('JETS DE SAUVEGARDE'),
-      );
-      final appearancePosition = tester.getTopLeft(
-        find.text('APPARENCE PHYSIQUE'),
-      );
-      expect(appearancePosition.dy, greaterThan(savingThrowsPosition.dy));
     },
   );
 
   testWidgets(
     'affiche la carte "Aventures" seulement si au moins une histoire est '
-    'rattachée, après la carte "Apparence physique"',
+    'rattachée, après la carte "Jets de sauvegarde"',
     (tester) async {
       fakeRepository.detailToReturn = _baseDetail;
 
@@ -756,10 +758,9 @@ void main() {
 
   testWidgets(
     'la carte "Aventures" affiche une ligne par histoire rattachée, sous '
-    'la carte "Apparence physique"',
+    'la carte "Jets de sauvegarde"',
     (tester) async {
       fakeRepository.detailToReturn = _baseDetail.copyWith(
-        sexe: 'Femme',
         adventures: const [
           CharacterAdventure(
             characterCampaignId: 'cc-1',
@@ -775,11 +776,11 @@ void main() {
       expect(find.text('AVENTURES'), findsOneWidget);
       expect(find.text('La Malédiction du Nord'), findsOneWidget);
 
-      final appearancePosition = tester.getTopLeft(
-        find.text('APPARENCE PHYSIQUE'),
+      final savingThrowsPosition = tester.getTopLeft(
+        find.text('JETS DE SAUVEGARDE'),
       );
       final adventuresPosition = tester.getTopLeft(find.text('AVENTURES'));
-      expect(adventuresPosition.dy, greaterThan(appearancePosition.dy));
+      expect(adventuresPosition.dy, greaterThan(savingThrowsPosition.dy));
     },
   );
 
@@ -853,7 +854,16 @@ void main() {
     },
   );
 
-  group('Marquer comme mort / Ressusciter (CharacterVitalsCard)', () {
+  // Ouvre le menu "…" du bandeau bois de l'onglet "Personnage" (recettage
+  // direction-artistique du 13/09) — "Archiver ce personnage"/"Désarchiver"
+  // et "Marquer comme mort"/"Ressusciter" y ont été relogés depuis le pied
+  // de `CharacterVitalsCard` (liens texte retirés).
+  Future<void> openCharacterHeaderMenu(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('Plus d\'options'));
+    await tester.pumpAndSettle();
+  }
+
+  group('Marquer comme mort / Ressusciter (menu "…" du bandeau bois)', () {
     testWidgets(
       'affiche "Marquer comme mort" pour un personnage vivant, appelle '
       'setDead(isDead: true) au tap',
@@ -862,6 +872,7 @@ void main() {
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
+        await openCharacterHeaderMenu(tester);
 
         expect(find.text('Marquer comme mort'), findsOneWidget);
         expect(find.text('Ressusciter'), findsNothing);
@@ -882,6 +893,7 @@ void main() {
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
+        await openCharacterHeaderMenu(tester);
 
         expect(find.text('Ressusciter'), findsOneWidget);
         expect(find.text('Marquer comme mort'), findsNothing);
@@ -910,6 +922,7 @@ void main() {
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
+        await openCharacterHeaderMenu(tester);
 
         await tester.tap(find.text('Marquer comme mort'));
         await tester.pumpAndSettle();
@@ -937,8 +950,7 @@ void main() {
     );
 
     testWidgets(
-      'setDead échoue (CharacterFailure) : affiche le message du repository, '
-      'le lien reste "Marquer comme mort" (aucun changement local)',
+      'setDead échoue (CharacterFailure) : affiche le message du repository',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail;
         fakeRepository.setDeadErrorToThrow = const CharacterFailure(
@@ -947,6 +959,7 @@ void main() {
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
+        await openCharacterHeaderMenu(tester);
 
         await tester.tap(find.text('Marquer comme mort'));
         await tester.pumpAndSettle();
@@ -955,12 +968,11 @@ void main() {
           find.text('Impossible de mettre à jour le statut.'),
           findsOneWidget,
         );
-        expect(find.text('Marquer comme mort'), findsOneWidget);
       },
     );
   });
 
-  group('Archiver ce personnage / Désarchiver (CharacterVitalsCard)', () {
+  group('Archiver ce personnage / Désarchiver (menu "…" du bandeau bois)', () {
     testWidgets(
       'affiche "Archiver ce personnage" pour un personnage actif, appelle '
       'setArchived(isArchived: true) au tap',
@@ -969,6 +981,7 @@ void main() {
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
+        await openCharacterHeaderMenu(tester);
 
         expect(find.text('Archiver ce personnage'), findsOneWidget);
         expect(find.text('Désarchiver'), findsNothing);
@@ -985,12 +998,11 @@ void main() {
       'affiche "Désarchiver" pour un personnage déjà archivé, appelle '
       'setArchived(isArchived: false) au tap',
       (tester) async {
-        fakeRepository.detailToReturn = _baseDetail.copyWith(
-          isArchived: true,
-        );
+        fakeRepository.detailToReturn = _baseDetail.copyWith(isArchived: true);
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
+        await openCharacterHeaderMenu(tester);
 
         expect(find.text('Désarchiver'), findsOneWidget);
         expect(find.text('Archiver ce personnage'), findsNothing);
@@ -1013,6 +1025,7 @@ void main() {
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
+        await openCharacterHeaderMenu(tester);
 
         await tester.tap(find.text('Archiver ce personnage'));
         await tester.pumpAndSettle();
@@ -1027,29 +1040,25 @@ void main() {
       },
     );
 
-    testWidgets(
-      'setArchived échoue (CharacterFailure) : affiche le message du '
-      'repository, le lien reste "Archiver ce personnage" (aucun changement '
-      'local)',
-      (tester) async {
-        fakeRepository.detailToReturn = _baseDetail;
-        fakeRepository.setArchivedErrorToThrow = const CharacterFailure(
-          'Impossible de mettre à jour le statut.',
-        );
+    testWidgets('setArchived échoue (CharacterFailure) : affiche le message du '
+        'repository', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+      fakeRepository.setArchivedErrorToThrow = const CharacterFailure(
+        'Impossible de mettre à jour le statut.',
+      );
 
-        await pumpDetail(tester);
-        await tester.pumpAndSettle();
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+      await openCharacterHeaderMenu(tester);
 
-        await tester.tap(find.text('Archiver ce personnage'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Archiver ce personnage'));
+      await tester.pumpAndSettle();
 
-        expect(
-          find.text('Impossible de mettre à jour le statut.'),
-          findsOneWidget,
-        );
-        expect(find.text('Archiver ce personnage'), findsOneWidget);
-      },
-    );
+      expect(
+        find.text('Impossible de mettre à jour le statut.'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('Vitesse / Classe d\'Armure / Inspiration (CharacterStatPillsRow)', () {
@@ -1278,7 +1287,7 @@ void main() {
     // contenu) : "0" (PO) prouve que l'onglet a bien basculé sur
     // `CharacterInventoryTabBody`, pas sur un autre onglet.
     expect(find.text('PO'), findsOneWidget);
-    expect(find.text('Ajouter un objet'), findsOneWidget);
+    expect(find.text('+ Objet'), findsOneWidget);
     expect(find.text('INVENTAIRE'), findsOneWidget);
 
     await tester.tap(find.text('HIST.'));
@@ -1295,54 +1304,163 @@ void main() {
     expect(find.text('FICHE'), findsOneWidget);
   });
 
-  testWidgets(
-    'icône "Modifier" du bandeau bois : n\'apparaît que sur l\'onglet '
-    '"Histoire", ouvre la sheet d\'édition préremplie, un succès invalide '
-    'la fiche et affiche le SnackBar de confirmation',
-    (tester) async {
+  group('icônes du bandeau bois par onglet (recettage direction-artistique '
+      'du 13/09)', () {
+    testWidgets(
+      'icône recherche de l\'onglet "Compétences" donne le focus au champ '
+      'de recherche de cet onglet',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('COMP.'));
+        await tester.pumpAndSettle();
+
+        final searchField = find.widgetWithText(
+          TextField,
+          'Rechercher une compétence',
+        );
+        expect(
+          tester.widget<TextField>(searchField).focusNode?.hasFocus,
+          isFalse,
+        );
+
+        await tester.tap(find.byTooltip('Rechercher'));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.widget<TextField>(searchField).focusNode?.hasFocus,
+          isTrue,
+        );
+      },
+    );
+
+    testWidgets('icône recherche de l\'onglet "Sorts" donne le focus au champ '
+        '"Rechercher un sort" de cet onglet', (tester) async {
       fakeRepository.detailToReturn = _baseDetail.copyWith(
-        appearanceText: 'Cheveux argentés.',
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Bouclier',
+            level: 1,
+            school: 'Abjuration',
+            status: 'connu',
+          ),
+        ],
       );
 
       await pumpDetail(tester);
       await tester.pumpAndSettle();
-      expect(find.byTooltip('Modifier'), findsNothing);
-
-      await tester.tap(find.text('HIST.'));
-      await tester.pumpAndSettle();
-      expect(find.byTooltip('Modifier'), findsOneWidget);
-
-      await tester.tap(find.byTooltip('Modifier'));
+      await tester.tap(find.text('SORTS'));
       await tester.pumpAndSettle();
 
-      expect(find.text("MODIFIER L'HISTOIRE"), findsOneWidget);
+      final searchField = find.widgetWithText(TextField, 'Rechercher un sort');
       expect(
-        tester
-            .widgetList<TextFormField>(find.byType(TextFormField))
-            .first
-            .controller!
-            .text,
-        'Cheveux argentés.',
+        tester.widget<TextField>(searchField).focusNode?.hasFocus,
+        isFalse,
       );
 
-      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+      await tester.tap(find.byTooltip('Rechercher'));
       await tester.pumpAndSettle();
 
-      expect(fakeRepository.updateStoryFieldsCallCount, 1);
-      expect(
-        fakeRepository.lastUpdatedStoryAppearanceText,
-        'Cheveux argentés.',
-      );
-      expect(
-        fakeRepository.fetchDetailCallCount,
-        greaterThan(1),
-        reason:
-            'un succès doit invalider `characterDetailProvider`, '
-            'déclenchant un refetch',
-      );
-      expect(find.text('Histoire mise à jour.'), findsOneWidget);
-    },
-  );
+      expect(tester.widget<TextField>(searchField).focusNode?.hasFocus, isTrue);
+    });
+
+    testWidgets(
+      'icône filtre de l\'onglet "Inventaire" ne lève aucune exception '
+      '(fait défiler la vue vers la bascule de filtre par catégorie)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          inventory: const [
+            CharacterInventoryItem(
+              id: 'inv-1',
+              itemId: 1,
+              name: 'Dague',
+              category: 'arme',
+              quantity: 1,
+              equipped: false,
+            ),
+          ],
+        );
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SAC'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byTooltip('Filtrer'));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'onglet "Personnage" : icône "Modifier"/crayon absente (aucun écran '
+      'd\'édition d\'identité n\'existe encore dans ce dépôt — voir le '
+      'rapport de la tâche qui a introduit ce recettage)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        // Note : `Icons.edit_outlined` reste présent sur cet onglet (bouton
+        // crayon "Ajuster PV" de `CharacterVitalsCard`, sans rapport avec
+        // l'édition de l'identité) — seule l'absence du tooltip "Modifier"
+        // est vérifiée ici.
+        expect(find.byTooltip('Modifier'), findsNothing);
+      },
+    );
+  });
+
+  testWidgets('onglet "Histoire" : aucune icône "Modifier" sur le bandeau bois '
+      '(recettage direction-artistique du 13/09) — taper une carte de champ '
+      'ouvre directement la sheet d\'édition préremplie, un succès invalide '
+      'la fiche et affiche le SnackBar de confirmation', (tester) async {
+    fakeRepository.detailToReturn = _baseDetail.copyWith(
+      appearanceText: 'Cheveux argentés.',
+    );
+
+    await pumpDetail(tester);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Modifier'), findsNothing);
+
+    await tester.tap(find.text('HIST.'));
+    await tester.pumpAndSettle();
+    // Plus d'icône crayon sur ce bandeau bois — retirée au profit de
+    // cartes de champ individuellement tappables (voir
+    // `character_story_tab_body.dart`).
+    expect(find.byTooltip('Modifier'), findsNothing);
+
+    await tester.tap(find.text('Cheveux argentés.'));
+    await tester.pumpAndSettle();
+
+    expect(find.text("MODIFIER L'HISTOIRE"), findsOneWidget);
+    expect(
+      tester
+          .widgetList<TextFormField>(find.byType(TextFormField))
+          .first
+          .controller!
+          .text,
+      'Cheveux argentés.',
+    );
+
+    await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+    await tester.pumpAndSettle();
+
+    expect(fakeRepository.updateStoryFieldsCallCount, 1);
+    expect(fakeRepository.lastUpdatedStoryAppearanceText, 'Cheveux argentés.');
+    expect(
+      fakeRepository.fetchDetailCallCount,
+      greaterThan(1),
+      reason:
+          'un succès doit invalider `characterDetailProvider`, '
+          'déclenchant un refetch',
+    );
+    expect(find.text('Histoire mise à jour.'), findsOneWidget);
+  });
 
   group('déclenchement de la montée de niveau (increment 1)', () {
     testWidgets(
@@ -1354,18 +1472,10 @@ void main() {
         await pumpDetail(tester);
         await tester.pumpAndSettle();
 
-        // `find.byIcon(Icons.add)` matche aussi le stepper rapide "+" du
-        // bandeau PV (`semanticLabel` "Augmenter") : le bouton "+" du
-        // bandeau XP est le seul `IconButton` parmi les deux icônes
-        // trouvées (le stepper rapide n'utilise pas `IconButton`, voir
-        // `StepperCounter._StepperButton`).
-        expect(find.byIcon(Icons.add), findsNWidgets(2));
-        await tester.tap(
-          find.ancestor(
-            of: find.byIcon(Icons.add),
-            matching: find.byType(IconButton),
-          ),
-        );
+        // `+ XP` : `PrimaryButton` pleine largeur sous la jauge XP
+        // (recettage direction-artistique du 13/09, remplace l'ancien
+        // `IconButton` "+" de l'en-tête XP).
+        await tester.tap(find.widgetWithText(PrimaryButton, '+ XP'));
         await tester.pumpAndSettle();
 
         expect(find.text("Ajouter de l'XP"), findsOneWidget);
@@ -1390,12 +1500,7 @@ void main() {
         await pumpDetail(tester);
         await tester.pumpAndSettle();
 
-        await tester.tap(
-          find.ancestor(
-            of: find.byIcon(Icons.add),
-            matching: find.byType(IconButton),
-          ),
-        );
+        await tester.tap(find.widgetWithText(PrimaryButton, '+ XP'));
         await tester.pumpAndSettle();
 
         // xp actuelle 7000, seuil niveau 6 = 14000 -> 7500 suffit à le
@@ -1460,12 +1565,7 @@ void main() {
         await pumpDetail(tester);
         await tester.pumpAndSettle();
 
-        await tester.tap(
-          find.ancestor(
-            of: find.byIcon(Icons.add),
-            matching: find.byType(IconButton),
-          ),
-        );
+        await tester.tap(find.widgetWithText(PrimaryButton, '+ XP'));
         await tester.pumpAndSettle();
 
         await tester.enterText(find.byType(TextFormField), '250');
@@ -1492,12 +1592,7 @@ void main() {
         await pumpDetail(tester);
         await tester.pumpAndSettle();
 
-        await tester.tap(
-          find.ancestor(
-            of: find.byIcon(Icons.add),
-            matching: find.byType(IconButton),
-          ),
-        );
+        await tester.tap(find.widgetWithText(PrimaryButton, '+ XP'));
         await tester.pumpAndSettle();
 
         // xp actuelle 7000, seuil niveau 6 = 14000 -> 7500 suffit à le
@@ -1526,16 +1621,18 @@ void main() {
     );
   });
 
-  group('lien "Prendre un repos" et feuille "Repos"', () {
+  group('boutons "Repos court"/"Repos long" et feuille "Repos"', () {
     testWidgets(
-      'le lien "Prendre un repos" ouvre RestSheet avec les PV actuels/max',
+      'le bouton "Repos long" ouvre RestSheet avec les PV actuels/max, '
+      'présélectionnée sur "Repos long" (recettage direction-artistique du '
+      '13/09 : remplace le lien texte unique "Prendre un repos")',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail;
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Prendre un repos'));
+        await tester.tap(find.text('REPOS LONG'));
         await tester.pumpAndSettle();
 
         expect(find.text('Repos'), findsOneWidget);
@@ -1543,50 +1640,50 @@ void main() {
       },
     );
 
+    testWidgets('appliquer un repos long (bouton "Repos long") appelle '
+        'applyRest(RestType.long), rafraîchit la fiche et affiche la '
+        'confirmation', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('REPOS LONG'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyRestCallCount, 1);
+      expect(fakeRepository.lastAppliedRestType, RestType.long);
+      expect(fakeRepository.lastAppliedRestClassName, 'Magicienne');
+      expect(fakeRepository.fetchDetailCallCount, greaterThan(1));
+      expect(
+        find.text('Repos long effectué. PV restaurés au maximum.'),
+        findsOneWidget,
+      );
+      // Bascule optimiste immédiate du bandeau PV (résultat connu à
+      // l'avance pour un repos long), avant même que le rafraîchissement
+      // réseau ne confirme la même valeur.
+      expect(find.text('30 / 30'), findsOneWidget);
+    });
+
     testWidgets(
-      'appliquer un repos long appelle applyRest(RestType.long), rafraîchit '
-      'la fiche et affiche la confirmation',
+      'le bouton "Repos court" ouvre RestSheet déjà présélectionnée sur '
+      '"Repos court" (initialType) ; appliquer appelle '
+      'applyRest(RestType.short) et affiche une confirmation sobre',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail;
 
         await pumpDetail(tester);
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.text('Prendre un repos'));
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.text('APPLIQUER'));
-        await tester.pumpAndSettle();
-
-        expect(fakeRepository.applyRestCallCount, 1);
-        expect(fakeRepository.lastAppliedRestType, RestType.long);
-        expect(fakeRepository.lastAppliedRestClassName, 'Magicienne');
-        expect(fakeRepository.fetchDetailCallCount, greaterThan(1));
-        expect(
-          find.text('Repos long effectué. PV restaurés au maximum.'),
-          findsOneWidget,
-        );
-        // Bascule optimiste immédiate du bandeau PV (résultat connu à
-        // l'avance pour un repos long), avant même que le rafraîchissement
-        // réseau ne confirme la même valeur.
-        expect(find.text('30 / 30'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'appliquer un repos court appelle applyRest(RestType.short) et affiche '
-      'une confirmation sobre',
-      (tester) async {
-        fakeRepository.detailToReturn = _baseDetail;
-
-        await pumpDetail(tester);
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.text('Prendre un repos'));
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('REPOS COURT'));
         await tester.pumpAndSettle();
+
+        // Segment "Repos court" déjà présélectionné : pas besoin de le
+        // taper à nouveau dans la sheet, contrairement au comportement
+        // précédent (lien texte unique, toujours "Repos long" par défaut).
         await tester.tap(find.text('APPLIQUER'));
         await tester.pumpAndSettle();
 
@@ -1607,7 +1704,7 @@ void main() {
       await pumpDetail(tester);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Prendre un repos'));
+      await tester.tap(find.text('REPOS LONG'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('APPLIQUER'));
       await tester.pumpAndSettle();
@@ -1688,10 +1785,13 @@ void main() {
           findsNothing,
         );
         // Revert : l'état optimiste (1 restant) ne doit pas rester affiché
-        // puisque rien ne sera synchronisé plus tard.
+        // puisque rien ne sera synchronisé plus tard. Deux occurrences
+        // depuis le recettage direction-artistique du 13/09 (carte de
+        // synthèse "EMPLACEMENTS DE SORTS" + groupe par niveau, voir
+        // `character_spells_tab_body_test.dart`).
         expect(
           find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 3'),
-          findsOneWidget,
+          findsNWidgets(2),
         );
       },
     );
@@ -1725,7 +1825,7 @@ void main() {
         // sur la valeur optimiste jamais confirmée.
         expect(
           find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 3'),
-          findsOneWidget,
+          findsNWidgets(2),
           reason:
               "L'état optimiste (1 restant) ne doit pas rester affiché après "
               "l'échec de l'appel réseau.",
@@ -1827,54 +1927,50 @@ void main() {
       },
     );
 
-    testWidgets(
-      'taper "Préparer ce sort" dans le panneau "Infos" appelle '
-      'setSpellPrepared(prepared: true) pour un sort \'connu\'',
-      (tester) async {
-        await pumpSpellsTab(tester);
+    testWidgets('taper "Préparer ce sort" dans le panneau "Infos" appelle '
+        'setSpellPrepared(prepared: true) pour un sort \'connu\'', (
+      tester,
+    ) async {
+      await pumpSpellsTab(tester);
 
-        await tester.tap(find.text('Bouclier'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Préparer ce sort'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Bouclier'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Préparer ce sort'));
+      await tester.pumpAndSettle();
 
-        expect(fakeRepository.setSpellPreparedCallCount, 1);
-        expect(fakeRepository.lastPreparedSpellId, 1);
-        expect(fakeRepository.lastSetSpellPreparedValue, isTrue);
-      },
-    );
+      expect(fakeRepository.setSpellPreparedCallCount, 1);
+      expect(fakeRepository.lastPreparedSpellId, 1);
+      expect(fakeRepository.lastSetSpellPreparedValue, isTrue);
+    });
 
-    testWidgets(
-      'un sort déjà \'préparé\' : "Ne plus préparer" appelle '
-      'setSpellPrepared(prepared: false)',
-      (tester) async {
-        fakeRepository.detailToReturn = _baseDetail.copyWith(
-          spells: const [
-            CharacterSpellEntry(
-              id: 1,
-              name: 'Bouclier',
-              level: 1,
-              school: 'Abjuration',
-              status: 'préparé',
-            ),
-          ],
-          spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],
-        );
+    testWidgets('un sort déjà \'préparé\' : "Ne plus préparer" appelle '
+        'setSpellPrepared(prepared: false)', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Bouclier',
+            level: 1,
+            school: 'Abjuration',
+            status: 'préparé',
+          ),
+        ],
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],
+      );
 
-        await pumpDetail(tester);
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('SORTS'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Bouclier'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Ne plus préparer'));
-        await tester.pumpAndSettle();
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SORTS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bouclier'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ne plus préparer'));
+      await tester.pumpAndSettle();
 
-        expect(fakeRepository.setSpellPreparedCallCount, 1);
-        expect(fakeRepository.lastPreparedSpellId, 1);
-        expect(fakeRepository.lastSetSpellPreparedValue, isFalse);
-      },
-    );
+      expect(fakeRepository.setSpellPreparedCallCount, 1);
+      expect(fakeRepository.lastPreparedSpellId, 1);
+      expect(fakeRepository.lastSetSpellPreparedValue, isFalse);
+    });
   });
 
   group('utiliser une aptitude de classe (increment 1 — actions '

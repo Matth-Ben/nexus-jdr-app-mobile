@@ -404,7 +404,7 @@ void main() {
       await tester.tap(find.bySemanticsLabel("Augmenter"));
       await tester.pump();
 
-      await tester.tap(find.text("Prendre un repos"));
+      await tester.tap(find.text("REPOS LONG"));
       await tester.pumpAndSettle();
       await tester.tap(find.text("APPLIQUER"));
       await tester.pumpAndSettle();
@@ -443,8 +443,9 @@ void main() {
       await tester.tap(find.bySemanticsLabel("Augmenter"));
       await tester.pump();
 
-      await tester.tap(find.text("Prendre un repos"));
-      await tester.pumpAndSettle();
+      // Bouton "Repos court" du bandeau PV : ouvre directement RestSheet
+      // présélectionnée sur ce type (`initialType`), pas besoin de la
+      // rebasculer une fois la sheet ouverte.
       await tester.tap(find.text("REPOS COURT"));
       await tester.pumpAndSettle();
 
@@ -507,7 +508,7 @@ void main() {
       final repository = await pumpDetail(tester);
       repository.applyRestGate = Completer<void>();
 
-      await tester.tap(find.text("Prendre un repos"));
+      await tester.tap(find.text("REPOS LONG"));
       await tester.pumpAndSettle();
       // "Repos long" est le segment sélectionné par défaut (spec DA).
       await tester.tap(find.text("APPLIQUER"));
