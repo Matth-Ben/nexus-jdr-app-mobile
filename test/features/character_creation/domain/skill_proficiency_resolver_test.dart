@@ -60,4 +60,35 @@ void main() {
 
     expect(rows, isEmpty);
   });
+
+  group('resolveNames (usage affichage, ex. récapitulatif étape 9/9)', () {
+    test('concatène les compétences de classe puis d\'historique, sans '
+        'catalogue', () {
+      final names = SkillProficiencyResolver.resolveNames(
+        classSkillNames: const ['Histoire'],
+        backgroundSkillNames: const ['Arcanes'],
+      );
+
+      expect(names, ['Histoire', 'Arcanes']);
+    });
+
+    test('déduplique une compétence présente dans les deux listes, en '
+        'gardant sa première position (classe avant historique)', () {
+      final names = SkillProficiencyResolver.resolveNames(
+        classSkillNames: const ['Arcanes', 'Perception'],
+        backgroundSkillNames: const ['Perception', 'Religion'],
+      );
+
+      expect(names, ['Arcanes', 'Perception', 'Religion']);
+    });
+
+    test('listes vides -> aucun nom', () {
+      final names = SkillProficiencyResolver.resolveNames(
+        classSkillNames: const [],
+        backgroundSkillNames: const [],
+      );
+
+      expect(names, isEmpty);
+    });
+  });
 }

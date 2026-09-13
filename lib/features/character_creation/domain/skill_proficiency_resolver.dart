@@ -35,7 +35,10 @@ abstract final class SkillProficiencyResolver {
     final idByName = {for (final skill in catalog.skills) skill.name: skill.id};
 
     final resolvedIds = <int>{};
-    for (final name in [...classSkillNames, ...backgroundSkillNames]) {
+    for (final name in resolveNames(
+      classSkillNames: classSkillNames,
+      backgroundSkillNames: backgroundSkillNames,
+    )) {
       final id = idByName[name];
       if (id != null) {
         resolvedIds.add(id);
@@ -45,5 +48,26 @@ abstract final class SkillProficiencyResolver {
     return [
       for (final id in resolvedIds) (skillId: id, proficiency: 'competente'),
     ];
+  }
+
+  /// Même déduplication que [resolve], mais par nom plutôt que par
+  /// `skill_id` — pour les usages purement affichage (ex. la ligne
+  /// "Compétences" du récapitulatif, étape 9/9,
+  /// `presentation/summary_step_screen.dart`) qui n'ont pas besoin d'un
+  /// [SkillCatalog] pour se contenter de lister les noms déjà connus du
+  /// brouillon/de l'historique choisi. Ordre stable : compétences de classe
+  /// d'abord, puis compétences d'historique non déjà présentes.
+  static List<String> resolveNames({
+    required List<String> classSkillNames,
+    required List<String> backgroundSkillNames,
+  }) {
+    final seen = <String>{};
+    final names = <String>[];
+    for (final name in [...classSkillNames, ...backgroundSkillNames]) {
+      if (seen.add(name)) {
+        names.add(name);
+      }
+    }
+    return names;
   }
 }
