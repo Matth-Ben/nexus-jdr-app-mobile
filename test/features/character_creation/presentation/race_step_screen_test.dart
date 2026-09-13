@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/theme/app_colors.dart';
+import 'package:personnages/core/widgets/destructive_button.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/core/widgets/selectable_option_tile.dart';
 import 'package:personnages/core/widgets/step_progress_bar.dart';
@@ -38,6 +39,7 @@ import 'package:personnages/features/character_creation/domain/tool_catalog.dart
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/race_step_screen.dart';
+import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   RaceCatalog? catalogToReturn;
@@ -204,22 +206,44 @@ void main() {
   CharacterCreationDraft readDraft() =>
       container.read(characterCreationDraftControllerProvider);
 
-  testWidgets('affiche un indicateur de chargement pendant la récupération', (
-    WidgetTester tester,
-  ) async {
-    fakeRepository.catalogCompleter = Completer<RaceCatalog>();
+  testWidgets(
+    'affiche un indicateur de chargement pendant la récupération, avec un '
+    'pied de page "Abandonner" toujours accessible (régression corrigée : '
+    'avant, seule l\'icône croix du bandeau, disparue avec '
+    '`DraftAutosaveFooter`, permettait d\'abandonner depuis cet état)',
+    (WidgetTester tester) async {
+      fakeRepository.catalogCompleter = Completer<RaceCatalog>();
 
-    await tester.pumpWidget(buildTestWidget());
-    await tester.pump();
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pump();
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    // Le bandeau bois complet (titre/compteur/StepProgressBar) ne doit
-    // apparaître qu'une fois les données chargées (`_Header`), jamais
-    // pendant le chargement (`_MinimalHeader` seul) — verrouille la
-    // séparation des deux, plutôt que de ne compter que sur la structure du
-    // code (suggestion QA/code-reviewer).
-    expect(find.byType(StepProgressBar), findsNothing);
-  });
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // Le bandeau bois complet (titre/compteur/StepProgressBar) ne doit
+      // apparaître qu'une fois les données chargées (`_Header`), jamais
+      // pendant le chargement (`_MinimalHeader` seul) — verrouille la
+      // séparation des deux, plutôt que de ne compter que sur la structure du
+      // code (suggestion QA/code-reviewer).
+      expect(find.byType(StepProgressBar), findsNothing);
+
+      expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DraftAutosaveFooter),
+          matching: find.text('Abandonner'),
+        ),
+      );
+      // `pump(duration)` plutôt que `pumpAndSettle()` : le `Completer` du
+      // catalogue de races n'est volontairement jamais résolu dans ce test,
+      // donc le `CircularProgressIndicator` continue d'animer indéfiniment
+      // sous le dialogue — `pumpAndSettle()` ne converge jamais dans ce cas
+      // (attend la fin de toute animation en cours) et lève un timeout.
+      // Une seule frame suffit à faire apparaître le dialogue de
+      // confirmation (`showDialog`, transition ~150ms par défaut).
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Abandonner la création ?'), findsOneWidget);
+    },
+  );
 
   testWidgets('affiche la liste des races avec leur résumé', (
     WidgetTester tester,
@@ -705,8 +729,8 @@ void main() {
     });
 
     testWidgets(
-      'icône croix ouvre la confirmation d\'abandon ; confirmer '
-      'réinitialise le brouillon et revient à la liste',
+      'lien "Abandonner" du pied de page ouvre la confirmation d\'abandon ; '
+      'confirmer réinitialise le brouillon et revient à la liste',
       (tester) async {
         fakeRepository.catalogToReturn = const RaceCatalog(
           races: [_elfe],
@@ -726,16 +750,52 @@ void main() {
 
         expect(readDraft(), isNot(const CharacterCreationDraft()));
 
-        await tester.tap(find.byIcon(Icons.close));
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(find.text('Abandonner la création ?'), findsOneWidget);
 
-        await tester.tap(find.text('Abandonner'));
+        // `find.byType(DestructiveButton)` plutôt que `find.text('Abandonner')`
+        // : la dialogue de confirmation reste superposée au pied de page qui
+        // porte lui-même le texte "Abandonner" (`DraftAutosaveFooter`), un
+        // simple `find.text` serait donc ambigu (deux candidats).
+        await tester.tap(find.byType(DestructiveButton));
         await tester.pumpAndSettle();
 
         expect(readDraft(), const CharacterCreationDraft());
         expect(find.text('Liste des personnages'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'lien "Abandonner" du pied de page reste accessible même en état '
+      "d'erreur de chargement du catalogue (régression corrigée : avant, "
+      'seul "Retour" restait disponible depuis cet état, sans aucun moyen '
+      'de revenir à la confirmation d\'abandon)',
+      (tester) async {
+        fakeRepository.catalogErrorToThrow = const CharacterCreationFailure(
+          'Impossible de charger les races disponibles. Réessayez.',
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
       },
     );
   });

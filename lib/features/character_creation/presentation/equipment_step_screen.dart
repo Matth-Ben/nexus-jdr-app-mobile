@@ -24,6 +24,7 @@ import '../domain/item_option.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
 /// Étape 7/9 de l'assistant de création de personnage : équipement de départ
@@ -133,11 +134,16 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
             _MinimalHeader(
               onBack: _goBack,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.equipment),
-              onAbandon: () => abandonCharacterCreation(context, ref),
             ),
             const Expanded(
               child: Center(
                 child: CircularProgressIndicator(color: AppColors.woodMedium),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
               ),
             ),
           ],
@@ -147,7 +153,6 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
             _MinimalHeader(
               onBack: _goBack,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.equipment),
-              onAbandon: () => abandonCharacterCreation(context, ref),
             ),
             Expanded(
               child: _ErrorState(
@@ -166,6 +171,12 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                   ref.invalidate(itemCatalogProvider);
                   ref.invalidate(equipmentStepDataProvider);
                 },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
               ),
             ),
           ],
@@ -195,7 +206,6 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
           currentStep: 7,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.equipment),
-          onAbandon: () => abandonCharacterCreation(context, ref),
         ),
         Expanded(
           child: SafeArea(
@@ -279,6 +289,10 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      DraftAutosaveFooter(
+                        onAbandon: () => abandonCharacterCreation(context, ref),
                       ),
                     ],
                   ),
@@ -497,14 +511,12 @@ class _Header extends StatelessWidget {
     required this.currentStep,
     required this.totalSteps,
     required this.onHelp,
-    required this.onAbandon,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -546,11 +558,6 @@ class _Header extends StatelessWidget {
                         Icons.help_outline,
                         color: AppColors.textOnWood,
                       ),
-                    ),
-                    IconButton(
-                      onPressed: onAbandon,
-                      tooltip: 'Abandonner la création',
-                      icon: const Icon(Icons.close, color: AppColors.textOnWood),
                     ),
                   ],
                 ),
@@ -600,15 +607,10 @@ class _Header extends StatelessWidget {
 /// chargement/l'erreur — copie exacte du pattern des étapes 4/6 (voir la
 /// documentation de classe de [EquipmentStepScreen]).
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({
-    required this.onBack,
-    required this.onHelp,
-    required this.onAbandon,
-  });
+  const _MinimalHeader({required this.onBack, required this.onHelp});
 
   final VoidCallback onBack;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -642,11 +644,6 @@ class _MinimalHeader extends StatelessWidget {
                 onPressed: onHelp,
                 tooltip: 'Aide',
                 icon: const Icon(Icons.help_outline, color: AppColors.textOnWood),
-              ),
-              IconButton(
-                onPressed: onAbandon,
-                tooltip: 'Abandonner la création',
-                icon: const Icon(Icons.close, color: AppColors.textOnWood),
               ),
             ],
           ),

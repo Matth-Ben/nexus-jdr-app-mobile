@@ -32,6 +32,7 @@ import 'package:personnages/features/character_creation/domain/tool_catalog.dart
 import 'package:personnages/features/character_creation/presentation/equipment_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
+import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   BackgroundCatalog? backgroundCatalogToReturn;
@@ -206,7 +207,19 @@ void main() {
         .setBackground(backgroundId: backgroundId);
   }
 
+  // Surface de test agrandie en hauteur — même rationale que
+  // `ability_score_step_screen_test.dart` (voir son commentaire) : le pied
+  // de page "Brouillon sauvegardé automatiquement · Abandonner"
+  // (`DraftAutosaveFooter`, correctif direction-artistique du 13/09) réduit
+  // la hauteur disponible pour la liste défilante, ce qui faisait manquer
+  // certaines catégories d'objets (`ListView` ne construit que les
+  // éléments visibles) à la hauteur par défaut (~600).
   Future<void> pumpEquipmentStep(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1300);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
     router.push('/characters/new/step-7');
@@ -237,18 +250,38 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('affiche un indicateur de chargement pendant la récupération', (
-    WidgetTester tester,
-  ) async {
-    fakeRepository.backgroundCatalogCompleter = Completer<BackgroundCatalog>();
-    selectBackground(1);
+  testWidgets(
+    'affiche un indicateur de chargement pendant la récupération, avec un '
+    'pied de page "Abandonner" toujours accessible (régression corrigée : '
+    'avant, seule l\'icône croix du bandeau, disparue avec '
+    '`DraftAutosaveFooter`, permettait d\'abandonner depuis cet état)',
+    (WidgetTester tester) async {
+      fakeRepository.backgroundCatalogCompleter =
+          Completer<BackgroundCatalog>();
+      selectBackground(1);
 
-    await tester.pumpWidget(buildTestWidget());
-    router.push('/characters/new/step-7');
-    await tester.pump();
+      await tester.pumpWidget(buildTestWidget());
+      router.push('/characters/new/step-7');
+      await tester.pump();
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-  });
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DraftAutosaveFooter),
+          matching: find.text('Abandonner'),
+        ),
+      );
+      // `pump(duration)` plutôt que `pumpAndSettle()` : voir
+      // `race_step_screen_test.dart` pour le rationale (le
+      // `CircularProgressIndicator` du `Completer` jamais résolu anime
+      // indéfiniment, `pumpAndSettle()` ne convergerait jamais).
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Abandonner la création ?'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'affiche un état d\'erreur avec un bouton "Réessayer" si le catalogue '
@@ -571,15 +604,57 @@ void main() {
       },
     );
 
-    testWidgets('icône croix ouvre la confirmation d\'abandon', (
-      tester,
-    ) async {
-      await pumpEquipmentStep(tester);
+    testWidgets(
+      'lien "Abandonner" du pied de page ouvre la confirmation d\'abandon, '
+      'une fois le contenu réel chargé',
+      (tester) async {
+        fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+          backgrounds: [_acolyte],
+        );
+        fakeRepository.itemCatalogToReturn = _itemCatalog;
+        selectBackground(1);
 
-      await tester.tap(find.byIcon(Icons.close));
-      await tester.pumpAndSettle();
+        await pumpEquipmentStep(tester);
 
-      expect(find.text('Abandonner la création ?'), findsOneWidget);
-    });
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'lien "Abandonner" du pied de page reste accessible même en état '
+      "d'erreur de chargement du catalogue (régression corrigée : avant, "
+      'seul "Retour" restait disponible depuis cet état, sans aucun moyen '
+      'de revenir à la confirmation d\'abandon)',
+      (tester) async {
+        fakeRepository.backgroundCatalogErrorToThrow =
+            const CharacterCreationFailure(
+              'Impossible de charger les historiques disponibles. '
+              'Réessayez.',
+            );
+        selectBackground(1);
+
+        await pumpEquipmentStep(tester);
+
+        expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
   });
 }

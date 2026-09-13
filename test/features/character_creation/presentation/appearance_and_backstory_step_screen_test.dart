@@ -18,6 +18,7 @@ import 'package:personnages/core/widgets/step_progress_bar.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/presentation/appearance_and_backstory_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
+import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
 // Ordre canonique des 9 champs, voir le commentaire de classe de
 // `AppearanceAndBackstoryStepScreen` — les tests s'appuient sur cet ordre
@@ -375,15 +376,21 @@ void main() {
       },
     );
 
-    testWidgets('icône croix ouvre la confirmation d\'abandon', (
-      tester,
-    ) async {
-      await pumpStep(tester);
+    testWidgets(
+      'lien "Abandonner" du pied de page ouvre la confirmation d\'abandon',
+      (tester) async {
+        await pumpStep(tester);
 
-      await tester.tap(find.byIcon(Icons.close));
-      await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Abandonner la création ?'), findsOneWidget);
-    });
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
   });
 }

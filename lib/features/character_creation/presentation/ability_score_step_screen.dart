@@ -21,6 +21,7 @@ import '../domain/race_catalog.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
 /// Étape 4/9 de l'assistant de création de personnage : scores de
@@ -176,11 +177,16 @@ class _AbilityScoreStepScreenState
             _MinimalHeader(
               onBack: _goBack,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.abilityScore),
-              onAbandon: () => abandonCharacterCreation(context, ref),
             ),
             const Expanded(
               child: Center(
                 child: CircularProgressIndicator(color: AppColors.woodMedium),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
               ),
             ),
           ],
@@ -190,7 +196,6 @@ class _AbilityScoreStepScreenState
             _MinimalHeader(
               onBack: _goBack,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.abilityScore),
-              onAbandon: () => abandonCharacterCreation(context, ref),
             ),
             Expanded(
               child: _ErrorState(
@@ -198,6 +203,12 @@ class _AbilityScoreStepScreenState
                     ? error.message
                     : 'Impossible de charger les bonus raciaux. Réessayez.',
                 onRetry: () => ref.invalidate(raceCatalogProvider),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
               ),
             ),
           ],
@@ -214,7 +225,6 @@ class _AbilityScoreStepScreenState
           currentStep: 4,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.abilityScore),
-          onAbandon: () => abandonCharacterCreation(context, ref),
         ),
         Expanded(
           child: SafeArea(
@@ -327,21 +337,29 @@ class _AbilityScoreStepScreenState
                 ),
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: SecondaryButton(
-                          label: 'Retour',
-                          surface: SecondaryButtonSurface.parchment,
-                          onPressed: _goBack,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SecondaryButton(
+                              label: 'Retour',
+                              surface: SecondaryButtonSurface.parchment,
+                              onPressed: _goBack,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: PrimaryButton(
+                              label: 'Suivant',
+                              onPressed: _submit,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: PrimaryButton(
-                          label: 'Suivant',
-                          onPressed: _submit,
-                        ),
+                      const SizedBox(height: AppSpacing.sm),
+                      DraftAutosaveFooter(
+                        onAbandon: () => abandonCharacterCreation(context, ref),
                       ),
                     ],
                   ),
@@ -435,14 +453,12 @@ class _Header extends StatelessWidget {
     required this.currentStep,
     required this.totalSteps,
     required this.onHelp,
-    required this.onAbandon,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -484,11 +500,6 @@ class _Header extends StatelessWidget {
                         Icons.help_outline,
                         color: AppColors.textOnWood,
                       ),
-                    ),
-                    IconButton(
-                      onPressed: onAbandon,
-                      tooltip: 'Abandonner la création',
-                      icon: const Icon(Icons.close, color: AppColors.textOnWood),
                     ),
                   ],
                 ),
@@ -537,15 +548,10 @@ class _Header extends StatelessWidget {
 /// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
 /// chargement/l'erreur — copie exacte du pattern des étapes 6/7/9.
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({
-    required this.onBack,
-    required this.onHelp,
-    required this.onAbandon,
-  });
+  const _MinimalHeader({required this.onBack, required this.onHelp});
 
   final VoidCallback onBack;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -579,11 +585,6 @@ class _MinimalHeader extends StatelessWidget {
                 onPressed: onHelp,
                 tooltip: 'Aide',
                 icon: const Icon(Icons.help_outline, color: AppColors.textOnWood),
-              ),
-              IconButton(
-                onPressed: onAbandon,
-                tooltip: 'Abandonner la création',
-                icon: const Icon(Icons.close, color: AppColors.textOnWood),
               ),
             ],
           ),

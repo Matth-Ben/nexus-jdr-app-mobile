@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/widgets/destructive_button.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
 import 'package:personnages/features/character_creation/domain/alignment_catalog.dart';
@@ -39,6 +40,7 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_return_route_provider.dart';
 import 'package:personnages/features/character_creation/presentation/summary_step_screen.dart';
+import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   RaceCatalog raceCatalogToReturn = const RaceCatalog(races: [], subraces: []);
@@ -419,6 +421,18 @@ void main() {
   );
 
   testWidgets(
+    'la ligne "Compétences" inclut à la fois le choix de classe (étape 5) '
+    'et la compétence accordée automatiquement par l\'historique (étape 3) '
+    '— régression corrigée lors du recettage direction-artistique du 13/09 '
+    '(auparavant seul le choix de classe était affiché)',
+    (WidgetTester tester) async {
+      await pumpSummaryStep(tester);
+
+      expect(find.text('Histoire, Arcanes'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'affiche "Sorts mineurs"/"Sorts niveau 1" pour une classe lanceuse de '
     'sorts, avec le nombre sélectionné',
     (WidgetTester tester) async {
@@ -721,15 +735,94 @@ void main() {
       },
     );
 
-    testWidgets('icône croix ouvre la confirmation d\'abandon', (
-      tester,
-    ) async {
-      await pumpSummaryStep(tester);
+    testWidgets(
+      'affiche un indicateur de chargement pendant la récupération, avec un '
+      'pied de page "Abandonner" toujours accessible (même garantie que les '
+      'étapes 1-8, cf. race_step_screen_test.dart)',
+      (WidgetTester tester) async {
+        fakeRepository.classCatalogCompleter = Completer<ClassCatalog>();
 
-      await tester.tap(find.byIcon(Icons.close));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/new/step-9');
+        await tester.pump();
 
-      expect(find.text('Abandonner la création ?'), findsOneWidget);
-    });
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        // `pump(duration)` plutôt que `pumpAndSettle()` : le `Completer` du
+        // catalogue de classes n'est volontairement jamais résolu dans ce
+        // test, donc le `CircularProgressIndicator` continue d'animer
+        // indéfiniment sous le dialogue — `pumpAndSettle()` ne converge
+        // jamais dans ce cas et lève un timeout (même rationale que
+        // race_step_screen_test.dart).
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'lien "Abandonner" du pied de page reste accessible même en état '
+      "d'erreur de chargement du catalogue (même garantie que les étapes "
+      '1-8, cf. race_step_screen_test.dart)',
+      (tester) async {
+        fakeRepository.classCatalogErrorToThrow =
+            const CharacterCreationFailure(
+              'Impossible de charger les classes disponibles. Réessayez.',
+            );
+
+        await pumpSummaryStep(tester);
+
+        expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'lien "Abandonner" du pied de page ouvre la confirmation d\'abandon ; '
+      'confirmer réinitialise le brouillon et revient à la liste',
+      (tester) async {
+        await pumpSummaryStep(tester);
+
+        expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+
+        // `find.byType(DestructiveButton)` plutôt que `find.text('Abandonner')`
+        // : la dialogue de confirmation reste superposée au pied de page qui
+        // porte lui-même le texte "Abandonner" (`DraftAutosaveFooter`), un
+        // simple `find.text` serait donc ambigu (deux candidats) — même
+        // rationale que `race_step_screen_test.dart`.
+        await tester.tap(find.byType(DestructiveButton));
+        await tester.pumpAndSettle();
+
+        expect(readDraft(), const CharacterCreationDraft());
+        expect(find.text('Liste des personnages'), findsOneWidget);
+      },
+    );
   });
 }

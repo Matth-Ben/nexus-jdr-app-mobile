@@ -12,6 +12,7 @@ import '../../../core/widgets/step_progress_bar.dart';
 import '../domain/creation_step_help.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
 /// Étape 8/9 de l'assistant de création de personnage : apparence, histoire
@@ -194,7 +195,6 @@ class _AppearanceAndBackstoryStepScreenState
           currentStep: 8,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.appearanceAndBackstory),
-          onAbandon: () => abandonCharacterCreation(context, ref),
         ),
           Expanded(child: _buildContent()),
         ],
@@ -248,18 +248,29 @@ class _AppearanceAndBackstoryStepScreenState
           ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'Retour',
-                    surface: SecondaryButtonSurface.parchment,
-                    onPressed: _goBack,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SecondaryButton(
+                        label: 'Retour',
+                        surface: SecondaryButtonSurface.parchment,
+                        onPressed: _goBack,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: PrimaryButton(
+                        label: 'Suivant',
+                        onPressed: _submit,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: PrimaryButton(label: 'Suivant', onPressed: _submit),
+                const SizedBox(height: AppSpacing.sm),
+                DraftAutosaveFooter(
+                  onAbandon: () => abandonCharacterCreation(context, ref),
                 ),
               ],
             ),
@@ -412,14 +423,12 @@ class _Header extends StatelessWidget {
     required this.currentStep,
     required this.totalSteps,
     required this.onHelp,
-    required this.onAbandon,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -461,11 +470,6 @@ class _Header extends StatelessWidget {
                         Icons.help_outline,
                         color: AppColors.textOnWood,
                       ),
-                    ),
-                    IconButton(
-                      onPressed: onAbandon,
-                      tooltip: 'Abandonner la création',
-                      icon: const Icon(Icons.close, color: AppColors.textOnWood),
                     ),
                   ],
                 ),

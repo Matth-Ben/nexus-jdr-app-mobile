@@ -20,6 +20,8 @@
 // sans défilement, ce qui ferait manquer certaines lignes aux
 // `find.text(...)` (`ListView` ne construit que les éléments visibles).
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +34,7 @@ import 'package:personnages/features/character_creation/domain/alignment_catalog
 import 'package:personnages/features/character_creation/domain/background_catalog.dart';
 import 'package:personnages/features/character_creation/domain/background_option.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
+import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
 import 'package:personnages/features/character_creation/domain/class_catalog.dart';
 import 'package:personnages/features/character_creation/domain/class_option.dart';
 import 'package:personnages/features/character_creation/domain/item_catalog.dart';
@@ -44,13 +47,23 @@ import 'package:personnages/features/character_creation/domain/race_option.dart'
 import 'package:personnages/features/character_creation/presentation/ability_score_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
+import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   RaceCatalog? catalogToReturn;
+  Object? catalogErrorToThrow;
+  Completer<RaceCatalog>? catalogCompleter;
 
   @override
-  Future<RaceCatalog> fetchRaceCatalog() async =>
-      catalogToReturn ?? const RaceCatalog(races: [], subraces: []);
+  Future<RaceCatalog> fetchRaceCatalog() async {
+    if (catalogCompleter != null) {
+      return catalogCompleter!.future;
+    }
+    if (catalogErrorToThrow != null) {
+      throw catalogErrorToThrow!;
+    }
+    return catalogToReturn ?? const RaceCatalog(races: [], subraces: []);
+  }
 
   // Non exercé par ces tests (étape 4 "Caractéristiques" n'utilise que le
   // catalogue de races) : implémentation minimale requise pour satisfaire
@@ -499,15 +512,78 @@ void main() {
       },
     );
 
-    testWidgets('icône croix ouvre la confirmation d\'abandon', (
-      tester,
-    ) async {
-      await pumpAbilityScoreStep(tester);
+    testWidgets(
+      'lien "Abandonner" du pied de page ouvre la confirmation d\'abandon, '
+      'une fois le contenu réel chargé',
+      (tester) async {
+        await pumpAbilityScoreStep(tester);
 
-      await tester.tap(find.byIcon(Icons.close));
-      await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Abandonner la création ?'), findsOneWidget);
-    });
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'lien "Abandonner" du pied de page reste accessible pendant le '
+      'chargement du catalogue de races (régression corrigée : avant, seule '
+      'l\'icône croix du bandeau, disparue avec `DraftAutosaveFooter`, '
+      'permettait d\'abandonner depuis cet état)',
+      (tester) async {
+        fakeRepository.catalogCompleter = Completer<RaceCatalog>();
+
+        await tester.pumpWidget(buildTestWidget());
+        router.push('/characters/new/step-4');
+        await tester.pump();
+
+        expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        // `pump(duration)` plutôt que `pumpAndSettle()` : voir
+        // `race_step_screen_test.dart` pour le rationale (le
+        // `CircularProgressIndicator` du `Completer` jamais résolu anime
+        // indéfiniment, `pumpAndSettle()` ne convergerait jamais).
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'lien "Abandonner" du pied de page reste accessible même en état '
+      "d'erreur de chargement du catalogue de races (régression corrigée : "
+      'avant, seul "Retour" restait disponible depuis cet état, sans aucun '
+      'moyen de revenir à la confirmation d\'abandon)',
+      (tester) async {
+        fakeRepository.catalogErrorToThrow = const CharacterCreationFailure(
+          'Impossible de charger les bonus raciaux. Réessayez.',
+        );
+
+        await pumpAbilityScoreStep(tester);
+
+        expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
   });
 }

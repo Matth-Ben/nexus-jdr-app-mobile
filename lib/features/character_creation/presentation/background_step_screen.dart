@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/widgets/accent_icon_badge.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
@@ -16,6 +15,7 @@ import '../domain/creation_step_help.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
 /// Étape 3/9 de l'assistant de création de personnage : choix de l'historique
@@ -37,11 +37,11 @@ import 'widgets/step_help_sheet.dart';
 /// `core/widgets` : même principe que `BackgroundRowMapper` dupliqué depuis
 /// `ClassRowMapper`, pour ne pas coupler les étapes entre elles.
 ///
-/// Écart assumé par rapport à la maquette `04_étape_3_historique.png` : cette
-/// maquette ne montre aucune icône à gauche des tuiles, mais `AccentIconBadge`
-/// est conservé ici (décision du chef de projet) pour la cohérence visuelle
-/// avec les étapes Race/Classe qui la précèdent — un joueur qui enchaîne les
-/// étapes ne doit pas voir l'iconographie disparaître puis réapparaître.
+/// Tuiles sans icône `AccentIconBadge` à gauche (contrairement à Race/
+/// Classe) — corrigé lors du recettage `direction-artistique` du 13/09 pour
+/// se conformer à la maquette `04_étape_3_historique.png`, qui n'en montre
+/// aucune ; l'ancien écart assumé de cohérence visuelle avec les étapes
+/// Race/Classe a été tranché par le chef de projet en faveur de la maquette.
 class BackgroundStepScreen extends ConsumerStatefulWidget {
   const BackgroundStepScreen({super.key});
 
@@ -102,11 +102,16 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
             _MinimalHeader(
               onBack: _goBack,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.background),
-              onAbandon: () => abandonCharacterCreation(context, ref),
             ),
             const Expanded(
               child: Center(
                 child: CircularProgressIndicator(color: AppColors.woodMedium),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
               ),
             ),
           ],
@@ -116,7 +121,6 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
             _MinimalHeader(
               onBack: _goBack,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.background),
-              onAbandon: () => abandonCharacterCreation(context, ref),
             ),
             Expanded(
               child: _ErrorState(
@@ -125,6 +129,12 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
                     : 'Impossible de charger les historiques disponibles. '
                           'Réessayez.',
                 onRetry: () => ref.invalidate(backgroundCatalogProvider),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
               ),
             ),
           ],
@@ -143,7 +153,6 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
           currentStep: 3,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.background),
-          onAbandon: () => abandonCharacterCreation(context, ref),
         ),
         Expanded(
           child: SafeArea(
@@ -184,10 +193,6 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
                           selected:
                               _selectedBackgroundId ==
                               catalog.backgrounds[i].id,
-                          leading: AccentIconBadge(
-                            index: i,
-                            icon: Icons.menu_book,
-                          ),
                           onTap: () =>
                               _selectBackground(catalog.backgrounds[i].id),
                         ),
@@ -197,21 +202,29 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: SecondaryButton(
-                          label: 'Retour',
-                          surface: SecondaryButtonSurface.parchment,
-                          onPressed: _goBack,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SecondaryButton(
+                              label: 'Retour',
+                              surface: SecondaryButtonSurface.parchment,
+                              onPressed: _goBack,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: PrimaryButton(
+                              label: 'Suivant',
+                              onPressed: canProceed ? _submit : null,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: PrimaryButton(
-                          label: 'Suivant',
-                          onPressed: canProceed ? _submit : null,
-                        ),
+                      const SizedBox(height: AppSpacing.sm),
+                      DraftAutosaveFooter(
+                        onAbandon: () => abandonCharacterCreation(context, ref),
                       ),
                     ],
                   ),
@@ -235,14 +248,12 @@ class _Header extends StatelessWidget {
     required this.currentStep,
     required this.totalSteps,
     required this.onHelp,
-    required this.onAbandon,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -284,11 +295,6 @@ class _Header extends StatelessWidget {
                         Icons.help_outline,
                         color: AppColors.textOnWood,
                       ),
-                    ),
-                    IconButton(
-                      onPressed: onAbandon,
-                      tooltip: 'Abandonner la création',
-                      icon: const Icon(Icons.close, color: AppColors.textOnWood),
                     ),
                   ],
                 ),
@@ -337,15 +343,10 @@ class _Header extends StatelessWidget {
 /// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
 /// chargement/l'erreur — copie exacte du pattern des étapes 6/7/9.
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({
-    required this.onBack,
-    required this.onHelp,
-    required this.onAbandon,
-  });
+  const _MinimalHeader({required this.onBack, required this.onHelp});
 
   final VoidCallback onBack;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -379,11 +380,6 @@ class _MinimalHeader extends StatelessWidget {
                 onPressed: onHelp,
                 tooltip: 'Aide',
                 icon: const Icon(Icons.help_outline, color: AppColors.textOnWood),
-              ),
-              IconButton(
-                onPressed: onAbandon,
-                tooltip: 'Abandonner la création',
-                icon: const Icon(Icons.close, color: AppColors.textOnWood),
               ),
             ],
           ),

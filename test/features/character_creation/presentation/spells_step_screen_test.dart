@@ -35,6 +35,7 @@ import 'package:personnages/features/character_creation/domain/tool_catalog.dart
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/spells_step_screen.dart';
+import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   ClassCatalog? classCatalogToReturn;
@@ -255,18 +256,37 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('affiche un indicateur de chargement pendant la récupération', (
-    WidgetTester tester,
-  ) async {
-    fakeRepository.classCatalogCompleter = Completer<ClassCatalog>();
-    selectClass(2);
+  testWidgets(
+    'affiche un indicateur de chargement pendant la récupération, avec un '
+    'pied de page "Abandonner" toujours accessible (régression corrigée : '
+    'avant, seule l\'icône croix du bandeau, disparue avec '
+    '`DraftAutosaveFooter`, permettait d\'abandonner depuis cet état)',
+    (WidgetTester tester) async {
+      fakeRepository.classCatalogCompleter = Completer<ClassCatalog>();
+      selectClass(2);
 
-    await tester.pumpWidget(buildTestWidget());
-    router.push('/characters/new/step-6');
-    await tester.pump();
+      await tester.pumpWidget(buildTestWidget());
+      router.push('/characters/new/step-6');
+      await tester.pump();
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-  });
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DraftAutosaveFooter),
+          matching: find.text('Abandonner'),
+        ),
+      );
+      // `pump(duration)` plutôt que `pumpAndSettle()` : voir
+      // `race_step_screen_test.dart` pour le rationale (le
+      // `CircularProgressIndicator` du `Completer` jamais résolu anime
+      // indéfiniment, `pumpAndSettle()` ne convergerait jamais).
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Abandonner la création ?'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'affiche un état d\'erreur avec un bouton "Réessayer" si le catalogue '
@@ -640,15 +660,47 @@ void main() {
       expect(find.text('6. SORTS'), findsOneWidget);
     });
 
-    testWidgets('icône croix ouvre la confirmation d\'abandon', (
-      tester,
-    ) async {
-      await pumpSpellsStep(tester);
+    testWidgets(
+      'lien "Abandonner" du pied de page ouvre la confirmation d\'abandon',
+      (tester) async {
+        await pumpSpellsStep(tester);
 
-      await tester.tap(find.byIcon(Icons.close));
-      await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Abandonner la création ?'), findsOneWidget);
-    });
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'lien "Abandonner" du pied de page reste accessible même en état '
+      "d'erreur de chargement du catalogue (régression corrigée : avant, "
+      'seul "Retour" restait disponible depuis cet état, sans aucun moyen '
+      'de revenir à la confirmation d\'abandon)',
+      (tester) async {
+        fakeRepository.classCatalogErrorToThrow = const CharacterCreationFailure(
+          'Impossible de charger les classes disponibles. Réessayez.',
+        );
+
+        await pumpSpellsStep(tester);
+
+        expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
   });
 }

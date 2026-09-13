@@ -39,6 +39,7 @@ import 'package:personnages/features/character_creation/domain/tool_option.dart'
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/skills_and_tools_step_screen.dart';
+import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   ClassCatalog? classCatalogToReturn;
@@ -293,28 +294,59 @@ void main() {
     notifier.setBackground(backgroundId: backgroundId);
   }
 
+  // Surface de test agrandie en hauteur — même rationale que
+  // `ability_score_step_screen_test.dart` (voir son commentaire) : le pied
+  // de page "Brouillon sauvegardé automatiquement · Abandonner"
+  // (`DraftAutosaveFooter`, correctif direction-artistique du 13/09) réduit
+  // la hauteur disponible pour la liste défilante, ce qui faisait manquer
+  // certaines sections (`ListView` ne construit que les éléments visibles)
+  // à la hauteur par défaut (~600).
   Future<void> pumpSkillsAndToolsStep(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1300);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(buildTestWidget());
     await tester.pumpAndSettle();
     router.push('/characters/new/step-5');
     await tester.pumpAndSettle();
   }
 
-  testWidgets('affiche un indicateur de chargement pendant la récupération', (
-    WidgetTester tester,
-  ) async {
-    fakeRepository.classCatalogCompleter = Completer<ClassCatalog>();
-    selectClassAndBackground(classId: 1, backgroundId: 10);
+  testWidgets(
+    'affiche un indicateur de chargement pendant la récupération, avec un '
+    'pied de page "Abandonner" toujours accessible (régression corrigée : '
+    'avant, seule l\'icône croix du bandeau, disparue avec '
+    '`DraftAutosaveFooter`, permettait d\'abandonner depuis cet état)',
+    (WidgetTester tester) async {
+      fakeRepository.classCatalogCompleter = Completer<ClassCatalog>();
+      selectClassAndBackground(classId: 1, backgroundId: 10);
 
-    await tester.pumpWidget(buildTestWidget());
-    router.push('/characters/new/step-5');
-    await tester.pump();
+      await tester.pumpWidget(buildTestWidget());
+      router.push('/characters/new/step-5');
+      await tester.pump();
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    // Voir race_step_screen_test.dart pour le rationale : le bandeau bois
-    // complet ne doit apparaître qu'une fois les données chargées.
-    expect(find.byType(StepProgressBar), findsNothing);
-  });
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // Voir race_step_screen_test.dart pour le rationale : le bandeau bois
+      // complet ne doit apparaître qu'une fois les données chargées.
+      expect(find.byType(StepProgressBar), findsNothing);
+
+      expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DraftAutosaveFooter),
+          matching: find.text('Abandonner'),
+        ),
+      );
+      // `pump(duration)` plutôt que `pumpAndSettle()` : voir
+      // `race_step_screen_test.dart` pour le rationale (le
+      // `CircularProgressIndicator` du `Completer` jamais résolu anime
+      // indéfiniment, `pumpAndSettle()` ne convergerait jamais).
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Abandonner la création ?'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'le titre d\'étape et la barre de progression sont sur le bandeau bois, '
@@ -1084,16 +1116,57 @@ void main() {
       },
     );
 
-    testWidgets('icône croix ouvre la confirmation d\'abandon', (
-      tester,
-    ) async {
-      selectClassAndBackground(classId: 1, backgroundId: 10);
-      await pumpSkillsAndToolsStep(tester);
+    testWidgets(
+      'lien "Abandonner" du pied de page ouvre la confirmation d\'abandon, '
+      'une fois le contenu réel chargé',
+      (tester) async {
+        fakeRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [_guerrier],
+        );
+        fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+          backgrounds: [_ermite],
+        );
+        selectClassAndBackground(classId: 1, backgroundId: 10);
+        await pumpSkillsAndToolsStep(tester);
 
-      await tester.tap(find.byIcon(Icons.close));
-      await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Abandonner la création ?'), findsOneWidget);
-    });
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'lien "Abandonner" du pied de page reste accessible même en état '
+      "d'erreur de chargement d'un catalogue (régression corrigée : avant, "
+      'seul "Retour" restait disponible depuis cet état, sans aucun moyen '
+      'de revenir à la confirmation d\'abandon)',
+      (tester) async {
+        fakeRepository.classCatalogErrorToThrow =
+            const CharacterCreationFailure(
+              'Impossible de charger les classes disponibles. Réessayez.',
+            );
+        selectClassAndBackground(classId: 1, backgroundId: 10);
+
+        await pumpSkillsAndToolsStep(tester);
+
+        expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
   });
 }

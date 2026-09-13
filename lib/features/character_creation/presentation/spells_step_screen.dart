@@ -19,6 +19,7 @@ import '../domain/spells_step_selection.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
 /// Étape 6/9 de l'assistant de création de personnage : sorts
@@ -130,11 +131,16 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
             _MinimalHeader(
               onBack: _goBack,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
-              onAbandon: () => abandonCharacterCreation(context, ref),
             ),
             const Expanded(
               child: Center(
                 child: CircularProgressIndicator(color: AppColors.woodMedium),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
               ),
             ),
           ],
@@ -144,7 +150,6 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
             _MinimalHeader(
               onBack: _goBack,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
-              onAbandon: () => abandonCharacterCreation(context, ref),
             ),
             Expanded(
               child: _ErrorState(
@@ -183,6 +188,12 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
                   }
                   ref.invalidate(spellsStepDataProvider);
                 },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
               ),
             ),
           ],
@@ -226,7 +237,6 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
           currentStep: 6,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
-          onAbandon: () => abandonCharacterCreation(context, ref),
           showCantripTab: showCantripTab,
           showLevelOneTab: showLevelOneTab,
           activeTab: activeTab,
@@ -264,21 +274,29 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: SecondaryButton(
-                          label: 'Retour',
-                          surface: SecondaryButtonSurface.parchment,
-                          onPressed: _goBack,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SecondaryButton(
+                              label: 'Retour',
+                              surface: SecondaryButtonSurface.parchment,
+                              onPressed: _goBack,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: PrimaryButton(
+                              label: 'Suivant',
+                              onPressed: canProceed ? _submit : null,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: PrimaryButton(
-                          label: 'Suivant',
-                          onPressed: canProceed ? _submit : null,
-                        ),
+                      const SizedBox(height: AppSpacing.sm),
+                      DraftAutosaveFooter(
+                        onAbandon: () => abandonCharacterCreation(context, ref),
                       ),
                     ],
                   ),
@@ -421,7 +439,6 @@ class _Header extends StatelessWidget {
     required this.currentStep,
     required this.totalSteps,
     required this.onHelp,
-    required this.onAbandon,
     required this.showCantripTab,
     required this.showLevelOneTab,
     required this.activeTab,
@@ -432,7 +449,6 @@ class _Header extends StatelessWidget {
   final int currentStep;
   final int totalSteps;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
   final bool showCantripTab;
   final bool showLevelOneTab;
   final _SpellTab activeTab;
@@ -480,11 +496,6 @@ class _Header extends StatelessWidget {
                         Icons.help_outline,
                         color: AppColors.textOnWood,
                       ),
-                    ),
-                    IconButton(
-                      onPressed: onAbandon,
-                      tooltip: 'Abandonner la création',
-                      icon: const Icon(Icons.close, color: AppColors.textOnWood),
                     ),
                   ],
                 ),
@@ -552,15 +563,10 @@ class _Header extends StatelessWidget {
 /// impossible d'afficher le titre/la barre de progression/les onglets sur le
 /// bandeau (voir la documentation de classe de [SpellsStepScreen]).
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({
-    required this.onBack,
-    required this.onHelp,
-    required this.onAbandon,
-  });
+  const _MinimalHeader({required this.onBack, required this.onHelp});
 
   final VoidCallback onBack;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -594,11 +600,6 @@ class _MinimalHeader extends StatelessWidget {
                 onPressed: onHelp,
                 tooltip: 'Aide',
                 icon: const Icon(Icons.help_outline, color: AppColors.textOnWood),
-              ),
-              IconButton(
-                onPressed: onAbandon,
-                tooltip: 'Abandonner la création',
-                icon: const Icon(Icons.close, color: AppColors.textOnWood),
               ),
             ],
           ),

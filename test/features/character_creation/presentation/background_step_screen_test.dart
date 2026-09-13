@@ -36,6 +36,7 @@ import 'package:personnages/features/character_creation/domain/tool_catalog.dart
 import 'package:personnages/features/character_creation/presentation/background_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
+import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   BackgroundCatalog? catalogToReturn;
@@ -191,20 +192,39 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('affiche un indicateur de chargement pendant la récupération', (
-    WidgetTester tester,
-  ) async {
-    fakeRepository.catalogCompleter = Completer<BackgroundCatalog>();
+  testWidgets(
+    'affiche un indicateur de chargement pendant la récupération, avec un '
+    'pied de page "Abandonner" toujours accessible (régression corrigée : '
+    'avant, seule l\'icône croix du bandeau, disparue avec '
+    '`DraftAutosaveFooter`, permettait d\'abandonner depuis cet état)',
+    (WidgetTester tester) async {
+      fakeRepository.catalogCompleter = Completer<BackgroundCatalog>();
 
-    await tester.pumpWidget(buildTestWidget());
-    router.push('/characters/new/step-3');
-    await tester.pump();
+      await tester.pumpWidget(buildTestWidget());
+      router.push('/characters/new/step-3');
+      await tester.pump();
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    // Voir race_step_screen_test.dart pour le rationale : le bandeau bois
-    // complet ne doit apparaître qu'une fois les données chargées.
-    expect(find.byType(StepProgressBar), findsNothing);
-  });
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // Voir race_step_screen_test.dart pour le rationale : le bandeau bois
+      // complet ne doit apparaître qu'une fois les données chargées.
+      expect(find.byType(StepProgressBar), findsNothing);
+
+      expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DraftAutosaveFooter),
+          matching: find.text('Abandonner'),
+        ),
+      );
+      // `pump(duration)` plutôt que `pumpAndSettle()` : voir
+      // `race_step_screen_test.dart` pour le rationale (le
+      // `CircularProgressIndicator` du `Completer` jamais résolu anime
+      // indéfiniment, `pumpAndSettle()` ne convergerait jamais).
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Abandonner la création ?'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'affiche la liste des historiques avec leurs compétences, sans aptitude '
@@ -237,6 +257,26 @@ void main() {
         ),
         findsNothing,
       );
+    },
+  );
+
+  testWidgets(
+    'les tuiles d\'historique n\'ont aucune icône à gauche (correctif de '
+    'conformité visuelle direction-artistique du 13/09, maquette '
+    '04_étape_3_historique.png : ni AccentIconBadge ni aucun autre '
+    "leading, contrairement à Race/Classe)",
+    (WidgetTester tester) async {
+      fakeRepository.catalogToReturn = const BackgroundCatalog(
+        backgrounds: [_ermite, _soldat],
+      );
+
+      await pumpBackgroundStep(tester);
+
+      final tiles = tester
+          .widgetList<SelectableOptionTile>(find.byType(SelectableOptionTile))
+          .toList();
+      expect(tiles, hasLength(2));
+      expect(tiles.every((tile) => tile.leading == null), isTrue);
     },
   );
 
@@ -648,15 +688,47 @@ void main() {
       },
     );
 
-    testWidgets('icône croix ouvre la confirmation d\'abandon', (
-      tester,
-    ) async {
-      await pumpBackgroundStep(tester);
+    testWidgets(
+      'lien "Abandonner" du pied de page ouvre la confirmation d\'abandon',
+      (tester) async {
+        await pumpBackgroundStep(tester);
 
-      await tester.tap(find.byIcon(Icons.close));
-      await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Abandonner la création ?'), findsOneWidget);
-    });
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'lien "Abandonner" du pied de page reste accessible même en état '
+      "d'erreur de chargement du catalogue (régression corrigée : avant, "
+      'seul "Retour" restait disponible depuis cet état, sans aucun moyen '
+      'de revenir à la confirmation d\'abandon)',
+      (tester) async {
+        fakeRepository.catalogErrorToThrow = const CharacterCreationFailure(
+          'Impossible de charger les historiques disponibles. Réessayez.',
+        );
+
+        await pumpBackgroundStep(tester);
+
+        expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(DraftAutosaveFooter),
+            matching: find.text('Abandonner'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
   });
 }

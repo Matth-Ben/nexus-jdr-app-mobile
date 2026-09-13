@@ -17,11 +17,13 @@ import '../domain/character_creation_failure.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/equipment_choice_tab.dart';
 import '../domain/final_ability_scores_resolver.dart';
+import '../domain/skill_proficiency_resolver.dart';
 import '../domain/spellcasting_rules.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'providers/character_creation_return_route_provider.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
 /// Étape 9/9 de l'assistant de création de personnage : récapitulatif
@@ -72,6 +74,16 @@ import 'widgets/step_help_sheet.dart';
 /// 1" sont masquées, voir [_SummaryStepScreenState._buildContent]) — ce
 /// masquage ne suffisait donc pas à rendre le calcul correct pour les
 /// étapes situées *avant* le trou. Voir [_SummaryStepScreenState._editStep].
+///
+/// Porte aussi, comme les étapes 1-8, le pied de page [DraftAutosaveFooter]
+/// avec son lien "Abandonner" — décision du chef de projet suite à une
+/// remarque `code-reviewer` : la maquette actuelle de cette étape ne montre
+/// pas ce pied de page, mais le retirer purement et simplement (comme
+/// l'ancienne icône croix du bandeau, elle bien absente de la maquette)
+/// aurait fait perdre silencieusement la capacité d'abandonner une création
+/// depuis cet écran. Placé sous le bouton "Créer le personnage" plutôt que
+/// sous une `Row` Retour/Suivant : cette étape n'a pas ce layout (voir
+/// [_SummaryStepScreenState._buildContent]).
 class SummaryStepScreen extends ConsumerStatefulWidget {
   const SummaryStepScreen({super.key});
 
@@ -234,12 +246,12 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
         data: (data) => Column(
           children: [
             _Header(
-          onBack: _goBack,
-          currentStep: 9,
-          totalSteps: _totalSteps,
-          onHelp: () => showStepHelpSheet(context, CreationStepHelp.summary),
-          onAbandon: () => abandonCharacterCreation(context, ref),
-        ),
+              onBack: _goBack,
+              currentStep: 9,
+              totalSteps: _totalSteps,
+              onHelp: () =>
+                  showStepHelpSheet(context, CreationStepHelp.summary),
+            ),
             Expanded(child: _buildContent(data)),
           ],
         ),
@@ -247,12 +259,18 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
           children: [
             _MinimalHeader(
               onBack: _goBack,
-              onHelp: () => showStepHelpSheet(context, CreationStepHelp.summary),
-              onAbandon: () => abandonCharacterCreation(context, ref),
+              onHelp: () =>
+                  showStepHelpSheet(context, CreationStepHelp.summary),
             ),
             const Expanded(
               child: Center(
                 child: CircularProgressIndicator(color: AppColors.woodMedium),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
               ),
             ),
           ],
@@ -261,8 +279,8 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
           children: [
             _MinimalHeader(
               onBack: _goBack,
-              onHelp: () => showStepHelpSheet(context, CreationStepHelp.summary),
-              onAbandon: () => abandonCharacterCreation(context, ref),
+              onHelp: () =>
+                  showStepHelpSheet(context, CreationStepHelp.summary),
             ),
             Expanded(
               child: _ErrorState(
@@ -290,6 +308,12 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
                   }
                   ref.invalidate(summaryStepDataProvider);
                 },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
               ),
             ),
           ],
@@ -322,7 +346,10 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
       ),
       (
         title: 'Compétences',
-        value: draft.classSkillChoices.join(', '),
+        value: SkillProficiencyResolver.resolveNames(
+          classSkillNames: draft.classSkillChoices,
+          backgroundSkillNames: data.backgroundOption.skillProficiencies,
+        ).join(', '),
         stepNumber: 5,
       ),
       if (draft.classToolChoices.isNotEmpty)
@@ -434,6 +461,10 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
                   label: 'Créer le personnage',
                   isLoading: _isSubmitting,
                   onPressed: canSubmit ? _submit : null,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                DraftAutosaveFooter(
+                  onAbandon: () => abandonCharacterCreation(context, ref),
                 ),
               ],
             ),
@@ -734,14 +765,12 @@ class _Header extends StatelessWidget {
     required this.currentStep,
     required this.totalSteps,
     required this.onHelp,
-    required this.onAbandon,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -783,11 +812,6 @@ class _Header extends StatelessWidget {
                         Icons.help_outline,
                         color: AppColors.textOnWood,
                       ),
-                    ),
-                    IconButton(
-                      onPressed: onAbandon,
-                      tooltip: 'Abandonner la création',
-                      icon: const Icon(Icons.close, color: AppColors.textOnWood),
                     ),
                   ],
                 ),
@@ -836,15 +860,10 @@ class _Header extends StatelessWidget {
 /// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
 /// chargement/l'erreur — copie exacte du pattern des étapes précédentes.
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({
-    required this.onBack,
-    required this.onHelp,
-    required this.onAbandon,
-  });
+  const _MinimalHeader({required this.onBack, required this.onHelp});
 
   final VoidCallback onBack;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -877,12 +896,10 @@ class _MinimalHeader extends StatelessWidget {
               IconButton(
                 onPressed: onHelp,
                 tooltip: 'Aide',
-                icon: const Icon(Icons.help_outline, color: AppColors.textOnWood),
-              ),
-              IconButton(
-                onPressed: onAbandon,
-                tooltip: 'Abandonner la création',
-                icon: const Icon(Icons.close, color: AppColors.textOnWood),
+                icon: const Icon(
+                  Icons.help_outline,
+                  color: AppColors.textOnWood,
+                ),
               ),
             ],
           ),

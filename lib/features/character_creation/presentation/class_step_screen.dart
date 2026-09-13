@@ -16,6 +16,7 @@ import '../domain/creation_step_help.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
 /// Étape 2/9 de l'assistant de création de personnage : choix de la classe
@@ -90,11 +91,16 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
             _MinimalHeader(
               onBack: _goBack,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.classStep),
-              onAbandon: () => abandonCharacterCreation(context, ref),
             ),
             const Expanded(
               child: Center(
                 child: CircularProgressIndicator(color: AppColors.woodMedium),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
               ),
             ),
           ],
@@ -104,7 +110,6 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
             _MinimalHeader(
               onBack: _goBack,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.classStep),
-              onAbandon: () => abandonCharacterCreation(context, ref),
             ),
             Expanded(
               child: _ErrorState(
@@ -113,6 +118,12 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                     : 'Impossible de charger les classes disponibles. '
                           'Réessayez.',
                 onRetry: () => ref.invalidate(classCatalogProvider),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: DraftAutosaveFooter(
+                onAbandon: () => abandonCharacterCreation(context, ref),
               ),
             ),
           ],
@@ -131,7 +142,6 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
           currentStep: 2,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.classStep),
-          onAbandon: () => abandonCharacterCreation(context, ref),
         ),
         Expanded(
           child: SafeArea(
@@ -180,21 +190,29 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Row(
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: SecondaryButton(
-                          label: 'Retour',
-                          surface: SecondaryButtonSurface.parchment,
-                          onPressed: _goBack,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SecondaryButton(
+                              label: 'Retour',
+                              surface: SecondaryButtonSurface.parchment,
+                              onPressed: _goBack,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: PrimaryButton(
+                              label: 'Suivant',
+                              onPressed: canProceed ? _submit : null,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: PrimaryButton(
-                          label: 'Suivant',
-                          onPressed: canProceed ? _submit : null,
-                        ),
+                      const SizedBox(height: AppSpacing.sm),
+                      DraftAutosaveFooter(
+                        onAbandon: () => abandonCharacterCreation(context, ref),
                       ),
                     ],
                   ),
@@ -218,14 +236,12 @@ class _Header extends StatelessWidget {
     required this.currentStep,
     required this.totalSteps,
     required this.onHelp,
-    required this.onAbandon,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -267,11 +283,6 @@ class _Header extends StatelessWidget {
                         Icons.help_outline,
                         color: AppColors.textOnWood,
                       ),
-                    ),
-                    IconButton(
-                      onPressed: onAbandon,
-                      tooltip: 'Abandonner la création',
-                      icon: const Icon(Icons.close, color: AppColors.textOnWood),
                     ),
                   ],
                 ),
@@ -320,15 +331,10 @@ class _Header extends StatelessWidget {
 /// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
 /// chargement/l'erreur — copie exacte du pattern des étapes 6/7/9.
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({
-    required this.onBack,
-    required this.onHelp,
-    required this.onAbandon,
-  });
+  const _MinimalHeader({required this.onBack, required this.onHelp});
 
   final VoidCallback onBack;
   final VoidCallback onHelp;
-  final VoidCallback onAbandon;
 
   @override
   Widget build(BuildContext context) {
@@ -362,11 +368,6 @@ class _MinimalHeader extends StatelessWidget {
                 onPressed: onHelp,
                 tooltip: 'Aide',
                 icon: const Icon(Icons.help_outline, color: AppColors.textOnWood),
-              ),
-              IconButton(
-                onPressed: onAbandon,
-                tooltip: 'Abandonner la création',
-                icon: const Icon(Icons.close, color: AppColors.textOnWood),
               ),
             ],
           ),
