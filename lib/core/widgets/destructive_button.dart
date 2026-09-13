@@ -17,13 +17,25 @@ import '../theme/app_typography.dart';
 /// (`features/profile/presentation/profile_screen.dart`), et réutilisable
 /// tel quel pour la suppression de personnage à venir.
 ///
-/// Contrairement à [PrimaryButton]/[SecondaryButton], le texte n'est **pas**
-/// en `font.display`/majuscules : le design système précise explicitement
-/// `font.body` 700 pour ce composant.
+/// Contrairement à [PrimaryButton]/[SecondaryButton], le texte du variant
+/// par défaut ([filled] `false`) n'est **pas** en `font.display`/majuscules :
+/// le design système précise explicitement `font.body` 700 pour ce
+/// composant.
+///
+/// [filled] introduit le variant "Bouton destructif — fond plein" (recettage
+/// direction-artistique du 13/09/2026, écran "Profil — Suppression du
+/// compte" : `docs/cahier-des-charges/09-maquettes-captures.md`, action
+/// "SUPPRIMER DÉFINITIVEMENT") : fond `accent.brick` plein (au lieu du fond
+/// `alertBannerBackground`/bordure du variant par défaut), texte
+/// `color.text.on-wood` — la maquette montre ce libellé en majuscules
+/// `font.display`, comme [PrimaryButton]/[SecondaryButton], contrairement au
+/// variant par défaut ci-dessus ; `false` par défaut, comportement inchangé
+/// pour tous les usages existants (aucun n'a besoin de ce fond plein).
 class DestructiveButton extends StatelessWidget {
   const DestructiveButton({
     required this.label,
     required this.onPressed,
+    this.filled = false,
     super.key,
   });
 
@@ -31,6 +43,9 @@ class DestructiveButton extends StatelessWidget {
 
   /// `null` désactive le bouton.
   final VoidCallback? onPressed;
+
+  /// `true` : variant "fond plein" (voir la documentation de classe).
+  final bool filled;
 
   @override
   Widget build(BuildContext context) {
@@ -40,12 +55,16 @@ class DestructiveButton extends StatelessWidget {
       opacity: isEnabled ? 1 : 0.6,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.alertBannerBackground,
+          color: filled
+              ? AppColors.accentBrick
+              : AppColors.alertBannerBackground,
           borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: AppColors.accentBrick,
-            width: AppBorders.card,
-          ),
+          border: filled
+              ? null
+              : Border.all(
+                  color: AppColors.accentBrick,
+                  width: AppBorders.card,
+                ),
         ),
         child: Material(
           color: Colors.transparent,
@@ -61,13 +80,18 @@ class DestructiveButton extends StatelessWidget {
                     horizontal: AppSpacing.sm,
                   ),
                   child: Text(
-                    label,
+                    filled ? label.toUpperCase() : label,
                     textAlign: TextAlign.center,
-                    style: AppTypography.body(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.accentBrick,
-                    ),
+                    style: filled
+                        ? AppTypography.display(
+                            fontSize: 11,
+                            color: AppColors.textOnWood,
+                          )
+                        : AppTypography.body(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.accentBrick,
+                          ),
                   ),
                 ),
               ),
