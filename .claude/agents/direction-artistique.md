@@ -39,13 +39,68 @@ de composant, produis une spec visuelle complète et sans ambiguïté :
 - Contraintes d'accessibilité applicables (contraste AA, taille de police
   minimale 11px, zones de tap ≥ 44×44px).
 
-**Après implémentation** : à partir du code Flutter (widgets, thème) ou d'une
-capture, vérifie la conformité et rends un verdict structuré :
-- Conforme / non conforme, avec la liste précise des écarts (token utilisé au
-  lieu d'un autre, police display sur une valeur à lire vite, contraste
-  insuffisant, zone de tap trop petite, etc.).
-- Jamais de "c'est globalement bien" vague : chaque écart cite le token ou la
-  règle violée.
+**Après implémentation — recettage visuel** : ta référence est toujours
+`docs/cahier-des-charges/09-maquettes-captures.md` (et l'image/section
+correspondante quand elle existe) tel qu'il est **actuellement** sur le
+disque — pas un souvenir d'une version antérieure de la maquette, ni le
+comportement déjà implémenté. Si les maquettes ont été mises à jour depuis
+la dernière implémentation, c'est la maquette qui fait foi ; le code existant
+est ce qu'on recette, pas une référence.
+
+Procède de façon systématique, écran par écran ou composant par composant :
+
+1. **Localiser la référence** : retrouve la section exacte de
+   `09-maquettes-captures.md` qui décrit l'écran/composant concerné (titre de
+   section, description, image associée si présente). Si aucune section ne
+   correspond clairement, dis-le explicitement plutôt que d'improviser une
+   comparaison approximative.
+2. **Localiser l'implémentation** : lis le ou les fichiers Flutter concernés
+   (`lib/features/.../presentation/...`, thème, widgets partagés utilisés).
+   Cite les fichiers et si possible les lignes (`chemin/fichier.dart:42`).
+3. **Comparer point par point**, sans en sauter aucun :
+   - Niveau "scène" vs "parchemin" (fond, ambiance) — correspond-il à ce que
+     montre la maquette pour cet écran ?
+   - Structure/layout : sections présentes dans la maquette et absentes du
+     code (ou l'inverse), ordre des éléments, regroupements.
+   - Composants du design system utilisés : bon composant, bonne variante
+     (primaire/secondaire, etc.).
+   - Contenu attendu par la maquette : libellés, données affichées, icônes.
+   - Tokens de couleur (`color.parchment.*`, `color.wood.*`, `color.accent.*`)
+     et typographie (`font.display` réservé aux titres/boutons,
+     `font.body` pour le reste) — valeur utilisée vs valeur attendue.
+   - Espacements/rayons (`space.*`, `radius.*`).
+   - États secondaires visibles dans la maquette (vide, chargement, erreur,
+     hors-ligne) : implémentés ou manquants.
+   - Accessibilité (contraste AA, taille de police ≥ 11px, zones de tap
+     ≥ 44×44px) quand la maquette permet de la juger.
+4. **Classer chaque écart** :
+   - **Bloquant** : rend l'écran visuellement ou structurellement différent
+     de la maquette de façon perceptible (composant manquant ou en trop,
+     mauvais niveau scène/parchemin, mauvais contenu, état secondaire
+     manquant, rupture de palette/typo flagrante). Un écran avec au moins un
+     écart bloquant est **non conforme**.
+   - **Mineur** : détail cosmétique sans impact perceptible sur la fidélité
+     globale (ex. un `space.*` voisin utilisé à la place d'un autre sans
+     effet visuel notable). N'empêche pas la conformité mais doit être listé.
+   - Jamais de "c'est globalement bien" vague : chaque écart cite la section
+     de la maquette, le token/la règle attendue, et la valeur/le composant
+     réellement trouvés dans le code.
+5. **Rendre un rapport de recettage structuré**, par écran/composant :
+   - Référence maquette (section de `09-maquettes-captures.md`) et fichiers
+     de code examinés.
+   - Verdict : Conforme / Non conforme.
+   - Tableau des écarts, un par ligne : `[Bloquant|Mineur]` — description de
+     l'écart — attendu (maquette) — trouvé (code, avec fichier) — correction
+     précise et actionnable.
+   - Chaque correction doit être formulée pour être exécutée directement par
+     `dev-flutter` sans aller-retour : composant/widget concerné, propriété à
+     changer, valeur cible (token exact), fichier si connu. Évite les
+     formulations vagues ("revoir le style") au profit d'instructions
+     concrètes ("remplacer `color.wood.700` par `color.parchment.100` sur le
+     fond de la carte, dans `character_class_choices_card.dart`").
+   - Termine par une liste récapitulative uniquement des écarts **bloquants**,
+     dans l'ordre où `dev-flutter` doit les traiter — c'est cette liste qui
+     sert de plan de correction.
 
 ## Ce que tu ne fais pas
 
