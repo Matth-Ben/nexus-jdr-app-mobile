@@ -87,8 +87,8 @@ AuthFailure mapAuthException(AuthException error) {
 AuthFailure mapUnknownError() => const AuthFailure(_networkErrorMessage);
 
 /// Message générique pour `AuthRepository.deleteAccount` — même texte fixe
-/// affiché par `delete_account_sheet.dart` pour toute erreur autre qu'un mot
-/// de passe incorrect (spec direction-artistique de la tâche "Confidentialité
+/// affiché par `profile_delete_account_screen.dart` pour toute erreur autre
+/// qu'un mot de passe incorrect (spec direction-artistique de la tâche "Confidentialité
 /// et données") : conservé ici comme valeur par défaut de [AuthFailure
 /// .message] quand le corps d'erreur serveur ne porte aucun `message`
 /// exploitable, même rôle que `genericBugReportErrorMessage`
@@ -99,7 +99,7 @@ const String genericDeleteAccountErrorMessage =
 /// Traduit une exception levée par `SupabaseClient.functions.invoke(
 /// 'delete-account')` en [AuthFailure] — même principe que
 /// [mapBugReportError] (`features/bug_report/data/bug_report_error_mapper.dart`),
-/// gardé sans distinction de code d'erreur : `delete_account_sheet.dart`
+/// gardé sans distinction de code d'erreur : `profile_delete_account_screen.dart`
 /// n'affiche de toute façon qu'un unique bandeau générique fixe pour toute
 /// erreur de suppression (spec de la tâche), [AuthFailure.message] n'étant
 /// conservé que pour un éventuel diagnostic futur.

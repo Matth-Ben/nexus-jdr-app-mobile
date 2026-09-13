@@ -17,9 +17,10 @@ import '../../../../core/widgets/sheet_header_bar.dart';
 ///
 /// Action 100% locale (`AppSettings.openAppSettings`, ouvre les réglages
 /// système de l'app) : aucun état d'erreur/hors-ligne, contrairement à
-/// `export_data_sheet.dart`/`delete_account_sheet.dart` — la sheet reste
-/// librement fermable (voile/geste retour/`X`), aucun appel réseau à
-/// protéger.
+/// `export_data_sheet.dart`/`profile_delete_account_screen.dart` (l'ancienne
+/// `delete_account_sheet.dart`, remplacée par cet écran dédié lors du
+/// recettage direction-artistique du 13/09/2026) — la sheet reste librement
+/// fermable (voile/geste retour/`X`), aucun appel réseau à protéger.
 Future<void> showDevicePermissionsSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,

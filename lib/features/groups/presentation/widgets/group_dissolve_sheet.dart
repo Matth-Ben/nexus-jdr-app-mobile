@@ -12,12 +12,17 @@ import '../../../../core/widgets/sheet_header_bar.dart';
 import '../providers/group_providers.dart';
 
 /// Ouvre la sheet "Dissoudre le groupe" (`DestructiveButton` isolé de
-/// `group_management_sheet.dart`) — calque EXACT de
+/// `group_management_sheet.dart`) — calque EXACT de l'ancienne
 /// `features/profile/presentation/widgets/delete_account_sheet.dart` (un
 /// seul widget à 2 étapes internes : avertissement, puis confirmation),
 /// avec une confirmation par retape du NOM DU GROUPE (comparaison
 /// insensible casse/espaces) plutôt qu'un mot de passe — voir
-/// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2.
+/// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2. Ce
+/// fichier de référence a depuis été remplacé par l'écran dédié
+/// `features/profile/presentation/profile_delete_account_screen.dart`
+/// (recettage direction-artistique du 13/09/2026) ; cette sheet-ci reste
+/// volontairement une sheet à 2 étapes (pas d'écran dédié), le patron
+/// décrit ici n'a donc plus de jumeau exact ailleurs dans le dépôt.
 ///
 /// Gère elle-même toute la séquence "confirmer -> dissoudre -> naviguer" :
 /// contrairement à `showGroupRenameSheet`, il n'y a rien à faire après coup

@@ -95,11 +95,11 @@ abstract class AuthRepository {
   /// écrasement).
   Future<void> removeAvatar();
 
-  /// Supprime définitivement le compte connecté — étape 2/2 de la sheet
+  /// Supprime définitivement le compte connecté — étape finale de l'écran
   /// "Supprimer mon compte"
-  /// (`features/profile/presentation/widgets/delete_account_sheet.dart`),
+  /// (`features/profile/presentation/profile_delete_account_screen.dart`),
   /// appelée uniquement après reconfirmation du mot de passe par
-  /// [signInWithPassword] (voir la documentation de classe de la sheet pour
+  /// [signInWithPassword] (voir la documentation de classe de cet écran pour
   /// le flux complet).
   ///
   /// Appelle l'edge function Supabase `delete-account` (déployée côté dépôt
@@ -115,7 +115,7 @@ abstract class AuthRepository {
   ///
   /// Ne déconnecte **pas** le joueur elle-même : c'est à l'appelant
   /// d'enchaîner avec [signOut] une fois cette méthode résolue avec succès
-  /// (voir la doc de classe de `_DeleteAccountSheetContent`), pour que la
+  /// (voir la doc de classe de `ProfileDeleteAccountScreen`), pour que la
   /// séquence "supprimer puis déconnecter" reste explicite et visible d'un
   /// seul coup d'œil côté UI plutôt que cachée dans ce repository.
   Future<void> deleteAccount();

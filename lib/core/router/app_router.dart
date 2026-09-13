@@ -28,6 +28,7 @@ import '../../features/groups/presentation/group_screen.dart';
 import '../../features/join_story/presentation/join_character_step_screen.dart';
 import '../../features/join_story/presentation/join_code_step_screen.dart';
 import '../../features/join_story/presentation/join_confirmation_step_screen.dart';
+import '../../features/profile/presentation/profile_delete_account_screen.dart';
 import '../../features/profile/presentation/profile_edit_screen.dart';
 import '../../features/profile/presentation/profile_help_screen.dart';
 import '../../features/profile/presentation/profile_notifications_screen.dart';
@@ -174,6 +175,16 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const ProfileHelpScreen(),
       ),
       GoRoute(
+        // Écran dédié "Supprimer le compte" (`features/profile/`), poussé
+        // depuis la tuile "Supprimer mon compte" (section "ZONE DANGEREUSE")
+        // de `ProfilePrivacyScreen` — remplace l'ancienne bottom sheet
+        // `showDeleteAccountSheet` (recettage direction-artistique du
+        // 13/09/2026, la maquette attend un écran plein dédié) — voir la
+        // doc de classe de `ProfileDeleteAccountScreen`.
+        path: '/profile/privacy/delete-account',
+        builder: (context, state) => const ProfileDeleteAccountScreen(),
+      ),
+      GoRoute(
         // Sous-écran "Préférences de notifications" (`features/profile/`,
         // chantier "Notifications" —
         // `docs/cahier-des-charges/15-profil-parametres.md` section 3),
@@ -205,9 +216,8 @@ GoRouter appRouter(Ref ref) {
         // 12-partage-et-groupes.md` section 1 —
         // `character_sharing/presentation/character_share_screen.dart`.
         path: '/characters/:id/share',
-        builder: (context, state) => CharacterShareScreen(
-          characterId: state.pathParameters['id']!,
-        ),
+        builder: (context, state) =>
+            CharacterShareScreen(characterId: state.pathParameters['id']!),
       ),
       GoRoute(
         // Point d'entrée du deep link universel `nexus-jdr.app/p/{token}`
@@ -217,9 +227,8 @@ GoRouter appRouter(Ref ref) {
         // explicitement ce préfixe) : c'est tout l'intérêt de ce lien,
         // consultable sans compte Nexus JDR.
         path: '/p/:token',
-        builder: (context, state) => SharedCharacterViewScreen(
-          token: state.pathParameters['token']!,
-        ),
+        builder: (context, state) =>
+            SharedCharacterViewScreen(token: state.pathParameters['token']!),
       ),
       GoRoute(
         // Flux "Rejoindre une histoire" (`features/join_story/`), 4 étapes
