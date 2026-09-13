@@ -2,13 +2,13 @@
 // `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`, section
 // "Onglet Compétences".
 //
-// `CharacterSkillsTabBody` est un `StatelessWidget` pur (pas de Riverpod, pas
-// de réseau) : contrairement à `character_detail_screen_test.dart`, un
-// simple `MaterialApp(home: ...)` suffit à le monter.
+// `CharacterSkillsTabBody` est un `StatefulWidget` (depuis l'ajout du champ
+// de recherche, recettage direction-artistique du 13/09) mais sans
+// dépendance Riverpod/réseau : contrairement à `character_detail_screen_test.dart`,
+// un simple `MaterialApp(home: ...)` suffit à le monter.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:personnages/features/characters/domain/character_class_choice.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
@@ -21,7 +21,6 @@ CharacterDetail _detail({
   List<CharacterDetailClassRow> classes = const [],
   List<CharacterSkillRow> skills = const [],
   List<CharacterClassFeature> classFeatures = const [],
-  List<CharacterClassChoice> classChoices = const [],
   List<String> armorProficiencyNames = const [],
   List<String> weaponProficiencyNames = const [],
   List<String> toolProficiencyNames = const [],
@@ -41,7 +40,6 @@ CharacterDetail _detail({
     abilityScores: const {'dex': 16, 'int': 10},
     skills: skills,
     classFeatures: classFeatures,
-    classChoices: classChoices,
     armorProficiencyNames: armorProficiencyNames,
     weaponProficiencyNames: weaponProficiencyNames,
     toolProficiencyNames: toolProficiencyNames,
@@ -52,11 +50,19 @@ CharacterDetail _detail({
   );
 }
 
-Future<void> _pump(WidgetTester tester, CharacterDetail detail) async {
+Future<void> _pump(
+  WidgetTester tester,
+  CharacterDetail detail, {
+  VoidCallback? onNavigateToSpells,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
-        body: CharacterSkillsTabBody(detail: detail, onUseFeature: (_) {}),
+        body: CharacterSkillsTabBody(
+          detail: detail,
+          onUseFeature: (_) {},
+          onNavigateToSpells: onNavigateToSpells,
+        ),
       ),
     ),
   );
@@ -88,11 +94,34 @@ void main() {
     expect(find.text('+5'), findsOneWidget);
   });
 
+  testWidgets('chaque ligne de compétence porte un chip "D20" (recettage '
+      'direction-artistique du 13/09, remplace l\'icône dé) en bout de ligne', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _detail(
+        skills: const [
+          CharacterSkillRow(
+            id: 1,
+            name: 'Acrobaties',
+            abilityId: 'dex',
+            proficiency: 'competente',
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('D20'), findsOneWidget);
+    expect(find.byIcon(Icons.casino_outlined), findsNothing);
+  });
+
   testWidgets(
     'taper une ligne de compétence ouvre le mini lancer de dé virtuel avec '
     'le nom de la compétence et son bonus déjà calculé (docs/'
     'cahier-des-charges/11-fonctionnalites-a-ajouter.md, section "Onglet '
-    'Compétences")',
+    'Compétences") — le chip "D20" ne change pas ce comportement, toute la '
+    'ligne reste tappable',
     (tester) async {
       await _pump(
         tester,
@@ -117,6 +146,142 @@ void main() {
       expect(find.textContaining('+5 ='), findsOneWidget);
     },
   );
+
+  group(
+    'recherche de compétence (recettage direction-artistique du 13/09)',
+    () {
+      const skills = [
+        CharacterSkillRow(
+          id: 1,
+          name: 'Acrobaties',
+          abilityId: 'dex',
+          proficiency: 'competente',
+        ),
+        CharacterSkillRow(
+          id: 2,
+          name: 'Arcanes',
+          abilityId: 'int',
+          proficiency: 'aucune',
+        ),
+      ];
+
+      testWidgets('le champ de recherche est toujours affiché', (tester) async {
+        await _pump(tester, _detail(skills: skills));
+
+        expect(
+          find.widgetWithText(TextField, 'Rechercher une compétence'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets(
+        'taper dans le champ ne garde que les compétences dont le nom '
+        'correspond, sans masquer les autres cartes de l\'onglet',
+        (tester) async {
+          await _pump(
+            tester,
+            _detail(skills: skills, knownLanguageNames: const ['Nain']),
+          );
+
+          await tester.enterText(
+            find.widgetWithText(TextField, 'Rechercher une compétence'),
+            'acro',
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('Acrobaties'), findsOneWidget);
+          expect(find.text('Arcanes'), findsNothing);
+          // Carte "LANGUES CONNUES" non affectée par la recherche (spec de la
+          // tâche : le champ ne filtre que "LES 18 COMPÉTENCES").
+          expect(find.text('LANGUES CONNUES'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'aucune compétence ne correspond à la recherche : affiche un message '
+        'dédié à la place de "LES 18 COMPÉTENCES"',
+        (tester) async {
+          await _pump(tester, _detail(skills: skills));
+
+          await tester.enterText(
+            find.widgetWithText(TextField, 'Rechercher une compétence'),
+            'zzzzz',
+          );
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text('Aucune compétence pour « zzzzz ».'),
+            findsOneWidget,
+          );
+          expect(find.text('LES 18 COMPÉTENCES'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'icône "×" efface la recherche et restaure la liste complète',
+        (tester) async {
+          await _pump(tester, _detail(skills: skills));
+
+          await tester.enterText(
+            find.widgetWithText(TextField, 'Rechercher une compétence'),
+            'acro',
+          );
+          await tester.pumpAndSettle();
+          expect(find.text('Arcanes'), findsNothing);
+
+          await tester.tap(find.byIcon(Icons.close));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Acrobaties'), findsOneWidget);
+          expect(find.text('Arcanes'), findsOneWidget);
+        },
+      );
+    },
+  );
+
+  group('bandeau "SORTS →" (recettage direction-artistique du 13/09)', () {
+    testWidgets('toujours affiché, entre "APTITUDES DE CLASSE" et "LES 18 '
+        'COMPÉTENCES"', (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          classFeatures: const [
+            CharacterClassFeature(id: 1, name: 'Rage', level: 1),
+          ],
+        ),
+      );
+
+      expect(
+        find.text('Les sorts et emplacements sont dans l\'onglet dédié.'),
+        findsOneWidget,
+      );
+      expect(find.text('SORTS →'), findsOneWidget);
+
+      final featuresY = tester.getTopLeft(find.text('APTITUDES DE CLASSE')).dy;
+      final bannerY = tester
+          .getTopLeft(
+            find.text(
+              'Les sorts et emplacements sont dans '
+              'l\'onglet dédié.',
+            ),
+          )
+          .dy;
+      final skillsY = tester.getTopLeft(find.text('LES 18 COMPÉTENCES')).dy;
+
+      expect(featuresY, lessThan(bannerY));
+      expect(bannerY, lessThan(skillsY));
+    });
+
+    testWidgets('taper le bandeau appelle onNavigateToSpells', (tester) async {
+      var navigateCount = 0;
+      await _pump(tester, _detail(), onNavigateToSpells: () => navigateCount++);
+
+      await tester.tap(find.text('SORTS →'));
+      await tester.pumpAndSettle();
+
+      expect(navigateCount, 1);
+    });
+  });
 
   testWidgets('affiche une aptitude à usage limité avec son compteur', (
     tester,
@@ -270,8 +435,11 @@ void main() {
   );
 
   testWidgets(
-    'les cartes armures/armes/outils/langues/choix de classe/invocations '
-    'n\'apparaissent pas quand vides',
+    'les cartes armures/armes/outils/langues/invocations n\'apparaissent '
+    'pas quand vides ; "CHOIX DE CLASSE" n\'apparaît plus jamais sur cet '
+    'onglet depuis le recettage direction-artistique du 13/09 (widget '
+    'conservé, juste son insertion retirée — voir '
+    '`character_skills_tab_body.dart`)',
     (tester) async {
       await _pump(tester, _detail());
 
@@ -282,100 +450,6 @@ void main() {
       expect(find.text('APTITUDES DE CLASSE'), findsNothing);
       expect(find.text('CHOIX DE CLASSE'), findsNothing);
       expect(find.text('INVOCATIONS CONNUES'), findsNothing);
-    },
-  );
-
-  testWidgets(
-    'la carte "CHOIX DE CLASSE" affiche la sous-classe choisie — gap de '
-    'lecture trouvé en construisant l\'export XML (voir le README) : cette '
-    'colonne était déjà écrite mais jamais relue par fetchCharacterDetail '
-    'avant cet ajout',
-    (tester) async {
-      await _pump(
-        tester,
-        _detail(
-          classes: const [
-            CharacterDetailClassRow(
-              classId: 1,
-              hitDie: 12,
-              className: 'Barbare',
-              level: 3,
-              isPrimary: true,
-              savingThrowProficiencies: [],
-              subclassName: 'Guerrier totem',
-            ),
-          ],
-        ),
-      );
-
-      expect(find.text('CHOIX DE CLASSE'), findsOneWidget);
-      expect(find.text('Sous-classe'), findsOneWidget);
-      expect(find.text('Guerrier totem'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'multiclassage avec 2 sous-classes choisies : le label est désambiguïsé '
-    'par nom de classe',
-    (tester) async {
-      await _pump(
-        tester,
-        _detail(
-          classes: const [
-            CharacterDetailClassRow(
-              classId: 1,
-              hitDie: 10,
-              className: 'Guerrier',
-              level: 3,
-              isPrimary: true,
-              savingThrowProficiencies: [],
-              subclassName: 'Chevalier occulte',
-            ),
-            CharacterDetailClassRow(
-              classId: 2,
-              hitDie: 8,
-              className: 'Roublard',
-              level: 2,
-              isPrimary: false,
-              savingThrowProficiencies: [],
-              subclassName: 'Assassin',
-            ),
-          ],
-        ),
-      );
-
-      expect(find.text('Sous-classe (Guerrier)'), findsOneWidget);
-      expect(find.text('Chevalier occulte'), findsOneWidget);
-      expect(find.text('Sous-classe (Roublard)'), findsOneWidget);
-      expect(find.text('Assassin'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'la carte "CHOIX DE CLASSE" affiche le style de combat/ennemi juré '
-    'résolus par niveau',
-    (tester) async {
-      await _pump(
-        tester,
-        _detail(
-          classChoices: const [
-            CharacterClassChoice(
-              featureName: 'Style de combat',
-              chosenValue: 'Défense',
-            ),
-            CharacterClassChoice(
-              featureName: 'Ennemi juré',
-              chosenValue: 'Morts-vivants',
-            ),
-          ],
-        ),
-      );
-
-      expect(find.text('CHOIX DE CLASSE'), findsOneWidget);
-      expect(find.text('Style de combat'), findsOneWidget);
-      expect(find.text('Défense'), findsOneWidget);
-      expect(find.text('Ennemi juré'), findsOneWidget);
-      expect(find.text('Morts-vivants'), findsOneWidget);
     },
   );
 
@@ -423,11 +497,11 @@ void main() {
   });
 
   testWidgets(
-    'les cartes s\'affichent dans l\'ordre Choix de classe -> Compétences -> '
-    'Armures -> Armes -> Outils -> Langues -> Invocations',
+    'les cartes s\'affichent dans l\'ordre Compétences -> Armures -> Armes '
+    '-> Outils -> Langues -> Invocations',
     (tester) async {
       // Viewport agrandi (même technique que
-      // `character_inventory_tab_body_test.dart`) : avec les 7 cartes de ce
+      // `character_inventory_tab_body_test.dart`) : avec les 6 cartes de ce
       // test simultanément non vides, le contenu dépasse la hauteur de test
       // par défaut — `ListView` (SliverList) ne construit que les enfants
       // visibles/dans le cacheExtent, `getTopLeft` échouerait sinon sur les
@@ -444,12 +518,6 @@ void main() {
       await _pump(
         tester,
         _detail(
-          classChoices: const [
-            CharacterClassChoice(
-              featureName: 'Style de combat',
-              chosenValue: 'Défense',
-            ),
-          ],
           armorProficiencyNames: const ['légère'],
           weaponProficiencyNames: const ['courantes'],
           toolProficiencyNames: const ['Outils de forgeron'],
@@ -458,7 +526,6 @@ void main() {
         ),
       );
 
-      final choicesY = tester.getTopLeft(find.text('CHOIX DE CLASSE')).dy;
       final skillsY = tester.getTopLeft(find.text('LES 18 COMPÉTENCES')).dy;
       final armorY = tester.getTopLeft(find.text("MAÎTRISES D'ARMURES")).dy;
       final weaponY = tester.getTopLeft(find.text("MAÎTRISES D'ARMES")).dy;
@@ -468,7 +535,6 @@ void main() {
           .getTopLeft(find.text('INVOCATIONS CONNUES'))
           .dy;
 
-      expect(choicesY, lessThan(skillsY));
       expect(skillsY, lessThan(armorY));
       expect(armorY, lessThan(weaponY));
       expect(weaponY, lessThan(toolY));
@@ -492,8 +558,9 @@ void main() {
   testWidgets(
     "la scission des onglets \"Compétences\"/\"Sorts\" est étanche : des "
     'sorts non vides sur `detail` ne font fuiter aucun contenu "Sorts" dans '
-    'CharacterSkillsTabBody — voir `character_spells_tab_body_test.dart` '
-    'pour la contrepartie (les sorts vivent désormais uniquement dans '
+    'CharacterSkillsTabBody (hors le bandeau "SORTS →", volontairement '
+    'toujours affiché) — voir `character_spells_tab_body_test.dart` pour la '
+    'contrepartie (les sorts vivent désormais uniquement dans '
     "`CharacterSpellsTabBody`), régression garde-fou pour la scission de "
     "l'onglet \"Compétences\" en 2 (\"Compétences\" + \"Sorts\").",
     (tester) async {
@@ -513,7 +580,6 @@ void main() {
         ),
       );
 
-      expect(find.text('SORTS'), findsNothing);
       expect(find.text('Lumière'), findsNothing);
       expect(find.text('Sorts mineurs'), findsNothing);
     },

@@ -7,7 +7,10 @@ import '../../domain/character_detail.dart';
 import '../../domain/spell_name_filter.dart';
 import '../../domain/spellcasting_class_names.dart';
 import '../../domain/spells_by_level_grouper.dart';
+import 'character_class_features_card.dart';
+import 'character_spell_slots_summary_card.dart';
 import 'character_spells_section.dart';
+import 'class_feature_action_sheet.dart';
 import 'spell_action_sheet.dart';
 
 /// Contenu de l'onglet "Sorts" de la fiche personnage — scindé de l'onglet
@@ -29,7 +32,9 @@ class CharacterSpellsTabBody extends StatefulWidget {
     required this.onCastSpell,
     required this.onToggleFavorite,
     required this.onTogglePrepared,
+    this.onUseFeature,
     this.actionsDisabled = false,
+    this.searchFocusNode,
     super.key,
   });
 
@@ -37,19 +42,36 @@ class CharacterSpellsTabBody extends StatefulWidget {
   final CastSpellCallback onCastSpell;
   final ToggleSpellFlagCallback onToggleFavorite;
   final ToggleSpellFlagCallback onTogglePrepared;
+
+  /// Carte de pied "INVOCATIONS & APTITUDES À USAGE LIMITÉ" (recettage
+  /// direction-artistique du 13/09) : `null` masque entièrement cette carte
+  /// (ex. `shared_character_view_screen.dart`, vue en lecture seule — pas de
+  /// callback d'écriture à proposer à un lecteur anonyme), même convention
+  /// que les autres callbacks d'écriture de cet écran.
+  final UseClassFeatureCallback? onUseFeature;
+
   final bool actionsDisabled;
 
+  /// Focus programmatique du champ "Rechercher un sort" (icône loupe du
+  /// bandeau bois, voir `character_detail_screen.dart`) — `null` crée un
+  /// `FocusNode` entièrement interne, comportement inchangé pour les usages
+  /// qui n'en ont pas besoin.
+  final FocusNode? searchFocusNode;
+
   @override
-  State<CharacterSpellsTabBody> createState() =>
-      _CharacterSpellsTabBodyState();
+  State<CharacterSpellsTabBody> createState() => _CharacterSpellsTabBodyState();
 }
 
 class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
   final TextEditingController _searchController = TextEditingController();
+  FocusNode? _ownedFocusNode;
+
+  FocusNode get _focusNode => widget.searchFocusNode ?? _ownedFocusNode!;
 
   @override
   void initState() {
     super.initState();
+    if (widget.searchFocusNode == null) _ownedFocusNode = FocusNode();
     _searchController.addListener(_handleSearchChanged);
   }
 
@@ -61,22 +83,58 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
   void dispose() {
     _searchController.removeListener(_handleSearchChanged);
     _searchController.dispose();
+    _ownedFocusNode?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final detail = widget.detail;
+
+    // Carte de pied "INVOCATIONS & APTITUDES À USAGE LIMITÉ" (recettage
+    // direction-artistique du 13/09) : `null` (vue en lecture seule, voir
+    // `CharacterSpellsTabBody.onUseFeature`) masque entièrement la carte,
+    // même sans aptitude — aucune écriture ne peut être proposée sans
+    // callback pour l'exécuter.
+    final onUseFeature = widget.onUseFeature;
+    final limitedUseFeatures = [
+      for (final feature in detail.classFeatures)
+        if (!feature.isPassive) feature,
+    ];
+    final showLimitedUseCard =
+        onUseFeature != null && limitedUseFeatures.isNotEmpty;
+    final showSlotsSummary = CharacterSpellSlotsSummaryCard.hasContent(
+      detail.spellSlots,
+    );
+
     if (detail.spells.isEmpty) {
       final isSpellcaster = detail.classes.any(
         (classRow) => spellcastingClassNames.contains(classRow.className),
       );
-      return isSpellcaster
-          ? const _EmptySpellsState()
-          : _NonCasterEmptyState(
-              characterName: detail.name,
-              className: detail.primaryClass?.className ?? 'cette classe',
-            );
+      return ListView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        children: [
+          isSpellcaster
+              ? const _EmptySpellsState()
+              : _NonCasterEmptyState(
+                  characterName: detail.name,
+                  className: detail.primaryClass?.className ?? 'cette classe',
+                ),
+          if (showSlotsSummary) ...[
+            const SizedBox(height: AppSpacing.md),
+            CharacterSpellSlotsSummaryCard(spellSlots: detail.spellSlots),
+          ],
+          if (showLimitedUseCard) ...[
+            const SizedBox(height: AppSpacing.md),
+            CharacterClassFeaturesCard(
+              features: limitedUseFeatures,
+              onUseFeature: onUseFeature,
+              actionsDisabled: widget.actionsDisabled,
+              title: 'INVOCATIONS & APTITUDES À USAGE LIMITÉ',
+            ),
+          ],
+        ],
+      );
     }
 
     final filteredSpells = SpellNameFilter.apply(
@@ -88,13 +146,19 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
     // requête en cours n'a pas plus sa place ici que dans les groupes par
     // niveau ci-dessous — voir la documentation de classe de
     // `CharacterSpellsSection`.
-    final favorites = filteredSpells.where((spell) => spell.isFavorite).toList();
+    final favorites = filteredSpells
+        .where((spell) => spell.isFavorite)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
-        _SpellSearchField(controller: _searchController),
+        _SpellSearchField(controller: _searchController, focusNode: _focusNode),
         const SizedBox(height: AppSpacing.md),
+        if (showSlotsSummary) ...[
+          CharacterSpellSlotsSummaryCard(spellSlots: detail.spellSlots),
+          const SizedBox(height: AppSpacing.md),
+        ],
         if (spellGroups.isEmpty)
           _NoSearchMatchState(query: _searchController.text.trim())
         else
@@ -108,6 +172,15 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
             onTogglePrepared: widget.onTogglePrepared,
             actionsDisabled: widget.actionsDisabled,
           ),
+        if (showLimitedUseCard) ...[
+          const SizedBox(height: AppSpacing.md),
+          CharacterClassFeaturesCard(
+            features: limitedUseFeatures,
+            onUseFeature: onUseFeature,
+            actionsDisabled: widget.actionsDisabled,
+            title: 'INVOCATIONS & APTITUDES À USAGE LIMITÉ',
+          ),
+        ],
       ],
     );
   }
@@ -118,14 +191,16 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
 /// porté par `AppTheme.light.inputDecorationTheme`, même convention que
 /// `character_list_screen.dart::_SearchRow`.
 class _SpellSearchField extends StatelessWidget {
-  const _SpellSearchField({required this.controller});
+  const _SpellSearchField({required this.controller, required this.focusNode});
 
   final TextEditingController controller;
+  final FocusNode focusNode;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       style: AppTypography.body(color: AppColors.textPrimary),
       decoration: InputDecoration(
         hintText: 'Rechercher un sort',

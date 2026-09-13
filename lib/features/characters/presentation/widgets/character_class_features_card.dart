@@ -20,16 +20,25 @@ import 'class_feature_action_sheet.dart';
 ///
 /// N'affiche rien tant que [features] est vide — appelant responsable de ne
 /// pas monter cette carte dans ce cas (voir `character_skills_tab_body.dart`).
+///
+/// [title] surchargeable (par défaut "APTITUDES DE CLASSE") — réutilisé tel
+/// quel par `character_spells_tab_body.dart` pour sa carte de pied
+/// "INVOCATIONS & APTITUDES À USAGE LIMITÉ" (recettage direction-artistique
+/// du 13/09), filtrée aux seules aptitudes non passives : même formatage de
+/// ligne que la carte "Aptitudes de classe" de l'onglet "Compétences", sans
+/// dupliquer [_FeatureRow].
 class CharacterClassFeaturesCard extends StatelessWidget {
   const CharacterClassFeaturesCard({
     required this.features,
     required this.onUseFeature,
     this.actionsDisabled = false,
+    this.title = 'APTITUDES DE CLASSE',
     super.key,
   });
 
   final List<CharacterClassFeature> features;
   final UseClassFeatureCallback onUseFeature;
+  final String title;
 
   /// `true` pendant qu'un repos (court ou long) est en cours d'application —
   /// voir `character_detail_screen.dart::_isApplyingRest` et la
@@ -50,7 +59,7 @@ class CharacterClassFeaturesCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'APTITUDES DE CLASSE',
+            title,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,
