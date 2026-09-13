@@ -361,6 +361,19 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     }
   }
 
+  /// Tap sur le lien "Voir l'historique des niveaux" de l'étape "Points de
+  /// vie" (recettage direction-artistique du 13/09, point 3) — aucun écran
+  /// d'historique des niveaux n'existe encore dans ce dépôt (aucune route
+  /// dédiée trouvée à ce jour), donc pas de navigation possible pour
+  /// l'instant : même texte/patron que
+  /// `ProfileScreen`/`ProfileHelpScreen`/`ProfilePrivacyScreen`/
+  /// `AppearanceAndBackstoryStepScreen` pour les fonctionnalités pas encore
+  /// prêtes. À recâbler vers le vrai écran une fois qu'il existera.
+  void _showLevelHistoryComingSoon() {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Bientôt disponible')));
+  }
+
   /// Résultat du jet de dé pour [_targetLevel], calculé une seule fois par
   /// niveau ("déjà résolu au montage", spec visuelle) : simple mutation de
   /// champ (pas de `setState`) — sûr à appeler depuis `build()`, contrairement
@@ -1038,10 +1051,23 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'Points de vie',
+                                  'Points de vie maximum',
                                   style: AppTypography.body(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                // Delta affiché juste sous le titre en plus du
+                                // `GainRow` de bas de carte (recettage
+                                // direction-artistique du 13/09, point 1) :
+                                // même formatage que `_AllocationRow` de
+                                // l'étape "Caractéristiques", valeurs déjà
+                                // calculées en tête de [_buildHpStep].
+                                Text(
+                                  '${data.currentMaxHp} → $newMaxHp (+$gain)',
+                                  style: AppTypography.body(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
                                   ),
                                 ),
                                 Text(
@@ -1066,14 +1092,16 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                       ),
                       const SizedBox(height: AppSpacing.md),
                       SegmentedToggle<_HpMethod>(
-                        options: const [
+                        options: [
                           SegmentedToggleOption(
                             value: _HpMethod.roll,
-                            label: 'Lancer le dé',
+                            label: 'Lancer le dé (d${data.hitDie})',
                           ),
                           SegmentedToggleOption(
                             value: _HpMethod.average,
-                            label: 'Valeur moyenne',
+                            label:
+                                'Valeur moyenne '
+                                '(${LevelUpHitPointsCalculator.averageValue(data.hitDie)})',
                           ),
                         ],
                         value: _hpMethod,
@@ -1152,6 +1180,34 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         _StepFooter(
           onBack: _goBackToSheet,
           onContinue: () => setState(() => _phase = _LevelUpPhase.abilities),
+        ),
+        // Lien "Voir l'historique des niveaux" sous le bouton "Continuer"
+        // (recettage direction-artistique du 13/09, point 3) : pas de vrai
+        // écran d'historique dans ce dépôt à ce jour, voir
+        // [_showLevelHistoryComingSoon].
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
+          child: InkWell(
+            onTap: _showLevelHistoryComingSoon,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Center(
+                child: Text(
+                  "Voir l'historique des niveaux",
+                  style: AppTypography.body(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ).copyWith(decoration: TextDecoration.underline),
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     );

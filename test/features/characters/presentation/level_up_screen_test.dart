@@ -705,8 +705,10 @@ void main() {
     });
 
     testWidgets(
-      'étape "Points de vie" : bascule sur "Valeur moyenne" affiche la '
-      'valeur déterministe et l\'aperçu "Points de vie maximum"',
+      'étape "Points de vie" : titre "Points de vie maximum" avec son delta '
+      'affiché sous le titre (en plus du `GainRow` de bas de carte), '
+      'libellés du sélecteur interpolés avec le dé de la classe, bascule '
+      'sur "Valeur moyenne" affiche la valeur déterministe',
       (tester) async {
         await pushPastAnnouncement(tester, 5);
 
@@ -715,8 +717,18 @@ void main() {
         expect(find.text('Dé de vie de la classe : d10'), findsOneWidget);
         // Mode "Lancer le dé" par défaut : lien "Relancer le dé" visible.
         expect(find.text('Relancer le dé'), findsOneWidget);
+        // Libellés du sélecteur interpolés avec le dé de vie de la classe
+        // (d10) et sa valeur moyenne ((10 / 2).ceil() + 1 = 6) — recettage
+        // direction-artistique du 13/09, point 2.
+        expect(find.text('LANCER LE DÉ (D10)'), findsOneWidget);
+        expect(find.text('VALEUR MOYENNE (6)'), findsOneWidget);
+        // Titre de carte renommé "Points de vie maximum" (point 1), avec son
+        // delta affiché juste en dessous en plus du `GainRow` existant de
+        // bas de carte (pas déplacé) : le titre apparaît donc deux fois,
+        // quel que soit le jet (aléatoire) affiché à ce stade.
+        expect(find.text('Points de vie maximum'), findsNWidgets(2));
 
-        await tester.tap(find.text('VALEUR MOYENNE'));
+        await tester.tap(find.textContaining('VALEUR MOYENNE'));
         await tester.pumpAndSettle();
 
         // d10 -> moyenne 6, +2 (modificateur Con 14) -> gain 8.
@@ -727,8 +739,31 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Relancer le dé'), findsNothing);
-        expect(find.text('Points de vie maximum'), findsOneWidget);
-        expect(find.text('28 → 36 (+8)'), findsOneWidget);
+        expect(find.text('Points de vie maximum'), findsNWidgets(2));
+        // Le delta apparaît lui aussi deux fois : sous le titre et dans le
+        // `GainRow` de bas de carte, avec la même valeur.
+        expect(find.text('28 → 36 (+8)'), findsNWidgets(2));
+      },
+    );
+
+    testWidgets(
+      'étape "Points de vie" : lien "Voir l\'historique des niveaux" sous '
+      '"Continuer", pas encore câblé sur un écran réel (aucun écran '
+      'd\'historique des niveaux dans ce dépôt) : affiche un SnackBar '
+      '"Bientôt disponible", même patron que les autres fonctionnalités '
+      'pas encore prêtes de ce dépôt',
+      (tester) async {
+        await pushPastAnnouncement(tester, 5);
+
+        final link = find.text("Voir l'historique des niveaux");
+        expect(link, findsOneWidget);
+
+        await tester.tap(link);
+        await tester.pump();
+
+        expect(find.text('Bientôt disponible'), findsOneWidget);
+        // Aucune navigation : toujours sur l'étape "Points de vie".
+        expect(find.text('Étape 1 sur 3 · Points de vie'), findsOneWidget);
       },
     );
 
@@ -808,7 +843,7 @@ void main() {
         );
 
         await pushPastAnnouncement(tester, 5);
-        await tester.tap(find.text('VALEUR MOYENNE'));
+        await tester.tap(find.textContaining('VALEUR MOYENNE'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
@@ -914,7 +949,7 @@ void main() {
         // affiché sur l'étape "Points de vie" (voir `LevelUpHeader`).
         expect(find.text('Encore 1 niveau à valider ensuite'), findsOneWidget);
 
-        await tester.tap(find.text('VALEUR MOYENNE'));
+        await tester.tap(find.textContaining('VALEUR MOYENNE'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('CONTINUER')); // Points de vie -> Aptitudes
         await tester.pumpAndSettle();
