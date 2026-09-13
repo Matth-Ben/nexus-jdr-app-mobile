@@ -703,7 +703,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('3 champs à vérifier avant l\'enregistrement.'),
+      find.text('3 champs nécessitent une correction manuelle avant '
+          'validation'),
       findsOneWidget,
     );
     expect(find.textContaining('Alignement non reconnu'), findsOneWidget);
@@ -712,6 +713,28 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'carte d\'alerte : icône d\'avertissement seule à droite, pas de '
+    'chevron (correctif de conformité visuelle direction-artistique du '
+    '13/09, maquette qui ne montre pas d\'affordance chevron)',
+    (WidgetTester tester) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(buildTestWidget(xmlSource: _multipleAlertsXml));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.chevron_right), findsNothing);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsWidgets);
+
+      final iconCenter = tester.getCenter(
+        find.byIcon(Icons.warning_amber_rounded).first,
+      );
+      final titleCenter = tester.getCenter(
+        find.textContaining('Alignement non reconnu'),
+      );
+      expect(iconCenter.dx, greaterThan(titleCenter.dx));
+    },
+  );
 
   testWidgets(
     'tap "VALIDER LE PERSONNAGE" (≥1 alerte) : ouvre le dialogue "CHAMPS NON '

@@ -204,9 +204,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Text(
                     unresolvedCount == 1
-                        ? '1 champ à vérifier avant l\'enregistrement.'
-                        : '$unresolvedCount champs à vérifier avant '
-                              'l\'enregistrement.',
+                        ? '1 champ nécessite une correction manuelle avant '
+                              'validation'
+                        : '$unresolvedCount champs nécessitent une '
+                              'correction manuelle avant validation',
                     textAlign: TextAlign.center,
                     style: AppTypography.body(
                       fontSize: 13,
@@ -1324,7 +1325,10 @@ class _InfoCard extends StatelessWidget {
 /// signaler un champ d'import XML non reconnu") — réutilisation directe des
 /// tokens visuels déjà appliqués par `AlertBanner`
 /// (`core/widgets/alert_banner.dart`), avec en plus un tap (ouvre la bottom
-/// sheet de correction) et un chevron indiquant l'affordance.
+/// sheet de correction). Icône d'avertissement seule, à droite du contenu —
+/// pas de chevron (corrigé lors du recettage `direction-artistique` du
+/// 13/09, conformément à la maquette qui ne montre pas d'affordance
+/// chevron).
 class _AlertCard extends StatelessWidget {
   const _AlertCard({
     required this.title,
@@ -1359,12 +1363,6 @@ class _AlertCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(
-                Icons.warning_amber_rounded,
-                color: AppColors.accentBrick,
-                size: 20,
-              ),
-              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1387,8 +1385,9 @@ class _AlertCard extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
               const Icon(
-                Icons.chevron_right,
+                Icons.warning_amber_rounded,
                 color: AppColors.accentBrick,
                 size: 20,
               ),
