@@ -14,7 +14,6 @@ import '../../characters/domain/character_identity_formatter.dart';
 import '../../characters/domain/proficiency_bonus.dart';
 import '../../characters/domain/saving_throw_calculator.dart';
 import '../../characters/presentation/widgets/character_ability_score_grid.dart';
-import '../../characters/presentation/widgets/character_appearance_card.dart';
 import '../../characters/presentation/widgets/character_detail_tab_bar.dart';
 import '../../characters/presentation/widgets/character_inventory_tab_body.dart';
 import '../../characters/presentation/widgets/character_saving_throws_card.dart';
@@ -70,9 +69,7 @@ class _SharedCharacterViewScreenState
 
   @override
   Widget build(BuildContext context) {
-    final sharedAsync = ref.watch(
-      sharedCharacterProvider(token: widget.token),
-    );
+    final sharedAsync = ref.watch(sharedCharacterProvider(token: widget.token));
 
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,
@@ -196,10 +193,12 @@ class _CharacterTabBody extends StatelessWidget {
         CharacterAbilityScoreGrid(abilityScores: detail.abilityScores),
         const SizedBox(height: AppSpacing.md),
         CharacterSavingThrowsCard(results: savingThrows),
-        if (CharacterAppearanceCard.hasContent(detail)) ...[
-          const SizedBox(height: AppSpacing.md),
-          CharacterAppearanceCard(detail: detail),
-        ],
+        // `CharacterAppearanceCard` n'est plus insérée ici : réintégrée dans
+        // l'onglet "Histoire" (voir `character_story_tab_body.dart`, réutilisé
+        // tel quel par cet écran ci-dessous pour `CharacterDetailTab.story`) —
+        // la garder aussi ici la ferait apparaître deux fois sur cette fiche
+        // en lecture seule (onglets "Personnage" et "Histoire"), même
+        // principe que le retrait équivalent sur `character_detail_screen.dart`.
       ],
     );
   }
@@ -301,7 +300,11 @@ class _SharedVitalsCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
-          _Gauge(height: 12, ratio: detail.hpRatio, gradient: _hpGradient(detail.hpRatio)),
+          _Gauge(
+            height: 12,
+            ratio: detail.hpRatio,
+            gradient: _hpGradient(detail.hpRatio),
+          ),
           if (detail.temporaryHp > 0) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
@@ -406,11 +409,7 @@ class _InvalidLinkState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.link_off,
-              size: 48,
-              color: AppColors.accentBrick,
-            ),
+            const Icon(Icons.link_off, size: 48, color: AppColors.accentBrick),
             const SizedBox(height: AppSpacing.md),
             Text(
               'Ce lien de partage n\'est plus valide',

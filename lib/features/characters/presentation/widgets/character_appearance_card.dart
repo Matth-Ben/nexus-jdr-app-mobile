@@ -5,11 +5,17 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/character_detail.dart';
 
-/// Carte "Apparence physique" de l'onglet "Personnage" — voir
+/// Carte "Apparence physique" (données structurées) — voir
 /// `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` ligne 45
 /// ("Section apparence physique (âge, taille, poids, yeux, peau,
 /// cheveux)"). Omise de l'implémentation initiale de l'onglet "Personnage"
-/// (commit `28338b8`), ajoutée ici après coup.
+/// (commit `28338b8`), ajoutée ici après coup, puis retirée de cet onglet
+/// (recettage direction-artistique du 13/09 — absente de la maquette de
+/// l'onglet "Personnage") et réintégrée dans l'onglet "Histoire"
+/// (`character_story_tab_body.dart`), à côté du champ texte libre
+/// "Apparence physique" (les deux sont complémentaires : celui-ci est une
+/// description en prose écrite par le joueur, cette carte est la donnée
+/// structurée importée depuis aidedd.org).
 ///
 /// Même gabarit que `character_saving_throws_card.dart` (carte parchemin +
 /// titre en majuscules + `Wrap` de paires label/valeur), sans point de
@@ -18,9 +24,14 @@ import '../../domain/character_detail.dart';
 /// calculés. Un champ vide (une fois `trim`) est omis du `Wrap` plutôt que
 /// d'afficher une valeur vide ("Yeux : —") — voir [hasContent] pour le cas
 /// où les 7 champs sont vides, qui masque la carte entière : à la charge de
-/// l'appelant (voir `presentation/character_detail_screen.dart::_CharacterTabBody`),
+/// l'appelant (voir `presentation/widgets/character_story_tab_body.dart`),
 /// même principe que les cartes optionnelles de l'onglet "Compétences"
 /// (`character_skills_tab_body.dart`, ex. `detail.knownLanguageNames.isNotEmpty`).
+/// Purement affichage : contrairement aux 9 champs de texte libre de
+/// l'onglet "Histoire", ces 7 champs ne viennent que de l'import XML
+/// aidedd.org (jamais de l'assistant de création) — cette carte n'est donc
+/// jamais tappable/éditable, contrairement aux cartes de champ qui
+/// l'entourent dans cet onglet.
 class CharacterAppearanceCard extends StatelessWidget {
   const CharacterAppearanceCard({required this.detail, super.key});
 

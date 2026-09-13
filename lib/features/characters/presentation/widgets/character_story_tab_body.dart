@@ -7,6 +7,7 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_story_field.dart';
 import '../../domain/character_story_fields_resolver.dart';
+import 'character_appearance_card.dart';
 import 'character_gallery_card.dart';
 import 'character_journal_card.dart';
 
@@ -44,6 +45,18 @@ import 'character_journal_card.dart';
 /// ajouter du contenu ; seule la vue de partage en lecture seule
 /// ([actionsDisabled]) les masque entièrement quand elles sont vides
 /// (rien à ajouter, rien à montrer).
+///
+/// [CharacterAppearanceCard] (7 champs structurés Sexe/Âge/Taille/Poids/
+/// Yeux/Peau/Cheveux, alimentés uniquement par l'import XML aidedd.org —
+/// voir sa documentation de classe) est affichée en tête de liste, juste
+/// avant la carte de champ "APPARENCE PHYSIQUE" (texte libre) quand l'une
+/// des deux a du contenu — même principe que
+/// [CharacterGalleryCard]/[CharacterJournalCard] : affichée indépendamment
+/// de [_EmptyStoryState] (les 7 champs structurés peuvent être renseignés
+/// alors que les 9 champs de texte libre sont tous vides). Contrairement
+/// aux cartes de champ de cet onglet, elle n'est jamais tappable : ses
+/// données viennent uniquement de l'import, pas de la sheet d'édition
+/// [onEdit].
 class CharacterStoryTabBody extends StatelessWidget {
   const CharacterStoryTabBody({
     required this.detail,
@@ -77,26 +90,39 @@ class CharacterStoryTabBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
+        if (CharacterAppearanceCard.hasContent(detail)) ...[
+          CharacterAppearanceCard(detail: detail),
+          const SizedBox(height: AppSpacing.md),
+        ],
         if (rows.isEmpty)
           _EmptyStoryState(onEdit: onEdit, actionsDisabled: actionsDisabled)
         else
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0) const SizedBox(height: AppSpacing.md),
-            _StoryFieldRow(fields: rows[i]),
+            _StoryFieldRow(
+              fields: rows[i],
+              onTap: actionsDisabled ? null : onEdit,
+            ),
           ],
         if (CharacterGalleryCard.hasVisibleContent(
           detail,
           actionsDisabled: actionsDisabled,
         )) ...[
           const SizedBox(height: AppSpacing.md),
-          CharacterGalleryCard(detail: detail, actionsDisabled: actionsDisabled),
+          CharacterGalleryCard(
+            detail: detail,
+            actionsDisabled: actionsDisabled,
+          ),
         ],
         if (CharacterJournalCard.hasVisibleContent(
           detail,
           actionsDisabled: actionsDisabled,
         )) ...[
           const SizedBox(height: AppSpacing.md),
-          CharacterJournalCard(detail: detail, actionsDisabled: actionsDisabled),
+          CharacterJournalCard(
+            detail: detail,
+            actionsDisabled: actionsDisabled,
+          ),
         ],
       ],
     );
@@ -106,22 +132,33 @@ class CharacterStoryTabBody extends StatelessWidget {
 /// Une ligne de [CharacterStoryFieldsResolver.resolveRows] : 1 champ (pleine
 /// largeur) ou 2 champs côte à côte (Idéaux/Défauts, seule paire de la
 /// maquette — voir sa documentation de classe).
+///
+/// [onTap] (`null` sur la vue de partage en lecture seule, voir
+/// [CharacterStoryTabBody.actionsDisabled]) ouvre la même sheet d'édition
+/// que menait l'icône crayon du bandeau bois avant son retrait du header
+/// (recettage direction-artistique du 13/09) — l'édition reste globale aux 9
+/// champs à la fois (`character_story_edit_sheet.dart`, pas de découpage
+/// champ par champ côté sheet), donc chaque carte individuelle ouvre la même
+/// sheet complète plutôt qu'une édition ciblée sur son seul champ.
 class _StoryFieldRow extends StatelessWidget {
-  const _StoryFieldRow({required this.fields});
+  const _StoryFieldRow({required this.fields, required this.onTap});
 
   final List<CharacterStoryField> fields;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     if (fields.length == 1) {
-      return _StoryFieldCard(field: fields.single);
+      return _StoryFieldCard(field: fields.single, onTap: onTap);
     }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < fields.length; i++) ...[
           if (i > 0) const SizedBox(width: AppSpacing.sm),
-          Expanded(child: _StoryFieldCard(field: fields[i])),
+          Expanded(
+            child: _StoryFieldCard(field: fields[i], onTap: onTap),
+          ),
         ],
       ],
     );
@@ -130,11 +167,13 @@ class _StoryFieldRow extends StatelessWidget {
 
 /// Titre en majuscules (`AppTypography.display`, même token que les titres
 /// des autres cartes de la fiche, ex. `character_skills_card.dart::"LES 18
-/// COMPÉTENCES"`) au-dessus d'une carte parchemin contenant le texte brut.
+/// COMPÉTENCES"`) au-dessus d'une carte parchemin contenant le texte brut,
+/// tappable dans son ensemble — voir [_StoryFieldRow].
 class _StoryFieldCard extends StatelessWidget {
-  const _StoryFieldCard({required this.field});
+  const _StoryFieldCard({required this.field, required this.onTap});
 
   final CharacterStoryField field;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -149,18 +188,25 @@ class _StoryFieldCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: AppColors.parchmentCard,
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
             borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(
-              color: AppColors.woodLight,
-              width: AppBorders.card,
+            onTap: onTap,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.parchmentCard,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: AppColors.woodLight,
+                  width: AppBorders.card,
+                ),
+              ),
+              child: Text(field.text, style: AppTypography.body(fontSize: 14)),
             ),
           ),
-          child: Text(field.text, style: AppTypography.body(fontSize: 14)),
         ),
       ],
     );

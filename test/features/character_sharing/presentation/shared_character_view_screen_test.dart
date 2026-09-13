@@ -130,53 +130,78 @@ void main() {
     },
   );
 
+  testWidgets('personnage partagé valide : affiche le bandeau "lecture seule", '
+      'l\'identité et les caractéristiques, avec la barre de 5 onglets', (
+    tester,
+  ) async {
+    fakeRepository.detailToReturn = _baseDetail;
+
+    await pumpSharedView(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vue en lecture seule'), findsOneWidget);
+    expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+    expect(find.text('Elfe · Magicienne · Niveau 5'), findsOneWidget);
+    expect(find.text('PERSO'), findsOneWidget);
+    expect(find.text('COMP.'), findsOneWidget);
+    expect(find.text('SORTS'), findsOneWidget);
+    expect(find.text('SAC'), findsOneWidget);
+    expect(find.text('HIST.'), findsOneWidget);
+  });
+
   testWidgets(
-    'personnage partagé valide : affiche le bandeau "lecture seule", '
-    'l\'identité et les caractéristiques, avec la barre de 5 onglets',
+    'carte "Apparence physique" structuree (recettage direction-artistique '
+    'du 13/09) : absente de l\'onglet "Personnage", affichee une seule '
+    'fois sur l\'onglet "Histoire" (pas de doublon entre les deux onglets '
+    'qui reutilisent tous deux CharacterStoryTabBody/le contenu partage)',
     (tester) async {
-      fakeRepository.detailToReturn = _baseDetail;
+      fakeRepository.detailToReturn = _baseDetail.copyWith(sexe: 'Femme');
 
       await pumpSharedView(tester);
       await tester.pumpAndSettle();
 
-      expect(find.text('Vue en lecture seule'), findsOneWidget);
-      expect(find.text('Halltesse Ambrelune'), findsOneWidget);
-      expect(find.text('Elfe · Magicienne · Niveau 5'), findsOneWidget);
-      expect(find.text('PERSO'), findsOneWidget);
-      expect(find.text('COMP.'), findsOneWidget);
-      expect(find.text('SORTS'), findsOneWidget);
-      expect(find.text('SAC'), findsOneWidget);
-      expect(find.text('HIST.'), findsOneWidget);
+      // Onglet "Personnage" (actif par defaut) : ni la carte structuree ni
+      // son contenu ne doivent apparaitre.
+      expect(find.text('APPARENCE PHYSIQUE'), findsNothing);
+      expect(find.text('Sexe'), findsNothing);
+      expect(find.text('Femme'), findsNothing);
+
+      await tester.tap(find.text('HIST.'));
+      await tester.pumpAndSettle();
+
+      // Onglet "Histoire" : une seule occurrence (aucun champ de texte
+      // libre "Apparence physique" renseigne sur _baseDetail, donc seule la
+      // carte structuree peut porter ce titre).
+      expect(find.text('APPARENCE PHYSIQUE'), findsOneWidget);
+      expect(find.text('Sexe'), findsOneWidget);
+      expect(find.text('Femme'), findsOneWidget);
     },
   );
 
-  testWidgets(
-    'affiche la rangée Vitesse/Classe d\'Armure/Inspiration, tuile '
-    '"Inspiration" non tappable (lecture seule, aucun repository de '
-    'partage n\'expose de setInspiration)',
-    (tester) async {
-      fakeRepository.detailToReturn = _baseDetail.copyWith(
-        speed: 9,
-        inspiration: true,
-      );
+  testWidgets('affiche la rangée Vitesse/Classe d\'Armure/Inspiration, tuile '
+      '"Inspiration" non tappable (lecture seule, aucun repository de '
+      'partage n\'expose de setInspiration)', (tester) async {
+    fakeRepository.detailToReturn = _baseDetail.copyWith(
+      speed: 9,
+      inspiration: true,
+    );
 
-      await pumpSharedView(tester);
-      await tester.pumpAndSettle();
+    await pumpSharedView(tester);
+    await tester.pumpAndSettle();
 
-      expect(find.text('VITESSE'), findsOneWidget);
-      expect(find.text('9 m'), findsOneWidget);
-      expect(find.text("CLASSE D'ARMURE"), findsOneWidget);
-      expect(find.text('INSPIRATION'), findsOneWidget);
-      expect(find.text('✓'), findsOneWidget);
+    expect(find.text('VITESSE'), findsOneWidget);
+    expect(find.text('9 m'), findsOneWidget);
+    expect(find.text("CLASSE D'ARMURE"), findsOneWidget);
+    expect(find.text('INSPIRATION'), findsOneWidget);
+    expect(find.text('✓'), findsOneWidget);
 
-      // Tap sans effet : pas d'InkWell/Material tappable pour cette tuile
-      // en lecture seule (`onTapInspiration` non fourni par cet écran).
-      await tester.tap(find.text('INSPIRATION'), warnIfMissed: false);
-      await tester.pumpAndSettle();
+    // Tap sans effet : pas d'InkWell/Material tappable pour cette tuile
+    // en lecture seule (`onTapInspiration` non fourni par cet écran).
+    await tester.tap(find.text('INSPIRATION'), warnIfMissed: false);
+    await tester.pumpAndSettle();
 
-      expect(find.text('✓'), findsOneWidget);
-    },
-  );
+    expect(find.text('✓'), findsOneWidget);
+  });
 
   testWidgets('changer d\'onglet affiche le contenu de l\'onglet Compétences '
       'en lecture seule', (tester) async {
