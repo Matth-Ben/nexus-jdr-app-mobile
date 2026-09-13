@@ -1,12 +1,23 @@
 // Tests de widget du sous-écran "Modifier le profil"
-// (`presentation/profile_edit_screen.dart`) — les 4 lignes affichent la
-// bonne valeur/le bon fallback depuis `currentUserProvider`, chaque ligne
-// ouvre la bonne sheet au tap, bandeau bois avec retour fonctionnel.
+// (`presentation/profile_edit_screen.dart`) — refonte du 13/09/2026
+// (recettage direction-artistique) : édition directe/inline plutôt que 4
+// lignes résumé + sheet, voir la documentation de classe de
+// `ProfileEditScreen`.
 //
-// `currentUserProvider`/`authRepositoryProvider` injectés via
-// `overrideWithValue`, jamais `Supabase.instance.client` — même stratégie
-// que `profile_screen_test.dart`.
+// - Avatar centré + 2 liens "Prendre une photo"/"Choisir dans la galerie",
+//   les deux ouvrent `showAvatarEditSheet`.
+// - Champ "Pseudo" inline, prérempli, piloté par un bouton "Enregistrer" en
+//   bas d'écran (désactivé si inchangé/vide) — logique de sauvegarde reprise
+//   de `edit_display_name_sheet_test.dart` (même double `_FakeAuthRepository`
+//   à `gate`/`errorToThrow`, mêmes scénarios réseau).
+// - Champ "E-mail" visuellement désactivé, tap ouvre `showChangeEmailSheet`.
+// - Ligne "Changer le mot de passe", tap ouvre `showChangePasswordSheet`.
+//
+// `currentUserProvider`/`authRepositoryProvider`/`connectivityCheckerProvider`
+// injectés via `overrideWithValue`, jamais `Supabase.instance.client` — même
+// stratégie que `profile_screen_test.dart`.
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -15,12 +26,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/core/widgets/primary_button.dart';
+import 'package:personnages/core/widgets/profile_avatar.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
+import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/presentation/profile_edit_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakeAuthRepository implements AuthRepository {
+  final Completer<void> gate = Completer<void>();
+  bool gateUpdateDisplayName = false;
+
+  int updateDisplayNameCallCount = 0;
+  String? lastDisplayName;
+  Object? errorToThrow;
+
+  @override
+  Future<void> updateDisplayName({required String? displayName}) async {
+    updateDisplayNameCallCount++;
+    lastDisplayName = displayName;
+    if (gateUpdateDisplayName) await gate.future;
+    final error = errorToThrow;
+    if (error != null) throw error;
+  }
+
   @override
   Future<void> deleteAccount() async {}
 
@@ -43,9 +73,6 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> resetPasswordForEmail({required String email}) async {}
 
   @override
-  Future<void> updateDisplayName({required String? displayName}) async {}
-
-  @override
   Future<void> updatePassword({required String newPassword}) async {}
 
   @override
@@ -58,9 +85,13 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> removeAvatar() async {}
 }
 
-class _AlwaysOnlineConnectivityChecker implements ConnectivityChecker {
+class _FakeConnectivityChecker implements ConnectivityChecker {
+  _FakeConnectivityChecker({required this.connected});
+
+  final bool connected;
+
   @override
-  Future<bool> hasConnection() async => true;
+  Future<bool> hasConnection() async => connected;
 
   @override
   Stream<bool> get onConnectivityRestored => const Stream.empty();
@@ -81,14 +112,19 @@ User _fakeUser({
   );
 }
 
-Future<void> _pumpScreen(WidgetTester tester, {required User? user}) async {
+Future<_FakeAuthRepository> _pumpScreen(
+  WidgetTester tester, {
+  required User? user,
+  bool connected = true,
+}) async {
+  final repository = _FakeAuthRepository();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         currentUserProvider.overrideWithValue(user),
-        authRepositoryProvider.overrideWithValue(_FakeAuthRepository()),
+        authRepositoryProvider.overrideWithValue(repository),
         connectivityCheckerProvider.overrideWithValue(
-          _AlwaysOnlineConnectivityChecker(),
+          _FakeConnectivityChecker(connected: connected),
         ),
       ],
       child: MaterialApp.router(
@@ -117,6 +153,7 @@ Future<void> _pumpScreen(WidgetTester tester, {required User? user}) async {
   );
   await tester.tap(find.text('Ouvrir'));
   await tester.pumpAndSettle();
+  return repository;
 }
 
 void main() {
@@ -126,114 +163,309 @@ void main() {
     expect(find.text('MODIFIER LE PROFIL'), findsOneWidget);
   });
 
-  testWidgets(
-    'ligne "Pseudo" : affiche le pseudo courant, ou "Aventurier" si vide '
-    '(même fallback que `profile_screen.dart`)',
-    (tester) async {
-      await _pumpScreen(tester, user: _fakeUser(fullName: 'Aranea'));
-      expect(find.text('Pseudo'), findsOneWidget);
-      expect(find.text('Aranea'), findsOneWidget);
-    },
-  );
+  group('Avatar', () {
+    testWidgets(
+      'affiche les 2 liens "Prendre une photo"/"Choisir dans la galerie"',
+      (tester) async {
+        await _pumpScreen(tester, user: _fakeUser());
 
-  testWidgets('ligne "Pseudo" : "Aventurier" quand `full_name` est absent', (
-    tester,
-  ) async {
-    await _pumpScreen(tester, user: _fakeUser());
-    expect(find.text('Aventurier'), findsOneWidget);
-  });
+        expect(find.text('Prendre une photo'), findsOneWidget);
+        expect(find.text('Choisir dans la galerie'), findsOneWidget);
+      },
+    );
 
-  testWidgets(
-    'ligne "Avatar" : "Aucune photo" sans `avatar_url`, "Photo définie" '
-    'sinon',
-    (tester) async {
-      await _pumpScreen(tester, user: _fakeUser());
-      expect(find.text('Avatar'), findsOneWidget);
-      expect(find.text('Aucune photo'), findsOneWidget);
+    testWidgets(
+      'taper "Prendre une photo" ouvre le sheet de choix caméra/galerie',
+      (tester) async {
+        await _pumpScreen(tester, user: _fakeUser());
 
-      await _pumpScreen(
-        tester,
-        user: _fakeUser(avatarUrl: 'https://exemple.com/avatar.png'),
-      );
-      expect(find.text('Photo définie'), findsOneWidget);
-    },
-  );
+        await tester.tap(find.text('Prendre une photo'));
+        await tester.pumpAndSettle();
 
-  testWidgets(
-    'ligne "Mot de passe" : valeur fixe masquée, jamais le vrai mot de '
-    'passe',
-    (tester) async {
-      await _pumpScreen(tester, user: _fakeUser());
-      expect(find.text('Mot de passe'), findsOneWidget);
-      expect(find.text('••••••••'), findsOneWidget);
-    },
-  );
+        // `Icons.photo_camera_outlined` n'existe que dans les lignes du
+        // sheet (`avatar_edit_sheet.dart`), jamais sur cet écran (badge
+        // caméra en `Icons.photo_camera` plein) : preuve non ambiguë que le
+        // sheet est bien ouvert, malgré le libellé partagé avec le lien de
+        // l'écran resté affiché en arrière-plan.
+        expect(find.byIcon(Icons.photo_camera_outlined), findsOneWidget);
+        expect(find.text('Choisir dans la galerie'), findsNWidgets(2));
+      },
+    );
 
-  testWidgets('ligne "Email" : affiche l\'adresse courante', (tester) async {
-    await _pumpScreen(tester, user: _fakeUser(email: 'aranea@exemple.com'));
-    expect(find.text('Email'), findsOneWidget);
-    expect(find.text('aranea@exemple.com'), findsOneWidget);
-  });
+    testWidgets(
+      'taper "Choisir dans la galerie" ouvre le même sheet de choix',
+      (tester) async {
+        await _pumpScreen(tester, user: _fakeUser());
 
-  testWidgets('taper "Pseudo" ouvre la sheet "PSEUDO"', (tester) async {
-    await _pumpScreen(tester, user: _fakeUser());
+        await tester.tap(find.text('Choisir dans la galerie'));
+        await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Pseudo'));
-    await tester.pumpAndSettle();
+        expect(find.byIcon(Icons.photo_camera_outlined), findsOneWidget);
+        expect(find.text('Retirer la photo'), findsNothing);
+      },
+    );
 
-    expect(find.text('PSEUDO'), findsOneWidget);
-  });
+    testWidgets(
+      'taper l\'avatar lui-même ouvre aussi le sheet, avec "Retirer la '
+      'photo" si un avatar est déjà défini',
+      (tester) async {
+        await _pumpScreen(
+          tester,
+          user: _fakeUser(avatarUrl: 'https://exemple.com/avatar.png'),
+        );
 
-  testWidgets('taper "Avatar" ouvre le sheet de choix de source', (
-    tester,
-  ) async {
-    await _pumpScreen(tester, user: _fakeUser());
+        await tester.tap(find.byType(ProfileAvatar));
+        await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Avatar'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Prendre une photo'), findsOneWidget);
-    expect(find.text('Choisir dans la galerie'), findsOneWidget);
-    expect(
-      find.text('Retirer la photo'),
-      findsNothing,
-      reason: 'sans avatar déjà défini, pas d\'option de suppression',
+        expect(find.text('Retirer la photo'), findsOneWidget);
+      },
     );
   });
 
-  testWidgets(
-    'taper "Avatar" avec un avatar déjà défini propose "Retirer la photo"',
-    (tester) async {
-      await _pumpScreen(
-        tester,
-        user: _fakeUser(avatarUrl: 'https://exemple.com/avatar.png'),
-      );
+  group('Pseudo', () {
+    testWidgets('préremplit le champ depuis `full_name`, pas le repli '
+        '"Aventurier"', (tester) async {
+      await _pumpScreen(tester, user: _fakeUser(fullName: 'Aranea'));
 
-      await tester.tap(find.text('Avatar'));
+      final field = tester.widget<TextFormField>(find.byType(TextFormField));
+      expect(field.controller!.text, 'Aranea');
+      expect(find.text('Aventurier'), findsNothing);
+    });
+
+    testWidgets('champ vide quand `full_name` est absent', (tester) async {
+      await _pumpScreen(tester, user: _fakeUser());
+
+      final field = tester.widget<TextFormField>(find.byType(TextFormField));
+      expect(field.controller!.text, isEmpty);
+    });
+
+    testWidgets('"Enregistrer" désactivé tant que le pseudo est inchangé', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, user: _fakeUser(fullName: 'Aranea'));
+
+      final button = tester.widget<PrimaryButton>(
+        find.widgetWithText(PrimaryButton, 'ENREGISTRER'),
+      );
+      expect(button.onPressed, isNull);
+    });
+
+    testWidgets('"Enregistrer" désactivé tant que le pseudo saisi est vide', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, user: _fakeUser(fullName: 'Aranea'));
+
+      await tester.enterText(find.byType(TextFormField), '   ');
+      await tester.pump();
+
+      final button = tester.widget<PrimaryButton>(
+        find.widgetWithText(PrimaryButton, 'ENREGISTRER'),
+      );
+      expect(button.onPressed, isNull);
+    });
+
+    testWidgets(
+      '"Enregistrer" activé dès que le pseudo saisi diffère et n\'est pas '
+      'vide',
+      (tester) async {
+        await _pumpScreen(tester, user: _fakeUser(fullName: 'Aranea'));
+
+        await tester.enterText(find.byType(TextFormField), 'Nouveau nom');
+        await tester.pump();
+
+        final button = tester.widget<PrimaryButton>(
+          find.widgetWithText(PrimaryButton, 'ENREGISTRER'),
+        );
+        expect(button.onPressed, isNotNull);
+      },
+    );
+
+    testWidgets(
+      '"Enregistrer" : envoie la valeur trimée, affiche le SnackBar de '
+      'confirmation, se redésactive ensuite',
+      (tester) async {
+        final repository = await _pumpScreen(
+          tester,
+          user: _fakeUser(fullName: 'Aranea'),
+        );
+
+        await tester.enterText(find.byType(TextFormField), '  Nouveau nom  ');
+        await tester.pump();
+        await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+        await tester.pumpAndSettle();
+
+        expect(repository.updateDisplayNameCallCount, 1);
+        expect(repository.lastDisplayName, 'Nouveau nom');
+        expect(find.text('Pseudo mis à jour.'), findsOneWidget);
+
+        final button = tester.widget<PrimaryButton>(
+          find.widgetWithText(PrimaryButton, 'ENREGISTRER'),
+        );
+        expect(
+          button.onPressed,
+          isNull,
+          reason:
+              'redevient désactivé, le pseudo enregistré est la '
+              'nouvelle référence',
+        );
+      },
+    );
+
+    testWidgets(
+      'pendant la sauvegarde : "Enregistrer" en isLoading, champ pseudo '
+      'désactivé',
+      (tester) async {
+        final repository = await _pumpScreen(
+          tester,
+          user: _fakeUser(fullName: 'Aranea'),
+        );
+        repository.gateUpdateDisplayName = true;
+
+        await tester.enterText(find.byType(TextFormField), 'Nouveau nom');
+        await tester.pump();
+        await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+        await tester.pump();
+
+        // Plus de `Text('ENREGISTRER')` pendant `isLoading` (remplacé par le
+        // spinner) : `find.widgetWithText` ne le trouverait plus, on
+        // retrouve le bouton par type (seul `PrimaryButton` de cet écran).
+        final button = tester.widget<PrimaryButton>(find.byType(PrimaryButton));
+        expect(button.isLoading, isTrue);
+
+        final field = tester.widget<TextFormField>(find.byType(TextFormField));
+        expect(field.enabled, isFalse);
+
+        repository.gate.complete();
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'aucune connexion réseau : bandeau hors-ligne honnête, aucun appel '
+      'réseau tenté, texte saisi préservé',
+      (tester) async {
+        final repository = await _pumpScreen(
+          tester,
+          user: _fakeUser(fullName: 'Aranea'),
+          connected: false,
+        );
+
+        await tester.enterText(
+          find.byType(TextFormField),
+          'Pas encore enregistré',
+        );
+        await tester.pump();
+        await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining("n'a pas pu être enregistrée"),
+          findsOneWidget,
+        );
+        expect(repository.updateDisplayNameCallCount, 0);
+        expect(
+          tester
+              .widget<TextFormField>(find.byType(TextFormField))
+              .controller!
+              .text,
+          'Pas encore enregistré',
+        );
+      },
+    );
+
+    testWidgets(
+      'AuthFailure : bandeau d\'alerte inline affiche `failure.message`',
+      (tester) async {
+        final repository = await _pumpScreen(
+          tester,
+          user: _fakeUser(fullName: 'Aranea'),
+        );
+        repository.errorToThrow = const AuthFailure('Erreur serveur.');
+
+        await tester.enterText(find.byType(TextFormField), 'Nouveau nom');
+        await tester.pump();
+        await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Erreur serveur.'), findsOneWidget);
+      },
+    );
+
+    testWidgets('échec inattendu (pas une AuthFailure) : bandeau générique', (
+      tester,
+    ) async {
+      final repository = await _pumpScreen(
+        tester,
+        user: _fakeUser(fullName: 'Aranea'),
+      );
+      repository.errorToThrow = Exception('boom');
+
+      await tester.enterText(find.byType(TextFormField), 'Nouveau nom');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Retirer la photo'), findsOneWidget);
-    },
-  );
-
-  testWidgets('taper "Mot de passe" ouvre la sheet "MOT DE PASSE"', (
-    tester,
-  ) async {
-    await _pumpScreen(tester, user: _fakeUser());
-
-    await tester.tap(find.text('Mot de passe'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('MOT DE PASSE'), findsOneWidget);
+      expect(
+        find.text("Impossible d'enregistrer les modifications. Réessayez."),
+        findsOneWidget,
+      );
+    });
   });
 
-  testWidgets('taper "Email" ouvre la sheet "ADRESSE EMAIL"', (tester) async {
-    await _pumpScreen(tester, user: _fakeUser());
+  group('E-mail', () {
+    testWidgets('affiche l\'adresse courante dans un champ non éditable', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, user: _fakeUser(email: 'aranea@exemple.com'));
 
-    await tester.tap(find.text('Email'));
-    await tester.pumpAndSettle();
+      expect(find.text('E-mail'), findsOneWidget);
+      expect(find.text('aranea@exemple.com'), findsOneWidget);
+      // Aucun `TextFormField` pour ce champ : seul celui du pseudo existe.
+      expect(find.byType(TextFormField), findsOneWidget);
+    });
 
-    expect(find.text('ADRESSE EMAIL'), findsOneWidget);
+    testWidgets('affiche le texte d\'aide sur le lien de confirmation', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, user: _fakeUser());
+
+      expect(
+        find.text(
+          "Modifier l'e-mail envoie un lien de confirmation à la nouvelle "
+          'adresse.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('taper le champ ouvre la sheet "ADRESSE EMAIL"', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, user: _fakeUser(email: 'aranea@exemple.com'));
+
+      await tester.tap(find.text('aranea@exemple.com'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ADRESSE EMAIL'), findsOneWidget);
+    });
+  });
+
+  group('Mot de passe', () {
+    testWidgets('affiche la ligne "Changer le mot de passe"', (tester) async {
+      await _pumpScreen(tester, user: _fakeUser());
+
+      expect(find.text('Changer le mot de passe'), findsOneWidget);
+      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+    });
+
+    testWidgets('taper la ligne ouvre la sheet "MOT DE PASSE"', (tester) async {
+      await _pumpScreen(tester, user: _fakeUser());
+
+      await tester.tap(find.text('Changer le mot de passe'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('MOT DE PASSE'), findsOneWidget);
+    });
   });
 
   testWidgets('le bandeau bois propose un retour fonctionnel', (tester) async {
