@@ -1,4 +1,5 @@
 import '../domain/character_adventure.dart';
+import '../domain/character_class_choice.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_detail_class_row.dart';
@@ -65,6 +66,20 @@ abstract final class CharacterDetailRowMapper {
 
   static Set<String> _singletonIdSet(dynamic id) =>
       id != null ? {id.toString()} : const {};
+
+  /// Identifiants de sous-classe (`character_classes.subclass_id`), une
+  /// ligne peut ne pas en avoir (`null`, personnage n'ayant pas encore choisi
+  /// de sous-classe) — voir [CharacterDetailClassRow.subclassName].
+  static Set<String> collectSubclassIds(Map<String, dynamic> row) {
+    final ids = <String>{};
+    for (final classRow in classRowsOf(row)) {
+      final id = classRow['subclass_id'];
+      if (id != null) {
+        ids.add(id.toString());
+      }
+    }
+    return ids;
+  }
 
   /// Identifiants de classe en `int` (pas stringifiés), pour interroger
   /// `class_features.class_id` (`.inFilter`) — distinct de [collectClassIds]
@@ -262,9 +277,7 @@ abstract final class CharacterDetailRowMapper {
         photoRow['created_at'] as String? ?? '',
       );
       if (id == null || url == null || createdAt == null) continue;
-      photos.add(
-        CharacterGalleryPhoto(id: id, url: url, createdAt: createdAt),
-      );
+      photos.add(CharacterGalleryPhoto(id: id, url: url, createdAt: createdAt));
     }
     photos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return photos;
@@ -299,6 +312,83 @@ abstract final class CharacterDetailRowMapper {
   ) {
     final raw = row['character_feature_uses'] as List<dynamic>?;
     return raw?.cast<Map<String, dynamic>>() ?? const [];
+  }
+
+  static List<Map<String, dynamic>> classOptionRowsOf(
+    Map<String, dynamic> row,
+  ) {
+    final raw = row['character_class_options'] as List<dynamic>?;
+    return raw?.cast<Map<String, dynamic>>() ?? const [];
+  }
+
+  /// Construit les [CharacterClassChoice] de la carte "CHOIX DE CLASSE" à
+  /// partir des lignes brutes `character_class_options` (voir
+  /// [classOptionRowsOf]) — [featureNames] est la même map déjà résolue pour
+  /// la carte "APTITUDES DE CLASSE" (`class_features`/`translations`,
+  /// `field_name = 'name'`) : les 2 seules aptitudes qui produisent une
+  /// ligne `character_class_options` ("Style de combat"/"Ennemi juré", voir
+  /// `data/character_repository.dart::_applyChoice`) sont déjà attaintes au
+  /// niveau où le choix a été fait, donc déjà présentes dans cette map —
+  /// aucune requête `translations` supplémentaire nécessaire. Une ligne dont
+  /// `class_feature_id` ne résout à aucun nom (ne devrait pas arriver) est
+  /// ignorée plutôt que d'afficher un libellé vide.
+  static List<CharacterClassChoice> parseClassChoices(
+    List<Map<String, dynamic>> rows, {
+    required Map<String, String> featureNames,
+  }) {
+    final choices = <CharacterClassChoice>[];
+    for (final row in rows) {
+      final classFeatureId = row['class_feature_id'];
+      final chosenValue = row['chosen_value'] as String?;
+      if (classFeatureId == null || chosenValue == null) continue;
+      final featureName = featureNames[classFeatureId.toString()];
+      if (featureName == null) continue;
+      choices.add(
+        CharacterClassChoice(
+          featureName: featureName,
+          chosenValue: chosenValue,
+        ),
+      );
+    }
+    return choices;
+  }
+
+  static List<Map<String, dynamic>> invocationRowsOf(Map<String, dynamic> row) {
+    final raw = row['character_invocations'] as List<dynamic>?;
+    return raw?.cast<Map<String, dynamic>>() ?? const [];
+  }
+
+  /// Identifiants d'invocation (`character_invocations.invocation_id`) à
+  /// résoudre via `translations` (`entity_type = 'invocation'`), en `int`.
+  static Set<int> collectInvocationIds(List<Map<String, dynamic>> rows) {
+    final ids = <int>{};
+    for (final row in rows) {
+      final invocationId = row['invocation_id'];
+      if (invocationId is num) {
+        ids.add(invocationId.toInt());
+      }
+    }
+    return ids;
+  }
+
+  /// Noms d'invocations connues déjà résolus (carte "INVOCATIONS CONNUES") —
+  /// même principe que [parseLanguageNames]. Une ligne sans `invocation_id`
+  /// exploitable est ignorée.
+  static List<String> parseInvocationNames(
+    List<Map<String, dynamic>> rows, {
+    required Map<String, String> invocationNames,
+  }) {
+    final names = <String>[];
+    for (final row in rows) {
+      final invocationId = row['invocation_id'];
+      if (invocationId is num) {
+        names.add(
+          invocationNames[invocationId.toInt().toString()] ??
+              'Invocation #$invocationId',
+        );
+      }
+    }
+    return names;
   }
 
   /// Parse les lignes brutes `character_spell_slots` (slot_level,
@@ -443,6 +533,7 @@ abstract final class CharacterDetailRowMapper {
   static List<CharacterDetailClassRow> parseClasses(
     Map<String, dynamic> row, {
     required Map<String, String> classNames,
+    Map<String, String> subclassNames = const {},
   }) {
     final rows = <CharacterDetailClassRow>[];
     for (final classRow in classRowsOf(row)) {
@@ -450,6 +541,7 @@ abstract final class CharacterDetailRowMapper {
       if (classId == null) continue;
       final key = classId.toString();
       final nestedClass = classRow['classes'] as Map<String, dynamic>?;
+      final subclassId = classRow['subclass_id'];
       rows.add(
         CharacterDetailClassRow(
           classId: classId as Object,
@@ -467,6 +559,9 @@ abstract final class CharacterDetailRowMapper {
           weaponProficiencies: parseWeaponProficiencies(
             nestedClass?['weapon_proficiencies'],
           ),
+          subclassName: subclassId != null
+              ? subclassNames[subclassId.toString()]
+              : null,
         ),
       );
     }
@@ -523,12 +618,15 @@ abstract final class CharacterDetailRowMapper {
     required Map<String, String> classNames,
     required Map<String, String> backgroundNames,
     required Map<String, String> alignmentNames,
+    Map<String, String> subclassNames = const {},
     List<CharacterSkillRow> skills = const [],
     List<CharacterClassFeature> classFeatures = const [],
+    List<CharacterClassChoice> classChoices = const [],
     List<String> toolProficiencyNames = const [],
     List<String> knownLanguageNames = const [],
     List<CharacterSpellEntry> spells = const [],
     List<CharacterSpellSlot> spellSlots = const [],
+    List<String> knownInvocationNames = const [],
     List<CharacterInventoryItem> inventory = const [],
     List<CharacterAdventure> adventures = const [],
     int? speed,
@@ -537,7 +635,11 @@ abstract final class CharacterDetailRowMapper {
     final subraceId = row['subrace_id'];
     final backgroundId = row['background_id'];
     final alignmentId = row['alignment_id'];
-    final parsedClasses = parseClasses(row, classNames: classNames);
+    final parsedClasses = parseClasses(
+      row,
+      classNames: classNames,
+      subclassNames: subclassNames,
+    );
 
     return CharacterDetail(
       id: row['id'] as String,
@@ -551,10 +653,12 @@ abstract final class CharacterDetailRowMapper {
       backgroundName: backgroundId != null
           ? backgroundNames[backgroundId.toString()]
           : null,
+      backgroundCustomText: row['background_custom_text'] as String?,
       alignmentName: alignmentId != null
           ? alignmentNames[alignmentId.toString()]
           : null,
       classes: parsedClasses,
+      classChoices: classChoices,
       xp: (row['xp'] as num?)?.toInt() ?? 0,
       currentHp: (row['current_hp'] as num?)?.toInt() ?? 0,
       maxHp: (row['max_hp'] as num?)?.toInt() ?? 0,
@@ -574,6 +678,7 @@ abstract final class CharacterDetailRowMapper {
       spells: spells,
       spellSlots: spellSlots,
       pactSpellSlot: parsePactSpellSlot(row),
+      knownInvocationNames: knownInvocationNames,
       currencyGp: (row['currency_gp'] as num?)?.toInt() ?? 0,
       currencyPp: (row['currency_pp'] as num?)?.toInt() ?? 0,
       currencyEp: (row['currency_ep'] as num?)?.toInt() ?? 0,

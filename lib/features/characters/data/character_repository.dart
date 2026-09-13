@@ -839,6 +839,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             subrace_id,
             race_custom_text,
             background_id,
+            background_custom_text,
             alignment_id,
             sexe,
             age,
@@ -861,7 +862,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             allies_text,
             features_text,
             treasure_text,
-            character_classes(class_id, level, is_primary, hit_dice_spent, classes(saving_throw_proficiencies, hit_die, armor_proficiencies, weapon_proficiencies)),
+            character_classes(class_id, subclass_id, level, is_primary, hit_dice_spent, classes(saving_throw_proficiencies, hit_die, armor_proficiencies, weapon_proficiencies)),
             character_ability_scores(ability_id, score),
             character_skill_proficiencies(skill_id, proficiency),
             character_tool_proficiencies(tool_id, custom_text),
@@ -870,6 +871,8 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_spell_slots(slot_level, slots_total, slots_used),
             character_pact_slots(slot_level, slots_total, slots_used),
             character_feature_uses(class_feature_id, uses_remaining),
+            character_class_options(class_feature_id, level, chosen_value),
+            character_invocations(invocation_id),
             character_inventory(
               id, item_id, custom_name, quantity, equipped, is_attuned, notes,
               items(
@@ -3018,6 +3021,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
       fieldName: 'name',
       entityIds: CharacterDetailRowMapper.collectAlignmentIds(row),
     );
+    // Nom de sous-classe, carte "CHOIX DE CLASSE" (`character_classes
+    // .subclass_id`) — gap de lecture trouvé en construisant l'export XML
+    // (voir le README) : cette colonne était déjà écrite par la montée de
+    // niveau mais jamais relue par cette méthode avant cet ajout.
+    final subclassNameRows = await _fetchTranslationRows(
+      entityType: 'subclass',
+      fieldName: 'name',
+      entityIds: CharacterDetailRowMapper.collectSubclassIds(row),
+    );
+    // Noms d'invocations occultistes connues, carte "INVOCATIONS CONNUES"
+    // (`character_invocations`, déjà embarquée dans [row]) — même gap de
+    // lecture que ci-dessus.
+    final invocationNameRows = await _fetchTranslationRows(
+      entityType: 'invocation',
+      fieldName: 'name',
+      entityIds: CharacterDetailRowMapper.collectInvocationIds(
+        CharacterDetailRowMapper.invocationRowsOf(row),
+      ).map((id) => id.toString()).toSet(),
+    );
 
     // Les 18 [CharacterSkillRow] de l'onglet "Compétences" : `skills` est
     // une table de référence à peuplement fixe (pas liée à `characters`),
@@ -3175,6 +3197,8 @@ class SupabaseCharacterRepository implements CharacterRepository {
       'classNameRows': classNameRows,
       'backgroundNameRows': backgroundNameRows,
       'alignmentNameRows': alignmentNameRows,
+      'subclassNameRows': subclassNameRows,
+      'invocationNameRows': invocationNameRows,
       'skillRows': skillRows,
       'skillNameRows': skillNameRows,
       'classFeatureRows': classFeatureRows,
@@ -3213,6 +3237,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final alignmentNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['alignmentNameRows']),
     );
+    final subclassNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['subclassNameRows']),
+    );
+    final invocationNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['invocationNameRows']),
+    );
+    final knownInvocationNames = CharacterDetailRowMapper.parseInvocationNames(
+      CharacterDetailRowMapper.invocationRowsOf(row),
+      invocationNames: invocationNames,
+    );
 
     final skillNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['skillNameRows']),
@@ -3247,6 +3281,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
           usesRemaining: usesRemaining,
         ),
     ];
+    final classChoices = CharacterDetailRowMapper.parseClassChoices(
+      CharacterDetailRowMapper.classOptionRowsOf(row),
+      featureNames: classFeatureNames,
+    );
 
     final toolNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['toolNameRows']),
@@ -3311,12 +3349,15 @@ class SupabaseCharacterRepository implements CharacterRepository {
       classNames: classNames,
       backgroundNames: backgroundNames,
       alignmentNames: alignmentNames,
+      subclassNames: subclassNames,
       skills: skills,
       classFeatures: classFeatures,
+      classChoices: classChoices,
       toolProficiencyNames: toolProficiencyNames,
       knownLanguageNames: knownLanguageNames,
       spells: spells,
       spellSlots: CharacterDetailRowMapper.parseSpellSlots(row),
+      knownInvocationNames: knownInvocationNames,
       inventory: inventory,
       adventures: adventures,
     );

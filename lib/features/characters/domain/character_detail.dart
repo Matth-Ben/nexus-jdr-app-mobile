@@ -3,6 +3,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'armor_class_calculator.dart';
 import 'carrying_capacity_calculator.dart';
 import 'character_adventure.dart';
+import 'character_class_choice.dart';
 import 'character_class_feature.dart';
 import 'character_detail_class_row.dart';
 import 'character_gallery_photo.dart';
@@ -49,6 +50,18 @@ abstract class CharacterDetail with _$CharacterDetail {
 
     /// Nom d'historique traduit, `null` si `background_id` est nul.
     String? backgroundName,
+
+    /// Texte libre d'historique personnalisé (`characters
+    /// .background_custom_text`), `null` si le personnage a un historique du
+    /// catalogue — même principe que [raceCustomText] ci-dessus, mutuellement
+    /// exclusif avec [backgroundName] en pratique. Alimenté uniquement par
+    /// l'import XML (`<backSpe>` d'aidedd.org, voir
+    /// `features/xml_import/data/xml_import_repository.dart`) : l'assistant
+    /// de création manuel ne propose pas d'historique personnalisé. Gap de
+    /// lecture trouvé en construisant l'export XML (voir le README, section
+    /// "Reste à faire") : cette colonne était déjà écrite mais jamais relue
+    /// par `fetchCharacterDetail` avant cet ajout.
+    String? backgroundCustomText,
 
     /// Nom d'alignement traduit, `null` si `alignment_id` est nul.
     String? alignmentName,
@@ -127,6 +140,12 @@ abstract class CharacterDetail with _$CharacterDetail {
     @Default(<CharacterClassFeature>[])
     List<CharacterClassFeature> classFeatures,
 
+    /// Choix de classe résolus par niveau ("Style de combat"/"Ennemi juré",
+    /// `character_class_options`) — onglet "Compétences", carte "CHOIX DE
+    /// CLASSE". Même gap de lecture que [classes]`.subclassName` — voir la
+    /// documentation de classe de [CharacterClassChoice].
+    @Default(<CharacterClassChoice>[]) List<CharacterClassChoice> classChoices,
+
     /// Tokens de maîtrise d'armures, fusionnés/dédupliqués sur toutes les
     /// classes du personnage — onglet "Compétences", carte "MAÎTRISES
     /// D'ARMURES". Voir `data/character_detail_row_mapper.dart`
@@ -166,6 +185,14 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// `data/character_repository.dart::_resetSpellSlots`). Toujours
     /// `isPact: true` quand non `null`.
     CharacterSpellSlot? pactSpellSlot,
+
+    /// Invocations occultistes connues (`character_invocations`), noms déjà
+    /// traduits — onglet "Compétences", carte "INVOCATIONS CONNUES".
+    /// Toujours vide pour un personnage non Occultiste. Même gap de lecture
+    /// que [pactSpellSlot] avant cet ajout : écrites par la montée de niveau
+    /// (`data/character_repository.dart::applyLevelUp`, choix
+    /// "invocation"), jamais relues par `fetchCharacterDetail`.
+    @Default(<String>[]) List<String> knownInvocationNames,
 
     /// Monnaie du personnage (`characters.currency_gp/pp/ep/sp/cp`) — onglet
     /// "Inventaire", rangée de stat boxes (voir
@@ -239,7 +266,8 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// (`character_photos`), triée du plus récent au plus ancien (voir
     /// `data/character_detail_row_mapper.dart::parseGalleryPhotos`) — voir
     /// `presentation/widgets/character_gallery_card.dart`.
-    @Default(<CharacterGalleryPhoto>[]) List<CharacterGalleryPhoto> galleryPhotos,
+    @Default(<CharacterGalleryPhoto>[])
+    List<CharacterGalleryPhoto> galleryPhotos,
 
     /// Journal de campagne / notes de séance de l'onglet "Histoire"
     /// (`character_journal_entries`), même ordre que [galleryPhotos] — voir

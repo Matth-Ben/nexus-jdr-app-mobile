@@ -31,17 +31,27 @@ abstract final class CharacterIdentityFormatter {
 
   /// "Historique : {nom} · {Alignement}", avec chaque segment omis s'il n'est
   /// pas résolu — `null` (ligne entièrement masquée) seulement si les deux
-  /// sont absents à la fois.
+  /// sont absents à la fois. Un historique personnalisé
+  /// ([CharacterDetail.backgroundCustomText], import XML uniquement)
+  /// remplace le nom résolu, même priorité que [_raceSegment] pour la race.
   static String? subtitleLine2(CharacterDetail detail) {
-    if (detail.backgroundName == null && detail.alignmentName == null) {
+    final background = _backgroundSegment(detail);
+    if (background == null && detail.alignmentName == null) {
       return null;
     }
     final segments = <String>[
-      if (detail.backgroundName case final background?)
-        'Historique : $background',
+      if (background != null) 'Historique : $background',
       ?detail.alignmentName,
     ];
     return segments.join(' · ');
+  }
+
+  static String? _backgroundSegment(CharacterDetail detail) {
+    final custom = detail.backgroundCustomText?.trim();
+    if (custom != null && custom.isNotEmpty) {
+      return custom;
+    }
+    return detail.backgroundName;
   }
 
   static String? _raceSegment(CharacterDetail detail) {

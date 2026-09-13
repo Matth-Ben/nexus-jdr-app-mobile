@@ -8,27 +8,32 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/features/characters/domain/character_class_choice.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
+import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_skill_row.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_skills_tab_body.dart';
 
 CharacterDetail _detail({
+  List<CharacterDetailClassRow> classes = const [],
   List<CharacterSkillRow> skills = const [],
   List<CharacterClassFeature> classFeatures = const [],
+  List<CharacterClassChoice> classChoices = const [],
   List<String> armorProficiencyNames = const [],
   List<String> weaponProficiencyNames = const [],
   List<String> toolProficiencyNames = const [],
   List<String> knownLanguageNames = const [],
+  List<String> knownInvocationNames = const [],
   List<CharacterSpellEntry> spells = const [],
   List<CharacterSpellSlot> spellSlots = const [],
 }) {
   return CharacterDetail(
     id: '1',
     name: 'Test',
-    classes: const [],
+    classes: classes,
     xp: 0,
     currentHp: 10,
     maxHp: 10,
@@ -36,10 +41,12 @@ CharacterDetail _detail({
     abilityScores: const {'dex': 16, 'int': 10},
     skills: skills,
     classFeatures: classFeatures,
+    classChoices: classChoices,
     armorProficiencyNames: armorProficiencyNames,
     weaponProficiencyNames: weaponProficiencyNames,
     toolProficiencyNames: toolProficiencyNames,
     knownLanguageNames: knownLanguageNames,
+    knownInvocationNames: knownInvocationNames,
     spells: spells,
     spellSlots: spellSlots,
   );
@@ -263,8 +270,8 @@ void main() {
   );
 
   testWidgets(
-    'les cartes armures/armes/outils/langues n\'apparaissent pas quand '
-    'vides',
+    'les cartes armures/armes/outils/langues/choix de classe/invocations '
+    'n\'apparaissent pas quand vides',
     (tester) async {
       await _pump(tester, _detail());
 
@@ -273,6 +280,119 @@ void main() {
       expect(find.text("MAÎTRISES D'OUTILS"), findsNothing);
       expect(find.text('LANGUES CONNUES'), findsNothing);
       expect(find.text('APTITUDES DE CLASSE'), findsNothing);
+      expect(find.text('CHOIX DE CLASSE'), findsNothing);
+      expect(find.text('INVOCATIONS CONNUES'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'la carte "CHOIX DE CLASSE" affiche la sous-classe choisie — gap de '
+    'lecture trouvé en construisant l\'export XML (voir le README) : cette '
+    'colonne était déjà écrite mais jamais relue par fetchCharacterDetail '
+    'avant cet ajout',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          classes: const [
+            CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 12,
+              className: 'Barbare',
+              level: 3,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+              subclassName: 'Guerrier totem',
+            ),
+          ],
+        ),
+      );
+
+      expect(find.text('CHOIX DE CLASSE'), findsOneWidget);
+      expect(find.text('Sous-classe'), findsOneWidget);
+      expect(find.text('Guerrier totem'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'multiclassage avec 2 sous-classes choisies : le label est désambiguïsé '
+    'par nom de classe',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          classes: const [
+            CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 3,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+              subclassName: 'Chevalier occulte',
+            ),
+            CharacterDetailClassRow(
+              classId: 2,
+              hitDie: 8,
+              className: 'Roublard',
+              level: 2,
+              isPrimary: false,
+              savingThrowProficiencies: [],
+              subclassName: 'Assassin',
+            ),
+          ],
+        ),
+      );
+
+      expect(find.text('Sous-classe (Guerrier)'), findsOneWidget);
+      expect(find.text('Chevalier occulte'), findsOneWidget);
+      expect(find.text('Sous-classe (Roublard)'), findsOneWidget);
+      expect(find.text('Assassin'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'la carte "CHOIX DE CLASSE" affiche le style de combat/ennemi juré '
+    'résolus par niveau',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          classChoices: const [
+            CharacterClassChoice(
+              featureName: 'Style de combat',
+              chosenValue: 'Défense',
+            ),
+            CharacterClassChoice(
+              featureName: 'Ennemi juré',
+              chosenValue: 'Morts-vivants',
+            ),
+          ],
+        ),
+      );
+
+      expect(find.text('CHOIX DE CLASSE'), findsOneWidget);
+      expect(find.text('Style de combat'), findsOneWidget);
+      expect(find.text('Défense'), findsOneWidget);
+      expect(find.text('Ennemi juré'), findsOneWidget);
+      expect(find.text('Morts-vivants'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'la carte "INVOCATIONS CONNUES" affiche les noms quand non vide — même '
+    'gap de lecture (occultiste)',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          knownInvocationNames: const ['Vue démoniaque', 'Décharge agonisante'],
+        ),
+      );
+
+      expect(find.text('INVOCATIONS CONNUES'), findsOneWidget);
+      expect(find.text('Vue démoniaque'), findsOneWidget);
+      expect(find.text('Décharge agonisante'), findsOneWidget);
     },
   );
 
@@ -303,29 +423,57 @@ void main() {
   });
 
   testWidgets(
-    'les cartes s\'affichent dans l\'ordre Compétences -> Armures -> Armes '
-    '-> Outils -> Langues',
+    'les cartes s\'affichent dans l\'ordre Choix de classe -> Compétences -> '
+    'Armures -> Armes -> Outils -> Langues -> Invocations',
     (tester) async {
+      // Viewport agrandi (même technique que
+      // `character_inventory_tab_body_test.dart`) : avec les 7 cartes de ce
+      // test simultanément non vides, le contenu dépasse la hauteur de test
+      // par défaut — `ListView` (SliverList) ne construit que les enfants
+      // visibles/dans le cacheExtent, `getTopLeft` échouerait sinon sur les
+      // dernières cartes jamais montées.
+      final originalSize = tester.view.physicalSize;
+      final originalRatio = tester.view.devicePixelRatio;
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.physicalSize = originalSize;
+        tester.view.devicePixelRatio = originalRatio;
+      });
+
       await _pump(
         tester,
         _detail(
+          classChoices: const [
+            CharacterClassChoice(
+              featureName: 'Style de combat',
+              chosenValue: 'Défense',
+            ),
+          ],
           armorProficiencyNames: const ['légère'],
           weaponProficiencyNames: const ['courantes'],
           toolProficiencyNames: const ['Outils de forgeron'],
           knownLanguageNames: const ['Nain'],
+          knownInvocationNames: const ['Vue démoniaque'],
         ),
       );
 
+      final choicesY = tester.getTopLeft(find.text('CHOIX DE CLASSE')).dy;
       final skillsY = tester.getTopLeft(find.text('LES 18 COMPÉTENCES')).dy;
       final armorY = tester.getTopLeft(find.text("MAÎTRISES D'ARMURES")).dy;
       final weaponY = tester.getTopLeft(find.text("MAÎTRISES D'ARMES")).dy;
       final toolY = tester.getTopLeft(find.text("MAÎTRISES D'OUTILS")).dy;
       final languageY = tester.getTopLeft(find.text('LANGUES CONNUES')).dy;
+      final invocationY = tester
+          .getTopLeft(find.text('INVOCATIONS CONNUES'))
+          .dy;
 
+      expect(choicesY, lessThan(skillsY));
       expect(skillsY, lessThan(armorY));
       expect(armorY, lessThan(weaponY));
       expect(weaponY, lessThan(toolY));
       expect(toolY, lessThan(languageY));
+      expect(languageY, lessThan(invocationY));
     },
   );
 

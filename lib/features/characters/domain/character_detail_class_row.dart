@@ -20,6 +20,7 @@ class CharacterDetailClassRow {
     this.hitDiceSpent = 0,
     this.armorProficiencies = const [],
     this.weaponProficiencies = const [],
+    this.subclassName,
   });
 
   /// Identifiant de la classe (`classes.id`, entier côté Supabase, gardé en
@@ -95,4 +96,15 @@ class CharacterDetailClassRow {
   /// Même principe que [armorProficiencies], pour
   /// `classes.weapon_proficiencies` (carte "MAÎTRISES D'ARMES").
   final List<String> weaponProficiencies;
+
+  /// Nom de sous-classe traduit (`character_classes.subclass_id`), `null`
+  /// tant que le personnage n'a pas encore choisi de sous-classe (l'assistant
+  /// de création ne le propose pas — seule la montée de niveau écrit cette
+  /// colonne, voir `data/character_repository.dart::applyLevelUp`,
+  /// `LevelUpChoiceKind.subclass`). Onglet "Compétences", carte "CHOIX DE
+  /// CLASSE" (`presentation/widgets/character_class_choices_card.dart`) —
+  /// gap de lecture trouvé en construisant l'export XML (voir le README,
+  /// section "Reste à faire") : cette colonne était déjà écrite mais jamais
+  /// relue par `fetchCharacterDetail` avant cet ajout.
+  final String? subclassName;
 }

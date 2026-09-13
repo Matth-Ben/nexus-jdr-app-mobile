@@ -5,7 +5,9 @@ import '../../domain/character_detail.dart';
 import '../../domain/proficiency_bonus.dart';
 import '../../domain/skill_bonus_calculator.dart';
 import 'character_armor_proficiencies_card.dart';
+import 'character_class_choices_card.dart';
 import 'character_class_features_card.dart';
+import 'character_invocations_card.dart';
 import 'character_languages_card.dart';
 import 'character_skills_card.dart';
 import 'character_tool_proficiencies_card.dart';
@@ -56,6 +58,10 @@ class CharacterSkillsTabBody extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
         ],
+        if (CharacterClassChoicesCard.hasContent(detail)) ...[
+          CharacterClassChoicesCard(detail: detail),
+          const SizedBox(height: AppSpacing.md),
+        ],
         CharacterSkillsCard(results: skillResults),
         if (detail.armorProficiencyNames.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
@@ -74,6 +80,10 @@ class CharacterSkillsTabBody extends StatelessWidget {
         if (detail.knownLanguageNames.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           CharacterLanguagesCard(names: detail.knownLanguageNames),
+        ],
+        if (detail.knownInvocationNames.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          CharacterInvocationsCard(names: detail.knownInvocationNames),
         ],
       ],
     );

@@ -8,6 +8,7 @@ CharacterDetail _detail({
   String? subraceName,
   String? raceCustomText,
   String? backgroundName,
+  String? backgroundCustomText,
   String? alignmentName,
   List<CharacterDetailClassRow> classes = const [],
 }) {
@@ -18,6 +19,7 @@ CharacterDetail _detail({
     subraceName: subraceName,
     raceCustomText: raceCustomText,
     backgroundName: backgroundName,
+    backgroundCustomText: backgroundCustomText,
     alignmentName: alignmentName,
     classes: classes,
     xp: 0,
@@ -164,5 +166,32 @@ void main() {
       final detail = _detail(alignmentName: 'Neutre');
       expect(CharacterIdentityFormatter.subtitleLine2(detail), 'Neutre');
     });
+
+    test('historique personnalisé (import XML, <backSpe>) affiché à la '
+        'place du nom résolu — même priorité que raceCustomText pour la '
+        'race, gap de lecture trouvé en construisant l\'export XML (voir le '
+        'README)', () {
+      final detail = _detail(
+        backgroundName:
+            'Noble', // ne devrait jamais être renseigné en même temps
+        backgroundCustomText: 'Ancien marin déchu',
+        alignmentName: 'Neutre',
+      );
+      expect(
+        CharacterIdentityFormatter.subtitleLine2(detail),
+        'Historique : Ancien marin déchu · Neutre',
+      );
+    });
+
+    test(
+      'historique personnalisé seul (sans alignement) n\'est pas masqué',
+      () {
+        final detail = _detail(backgroundCustomText: 'Vagabond');
+        expect(
+          CharacterIdentityFormatter.subtitleLine2(detail),
+          'Historique : Vagabond',
+        );
+      },
+    );
   });
 }

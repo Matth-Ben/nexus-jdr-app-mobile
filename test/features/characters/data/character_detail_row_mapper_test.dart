@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/data/character_detail_row_mapper.dart';
+import 'package:personnages/features/characters/domain/character_class_choice.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 
 Map<String, dynamic> _row({
@@ -888,8 +889,16 @@ void main() {
       final row = _row();
       row['character_photos'] = [
         {'id': 'photo-1', 'url': null, 'created_at': '2026-09-01T10:00:00Z'},
-        {'id': null, 'url': 'https://example.com/2.png', 'created_at': '2026-09-01T10:00:00Z'},
-        {'id': 'photo-3', 'url': 'https://example.com/3.png', 'created_at': null},
+        {
+          'id': null,
+          'url': 'https://example.com/2.png',
+          'created_at': '2026-09-01T10:00:00Z',
+        },
+        {
+          'id': 'photo-3',
+          'url': 'https://example.com/3.png',
+          'created_at': null,
+        },
       ];
 
       expect(CharacterDetailRowMapper.parseGalleryPhotos(row), isEmpty);
@@ -979,6 +988,135 @@ void main() {
 
       expect(detail.journalEntries, hasLength(1));
       expect(detail.journalEntries.single.body, 'Première note.');
+    });
+  });
+
+  group('CharacterDetailRowMapper — gap de lecture (sous-classe/choix de '
+      'classe/invocations/historique personnalisé, voir le README)', () {
+    test('collectSubclassIds collecte les subclass_id non nuls des lignes '
+        'character_classes', () {
+      final row = _row(
+        characterClasses: const [
+          {'class_id': 5, 'subclass_id': 13, 'level': 3, 'is_primary': true},
+          {'class_id': 7, 'subclass_id': null, 'level': 1, 'is_primary': false},
+        ],
+      );
+      expect(CharacterDetailRowMapper.collectSubclassIds(row), {'13'});
+    });
+
+    test('parseClasses résout subclassName depuis subclassNames, null tant '
+        'qu\'aucune sous-classe n\'est choisie (assistant de création ne le '
+        'propose pas encore)', () {
+      final row = _row(
+        characterClasses: const [
+          {'class_id': 5, 'subclass_id': 13, 'level': 3, 'is_primary': true},
+          {'class_id': 7, 'subclass_id': null, 'level': 1, 'is_primary': false},
+        ],
+      );
+      final classes = CharacterDetailRowMapper.parseClasses(
+        row,
+        classNames: const {'5': 'Barbare', '7': 'Guerrier'},
+        subclassNames: const {'13': 'Guerrier totem'},
+      );
+      expect(classes[0].subclassName, 'Guerrier totem');
+      expect(classes[1].subclassName, isNull);
+    });
+
+    test('parseClassChoices résout le nom de l\'aptitude (déjà présent dans '
+        'featureNames, même map que la carte "APTITUDES DE CLASSE") + la '
+        'valeur choisie telle quelle', () {
+      final rows = [
+        {'class_feature_id': 100, 'level': 1, 'chosen_value': 'Défense'},
+        {'class_feature_id': 101, 'level': 1, 'chosen_value': 'Morts-vivants'},
+      ];
+      final choices = CharacterDetailRowMapper.parseClassChoices(
+        rows,
+        featureNames: const {'100': 'Style de combat', '101': 'Ennemi juré'},
+      );
+      expect(choices, hasLength(2));
+      expect(choices[0].featureName, 'Style de combat');
+      expect(choices[0].chosenValue, 'Défense');
+      expect(choices[1].featureName, 'Ennemi juré');
+      expect(choices[1].chosenValue, 'Morts-vivants');
+    });
+
+    test('parseClassChoices ignore une ligne dont class_feature_id ne '
+        'résout à aucun nom (ne devrait pas arriver)', () {
+      final rows = [
+        {'class_feature_id': 999, 'level': 1, 'chosen_value': 'Défense'},
+      ];
+      expect(
+        CharacterDetailRowMapper.parseClassChoices(
+          rows,
+          featureNames: const {},
+        ),
+        isEmpty,
+      );
+    });
+
+    test('collectInvocationIds/parseInvocationNames résolvent les noms '
+        'd\'invocations occultistes connues', () {
+      final rows = [
+        {'invocation_id': 1},
+        {'invocation_id': 2},
+      ];
+      expect(CharacterDetailRowMapper.collectInvocationIds(rows), {1, 2});
+
+      final names = CharacterDetailRowMapper.parseInvocationNames(
+        rows,
+        invocationNames: const {
+          '1': 'Décharge agonisante',
+          '2': 'Vue démoniaque',
+        },
+      );
+      expect(names, ['Décharge agonisante', 'Vue démoniaque']);
+    });
+
+    test('parseInvocationNames retombe sur un libellé générique pour un '
+        'invocation_id sans traduction résolue', () {
+      final names = CharacterDetailRowMapper.parseInvocationNames([
+        {'invocation_id': 99},
+      ], invocationNames: const {});
+      expect(names, ['Invocation #99']);
+    });
+
+    test('toCharacterDetail expose backgroundCustomText/classChoices/'
+        'knownInvocationNames tels quels quand fournis, backgroundCustomText '
+        'reste null par défaut', () {
+      final row = _row();
+      row['background_custom_text'] = 'Vagabond';
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+        classChoices: const [
+          CharacterClassChoice(
+            featureName: 'Style de combat',
+            chosenValue: 'Défense',
+          ),
+        ],
+        knownInvocationNames: const ['Vue démoniaque'],
+      );
+
+      expect(detail.backgroundCustomText, 'Vagabond');
+      expect(detail.classChoices.single.chosenValue, 'Défense');
+      expect(detail.knownInvocationNames, ['Vue démoniaque']);
+
+      final withoutCustomText = CharacterDetailRowMapper.toCharacterDetail(
+        _row(),
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+      expect(withoutCustomText.backgroundCustomText, isNull);
+      expect(withoutCustomText.classChoices, isEmpty);
+      expect(withoutCustomText.knownInvocationNames, isEmpty);
     });
   });
 }
