@@ -5,7 +5,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/dashed_border_painter.dart';
+import 'package:personnages/core/widgets/portrait_frame.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_card.dart';
 
@@ -105,12 +107,65 @@ void main() {
 
   testWidgets('le nom et le résumé restent toujours affichés, quelle que '
       'soit la variante', (tester) async {
-    await _pump(
-      tester,
-      _baseSummary.copyWith(isArchived: true, isDead: true),
-    );
+    await _pump(tester, _baseSummary.copyWith(isArchived: true, isDead: true));
 
     expect(find.text('Halltesse Ambrelune'), findsOneWidget);
     expect(find.text('Elfe · Magicienne · Niv. 5'), findsOneWidget);
+  });
+
+  group('couleur thématique du portrait selon la classe (recettage '
+      'direction artistique du 13/09)', () {
+    Color? portraitClassThemeColor(WidgetTester tester) {
+      final frame = tester.widget<PortraitFrame>(find.byType(PortraitFrame));
+      return frame.classThemeColor;
+    }
+
+    testWidgets('Magicien : accentTeal', (tester) async {
+      await _pump(tester, _baseSummary.copyWith(className: 'Magicien'));
+
+      expect(portraitClassThemeColor(tester), AppColors.accentTeal);
+    });
+
+    testWidgets('Guerrier : accentBrick', (tester) async {
+      await _pump(tester, _baseSummary.copyWith(className: 'Guerrier'));
+
+      expect(portraitClassThemeColor(tester), AppColors.accentBrick);
+    });
+
+    testWidgets('Clerc : accentBlue', (tester) async {
+      await _pump(tester, _baseSummary.copyWith(className: 'Clerc'));
+
+      expect(portraitClassThemeColor(tester), AppColors.accentBlue);
+    });
+
+    testWidgets(
+      "les autres classes (ex. Roublard, Barbare, Paladin) n'ont pas de "
+      'couleur thématique : le fallback pointillé neutre existant reste '
+      'inchangé',
+      (tester) async {
+        for (final className in ['Roublard', 'Barbare', 'Paladin']) {
+          await _pump(tester, _baseSummary.copyWith(className: className));
+
+          expect(portraitClassThemeColor(tester), isNull);
+        }
+      },
+    );
+
+    testWidgets(
+      "un personnage sans classe résolue n'a pas de couleur thématique",
+      (tester) async {
+        await _pump(
+          tester,
+          CharacterSummary(
+            id: _baseSummary.id,
+            name: _baseSummary.name,
+            level: _baseSummary.level,
+            xp: _baseSummary.xp,
+          ),
+        );
+
+        expect(portraitClassThemeColor(tester), isNull);
+      },
+    );
   });
 }

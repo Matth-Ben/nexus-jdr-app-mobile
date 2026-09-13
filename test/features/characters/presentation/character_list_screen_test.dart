@@ -987,6 +987,31 @@ void main() {
     );
   });
 
+  testWidgets(
+    'en-tête : le bouton "groupes" est affiché à gauche du bouton "profil" '
+    '(conforme à la maquette "Liste des personnages" de '
+    '`09-maquettes-captures.md`, recettage direction artistique du 13/09)',
+    (WidgetTester tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      final groupsX = tester.getTopLeft(find.byIcon(Icons.groups_outlined)).dx;
+      final profileX = tester
+          .getTopLeft(find.byIcon(Icons.person_outline).last)
+          .dx;
+
+      expect(
+        groupsX,
+        lessThan(profileX),
+        reason:
+            'le bouton "groupes" doit précéder le bouton "profil" '
+            'horizontalement dans l\'en-tête',
+      );
+    },
+  );
+
   group('recherche/filtre (docs/cahier-des-charges/'
       '11-fonctionnalites-a-ajouter.md section 2)', () {
     const characters = [
@@ -1139,35 +1164,34 @@ void main() {
       },
     );
 
-    testWidgets(
-      'recherche ET filtre de classe combinés (intersection)',
-      (WidgetTester tester) async {
-        fakeCharacterRepository.charactersToReturn = characters;
+    testWidgets('recherche ET filtre de classe combinés (intersection)', (
+      WidgetTester tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = characters;
 
-        await tester.pumpWidget(buildTestWidget());
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.byIcon(Icons.filter_list));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Roublard'));
-        await tester.tap(find.text('APPLIQUER'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.filter_list));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Roublard'));
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
 
-        await tester.enterText(
-          find.widgetWithText(TextField, 'Rechercher un personnage'),
-          'Sylvi',
-        );
-        await tester.pumpAndSettle();
-        expect(find.text('Sylvi Aubefeuille'), findsOneWidget);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Rechercher un personnage'),
+        'Sylvi',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Sylvi Aubefeuille'), findsOneWidget);
 
-        await tester.enterText(
-          find.widgetWithText(TextField, 'Rechercher un personnage'),
-          'Borgan',
-        );
-        await tester.pumpAndSettle();
-        expect(find.text('Borgan Pierrefort'), findsNothing);
-        expect(find.textContaining('AUCUN RÉSULTAT'), findsOneWidget);
-      },
-    );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Rechercher un personnage'),
+        'Borgan',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Borgan Pierrefort'), findsNothing);
+      expect(find.textContaining('AUCUN RÉSULTAT'), findsOneWidget);
+    });
   });
 }

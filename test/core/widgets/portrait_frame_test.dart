@@ -3,13 +3,15 @@
 // "Un personnage sans portrait affiche une image de substitution générique
 // (silhouette/icône par défaut selon la classe, à défaut une icône neutre)."
 //
-// L'implémentation actuelle retient l'option "icône neutre" (pas encore de
-// dégradé par classe, en attente d'arbitrage direction artistique — voir le
-// commentaire de `lib/core/widgets/portrait_frame.dart`), ce que ces tests
-// verrouillent.
+// Sans `classThemeColor`, l'implémentation retient l'option "icône neutre"
+// (motif pointillé) ; avec `classThemeColor` (recettage direction
+// artistique du 13/09), un fond uni de cette couleur remplace ce motif —
+// voir `lib/core/widgets/portrait_frame.dart`.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/theme/app_colors.dart';
+import 'package:personnages/core/widgets/dashed_border_painter.dart';
 import 'package:personnages/core/widgets/portrait_frame.dart';
 
 Widget _wrap(Widget child) {
@@ -79,5 +81,97 @@ void main() {
 
     final renderSize = tester.getSize(find.byType(PortraitFrame));
     expect(renderSize, const Size(96, 96));
+  });
+
+  group('classThemeColor (recettage direction artistique du 13/09)', () {
+    testWidgets('sans portraitUrl ni classThemeColor, garde le motif pointillé '
+        'neutre inchangé (comportement par défaut)', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(_wrap(const PortraitFrame(portraitUrl: null)));
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is CustomPaint && widget.painter is DashedBorderPainter,
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'sans portraitUrl, avec classThemeColor renseigné, remplace le motif '
+      'pointillé par un fond uni de cette couleur avec une silhouette '
+      'claire par-dessus',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            const PortraitFrame(
+              portraitUrl: null,
+              classThemeColor: AppColors.accentTeal,
+            ),
+          ),
+        );
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is CustomPaint && widget.painter is DashedBorderPainter,
+          ),
+          findsNothing,
+        );
+        expect(find.byIcon(Icons.person_outline), findsOneWidget);
+
+        // `Container` bâtit lui-même un `DecoratedBox` pour la bordure
+        // "cadre de portrait" (bois) : on cible ici spécifiquement celui du
+        // placeholder thématique (fond uni `classThemeColor`, sans bordure)
+        // pour ne pas confondre les deux.
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DecoratedBox &&
+                widget.decoration is BoxDecoration &&
+                (widget.decoration as BoxDecoration).color ==
+                    AppColors.accentTeal,
+          ),
+          findsOneWidget,
+        );
+
+        final icon = tester.widget<Icon>(find.byIcon(Icons.person_outline));
+        expect(icon.color, AppColors.textOnWood);
+      },
+    );
+
+    testWidgets(
+      'avec un portraitUrl défini, classThemeColor est ignoré tant que '
+      "l'image reste valide (pas de fond thématique visible par-dessus)",
+      (WidgetTester tester) async {
+        const url = 'https://example.com/portrait.jpg';
+
+        await tester.pumpWidget(
+          _wrap(
+            const PortraitFrame(
+              portraitUrl: url,
+              classThemeColor: AppColors.accentTeal,
+            ),
+          ),
+        );
+
+        // Aucun `DecoratedBox` avec le fond `classThemeColor` : seul celui
+        // de la bordure "cadre de portrait" (bois) construit par `Container`
+        // reste présent.
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is DecoratedBox &&
+                widget.decoration is BoxDecoration &&
+                (widget.decoration as BoxDecoration).color ==
+                    AppColors.accentTeal,
+          ),
+          findsNothing,
+        );
+        expect(find.byType(Image), findsOneWidget);
+      },
+    );
   });
 }

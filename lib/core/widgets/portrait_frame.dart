@@ -12,10 +12,10 @@ import 'dashed_border_painter.dart';
 ///
 /// Sans [portraitUrl], affiche un motif pointillé neutre `color.text.muted`
 /// (voir maquette `01_liste_personnages.png`, personnage "Sylvi
-/// Aubefeuille") plutôt que le dégradé thématique par classe également
-/// mentionné au design système : ce second fallback n'a pas encore de
-/// mapping classe → dégradé défini nulle part dans le cahier des charges, à
-/// spécifier par la direction artistique avant implémentation.
+/// Aubefeuille"), sauf si [classThemeColor] est fourni : dans ce cas, un
+/// fond uni de cette couleur avec une silhouette claire par-dessus est
+/// affiché à la place (voir mapping classe → couleur documenté sur
+/// [CharacterCard], recettage direction artistique du 13/09).
 ///
 /// [fallbackIcon] (`Icons.person_outline` par défaut, comportement inchangé
 /// pour tous les appelants existants) permet de réutiliser ce même cadre pour
@@ -27,12 +27,19 @@ class PortraitFrame extends StatelessWidget {
     required this.portraitUrl,
     this.size = 64,
     this.fallbackIcon = Icons.person_outline,
+    this.classThemeColor,
     super.key,
   });
 
   final String? portraitUrl;
   final double size;
   final IconData fallbackIcon;
+
+  /// Couleur thématique de la classe du personnage, utilisée uniquement
+  /// comme fond du placeholder affiché en l'absence de [portraitUrl] (voir
+  /// [_ThemedPortraitPlaceholder]). `null` conserve le motif pointillé
+  /// neutre existant.
+  final Color? classThemeColor;
 
   @override
   Widget build(BuildContext context) {
@@ -55,14 +62,21 @@ class PortraitFrame extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: portraitUrl == null
-          ? _EmptyPortraitPlaceholder(icon: fallbackIcon)
+          ? _buildEmptyPlaceholder()
           : Image.network(
               portraitUrl!,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) =>
-                  _EmptyPortraitPlaceholder(icon: fallbackIcon),
+                  _buildEmptyPlaceholder(),
             ),
     );
+  }
+
+  Widget _buildEmptyPlaceholder() {
+    final themeColor = classThemeColor;
+    return themeColor == null
+        ? _EmptyPortraitPlaceholder(icon: fallbackIcon)
+        : _ThemedPortraitPlaceholder(icon: fallbackIcon, color: themeColor);
   }
 }
 
@@ -78,6 +92,26 @@ class _EmptyPortraitPlaceholder extends StatelessWidget {
     return CustomPaint(
       painter: DashedBorderPainter(color: AppColors.textMuted),
       child: Center(child: Icon(icon, color: AppColors.textMuted)),
+    );
+  }
+}
+
+/// Placeholder "dégradé thématique par classe" (recettage direction
+/// artistique du 13/09) : fond uni de [color] avec une silhouette claire
+/// (`AppColors.textOnWood`) par-dessus, affiché à la place de
+/// [_EmptyPortraitPlaceholder] quand [PortraitFrame.classThemeColor] est
+/// renseigné.
+class _ThemedPortraitPlaceholder extends StatelessWidget {
+  const _ThemedPortraitPlaceholder({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(color: color),
+      child: Center(child: Icon(icon, color: AppColors.textOnWood)),
     );
   }
 }

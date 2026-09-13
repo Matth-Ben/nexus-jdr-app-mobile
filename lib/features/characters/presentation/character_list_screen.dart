@@ -360,9 +360,9 @@ class _Header extends StatelessWidget {
         ),
         const Row(
           children: [
-            _ProfileButton(),
-            SizedBox(width: AppSpacing.sm),
             _GroupsButton(),
+            SizedBox(width: AppSpacing.sm),
+            _ProfileButton(),
           ],
         ),
       ],
@@ -405,18 +405,12 @@ class _SearchRow extends StatelessWidget {
             style: AppTypography.body(color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: 'Rechercher un personnage',
-              prefixIcon: const Icon(
-                Icons.search,
-                color: AppColors.textMuted,
-              ),
+              prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
               suffixIcon: controller.text.isEmpty
                   ? null
                   : IconButton(
                       tooltip: 'Effacer',
-                      icon: const Icon(
-                        Icons.close,
-                        color: AppColors.textMuted,
-                      ),
+                      icon: const Icon(Icons.close, color: AppColors.textMuted),
                       onPressed: controller.clear,
                     ),
             ),
@@ -460,11 +454,7 @@ class _FilterButton extends StatelessWidget {
             children: [
               const Icon(Icons.filter_list, color: AppColors.textSecondary),
               if (active)
-                const Positioned(
-                  top: 6,
-                  right: 6,
-                  child: _FilterActiveDot(),
-                ),
+                const Positioned(top: 6, right: 6, child: _FilterActiveDot()),
             ],
           ),
         ),
@@ -660,7 +650,10 @@ class _SearchEmptyState extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 220),
-              child: SecondaryButton(label: 'Réinitialiser', onPressed: onReset),
+              child: SecondaryButton(
+                label: 'Réinitialiser',
+                onPressed: onReset,
+              ),
             ),
           ],
         ),

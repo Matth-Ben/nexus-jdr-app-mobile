@@ -80,6 +80,7 @@ class CharacterCard extends StatelessWidget {
           PortraitFrame(
             portraitUrl: character.portraitUrl,
             fallbackIcon: isDead ? Icons.mood_bad : Icons.person_outline,
+            classThemeColor: _classThemeColor(character.className),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -97,10 +98,7 @@ class CharacterCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   _summaryLine(character),
-                  style: AppTypography.body(
-                    fontSize: 13,
-                    color: summaryColor,
-                  ),
+                  style: AppTypography.body(fontSize: 13, color: summaryColor),
                 ),
                 if (isArchived || isDead) ...[
                   const SizedBox(height: AppSpacing.xs),
@@ -155,6 +153,29 @@ class CharacterCard extends StatelessWidget {
     ];
     return segments.join(' · ');
   }
+
+  /// Couleur thématique du placeholder de portrait (`PortraitFrame`), selon
+  /// la classe du personnage (recettage direction artistique du 13/09) :
+  /// Magicien(ne) → `accentTeal`, Guerrier → `accentBrick`, Clerc →
+  /// `accentBlue`. Toutes les autres classes (Roublard, Barbare, Paladin,
+  /// etc.) et les personnages sans classe résolue gardent `null`, qui
+  /// préserve le motif pointillé neutre existant sur `PortraitFrame`.
+  ///
+  /// [className] provient de la table de référence `classes`
+  /// (`character_repository.dart` via `_fetchTranslatedNames`), jamais
+  /// genré : la consigne d'origine (recettage) mentionnait "Magicienne", qui
+  /// ne correspond à aucune valeur réellement stockée par ce dépôt (voir par
+  /// ex. `lib/features/characters/domain/spellcasting_class_names.dart`, clé
+  /// `'Magicien'`) — adapté ici vers `'Magicien'` pour que le mapping soit
+  /// effectif ; validé avec le chef de projet.
+  Color? _classThemeColor(String? className) {
+    return switch (className) {
+      'Magicien' => AppColors.accentTeal,
+      'Guerrier' => AppColors.accentBrick,
+      'Clerc' => AppColors.accentBlue,
+      _ => null,
+    };
+  }
 }
 
 /// Badge pill "ARCHIVÉ"/"MORT" — voir
@@ -181,7 +202,10 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
       decoration: BoxDecoration(
         color: _background,
         borderRadius: BorderRadius.circular(AppRadius.sm),
