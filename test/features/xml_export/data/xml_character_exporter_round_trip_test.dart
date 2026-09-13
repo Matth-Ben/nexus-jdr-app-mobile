@@ -991,17 +991,16 @@ void main() {
         },
       );
 
-      test('sexe non standard : tag omis ; le reimport retombe sur le jeton '
-          'litteral "(absent)" du resolver import existant, jamais "Non '
-          'renseigne" (chemin de secours mort en pratique dans '
-          'XmlImportSaveDataResolver._resolve, signale sans etre corrige ici '
-          'car hors perimetre de ce chantier export)', () {
+      test('sexe non standard : tag omis ; le reimport retombe sur "Non '
+          'renseigné", jamais le jeton technique "(absent)" du resolver '
+          'import (bug corrigé depuis, voir '
+          'XmlImportSaveDataResolver._labelOf/README)', () {
         final detail = baseDetail(sexe: 'Autre');
         final xml = XmlCharacterExporter.export(detail);
         expect(xml, isNot(contains('<sexe>')));
 
         final data = reimport(detail);
-        expect(data.sexe, '(absent)');
+        expect(data.sexe, 'Non renseigné');
       });
 
       test("alignement non standard : tag omis, alignmentId reste null au "

@@ -66,10 +66,7 @@ abstract final class XmlImportSaveDataResolver {
     final classValue = _recognizedValue(resolved.characterClass);
     final backgroundValue = _recognizedValue(resolved.background);
 
-    final sexeLabel =
-        _recognizedValue(resolved.sexe) ??
-        _rawValueOf(resolved.sexe) ??
-        'Non renseigné';
+    final sexeLabel = _labelOf(resolved.sexe) ?? 'Non renseigné';
 
     final alignmentLabel = _recognizedValue(resolved.alignment);
     final alignmentOption = alignmentLabel == null

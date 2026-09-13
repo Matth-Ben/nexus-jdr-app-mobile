@@ -365,4 +365,48 @@ void main() {
       expect(data.inventoryLines.every((line) => line.itemId == null), isTrue);
     });
   });
+
+  group('XmlImportSaveDataResolver.resolve — sexe', () {
+    test('sexe reconnu -> le libellé aidedd tel quel', () {
+      final data = XmlImportSaveDataResolver.resolve(
+        resolved: _resolved(sexe: const XmlFieldResolution.recognized('Femme')),
+        itemCatalog: _itemCatalog,
+        skillCatalog: _skillCatalog,
+        alignmentCatalog: _alignmentCatalog,
+      );
+
+      expect(data.sexe, 'Femme');
+    });
+
+    test('sexe non résolu avec un jeton brut réel -> le jeton brut, jamais '
+        'perdu', () {
+      final data = XmlImportSaveDataResolver.resolve(
+        resolved: _resolved(
+          sexe: const XmlFieldResolution.unrecognized('Autre'),
+        ),
+        itemCatalog: _itemCatalog,
+        skillCatalog: _skillCatalog,
+        alignmentCatalog: _alignmentCatalog,
+      );
+
+      expect(data.sexe, 'Autre');
+    });
+
+    test('sexe absent du XML (jeton technique "(absent)" de '
+        'XmlCodedFieldResolver) -> "Non renseigné", jamais la chaîne '
+        'technique brute — régression trouvée en construisant l\'export XML '
+        '(voir README) : le repli "Non renseigné" était du code mort, '
+        '_rawValueOf ne renvoyant jamais null pour ce cas', () {
+      final data = XmlImportSaveDataResolver.resolve(
+        resolved: _resolved(
+          sexe: const XmlFieldResolution.unrecognized('(absent)'),
+        ),
+        itemCatalog: _itemCatalog,
+        skillCatalog: _skillCatalog,
+        alignmentCatalog: _alignmentCatalog,
+      );
+
+      expect(data.sexe, 'Non renseigné');
+    });
+  });
 }
