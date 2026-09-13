@@ -9,6 +9,7 @@ import '../../../core/network/connectivity_checker.dart';
 import '../../character_creation/domain/spellcasting_rules.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
+import '../domain/character_list_sorter.dart';
 import '../domain/character_summary.dart';
 import '../domain/currency_kind.dart';
 import '../domain/gallery_photo_storage_path_resolver.dart';
@@ -797,7 +798,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         entityIds: classIds,
       );
 
-      return characterRows
+      final summaries = characterRows
           .map(
             (row) => CharacterRowMapper.toSummary(
               row,
@@ -806,6 +807,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             ),
           )
           .toList();
+      return CharacterListSorter.sort(summaries);
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (_) {
