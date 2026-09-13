@@ -1,8 +1,13 @@
 // Tests de l'écran "Aide et support"
 // (`presentation/profile_help_screen.dart`) :
-// - tests de widget : bandeau bois + retour, les 3 tuiles (icônes dédiées)
-//   et le `SnackBar` "Bientôt disponible" des 2 tuiles placeholder
-//   ("FAQ / Centre d'aide", "Mentions légales / CGU").
+// - tests de widget : bandeau bois + retour, les 3 en-têtes de section
+//   ("QUESTIONS FRÉQUENTES"/"NOUS CONTACTER"/"À PROPOS"), les 3 cartes
+//   `SettingsListCard` regroupant leurs tuiles (icônes dédiées), le
+//   `SnackBar` "Bientôt disponible" des tuiles placeholder (3 questions FAQ +
+//   "Voir toutes les questions" + "Mentions légales / CGU" + "Crédits &
+//   licences"), l'ouverture de la sheet "SIGNALER UN BUG" (déplacée ici
+//   depuis le hub `profile_screen.dart`, voir sa doc de classe), les 2 textes
+//   d'aide sous "NOUS CONTACTER"/"À PROPOS", le pied de page version.
 // - tests unitaires de [buildSupportEmailUri] (adresse/sujet/corps du
 //   message) — même fichier que les tests de widget de l'écran qui
 //   l'utilise, même organisation que `computeAuthRedirect` dans
@@ -15,14 +20,17 @@
 // (adresse/sujet/corps) est testée séparément et de façon pure via
 // [buildSupportEmailUri], sans jamais passer par `launchUrl`.
 //
-// Aucune donnée à charger à l'ouverture de l'écran (100% synchrone) : pas de
-// provider à overrider, contrairement à `profile_privacy_screen_test.dart`.
+// Aucune donnée à charger à l'ouverture de l'écran (100% synchrone en dehors
+// du pied de page version) : pas de provider à overrider hormis
+// `PackageInfo.setMockInitialValues` (canal de plateforme natif lu par
+// `packageInfoProvider`, même mécanisme que `profile_screen_test.dart`).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:personnages/core/widgets/settings_list_card.dart';
 import 'package:personnages/features/profile/presentation/profile_help_screen.dart';
 
 Future<void> _pumpScreen(WidgetTester tester) async {
@@ -57,39 +65,122 @@ Future<void> _pumpScreen(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('affiche le bandeau bois et les 3 tuiles avec leurs icônes '
-      'dédiées', (tester) async {
+  setUpAll(() {
+    PackageInfo.setMockInitialValues(
+      appName: 'Nexus JDR — Personnages',
+      packageName: 'app.nexusjdr.personnages',
+      version: '1.0.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+  });
+
+  testWidgets('affiche le bandeau bois et les 3 en-têtes de section', (
+    tester,
+  ) async {
     await _pumpScreen(tester);
 
     expect(find.text('AIDE ET SUPPORT'), findsOneWidget);
+    expect(find.text('QUESTIONS FRÉQUENTES'), findsOneWidget);
+    expect(find.text('NOUS CONTACTER'), findsOneWidget);
+    expect(find.text('À PROPOS'), findsOneWidget);
+  });
+
+  testWidgets('section "QUESTIONS FRÉQUENTES" : 3 questions + "Voir toutes les '
+      'questions" (icône de lien externe), regroupées dans un '
+      'SettingsListCard', (tester) async {
+    await _pumpScreen(tester);
+
     for (final label in const [
-      'FAQ / Centre d\'aide',
-      'Contacter le support',
-      'Mentions légales / CGU',
+      'Comment importer un personnage aidedd.org ?',
+      'Comment rejoindre l\'histoire de mon MJ ?',
+      'Mes personnages sont-ils sauvegardés hors ligne ?',
+      'Voir toutes les questions',
     ]) {
       expect(find.text(label), findsOneWidget);
     }
-    expect(find.byIcon(Icons.menu_book_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.email_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.gavel_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.chevron_right), findsNWidgets(3));
+    expect(find.byIcon(Icons.north_east), findsOneWidget);
   });
 
   for (final label in const [
-    'FAQ / Centre d\'aide',
+    'Comment importer un personnage aidedd.org ?',
+    'Comment rejoindre l\'histoire de mon MJ ?',
+    'Mes personnages sont-ils sauvegardés hors ligne ?',
+    'Voir toutes les questions',
     'Mentions légales / CGU',
+    'Crédits & licences',
   ]) {
     testWidgets('taper "$label" affiche le SnackBar "Bientôt disponible"', (
       tester,
     ) async {
       await _pumpScreen(tester);
 
+      await tester.ensureVisible(find.text(label));
       await tester.tap(find.text(label));
       await tester.pumpAndSettle();
 
       expect(find.text('Bientôt disponible'), findsOneWidget);
     });
   }
+
+  testWidgets(
+    'section "NOUS CONTACTER" : "Contacter le support" + "Signaler un bug" '
+    'regroupées dans un SettingsListCard, avec leur texte d\'aide',
+    (tester) async {
+      await _pumpScreen(tester);
+
+      expect(find.text('Contacter le support'), findsOneWidget);
+      expect(find.text('Signaler un bug'), findsOneWidget);
+      expect(find.byIcon(Icons.email_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
+      expect(
+        find.text(
+          'Réponse sous 48h en semaine. Un aperçu des infos techniques '
+          "de l'appareil est joint automatiquement.",
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('taper "Signaler un bug" ouvre la sheet "SIGNALER UN BUG"', (
+    tester,
+  ) async {
+    await _pumpScreen(tester);
+
+    await tester.tap(find.text('Signaler un bug'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SIGNALER UN BUG'), findsOneWidget);
+  });
+
+  testWidgets(
+    'section "À PROPOS" : "Mentions légales / CGU" + "Crédits & licences" '
+    'regroupées dans un SettingsListCard, avec son texte d\'aide',
+    (tester) async {
+      await _pumpScreen(tester);
+
+      expect(find.text('Mentions légales / CGU'), findsOneWidget);
+      expect(find.text('Crédits & licences'), findsOneWidget);
+      expect(find.byIcon(Icons.gavel_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.copyright_outlined), findsOneWidget);
+      expect(
+        find.text(
+          'Contenu D&D 5e sous licence Open5e / SRD. Voir les crédits '
+          'complets pour le détail des sources.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('les 3 sections sont bien regroupées dans 3 SettingsListCard', (
+    tester,
+  ) async {
+    await _pumpScreen(tester);
+
+    expect(find.byType(SettingsListCard), findsNWidgets(3));
+  });
 
   testWidgets('le bandeau bois propose un retour fonctionnel', (tester) async {
     await _pumpScreen(tester);
@@ -99,6 +190,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ouvrir'), findsOneWidget);
+  });
+
+  testWidgets('le pied de page affiche la version lue dynamiquement '
+      '(`package_info_plus`, mockée ici via `setMockInitialValues`) — même '
+      'mécanisme que `profile_screen.dart`', (tester) async {
+    await _pumpScreen(tester);
+
+    await tester.ensureVisible(find.text('Nexus JDR — Personnages · v1.0.0'));
+    expect(find.text('Nexus JDR — Personnages · v1.0.0'), findsOneWidget);
   });
 
   group('buildSupportEmailUri', () {

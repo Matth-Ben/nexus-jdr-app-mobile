@@ -12,8 +12,10 @@ import '../../../../core/widgets/selectable_option_tile.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../../bug_report/presentation/providers/bug_report_providers.dart';
 
-/// Ouvre la sheet "Signaler un bug" (tuile "Signaler un bug" de
-/// `profile_screen.dart`) — sheet autoportante calquée sur
+/// Ouvre la sheet "Signaler un bug" (tuile "Signaler un bug" de la section
+/// "NOUS CONTACTER" de `profile_help_screen.dart` — déplacée depuis le hub
+/// `profile_screen.dart` au recettage direction-artistique du 13/09/2026)
+/// — sheet autoportante calquée sur
 /// `character_story_edit_sheet.dart` (voir sa documentation de classe pour le
 /// rationale complet du pattern "attend le résultat réseau sur place") :
 /// envoie elle-même `BugReportRepository.submitReport` et n'appelle

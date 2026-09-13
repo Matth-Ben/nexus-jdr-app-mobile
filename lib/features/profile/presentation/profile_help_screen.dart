@@ -1,50 +1,72 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/menu_tile.dart';
+import '../../../core/widgets/settings_list_card.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import 'providers/package_info_provider.dart';
+import 'widgets/report_bug_sheet.dart';
 
 /// Sous-écran "Aide et support", route `/profile/help` — poussé depuis la
 /// tuile éponyme de `profile_screen.dart` (qui affichait auparavant
 /// `_showComingSoon`, voir la doc de classe de `ProfileScreen`).
 ///
 /// Même gabarit exact que `ProfilePrivacyScreen` (`WoodBackHeader` + corps
-/// parchemin scrollable) : 3 tuiles de menu ("FAQ / Centre d'aide",
-/// "Contacter le support", "Mentions légales / CGU"), sans bandeau
-/// `InfoBanner` ni bouton destructif — spec direction-artistique de la tâche
-/// "Aide et support" (incrément C du chantier "Profil/Paramètres").
+/// parchemin scrollable, en-têtes de section `font.body` 13px/800
+/// `textSecondary` en `Text` inline plutôt qu'un composant dédié — même choix
+/// que `ProfilePrivacyScreen`, jamais `font.display`, réservé aux libellés
+/// capitalisés par le style lui-même) : 3 sections regroupées en
+/// `SettingsListCard` — recettage direction-artistique du 13/09/2026.
 ///
-/// **"Signaler un bug" et "Version de l'app" sont volontairement absents**
-/// de cet écran : le premier est déjà une tuile séparée de `ProfileScreen`
-/// (`showReportBugSheet`), le second déjà affiché en pied de page de
-/// `ProfileScreen` (`_FooterVersion`) — décision déjà actée par le chef de
-/// projet, pas une omission.
+/// - "QUESTIONS FRÉQUENTES" : 3 vraies questions + "Voir toutes les
+///   questions" (icône de fin `Icons.north_east`, même convention que
+///   `ProfilePrivacyScreen` pour une action qui sortirait de l'app/ouvrirait
+///   un centre d'aide dédié) — remplace l'ancienne tuile générique unique
+///   "FAQ / Centre d'aide".
+/// - "NOUS CONTACTER" : "Contacter le support" (déjà existant sur cet écran)
+///   + "Signaler un bug", **déplacée ici depuis le hub `ProfileScreen`**
+///   (retirée de là au recettage du 13/09/2026, voir la doc de classe de
+///   `ProfileScreen` — même action [showReportBugSheet], câblée à
+///   l'identique).
+/// - "À PROPOS" : "Mentions légales / CGU" (déjà existant) + "Crédits &
+///   licences" (nouvelle tuile, pas encore de contenu réel).
 ///
-/// Seule "Contacter le support" est réellement fonctionnelle : ouvre le
-/// client e-mail natif (`url_launcher`) sur une adresse/sujet/corps
-/// pré-remplis (voir [buildSupportEmailUri]). "FAQ / Centre d'aide" et
-/// "Mentions légales / CGU" affichent le même `SnackBar` "Bientôt
-/// disponible" que `ProfileScreen._showComingSoon`/
+/// Aucune des 3 questions FAQ, "Voir toutes les questions", "Crédits &
+/// licences" et "Mentions légales / CGU" ne sont encore implémentées : même
+/// `SnackBar` "Bientôt disponible" que `ProfileScreen._showComingSoon`/
 /// `ProfilePrivacyScreen._showComingSoon`, réutilisé mot pour mot.
+/// "Contacter le support" (ouvre le client e-mail natif via `url_launcher`,
+/// voir [buildSupportEmailUri]) et "Signaler un bug" (ouvre
+/// [showReportBugSheet]) restent les 2 seules actions réellement
+/// fonctionnelles de cet écran.
 ///
-/// Lecture 100% synchrone à l'ouverture (aucune donnée à charger) : ni état
-/// de chargement ni appel réseau ici, même remarque que `ProfileScreen`/
-/// `ProfilePrivacyScreen`. `PackageInfo.fromPlatform()` n'est lu qu'au tap
-/// sur "Contacter le support", pas à l'ouverture de l'écran — pas besoin
-/// d'un provider Riverpod dédié (contrairement à
-/// `providers/package_info_provider.dart`, qui alimente le pied de page
-/// affiché en permanence de `ProfileScreen`) pour un unique appel ponctuel.
-class ProfileHelpScreen extends StatelessWidget {
+/// Pied de page version identique à `ProfileScreen._FooterVersion`
+/// ([_FooterVersion] ci-dessous, dupliqué plutôt qu'extrait en composant
+/// partagé — 2e usage seulement, même convention "dupliquer jusqu'à 2 usages,
+/// extraire au 3e" déjà documentée sur `MenuTile`/`SettingsListCard`) :
+/// réutilise le même `packageInfoProvider` partagé (`keepAlive`), jamais une
+/// 2e lecture indépendante de la version.
+///
+/// Lecture 100% synchrone à l'ouverture pour tout le reste (aucune autre
+/// donnée à charger) : ni état de chargement ni appel réseau ici en dehors du
+/// pied de page, même remarque que `ProfileScreen`/`ProfilePrivacyScreen`.
+/// `PackageInfo.fromPlatform()` n'est lu qu'au tap sur "Contacter le
+/// support", pas à l'ouverture de l'écran (contrairement au pied de page, qui
+/// le lit via `packageInfoProvider` dès la construction) — pas besoin d'un
+/// 2e provider dédié pour cet unique appel ponctuel.
+class ProfileHelpScreen extends ConsumerWidget {
   const ProfileHelpScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,
       body: Column(
@@ -57,24 +79,101 @@ class ProfileHelpScreen extends StatelessWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  MenuTile(
-                    icon: Icons.menu_book_outlined,
-                    label: 'FAQ / Centre d\'aide',
-                    onTap: () => _showComingSoon(context),
+                  const _SectionHeader('QUESTIONS FRÉQUENTES'),
+                  const SizedBox(height: AppSpacing.sm),
+                  SettingsListCard(
+                    children: [
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.file_upload_outlined,
+                        label:
+                            'Comment importer un personnage '
+                            'aidedd.org ?',
+                        onTap: () => _showComingSoon(context),
+                      ),
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.group_add_outlined,
+                        label: 'Comment rejoindre l\'histoire de mon MJ ?',
+                        onTap: () => _showComingSoon(context),
+                      ),
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.cloud_off_outlined,
+                        label:
+                            'Mes personnages sont-ils sauvegardés hors '
+                            'ligne ?',
+                        onTap: () => _showComingSoon(context),
+                      ),
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.menu_book_outlined,
+                        label: 'Voir toutes les questions',
+                        trailingIcon: Icons.north_east,
+                        onTap: () => _showComingSoon(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  const _SectionHeader('NOUS CONTACTER'),
+                  const SizedBox(height: AppSpacing.sm),
+                  SettingsListCard(
+                    children: [
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.email_outlined,
+                        label: 'Contacter le support',
+                        onTap: () => _contactSupport(context),
+                      ),
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.bug_report_outlined,
+                        label: 'Signaler un bug',
+                        onTap: () => showReportBugSheet(context),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  MenuTile(
-                    icon: Icons.email_outlined,
-                    label: 'Contacter le support',
-                    onTap: () => _contactSupport(context),
+                  Text(
+                    'Réponse sous 48h en semaine. Un aperçu des infos '
+                    "techniques de l'appareil est joint automatiquement.",
+                    style: AppTypography.body(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  const _SectionHeader('À PROPOS'),
+                  const SizedBox(height: AppSpacing.sm),
+                  SettingsListCard(
+                    children: [
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.gavel_outlined,
+                        label: 'Mentions légales / CGU',
+                        onTap: () => _showComingSoon(context),
+                      ),
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.copyright_outlined,
+                        label: 'Crédits & licences',
+                        onTap: () => _showComingSoon(context),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  MenuTile(
-                    icon: Icons.gavel_outlined,
-                    label: 'Mentions légales / CGU',
-                    onTap: () => _showComingSoon(context),
+                  Text(
+                    'Contenu D&D 5e sous licence Open5e / SRD. Voir les '
+                    'crédits complets pour le détail des sources.',
+                    style: AppTypography.body(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
                   ),
+                  const SizedBox(height: AppSpacing.lg),
+                  const _FooterVersion(),
                 ],
               ),
             ),
@@ -96,18 +195,19 @@ class ProfileHelpScreen extends StatelessWidget {
     }
   }
 
-  /// Tap sur "FAQ / Centre d'aide"/"Mentions légales / CGU", pas encore
-  /// implémentées (spec direction-artistique de la tâche) — même texte exact
-  /// que `ProfileScreen._showComingSoon`/
-  /// `ProfilePrivacyScreen._showComingSoon`, réutilisé mot pour mot plutôt
-  /// qu'une nouvelle constante.
+  /// Tap sur toute tuile pas encore implémentée (FAQ, "Voir toutes les
+  /// questions", "Mentions légales / CGU", "Crédits & licences" — spec
+  /// direction-artistique de la tâche) — même texte exact que
+  /// `ProfileScreen._showComingSoon`/`ProfilePrivacyScreen._showComingSoon`,
+  /// réutilisé mot pour mot plutôt qu'une nouvelle constante.
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Bientôt disponible')));
   }
 
-  /// Tap sur "Contacter le support" — seule action réellement fonctionnelle
-  /// de cet écran (spec direction-artistique de la tâche).
+  /// Tap sur "Contacter le support" — l'une des 2 seules actions réellement
+  /// fonctionnelles de cet écran (spec direction-artistique de la tâche),
+  /// avec [showReportBugSheet] pour "Signaler un bug".
   ///
   /// `canLaunchUrl` est vérifié *avant* `launchUrl` (jamais une ouverture à
   /// l'aveugle) : `false` affiche un premier `SnackBar` dédié (aucune
@@ -135,6 +235,53 @@ class ProfileHelpScreen extends StatelessWidget {
         const SnackBar(content: Text(_genericMailErrorMessage)),
       );
     }
+  }
+}
+
+/// Titre de section ("QUESTIONS FRÉQUENTES"/"NOUS CONTACTER"/"À PROPOS"),
+/// recréé localement plutôt qu'un composant partagé — même précédent que
+/// `profile_notifications_screen.dart::_SectionHeader`/
+/// `character_creation/presentation/equipment_step_screen.dart::_SectionHeader`
+/// (voir leur doc de classe pour le rationale de la duplication).
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: AppTypography.body(
+        fontSize: 13,
+        fontWeight: FontWeight.w800,
+        color: AppColors.textSecondary,
+      ),
+    );
+  }
+}
+
+/// Pied de page "Nexus JDR — Personnages · vX.Y.Z" — dupliqué à l'identique
+/// depuis `ProfileScreen._FooterVersion` (voir la doc de classe de
+/// [ProfileHelpScreen] pour le rationale de la duplication plutôt qu'une
+/// extraction) : même `packageInfoProvider` partagé, même repli "sans le
+/// numéro de version" pendant la résolution (jamais un état de chargement
+/// dédié pour un pied de page discret).
+class _FooterVersion extends ConsumerWidget {
+  const _FooterVersion();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final version = ref.watch(packageInfoProvider).value?.version;
+    final label = version == null
+        ? 'Nexus JDR — Personnages'
+        : 'Nexus JDR — Personnages · v$version';
+
+    return Text(
+      label,
+      textAlign: TextAlign.center,
+      style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
+    );
   }
 }
 
