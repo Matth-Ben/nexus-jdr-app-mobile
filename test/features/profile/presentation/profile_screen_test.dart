@@ -1,12 +1,14 @@
 // Tests de widget de l'écran "Profil" (`presentation/profile_screen.dart`) —
 // avatar (statique/dynamique selon `user_metadata['avatar_url']`)/nom/e-mail
 // (fallback "Aventurier" quand `user_metadata['full_name']` est absent/vide),
-// bandeau "Compte lié à l'app Histoires", les 5 lignes de menu (navigation
-// vers `ProfileEditScreen` pour "Modifier le profil",
-// `ProfileNotificationsScreen` pour "Notifications",
+// bandeau "Compte lié à l'app Histoires", les 4 lignes de menu regroupées
+// dans un `SettingsListCard` (navigation vers `ProfileEditScreen` pour
+// "Modifier le profil", `ProfileNotificationsScreen` pour "Notifications",
 // `ProfilePrivacyScreen` pour "Confidentialité et données",
-// `ProfileHelpScreen` pour "Aide et support"), bouton "Se déconnecter", pied
-// de page version.
+// `ProfileHelpScreen` pour "Aide et support" — "Signaler un bug" a été
+// retiré du hub au recettage direction-artistique du 13/09/2026, déplacé
+// dans "Aide et support" dans une tâche suivante), bouton "Se déconnecter",
+// pied de page version.
 //
 // `currentUserProvider`/`authRepositoryProvider` injectés via
 // `overrideWithValue`, jamais `Supabase.instance.client` — même stratégie que
@@ -21,6 +23,7 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/core/widgets/settings_list_card.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/data/notification_preferences_repository.dart';
@@ -231,27 +234,30 @@ void main() {
     expect(find.text("Compte lié à l'app Histoires"), findsOneWidget);
   });
 
-  testWidgets('affiche les 5 lignes de menu avec leurs icônes dédiées', (
-    tester,
-  ) async {
-    await pumpProfile(tester, user: _fakeUser());
+  testWidgets(
+    'affiche les 4 lignes de menu (regroupées dans un SettingsListCard) avec '
+    'leurs icônes dédiées, sans "Signaler un bug"',
+    (tester) async {
+      await pumpProfile(tester, user: _fakeUser());
 
-    for (final label in const [
-      'Modifier le profil',
-      'Notifications',
-      'Confidentialité et données',
-      'Aide et support',
-      'Signaler un bug',
-    ]) {
-      expect(find.text(label), findsOneWidget);
-    }
-    expect(find.byIcon(Icons.person_outline), findsOneWidget);
-    expect(find.byIcon(Icons.notifications_none), findsOneWidget);
-    expect(find.byIcon(Icons.privacy_tip_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.help_outline), findsOneWidget);
-    expect(find.byIcon(Icons.bug_report_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.chevron_right), findsNWidgets(5));
-  });
+      for (final label in const [
+        'Modifier le profil',
+        'Notifications',
+        'Confidentialité et données',
+        'Aide et support',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+      expect(find.text('Signaler un bug'), findsNothing);
+      expect(find.byIcon(Icons.person_outline), findsOneWidget);
+      expect(find.byIcon(Icons.notifications_none), findsOneWidget);
+      expect(find.byIcon(Icons.privacy_tip_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.help_outline), findsOneWidget);
+      expect(find.byIcon(Icons.bug_report_outlined), findsNothing);
+      expect(find.byIcon(Icons.chevron_right), findsNWidgets(4));
+      expect(find.byType(SettingsListCard), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'taper "Modifier le profil" pousse `ProfileEditScreen` (`/profile/edit`)',
@@ -262,11 +268,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // `ProfileEditScreen` (route `/profile/edit`) : bandeau bois "MODIFIER
-      // LE PROFIL" + ses 4 lignes, voir `profile_edit_screen_test.dart` pour
-      // le détail de cet écran.
+      // LE PROFIL" + édition inline (pseudo/avatar/e-mail/mot de passe),
+      // voir `profile_edit_screen_test.dart` pour le détail de cet écran
+      // (refonte du 13/09/2026, recettage direction-artistique — l'ancien
+      // patron "4 lignes résumé" n'existe plus).
       expect(find.text('MODIFIER LE PROFIL'), findsOneWidget);
       expect(find.text('Pseudo'), findsOneWidget);
-      expect(find.text('Avatar'), findsOneWidget);
+      expect(find.text('E-mail'), findsOneWidget);
     },
   );
 
@@ -315,19 +323,6 @@ void main() {
     expect(find.byIcon(Icons.person), findsOneWidget);
   });
 
-  testWidgets('taper "Signaler un bug" ouvre la sheet "SIGNALER UN BUG"', (
-    tester,
-  ) async {
-    await pumpProfile(tester, user: _fakeUser());
-
-    await tester.ensureVisible(find.text('Signaler un bug'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Signaler un bug'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('SIGNALER UN BUG'), findsOneWidget);
-  });
-
   testWidgets('taper "Notifications" pousse `ProfileNotificationsScreen` '
       '(`/profile/notifications`)', (tester) async {
     await pumpProfile(tester, user: _fakeUser());
@@ -352,10 +347,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // `ProfilePrivacyScreen` (route `/profile/privacy`) : bandeau bois
-      // "CONFIDENTIALITÉ ET DONNÉES" + ses 3 tuiles, voir
+      // "CONFIDENTIALITÉ" + ses 3 tuiles, voir
       // `profile_privacy_screen_test.dart` pour le détail de cet écran.
-      expect(find.text('CONFIDENTIALITÉ ET DONNÉES'), findsOneWidget);
-      expect(find.text('Export de mes données'), findsOneWidget);
+      expect(find.text('CONFIDENTIALITÉ'), findsOneWidget);
+      expect(find.text('Exporter mes données'), findsOneWidget);
     },
   );
 

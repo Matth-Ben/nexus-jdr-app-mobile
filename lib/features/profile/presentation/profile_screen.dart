@@ -8,10 +8,11 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/destructive_button.dart';
 import '../../../core/widgets/info_banner.dart';
 import '../../../core/widgets/menu_tile.dart';
+import '../../../core/widgets/profile_avatar.dart';
+import '../../../core/widgets/settings_list_card.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import 'providers/package_info_provider.dart';
-import 'widgets/report_bug_sheet.dart';
 
 /// Écran "Profil / paramètres du compte", route `/profile` — dernier écran
 /// de la navigation principale (bouton profil rond de
@@ -61,7 +62,7 @@ class ProfileScreen extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               child: Column(
                 children: [
-                  _ProfileAvatar(avatarUrl: avatarUrl),
+                  ProfileAvatar(avatarUrl: avatarUrl),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     displayName,
@@ -93,34 +94,33 @@ class ProfileScreen extends ConsumerWidget {
                     message: "Compte lié à l'app Histoires",
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  MenuTile(
-                    icon: Icons.person_outline,
-                    label: 'Modifier le profil',
-                    onTap: () => context.push('/profile/edit'),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  MenuTile(
-                    icon: Icons.notifications_none,
-                    label: 'Notifications',
-                    onTap: () => context.push('/profile/notifications'),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  MenuTile(
-                    icon: Icons.privacy_tip_outlined,
-                    label: 'Confidentialité et données',
-                    onTap: () => context.push('/profile/privacy'),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  MenuTile(
-                    icon: Icons.help_outline,
-                    label: 'Aide et support',
-                    onTap: () => context.push('/profile/help'),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  MenuTile(
-                    icon: Icons.bug_report_outlined,
-                    label: 'Signaler un bug',
-                    onTap: () => showReportBugSheet(context),
+                  SettingsListCard(
+                    children: [
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.person_outline,
+                        label: 'Modifier le profil',
+                        onTap: () => context.push('/profile/edit'),
+                      ),
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.notifications_none,
+                        label: 'Notifications',
+                        onTap: () => context.push('/profile/notifications'),
+                      ),
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.privacy_tip_outlined,
+                        label: 'Confidentialité et données',
+                        onTap: () => context.push('/profile/privacy'),
+                      ),
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.help_outline,
+                        label: 'Aide et support',
+                        onTap: () => context.push('/profile/help'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   DestructiveButton(
@@ -148,69 +148,6 @@ class ProfileScreen extends ConsumerWidget {
     } else {
       context.go('/');
     }
-  }
-}
-
-/// "Avatar de profil" du design système (section 4) : cercle 76×76px,
-/// bordure 3px `gold-end` + halo 1px `wood.dark` (même technique de halo que
-/// `PortraitFrame` : `boxShadow` non flouté, `spreadRadius` égal à
-/// `AppBorders.cardEmphasisHalo`) — conservés dans tous les cas, avec ou
-/// sans photo (spec direction-artistique du flux "Modifier le profil").
-/// Sans [avatarUrl] : fond `wood.light` + silhouette `Icons.person`
-/// (comportement historique, inchangé). Avec [avatarUrl] : `ClipOval` +
-/// `Image.network` (`BoxFit.cover`) remplit le cercle — jamais le
-/// traitement "cadre bois sculpté" du portrait de personnage (bordure
-/// `wood.light`, coins `radius.md`), qui reste distinct.
-///
-/// Non interactif ici (pas d'`InkWell`) : le flux d'upload/retrait se fait
-/// depuis `ProfileEditScreen`, pas directement sur cet écran.
-class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({required this.avatarUrl});
-
-  final String? avatarUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final url = avatarUrl;
-    return Container(
-      width: 76,
-      height: 76,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: AppColors.woodLight,
-        shape: BoxShape.circle,
-        border: Border.fromBorderSide(
-          BorderSide(color: AppColors.goldEnd, width: AppBorders.cardEmphasis),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.woodDark,
-            blurRadius: 0,
-            spreadRadius: AppBorders.cardEmphasisHalo,
-          ),
-        ],
-      ),
-      child: url == null || url.isEmpty
-          ? const Icon(Icons.person, size: 40, color: AppColors.textOnWood)
-          : ClipOval(
-              child: Image.network(
-                url,
-                width: 76,
-                height: 76,
-                fit: BoxFit.cover,
-                // Même repli que `PortraitFrame` : ne jamais laisser un
-                // espace vide/une icône d'erreur brute si le chargement
-                // réseau échoue (avatar pas encore retéléchargé, URL
-                // périmée...), retombe silencieusement sur la silhouette par
-                // défaut.
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.person,
-                  size: 40,
-                  color: AppColors.textOnWood,
-                ),
-              ),
-            ),
-    );
   }
 }
 

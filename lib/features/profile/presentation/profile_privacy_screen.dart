@@ -3,36 +3,35 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/widgets/destructive_button.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/destructive_menu_tile.dart';
 import '../../../core/widgets/menu_tile.dart';
+import '../../../core/widgets/settings_list_card.dart';
 import '../../../core/widgets/wood_back_header.dart';
-import 'widgets/delete_account_sheet.dart';
 import 'widgets/device_permissions_sheet.dart';
 import 'widgets/export_data_sheet.dart';
 
-/// Sous-écran "Confidentialité et données", route `/profile/privacy` —
-/// poussé depuis la tuile éponyme de `profile_screen.dart` (qui affichait
-/// auparavant `_showComingSoon`, voir la doc de classe de `ProfileScreen`).
+/// Sous-écran "Confidentialité", route `/profile/privacy` — poussé depuis la
+/// tuile "Confidentialité et données" de `profile_screen.dart` (qui
+/// affichait auparavant `_showComingSoon`, voir la doc de classe de
+/// `ProfileScreen`). Le bandeau bois de cet écran est volontairement plus
+/// court ("CONFIDENTIALITÉ") que le libellé de la tuile qui y mène — recettage
+/// direction-artistique du 13/09/2026.
 ///
 /// Gabarit B identique à `ProfileEditScreen` (`WoodBackHeader` + corps
-/// parchemin scrollable) : 3 tuiles de menu ("Export de mes données",
-/// "Politique de confidentialité", "Gestion des autorisations appareil") +
-/// un bouton destructif isolé ("Supprimer mon compte") — spec
-/// direction-artistique de la tâche "Confidentialité et données". Les tuiles
-/// utilisent le composant partagé `core/widgets/menu_tile.dart` (`MenuTile`,
-/// anciennement `_PrivacyMenuTile` propre à ce fichier, extrait à
-/// l'incrément C du chantier "Profil/Paramètres" une fois `ProfileHelpScreen`
-/// devenu le 3e usage identique — voir la doc de classe de `MenuTile`).
-///
-/// **"Supprimer mon compte" n'est volontairement pas une 4e tuile** : un
-/// `DestructiveButton` séparé, placé en dernier après un espacement
-/// `AppSpacing.lg` (écart assumé par rapport à l'ordre listé dans le
-/// document fonctionnel, cohérent avec le placement de "Se déconnecter" en
-/// fin de `profile_screen.dart`, voir la spec de la tâche).
+/// parchemin scrollable) : une section "MES DONNÉES" (3 tuiles regroupées
+/// dans un `SettingsListCard` — "Exporter mes données", "Politique de
+/// confidentialité", "Autorisations de l'appareil" — les 2 dernières avec
+/// une icône de fin `Icons.north_east` puisqu'elles sortent de l'app/ouvrent
+/// une sheet système, voir `MenuTile.trailingIcon`) puis une section "ZONE
+/// DANGEREUSE" (`DestructiveMenuTile` isolée, "Supprimer mon compte", qui
+/// pousse l'écran dédié `/profile/privacy/delete-account`
+/// (`ProfileDeleteAccountScreen`) plutôt que d'ouvrir une sheet — recettage
+/// direction-artistique du 13/09/2026, la maquette attend un écran plein).
 ///
 /// Lecture 100% synchrone à l'ouverture (aucune donnée à charger, chaque
-/// tuile ouvre sa propre sheet) : ni état de chargement ni appel réseau ici,
-/// même remarque que `ProfileScreen`/`ProfileEditScreen`.
+/// tuile ouvre sa propre sheet ou route) : ni état de chargement ni appel
+/// réseau ici, même remarque que `ProfileScreen`/`ProfileEditScreen`.
 class ProfilePrivacyScreen extends StatelessWidget {
   const ProfilePrivacyScreen({super.key});
 
@@ -43,35 +42,78 @@ class ProfilePrivacyScreen extends StatelessWidget {
       body: Column(
         children: [
           WoodBackHeader(
-            title: 'CONFIDENTIALITÉ ET DONNÉES',
+            title: 'CONFIDENTIALITÉ',
             onBack: () => _goBack(context),
           ),
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  MenuTile(
-                    icon: Icons.download_outlined,
-                    label: 'Export de mes données',
-                    onTap: () => showExportDataSheet(context),
+                  Text(
+                    'MES DONNÉES',
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  MenuTile(
-                    icon: Icons.description_outlined,
-                    label: 'Politique de confidentialité',
-                    onTap: () => _showComingSoon(context),
+                  SettingsListCard(
+                    children: [
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.download_outlined,
+                        label: 'Exporter mes données',
+                        onTap: () => showExportDataSheet(context),
+                      ),
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.description_outlined,
+                        label: 'Politique de confidentialité',
+                        trailingIcon: Icons.north_east,
+                        onTap: () => _showComingSoon(context),
+                      ),
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.admin_panel_settings_outlined,
+                        label: "Autorisations de l'appareil",
+                        trailingIcon: Icons.north_east,
+                        onTap: () => showDevicePermissionsSheet(context),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  MenuTile(
-                    icon: Icons.admin_panel_settings_outlined,
-                    label: 'Gestion des autorisations appareil',
-                    onTap: () => showDevicePermissionsSheet(context),
+                  Text(
+                    "L'export contient tes personnages, leur inventaire, "
+                    'leurs sorts et leur historique (JSON, envoyé par '
+                    'e-mail).',
+                    style: AppTypography.body(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  DestructiveButton(
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: AppColors.gaugeTrack,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
+                    'ZONE DANGEREUSE',
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.accentBrick,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  DestructiveMenuTile(
                     label: 'Supprimer mon compte',
-                    onPressed: () => showDeleteAccountSheet(context),
+                    onTap: () =>
+                        context.push('/profile/privacy/delete-account'),
                   ),
                 ],
               ),

@@ -1,8 +1,11 @@
 // Tests de widget de l'écran "Préférences de notifications"
 // (`presentation/profile_notifications_screen.dart`) : chargement/erreur/
-// données, sous-interrupteurs grisés quand le global push est désactivé,
-// bascule optimiste + revert sur échec, et demande de permission OS avant
-// d'activer le global (accordée/refusée).
+// données, groupe "DÉCLENCHEURS" (2 rangées regroupées dans un
+// `SettingsListCard` — voir la doc de classe de
+// `ProfileNotificationsScreen`), rangées grisées quand "Notifications push"
+// est désactivé, bascule optimiste + revert sur échec, demande de
+// permission OS avant d'activer le global (accordée/refusée), et texte
+// d'aide en pied d'écran.
 //
 // `PushNotificationGateway`/`NotificationPreferencesRepository` sont tous
 // deux des abstractions injectées via Riverpod — voir la doc de classe de
@@ -20,6 +23,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/notifications/notification_providers.dart';
 import 'package:personnages/core/notifications/push_notification_gateway.dart';
+import 'package:personnages/core/widgets/settings_list_card.dart';
 import 'package:personnages/features/profile/data/notification_preferences_repository.dart';
 import 'package:personnages/features/profile/domain/notification_preferences.dart';
 import 'package:personnages/features/profile/presentation/profile_notifications_screen.dart';
@@ -179,7 +183,7 @@ void main() {
     );
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.text('NOTIFICATIONS PUSH'), findsNothing);
+    expect(find.text('DÉCLENCHEURS'), findsNothing);
   });
 
   testWidgets(
@@ -204,57 +208,98 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(repository.fetchCallCount, 2);
-      expect(find.text('NOTIFICATIONS PUSH'), findsOneWidget);
+      expect(find.text('DÉCLENCHEURS'), findsOneWidget);
     },
   );
 
-  testWidgets('affiche les 2 groupes et les 4 rangées avec leurs valeurs', (
-    tester,
-  ) async {
-    repository.current = const NotificationPreferences(
-      pushEnabled: true,
-      pushRestReminder: false,
-      pushAccessRevoked: true,
-      emailDigestEnabled: true,
-    );
-
-    await _pumpScreen(tester, repository: repository, gateway: gateway);
-
-    expect(find.text('NOTIFICATIONS PUSH'), findsOneWidget);
-    expect(find.text('EMAIL'), findsOneWidget);
-    expect(find.text('Activer les notifications push'), findsOneWidget);
-    expect(find.text('Rappel de repos long'), findsOneWidget);
-    expect(find.text('Accès à une histoire retiré'), findsOneWidget);
-    expect(find.text('Recevoir un résumé par email'), findsOneWidget);
-
-    expect(_switchFor(tester, 'Activer les notifications push').value, isTrue);
-    expect(_switchFor(tester, 'Rappel de repos long').value, isFalse);
-    expect(_switchFor(tester, 'Accès à une histoire retiré').value, isTrue);
-    expect(_switchFor(tester, 'Recevoir un résumé par email').value, isTrue);
-  });
-
   testWidgets(
-    'grise les 2 sous-interrupteurs push (onChanged null) quand le global '
-    'push est désactivé, sans affecter le switch email',
+    'affiche les 2 groupes ("DÉCLENCHEURS"/"E-MAIL") et les 4 rangées avec '
+    'leurs valeurs, sans en-tête ni icône sur "Notifications push"',
     (tester) async {
-      repository.current = const NotificationPreferences(pushEnabled: false);
+      repository.current = const NotificationPreferences(
+        pushEnabled: true,
+        pushRestReminder: false,
+        pushAccessRevoked: true,
+        emailDigestEnabled: true,
+      );
 
       await _pumpScreen(tester, repository: repository, gateway: gateway);
 
-      expect(_switchFor(tester, 'Rappel de repos long').onChanged, isNull);
+      expect(find.text('DÉCLENCHEURS'), findsOneWidget);
+      expect(find.text('E-MAIL'), findsOneWidget);
+      expect(find.text('NOTIFICATIONS PUSH'), findsNothing);
+      expect(find.text('EMAIL'), findsNothing);
+      expect(find.text('Notifications push'), findsOneWidget);
+      expect(find.text('Invitation à rejoindre une histoire'), findsNothing);
+      expect(find.text('Repos long non pris depuis longtemps'), findsOneWidget);
+      expect(find.text('Accès retiré ou modifié par le MJ'), findsOneWidget);
+      expect(find.text('Recevoir un résumé par e-mail'), findsOneWidget);
+
+      // Icônes dédiées des 2 rangées "DÉCLENCHEURS", dans cet ordre — le
+      // groupe ne contient plus que ces 2 rangées (retrait de "Invitation à
+      // rejoindre une histoire", décision chef de projet du 13/09/2026).
+      expect(find.byIcon(Icons.arrow_forward), findsNothing);
+      expect(find.byIcon(Icons.star_outline), findsOneWidget);
+      expect(find.byIcon(Icons.warning_amber_outlined), findsOneWidget);
+      final settingsListCard = find.byType(SettingsListCard);
+      expect(settingsListCard, findsOneWidget);
       expect(
-        _switchFor(tester, 'Accès à une histoire retiré').onChanged,
-        isNull,
+        find.descendant(of: settingsListCard, matching: find.byType(Switch)),
+        findsNWidgets(2),
+      );
+
+      expect(_switchFor(tester, 'Notifications push').value, isTrue);
+      expect(
+        _switchFor(tester, 'Repos long non pris depuis longtemps').value,
+        isFalse,
       );
       expect(
-        _switchFor(tester, 'Recevoir un résumé par email').onChanged,
-        isNotNull,
+        _switchFor(tester, 'Accès retiré ou modifié par le MJ').value,
+        isTrue,
       );
+      expect(_switchFor(tester, 'Recevoir un résumé par e-mail').value, isTrue);
     },
   );
 
   testWidgets(
-    'bascule optimiste : le switch email reflète immédiatement le nouvel '
+    'affiche le texte d\'aide centré sur les autorisations système en pied '
+    'd\'écran',
+    (tester) async {
+      await _pumpScreen(tester, repository: repository, gateway: gateway);
+
+      expect(
+        find.text(
+          'Les autorisations système (notifications) se gèrent aussi '
+          'depuis les réglages du téléphone.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('grise les 2 rangées "DÉCLENCHEURS" adossées à une préférence '
+      '(onChanged null) quand "Notifications push" est désactivé, sans '
+      'affecter le switch e-mail', (tester) async {
+    repository.current = const NotificationPreferences(pushEnabled: false);
+
+    await _pumpScreen(tester, repository: repository, gateway: gateway);
+
+    expect(
+      _switchFor(tester, 'Repos long non pris depuis longtemps').onChanged,
+      isNull,
+    );
+    expect(
+      _switchFor(tester, 'Accès retiré ou modifié par le MJ').onChanged,
+      isNull,
+    );
+    expect(
+      _switchFor(tester, 'Recevoir un résumé par e-mail').onChanged,
+      isNotNull,
+    );
+  });
+
+  testWidgets(
+    'bascule optimiste : le switch e-mail reflète immédiatement le nouvel '
     'état, avant même la réponse du repository',
     (tester) async {
       repository.current = const NotificationPreferences(
@@ -268,7 +313,7 @@ void main() {
 
       // `update` n'est pas encore résolu (complété plus bas) : le switch
       // reflète déjà `true` grâce à `_optimistic`, jamais la valeur fetchée.
-      expect(_switchFor(tester, 'Recevoir un résumé par email').value, isTrue);
+      expect(_switchFor(tester, 'Recevoir un résumé par e-mail').value, isTrue);
 
       repository.updateCompleter!.complete();
       await tester.pumpAndSettle();
@@ -293,12 +338,15 @@ void main() {
 
       await tester.tap(find.byType(Switch).last);
       await tester.pump();
-      expect(_switchFor(tester, 'Recevoir un résumé par email').value, isTrue);
+      expect(_switchFor(tester, 'Recevoir un résumé par e-mail').value, isTrue);
 
       repository.updateCompleter!.complete();
       await tester.pumpAndSettle();
 
-      expect(_switchFor(tester, 'Recevoir un résumé par email').value, isFalse);
+      expect(
+        _switchFor(tester, 'Recevoir un résumé par e-mail').value,
+        isFalse,
+      );
       expect(
         find.text("Impossible d'enregistrer ce réglage. Réessaie."),
         findsOneWidget,
@@ -317,7 +365,7 @@ void main() {
 
     expect(gateway.requestPermissionCallCount, 1);
     expect(repository.updateCalls.single.pushEnabled, isTrue);
-    expect(_switchFor(tester, 'Activer les notifications push').value, isTrue);
+    expect(_switchFor(tester, 'Notifications push').value, isTrue);
     expect(find.byType(Icon), findsWidgets);
     expect(
       find.textContaining('désactivées au niveau du téléphone'),
@@ -338,10 +386,7 @@ void main() {
 
       expect(gateway.requestPermissionCallCount, 1);
       expect(repository.updateCalls, isEmpty);
-      expect(
-        _switchFor(tester, 'Activer les notifications push').value,
-        isFalse,
-      );
+      expect(_switchFor(tester, 'Notifications push').value, isFalse);
       expect(
         find.textContaining('désactivées au niveau du téléphone'),
         findsOneWidget,

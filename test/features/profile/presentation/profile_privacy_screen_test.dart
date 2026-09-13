@@ -1,8 +1,11 @@
-// Tests de widget de l'écran "Confidentialité et données"
-// (`presentation/profile_privacy_screen.dart`) — bandeau bois + retour, les
-// 3 tuiles (icônes dédiées, ouverture de la bonne sheet/SnackBar), le bouton
-// destructif isolé "Supprimer mon compte" (ouvre sa sheet, jamais une simple
-// tuile).
+// Tests de widget de l'écran "Confidentialité"
+// (`presentation/profile_privacy_screen.dart`) — bandeau bois "CONFIDENTIALITÉ"
+// + retour, section "MES DONNÉES" (3 tuiles regroupées dans un
+// `SettingsListCard`, icônes dédiées, ouverture de la bonne sheet/SnackBar,
+// icône de fin `north_east` sur les 2 tuiles qui sortent de l'app/ouvrent une
+// sheet système), section "ZONE DANGEREUSE" (`DestructiveMenuTile` isolée
+// "Supprimer mon compte", jamais une simple tuile) — recettage
+// direction-artistique du 13/09/2026.
 //
 // Aucune donnée à charger (écran 100% synchrone) : `currentUserProvider`
 // tout de même overridé (`authRepositoryProvider`/`connectivityCheckerProvider`
@@ -17,10 +20,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
-import 'package:personnages/core/widgets/destructive_button.dart';
+import 'package:personnages/core/widgets/destructive_menu_tile.dart';
+import 'package:personnages/core/widgets/settings_list_card.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/data/data_export_repository.dart';
+import 'package:personnages/features/profile/presentation/profile_delete_account_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_privacy_screen.dart';
 import 'package:personnages/features/profile/presentation/providers/data_export_providers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -119,6 +124,10 @@ Future<void> _pumpScreen(WidgetTester tester) async {
               path: '/profile/privacy',
               builder: (context, state) => const ProfilePrivacyScreen(),
             ),
+            GoRoute(
+              path: '/profile/privacy/delete-account',
+              builder: (context, state) => const ProfileDeleteAccountScreen(),
+            ),
           ],
         ),
       ),
@@ -129,43 +138,86 @@ Future<void> _pumpScreen(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('affiche le bandeau bois et les 3 tuiles avec leurs icônes '
-      'dédiées', (tester) async {
-    await _pumpScreen(tester);
-
-    expect(find.text('CONFIDENTIALITÉ ET DONNÉES'), findsOneWidget);
-    for (final label in const [
-      'Export de mes données',
-      'Politique de confidentialité',
-      'Gestion des autorisations appareil',
-    ]) {
-      expect(find.text(label), findsOneWidget);
-    }
-    expect(find.byIcon(Icons.download_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.description_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.admin_panel_settings_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.chevron_right), findsNWidgets(3));
-  });
-
   testWidgets(
-    '"Supprimer mon compte" est un `DestructiveButton` isolé, pas une '
-    'tuile',
+    'affiche le bandeau bois "CONFIDENTIALITÉ", la section "MES DONNÉES" '
+    '(3 tuiles avec leurs icônes dédiées, regroupées dans un '
+    'SettingsListCard) et son texte d\'aide',
     (tester) async {
       await _pumpScreen(tester);
 
+      expect(find.text('CONFIDENTIALITÉ'), findsOneWidget);
+      expect(find.text('CONFIDENTIALITÉ ET DONNÉES'), findsNothing);
+      expect(find.text('MES DONNÉES'), findsOneWidget);
+      for (final label in const [
+        'Exporter mes données',
+        'Politique de confidentialité',
+        "Autorisations de l'appareil",
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+      expect(find.byIcon(Icons.download_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.description_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.admin_panel_settings_outlined), findsOneWidget);
+      expect(find.byType(SettingsListCard), findsOneWidget);
       expect(
-        find.widgetWithText(DestructiveButton, 'Supprimer mon compte'),
+        find.text(
+          "L'export contient tes personnages, leur inventaire, leurs "
+          'sorts et leur historique (JSON, envoyé par e-mail).',
+        ),
         findsOneWidget,
       );
     },
   );
 
-  testWidgets('taper "Export de mes données" ouvre la sheet éponyme', (
+  testWidgets(
+    '"Exporter mes données" garde le chevron par défaut (action interne), '
+    'les 2 autres tuiles de "MES DONNÉES" ont l\'icône de lien externe',
+    (tester) async {
+      await _pumpScreen(tester);
+
+      // Scope au `SettingsListCard` : `DestructiveMenuTile` ("Supprimer mon
+      // compte", plus bas) dessine lui aussi un `Icons.chevron_right`, mais
+      // dans sa propre palette `accent.brick` — hors de la portée de ce test.
+      final settingsCard = find.byType(SettingsListCard);
+      expect(
+        find.descendant(
+          of: settingsCard,
+          matching: find.byIcon(Icons.chevron_right),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: settingsCard,
+          matching: find.byIcon(Icons.north_east),
+        ),
+        findsNWidgets(2),
+      );
+    },
+  );
+
+  testWidgets('affiche "ZONE DANGEREUSE" et "Supprimer mon compte" est un '
+      '`DestructiveMenuTile` isolé, pas une tuile de `SettingsListCard`', (
     tester,
   ) async {
     await _pumpScreen(tester);
 
-    await tester.tap(find.text('Export de mes données'));
+    expect(find.text('ZONE DANGEREUSE'), findsOneWidget);
+    expect(
+      find.widgetWithText(DestructiveMenuTile, 'Supprimer mon compte'),
+      findsOneWidget,
+    );
+    // Une seule carte `SettingsListCard` (celle de "MES DONNÉES") :
+    // "Supprimer mon compte" n'en fait pas partie.
+    expect(find.byType(SettingsListCard), findsOneWidget);
+  });
+
+  testWidgets('taper "Exporter mes données" ouvre la sheet éponyme', (
+    tester,
+  ) async {
+    await _pumpScreen(tester);
+
+    await tester.tap(find.text('Exporter mes données'));
     await tester.pumpAndSettle();
 
     expect(find.text('EXPORT DE MES DONNÉES'), findsOneWidget);
@@ -184,27 +236,26 @@ void main() {
     },
   );
 
-  testWidgets(
-    'taper "Gestion des autorisations appareil" ouvre la sheet éponyme',
-    (tester) async {
-      await _pumpScreen(tester);
-
-      await tester.tap(find.text('Gestion des autorisations appareil'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('GESTION DES AUTORISATIONS APPAREIL'), findsOneWidget);
-    },
-  );
-
-  testWidgets('taper "Supprimer mon compte" ouvre la sheet de suppression', (
+  testWidgets('taper "Autorisations de l\'appareil" ouvre la sheet éponyme', (
     tester,
   ) async {
+    await _pumpScreen(tester);
+
+    await tester.tap(find.text("Autorisations de l'appareil"));
+    await tester.pumpAndSettle();
+
+    expect(find.text('GESTION DES AUTORISATIONS APPAREIL'), findsOneWidget);
+  });
+
+  testWidgets('taper "Supprimer mon compte" pousse l\'écran dédié '
+      '(/profile/privacy/delete-account), pas une sheet', (tester) async {
     await _pumpScreen(tester);
 
     await tester.tap(find.text('Supprimer mon compte'));
     await tester.pumpAndSettle();
 
-    expect(find.text('SUPPRIMER MON COMPTE'), findsOneWidget);
+    expect(find.text('SUPPRIMER LE COMPTE'), findsOneWidget);
+    expect(find.byType(ProfileDeleteAccountScreen), findsOneWidget);
   });
 
   testWidgets('le bandeau bois propose un retour fonctionnel', (tester) async {

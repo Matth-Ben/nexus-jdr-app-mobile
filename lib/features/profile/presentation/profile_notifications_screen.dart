@@ -9,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/alert_banner.dart';
 import '../../../core/widgets/secondary_button.dart';
+import '../../../core/widgets/settings_list_card.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../domain/notification_preferences.dart';
 import 'providers/notification_preferences_providers.dart';
@@ -26,12 +27,22 @@ import 'providers/notification_preferences_providers.dart';
 /// backend "Notifications" —
 /// `docs/cahier-des-charges/15-profil-parametres.md` section 3.
 ///
-/// 2 groupes ("NOTIFICATIONS PUSH"/"EMAIL", `_SectionHeader`) de rangées
-/// `_ToggleRow` — spec direction-artistique de la tâche. Les 2
-/// sous-interrupteurs push ("Rappel de repos long"/"Accès à une histoire
-/// retiré") sont grisés (`onChanged: null`) quand l'interrupteur global
-/// "Activer les notifications push" est désactivé ; le switch email est
+/// Interrupteur principal "Notifications push" isolé (sa propre carte
+/// simple, sans en-tête de section ni icône), puis groupe "DÉCLENCHEURS"
+/// (`_SectionHeader`, 2 rangées `_ToggleRow` avec `standalone: false`
+/// regroupées dans un `SettingsListCard`), puis groupe "E-MAIL" (1 rangée) —
+/// recettage direction-artistique du 13/09/2026. Les 2 rangées
+/// "DÉCLENCHEURS" ("Repos long non pris depuis longtemps"/
+/// `pushRestReminder` et "Accès retiré ou modifié par le MJ"/
+/// `pushAccessRevoked`) sont grisées (`onChanged: null`) quand
+/// l'interrupteur "Notifications push" est désactivé. Le switch e-mail est
 /// toujours indépendant du push.
+///
+/// **Pas de rangée "Invitation à rejoindre une histoire"** : décision chef
+/// de projet (13/09/2026) de retirer plutôt que d'afficher un réglage sans
+/// effet réel — `NotificationPreferences` (voir sa doc de classe) ne
+/// modélise volontairement que ces 2 déclencheurs tant que les invitations
+/// ne sont pas nominatives (voir `features/join_story/`).
 ///
 /// **Bascule optimiste + revert** (voir [_toggle]) : chaque bascule met à
 /// jour [_optimistic] immédiatement puis appelle
@@ -52,8 +63,8 @@ import 'providers/notification_preferences_providers.dart';
 /// refléter une capacité réelle, jamais une simple intention. Une permission
 /// refusée n'écrit rien et affiche un [AlertBanner] (bandeau d'erreur/action
 /// corrective — pas [InfoBanner], réservé à l'information neutre, voir la
-/// doc de classe de `core/widgets/info_banner.dart`) au-dessus du groupe
-/// "NOTIFICATIONS PUSH" (voir [_osPermissionDenied]) — pas de lien direct
+/// doc de classe de `core/widgets/info_banner.dart`) au-dessus de la rangée
+/// "Notifications push" (voir [_osPermissionDenied]) — pas de lien direct
 /// vers les réglages système dans cette itération (même limite déjà assumée
 /// pour les autorisations caméra/galerie de `ProfilePrivacyScreen`, voir
 /// `widgets/device_permissions_sheet.dart`).
@@ -157,8 +168,6 @@ class _ProfileNotificationsScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SectionHeader('NOTIFICATIONS PUSH'),
-          const SizedBox(height: AppSpacing.sm),
           if (_osPermissionDenied) ...[
             const AlertBanner(
               message:
@@ -169,41 +178,50 @@ class _ProfileNotificationsScreenState
             const SizedBox(height: AppSpacing.sm),
           ],
           _ToggleRow(
-            icon: Icons.notifications_none,
-            title: 'Activer les notifications push',
+            title: 'Notifications push',
             value: prefs.pushEnabled,
             onChanged: (value) => _togglePushEnabled(prefs, value),
           ),
+          const SizedBox(height: AppSpacing.lg),
+          const _SectionHeader('DÉCLENCHEURS'),
           const SizedBox(height: AppSpacing.sm),
-          _ToggleRow(
-            title: 'Rappel de repos long',
-            subtitle:
-                "Te prévient si un personnage n'a pas fait de repos long "
-                'depuis un moment.',
-            value: prefs.pushRestReminder,
-            onChanged: prefs.pushEnabled
-                ? (value) => _toggle(prefs, pushRestReminder: value)
-                : null,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _ToggleRow(
-            title: 'Accès à une histoire retiré',
-            subtitle:
-                'Te prévient si un MJ retire l\'accès de ton personnage à '
-                'son histoire.',
-            value: prefs.pushAccessRevoked,
-            onChanged: prefs.pushEnabled
-                ? (value) => _toggle(prefs, pushAccessRevoked: value)
-                : null,
+          SettingsListCard(
+            children: [
+              _ToggleRow(
+                standalone: false,
+                icon: Icons.star_outline,
+                title: 'Repos long non pris depuis longtemps',
+                value: prefs.pushRestReminder,
+                onChanged: prefs.pushEnabled
+                    ? (value) => _toggle(prefs, pushRestReminder: value)
+                    : null,
+              ),
+              _ToggleRow(
+                standalone: false,
+                icon: Icons.warning_amber_outlined,
+                title: 'Accès retiré ou modifié par le MJ',
+                value: prefs.pushAccessRevoked,
+                onChanged: prefs.pushEnabled
+                    ? (value) => _toggle(prefs, pushAccessRevoked: value)
+                    : null,
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          const _SectionHeader('EMAIL'),
+          const _SectionHeader('E-MAIL'),
           const SizedBox(height: AppSpacing.sm),
           _ToggleRow(
-            title: 'Recevoir un résumé par email',
+            title: 'Recevoir un résumé par e-mail',
             subtitle: 'Résumé hebdomadaire des personnages qui ont progressé.',
             value: prefs.emailDigestEnabled,
             onChanged: (value) => _toggle(prefs, emailDigestEnabled: value),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'Les autorisations système (notifications) se gèrent aussi '
+            'depuis les réglages du téléphone.',
+            textAlign: TextAlign.center,
+            style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
           ),
         ],
       ),
@@ -252,11 +270,19 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// Rangée "carte + interrupteur" du groupe "NOTIFICATIONS PUSH"/"EMAIL" —
-/// nouveau composant local (un seul écran l'utilise pour l'instant, voir la
-/// doc de classe de [ProfileNotificationsScreen]) : carte `parchment.card`,
-/// bordure `wood.light` 2px constante (jamais de mise en avant dorée façon
-/// `SelectableOptionTile` — un interrupteur n'est pas un choix exclusif).
+/// Rangée "carte + interrupteur" des groupes "Notifications push" isolé/
+/// "DÉCLENCHEURS"/"E-MAIL" — nouveau composant local (un seul écran
+/// l'utilise pour l'instant, voir la doc de classe de
+/// [ProfileNotificationsScreen]) : bordure `wood.light` 2px constante
+/// (jamais de mise en avant dorée façon `SelectableOptionTile` — un
+/// interrupteur n'est pas un choix exclusif).
+///
+/// [standalone] (`true` par défaut) porte sa propre carte `parchment.card` —
+/// seule la rangée "Notifications push", isolée en tête d'écran, l'utilise.
+/// À `false` (les 3 rangées "DÉCLENCHEURS"), aucune carte/bordure propre :
+/// pensé pour être empilé dans un
+/// `core/widgets/settings_list_card.dart::SettingsListCard`, qui porte déjà
+/// la carte englobante — même convention que `MenuTile.standalone`.
 ///
 /// [onChanged] à `null` grise la rangée (titre/sous-titre en
 /// `color.text.muted`, `Switch` désactivé) — jamais un `Opacity` manuel, voir
@@ -268,18 +294,20 @@ class _ToggleRow extends StatelessWidget {
     required this.onChanged,
     this.subtitle,
     this.icon,
+    this.standalone = true,
   });
 
   final String title;
 
-  /// Ligne de sous-titre optionnelle sous [title] — absente pour "Activer
-  /// les notifications push" (voir [icon] à la place).
+  /// Ligne de sous-titre optionnelle sous [title] — seule "Recevoir un
+  /// résumé par e-mail" en a une désormais (les 2 rangées "DÉCLENCHEURS" ont
+  /// perdu la leur, spec direction-artistique du 13/09/2026).
   final String? subtitle;
 
-  /// Icône affichée à gauche de la rangée — seule "Activer les notifications
-  /// push" en a une (spec direction-artistique de la tâche).
+  /// Icône affichée à gauche de la rangée.
   final IconData? icon;
   final bool value;
+  final bool standalone;
 
   /// `null` -> rangée désactivée (grisée) — voir la doc de classe.
   final ValueChanged<bool>? onChanged;
@@ -288,58 +316,62 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final content = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 44),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 22, color: AppColors.textSecondary),
+              const SizedBox(width: AppSpacing.sm),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: AppTypography.body(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _enabled
+                          ? AppColors.textPrimary
+                          : AppColors.textMuted,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: AppTypography.body(
+                        fontSize: 12,
+                        color: _enabled
+                            ? AppColors.textSecondary
+                            : AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            _AppSwitch(value: value, onChanged: onChanged),
+          ],
+        ),
+      ),
+    );
+
+    if (!standalone) return content;
+
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.parchmentCard,
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
       ),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          child: Row(
-            children: [
-              if (icon != null) ...[
-                Icon(icon, size: 22, color: AppColors.textSecondary),
-                const SizedBox(width: AppSpacing.sm),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTypography.body(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: _enabled
-                            ? AppColors.textPrimary
-                            : AppColors.textMuted,
-                      ),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle!,
-                        style: AppTypography.body(
-                          fontSize: 12,
-                          color: _enabled
-                              ? AppColors.textSecondary
-                              : AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              _AppSwitch(value: value, onChanged: onChanged),
-            ],
-          ),
-        ),
-      ),
+      child: content,
     );
   }
 }
