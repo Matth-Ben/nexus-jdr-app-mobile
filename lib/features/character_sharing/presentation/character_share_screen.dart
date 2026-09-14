@@ -195,10 +195,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           if (isActive) ...[
-            const InfoBanner(
-              message: 'Partage actif',
-              icon: Icons.check_circle_outline,
-            ),
+            const InfoBanner.success(message: 'Partage actif'),
             const SizedBox(height: AppSpacing.md),
             Text(
               'LIEN DE PARTAGE',
@@ -208,9 +205,12 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
-            _ShareLinkField(
-              link: _linkFor(token),
-              onCopy: _isBusy ? null : () => _copyLink(token),
+            Row(
+              children: [
+                Expanded(child: _ShareLinkField(link: _linkFor(token))),
+                const SizedBox(width: AppSpacing.sm),
+                _CopyLinkButton(onCopy: _isBusy ? null : () => _copyLink(token)),
+              ],
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
@@ -240,6 +240,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
             const SizedBox(height: AppSpacing.sm),
             DestructiveButton(
               label: 'Désactiver le partage',
+              icon: Icons.block,
               onPressed: _isBusy ? null : _confirmDisable,
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -319,10 +320,9 @@ class _IdentityCard extends StatelessWidget {
 }
 
 class _ShareLinkField extends StatelessWidget {
-  const _ShareLinkField({required this.link, required this.onCopy});
+  const _ShareLinkField({required this.link});
 
   final String link;
-  final VoidCallback? onCopy;
 
   @override
   Widget build(BuildContext context) {
@@ -336,26 +336,54 @@ class _ShareLinkField extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              link,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.body(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+      child: Text(
+        link,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTypography.body(fontSize: 14, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+/// Bouton "Copier le lien", détaché du champ (recettage direction-artistique
+/// du 13/09/2026, écran "Partage — Gérer le lien") : carré ~48×48, fond
+/// `AppColors.primaryButtonGradient`, icône `Icons.copy_outlined` blanche —
+/// auparavant un `IconButton` transparent intégré à `_ShareLinkField`.
+class _CopyLinkButton extends StatelessWidget {
+  const _CopyLinkButton({required this.onCopy});
+
+  final VoidCallback? onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    final isEnabled = onCopy != null;
+
+    return Opacity(
+      opacity: isEnabled ? 1 : 0.6,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: AppColors.primaryButtonGradient,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            onTap: onCopy,
+            child: const SizedBox(
+              width: 48,
+              height: 48,
+              child: Center(
+                child: Tooltip(
+                  message: 'Copier le lien',
+                  child: Icon(Icons.copy_outlined, color: Colors.white),
+                ),
               ),
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
-          IconButton(
-            tooltip: 'Copier le lien',
-            onPressed: onCopy,
-            icon: const Icon(Icons.copy_outlined, color: AppColors.woodMedium),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -31,11 +31,17 @@ import '../theme/app_typography.dart';
 /// `font.display`, comme [PrimaryButton]/[SecondaryButton], contrairement au
 /// variant par défaut ci-dessus ; `false` par défaut, comportement inchangé
 /// pour tous les usages existants (aucun n'a besoin de ce fond plein).
+///
+/// [icon] ajoute une icône avant le libellé (recettage direction-artistique
+/// du 13/09/2026, écran "Partage — Gérer le lien", action "Désactiver le
+/// partage" avec `Icons.block`) : taille 18, `AppColors.accentBrick`, `null`
+/// par défaut (aucun usage existant n'en a besoin).
 class DestructiveButton extends StatelessWidget {
   const DestructiveButton({
     required this.label,
     required this.onPressed,
     this.filled = false,
+    this.icon,
     super.key,
   });
 
@@ -46,6 +52,10 @@ class DestructiveButton extends StatelessWidget {
 
   /// `true` : variant "fond plein" (voir la documentation de classe).
   final bool filled;
+
+  /// Icône optionnelle affichée avant le libellé — voir la documentation de
+  /// classe.
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -79,19 +89,36 @@ class DestructiveButton extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.sm,
                   ),
-                  child: Text(
-                    filled ? label.toUpperCase() : label,
-                    textAlign: TextAlign.center,
-                    style: filled
-                        ? AppTypography.display(
-                            fontSize: 11,
-                            color: AppColors.textOnWood,
-                          )
-                        : AppTypography.body(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.accentBrick,
-                          ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (icon != null) ...[
+                        Icon(icon, size: 18, color: AppColors.accentBrick),
+                        const SizedBox(width: AppSpacing.xs),
+                      ],
+                      // `Flexible` : sans lui, `Text` reçoit une largeur non
+                      // bornée de la part de `Row` (perd la contrainte de
+                      // largeur propagée par `Padding` quand il en était
+                      // l'unique enfant direct) et ne s'enroule/ne rétrécit
+                      // plus — régression réelle trouvée sur "Dissoudre le
+                      // groupe" (libellé long, `RenderFlex overflowed`).
+                      Flexible(
+                        child: Text(
+                          filled ? label.toUpperCase() : label,
+                          textAlign: TextAlign.center,
+                          style: filled
+                              ? AppTypography.display(
+                                  fontSize: 11,
+                                  color: AppColors.textOnWood,
+                                )
+                              : AppTypography.body(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.accentBrick,
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

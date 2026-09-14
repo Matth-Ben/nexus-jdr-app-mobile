@@ -21,13 +21,29 @@ import '../theme/app_typography.dart';
 /// ("compte lié") pouvant resservir ailleurs (chef de projet, tâche
 /// "écran Profil").
 class InfoBanner extends StatelessWidget {
-  const InfoBanner({required this.message, required this.icon, super.key});
+  const InfoBanner({required this.message, required this.icon, super.key})
+    : _isSuccess = false;
+
+  /// Variant "succès" (recettage direction-artistique du 13/09/2026, écran
+  /// "Partage — Gérer le lien", bandeau "Partage actif") : fond vert menthe
+  /// pâle (`Color(0xFFE7F0E9)`), bordure `AppColors.accentTeal`, puce ronde
+  /// pleine (`Icons.circle`, ~8px, `accentTeal`) devant le texte au lieu de
+  /// l'icône du variant par défaut — nouveau token visuel absent de
+  /// `10-design-system.md`, distinct du variant "info neutre" ci-dessus
+  /// (fond `parchment.card`/bordure `gold-end`), jamais utilisé pour la même
+  /// situation (succès vs information neutre).
+  const InfoBanner.success({required this.message, super.key})
+    : icon = null,
+      _isSuccess = true;
 
   final String message;
 
   /// Icône affichée à gauche du message, toujours en `AppColors.accentTeal`
-  /// — voir la documentation de classe.
-  final IconData icon;
+  /// — voir la documentation de classe. `null` pour le variant [success],
+  /// qui affiche une puce ronde à la place.
+  final IconData? icon;
+
+  final bool _isSuccess;
 
   @override
   Widget build(BuildContext context) {
@@ -37,13 +53,18 @@ class InfoBanner extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.parchmentCard,
+        color: _isSuccess ? const Color(0xFFE7F0E9) : AppColors.parchmentCard,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.goldEnd, width: AppBorders.card),
+        border: Border.all(
+          color: _isSuccess ? AppColors.accentTeal : AppColors.goldEnd,
+          width: AppBorders.card,
+        ),
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.accentTeal, size: 20),
+          _isSuccess
+              ? const Icon(Icons.circle, color: AppColors.accentTeal, size: 8)
+              : Icon(icon, color: AppColors.accentTeal, size: 20),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(

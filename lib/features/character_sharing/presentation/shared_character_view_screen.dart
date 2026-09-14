@@ -11,12 +11,9 @@ import '../../../core/widgets/wood_back_header.dart';
 import '../../characters/domain/character_detail.dart';
 import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_identity_formatter.dart';
-import '../../characters/domain/proficiency_bonus.dart';
-import '../../characters/domain/saving_throw_calculator.dart';
 import '../../characters/presentation/widgets/character_ability_score_grid.dart';
 import '../../characters/presentation/widgets/character_detail_tab_bar.dart';
 import '../../characters/presentation/widgets/character_inventory_tab_body.dart';
-import '../../characters/presentation/widgets/character_saving_throws_card.dart';
 import '../../characters/presentation/widgets/character_skills_tab_body.dart';
 import '../../characters/presentation/widgets/character_spells_tab_body.dart';
 import '../../characters/presentation/widgets/character_stat_pills_row.dart';
@@ -163,15 +160,6 @@ class _CharacterTabBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final proficiencyBonus = ProficiencyBonusRules.forTotalLevel(
-      detail.totalLevel,
-    );
-    final savingThrows = SavingThrowCalculator.computeAll(
-      abilityScores: detail.abilityScores,
-      proficientAbilities: detail.primarySavingThrowProficiencies,
-      proficiencyBonus: proficiencyBonus,
-    );
-
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
@@ -192,7 +180,21 @@ class _CharacterTabBody extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         CharacterAbilityScoreGrid(abilityScores: detail.abilityScores),
         const SizedBox(height: AppSpacing.md),
-        CharacterSavingThrowsCard(results: savingThrows),
+        // Texte explicatif (recettage direction-artistique du 13/09/2026,
+        // écran "Partage — Vue en lecture seule") : indique où trouver le
+        // reste de la fiche, la carte "Jets de sauvegarde" n'étant plus
+        // affichée sur cet écran (retirée ci-dessous, absente de la
+        // maquette de cette vue).
+        Text(
+          'Toutes les sections (Compétences, Sorts, Inventaire, Histoire) '
+          'sont consultables ci-dessous, en lecture seule.',
+          textAlign: TextAlign.center,
+          style: AppTypography.body(color: AppColors.textMuted),
+        ),
+        // `CharacterSavingThrowsCard` n'est plus insérée ici : absente de la
+        // maquette de cette vue (recettage direction-artistique du
+        // 13/09/2026, écran "Partage — Vue en lecture seule").
+        //
         // `CharacterAppearanceCard` n'est plus insérée ici : réintégrée dans
         // l'onglet "Histoire" (voir `character_story_tab_body.dart`, réutilisé
         // tel quel par cet écran ci-dessous pour `CharacterDetailTab.story`) —
@@ -212,6 +214,7 @@ class _SharedIdentityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitle = CharacterIdentityFormatter.subtitleLine1(detail);
+    final subtitleLine2 = CharacterIdentityFormatter.subtitleLine2(detail);
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -244,6 +247,18 @@ class _SharedIdentityCard extends StatelessWidget {
                     style: AppTypography.body(
                       fontSize: 13,
                       color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+                if (subtitleLine2 != null) ...[
+                  const SizedBox(height: AppSpacing.xs / 2),
+                  Text(
+                    subtitleLine2,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.body(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
                     ),
                   ),
                 ],
@@ -297,6 +312,15 @@ class _SharedVitalsCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              // "+X PV temp." affiché sur la même ligne que le texte
+              // principal (recettage direction-artistique du 13/09/2026,
+              // écran "Partage — Vue en lecture seule"), pas sur sa propre
+              // ligne sous la jauge comme auparavant — même style de puce
+              // que `_TemporaryHpChip` de `group_members_tab_body.dart`.
+              if (detail.temporaryHp > 0) ...[
+                const SizedBox(width: AppSpacing.xs),
+                _TemporaryHpChip(amount: detail.temporaryHp),
+              ],
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -305,17 +329,6 @@ class _SharedVitalsCard extends StatelessWidget {
             ratio: detail.hpRatio,
             gradient: _hpGradient(detail.hpRatio),
           ),
-          if (detail.temporaryHp > 0) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              '+${detail.temporaryHp} PV temp.',
-              style: AppTypography.body(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.accentTeal,
-              ),
-            ),
-          ],
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
@@ -361,6 +374,39 @@ class _SharedVitalsCard extends StatelessWidget {
     }
     return const LinearGradient(
       colors: [AppColors.hpCriticalStart, AppColors.hpCriticalEnd],
+    );
+  }
+}
+
+/// Puce "+X PV temp.", copiée à l'identique de `_TemporaryHpChip` de
+/// `features/groups/presentation/widgets/group_members_tab_body.dart`
+/// (widget privé à ce fichier, non réutilisable directement) : fond
+/// `parchmentCardAlt`, bordure `accentTeal`.
+class _TemporaryHpChip extends StatelessWidget {
+  const _TemporaryHpChip({required this.amount});
+
+  final int amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.parchmentCardAlt,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.accentTeal, width: 1),
+      ),
+      child: Text(
+        '+$amount PV temp.',
+        style: AppTypography.body(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppColors.accentTeal,
+        ),
+      ),
     );
   }
 }
