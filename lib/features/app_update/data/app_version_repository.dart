@@ -2,20 +2,26 @@ import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Ligne `app_versions` de la plateforme courante — table de référence
-/// partagée avec l'app web "Histoires" (lecture authentifiée seule côté
-/// client, écriture réservée aux admins, voir le cahier des charges) :
-/// `platform` (`'android'`/`'ios'`, clé primaire), `minimum_supported_version`,
-/// `latest_version` (toutes deux au format `major.minor.patch`, voir
-/// `domain/app_version_comparator.dart`).
+/// Ligne `app_versions` de la plateforme courante — table de référence,
+/// **lecture publique y compris non authentifiée** (le contrôle de version
+/// a lieu avant/pendant la connexion, voir
+/// `docs/cahier-des-charges/13-depot-versioning-publication.md` section
+/// 3.3 — écriture réservée aux admins) : `platform` (`'android'`/`'ios'`,
+/// clé primaire), `min_supported_version`, `latest_version` (toutes deux au
+/// format `major.minor.patch`, voir `domain/app_version_comparator.dart`),
+/// `store_url` (lien direct vers la fiche store, `null` tant que l'app
+/// n'est pas encore publiée — voir `domain/app_store_urls.dart` pour le
+/// repli utilisé dans ce cas).
 class AppVersionRow {
   const AppVersionRow({
     required this.minimumSupportedVersion,
     required this.latestVersion,
+    this.storeUrl,
   });
 
   final String minimumSupportedVersion;
   final String latestVersion;
+  final String? storeUrl;
 }
 
 /// Passerelle vers `app_versions` — abstraction (plutôt qu'une classe
@@ -42,7 +48,7 @@ class SupabaseAppVersionRepository implements AppVersionRepository {
   Future<AppVersionRow> fetchCurrentPlatformVersion() async {
     final row = await _client
         .from('app_versions')
-        .select('minimum_supported_version, latest_version')
+        .select('min_supported_version, latest_version, store_url')
         .eq('platform', _platformLabel())
         .maybeSingle();
 
@@ -53,8 +59,9 @@ class SupabaseAppVersionRepository implements AppVersionRepository {
     }
 
     return AppVersionRow(
-      minimumSupportedVersion: row['minimum_supported_version'] as String,
+      minimumSupportedVersion: row['min_supported_version'] as String,
       latestVersion: row['latest_version'] as String,
+      storeUrl: row['store_url'] as String?,
     );
   }
 

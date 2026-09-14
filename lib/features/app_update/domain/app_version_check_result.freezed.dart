@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AppVersionCheckResult {
 
- AppVersionStatus get status; String get installedVersion; String get minimumVersion; String get latestVersion;
+ AppVersionStatus get status; String get installedVersion; String get minimumVersion; String get latestVersion; String? get storeUrl;
 /// Create a copy of AppVersionCheckResult
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +26,16 @@ $AppVersionCheckResultCopyWith<AppVersionCheckResult> get copyWith => _$AppVersi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AppVersionCheckResult&&(identical(other.status, status) || other.status == status)&&(identical(other.installedVersion, installedVersion) || other.installedVersion == installedVersion)&&(identical(other.minimumVersion, minimumVersion) || other.minimumVersion == minimumVersion)&&(identical(other.latestVersion, latestVersion) || other.latestVersion == latestVersion));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AppVersionCheckResult&&(identical(other.status, status) || other.status == status)&&(identical(other.installedVersion, installedVersion) || other.installedVersion == installedVersion)&&(identical(other.minimumVersion, minimumVersion) || other.minimumVersion == minimumVersion)&&(identical(other.latestVersion, latestVersion) || other.latestVersion == latestVersion)&&(identical(other.storeUrl, storeUrl) || other.storeUrl == storeUrl));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,status,installedVersion,minimumVersion,latestVersion);
+int get hashCode => Object.hash(runtimeType,status,installedVersion,minimumVersion,latestVersion,storeUrl);
 
 @override
 String toString() {
-  return 'AppVersionCheckResult(status: $status, installedVersion: $installedVersion, minimumVersion: $minimumVersion, latestVersion: $latestVersion)';
+  return 'AppVersionCheckResult(status: $status, installedVersion: $installedVersion, minimumVersion: $minimumVersion, latestVersion: $latestVersion, storeUrl: $storeUrl)';
 }
 
 
@@ -46,7 +46,7 @@ abstract mixin class $AppVersionCheckResultCopyWith<$Res>  {
   factory $AppVersionCheckResultCopyWith(AppVersionCheckResult value, $Res Function(AppVersionCheckResult) _then) = _$AppVersionCheckResultCopyWithImpl;
 @useResult
 $Res call({
- AppVersionStatus status, String installedVersion, String minimumVersion, String latestVersion
+ AppVersionStatus status, String installedVersion, String minimumVersion, String latestVersion, String? storeUrl
 });
 
 
@@ -63,13 +63,14 @@ class _$AppVersionCheckResultCopyWithImpl<$Res>
 
 /// Create a copy of AppVersionCheckResult
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? installedVersion = null,Object? minimumVersion = null,Object? latestVersion = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? installedVersion = null,Object? minimumVersion = null,Object? latestVersion = null,Object? storeUrl = freezed,}) {
   return _then(AppVersionCheckResult(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as AppVersionStatus,installedVersion: null == installedVersion ? _self.installedVersion : installedVersion // ignore: cast_nullable_to_non_nullable
 as String,minimumVersion: null == minimumVersion ? _self.minimumVersion : minimumVersion // ignore: cast_nullable_to_non_nullable
 as String,latestVersion: null == latestVersion ? _self.latestVersion : latestVersion // ignore: cast_nullable_to_non_nullable
-as String,
+as String,storeUrl: freezed == storeUrl ? _self.storeUrl : storeUrl // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -154,10 +155,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( AppVersionStatus status,  String installedVersion,  String minimumVersion,  String latestVersion)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( AppVersionStatus status,  String installedVersion,  String minimumVersion,  String latestVersion,  String? storeUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AppVersionCheckResult() when $default != null:
-return $default(_that.status,_that.installedVersion,_that.minimumVersion,_that.latestVersion);case _:
+return $default(_that.status,_that.installedVersion,_that.minimumVersion,_that.latestVersion,_that.storeUrl);case _:
   return orElse();
 
 }
@@ -175,10 +176,10 @@ return $default(_that.status,_that.installedVersion,_that.minimumVersion,_that.l
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( AppVersionStatus status,  String installedVersion,  String minimumVersion,  String latestVersion)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( AppVersionStatus status,  String installedVersion,  String minimumVersion,  String latestVersion,  String? storeUrl)  $default,) {final _that = this;
 switch (_that) {
 case _AppVersionCheckResult():
-return $default(_that.status,_that.installedVersion,_that.minimumVersion,_that.latestVersion);case _:
+return $default(_that.status,_that.installedVersion,_that.minimumVersion,_that.latestVersion,_that.storeUrl);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -195,10 +196,10 @@ return $default(_that.status,_that.installedVersion,_that.minimumVersion,_that.l
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( AppVersionStatus status,  String installedVersion,  String minimumVersion,  String latestVersion)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( AppVersionStatus status,  String installedVersion,  String minimumVersion,  String latestVersion,  String? storeUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _AppVersionCheckResult() when $default != null:
-return $default(_that.status,_that.installedVersion,_that.minimumVersion,_that.latestVersion);case _:
+return $default(_that.status,_that.installedVersion,_that.minimumVersion,_that.latestVersion,_that.storeUrl);case _:
   return null;
 
 }
@@ -210,13 +211,14 @@ return $default(_that.status,_that.installedVersion,_that.minimumVersion,_that.l
 
 
 class _AppVersionCheckResult implements AppVersionCheckResult {
-  const _AppVersionCheckResult({required this.status, required this.installedVersion, required this.minimumVersion, required this.latestVersion});
+  const _AppVersionCheckResult({required this.status, required this.installedVersion, required this.minimumVersion, required this.latestVersion, this.storeUrl});
   
 
 @override final  AppVersionStatus status;
 @override final  String installedVersion;
 @override final  String minimumVersion;
 @override final  String latestVersion;
+@override final  String? storeUrl;
 
 /// Create a copy of AppVersionCheckResult
 /// with the given fields replaced by the non-null parameter values.
@@ -228,16 +230,16 @@ _$AppVersionCheckResultCopyWith<_AppVersionCheckResult> get copyWith => __$AppVe
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AppVersionCheckResult&&(identical(other.status, status) || other.status == status)&&(identical(other.installedVersion, installedVersion) || other.installedVersion == installedVersion)&&(identical(other.minimumVersion, minimumVersion) || other.minimumVersion == minimumVersion)&&(identical(other.latestVersion, latestVersion) || other.latestVersion == latestVersion));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AppVersionCheckResult&&(identical(other.status, status) || other.status == status)&&(identical(other.installedVersion, installedVersion) || other.installedVersion == installedVersion)&&(identical(other.minimumVersion, minimumVersion) || other.minimumVersion == minimumVersion)&&(identical(other.latestVersion, latestVersion) || other.latestVersion == latestVersion)&&(identical(other.storeUrl, storeUrl) || other.storeUrl == storeUrl));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,status,installedVersion,minimumVersion,latestVersion);
+int get hashCode => Object.hash(runtimeType,status,installedVersion,minimumVersion,latestVersion,storeUrl);
 
 @override
 String toString() {
-  return 'AppVersionCheckResult(status: $status, installedVersion: $installedVersion, minimumVersion: $minimumVersion, latestVersion: $latestVersion)';
+  return 'AppVersionCheckResult(status: $status, installedVersion: $installedVersion, minimumVersion: $minimumVersion, latestVersion: $latestVersion, storeUrl: $storeUrl)';
 }
 
 
@@ -248,7 +250,7 @@ abstract mixin class _$AppVersionCheckResultCopyWith<$Res> implements $AppVersio
   factory _$AppVersionCheckResultCopyWith(_AppVersionCheckResult value, $Res Function(_AppVersionCheckResult) _then) = __$AppVersionCheckResultCopyWithImpl;
 @override @useResult
 $Res call({
- AppVersionStatus status, String installedVersion, String minimumVersion, String latestVersion
+ AppVersionStatus status, String installedVersion, String minimumVersion, String latestVersion, String? storeUrl
 });
 
 
@@ -265,13 +267,14 @@ class __$AppVersionCheckResultCopyWithImpl<$Res>
 
 /// Create a copy of AppVersionCheckResult
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? installedVersion = null,Object? minimumVersion = null,Object? latestVersion = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? installedVersion = null,Object? minimumVersion = null,Object? latestVersion = null,Object? storeUrl = freezed,}) {
   return _then(_AppVersionCheckResult(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as AppVersionStatus,installedVersion: null == installedVersion ? _self.installedVersion : installedVersion // ignore: cast_nullable_to_non_nullable
 as String,minimumVersion: null == minimumVersion ? _self.minimumVersion : minimumVersion // ignore: cast_nullable_to_non_nullable
 as String,latestVersion: null == latestVersion ? _self.latestVersion : latestVersion // ignore: cast_nullable_to_non_nullable
-as String,
+as String,storeUrl: freezed == storeUrl ? _self.storeUrl : storeUrl // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

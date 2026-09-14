@@ -15,31 +15,54 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   group('SupabaseAppVersionRepository.fetchCurrentPlatformVersion', () {
-    test('filtre sur la plateforme courante et mappe minimum/latest', () async {
-      http.Request? capturedRequest;
+    test(
+      'filtre sur la plateforme courante et mappe minimum/latest/store_url',
+      () async {
+        http.Request? capturedRequest;
+        final client = _buildFakeClient(
+          onRequest: (request) => capturedRequest = request,
+          row: const {
+            'min_supported_version': '0.3.0',
+            'latest_version': '0.5.0',
+            'store_url': 'https://play.google.com/store/apps/details?id=test',
+          },
+        );
+        final repository = SupabaseAppVersionRepository(client);
+
+        final row = await repository.fetchCurrentPlatformVersion();
+
+        expect(capturedRequest, isNotNull);
+        expect(capturedRequest!.url.path, endsWith('/rest/v1/app_versions'));
+        expect(
+          capturedRequest!.url.queryParameters['platform'],
+          // `Platform.isIOS` est `false` sous `flutter test` (exécuté sur
+          // hôte desktop) : la requête filtre donc toujours sur `android`
+          // dans cet environnement de test, cohérent avec
+          // `AppVersionRepository._platformLabel`.
+          Platform.isIOS ? 'eq.ios' : 'eq.android',
+        );
+        expect(row.minimumSupportedVersion, '0.3.0');
+        expect(row.latestVersion, '0.5.0');
+        expect(
+          row.storeUrl,
+          'https://play.google.com/store/apps/details?id=test',
+        );
+      },
+    );
+
+    test('store_url absent (null) -> mappé à null, pas d\'exception', () async {
       final client = _buildFakeClient(
-        onRequest: (request) => capturedRequest = request,
         row: const {
-          'minimum_supported_version': '0.3.0',
-          'latest_version': '0.5.0',
+          'min_supported_version': '0.1.0',
+          'latest_version': '0.1.0',
+          'store_url': null,
         },
       );
       final repository = SupabaseAppVersionRepository(client);
 
       final row = await repository.fetchCurrentPlatformVersion();
 
-      expect(capturedRequest, isNotNull);
-      expect(capturedRequest!.url.path, endsWith('/rest/v1/app_versions'));
-      expect(
-        capturedRequest!.url.queryParameters['platform'],
-        // `Platform.isIOS` est `false` sous `flutter test` (exécuté sur
-        // hôte desktop) : la requête filtre donc toujours sur `android`
-        // dans cet environnement de test, cohérent avec
-        // `AppVersionRepository._platformLabel`.
-        Platform.isIOS ? 'eq.ios' : 'eq.android',
-      );
-      expect(row.minimumSupportedVersion, '0.3.0');
-      expect(row.latestVersion, '0.5.0');
+      expect(row.storeUrl, isNull);
     });
 
     test(

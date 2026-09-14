@@ -24,14 +24,19 @@ class ForceUpdateScreen extends StatelessWidget {
   const ForceUpdateScreen({
     required this.installedVersion,
     required this.minimumVersion,
+    this.storeUrl,
     super.key,
   });
 
   /// Version actuellement installée (`PackageInfo.version`).
   final String installedVersion;
 
-  /// `app_versions.minimum_supported_version` de la plateforme courante.
+  /// `app_versions.min_supported_version` de la plateforme courante.
   final String minimumVersion;
+
+  /// `app_versions.store_url` — voir `app_store_launcher.dart` pour le
+  /// comportement de repli quand `null`/vide.
+  final String? storeUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +79,8 @@ class ForceUpdateScreen extends StatelessWidget {
                   width: double.infinity,
                   child: PrimaryButton(
                     label: '↓ Mettre à jour',
-                    onPressed: () => openAppStorePage(context),
+                    onPressed: () =>
+                        openAppStorePage(context, storeUrl: storeUrl),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),

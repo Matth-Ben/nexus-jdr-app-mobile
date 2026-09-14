@@ -67,7 +67,7 @@ class UpdateSuggestedBanner extends ConsumerWidget {
               ),
             ),
             InkWell(
-              onTap: () => openAppStorePage(context),
+              onTap: () => openAppStorePage(context, storeUrl: result.storeUrl),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                 child: Text(

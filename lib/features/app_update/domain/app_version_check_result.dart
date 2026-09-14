@@ -18,5 +18,6 @@ abstract class AppVersionCheckResult with _$AppVersionCheckResult {
     required String installedVersion,
     required String minimumVersion,
     required String latestVersion,
+    String? storeUrl,
   }) = _AppVersionCheckResult;
 }

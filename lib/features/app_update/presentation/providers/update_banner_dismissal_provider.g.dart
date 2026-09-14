@@ -128,7 +128,7 @@ final class UpdateBannerDismissalControllerProvider
 }
 
 String _$updateBannerDismissalControllerHash() =>
-    r'9d3f26753796e0273cfc2deca76f1f0e0a6539a7';
+    r'3e64fb9039d4a82668c3800253d2b190b3e7c60a';
 
 /// Persiste, sous forme d'une simple chaîne `SharedPreferences` (stockage
 /// local à l'appareil, jamais synchronisé), la dernière valeur de

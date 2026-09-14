@@ -158,4 +158,4 @@ final class AppVersionCheckProvider
   }
 }
 
-String _$appVersionCheckHash() => r'1eb9452a1da51d1cb6e7811a1895747459781cea';
+String _$appVersionCheckHash() => r'4add93be68520738b1d85736f0e47796c5098e33';

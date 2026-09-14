@@ -53,6 +53,7 @@ Future<AppVersionCheckResult> appVersionCheck(Ref ref) async {
       installedVersion: installedVersion,
       minimumVersion: row.minimumSupportedVersion,
       latestVersion: row.latestVersion,
+      storeUrl: row.storeUrl,
     );
   } catch (_) {
     return AppVersionCheckResult(
@@ -65,7 +66,7 @@ Future<AppVersionCheckResult> appVersionCheck(Ref ref) async {
 }
 
 /// `updateRequired` > `updateSuggested` > `upToDate` — voir la doc de
-/// [AppVersionStatus] pour les seuils exacts (`minimum_supported_version`/
+/// [AppVersionStatus] pour les seuils exacts (`min_supported_version`/
 /// `latest_version`).
 AppVersionStatus _resolveStatus({
   required String installedVersion,

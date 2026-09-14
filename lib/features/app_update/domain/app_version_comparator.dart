@@ -1,5 +1,5 @@
 /// Comparaison sémantique de deux numéros de version `major.minor.patch`
-/// (format des colonnes `app_versions.minimum_supported_version`/
+/// (format des colonnes `app_versions.min_supported_version`/
 /// `latest_version`, voir `data/app_version_repository.dart`, et de
 /// `PackageInfo.version`).
 ///
