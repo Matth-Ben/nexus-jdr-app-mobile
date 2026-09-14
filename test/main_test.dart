@@ -44,7 +44,7 @@ void main() {
     'affiche SplashScreen pendant l\'initialisation, puis bascule sur '
     '`child` une fois celle-ci résolue',
     (tester) async {
-      final completer = Completer<void>();
+      final completer = Completer<bool>();
 
       await tester.pumpWidget(
         ProviderScope(
@@ -70,7 +70,7 @@ void main() {
       expect(find.byType(SplashScreen), findsOneWidget);
       expect(find.text('App prête'), findsNothing);
 
-      completer.complete();
+      completer.complete(true);
       // Plusieurs `pump` supplémentaires (toujours pas `pumpAndSettle`, même
       // rationale) : depuis l'introduction de la vérification de version
       // (`appVersionCheckProvider`, voir la doc de classe d'`AppBootstrap`),
@@ -89,38 +89,79 @@ void main() {
     },
   );
 
-  testWidgets('n\'affiche `child` qu\'une fois, jamais avant la résolution de '
-      '`initialize` (même si celle-ci échoue)', (tester) async {
-    final completer = Completer<void>();
-
-    await tester.pumpWidget(
-      ProviderScope(
-        child: AppBootstrap(
-          initialize: () => completer.future,
-          child: const MaterialApp(
-            home: Scaffold(body: Center(child: Text('App prête'))),
+  testWidgets(
+    '`initialize` résolu à `false` (Supabase indisponible) -> écran de '
+    'repli, jamais `child` (qui dépend de Supabase.instance.client) ; '
+    '"Réessayer" relance `initialize`',
+    (tester) async {
+      var attempt = 0;
+      await tester.pumpWidget(
+        ProviderScope(
+          child: AppBootstrap(
+            initialize: () async => (++attempt) > 1,
+            child: const MaterialApp(
+              home: Scaffold(body: Center(child: Text('App prête'))),
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pump();
-
-    expect(find.text('App prête'), findsNothing);
-
-    completer.completeError(Exception('échec réseau simulé'));
-    // `FutureBuilder` capture l'erreur dans le `snapshot` plutôt que de la
-    // laisser remonter : `ConnectionState.done` est bien atteint (avec
-    // `snapshot.hasError`), donc `child` s'affiche quand même — cohérent
-    // avec `05-ux-navigation.md` ("l'app démarre quand même... plutôt que
-    // de rester bloquée sur cet écran"). Plusieurs `pump` (même rationale
-    // que le test précédent) : laisse le temps à la chaîne de `Future`s de
-    // `appVersionCheckProvider` de se résoudre avant d'atteindre `child`.
-    for (var i = 0; i < 5; i++) {
+      );
       await tester.pump();
-    }
+      await tester.pump();
 
-    expect(find.text('App prête'), findsOneWidget);
-  });
+      expect(find.text('App prête'), findsNothing);
+      expect(
+        find.text(
+          'Impossible de démarrer l\'application. Vérifie ta connexion et '
+          'réessaie.',
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Réessayer'));
+      // Plusieurs `pump` (même rationale que `pumpBootstrap` plus bas dans
+      // ce fichier) : `initialize` réussit cette fois, mais la chaîne
+      // `appVersionCheckProvider` (packageInfoProvider.future puis le
+      // dépôt) doit encore se résoudre avant d'atteindre `child`.
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+
+      expect(find.text('App prête'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    '`initialize` qui lève malgré tout (défense en profondeur, ne devrait '
+    'plus arriver en pratique) -> écran de repli, jamais `child`',
+    (tester) async {
+      final completer = Completer<bool>();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: AppBootstrap(
+            initialize: () => completer.future,
+            child: const MaterialApp(
+              home: Scaffold(body: Center(child: Text('App prête'))),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      completer.completeError(Exception('échec inattendu simulé'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('App prête'), findsNothing);
+      expect(
+        find.text(
+          'Impossible de démarrer l\'application. Vérifie ta connexion et '
+          'réessaie.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
   group('vérification de version une fois `initialize` résolu '
       '(`appVersionCheckProvider`, recettage direction-artistique du '
@@ -135,7 +176,7 @@ void main() {
             appVersionRepositoryProvider.overrideWithValue(repository),
           ],
           child: AppBootstrap(
-            initialize: () async {},
+            initialize: () async => true,
             child: const MaterialApp(
               home: Scaffold(body: Center(child: Text('App prête'))),
             ),

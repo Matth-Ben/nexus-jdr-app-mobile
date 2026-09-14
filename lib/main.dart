@@ -35,23 +35,26 @@ Future<void> main() async {
 /// d'initialisation par défaut d'[AppBootstrap], extraite en fonction
 /// top-level pour rester substituable en test (voir [AppBootstrap
 /// .initialize]).
-Future<void> _initializeSupabaseAndFirebase() async {
+///
+/// Renvoie `true` si `Supabase.initialize` a réussi (et donc si
+/// `Supabase.instance.client` est sûr d'accès), `false` sinon —
+/// [AppBootstrap] s'en sert pour décider s'il peut construire [NexusJdrApp]
+/// (dont le routeur lit `Supabase.instance.client` dès sa construction,
+/// via `core/network/supabase_client_provider.dart`) ou doit rester sur un
+/// écran de repli : `Supabase.instance.client` est un champ `late`, son
+/// accès avant une initialisation réussie lève un
+/// `LateInitializationError` **non lié aux `assert`** (donc pas retiré en
+/// release) — contrairement à ce qu'un ancien commentaire ici laissait
+/// entendre, laisser passer vers [NexusJdrApp] après un échec de
+/// `Supabase.initialize` plante réellement, dans tous les modes de build.
+Future<bool> _initializeSupabaseAndFirebase() async {
   assert(
     EnvConfig.isConfigured,
     'SUPABASE_URL / SUPABASE_ANON_KEY manquants : lancer avec '
     '--dart-define-from-file=config/<flavor>.json (voir config/README.md).',
   );
 
-  // `Supabase.initialize` ne fait aucun appel réseau bloquant en soi (mise en
-  // place du client + stockage local de session) : en cas d'échec (ex.
-  // plugin natif indisponible), on ne bloque quand même pas indéfiniment
-  // l'écran de lancement (`05-ux-navigation.md` : « en cas d'échec réseau à
-  // ce stade, l'app démarre quand même hors ligne sur les données déjà en
-  // cache plutôt que de rester bloquée sur cet écran »). La résilience
-  // réseau proprement dite (repli sur le cache `drift` des données de
-  // référence/de la fiche personnage ouverte) est un mécanisme distinct,
-  // déjà en place plus bas dans l'app (Phase 2, mode hors-ligne) et hors du
-  // périmètre de cet écran.
+  var supabaseReady = false;
   try {
     await Supabase.initialize(
       url: EnvConfig.supabaseUrl,
@@ -62,6 +65,7 @@ Future<void> _initializeSupabaseAndFirebase() async {
       // dépréciée).
       publishableKey: EnvConfig.supabaseAnonKey,
     );
+    supabaseReady = true;
   } catch (error, stackTrace) {
     FlutterError.reportError(
       FlutterErrorDetails(
@@ -80,11 +84,29 @@ Future<void> _initializeSupabaseAndFirebase() async {
   // attente) — `DefaultFirebaseOptions.currentPlatform` lèverait
   // `UnsupportedError` sur cette plateforme. `kIsWeb` exclu par construction
   // (ce dépôt ne cible aucune cible web, voir `01-architecture-technique.md`).
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+  // Un échec ici (Firebase, secondaire aux notifications push) ne doit pas
+  // empêcher l'app de démarrer si Supabase, lui, a bien réussi — même
+  // rationale de résilience que ci-dessus.
+  if (supabaseReady &&
+      !kIsWeb &&
+      defaultTargetPlatform == TargetPlatform.android) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (error, stackTrace) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'nexus_jdr main',
+          context: ErrorDescription('lors de Firebase.initializeApp'),
+        ),
+      );
+    }
   }
+
+  return supabaseReady;
 }
 
 /// Racine réelle de l'app : affiche [SplashScreen] le temps que [initialize]
@@ -108,14 +130,20 @@ Future<void> _initializeSupabaseAndFirebase() async {
 /// vrai ni dépendre d'un `Supabase.instance.client` réel — voir
 /// `test/main_test.dart`.
 ///
-/// Une fois [initialize] résolu, ce widget vérifie aussi la version
-/// installée (`appVersionCheckProvider`,
+/// Une fois [initialize] résolu **avec succès** (`true`, Supabase prêt), ce
+/// widget vérifie aussi la version installée (`appVersionCheckProvider`,
 /// `features/app_update/presentation/providers/app_version_providers.dart`)
 /// avant de basculer sur [child] : `AppVersionStatus.updateRequired` affiche
 /// `ForceUpdateScreen` à la place (écran bloquant, recettage
 /// direction-artistique du 13/09/2026), tout autre statut — y compris un
 /// échec de la vérification elle-même, voir la doc de
 /// `appVersionCheckProvider` — laisse passer vers [child] normalement.
+///
+/// Si [initialize] résout `false` (Supabase indisponible), ni la
+/// vérification de version ni [child] ne sont construits — tous deux
+/// dépendent de `Supabase.instance.client`, qui planterait (voir la doc de
+/// [_initializeSupabaseAndFirebase]) — [_SupabaseUnavailableScreen] prend le
+/// relais à la place, avec un bouton "Réessayer" qui relance [initialize].
 @visibleForTesting
 class AppBootstrap extends ConsumerStatefulWidget {
   const AppBootstrap({
@@ -124,7 +152,7 @@ class AppBootstrap extends ConsumerStatefulWidget {
     super.key,
   });
 
-  final Future<void> Function() initialize;
+  final Future<bool> Function() initialize;
   final Widget child;
 
   @override
@@ -132,15 +160,39 @@ class AppBootstrap extends ConsumerStatefulWidget {
 }
 
 class _AppBootstrapState extends ConsumerState<AppBootstrap> {
-  late final Future<void> _initialization = widget.initialize();
+  late Future<bool> _initialization = widget.initialize();
+
+  void _retryInitialization() {
+    // Corps de bloc, pas d'expression : `setState(() => _initialization =
+    // widget.initialize())` renvoie la valeur de l'affectation (le
+    // `Future<bool>` lui-même), ce que `setState` interprète comme un
+    // callback async invalide.
+    setState(() {
+      _initialization = widget.initialize();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<void>(
+    return FutureBuilder<bool>(
       future: _initialization,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return _splashApp();
+        }
+
+        // `snapshot.data != true` couvre `false` (échec intercepté par
+        // [_initializeSupabaseAndFirebase]) ET `snapshot.hasError` (défense
+        // en profondeur : ne devrait pas arriver puisque cette fonction ne
+        // laisse plus rien remonter, mais un `initialize` substitué en test
+        // pourrait toujours le faire) — dans les deux cas, ni la
+        // vérification de version ni [child] ne sont sûrs à construire.
+        if (snapshot.data != true) {
+          return MaterialApp(
+            theme: AppTheme.light,
+            debugShowCheckedModeBanner: false,
+            home: _SupabaseUnavailableScreen(onRetry: _retryInitialization),
+          );
         }
 
         final versionCheck = ref.watch(appVersionCheckProvider);
@@ -162,6 +214,7 @@ class _AppBootstrapState extends ConsumerState<AppBootstrap> {
                 home: ForceUpdateScreen(
                   installedVersion: result.installedVersion,
                   minimumVersion: result.minimumVersion,
+                  storeUrl: result.storeUrl,
                 ),
               );
             }
@@ -177,6 +230,49 @@ class _AppBootstrapState extends ConsumerState<AppBootstrap> {
       theme: AppTheme.light,
       debugShowCheckedModeBanner: false,
       home: const SplashScreen(),
+    );
+  }
+}
+
+/// Repli minimal si [_initializeSupabaseAndFirebase] échoue — cas rare (ex.
+/// configuration `SUPABASE_URL` malformée), mais [NexusJdrApp] ne peut pas
+/// être construit dans cet état (voir la doc de classe d'[AppBootstrap]).
+/// Volontairement sommaire (pas de maquette dédiée à cet état, contrairement
+/// à [ForceUpdateScreen]/[SplashScreen]) : juste de quoi ne jamais laisser
+/// l'utilisateur face à un écran figé sans recours.
+class _SupabaseUnavailableScreen extends StatelessWidget {
+  const _SupabaseUnavailableScreen({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.light.scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 48),
+                const SizedBox(height: 16),
+                const Text(
+                  'Impossible de démarrer l\'application. Vérifie ta '
+                  'connexion et réessaie.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: onRetry,
+                  child: const Text('Réessayer'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
