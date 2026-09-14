@@ -32,6 +32,8 @@ class SecondaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.surface = SecondaryButtonSurface.scene,
+    this.icon,
+    this.borderColor,
     super.key,
   });
 
@@ -43,6 +45,17 @@ class SecondaryButton extends StatelessWidget {
 
   /// Fond sur lequel le bouton est posé. Voir [SecondaryButtonSurface].
   final SecondaryButtonSurface surface;
+
+  /// Icône optionnelle affichée avant le libellé (défaut : aucune, pour ne
+  /// rien changer aux usages existants).
+  final IconData? icon;
+
+  /// Surcharge la bordure `wood.light` par défaut — ex. `AppColors.goldEnd`
+  /// pour un bouton secondaire "doré" (recettage direction-artistique du
+  /// 13/09/2026, bouton "Ajouter au butin du groupe" de
+  /// `group_treasure_tab_body.dart`) sans dupliquer tout le composant pour
+  /// cette seule variante de bordure.
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +76,7 @@ class SecondaryButton extends StatelessWidget {
           color: backgroundColor,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
-            color: AppColors.woodLight,
+            color: borderColor ?? AppColors.woodLight,
             width: AppBorders.card,
           ),
         ),
@@ -80,13 +93,24 @@ class SecondaryButton extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.sm,
                   ),
-                  child: Text(
-                    label.toUpperCase(),
-                    textAlign: TextAlign.center,
-                    style: AppTypography.display(
-                      fontSize: 11,
-                      color: textColor,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (icon != null) ...[
+                        Icon(icon, size: 16, color: textColor),
+                        const SizedBox(width: AppSpacing.xs),
+                      ],
+                      Flexible(
+                        child: Text(
+                          label.toUpperCase(),
+                          textAlign: TextAlign.center,
+                          style: AppTypography.display(
+                            fontSize: 11,
+                            color: textColor,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

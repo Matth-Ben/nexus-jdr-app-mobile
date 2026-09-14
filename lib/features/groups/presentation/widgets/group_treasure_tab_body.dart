@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/primary_button.dart';
+import '../../../../core/widgets/dashed_button.dart';
+import '../../../../core/widgets/secondary_button.dart';
 import '../../../characters/presentation/widgets/character_inventory_stat_boxes_row.dart';
 import '../../domain/group_treasure.dart';
 import '../../domain/group_treasure_item.dart';
@@ -45,14 +46,20 @@ class GroupTreasureTabBody extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
+              const _SectionLabel('MONNAIE COMMUNE'),
+              const SizedBox(height: AppSpacing.sm),
               CharacterInventoryStatBoxesRow(boxes: boxes),
               const SizedBox(height: AppSpacing.sm),
-              _ClaimCurrencyLink(
-                onTap: (!isBusy && !treasure.hasNoCurrency)
+              DashedButton(
+                icon: Icons.savings_outlined,
+                label: 'Répartir vers mon inventaire',
+                onPressed: (!isBusy && !treasure.hasNoCurrency)
                     ? onClaimCurrency
                     : null,
               ),
               const SizedBox(height: AppSpacing.md),
+              const _SectionLabel('OBJETS EN ATTENTE'),
+              const SizedBox(height: AppSpacing.sm),
               if (treasure.items.isEmpty)
                 const _EmptyTreasureItemsState()
               else
@@ -68,8 +75,11 @@ class GroupTreasureTabBody extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
-          child: PrimaryButton(
-            label: '+ Ajouter au butin',
+          child: SecondaryButton(
+            label: 'Ajouter au butin du groupe',
+            icon: Icons.card_giftcard,
+            surface: SecondaryButtonSurface.parchment,
+            borderColor: AppColors.goldEnd,
             onPressed: isBusy ? null : onAddToTreasure,
           ),
         ),
@@ -78,50 +88,34 @@ class GroupTreasureTabBody extends StatelessWidget {
   }
 }
 
-/// Lien texte "S'attribuer de la monnaie" — calque `_RestLink`
-/// (`character_vitals_card.dart`) : `Icons.savings_outlined` 14px, `body`
-/// 700/13 `textSecondary`, zone de tap 44px min-height. Désactivé (`onTap`
-/// `null`) si le butin commun n'a aucune monnaie ou qu'une écriture est déjà
-/// en vol.
-class _ClaimCurrencyLink extends StatelessWidget {
-  const _ClaimCurrencyLink({required this.onTap});
+/// Libellé de section ("MONNAIE COMMUNE"/"OBJETS EN ATTENTE") — même style de
+/// libellé de section que `ProfilePrivacyScreen` (section "MES DONNÉES",
+/// `font.body` 13px/800 `textSecondary`), recettage direction-artistique du
+/// 13/09/2026.
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.label);
 
-  final VoidCallback? onTap;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final disabled = onTap == null;
-    final color = disabled ? AppColors.textMuted : AppColors.textSecondary;
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.savings_outlined, size: 14, color: color),
-              const SizedBox(width: 4),
-              Text(
-                "S'attribuer de la monnaie",
-                style: AppTypography.body(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
+    return Text(
+      label,
+      style: AppTypography.body(
+        fontSize: 13,
+        fontWeight: FontWeight.w800,
+        color: AppColors.textSecondary,
       ),
     );
   }
 }
 
-/// Ligne d'objet en attente d'attribution — calque `_RewardItemRow`
-/// (`add_reward_sheet.dart`), lecture seule (pas de suppression ici) +
-/// `IconButton(44×44, Icons.call_split)` pour réclamer une partie/la
-/// totalité de la quantité disponible.
+/// Ligne d'objet en attente d'attribution — vignette carrée 40×40
+/// (placeholder, aucune image disponible pour ce butin dénormalisé, voir la
+/// doc de classe de [GroupTreasureItem]), nom/sous-titre sur 2 lignes puis
+/// lien texte "S'attribuer" (calque `GroupRepository.claimTreasureItem`) —
+/// recettage direction-artistique du 13/09/2026, remplace l'ancien
+/// `IconButton(Icons.call_split)`.
 class _TreasureItemRow extends StatelessWidget {
   const _TreasureItemRow({required this.item, required this.onClaim});
 
@@ -130,8 +124,10 @@ class _TreasureItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final disabled = onClaim == null;
+
     return Container(
-      padding: const EdgeInsets.only(left: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         color: AppColors.parchmentCard,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -139,26 +135,66 @@ class _TreasureItemRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              '${item.displayName} × ${item.quantity}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.body(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.parchmentCardAlt,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
           ),
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              tooltip: 'Réclamer',
-              onPressed: onClaim,
-              icon: const Icon(
-                Icons.call_split,
-                color: AppColors.textSecondary,
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  item.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.body(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '× ${item.quantity}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.body(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: InkWell(
+              onTap: onClaim,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
+                    child: Text(
+                      "S'attribuer",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: disabled
+                            ? AppColors.textMuted
+                            : AppColors.accentTeal,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
