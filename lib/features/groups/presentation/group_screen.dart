@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/secondary_button.dart';
+import '../../../core/widgets/segmented_tab_bar.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../characters/domain/currency_kind.dart';
 import '../../characters/domain/reward_item_draft.dart';
@@ -20,16 +20,19 @@ import 'widgets/add_to_group_treasure_sheet.dart';
 import 'widgets/claim_group_treasure_currency_sheet.dart';
 import 'widgets/claim_group_treasure_item_sheet.dart';
 import 'widgets/group_confirmation_dialog.dart';
-import 'widgets/group_management_sheet.dart';
 import 'widgets/group_members_tab_body.dart';
 import 'widgets/group_tab_bar.dart';
 import 'widgets/group_treasure_tab_body.dart';
 
 /// Écran "Groupe", route `/groups/:id` —
-/// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2 : 2
-/// bandeaux bois empilés (`WoodBackHeader` + bandeau d'identité, calque
-/// `profile_screen.dart`), corps parchemin scrollable selon l'onglet actif
-/// (Membres/Butin), `GroupTabBar` en pied d'écran.
+/// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2, revu par
+/// le recettage direction-artistique du 13/09 : `WoodBackHeader` (titre =
+/// nom du groupe) suivi directement d'un [SegmentedTabBar] Membres/Butin,
+/// puis le corps parchemin scrollable de l'onglet actif. Le bandeau
+/// d'identité (nom éditable, code d'invitation, régénération) qui vivait ici
+/// auparavant est retiré : son contenu est repris par l'écran "Paramètres du
+/// groupe" (tâche séparée), accessible depuis l'icône réglages du header côté
+/// owner.
 ///
 /// Toutes les écritures (exclure un membre, quitter, réclamer de la
 /// monnaie/un objet, ajouter au butin) sont orchestrées ici — les sheets/
@@ -60,11 +63,6 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Future<void> _copyInviteCode(String code) async {
-    await Clipboard.setData(ClipboardData(text: code));
-    _showSnackBar('Code copié.');
   }
 
   Future<void> _confirmLeaveGroup(GroupDetail detail) async {
@@ -115,32 +113,6 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       _showSnackBar(failure.message);
     } catch (_) {
       _showSnackBar("Impossible d'exclure ce membre. Réessayez.");
-    }
-  }
-
-  Future<void> _confirmRegenerateInviteCode() async {
-    final confirmed = await showGroupConfirmationDialog(
-      context,
-      title: "Régénérer le code d'invitation ?",
-      message:
-          "L'ancien code cessera de fonctionner immédiatement. Les membres "
-          'déjà présents ne sont pas affectés.',
-      confirmLabel: 'Régénérer',
-      destructive: false,
-    );
-    if (confirmed != true || !mounted) return;
-
-    try {
-      await ref
-          .read(groupRepositoryProvider)
-          .regenerateInviteCode(widget.groupId);
-      ref.invalidate(groupDetailProvider(widget.groupId));
-      if (!mounted) return;
-      _showSnackBar('Code régénéré.');
-    } on GroupFailure catch (failure) {
-      _showSnackBar(failure.message);
-    } catch (_) {
-      _showSnackBar('Impossible de régénérer le code. Réessayez.');
     }
   }
 
@@ -326,7 +298,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       body: Column(
         children: [
           WoodBackHeader(
-            title: 'GROUPE',
+            title: detail?.name.toUpperCase() ?? 'GROUPE',
             onBack: _goBack,
             trailing: detail == null
                 ? null
@@ -335,10 +307,8 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
                     height: 44,
                     child: IconButton(
                       onPressed: detail.isOwner
-                          ? () => showGroupManagementSheet(
-                              context,
-                              detail: detail,
-                              onRegenerateCode: _confirmRegenerateInviteCode,
+                          ? () => context.push(
+                              '/groups/${widget.groupId}/settings',
                             )
                           : () => _confirmLeaveGroup(detail),
                       icon: Icon(
@@ -348,8 +318,17 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
                     ),
                   ),
           ),
-          if (detail != null)
-            _GroupIdentityBand(detail: detail, onCopyCode: _copyInviteCode),
+          detailAsync.maybeWhen(
+            data: (_) => SegmentedTabBar<GroupTab>(
+              options: [
+                for (final tab in GroupTab.values)
+                  SegmentedTabBarOption(value: tab, label: tab.label),
+              ],
+              value: _tab,
+              onChanged: (tab) => setState(() => _tab = tab),
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
           Expanded(
             child: detailAsync.when(
               data: (data) => _buildTabBody(data),
@@ -367,13 +346,6 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: detailAsync.maybeWhen(
-        data: (_) => GroupTabBar(
-          current: _tab,
-          onSelect: (tab) => setState(() => _tab = tab),
-        ),
-        orElse: () => null,
-      ),
     );
   }
 
@@ -382,6 +354,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       GroupTab.members => GroupMembersTabBody(
         detail: detail,
         onRemoveMember: _confirmRemoveMember,
+        onLeaveGroup: () => _confirmLeaveGroup(detail),
       ),
       GroupTab.treasure => _buildTreasureTab(detail),
     };
@@ -405,95 +378,6 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             ? error.message
             : 'Impossible de charger le butin commun. Réessayez.',
         onRetry: () => ref.invalidate(groupTreasureProvider(widget.groupId)),
-      ),
-    );
-  }
-}
-
-/// Bandeau d'identité (nom, code, nombre de membres) — 2e bandeau bois de
-/// l'écran "Groupe", calque `profile_screen.dart`.
-class _GroupIdentityBand extends StatelessWidget {
-  const _GroupIdentityBand({required this.detail, required this.onCopyCode});
-
-  final GroupDetail detail;
-  final void Function(String code) onCopyCode;
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: AppColors.woodMedium,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        child: Column(
-          children: [
-            Text(
-              detail.name,
-              textAlign: TextAlign.center,
-              style: AppTypography.body(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textOnWood,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _InviteCodeChip(code: detail.inviteCode),
-                SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: IconButton(
-                    tooltip: 'Copier le code',
-                    onPressed: () => onCopyCode(detail.inviteCode),
-                    icon: const Icon(
-                      Icons.copy_outlined,
-                      color: AppColors.textOnWood,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Text(
-              '${detail.members.length} membres',
-              style: AppTypography.body(
-                fontSize: 13,
-                color: AppColors.textOnWoodMuted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InviteCodeChip extends StatelessWidget {
-  const _InviteCodeChip({required this.code});
-
-  final String code;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.parchmentCard,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
-      ),
-      child: Text(
-        code,
-        style: AppTypography.body(
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
-        ).copyWith(letterSpacing: 3),
       ),
     );
   }

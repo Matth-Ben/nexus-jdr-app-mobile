@@ -307,6 +307,42 @@ void main() {
     },
   );
 
+  testWidgets(
+    'puces de couleur : une par membre (borné à 6), badge pointillé "+N" '
+    'au-delà',
+    (tester) async {
+      fakeGroupRepository.groupsToReturn = const [
+        GroupSummary(
+          id: 'group-1',
+          name: 'Petit groupe',
+          memberCount: 3,
+          founderId: 'founder-id',
+        ),
+        GroupSummary(
+          id: 'group-2',
+          name: 'Grand groupe',
+          memberCount: 8,
+          founderId: 'founder-id',
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+      await tester.pumpAndSettle();
+
+      final squares = tester
+          .widgetList<Container>(find.byType(Container))
+          .where(
+            (container) =>
+                container.constraints?.maxWidth == 16 &&
+                container.constraints?.maxHeight == 16,
+          )
+          .toList();
+      // 3 puces (groupe 1) + 6 puces visibles (groupe 2, borné) = 9.
+      expect(squares.length, 9);
+      expect(find.text('+2'), findsOneWidget);
+    },
+  );
+
   testWidgets('échec réseau : affiche un message d\'erreur avec un bouton '
       '"Réessayer" qui relance fetchMyGroups', (tester) async {
     fakeGroupRepository.errorToThrow = const GroupFailure('Erreur serveur.');

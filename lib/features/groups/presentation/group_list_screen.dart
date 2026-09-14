@@ -13,6 +13,7 @@ import '../domain/group_color_assigner.dart';
 import '../domain/group_failure.dart';
 import '../domain/group_summary.dart';
 import 'providers/group_providers.dart';
+import 'widgets/member_color_chips_row.dart';
 
 /// Écran "Groupes", route `/groups` — point d'entrée UNIQUE du bouton
 /// "groupes" de `character_list_screen.dart` (`_GroupsButton`), quel que
@@ -166,6 +167,20 @@ class _GroupList extends StatelessWidget {
   }
 }
 
+/// Identifiants factices pour [MemberColorChipsRow] : `GroupSummary` (le
+/// résumé léger utilisé par cet écran, voir sa doc de classe) ne porte que
+/// [GroupSummary.memberCount], jamais la liste réelle des membres — obtenir
+/// leurs vrais identifiants demanderait d'étendre `fetchMyGroups` pour
+/// joindre `group_members`, hors périmètre du recettage direction-
+/// artistique du 13/09 (purement une prévisualisation décorative, voir
+/// `GroupColorAssigner`). En attendant, `'${group.id}-member-$i'` fournit
+/// des identifiants stables (donc des couleurs stables) et du bon nombre —
+/// juste jamais liés aux vrais membres. À remplacer par de vrais
+/// identifiants si `fetchMyGroups` est un jour étendu pour les exposer.
+List<String> _placeholderMemberIds(GroupSummary group) => [
+  for (var i = 0; i < group.memberCount; i++) '${group.id}-member-$i',
+];
+
 class _GroupRow extends StatelessWidget {
   const _GroupRow({
     required this.group,
@@ -231,6 +246,8 @@ class _GroupRow extends StatelessWidget {
                         color: AppColors.textSecondary,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    MemberColorChipsRow(ids: _placeholderMemberIds(group)),
                   ],
                 ),
               ),

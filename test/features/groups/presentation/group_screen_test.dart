@@ -8,6 +8,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/theme/app_colors.dart';
+import 'package:personnages/core/theme/app_spacing.dart';
+import 'package:personnages/core/widgets/wood_back_header.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/created_group.dart';
@@ -214,6 +217,19 @@ GoRouter _buildTestRouter() {
         builder: (context, state) =>
             GroupScreen(groupId: state.pathParameters['id']!),
       ),
+      // Stub de `GroupSettingsScreen` (route `/groups/:id/settings`,
+      // recettage direction-artistique du 13/09/2026) — seul le fait que
+      // l'icône réglages y navigue est du ressort de ce fichier, le contenu
+      // de l'écran lui-même est testé dans
+      // `group_settings_screen_test.dart`.
+      GoRoute(
+        path: '/groups/:id/settings',
+        builder: (context, state) => Scaffold(
+          body: Center(
+            child: Text('Paramètres du groupe ${state.pathParameters['id']}'),
+          ),
+        ),
+      ),
     ],
   );
 }
@@ -308,19 +324,8 @@ void main() {
     },
   );
 
-  group('bandeau d\'identité', () {
-    testWidgets('affiche nom, code, nombre de membres', (tester) async {
-      fakeRepository.detailToReturn = ownerViewDetail();
-
-      await tester.pumpWidget(_buildTestWidget(fakeRepository));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Les Lames de l\'Aube'), findsOneWidget);
-      expect(find.text('AB3F7K2M'), findsOneWidget);
-      expect(find.text('3 membres'), findsOneWidget);
-    });
-
-    testWidgets('copier le code affiche un SnackBar "Code copié."', (
+  group('en-tête', () {
+    testWidgets('affiche le nom du groupe en majuscules une fois chargé', (
       tester,
     ) async {
       fakeRepository.detailToReturn = ownerViewDetail();
@@ -328,36 +333,109 @@ void main() {
       await tester.pumpWidget(_buildTestWidget(fakeRepository));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.copy_outlined));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Code copié.'), findsOneWidget);
+      expect(find.text('LES LAMES DE L\'AUBE'), findsOneWidget);
     });
-  });
 
-  group('en-tête selon le rôle', () {
-    testWidgets('owner : icône réglages', (tester) async {
+    testWidgets('owner : icône réglages dans le header, jamais déconnexion', (
+      tester,
+    ) async {
       fakeRepository.detailToReturn = ownerViewDetail();
 
       await tester.pumpWidget(_buildTestWidget(fakeRepository));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.logout), findsNothing);
+      final header = find.byType(WoodBackHeader);
+      expect(
+        find.descendant(
+          of: header,
+          matching: find.byIcon(Icons.settings_outlined),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: header, matching: find.byIcon(Icons.logout)),
+        findsNothing,
+      );
     });
 
-    testWidgets('membre : icône déconnexion (quitter)', (tester) async {
-      fakeRepository.detailToReturn = memberViewDetail();
+    testWidgets(
+      'membre : icône déconnexion (quitter) dans le header, jamais réglages',
+      (tester) async {
+        fakeRepository.detailToReturn = memberViewDetail();
+
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+
+        final header = find.byType(WoodBackHeader);
+        expect(
+          find.descendant(of: header, matching: find.byIcon(Icons.logout)),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: header,
+            matching: find.byIcon(Icons.settings_outlined),
+          ),
+          findsNothing,
+        );
+      },
+    );
+  });
+
+  group('onglet Membres', () {
+    testWidgets('indicateur "Mis à jour en direct" en tête de liste', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
 
       await tester.pumpWidget(_buildTestWidget(fakeRepository));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.logout), findsOneWidget);
-      expect(find.byIcon(Icons.settings_outlined), findsNothing);
+      expect(find.text('Mis à jour en direct'), findsOneWidget);
     });
-  });
 
-  group('onglet Membres', () {
+    testWidgets('texte explicatif de confidentialité en pied de liste', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('Seuls les PV et le statut sont visibles ici'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('carte "MORT" : bordure accent.brick 3px, fond dédié '
+        '(distincte de la carte par défaut)', (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+
+      final deadNameFinder = find.text('Ithil');
+      final deadCardFinder = find.ancestor(
+        of: deadNameFinder,
+        matching: find.byType(Container),
+      );
+      final decorations = tester
+          .widgetList<Container>(deadCardFinder)
+          .map((container) => container.decoration)
+          .whereType<BoxDecoration>()
+          .where(
+            (decoration) => decoration.color == AppColors.deadCardBackground,
+          )
+          .toList();
+
+      expect(decorations, isNotEmpty);
+      expect(decorations.first.border, isA<Border>());
+      final border = decorations.first.border! as Border;
+      expect(border.top.color, AppColors.accentBrick);
+      expect(border.top.width, AppBorders.cardEmphasis);
+    });
+
     testWidgets('affiche tous les membres, "(toi)" sur sa propre ligne', (
       tester,
     ) async {
@@ -444,7 +522,7 @@ void main() {
     );
   });
 
-  group('quitter le groupe (membre)', () {
+  group('quitter le groupe (membre, icône du header)', () {
     testWidgets(
       'confirmation puis leaveGroup, navigation vers / avec SnackBar',
       (tester) async {
@@ -453,7 +531,12 @@ void main() {
         await tester.pumpWidget(_buildTestWidget(fakeRepository));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byIcon(Icons.logout));
+        await tester.tap(
+          find.descendant(
+            of: find.byType(WoodBackHeader),
+            matching: find.byIcon(Icons.logout),
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(find.textContaining('Quitter'), findsWidgets);
@@ -468,6 +551,39 @@ void main() {
         expect(find.text('Tu as quitté le groupe.'), findsOneWidget);
       },
     );
+  });
+
+  group('quitter le groupe (lien en pied de l\'onglet Membres)', () {
+    testWidgets(
+      'membre : le lien "Quitter le groupe" est présent et fonctionne',
+      (tester) async {
+        fakeRepository.detailToReturn = memberViewDetail();
+
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Quitter le groupe'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Quitter'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.leaveGroupCalled, isTrue);
+        expect(find.text('Tu as quitté le groupe.'), findsOneWidget);
+      },
+    );
+
+    testWidgets('owner (fondateur) : le lien "Quitter le groupe" est absent — '
+        'décision du chef de projet, un fondateur dissout son groupe plutôt '
+        'que de le quitter (voir GroupMembersTabBody.onLeaveGroup)', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Quitter le groupe'), findsNothing);
+    });
   });
 
   group('onglet Butin', () {
@@ -488,11 +604,11 @@ void main() {
 
       expect(find.text('12'), findsOneWidget);
       expect(find.text('Aucun objet en attente.'), findsOneWidget);
-      expect(find.text('+ AJOUTER AU BUTIN'), findsOneWidget);
+      expect(find.text('AJOUTER AU BUTIN DU GROUPE'), findsOneWidget);
     });
 
     testWidgets(
-      '"S\'attribuer de la monnaie" désactivé quand le butin est vide',
+      '"Répartir vers mon inventaire" désactivé quand le butin est vide',
       (tester) async {
         fakeRepository.detailToReturn = ownerViewDetail();
         fakeRepository.treasureToReturn = const GroupTreasure(
@@ -504,7 +620,7 @@ void main() {
         await tester.tap(find.text('BUTIN'));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text("S'attribuer de la monnaie"));
+        await tester.tap(find.text('Répartir vers mon inventaire'));
         await tester.pumpAndSettle();
 
         // Aucune sheet ne s'ouvre : le titre de la sheet de réclamation
@@ -513,7 +629,7 @@ void main() {
       },
     );
 
-    testWidgets('affiche un objet en attente avec un bouton de réclamation', (
+    testWidgets('affiche un objet en attente avec un lien de réclamation', (
       tester,
     ) async {
       fakeRepository.detailToReturn = ownerViewDetail();
@@ -530,7 +646,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Potion'), findsOneWidget);
-      expect(find.byIcon(Icons.call_split), findsOneWidget);
+      expect(find.text("S'attribuer"), findsOneWidget);
     });
 
     testWidgets(
@@ -550,7 +666,7 @@ void main() {
         await tester.tap(find.text('BUTIN'));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text("S'attribuer de la monnaie"));
+        await tester.tap(find.text('Répartir vers mon inventaire'));
         await tester.pumpAndSettle();
 
         // Ordre des champs de `claim_group_treasure_currency_sheet.dart` :
@@ -590,7 +706,7 @@ void main() {
         await tester.tap(find.text('BUTIN'));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text("S'attribuer de la monnaie"));
+        await tester.tap(find.text('Répartir vers mon inventaire'));
         await tester.pumpAndSettle();
 
         await tester.enterText(find.byType(TextFormField).at(0), '5');
@@ -626,7 +742,7 @@ void main() {
         await tester.tap(find.text('BUTIN'));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text("S'attribuer de la monnaie"));
+        await tester.tap(find.text('Répartir vers mon inventaire'));
         await tester.pumpAndSettle();
 
         final fields = find.byType(TextFormField);
@@ -653,41 +769,41 @@ void main() {
       },
     );
 
-    testWidgets(
-      "réclamer un objet : ouvre la sheet de quantité, appelle "
-      "claimTreasureItem puis rafraîchit le butin",
-      (tester) async {
-        fakeRepository.detailToReturn = ownerViewDetail();
-        fakeRepository.treasureToReturn = const GroupTreasure(
-          groupId: 'group-1',
-          items: [
-            GroupTreasureItem(itemId: 7, displayName: 'Potion', quantity: 3),
-          ],
-        );
+    testWidgets("réclamer un objet : ouvre la sheet de quantité, appelle "
+        "claimTreasureItem puis rafraîchit le butin", (tester) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+      fakeRepository.treasureToReturn = const GroupTreasure(
+        groupId: 'group-1',
+        items: [
+          GroupTreasureItem(itemId: 7, displayName: 'Potion', quantity: 3),
+        ],
+      );
 
-        await tester.pumpWidget(_buildTestWidget(fakeRepository));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('BUTIN'));
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('BUTIN'));
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.byIcon(Icons.call_split));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text("S'attribuer"));
+      await tester.pumpAndSettle();
 
-        expect(find.text('Réclamer Potion'), findsOneWidget);
+      expect(find.text('Réclamer Potion'), findsOneWidget);
 
-        await tester.tap(find.text('RÉCLAMER'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('RÉCLAMER'));
+      await tester.pumpAndSettle();
 
-        expect(fakeRepository.lastClaimedQuantity, 1);
-        expect(find.text('Objet ajouté à ton inventaire.'), findsOneWidget);
-        expect(fakeRepository.treasureFetchCount, greaterThanOrEqualTo(2));
-      },
-    );
+      expect(fakeRepository.lastClaimedQuantity, 1);
+      expect(find.text('Objet ajouté à ton inventaire.'), findsOneWidget);
+      expect(fakeRepository.treasureFetchCount, greaterThanOrEqualTo(2));
+    });
   });
 
   group('gestion du groupe (owner)', () {
     testWidgets(
-      'la sheet "GESTION DU GROUPE" liste Renommer/Régénérer/Dissoudre',
+      "l'icône réglages navigue vers l'écran dédié /groups/:id/settings "
+      '(recettage direction-artistique du 13/09/2026 : remplace la sheet '
+      '"GESTION DU GROUPE", voir group_settings_screen_test.dart pour le '
+      'contenu de cet écran)',
       (tester) async {
         fakeRepository.detailToReturn = ownerViewDetail();
 
@@ -697,77 +813,8 @@ void main() {
         await tester.tap(find.byIcon(Icons.settings_outlined));
         await tester.pumpAndSettle();
 
-        expect(find.text('GESTION DU GROUPE'), findsOneWidget);
-        expect(find.text('Renommer le groupe'), findsOneWidget);
-        expect(find.text('Régénérer le code'), findsOneWidget);
-        expect(find.text('Dissoudre le groupe'), findsOneWidget);
+        expect(find.text('Paramètres du groupe group-1'), findsOneWidget);
       },
     );
-
-    testWidgets('régénérer le code : confirmation puis rafraîchissement', (
-      tester,
-    ) async {
-      fakeRepository.detailToReturn = ownerViewDetail();
-      fakeRepository.regeneratedCode = 'ZZZZ9999';
-
-      await tester.pumpWidget(_buildTestWidget(fakeRepository));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.settings_outlined));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Régénérer le code'));
-      await tester.pumpAndSettle();
-
-      expect(find.text("Régénérer le code d'invitation ?"), findsOneWidget);
-
-      await tester.tap(find.text('RÉGÉNÉRER'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Code régénéré.'), findsOneWidget);
-    });
-
-    testWidgets('dissoudre le groupe : retape du nom requise avant activation, '
-        'insensible casse/espaces, navigue vers / une fois confirmé', (
-      tester,
-    ) async {
-      fakeRepository.detailToReturn = ownerViewDetail();
-
-      await tester.pumpWidget(_buildTestWidget(fakeRepository));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.settings_outlined));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Dissoudre le groupe'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('DISSOUDRE LE GROUPE'), findsOneWidget);
-      // `DestructiveButton` garde la casse du libellé fourni (jamais
-      // uppercase, contrairement à `PrimaryButton`/`SecondaryButton`).
-      await tester.tap(find.text('Continuer'));
-      await tester.pumpAndSettle();
-
-      final confirmFinder = find.text('Dissoudre définitivement');
-      expect(
-        tester
-            .widget<InkWell>(
-              find.ancestor(of: confirmFinder, matching: find.byType(InkWell)),
-            )
-            .onTap,
-        isNull,
-      );
-
-      await tester.enterText(
-        find.byType(TextFormField),
-        '  les lames de l\'aube  ',
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(confirmFinder);
-      await tester.pumpAndSettle();
-
-      expect(fakeRepository.dissolveCalled, isTrue);
-      expect(find.text('Liste des personnages'), findsOneWidget);
-      expect(find.text('Groupe dissous.'), findsOneWidget);
-    });
   });
 }
