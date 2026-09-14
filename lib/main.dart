@@ -9,6 +9,9 @@ import 'core/notifications/notification_providers.dart';
 import 'core/notifications/push_token_registrar.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/app_update/domain/app_version_status.dart';
+import 'features/app_update/presentation/force_update_screen.dart';
+import 'features/app_update/presentation/providers/app_version_providers.dart';
 import 'features/character_creation/presentation/providers/character_creation_catalog_preloader.dart';
 import 'features/characters/presentation/providers/character_write_sync_coordinator.dart';
 import 'features/splash/presentation/splash_screen.dart';
@@ -104,8 +107,17 @@ Future<void> _initializeSupabaseAndFirebase() async {
 /// sans jamais appeler `Supabase.initialize`/`Firebase.initializeApp` pour de
 /// vrai ni dépendre d'un `Supabase.instance.client` réel — voir
 /// `test/main_test.dart`.
+///
+/// Une fois [initialize] résolu, ce widget vérifie aussi la version
+/// installée (`appVersionCheckProvider`,
+/// `features/app_update/presentation/providers/app_version_providers.dart`)
+/// avant de basculer sur [child] : `AppVersionStatus.updateRequired` affiche
+/// `ForceUpdateScreen` à la place (écran bloquant, recettage
+/// direction-artistique du 13/09/2026), tout autre statut — y compris un
+/// échec de la vérification elle-même, voir la doc de
+/// `appVersionCheckProvider` — laisse passer vers [child] normalement.
 @visibleForTesting
-class AppBootstrap extends StatefulWidget {
+class AppBootstrap extends ConsumerStatefulWidget {
   const AppBootstrap({
     this.initialize = _initializeSupabaseAndFirebase,
     this.child = const NexusJdrApp(),
@@ -116,10 +128,10 @@ class AppBootstrap extends StatefulWidget {
   final Widget child;
 
   @override
-  State<AppBootstrap> createState() => _AppBootstrapState();
+  ConsumerState<AppBootstrap> createState() => _AppBootstrapState();
 }
 
-class _AppBootstrapState extends State<AppBootstrap> {
+class _AppBootstrapState extends ConsumerState<AppBootstrap> {
   late final Future<void> _initialization = widget.initialize();
 
   @override
@@ -128,14 +140,43 @@ class _AppBootstrapState extends State<AppBootstrap> {
       future: _initialization,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return MaterialApp(
-            theme: AppTheme.light,
-            debugShowCheckedModeBanner: false,
-            home: const SplashScreen(),
-          );
+          return _splashApp();
         }
-        return widget.child;
+
+        final versionCheck = ref.watch(appVersionCheckProvider);
+        return versionCheck.when(
+          // Toujours affiché plutôt qu'une exception non gérée : un
+          // provider `keepAlive` déjà en `AsyncError` (ex. lu une première
+          // fois avant que Supabase soit prêt dans un test) ne devrait
+          // normalement jamais arriver ici (`appVersionCheckProvider`
+          // intercepte lui-même toute exception, voir sa documentation),
+          // mais retomber sur [child] reste le choix le plus sûr si jamais
+          // c'était le cas — jamais bloquant pour un souci de version.
+          error: (error, stackTrace) => widget.child,
+          loading: _splashApp,
+          data: (result) {
+            if (result.status == AppVersionStatus.updateRequired) {
+              return MaterialApp(
+                theme: AppTheme.light,
+                debugShowCheckedModeBanner: false,
+                home: ForceUpdateScreen(
+                  installedVersion: result.installedVersion,
+                  minimumVersion: result.minimumVersion,
+                ),
+              );
+            }
+            return widget.child;
+          },
+        );
       },
+    );
+  }
+
+  Widget _splashApp() {
+    return MaterialApp(
+      theme: AppTheme.light,
+      debugShowCheckedModeBanner: false,
+      home: const SplashScreen(),
     );
   }
 }

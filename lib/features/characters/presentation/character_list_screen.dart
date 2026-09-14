@@ -14,6 +14,7 @@ import '../../../core/widgets/dashed_border_painter.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
+import '../../app_update/presentation/widgets/update_suggested_banner.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
 import '../../character_creation/presentation/providers/character_creation_return_route_provider.dart';
 import '../domain/character_list_filter.dart';
@@ -153,6 +154,13 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
                 children: [
                   const _Header(),
                   const SizedBox(height: AppSpacing.sm),
+                  // Bandeau "Mise à jour suggérée" (recettage
+                  // direction-artistique du 13/09/2026) — inséré
+                  // inconditionnellement : le widget se réduit lui-même à
+                  // `SizedBox.shrink()` tant qu'aucune mise à jour n'est
+                  // suggérée ou que sa version a déjà été refermée, voir sa
+                  // documentation de classe.
+                  const UpdateSuggestedBanner(),
                   _SearchRow(
                     controller: _searchController,
                     filterActive: _selectedClassNames.isNotEmpty,

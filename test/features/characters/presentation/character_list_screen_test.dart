@@ -11,6 +11,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:personnages/features/app_update/data/app_version_repository.dart';
+import 'package:personnages/features/app_update/presentation/providers/app_version_providers.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
@@ -361,13 +364,55 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> removeAvatar() async {}
 }
 
+/// Double d'`AppVersionRepository` (`features/app_update/`) — voir la
+/// documentation de classe de `UpdateSuggestedBanner` dans
+/// `character_list_screen.dart::build` : la bannière "Mise à jour suggérée"
+/// est insérée inconditionnellement, ce fichier ne teste donc que sa
+/// présence/absence selon le statut résolu, jamais son contenu détaillé
+/// (voir `test/features/app_update/presentation/widgets/update_suggested_banner_test.dart`
+/// pour ça).
+class _FakeAppVersionRepository implements AppVersionRepository {
+  _FakeAppVersionRepository(this._row);
+
+  final AppVersionRow _row;
+
+  @override
+  Future<AppVersionRow> fetchCurrentPlatformVersion() async => _row;
+}
+
 void main() {
+  // `packageInfoProvider` (lu par `appVersionCheckProvider`, dépendance de
+  // `UpdateSuggestedBanner`) : mockée une fois pour tout le fichier, même
+  // convention que `profile_screen_test.dart`.
+  setUpAll(() {
+    PackageInfo.setMockInitialValues(
+      appName: 'Nexus JDR — Personnages',
+      packageName: 'com.nexusjdr.personnages',
+      version: '0.1.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+  });
+
   late _FakeCharacterRepository fakeCharacterRepository;
   late _FakeAuthRepository fakeAuthRepository;
+  // Statut "à jour" par défaut (`installedVersion` == `latestVersion`, voir
+  // `setUpAll` ci-dessus) : la bannière "Mise à jour suggérée" reste
+  // invisible pour tous les tests de ce fichier qui ne la concernent pas
+  // explicitement — important en particulier pour ne pas faire doublon avec
+  // l'icône `Icons.close` déjà utilisée par le champ de recherche (voir le
+  // groupe "recherche/filtre" plus bas).
+  late _FakeAppVersionRepository fakeAppVersionRepository;
 
   setUp(() {
     fakeCharacterRepository = _FakeCharacterRepository();
     fakeAuthRepository = _FakeAuthRepository();
+    fakeAppVersionRepository = _FakeAppVersionRepository(
+      const AppVersionRow(
+        minimumSupportedVersion: '0.1.0',
+        latestVersion: '0.1.0',
+      ),
+    );
   });
 
   GoRouter buildTestRouter({List<NavigatorObserver> observers = const []}) {
@@ -442,13 +487,19 @@ void main() {
     );
   }
 
-  Widget buildTestWidget({RouteObserver<PageRoute<dynamic>>? routeObserver}) {
+  Widget buildTestWidget({
+    RouteObserver<PageRoute<dynamic>>? routeObserver,
+    AppVersionRepository? appVersionRepository,
+  }) {
     final observer = routeObserver ?? RouteObserver<PageRoute<dynamic>>();
     return ProviderScope(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeCharacterRepository),
         authRepositoryProvider.overrideWithValue(fakeAuthRepository),
         routeObserverProvider.overrideWithValue(observer),
+        appVersionRepositoryProvider.overrideWithValue(
+          appVersionRepository ?? fakeAppVersionRepository,
+        ),
       ],
       child: MaterialApp.router(
         routerConfig: buildTestRouter(observers: [observer]),
@@ -839,6 +890,9 @@ void main() {
             fakeCharacterRepository,
           ),
           authRepositoryProvider.overrideWithValue(fakeAuthRepository),
+          appVersionRepositoryProvider.overrideWithValue(
+            fakeAppVersionRepository,
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -1321,5 +1375,85 @@ void main() {
       expect(find.text('Borgan Pierrefort'), findsNothing);
       expect(find.textContaining('AUCUN RÉSULTAT'), findsOneWidget);
     });
+  });
+
+  group('bannière "Mise à jour suggérée" (`UpdateSuggestedBanner`, recettage '
+      'direction-artistique du 13/09/2026) — insérée entre l\'en-tête et la '
+      'barre de recherche, contenu détaillé testé séparément dans '
+      'update_suggested_banner_test.dart', () {
+    testWidgets('invisible par défaut (statut "à jour", voir le double '
+        '`_FakeAppVersionRepository` par défaut de `setUp`)', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nouvelle version disponible'), findsNothing);
+    });
+
+    testWidgets('visible entre l\'en-tête ("TES AVENTURIERS") et la barre de '
+        'recherche quand une mise à jour est suggérée', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          appVersionRepository: _FakeAppVersionRepository(
+            const AppVersionRow(
+              minimumSupportedVersion: '0.1.0',
+              latestVersion: '0.5.0',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nouvelle version disponible'), findsOneWidget);
+
+      final headerY = tester.getBottomLeft(find.text('TES AVENTURIERS')).dy;
+      final bannerY = tester
+          .getTopLeft(find.text('Nouvelle version disponible'))
+          .dy;
+      final searchY = tester
+          .getTopLeft(
+            find.widgetWithText(TextField, 'Rechercher un personnage'),
+          )
+          .dy;
+
+      expect(
+        headerY,
+        lessThan(bannerY),
+        reason: 'la bannière doit être sous l\'en-tête',
+      );
+      expect(
+        bannerY,
+        lessThan(searchY),
+        reason:
+            'la bannière doit être au-dessus de la barre de '
+            'recherche',
+      );
+    });
+
+    testWidgets(
+      'invisible quand une mise à jour est obligatoire (c\'est l\'écran '
+      'bloquant `ForceUpdateScreen` qui prend le relais avant même '
+      'd\'atteindre cet écran, jamais la bannière)',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [];
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            appVersionRepository: _FakeAppVersionRepository(
+              const AppVersionRow(
+                minimumSupportedVersion: '0.5.0',
+                latestVersion: '0.6.0',
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nouvelle version disponible'), findsNothing);
+      },
+    );
   });
 }

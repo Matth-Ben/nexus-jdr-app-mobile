@@ -87,6 +87,15 @@ dependencies:
   url_launcher: ^6.3.2
   firebase_core: ^4.14.0
   firebase_messaging: ^16.6.0
+  # Persiste la fermeture de la bannière "Mise à jour suggérée"
+  # (`features/app_update/presentation/widgets/update_suggested_banner.dart`)
+  # par version, pour qu'elle ne réapparaisse pas en boucle à chaque
+  # affichage tant qu'aucune nouvelle version n'est sortie — déjà résolu
+  # transitivement (`supabase_flutter`/`gotrue` s'en servent pour le stockage
+  # de session sur certaines plateformes), mais déclaré explicitement
+  # puisqu'importé directement par du code de ce dépôt (même rationale que
+  # `path` plus haut).
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
