@@ -10,17 +10,18 @@ import '../../../core/router/route_observer_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/dashed_border_painter.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
 import '../../character_creation/presentation/providers/character_creation_return_route_provider.dart';
-import '../domain/character_failure.dart';
 import '../domain/character_list_filter.dart';
 import '../domain/character_summary.dart';
 import 'providers/character_providers.dart';
 import 'widgets/character_card.dart';
 import 'widgets/character_class_filter_sheet.dart';
+import 'widgets/connection_error_state.dart';
 
 /// Écran d'accueil listant les personnages du joueur connecté
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 2,
@@ -121,6 +122,22 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   Widget build(BuildContext context) {
     final charactersAsync = ref.watch(charactersProvider);
 
+    // Échec du chargement initial : écran dédié plein écran ("Connexion
+    // impossible", recettage direction artistique du 13/09/2026 — voir
+    // `widgets/connection_error_state.dart`), pas seulement la zone de liste
+    // — l'en-tête "TES AVENTURIERS"/la barre de recherche n'ont aucun sens
+    // tant qu'aucune donnée n'a pu être chargée. `hasError` reflète bien
+    // l'état actuellement "actif" de l'`AsyncValue` (comme le ferait la
+    // branche `error:` d'un `.when`) : un `ref.invalidate` déclenché par
+    // [ConnectionErrorState.onRetry] fait immédiatement retomber l'état sur
+    // `AsyncLoading`, donc quitter cet écran, avant toute nouvelle erreur
+    // éventuelle.
+    if (charactersAsync.hasError) {
+      return ConnectionErrorState(
+        onRetry: () => ref.invalidate(charactersProvider),
+      );
+    }
+
     return SceneScaffold(
       body: SafeArea(
         child: Column(
@@ -139,8 +156,8 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
                   _SearchRow(
                     controller: _searchController,
                     filterActive: _selectedClassNames.isNotEmpty,
-                    // `null` (chargement/erreur) : bouton filtre sans effet,
-                    // rien à filtrer tant que la liste n'a pas résolu.
+                    // `null` (chargement) : bouton filtre sans effet, rien à
+                    // filtrer tant que la liste n'a pas résolu.
                     onTapFilter: charactersAsync.value == null
                         ? null
                         : () => _openClassFilterSheet(charactersAsync.value!),
@@ -149,7 +166,10 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
               ),
             ),
             Expanded(
-              child: charactersAsync.when(
+              // `maybeWhen` plutôt que `when` : l'erreur est déjà interceptée
+              // plus haut par le retour anticipé sur `charactersAsync.hasError`
+              // — seuls `data`/`loading` restent possibles ici.
+              child: charactersAsync.maybeWhen(
                 data: (characters) {
                   final visible = CharacterListFilter.apply(
                     characters: characters,
@@ -164,14 +184,8 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
                   }
                   return _CharacterList(characters: visible);
                 },
-                loading: () => const Center(
+                orElse: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.goldEnd),
-                ),
-                error: (error, stackTrace) => _ErrorState(
-                  message: error is CharacterFailure
-                      ? error.message
-                      : 'Impossible de charger vos personnages. Réessayez.',
-                  onRetry: () => ref.invalidate(charactersProvider),
                 ),
               ),
             ),
@@ -563,20 +577,17 @@ class _SearchEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
+            SizedBox(
               width: 88,
               height: 88,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.fromBorderSide(
-                  BorderSide(color: AppColors.textOnWoodMuted, width: 1.5),
+              child: CustomPaint(
+                painter: const DashedBorderPainter(
+                  color: AppColors.textOnWoodMuted,
+                  shape: BoxShape.circle,
                 ),
-              ),
-              child: const Icon(
-                Icons.search,
-                size: 40,
-                color: AppColors.goldEnd,
+                child: const Center(
+                  child: Icon(Icons.search, size: 40, color: AppColors.goldEnd),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -619,6 +630,13 @@ class _SearchEmptyState extends StatelessWidget {
 /// `docs/cahier-des-charges/09-maquettes-captures.md`, section "État vide —
 /// Liste de personnages" (absente du cahier des charges d'origine au moment
 /// où cet écran a été introduit, ajoutée depuis).
+///
+/// Icône `Icons.explore_outlined` en `AppColors.accentTeal` (recettage
+/// direction-artistique du 13/09, décision validée par le chef de projet) —
+/// remplace l'ancien `Icons.shield_moon_outlined`/`AppColors.goldEnd`, moins
+/// aligné avec le thème "carte/exploration" de la maquette. Voir aussi
+/// [_SearchEmptyState], qui garde `Icons.search`/`AppColors.goldEnd` (non
+/// concerné par ce changement).
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
@@ -630,20 +648,21 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
+            SizedBox(
               width: 88,
               height: 88,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.fromBorderSide(
-                  BorderSide(color: AppColors.textOnWoodMuted, width: 1.5),
+              child: CustomPaint(
+                painter: const DashedBorderPainter(
+                  color: AppColors.textOnWoodMuted,
+                  shape: BoxShape.circle,
                 ),
-              ),
-              child: const Icon(
-                Icons.shield_moon_outlined,
-                size: 40,
-                color: AppColors.goldEnd,
+                child: const Center(
+                  child: Icon(
+                    Icons.explore_outlined,
+                    size: 40,
+                    color: AppColors.accentTeal,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -665,40 +684,6 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textOnWoodMuted),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              size: 48,
-              color: AppColors.accentBrick,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: AppTypography.body(color: AppColors.textOnWood),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
           ],
         ),
       ),

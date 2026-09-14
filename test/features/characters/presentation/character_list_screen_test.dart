@@ -30,6 +30,8 @@ import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/core/router/route_observer_provider.dart';
+import 'package:personnages/core/theme/app_colors.dart';
+import 'package:personnages/core/widgets/dashed_border_painter.dart';
 import 'package:personnages/features/characters/presentation/character_list_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_card.dart';
@@ -627,48 +629,146 @@ void main() {
     expect(find.textContaining('AUCUN AVENTURIER'), findsOneWidget);
   });
 
-  testWidgets(
-    'affiche un état d\'erreur avec un bouton "Réessayer" qui relance la '
-    'requête',
-    (WidgetTester tester) async {
-      fakeCharacterRepository.errorToThrow = const CharacterFailure(
-        'Impossible de charger vos personnages. Réessayez.',
+  testWidgets('état vide "aucun personnage" : médaillon en bordure pointillée '
+      'circulaire, icône explore_outlined en accentTeal (recettage direction '
+      'artistique du 13/09)', (WidgetTester tester) async {
+    fakeCharacterRepository.charactersToReturn = const [];
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is CustomPaint &&
+            widget.painter is DashedBorderPainter &&
+            (widget.painter! as DashedBorderPainter).shape == BoxShape.circle &&
+            (widget.painter! as DashedBorderPainter).color ==
+                AppColors.textOnWoodMuted,
+      ),
+      findsOneWidget,
+    );
+    final icon = tester.widget<Icon>(find.byIcon(Icons.explore_outlined));
+    expect(icon.color, AppColors.accentTeal);
+    expect(find.byIcon(Icons.shield_moon_outlined), findsNothing);
+  });
+
+  group(
+    'échec du chargement initial : écran "Connexion impossible" '
+    '(recettage direction artistique du 13/09/2026, remplace l\'ancien '
+    '`_ErrorState` générique — voir `widgets/connection_error_state.dart`)',
+    () {
+      testWidgets(
+        'affiche le bandeau "CONNEXION", le titre, le texte explicatif et '
+        'l\'icône wifi barrée, quelle que soit l\'erreur levée par le dépôt',
+        (WidgetTester tester) async {
+          fakeCharacterRepository.errorToThrow = const CharacterFailure(
+            'Session expirée, reconnecte-toi.',
+          );
+
+          await tester.pumpWidget(buildTestWidget());
+          await tester.pumpAndSettle();
+
+          expect(find.text('CONNEXION'), findsOneWidget);
+          expect(find.text('Connexion impossible'), findsOneWidget);
+          expect(
+            find.textContaining(
+              'les modifications se synchroniseront automatiquement',
+            ),
+            findsOneWidget,
+          );
+          expect(find.byIcon(Icons.wifi_off), findsOneWidget);
+          // Copie statique de la maquette, jamais le message de la
+          // `CharacterFailure` sous-jacente (spec de la tâche).
+          expect(find.text('Session expirée, reconnecte-toi.'), findsNothing);
+        },
       );
 
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
+      testWidgets(
+        'même écran statique quand le dépôt lève une exception qui n\'est '
+        'pas une CharacterFailure',
+        (WidgetTester tester) async {
+          fakeCharacterRepository.errorToThrow = StateError('boom réseau');
 
-      expect(
-        find.text('Impossible de charger vos personnages. Réessayez.'),
-        findsOneWidget,
-      );
-      expect(fakeCharacterRepository.fetchCallCount, 1);
+          await tester.pumpWidget(buildTestWidget());
+          await tester.pumpAndSettle();
 
-      await tester.tap(find.text('RÉESSAYER'));
-      await tester.pumpAndSettle();
-
-      expect(fakeCharacterRepository.fetchCallCount, 2);
-    },
-  );
-
-  testWidgets(
-    'affiche un message d\'erreur générique (et le bouton "Réessayer") '
-    'quand le dépôt lève une exception qui n\'est pas une CharacterFailure',
-    (WidgetTester tester) async {
-      fakeCharacterRepository.errorToThrow = StateError('boom réseau');
-
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('Impossible de charger vos personnages. Réessayez.'),
-        findsOneWidget,
+          expect(find.text('Connexion impossible'), findsOneWidget);
+        },
       );
 
-      await tester.tap(find.text('RÉESSAYER'));
-      await tester.pumpAndSettle();
+      testWidgets('le bouton "RÉESSAYER" relance la requête', (
+        WidgetTester tester,
+      ) async {
+        fakeCharacterRepository.errorToThrow = const CharacterFailure(
+          'Impossible de charger vos personnages. Réessayez.',
+        );
 
-      expect(fakeCharacterRepository.fetchCallCount, 2);
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        expect(fakeCharacterRepository.fetchCallCount, 1);
+
+        await tester.tap(find.text('RÉESSAYER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeCharacterRepository.fetchCallCount, 2);
+      });
+
+      testWidgets('un nouvel échec après "RÉESSAYER" réaffiche le même écran '
+          '"Connexion impossible" (pas de crash, pas de retour à la liste)', (
+        WidgetTester tester,
+      ) async {
+        fakeCharacterRepository.errorToThrow = const CharacterFailure(
+          'Impossible de charger vos personnages. Réessayez.',
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('RÉESSAYER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Connexion impossible'), findsOneWidget);
+        expect(fakeCharacterRepository.fetchCallCount, 2);
+      });
+
+      testWidgets('affiche le lien "Continuer hors ligne", visuellement neutre '
+          '(aucun fallback cache réel tant que la Phase 4 n\'est pas livrée '
+          '— voir `widgets/connection_error_state.dart`)', (
+        WidgetTester tester,
+      ) async {
+        fakeCharacterRepository.errorToThrow = const CharacterFailure(
+          'Impossible de charger vos personnages. Réessayez.',
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        expect(find.text('Continuer hors ligne'), findsOneWidget);
+        expect(
+          find.ancestor(
+            of: find.text('Continuer hors ligne'),
+            matching: find.byType(Tooltip),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('aucune flèche retour dans le bandeau "CONNEXION" : '
+          '`CharacterListScreen` est l\'écran d\'accueil (route `/`), rien de '
+          'cohérent vers quoi revenir (écart assumé par rapport à la maquette, '
+          'voir la documentation de classe de `ConnectionErrorState`)', (
+        WidgetTester tester,
+      ) async {
+        fakeCharacterRepository.errorToThrow = const CharacterFailure(
+          'Impossible de charger vos personnages. Réessayez.',
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.arrow_back_ios_new), findsNothing);
+      });
     },
   );
 
@@ -1081,6 +1181,36 @@ void main() {
         expect(find.text('Halltesse Ambrelune'), findsOneWidget);
         expect(find.text('Borgan Pierrefort'), findsOneWidget);
         expect(find.text('Sylvi Aubefeuille'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'état "aucun résultat" : médaillon en bordure pointillée circulaire '
+      '(recettage direction artistique du 13/09)',
+      (WidgetTester tester) async {
+        fakeCharacterRepository.charactersToReturn = characters;
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Rechercher un personnage'),
+          'Zar',
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is CustomPaint &&
+                widget.painter is DashedBorderPainter &&
+                (widget.painter! as DashedBorderPainter).shape ==
+                    BoxShape.circle &&
+                (widget.painter! as DashedBorderPainter).color ==
+                    AppColors.textOnWoodMuted,
+          ),
+          findsOneWidget,
+        );
       },
     );
 

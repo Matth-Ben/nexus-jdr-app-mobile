@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/dashed_border_painter.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
@@ -312,6 +313,14 @@ class _FounderBadge extends StatelessWidget {
   }
 }
 
+/// Recettage direction-artistique du 13/09 : cet écran (`GroupListScreen`)
+/// est un niveau "scène" (`SceneScaffold`, fond sombre) — [_EmptyState] et
+/// [_ErrorState] utilisaient encore par erreur les tokens "parchemin" (fond
+/// clair) hérités de leur écriture initiale plutôt que les tokens "on-wood"
+/// (texte clair sur fond sombre) déjà utilisés partout ailleurs sur cet
+/// écran (voir `_Header`, `_GroupRow`...). Corrigé ici pour correspondre à
+/// `character_list_screen.dart::_EmptyState`/`_ErrorState`, mêmes états sur
+/// un écran "scène" comparable.
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
@@ -323,20 +332,21 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
+            SizedBox(
               width: 88,
               height: 88,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.fromBorderSide(
-                  BorderSide(color: AppColors.textMuted, width: 1.5),
+              child: CustomPaint(
+                painter: const DashedBorderPainter(
+                  color: AppColors.textOnWoodMuted,
+                  shape: BoxShape.circle,
                 ),
-              ),
-              child: const Icon(
-                Icons.groups_outlined,
-                size: 40,
-                color: AppColors.woodMedium,
+                child: const Center(
+                  child: Icon(
+                    Icons.groups_outlined,
+                    size: 40,
+                    color: AppColors.goldEnd,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -345,7 +355,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: AppTypography.display(
                 fontSize: 11,
-                color: AppColors.textPrimary,
+                color: AppColors.textOnWood,
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -353,7 +363,7 @@ class _EmptyState extends StatelessWidget {
               "Crée un groupe pour ton équipe, ou rejoins celui de tes "
               "coéquipiers avec un code d'invitation.",
               textAlign: TextAlign.center,
-              style: AppTypography.body(color: AppColors.textSecondary),
+              style: AppTypography.body(color: AppColors.textOnWoodMuted),
             ),
           ],
         ),
@@ -385,14 +395,10 @@ class _ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: AppTypography.body(color: AppColors.textPrimary),
+              style: AppTypography.body(color: AppColors.textOnWood),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(
-              label: 'Réessayer',
-              surface: SecondaryButtonSurface.parchment,
-              onPressed: onRetry,
-            ),
+            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
           ],
         ),
       ),

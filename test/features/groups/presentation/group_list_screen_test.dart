@@ -8,6 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/theme/app_colors.dart';
+import 'package:personnages/core/widgets/dashed_border_painter.dart';
+import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
@@ -187,6 +190,47 @@ void main() {
     },
   );
 
+  testWidgets(
+    'état vide : tokens "on-wood" (écran "scène") plutôt que "parchemin" — '
+    'médaillon en bordure pointillée circulaire, icône groups_outlined en '
+    'goldEnd (recettage direction artistique du 13/09)',
+    (tester) async {
+      fakeGroupRepository.groupsToReturn = const [];
+
+      await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is CustomPaint &&
+              widget.painter is DashedBorderPainter &&
+              (widget.painter! as DashedBorderPainter).shape ==
+                  BoxShape.circle &&
+              (widget.painter! as DashedBorderPainter).color ==
+                  AppColors.textOnWoodMuted,
+        ),
+        findsOneWidget,
+      );
+
+      final icon = tester.widget<Icon>(find.byIcon(Icons.groups_outlined));
+      expect(icon.color, AppColors.goldEnd);
+
+      final title = tester.widget<Text>(
+        find.text("AUCUN GROUPE POUR L'INSTANT"),
+      );
+      expect(title.style?.color, AppColors.textOnWood);
+
+      final body = tester.widget<Text>(
+        find.text(
+          "Crée un groupe pour ton équipe, ou rejoins celui de tes "
+          "coéquipiers avec un code d'invitation.",
+        ),
+      );
+      expect(body.style?.color, AppColors.textOnWoodMuted);
+    },
+  );
+
   testWidgets('liste les groupes du joueur (nom + nombre de membres), boutons '
       'Créer/Rejoindre toujours affichés même avec des groupes existants', (
     tester,
@@ -360,6 +404,34 @@ void main() {
 
     expect(fakeGroupRepository.fetchCallCount, 2);
     expect(find.text("AUCUN GROUPE POUR L'INSTANT"), findsOneWidget);
+  });
+
+  testWidgets('état d\'erreur : tokens "on-wood" (écran "scène") plutôt que '
+      '"parchemin" — texte en textOnWood, bouton "Réessayer" en surface '
+      '"scene" par défaut (recettage direction artistique du 13/09)', (
+    tester,
+  ) async {
+    fakeGroupRepository.errorToThrow = const GroupFailure('Erreur serveur.');
+
+    await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+    await tester.pumpAndSettle();
+
+    final message = tester.widget<Text>(find.text('Erreur serveur.'));
+    expect(message.style?.color, AppColors.textOnWood);
+
+    // `find.byType(SecondaryButton)` seul trouverait aussi "REJOINDRE UN
+    // GROUPE" (pied d'écran, toujours affiché même en état d'erreur) : on
+    // restreint donc à celui portant le libellé "Réessayer".
+    final retryButton = tester.widget<SecondaryButton>(
+      find.ancestor(
+        of: find.text('RÉESSAYER'),
+        matching: find.byType(SecondaryButton),
+      ),
+    );
+    expect(retryButton.surface, SecondaryButtonSurface.scene);
+
+    final icon = tester.widget<Icon>(find.byIcon(Icons.error_outline));
+    expect(icon.color, AppColors.accentBrick);
   });
 
   testWidgets('le bouton retour navigue vers / (aucune pile à dépiler ici)', (
