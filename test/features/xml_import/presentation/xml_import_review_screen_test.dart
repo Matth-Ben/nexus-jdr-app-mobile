@@ -703,8 +703,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('3 champs nécessitent une correction manuelle avant '
-          'validation'),
+      find.text(
+        '3 champs nécessitent une correction manuelle avant '
+        'validation',
+      ),
       findsOneWidget,
     );
     expect(find.textContaining('Alignement non reconnu'), findsOneWidget);
@@ -714,27 +716,26 @@ void main() {
     );
   });
 
-  testWidgets(
-    'carte d\'alerte : icône d\'avertissement seule à droite, pas de '
-    'chevron (correctif de conformité visuelle direction-artistique du '
-    '13/09, maquette qui ne montre pas d\'affordance chevron)',
-    (WidgetTester tester) async {
-      growTestViewport(tester);
-      await tester.pumpWidget(buildTestWidget(xmlSource: _multipleAlertsXml));
-      await tester.pumpAndSettle();
+  testWidgets('carte d\'alerte : icône d\'avertissement seule à droite, pas de '
+      'chevron (correctif de conformité visuelle direction-artistique du '
+      '13/09, maquette qui ne montre pas d\'affordance chevron)', (
+    WidgetTester tester,
+  ) async {
+    growTestViewport(tester);
+    await tester.pumpWidget(buildTestWidget(xmlSource: _multipleAlertsXml));
+    await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.chevron_right), findsNothing);
-      expect(find.byIcon(Icons.warning_amber_rounded), findsWidgets);
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
+    expect(find.byIcon(Icons.warning_amber_rounded), findsWidgets);
 
-      final iconCenter = tester.getCenter(
-        find.byIcon(Icons.warning_amber_rounded).first,
-      );
-      final titleCenter = tester.getCenter(
-        find.textContaining('Alignement non reconnu'),
-      );
-      expect(iconCenter.dx, greaterThan(titleCenter.dx));
-    },
-  );
+    final iconCenter = tester.getCenter(
+      find.byIcon(Icons.warning_amber_rounded).first,
+    );
+    final titleCenter = tester.getCenter(
+      find.textContaining('Alignement non reconnu'),
+    );
+    expect(iconCenter.dx, greaterThan(titleCenter.dx));
+  });
 
   testWidgets(
     'tap "VALIDER LE PERSONNAGE" (≥1 alerte) : ouvre le dialogue "CHAMPS NON '
@@ -839,20 +840,43 @@ void main() {
   );
 
   testWidgets(
-    'état "Erreur" (XML invalide) : message dédié, bouton "CHOISIR UN AUTRE '
-    'FICHIER", pas de liste de cartes ni de bouton primaire',
+    'état "Erreur" (XML invalide) : bandeau "IMPORT XML" sans sous-titre, '
+    'titre "Fichier illisible", encart nommant le fichier, bouton primaire '
+    '"CHOISIR UN AUTRE FICHIER" et lien "Annuler" séparé, pas de liste de '
+    'cartes',
     (WidgetTester tester) async {
       growTestViewport(tester);
       await tester.pumpWidget(buildTestWidget(xmlSource: _invalidXml));
       await tester.pumpAndSettle();
 
+      expect(find.text('IMPORT XML'), findsOneWidget);
+      expect(find.text('Fichier illisible'), findsOneWidget);
       expect(
         find.text('Ce fichier ne semble pas être un export aidedd.org valide.'),
         findsOneWidget,
       );
-      expect(find.textContaining('échec de l\'analyse'), findsOneWidget);
+      expect(find.text('test.xml'), findsOneWidget);
       expect(find.text('CHOISIR UN AUTRE FICHIER'), findsOneWidget);
-      expect(find.byType(PrimaryButton), findsNothing);
+      expect(find.byType(PrimaryButton), findsOneWidget);
+      expect(find.text('Annuler'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'état "Erreur" (XML invalide) : "Annuler" et "CHOISIR UN AUTRE FICHIER" '
+    'sont câblés au même comportement de retour (pas de sélecteur de '
+    'fichier dédié à cet écran, voir la doc de `_InvalidFileErrorState` — '
+    "les deux actions n'ont donc rien pour les distinguer aujourd'hui)",
+    (WidgetTester tester) async {
+      await tester.pumpWidget(buildTestWidget(xmlSource: _invalidXml));
+      await tester.pumpAndSettle();
+
+      final primaryButton = tester.widget<PrimaryButton>(
+        find.byType(PrimaryButton),
+      );
+      final cancelButton = tester.widget<TextButton>(find.byType(TextButton));
+
+      expect(primaryButton.onPressed, equals(cancelButton.onPressed));
     },
   );
 }

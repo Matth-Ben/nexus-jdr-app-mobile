@@ -121,15 +121,13 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     if (error is XmlImportInvalidFileFailure) {
       return Column(
         children: [
-          _Header(
-            title: 'VÉRIFICATION IMPORT',
-            subtitle: '${widget.fileName} — échec de l\'analyse',
-            onBack: _goBack,
-          ),
+          _Header(title: 'IMPORT XML', subtitle: null, onBack: _goBack),
           Expanded(
             child: _InvalidFileErrorState(
+              fileName: widget.fileName,
               message: error.message,
               onPickAnother: _goBack,
+              onCancel: _goBack,
             ),
           ),
         ],
@@ -1138,12 +1136,17 @@ class _CorrectableEntry {
   final ValueChanged<String?> onConfirm;
 }
 
-/// Bandeau bois plein en tête d'écran, avec titre + sous-titre — pas de barre
-/// de progression contrairement à `_Header` de l'assistant de création (cet
-/// écran n'est pas une étape numérotée). Le sous-titre reprend le token déjà
-/// défini pour les icônes inactives de la barre d'onglets
+/// Bandeau bois plein en tête d'écran, avec titre + sous-titre optionnel —
+/// pas de barre de progression contrairement à `_Header` de l'assistant de
+/// création (cet écran n'est pas une étape numérotée). Le sous-titre reprend
+/// le token déjà défini pour les icônes inactives de la barre d'onglets
 /// (`AppColors.textOnWoodMuted`, voir `CharacterDetailTabBar`) plutôt qu'une
 /// nouvelle valeur d'opacité — voir la spec visuelle de la tâche.
+///
+/// [subtitle] `null` = titre seul (recettage `direction-artistique` du
+/// 13/09, état "Erreur — Import XML invalide" : la maquette ne montre que le
+/// bandeau "IMPORT XML" sans sous-titre, le nom du fichier étant déplacé
+/// dans l'encart dédié du corps de l'écran, voir [_InvalidFileErrorState]).
 class _Header extends StatelessWidget {
   const _Header({
     required this.title,
@@ -1152,7 +1155,7 @@ class _Header extends StatelessWidget {
   });
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final VoidCallback onBack;
 
   @override
@@ -1190,14 +1193,16 @@ class _Header extends StatelessWidget {
                           color: AppColors.textOnWood,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        subtitle,
-                        style: AppTypography.body(
-                          fontSize: 12,
-                          color: AppColors.textOnWoodMuted,
+                      if (subtitle != null) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          subtitle!,
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.textOnWoodMuted,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -1699,18 +1704,37 @@ class _SavingOverlay extends StatelessWidget {
   }
 }
 
-/// État d'erreur "XML invalide/structure non reconnue" — voir la spec
-/// visuelle : icône alerte, message principal, texte secondaire, bouton
-/// secondaire pleine largeur "CHOISIR UN AUTRE FICHIER" (pas de bouton
-/// primaire), pas de liste de cartes.
+/// État d'erreur "XML invalide/structure non reconnue" — recettage
+/// `direction-artistique` du 13/09 : médaillon cerclé (icône document
+/// illisible), titre court "Fichier illisible", texte explicatif, encart
+/// bordé nommant le fichier concerné, bouton primaire doré "CHOISIR UN AUTRE
+/// FICHIER" puis lien texte "Annuler" séparé en dessous — pas de liste de
+/// cartes.
+///
+/// [onPickAnother] et [onCancel] pointent tous les deux vers
+/// [_XmlImportReviewScreenState._goBack] au point d'appel : ce dépôt n'a pas
+/// d'écran de sélecteur de fichier dédié (le dialogue natif `file_picker`
+/// vit dans `CharacterListScreen`, voir sa documentation), donc "choisir un
+/// autre fichier" ne peut aujourd'hui que revenir à la liste des
+/// personnages, exactement comme "Annuler" — aucune des deux actions ne peut
+/// relancer directement une sélection de fichier depuis cet écran. Les deux
+/// callbacks restent distincts dans l'API du widget (plutôt qu'un seul
+/// `onBack` partagé) pour ne pas figer cette contrainte de navigation
+/// actuelle dans la signature du composant, si un sélecteur dédié à cet
+/// écran est introduit plus tard. Comportement identique signalé au chef de
+/// projet plutôt qu'une distinction fabriquée artificiellement.
 class _InvalidFileErrorState extends StatelessWidget {
   const _InvalidFileErrorState({
+    required this.fileName,
     required this.message,
     required this.onPickAnother,
+    required this.onCancel,
   });
 
+  final String fileName;
   final String message;
   final VoidCallback onPickAnother;
+  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -1720,21 +1744,49 @@ class _InvalidFileErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 48,
-              color: AppColors.accentBrick,
+            Container(
+              width: 90,
+              height: 90,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.fromBorderSide(
+                  BorderSide(color: AppColors.accentBrick, width: 2),
+                ),
+              ),
+              child: const Center(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(
+                      Icons.description_outlined,
+                      size: 40,
+                      color: AppColors.accentBrick,
+                    ),
+                    Icon(Icons.close, size: 20, color: AppColors.accentBrick),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
+            Text(
+              'Fichier illisible',
+              textAlign: TextAlign.center,
+              style: AppTypography.body(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Ce fichier ne semble pas être un export aidedd.org valide.',
               textAlign: TextAlign.center,
               style: AppTypography.body(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               message,
               textAlign: TextAlign.center,
@@ -1744,12 +1796,59 @@ class _InvalidFileErrorState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.parchmentCard,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(
+                  color: AppColors.woodLight,
+                  width: AppBorders.card,
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.insert_drive_file_outlined,
+                    size: 18,
+                    color: AppColors.textMuted,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      fileName,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
             SizedBox(
               width: double.infinity,
-              child: SecondaryButton(
+              child: PrimaryButton(
                 label: 'Choisir un autre fichier',
-                surface: SecondaryButtonSurface.parchment,
                 onPressed: onPickAnother,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextButton(
+              onPressed: onCancel,
+              child: Text(
+                'Annuler',
+                style: AppTypography.body(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
           ],
