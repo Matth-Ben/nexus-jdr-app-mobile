@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/created_group.dart';
@@ -20,6 +21,7 @@ import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 import 'package:personnages/features/groups/domain/joined_group.dart';
 import 'package:personnages/features/groups/presentation/group_list_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakeGroupRepository implements GroupRepository {
   List<GroupSummary>? groupsToReturn;
@@ -142,10 +144,22 @@ GoRouter _buildTestRouter() {
   );
 }
 
+User _fakeUser() {
+  return User(
+    id: 'current-user-id',
+    appMetadata: const {},
+    userMetadata: const {},
+    aud: 'authenticated',
+    email: 'joueur@exemple.com',
+    createdAt: '2026-01-01T00:00:00Z',
+  );
+}
+
 Widget _buildTestWidget(_FakeGroupRepository groupRepository) {
   return ProviderScope(
     overrides: [
       groupRepositoryProvider.overrideWithValue(groupRepository),
+      currentUserProvider.overrideWithValue(_fakeUser()),
     ],
     child: MaterialApp.router(routerConfig: _buildTestRouter()),
   );
@@ -173,32 +187,46 @@ void main() {
     },
   );
 
-  testWidgets(
-    'liste les groupes du joueur (nom + nombre de membres), boutons '
-    'Créer/Rejoindre toujours affichés même avec des groupes existants',
-    (tester) async {
-      fakeGroupRepository.groupsToReturn = const [
-        GroupSummary(id: 'group-1', name: 'Les Lames', memberCount: 2),
-        GroupSummary(id: 'group-2', name: 'Les Ombres', memberCount: 4),
-      ];
+  testWidgets('liste les groupes du joueur (nom + nombre de membres), boutons '
+      'Créer/Rejoindre toujours affichés même avec des groupes existants', (
+    tester,
+  ) async {
+    fakeGroupRepository.groupsToReturn = const [
+      GroupSummary(
+        id: 'group-1',
+        name: 'Les Lames',
+        memberCount: 2,
+        founderId: 'founder-id',
+      ),
+      GroupSummary(
+        id: 'group-2',
+        name: 'Les Ombres',
+        memberCount: 4,
+        founderId: 'founder-id',
+      ),
+    ];
 
-      await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Les Lames'), findsOneWidget);
-      expect(find.text('2 membres'), findsOneWidget);
-      expect(find.text('Les Ombres'), findsOneWidget);
-      expect(find.text('4 membres'), findsOneWidget);
-      expect(find.text('CRÉER UN GROUPE'), findsOneWidget);
-      expect(find.text('REJOINDRE UN GROUPE'), findsOneWidget);
-    },
-  );
+    expect(find.text('Les Lames'), findsOneWidget);
+    expect(find.text('2 membres'), findsOneWidget);
+    expect(find.text('Les Ombres'), findsOneWidget);
+    expect(find.text('4 membres'), findsOneWidget);
+    expect(find.text('CRÉER UN GROUPE'), findsOneWidget);
+    expect(find.text('REJOINDRE UN GROUPE'), findsOneWidget);
+  });
 
   testWidgets('taper un groupe de la liste navigue vers /groups/:id', (
     tester,
   ) async {
     fakeGroupRepository.groupsToReturn = const [
-      GroupSummary(id: 'group-1', name: 'Les Lames', memberCount: 2),
+      GroupSummary(
+        id: 'group-1',
+        name: 'Les Lames',
+        memberCount: 2,
+        founderId: 'founder-id',
+      ),
     ];
 
     await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
@@ -215,7 +243,12 @@ void main() {
     'déjà rejoint (permet d\'en créer un second)',
     (tester) async {
       fakeGroupRepository.groupsToReturn = const [
-        GroupSummary(id: 'group-1', name: 'Les Lames', memberCount: 2),
+        GroupSummary(
+          id: 'group-1',
+          name: 'Les Lames',
+          memberCount: 2,
+          founderId: 'founder-id',
+        ),
       ];
 
       await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
@@ -228,45 +261,70 @@ void main() {
     },
   );
 
+  testWidgets('"Rejoindre un groupe" navigue vers /groups/join — même avec un '
+      'groupe déjà rejoint (permet d\'en rejoindre un second)', (tester) async {
+    fakeGroupRepository.groupsToReturn = const [
+      GroupSummary(
+        id: 'group-1',
+        name: 'Les Lames',
+        memberCount: 2,
+        founderId: 'founder-id',
+      ),
+    ];
+
+    await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('REJOINDRE UN GROUPE'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rejoindre un groupe'), findsOneWidget);
+  });
+
   testWidgets(
-    '"Rejoindre un groupe" navigue vers /groups/join — même avec un '
-    'groupe déjà rejoint (permet d\'en rejoindre un second)',
+    'badge "TOI" affiché uniquement sur le groupe fondé par le joueur '
+    'connecté',
     (tester) async {
       fakeGroupRepository.groupsToReturn = const [
-        GroupSummary(id: 'group-1', name: 'Les Lames', memberCount: 2),
+        GroupSummary(
+          id: 'group-1',
+          name: 'Les Lames',
+          memberCount: 2,
+          founderId: 'current-user-id',
+        ),
+        GroupSummary(
+          id: 'group-2',
+          name: 'Les Ombres',
+          memberCount: 4,
+          founderId: 'someone-else-id',
+        ),
       ];
 
       await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('REJOINDRE UN GROUPE'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Rejoindre un groupe'), findsOneWidget);
+      expect(find.text('TOI'), findsOneWidget);
     },
   );
 
-  testWidgets(
-    'échec réseau : affiche un message d\'erreur avec un bouton '
-    '"Réessayer" qui relance fetchMyGroups',
-    (tester) async {
-      fakeGroupRepository.errorToThrow = const GroupFailure('Erreur serveur.');
+  testWidgets('échec réseau : affiche un message d\'erreur avec un bouton '
+      '"Réessayer" qui relance fetchMyGroups', (tester) async {
+    fakeGroupRepository.errorToThrow = const GroupFailure('Erreur serveur.');
 
-      await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(_buildTestWidget(fakeGroupRepository));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Erreur serveur.'), findsOneWidget);
-      expect(fakeGroupRepository.fetchCallCount, 1);
+    expect(find.text('Erreur serveur.'), findsOneWidget);
+    expect(fakeGroupRepository.fetchCallCount, 1);
 
-      fakeGroupRepository.errorToThrow = null;
-      fakeGroupRepository.groupsToReturn = const [];
-      await tester.tap(find.text('RÉESSAYER'));
-      await tester.pumpAndSettle();
+    fakeGroupRepository.errorToThrow = null;
+    fakeGroupRepository.groupsToReturn = const [];
+    await tester.tap(find.text('RÉESSAYER'));
+    await tester.pumpAndSettle();
 
-      expect(fakeGroupRepository.fetchCallCount, 2);
-      expect(find.text("AUCUN GROUPE POUR L'INSTANT"), findsOneWidget);
-    },
-  );
+    expect(fakeGroupRepository.fetchCallCount, 2);
+    expect(find.text("AUCUN GROUPE POUR L'INSTANT"), findsOneWidget);
+  });
 
   testWidgets('le bouton retour navigue vers / (aucune pile à dépiler ici)', (
     tester,

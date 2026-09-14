@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$GroupSummary {
 
- String get id; String get name; int get memberCount;
+ String get id; String get name; int get memberCount; String get founderId;
 /// Create a copy of GroupSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +26,16 @@ $GroupSummaryCopyWith<GroupSummary> get copyWith => _$GroupSummaryCopyWithImpl<G
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&(identical(other.founderId, founderId) || other.founderId == founderId));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,memberCount);
+int get hashCode => Object.hash(runtimeType,id,name,memberCount,founderId);
 
 @override
 String toString() {
-  return 'GroupSummary(id: $id, name: $name, memberCount: $memberCount)';
+  return 'GroupSummary(id: $id, name: $name, memberCount: $memberCount, founderId: $founderId)';
 }
 
 
@@ -46,7 +46,7 @@ abstract mixin class $GroupSummaryCopyWith<$Res>  {
   factory $GroupSummaryCopyWith(GroupSummary value, $Res Function(GroupSummary) _then) = _$GroupSummaryCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, int memberCount
+ String id, String name, int memberCount, String founderId
 });
 
 
@@ -63,12 +63,13 @@ class _$GroupSummaryCopyWithImpl<$Res>
 
 /// Create a copy of GroupSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? memberCount = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? memberCount = null,Object? founderId = null,}) {
   return _then(GroupSummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,memberCount: null == memberCount ? _self.memberCount : memberCount // ignore: cast_nullable_to_non_nullable
-as int,
+as int,founderId: null == founderId ? _self.founderId : founderId // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -153,10 +154,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  int memberCount)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  int memberCount,  String founderId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _GroupSummary() when $default != null:
-return $default(_that.id,_that.name,_that.memberCount);case _:
+return $default(_that.id,_that.name,_that.memberCount,_that.founderId);case _:
   return orElse();
 
 }
@@ -174,10 +175,10 @@ return $default(_that.id,_that.name,_that.memberCount);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  int memberCount)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  int memberCount,  String founderId)  $default,) {final _that = this;
 switch (_that) {
 case _GroupSummary():
-return $default(_that.id,_that.name,_that.memberCount);case _:
+return $default(_that.id,_that.name,_that.memberCount,_that.founderId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -194,10 +195,10 @@ return $default(_that.id,_that.name,_that.memberCount);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  int memberCount)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  int memberCount,  String founderId)?  $default,) {final _that = this;
 switch (_that) {
 case _GroupSummary() when $default != null:
-return $default(_that.id,_that.name,_that.memberCount);case _:
+return $default(_that.id,_that.name,_that.memberCount,_that.founderId);case _:
   return null;
 
 }
@@ -209,12 +210,13 @@ return $default(_that.id,_that.name,_that.memberCount);case _:
 
 
 class _GroupSummary implements GroupSummary {
-  const _GroupSummary({required this.id, required this.name, required this.memberCount});
+  const _GroupSummary({required this.id, required this.name, required this.memberCount, required this.founderId});
   
 
 @override final  String id;
 @override final  String name;
 @override final  int memberCount;
+@override final  String founderId;
 
 /// Create a copy of GroupSummary
 /// with the given fields replaced by the non-null parameter values.
@@ -226,16 +228,16 @@ _$GroupSummaryCopyWith<_GroupSummary> get copyWith => __$GroupSummaryCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&(identical(other.founderId, founderId) || other.founderId == founderId));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,memberCount);
+int get hashCode => Object.hash(runtimeType,id,name,memberCount,founderId);
 
 @override
 String toString() {
-  return 'GroupSummary(id: $id, name: $name, memberCount: $memberCount)';
+  return 'GroupSummary(id: $id, name: $name, memberCount: $memberCount, founderId: $founderId)';
 }
 
 
@@ -246,7 +248,7 @@ abstract mixin class _$GroupSummaryCopyWith<$Res> implements $GroupSummaryCopyWi
   factory _$GroupSummaryCopyWith(_GroupSummary value, $Res Function(_GroupSummary) _then) = __$GroupSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, int memberCount
+ String id, String name, int memberCount, String founderId
 });
 
 
@@ -263,12 +265,13 @@ class __$GroupSummaryCopyWithImpl<$Res>
 
 /// Create a copy of GroupSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? memberCount = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? memberCount = null,Object? founderId = null,}) {
   return _then(_GroupSummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,memberCount: null == memberCount ? _self.memberCount : memberCount // ignore: cast_nullable_to_non_nullable
-as int,
+as int,founderId: null == founderId ? _self.founderId : founderId // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 

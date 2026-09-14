@@ -192,15 +192,17 @@ class SupabaseGroupRepository implements GroupRepository {
     try {
       final memberRows = await _client
           .from('group_members')
-          .select('group_id, groups(id, name)')
+          .select('group_id, groups(id, name, owner_id)')
           .eq('user_id', ownerId);
 
       final namesById = <String, String>{};
+      final founderIdsById = <String, String>{};
       for (final row in memberRows) {
         final group = row['groups'] as Map<String, dynamic>?;
         if (group == null) continue;
         final id = group['id'] as String;
         namesById[id] = (group['name'] as String?) ?? '';
+        founderIdsById[id] = (group['owner_id'] as String?) ?? '';
       }
       if (namesById.isEmpty) return const [];
 
@@ -220,6 +222,7 @@ class SupabaseGroupRepository implements GroupRepository {
             id: entry.key,
             name: entry.value,
             memberCount: counts[entry.key] ?? 0,
+            founderId: founderIdsById[entry.key] ?? '',
           ),
       ];
     } on PostgrestException catch (error) {

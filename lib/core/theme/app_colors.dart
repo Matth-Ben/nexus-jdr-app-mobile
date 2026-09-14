@@ -53,6 +53,24 @@ abstract final class AppColors {
   /// l'assistant de création (budget d'achat dépassé).
   static const Color alertBannerBackground = Color(0xFFFDECE0);
 
+  /// Fond de la pilule de statut "INCONSCIENT" (recettage direction-
+  /// artistique du 13/09) — distinct du fond partagé [alertBannerBackground]
+  /// désormais réservé à "MORT" (les deux statuts utilisaient jusqu'ici les
+  /// mêmes tokens, jugé insuffisamment distinctif sur l'onglet "Membres" de
+  /// l'écran "Groupe").
+  static const Color statusUnconsciousBackground = Color(0xFFFBEBCB);
+
+  /// Bordure/texte de la pilule "INCONSCIENT" — nuance ambre volontairement
+  /// plus foncée que [goldEnd] (jugé insuffisamment contrasté pour du texte
+  /// sur [statusUnconsciousBackground]), tout en restant dans la même
+  /// famille de tons or/ambre que le reste de la palette.
+  static const Color statusUnconsciousAccent = Color(0xFFA5721E);
+
+  /// Fond mat désaturé de la variante "MORT" de la carte membre (recettage
+  /// direction-artistique du 13/09) — voir `_DeadMemberCard` de
+  /// `features/groups/presentation/widgets/group_members_tab_body.dart`.
+  static const Color deadCardBackground = Color(0xFFE8E3D8);
+
   // Bouton primaire : ombre portée basse ("effet pressable").
   static const Color primaryButtonShadow = Color(0xFF7A4D1F);
 

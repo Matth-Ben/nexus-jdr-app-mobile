@@ -6,8 +6,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
-import '../../../core/widgets/wood_back_header.dart';
+import '../../auth/presentation/providers/auth_providers.dart';
+import '../domain/group_color_assigner.dart';
 import '../domain/group_failure.dart';
 import '../domain/group_summary.dart';
 import 'providers/group_providers.dart';
@@ -35,21 +37,27 @@ class GroupListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groupsAsync = ref.watch(myGroupsProvider);
+    final currentUserId = ref.watch(currentUserProvider)?.id;
 
-    return Scaffold(
-      backgroundColor: AppColors.parchmentBg,
+    return SceneScaffold(
       body: SafeArea(
-        top: false,
         child: Column(
           children: [
-            WoodBackHeader(title: 'GROUPES', onBack: () => _goBack(context)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              child: _Header(onBack: () => _goBack(context)),
+            ),
             Expanded(
               child: groupsAsync.when(
-                data: (groups) => _GroupList(groups: groups),
+                data: (groups) =>
+                    _GroupList(groups: groups, currentUserId: currentUserId),
                 loading: () => const Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.woodMedium,
-                  ),
+                  child: CircularProgressIndicator(color: AppColors.goldEnd),
                 ),
                 error: (error, stackTrace) => _ErrorState(
                   message: error is GroupFailure
@@ -78,7 +86,6 @@ class GroupListScreen extends ConsumerWidget {
                   Expanded(
                     child: SecondaryButton(
                       label: 'Rejoindre un groupe',
-                      surface: SecondaryButtonSurface.parchment,
                       onPressed: () => context.push('/groups/join'),
                     ),
                   ),
@@ -92,10 +99,48 @@ class GroupListScreen extends ConsumerWidget {
   }
 }
 
+/// En-tête sans bandeau bois contrastant, posé directement sur le fond
+/// "scène" — même patron que `_Header` de `character_list_screen.dart`,
+/// mais avec un bouton retour (cet écran est toujours poussé par-dessus la
+/// liste des personnages, contrairement à celle-ci).
+class _Header extends StatelessWidget {
+  const _Header({required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: onBack,
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: AppColors.textOnWood,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Text(
+          'GROUPES',
+          style: AppTypography.display(
+            fontSize: 15,
+            color: AppColors.textOnWood,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _GroupList extends StatelessWidget {
-  const _GroupList({required this.groups});
+  const _GroupList({required this.groups, required this.currentUserId});
 
   final List<GroupSummary> groups;
+
+  /// `null` si aucun utilisateur connecté (ne devrait pas arriver sur cet
+  /// écran, protégé par l'auth guard du routeur) — dans ce cas, aucun groupe
+  /// n'affiche le badge "TOI".
+  final String? currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +157,8 @@ class _GroupList extends StatelessWidget {
         final group = groups[index];
         return _GroupRow(
           group: group,
+          isFoundedByCurrentUser:
+              currentUserId != null && group.founderId == currentUserId,
           onTap: () => context.push('/groups/${group.id}'),
         );
       },
@@ -120,9 +167,14 @@ class _GroupList extends StatelessWidget {
 }
 
 class _GroupRow extends StatelessWidget {
-  const _GroupRow({required this.group, required this.onTap});
+  const _GroupRow({
+    required this.group,
+    required this.isFoundedByCurrentUser,
+    required this.onTap,
+  });
 
   final GroupSummary group;
+  final bool isFoundedByCurrentUser;
   final VoidCallback onTap;
 
   @override
@@ -145,19 +197,31 @@ class _GroupRow extends StatelessWidget {
           ),
           child: Row(
             children: [
+              _GroupAvatar(groupId: group.id),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      group.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.body(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            group.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.body(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        if (isFoundedByCurrentUser) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          const _FounderBadge(),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -177,6 +241,54 @@ class _GroupRow extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Avatar rond d'un groupe : couleur stable dérivée de son id
+/// (`GroupColorAssigner`), simple variation visuelle sans signification
+/// métier — voir la doc de classe de `GroupColorAssigner`.
+class _GroupAvatar extends StatelessWidget {
+  const _GroupAvatar({required this.groupId});
+
+  final String groupId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: GroupColorAssigner.colorFor(groupId),
+      ),
+      child: const Icon(Icons.groups, size: 22, color: AppColors.textOnWood),
+    );
+  }
+}
+
+/// Badge "TOI" à côté du nom d'un groupe fondé par le joueur connecté (voir
+/// `GroupSummary.founderId`).
+class _FounderBadge extends StatelessWidget {
+  const _FounderBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.parchmentCardAlt,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.woodLight, width: 1),
+      ),
+      child: Text(
+        'TOI',
+        style: AppTypography.display(
+          fontSize: 9,
+          color: AppColors.textSecondary,
         ),
       ),
     );

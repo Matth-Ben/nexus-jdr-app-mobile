@@ -11,5 +11,10 @@ abstract class GroupSummary with _$GroupSummary {
     required String id,
     required String name,
     required int memberCount,
+    // Identifiant du créateur (`groups.owner_id`) — utilisé par
+    // `group_list_screen.dart` pour afficher le badge "TOI" à côté du nom
+    // du groupe fondé par le joueur connecté (comparé à
+    // `currentUserProvider`).
+    required String founderId,
   }) = _GroupSummary;
 }
