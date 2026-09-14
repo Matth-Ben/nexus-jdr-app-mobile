@@ -11,8 +11,10 @@ import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../providers/group_providers.dart';
 
-/// Ouvre la sheet "Dissoudre le groupe" (`DestructiveButton` isolé de
-/// `group_management_sheet.dart`) — calque EXACT de l'ancienne
+/// Ouvre la sheet "Dissoudre le groupe" (`DestructiveButton` de la section
+/// "ZONE DANGEREUSE" de `group_settings_screen.dart`, anciennement isolé
+/// dans `group_management_sheet.dart`, retiré par le recettage
+/// direction-artistique du 13/09/2026) — calque EXACT de l'ancienne
 /// `features/profile/presentation/widgets/delete_account_sheet.dart` (un
 /// seul widget à 2 étapes internes : avertissement, puis confirmation),
 /// avec une confirmation par retape du NOM DU GROUPE (comparaison

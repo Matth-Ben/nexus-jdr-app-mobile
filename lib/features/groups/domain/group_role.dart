@@ -3,7 +3,7 @@
 enum GroupRole {
   /// Créateur du groupe — seul rôle habilité à gérer le groupe (renommer,
   /// régénérer le code, dissoudre, exclure un membre), voir
-  /// `presentation/widgets/group_management_sheet.dart`.
+  /// `presentation/group_settings_screen.dart`.
   owner,
 
   /// Tout autre membre — peut quitter le groupe, consulter le tableau de

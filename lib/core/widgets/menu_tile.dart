@@ -19,7 +19,7 @@ import '../theme/app_typography.dart';
 /// [standalone] (`true` par défaut, comportement historique inchangé) porte
 /// sa propre carte (fond/bordure/rayon ci-dessous) — usages isolés
 /// (`ProfileHelpScreen`, `character_share_screen.dart`,
-/// `group_management_sheet.dart`...). À `false`, la tuile ne dessine plus
+/// `group_settings_screen.dart`...). À `false`, la tuile ne dessine plus
 /// aucune carte/bordure propre : pensé pour être empilé comme ligne d'un
 /// `core/widgets/settings_list_card.dart::SettingsListCard`, qui porte déjà
 /// la carte englobante (recettage direction-artistique du 13/09/2026, "Liste

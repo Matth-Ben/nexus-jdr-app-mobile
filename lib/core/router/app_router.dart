@@ -20,11 +20,10 @@ import '../../features/characters/presentation/character_detail_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
 import '../../features/characters/presentation/level_up_screen.dart';
 import '../../features/groups/presentation/group_create_screen.dart';
-import '../../features/groups/presentation/group_join_character_step_screen.dart';
-import '../../features/groups/presentation/group_join_code_step_screen.dart';
-import '../../features/groups/presentation/group_join_confirmation_step_screen.dart';
+import '../../features/groups/presentation/group_join_screen.dart';
 import '../../features/groups/presentation/group_list_screen.dart';
 import '../../features/groups/presentation/group_screen.dart';
+import '../../features/groups/presentation/group_settings_screen.dart';
 import '../../features/join_story/presentation/join_character_step_screen.dart';
 import '../../features/join_story/presentation/join_code_step_screen.dart';
 import '../../features/join_story/presentation/join_confirmation_step_screen.dart';
@@ -295,25 +294,14 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const GroupCreateScreen(),
       ),
       GoRoute(
-        // Flux "Rejoindre un groupe" (`features/groups/`), 3 étapes — calque
-        // du flux "Rejoindre une histoire" (`/join`, `/join/step-2`,
-        // `/join/step-3`), sans deep link universel dédié pour ce flux.
+        // Écran unique "REJOINDRE UN GROUPE" (`features/groups/`) — même
+        // chemin que l'ancienne étape 1/3 du flux à 3 écrans (retiré par le
+        // recettage direction-artistique du 13/09/2026, voir la doc de
+        // classe de `GroupJoinScreen`), pour ne pas casser les liens déjà
+        // utilisés depuis `group_list_screen.dart`.
         path: '/groups/join',
-        builder: (context, state) => GroupJoinCodeStepScreen(
-          initialCode: state.uri.queryParameters['code'],
-        ),
-      ),
-      GoRoute(
-        path: '/groups/join/step-2',
-        builder: (context, state) => GroupJoinConfirmationStepScreen(
-          code: state.uri.queryParameters['code']!,
-        ),
-      ),
-      GoRoute(
-        path: '/groups/join/step-3',
-        builder: (context, state) => GroupJoinCharacterStepScreen(
-          code: state.uri.queryParameters['code']!,
-        ),
+        builder: (context, state) =>
+            GroupJoinScreen(initialCode: state.uri.queryParameters['code']),
       ),
       GoRoute(
         // Écran "Groupe" (`features/groups/`), onglets Membres/Butin — voir
@@ -321,6 +309,16 @@ GoRouter appRouter(Ref ref) {
         path: '/groups/:id',
         builder: (context, state) =>
             GroupScreen(groupId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        // Écran "Paramètres du groupe" (`features/groups/`) — remplace
+        // `showGroupManagementSheet` (recettage direction-artistique du
+        // 13/09/2026, voir la doc de classe de `GroupSettingsScreen`),
+        // poussé depuis l'icône réglages du `WoodBackHeader` de l'écran
+        // "Groupe" (`group_screen.dart`, owner uniquement).
+        path: '/groups/:id/settings',
+        builder: (context, state) =>
+            GroupSettingsScreen(groupId: state.pathParameters['id']!),
       ),
     ],
   );

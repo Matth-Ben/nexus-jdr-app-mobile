@@ -1,5 +1,9 @@
-// Tests de widget de l'étape 3/3 "Choix du personnage" du flux "Rejoindre
-// un groupe" — calque `join_character_step_screen_test.dart`.
+// Tests de widget de l'écran unique "REJOINDRE UN GROUPE" (route
+// `/groups/join`) — recettage direction-artistique du 13/09/2026, voir la
+// doc de classe de `GroupJoinScreen`. Remplace les 3 anciens fichiers de test
+// à étapes (`group_join_code_step_screen_test.dart`,
+// `group_join_confirmation_step_screen_test.dart`,
+// `group_join_character_step_screen_test.dart`, retirés par cette tâche).
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -8,24 +12,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
-import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
-import 'package:personnages/features/character_creation/presentation/providers/character_creation_return_route_provider.dart';
+import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
+import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_feat_option.dart';
 import 'package:personnages/features/characters/domain/level_up_invocation_option.dart';
-import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
-import 'package:personnages/features/characters/presentation/widgets/character_card.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
 import 'package:personnages/features/groups/domain/created_group.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
@@ -35,7 +36,7 @@ import 'package:personnages/features/groups/domain/group_summary.dart';
 import 'package:personnages/features/groups/domain/group_treasure.dart';
 import 'package:personnages/features/groups/domain/group_treasure_item.dart';
 import 'package:personnages/features/groups/domain/joined_group.dart';
-import 'package:personnages/features/groups/presentation/group_join_character_step_screen.dart';
+import 'package:personnages/features/groups/presentation/group_join_screen.dart';
 import 'package:personnages/features/groups/presentation/providers/group_providers.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
@@ -274,11 +275,23 @@ class _FakeCharacterRepository implements CharacterRepository {
 }
 
 class _FakeGroupRepository implements GroupRepository {
+  GroupPreview? previewToReturn;
+  Object? previewErrorToThrow;
+  int previewCallCount = 0;
+
   Object? joinErrorToThrow;
   Completer<JoinedGroup>? joinCompleter;
   String? lastJoinedCode;
   String? lastJoinedCharacterId;
   int joinCallCount = 0;
+
+  @override
+  Future<GroupPreview> previewGroupInvite(String code) async {
+    previewCallCount++;
+    if (previewErrorToThrow != null) throw previewErrorToThrow!;
+    return previewToReturn ??
+        const GroupPreview(name: 'Groupe test', memberCount: 1);
+  }
 
   @override
   Future<JoinedGroup> joinGroup({
@@ -301,10 +314,6 @@ class _FakeGroupRepository implements GroupRepository {
     required String name,
     required String characterId,
   }) => throw UnimplementedError();
-
-  @override
-  Future<GroupPreview> previewGroupInvite(String code) =>
-      throw UnimplementedError();
 
   @override
   Future<GroupDetail> fetchGroupDetail(String groupId) =>
@@ -366,7 +375,7 @@ class _FakeGroupRepository implements GroupRepository {
 
 GoRouter _buildTestRouter() {
   return GoRouter(
-    initialLocation: '/groups/join/step-3?code=AB3F7K2M',
+    initialLocation: '/groups/join',
     routes: [
       GoRoute(
         path: '/',
@@ -374,20 +383,9 @@ GoRouter _buildTestRouter() {
             const Scaffold(body: Center(child: Text('Liste des personnages'))),
       ),
       GoRoute(
-        path: '/groups/join/step-2',
+        path: '/groups/join',
         builder: (context, state) =>
-            const Scaffold(body: Center(child: Text('Étape 2'))),
-      ),
-      GoRoute(
-        path: '/groups/join/step-3',
-        builder: (context, state) => GroupJoinCharacterStepScreen(
-          code: state.uri.queryParameters['code']!,
-        ),
-      ),
-      GoRoute(
-        path: '/characters/new',
-        builder: (context, state) =>
-            const Scaffold(body: Center(child: Text('Assistant de création'))),
+            GroupJoinScreen(initialCode: state.uri.queryParameters['code']),
       ),
       GoRoute(
         path: '/groups/:id',
@@ -414,6 +412,11 @@ Widget _buildTestWidget({
   );
 }
 
+bool _isPrimaryButtonEnabled(WidgetTester tester) {
+  final button = tester.widget<PrimaryButton>(find.byType(PrimaryButton));
+  return button.onPressed != null;
+}
+
 void main() {
   late _FakeCharacterRepository fakeCharacterRepository;
   late _FakeGroupRepository fakeGroupRepository;
@@ -423,67 +426,212 @@ void main() {
     fakeGroupRepository = _FakeGroupRepository();
   });
 
-  testWidgets('affiche les personnages du joueur connecté', (tester) async {
+  Widget buildWidget() => _buildTestWidget(
+    characterRepository: fakeCharacterRepository,
+    groupRepository: fakeGroupRepository,
+  );
+
+  testWidgets('affiche le titre et le texte d\'intro', (tester) async {
+    fakeCharacterRepository.charactersToReturn = const [];
+
+    await tester.pumpWidget(buildWidget());
+    await tester.pumpAndSettle();
+
+    expect(find.text('REJOINDRE UN GROUPE'), findsOneWidget);
+    expect(find.textContaining("Demande le code d'invitation"), findsOneWidget);
+  });
+
+  testWidgets(
+    '"Rejoindre" désactivé tant que le code fait moins de 6 caractères ou '
+    "qu'aucun personnage n'est sélectionné",
+    (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+
+      expect(_isPrimaryButtonEnabled(tester), isFalse);
+
+      await tester.enterText(find.byType(TextField), 'AB3F');
+      await tester.pump();
+
+      expect(
+        _isPrimaryButtonEnabled(tester),
+        isFalse,
+        reason: 'code trop court ET aucun personnage disponible',
+      );
+    },
+  );
+
+  testWidgets('"Rejoindre" devient actif à partir de 6 caractères une fois un '
+      'personnage sélectionné (auto-sélection du premier personnage)', (
+    tester,
+  ) async {
     fakeCharacterRepository.charactersToReturn = const [
       CharacterSummary(id: '1', name: 'Halltesse', level: 5, xp: 7000),
     ];
 
-    await tester.pumpWidget(
-      _buildTestWidget(
-        characterRepository: fakeCharacterRepository,
-        groupRepository: fakeGroupRepository,
-      ),
-    );
+    await tester.pumpWidget(buildWidget());
     await tester.pumpAndSettle();
 
     expect(find.text('Halltesse'), findsOneWidget);
-    expect(find.text('Étape 3 / 3'), findsOneWidget);
+    expect(_isPrimaryButtonEnabled(tester), isFalse);
+
+    await tester.enterText(find.byType(TextField), 'ab3f7k');
+    await tester.pump();
+
+    expect(_isPrimaryButtonEnabled(tester), isTrue);
   });
 
-  testWidgets('état vide : message dédié, le bouton "+ Créer" reste affiché', (
+  testWidgets('le champ code se formate en majuscules avec un tiret', (
+    tester,
+  ) async {
+    fakeCharacterRepository.charactersToReturn = const [];
+
+    await tester.pumpWidget(buildWidget());
+    await tester.pumpAndSettle();
+
+    // Volontairement différent du hint "AB3F - 7K2M" du champ (voir
+    // `_CodeField`) : sinon le `Text` du hint (toujours monté, même masqué
+    // une fois le champ rempli) crée un second match pour `find.text`.
+    await tester.enterText(find.byType(TextField), 'cd9912xy');
+    await tester.pump();
+
+    expect(find.text('CD99 - 12XY'), findsOneWidget);
+  });
+
+  testWidgets('le champ code est pré-rempli et formaté via initialCode', (
     tester,
   ) async {
     fakeCharacterRepository.charactersToReturn = const [];
 
     await tester.pumpWidget(
-      _buildTestWidget(
-        characterRepository: fakeCharacterRepository,
-        groupRepository: fakeGroupRepository,
+      ProviderScope(
+        overrides: [
+          characterRepositoryProvider.overrideWithValue(
+            fakeCharacterRepository,
+          ),
+          groupRepositoryProvider.overrideWithValue(fakeGroupRepository),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: GroupJoinScreen(initialCode: 'ZZ9988XX')),
+        ),
       ),
     );
+    await tester.pumpAndSettle();
+
+    expect(find.text('ZZ99 - 88XX'), findsOneWidget);
+  });
+
+  testWidgets('état vide : message dédié dans la tuile personnage', (
+    tester,
+  ) async {
+    fakeCharacterRepository.charactersToReturn = const [];
+
+    await tester.pumpWidget(buildWidget());
     await tester.pumpAndSettle();
 
     expect(
       find.text("Tu n'as pas encore de personnage à rattacher."),
       findsOneWidget,
     );
-    expect(find.text('+ CRÉER UN NOUVEAU PERSONNAGE'), findsOneWidget);
+  });
+
+  testWidgets('tap sur la tuile personnage ouvre "CHOISIR UN PERSONNAGE", la '
+      'sélection met à jour la tuile', (tester) async {
+    fakeCharacterRepository.charactersToReturn = const [
+      CharacterSummary(id: '1', name: 'Halltesse', level: 5, xp: 7000),
+      CharacterSummary(id: '2', name: 'Borgan', level: 3, xp: 900),
+    ];
+
+    await tester.pumpWidget(buildWidget());
+    await tester.pumpAndSettle();
+
+    // Halltesse est auto-sélectionnée (premier personnage de la liste).
+    expect(find.text('Halltesse'), findsOneWidget);
+
+    await tester.tap(find.text('Halltesse'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CHOISIR UN PERSONNAGE'), findsOneWidget);
+    expect(find.text('Borgan'), findsOneWidget);
+
+    await tester.tap(find.text('Borgan'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CHOISIR UN PERSONNAGE'), findsNothing);
+    expect(find.text('Borgan'), findsOneWidget);
   });
 
   testWidgets(
-    'tap sur une carte personnage rattache directement, affiche l\'overlay '
-    'pendant l\'appel, puis navigue vers l\'écran "Groupe" avec un SnackBar '
-    'de succès',
+    'code invalide (aperçu) : texte d\'aide discret sous le champ, jamais '
+    'de bandeau encadré',
+    (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(id: '1', name: 'Halltesse', level: 5, xp: 7000),
+      ];
+      fakeGroupRepository.previewErrorToThrow = const GroupInviteFailure(
+        GroupInviteFailureKind.invalidCode,
+      );
+
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'ab3f7k');
+      await tester.pump();
+      await tester.tap(find.text('REJOINDRE'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text("Ce code d'invitation n'est pas valide."),
+        findsOneWidget,
+      );
+      expect(fakeGroupRepository.joinCallCount, 0);
+    },
+  );
+
+  testWidgets(
+    'erreur générique à l\'aperçu : bandeau encadré en tête d\'écran',
+    (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(id: '1', name: 'Halltesse', level: 5, xp: 7000),
+      ];
+      fakeGroupRepository.previewErrorToThrow = const GroupInviteFailure(
+        GroupInviteFailureKind.generic,
+      );
+
+      await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'ab3f7k');
+      await tester.pump();
+      await tester.tap(find.text('REJOINDRE'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Impossible de rejoindre ce groupe. Réessayez.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'succès : aperçu puis rattachement, navigation vers l\'écran "Groupe" '
+    'avec un SnackBar',
     (tester) async {
       fakeCharacterRepository.charactersToReturn = const [
         CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
       ];
       fakeGroupRepository.joinCompleter = Completer<JoinedGroup>();
 
-      await tester.pumpWidget(
-        _buildTestWidget(
-          characterRepository: fakeCharacterRepository,
-          groupRepository: fakeGroupRepository,
-        ),
-      );
+      await tester.pumpWidget(buildWidget());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(CharacterCard));
+      await tester.enterText(find.byType(TextField), 'ab3f7k');
+      await tester.pump();
+      await tester.tap(find.text('REJOINDRE'));
       await tester.pump();
 
-      expect(fakeGroupRepository.joinCallCount, 1);
-      expect(fakeGroupRepository.lastJoinedCode, 'AB3F7K2M');
-      expect(fakeGroupRepository.lastJoinedCharacterId, '42');
       expect(find.text('Rattachement au groupe...'), findsOneWidget);
 
       fakeGroupRepository.joinCompleter!.complete(
@@ -491,14 +639,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(fakeGroupRepository.lastJoinedCode, 'AB3F7K');
+      expect(fakeGroupRepository.lastJoinedCharacterId, '42');
       expect(find.text('Écran Groupe group-1'), findsOneWidget);
       expect(find.text('Groupe rejoint !'), findsOneWidget);
     },
   );
 
   testWidgets(
-    'échec "already_in_group" : referme l\'overlay, reste sur l\'étape, '
-    'affiche le bandeau dédié',
+    'échec "already_in_group" au rattachement : bandeau encadré dédié',
     (tester) async {
       fakeCharacterRepository.charactersToReturn = const [
         CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
@@ -507,112 +656,34 @@ void main() {
         GroupInviteFailureKind.alreadyInGroup,
       );
 
-      await tester.pumpWidget(
-        _buildTestWidget(
-          characterRepository: fakeCharacterRepository,
-          groupRepository: fakeGroupRepository,
-        ),
-      );
+      await tester.pumpWidget(buildWidget());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(CharacterCard));
+      await tester.enterText(find.byType(TextField), 'ab3f7k');
+      await tester.pump();
+      await tester.tap(find.text('REJOINDRE'));
       await tester.pumpAndSettle();
 
       expect(
         find.text('Ce personnage est déjà membre de ce groupe.'),
         findsOneWidget,
       );
-      expect(find.text('Rattachement au groupe...'), findsNothing);
-      expect(find.text('Étape 3 / 3'), findsOneWidget);
     },
   );
 
-  testWidgets('échec "invalid_code" : affiche le bandeau dédié', (
-    tester,
-  ) async {
-    fakeCharacterRepository.charactersToReturn = const [
-      CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
-    ];
-    fakeGroupRepository.joinErrorToThrow = const GroupInviteFailure(
-      GroupInviteFailureKind.invalidCode,
-    );
-
-    await tester.pumpWidget(
-      _buildTestWidget(
-        characterRepository: fakeCharacterRepository,
-        groupRepository: fakeGroupRepository,
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byType(CharacterCard));
-    await tester.pumpAndSettle();
-
-    expect(find.text("Ce code d'invitation n'est pas valide."), findsOneWidget);
-  });
-
-  testWidgets('échec générique : affiche le message générique', (tester) async {
-    fakeCharacterRepository.charactersToReturn = const [
-      CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
-    ];
-    fakeGroupRepository.joinErrorToThrow = StateError('boom');
-
-    await tester.pumpWidget(
-      _buildTestWidget(
-        characterRepository: fakeCharacterRepository,
-        groupRepository: fakeGroupRepository,
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byType(CharacterCard));
-    await tester.pumpAndSettle();
-
-    expect(
-      find.text('Impossible de rejoindre ce groupe. Réessayez.'),
-      findsOneWidget,
-    );
-  });
-
   testWidgets(
-    '"+ Créer un nouveau personnage" réinitialise le brouillon, pose la '
-    'route de retour vers cette étape et lance l\'assistant de création',
+    'le retour arrière ramène à la liste des personnages quand il n\'y a '
+    'rien à dépiler',
     (tester) async {
       fakeCharacterRepository.charactersToReturn = const [];
 
-      final container = ProviderContainer(
-        overrides: [
-          characterRepositoryProvider.overrideWithValue(
-            fakeCharacterRepository,
-          ),
-          groupRepositoryProvider.overrideWithValue(fakeGroupRepository),
-        ],
-      );
-      addTearDown(container.dispose);
-      container
-          .read(characterCreationDraftControllerProvider.notifier)
-          .setRace(raceId: 7, subraceId: 3);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(routerConfig: _buildTestRouter()),
-        ),
-      );
+      await tester.pumpWidget(buildWidget());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('+ CRÉER UN NOUVEAU PERSONNAGE'));
+      await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
       await tester.pumpAndSettle();
 
-      expect(find.text('Assistant de création'), findsOneWidget);
-      expect(
-        container.read(characterCreationDraftControllerProvider),
-        const CharacterCreationDraft(),
-      );
-      expect(
-        container.read(characterCreationReturnRouteControllerProvider),
-        '/groups/join/step-3?code=AB3F7K2M',
-      );
+      expect(find.text('Liste des personnages'), findsOneWidget);
     },
   );
 }
