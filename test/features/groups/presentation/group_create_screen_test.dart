@@ -408,6 +408,27 @@ bool _isPrimaryButtonEnabled(WidgetTester tester, String label) {
   return button.onPressed != null;
 }
 
+/// Ouvre la sheet "Choisir un personnage" — un tap sur la tuile de
+/// sélection (identifiée par son chevron, seul dans l'arbre sur cet écran
+/// tant que la sheet n'est pas ouverte, quel que soit le libellé affiché sur
+/// la tuile à cet instant : placeholder ou nom du personnage déjà choisi).
+Future<void> _openCharacterPicker(WidgetTester tester) async {
+  await tester.tap(find.byIcon(Icons.chevron_right));
+  await tester.pumpAndSettle();
+}
+
+/// Ouvre la sheet puis sélectionne [characterName] dedans — la sheet se
+/// referme automatiquement après la sélection (voir
+/// `group_create_screen.dart::_openCharacterPicker`).
+Future<void> _selectCharacterViaSheet(
+  WidgetTester tester,
+  String characterName,
+) async {
+  await _openCharacterPicker(tester);
+  await tester.tap(find.text(characterName), warnIfMissed: false);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   late _FakeCharacterRepository fakeCharacterRepository;
   late _FakeGroupRepository fakeGroupRepository;
@@ -417,22 +438,42 @@ void main() {
     fakeGroupRepository = _FakeGroupRepository();
   });
 
-  testWidgets('affiche le titre et les personnages du joueur', (tester) async {
-    fakeCharacterRepository.charactersToReturn = const [
-      CharacterSummary(id: '1', name: 'Sylvi', level: 3, xp: 900),
-    ];
+  testWidgets(
+    'affiche le titre, le texte d\'intro et le sélecteur de personnage',
+    (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(id: '1', name: 'Sylvi', level: 3, xp: 900),
+      ];
 
-    await tester.pumpWidget(
-      _buildTestWidget(
-        characterRepository: fakeCharacterRepository,
-        groupRepository: fakeGroupRepository,
-      ),
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        _buildTestWidget(
+          characterRepository: fakeCharacterRepository,
+          groupRepository: fakeGroupRepository,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('CRÉER UN GROUPE'), findsOneWidget);
-    expect(find.text('Sylvi'), findsOneWidget);
-  });
+      expect(find.text('CRÉER UN GROUPE'), findsOneWidget);
+      expect(
+        find.textContaining('Un groupe permet de suivre les PV'),
+        findsOneWidget,
+      );
+      expect(find.text('Nom du groupe'), findsOneWidget);
+      expect(find.text('Ton personnage dans ce groupe'), findsOneWidget);
+      expect(find.textContaining('représentera ta présence'), findsOneWidget);
+      // Aucune sélection : la tuile affiche le placeholder, "Sylvi"
+      // n'apparaît nulle part avant l'ouverture de la sheet.
+      expect(find.text('Choisir un personnage'), findsOneWidget);
+      expect(find.text('Sylvi'), findsNothing);
+      expect(
+        find.textContaining("Un code d'invitation sera généré"),
+        findsOneWidget,
+      );
+
+      await _openCharacterPicker(tester);
+      expect(find.text('Sylvi'), findsOneWidget);
+    },
+  );
 
   testWidgets('"Créer le groupe" désactivé tant que le nom est vide ou aucun '
       'personnage sélectionné', (tester) async {
@@ -454,8 +495,7 @@ void main() {
     await tester.pump();
     expect(_isPrimaryButtonEnabled(tester, 'Créer le groupe'), isFalse);
 
-    await tester.tap(find.text('Sylvi'), warnIfMissed: false);
-    await tester.pump();
+    await _selectCharacterViaSheet(tester, 'Sylvi');
     expect(_isPrimaryButtonEnabled(tester, 'Créer le groupe'), isTrue);
   });
 
@@ -477,10 +517,11 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextFormField), 'Les Lames');
-      await tester.tap(find.text('Sylvi'), warnIfMissed: false);
-      await tester.pump();
-      await tester.tap(find.text('Borgan'), warnIfMissed: false);
-      await tester.pump();
+      await _selectCharacterViaSheet(tester, 'Sylvi');
+      // La tuile affiche désormais "Sylvi" : rouvrir la sheet à travers
+      // elle puis choisir "Borgan" à la place.
+      expect(find.text('Sylvi'), findsOneWidget);
+      await _selectCharacterViaSheet(tester, 'Borgan');
 
       fakeGroupRepository.createCompleter = Completer<CreatedGroup>();
       await tester.tap(find.text('CRÉER LE GROUPE'));
@@ -508,8 +549,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextFormField), 'Les Lames');
-      await tester.tap(find.text('Sylvi'), warnIfMissed: false);
-      await tester.pump();
+      await _selectCharacterViaSheet(tester, 'Sylvi');
       await tester.tap(find.text('CRÉER LE GROUPE'));
       await tester.pump();
 
@@ -550,8 +590,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextFormField), 'Les Lames');
-      await tester.tap(find.text('Sylvi'), warnIfMissed: false);
-      await tester.pump();
+      await _selectCharacterViaSheet(tester, 'Sylvi');
       await tester.tap(find.text('CRÉER LE GROUPE'));
       await tester.pumpAndSettle();
 
@@ -574,6 +613,13 @@ void main() {
     expect(
       find.textContaining("Tu n'as pas encore de personnage"),
       findsOneWidget,
+    );
+    // Sans personnage, ni tuile de sélection ni note sur le code
+    // d'invitation ne doivent s'afficher (rien à choisir).
+    expect(find.text('Choisir un personnage'), findsNothing);
+    expect(
+      find.textContaining("Un code d'invitation sera généré"),
+      findsNothing,
     );
   });
 }
