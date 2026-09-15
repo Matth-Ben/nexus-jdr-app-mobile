@@ -472,7 +472,7 @@ class _SpellRow extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Flexible(
+                    Expanded(
                       child: Text(
                         spell.name,
                         maxLines: 1,
@@ -480,7 +480,11 @@ class _SpellRow extends StatelessWidget {
                         style: AppTypography.body(fontSize: 13),
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: AppSpacing.xs),
+                    // Groupe étoile/boutons aligné en fin de ligne (voir
+                    // `Expanded` ci-dessus), espacement régulier entre les 3
+                    // éléments plutôt que l'écart inégal précédent (xs entre
+                    // étoile/"Infos", xs/2 entre "Infos"/"Lancer").
                     _FavoriteStar(
                       isFavorite: spell.isFavorite,
                       onTap: enabled ? () => onToggleFavorite(spell) : null,
@@ -500,7 +504,7 @@ class _SpellRow extends StatelessWidget {
                             )
                           : null,
                     ),
-                    const SizedBox(width: AppSpacing.xs / 2),
+                    const SizedBox(width: AppSpacing.xs),
                     _SpellRowActionButton(
                       label: 'Lancer',
                       primary: true,
@@ -581,6 +585,7 @@ class _SpellRowActionButton extends StatelessWidget {
             ),
             child: Text(
               label.toUpperCase(),
+              textAlign: TextAlign.center,
               style: AppTypography.display(
                 fontSize: 9,
                 color: primary ? AppColors.woodDark : AppColors.textSecondary,
