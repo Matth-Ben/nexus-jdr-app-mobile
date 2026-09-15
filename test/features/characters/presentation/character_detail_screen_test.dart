@@ -1482,7 +1482,7 @@ void main() {
 
     testWidgets(
       'icône filtre de l\'onglet "Inventaire" ne lève aucune exception '
-      '(fait défiler la vue vers la bascule de filtre par catégorie)',
+      '(fait défiler la vue vers le bouton de filtre par catégorie)',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail.copyWith(
           inventory: const [

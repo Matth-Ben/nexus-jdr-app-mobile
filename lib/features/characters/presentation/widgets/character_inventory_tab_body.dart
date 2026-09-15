@@ -4,7 +4,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/dashed_add_tile.dart';
-import '../../../../core/widgets/segmented_toggle.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/currency_kind.dart';
@@ -16,6 +15,7 @@ import 'character_inventory_capacity_gauge.dart';
 import 'character_inventory_item_card.dart';
 import 'character_inventory_stat_boxes_row.dart';
 import 'currency_adjustment_sheet.dart';
+import 'inventory_category_filter_sheet.dart';
 import 'item_action_sheet.dart';
 
 /// Contenu de l'onglet "Inventaire" de la fiche personnage — voir
@@ -98,11 +98,11 @@ class CharacterInventoryTabBody extends StatefulWidget {
   /// "Compétences" qui doivent aussi se verrouiller pendant un repos.
   final bool actionsDisabled;
 
-  /// Clé posée sur la bascule de filtre par catégorie ([SegmentedToggle])
-  /// pour que l'icône filtre du bandeau bois (`character_detail_screen.dart`)
-  /// puisse y faire défiler la vue (`Scrollable.ensureVisible`) — `null`
-  /// laisse ce comportement de côté (ex. `shared_character_view_screen.dart`,
-  /// qui n'a pas cette icône).
+  /// Clé posée sur le bouton "Filtrer par catégorie" (voir
+  /// [_InventoryFilterButton]) pour que l'icône filtre du bandeau bois
+  /// (`character_detail_screen.dart`) puisse y faire défiler la vue
+  /// (`Scrollable.ensureVisible`) — `null` laisse ce comportement de côté
+  /// (ex. `shared_character_view_screen.dart`, qui n'a pas cette icône).
   final GlobalKey? filterAnchorKey;
 
   @override
@@ -138,6 +138,20 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
       currentAmount: _currentAmountOf(widget.detail, currency),
       onApply: (newAmount) => widget.onAdjustCurrency(currency, newAmount),
     );
+  }
+
+  /// Ouvre [showInventoryCategoryFilterSheet] (icône filtre du bandeau bois
+  /// ou bouton [_InventoryFilterButton] en tête de liste) — remplace
+  /// l'ancienne bascule segmentée à 5 segments, dont les libellés cassaient
+  /// sur petit écran faute de place. `null` en retour (sheet fermée sans
+  /// choix) laisse [_filter] inchangé.
+  Future<void> _openCategoryFilter(BuildContext context) async {
+    final picked = await showInventoryCategoryFilterSheet(
+      context,
+      current: _filter,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _filter = picked);
   }
 
   Future<void> _openAddItem(BuildContext context) async {
@@ -186,13 +200,11 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
           const SizedBox(height: AppSpacing.md),
           KeyedSubtree(
             key: widget.filterAnchorKey,
-            child: SegmentedToggle<InventoryCategoryFilter>(
-              options: [
-                for (final option in InventoryCategoryFilter.values)
-                  SegmentedToggleOption(value: option, label: option.label),
-              ],
-              value: _filter,
-              onChanged: (value) => setState(() => _filter = value),
+            child: _InventoryFilterButton(
+              filter: _filter,
+              onTap: widget.actionsDisabled
+                  ? null
+                  : () => _openCategoryFilter(context),
             ),
           ),
         ],
@@ -219,6 +231,72 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
           onAddReward: widget.actionsDisabled ? null : widget.onAddReward,
         ),
       ],
+    );
+  }
+}
+
+/// Bouton "Filtrer par catégorie" — remplace l'ancienne bascule segmentée à
+/// 5 segments ([SegmentedToggle], `core/widgets/segmented_toggle.dart`),
+/// dont les libellés ("Consomm."/"Divers"...) se cassaient sur petit écran
+/// (5 segments de largeur égale forcée). Un seul bouton compact, aligné à
+/// gauche (pas pleine largeur, contrairement à [_AddRowButtons] : c'est un
+/// simple filtre, pas une action primaire de l'écran), affichant le filtre
+/// actif et ouvrant [showInventoryCategoryFilterSheet] au tap.
+class _InventoryFilterButton extends StatelessWidget {
+  const _InventoryFilterButton({required this.filter, required this.onTap});
+
+  final InventoryCategoryFilter filter;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return Opacity(
+      opacity: enabled ? 1 : 0.6,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            onTap: onTap,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 44),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.parchmentCardAlt,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: AppColors.woodLight,
+                  width: AppBorders.card,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.filter_list,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    'Filtre : ${filter.label}',
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

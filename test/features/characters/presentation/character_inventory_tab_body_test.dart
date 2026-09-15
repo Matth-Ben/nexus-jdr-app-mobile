@@ -3,7 +3,7 @@
 // Inventaire".
 //
 // `CharacterInventoryTabBody` n'a pas de dépendance Riverpod/réseau (l'état
-// interne de la bascule de filtre mis à part) : les sheets qu'il ouvre le
+// interne du filtre par catégorie mis à part) : les sheets qu'il ouvre le
 // sont aussi, à l'exception de la sheet "Depuis le catalogue"
 // (`add_item_flow.dart`, qui a besoin de `inventoryCatalogProvider`) —
 // volontairement pas exercée ici (elle a son test dédié), ce fichier se
@@ -481,183 +481,224 @@ void main() {
     );
   });
 
-  group('filtre "Tout"/"Armes"/"Armures"/"Consomm."/"Divers" (docs/cahier-des-'
-      'charges/11-fonctionnalites-a-ajouter.md section 3)', () {
-    testWidgets('la bascule de filtre est absente d\'un inventaire vide', (
-      tester,
-    ) async {
-      await _pump(tester, _detail());
+  group(
+    'filtre "Tout"/"Armes"/"Armures"/"Consomm."/"Divers" (docs/cahier-des-'
+    'charges/11-fonctionnalites-a-ajouter.md section 3) — bouton qui ouvre '
+    'la sheet de sélection (recettage : remplace l\'ancienne bascule '
+    'segmentée à 5 segments, dont les libellés cassaient sur petit écran)',
+    () {
+      // Ouvre la sheet via le bouton "Filtre : {label actif}", puis tape
+      // l'option [label] (libellé exact, pas majuscule — [SelectableOptionTile]
+      // ne transforme pas la casse, contrairement à l'ancienne bascule
+      // segmentée).
+      Future<void> selectFilter(WidgetTester tester, String label) async {
+        await tester.tap(find.textContaining('Filtre : '));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+      }
 
-      expect(find.text('TOUT'), findsNothing);
-      expect(find.text('ARMES'), findsNothing);
-    });
+      testWidgets('le bouton de filtre est absent d\'un inventaire vide', (
+        tester,
+      ) async {
+        await _pump(tester, _detail());
 
-    testWidgets(
-      '"Tout" (par défaut) affiche tous les objets, quelle que soit leur '
-      'catégorie',
-      (tester) async {
+        expect(find.textContaining('Filtre : '), findsNothing);
+      });
+
+      testWidgets(
+        '"Tout" (par défaut) affiche tous les objets, quelle que soit leur '
+        'catégorie',
+        (tester) async {
+          await _pump(
+            tester,
+            _detail(inventory: const [_dagger, _potion, _customItem]),
+          );
+
+          expect(find.text('Filtre : Tout'), findsOneWidget);
+          expect(find.text('Dague'), findsOneWidget);
+          expect(find.text('Potion de soins'), findsOneWidget);
+          expect(find.text('Petit sac de sable'), findsOneWidget);
+        },
+      );
+
+      testWidgets('"Armes" ne garde que les objets de catégorie "arme"', (
+        tester,
+      ) async {
         await _pump(
           tester,
           _detail(inventory: const [_dagger, _potion, _customItem]),
         );
+
+        await selectFilter(tester, 'Armes');
+
+        expect(find.text('Filtre : Armes'), findsOneWidget);
+        expect(find.text('Dague'), findsOneWidget);
+        expect(find.text('Potion de soins'), findsNothing);
+        expect(find.text('Petit sac de sable'), findsNothing);
+      });
+
+      testWidgets('"Consomm." ne garde que les objets consommables, quelle que '
+          'soit leur catégorie', (tester) async {
+        await _pump(
+          tester,
+          _detail(inventory: const [_dagger, _potion, _customItem]),
+        );
+
+        await selectFilter(tester, 'Consomm.');
+
+        expect(find.text('Potion de soins'), findsOneWidget);
+        expect(find.text('Dague'), findsNothing);
+        expect(find.text('Petit sac de sable'), findsNothing);
+      });
+
+      testWidgets('"Armures" ne garde que les objets de catégorie "armure"', (
+        tester,
+      ) async {
+        await _pump(
+          tester,
+          _detail(inventory: const [_dagger, _plateArmor, _customItem]),
+        );
+
+        await selectFilter(tester, 'Armures');
+
+        expect(find.text('Armure de plates'), findsOneWidget);
+        expect(find.text('Dague'), findsNothing);
+        expect(find.text('Petit sac de sable'), findsNothing);
+      });
+
+      testWidgets(
+        '"Divers" ne garde que les objets hors arme/armure/consommable '
+        '(y compris les objets personnalisés)',
+        (tester) async {
+          await _pump(
+            tester,
+            _detail(
+              inventory: const [
+                _dagger,
+                _plateArmor,
+                _potion,
+                _rope,
+                _customItem,
+              ],
+            ),
+          );
+
+          await selectFilter(tester, 'Divers');
+
+          expect(find.text('Corde'), findsOneWidget);
+          expect(find.text('Petit sac de sable'), findsOneWidget);
+          expect(find.text('Dague'), findsNothing);
+          expect(find.text('Armure de plates'), findsNothing);
+          expect(find.text('Potion de soins'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'aucun objet de la catégorie filtrée : affiche un message dédié, '
+        'pas l\'état "INVENTAIRE VIDE" (l\'inventaire n\'est pas vide)',
+        (tester) async {
+          await _pump(tester, _detail(inventory: const [_customItem]));
+
+          await selectFilter(tester, 'Armes');
+
+          expect(
+            find.text('Aucun objet dans cette catégorie.'),
+            findsOneWidget,
+          );
+          expect(find.text('INVENTAIRE VIDE'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'le bouton de filtre ne lève aucune exception sur une largeur d\'écran '
+        'étroite (360 — Android bas de gamme courant), contrairement à '
+        'l\'ancienne bascule à 5 segments',
+        (tester) async {
+          final originalSize = tester.view.physicalSize;
+          final originalRatio = tester.view.devicePixelRatio;
+          tester.view.physicalSize = const Size(360, 800);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(() {
+            tester.view.physicalSize = originalSize;
+            tester.view.devicePixelRatio = originalRatio;
+          });
+
+          await _pump(
+            tester,
+            _detail(inventory: const [_dagger, _potion, _customItem]),
+          );
+
+          expect(tester.takeException(), isNull);
+          expect(find.text('Filtre : Tout'), findsOneWidget);
+        },
+      );
+
+      testWidgets('revenir sur "Tout" restaure la liste complète', (
+        tester,
+      ) async {
+        await _pump(
+          tester,
+          _detail(inventory: const [_dagger, _potion, _customItem]),
+        );
+
+        await selectFilter(tester, 'Armes');
+        expect(find.text('Potion de soins'), findsNothing);
+
+        await selectFilter(tester, 'Tout');
 
         expect(find.text('Dague'), findsOneWidget);
         expect(find.text('Potion de soins'), findsOneWidget);
         expect(find.text('Petit sac de sable'), findsOneWidget);
-      },
-    );
+      });
 
-    testWidgets('"Armes" ne garde que les objets de catégorie "arme"', (
-      tester,
-    ) async {
-      await _pump(
-        tester,
-        _detail(inventory: const [_dagger, _potion, _customItem]),
+      testWidgets(
+        'fermer la sheet sans choisir (tap en dehors) laisse le filtre actif '
+        'inchangé',
+        (tester) async {
+          await _pump(
+            tester,
+            _detail(inventory: const [_dagger, _potion, _customItem]),
+          );
+
+          await selectFilter(tester, 'Armes');
+          expect(find.text('Filtre : Armes'), findsOneWidget);
+
+          await tester.tap(find.textContaining('Filtre : '));
+          await tester.pumpAndSettle();
+          // Ferme en tapant en dehors de la sheet plutôt qu'une de ses options.
+          await tester.tapAt(const Offset(20, 20));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Filtre : Armes'), findsOneWidget);
+          expect(find.text('Dague'), findsOneWidget);
+          expect(find.text('Potion de soins'), findsNothing);
+        },
       );
 
-      await tester.tap(find.text('ARMES'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Dague'), findsOneWidget);
-      expect(find.text('Potion de soins'), findsNothing);
-      expect(find.text('Petit sac de sable'), findsNothing);
-    });
-
-    testWidgets('"Consomm." ne garde que les objets consommables, quelle que '
-        'soit leur catégorie', (tester) async {
-      await _pump(
-        tester,
-        _detail(inventory: const [_dagger, _potion, _customItem]),
-      );
-
-      await tester.tap(find.text('CONSOMM.'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Potion de soins'), findsOneWidget);
-      expect(find.text('Dague'), findsNothing);
-      expect(find.text('Petit sac de sable'), findsNothing);
-    });
-
-    testWidgets('"Armures" ne garde que les objets de catégorie "armure"', (
-      tester,
-    ) async {
-      await _pump(
-        tester,
-        _detail(inventory: const [_dagger, _plateArmor, _customItem]),
-      );
-
-      await tester.tap(find.text('ARMURES'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Armure de plates'), findsOneWidget);
-      expect(find.text('Dague'), findsNothing);
-      expect(find.text('Petit sac de sable'), findsNothing);
-    });
-
-    testWidgets('"Divers" ne garde que les objets hors arme/armure/consommable '
-        '(y compris les objets personnalisés)', (tester) async {
-      await _pump(
-        tester,
-        _detail(
-          inventory: const [_dagger, _plateArmor, _potion, _rope, _customItem],
-        ),
-      );
-
-      await tester.tap(find.text('DIVERS'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Corde'), findsOneWidget);
-      expect(find.text('Petit sac de sable'), findsOneWidget);
-      expect(find.text('Dague'), findsNothing);
-      expect(find.text('Armure de plates'), findsNothing);
-      expect(find.text('Potion de soins'), findsNothing);
-    });
-
-    testWidgets(
-      'aucun objet de la catégorie filtrée : affiche un message dédié, '
-      'pas l\'état "INVENTAIRE VIDE" (l\'inventaire n\'est pas vide)',
-      (tester) async {
-        await _pump(tester, _detail(inventory: const [_customItem]));
-
-        await tester.tap(find.text('ARMES'));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Aucun objet dans cette catégorie.'), findsOneWidget);
-        expect(find.text('INVENTAIRE VIDE'), findsNothing);
-      },
-    );
-
-    testWidgets(
-      'les 5 segments (TOUT/ARMES/ARMURES/CONSOMM./DIVERS) tiennent sans '
-      'débordement sur une largeur d\'écran étroite (360 — Android bas de '
-      'gamme courant)',
-      (tester) async {
-        final originalSize = tester.view.physicalSize;
-        final originalRatio = tester.view.devicePixelRatio;
-        tester.view.physicalSize = const Size(360, 800);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(() {
-          tester.view.physicalSize = originalSize;
-          tester.view.devicePixelRatio = originalRatio;
-        });
-
-        await _pump(
+      testWidgets('le bouton "Objet" reste visible et fonctionnel '
+          'même quand le filtre actif ne montre aucun objet', (tester) async {
+        final recorder = await _pump(
           tester,
-          _detail(inventory: const [_dagger, _potion, _customItem]),
+          _detail(inventory: const [_customItem]),
         );
 
-        expect(tester.takeException(), isNull);
-        expect(find.text('TOUT'), findsOneWidget);
-        expect(find.text('ARMES'), findsOneWidget);
-        expect(find.text('ARMURES'), findsOneWidget);
-        expect(find.text('CONSOMM.'), findsOneWidget);
-        expect(find.text('DIVERS'), findsOneWidget);
-      },
-    );
+        await selectFilter(tester, 'Armes');
+        expect(find.text('Objet'), findsOneWidget);
 
-    testWidgets('revenir sur "Tout" restaure la liste complète', (
-      tester,
-    ) async {
-      await _pump(
-        tester,
-        _detail(inventory: const [_dagger, _potion, _customItem]),
-      );
+        await tester.tap(find.text('Objet'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Objet personnalisé'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextFormField), 'Corde');
+        await tester.pump();
+        await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('ARMES'));
-      await tester.pumpAndSettle();
-      expect(find.text('Potion de soins'), findsNothing);
-
-      await tester.tap(find.text('TOUT'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Dague'), findsOneWidget);
-      expect(find.text('Potion de soins'), findsOneWidget);
-      expect(find.text('Petit sac de sable'), findsOneWidget);
-    });
-
-    testWidgets('le bouton "Objet" reste visible et fonctionnel '
-        'même quand le filtre actif ne montre aucun objet', (tester) async {
-      final recorder = await _pump(
-        tester,
-        _detail(inventory: const [_customItem]),
-      );
-
-      await tester.tap(find.text('ARMES'));
-      await tester.pumpAndSettle();
-      expect(find.text('Objet'), findsOneWidget);
-
-      await tester.tap(find.text('Objet'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Objet personnalisé'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField), 'Corde');
-      await tester.pump();
-      await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
-      await tester.pumpAndSettle();
-
-      expect(recorder.addCustomItemCalls, [('Corde', 1)]);
-    });
-  });
+        expect(recorder.addCustomItemCalls, [('Corde', 1)]);
+      });
+    },
+  );
 
   group('harmonisation (docs/cahier-des-charges/'
       '11-fonctionnalites-a-ajouter.md section 3)', () {
