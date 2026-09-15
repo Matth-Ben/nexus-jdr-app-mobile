@@ -113,6 +113,38 @@ void main() {
     expect(find.text('Elfe · Magicienne · Niv. 5'), findsOneWidget);
   });
 
+  group('jauge XP (masquée pour un personnage mort/archivé, demande '
+      'utilisateur : la progression XP n\'a plus de sens pour un '
+      'personnage qui ne joue plus)', () {
+    testWidgets('personnage normal : la jauge XP est affichée', (tester) async {
+      await _pump(tester, _baseSummary);
+
+      expect(find.text('XP'), findsOneWidget);
+    });
+
+    testWidgets('personnage archivé : la jauge XP est masquée', (tester) async {
+      await _pump(tester, _baseSummary.copyWith(isArchived: true));
+
+      expect(find.text('XP'), findsNothing);
+    });
+
+    testWidgets('personnage mort : la jauge XP est masquée', (tester) async {
+      await _pump(tester, _baseSummary.copyWith(isDead: true));
+
+      expect(find.text('XP'), findsNothing);
+    });
+
+    testWidgets('personnage à la fois mort et archivé : la jauge XP est '
+        'masquée', (tester) async {
+      await _pump(
+        tester,
+        _baseSummary.copyWith(isArchived: true, isDead: true),
+      );
+
+      expect(find.text('XP'), findsNothing);
+    });
+  });
+
   group('couleur thématique du portrait selon la classe (recettage '
       'direction artistique du 13/09)', () {
     Color? portraitClassThemeColor(WidgetTester tester) {

@@ -111,8 +111,13 @@ class CharacterCard extends StatelessWidget {
                     ],
                   ),
                 ],
-                const SizedBox(height: AppSpacing.sm),
-                _XpGauge(progress: character.xpProgress),
+                // Jauge XP masquée pour un personnage mort/archivé (demande
+                // utilisateur) : la progression XP n'a plus de sens pour un
+                // personnage qui ne joue plus.
+                if (!isDead && !isArchived) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _XpGauge(progress: character.xpProgress),
+                ],
               ],
             ),
           ),
