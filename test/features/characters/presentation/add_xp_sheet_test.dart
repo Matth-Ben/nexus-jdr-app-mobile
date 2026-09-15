@@ -14,6 +14,7 @@ void main() {
     required int currentXp,
     required int? nextLevelXpThreshold,
     required ValueChanged<int> onApply,
+    VoidCallback? onTapLevelUp,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -26,6 +27,7 @@ void main() {
                   currentXp: currentXp,
                   nextLevelXpThreshold: nextLevelXpThreshold,
                   onApply: onApply,
+                  onTapLevelUp: onTapLevelUp ?? () {},
                 ),
                 child: const Text('Ouvrir'),
               ),
@@ -139,4 +141,62 @@ void main() {
       expect(find.text('XP actuelle : 355000 / 355000'), findsOneWidget);
     },
   );
+
+  group('"Monter de niveau manuellement" (demande utilisateur du 15/09 : '
+      'relogé ici depuis le bandeau PV/XP de la fiche)', () {
+    testWidgets('visible tant que le seuil du niveau suivant n\'est pas '
+        'franchi ; le tap ferme la feuille et appelle onTapLevelUp', (
+      tester,
+    ) async {
+      var levelUpCallCount = 0;
+      await pumpSheet(
+        tester,
+        currentXp: 900,
+        nextLevelXpThreshold: 2700,
+        onApply: (_) {},
+        onTapLevelUp: () => levelUpCallCount++,
+      );
+
+      expect(find.text('Monter de niveau manuellement'), findsOneWidget);
+
+      await tester.tap(find.text('Monter de niveau manuellement'));
+      await tester.pumpAndSettle();
+
+      expect(levelUpCallCount, 1);
+      // La feuille se ferme (même patron que "Annuler"/"Ajouter").
+      expect(find.text("Ajouter de l'XP"), findsNothing);
+    });
+
+    testWidgets(
+      'absent une fois le seuil du niveau suivant déjà franchi (le bandeau '
+      '"NIVEAU DISPONIBLE" de la fiche reste le seul point d\'entrée, pas '
+      'de doublon)',
+      (tester) async {
+        await pumpSheet(
+          tester,
+          currentXp: 2700,
+          nextLevelXpThreshold: 2700,
+          onApply: (_) {},
+        );
+
+        expect(find.text('Monter de niveau manuellement'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'reste visible au niveau maximum (nextLevelXpThreshold nul, jamais '
+      '"franchi" au sens strict de la condition — même comportement que '
+      'l\'ancien lien du bandeau PV/XP, non modifié par ce relogement)',
+      (tester) async {
+        await pumpSheet(
+          tester,
+          currentXp: 355000,
+          nextLevelXpThreshold: null,
+          onApply: (_) {},
+        );
+
+        expect(find.text('Monter de niveau manuellement'), findsOneWidget);
+      },
+    );
+  });
 }

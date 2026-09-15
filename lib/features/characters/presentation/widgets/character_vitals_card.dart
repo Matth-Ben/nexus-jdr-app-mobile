@@ -343,56 +343,20 @@ class _XpSection extends StatelessWidget {
         // "+" de l'en-tête ci-dessus (recettage direction-artistique du
         // 13/09), même callback [onTapAddXp] (ouvre `AddXpSheet`).
         PrimaryButton(label: '+ XP', onPressed: onTapAddXp),
-        const SizedBox(height: AppSpacing.xs),
-        if (thresholdReached)
+        // Lien discret "Monter de niveau manuellement" retiré d'ici (demande
+        // utilisateur du 15/09) : relogé dans `AddXpSheet` (bouton "+ XP"
+        // ci-dessus), voir sa documentation de classe. Le bandeau "NIVEAU
+        // {n} DISPONIBLE" reste seul ici : contrairement au lien, il ne fait
+        // pas doublon avec un contenu de la sheet (rien d'équivalent n'y est
+        // proposé une fois le seuil déjà franchi).
+        if (thresholdReached) ...[
+          const SizedBox(height: AppSpacing.xs),
           _LevelUpAvailableBanner(
             targetLevel: detail.totalLevel + 1,
             onTap: onTapLevelUp,
-          )
-        else
-          _ManualLevelUpLink(onTap: onTapLevelUp),
-      ],
-    );
-  }
-}
-
-/// Lien discret "Monter de niveau manuellement" (XP sous le seuil), toujours
-/// visible sous la jauge XP — déclenchement manuel "hors XP" (spec visuelle
-/// section 1a).
-class _ManualLevelUpLink extends StatelessWidget {
-  const _ManualLevelUpLink({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.arrow_upward,
-                size: 14,
-                color: AppColors.textSecondary,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'Monter de niveau manuellement',
-                style: AppTypography.body(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
           ),
-        ),
-      ),
+        ],
+      ],
     );
   }
 }

@@ -1928,6 +1928,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           currentXp: detail.xp,
           nextLevelXpThreshold: detail.nextLevelXpThreshold,
           onApply: (amount) => _addXp(detail, amount),
+          onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
         ),
         onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
         onTapToggleInspiration: () => _toggleInspiration(detail),

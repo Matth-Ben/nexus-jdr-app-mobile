@@ -1642,16 +1642,23 @@ void main() {
     );
 
     testWidgets(
-      'lien "Monter de niveau manuellement" visible tant que l\'XP n\'a pas '
-      'franchi le seuil, et ouvre le flux ciblant totalLevel + 1',
+      'lien "Monter de niveau manuellement" (feuille "+ XP") visible tant '
+      'que l\'XP n\'a pas franchi le seuil, et ouvre le flux ciblant '
+      'totalLevel + 1 (demande utilisateur du 15/09 : relogé depuis le '
+      'bandeau PV/XP directement dans la feuille "+ XP")',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail;
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
 
-        expect(find.text('Monter de niveau manuellement'), findsOneWidget);
+        expect(find.text('Monter de niveau manuellement'), findsNothing);
         expect(find.textContaining('DISPONIBLE'), findsNothing);
+
+        await tester.tap(find.widgetWithText(PrimaryButton, '+ XP'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Monter de niveau manuellement'), findsOneWidget);
 
         await tester.tap(find.text('Monter de niveau manuellement'));
         await tester.pumpAndSettle();

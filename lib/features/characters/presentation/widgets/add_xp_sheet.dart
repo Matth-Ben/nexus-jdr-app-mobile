@@ -8,11 +8,9 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 
 /// Ouvre la feuille "Ajouter de l'XP" (bouton "+" du bandeau XP de
-/// `CharacterVitalsCard`, ou lien discret "Monter de niveau manuellement" —
-/// non, ce dernier ouvre directement le flux, voir
-/// `character_detail_screen.dart`) — sibling direct de
-/// `hp_adjustment_sheet.dart`, même patron (`showModalBottomSheet`, fond
-/// `parchment.card`, `isScrollControlled: true`).
+/// `CharacterVitalsCard`) — sibling direct de `hp_adjustment_sheet.dart`,
+/// même patron (`showModalBottomSheet`, fond `parchment.card`,
+/// `isScrollControlled: true`).
 ///
 /// [onApply] reçoit uniquement le *montant* d'XP saisi (pas le nouveau total
 /// déjà calculé, contrairement à `showHpAdjustmentSheet`) : l'appelant
@@ -20,11 +18,21 @@ import '../../../../core/widgets/secondary_button.dart';
 /// `detail.xp`, d'écrire le résultat en base
 /// (`CharacterRepository.addXp`) et de déclencher la montée de niveau si un
 /// seuil est franchi.
+///
+/// [onTapLevelUp] déclenche le même flux de montée de niveau que le lien
+/// "Monter de niveau manuellement" (demande utilisateur du 15/09 : relogé
+/// depuis le bandeau PV/XP directement dans cette feuille, plutôt que d'y
+/// occuper en permanence sa propre ligne — voir
+/// `character_vitals_card.dart::_XpSection`). N'est proposé que si le seuil
+/// du niveau suivant n'est pas déjà franchi (voir [_AddXpSheetContent] :
+/// une fois franchi, le bandeau "NIVEAU {n} DISPONIBLE" de la fiche reste le
+/// seul point d'entrée, pas la peine de le dupliquer ici).
 Future<void> showAddXpSheet(
   BuildContext context, {
   required int currentXp,
   required int? nextLevelXpThreshold,
   required ValueChanged<int> onApply,
+  required VoidCallback onTapLevelUp,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -34,6 +42,7 @@ Future<void> showAddXpSheet(
       currentXp: currentXp,
       nextLevelXpThreshold: nextLevelXpThreshold,
       onApply: onApply,
+      onTapLevelUp: onTapLevelUp,
     ),
   );
 }
@@ -43,11 +52,13 @@ class _AddXpSheetContent extends StatefulWidget {
     required this.currentXp,
     required this.nextLevelXpThreshold,
     required this.onApply,
+    required this.onTapLevelUp,
   });
 
   final int currentXp;
   final int? nextLevelXpThreshold;
   final ValueChanged<int> onApply;
+  final VoidCallback onTapLevelUp;
 
   @override
   State<_AddXpSheetContent> createState() => _AddXpSheetContentState();
@@ -90,6 +101,11 @@ class _AddXpSheetContentState extends State<_AddXpSheetContent> {
     Navigator.of(context).pop();
   }
 
+  void _tapLevelUp() {
+    Navigator.of(context).pop();
+    widget.onTapLevelUp();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Au niveau maximum (`nextLevelXpThreshold` nul), même repli que
@@ -97,6 +113,12 @@ class _AddXpSheetContentState extends State<_AddXpSheetContent> {
     // actuelle elle-même.
     final threshold = widget.nextLevelXpThreshold ?? widget.currentXp;
     final amount = _amount;
+    // Même condition que `CharacterVitalsCard._XpSection` : le seuil est
+    // considéré franchi seulement s'il existe réellement (pas déjà au
+    // niveau maximum) ET que l'XP actuelle l'a atteint ou dépassé.
+    final thresholdReached =
+        widget.nextLevelXpThreshold != null &&
+        widget.currentXp >= widget.nextLevelXpThreshold!;
 
     return SafeArea(
       child: Padding(
@@ -179,6 +201,38 @@ class _AddXpSheetContentState extends State<_AddXpSheetContent> {
                 ),
               ],
             ),
+            if (!thresholdReached) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Center(
+                child: InkWell(
+                  onTap: _tapLevelUp,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 44),
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.arrow_upward,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Monter de niveau manuellement',
+                            style: AppTypography.body(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
