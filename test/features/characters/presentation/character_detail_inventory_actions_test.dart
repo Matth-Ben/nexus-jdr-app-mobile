@@ -279,6 +279,10 @@ class FakeRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<WriteOutcome> deleteCharacter({required String characterId}) =>
+      throw UnimplementedError();
+
+  @override
   Future<WriteOutcome> setInspiration({
     required String characterId,
     required bool inspiration,
@@ -721,7 +725,7 @@ void main() {
       final repository = await pumpDetail(tester);
       await openInventoryTab(tester);
 
-      await tester.tap(find.text('+ Objet'));
+      await tester.tap(find.text('Objet'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();

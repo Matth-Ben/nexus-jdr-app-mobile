@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/destructive_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
@@ -49,8 +50,16 @@ import 'widgets/rest_sheet.dart';
 /// direction-artistique du 13/09) — regroupe "Exporter en XML" (déjà
 /// existant, précédemment sa propre icône) et les liens "Archiver ce
 /// personnage"/"Désarchiver"/"Marquer comme mort"/"Ressusciter" (relogés
-/// depuis le pied de `CharacterVitalsCard`, voir sa documentation de classe).
-enum _CharacterHeaderMenuAction { exportXml, toggleArchived, toggleDead }
+/// depuis le pied de `CharacterVitalsCard`, voir sa documentation de classe),
+/// ainsi que "Supprimer le personnage" (demande utilisateur, seul menu
+/// "paramètres" existant pour un personnage dans ce dépôt — voir
+/// `_CharacterDetailScreenState._deleteCharacter`).
+enum _CharacterHeaderMenuAction {
+  exportXml,
+  toggleArchived,
+  toggleDead,
+  delete,
+}
 
 /// Fiche personnage, route `/characters/:id` — remplace
 /// `CharacterDetailPlaceholderScreen`. Les 5 onglets (voir
@@ -1292,6 +1301,41 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Supprime définitivement le personnage (action "Supprimer le
+  /// personnage" du menu "…") — déjà confirmée par
+  /// [showDeleteCharacterConfirmationDialog] avant d'atteindre cette méthode
+  /// (appelée par l'`onSelected` du menu, voir `build`). Contrairement à
+  /// [_toggleDead]/[_toggleArchived] (flags réversibles), cette action est
+  /// irréversible : au succès, revient à la liste des personnages (l'écran
+  /// courant n'a plus de fiche à afficher) plutôt que de rafraîchir sur
+  /// place.
+  Future<void> _deleteCharacter(CharacterDetail detail) async {
+    final confirmed = await showDeleteCharacterConfirmationDialog(
+      context,
+      characterName: detail.name,
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .deleteCharacter(characterId: widget.characterId);
+      if (!mounted) return;
+      if (outcome == WriteOutcome.queued) {
+        // Voir la documentation de `CharacterRepository.deleteCharacter` :
+        // même convention que [_toggleDead]/[_toggleArchived] (jamais mis en
+        // file), le personnage n'a donc pas été supprimé.
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      _goBack();
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar('Impossible de supprimer le personnage. Réessayez.');
+    }
+  }
+
   /// Bascule `characters.inspiration` (tuile "Inspiration",
   /// `CharacterStatPillsRow`) — même contrat que [_toggleDead]/
   /// [_toggleArchived], voir `docs/cahier-des-charges/`
@@ -1700,6 +1744,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                                 _toggleArchived(currentDetail),
                               _CharacterHeaderMenuAction.toggleDead =>
                                 _toggleDead(currentDetail),
+                              _CharacterHeaderMenuAction.delete =>
+                                _deleteCharacter(currentDetail),
                             },
                             itemBuilder: (context) => [
                               const PopupMenuItem(
@@ -1721,6 +1767,16 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                                   currentDetail.isDead
                                       ? 'Ressusciter'
                                       : 'Marquer comme mort',
+                                ),
+                              ),
+                              const PopupMenuDivider(),
+                              PopupMenuItem(
+                                value: _CharacterHeaderMenuAction.delete,
+                                child: Text(
+                                  'Supprimer le personnage',
+                                  style: AppTypography.body(
+                                    color: AppColors.accentBrick,
+                                  ),
                                 ),
                               ),
                             ],
@@ -2035,4 +2091,73 @@ class _ErrorState extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Dialogue de confirmation "Supprimer {nom} ?" — calque exact de
+/// `item_action_sheet.dart::showRemoveInventoryItemConfirmationDialog`, avec
+/// un texte adapté à la portée bien plus large de cette suppression (tout le
+/// personnage, pas un seul objet). Retourne `true` si le joueur confirme,
+/// `false`/`null` sinon.
+Future<bool?> showDeleteCharacterConfirmationDialog(
+  BuildContext context, {
+  required String characterName,
+}) {
+  return showDialog<bool>(
+    context: context,
+    builder: (context) => Dialog(
+      backgroundColor: AppColors.parchmentCard,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: const BorderSide(
+          color: AppColors.woodLight,
+          width: AppBorders.card,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Supprimer $characterName ?',
+              style: AppTypography.body(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Cette action est définitive : le personnage et toutes ses '
+              'données (sorts, inventaire, historique...) seront '
+              'irrémédiablement supprimés.',
+              style: AppTypography.body(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: SecondaryButton(
+                    label: 'Annuler',
+                    surface: SecondaryButtonSurface.parchment,
+                    onPressed: () => Navigator.of(context).pop(false),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: DestructiveButton(
+                    label: 'Supprimer',
+                    onPressed: () => Navigator.of(context).pop(true),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }

@@ -132,6 +132,23 @@ abstract class CharacterRepository {
     required bool inspiration,
   });
 
+  /// Supprime définitivement [characterId] — action "Supprimer le
+  /// personnage" du menu "…" de l'onglet "Personnage", déjà confirmée par
+  /// l'appelant (dialogue de confirmation, voir
+  /// `character_detail_screen.dart::_deleteCharacter`) avant d'atteindre
+  /// cette méthode. `DELETE FROM characters` cascade côté base vers les ~15
+  /// tables "Personnages" liées (`on delete cascade`, voir les migrations du
+  /// dépôt web) et la policy RLS "Owner can delete their characters" — aucun
+  /// nettoyage manuel nécessaire ici. Ne supprime PAS les fichiers déjà
+  /// envoyés dans le bucket Storage (portrait, galerie) : orphelins acceptés,
+  /// même compromis que le reste de ce dépôt pour les suppressions en
+  /// cascade (pas de nettoyage Storage best-effort ici, contrairement à
+  /// [removeAvatar] côté profil qui connaît un unique fichier).
+  ///
+  /// Mode hors ligne : mêmes règles que [setDead]/[setArchived] (jamais mise
+  /// en file, voir la documentation de [setDead]).
+  Future<WriteOutcome> deleteCharacter({required String characterId});
+
   /// Envoie [bytes] (déjà recadrées en carré, voir
   /// `presentation/widgets/portrait_crop_screen.dart`) dans le bucket
   /// `character-portraits` (RLS écriture restreinte à `{user_id}/...`,
@@ -987,6 +1004,27 @@ class SupabaseCharacterRepository implements CharacterRepository {
       await _client
           .from('characters')
           .update({'is_archived': isArchived})
+          .eq('id', characterId)
+          .eq('owner_id', ownerId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> deleteCharacter({required String characterId}) async {
+    final ownerId = _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('characters')
+          .delete()
           .eq('id', characterId)
           .eq('owner_id', ownerId);
       return WriteOutcome.synced;

@@ -171,6 +171,10 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<WriteOutcome> deleteCharacter({required String characterId}) =>
+      throw UnimplementedError();
+
+  @override
   Future<WriteOutcome> setInspiration({
     required String characterId,
     required bool inspiration,

@@ -102,6 +102,11 @@ class _FakeCharacterRepository implements CharacterRepository {
   WriteOutcome setArchivedOutcomeToReturn = WriteOutcome.synced;
   Object? setArchivedErrorToThrow;
 
+  String? lastDeletedCharacterId;
+  int deleteCharacterCallCount = 0;
+  WriteOutcome deleteCharacterOutcomeToReturn = WriteOutcome.synced;
+  Object? deleteCharacterErrorToThrow;
+
   bool? lastSetInspirationValue;
   int setInspirationCallCount = 0;
   WriteOutcome setInspirationOutcomeToReturn = WriteOutcome.synced;
@@ -150,6 +155,14 @@ class _FakeCharacterRepository implements CharacterRepository {
     lastSetArchivedValue = isArchived;
     if (setArchivedErrorToThrow != null) throw setArchivedErrorToThrow!;
     return setArchivedOutcomeToReturn;
+  }
+
+  @override
+  Future<WriteOutcome> deleteCharacter({required String characterId}) async {
+    deleteCharacterCallCount++;
+    lastDeletedCharacterId = characterId;
+    if (deleteCharacterErrorToThrow != null) throw deleteCharacterErrorToThrow!;
+    return deleteCharacterOutcomeToReturn;
   }
 
   @override
@@ -1061,6 +1074,106 @@ void main() {
     });
   });
 
+  group('Supprimer le personnage (menu "…" du bandeau bois)', () {
+    testWidgets(
+      'affiche un dialogue de confirmation, annuler ne supprime rien',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await openCharacterHeaderMenu(tester);
+
+        await tester.tap(find.text('Supprimer le personnage'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Supprimer Halltesse Ambrelune ?'), findsOneWidget);
+
+        await tester.tap(find.text('ANNULER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.deleteCharacterCallCount, 0);
+        // Toujours sur la fiche, pas de retour à la liste.
+        expect(find.text('Liste'), findsNothing);
+      },
+    );
+
+    testWidgets('confirmer appelle deleteCharacter puis revient à la liste', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+      await openCharacterHeaderMenu(tester);
+
+      await tester.tap(find.text('Supprimer le personnage'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Supprimer'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.deleteCharacterCallCount, 1);
+      expect(fakeRepository.lastDeletedCharacterId, '1');
+      expect(find.text('Liste'), findsOneWidget);
+    });
+
+    testWidgets(
+      'deleteCharacter mis en file (mode hors-ligne) : ne doit PAS promettre '
+      'une synchronisation qui n\'aura jamais lieu, ni revenir à la liste '
+      '(le personnage n\'a pas été supprimé) — même convention que '
+      'setDead/setArchived',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.deleteCharacterOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await openCharacterHeaderMenu(tester);
+
+        await tester.tap(find.text('Supprimer le personnage'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Supprimer'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            "Hors ligne : cette action n'a pas pu être enregistrée. "
+            'Réessayez une fois reconnecté.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Liste'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'deleteCharacter échoue (CharacterFailure) : affiche le message du '
+      'repository, reste sur la fiche',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.deleteCharacterErrorToThrow = const CharacterFailure(
+          'Impossible de supprimer le personnage.',
+        );
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await openCharacterHeaderMenu(tester);
+
+        await tester.tap(find.text('Supprimer le personnage'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Supprimer'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Impossible de supprimer le personnage.'),
+          findsOneWidget,
+        );
+        expect(find.text('Liste'), findsNothing);
+      },
+    );
+  });
+
   group('Vitesse / Classe d\'Armure / Inspiration (CharacterStatPillsRow)', () {
     testWidgets(
       'affiche la vitesse résolue (speed), la CA calculée depuis Dex sans '
@@ -1287,7 +1400,7 @@ void main() {
     // contenu) : "0" (PO) prouve que l'onglet a bien basculé sur
     // `CharacterInventoryTabBody`, pas sur un autre onglet.
     expect(find.text('PO'), findsOneWidget);
-    expect(find.text('+ Objet'), findsOneWidget);
+    expect(find.text('Objet'), findsOneWidget);
     expect(find.text('INVENTAIRE'), findsOneWidget);
 
     await tester.tap(find.text('HIST.'));
