@@ -19,9 +19,17 @@ enum _AuthMode { login, signUp }
 /// Écran de connexion / inscription — premier écran présenté à un
 /// utilisateur non connecté (`docs/cahier-des-charges/05-ux-navigation.md`).
 ///
-/// Après un login/signup réussi, la redirection vers `/` est gérée par le
+/// Après un **login** réussi, la redirection vers `/` est gérée par le
 /// routeur (`core/router/app_router.dart`), qui réagit lui-même au flux
 /// `onAuthStateChange` : cet écran n'a pas besoin de naviguer explicitement.
+///
+/// Un **signup** réussi ne crée en revanche pas forcément de session : la
+/// confirmation par e-mail est activée sur ce projet Supabase (voir la doc
+/// de classe de `AuthRepository.signUp`), donc `onAuthStateChange` ne se
+/// déclenchera qu'une fois le lien reçu par e-mail suivi — jusque-là, cet
+/// écran doit afficher explicitement un état "vérifie ta boîte mail"
+/// ([_signUpConfirmationEmail]) plutôt que de rester silencieux en
+/// attendant une redirection qui n'arrivera pas tout de suite.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -38,6 +46,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   _AuthMode _mode = _AuthMode.login;
   bool _isSubmitting = false;
   String? _errorMessage;
+
+  /// Non-null une fois qu'une inscription a réussi mais nécessite une
+  /// confirmation par e-mail (voir la doc de classe) : porte l'adresse
+  /// saisie pour l'afficher dans le message, et fait basculer [_AuthCard]
+  /// sur son état "vérifie ta boîte mail" à la place du formulaire.
+  String? _signUpConfirmationEmail;
 
   bool get _isSignUp => _mode == _AuthMode.signUp;
 
@@ -61,6 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() {
       _mode = _isSignUp ? _AuthMode.login : _AuthMode.signUp;
       _errorMessage = null;
+      _signUpConfirmationEmail = null;
       _passwordController.clear();
       _confirmPasswordController.clear();
       // Réinitialise l'état de validation du formulaire (champs "touchés")
@@ -91,7 +106,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       if (_isSignUp) {
-        await repository.signUp(email: email, password: password);
+        final needsEmailConfirmation = await repository.signUp(
+          email: email,
+          password: password,
+        );
+        if (!mounted) return;
+        if (needsEmailConfirmation) {
+          setState(() => _signUpConfirmationEmail = email);
+        }
+        // Sinon (compte immédiatement actif) : rien à faire ici,
+        // `onAuthStateChange` a déjà créé une session, le routeur
+        // redirigera (voir doc de classe).
       } else {
         await repository.signInWithPassword(email: email, password: password);
       }
@@ -146,12 +171,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     isSignUp: _isSignUp,
                     isSubmitting: _isSubmitting,
                     errorMessage: _errorMessage,
+                    signUpConfirmationEmail: _signUpConfirmationEmail,
                     emailController: _emailController,
                     passwordController: _passwordController,
                     confirmPasswordController: _confirmPasswordController,
                     onSubmit: _submit,
                     onSwitchMode: _switchMode,
                     onForgotPassword: _openForgotPasswordDialog,
+                    onBackToLogin: _switchMode,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
@@ -182,24 +209,31 @@ class _AuthCard extends StatelessWidget {
     required this.isSignUp,
     required this.isSubmitting,
     required this.errorMessage,
+    required this.signUpConfirmationEmail,
     required this.emailController,
     required this.passwordController,
     required this.confirmPasswordController,
     required this.onSubmit,
     required this.onSwitchMode,
     required this.onForgotPassword,
+    required this.onBackToLogin,
   });
 
   final GlobalKey<FormState> formKey;
   final bool isSignUp;
   final bool isSubmitting;
   final String? errorMessage;
+
+  /// Non-null : remplace le formulaire par l'état "vérifie ta boîte mail"
+  /// (voir la doc de classe de `_LoginScreenState._signUpConfirmationEmail`).
+  final String? signUpConfirmationEmail;
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final TextEditingController confirmPasswordController;
   final VoidCallback onSubmit;
   final VoidCallback onSwitchMode;
   final VoidCallback onForgotPassword;
+  final VoidCallback onBackToLogin;
 
   /// Petits "clous" décoratifs aux 4 coins de la carte (voir maquette
   /// `docs/cahier-des-charges/09-maquettes-captures.md`, section "Écran de
@@ -242,159 +276,209 @@ class _AuthCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Form(
-            key: formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  isSignUp ? 'CRÉER UN COMPTE' : 'ENTRER DANS LA TAVERNE',
-                  textAlign: TextAlign.center,
-                  style: AppTypography.display(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _FieldLabel('Adresse e-mail'),
-                const SizedBox(height: AppSpacing.xs),
-                TextFormField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autocorrect: false,
-                  decoration: const InputDecoration(
-                    hintText: 'nom@exemple.com',
-                  ),
-                  validator: AuthValidators.email,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _FieldLabel('Mot de passe'),
-                const SizedBox(height: AppSpacing.xs),
-                TextFormField(
-                  controller: passwordController,
-                  obscureText: true,
-                  textInputAction: isSignUp
-                      ? TextInputAction.next
-                      : TextInputAction.done,
-                  decoration: const InputDecoration(hintText: '••••••••'),
-                  validator: AuthValidators.password,
-                  onFieldSubmitted: isSignUp ? null : (_) => onSubmit(),
-                ),
-                if (!isSignUp) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: isSubmitting ? null : onForgotPassword,
-                      child: Padding(
-                        // Élargit la zone de tap à au moins 44x44px (section 7
-                        // "Accessibilité" du design system) sans agrandir le
-                        // texte lui-même, même principe que le lien
-                        // "Créer un compte"/"Se connecter" ci-dessous.
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xs,
-                          vertical: 14,
-                        ),
-                        child: Text(
-                          'Mot de passe oublié ?',
-                          style: AppTypography.body(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.goldEnd,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-                if (isSignUp) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  _FieldLabel('Confirmer le mot de passe'),
-                  const SizedBox(height: AppSpacing.xs),
-                  TextFormField(
-                    controller: confirmPasswordController,
-                    obscureText: true,
-                    textInputAction: TextInputAction.done,
-                    decoration: const InputDecoration(hintText: '••••••••'),
-                    validator: (value) => AuthValidators.passwordConfirmation(
-                      value,
-                      passwordController.text,
-                    ),
-                    onFieldSubmitted: (_) => onSubmit(),
-                  ),
-                ],
-                if (errorMessage != null) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    errorMessage!,
-                    style: AppTypography.body(
-                      fontSize: 12,
-                      color: AppColors.accentBrick,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.md),
-                PrimaryButton(
-                  label: isSignUp ? 'Créer le compte' : 'Entrer',
-                  isLoading: isSubmitting,
-                  onPressed: isSubmitting ? null : onSubmit,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Center(
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    // Centre verticalement le lien (dont la zone de tap est
-                    // agrandie ci-dessous) par rapport au texte simple voisin,
-                    // pour que la ligne reste visuellement cohérente malgré la
-                    // différence de hauteur entre les deux éléments.
-                    crossAxisAlignment: WrapCrossAlignment.center,
+          child: signUpConfirmationEmail != null
+              ? _SignUpConfirmationView(
+                  email: signUpConfirmationEmail!,
+                  onBackToLogin: onBackToLogin,
+                )
+              : Form(
+                  key: formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        isSignUp
-                            ? 'Déjà un compte ? '
-                            : 'Pas encore de compte ? ',
-                        style: AppTypography.body(
-                          fontSize: 13,
+                        isSignUp ? 'CRÉER UN COMPTE' : 'ENTRER DANS LA TAVERNE',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.display(
+                          fontSize: 11,
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: isSubmitting ? null : onSwitchMode,
-                        child: Padding(
-                          // Élargit la zone de tap à au moins 44x44px (section 7
-                          // "Accessibilité" du design system) sans agrandir le
-                          // texte lui-même.
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.xs,
-                            vertical: 14,
-                          ),
-                          child: Text(
-                            isSignUp ? 'Se connecter' : 'Créer un compte',
-                            style: AppTypography.body(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.goldEnd,
+                      const SizedBox(height: AppSpacing.md),
+                      _FieldLabel('Adresse e-mail'),
+                      const SizedBox(height: AppSpacing.xs),
+                      TextFormField(
+                        controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        autocorrect: false,
+                        decoration: const InputDecoration(
+                          hintText: 'nom@exemple.com',
+                        ),
+                        validator: AuthValidators.email,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _FieldLabel('Mot de passe'),
+                      const SizedBox(height: AppSpacing.xs),
+                      TextFormField(
+                        controller: passwordController,
+                        obscureText: true,
+                        textInputAction: isSignUp
+                            ? TextInputAction.next
+                            : TextInputAction.done,
+                        decoration: const InputDecoration(hintText: '••••••••'),
+                        validator: AuthValidators.password,
+                        onFieldSubmitted: isSignUp ? null : (_) => onSubmit(),
+                      ),
+                      if (!isSignUp) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: isSubmitting ? null : onForgotPassword,
+                            child: Padding(
+                              // Élargit la zone de tap à au moins 44x44px (section 7
+                              // "Accessibilité" du design system) sans agrandir le
+                              // texte lui-même, même principe que le lien
+                              // "Créer un compte"/"Se connecter" ci-dessous.
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xs,
+                                vertical: 14,
+                              ),
+                              child: Text(
+                                'Mot de passe oublié ?',
+                                style: AppTypography.body(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.goldEnd,
+                                ),
+                              ),
                             ),
                           ),
+                        ),
+                      ],
+                      if (isSignUp) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        _FieldLabel('Confirmer le mot de passe'),
+                        const SizedBox(height: AppSpacing.xs),
+                        TextFormField(
+                          controller: confirmPasswordController,
+                          obscureText: true,
+                          textInputAction: TextInputAction.done,
+                          decoration: const InputDecoration(
+                            hintText: '••••••••',
+                          ),
+                          validator: (value) =>
+                              AuthValidators.passwordConfirmation(
+                                value,
+                                passwordController.text,
+                              ),
+                          onFieldSubmitted: (_) => onSubmit(),
+                        ),
+                      ],
+                      if (errorMessage != null) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          errorMessage!,
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.accentBrick,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.md),
+                      PrimaryButton(
+                        label: isSignUp ? 'Créer le compte' : 'Entrer',
+                        isLoading: isSubmitting,
+                        onPressed: isSubmitting ? null : onSubmit,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Center(
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          // Centre verticalement le lien (dont la zone de tap est
+                          // agrandie ci-dessous) par rapport au texte simple voisin,
+                          // pour que la ligne reste visuellement cohérente malgré la
+                          // différence de hauteur entre les deux éléments.
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              isSignUp
+                                  ? 'Déjà un compte ? '
+                                  : 'Pas encore de compte ? ',
+                              style: AppTypography.body(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: isSubmitting ? null : onSwitchMode,
+                              child: Padding(
+                                // Élargit la zone de tap à au moins 44x44px (section 7
+                                // "Accessibilité" du design system) sans agrandir le
+                                // texte lui-même.
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.xs,
+                                  vertical: 14,
+                                ),
+                                child: Text(
+                                  isSignUp ? 'Se connecter' : 'Créer un compte',
+                                  style: AppTypography.body(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.goldEnd,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
         ),
         Positioned(top: _rivetInset, left: _rivetInset, child: _rivet()),
         Positioned(top: _rivetInset, right: _rivetInset, child: _rivet()),
         Positioned(bottom: _rivetInset, left: _rivetInset, child: _rivet()),
         Positioned(bottom: _rivetInset, right: _rivetInset, child: _rivet()),
+      ],
+    );
+  }
+}
+
+/// État affiché à la place du formulaire une fois qu'une inscription a
+/// réussi mais nécessite une confirmation par e-mail (voir la doc de classe
+/// de [LoginScreen]) — message équivalent à celui de l'app web "Histoires"
+/// (`apps/web/app/(auth)/register/register-form.tsx`) : "Un email de
+/// confirmation vient de t'être envoyé...".
+class _SignUpConfirmationView extends StatelessWidget {
+  const _SignUpConfirmationView({
+    required this.email,
+    required this.onBackToLogin,
+  });
+
+  final String email;
+  final VoidCallback onBackToLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'VÉRIFIEZ VOS E-MAILS',
+          textAlign: TextAlign.center,
+          style: AppTypography.display(
+            fontSize: 11,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          "Un e-mail de confirmation vient d'être envoyé à $email. "
+          "Cliquez sur le lien qu'il contient pour activer votre compte.",
+          textAlign: TextAlign.center,
+          style: AppTypography.body(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        PrimaryButton(label: 'Retour à la connexion', onPressed: onBackToLogin),
       ],
     );
   }

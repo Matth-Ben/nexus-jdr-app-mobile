@@ -16,7 +16,15 @@ abstract class AuthRepository {
     required String password,
   });
 
-  Future<void> signUp({required String email, required String password});
+  /// Renvoie `true` si une confirmation par e-mail est nécessaire avant que
+  /// le compte soit actif (aucune session créée par cet appel — c'est le
+  /// cas sur ce projet Supabase, voir la doc de classe de
+  /// [SupabaseAuthRepository.signUp]), `false` si le compte est
+  /// immédiatement actif (session créée, comme pour [signInWithPassword]).
+  /// L'appelant (`login_screen.dart`) en a besoin pour savoir s'il doit
+  /// afficher un message "vérifie ta boîte mail" plutôt que de compter sur
+  /// une redirection automatique qui n'aura pas lieu.
+  Future<bool> signUp({required String email, required String password});
 
   /// Déconnecte l'utilisateur courant (ex. action "Se déconnecter" du menu
   /// profil de la liste des personnages).
@@ -157,9 +165,20 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> signUp({required String email, required String password}) async {
+  Future<bool> signUp({required String email, required String password}) async {
     try {
-      await _client.auth.signUp(email: email, password: password);
+      final response = await _client.auth.signUp(
+        email: email,
+        password: password,
+      );
+      // Confirmation par e-mail activée sur ce projet Supabase (même
+      // config que l'app web, voir `apps/web/app/(auth)/actions.ts`, qui ne
+      // redirige jamais après un `signUp` réussi contrairement à son
+      // `login`) : `signUp` réussit sans exception mais ne crée pas de
+      // session tant que le lien de confirmation n'a pas été suivi.
+      // `response.session == null` est le seul signal fiable pour le
+      // distinguer d'un compte immédiatement actif.
+      return response.session == null;
     } on AuthException catch (error) {
       throw mapAuthException(error);
     } catch (_) {

@@ -189,6 +189,53 @@ void main() {
         );
       },
     );
+
+    test('confirmation par e-mail requise (réponse `/signup` sans '
+        '`access_token`, donc sans session — cas réel sur ce projet Supabase, '
+        "voir la doc de classe de `signUp`) : renvoie `true` plutôt que "
+        'de laisser croire que le compte est actif', () async {
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/signup')) {
+          return http.Response(
+            jsonEncode(_fakeUserJson()),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      });
+
+      final needsConfirmation = await SupabaseAuthRepository(client)
+          .signUp(email: 'nouveau@exemple.com', password: 'password1234');
+
+      expect(needsConfirmation, isTrue);
+      expect(client.auth.currentSession, isNull);
+    });
+
+    test(
+      'confirmation par e-mail désactivée (réponse `/signup` avec '
+      '`access_token`, session créée immédiatement) : renvoie `false`',
+      () async {
+        final client = _buildFakeSupabaseClient((request) async {
+          if (request.url.path.endsWith('/signup')) {
+            return http.Response(
+              jsonEncode(_fakeSessionJson()),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('{}', 200, request: request);
+        });
+
+        final needsConfirmation = await SupabaseAuthRepository(client)
+            .signUp(email: 'nouveau@exemple.com', password: 'password1234');
+
+        expect(needsConfirmation, isFalse);
+        expect(client.auth.currentSession, isNotNull);
+      },
+    );
   });
 
   group('SupabaseAuthRepository.signOut', () {

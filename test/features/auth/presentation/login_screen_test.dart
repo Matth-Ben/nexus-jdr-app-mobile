@@ -27,6 +27,10 @@ import 'package:personnages/features/auth/presentation/providers/auth_providers.
 ///   garder l'appel en attente pour observer l'état "en cours de soumission"
 ///   (bouton désactivé + indicateur de chargement) avant de le résoudre
 ///   manuellement dans le test.
+/// - [signUpNeedsEmailConfirmation] simule la réponse Supabase quand la
+///   confirmation par e-mail est requise (`AuthResponse.session == null`,
+///   voir `SupabaseAuthRepository.signUp`) — `false` par défaut simule un
+///   compte immédiatement actif.
 class _FakeAuthRepository implements AuthRepository {
   int signInCallCount = 0;
   int signUpCallCount = 0;
@@ -34,6 +38,7 @@ class _FakeAuthRepository implements AuthRepository {
 
   Object? signInError;
   Object? signUpError;
+  bool signUpNeedsEmailConfirmation = false;
 
   Completer<void>? signInCompleter;
   Completer<void>? signUpCompleter;
@@ -56,7 +61,7 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> signUp({required String email, required String password}) async {
+  Future<bool> signUp({required String email, required String password}) async {
     signUpCallCount++;
     if (signUpCompleter != null) {
       await signUpCompleter!.future;
@@ -64,6 +69,7 @@ class _FakeAuthRepository implements AuthRepository {
     if (signUpError != null) {
       throw signUpError!;
     }
+    return signUpNeedsEmailConfirmation;
   }
 
   @override
@@ -279,6 +285,76 @@ void main() {
     expect(fakeRepository.signUpCallCount, 1);
     expect(fakeRepository.signInCallCount, 0);
   });
+
+  testWidgets(
+    'après une inscription réussie sans confirmation requise, ne montre '
+    'aucun état supplémentaire (le routeur redirige via onAuthStateChange)',
+    (WidgetTester tester) async {
+      fakeRepository.signUpNeedsEmailConfirmation = false;
+
+      await tester.pumpWidget(buildTestWidget());
+
+      await tester.tap(find.text('Créer un compte'));
+      await tester.pumpAndSettle();
+
+      await fillLoginForm(tester);
+      await tester.enterText(find.byType(TextFormField).at(2), 'motdepasse123');
+      await tester.tap(find.text('CRÉER LE COMPTE'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('VÉRIFIEZ VOS E-MAILS'), findsNothing);
+      expect(find.text('CRÉER LE COMPTE'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'après une inscription nécessitant une confirmation par e-mail, affiche '
+    'un message explicite avec l\'adresse saisie plutôt que de rester '
+    'silencieux (bug rapporté : rien ne semblait se passer sur téléphone)',
+    (WidgetTester tester) async {
+      fakeRepository.signUpNeedsEmailConfirmation = true;
+
+      await tester.pumpWidget(buildTestWidget());
+
+      await tester.tap(find.text('Créer un compte'));
+      await tester.pumpAndSettle();
+
+      await fillLoginForm(tester, email: 'nouveau@exemple.com');
+      await tester.enterText(find.byType(TextFormField).at(2), 'motdepasse123');
+      await tester.tap(find.text('CRÉER LE COMPTE'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('VÉRIFIEZ VOS E-MAILS'), findsOneWidget);
+      expect(find.textContaining('nouveau@exemple.com'), findsOneWidget);
+      // Le formulaire n'est plus affiché tant que la confirmation est en
+      // attente.
+      expect(find.text('CRÉER LE COMPTE'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'depuis l\'état "vérifiez vos e-mails", le bouton de retour ramène au '
+    'formulaire de connexion',
+    (WidgetTester tester) async {
+      fakeRepository.signUpNeedsEmailConfirmation = true;
+
+      await tester.pumpWidget(buildTestWidget());
+
+      await tester.tap(find.text('Créer un compte'));
+      await tester.pumpAndSettle();
+      await fillLoginForm(tester);
+      await tester.enterText(find.byType(TextFormField).at(2), 'motdepasse123');
+      await tester.tap(find.text('CRÉER LE COMPTE'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('RETOUR À LA CONNEXION'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('VÉRIFIEZ VOS E-MAILS'), findsNothing);
+      expect(find.text('ENTRER'), findsOneWidget);
+      expect(find.text('Confirmer le mot de passe'), findsNothing);
+    },
+  );
 
   testWidgets(
     'affiche le message d\'une AuthFailure renvoyée par le dépôt (ex. '
