@@ -1734,34 +1734,33 @@ void main() {
     );
   });
 
-  group('boutons "Repos court"/"Repos long" et feuille "Repos"', () {
-    testWidgets(
-      'le bouton "Repos long" ouvre RestSheet avec les PV actuels/max, '
-      'présélectionnée sur "Repos long" (recettage direction-artistique du '
-      '13/09 : remplace le lien texte unique "Prendre un repos")',
-      (tester) async {
-        fakeRepository.detailToReturn = _baseDetail;
+  group('bouton "Repos" unique et feuille "Repos"', () {
+    testWidgets('le bouton "Repos" ouvre RestSheet avec les PV actuels/max, '
+        'présélectionnée sur "Repos long" par défaut (demande utilisateur du '
+        '15/09 : remplace les deux boutons "Repos court"/"Repos long" — le '
+        'choix du type se fait désormais uniquement via la bascule segmentée '
+        'de la sheet)', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
 
-        await pumpDetail(tester);
-        await tester.pumpAndSettle();
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.text('REPOS LONG'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('REPOS'));
+      await tester.pumpAndSettle();
 
-        expect(find.text('Repos'), findsOneWidget);
-        expect(find.text('PV actuels : 18 / 30'), findsOneWidget);
-      },
-    );
+      expect(find.text('Repos'), findsOneWidget);
+      expect(find.text('PV actuels : 18 / 30'), findsOneWidget);
+    });
 
-    testWidgets('appliquer un repos long (bouton "Repos long") appelle '
-        'applyRest(RestType.long), rafraîchit la fiche et affiche la '
+    testWidgets('appliquer directement (segment "Repos long" par défaut) '
+        'appelle applyRest(RestType.long), rafraîchit la fiche et affiche la '
         'confirmation', (tester) async {
       fakeRepository.detailToReturn = _baseDetail;
 
       await pumpDetail(tester);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('REPOS LONG'));
+      await tester.tap(find.text('REPOS'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('APPLIQUER'));
@@ -1781,30 +1780,27 @@ void main() {
       expect(find.text('30 / 30'), findsOneWidget);
     });
 
-    testWidgets(
-      'le bouton "Repos court" ouvre RestSheet déjà présélectionnée sur '
-      '"Repos court" (initialType) ; appliquer appelle '
-      'applyRest(RestType.short) et affiche une confirmation sobre',
-      (tester) async {
-        fakeRepository.detailToReturn = _baseDetail;
+    testWidgets('choisir le segment "Repos court" dans la sheet puis appliquer '
+        'appelle applyRest(RestType.short) et affiche une confirmation sobre', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail;
 
-        await pumpDetail(tester);
-        await tester.pumpAndSettle();
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.text('REPOS COURT'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('REPOS'));
+      await tester.pumpAndSettle();
 
-        // Segment "Repos court" déjà présélectionné : pas besoin de le
-        // taper à nouveau dans la sheet, contrairement au comportement
-        // précédent (lien texte unique, toujours "Repos long" par défaut).
-        await tester.tap(find.text('APPLIQUER'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('REPOS COURT'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
 
-        expect(fakeRepository.applyRestCallCount, 1);
-        expect(fakeRepository.lastAppliedRestType, RestType.short);
-        expect(find.text('Repos court effectué.'), findsOneWidget);
-      },
-    );
+      expect(fakeRepository.applyRestCallCount, 1);
+      expect(fakeRepository.lastAppliedRestType, RestType.short);
+      expect(find.text('Repos court effectué.'), findsOneWidget);
+    });
 
     testWidgets('un échec de applyRest affiche un SnackBar d\'erreur', (
       tester,
@@ -1817,7 +1813,7 @@ void main() {
       await pumpDetail(tester);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('REPOS LONG'));
+      await tester.tap(find.text('REPOS'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('APPLIQUER'));
       await tester.pumpAndSettle();

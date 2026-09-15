@@ -7,7 +7,6 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/stepper_counter.dart';
 import '../../domain/character_detail.dart';
-import '../../domain/rest_type.dart';
 
 /// Carte combinant les bandeaux PV et XP de l'onglet "Personnage" — voir la
 /// spec visuelle de la tâche qui a produit ce fichier.
@@ -40,17 +39,16 @@ class CharacterVitalsCard extends StatelessWidget {
   /// différée qu'un repos peut déclencher, voir
   /// `_CharacterDetailScreenState._reassertCurrentHpState` — est en vol côté
   /// réseau. Désactive le stepper PV (+/-), le bouton crayon "Ajuster PV" ET
-  /// les boutons "Repos court"/"Repos long" eux-mêmes (jamais masqués, juste
-  /// avec un callback `null`, pour que la fiche reste lisible) le temps de
-  /// cette fenêtre.
+  /// le bouton "Repos" lui-même (jamais masqué, juste avec un callback
+  /// `null`, pour que la fiche reste lisible) le temps de cette fenêtre.
   ///
   /// Ferme la course résiduelle confirmée en revue de code : sans le verrou
   /// sur le stepper/crayon, un ajustement PV démarré *pendant* qu'un repos
   /// long écrit encore en base pourrait résoudre *avant* lui et se faire
   /// écraser silencieusement par l'écriture `current_hp = max_hp` du repos,
-  /// arrivée après coup. Sans le verrou sur les boutons "Repos court"/"Repos
-  /// long" eux-mêmes, un second repos pourrait de la même façon démarrer et
-  /// résoudre pendant qu'une réaffirmation PV différée (déclenchée par
+  /// arrivée après coup. Sans le verrou sur le bouton "Repos" lui-même, un
+  /// second repos pourrait de la même façon démarrer et résoudre pendant
+  /// qu'une réaffirmation PV différée (déclenchée par
   /// [_restGeneration]/`_reassertCurrentHpState`, l'autre sens de la course :
   /// un ajustement PV démarré *avant* le repos et résolu après lui) est
   /// encore en vol, et se faire écraser à son tour — même bug, un niveau
@@ -69,12 +67,13 @@ class CharacterVitalsCard extends StatelessWidget {
   /// voir `character_detail_screen.dart`.
   final VoidCallback onTapLevelUp;
 
-  /// Ouvre `RestSheet` pré-filtrée sur le [RestType] passé (recettage
-  /// direction-artistique du 13/09 : remplace l'ancien lien texte unique
-  /// "Prendre un repos" par deux `SecondaryButton` côte à côte "Repos
-  /// court"/"Repos long", voir [_RestButtonsRow]) — voir
+  /// Ouvre `RestSheet` (bouton "Repos" unique, voir [_RestButton] — demande
+  /// utilisateur du 15/09 : remplace les deux `SecondaryButton` "Repos
+  /// court"/"Repos long" introduits par le recettage direction-artistique du
+  /// 13/09, le choix du type se fait désormais uniquement via la bascule
+  /// segmentée déjà présente à l'intérieur de `RestSheet`) — voir
   /// `character_detail_screen.dart`.
-  final ValueChanged<RestType> onTapRest;
+  final VoidCallback onTapRest;
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +95,7 @@ class CharacterVitalsCard extends StatelessWidget {
             actionsDisabled: hpActionsDisabled,
           ),
           const SizedBox(height: AppSpacing.sm),
-          _RestButtonsRow(onTap: hpActionsDisabled ? null : onTapRest),
+          _RestButton(onTap: hpActionsDisabled ? null : onTapRest),
           const SizedBox(height: AppSpacing.sm),
           const Divider(height: 1, thickness: 1, color: AppColors.gaugeTrack),
           const SizedBox(height: AppSpacing.sm),
@@ -111,42 +110,27 @@ class CharacterVitalsCard extends StatelessWidget {
   }
 }
 
-/// Rangée "Repos court"/"Repos long" — remplace le lien texte unique
-/// "Prendre un repos" (recettage direction-artistique du 13/09) : deux
-/// `SecondaryButton` de largeur égale, chacun ouvrant directement `RestSheet`
-/// pré-filtrée sur le type correspondant (voir
-/// [CharacterVitalsCard.onTapRest]) plutôt que de toujours démarrer sur
-/// "Repos long" (comportement précédent du lien unique).
-class _RestButtonsRow extends StatelessWidget {
-  const _RestButtonsRow({required this.onTap});
+/// Bouton "Repos" unique — remplace les deux `SecondaryButton` côte à côte
+/// "Repos court"/"Repos long" (recettage direction-artistique du 13/09),
+/// eux-mêmes un remplacement du lien texte unique "Prendre un repos"
+/// d'origine (demande utilisateur du 15/09 : le choix du type se fait
+/// désormais uniquement via la bascule segmentée déjà présente à
+/// l'intérieur de `RestSheet`, pas la peine de le dupliquer ici).
+class _RestButton extends StatelessWidget {
+  const _RestButton({required this.onTap});
 
   /// `null` pendant qu'un repos (ou sa réaffirmation PV différée, voir
   /// `_CharacterDetailScreenState._isApplyingRest`) est déjà en vol — évite
   /// qu'un second repos parte avant que le premier n'ait fini d'écrire, même
-  /// verrou que l'ancien `_RestLink`.
-  final ValueChanged<RestType>? onTap;
+  /// verrou que l'ancien `_RestLink`/`_RestButtonsRow`.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final tap = onTap;
-    return Row(
-      children: [
-        Expanded(
-          child: SecondaryButton(
-            label: 'Repos court',
-            surface: SecondaryButtonSurface.parchment,
-            onPressed: tap == null ? null : () => tap(RestType.short),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: SecondaryButton(
-            label: 'Repos long',
-            surface: SecondaryButtonSurface.parchment,
-            onPressed: tap == null ? null : () => tap(RestType.long),
-          ),
-        ),
-      ],
+    return SecondaryButton(
+      label: 'Repos',
+      surface: SecondaryButtonSurface.parchment,
+      onPressed: onTap,
     );
   }
 }

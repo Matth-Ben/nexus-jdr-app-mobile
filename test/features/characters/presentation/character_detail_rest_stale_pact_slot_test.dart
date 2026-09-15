@@ -405,7 +405,7 @@ void main() {
       // precedent est toujours en vol.
       await tester.tap(find.text('PERSO'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('REPOS LONG'));
+      await tester.tap(find.text('REPOS'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(PrimaryButton, 'APPLIQUER'));
       await tester.pumpAndSettle();
@@ -448,8 +448,10 @@ void main() {
 
       await tester.tap(find.text('PERSO'));
       await tester.pumpAndSettle();
-      // Bouton "Repos court" du bandeau PV : ouvre directement RestSheet
-      // présélectionnée sur ce type (`initialType`).
+      // Bouton "Repos" unique du bandeau PV : ouvre RestSheet, puis bascule
+      // vers le segment "Repos court".
+      await tester.tap(find.text('REPOS'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('REPOS COURT'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(PrimaryButton, 'APPLIQUER'));

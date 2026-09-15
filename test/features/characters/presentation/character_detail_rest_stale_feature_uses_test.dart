@@ -397,10 +397,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Un repos court démarre et résout pendant que l'utilisation
-      // précédente est toujours en vol. Bouton "Repos court" du bandeau PV :
-      // ouvre directement RestSheet présélectionnée sur ce type
-      // (`initialType`).
+      // précédente est toujours en vol. Bouton "Repos" unique du bandeau PV :
+      // ouvre RestSheet, puis bascule vers le segment "Repos court".
       await tester.tap(find.text('PERSO'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('REPOS'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('REPOS COURT'));
       await tester.pumpAndSettle();

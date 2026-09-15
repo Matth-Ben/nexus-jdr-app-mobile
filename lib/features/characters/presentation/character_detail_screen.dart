@@ -1939,7 +1939,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         ),
         onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
         onTapToggleInspiration: () => _toggleInspiration(detail),
-        onTapRest: (initialType) {
+        onTapRest: () {
           final effective = _effectiveDetail(detail);
           showRestSheet(
             context,
@@ -1951,7 +1951,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             constitutionModifier: AbilityScoreRules.abilityModifier(
               effective.abilityScores['con'] ?? 10,
             ),
-            initialType: initialType,
+            // Plus de pré-sélection depuis l'appelant (bouton "Repos"
+            // unique, voir `CharacterVitalsCard.onTapRest`) : `RestSheet`
+            // garde son défaut `RestType.long`, le joueur choisit ensuite
+            // via sa propre bascule segmentée.
             onApply: (result) => _applyRest(
               detail,
               result.type,
@@ -2001,7 +2004,7 @@ class _CharacterTabBody extends StatelessWidget {
   /// Tuile "Inspiration" (`CharacterStatPillsRow`) — voir
   /// `_CharacterDetailScreenState._toggleInspiration`.
   final VoidCallback onTapToggleInspiration;
-  final ValueChanged<RestType> onTapRest;
+  final VoidCallback onTapRest;
 
   /// Voir `_CharacterDetailScreenState._isApplyingRest`.
   final bool hpActionsDisabled;

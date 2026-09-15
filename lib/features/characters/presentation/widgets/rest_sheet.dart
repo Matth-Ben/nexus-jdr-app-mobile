@@ -110,11 +110,12 @@ class _RestSheetContent extends StatefulWidget {
   final int constitutionModifier;
 
   /// Segment présélectionné à l'ouverture — "Repos long" par défaut (spec
-  /// visuelle direction-artistique d'origine), ou le type déjà choisi par le
-  /// joueur quand la sheet est ouverte depuis l'un des deux boutons "Repos
-  /// court"/"Repos long" de `character_vitals_card.dart` (recettage
-  /// direction-artistique du 13/09) plutôt que le lien texte unique qu'ils
-  /// remplacent.
+  /// visuelle direction-artistique d'origine). `character_vitals_card.dart`
+  /// n'a plus qu'un seul bouton "Repos" (demande utilisateur du 15/09,
+  /// remplace les deux boutons "Repos court"/"Repos long" du recettage
+  /// direction-artistique du 13/09) et ne fournit donc plus jamais de valeur
+  /// différente du défaut : le joueur choisit désormais uniquement via cette
+  /// bascule segmentée, après ouverture.
   final RestType initialType;
   final ValueChanged<RestSheetResult> onApply;
 

@@ -394,7 +394,7 @@ void main() {
       // toujours en vol.
       await tester.tap(find.text('PERSO'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('REPOS LONG'));
+      await tester.tap(find.text('REPOS'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('APPLIQUER'));
       await tester.pumpAndSettle();
