@@ -42,132 +42,113 @@ void main() {
       addTearDown(container.dispose);
     });
 
-    test(
-      'souscrit une fois le détail résolu, et onChanged invalide '
-      'groupDetailProvider tant que ce provider est monté',
-      () async {
-        fakeRepository.detailBuilder = () =>
-            _detail(memberIds: const ['char-a', 'char-b']);
+    test('souscrit une fois le détail résolu, et onChanged invalide '
+        'groupDetailProvider tant que ce provider est monté', () async {
+      fakeRepository.detailBuilder = () =>
+          _detail(memberIds: const ['char-a', 'char-b']);
 
-        container.listen(
-          groupMembersRealtimeWatcherProvider(groupId),
-          (previous, next) {},
-          fireImmediately: true,
-        );
-        await pumpEventQueue();
+      container.listen(
+        groupMembersRealtimeWatcherProvider(groupId),
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      await pumpEventQueue();
 
-        expect(fakeRepository.subscribeCallCount, 1);
-        expect(fakeRepository.lastSubscribedCharacterIds, [
-          'char-a',
-          'char-b',
-        ]);
-        expect(fakeRepository.fetchGroupDetailCallCount, 1);
+      expect(fakeRepository.subscribeCallCount, 1);
+      expect(fakeRepository.lastSubscribedCharacterIds, ['char-a', 'char-b']);
+      expect(fakeRepository.fetchGroupDetailCallCount, 1);
 
-        fakeRepository.lastOnChanged!();
-        await pumpEventQueue();
+      fakeRepository.lastOnChanged!();
+      await pumpEventQueue();
 
-        expect(
-          fakeRepository.fetchGroupDetailCallCount,
-          2,
-          reason: 'onChanged doit invalider groupDetailProvider(groupId)',
-        );
-      },
-    );
+      expect(
+        fakeRepository.fetchGroupDetailCallCount,
+        2,
+        reason: 'onChanged doit invalider groupDetailProvider(groupId)',
+      );
+    });
 
-    test(
-      'onChanged appelé après démontage du provider ne lève pas '
-      '(garde ref.mounted, problème A)',
-      () async {
-        fakeRepository.detailBuilder = () =>
-            _detail(memberIds: const ['char-a']);
+    test('onChanged appelé après démontage du provider ne lève pas '
+        '(garde ref.mounted, problème A)', () async {
+      fakeRepository.detailBuilder = () => _detail(memberIds: const ['char-a']);
 
-        container.listen(
-          groupMembersRealtimeWatcherProvider(groupId),
-          (previous, next) {},
-          fireImmediately: true,
-        );
-        await pumpEventQueue();
-        final onChanged = fakeRepository.lastOnChanged!;
+      container.listen(
+        groupMembersRealtimeWatcherProvider(groupId),
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      await pumpEventQueue();
+      final onChanged = fakeRepository.lastOnChanged!;
 
-        container.dispose();
+      container.dispose();
 
-        expect(onChanged, returnsNormally);
-      },
-    );
+      expect(onChanged, returnsNormally);
+    });
 
-    test(
-      'un refresh de groupDetailProvider qui ne change pas la liste de '
-      'characterIds (ex. simple mise à jour de PV) ne recrée pas le '
-      'channel (problème B)',
-      () async {
-        var hp = 10;
-        fakeRepository.detailBuilder = () => _detail(
-          memberIds: const ['char-a', 'char-b'],
-          firstMemberHp: hp,
-        );
+    test('un refresh de groupDetailProvider qui ne change pas la liste de '
+        'characterIds (ex. simple mise à jour de PV) ne recrée pas le '
+        'channel (problème B)', () async {
+      var hp = 10;
+      fakeRepository.detailBuilder = () =>
+          _detail(memberIds: const ['char-a', 'char-b'], firstMemberHp: hp);
 
-        container.listen(
-          groupMembersRealtimeWatcherProvider(groupId),
-          (previous, next) {},
-          fireImmediately: true,
-        );
-        await pumpEventQueue();
-        expect(fakeRepository.subscribeCallCount, 1);
-        final firstSubscription = fakeRepository.subscriptions.single;
+      container.listen(
+        groupMembersRealtimeWatcherProvider(groupId),
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      await pumpEventQueue();
+      expect(fakeRepository.subscribeCallCount, 1);
+      final firstSubscription = fakeRepository.subscriptions.single;
 
-        hp = 25;
-        container.invalidate(groupDetailProvider(groupId));
-        await pumpEventQueue();
+      hp = 25;
+      container.invalidate(groupDetailProvider(groupId));
+      await pumpEventQueue();
 
-        expect(
-          fakeRepository.fetchGroupDetailCallCount,
-          2,
-          reason: 'le détail a bien été rafraîchi',
-        );
-        expect(
-          fakeRepository.subscribeCallCount,
-          1,
-          reason:
-              'même liste de characterIds -> le channel ne doit pas être '
-              'recréé',
-        );
-        expect(firstSubscription.cancelled, isFalse);
-      },
-    );
+      expect(
+        fakeRepository.fetchGroupDetailCallCount,
+        2,
+        reason: 'le détail a bien été rafraîchi',
+      );
+      expect(
+        fakeRepository.subscribeCallCount,
+        1,
+        reason:
+            'même liste de characterIds -> le channel ne doit pas être '
+            'recréé',
+      );
+      expect(firstSubscription.cancelled, isFalse);
+    });
 
-    test(
-      'un changement réel de la liste de characterIds (un membre rejoint) '
-      'recrée le channel et annule le précédent',
-      () async {
-        var memberIds = const ['char-a', 'char-b'];
-        fakeRepository.detailBuilder = () => _detail(memberIds: memberIds);
+    test('un changement réel de la liste de characterIds (un membre rejoint) '
+        'recrée le channel et annule le précédent', () async {
+      var memberIds = const ['char-a', 'char-b'];
+      fakeRepository.detailBuilder = () => _detail(memberIds: memberIds);
 
-        container.listen(
-          groupMembersRealtimeWatcherProvider(groupId),
-          (previous, next) {},
-          fireImmediately: true,
-        );
-        await pumpEventQueue();
-        expect(fakeRepository.subscribeCallCount, 1);
-        final firstSubscription = fakeRepository.subscriptions.single;
+      container.listen(
+        groupMembersRealtimeWatcherProvider(groupId),
+        (previous, next) {},
+        fireImmediately: true,
+      );
+      await pumpEventQueue();
+      expect(fakeRepository.subscribeCallCount, 1);
+      final firstSubscription = fakeRepository.subscriptions.single;
 
-        memberIds = const ['char-a', 'char-b', 'char-c'];
-        container.invalidate(groupDetailProvider(groupId));
-        await pumpEventQueue();
+      memberIds = const ['char-a', 'char-b', 'char-c'];
+      container.invalidate(groupDetailProvider(groupId));
+      await pumpEventQueue();
 
-        expect(fakeRepository.subscribeCallCount, 2);
-        expect(fakeRepository.lastSubscribedCharacterIds, memberIds);
-        expect(
-          firstSubscription.cancelled,
-          isTrue,
-          reason: 'ancien channel annulé avant la recréation',
-        );
-      },
-    );
+      expect(fakeRepository.subscribeCallCount, 2);
+      expect(fakeRepository.lastSubscribedCharacterIds, memberIds);
+      expect(
+        firstSubscription.cancelled,
+        isTrue,
+        reason: 'ancien channel annulé avant la recréation',
+      );
+    });
 
     test('dispose() du ProviderContainer annule le channel Realtime', () async {
-      fakeRepository.detailBuilder = () =>
-          _detail(memberIds: const ['char-a']);
+      fakeRepository.detailBuilder = () => _detail(memberIds: const ['char-a']);
 
       container.listen(
         groupMembersRealtimeWatcherProvider(groupId),

@@ -27,7 +27,9 @@ void main() {
       'retourne null pour une URL externe qui ne pointe pas vers le bucket',
       () {
         expect(
-          GalleryPhotoStoragePathResolver.resolve('https://example.com/foo.jpg'),
+          GalleryPhotoStoragePathResolver.resolve(
+            'https://example.com/foo.jpg',
+          ),
           isNull,
         );
       },

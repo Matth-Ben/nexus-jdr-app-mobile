@@ -234,9 +234,7 @@ void main() {
         // désormais l'inventaire personnel elle-même, dans le même appel
         // atomique que la décrémentation du butin.
         expect(
-          requests.any(
-            (request) => request.url.path.endsWith('/characters'),
-          ),
+          requests.any((request) => request.url.path.endsWith('/characters')),
           isFalse,
         );
       },

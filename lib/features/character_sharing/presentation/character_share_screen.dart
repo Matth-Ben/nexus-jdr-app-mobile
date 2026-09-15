@@ -150,10 +150,7 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
       backgroundColor: AppColors.parchmentBg,
       body: Column(
         children: [
-          WoodBackHeader(
-            title: 'PARTAGER LE PERSONNAGE',
-            onBack: _goBack,
-          ),
+          WoodBackHeader(title: 'PARTAGER LE PERSONNAGE', onBack: _goBack),
           Expanded(
             child: detailAsync.when(
               data: _buildContent,
@@ -209,7 +206,9 @@ class _CharacterShareScreenState extends ConsumerState<CharacterShareScreen> {
               children: [
                 Expanded(child: _ShareLinkField(link: _linkFor(token))),
                 const SizedBox(width: AppSpacing.sm),
-                _CopyLinkButton(onCopy: _isBusy ? null : () => _copyLink(token)),
+                _CopyLinkButton(
+                  onCopy: _isBusy ? null : () => _copyLink(token),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.xs),

@@ -121,14 +121,15 @@ void main() {
         ],
       });
 
-      expect(
-        detail.armorProficiencyNames.toSet(),
-        {'légère', 'moyenne', 'lourde'},
-      );
-      expect(
-        detail.weaponProficiencyNames.toSet(),
-        {'courant', 'arbalète de poing'},
-      );
+      expect(detail.armorProficiencyNames.toSet(), {
+        'légère',
+        'moyenne',
+        'lourde',
+      });
+      expect(detail.weaponProficiencyNames.toSet(), {
+        'courant',
+        'arbalète de poing',
+      });
     });
 
     test('mappe les sorts avec leurs détails complets', () {

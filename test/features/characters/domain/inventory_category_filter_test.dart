@@ -19,8 +19,17 @@ CharacterInventoryItem _item(
 void main() {
   group('InventoryCategoryFilter', () {
     final sword = _item('1', 'Épée longue', category: 'arme');
-    final potion = _item('2', 'Potion de soin', category: 'objet_magique', consumable: true);
-    final backpack = _item('3', "Sac à dos d'érudit", category: 'equipement_general');
+    final potion = _item(
+      '2',
+      'Potion de soin',
+      category: 'objet_magique',
+      consumable: true,
+    );
+    final backpack = _item(
+      '3',
+      "Sac à dos d'érudit",
+      category: 'equipement_general',
+    );
     final armor = _item('5', 'Chemise de mailles', category: 'armure');
     final shield = _item('6', 'Bouclier', category: 'bouclier');
     final items = [sword, potion, backpack];
@@ -96,10 +105,11 @@ void main() {
 
     test('apply(armor) ne garde que armure/bouclier', () {
       expect(
-        InventoryCategoryFilter.apply(
-          [...items, armor, shield],
-          InventoryCategoryFilter.armor,
-        ),
+        InventoryCategoryFilter.apply([
+          ...items,
+          armor,
+          shield,
+        ], InventoryCategoryFilter.armor),
         [armor, shield],
       );
     });
@@ -107,10 +117,11 @@ void main() {
     test('apply(misc) ne garde que ce qui n\'est ni arme/armure/bouclier ni '
         'consommable', () {
       expect(
-        InventoryCategoryFilter.apply(
-          [...items, armor, shield],
-          InventoryCategoryFilter.misc,
-        ),
+        InventoryCategoryFilter.apply([
+          ...items,
+          armor,
+          shield,
+        ], InventoryCategoryFilter.misc),
         [backpack],
       );
     });

@@ -23,9 +23,12 @@ void main() {
       expect(SpellNameFilter.apply(spells: spells, query: ''), spells);
     });
 
-    test('requête vide après trim (espaces seuls) équivaut à aucune requête', () {
-      expect(SpellNameFilter.apply(spells: spells, query: '   '), spells);
-    });
+    test(
+      'requête vide après trim (espaces seuls) équivaut à aucune requête',
+      () {
+        expect(SpellNameFilter.apply(spells: spells, query: '   '), spells);
+      },
+    );
 
     test('filtre par sous-chaîne du nom, insensible à la casse', () {
       final result = SpellNameFilter.apply(spells: spells, query: 'BOULE');

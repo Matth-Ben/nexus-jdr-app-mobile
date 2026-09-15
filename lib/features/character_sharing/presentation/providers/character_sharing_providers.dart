@@ -23,7 +23,9 @@ CharacterSharingRepository characterSharingRepository(Ref ref) {
 /// silencieuse.
 @Riverpod(retry: _noRetry)
 Future<CharacterDetail?> sharedCharacter(Ref ref, {required String token}) {
-  return ref.watch(characterSharingRepositoryProvider).fetchSharedCharacter(token);
+  return ref
+      .watch(characterSharingRepositoryProvider)
+      .fetchSharedCharacter(token);
 }
 
 Duration? _noRetry(int retryCount, Object error) => null;

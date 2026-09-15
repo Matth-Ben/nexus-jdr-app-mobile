@@ -29,7 +29,8 @@ void main() {
       // (nextInt(20) renvoie [0, 19], +1 donne [1, 20]) plutôt que de
       // dépendre d'un tirage aléatoire pour toucher les bornes.
       final results = [
-        for (var seed = 0; seed < 200; seed++) DiceRoller.rollD20(random: Random(seed)),
+        for (var seed = 0; seed < 200; seed++)
+          DiceRoller.rollD20(random: Random(seed)),
       ];
 
       expect(results.every((r) => r >= 1), isTrue);

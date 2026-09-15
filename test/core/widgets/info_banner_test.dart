@@ -26,27 +26,26 @@ void main() {
     );
   });
 
-  testWidgets(
-    'InfoBanner.success affiche le message et une puce ronde pleine '
-    '(Icons.circle) plutôt que l\'icône du variant par défaut',
-    (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: InfoBanner.success(message: 'Partage actif')),
-        ),
-      );
+  testWidgets('InfoBanner.success affiche le message et une puce ronde pleine '
+      '(Icons.circle) plutôt que l\'icône du variant par défaut', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: InfoBanner.success(message: 'Partage actif')),
+      ),
+    );
 
-      expect(find.text('Partage actif'), findsOneWidget);
-      expect(find.byIcon(Icons.circle), findsOneWidget);
+    expect(find.text('Partage actif'), findsOneWidget);
+    expect(find.byIcon(Icons.circle), findsOneWidget);
 
-      final icon = tester.widget<Icon>(find.byIcon(Icons.circle));
-      expect(icon.color, AppColors.accentTeal);
-      expect(icon.size, 8);
+    final icon = tester.widget<Icon>(find.byIcon(Icons.circle));
+    expect(icon.color, AppColors.accentTeal);
+    expect(icon.size, 8);
 
-      final container = tester.widget<Container>(find.byType(Container));
-      final decoration = container.decoration! as BoxDecoration;
-      expect(decoration.color, const Color(0xFFE7F0E9));
-      expect((decoration.border! as Border).top.color, AppColors.accentTeal);
-    },
-  );
+    final container = tester.widget<Container>(find.byType(Container));
+    final decoration = container.decoration! as BoxDecoration;
+    expect(decoration.color, const Color(0xFFE7F0E9));
+    expect((decoration.border! as Border).top.color, AppColors.accentTeal);
+  });
 }

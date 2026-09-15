@@ -77,7 +77,11 @@ class CharacterJournalCard extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             for (var i = 0; i < entries.length; i++) ...[
               if (i > 0)
-                const Divider(height: 1, thickness: 1, color: AppColors.gaugeTrack),
+                const Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: AppColors.gaugeTrack,
+                ),
               _JournalEntryRow(
                 entry: entries[i],
                 onTap: actionsDisabled
@@ -90,10 +94,8 @@ class CharacterJournalCard extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             DashedAddTile(
               label: 'Ajouter une note',
-              onTap: () => showJournalEntryEditSheet(
-                context,
-                characterId: detail.id,
-              ),
+              onTap: () =>
+                  showJournalEntryEditSheet(context, characterId: detail.id),
             ),
           ],
         ],
@@ -151,9 +153,8 @@ class CharacterJournalCard extends ConsumerWidget {
       }
       ref.invalidate(characterDetailProvider(detail.id));
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Note supprimée.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Note supprimée.')));
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -214,16 +215,14 @@ class _JournalEntryActionSheetContent extends StatelessWidget {
           SheetActionRow(
             icon: Icons.edit_outlined,
             label: 'Modifier',
-            onTap: () =>
-                Navigator.of(context).pop(_JournalEntryAction.edit),
+            onTap: () => Navigator.of(context).pop(_JournalEntryAction.edit),
           ),
           const SheetActionDivider(),
           SheetActionRow(
             icon: Icons.delete_outline,
             label: 'Supprimer',
             color: AppColors.accentBrick,
-            onTap: () =>
-                Navigator.of(context).pop(_JournalEntryAction.remove),
+            onTap: () => Navigator.of(context).pop(_JournalEntryAction.remove),
           ),
         ],
       ),

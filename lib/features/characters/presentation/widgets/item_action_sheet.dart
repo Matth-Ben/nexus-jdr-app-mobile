@@ -125,7 +125,10 @@ Future<void> removeItemFlow(
 enum _ItemSheetAction { info, use, toggleEquipped, toggleAttuned, remove }
 
 class _ItemActionSheetContent extends StatelessWidget {
-  const _ItemActionSheetContent({required this.item, required this.attunedCount});
+  const _ItemActionSheetContent({
+    required this.item,
+    required this.attunedCount,
+  });
 
   final CharacterInventoryItem item;
   final int attunedCount;

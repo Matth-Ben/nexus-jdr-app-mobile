@@ -140,7 +140,10 @@ class _GalleryThumbnail extends StatelessWidget {
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) => const ColoredBox(
               color: AppColors.parchmentCardAlt,
-              child: Icon(Icons.broken_image_outlined, color: AppColors.textMuted),
+              child: Icon(
+                Icons.broken_image_outlined,
+                color: AppColors.textMuted,
+              ),
             ),
           ),
         ),

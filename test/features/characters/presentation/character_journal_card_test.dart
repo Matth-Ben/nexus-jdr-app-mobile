@@ -240,8 +240,10 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
-  Future<WriteOutcome> addXp({required String characterId, required int newXp}) =>
-      throw UnimplementedError();
+  Future<WriteOutcome> addXp({
+    required String characterId,
+    required int newXp,
+  }) => throw UnimplementedError();
 
   @override
   Future<LevelUpLevelData> fetchLevelUpLevelData({
@@ -283,7 +285,9 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 }
 
-CharacterDetail _detail({List<CharacterJournalEntry> journalEntries = const []}) {
+CharacterDetail _detail({
+  List<CharacterJournalEntry> journalEntries = const [],
+}) {
   return CharacterDetail(
     id: '1',
     name: 'Test',
@@ -338,13 +342,14 @@ void main() {
 
   testWidgets('affiche une ligne par entrée (date + texte), séparées par un '
       'Divider', (tester) async {
-    await _pump(tester, _detail(journalEntries: [entry2, entry1]), fakeRepository);
+    await _pump(
+      tester,
+      _detail(journalEntries: [entry2, entry1]),
+      fakeRepository,
+    );
 
     expect(find.text('JOURNAL DE CAMPAGNE'), findsOneWidget);
-    expect(
-      find.text('Combat contre les gobelins de la mine.'),
-      findsOneWidget,
-    );
+    expect(find.text('Combat contre les gobelins de la mine.'), findsOneWidget);
     expect(
       find.text('Première séance : rencontre au Chaudron fumant.'),
       findsOneWidget,
@@ -403,7 +408,10 @@ void main() {
 
       expect(find.text('MODIFIER LA NOTE'), findsOneWidget);
       expect(
-        tester.widget<TextFormField>(find.byType(TextFormField)).controller!.text,
+        tester
+            .widget<TextFormField>(find.byType(TextFormField))
+            .controller!
+            .text,
         'Première séance : rencontre au Chaudron fumant.',
       );
 
@@ -421,29 +429,26 @@ void main() {
     },
   );
 
-  testWidgets(
-    '"Supprimer" ouvre une confirmation ; confirmer appelle '
-    'removeJournalEntry',
-    (tester) async {
-      await _pump(tester, _detail(journalEntries: [entry1]), fakeRepository);
+  testWidgets('"Supprimer" ouvre une confirmation ; confirmer appelle '
+      'removeJournalEntry', (tester) async {
+    await _pump(tester, _detail(journalEntries: [entry1]), fakeRepository);
 
-      await tester.tap(
-        find.text('Première séance : rencontre au Chaudron fumant.'),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Supprimer'));
-      await tester.pumpAndSettle();
+    await tester.tap(
+      find.text('Première séance : rencontre au Chaudron fumant.'),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Supprimer'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Supprimer cette note ?'), findsOneWidget);
+    expect(find.text('Supprimer cette note ?'), findsOneWidget);
 
-      await tester.tap(find.text('Supprimer').last);
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Supprimer').last);
+    await tester.pumpAndSettle();
 
-      expect(fakeRepository.removeJournalEntryCallCount, 1);
-      expect(fakeRepository.lastEntryId, 'entry-1');
-      expect(find.text('Note supprimée.'), findsOneWidget);
-    },
-  );
+    expect(fakeRepository.removeJournalEntryCallCount, 1);
+    expect(fakeRepository.lastEntryId, 'entry-1');
+    expect(find.text('Note supprimée.'), findsOneWidget);
+  });
 
   testWidgets(
     'actionsDisabled : ni la tuile "Ajouter une note" ni le tap sur une '

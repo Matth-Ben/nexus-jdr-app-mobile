@@ -287,10 +287,8 @@ Future<FakeRepository> _pumpSheet(WidgetTester tester) async {
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(
-                onPressed: () => showJournalEntryEditSheet(
-                  context,
-                  characterId: 'char-1',
-                ),
+                onPressed: () =>
+                    showJournalEntryEditSheet(context, characterId: 'char-1'),
                 child: const Text('Ouvrir'),
               ),
             ),
@@ -362,7 +360,10 @@ void main() {
         findsOneWidget,
       );
       expect(
-        tester.widget<TextFormField>(find.byType(TextFormField)).controller!.text,
+        tester
+            .widget<TextFormField>(find.byType(TextFormField))
+            .controller!
+            .text,
         'Note pas envoyée.',
       );
     },
@@ -382,7 +383,10 @@ void main() {
 
       expect(find.text('Erreur serveur.'), findsOneWidget);
       expect(
-        tester.widget<TextFormField>(find.byType(TextFormField)).controller!.text,
+        tester
+            .widget<TextFormField>(find.byType(TextFormField))
+            .controller!
+            .text,
         'Note en cours.',
       );
     },

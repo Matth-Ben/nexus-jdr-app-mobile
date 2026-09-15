@@ -126,8 +126,10 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
-  Future<WriteOutcome> addXp({required String characterId, required int newXp}) =>
-      throw UnimplementedError();
+  Future<WriteOutcome> addXp({
+    required String characterId,
+    required int newXp,
+  }) => throw UnimplementedError();
 
   @override
   Future<LevelUpLevelData> fetchLevelUpLevelData({
@@ -391,27 +393,24 @@ void main() {
     },
   );
 
-  testWidgets(
-    'partage actif : affiche le lien, "Régénérer le lien" et la zone '
-    'dangereuse avec "Désactiver le partage"',
-    (tester) async {
-      fakeCharacterRepository.detailToReturn = _baseDetail.copyWith(
-        shareToken: 'existing-token',
-      );
+  testWidgets('partage actif : affiche le lien, "Régénérer le lien" et la zone '
+      'dangereuse avec "Désactiver le partage"', (tester) async {
+    fakeCharacterRepository.detailToReturn = _baseDetail.copyWith(
+      shareToken: 'existing-token',
+    );
 
-      await pumpShareScreen(tester);
-      await tester.pumpAndSettle();
+    await pumpShareScreen(tester);
+    await tester.pumpAndSettle();
 
-      expect(find.text('Partage actif'), findsOneWidget);
-      expect(
-        find.textContaining('nexus-jdr.app/p/existing-token'),
-        findsOneWidget,
-      );
-      expect(find.text('Régénérer le lien'), findsOneWidget);
-      expect(find.text('ZONE DANGEREUSE'), findsOneWidget);
-      expect(find.text('Désactiver le partage'), findsOneWidget);
-    },
-  );
+    expect(find.text('Partage actif'), findsOneWidget);
+    expect(
+      find.textContaining('nexus-jdr.app/p/existing-token'),
+      findsOneWidget,
+    );
+    expect(find.text('Régénérer le lien'), findsOneWidget);
+    expect(find.text('ZONE DANGEREUSE'), findsOneWidget);
+    expect(find.text('Désactiver le partage'), findsOneWidget);
+  });
 
   testWidgets(
     'tap "Désactiver le partage" ouvre une confirmation ; confirmer appelle '
@@ -459,23 +458,24 @@ void main() {
     },
   );
 
-  testWidgets('échec de régénération affiche le message d\'erreur en SnackBar', (
-    tester,
-  ) async {
-    fakeCharacterRepository.detailToReturn = _baseDetail;
-    fakeSharingRepository.regenerateErrorToThrow = const CharacterFailure(
-      'Ce personnage est introuvable ou ne vous appartient plus.',
-    );
+  testWidgets(
+    'échec de régénération affiche le message d\'erreur en SnackBar',
+    (tester) async {
+      fakeCharacterRepository.detailToReturn = _baseDetail;
+      fakeSharingRepository.regenerateErrorToThrow = const CharacterFailure(
+        'Ce personnage est introuvable ou ne vous appartient plus.',
+      );
 
-    await pumpShareScreen(tester);
-    await tester.pumpAndSettle();
+      await pumpShareScreen(tester);
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('ACTIVER LE PARTAGE'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('ACTIVER LE PARTAGE'));
+      await tester.pumpAndSettle();
 
-    expect(
-      find.text('Ce personnage est introuvable ou ne vous appartient plus.'),
-      findsOneWidget,
-    );
-  });
+      expect(
+        find.text('Ce personnage est introuvable ou ne vous appartient plus.'),
+        findsOneWidget,
+      );
+    },
+  );
 }

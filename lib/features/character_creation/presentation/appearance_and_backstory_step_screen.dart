@@ -191,11 +191,14 @@ class _AppearanceAndBackstoryStepScreenState
       body: Column(
         children: [
           _Header(
-          onBack: _goBack,
-          currentStep: 8,
-          totalSteps: _totalSteps,
-          onHelp: () => showStepHelpSheet(context, CreationStepHelp.appearanceAndBackstory),
-        ),
+            onBack: _goBack,
+            currentStep: 8,
+            totalSteps: _totalSteps,
+            onHelp: () => showStepHelpSheet(
+              context,
+              CreationStepHelp.appearanceAndBackstory,
+            ),
+          ),
           Expanded(child: _buildContent()),
         ],
       ),

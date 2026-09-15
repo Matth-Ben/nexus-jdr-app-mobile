@@ -60,9 +60,8 @@ Future<void> showAddGalleryPhotoSheet(
         .addGalleryPhoto(characterId: characterId, bytes: bytes);
     ref.invalidate(characterDetailProvider(characterId));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Photo ajoutée.')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Photo ajoutée.')));
   } catch (_) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -131,8 +130,7 @@ class _GalleryPhotoUrlDialog extends StatefulWidget {
   const _GalleryPhotoUrlDialog();
 
   @override
-  State<_GalleryPhotoUrlDialog> createState() =>
-      _GalleryPhotoUrlDialogState();
+  State<_GalleryPhotoUrlDialog> createState() => _GalleryPhotoUrlDialogState();
 }
 
 class _GalleryPhotoUrlDialogState extends State<_GalleryPhotoUrlDialog> {

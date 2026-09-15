@@ -19,8 +19,14 @@ CharacterSpellEntry _spell({required int level, required String status}) {
 void main() {
   group('SpellStatusFormatter.subtitle', () {
     test('sort mineur (niveau 0) -> jamais de sous-titre', () {
-      expect(SpellStatusFormatter.subtitle(_spell(level: 0, status: 'connu')), isNull);
-      expect(SpellStatusFormatter.subtitle(_spell(level: 0, status: 'inné')), isNull);
+      expect(
+        SpellStatusFormatter.subtitle(_spell(level: 0, status: 'connu')),
+        isNull,
+      );
+      expect(
+        SpellStatusFormatter.subtitle(_spell(level: 0, status: 'inné')),
+        isNull,
+      );
     });
 
     test("sort niveau >= 1 'connu' -> \"connu, non préparé\"", () {
@@ -37,55 +43,84 @@ void main() {
       );
     });
 
-    test("sort niveau >= 1 'inné' (toujours disponible) -> aucun sous-titre", () {
-      expect(SpellStatusFormatter.subtitle(_spell(level: 2, status: 'inné')), isNull);
-    });
+    test(
+      "sort niveau >= 1 'inné' (toujours disponible) -> aucun sous-titre",
+      () {
+        expect(
+          SpellStatusFormatter.subtitle(_spell(level: 2, status: 'inné')),
+          isNull,
+        );
+      },
+    );
   });
 
   group('SpellStatusFormatter.canCast', () {
     test('sort mineur -> toujours lançable, quel que soit le statut', () {
-      expect(SpellStatusFormatter.canCast(_spell(level: 0, status: 'connu')), isTrue);
-      expect(SpellStatusFormatter.canCast(_spell(level: 0, status: 'préparé')), isTrue);
+      expect(
+        SpellStatusFormatter.canCast(_spell(level: 0, status: 'connu')),
+        isTrue,
+      );
+      expect(
+        SpellStatusFormatter.canCast(_spell(level: 0, status: 'préparé')),
+        isTrue,
+      );
     });
 
     test("sort niveau >= 1 'connu' (non préparé) -> pas lançable", () {
-      expect(SpellStatusFormatter.canCast(_spell(level: 1, status: 'connu')), isFalse);
+      expect(
+        SpellStatusFormatter.canCast(_spell(level: 1, status: 'connu')),
+        isFalse,
+      );
     });
 
     test("sort niveau >= 1 'préparé' -> lançable", () {
-      expect(SpellStatusFormatter.canCast(_spell(level: 1, status: 'préparé')), isTrue);
+      expect(
+        SpellStatusFormatter.canCast(_spell(level: 1, status: 'préparé')),
+        isTrue,
+      );
     });
 
     test("sort niveau >= 1 'inné' -> toujours lançable", () {
-      expect(SpellStatusFormatter.canCast(_spell(level: 5, status: 'inné')), isTrue);
+      expect(
+        SpellStatusFormatter.canCast(_spell(level: 5, status: 'inné')),
+        isTrue,
+      );
     });
   });
 
   group('SpellStatusFormatter.canTogglePrepared', () {
     test('sort mineur -> jamais de bascule de préparation', () {
       expect(
-        SpellStatusFormatter.canTogglePrepared(_spell(level: 0, status: 'connu')),
+        SpellStatusFormatter.canTogglePrepared(
+          _spell(level: 0, status: 'connu'),
+        ),
         isFalse,
       );
     });
 
     test("sort inné -> jamais de bascule de préparation", () {
       expect(
-        SpellStatusFormatter.canTogglePrepared(_spell(level: 2, status: 'inné')),
+        SpellStatusFormatter.canTogglePrepared(
+          _spell(level: 2, status: 'inné'),
+        ),
         isFalse,
       );
     });
 
     test("sort 'connu' niveau >= 1 -> bascule possible", () {
       expect(
-        SpellStatusFormatter.canTogglePrepared(_spell(level: 1, status: 'connu')),
+        SpellStatusFormatter.canTogglePrepared(
+          _spell(level: 1, status: 'connu'),
+        ),
         isTrue,
       );
     });
 
     test("sort 'préparé' niveau >= 1 -> bascule possible", () {
       expect(
-        SpellStatusFormatter.canTogglePrepared(_spell(level: 1, status: 'préparé')),
+        SpellStatusFormatter.canTogglePrepared(
+          _spell(level: 1, status: 'préparé'),
+        ),
         isTrue,
       );
     });

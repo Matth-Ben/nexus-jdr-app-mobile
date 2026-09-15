@@ -90,7 +90,8 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
           children: [
             _MinimalHeader(
               onBack: _goBack,
-              onHelp: () => showStepHelpSheet(context, CreationStepHelp.classStep),
+              onHelp: () =>
+                  showStepHelpSheet(context, CreationStepHelp.classStep),
             ),
             const Expanded(
               child: Center(
@@ -109,7 +110,8 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
           children: [
             _MinimalHeader(
               onBack: _goBack,
-              onHelp: () => showStepHelpSheet(context, CreationStepHelp.classStep),
+              onHelp: () =>
+                  showStepHelpSheet(context, CreationStepHelp.classStep),
             ),
             Expanded(
               child: _ErrorState(
@@ -367,7 +369,10 @@ class _MinimalHeader extends StatelessWidget {
               IconButton(
                 onPressed: onHelp,
                 tooltip: 'Aide',
-                icon: const Icon(Icons.help_outline, color: AppColors.textOnWood),
+                icon: const Icon(
+                  Icons.help_outline,
+                  color: AppColors.textOnWood,
+                ),
               ),
             ],
           ),

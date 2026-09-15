@@ -118,7 +118,10 @@ class _StatPill extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             value,
-            style: AppTypography.body(fontSize: 18, fontWeight: FontWeight.w800),
+            style: AppTypography.body(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
