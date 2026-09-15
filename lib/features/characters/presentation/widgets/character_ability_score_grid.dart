@@ -29,19 +29,44 @@ class CharacterAbilityScoreGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 3,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: AppSpacing.sm,
-      crossAxisSpacing: AppSpacing.sm,
-      childAspectRatio: 1.05,
+    // 2 rangées de 3 (`Row`+`Expanded`) plutôt qu'un `GridView.count` à
+    // `childAspectRatio` fixe : ce dernier imposait une hauteur de tuile
+    // dérivée de sa largeur, plus courte que le contenu réel (icône + 3
+    // lignes de texte) sur certaines largeurs d'écran/échelles de police —
+    // "bottom overflowed by 8.7 pixels" signalé par l'utilisateur. `Row` ne
+    // contraint que la largeur de chaque tuile (`Expanded`), sa hauteur suit
+    // naturellement son contenu, quels que soient l'écran ou la taille de
+    // police système : plus aucun risque de débordement vertical.
+    final cards = [
+      for (final definition in abilityScoreDefinitions)
+        _AbilityScoreCard(
+          definition: definition,
+          score: abilityScores[definition.key] ?? 10,
+        ),
+    ];
+
+    return Column(
       children: [
-        for (final definition in abilityScoreDefinitions)
-          _AbilityScoreCard(
-            definition: definition,
-            score: abilityScores[definition.key] ?? 10,
+        for (var row = 0; row < 2; row++) ...[
+          if (row > 0) const SizedBox(height: AppSpacing.sm),
+          Row(
+            // PAS `CrossAxisAlignment.stretch` : cette `Row` vit dans une
+            // `Column` elle-même dans une `ListView` (hauteur non bornée le
+            // long de l'axe de défilement) — demander à chaque enfant de
+            // s'étirer sur la hauteur de la `Row` lui transmettrait une
+            // contrainte de hauteur infinie ("BoxConstraints forces an
+            // infinite height", plantage réel constaté). `center` (défaut)
+            // laisse chaque carte reporter sa propre hauteur naturelle, déjà
+            // égale entre les 3 colonnes puisque leur contenu est structuré
+            // à l'identique.
+            children: [
+              for (var col = 0; col < 3; col++) ...[
+                if (col > 0) const SizedBox(width: AppSpacing.sm),
+                Expanded(child: cards[row * 3 + col]),
+              ],
+            ],
           ),
+        ],
       ],
     );
   }
