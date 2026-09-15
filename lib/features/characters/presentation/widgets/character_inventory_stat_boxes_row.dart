@@ -14,10 +14,15 @@ typedef AdjustCurrencyTapCallback = void Function(CurrencyKind currency);
 /// Rangée de "stat boxes" en tête de l'onglet "Inventaire" — voir
 /// `domain/inventory_stat_boxes_resolver.dart` pour leur construction.
 ///
-/// Défilable horizontalement (`SingleChildScrollView`) plutôt qu'un `Row`
-/// simple : [boxes] peut compter jusqu'à 6 entrées (platine et électrum
-/// affichées en plus des 4 boxes de la maquette quand non nulles), qui ne
-/// tiendraient pas toutes sur la largeur d'un écran de téléphone.
+/// [boxes] peut compter jusqu'à 6 entrées (platine et électrum affichées en
+/// plus des 4 boxes de la maquette quand non nulles) : quand elles tiennent
+/// toutes à largeur fixe ([_boxWidth]) sur l'écran courant (cas courant, 3-4
+/// boxes), chaque box est étirée à parts égales pour occuper toute la
+/// largeur disponible plutôt que de laisser un espace vide à droite
+/// (`Row`+`Expanded`, mesuré via [LayoutBuilder]) — sinon (6 boxes sur un
+/// écran étroit), retombe sur le défilement horizontal à largeur fixe
+/// d'origine (`SingleChildScrollView`), seul moyen de rester utilisable sans
+/// rogner aucune box.
 ///
 /// Chaque box de monnaie ([InventoryStatBox.currency] non nul) est
 /// cliquable ([onTapCurrency]), pas la box "KG" (poids, pas une monnaie
@@ -38,25 +43,53 @@ class CharacterInventoryStatBoxesRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          for (var i = 0; i < boxes.length; i++) ...[
-            if (i > 0) const SizedBox(width: AppSpacing.sm),
-            _StatBox(box: boxes[i], onTapCurrency: onTapCurrency),
-          ],
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalFixedWidth =
+            boxes.length * _boxWidth + (boxes.length - 1) * AppSpacing.sm;
+        if (boxes.isNotEmpty && totalFixedWidth <= constraints.maxWidth) {
+          return Row(
+            children: [
+              for (var i = 0; i < boxes.length; i++) ...[
+                if (i > 0) const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _StatBox(box: boxes[i], onTapCurrency: onTapCurrency),
+                ),
+              ],
+            ],
+          );
+        }
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var i = 0; i < boxes.length; i++) ...[
+                if (i > 0) const SizedBox(width: AppSpacing.sm),
+                _StatBox(
+                  box: boxes[i],
+                  onTapCurrency: onTapCurrency,
+                  width: _boxWidth,
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
 class _StatBox extends StatelessWidget {
-  const _StatBox({required this.box, required this.onTapCurrency});
+  const _StatBox({required this.box, required this.onTapCurrency, this.width});
 
   final InventoryStatBox box;
   final AdjustCurrencyTapCallback? onTapCurrency;
+
+  /// Largeur fixe imposée uniquement pour la variante défilante (voir
+  /// [CharacterInventoryStatBoxesRow.build]) — `null` dans la variante
+  /// étirée : la contrainte de largeur tendue imposée par l'[Expanded]
+  /// parent fait déjà foi.
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +104,7 @@ class _StatBox extends StatelessWidget {
     final currency = box.currency;
 
     final content = Container(
-      width: CharacterInventoryStatBoxesRow._boxWidth,
+      width: width,
       padding: const EdgeInsets.symmetric(
         vertical: AppSpacing.sm,
         horizontal: AppSpacing.xs,
@@ -122,12 +155,12 @@ class _StatBox extends StatelessWidget {
       return content;
     }
 
-    // `InkWell` enveloppe tout le `Container` (76px de large) plutôt que
-    // seulement son texte, pour une zone de tap ≥44×44 conforme (consigne
-    // d'accessibilité explicite de la tâche) — la box mesure déjà 76px de
-    // large, seule sa hauteur (déterminée par son contenu) doit être
-    // vérifiée en pratique, mais l'enveloppe complète est de toute façon la
-    // seule façon de couvrir toute la surface visuelle cliquable.
+    // `InkWell` enveloppe tout le `Container` (76px de large au minimum,
+    // potentiellement plus dans la variante étirée) plutôt que seulement son
+    // texte, pour une zone de tap ≥44×44 conforme (consigne d'accessibilité
+    // explicite de la tâche) — seule la hauteur (déterminée par son contenu)
+    // doit être vérifiée en pratique, mais l'enveloppe complète est de toute
+    // façon la seule façon de couvrir toute la surface visuelle cliquable.
     return Material(
       color: Colors.transparent,
       child: InkWell(
