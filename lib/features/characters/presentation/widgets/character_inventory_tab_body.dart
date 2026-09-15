@@ -224,8 +224,10 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
 }
 
 /// Pied de liste de l'onglet "Inventaire" (recettage direction-artistique du
-/// 13/09) : deux boutons de largeur égale, "+ Objet" (tuile pointillée
-/// existante, [DashedAddTile], comportement inchangé) et "Récompense"
+/// 13/09) : deux boutons de largeur égale, "Objet" (tuile pointillée
+/// existante, [DashedAddTile], qui porte déjà sa propre icône "+" — le
+/// libellé ne doit donc jamais répéter ce signe, contrairement à un ancien
+/// "+ Objet" qui affichait "+" deux fois) et "Récompense"
 /// (bouton secondaire avec icône cadeau, relogé depuis l'icône du bandeau
 /// bois — voir [CharacterInventoryTabBody.onAddReward]).
 class _AddRowButtons extends StatelessWidget {
@@ -239,7 +241,7 @@ class _AddRowButtons extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: DashedAddTile(label: '+ Objet', onTap: onAddItem),
+          child: DashedAddTile(label: 'Objet', onTap: onAddItem),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(child: _RewardButton(onTap: onAddReward)),

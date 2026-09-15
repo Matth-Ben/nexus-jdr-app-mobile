@@ -272,12 +272,12 @@ void main() {
     },
   );
 
-  testWidgets('inventaire vide : état "INVENTAIRE VIDE", bouton "+ Objet" '
+  testWidgets('inventaire vide : état "INVENTAIRE VIDE", bouton "Objet" '
       'et stat boxes restent visibles', (tester) async {
     await _pump(tester, _detail(currencyGp: 5));
 
     expect(find.text('INVENTAIRE VIDE'), findsOneWidget);
-    expect(find.text('+ Objet'), findsOneWidget);
+    expect(find.text('Objet'), findsOneWidget);
     expect(find.text('PO'), findsOneWidget);
   });
 
@@ -398,12 +398,12 @@ void main() {
     });
   });
 
-  group('"+ Objet" -> flux "Objet personnalisé"', () {
+  group('"Objet" -> flux "Objet personnalisé"', () {
     testWidgets('ouvre la sheet à 2 choix, "Objet personnalisé" -> saisie -> '
         'onAddCustomInventoryItem', (tester) async {
       final recorder = await _pump(tester, _detail());
 
-      await tester.tap(find.text('+ Objet'));
+      await tester.tap(find.text('Objet'));
       await tester.pumpAndSettle();
 
       expect(find.text('Depuis le catalogue'), findsOneWidget);
@@ -425,7 +425,7 @@ void main() {
     ) async {
       await _pump(tester, _detail(), actionsDisabled: true);
 
-      await tester.tap(find.text('+ Objet'), warnIfMissed: false);
+      await tester.tap(find.text('Objet'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(find.text('Depuis le catalogue'), findsNothing);
@@ -470,7 +470,7 @@ void main() {
         await _pump(tester, _detail());
 
         // `onAddReward` non fourni par [_pump] (`null` par défaut) : le
-        // bouton "Récompense" reste rendu (parité visuelle avec "+ Objet"),
+        // bouton "Récompense" reste rendu (parité visuelle avec "Objet"),
         // simplement inerte.
         expect(find.text('RÉCOMPENSE'), findsOneWidget);
         await tester.tap(find.text('RÉCOMPENSE'), warnIfMissed: false);
@@ -635,7 +635,7 @@ void main() {
       expect(find.text('Petit sac de sable'), findsOneWidget);
     });
 
-    testWidgets('le bouton "+ Objet" reste visible et fonctionnel '
+    testWidgets('le bouton "Objet" reste visible et fonctionnel '
         'même quand le filtre actif ne montre aucun objet', (tester) async {
       final recorder = await _pump(
         tester,
@@ -644,9 +644,9 @@ void main() {
 
       await tester.tap(find.text('ARMES'));
       await tester.pumpAndSettle();
-      expect(find.text('+ Objet'), findsOneWidget);
+      expect(find.text('Objet'), findsOneWidget);
 
-      await tester.tap(find.text('+ Objet'));
+      await tester.tap(find.text('Objet'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();
