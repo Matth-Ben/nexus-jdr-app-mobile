@@ -43,10 +43,8 @@ Future<void> showJournalEntryEditSheet(
     backgroundColor: Colors.transparent,
     isDismissible: false,
     enableDrag: false,
-    builder: (sheetContext) => _JournalEntryEditSheetContent(
-      characterId: characterId,
-      entry: entry,
-    ),
+    builder: (sheetContext) =>
+        _JournalEntryEditSheetContent(characterId: characterId, entry: entry),
   );
   if (saved != true || !context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(

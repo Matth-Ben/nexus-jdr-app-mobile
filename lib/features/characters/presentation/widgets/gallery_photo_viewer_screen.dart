@@ -60,8 +60,7 @@ class _GalleryPhotoViewerScreen extends StatefulWidget {
       _GalleryPhotoViewerScreenState();
 }
 
-class _GalleryPhotoViewerScreenState
-    extends State<_GalleryPhotoViewerScreen> {
+class _GalleryPhotoViewerScreenState extends State<_GalleryPhotoViewerScreen> {
   bool _isRemoving = false;
 
   Future<void> _confirmAndRemove() async {
@@ -80,9 +79,8 @@ class _GalleryPhotoViewerScreenState
       widget.ref.invalidate(characterDetailProvider(widget.characterId));
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Photo retirée.')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Photo retirée.')));
     } catch (_) {
       if (!mounted) return;
       setState(() => _isRemoving = false);

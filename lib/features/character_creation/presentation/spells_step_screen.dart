@@ -599,7 +599,10 @@ class _MinimalHeader extends StatelessWidget {
               IconButton(
                 onPressed: onHelp,
                 tooltip: 'Aide',
-                icon: const Icon(Icons.help_outline, color: AppColors.textOnWood),
+                icon: const Icon(
+                  Icons.help_outline,
+                  color: AppColors.textOnWood,
+                ),
               ),
             ],
           ),

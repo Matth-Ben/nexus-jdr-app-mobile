@@ -46,9 +46,7 @@ void main() {
     expect(find.text('Préparation de la taverne…'), findsOneWidget);
   });
 
-  testWidgets('affiche un indicateur de chargement à 3 points', (
-    tester,
-  ) async {
+  testWidgets('affiche un indicateur de chargement à 3 points', (tester) async {
     await tester.pumpWidget(buildTestWidget());
     // Un seul `pump` : laisse l'`AnimationController` démarrer sans
     // atteindre `pumpAndSettle`, qui ne se stabiliserait jamais tant que

@@ -133,7 +133,8 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
           children: [
             _MinimalHeader(
               onBack: _goBack,
-              onHelp: () => showStepHelpSheet(context, CreationStepHelp.equipment),
+              onHelp: () =>
+                  showStepHelpSheet(context, CreationStepHelp.equipment),
             ),
             const Expanded(
               child: Center(
@@ -152,7 +153,8 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
           children: [
             _MinimalHeader(
               onBack: _goBack,
-              onHelp: () => showStepHelpSheet(context, CreationStepHelp.equipment),
+              onHelp: () =>
+                  showStepHelpSheet(context, CreationStepHelp.equipment),
             ),
             Expanded(
               child: _ErrorState(
@@ -643,7 +645,10 @@ class _MinimalHeader extends StatelessWidget {
               IconButton(
                 onPressed: onHelp,
                 tooltip: 'Aide',
-                icon: const Icon(Icons.help_outline, color: AppColors.textOnWood),
+                icon: const Icon(
+                  Icons.help_outline,
+                  color: AppColors.textOnWood,
+                ),
               ),
             ],
           ),

@@ -220,30 +220,29 @@ void main() {
       },
     );
 
-    testWidgets(
-      'un objet déjà harmonisé : libellé "Ne plus harmoniser"',
-      (tester) async {
-        const attuned = CharacterInventoryItem(
-          id: 'inv-magic-attuned',
-          itemId: 5,
-          name: 'Bague harmonisée',
-          category: 'objet_magique',
-          quantity: 1,
-          equipped: false,
-          requiresAttunement: true,
-          isAttuned: true,
-        );
-        await pumpSheet(tester, item: attuned);
+    testWidgets('un objet déjà harmonisé : libellé "Ne plus harmoniser"', (
+      tester,
+    ) async {
+      const attuned = CharacterInventoryItem(
+        id: 'inv-magic-attuned',
+        itemId: 5,
+        name: 'Bague harmonisée',
+        category: 'objet_magique',
+        quantity: 1,
+        equipped: false,
+        requiresAttunement: true,
+        isAttuned: true,
+      );
+      await pumpSheet(tester, item: attuned);
 
-        expect(find.text('Ne plus harmoniser'), findsOneWidget);
-        expect(find.text('Harmoniser cet objet'), findsNothing);
+      expect(find.text('Ne plus harmoniser'), findsOneWidget);
+      expect(find.text('Harmoniser cet objet'), findsNothing);
 
-        await tester.tap(find.text('Ne plus harmoniser'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('Ne plus harmoniser'));
+      await tester.pumpAndSettle();
 
-        expect(toggleAttunedCalls, [attuned]);
-      },
-    );
+      expect(toggleAttunedCalls, [attuned]);
+    });
 
     testWidgets(
       'plafond de 3 objets harmonisés atteint : "Harmoniser cet objet" est '
@@ -253,7 +252,10 @@ void main() {
 
         expect(find.text('Limite (3) atteinte'), findsOneWidget);
 
-        await tester.tap(find.text('Harmoniser cet objet'), warnIfMissed: false);
+        await tester.tap(
+          find.text('Harmoniser cet objet'),
+          warnIfMissed: false,
+        );
         await tester.pumpAndSettle();
 
         expect(toggleAttunedCalls, isEmpty);
@@ -362,7 +364,10 @@ void main() {
           findsOneWidget,
         );
 
-        await tester.tap(find.text('Harmoniser cet objet'), warnIfMissed: false);
+        await tester.tap(
+          find.text('Harmoniser cet objet'),
+          warnIfMissed: false,
+        );
         await tester.pumpAndSettle();
 
         expect(toggleAttunedCalls, isEmpty);

@@ -158,27 +158,24 @@ void main() {
       },
     );
 
-    test(
-      'is_dead/is_archived absents de la ligne -> false (repli sûr, ex. '
-      'lignes de test antérieures à ces colonnes)',
-      () {
-        final summary = CharacterRowMapper.toSummary(
-          {
-            'id': 'char-5',
-            'name': 'Sans statut',
-            'portrait_url': null,
-            'xp': 0,
-            'race_id': null,
-            'character_classes': <Map<String, dynamic>>[],
-          },
-          raceNames: const {},
-          classNames: const {},
-        );
+    test('is_dead/is_archived absents de la ligne -> false (repli sûr, ex. '
+        'lignes de test antérieures à ces colonnes)', () {
+      final summary = CharacterRowMapper.toSummary(
+        {
+          'id': 'char-5',
+          'name': 'Sans statut',
+          'portrait_url': null,
+          'xp': 0,
+          'race_id': null,
+          'character_classes': <Map<String, dynamic>>[],
+        },
+        raceNames: const {},
+        classNames: const {},
+      );
 
-        expect(summary.isDead, isFalse);
-        expect(summary.isArchived, isFalse);
-      },
-    );
+      expect(summary.isDead, isFalse);
+      expect(summary.isArchived, isFalse);
+    });
 
     test('is_dead/is_archived à true sont bien remontés (badges "MORT"/'
         '"ARCHIVÉ" de la carte personnage)', () {

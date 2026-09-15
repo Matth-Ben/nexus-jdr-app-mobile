@@ -49,7 +49,8 @@ abstract final class ArmorClassCalculator {
     );
     final baseAc = equippedArmor == null
         ? 10 + dexModifier
-        : equippedArmor.acBase + _dexBonusFor(equippedArmor.acDexBonus, dexModifier);
+        : equippedArmor.acBase +
+              _dexBonusFor(equippedArmor.acDexBonus, dexModifier);
 
     final equippedShield = _firstEquippedWithArmorProperties(
       inventory,
@@ -74,14 +75,13 @@ abstract final class ArmorClassCalculator {
     return null;
   }
 
-  static int _dexBonusFor(String acDexBonus, int dexModifier) => switch (
-    acDexBonus
-  ) {
-    'aucun' => 0,
-    'max_2' => dexModifier > 2 ? 2 : dexModifier,
-    'illimite' => dexModifier,
-    // Ne devrait pas arriver (valeur contrainte côté base) — traité comme
-    // 'aucun' plutôt que de crasher sur une donnée inattendue.
-    _ => 0,
-  };
+  static int _dexBonusFor(String acDexBonus, int dexModifier) =>
+      switch (acDexBonus) {
+        'aucun' => 0,
+        'max_2' => dexModifier > 2 ? 2 : dexModifier,
+        'illimite' => dexModifier,
+        // Ne devrait pas arriver (valeur contrainte côté base) — traité comme
+        // 'aucun' plutôt que de crasher sur une donnée inattendue.
+        _ => 0,
+      };
 }

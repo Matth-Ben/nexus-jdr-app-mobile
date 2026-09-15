@@ -683,9 +683,10 @@ void main() {
       'seul "Retour" restait disponible depuis cet état, sans aucun moyen '
       'de revenir à la confirmation d\'abandon)',
       (tester) async {
-        fakeRepository.classCatalogErrorToThrow = const CharacterCreationFailure(
-          'Impossible de charger les classes disponibles. Réessayez.',
-        );
+        fakeRepository.classCatalogErrorToThrow =
+            const CharacterCreationFailure(
+              'Impossible de charger les classes disponibles. Réessayez.',
+            );
 
         await pumpSpellsStep(tester);
 

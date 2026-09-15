@@ -302,24 +302,21 @@ void main() {
       status: 'préparé',
     );
 
-    testWidgets(
-      'un sort niveau >= 1 \'connu\' (non préparé) : "Lancer" est '
-      'désactivé et le lien affiche "Préparer ce sort"',
-      (tester) async {
-        await pumpPanel(
-          tester,
-          spell: knownSpell,
-          spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
-        );
+    testWidgets('un sort niveau >= 1 \'connu\' (non préparé) : "Lancer" est '
+        'désactivé et le lien affiche "Préparer ce sort"', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: knownSpell,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+      );
 
-        final button = tester.widget<PrimaryButton>(
-          find.widgetWithText(PrimaryButton, 'LANCER'),
-        );
-        expect(button.onPressed, isNull);
-        expect(find.text('Préparer ce sort'), findsOneWidget);
-        expect(find.text('Ne plus préparer'), findsNothing);
-      },
-    );
+      final button = tester.widget<PrimaryButton>(
+        find.widgetWithText(PrimaryButton, 'LANCER'),
+      );
+      expect(button.onPressed, isNull);
+      expect(find.text('Préparer ce sort'), findsOneWidget);
+      expect(find.text('Ne plus préparer'), findsNothing);
+    });
 
     testWidgets(
       'taper "Préparer ce sort" appelle onTogglePrepared avec le sort et '
@@ -375,15 +372,12 @@ void main() {
       },
     );
 
-    testWidgets(
-      'un cantrip (niveau 0) : aucun lien de bascule de préparation '
-      '(canTogglePrepared toujours faux)',
-      (tester) async {
-        await pumpPanel(tester, spell: _cantrip, spellSlots: const []);
+    testWidgets('un cantrip (niveau 0) : aucun lien de bascule de préparation '
+        '(canTogglePrepared toujours faux)', (tester) async {
+      await pumpPanel(tester, spell: _cantrip, spellSlots: const []);
 
-        expect(find.text('Préparer ce sort'), findsNothing);
-        expect(find.text('Ne plus préparer'), findsNothing);
-      },
-    );
+      expect(find.text('Préparer ce sort'), findsNothing);
+      expect(find.text('Ne plus préparer'), findsNothing);
+    });
   });
 }

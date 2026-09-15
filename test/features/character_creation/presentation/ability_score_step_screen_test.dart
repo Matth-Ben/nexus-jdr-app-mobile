@@ -530,35 +530,32 @@ void main() {
       },
     );
 
-    testWidgets(
-      'lien "Abandonner" du pied de page reste accessible pendant le '
-      'chargement du catalogue de races (régression corrigée : avant, seule '
-      'l\'icône croix du bandeau, disparue avec `DraftAutosaveFooter`, '
-      'permettait d\'abandonner depuis cet état)',
-      (tester) async {
-        fakeRepository.catalogCompleter = Completer<RaceCatalog>();
+    testWidgets('lien "Abandonner" du pied de page reste accessible pendant le '
+        'chargement du catalogue de races (régression corrigée : avant, seule '
+        'l\'icône croix du bandeau, disparue avec `DraftAutosaveFooter`, '
+        'permettait d\'abandonner depuis cet état)', (tester) async {
+      fakeRepository.catalogCompleter = Completer<RaceCatalog>();
 
-        await tester.pumpWidget(buildTestWidget());
-        router.push('/characters/new/step-4');
-        await tester.pump();
+      await tester.pumpWidget(buildTestWidget());
+      router.push('/characters/new/step-4');
+      await tester.pump();
 
-        expect(find.byType(DraftAutosaveFooter), findsOneWidget);
+      expect(find.byType(DraftAutosaveFooter), findsOneWidget);
 
-        await tester.tap(
-          find.descendant(
-            of: find.byType(DraftAutosaveFooter),
-            matching: find.text('Abandonner'),
-          ),
-        );
-        // `pump(duration)` plutôt que `pumpAndSettle()` : voir
-        // `race_step_screen_test.dart` pour le rationale (le
-        // `CircularProgressIndicator` du `Completer` jamais résolu anime
-        // indéfiniment, `pumpAndSettle()` ne convergerait jamais).
-        await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(DraftAutosaveFooter),
+          matching: find.text('Abandonner'),
+        ),
+      );
+      // `pump(duration)` plutôt que `pumpAndSettle()` : voir
+      // `race_step_screen_test.dart` pour le rationale (le
+      // `CircularProgressIndicator` du `Completer` jamais résolu anime
+      // indéfiniment, `pumpAndSettle()` ne convergerait jamais).
+      await tester.pump(const Duration(milliseconds: 300));
 
-        expect(find.text('Abandonner la création ?'), findsOneWidget);
-      },
-    );
+      expect(find.text('Abandonner la création ?'), findsOneWidget);
+    });
 
     testWidgets(
       'lien "Abandonner" du pied de page reste accessible même en état '

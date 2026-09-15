@@ -176,7 +176,8 @@ class _AbilityScoreStepScreenState
           children: [
             _MinimalHeader(
               onBack: _goBack,
-              onHelp: () => showStepHelpSheet(context, CreationStepHelp.abilityScore),
+              onHelp: () =>
+                  showStepHelpSheet(context, CreationStepHelp.abilityScore),
             ),
             const Expanded(
               child: Center(
@@ -195,7 +196,8 @@ class _AbilityScoreStepScreenState
           children: [
             _MinimalHeader(
               onBack: _goBack,
-              onHelp: () => showStepHelpSheet(context, CreationStepHelp.abilityScore),
+              onHelp: () =>
+                  showStepHelpSheet(context, CreationStepHelp.abilityScore),
             ),
             Expanded(
               child: _ErrorState(
@@ -224,7 +226,8 @@ class _AbilityScoreStepScreenState
           onBack: _goBack,
           currentStep: 4,
           totalSteps: _totalSteps,
-          onHelp: () => showStepHelpSheet(context, CreationStepHelp.abilityScore),
+          onHelp: () =>
+              showStepHelpSheet(context, CreationStepHelp.abilityScore),
         ),
         Expanded(
           child: SafeArea(
@@ -584,7 +587,10 @@ class _MinimalHeader extends StatelessWidget {
               IconButton(
                 onPressed: onHelp,
                 tooltip: 'Aide',
-                icon: const Icon(Icons.help_outline, color: AppColors.textOnWood),
+                icon: const Icon(
+                  Icons.help_outline,
+                  color: AppColors.textOnWood,
+                ),
               ),
             ],
           ),

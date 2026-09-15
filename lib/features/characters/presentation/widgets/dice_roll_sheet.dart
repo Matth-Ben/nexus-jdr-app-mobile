@@ -32,11 +32,8 @@ Future<void> showDiceRollSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (sheetContext) => _DiceRollSheetContent(
-      label: label,
-      modifier: modifier,
-      random: random,
-    ),
+    builder: (sheetContext) =>
+        _DiceRollSheetContent(label: label, modifier: modifier, random: random),
   );
 }
 

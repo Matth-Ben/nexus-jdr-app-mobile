@@ -54,13 +54,18 @@ void main() {
       expect(ac, 8);
     });
 
-    test('armure légère (ac_dex_bonus illimité) : Dex ajoutée sans plafond', () {
-      final ac = ArmorClassCalculator.compute(
-        abilityScores: {'dex': 18}, // modificateur +4
-        inventory: [_armor(equipped: true, acBase: 11, acDexBonus: 'illimite')],
-      );
-      expect(ac, 15);
-    });
+    test(
+      'armure légère (ac_dex_bonus illimité) : Dex ajoutée sans plafond',
+      () {
+        final ac = ArmorClassCalculator.compute(
+          abilityScores: {'dex': 18}, // modificateur +4
+          inventory: [
+            _armor(equipped: true, acBase: 11, acDexBonus: 'illimite'),
+          ],
+        );
+        expect(ac, 15);
+      },
+    );
 
     test('armure intermédiaire (ac_dex_bonus max_2) : Dex plafonnée à +2 '
         'même avec un modificateur supérieur', () {

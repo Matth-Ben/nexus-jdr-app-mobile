@@ -6,7 +6,8 @@ CharacterSummary _summary({
   required String id,
   required String name,
   String? className,
-}) => CharacterSummary(id: id, name: name, className: className, level: 1, xp: 0);
+}) =>
+    CharacterSummary(id: id, name: name, className: className, level: 1, xp: 0);
 
 void main() {
   group('CharacterListFilter.apply', () {
@@ -27,15 +28,18 @@ void main() {
       expect(result, characters);
     });
 
-    test('requête vide après trim (espaces seuls) équivaut à aucune requête', () {
-      final result = CharacterListFilter.apply(
-        characters: characters,
-        query: '   ',
-        classNames: {},
-      );
+    test(
+      'requête vide après trim (espaces seuls) équivaut à aucune requête',
+      () {
+        final result = CharacterListFilter.apply(
+          characters: characters,
+          query: '   ',
+          classNames: {},
+        );
 
-      expect(result, characters);
-    });
+        expect(result, characters);
+      },
+    );
 
     test('filtre par sous-chaîne du nom, insensible à la casse', () {
       final result = CharacterListFilter.apply(

@@ -227,8 +227,10 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
-  Future<WriteOutcome> addXp({required String characterId, required int newXp}) =>
-      throw UnimplementedError();
+  Future<WriteOutcome> addXp({
+    required String characterId,
+    required int newXp,
+  }) => throw UnimplementedError();
 
   @override
   Future<LevelUpLevelData> fetchLevelUpLevelData({
@@ -270,7 +272,9 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 }
 
-CharacterDetail _detail({List<CharacterGalleryPhoto> galleryPhotos = const []}) {
+CharacterDetail _detail({
+  List<CharacterGalleryPhoto> galleryPhotos = const [],
+}) {
   return CharacterDetail(
     id: '1',
     name: 'Test',
@@ -326,7 +330,11 @@ void main() {
   testWidgets('affiche une vignette par photo, plus la tuile "+"', (
     tester,
   ) async {
-    await _pump(tester, _detail(galleryPhotos: [photo1, photo2]), fakeRepository);
+    await _pump(
+      tester,
+      _detail(galleryPhotos: [photo1, photo2]),
+      fakeRepository,
+    );
 
     expect(find.text('GALERIE'), findsOneWidget);
     expect(find.byType(Image), findsNWidgets(2));
@@ -369,49 +377,45 @@ void main() {
     },
   );
 
-  testWidgets(
-    'visionneuse : actionsDisabled masque "Retirer cette photo"',
-    (tester) async {
-      await _pump(
-        tester,
-        _detail(galleryPhotos: [photo1]),
-        fakeRepository,
-        actionsDisabled: true,
-      );
+  testWidgets('visionneuse : actionsDisabled masque "Retirer cette photo"', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _detail(galleryPhotos: [photo1]),
+      fakeRepository,
+      actionsDisabled: true,
+    );
 
-      await tester.tap(find.byType(Image).first);
-      await tester.pumpAndSettle();
+    await tester.tap(find.byType(Image).first);
+    await tester.pumpAndSettle();
 
-      expect(find.text('Retirer cette photo'), findsNothing);
-      // La croix de fermeture reste disponible en lecture seule.
-      expect(find.byIcon(Icons.close), findsOneWidget);
-    },
-  );
+    expect(find.text('Retirer cette photo'), findsNothing);
+    // La croix de fermeture reste disponible en lecture seule.
+    expect(find.byIcon(Icons.close), findsOneWidget);
+  });
 
-  testWidgets(
-    'visionneuse : "Retirer cette photo" confirmé appelle '
-    'removeGalleryPhoto et referme la visionneuse',
-    (tester) async {
-      await _pump(tester, _detail(galleryPhotos: [photo1]), fakeRepository);
+  testWidgets('visionneuse : "Retirer cette photo" confirmé appelle '
+      'removeGalleryPhoto et referme la visionneuse', (tester) async {
+    await _pump(tester, _detail(galleryPhotos: [photo1]), fakeRepository);
 
-      await tester.tap(find.byType(Image).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Retirer cette photo'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byType(Image).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Retirer cette photo'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Retirer cette photo ?'), findsOneWidget);
+    expect(find.text('Retirer cette photo ?'), findsOneWidget);
 
-      await tester.tap(find.text('Retirer').last);
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Retirer').last);
+    await tester.pumpAndSettle();
 
-      expect(fakeRepository.removeGalleryPhotoCallCount, 1);
-      expect(fakeRepository.lastRemovedPhotoId, 'photo-1');
-      expect(fakeRepository.lastRemovedUrl, 'https://example.com/1.png');
-      expect(find.text('Photo retirée.'), findsOneWidget);
-      // La visionneuse s'est refermée : la croix n'est plus là.
-      expect(find.byIcon(Icons.close), findsNothing);
-    },
-  );
+    expect(fakeRepository.removeGalleryPhotoCallCount, 1);
+    expect(fakeRepository.lastRemovedPhotoId, 'photo-1');
+    expect(fakeRepository.lastRemovedUrl, 'https://example.com/1.png');
+    expect(find.text('Photo retirée.'), findsOneWidget);
+    // La visionneuse s'est refermée : la croix n'est plus là.
+    expect(find.byIcon(Icons.close), findsNothing);
+  });
 
   group('CharacterGalleryCard.hasVisibleContent', () {
     test('true avec au moins une photo, même en lecture seule', () {

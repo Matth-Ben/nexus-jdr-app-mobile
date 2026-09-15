@@ -150,7 +150,9 @@ List<CharacterJournalEntry> _mapJournalEntries(dynamic raw) {
     final body = row['body'] as String?;
     final createdAt = DateTime.tryParse(row['created_at'] as String? ?? '');
     if (id == null || body == null || createdAt == null) continue;
-    entries.add(CharacterJournalEntry(id: id, body: body, createdAt: createdAt));
+    entries.add(
+      CharacterJournalEntry(id: id, body: body, createdAt: createdAt),
+    );
   }
   entries.sort((a, b) => b.createdAt.compareTo(a.createdAt));
   return entries;
@@ -161,7 +163,10 @@ Map<String, dynamic>? _mapOf(dynamic value) =>
 
 List<Map<String, dynamic>> _listOfMaps(dynamic value) {
   if (value is! List) return const [];
-  return [for (final item in value) if (item is Map<String, dynamic>) item];
+  return [
+    for (final item in value)
+      if (item is Map<String, dynamic>) item,
+  ];
 }
 
 int _asInt(dynamic value) => value is num ? value.toInt() : 0;
@@ -237,10 +242,7 @@ List<CharacterSkillRow> _mapSkills(dynamic value) {
 
   final result = <CharacterSkillRow>[];
   var index = 0;
-  SharedCharacterSkillCatalog.abilityKeyBySkillName.forEach((
-    name,
-    abilityKey,
-  ) {
+  SharedCharacterSkillCatalog.abilityKeyBySkillName.forEach((name, abilityKey) {
     index++;
     result.add(
       CharacterSkillRow(

@@ -259,7 +259,11 @@ class _ToggleAttunedLink extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(attuned ? Icons.link_off : Icons.link, size: 14, color: color),
+                Icon(
+                  attuned ? Icons.link_off : Icons.link,
+                  size: 14,
+                  color: color,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   attuned ? 'Ne plus harmoniser' : 'Harmoniser cet objet',

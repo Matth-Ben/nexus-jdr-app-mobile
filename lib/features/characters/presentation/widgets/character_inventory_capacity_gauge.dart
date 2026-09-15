@@ -110,7 +110,9 @@ class _CapacityGaugeBar extends StatelessWidget {
         child: FractionallySizedBox(
           alignment: Alignment.centerLeft,
           widthFactor: ratio.clamp(0, 1),
-          child: DecoratedBox(decoration: BoxDecoration(gradient: _gradientFor(ratio))),
+          child: DecoratedBox(
+            decoration: BoxDecoration(gradient: _gradientFor(ratio)),
+          ),
         ),
       ),
     );

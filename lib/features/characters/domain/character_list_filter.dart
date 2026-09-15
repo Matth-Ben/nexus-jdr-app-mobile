@@ -28,17 +28,19 @@ abstract final class CharacterListFilter {
   }) {
     final normalizedQuery = query.trim().toLowerCase();
 
-    return characters.where((character) {
-      if (normalizedQuery.isNotEmpty &&
-          !character.name.toLowerCase().contains(normalizedQuery)) {
-        return false;
-      }
-      if (classNames.isNotEmpty &&
-          !classNames.contains(character.className)) {
-        return false;
-      }
-      return true;
-    }).toList(growable: false);
+    return characters
+        .where((character) {
+          if (normalizedQuery.isNotEmpty &&
+              !character.name.toLowerCase().contains(normalizedQuery)) {
+            return false;
+          }
+          if (classNames.isNotEmpty &&
+              !classNames.contains(character.className)) {
+            return false;
+          }
+          return true;
+        })
+        .toList(growable: false);
   }
 
   /// Classes distinctes présentes parmi [characters], triées alphabétiquement

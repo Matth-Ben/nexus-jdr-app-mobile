@@ -18,10 +18,7 @@ import '../../domain/creation_step_help.dart';
 /// dimensionne à son contenu (`mainAxisSize.min`) plutôt que d'imposer une
 /// hauteur fixe/majoritaire de l'écran. La croix de [SheetHeaderBar] suffit
 /// à refermer la sheet — pas de bouton de pied dédié.
-Future<void> showStepHelpSheet(
-  BuildContext context,
-  StepHelpContent content,
-) {
+Future<void> showStepHelpSheet(BuildContext context, StepHelpContent content) {
   return showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,

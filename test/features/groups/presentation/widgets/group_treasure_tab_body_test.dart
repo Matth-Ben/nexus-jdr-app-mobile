@@ -58,29 +58,24 @@ void main() {
     },
   );
 
-  testWidgets(
-    'le bouton "Répartir vers mon inventaire" est un DashedButton, '
-    'désactivé quand le butin commun n\'a aucune monnaie',
-    (tester) async {
-      var claimCurrencyCalled = false;
-      await tester.pumpWidget(
-        buildWidget(
-          treasure: const GroupTreasure(groupId: 'group-1'),
-          onClaimCurrency: () => claimCurrencyCalled = true,
-        ),
-      );
+  testWidgets('le bouton "Répartir vers mon inventaire" est un DashedButton, '
+      'désactivé quand le butin commun n\'a aucune monnaie', (tester) async {
+    var claimCurrencyCalled = false;
+    await tester.pumpWidget(
+      buildWidget(
+        treasure: const GroupTreasure(groupId: 'group-1'),
+        onClaimCurrency: () => claimCurrencyCalled = true,
+      ),
+    );
 
-      expect(find.text('Répartir vers mon inventaire'), findsOneWidget);
-      final dashedButton = tester.widget<DashedButton>(
-        find.byType(DashedButton),
-      );
-      expect(dashedButton.onPressed, isNull);
+    expect(find.text('Répartir vers mon inventaire'), findsOneWidget);
+    final dashedButton = tester.widget<DashedButton>(find.byType(DashedButton));
+    expect(dashedButton.onPressed, isNull);
 
-      await tester.tap(find.text('Répartir vers mon inventaire'));
-      await tester.pumpAndSettle();
-      expect(claimCurrencyCalled, isFalse);
-    },
-  );
+    await tester.tap(find.text('Répartir vers mon inventaire'));
+    await tester.pumpAndSettle();
+    expect(claimCurrencyCalled, isFalse);
+  });
 
   testWidgets(
     'le bouton "Répartir vers mon inventaire" est actif dès qu\'il y a de '
@@ -159,11 +154,7 @@ void main() {
             groupId: 'group-1',
             currencyGp: 12,
             items: [
-              GroupTreasureItem(
-                itemId: 7,
-                displayName: 'Potion',
-                quantity: 1,
-              ),
+              GroupTreasureItem(itemId: 7, displayName: 'Potion', quantity: 1),
             ],
           ),
           isBusy: true,
