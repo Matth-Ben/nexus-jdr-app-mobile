@@ -820,25 +820,32 @@ void main() {
     expect(find.text('+4 PV temp.'), findsOneWidget);
   });
 
-  testWidgets('le stepper rapide "+" appelle updateHp avec un soin de 1 PV', (
-    tester,
-  ) async {
-    fakeRepository.detailToReturn = _baseDetail;
+  testWidgets(
+    'tap sur le bandeau PV ouvre la feuille d\'ajustement ; "Soins" +1 '
+    'appelle updateHp',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
 
-    await pumpDetail(tester);
-    await tester.pumpAndSettle();
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
 
-    // `find.byIcon(Icons.add)` matche aussi le bouton "+" de l'en-tête XP
-    // (ouverture d'`AddXpSheet`, voir `add_xp_sheet_test.dart`/
-    // `level_up_screen_test.dart`) : distingue via le `semanticLabel`
-    // "Augmenter" du stepper rapide (`StepperCounter`).
-    await tester.tap(find.bySemanticsLabel('Augmenter'));
-    await tester.pumpAndSettle();
+      // Bandeau PV entièrement tappable (demande utilisateur du 15/09,
+      // remplace l'ancien stepper rapide "+"/"-" et le bouton crayon isolé,
+      // voir `character_vitals_card.dart::_HpSection`).
+      await tester.tap(find.text('POINTS DE VIE'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SOINS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Augmenter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
 
-    expect(fakeRepository.updateHpCallCount, 1);
-    expect(fakeRepository.lastUpdatedCurrentHp, 19);
-    expect(fakeRepository.lastUpdatedTemporaryHp, 0);
-  });
+      expect(fakeRepository.updateHpCallCount, 1);
+      expect(fakeRepository.lastUpdatedCurrentHp, 19);
+      expect(fakeRepository.lastUpdatedTemporaryHp, 0);
+    },
+  );
 
   testWidgets(
     'updateHp mis en file (mode hors-ligne) : affiche le SnackBar hors '
@@ -850,7 +857,13 @@ void main() {
       await pumpDetail(tester);
       await tester.pumpAndSettle();
 
+      await tester.tap(find.text('POINTS DE VIE'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SOINS'));
+      await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel('Augmenter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
       await tester.pumpAndSettle();
 
       expect(

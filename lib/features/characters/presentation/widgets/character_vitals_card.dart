@@ -5,7 +5,6 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
-import '../../../../core/widgets/stepper_counter.dart';
 import '../../domain/character_detail.dart';
 
 /// Carte combinant les bandeaux PV et XP de l'onglet "Personnage" — voir la
@@ -14,8 +13,6 @@ class CharacterVitalsCard extends StatelessWidget {
   const CharacterVitalsCard({
     required this.detail,
     required this.onTapAdjustHp,
-    required this.onQuickHeal,
-    required this.onQuickDamage,
     required this.onTapAddXp,
     required this.onTapLevelUp,
     required this.onTapRest,
@@ -25,30 +22,28 @@ class CharacterVitalsCard extends StatelessWidget {
 
   final CharacterDetail detail;
 
-  /// Ouvre la feuille d'ajustement PV détaillée (bouton crayon).
+  /// Ouvre la feuille d'ajustement PV détaillée — tap sur l'ensemble du
+  /// bandeau PV (demande utilisateur du 15/09 : remplace à la fois le
+  /// stepper +/- de soin/dégât rapide, retiré, et l'ancien bouton crayon
+  /// isolé, dont la zone de tap ne couvrait que lui-même — voir
+  /// [_HpSection]).
   final VoidCallback onTapAdjustHp;
-
-  /// `StepperCounter` "+" : soin rapide de 1 PV.
-  final VoidCallback onQuickHeal;
-
-  /// `StepperCounter` "-" : dégât rapide de 1 PV (PV temporaires absorbés en
-  /// premier, même règle que la feuille d'ajustement détaillée).
-  final VoidCallback onQuickDamage;
 
   /// `true` pendant qu'un repos (`RestSheet`) — ou la réaffirmation PV
   /// différée qu'un repos peut déclencher, voir
   /// `_CharacterDetailScreenState._reassertCurrentHpState` — est en vol côté
-  /// réseau. Désactive le stepper PV (+/-), le bouton crayon "Ajuster PV" ET
-  /// le bouton "Repos" lui-même (jamais masqué, juste avec un callback
-  /// `null`, pour que la fiche reste lisible) le temps de cette fenêtre.
+  /// réseau. Désactive le bandeau PV (tap sur l'ensemble, voir
+  /// [onTapAdjustHp]) ET le bouton "Repos" lui-même (jamais masqué, juste
+  /// avec un callback `null`, pour que la fiche reste lisible) le temps de
+  /// cette fenêtre.
   ///
   /// Ferme la course résiduelle confirmée en revue de code : sans le verrou
-  /// sur le stepper/crayon, un ajustement PV démarré *pendant* qu'un repos
-  /// long écrit encore en base pourrait résoudre *avant* lui et se faire
-  /// écraser silencieusement par l'écriture `current_hp = max_hp` du repos,
-  /// arrivée après coup. Sans le verrou sur le bouton "Repos" lui-même, un
-  /// second repos pourrait de la même façon démarrer et résoudre pendant
-  /// qu'une réaffirmation PV différée (déclenchée par
+  /// sur le bandeau PV, un ajustement PV démarré *pendant* qu'un repos long
+  /// écrit encore en base pourrait résoudre *avant* lui et se faire écraser
+  /// silencieusement par l'écriture `current_hp = max_hp` du repos, arrivée
+  /// après coup. Sans le verrou sur le bouton "Repos" lui-même, un second
+  /// repos pourrait de la même façon démarrer et résoudre pendant qu'une
+  /// réaffirmation PV différée (déclenchée par
   /// [_restGeneration]/`_reassertCurrentHpState`, l'autre sens de la course :
   /// un ajustement PV démarré *avant* le repos et résolu après lui) est
   /// encore en vol, et se faire écraser à son tour — même bug, un niveau
@@ -90,8 +85,6 @@ class CharacterVitalsCard extends StatelessWidget {
           _HpSection(
             detail: detail,
             onTapAdjustHp: onTapAdjustHp,
-            onQuickHeal: onQuickHeal,
-            onQuickDamage: onQuickDamage,
             actionsDisabled: hpActionsDisabled,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -135,87 +128,68 @@ class _RestButton extends StatelessWidget {
   }
 }
 
+/// Bandeau PV entièrement tappable (demande utilisateur du 15/09 : remplace
+/// le stepper +/- de soin/dégât rapide, retiré, et l'ancien bouton crayon
+/// isolé — l'icône crayon reste affichée comme simple indice visuel
+/// "modifiable", mais n'est plus elle-même un `IconButton` séparé : tout le
+/// bandeau ouvre désormais la feuille d'ajustement détaillée au tap).
 class _HpSection extends StatelessWidget {
   const _HpSection({
     required this.detail,
     required this.onTapAdjustHp,
-    required this.onQuickHeal,
-    required this.onQuickDamage,
     required this.actionsDisabled,
   });
 
   final CharacterDetail detail;
   final VoidCallback onTapAdjustHp;
-  final VoidCallback onQuickHeal;
-  final VoidCallback onQuickDamage;
 
   /// Voir `CharacterVitalsCard.hpActionsDisabled`.
   final bool actionsDisabled;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        onTap: actionsDisabled ? null : onTapAdjustHp,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'POINTS DE VIE',
-              style: AppTypography.display(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const Spacer(),
-            Text(
-              '${detail.currentHp} / ${detail.maxHp}',
-              style: AppTypography.body(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            SizedBox(
-              width: 44,
-              height: 44,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                onPressed: actionsDisabled ? null : onTapAdjustHp,
-                icon: const Icon(
+            Row(
+              children: [
+                Text(
+                  'POINTS DE VIE',
+                  style: AppTypography.display(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${detail.currentHp} / ${detail.maxHp}',
+                  style: AppTypography.body(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                const Icon(
                   Icons.edit_outlined,
                   size: 18,
                   color: AppColors.textSecondary,
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        _HpGauge(ratio: detail.hpRatio),
-        const SizedBox(height: AppSpacing.xs),
-        Row(
-          children: [
-            if (detail.temporaryHp > 0)
+            const SizedBox(height: AppSpacing.xs),
+            _HpGauge(ratio: detail.hpRatio),
+            if (detail.temporaryHp > 0) ...[
+              const SizedBox(height: AppSpacing.xs),
               _TemporaryHpChip(amount: detail.temporaryHp),
-            const Spacer(),
-            StepperCounter(
-              value: detail.currentHp,
-              onIncrement: !actionsDisabled && detail.currentHp < detail.maxHp
-                  ? onQuickHeal
-                  : null,
-              // Un personnage à `current_hp = 0` peut encore avoir des PV
-              // temporaires (`HpAdjustmentCalculator.applyDamage` les
-              // absorbe en premier) : le "-" doit rester actif tant qu'il
-              // reste des PV *ou* des PV temporaires à réduire, pas
-              // seulement les premiers.
-              onDecrement:
-                  !actionsDisabled &&
-                      (detail.currentHp > 0 || detail.temporaryHp > 0)
-                  ? onQuickDamage
-                  : null,
-            ),
+            ],
           ],
         ),
-      ],
+      ),
     );
   }
 }

@@ -1,11 +1,11 @@
 // Tests de non-regression documentant 2 bugs de course entre un ajustement
-// PV (_applyHpState, ex. le stepper "+"/"-" ou HpAdjustmentSheet) et un
-// repos long (_applyRest), trouves en revue QA puis en revue de code du
-// chantier "Repos court/long" (voir les rapports correspondants). CORRIGES
-// dans character_detail_screen.dart (jeton [_restGeneration] +
+// PV (_applyHpState, via HpAdjustmentSheet — l'ancien stepper rapide "+"/"-"
+// du bandeau PV a ete retire, voir character_vitals_card.dart) et un repos
+// long (_applyRest), trouves en revue QA puis en revue de code du chantier
+// "Repos court/long" (voir les rapports correspondants). CORRIGES dans
+// character_detail_screen.dart (jeton [_restGeneration] +
 // [_reassertCurrentHpState] pour le premier sens, verrou
-// [_isApplyingRest]/`CharacterVitalsCard.hpActionsDisabled` pour le second) —
-// meme traitement que character_detail_hp_stepper_race_test.dart.
+// [_isApplyingRest]/`CharacterVitalsCard.hpActionsDisabled` pour le second).
 //
 // Les deux bugs partagent la meme cause racine (aucune coordination entre
 // les deux flux d'ecriture PV) mais se produisent dans des sens opposes de
@@ -405,7 +405,17 @@ void main() {
     (tester) async {
       final repository = await pumpDetail(tester);
 
+      // Ouvre la feuille d'ajustement PV (tap sur l'ensemble du bandeau PV,
+      // voir `character_vitals_card.dart::_HpSection` — remplace l'ancien
+      // stepper rapide "+" retiré de la carte) et applique +1 PV (mode
+      // "Soins"), qui reste en vol (gate).
+      await tester.tap(find.text("POINTS DE VIE"));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("SOINS"));
+      await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel("Augmenter"));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("APPLIQUER"));
       await tester.pump();
 
       await tester.tap(find.text("REPOS"));
@@ -444,7 +454,20 @@ void main() {
     (tester) async {
       final repository = await pumpDetail(tester);
 
+      // Ouvre la feuille d'ajustement PV (tap sur l'ensemble du bandeau PV,
+      // voir `character_vitals_card.dart::_HpSection` — remplace l'ancien
+      // stepper rapide "+" retiré de la carte) et applique +1 PV (mode
+      // "Soins"), qui reste en vol (gate). La feuille se ferme au tap
+      // "Appliquer" (fire-and-forget, même patron que les autres sheets) :
+      // plus aucune ambiguïté avec le stepper "Dés à dépenser" de RestSheet
+      // ci-dessous une fois celle-ci ouverte.
+      await tester.tap(find.text("POINTS DE VIE"));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("SOINS"));
+      await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel("Augmenter"));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("APPLIQUER"));
       await tester.pump();
 
       // Bouton "Repos" unique du bandeau PV : ouvre RestSheet (présélection
@@ -455,15 +478,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Dé de vie de la classe primaire de [detail] : d8, niveau 1, 0 dé
-      // déjà dépensé -> 1 dé disponible. Scopé à `BottomSheet` : le
-      // stepper PV de `CharacterVitalsCard` (même composant `StepperCounter`,
-      // même libellé "Augmenter") reste présent sous la feuille modale.
-      await tester.tap(
-        find.descendant(
-          of: find.byType(BottomSheet),
-          matching: find.bySemanticsLabel("Augmenter"),
-        ),
-      );
+      // déjà dépensé -> 1 dé disponible.
+      await tester.tap(find.bySemanticsLabel("Augmenter"));
       await tester.pumpAndSettle();
       // "Valeur moyenne" (déterministe) plutôt que "Lancer les dés" (défaut) :
       // d8 -> moyenne 5, +0 modificateur de Constitution (non renseigné,
@@ -506,9 +522,9 @@ void main() {
   );
 
   testWidgets(
-    "les actions PV (stepper +/-, crayon) sont desactivees pendant qu un "
-    "repos long est encore en vol, et reactivees une fois resolu (CORRIGE : "
-    "ferme le sens de course inverse du test precedent)",
+    "le bandeau PV (tap pour ajuster) est desactive pendant qu un repos "
+    "long est encore en vol, et reactive une fois resolu (CORRIGE : ferme "
+    "le sens de course inverse du test precedent)",
     (tester) async {
       final repository = await pumpDetail(tester);
       repository.applyRestGate = Completer<void>();
@@ -522,39 +538,28 @@ void main() {
       // temps à `_applyRest` de démarrer (verrou posé) sans jamais résoudre.
       await tester.pump();
 
-      final decrementInkWell = tester.widget<InkWell>(
+      // Bandeau PV entièrement tappable (voir
+      // `character_vitals_card.dart::_HpSection`, remplace l'ancien stepper
+      // +/- et le bouton crayon séparés) : un seul `InkWell` à vérifier.
+      final hpSectionInkWell = tester.widget<InkWell>(
         find.ancestor(
-          of: find.bySemanticsLabel("Diminuer"),
+          of: find.text("POINTS DE VIE"),
           matching: find.byType(InkWell),
         ),
       );
       expect(
-        decrementInkWell.onTap,
+        hpSectionInkWell.onTap,
         isNull,
         reason:
-            "Le stepper '-' doit être désactivé tant que le repos long est "
+            "Le bandeau PV doit être désactivé tant que le repos long est "
             "en vol.",
       );
-      final incrementInkWell = tester.widget<InkWell>(
-        find.ancestor(
-          of: find.bySemanticsLabel("Augmenter"),
-          matching: find.byType(InkWell),
-        ),
-      );
-      expect(incrementInkWell.onTap, isNull);
-      final adjustHpButton = tester.widget<IconButton>(
-        find.ancestor(
-          of: find.byIcon(Icons.edit_outlined),
-          matching: find.byType(IconButton),
-        ),
-      );
-      expect(adjustHpButton.onPressed, isNull);
 
-      // Un tap sur un bouton désactivé (`onTap`/`onPressed` nul) ne
-      // déclenche aucun appel réseau — vérifie explicitement qu'aucune
-      // écriture PV n'a pu démarrer pendant la fenêtre, pas seulement que
-      // le widget est visuellement désactivé.
-      await tester.tap(find.bySemanticsLabel("Diminuer"), warnIfMissed: false);
+      // Un tap sur un bandeau désactivé (`onTap` nul) ne déclenche aucun
+      // appel réseau — vérifie explicitement qu'aucune écriture PV n'a pu
+      // démarrer pendant la fenêtre, pas seulement que le widget est
+      // visuellement désactivé.
+      await tester.tap(find.text("POINTS DE VIE"), warnIfMissed: false);
       await tester.pump();
       expect(repository.updateHpCallCount, 0);
 
@@ -564,16 +569,16 @@ void main() {
       expect(repository.current.currentHp, 30);
       expect(find.text("30 / 30"), findsWidgets);
 
-      final decrementAfter = tester.widget<InkWell>(
+      final hpSectionInkWellAfter = tester.widget<InkWell>(
         find.ancestor(
-          of: find.bySemanticsLabel("Diminuer"),
+          of: find.text("POINTS DE VIE"),
           matching: find.byType(InkWell),
         ),
       );
       expect(
-        decrementAfter.onTap,
+        hpSectionInkWellAfter.onTap,
         isNotNull,
-        reason: "Le stepper doit être réactivé une fois le repos résolu.",
+        reason: "Le bandeau PV doit être réactivé une fois le repos résolu.",
       );
     },
   );

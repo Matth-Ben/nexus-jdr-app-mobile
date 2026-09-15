@@ -1923,14 +1923,6 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           state: _hpStateOf(detail),
           onApply: (newState) => _applyHpState(detail, newState),
         ),
-        onQuickHeal: () => _applyHpState(
-          detail,
-          HpAdjustmentCalculator.applyHeal(_hpStateOf(detail), 1),
-        ),
-        onQuickDamage: () => _applyHpState(
-          detail,
-          HpAdjustmentCalculator.applyDamage(_hpStateOf(detail), 1),
-        ),
         onTapAddXp: () => showAddXpSheet(
           context,
           currentXp: detail.xp,
@@ -1975,8 +1967,6 @@ class _CharacterTabBody extends StatelessWidget {
     required this.vitalsDetail,
     required this.onTapPortrait,
     required this.onTapAdjustHp,
-    required this.onQuickHeal,
-    required this.onQuickDamage,
     required this.onTapAddXp,
     required this.onTapLevelUp,
     required this.onTapToggleInspiration,
@@ -1989,15 +1979,13 @@ class _CharacterTabBody extends StatelessWidget {
   /// [detail] avec l'état PV optimiste local déjà fusionné (voir
   /// `_CharacterDetailScreenState._effectiveDetail`) — distinct de [detail]
   /// pour que seul le bandeau PV/XP (`CharacterVitalsCard`) réagisse
-  /// immédiatement à un tap de stepper, sans recalculer inutilement les
+  /// immédiatement à un ajustement PV, sans recalculer inutilement les
   /// autres cartes (identité, caractéristiques, jets de sauvegarde), qui ne
   /// dépendent pas des PV.
   final CharacterDetail vitalsDetail;
 
   final VoidCallback onTapPortrait;
   final VoidCallback onTapAdjustHp;
-  final VoidCallback onQuickHeal;
-  final VoidCallback onQuickDamage;
   final VoidCallback onTapAddXp;
   final VoidCallback onTapLevelUp;
 
@@ -2035,8 +2023,6 @@ class _CharacterTabBody extends StatelessWidget {
         CharacterVitalsCard(
           detail: vitalsDetail,
           onTapAdjustHp: onTapAdjustHp,
-          onQuickHeal: onQuickHeal,
-          onQuickDamage: onQuickDamage,
           onTapAddXp: onTapAddXp,
           onTapLevelUp: onTapLevelUp,
           onTapRest: onTapRest,
