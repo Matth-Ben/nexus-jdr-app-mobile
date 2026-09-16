@@ -18,10 +18,11 @@ import '../../app_update/presentation/widgets/update_suggested_banner.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
 import '../../character_creation/presentation/providers/character_creation_return_route_provider.dart';
 import '../domain/character_list_filter.dart';
+import '../domain/character_status_filter.dart';
 import '../domain/character_summary.dart';
 import 'providers/character_providers.dart';
 import 'widgets/character_card.dart';
-import 'widgets/character_class_filter_sheet.dart';
+import 'widgets/character_list_filter_sheet.dart';
 import 'widgets/connection_error_state.dart';
 
 /// Écran d'accueil listant les personnages du joueur connecté
@@ -64,6 +65,7 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   /// d'objets), seul autre champ de recherche existant dans ce dépôt.
   final TextEditingController _searchController = TextEditingController();
   Set<String> _selectedClassNames = {};
+  Set<CharacterStatusFilter> _selectedStatuses = {};
 
   @override
   void initState() {
@@ -98,17 +100,22 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
     setState(() {
       _searchController.clear();
       _selectedClassNames = {};
+      _selectedStatuses = {};
     });
   }
 
-  Future<void> _openClassFilterSheet(List<CharacterSummary> characters) async {
-    final result = await showCharacterClassFilterSheet(
+  Future<void> _openFilterSheet(List<CharacterSummary> characters) async {
+    final result = await showCharacterListFilterSheet(
       context,
       availableClassNames: CharacterListFilter.distinctClassNames(characters),
       selectedClassNames: _selectedClassNames,
+      selectedStatuses: _selectedStatuses,
     );
     if (result == null || !mounted) return;
-    setState(() => _selectedClassNames = result);
+    setState(() {
+      _selectedClassNames = result.classNames;
+      _selectedStatuses = result.statuses;
+    });
   }
 
   /// Appelé par le [RouteObserver] quand une route poussée par-dessus cet
@@ -163,12 +170,14 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
                   const UpdateSuggestedBanner(),
                   _SearchRow(
                     controller: _searchController,
-                    filterActive: _selectedClassNames.isNotEmpty,
+                    filterActive:
+                        _selectedClassNames.isNotEmpty ||
+                        _selectedStatuses.isNotEmpty,
                     // `null` (chargement) : bouton filtre sans effet, rien à
                     // filtrer tant que la liste n'a pas résolu.
                     onTapFilter: charactersAsync.value == null
                         ? null
-                        : () => _openClassFilterSheet(charactersAsync.value!),
+                        : () => _openFilterSheet(charactersAsync.value!),
                   ),
                 ],
               ),
@@ -183,6 +192,7 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
                     characters: characters,
                     query: _searchController.text,
                     classNames: _selectedClassNames,
+                    statuses: _selectedStatuses,
                   );
                   if (characters.isNotEmpty && visible.isEmpty) {
                     return _SearchEmptyState(
@@ -363,9 +373,9 @@ class _SearchRow extends StatelessWidget {
 
   final TextEditingController controller;
 
-  /// `true` si au moins une classe est actuellement filtrée — affiche un
-  /// point doré sur l'icône entonnoir (rappel visuel qu'un filtre est actif,
-  /// même si la sheet n'est pas ouverte).
+  /// `true` si au moins une classe ou un statut est actuellement filtré —
+  /// affiche un point doré sur l'icône entonnoir (rappel visuel qu'un filtre
+  /// est actif, même si la sheet n'est pas ouverte).
   final bool filterActive;
 
   final VoidCallback? onTapFilter;

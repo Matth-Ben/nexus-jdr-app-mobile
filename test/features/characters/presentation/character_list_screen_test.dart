@@ -1296,8 +1296,8 @@ void main() {
     );
 
     testWidgets(
-      'icône filtre : ouvre la sheet "FILTRER PAR CLASSE", cocher une '
-      'classe puis "Appliquer" ne garde que les personnages de cette classe',
+      'icône filtre : ouvre la sheet "FILTRER", cocher une classe puis '
+      '"Appliquer" ne garde que les personnages de cette classe',
       (WidgetTester tester) async {
         fakeCharacterRepository.charactersToReturn = characters;
 
@@ -1307,7 +1307,16 @@ void main() {
         await tester.tap(find.byIcon(Icons.filter_list));
         await tester.pumpAndSettle();
 
-        expect(find.text('FILTRER PAR CLASSE'), findsOneWidget);
+        expect(find.text('FILTRER'), findsOneWidget);
+
+        // La section "CLASSE" est en bas de la sheet, sous "STATUT"
+        // (`ListView`, chargement paresseux des enfants hors viewport) :
+        // scroller jusqu'à ce qu'elle soit montée avant de la chercher.
+        await tester.dragUntilVisible(
+          find.text('Roublard'),
+          find.byKey(const Key('characterListFilterOptions')),
+          const Offset(0, -100),
+        );
         expect(find.text('Magicien'), findsOneWidget);
         expect(find.text('Guerrier'), findsOneWidget);
         expect(find.text('Roublard'), findsOneWidget);
@@ -1333,6 +1342,11 @@ void main() {
 
         await tester.tap(find.byIcon(Icons.filter_list));
         await tester.pumpAndSettle();
+        await tester.dragUntilVisible(
+          find.text('Guerrier'),
+          find.byKey(const Key('characterListFilterOptions')),
+          const Offset(0, -100),
+        );
         await tester.tap(find.text('Guerrier'));
         await tester.tap(find.text('APPLIQUER'));
         await tester.pumpAndSettle();
@@ -1360,6 +1374,11 @@ void main() {
 
       await tester.tap(find.byIcon(Icons.filter_list));
       await tester.pumpAndSettle();
+      await tester.dragUntilVisible(
+        find.text('Roublard'),
+        find.byKey(const Key('characterListFilterOptions')),
+        const Offset(0, -100),
+      );
       await tester.tap(find.text('Roublard'));
       await tester.tap(find.text('APPLIQUER'));
       await tester.pumpAndSettle();
@@ -1378,6 +1397,105 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Borgan Pierrefort'), findsNothing);
       expect(find.textContaining('AUCUN RÉSULTAT'), findsOneWidget);
+    });
+
+    group('filtre par statut (16/09/2026, hors cahier des charges)', () {
+      const statusCharacters = [
+        CharacterSummary(
+          id: '1',
+          name: 'Halltesse Ambrelune',
+          level: 5,
+          xp: 7000,
+        ),
+        CharacterSummary(
+          id: '2',
+          name: 'Borgan Pierrefort',
+          level: 3,
+          xp: 1200,
+          isArchived: true,
+        ),
+        CharacterSummary(
+          id: '3',
+          name: 'Sylvi Aubefeuille',
+          level: 1,
+          xp: 0,
+          isDead: true,
+        ),
+      ];
+
+      testWidgets(
+        'sheet "FILTRER" : cocher "Vivants" ne garde que les personnages ni '
+        'morts ni archivés',
+        (WidgetTester tester) async {
+          fakeCharacterRepository.charactersToReturn = statusCharacters;
+
+          await tester.pumpWidget(buildTestWidget());
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.byIcon(Icons.filter_list));
+          await tester.pumpAndSettle();
+
+          expect(find.text('STATUT'), findsOneWidget);
+          expect(find.text('Vivants'), findsOneWidget);
+          expect(find.text('Archivé'), findsOneWidget);
+          expect(find.text('Mort'), findsOneWidget);
+
+          await tester.tap(find.text('Vivants'));
+          await tester.tap(find.text('APPLIQUER'));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+          expect(find.text('Borgan Pierrefort'), findsNothing);
+          expect(find.text('Sylvi Aubefeuille'), findsNothing);
+        },
+      );
+
+      testWidgets('cocher "Archivé" et "Mort" ensemble (union) : tout sauf '
+          'les vivants', (WidgetTester tester) async {
+        fakeCharacterRepository.charactersToReturn = statusCharacters;
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.filter_list));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Archivé'));
+        await tester.tap(find.text('Mort'));
+        await tester.tap(find.text('APPLIQUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Halltesse Ambrelune'), findsNothing);
+        expect(find.text('Borgan Pierrefort'), findsOneWidget);
+        expect(find.text('Sylvi Aubefeuille'), findsOneWidget);
+      });
+
+      testWidgets(
+        '"Réinitialiser" vide aussi la sélection de statut, pas seulement '
+        'la classe',
+        (WidgetTester tester) async {
+          fakeCharacterRepository.charactersToReturn = statusCharacters;
+
+          await tester.pumpWidget(buildTestWidget());
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.byIcon(Icons.filter_list));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Mort'));
+          await tester.tap(find.text('APPLIQUER'));
+          await tester.pumpAndSettle();
+          expect(find.text('Halltesse Ambrelune'), findsNothing);
+
+          await tester.tap(find.byIcon(Icons.filter_list));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('RÉINITIALISER'));
+          await tester.tap(find.text('APPLIQUER'));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+          expect(find.text('Borgan Pierrefort'), findsOneWidget);
+          expect(find.text('Sylvi Aubefeuille'), findsOneWidget);
+        },
+      );
     });
   });
 
