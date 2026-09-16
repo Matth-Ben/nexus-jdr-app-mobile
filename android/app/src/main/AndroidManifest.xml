@@ -4,6 +4,10 @@
          photo système, sans permission dédiée sur les versions d'Android
          récentes). -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Requis par `speech_to_text` (dictée vocale du bouton micro de
+         l'onglet "Notes" de l'écran "Groupe",
+         `features/groups/presentation/widgets/group_notes_tab_body.dart`). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="personnages"
         android:name="${applicationName}"
@@ -119,6 +123,13 @@
         <intent>
             <action android:name="android.intent.action.SENDTO"/>
             <data android:scheme="mailto"/>
+        </intent>
+        <!-- Requis par `speech_to_text` sur Android 11+ (API 30+) : sans
+             cette déclaration, aucun moteur de reconnaissance vocale
+             (`SpeechRecognizer.isRecognitionAvailable`) n'est visible à
+             l'app, même s'il y en a un installé sur l'appareil. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
         </intent>
     </queries>
 </manifest>

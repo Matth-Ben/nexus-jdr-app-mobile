@@ -19,6 +19,7 @@ import 'package:personnages/features/groups/domain/created_group.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_failure.dart';
 import 'package:personnages/features/groups/domain/group_member.dart';
+import 'package:personnages/features/groups/domain/group_note.dart';
 import 'package:personnages/features/groups/domain/group_preview.dart';
 import 'package:personnages/features/groups/domain/group_role.dart';
 import 'package:personnages/features/groups/domain/group_summary.dart';
@@ -129,6 +130,19 @@ class _FakeGroupRepository implements GroupRepository {
   GroupRealtimeSubscription subscribeToMemberUpdates({
     required List<String> characterIds,
     required void Function() onChanged,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<GroupNote> fetchGroupNote({
+    required String groupId,
+    required String characterId,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> saveGroupNote({
+    required String groupId,
+    required String characterId,
+    required String body,
   }) => throw UnimplementedError();
 }
 

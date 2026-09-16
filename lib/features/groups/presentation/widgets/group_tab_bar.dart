@@ -1,5 +1,7 @@
-/// Les 2 onglets de l'écran "Groupe" — voir
-/// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2.
+/// Les 3 onglets de l'écran "Groupe" — Membres/Butin voir
+/// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2 ; Notes
+/// (carnet personnel pendant la partie) ajouté le 16/09/2026, demande
+/// utilisateur hors cahier des charges.
 ///
 /// Ne porte plus qu'un libellé (`label`) depuis le recettage
 /// direction-artistique du 13/09 : la navigation entre onglets est
@@ -11,7 +13,8 @@
 /// désormais le nom du groupe, jamais un titre dépendant de l'onglet actif.
 enum GroupTab {
   members(label: 'Membres'),
-  treasure(label: 'Butin');
+  treasure(label: 'Butin'),
+  notes(label: 'Notes');
 
   const GroupTab({required this.label});
 

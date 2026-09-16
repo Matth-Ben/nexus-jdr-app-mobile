@@ -34,6 +34,15 @@
 		<string>Nexus JDR a besoin de l'appareil photo pour définir le portrait d'un personnage.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Nexus JDR a besoin d'accéder à vos photos pour définir le portrait d'un personnage.</string>
+		<!-- Requis par `speech_to_text` (dictée vocale du bouton micro de
+	     l'onglet "Notes" de l'écran "Groupe",
+	     `features/groups/presentation/widgets/group_notes_tab_body.dart`) :
+	     iOS refuse silencieusement l'accès micro/reconnaissance vocale sans
+	     ces libellés d'usage. -->
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Nexus JDR a besoin du micro pour la dictée vocale dans l'onglet Notes.</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>Nexus JDR utilise la reconnaissance vocale pour transcrire tes notes de séance.</string>
 		<key>UIApplicationSceneManifest</key>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>

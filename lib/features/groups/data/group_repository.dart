@@ -6,6 +6,7 @@ import '../domain/group_detail.dart';
 import '../domain/group_failure.dart';
 import '../domain/group_invite_code_generator.dart';
 import '../domain/group_invite_failure.dart';
+import '../domain/group_note.dart';
 import '../domain/group_preview.dart';
 import '../domain/group_summary.dart';
 import '../domain/group_treasure.dart';
@@ -25,8 +26,8 @@ abstract class GroupRealtimeSubscription {
 }
 
 /// Passerelle vers les groupes du joueur connecté — tables `groups`/
-/// `group_members`/`group_treasure` et 3 edge functions (`create-group`,
-/// `preview-group-invite`, `join-group`), voir
+/// `group_members`/`group_treasure`/`group_notes` et 3 edge functions
+/// (`create-group`, `preview-group-invite`, `join-group`), voir
 /// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.
 ///
 /// Abstraction (plutôt qu'une classe concrète directement injectée) — même
@@ -165,6 +166,26 @@ abstract class GroupRepository {
     required String characterId,
     required GroupTreasureItem item,
     required int quantity,
+  });
+
+  /// Note personnelle de [characterId] pour ce groupe — onglet "Notes".
+  /// Retourne une [GroupNote] vide (`body: ''`) tant que rien n'a encore été
+  /// enregistré, même repli que [fetchGroupTreasure].
+  Future<GroupNote> fetchGroupNote({
+    required String groupId,
+    required String characterId,
+  });
+
+  /// Enregistre le texte intégral de la note (pas un diff/append) — même
+  /// principe "un seul appel réseau" que [addToTreasure]. `upsert` (plutôt
+  /// qu'un `update` supposant la ligne déjà créée) : aucune ligne
+  /// `group_notes` n'existe tant que ce membre n'a jamais enregistré de note
+  /// (pas de trigger de création automatique à l'adhésion, contrairement à
+  /// `group_treasure`).
+  Future<void> saveGroupNote({
+    required String groupId,
+    required String characterId,
+    required String body,
   });
 
   /// S'abonne (Supabase Realtime, `postgres_changes` sur `characters`,
@@ -582,6 +603,52 @@ class SupabaseGroupRepository implements GroupRepository {
           .from('group_treasure')
           .update({'items': items.map((e) => e.toJson()).toList()})
           .eq('group_id', groupId);
+    } on PostgrestException catch (error) {
+      throw mapGroupError(error);
+    } catch (_) {
+      throw mapUnknownGroupError();
+    }
+  }
+
+  @override
+  Future<GroupNote> fetchGroupNote({
+    required String groupId,
+    required String characterId,
+  }) async {
+    try {
+      final row = await _client
+          .from('group_notes')
+          .select('body')
+          .eq('group_id', groupId)
+          .eq('character_id', characterId)
+          .maybeSingle();
+      return GroupNote(
+        groupId: groupId,
+        characterId: characterId,
+        body: (row?['body'] as String?) ?? '',
+      );
+    } on PostgrestException catch (error) {
+      throw mapGroupError(error);
+    } catch (_) {
+      throw mapUnknownGroupError();
+    }
+  }
+
+  @override
+  Future<void> saveGroupNote({
+    required String groupId,
+    required String characterId,
+    required String body,
+  }) async {
+    final userId = _requireOwnerId();
+    try {
+      await _client.from('group_notes').upsert({
+        'group_id': groupId,
+        'character_id': characterId,
+        'user_id': userId,
+        'body': body,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }, onConflict: 'group_id,character_id');
     } on PostgrestException catch (error) {
       throw mapGroupError(error);
     } catch (_) {

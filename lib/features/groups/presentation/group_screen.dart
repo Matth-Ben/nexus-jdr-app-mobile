@@ -21,13 +21,16 @@ import 'widgets/claim_group_treasure_currency_sheet.dart';
 import 'widgets/claim_group_treasure_item_sheet.dart';
 import 'widgets/group_confirmation_dialog.dart';
 import 'widgets/group_members_tab_body.dart';
+import 'widgets/group_notes_tab_body.dart';
 import 'widgets/group_tab_bar.dart';
 import 'widgets/group_treasure_tab_body.dart';
 
 /// Écran "Groupe", route `/groups/:id` —
 /// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2, revu par
 /// le recettage direction-artistique du 13/09 : `WoodBackHeader` (titre =
-/// nom du groupe) suivi directement d'un [SegmentedTabBar] Membres/Butin,
+/// nom du groupe) suivi directement d'un [SegmentedTabBar]
+/// Membres/Butin/Notes (ce dernier ajouté le 16/09/2026, demande
+/// utilisateur hors cahier des charges — voir `group_notes_tab_body.dart`),
 /// puis le corps parchemin scrollable de l'onglet actif. Le bandeau
 /// d'identité (nom éditable, code d'invitation, régénération) qui vivait ici
 /// auparavant est retiré : son contenu est repris par l'écran "Paramètres du
@@ -50,6 +53,7 @@ class GroupScreen extends ConsumerStatefulWidget {
 class _GroupScreenState extends ConsumerState<GroupScreen> {
   GroupTab _tab = GroupTab.members;
   bool _isWritingTreasure = false;
+  bool _isSavingNote = false;
 
   void _goBack() {
     if (context.canPop()) {
@@ -284,6 +288,31 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     }
   }
 
+  Future<void> _saveNote(String characterId, String body) async {
+    if (_isSavingNote) return;
+    setState(() => _isSavingNote = true);
+    try {
+      await ref
+          .read(groupRepositoryProvider)
+          .saveGroupNote(
+            groupId: widget.groupId,
+            characterId: characterId,
+            body: body,
+          );
+      ref.invalidate(
+        groupNoteProvider(groupId: widget.groupId, characterId: characterId),
+      );
+      if (!mounted) return;
+      _showSnackBar('Notes enregistrées.');
+    } on GroupFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar('Impossible d\'enregistrer tes notes. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isSavingNote = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Abonnement Realtime silencieux aux membres du groupe — voir
@@ -357,6 +386,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         onLeaveGroup: () => _confirmLeaveGroup(detail),
       ),
       GroupTab.treasure => _buildTreasureTab(detail),
+      GroupTab.notes => _buildNotesTab(detail),
     };
   }
 
@@ -378,6 +408,34 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             ? error.message
             : 'Impossible de charger le butin commun. Réessayez.',
         onRetry: () => ref.invalidate(groupTreasureProvider(widget.groupId)),
+      ),
+    );
+  }
+
+  Widget _buildNotesTab(GroupDetail detail) {
+    final characterId = detail.currentMember?.characterId;
+    if (characterId == null) return const SizedBox.shrink();
+
+    final noteAsync = ref.watch(
+      groupNoteProvider(groupId: widget.groupId, characterId: characterId),
+    );
+    return noteAsync.when(
+      data: (note) => GroupNotesTabBody(
+        initialBody: note.body,
+        isSaving: _isSavingNote,
+        onSave: (body) => _saveNote(characterId, body),
+        onDictationError: _showSnackBar,
+      ),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppColors.woodMedium),
+      ),
+      error: (error, stackTrace) => _ErrorState(
+        message: error is GroupFailure
+            ? error.message
+            : 'Impossible de charger tes notes. Réessayez.',
+        onRetry: () => ref.invalidate(
+          groupNoteProvider(groupId: widget.groupId, characterId: characterId),
+        ),
       ),
     );
   }

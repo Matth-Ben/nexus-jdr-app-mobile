@@ -96,6 +96,14 @@ dependencies:
   # puisqu'importé directement par du code de ce dépôt (même rationale que
   # `path` plus haut).
   shared_preferences: ^2.5.5
+  # Dictée vocale du bouton micro de l'onglet "Notes" de l'écran "Groupe"
+  # (`features/groups/presentation/widgets/group_notes_tab_body.dart`) —
+  # passe par le moteur de reconnaissance vocale du système (Android
+  # SpeechRecognizer / iOS Speech framework), jamais par nos propres
+  # serveurs ; selon l'appareil, ce moteur système peut lui-même transiter
+  # par un service distant du fabricant (Google/Apple), hors de notre
+  # contrôle.
+  speech_to_text: ^7.5.0
 
 dev_dependencies:
   flutter_test:

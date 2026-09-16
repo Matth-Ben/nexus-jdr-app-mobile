@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/group_repository.dart';
 import '../../domain/group_detail.dart';
+import '../../domain/group_note.dart';
 import '../../domain/group_preview.dart';
 import '../../domain/group_summary.dart';
 import '../../domain/group_treasure.dart';
@@ -35,6 +36,20 @@ Future<GroupDetail> groupDetail(Ref ref, String groupId) {
 @Riverpod(retry: _noRetry)
 Future<GroupTreasure> groupTreasure(Ref ref, String groupId) {
   return ref.watch(groupRepositoryProvider).fetchGroupTreasure(groupId);
+}
+
+/// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
+/// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
+/// que [myGroups].
+@Riverpod(retry: _noRetry)
+Future<GroupNote> groupNote(
+  Ref ref, {
+  required String groupId,
+  required String characterId,
+}) {
+  return ref
+      .watch(groupRepositoryProvider)
+      .fetchGroupNote(groupId: groupId, characterId: characterId);
 }
 
 /// Aperçu d'un groupe (étape 2/3 "Confirmation" du flux "Rejoindre un

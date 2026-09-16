@@ -395,6 +395,72 @@ void main() {
       },
     );
   });
+
+  group('SupabaseGroupRepository.fetchGroupNote', () {
+    test('ligne existante -> mappe le texte', () async {
+      final client = _buildFakeClient(
+        responses: {
+          'group_notes': [
+            {'body': 'Le MJ a mentionné une amulette bleue.'},
+          ],
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      final note = await repository.fetchGroupNote(
+        groupId: 'group-1',
+        characterId: 'char-1',
+      );
+
+      expect(note.groupId, 'group-1');
+      expect(note.characterId, 'char-1');
+      expect(note.body, 'Le MJ a mentionné une amulette bleue.');
+    });
+
+    test(
+      "aucune ligne encore enregistrée -> note vide plutôt qu'une erreur",
+      () async {
+        final client = _buildFakeClient(responses: {'group_notes': []});
+        final repository = SupabaseGroupRepository(client);
+
+        final note = await repository.fetchGroupNote(
+          groupId: 'group-1',
+          characterId: 'char-1',
+        );
+
+        expect(note.body, isEmpty);
+      },
+    );
+  });
+
+  group('SupabaseGroupRepository.saveGroupNote', () {
+    test(
+      'upsert {group_id, character_id, user_id, body} sur group_notes',
+      () async {
+        final requests = <http.Request>[];
+        final client = await _buildSignedInFakeClient(
+          ownerId: 'user-1',
+          onRequest: requests.add,
+        );
+        final repository = SupabaseGroupRepository(client);
+
+        await repository.saveGroupNote(
+          groupId: 'group-1',
+          characterId: 'char-1',
+          body: 'Un indice dans la crypte.',
+        );
+
+        final upsertRequest = requests.firstWhere(
+          (request) => request.url.path.endsWith('/group_notes'),
+        );
+        final body = jsonDecode(upsertRequest.body) as Map<String, dynamic>;
+        expect(body['group_id'], 'group-1');
+        expect(body['character_id'], 'char-1');
+        expect(body['user_id'], 'user-1');
+        expect(body['body'], 'Un indice dans la crypte.');
+      },
+    );
+  });
 }
 
 /// Fabrique un `SupabaseClient` réel dont le transport HTTP est fabriqué de

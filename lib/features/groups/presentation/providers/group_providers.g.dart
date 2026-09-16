@@ -276,6 +276,112 @@ final class GroupTreasureFamily extends $Family
   String toString() => r'groupTreasureProvider';
 }
 
+/// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
+/// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
+/// que [myGroups].
+
+@ProviderFor(groupNote)
+final groupNoteProvider = GroupNoteFamily._();
+
+/// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
+/// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
+/// que [myGroups].
+
+final class GroupNoteProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<GroupNote>,
+          GroupNote,
+          FutureOr<GroupNote>
+        >
+    with $FutureModifier<GroupNote>, $FutureProvider<GroupNote> {
+  /// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
+  /// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
+  /// que [myGroups].
+  GroupNoteProvider._({
+    required GroupNoteFamily super.from,
+    required ({String groupId, String characterId}) super.argument,
+  }) : super(
+         retry: _noRetry,
+         name: r'groupNoteProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$groupNoteHash();
+
+  @override
+  String toString() {
+    return r'groupNoteProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<GroupNote> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<GroupNote> create(Ref ref) {
+    final argument = this.argument as ({String groupId, String characterId});
+    return groupNote(
+      ref,
+      groupId: argument.groupId,
+      characterId: argument.characterId,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is GroupNoteProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$groupNoteHash() => r'306a217d5c3315c5bf1ba4c16c3599214ba8b131';
+
+/// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
+/// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
+/// que [myGroups].
+
+final class GroupNoteFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<GroupNote>,
+          ({String groupId, String characterId})
+        > {
+  GroupNoteFamily._()
+    : super(
+        retry: _noRetry,
+        name: r'groupNoteProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Note personnelle d'un membre pour un groupe — onglet "Notes", famille par
+  /// [groupId]/[characterId]. `autoDispose`, `retry: null` : mêmes rationales
+  /// que [myGroups].
+
+  GroupNoteProvider call({
+    required String groupId,
+    required String characterId,
+  }) => GroupNoteProvider._(
+    argument: (groupId: groupId, characterId: characterId),
+    from: this,
+  );
+
+  @override
+  String toString() => r'groupNoteProvider';
+}
+
 /// Aperçu d'un groupe (étape 2/3 "Confirmation" du flux "Rejoindre un
 /// groupe"), en famille par [code] — même rationale que
 /// `storyInvitePreviewProvider` (`features/join_story/presentation/
