@@ -38,6 +38,16 @@ abstract class SpellOption with _$SpellOption {
     /// réelle inclut toujours la quantité) — seconde moitié de la ligne de
     /// méta.
     required String castingTime,
+
+    /// `spells.is_incomplete` — `true` pour une entrée placeholder créée par
+    /// l'import XML aidedd.org quand l'utilisateur choisit "Garder comme
+    /// élément personnalisé" pour un sort non catalogué (voir
+    /// `features/xml_import/data/xml_import_placeholder_catalog_repository.dart`,
+    /// toujours `level: 0` pour ces entrées, voir sa documentation). Signale
+    /// qu'il manque des informations à compléter plus tard côté contenu —
+    /// `false` pour tout sort peuplé normalement par l'équipe
+    /// `dev-backend-supabase`.
+    @Default(false) bool isIncomplete,
   }) = _SpellOption;
 
   /// Ligne de méta affichée sous le nom du sort ("Évocation · 1 action").

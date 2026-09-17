@@ -26,7 +26,15 @@ mixin _$SpellOption {
 /// une première lecture de la maquette aurait pu le suggérer, la colonne
 /// réelle inclut toujours la quantité) — seconde moitié de la ligne de
 /// méta.
- String get castingTime;
+ String get castingTime;/// `spells.is_incomplete` — `true` pour une entrée placeholder créée par
+/// l'import XML aidedd.org quand l'utilisateur choisit "Garder comme
+/// élément personnalisé" pour un sort non catalogué (voir
+/// `features/xml_import/data/xml_import_placeholder_catalog_repository.dart`,
+/// toujours `level: 0` pour ces entrées, voir sa documentation). Signale
+/// qu'il manque des informations à compléter plus tard côté contenu —
+/// `false` pour tout sort peuplé normalement par l'équipe
+/// `dev-backend-supabase`.
+ bool get isIncomplete;
 /// Create a copy of SpellOption
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -37,16 +45,16 @@ $SpellOptionCopyWith<SpellOption> get copyWith => _$SpellOptionCopyWithImpl<Spel
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SpellOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.level, level) || other.level == level)&&(identical(other.school, school) || other.school == school)&&(identical(other.castingTime, castingTime) || other.castingTime == castingTime));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SpellOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.level, level) || other.level == level)&&(identical(other.school, school) || other.school == school)&&(identical(other.castingTime, castingTime) || other.castingTime == castingTime)&&(identical(other.isIncomplete, isIncomplete) || other.isIncomplete == isIncomplete));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,level,school,castingTime);
+int get hashCode => Object.hash(runtimeType,id,name,level,school,castingTime,isIncomplete);
 
 @override
 String toString() {
-  return 'SpellOption(id: $id, name: $name, level: $level, school: $school, castingTime: $castingTime)';
+  return 'SpellOption(id: $id, name: $name, level: $level, school: $school, castingTime: $castingTime, isIncomplete: $isIncomplete)';
 }
 
 
@@ -57,7 +65,7 @@ abstract mixin class $SpellOptionCopyWith<$Res>  {
   factory $SpellOptionCopyWith(SpellOption value, $Res Function(SpellOption) _then) = _$SpellOptionCopyWithImpl;
 @useResult
 $Res call({
- int id, String name, int level, String school, String castingTime
+ int id, String name, int level, String school, String castingTime, bool isIncomplete
 });
 
 
@@ -74,14 +82,15 @@ class _$SpellOptionCopyWithImpl<$Res>
 
 /// Create a copy of SpellOption
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? level = null,Object? school = null,Object? castingTime = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? level = null,Object? school = null,Object? castingTime = null,Object? isIncomplete = null,}) {
   return _then(SpellOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
 as int,school: null == school ? _self.school : school // ignore: cast_nullable_to_non_nullable
 as String,castingTime: null == castingTime ? _self.castingTime : castingTime // ignore: cast_nullable_to_non_nullable
-as String,
+as String,isIncomplete: null == isIncomplete ? _self.isIncomplete : isIncomplete // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -166,10 +175,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  int level,  String school,  String castingTime)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  int level,  String school,  String castingTime,  bool isIncomplete)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SpellOption() when $default != null:
-return $default(_that.id,_that.name,_that.level,_that.school,_that.castingTime);case _:
+return $default(_that.id,_that.name,_that.level,_that.school,_that.castingTime,_that.isIncomplete);case _:
   return orElse();
 
 }
@@ -187,10 +196,10 @@ return $default(_that.id,_that.name,_that.level,_that.school,_that.castingTime);
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  int level,  String school,  String castingTime)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  int level,  String school,  String castingTime,  bool isIncomplete)  $default,) {final _that = this;
 switch (_that) {
 case _SpellOption():
-return $default(_that.id,_that.name,_that.level,_that.school,_that.castingTime);case _:
+return $default(_that.id,_that.name,_that.level,_that.school,_that.castingTime,_that.isIncomplete);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -207,10 +216,10 @@ return $default(_that.id,_that.name,_that.level,_that.school,_that.castingTime);
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  int level,  String school,  String castingTime)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  int level,  String school,  String castingTime,  bool isIncomplete)?  $default,) {final _that = this;
 switch (_that) {
 case _SpellOption() when $default != null:
-return $default(_that.id,_that.name,_that.level,_that.school,_that.castingTime);case _:
+return $default(_that.id,_that.name,_that.level,_that.school,_that.castingTime,_that.isIncomplete);case _:
   return null;
 
 }
@@ -222,7 +231,7 @@ return $default(_that.id,_that.name,_that.level,_that.school,_that.castingTime);
 
 
 class _SpellOption extends SpellOption {
-  const _SpellOption({required this.id, required this.name, required this.level, required this.school, required this.castingTime}): super._();
+  const _SpellOption({required this.id, required this.name, required this.level, required this.school, required this.castingTime, this.isIncomplete = false}): super._();
   
 
 @override final  int id;
@@ -241,6 +250,15 @@ class _SpellOption extends SpellOption {
 /// réelle inclut toujours la quantité) — seconde moitié de la ligne de
 /// méta.
 @override final  String castingTime;
+/// `spells.is_incomplete` — `true` pour une entrée placeholder créée par
+/// l'import XML aidedd.org quand l'utilisateur choisit "Garder comme
+/// élément personnalisé" pour un sort non catalogué (voir
+/// `features/xml_import/data/xml_import_placeholder_catalog_repository.dart`,
+/// toujours `level: 0` pour ces entrées, voir sa documentation). Signale
+/// qu'il manque des informations à compléter plus tard côté contenu —
+/// `false` pour tout sort peuplé normalement par l'équipe
+/// `dev-backend-supabase`.
+@override@JsonKey() final  bool isIncomplete;
 
 /// Create a copy of SpellOption
 /// with the given fields replaced by the non-null parameter values.
@@ -252,16 +270,16 @@ _$SpellOptionCopyWith<_SpellOption> get copyWith => __$SpellOptionCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SpellOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.level, level) || other.level == level)&&(identical(other.school, school) || other.school == school)&&(identical(other.castingTime, castingTime) || other.castingTime == castingTime));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SpellOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.level, level) || other.level == level)&&(identical(other.school, school) || other.school == school)&&(identical(other.castingTime, castingTime) || other.castingTime == castingTime)&&(identical(other.isIncomplete, isIncomplete) || other.isIncomplete == isIncomplete));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,level,school,castingTime);
+int get hashCode => Object.hash(runtimeType,id,name,level,school,castingTime,isIncomplete);
 
 @override
 String toString() {
-  return 'SpellOption(id: $id, name: $name, level: $level, school: $school, castingTime: $castingTime)';
+  return 'SpellOption(id: $id, name: $name, level: $level, school: $school, castingTime: $castingTime, isIncomplete: $isIncomplete)';
 }
 
 
@@ -272,7 +290,7 @@ abstract mixin class _$SpellOptionCopyWith<$Res> implements $SpellOptionCopyWith
   factory _$SpellOptionCopyWith(_SpellOption value, $Res Function(_SpellOption) _then) = __$SpellOptionCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String name, int level, String school, String castingTime
+ int id, String name, int level, String school, String castingTime, bool isIncomplete
 });
 
 
@@ -289,14 +307,15 @@ class __$SpellOptionCopyWithImpl<$Res>
 
 /// Create a copy of SpellOption
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? level = null,Object? school = null,Object? castingTime = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? level = null,Object? school = null,Object? castingTime = null,Object? isIncomplete = null,}) {
   return _then(_SpellOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
 as int,school: null == school ? _self.school : school // ignore: cast_nullable_to_non_nullable
 as String,castingTime: null == castingTime ? _self.castingTime : castingTime // ignore: cast_nullable_to_non_nullable
-as String,
+as String,isIncomplete: null == isIncomplete ? _self.isIncomplete : isIncomplete // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

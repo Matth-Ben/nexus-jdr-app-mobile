@@ -22,6 +22,15 @@ abstract class RaceOption with _$RaceOption {
     required String name,
     required Map<String, dynamic> abilityBonuses,
     required List<RaceTrait> traits,
+
+    /// `races.is_incomplete` — `true` pour une entrée placeholder créée par
+    /// l'import XML aidedd.org quand l'utilisateur choisit "Garder comme
+    /// élément personnalisé" pour une race non cataloguée (voir
+    /// `features/xml_import/data/xml_import_placeholder_catalog_repository.dart`).
+    /// Signale qu'il manque des informations à compléter plus tard côté
+    /// contenu — `false` pour toute race peuplée normalement par l'équipe
+    /// `dev-backend-supabase`.
+    @Default(false) bool isIncomplete,
   }) = _RaceOption;
 
   /// Ligne de résumé affichée sous le nom ("+2 Dex · Vision dans le noir ·

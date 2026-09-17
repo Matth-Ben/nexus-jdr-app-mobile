@@ -57,6 +57,68 @@ final class XmlImportRepositoryProvider
 String _$xmlImportRepositoryHash() =>
     r'efbf7204f5e44fcb4ce57d83d0fd0edf3245d184';
 
+/// Passerelle "Garder comme élément personnalisé" pour Race/Historique/
+/// Sorts (voir la doc de classe de [XmlImportPlaceholderCatalogRepository])
+/// — même patron que [xmlImportRepositoryProvider] ci-dessus.
+
+@ProviderFor(xmlImportPlaceholderCatalogRepository)
+final xmlImportPlaceholderCatalogRepositoryProvider =
+    XmlImportPlaceholderCatalogRepositoryProvider._();
+
+/// Passerelle "Garder comme élément personnalisé" pour Race/Historique/
+/// Sorts (voir la doc de classe de [XmlImportPlaceholderCatalogRepository])
+/// — même patron que [xmlImportRepositoryProvider] ci-dessus.
+
+final class XmlImportPlaceholderCatalogRepositoryProvider
+    extends
+        $FunctionalProvider<
+          XmlImportPlaceholderCatalogRepository,
+          XmlImportPlaceholderCatalogRepository,
+          XmlImportPlaceholderCatalogRepository
+        >
+    with $Provider<XmlImportPlaceholderCatalogRepository> {
+  /// Passerelle "Garder comme élément personnalisé" pour Race/Historique/
+  /// Sorts (voir la doc de classe de [XmlImportPlaceholderCatalogRepository])
+  /// — même patron que [xmlImportRepositoryProvider] ci-dessus.
+  XmlImportPlaceholderCatalogRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'xmlImportPlaceholderCatalogRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() =>
+      _$xmlImportPlaceholderCatalogRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<XmlImportPlaceholderCatalogRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  XmlImportPlaceholderCatalogRepository create(Ref ref) {
+    return xmlImportPlaceholderCatalogRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(XmlImportPlaceholderCatalogRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride:
+          $SyncValueProvider<XmlImportPlaceholderCatalogRepository>(value),
+    );
+  }
+}
+
+String _$xmlImportPlaceholderCatalogRepositoryHash() =>
+    r'53467e5c65565a198d4c7f61d42db659f963e92f';
+
 /// Charge, parse et résout un export XML aidedd.org [xmlSource] (contenu
 /// déjà lu par le sélecteur de fichier natif, voir
 /// `features/characters/presentation/character_list_screen.dart::
@@ -150,7 +212,7 @@ final class XmlImportReviewControllerProvider
 }
 
 String _$xmlImportReviewControllerHash() =>
-    r'5f8b9d16e825cad0570fded79a08666c7a395dc4';
+    r'bb1a5870d6be44a4da1fc67cebc588202c2fc9d5';
 
 /// Charge, parse et résout un export XML aidedd.org [xmlSource] (contenu
 /// déjà lu par le sélecteur de fichier natif, voir

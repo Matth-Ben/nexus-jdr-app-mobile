@@ -15,7 +15,14 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$RaceOption {
 
- int get id; String get name; Map<String, dynamic> get abilityBonuses; List<RaceTrait> get traits;
+ int get id; String get name; Map<String, dynamic> get abilityBonuses; List<RaceTrait> get traits;/// `races.is_incomplete` — `true` pour une entrée placeholder créée par
+/// l'import XML aidedd.org quand l'utilisateur choisit "Garder comme
+/// élément personnalisé" pour une race non cataloguée (voir
+/// `features/xml_import/data/xml_import_placeholder_catalog_repository.dart`).
+/// Signale qu'il manque des informations à compléter plus tard côté
+/// contenu — `false` pour toute race peuplée normalement par l'équipe
+/// `dev-backend-supabase`.
+ bool get isIncomplete;
 /// Create a copy of RaceOption
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +33,16 @@ $RaceOptionCopyWith<RaceOption> get copyWith => _$RaceOptionCopyWithImpl<RaceOpt
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RaceOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.abilityBonuses, abilityBonuses)&&const DeepCollectionEquality().equals(other.traits, traits));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RaceOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.abilityBonuses, abilityBonuses)&&const DeepCollectionEquality().equals(other.traits, traits)&&(identical(other.isIncomplete, isIncomplete) || other.isIncomplete == isIncomplete));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(abilityBonuses),const DeepCollectionEquality().hash(traits));
+int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(abilityBonuses),const DeepCollectionEquality().hash(traits),isIncomplete);
 
 @override
 String toString() {
-  return 'RaceOption(id: $id, name: $name, abilityBonuses: $abilityBonuses, traits: $traits)';
+  return 'RaceOption(id: $id, name: $name, abilityBonuses: $abilityBonuses, traits: $traits, isIncomplete: $isIncomplete)';
 }
 
 
@@ -46,7 +53,7 @@ abstract mixin class $RaceOptionCopyWith<$Res>  {
   factory $RaceOptionCopyWith(RaceOption value, $Res Function(RaceOption) _then) = _$RaceOptionCopyWithImpl;
 @useResult
 $Res call({
- int id, String name, Map<String, dynamic> abilityBonuses, List<RaceTrait> traits
+ int id, String name, Map<String, dynamic> abilityBonuses, List<RaceTrait> traits, bool isIncomplete
 });
 
 
@@ -63,13 +70,14 @@ class _$RaceOptionCopyWithImpl<$Res>
 
 /// Create a copy of RaceOption
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? abilityBonuses = null,Object? traits = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? abilityBonuses = null,Object? traits = null,Object? isIncomplete = null,}) {
   return _then(RaceOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,abilityBonuses: null == abilityBonuses ? _self.abilityBonuses : abilityBonuses // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>,traits: null == traits ? _self.traits : traits // ignore: cast_nullable_to_non_nullable
-as List<RaceTrait>,
+as List<RaceTrait>,isIncomplete: null == isIncomplete ? _self.isIncomplete : isIncomplete // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -154,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits,  bool isIncomplete)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RaceOption() when $default != null:
-return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits);case _:
+return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits,_that.isIncomplete);case _:
   return orElse();
 
 }
@@ -175,10 +183,10 @@ return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits,  bool isIncomplete)  $default,) {final _that = this;
 switch (_that) {
 case _RaceOption():
-return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits);case _:
+return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits,_that.isIncomplete);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -195,10 +203,10 @@ return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits,  bool isIncomplete)?  $default,) {final _that = this;
 switch (_that) {
 case _RaceOption() when $default != null:
-return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits);case _:
+return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits,_that.isIncomplete);case _:
   return null;
 
 }
@@ -210,7 +218,7 @@ return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits);case _:
 
 
 class _RaceOption extends RaceOption {
-  const _RaceOption({required this.id, required this.name, required  Map<String, dynamic> abilityBonuses, required  List<RaceTrait> traits}): _abilityBonuses = abilityBonuses,_traits = traits,super._();
+  const _RaceOption({required this.id, required this.name, required  Map<String, dynamic> abilityBonuses, required  List<RaceTrait> traits, this.isIncomplete = false}): _abilityBonuses = abilityBonuses,_traits = traits,super._();
   
 
 @override final  int id;
@@ -229,6 +237,14 @@ class _RaceOption extends RaceOption {
   return EqualUnmodifiableListView(_traits);
 }
 
+/// `races.is_incomplete` — `true` pour une entrée placeholder créée par
+/// l'import XML aidedd.org quand l'utilisateur choisit "Garder comme
+/// élément personnalisé" pour une race non cataloguée (voir
+/// `features/xml_import/data/xml_import_placeholder_catalog_repository.dart`).
+/// Signale qu'il manque des informations à compléter plus tard côté
+/// contenu — `false` pour toute race peuplée normalement par l'équipe
+/// `dev-backend-supabase`.
+@override@JsonKey() final  bool isIncomplete;
 
 /// Create a copy of RaceOption
 /// with the given fields replaced by the non-null parameter values.
@@ -240,16 +256,16 @@ _$RaceOptionCopyWith<_RaceOption> get copyWith => __$RaceOptionCopyWithImpl<_Rac
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RaceOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other._abilityBonuses, _abilityBonuses)&&const DeepCollectionEquality().equals(other._traits, _traits));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RaceOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other._abilityBonuses, _abilityBonuses)&&const DeepCollectionEquality().equals(other._traits, _traits)&&(identical(other.isIncomplete, isIncomplete) || other.isIncomplete == isIncomplete));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(_abilityBonuses),const DeepCollectionEquality().hash(_traits));
+int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(_abilityBonuses),const DeepCollectionEquality().hash(_traits),isIncomplete);
 
 @override
 String toString() {
-  return 'RaceOption(id: $id, name: $name, abilityBonuses: $abilityBonuses, traits: $traits)';
+  return 'RaceOption(id: $id, name: $name, abilityBonuses: $abilityBonuses, traits: $traits, isIncomplete: $isIncomplete)';
 }
 
 
@@ -260,7 +276,7 @@ abstract mixin class _$RaceOptionCopyWith<$Res> implements $RaceOptionCopyWith<$
   factory _$RaceOptionCopyWith(_RaceOption value, $Res Function(_RaceOption) _then) = __$RaceOptionCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String name, Map<String, dynamic> abilityBonuses, List<RaceTrait> traits
+ int id, String name, Map<String, dynamic> abilityBonuses, List<RaceTrait> traits, bool isIncomplete
 });
 
 
@@ -277,13 +293,14 @@ class __$RaceOptionCopyWithImpl<$Res>
 
 /// Create a copy of RaceOption
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? abilityBonuses = null,Object? traits = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? abilityBonuses = null,Object? traits = null,Object? isIncomplete = null,}) {
   return _then(_RaceOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,abilityBonuses: null == abilityBonuses ? _self._abilityBonuses : abilityBonuses // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>,traits: null == traits ? _self._traits : traits // ignore: cast_nullable_to_non_nullable
-as List<RaceTrait>,
+as List<RaceTrait>,isIncomplete: null == isIncomplete ? _self.isIncomplete : isIncomplete // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

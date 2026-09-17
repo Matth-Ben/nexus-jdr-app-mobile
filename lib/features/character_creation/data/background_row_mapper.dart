@@ -64,6 +64,9 @@ abstract final class BackgroundRowMapper {
   /// valeur résolue retombe sur un libellé générique ("Historique #12") pour
   /// le nom, ou une chaîne vide pour l'aptitude, plutôt que de crasher ou
   /// d'afficher `null` — même règle que `ClassRowMapper.toClassOption`.
+  /// `row['is_incomplete']` absent (cache offline écrit avant l'introduction
+  /// de cette colonne) retombe sur `false` — voir
+  /// [BackgroundOption.isIncomplete].
   static BackgroundOption toBackgroundOption(
     Map<String, dynamic> row, {
     required Map<String, String> names,
@@ -84,6 +87,7 @@ abstract final class BackgroundRowMapper {
       ),
       languageChoiceCount: parseLanguageChoiceCount(toolOrLanguageChoices),
       equipment: parseEquipment(row['equipment']),
+      isIncomplete: row['is_incomplete'] as bool? ?? false,
     );
   }
 

@@ -280,6 +280,31 @@ void main() {
 
       expect(backgroundOption.equipment, isEmpty);
     });
+
+    test(
+      'is_incomplete absent de la ligne -> false (cache offline ancien)',
+      () {
+        final backgroundOption = BackgroundRowMapper.toBackgroundOption(
+          {'id': 1, 'skill_proficiencies': <String>[]},
+          names: const {},
+          featureNames: const {},
+          featureDescriptions: const {},
+        );
+
+        expect(backgroundOption.isIncomplete, isFalse);
+      },
+    );
+
+    test('is_incomplete true -> reporté tel quel sur BackgroundOption', () {
+      final backgroundOption = BackgroundRowMapper.toBackgroundOption(
+        {'id': 1, 'skill_proficiencies': <String>[], 'is_incomplete': true},
+        names: const {},
+        featureNames: const {},
+        featureDescriptions: const {},
+      );
+
+      expect(backgroundOption.isIncomplete, isTrue);
+    });
   });
 
   group('parseToolOrLanguageGrantedTools', () {

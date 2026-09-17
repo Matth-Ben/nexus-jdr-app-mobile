@@ -62,6 +62,8 @@ abstract final class SpellRowMapper {
   /// sans nom résolu retombe sur un libellé générique ("Sort #12") plutôt
   /// que de crasher ou d'afficher `null` — même principe que
   /// `ToolRowMapper.toToolOption`.
+  /// `row['is_incomplete']` absent (cache offline écrit avant l'introduction
+  /// de cette colonne) retombe sur `false` — voir [SpellOption.isIncomplete].
   static SpellOption toSpellOption(
     Map<String, dynamic> row, {
     required Map<String, String> names,
@@ -73,6 +75,7 @@ abstract final class SpellRowMapper {
       level: (row['level'] as num?)?.toInt() ?? 0,
       school: row['school'] as String? ?? '',
       castingTime: row['casting_time'] as String? ?? '',
+      isIncomplete: row['is_incomplete'] as bool? ?? false,
     );
   }
 }

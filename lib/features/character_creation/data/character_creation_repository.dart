@@ -268,7 +268,7 @@ class SupabaseCharacterCreationRepository
     try {
       final raceRows = await _client
           .from('races')
-          .select('id, ability_bonuses, traits')
+          .select('id, ability_bonuses, traits, is_incomplete')
           .order('id', ascending: true);
       final subraceRows = await _client
           .from('subraces')
@@ -410,7 +410,8 @@ class SupabaseCharacterCreationRepository
       final backgroundRows = await _client
           .from('backgrounds')
           .select(
-            'id, skill_proficiencies, tool_or_language_choices, equipment',
+            'id, skill_proficiencies, tool_or_language_choices, equipment, '
+            'is_incomplete',
           )
           .order('id', ascending: true);
 
@@ -616,7 +617,7 @@ class SupabaseCharacterCreationRepository
       if (spellIds.isNotEmpty) {
         spellRows = await _client
             .from('spells')
-            .select('id, level, school, casting_time')
+            .select('id, level, school, casting_time, is_incomplete')
             .inFilter('id', spellIds.toList())
             .order('id', ascending: true);
         spellNameRows = await _fetchTranslationRows(

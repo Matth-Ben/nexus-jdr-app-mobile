@@ -28,6 +28,7 @@ import 'package:personnages/features/character_creation/domain/race_catalog.dart
 import 'package:personnages/features/character_creation/domain/race_option.dart';
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
+import 'package:personnages/features/character_creation/domain/spell_option.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
@@ -44,6 +45,7 @@ import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
+import 'package:personnages/features/xml_import/data/xml_import_placeholder_catalog_repository.dart';
 import 'package:personnages/features/xml_import/data/xml_import_repository.dart';
 import 'package:personnages/features/xml_import/domain/xml_import_save_data.dart';
 import 'package:personnages/features/xml_import/presentation/providers/xml_import_providers.dart';
@@ -137,6 +139,65 @@ class _FakeXmlImportRepository implements XmlImportRepository {
     capturedCharacterName = characterName;
     if (errorToThrow != null) throw errorToThrow!;
     return 'new-character-id';
+  }
+}
+
+class _FakePlaceholderCatalogRepository
+    implements XmlImportPlaceholderCatalogRepository {
+  Object? errorToThrow;
+
+  /// Nombre d'appels réellement effectués à [findOrCreateRace] — utilisé par
+  /// le test de garde de ré-entrance (double-tap rapide sur "Garder comme
+  /// élément personnalisé") pour vérifier qu'un seul appel concurrent part
+  /// bien vers le dépôt, malgré plusieurs déclenchements côté UI.
+  int findOrCreateRaceCallCount = 0;
+
+  /// Non `null` = `findOrCreateRace` reste en attente de ce `Completer`
+  /// plutôt que de résoudre immédiatement — permet au test de figer l'appel
+  /// "en vol" le temps de simuler un second déclenchement concurrent avant
+  /// de laisser le premier appel se terminer.
+  Completer<RaceOption>? findOrCreateRaceCompleter;
+
+  @override
+  Future<RaceOption> findOrCreateRace(String rawName) async {
+    findOrCreateRaceCallCount++;
+    if (errorToThrow != null) throw errorToThrow!;
+    if (findOrCreateRaceCompleter != null) {
+      return findOrCreateRaceCompleter!.future;
+    }
+    return RaceOption(
+      id: 901,
+      name: rawName,
+      abilityBonuses: const {},
+      traits: const [],
+      isIncomplete: true,
+    );
+  }
+
+  @override
+  Future<BackgroundOption> findOrCreateBackground(String rawName) async {
+    if (errorToThrow != null) throw errorToThrow!;
+    return BackgroundOption(
+      id: 902,
+      name: rawName,
+      skillProficiencies: const [],
+      featureName: '',
+      featureDescription: '',
+      isIncomplete: true,
+    );
+  }
+
+  @override
+  Future<SpellOption> findOrCreateSpell(String rawName) async {
+    if (errorToThrow != null) throw errorToThrow!;
+    return SpellOption(
+      id: 903,
+      name: rawName,
+      level: 0,
+      school: '',
+      castingTime: '',
+      isIncomplete: true,
+    );
   }
 }
 
@@ -541,6 +602,7 @@ const _invalidXml = 'ceci n\'est pas du XML';
 void main() {
   late _FakeCharacterCreationRepository fakeCharacterCreationRepository;
   late _FakeXmlImportRepository fakeXmlImportRepository;
+  late _FakePlaceholderCatalogRepository fakePlaceholderCatalogRepository;
   late ProviderContainer container;
 
   setUp(() {
@@ -554,12 +616,16 @@ void main() {
         alignments: [_neutre],
       );
     fakeXmlImportRepository = _FakeXmlImportRepository();
+    fakePlaceholderCatalogRepository = _FakePlaceholderCatalogRepository();
     container = ProviderContainer(
       overrides: [
         characterCreationRepositoryProvider.overrideWithValue(
           fakeCharacterCreationRepository,
         ),
         xmlImportRepositoryProvider.overrideWithValue(fakeXmlImportRepository),
+        xmlImportPlaceholderCatalogRepositoryProvider.overrideWithValue(
+          fakePlaceholderCatalogRepository,
+        ),
         characterRepositoryProvider.overrideWithValue(
           _FakeCharacterRepository(),
         ),
@@ -881,6 +947,132 @@ void main() {
       final cancelButton = tester.widget<TextButton>(find.byType(TextButton));
 
       expect(primaryButton.onPressed, equals(cancelButton.onPressed));
+    },
+  );
+
+  testWidgets(
+    '"Garder comme élément personnalisé" sur Race non reconnue : crée une '
+    'nouvelle entrée placeholder, la carte devient une carte de résumé avec '
+    'le badge "Donnée incomplète", l\'alerte disparaît',
+    (WidgetTester tester) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(xmlSource: _raceAndClassUnresolvedXml),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Race non reconnu'), findsOneWidget);
+
+      await tester.tap(find.textContaining('Race non reconnu'));
+      await tester.pumpAndSettle();
+      expect(find.text('CORRIGER : RACE'), findsOneWidget);
+
+      await tester.tap(find.text('GARDER COMME ÉLÉMENT PERSONNALISÉ'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONFIRMER'));
+      await tester.pumpAndSettle();
+
+      // L'alerte a disparu, remplacée par une carte de résumé portant le
+      // nom brut du XML et le badge "Donnée incomplète".
+      expect(find.textContaining('Race non reconnu'), findsNothing);
+      expect(find.text('Race Maison Inventée'), findsOneWidget);
+      expect(find.text('Donnée incomplète'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    '"Garder comme élément personnalisé" sur Race non reconnue : échec '
+    'réseau -> SnackBar d\'erreur, le champ reste non résolu (alerte '
+    'toujours affichée)',
+    (WidgetTester tester) async {
+      fakePlaceholderCatalogRepository.errorToThrow = Exception(
+        'Erreur réseau simulée.',
+      );
+
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(xmlSource: _raceAndClassUnresolvedXml),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.textContaining('Race non reconnu'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('GARDER COMME ÉLÉMENT PERSONNALISÉ'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONFIRMER'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text("Impossible d'enregistrer cet élément. Réessayez."),
+        findsOneWidget,
+      );
+      // Le champ reste non résolu : l'alerte "Race" est toujours affichée.
+      expect(find.textContaining('Race non reconnu'), findsOneWidget);
+      expect(find.text('Donnée incomplète'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'double-tap rapide sur "Garder comme élément personnalisé" (Race) : un '
+    'seul appel au dépôt, la carte d\'alerte affiche "Enregistrement en '
+    'cours..." et cesse d\'être tappable tant que l\'appel n\'est pas résolu '
+    '(relecture code-reviewer — évite un doublon dans le catalogue partagé)',
+    (WidgetTester tester) async {
+      final completer = Completer<RaceOption>();
+      fakePlaceholderCatalogRepository.findOrCreateRaceCompleter = completer;
+
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(xmlSource: _raceAndClassUnresolvedXml),
+      );
+      await tester.pumpAndSettle();
+
+      // Premier passage : ouvre la bottom sheet, choisit "Garder comme
+      // élément personnalisé", confirme — l'appel réseau part mais reste en
+      // attente du `Completer` (jamais résolu à ce stade).
+      await tester.tap(find.textContaining('Race non reconnu'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('GARDER COMME ÉLÉMENT PERSONNALISÉ'));
+      await tester.pumpAndSettle();
+      // `pump` explicite plutôt que `pumpAndSettle` à partir d'ici : la
+      // carte "en cours" affiche un `CircularProgressIndicator` indéterminé
+      // (animation perpétuelle tant que le `Completer` n'est pas résolu),
+      // sur lequel `pumpAndSettle` ne se termine jamais.
+      await tester.tap(find.text('CONFIRMER'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(fakePlaceholderCatalogRepository.findOrCreateRaceCallCount, 1);
+      expect(find.text('Enregistrement en cours...'), findsOneWidget);
+      expect(find.textContaining('Race non reconnu'), findsNothing);
+
+      // Second déclenchement pendant que le premier appel est toujours en
+      // vol : la carte n'est plus tappable, donc aucune bottom sheet ne
+      // s'ouvre et aucun second appel concurrent ne part vers le dépôt.
+      await tester.tap(find.text('Enregistrement en cours...'));
+      await tester.pump();
+
+      expect(find.text('CORRIGER : RACE'), findsNothing);
+      expect(fakePlaceholderCatalogRepository.findOrCreateRaceCallCount, 1);
+
+      // Une fois le premier appel résolu, la carte redevient une carte de
+      // résumé normale (le badge confirme que la seule entrée créée est
+      // bien celle du premier appel).
+      completer.complete(
+        RaceOption(
+          id: 901,
+          name: 'Race Maison Inventée',
+          abilityBonuses: const {},
+          traits: const [],
+          isIncomplete: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Enregistrement en cours...'), findsNothing);
+      expect(find.text('Race Maison Inventée'), findsOneWidget);
+      expect(find.text('Donnée incomplète'), findsOneWidget);
+      expect(fakePlaceholderCatalogRepository.findOrCreateRaceCallCount, 1);
     },
   );
 }

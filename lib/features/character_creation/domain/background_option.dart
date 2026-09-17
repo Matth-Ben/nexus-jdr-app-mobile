@@ -71,6 +71,15 @@ abstract class BackgroundOption with _$BackgroundOption {
     /// `domain/background_equipment_resolver.dart` pour son exploitation à
     /// l'étape 7/9.
     @Default(<String>[]) List<String> equipment,
+
+    /// `backgrounds.is_incomplete` — `true` pour une entrée placeholder créée
+    /// par l'import XML aidedd.org quand l'utilisateur choisit "Garder comme
+    /// élément personnalisé" pour un historique non catalogué (voir
+    /// `features/xml_import/data/xml_import_placeholder_catalog_repository.dart`).
+    /// Signale qu'il manque des informations à compléter plus tard côté
+    /// contenu — `false` pour tout historique peuplé normalement par
+    /// l'équipe `dev-backend-supabase`.
+    @Default(false) bool isIncomplete,
   }) = _BackgroundOption;
 
   /// Ligne "Compétences : X, Y" affichée pour toutes les lignes, qu'elles

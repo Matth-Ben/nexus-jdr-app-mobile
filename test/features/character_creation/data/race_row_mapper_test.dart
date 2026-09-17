@@ -120,6 +120,27 @@ void main() {
         expect(race.name, 'Race #99');
       },
     );
+
+    test(
+      'is_incomplete absent de la ligne -> false (cache offline ancien)',
+      () {
+        final race = RaceRowMapper.toRaceOption(
+          {'id': 2, 'ability_bonuses': {}, 'traits': []},
+          names: const {'2': 'Elfe'},
+        );
+
+        expect(race.isIncomplete, isFalse);
+      },
+    );
+
+    test('is_incomplete true -> reporté tel quel sur RaceOption', () {
+      final race = RaceRowMapper.toRaceOption(
+        {'id': 2, 'ability_bonuses': {}, 'traits': [], 'is_incomplete': true},
+        names: const {'2': 'Race maison'},
+      );
+
+      expect(race.isIncomplete, isTrue);
+    });
   });
 
   group('toSubraceOption', () {

@@ -97,5 +97,26 @@ void main() {
       expect(spell.school, '');
       expect(spell.castingTime, '');
     });
+
+    test(
+      'is_incomplete absent de la ligne -> false (cache offline ancien)',
+      () {
+        final spell = SpellRowMapper.toSpellOption(
+          {'id': 5},
+          names: const {'5': 'Réparation'},
+        );
+
+        expect(spell.isIncomplete, isFalse);
+      },
+    );
+
+    test('is_incomplete true -> reporté tel quel sur SpellOption', () {
+      final spell = SpellRowMapper.toSpellOption(
+        {'id': 5, 'is_incomplete': true},
+        names: const {'5': 'Sort maison'},
+      );
+
+      expect(spell.isIncomplete, isTrue);
+    });
   });
 }

@@ -54,6 +54,24 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
   bool _isSaving = false;
   String? _saveErrorMessage;
 
+  /// Garde de ré-entrance pour "Garder comme élément personnalisé"
+  /// (Race/Historique/Sorts innés/Sorts connus, voir [_keepAsPlaceholder]) —
+  /// un identifiant par champ (`'race'`/`'background'`/`'innateSpells'`/
+  /// `'knownSpells'`) présent dans cet ensemble tant que son appel réseau
+  /// (`keepXxxAsPlaceholder`) n'est pas résolu. Un seul identifiant pour tout
+  /// le champ "Sorts innés"/"Sorts connus" (pas un par sort) : ces deux
+  /// champs consolident déjà toutes leurs entrées non reconnues dans une
+  /// seule [_AlertCard] (voir [_addSpellField]), donc c'est la granularité
+  /// visuellement disponible pour indiquer "en cours" — tant qu'un sort de ce
+  /// champ est en cours d'enregistrement en tant que placeholder, toute la
+  /// carte (pas seulement l'entrée concernée) devient non tappable, plutôt
+  /// que de laisser l'utilisateur relancer un second appel concurrent avec
+  /// le même nom brut (voir `xml_import_placeholder_catalog_repository.dart`
+  /// : le dédoublonnage par `ilike` ne voit que ce qui est déjà *committé*
+  /// en base, deux appels concurrents peuvent chacun ne rien trouver et
+  /// créer deux entrées dupliquées dans le catalogue partagé).
+  final Set<String> _pendingPlaceholderFields = {};
+
   /// Type inféré depuis l'expression (pas d'annotation explicite) : évite de
   /// dépendre du nom exact de la classe générée par `riverpod_generator` pour
   /// un provider `family` (`XmlImportReviewControllerProvider`, connue
@@ -398,14 +416,28 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       }
     }
 
-    void addSummary(String title, String value, {bool badge = false}) {
+    void addSummary(String title, String value, {String? badgeText}) {
       addSpacer();
-      widgets.add(_SummaryCard(title: title, value: value, badge: badge));
+      widgets.add(
+        _SummaryCard(title: title, value: value, badgeText: badgeText),
+      );
     }
 
-    void addAlert(String title, String message, VoidCallback onTap) {
+    void addAlert(
+      String title,
+      String message,
+      VoidCallback onTap, {
+      bool isPending = false,
+    }) {
       addSpacer();
-      widgets.add(_AlertCard(title: title, message: message, onTap: onTap));
+      widgets.add(
+        _AlertCard(
+          title: title,
+          message: message,
+          onTap: onTap,
+          isPending: isPending,
+        ),
+      );
     }
 
     // Nom.
@@ -420,6 +452,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       valueOf: (race) => race.name,
       candidates: [for (final race in data.raceCatalog.races) race.name],
       onCorrect: (label) => _controller().correctRace(label),
+      onKeepAsPlaceholder: (rawValue) =>
+          _controller().keepRaceAsPlaceholder(rawValue),
+      isIncompleteOf: (race) => race.isIncomplete,
+      placeholderFieldKey: 'race',
     );
 
     // Classe.
@@ -450,6 +486,10 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
           background.name,
       ],
       onCorrect: (label) => _controller().correctBackground(label),
+      onKeepAsPlaceholder: (rawValue) =>
+          _controller().keepBackgroundAsPlaceholder(rawValue),
+      isIncompleteOf: (background) => background.isIncomplete,
+      placeholderFieldKey: 'background',
     );
 
     // Caractéristiques.
@@ -529,6 +569,9 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       candidates: [for (final spell in data.spellCatalog.spells) spell.name],
       onCorrect: (index) =>
           (label) => _controller().correctInnateSpell(index, label),
+      onKeepAsPlaceholder: (index, rawValue) =>
+          _controller().keepInnateSpellAsPlaceholder(index, rawValue),
+      placeholderFieldKey: 'innateSpells',
     );
 
     // Sorts connus.
@@ -541,6 +584,9 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       candidates: [for (final spell in data.spellCatalog.spells) spell.name],
       onCorrect: (index) =>
           (label) => _controller().correctKnownSpell(index, label),
+      onKeepAsPlaceholder: (index, rawValue) =>
+          _controller().keepKnownSpellAsPlaceholder(index, rawValue),
+      placeholderFieldKey: 'knownSpells',
     );
 
     // Argent.
@@ -616,7 +662,11 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
             text,
       ];
       if (texts.isNotEmpty) {
-        addSummary('Objets personnalisés', texts.join(', '), badge: true);
+        addSummary(
+          'Objets personnalisés',
+          texts.join(', '),
+          badgeText: 'Personnalisé',
+        );
       }
     }
 
@@ -747,20 +797,98 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
   XmlImportReviewController _controller() => ref.read(_provider.notifier);
 
+  /// Exécute [action] (un des `keepXxxAsPlaceholder` de
+  /// [XmlImportReviewController]) pour le champ [fieldKey]
+  /// (`'race'`/`'background'`/`'innateSpells'`/`'knownSpells'`, voir la doc
+  /// de [_pendingPlaceholderFields]) et affiche un message d'erreur simple
+  /// (`SnackBar`) en cas d'échec (réseau, RLS...) — le champ concerné reste
+  /// alors non résolu, [action] n'ayant modifié aucun état avant de lancer
+  /// son exception (voir sa documentation).
+  ///
+  /// Garde de ré-entrance : si [fieldKey] est déjà dans
+  /// [_pendingPlaceholderFields] (un appel précédent pour ce même champ n'a
+  /// pas encore résolu), cette méthode ne fait rien — un second appel
+  /// concurrent avec le même nom brut créerait sinon une seconde entrée
+  /// dupliquée dans le catalogue partagé (voir sa documentation). Pendant
+  /// l'appel, [fieldKey] reste dans l'ensemble pour que la carte d'alerte
+  /// correspondante s'affiche "en cours" et cesse d'être tappable (voir
+  /// [_AlertCard.isPending]) — pas de [_SavingOverlay] plein écran, cette
+  /// opération est locale à une seule carte, pas à tout l'écran.
+  Future<void> _keepAsPlaceholder(
+    String fieldKey,
+    Future<void> Function() action,
+  ) async {
+    if (_pendingPlaceholderFields.contains(fieldKey)) return;
+    setState(() => _pendingPlaceholderFields.add(fieldKey));
+    try {
+      await action();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Impossible d'enregistrer cet élément. Réessayez."),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _pendingPlaceholderFields.remove(fieldKey));
+      } else {
+        _pendingPlaceholderFields.remove(fieldKey);
+      }
+    }
+  }
+
   void _addSingleCatalogField<T>({
-    required void Function(String title, String value, {bool badge}) addSummary,
-    required void Function(String title, String message, VoidCallback onTap)
+    required void Function(String title, String value, {String? badgeText})
+    addSummary,
+    required void Function(
+      String title,
+      String message,
+      VoidCallback onTap, {
+      bool isPending,
+    })
     addAlert,
     required String title,
     required XmlFieldResolution<T> resolution,
     required String Function(T value) valueOf,
     required List<String> candidates,
     required void Function(String label) onCorrect,
+
+    /// `null` (défaut) = comportement inchangé, "Garder comme élément
+    /// personnalisé" reste un no-op — utilisé par Classe (hors périmètre de
+    /// la tâche placeholder). Non `null` (Race/Historique) : appelé à la
+    /// place du no-op quand l'utilisateur choisit "Garder comme élément
+    /// personnalisé", crée une vraie entrée placeholder — voir
+    /// `XmlImportReviewController.keepRaceAsPlaceholder`/
+    /// `keepBackgroundAsPlaceholder`. Doit toujours être fourni avec
+    /// [placeholderFieldKey] (voir sa doc).
+    Future<void> Function(String rawValue)? onKeepAsPlaceholder,
+
+    /// `null` (défaut) = jamais de badge "Donnée incomplète" — utilisé par
+    /// Classe. Non `null` (Race/Historique) : lu sur la valeur reconnue pour
+    /// afficher ce badge quand elle a été créée comme placeholder
+    /// (`isIncomplete == true`).
+    bool Function(T value)? isIncompleteOf,
+
+    /// Identifiant de champ passé à [_keepAsPlaceholder] (voir la doc de
+    /// [_pendingPlaceholderFields]) — requis dès que [onKeepAsPlaceholder]
+    /// est fourni (Race : `'race'`, Historique : `'background'`), `null`
+    /// sinon (Classe).
+    String? placeholderFieldKey,
   }) {
     switch (resolution) {
       case XmlFieldResolutionRecognized<T>(:final value):
-        addSummary(title, valueOf(value));
+        addSummary(
+          title,
+          valueOf(value),
+          badgeText: (isIncompleteOf?.call(value) ?? false)
+              ? 'Donnée incomplète'
+              : null,
+        );
       case XmlFieldResolutionUnrecognized<T>(:final rawValue):
+        final isPending =
+            placeholderFieldKey != null &&
+            _pendingPlaceholderFields.contains(placeholderFieldKey);
         addAlert(
           title,
           '$title non reconnu(e) : "$rawValue"',
@@ -772,11 +900,20 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
                 sheetTitle: 'CORRIGER : ${title.toUpperCase()}',
                 candidates: candidates,
                 onConfirm: (label) {
-                  if (label != null) onCorrect(label);
+                  if (label != null) {
+                    onCorrect(label);
+                  } else if (onKeepAsPlaceholder != null &&
+                      placeholderFieldKey != null) {
+                    _keepAsPlaceholder(
+                      placeholderFieldKey,
+                      () => onKeepAsPlaceholder(rawValue),
+                    );
+                  }
                 },
               ),
             ],
           ),
+          isPending: isPending,
         );
       case XmlFieldResolutionCustom<T>():
         // Ne s'applique à aucun des champs consommés par cette méthode.
@@ -785,7 +922,8 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
   }
 
   void _addCodedField({
-    required void Function(String title, String value, {bool badge}) addSummary,
+    required void Function(String title, String value, {String? badgeText})
+    addSummary,
     required void Function(String title, String message, VoidCallback onTap)
     addAlert,
     required String title,
@@ -823,7 +961,8 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
   void _addGroupedField({
     required BuildContext context,
-    required void Function(String title, String value, {bool badge}) addSummary,
+    required void Function(String title, String value, {String? badgeText})
+    addSummary,
     required void Function(String title, String message, VoidCallback onTap)
     addAlert,
     required String title,
@@ -875,7 +1014,8 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
   void _addToolOrLanguageField<T>({
     required BuildContext context,
-    required void Function(String title, String value, {bool badge}) addSummary,
+    required void Function(String title, String value, {String? badgeText})
+    addSummary,
     required void Function(String title, String message, VoidCallback onTap)
     addAlert,
     required String title,
@@ -929,16 +1069,45 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
   void _addSpellField({
     required BuildContext context,
-    required void Function(String title, String value, {bool badge}) addSummary,
-    required void Function(String title, String message, VoidCallback onTap)
+    required void Function(String title, String value, {String? badgeText})
+    addSummary,
+    required void Function(
+      String title,
+      String message,
+      VoidCallback onTap, {
+      bool isPending,
+    })
     addAlert,
     required String title,
     required List<XmlSpellResolution> entries,
     required List<String> candidates,
     required void Function(String label) Function(int index) onCorrect,
+
+    /// `null` = comportement inchangé (no-op) ; non `null` (Sorts innés/
+    /// connus) : appelé avec l'index de l'entrée et le nom brut à la place du
+    /// no-op — voir la doc de [_addSingleCatalogField.onKeepAsPlaceholder]
+    /// pour le même principe. Doit toujours être fourni avec
+    /// [placeholderFieldKey] (voir sa doc).
+    Future<void> Function(int index, String rawValue)? onKeepAsPlaceholder,
+
+    /// Identifiant de champ passé à [_keepAsPlaceholder] (voir la doc de
+    /// [_pendingPlaceholderFields]) — requis dès que [onKeepAsPlaceholder]
+    /// est fourni (`'innateSpells'`/`'knownSpells'`). Un seul identifiant
+    /// pour tout le champ, pas un par sort : voir la doc de
+    /// [_pendingPlaceholderFields] pour la rationale (une seule
+    /// [_AlertCard] consolidée pour tout le champ).
+    String? placeholderFieldKey,
   }) {
     if (entries.isEmpty) return;
     final recognizedLabels = <String>[];
+    // Un seul badge pour toute la ligne consolidée (voir `_SummaryCard`, qui
+    // ne porte qu'un badge par carte) : dès qu'un sort reconnu de ce champ
+    // est un placeholder incomplet, toute la ligne "Sorts innés"/"Sorts
+    // connus" l'affiche — perte de granularité assumée (impossible de savoir
+    // lequel des sorts joints par ", " est concerné rien qu'à la lecture de
+    // la carte), même compromis que le reste de ce champ consolidé (déjà
+    // sans distinction individuelle dans son affichage `recognizedLabels`).
+    var hasIncompleteEntry = false;
     final alertEntries = <_CorrectableEntry>[];
     for (var index = 0; index < entries.length; index++) {
       final XmlFieldResolution<SpellOption> resolution =
@@ -946,6 +1115,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       switch (resolution) {
         case XmlFieldResolutionRecognized<SpellOption>(:final value):
           recognizedLabels.add(value.name);
+          if (value.isIncomplete) hasIncompleteEntry = true;
         case XmlFieldResolutionUnrecognized<SpellOption>(:final rawValue):
           alertEntries.add(
             _CorrectableEntry(
@@ -953,7 +1123,15 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
               sheetTitle: 'CORRIGER : ${title.toUpperCase()}',
               candidates: candidates,
               onConfirm: (label) {
-                if (label != null) onCorrect(index)(label);
+                if (label != null) {
+                  onCorrect(index)(label);
+                } else if (onKeepAsPlaceholder != null &&
+                    placeholderFieldKey != null) {
+                  _keepAsPlaceholder(
+                    placeholderFieldKey,
+                    () => onKeepAsPlaceholder(index, rawValue),
+                  );
+                }
               },
             ),
           );
@@ -963,9 +1141,16 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     }
 
     if (recognizedLabels.isNotEmpty) {
-      addSummary(title, recognizedLabels.join(', '));
+      addSummary(
+        title,
+        recognizedLabels.join(', '),
+        badgeText: hasIncompleteEntry ? 'Donnée incomplète' : null,
+      );
     }
     if (alertEntries.isNotEmpty) {
+      final isPending =
+          placeholderFieldKey != null &&
+          _pendingPlaceholderFields.contains(placeholderFieldKey);
       addAlert(
         title,
         alertEntries.length == 1
@@ -973,13 +1158,15 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
             : '${alertEntries.length} sorts non catalogués — à corriger '
                   'manuellement.',
         () => _openCorrectionFlow(cardTitle: title, entries: alertEntries),
+        isPending: isPending,
       );
     }
   }
 
   void _addQuantifiedField({
     required BuildContext context,
-    required void Function(String title, String value, {bool badge}) addSummary,
+    required void Function(String title, String value, {String? badgeText})
+    addSummary,
     required void Function(String title, String message, VoidCallback onTap)
     addAlert,
     required String title,
@@ -1218,20 +1405,23 @@ class _Header extends StatelessWidget {
 
 /// Carte de résumé en lecture seule (composant nouveau, voir la spec
 /// visuelle) : jamais tappable, jamais `font.display` pour une valeur
-/// importée. [badge] affiche "Personnalisé" en petit texte discret
-/// (`textMuted`) — seul usage à ce jour : "Objets personnalisés" (toujours
-/// `XmlFieldResolution.custom`, jamais un problème, voir sa documentation de
-/// classe).
+/// importée. [badgeText], quand non `null`, affiche un petit texte discret
+/// (`textMuted`) sous la valeur — généralisé (`String?` plutôt qu'un `bool`
+/// figé sur un seul libellé) pour servir deux usages désormais : "Personnalisé"
+/// pour "Objets personnalisés" (toujours `XmlFieldResolution.custom`, jamais
+/// un problème, voir sa documentation de classe), et "Donnée incomplète" pour
+/// une race/un historique/un sort `recognized` mais créé comme placeholder
+/// (`isIncomplete == true`, voir `XmlImportPlaceholderCatalogRepository`).
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
     required this.title,
     required this.value,
-    this.badge = false,
+    this.badgeText,
   });
 
   final String title;
   final String value;
-  final bool badge;
+  final String? badgeText;
 
   @override
   Widget build(BuildContext context) {
@@ -1266,10 +1456,10 @@ class _SummaryCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (badge) ...[
+                if (badgeText != null) ...[
                   const SizedBox(height: 2),
                   Text(
-                    'Personnalisé',
+                    badgeText!,
                     style: AppTypography.body(
                       fontSize: 11,
                       color: AppColors.textMuted,
@@ -1334,23 +1524,36 @@ class _InfoCard extends StatelessWidget {
 /// pas de chevron (corrigé lors du recettage `direction-artistique` du
 /// 13/09, conformément à la maquette qui ne montre pas d'affordance
 /// chevron).
+///
+/// [isPending] (relecture `code-reviewer` — garde de ré-entrance de "Garder
+/// comme élément personnalisé", voir la doc de
+/// `_XmlImportReviewScreenState._pendingPlaceholderFields`) : `true` tant
+/// qu'un appel `keepXxxAsPlaceholder` est en cours pour le champ que cette
+/// carte représente — [onTap] devient sans effet (pas de second appel
+/// concurrent possible) et le message est remplacé par "Enregistrement en
+/// cours..." avec un petit indicateur de chargement à la place de l'icône
+/// d'avertissement, à la place de l'icône seule habituelle. Pas de spinner
+/// plein écran (contrairement à `_SavingOverlay`) : l'état "en cours" reste
+/// local à cette seule carte.
 class _AlertCard extends StatelessWidget {
   const _AlertCard({
     required this.title,
     required this.message,
     required this.onTap,
+    this.isPending = false,
   });
 
   final String title;
   final String message;
   final VoidCallback onTap;
+  final bool isPending;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: isPending ? null : onTap,
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Container(
           constraints: const BoxConstraints(minHeight: 44),
@@ -1381,7 +1584,7 @@ class _AlertCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      message,
+                      isPending ? 'Enregistrement en cours...' : message,
                       style: AppTypography.body(
                         fontSize: 13,
                         color: AppColors.textSecondary,
@@ -1391,11 +1594,21 @@ class _AlertCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              const Icon(
-                Icons.warning_amber_rounded,
-                color: AppColors.accentBrick,
-                size: 20,
-              ),
+              if (isPending)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.accentBrick,
+                  ),
+                )
+              else
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: AppColors.accentBrick,
+                  size: 20,
+                ),
             ],
           ),
         ),

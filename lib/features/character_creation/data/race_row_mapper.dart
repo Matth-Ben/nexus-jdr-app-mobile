@@ -83,6 +83,9 @@ abstract final class RaceRowMapper {
   /// noms déjà résolus (`names`, clés en `String`, voir [collectIds]). Un id
   /// sans traduction résolue retombe sur un libellé générique ("Race #12")
   /// plutôt que de crasher ou d'afficher `null`.
+  ///
+  /// `row['is_incomplete']` absent (cache offline écrit avant l'introduction
+  /// de cette colonne) retombe sur `false` — voir [RaceOption.isIncomplete].
   static RaceOption toRaceOption(
     Map<String, dynamic> row, {
     required Map<String, String> names,
@@ -93,6 +96,7 @@ abstract final class RaceRowMapper {
       name: names[id.toString()] ?? 'Race #$id',
       abilityBonuses: parseAbilityBonuses(row['ability_bonuses']),
       traits: parseTraits(row['traits']),
+      isIncomplete: row['is_incomplete'] as bool? ?? false,
     );
   }
 

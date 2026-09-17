@@ -3,16 +3,20 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../../character_creation/domain/alignment_catalog.dart';
 import '../../../character_creation/domain/background_catalog.dart';
+import '../../../character_creation/domain/background_option.dart';
 import '../../../character_creation/domain/class_catalog.dart';
 import '../../../character_creation/domain/class_option.dart';
 import '../../../character_creation/domain/item_catalog.dart';
 import '../../../character_creation/domain/language_catalog.dart';
 import '../../../character_creation/domain/race_catalog.dart';
+import '../../../character_creation/domain/race_option.dart';
 import '../../../character_creation/domain/skill_catalog.dart';
 import '../../../character_creation/domain/spell_catalog.dart';
+import '../../../character_creation/domain/spell_option.dart';
 import '../../../character_creation/domain/tool_catalog.dart';
 import '../../../character_creation/presentation/providers/character_creation_providers.dart';
 import '../../data/xml_character_import_parser.dart';
+import '../../data/xml_import_placeholder_catalog_repository.dart';
 import '../../data/xml_import_repository.dart';
 import '../../domain/xml_character_import_resolved.dart';
 import '../../domain/xml_character_import_resolver.dart';
@@ -47,6 +51,18 @@ class XmlImportInvalidFileFailure implements Exception {
 @Riverpod(keepAlive: true)
 XmlImportRepository xmlImportRepository(Ref ref) {
   return SupabaseXmlImportRepository(ref.watch(supabaseClientProvider));
+}
+
+/// Passerelle "Garder comme élément personnalisé" pour Race/Historique/
+/// Sorts (voir la doc de classe de [XmlImportPlaceholderCatalogRepository])
+/// — même patron que [xmlImportRepositoryProvider] ci-dessus.
+@Riverpod(keepAlive: true)
+XmlImportPlaceholderCatalogRepository xmlImportPlaceholderCatalogRepository(
+  Ref ref,
+) {
+  return SupabaseXmlImportPlaceholderCatalogRepository(
+    ref.watch(supabaseClientProvider),
+  );
 }
 
 /// Données complètement chargées et résolues pour l'écran de vérification de
@@ -308,6 +324,72 @@ class XmlImportReviewController extends _$XmlImportReviewController {
     final list = [...current.resolved.knownSpells];
     if (index < 0 || index >= list.length) return;
     list[index] = (level: list[index].level, resolution: match);
+    _updateResolved(current.resolved.copyWith(knownSpells: list));
+  }
+
+  /// Crée (ou retrouve) une race placeholder pour [rawName] — voir la doc de
+  /// classe de [XmlImportPlaceholderCatalogRepository] — et résout `race`
+  /// vers cette nouvelle entrée [XmlFieldResolution.recognized] plutôt que de
+  /// laisser le champ [XmlFieldResolution.unrecognized] (comportement de
+  /// "Garder comme élément personnalisé" avant cette méthode). Propage
+  /// l'exception d'origine en cas d'échec (réseau, RLS...) — à l'appelant
+  /// (l'écran) de l'attraper pour afficher un message d'erreur, le champ
+  /// reste alors non résolu (aucun état modifié ici avant la fin de l'appel
+  /// réseau).
+  Future<void> keepRaceAsPlaceholder(String rawName) async {
+    final repository = ref.read(xmlImportPlaceholderCatalogRepositoryProvider);
+    final option = await repository.findOrCreateRace(rawName);
+    final current = state.value;
+    if (current == null) return;
+    _updateResolved(
+      current.resolved.copyWith(
+        race: XmlFieldResolution<RaceOption>.recognized(option),
+      ),
+    );
+  }
+
+  /// Même mécanique que [keepRaceAsPlaceholder], pour `background`.
+  Future<void> keepBackgroundAsPlaceholder(String rawName) async {
+    final repository = ref.read(xmlImportPlaceholderCatalogRepositoryProvider);
+    final option = await repository.findOrCreateBackground(rawName);
+    final current = state.value;
+    if (current == null) return;
+    _updateResolved(
+      current.resolved.copyWith(
+        background: XmlFieldResolution<BackgroundOption>.recognized(option),
+      ),
+    );
+  }
+
+  /// Même mécanique que [keepRaceAsPlaceholder], pour l'entrée [index] de
+  /// `innateSpells`.
+  Future<void> keepInnateSpellAsPlaceholder(int index, String rawName) async {
+    final repository = ref.read(xmlImportPlaceholderCatalogRepositoryProvider);
+    final option = await repository.findOrCreateSpell(rawName);
+    final current = state.value;
+    if (current == null) return;
+    final list = [...current.resolved.innateSpells];
+    if (index < 0 || index >= list.length) return;
+    list[index] = (
+      level: list[index].level,
+      resolution: XmlFieldResolution<SpellOption>.recognized(option),
+    );
+    _updateResolved(current.resolved.copyWith(innateSpells: list));
+  }
+
+  /// Même mécanique que [keepRaceAsPlaceholder], pour l'entrée [index] de
+  /// `knownSpells`.
+  Future<void> keepKnownSpellAsPlaceholder(int index, String rawName) async {
+    final repository = ref.read(xmlImportPlaceholderCatalogRepositoryProvider);
+    final option = await repository.findOrCreateSpell(rawName);
+    final current = state.value;
+    if (current == null) return;
+    final list = [...current.resolved.knownSpells];
+    if (index < 0 || index >= list.length) return;
+    list[index] = (
+      level: list[index].level,
+      resolution: XmlFieldResolution<SpellOption>.recognized(option),
+    );
     _updateResolved(current.resolved.copyWith(knownSpells: list));
   }
 
