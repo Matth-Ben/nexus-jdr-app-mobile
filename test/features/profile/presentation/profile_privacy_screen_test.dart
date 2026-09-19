@@ -1,11 +1,13 @@
 // Tests de widget de l'écran "Confidentialité"
 // (`presentation/profile_privacy_screen.dart`) — bandeau bois "CONFIDENTIALITÉ"
 // + retour, section "MES DONNÉES" (3 tuiles regroupées dans un
-// `SettingsListCard`, icônes dédiées, ouverture de la bonne sheet/SnackBar,
-// icône de fin `north_east` sur les 2 tuiles qui sortent de l'app/ouvrent une
-// sheet système), section "ZONE DANGEREUSE" (`DestructiveMenuTile` isolée
-// "Supprimer mon compte", jamais une simple tuile) — recettage
-// direction-artistique du 13/09/2026.
+// `SettingsListCard`, icônes dédiées, ouverture de la bonne sheet/route,
+// icône de fin `north_east` uniquement sur "Autorisations de l'appareil"
+// [qui ouvre une sheet système] — "Politique de confidentialité" garde le
+// chevron par défaut depuis qu'elle pousse l'écran interne
+// `ProfilePrivacyPolicyScreen`), section "ZONE DANGEREUSE"
+// (`DestructiveMenuTile` isolée "Supprimer mon compte", jamais une simple
+// tuile) — recettage direction-artistique du 13/09/2026.
 //
 // Aucune donnée à charger (écran 100% synchrone) : `currentUserProvider`
 // tout de même overridé (`authRepositoryProvider`/`connectivityCheckerProvider`
@@ -26,6 +28,7 @@ import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/data/data_export_repository.dart';
 import 'package:personnages/features/profile/presentation/profile_delete_account_screen.dart';
+import 'package:personnages/features/profile/presentation/profile_privacy_policy_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_privacy_screen.dart';
 import 'package:personnages/features/profile/presentation/providers/data_export_providers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -128,6 +131,10 @@ Future<void> _pumpScreen(WidgetTester tester) async {
               path: '/profile/privacy/delete-account',
               builder: (context, state) => const ProfileDeleteAccountScreen(),
             ),
+            GoRoute(
+              path: '/profile/privacy/policy',
+              builder: (context, state) => const ProfilePrivacyPolicyScreen(),
+            ),
           ],
         ),
       ),
@@ -170,8 +177,9 @@ void main() {
   );
 
   testWidgets(
-    '"Exporter mes données" garde le chevron par défaut (action interne), '
-    'les 2 autres tuiles de "MES DONNÉES" ont l\'icône de lien externe',
+    '"Exporter mes données" et "Politique de confidentialité" gardent le '
+    'chevron par défaut (actions internes), seule "Autorisations de '
+    'l\'appareil" a l\'icône de lien externe (ouvre une sheet système)',
     (tester) async {
       await _pumpScreen(tester);
 
@@ -184,14 +192,14 @@ void main() {
           of: settingsCard,
           matching: find.byIcon(Icons.chevron_right),
         ),
-        findsOneWidget,
+        findsNWidgets(2),
       );
       expect(
         find.descendant(
           of: settingsCard,
           matching: find.byIcon(Icons.north_east),
         ),
-        findsNWidgets(2),
+        findsOneWidget,
       );
     },
   );
@@ -223,18 +231,16 @@ void main() {
     expect(find.text('EXPORT DE MES DONNÉES'), findsOneWidget);
   });
 
-  testWidgets(
-    'taper "Politique de confidentialité" affiche le SnackBar "Bientôt '
-    'disponible"',
-    (tester) async {
-      await _pumpScreen(tester);
+  testWidgets('taper "Politique de confidentialité" pousse l\'écran dédié '
+      '(/profile/privacy/policy)', (tester) async {
+    await _pumpScreen(tester);
 
-      await tester.tap(find.text('Politique de confidentialité'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Politique de confidentialité'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Bientôt disponible'), findsOneWidget);
-    },
-  );
+    expect(find.text('POLITIQUE DE CONFIDENTIALITÉ'), findsOneWidget);
+    expect(find.byType(ProfilePrivacyPolicyScreen), findsOneWidget);
+  });
 
   testWidgets('taper "Autorisations de l\'appareil" ouvre la sheet éponyme', (
     tester,

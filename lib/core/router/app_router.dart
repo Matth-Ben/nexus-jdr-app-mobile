@@ -27,10 +27,14 @@ import '../../features/groups/presentation/group_settings_screen.dart';
 import '../../features/join_story/presentation/join_character_step_screen.dart';
 import '../../features/join_story/presentation/join_code_step_screen.dart';
 import '../../features/join_story/presentation/join_confirmation_step_screen.dart';
+import '../../features/profile/presentation/profile_credits_screen.dart';
 import '../../features/profile/presentation/profile_delete_account_screen.dart';
 import '../../features/profile/presentation/profile_edit_screen.dart';
+import '../../features/profile/presentation/profile_faq_screen.dart';
 import '../../features/profile/presentation/profile_help_screen.dart';
+import '../../features/profile/presentation/profile_legal_screen.dart';
 import '../../features/profile/presentation/profile_notifications_screen.dart';
+import '../../features/profile/presentation/profile_privacy_policy_screen.dart';
 import '../../features/profile/presentation/profile_privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/xml_import/presentation/xml_import_review_screen.dart';
@@ -172,6 +176,52 @@ GoRouter appRouter(Ref ref) {
         // `ProfileHelpScreen`.
         path: '/profile/help',
         builder: (context, state) => const ProfileHelpScreen(),
+      ),
+      GoRoute(
+        // Écran "Politique de confidentialité" (`features/profile/`),
+        // poussé depuis la tuile éponyme de `ProfilePrivacyScreen` — voir la
+        // doc de classe de `ProfilePrivacyPolicyScreen`.
+        path: '/profile/privacy/policy',
+        builder: (context, state) => const ProfilePrivacyPolicyScreen(),
+      ),
+      GoRoute(
+        // Écran "Mentions légales / CGU" (`features/profile/`), poussé
+        // depuis la tuile éponyme de `ProfileHelpScreen` — voir la doc de
+        // classe de `ProfileLegalScreen`.
+        path: '/profile/help/legal',
+        builder: (context, state) => const ProfileLegalScreen(),
+      ),
+      GoRoute(
+        // Écran "Crédits & licences" (`features/profile/`), poussé depuis
+        // la tuile éponyme de `ProfileHelpScreen` — voir la doc de classe de
+        // `ProfileCreditsScreen`.
+        path: '/profile/help/credits',
+        builder: (context, state) => const ProfileCreditsScreen(),
+      ),
+      GoRoute(
+        // Écran "Questions fréquentes" (`features/profile/`) — poussé sans
+        // query (`?question=...`) depuis "Voir toutes les questions", ou
+        // avec (pré-ouverture de la question visée) depuis une des 3 tuiles
+        // question de `ProfileHelpScreen` — voir la doc de classe de
+        // `ProfileFaqScreen`. `?question=N` en query plutôt qu'`extra` :
+        // même rationale que `/characters/:id/level-up` (`?level=...`), un
+        // simple entier reste inspectable/deep-linkable sans avoir besoin
+        // de transiter par `extra`.
+        //
+        // `int.tryParse` (jamais `int.parse`) : contrairement à
+        // `?level=...`, cette route revendique explicitement d'être
+        // deep-linkable, donc un `?question=` malformé (non numérique,
+        // vide) doit être ignoré sans faire planter le builder de route —
+        // `ProfileFaqScreen` traite déjà `null`/un id hors bornes de façon
+        // gracieuse (aucune question pré-ouverte), même filet de sécurité
+        // appliqué ici en amont.
+        path: '/profile/help/faq',
+        builder: (context, state) {
+          final question = state.uri.queryParameters['question'];
+          return ProfileFaqScreen(
+            initialQuestionId: question == null ? null : int.tryParse(question),
+          );
+        },
       ),
       GoRoute(
         // Écran dédié "Supprimer le compte" (`features/profile/`), poussé

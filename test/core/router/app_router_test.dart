@@ -51,7 +51,68 @@ GoRouter _buildJoinRoutesTestRouter(String initialLocation) {
   );
 }
 
+/// Même route `/profile/help/faq` que `appRouter` (`core/router/app_router.dart`,
+/// builder reproduit à l'identique) — isolée ici (plutôt qu'un accès direct à
+/// `appRouter`, qui dépend d'un `SupabaseClient` réel, même rationale que
+/// `_buildJoinRoutesTestRouter`) pour vérifier que `int.tryParse` protège
+/// bien le builder contre un `?question=` malformé (non-régression suggérée
+/// en revue de code : `int.parse` aurait levé une `FormatException` non
+/// rattrapée pour une valeur non numérique).
+GoRouter _buildFaqRouteTestRouter(String initialLocation) {
+  return GoRouter(
+    initialLocation: initialLocation,
+    routes: [
+      GoRoute(
+        path: '/profile/help/faq',
+        builder: (context, state) {
+          final question = state.uri.queryParameters['question'];
+          return Scaffold(
+            body: Center(
+              child: Text(
+                'FAQ id=${question == null ? null : int.tryParse(question)}',
+              ),
+            ),
+          );
+        },
+      ),
+    ],
+  );
+}
+
 void main() {
+  group('route /profile/help/faq : ?question= malformé ne fait jamais '
+      'planter le builder', () {
+    testWidgets('?question=abc (non numérique) résout la route sans '
+        'exception, id considéré absent (comme sans query)', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: _buildFaqRouteTestRouter(
+            '/profile/help/faq?question=abc',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('FAQ id=null'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('?question=3 (numérique) résout bien l\'id attendu', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: _buildFaqRouteTestRouter(
+            '/profile/help/faq?question=3',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('FAQ id=3'), findsOneWidget);
+    });
+  });
+
   group('routes /join* : /join/:code (deep link) ne masque jamais /join/step-2 '
       'et /join/step-3 (segments statiques)', () {
     testWidgets('/join/step-2?code=AB3F7K résout la route statique '

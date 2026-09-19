@@ -2,12 +2,14 @@
 // (`presentation/profile_help_screen.dart`) :
 // - tests de widget : bandeau bois + retour, les 3 en-têtes de section
 //   ("QUESTIONS FRÉQUENTES"/"NOUS CONTACTER"/"À PROPOS"), les 3 cartes
-//   `SettingsListCard` regroupant leurs tuiles (icônes dédiées), le
-//   `SnackBar` "Bientôt disponible" des tuiles placeholder (3 questions FAQ +
-//   "Voir toutes les questions" + "Mentions légales / CGU" + "Crédits &
-//   licences"), l'ouverture de la sheet "SIGNALER UN BUG" (déplacée ici
-//   depuis le hub `profile_screen.dart`, voir sa doc de classe), les 2 textes
-//   d'aide sous "NOUS CONTACTER"/"À PROPOS", le pied de page version.
+//   `SettingsListCard` regroupant leurs tuiles (icônes dédiées), la
+//   navigation des 5 tuiles qui poussent désormais un écran réel (3
+//   questions FAQ + "Voir toutes les questions" vers `ProfileFaqScreen`,
+//   "Mentions légales / CGU" vers `ProfileLegalScreen`, "Crédits & licences"
+//   vers `ProfileCreditsScreen`), l'ouverture de la sheet "SIGNALER UN BUG"
+//   (déplacée ici depuis le hub `profile_screen.dart`, voir sa doc de
+//   classe), les 2 textes d'aide sous "NOUS CONTACTER"/"À PROPOS", le pied
+//   de page version.
 // - tests unitaires de [buildSupportEmailUri] (adresse/sujet/corps du
 //   message) — même fichier que les tests de widget de l'écran qui
 //   l'utilise, même organisation que `computeAuthRedirect` dans
@@ -31,7 +33,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:personnages/core/widgets/settings_list_card.dart';
+import 'package:personnages/features/profile/presentation/profile_credits_screen.dart';
+import 'package:personnages/features/profile/presentation/profile_faq_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_help_screen.dart';
+import 'package:personnages/features/profile/presentation/profile_legal_screen.dart';
 
 Future<void> _pumpScreen(WidgetTester tester) async {
   await tester.pumpWidget(
@@ -54,6 +59,25 @@ Future<void> _pumpScreen(WidgetTester tester) async {
             GoRoute(
               path: '/profile/help',
               builder: (context, state) => const ProfileHelpScreen(),
+            ),
+            GoRoute(
+              path: '/profile/help/legal',
+              builder: (context, state) => const ProfileLegalScreen(),
+            ),
+            GoRoute(
+              path: '/profile/help/credits',
+              builder: (context, state) => const ProfileCreditsScreen(),
+            ),
+            GoRoute(
+              path: '/profile/help/faq',
+              builder: (context, state) {
+                final question = state.uri.queryParameters['question'];
+                return ProfileFaqScreen(
+                  initialQuestionId: question == null
+                      ? null
+                      : int.parse(question),
+                );
+              },
             ),
           ],
         ),
@@ -87,8 +111,10 @@ void main() {
   });
 
   testWidgets('section "QUESTIONS FRÉQUENTES" : 3 questions + "Voir toutes les '
-      'questions" (icône de lien externe), regroupées dans un '
-      'SettingsListCard', (tester) async {
+      'questions" (chevron par défaut, poussent un écran interne, pas '
+      'l\'icône de lien externe), regroupées dans un SettingsListCard', (
+    tester,
+  ) async {
     await _pumpScreen(tester);
 
     for (final label in const [
@@ -99,29 +125,72 @@ void main() {
     ]) {
       expect(find.text(label), findsOneWidget);
     }
-    expect(find.byIcon(Icons.north_east), findsOneWidget);
+    expect(find.byIcon(Icons.north_east), findsNothing);
   });
 
-  for (final label in const [
-    'Comment importer un personnage aidedd.org ?',
-    'Comment rejoindre l\'histoire de mon MJ ?',
-    'Mes personnages sont-ils sauvegardés hors ligne ?',
-    'Voir toutes les questions',
-    'Mentions légales / CGU',
-    'Crédits & licences',
-  ]) {
-    testWidgets('taper "$label" affiche le SnackBar "Bientôt disponible"', (
-      tester,
-    ) async {
-      await _pumpScreen(tester);
+  for (final entry in const {
+    'Comment importer un personnage aidedd.org ?': 1,
+    'Comment rejoindre l\'histoire de mon MJ ?': 2,
+    'Mes personnages sont-ils sauvegardés hors ligne ?': 3,
+  }.entries) {
+    testWidgets(
+      'taper "${entry.key}" pousse ProfileFaqScreen en pré-ouvrant la '
+      'question ${entry.value}',
+      (tester) async {
+        await _pumpScreen(tester);
 
-      await tester.ensureVisible(find.text(label));
-      await tester.tap(find.text(label));
-      await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text(entry.key));
+        await tester.tap(find.text(entry.key));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Bientôt disponible'), findsOneWidget);
-    });
+        expect(find.text('QUESTIONS FRÉQUENTES'), findsOneWidget);
+        final screen = tester.widget<ProfileFaqScreen>(
+          find.byType(ProfileFaqScreen),
+        );
+        expect(screen.initialQuestionId, entry.value);
+      },
+    );
   }
+
+  testWidgets('taper "Voir toutes les questions" pousse ProfileFaqScreen sans '
+      'pré-ouverture', (tester) async {
+    await _pumpScreen(tester);
+
+    await tester.ensureVisible(find.text('Voir toutes les questions'));
+    await tester.tap(find.text('Voir toutes les questions'));
+    await tester.pumpAndSettle();
+
+    final screen = tester.widget<ProfileFaqScreen>(
+      find.byType(ProfileFaqScreen),
+    );
+    expect(screen.initialQuestionId, isNull);
+  });
+
+  testWidgets('taper "Mentions légales / CGU" pousse l\'écran dédié', (
+    tester,
+  ) async {
+    await _pumpScreen(tester);
+
+    await tester.ensureVisible(find.text('Mentions légales / CGU'));
+    await tester.tap(find.text('Mentions légales / CGU'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('MENTIONS LÉGALES / CGU'), findsOneWidget);
+    expect(find.byType(ProfileLegalScreen), findsOneWidget);
+  });
+
+  testWidgets('taper "Crédits & licences" pousse l\'écran dédié', (
+    tester,
+  ) async {
+    await _pumpScreen(tester);
+
+    await tester.ensureVisible(find.text('Crédits & licences'));
+    await tester.tap(find.text('Crédits & licences'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CRÉDITS & LICENCES'), findsOneWidget);
+    expect(find.byType(ProfileCreditsScreen), findsOneWidget);
+  });
 
   testWidgets(
     'section "NOUS CONTACTER" : "Contacter le support" + "Signaler un bug" '

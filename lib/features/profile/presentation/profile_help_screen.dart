@@ -27,26 +27,30 @@ import 'widgets/report_bug_sheet.dart';
 /// `SettingsListCard` — recettage direction-artistique du 13/09/2026.
 ///
 /// - "QUESTIONS FRÉQUENTES" : 3 vraies questions + "Voir toutes les
-///   questions" (icône de fin `Icons.north_east`, même convention que
-///   `ProfilePrivacyScreen` pour une action qui sortirait de l'app/ouvrirait
-///   un centre d'aide dédié) — remplace l'ancienne tuile générique unique
-///   "FAQ / Centre d'aide".
+///   questions" — remplace l'ancienne tuile générique unique "FAQ / Centre
+///   d'aide". Les 3 questions poussent `ProfileFaqScreen`
+///   (`/profile/help/faq?question=N`) en pré-ouvrant leur question
+///   respective (1/2/3 dans `ProfileFaqScreen._faqItems`) ; "Voir toutes les
+///   questions" pousse le même écran sans pré-ouverture
+///   (`/profile/help/faq`) — les 4 tuiles gardent le chevron par défaut
+///   (poussent un écran interne, pas une action qui sort de l'app/ouvre une
+///   sheet système, seul cas où `MenuTile.trailingIcon: Icons.north_east`
+///   est réservé — voir sa doc de classe).
 /// - "NOUS CONTACTER" : "Contacter le support" (déjà existant sur cet écran)
 ///   + "Signaler un bug", **déplacée ici depuis le hub `ProfileScreen`**
 ///   (retirée de là au recettage du 13/09/2026, voir la doc de classe de
 ///   `ProfileScreen` — même action [showReportBugSheet], câblée à
 ///   l'identique).
-/// - "À PROPOS" : "Mentions légales / CGU" (déjà existant) + "Crédits &
-///   licences" (nouvelle tuile, pas encore de contenu réel).
+/// - "À PROPOS" : "Mentions légales / CGU" (pousse `ProfileLegalScreen`,
+///   `/profile/help/legal`) + "Crédits & licences" (pousse
+///   `ProfileCreditsScreen`, `/profile/help/credits`).
 ///
-/// Aucune des 3 questions FAQ, "Voir toutes les questions", "Crédits &
-/// licences" et "Mentions légales / CGU" ne sont encore implémentées : même
-/// `SnackBar` "Bientôt disponible" que `ProfileScreen._showComingSoon`/
-/// `ProfilePrivacyScreen._showComingSoon`, réutilisé mot pour mot.
 /// "Contacter le support" (ouvre le client e-mail natif via `url_launcher`,
 /// voir [buildSupportEmailUri]) et "Signaler un bug" (ouvre
-/// [showReportBugSheet]) restent les 2 seules actions réellement
-/// fonctionnelles de cet écran.
+/// [showReportBugSheet]) restent les 2 seules actions de cet écran à ne pas
+/// pousser une route `go_router` — toutes les autres tuiles de cet écran
+/// poussent désormais un écran réel, plus aucune tuile n'affiche
+/// `_showComingSoon` (retiré de ce fichier).
 ///
 /// Pied de page version identique à `ProfileScreen._FooterVersion`
 /// ([_FooterVersion] ci-dessous, dupliqué plutôt qu'extrait en composant
@@ -91,13 +95,15 @@ class ProfileHelpScreen extends ConsumerWidget {
                         label:
                             'Comment importer un personnage '
                             'aidedd.org ?',
-                        onTap: () => _showComingSoon(context),
+                        onTap: () =>
+                            context.push('/profile/help/faq?question=1'),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.group_add_outlined,
                         label: 'Comment rejoindre l\'histoire de mon MJ ?',
-                        onTap: () => _showComingSoon(context),
+                        onTap: () =>
+                            context.push('/profile/help/faq?question=2'),
                       ),
                       MenuTile(
                         standalone: false,
@@ -105,14 +111,14 @@ class ProfileHelpScreen extends ConsumerWidget {
                         label:
                             'Mes personnages sont-ils sauvegardés hors '
                             'ligne ?',
-                        onTap: () => _showComingSoon(context),
+                        onTap: () =>
+                            context.push('/profile/help/faq?question=3'),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.menu_book_outlined,
                         label: 'Voir toutes les questions',
-                        trailingIcon: Icons.north_east,
-                        onTap: () => _showComingSoon(context),
+                        onTap: () => context.push('/profile/help/faq'),
                       ),
                     ],
                   ),
@@ -153,13 +159,13 @@ class ProfileHelpScreen extends ConsumerWidget {
                         standalone: false,
                         icon: Icons.gavel_outlined,
                         label: 'Mentions légales / CGU',
-                        onTap: () => _showComingSoon(context),
+                        onTap: () => context.push('/profile/help/legal'),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.copyright_outlined,
                         label: 'Crédits & licences',
-                        onTap: () => _showComingSoon(context),
+                        onTap: () => context.push('/profile/help/credits'),
                       ),
                     ],
                   ),
@@ -195,19 +201,9 @@ class ProfileHelpScreen extends ConsumerWidget {
     }
   }
 
-  /// Tap sur toute tuile pas encore implémentée (FAQ, "Voir toutes les
-  /// questions", "Mentions légales / CGU", "Crédits & licences" — spec
-  /// direction-artistique de la tâche) — même texte exact que
-  /// `ProfileScreen._showComingSoon`/`ProfilePrivacyScreen._showComingSoon`,
-  /// réutilisé mot pour mot plutôt qu'une nouvelle constante.
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Bientôt disponible')));
-  }
-
-  /// Tap sur "Contacter le support" — l'une des 2 seules actions réellement
-  /// fonctionnelles de cet écran (spec direction-artistique de la tâche),
-  /// avec [showReportBugSheet] pour "Signaler un bug".
+  /// Tap sur "Contacter le support" — avec [showReportBugSheet] pour
+  /// "Signaler un bug", l'une des 2 seules tuiles de cet écran à ne pas
+  /// pousser une route `go_router` (voir la doc de classe).
   ///
   /// `canLaunchUrl` est vérifié *avant* `launchUrl` (jamais une ouverture à
   /// l'aveugle) : `false` affiche un premier `SnackBar` dédié (aucune
