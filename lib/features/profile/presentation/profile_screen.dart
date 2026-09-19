@@ -56,31 +56,34 @@ class ProfileScreen extends ConsumerWidget {
       body: Column(
         children: [
           WoodBackHeader(title: 'PROFIL', onBack: () => _goBack(context)),
-          ColoredBox(
-            color: AppColors.woodMedium,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-              child: Column(
-                children: [
-                  ProfileAvatar(avatarUrl: avatarUrl),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    displayName,
-                    style: AppTypography.body(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 17,
-                      color: AppColors.textOnWood,
+          SizedBox(
+            width: double.infinity,
+            child: ColoredBox(
+              color: AppColors.woodMedium,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                child: Column(
+                  children: [
+                    ProfileAvatar(avatarUrl: avatarUrl),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      displayName,
+                      style: AppTypography.body(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        color: AppColors.textOnWood,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    email,
-                    style: AppTypography.body(
-                      fontSize: 13,
-                      color: AppColors.textOnWoodMuted,
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      email,
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        color: AppColors.textOnWoodMuted,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

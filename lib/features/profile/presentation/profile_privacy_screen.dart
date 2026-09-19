@@ -21,13 +21,19 @@ import 'widgets/export_data_sheet.dart';
 /// Gabarit B identique à `ProfileEditScreen` (`WoodBackHeader` + corps
 /// parchemin scrollable) : une section "MES DONNÉES" (3 tuiles regroupées
 /// dans un `SettingsListCard` — "Exporter mes données", "Politique de
-/// confidentialité", "Autorisations de l'appareil" — les 2 dernières avec
-/// une icône de fin `Icons.north_east` puisqu'elles sortent de l'app/ouvrent
-/// une sheet système, voir `MenuTile.trailingIcon`) puis une section "ZONE
-/// DANGEREUSE" (`DestructiveMenuTile` isolée, "Supprimer mon compte", qui
-/// pousse l'écran dédié `/profile/privacy/delete-account`
-/// (`ProfileDeleteAccountScreen`) plutôt que d'ouvrir une sheet — recettage
-/// direction-artistique du 13/09/2026, la maquette attend un écran plein).
+/// confidentialité", "Autorisations de l'appareil" — la dernière avec une
+/// icône de fin `Icons.north_east` puisqu'elle ouvre une sheet système, voir
+/// `MenuTile.trailingIcon` ; "Politique de confidentialité" garde le chevron
+/// par défaut depuis qu'elle pousse un écran interne
+/// (`ProfilePrivacyPolicyScreen`, `/profile/privacy/policy`) plutôt que
+/// d'afficher `_showComingSoon` — même convention que "Confidentialité et
+/// données"/"Aide et support" sur `ProfileScreen`, `north_east` étant
+/// réservé aux actions qui sortent de l'app ou ouvrent une sheet système)
+/// puis une section "ZONE DANGEREUSE" (`DestructiveMenuTile` isolée,
+/// "Supprimer mon compte", qui pousse l'écran dédié
+/// `/profile/privacy/delete-account` (`ProfileDeleteAccountScreen`) plutôt
+/// que d'ouvrir une sheet — recettage direction-artistique du 13/09/2026, la
+/// maquette attend un écran plein).
 ///
 /// Lecture 100% synchrone à l'ouverture (aucune donnée à charger, chaque
 /// tuile ouvre sa propre sheet ou route) : ni état de chargement ni appel
@@ -72,8 +78,7 @@ class ProfilePrivacyScreen extends StatelessWidget {
                         standalone: false,
                         icon: Icons.description_outlined,
                         label: 'Politique de confidentialité',
-                        trailingIcon: Icons.north_east,
-                        onTap: () => _showComingSoon(context),
+                        onTap: () => context.push('/profile/privacy/policy'),
                       ),
                       MenuTile(
                         standalone: false,
@@ -134,14 +139,5 @@ class ProfilePrivacyScreen extends StatelessWidget {
     } else {
       context.go('/');
     }
-  }
-
-  /// Tap sur "Politique de confidentialité", pas encore implémentée (spec
-  /// direction-artistique de la tâche) — même texte exact que
-  /// `ProfileScreen._showComingSoon`, réutilisé mot pour mot plutôt qu'une
-  /// nouvelle constante.
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Bientôt disponible')));
   }
 }

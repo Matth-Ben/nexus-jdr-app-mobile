@@ -23,6 +23,7 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/core/widgets/profile_avatar.dart';
 import 'package:personnages/core/widgets/settings_list_card.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
@@ -225,6 +226,24 @@ void main() {
 
     expect(find.text('Aventurier'), findsOneWidget);
   });
+
+  testWidgets(
+    'le bandeau bois d\'identité (avatar/pseudo/e-mail) occupe toute la '
+    'largeur de l\'écran — pas seulement la largeur de son contenu',
+    (tester) async {
+      await pumpProfile(tester, user: _fakeUser(fullName: 'Aranea'));
+
+      final identityColoredBox = find.ancestor(
+        of: find.byType(ProfileAvatar),
+        matching: find.byType(ColoredBox),
+      );
+      expect(identityColoredBox, findsOneWidget);
+
+      final scaffoldWidth = tester.getSize(find.byType(Scaffold)).width;
+      final identityWidth = tester.getSize(identityColoredBox).width;
+      expect(identityWidth, scaffoldWidth);
+    },
+  );
 
   testWidgets('affiche le bandeau "Compte lié à l\'app Histoires"', (
     tester,
