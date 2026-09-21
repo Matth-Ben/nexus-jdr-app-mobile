@@ -91,6 +91,7 @@ abstract final class CharacterSpellRowMapper {
           level: (row['level'] as num?)?.toInt() ?? 0,
           school: row['school'] as String? ?? '',
           status: grant != null ? 'préparé' : statuses[id] ?? 'connu',
+          storedStatus: grant != null ? statuses[id] : null,
           castingTime: row['casting_time'] as String? ?? '',
           range: row['range'] as String? ?? '',
           components: components is Map<String, dynamic>

@@ -23,6 +23,7 @@ class CharacterSpellEntry {
     this.isFavorite = false,
     this.grantSource,
     this.isPersisted = true,
+    this.storedStatus,
   });
 
   final int id;
@@ -85,6 +86,12 @@ class CharacterSpellEntry {
   /// favori ni statut modifiable. `true` pour tout sort ordinaire et pour un
   /// sort accordé doublé d'une ligne réelle.
   final bool isPersisted;
+
+  /// Statut réellement stocké dans `character_spells.status`, quand il diffère
+  /// de [status] (sort accordé : [status] vaut toujours 'préparé' alors que la
+  /// ligne en base peut valoir 'connu'). `null` = identique à [status]. Sert
+  /// aux exports, fidèles aux données stockées.
+  final String? storedStatus;
 
   /// `true` si le sort est accordé par une sous-classe ([grantSource] non
   /// nul) : toujours préparé, exclu du décompte des sorts préparés, non

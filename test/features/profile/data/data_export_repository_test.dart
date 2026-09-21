@@ -17,7 +17,9 @@ import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
+import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
+import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/profile/data/data_export_repository.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
@@ -143,6 +145,50 @@ void main() {
       expect((classes.single as Map<String, dynamic>)['className'], 'Guerrier');
       final inventory = character['inventory'] as List<dynamic>;
       expect((inventory.single as Map<String, dynamic>)['name'], 'Épée longue');
+    });
+
+    test('sorts accordés par une sous-classe : statut stocké conservé, sort '
+        'purement dérivé exclu', () async {
+      final base = buildDetail(id: 'char-1', name: 'Aranea');
+      final detail = base.copyWith(
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Bénédiction',
+            level: 1,
+            school: 'Enchantement',
+            status: 'préparé',
+            grantSource: SpellGrantSource.domain,
+            storedStatus: 'connu',
+          ),
+          CharacterSpellEntry(
+            id: 2,
+            name: 'Soins',
+            level: 1,
+            school: 'Invocation',
+            status: 'préparé',
+            grantSource: SpellGrantSource.domain,
+            isPersisted: false,
+          ),
+        ],
+      );
+      final characterRepository = _FakeCharacterRepository()
+        ..summaries = [
+          const CharacterSummary(id: 'char-1', name: 'Aranea', level: 2, xp: 1),
+        ]
+        ..detailsById['char-1'] = detail;
+
+      final path = await LocalFileDataExportRepository(characterRepository)
+          .exportMyData();
+
+      final payload =
+          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+      final character =
+          (payload['characters'] as List<dynamic>).single
+              as Map<String, dynamic>;
+      final spells = character['spells'] as List<dynamic>;
+      expect(spells, hasLength(1));
+      expect((spells.single as Map<String, dynamic>)['status'], 'connu');
     });
 
     test('plusieurs personnages : un élément de `characters` par personnage, '

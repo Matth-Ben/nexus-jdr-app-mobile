@@ -158,7 +158,7 @@ Map<String, dynamic> _characterDetailToJson(CharacterDetail detail) {
           'name': spell.name,
           'level': spell.level,
           'school': spell.school,
-          'status': spell.status,
+          'status': spell.storedStatus ?? spell.status,
           'castingTime': spell.castingTime,
           'range': spell.range,
           'components': spell.components,
