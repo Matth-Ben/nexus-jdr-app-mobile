@@ -251,5 +251,61 @@ void main() {
       expect(detail.journalEntries[0].id, 'entry-2');
       expect(detail.journalEntries[1].id, 'entry-1');
     });
+    group('sorts accordés par une sous-classe', () {
+      Map<String, dynamic> spellRow(int id, String name) => {
+        'spell_id': id,
+        'spell_name': name,
+        'level': 1,
+        'school': 'Invocation',
+        'status': 'connu',
+      };
+
+      test('ajoute un sort accordé absent de character_spells', () {
+        final detail = mapSharedCharacterJson({
+          'character': {'id': 'char-1', 'name': 'Test'},
+          'classes': [
+            {'class_id': 3, 'class_name': 'Clerc', 'level': 1},
+          ],
+          'spells': <Map<String, dynamic>>[],
+          'subclass_spells': [
+            {...spellRow(7, 'Bénédiction'), 'class_id': 3},
+          ],
+        });
+
+        final spell = detail.spells.single;
+        expect(spell.name, 'Bénédiction');
+        expect(spell.status, 'préparé');
+        expect(spell.grantSource?.label, 'Domaine');
+        expect(spell.isPersisted, isFalse);
+      });
+
+      test('un sort choisi ET accordé apparaît une seule fois, accordé', () {
+        final detail = mapSharedCharacterJson({
+          'character': {'id': 'char-1', 'name': 'Test'},
+          'classes': [
+            {'class_id': 7, 'class_name': 'Paladin', 'level': 3},
+          ],
+          'spells': [spellRow(9, 'Sanctuaire')],
+          'subclass_spells': [
+            {...spellRow(9, 'Sanctuaire'), 'class_id': 7},
+          ],
+        });
+
+        final spell = detail.spells.single;
+        expect(spell.status, 'préparé');
+        expect(spell.grantSource?.label, 'Serment');
+        expect(spell.isPersisted, isTrue);
+      });
+
+      test('sans subclass_spells (ancien RPC), rien ne change', () {
+        final detail = mapSharedCharacterJson({
+          'character': {'id': 'char-1', 'name': 'Test'},
+          'spells': [spellRow(9, 'Sanctuaire')],
+        });
+
+        expect(detail.spells.single.grantSource, isNull);
+        expect(detail.spells.single.status, 'connu');
+      });
+    });
   });
 }
