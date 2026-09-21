@@ -1,3 +1,5 @@
+import 'spell_grant_source.dart';
+
 /// Un sort connu/préparé du personnage (onglet "Sorts", section "SORTS" —
 /// `presentation/widgets/character_spells_section.dart`) — voir
 /// `data/character_detail_row_mapper.dart`/`data/character_spell_row_mapper.dart`
@@ -19,6 +21,8 @@ class CharacterSpellEntry {
     this.concentration = false,
     this.description = '',
     this.isFavorite = false,
+    this.grantSource,
+    this.isPersisted = true,
   });
 
   final int id;
@@ -64,4 +68,26 @@ class CharacterSpellEntry {
   /// (`presentation/widgets/character_spells_section.dart`) — voir
   /// `CharacterRepository.setSpellFavorite`.
   final bool isFavorite;
+
+  /// Origine du sort s'il est accordé automatiquement par une sous-classe
+  /// (`subclass_spells`, voir `domain/subclass_spell_grant_resolver.dart`),
+  /// `null` pour un sort ordinaire. Un sort accordé est toujours préparé
+  /// ([status] vaut alors 'préparé'), ne compte pas dans la limite de sorts
+  /// préparés et ne peut pas être dé-préparé.
+  ///
+  /// Si le même sort est aussi présent dans `character_spells` (choisi
+  /// normalement), il n'apparaît qu'une fois : cette entrée, marquée accordée
+  /// ([isPersisted] `true`).
+  final SpellGrantSource? grantSource;
+
+  /// `false` uniquement pour un sort accordé qui n'a AUCUNE ligne
+  /// `character_spells` (dérivé pur) : rien à écrire dessus, donc ni
+  /// favori ni statut modifiable. `true` pour tout sort ordinaire et pour un
+  /// sort accordé doublé d'une ligne réelle.
+  final bool isPersisted;
+
+  /// `true` si le sort est accordé par une sous-classe ([grantSource] non
+  /// nul) : toujours préparé, exclu du décompte des sorts préparés, non
+  /// retirable.
+  bool get isAlwaysPrepared => grantSource != null;
 }

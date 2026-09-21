@@ -150,7 +150,9 @@ Map<String, dynamic> _characterDetailToJson(CharacterDetail detail) {
     'toolProficiencyNames': detail.toolProficiencyNames,
     'knownLanguageNames': detail.knownLanguageNames,
     'spells': [
-      for (final spell in detail.spells)
+      // Seules les lignes réellement stockées (`character_spells`) : les sorts
+      // accordés par une sous-classe sont dérivés, pas une donnée du joueur.
+      for (final spell in detail.spells.where((spell) => spell.isPersisted))
         {
           'id': spell.id,
           'name': spell.name,

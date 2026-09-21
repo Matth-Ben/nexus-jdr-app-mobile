@@ -26,6 +26,7 @@ import '../domain/portrait_storage_path_resolver.dart';
 import '../domain/rest_type.dart';
 import '../domain/reward_item_draft.dart';
 import '../domain/spell_slot_progression.dart';
+import '../domain/subclass_spell_grant_resolver.dart';
 import '../domain/write_outcome.dart';
 import 'character_detail_row_mapper.dart';
 import 'character_error_mapper.dart';
@@ -3187,9 +3188,39 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // `20260825090300_create_reference_spells_items_tables.sql` côté dépôt
     // web) — elle vit dans `translations` au même titre que le nom, même
     // pattern que `itemDescriptionRows` ci-dessous pour les objets.
-    final spellIds = CharacterSpellRowMapper.collectSpellIds(
-      CharacterDetailRowMapper.characterSpellRowsOf(row),
+    //
+    // Sorts "toujours préparés" des sous-classes (`subclass_spells`, Clerc/
+    // Paladin) : table de référence lue en entier pour la/les sous-classe(s)
+    // du personnage (jamais filtrée par niveau ici — le filtrage par niveau de
+    // classe est fait au mapping, voir [_mapCharacterDetailPayload], pour que
+    // le cache hors-ligne reste cohérent) ; seuls les sorts déjà atteints sont
+    // ajoutés aux `spells`/`translations` à résoudre. Aucune écriture dans
+    // `character_spells`.
+    final subclassProgress = CharacterDetailRowMapper.collectSubclassProgress(
+      row,
+      classNames: CharacterRowMapper.parseTranslatedNames(classNameRows),
     );
+    var subclassSpellRows = const <Map<String, dynamic>>[];
+    if (subclassProgress.isNotEmpty) {
+      subclassSpellRows = await _client
+          .from('subclass_spells')
+          .select('subclass_id, spell_id, class_level')
+          .inFilter('subclass_id', [
+            for (final entry in subclassProgress) entry.subclassId,
+          ]);
+    }
+    final grantedSpellIds = SubclassSpellGrantResolver.resolve(
+      progress: subclassProgress,
+      grants: CharacterDetailRowMapper.parseSubclassSpellGrants(
+        subclassSpellRows,
+      ),
+    ).keys;
+    final spellIds = <int>{
+      ...CharacterSpellRowMapper.collectSpellIds(
+        CharacterDetailRowMapper.characterSpellRowsOf(row),
+      ),
+      ...grantedSpellIds,
+    };
     var spellRows = const <Map<String, dynamic>>[];
     var spellNameRows = const <Map<String, dynamic>>[];
     var spellDescriptionRows = const <Map<String, dynamic>>[];
@@ -3257,6 +3288,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       'toolNameRows': toolNameRows,
       'languageNameRows': languageNameRows,
       'spellRows': spellRows,
+      'subclassSpellRows': subclassSpellRows,
       'spellNameRows': spellNameRows,
       'spellDescriptionRows': spellDescriptionRows,
       'itemNameRows': itemNameRows,
@@ -3359,8 +3391,21 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final spellDescriptions = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['spellDescriptionRows']),
     );
+    // Absent des payloads mis en cache avant l'introduction de
+    // `subclass_spells` : `_rowsOf(null)` retombe sur une liste vide, donc
+    // aucun sort accordé (jamais de crash sur un ancien cache).
+    final spellGrants = SubclassSpellGrantResolver.resolve(
+      progress: CharacterDetailRowMapper.collectSubclassProgress(
+        row,
+        classNames: classNames,
+      ),
+      grants: CharacterDetailRowMapper.parseSubclassSpellGrants(
+        _rowsOf(payload['subclassSpellRows']),
+      ),
+    );
     final spells = CharacterSpellRowMapper.toCharacterSpellEntries(
       _rowsOf(payload['spellRows']),
+      grants: spellGrants,
       names: spellNames,
       descriptions: spellDescriptions,
       statuses: CharacterSpellRowMapper.parseStatuses(

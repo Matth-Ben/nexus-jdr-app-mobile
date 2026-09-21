@@ -282,6 +282,27 @@ abstract class CharacterDetail with _$CharacterDetail {
   /// [CharacterDetailClassRow] plutôt que sur [CharacterClassRow].
   int get totalLevel => classes.fold(0, (sum, row) => sum + row.level);
 
+  /// Sorts accordés automatiquement par une sous-classe (domaine de Clerc,
+  /// serment de Paladin), dérivés à la lecture — voir
+  /// [CharacterSpellEntry.grantSource].
+  List<CharacterSpellEntry> get grantedSpells => [
+    for (final spell in spells)
+      if (spell.isAlwaysPrepared) spell,
+  ];
+
+  /// Nombre de sorts (niveau >= 1) que le joueur a lui-même préparés — le
+  /// numérateur de tout décompte "sorts préparés X / Y". Exclut les sorts
+  /// accordés par une sous-classe ([CharacterSpellEntry.isAlwaysPrepared]) :
+  /// toujours préparés, ils ne comptent pas dans la limite RAW 5e.
+  int get preparedSpellCount => spells
+      .where(
+        (spell) =>
+            spell.level > 0 &&
+            spell.status == 'préparé' &&
+            !spell.isAlwaysPrepared,
+      )
+      .length;
+
   /// Classe "principale" : celle marquée `is_primary`, ou la première de la
   /// liste à défaut (donnée incohérente, ne devrait normalement pas
   /// arriver). `null` si le personnage n'a aucune classe enregistrée.

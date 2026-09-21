@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/spell_cast_eligibility.dart';
+import '../../domain/spell_grant_source.dart';
 import '../../domain/spell_status_formatter.dart';
 import '../../domain/spells_by_level_grouper.dart';
 import 'spell_action_sheet.dart';
@@ -480,16 +481,25 @@ class _SpellRow extends StatelessWidget {
                         style: AppTypography.body(fontSize: 13),
                       ),
                     ),
+                    if (spell.grantSource != null) ...[
+                      const SizedBox(width: AppSpacing.xs),
+                      _GrantBadge(source: spell.grantSource!),
+                    ],
                     const SizedBox(width: AppSpacing.xs),
                     // Groupe étoile/boutons aligné en fin de ligne (voir
                     // `Expanded` ci-dessus), espacement régulier entre les 3
                     // éléments plutôt que l'écart inégal précédent (xs entre
                     // étoile/"Infos", xs/2 entre "Infos"/"Lancer").
-                    _FavoriteStar(
-                      isFavorite: spell.isFavorite,
-                      onTap: enabled ? () => onToggleFavorite(spell) : null,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
+                    // Un sort accordé par une sous-classe sans ligne
+                    // `character_spells` (dérivé pur) n'a rien sur quoi
+                    // écrire un favori : pas d'étoile.
+                    if (spell.isPersisted) ...[
+                      _FavoriteStar(
+                        isFavorite: spell.isFavorite,
+                        onTap: enabled ? () => onToggleFavorite(spell) : null,
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                    ],
                     _SpellRowActionButton(
                       label: 'Infos',
                       primary: false,
@@ -533,6 +543,50 @@ class _SpellRow extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pastille "DOMAINE"/"SERMENT" d'un sort accordé par une sous-classe (voir
+/// `CharacterSpellEntry.grantSource`) — mêmes tokens que les autres chips du
+/// design système (fond `parchment.card-alt`, liseré `wood.light`,
+/// `radius.sm`, `font.display`), cadenas pour signifier "non retirable".
+class _GrantBadge extends StatelessWidget {
+  const _GrantBadge({required this.source});
+
+  final SpellGrantSource source;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Toujours préparé, accordé par : ${source.label}',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        decoration: BoxDecoration(
+          color: AppColors.parchmentCardAlt,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: AppColors.woodLight, width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.lock_outline,
+              size: 12,
+              color: AppColors.woodMedium,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              source.label.toUpperCase(),
+              style: AppTypography.display(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
         ),
       ),
     );
