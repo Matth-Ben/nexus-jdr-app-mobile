@@ -22,6 +22,7 @@ import '../../character_creation/domain/spell_option.dart';
 import '../../character_creation/domain/spell_selection_resolver.dart';
 import '../../character_creation/domain/spells_step_selection.dart';
 import '../domain/character_failure.dart';
+import '../domain/invocation_selection_rules.dart';
 import '../domain/level_up_chain_resolver.dart';
 import '../domain/level_up_choice_kind.dart';
 import '../domain/level_up_choice_options.dart';
@@ -32,6 +33,7 @@ import '../domain/level_up_invocation_option.dart';
 import '../domain/level_up_multiclass_option.dart';
 import '../domain/signed_modifier_formatter.dart';
 import '../domain/spell_slot_change.dart';
+import '../domain/warlock_pact.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
 import 'providers/level_up_provider.dart';
@@ -295,14 +297,78 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     });
   }
 
-  void _toggleInvocation(String invocationId, int quota) {
+  void _toggleInvocation(LevelUpStepData data, String invocationId, int quota) {
     setState(() {
       _selectedInvocationIds = SpellsStepSelection.toggle(
-        current: _selectedInvocationIds,
+        current: _effectiveSelectedInvocationIds(data),
         value: invocationId,
         quota: quota,
       );
     });
+  }
+
+  /// Pacte connu pour la validation des prérequis d'invocations : celui choisi
+  /// dans cette même montée de niveau (étape "Choix à faire", ex. Pacte de la
+  /// lame au niveau 3) s'il y en a un, sinon celui déjà en base.
+  WarlockPact? _knownPactFor(LevelUpStepData data) {
+    if (data.choiceKind == LevelUpChoiceKind.pact) {
+      final selected = _selectedListOptionId;
+      final chosen = WarlockPact.fromKey(selected is String ? selected : null);
+      if (chosen != null) return chosen;
+    }
+    return data.knownPact;
+  }
+
+  /// Sorts mineurs connus pour la validation des prérequis d'invocations :
+  /// ceux déjà en base plus ceux choisis à l'étape "Sorts" de cette même
+  /// montée de niveau.
+  Set<int> _knownCantripIdsFor(LevelUpStepData data) {
+    final catalog = data.spellSelectionCatalog;
+    if (!data.requiresSpellSelection ||
+        catalog == null ||
+        _selectedNewCantrips.isEmpty) {
+      return data.knownCantripSpellIds;
+    }
+    final rows = SpellSelectionResolver.resolve(
+      cantripNames: _selectedNewCantrips,
+      levelOneSpellNames: const [],
+      catalog: catalog,
+      className: data.className,
+    );
+    return {...data.knownCantripSpellIds, for (final row in rows) row.spellId};
+  }
+
+  /// Niveau d'Occultiste CIBLE de cette montée de niveau.
+  int _warlockTargetLevel(LevelUpStepData data) => data.currentLevel + 1;
+
+  /// Quota d'invocations effectif, recalculé avec le pacte/les sorts mineurs
+  /// choisis dans cette même montée de niveau — voir
+  /// [InvocationSelectionRules.effectiveQuota].
+  int _effectiveInvocationQuota(LevelUpStepData data) {
+    if (!data.requiresInvocationSelection) return 0;
+    return InvocationSelectionRules.effectiveQuota(
+      data.availableInvocations,
+      delta: data.invocationDelta,
+      warlockLevel: _warlockTargetLevel(data),
+      knownPact: _knownPactFor(data),
+      knownCantripSpellIds: _knownCantripIdsFor(data),
+    );
+  }
+
+  /// [_selectedInvocationIds] purgée des invocations devenues inéligibles
+  /// (le joueur a pu revenir changer son pacte ou ses sorts mineurs) — seule
+  /// source lue pour l'affichage, le récapitulatif et l'écriture : la
+  /// sélection ne contient donc jamais d'invocation inéligible.
+  List<String> _effectiveSelectedInvocationIds(LevelUpStepData data) {
+    if (!data.requiresInvocationSelection) return const [];
+    return InvocationSelectionRules.pruneSelection(
+      _selectedInvocationIds,
+      data.availableInvocations,
+      quota: _effectiveInvocationQuota(data),
+      warlockLevel: _warlockTargetLevel(data),
+      knownPact: _knownPactFor(data),
+      knownCantripSpellIds: _knownCantripIdsFor(data),
+    );
   }
 
   /// Identifiants de sorts prêts pour `CharacterRepository.applyLevelUp`
@@ -330,7 +396,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// [_selectedInvocationIds] (`String`, voir sa documentation) en `int`.
   List<int> _buildInvocationIds(LevelUpStepData data) {
     if (!data.requiresInvocationSelection) return const [];
-    return [for (final id in _selectedInvocationIds) int.parse(id)];
+    return [
+      for (final id in _effectiveSelectedInvocationIds(data)) int.parse(id),
+    ];
   }
 
   /// Remet à zéro l'état de l'étape "Choix à faire" — appelé au chaînage
@@ -443,6 +511,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         chosenValue: _selectedListOptionId! as String,
       ),
       LevelUpChoiceKind.favoredEnemy => LevelUpChoiceSelection.favoredEnemy(
+        classFeatureId: data.choiceClassFeatureId!,
+        chosenValue: _selectedListOptionId! as String,
+      ),
+      LevelUpChoiceKind.pact => LevelUpChoiceSelection.pact(
         classFeatureId: data.choiceClassFeatureId!,
         chosenValue: _selectedListOptionId! as String,
       ),
@@ -1367,6 +1439,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       LevelUpChoiceKind.subclass => 'Sous-classe',
       LevelUpChoiceKind.fightingStyle => 'Style de combat',
       LevelUpChoiceKind.favoredEnemy => 'Ennemi juré',
+      LevelUpChoiceKind.pact => 'Faveur de pacte',
     };
   }
 
@@ -1418,6 +1491,19 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         options: [
           for (final enemy in LevelUpChoiceOptions.favoredEnemies)
             (id: enemy, title: enemy, subtitle: null, onInfoTap: null),
+        ],
+      ),
+      LevelUpChoiceKind.pact => _buildOptionListBody(
+        instruction: 'Choisissez votre Faveur de pacte.',
+        icon: Icons.menu_book,
+        options: [
+          for (final pact in WarlockPact.values)
+            (
+              id: pact.key,
+              title: pact.label,
+              subtitle: pact.description,
+              onInfoTap: null,
+            ),
         ],
       ),
     };
@@ -2020,8 +2106,8 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// rien n'empêche une correction en base par un futur écran).
   Widget _buildInvocationsStep(LevelUpStepData data) {
     final stepNumber = _invocationsStepNumber(data);
-    final quota = data.invocationQuota;
-    final selected = _selectedInvocationIds;
+    final quota = _effectiveInvocationQuota(data);
+    final selected = _effectiveSelectedInvocationIds(data);
 
     return Column(
       children: [
@@ -2069,9 +2155,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   ) ...[
                     if (i > 0) const SizedBox(height: AppSpacing.xs),
                     _invocationTile(
+                      data,
                       data.availableInvocations[i],
                       index: i,
                       quota: quota,
+                      selected: selected,
                     ),
                   ],
               ],
@@ -2097,28 +2185,43 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// `List<String>` + quota, voir [_selectedInvocationIds]). Couleur
   /// d'accent fixe [AppColors.accentViolet] (distinct du cycle générique de
   /// [AccentIconBadge], spec visuelle direction-artistique section 3).
+  ///
+  /// Une invocation dont les prérequis ne sont pas satisfaits (voir
+  /// [LevelUpInvocationOption.eligibilityFor]) est désactivée et affiche la
+  /// raison en français à la place du texte de prérequis brut.
   Widget _invocationTile(
+    LevelUpStepData data,
     LevelUpInvocationOption invocation, {
     required int index,
     required int quota,
+    required List<String> selected,
   }) {
     final id = invocation.id.toString();
-    final isSelected = _selectedInvocationIds.contains(id);
+    final isSelected = selected.contains(id);
+    final eligibility = invocation.eligibilityFor(
+      warlockLevel: _warlockTargetLevel(data),
+      knownPact: _knownPactFor(data),
+      knownCantripSpellIds: _knownCantripIdsFor(data),
+    );
     return CheckableOptionTile(
       title: invocation.name,
-      subtitle: invocation.prerequisiteText,
+      subtitle: eligibility.isEligible
+          ? invocation.prerequisiteText
+          : eligibility.reasonLabel,
       leading: AccentIconBadge(
         index: index,
         icon: Icons.remove_red_eye,
         color: AppColors.accentViolet,
       ),
       checked: isSelected,
-      enabled: !SpellsStepSelection.isChoiceLocked(
-        isSelected: isSelected,
-        selectedCount: _selectedInvocationIds.length,
-        quota: quota,
-      ),
-      onTap: () => _toggleInvocation(id, quota),
+      enabled:
+          eligibility.isEligible &&
+          !SpellsStepSelection.isChoiceLocked(
+            isSelected: isSelected,
+            selectedCount: selected.length,
+            quota: quota,
+          ),
+      onTap: () => _toggleInvocation(data, id, quota),
     );
   }
 
@@ -2248,6 +2351,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
             .name,
       LevelUpChoiceKind.fightingStyle ||
       LevelUpChoiceKind.favoredEnemy => _selectedListOptionId! as String,
+      LevelUpChoiceKind.pact => WarlockPact.displayLabelFor(
+        _selectedListOptionId! as String,
+      ),
       LevelUpChoiceKind.abilityScoreImprovement => throw StateError(
         'unreachable : traité ci-dessus',
       ),
@@ -2292,9 +2398,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// pluriel, subtitle = noms joints par ", ". Insérée dans [_buildSummary]
   /// après les blocs "Sorts", avant le bandeau d'erreur.
   GainRow? _invocationSummaryGainRow(LevelUpStepData data) {
-    if (_selectedInvocationIds.isEmpty) return null;
+    final selected = _effectiveSelectedInvocationIds(data);
+    if (selected.isEmpty) return null;
     final names = [
-      for (final id in _selectedInvocationIds)
+      for (final id in selected)
         data.availableInvocations
             .firstWhere((option) => option.id.toString() == id)
             .name,

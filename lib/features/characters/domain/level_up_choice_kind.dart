@@ -1,6 +1,6 @@
 import 'level_up_block_reason.dart';
 
-/// Les 4 types de choix couverts par l'étape "Choix à faire" de la montée de
+/// Les 5 types de choix couverts par l'étape "Choix à faire" de la montée de
 /// niveau (increment 2, `presentation/level_up_screen.dart`) —
 /// `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 6,
 /// point 3.
@@ -28,6 +28,11 @@ enum LevelUpChoiceKind {
 
   /// `class_features.choice_type == 'ennemi_jure'`.
   favoredEnemy,
+
+  /// `class_features.choice_type == 'pacte'` (Faveur de pacte de
+  /// l'Occultiste, niveau 3) — valeurs de `chosen_value` : voir
+  /// `domain/warlock_pact.dart`.
+  pact,
 }
 
 /// Détermine le [LevelUpChoiceKind] applicable à un niveau ciblé donné, une
@@ -55,7 +60,7 @@ abstract final class LevelUpPendingChoiceResolver {
     // `presentation/level_up_screen.dart`. Testée avant le `switch`
     // ci-dessous plutôt qu'incluse dedans, pour ne jamais confondre "aucun
     // choix à faire à cette étape" (retour `null`, cas normal) avec le
-    // `StateError` défensif qui protège les 3 seules valeurs qui, elles,
+    // `StateError` défensif qui protège les 4 seules valeurs qui, elles,
     // doivent obligatoirement produire un [LevelUpChoiceKind].
     if (classFeatureChoiceType == 'invocation') {
       return null;
@@ -69,8 +74,9 @@ abstract final class LevelUpPendingChoiceResolver {
         'sous_classe' => LevelUpChoiceKind.subclass,
         'style_combat' => LevelUpChoiceKind.fightingStyle,
         'ennemi_jure' => LevelUpChoiceKind.favoredEnemy,
+        'pacte' => LevelUpChoiceKind.pact,
         // Ne devrait jamais arriver : `LevelUpBlockRules.resolvedChoiceTypes`
-        // et ce `switch` doivent rester synchronisés (les 3 seules valeurs,
+        // et ce `switch` doivent rester synchronisés (les 4 seules valeurs,
         // hors `'invocation'` déjà exclue ci-dessus, qu'`evaluate` laisse
         // passer sans bloquer).
         _ => throw StateError(

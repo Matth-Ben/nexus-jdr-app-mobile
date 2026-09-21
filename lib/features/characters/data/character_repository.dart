@@ -518,8 +518,9 @@ abstract class CharacterRepository {
   ///   combiné dans le même `UPDATE`/`INSERT` que `level` (sur la ligne
   ///   fraîchement créée en cas de multiclassage, pas sur la classe
   ///   primaire).
-  /// - [LevelUpChoiceKind.fightingStyle]/[LevelUpChoiceKind.favoredEnemy] :
-  ///   insert `character_class_options`.
+  /// - [LevelUpChoiceKind.fightingStyle]/[LevelUpChoiceKind.favoredEnemy]/
+  ///   [LevelUpChoiceKind.pact] : insert `character_class_options`
+  ///   (`chosen_value` = `'chaine'`/`'lame'`/`'grimoire'` pour le pacte).
   ///
   /// Recalcule aussi `character_spell_slots`, depuis zéro (upsert complet
   /// pour le nouveau niveau, jamais un delta — voir
@@ -1889,10 +1890,18 @@ class SupabaseCharacterRepository implements CharacterRepository {
         entityIds: ids,
       );
 
+      final cantripNames = await _fetchTranslatedNames(
+        entityType: 'spell',
+        entityIds: LevelUpInvocationRowMapper.collectCantripSpellIds(
+          availableRows,
+        ),
+      );
+
       return LevelUpInvocationRowMapper.toInvocationOptions(
         availableRows,
         names: names,
         descriptions: descriptions,
+        cantripNames: cantripNames,
       );
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
@@ -2814,6 +2823,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         );
       case LevelUpChoiceKind.fightingStyle:
       case LevelUpChoiceKind.favoredEnemy:
+      case LevelUpChoiceKind.pact:
         await _client.from('character_class_options').insert({
           'character_id': characterId,
           'class_feature_id': choice.classFeatureId,

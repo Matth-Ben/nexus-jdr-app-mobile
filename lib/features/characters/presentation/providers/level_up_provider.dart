@@ -5,6 +5,7 @@ import '../../../character_creation/domain/spell_catalog.dart';
 import '../../../character_creation/presentation/providers/character_creation_providers.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/character_failure.dart';
+import '../../domain/invocation_selection_rules.dart';
 import '../../domain/invocations_known_progression.dart';
 import '../../domain/level_up_block_reason.dart';
 import '../../domain/level_up_choice_kind.dart';
@@ -18,6 +19,7 @@ import '../../domain/multiclass_proficiencies.dart';
 import '../../domain/spell_slot_change.dart';
 import '../../domain/spell_slot_progression.dart';
 import '../../domain/spells_known_progression.dart';
+import '../../domain/warlock_pact.dart';
 import 'character_detail_provider.dart';
 import 'character_providers.dart';
 
@@ -61,7 +63,7 @@ typedef LevelUpStepData = ({
   /// `class_features.id` de la ligne `choice_type` de ce niveau — voir
   /// `domain/level_up_level_data.dart::choiceClassFeatureId`. Pertinent
   /// seulement pour [LevelUpChoiceKind.fightingStyle]/
-  /// [LevelUpChoiceKind.favoredEnemy].
+  /// [LevelUpChoiceKind.favoredEnemy]/[LevelUpChoiceKind.pact].
   int? choiceClassFeatureId,
 
   /// Sous-classes disponibles à ce niveau — non vide seulement pour
@@ -189,11 +191,29 @@ typedef LevelUpStepData = ({
   List<LevelUpInvocationOption> availableInvocations,
 
   /// Quota EFFECTIF d'invocations à choisir à ce niveau — `min(delta RAW,
-  /// availableInvocations.length)`, jamais le delta RAW brut (spec visuelle
+  /// invocations ÉLIGIBLES)`, jamais le delta RAW brut (spec visuelle
   /// direction-artistique section 3 : l'app ne doit jamais promettre un
   /// quota qu'elle ne peut pas tenir). 0 si [requiresInvocationSelection] est
   /// `false`.
+  ///
+  /// Calculé sur l'état DÉJÀ EN BASE (pacte et sorts mineurs connus) : l'écran
+  /// le recalcule avec les choix faits dans la même montée de niveau (pacte
+  /// choisi à l'étape "Choix à faire", sorts mineurs de l'étape "Sorts"), voir
+  /// `domain/invocation_selection_rules.dart`.
   int invocationQuota,
+
+  /// Delta RAW d'invocations de ce niveau (0 si
+  /// [requiresInvocationSelection] est `false`) — base du quota effectif
+  /// recalculé par l'écran.
+  int invocationDelta,
+
+  /// Pacte de l'Occultiste déjà enregistré en base
+  /// (`character_class_options`), `null` si aucun — le pacte choisi dans la
+  /// même montée de niveau est géré par l'écran.
+  WarlockPact? knownPact,
+
+  /// `spells.id` des sorts mineurs (niveau 0) déjà connus du personnage.
+  Set<int> knownCantripSpellIds,
 });
 
 /// Options de multiclassage disponibles pour [detail] à cet instant — calcul
@@ -510,6 +530,14 @@ Future<LevelUpStepData> levelUpStepData(
       ? InvocationsKnownProgression.newInvocationsAt(effectiveTargetLevel)
       : 0;
   final requiresInvocationSelection = invocationDelta > 0;
+  WarlockPact? knownPact;
+  for (final choice in detail.classChoices) {
+    knownPact ??= choice.pact;
+  }
+  final knownCantripSpellIds = {
+    for (final spell in detail.spells)
+      if (spell.level == 0) spell.id,
+  };
   var availableInvocations = const <LevelUpInvocationOption>[];
   var invocationQuota = 0;
   if (requiresInvocationSelection) {
@@ -519,9 +547,13 @@ Future<LevelUpStepData> levelUpStepData(
     // Quota EFFECTIF (spec visuelle direction-artistique section 3) : jamais
     // le delta RAW brut, un personnage haut niveau peut avoir épuisé les 32
     // invocations peuplées en base.
-    invocationQuota = invocationDelta < availableInvocations.length
-        ? invocationDelta
-        : availableInvocations.length;
+    invocationQuota = InvocationSelectionRules.effectiveQuota(
+      availableInvocations,
+      delta: invocationDelta,
+      warlockLevel: effectiveTargetLevel,
+      knownPact: knownPact,
+      knownCantripSpellIds: knownCantripSpellIds,
+    );
   }
 
   // Dons — étape "Choix à faire", sous-mode "don" (voir
@@ -568,6 +600,9 @@ Future<LevelUpStepData> levelUpStepData(
     requiresInvocationSelection: requiresInvocationSelection,
     availableInvocations: availableInvocations,
     invocationQuota: invocationQuota,
+    invocationDelta: invocationDelta,
+    knownPact: knownPact,
+    knownCantripSpellIds: knownCantripSpellIds,
   );
 }
 

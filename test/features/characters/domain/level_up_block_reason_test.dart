@@ -35,13 +35,24 @@ void main() {
   group('LevelUpBlockRules.evaluate — increment 2 : resolvedChoiceTypes ne '
       'bloquent plus', () {
     test('resolvedChoiceTypes contient exactement sous_classe/'
-        'style_combat/ennemi_jure/invocation', () {
+        'style_combat/ennemi_jure/invocation/pacte', () {
       expect(LevelUpBlockRules.resolvedChoiceTypes, {
         'sous_classe',
         'style_combat',
         'ennemi_jure',
         'invocation',
+        'pacte',
       });
+    });
+
+    test("'pacte' (Faveur de pacte, Occultiste niveau 3) ne bloque plus la "
+        'montée de niveau', () {
+      final reason = LevelUpBlockRules.evaluate(
+        targetLevel: 3,
+        className: 'Occultiste',
+        classFeatureChoiceType: 'pacte',
+      );
+      expect(reason, isNull);
     });
 
     test("'sous_classe'/'style_combat'/'ennemi_jure' ne bloquent plus le "

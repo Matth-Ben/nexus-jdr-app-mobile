@@ -33,6 +33,16 @@ void main() {
       );
     });
 
+    test("'pacte' -> LevelUpChoiceKind.pact", () {
+      expect(
+        LevelUpPendingChoiceResolver.resolve(
+          targetLevel: 3,
+          classFeatureChoiceType: 'pacte',
+        ),
+        LevelUpChoiceKind.pact,
+      );
+    });
+
     test("'invocation' ne renvoie jamais de LevelUpChoiceKind (chantier "
         'sorts/dons/invocations) : ce choice_type est dans '
         'resolvedChoiceTypes (ne bloque plus le flux), mais mène à la '

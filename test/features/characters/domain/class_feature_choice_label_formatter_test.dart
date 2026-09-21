@@ -24,6 +24,10 @@ void main() {
         ClassFeatureChoiceLabelFormatter.labelFor('sort_domaine'),
         'Sort de domaine',
       );
+      expect(
+        ClassFeatureChoiceLabelFormatter.labelFor('pacte'),
+        'Faveur de pacte',
+      );
     });
 
     test('valeur inconnue -> humanisation générique de la clé brute', () {

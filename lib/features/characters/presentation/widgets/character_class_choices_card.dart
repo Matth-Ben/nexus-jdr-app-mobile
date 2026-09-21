@@ -39,7 +39,7 @@ class CharacterClassChoicesCard extends StatelessWidget {
           row.subclassName!,
         ),
       for (final choice in detail.classChoices)
-        _ClassChoiceItem(choice.featureName, choice.chosenValue),
+        _ClassChoiceItem(choice.featureName, choice.displayValue),
     ];
   }
 

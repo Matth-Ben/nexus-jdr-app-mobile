@@ -1,3 +1,5 @@
+import 'warlock_pact.dart';
+
 /// Un choix de classe résolu par niveau ("Style de combat"/"Ennemi juré",
 /// `character_class_options` — voir `docs/cahier-des-charges/
 /// 11-fonctionnalites-a-ajouter.md`) — onglet "Compétences", carte "CHOIX DE
@@ -30,4 +32,12 @@ class CharacterClassChoice {
   final String featureName;
 
   final String chosenValue;
+
+  /// Valeur lisible : traduit les clés de la Faveur de pacte de l'Occultiste
+  /// (`chaine`/`lame`/`grimoire` -> "Pacte de la chaîne"...), renvoie
+  /// [chosenValue] tel quel pour les autres choix (déjà des libellés).
+  String get displayValue => WarlockPact.displayLabelFor(chosenValue);
+
+  /// Pacte de l'Occultiste si ce choix en est un, `null` sinon.
+  WarlockPact? get pact => WarlockPact.fromKey(chosenValue);
 }
