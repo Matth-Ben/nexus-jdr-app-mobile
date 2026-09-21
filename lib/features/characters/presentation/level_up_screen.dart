@@ -18,6 +18,7 @@ import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/spell_level_tab_selector.dart';
 import '../../../core/widgets/stepper_counter.dart';
 import '../../character_creation/domain/ability_score_definitions.dart';
+import '../../character_creation/domain/spell_catalog.dart';
 import '../../character_creation/domain/spell_option.dart';
 import '../../character_creation/domain/spell_selection_resolver.dart';
 import '../../character_creation/domain/spells_step_selection.dart';
@@ -31,6 +32,7 @@ import '../domain/level_up_continue_option.dart';
 import '../domain/level_up_hit_points_calculator.dart';
 import '../domain/level_up_invocation_option.dart';
 import '../domain/level_up_multiclass_option.dart';
+import '../domain/patron_extended_spells.dart';
 import '../domain/signed_modifier_formatter.dart';
 import '../domain/spell_slot_change.dart';
 import '../domain/warlock_pact.dart';
@@ -397,7 +399,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// ceux déjà en base plus ceux choisis à l'étape "Sorts" de cette même
   /// montée de niveau.
   Set<int> _knownCantripIdsFor(LevelUpStepData data) {
-    final catalog = data.spellSelectionCatalog;
+    final catalog = _spellCatalogFor(data);
     // Sorts mineurs du Livre des ombres : comptent aussi comme sorts mineurs
     // connus (ex. Décharge occulte), ce sont des sorts mineurs (niveau 0).
     final pactCantripIds = _pactCantripIds(data);
@@ -418,6 +420,43 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       ...pactCantripIds,
     };
   }
+
+  /// Patron (sous-classe) de l'Occultiste qui progresse : celui choisi dans
+  /// cette même montée de niveau (étape "Choix à faire", avant l'étape
+  /// "Sorts") s'il y en a un, sinon celui déjà en base. `null` sans patron.
+  int? _patronSubclassIdFor(LevelUpStepData data) {
+    if (data.choiceKind == LevelUpChoiceKind.subclass) {
+      final selected = _selectedListOptionId;
+      if (selected is num) return selected.toInt();
+    }
+    return data.knownSubclassId;
+  }
+
+  /// Catalogue de la classe fusionné avec la liste étendue du patron (voir
+  /// [PatronExtendedSpells.merge]) — `null` hors Occultiste ou sans patron
+  /// (comportement inchangé).
+  PatronMergeResult? _patronMergeFor(LevelUpStepData data) {
+    final base = data.spellSelectionCatalog;
+    if (base == null ||
+        data.className != PatronExtendedSpells.warlockClassName) {
+      return null;
+    }
+    final subclassId = _patronSubclassIdFor(data);
+    final extended = subclassId == null
+        ? null
+        : data.patronExtendedSpells[subclassId];
+    if (extended == null) return null;
+    return PatronExtendedSpells.merge(
+      base: base,
+      extended: extended,
+      warlockLevel: _warlockTargetLevel(data),
+      maxSpellLevel: data.maxCastableSpellLevel,
+    );
+  }
+
+  /// Catalogue effectif des sorts de classe proposés à l'étape "Sorts".
+  SpellCatalog? _spellCatalogFor(LevelUpStepData data) =>
+      _patronMergeFor(data)?.catalog ?? data.spellSelectionCatalog;
 
   /// Niveau d'Occultiste CIBLE de cette montée de niveau.
   int _warlockTargetLevel(LevelUpStepData data) => data.currentLevel + 1;
@@ -471,7 +510,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
             for (final row in SpellSelectionResolver.resolve(
               cantripNames: _selectedNewCantrips,
               levelOneSpellNames: _selectedNewSpells,
-              catalog: data.spellSelectionCatalog!,
+              catalog: _spellCatalogFor(data)!,
               className: data.className,
             ))
               row.spellId,
@@ -1948,7 +1987,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     // `null` quand seule la faveur de pacte déclenche cette étape (aucun
     // nouveau sort de classe à ce niveau) : les listes de classe sont alors
     // vides et leurs onglets masqués (quota nul).
-    final catalog = data.spellSelectionCatalog;
+    final patronMerge = _patronMergeFor(data);
+    final catalog = patronMerge?.catalog ?? data.spellSelectionCatalog;
+    final patronOnlyIds = patronMerge?.patronOnlySpellIds ?? const <int>{};
     final cantripQuota = data.requiresSpellSelection ? data.newCantripQuota : 0;
     final spellQuota = data.requiresSpellSelection ? data.newSpellQuota : 0;
     final pactQuota = _pactCantripQuota(data);
@@ -1988,6 +2029,21 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           final byLevel = a.level.compareTo(b.level);
           return byLevel != 0 ? byLevel : a.name.compareTo(b.name);
         });
+
+    // Le joueur a pu revenir changer de patron : un sort d'une liste de patron
+    // qui n'est plus proposé est retiré de la sélection (jamais compté à tort
+    // dans le quota, ni écrit).
+    final candidateNames = {for (final spell in spells) spell.name};
+    final droppedPatronNames = {
+      for (final list in data.patronExtendedSpells.values)
+        for (final entry in list) entry.spell.name,
+    }.difference(candidateNames);
+    if (_selectedNewSpells.any(droppedPatronNames.contains)) {
+      _selectedNewSpells = [
+        for (final name in _selectedNewSpells)
+          if (!droppedPatronNames.contains(name)) name,
+      ];
+    }
 
     final canProceed = SpellsStepSelection.canProceed(
       cantripQuota: cantripQuota,
@@ -2073,6 +2129,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                     candidates: spells,
                     onToggle: _toggleNewSpell,
                     showLevelSuffix: true,
+                    patronSpellIds: patronOnlyIds,
                   ),
                 const SizedBox(height: AppSpacing.md),
                 _ParchmentCard(
@@ -2147,6 +2204,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     required List<SpellOption> candidates,
     required void Function(String name, int quota) onToggle,
     required bool showLevelSuffix,
+    Set<int> patronSpellIds = const {},
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2175,6 +2233,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
             quota: quota,
             onToggle: onToggle,
             showLevelSuffix: showLevelSuffix,
+            isPatronSpell: patronSpellIds.contains(candidates[i].id),
           ),
         ],
       ],
@@ -2194,13 +2253,17 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     required int quota,
     required void Function(String name, int quota) onToggle,
     required bool showLevelSuffix,
+    bool isPatronSpell = false,
   }) {
     final isSelected = selected.contains(spell.name);
+    // "Patron" : simple indication d'origine (liste étendue du patron), pas
+    // un sort accordé — une fois choisi, c'est un sort connu ordinaire.
+    final baseSubtitle = showLevelSuffix
+        ? '${spell.metaLine} (niveau ${spell.level})'
+        : spell.metaLine;
     return CheckableOptionTile(
       title: spell.name,
-      subtitle: showLevelSuffix
-          ? '${spell.metaLine} (niveau ${spell.level})'
-          : spell.metaLine,
+      subtitle: isPatronSpell ? '$baseSubtitle · Patron' : baseSubtitle,
       leading: AccentIconBadge(index: index, icon: Icons.auto_awesome),
       checked: isSelected,
       enabled: !SpellsStepSelection.isChoiceLocked(

@@ -614,6 +614,7 @@ abstract final class CharacterDetailRowMapper {
           subclassName: subclassId != null
               ? subclassNames[subclassId.toString()]
               : null,
+          subclassId: subclassId is num ? subclassId.toInt() : null,
         ),
       );
     }

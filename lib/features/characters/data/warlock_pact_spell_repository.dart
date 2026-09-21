@@ -3,7 +3,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../character_creation/data/spell_row_mapper.dart';
 import '../../character_creation/domain/spell_option.dart';
 import '../domain/character_failure.dart';
+import '../domain/patron_extended_spells.dart';
 import 'character_error_mapper.dart';
+import 'patron_extended_spell_row_mapper.dart';
 
 /// Langue d'affichage des noms de sorts, en dur pour l'instant — même
 /// rationale que `_locale` de `character_repository.dart`.
@@ -31,6 +33,14 @@ abstract class WarlockPactSpellRepository {
   /// `spells.id` de Appel de familier, `null` si le sort n'existe pas
   /// (ou pas en français) dans le catalogue de cet environnement.
   Future<int?> findFamiliarSpellId();
+
+  /// Sorts des listes ÉTENDUES des patrons d'Occultiste
+  /// (`subclass_spells.grant_kind = 'extends_list'`) pour chacune des
+  /// [subclassIds], par `subclasses.id`. Aucune requête si [subclassIds] est
+  /// vide. Lecture seule ; ces sorts ne sont jamais accordés d'office.
+  Future<Map<int, List<PatronExtendedSpell>>> fetchPatronExtendedSpells({
+    required List<int> subclassIds,
+  });
 }
 
 class SupabaseWarlockPactSpellRepository implements WarlockPactSpellRepository {
@@ -67,6 +77,43 @@ class SupabaseWarlockPactSpellRepository implements WarlockPactSpellRepository {
       throw mapCharacterError(error);
     } on CharacterFailure {
       rethrow;
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<Map<int, List<PatronExtendedSpell>>> fetchPatronExtendedSpells({
+    required List<int> subclassIds,
+  }) async {
+    if (subclassIds.isEmpty) return const {};
+    try {
+      final grantRows = await _client
+          .from('subclass_spells')
+          .select('subclass_id, spell_id, class_level')
+          .eq('grant_kind', 'extends_list')
+          .inFilter('subclass_id', subclassIds);
+      final spellIds = PatronExtendedSpellRowMapper.collectSpellIds(grantRows);
+      if (spellIds.isEmpty) return const {};
+
+      final spellRows = await _client
+          .from('spells')
+          .select('id, level, school, casting_time, is_incomplete')
+          .inFilter('id', spellIds.toList());
+      final nameRows = await _client
+          .from('translations')
+          .select('entity_id, value')
+          .eq('entity_type', 'spell')
+          .eq('field_name', 'name')
+          .eq('locale', _locale)
+          .inFilter('entity_id', SpellRowMapper.collectIds(spellRows).toList());
+      return PatronExtendedSpellRowMapper.parse(
+        grantRows: grantRows,
+        spellRows: spellRows,
+        names: SpellRowMapper.parseTranslatedValues(nameRows),
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
     } catch (_) {
       throw mapUnknownCharacterError();
     }

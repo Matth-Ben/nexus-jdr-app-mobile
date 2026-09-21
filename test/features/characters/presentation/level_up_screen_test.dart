@@ -33,6 +33,7 @@ import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
+import 'package:personnages/features/characters/domain/patron_extended_spells.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
@@ -144,6 +145,17 @@ class _FakeWarlockPactSpellRepository implements WarlockPactSpellRepository {
 
   @override
   Future<int?> findFamiliarSpellId() async => familiarSpellId;
+
+  Map<int, List<PatronExtendedSpell>> patronSpells = const {};
+  final List<List<int>> patronRequests = [];
+
+  @override
+  Future<Map<int, List<PatronExtendedSpell>>> fetchPatronExtendedSpells({
+    required List<int> subclassIds,
+  }) async {
+    patronRequests.add(subclassIds);
+    return patronSpells;
+  }
 }
 
 class _FakeCharacterRepository implements CharacterRepository {
@@ -3201,6 +3213,118 @@ void main() {
         expect(fakeRepository.applyLevelUpCalls.single.invocationIds, isEmpty);
       },
     );
+  });
+
+  group('Occultiste : sorts etendus du patron (extends_list)', () {
+    CharacterDetailClassRow occultisteClass({int? subclassId}) =>
+        CharacterDetailClassRow(
+          classId: 9,
+          hitDie: 8,
+          className: 'Occultiste',
+          level: 5,
+          isPrimary: true,
+          savingThrowProficiencies: const [],
+          subclassId: subclassId,
+        );
+
+    PatronExtendedSpell patron(
+      int id,
+      String name,
+      int level,
+      int classLevel,
+    ) => PatronExtendedSpell(
+      spell: SpellOption(
+        id: id,
+        name: name,
+        level: level,
+        school: 'Ecole',
+        castingTime: '1 action',
+      ),
+      classLevel: classLevel,
+    );
+
+    setUp(() {
+      fakeRepository.levelDataByLevel = {
+        6: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+      fakeCreationRepository.spellCatalogByClassId = {
+        9: const SpellCatalog(
+          spells: [
+            SpellOption(
+              id: 300,
+              name: 'Armure de mage',
+              level: 1,
+              school: 'Abjuration',
+              castingTime: '1 action',
+            ),
+          ],
+        ),
+      };
+      fakePactRepository.patronSpells = {
+        40: [
+          patron(350, 'Mains brulantes', 1, 1),
+          patron(351, 'Fracasser', 2, 3),
+          patron(352, 'Boule de feu', 3, 5),
+          // Pas encore atteint : niveau d'Occultiste 7 requis.
+          patron(353, 'Mur de feu', 4, 7),
+        ],
+      };
+    });
+
+    Future<void> goToSpellsStep(WidgetTester tester) async {
+      await pushPastAnnouncement(tester, 6);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'patron connu : les sorts accessibles au niveau cible sont ajoutes aux '
+      'candidats (marques "Patron"), choisir un sort du patron l ecrit comme '
+      'sort connu ordinaire',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [occultisteClass(subclassId: 40)],
+          xp: 0,
+        );
+
+        await goToSpellsStep(tester);
+
+        expect(fakePactRepository.patronRequests.single, [40]);
+        expect(find.text('Armure de mage'), findsOneWidget);
+        expect(find.text('Mains brulantes'), findsOneWidget);
+        expect(find.text('Fracasser'), findsOneWidget);
+        expect(find.text('Boule de feu'), findsOneWidget);
+        expect(find.text('Mur de feu'), findsNothing);
+        expect(find.textContaining('· Patron'), findsNWidgets(3));
+
+        await tester.tap(find.text('Fracasser'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.initialSpellIds, [351]);
+      },
+    );
+
+    testWidgets('sans patron : candidats de la liste de classe inchanges', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [occultisteClass()],
+        xp: 0,
+      );
+
+      await goToSpellsStep(tester);
+
+      expect(fakePactRepository.patronRequests.single, isEmpty);
+      expect(find.text('Armure de mage'), findsOneWidget);
+      expect(find.text('Mains brulantes'), findsNothing);
+      expect(find.textContaining('· Patron'), findsNothing);
+    });
   });
 
   group('Faveur de pacte (Occultiste niveau 3, choice_type pacte)', () {

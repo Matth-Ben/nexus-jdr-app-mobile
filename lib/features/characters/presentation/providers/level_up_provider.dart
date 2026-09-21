@@ -17,6 +17,7 @@ import '../../domain/level_up_multiclass_option.dart';
 import '../../domain/level_up_subclass_option.dart';
 import '../../domain/multiclass_prerequisites.dart';
 import '../../domain/multiclass_proficiencies.dart';
+import '../../domain/patron_extended_spells.dart';
 import '../../domain/spell_slot_change.dart';
 import '../../domain/spell_slot_progression.dart';
 import '../../domain/spells_known_progression.dart';
@@ -230,6 +231,18 @@ typedef LevelUpStepData = ({
   /// [choiceKind] n'est pas [LevelUpChoiceKind.pact] ou si le sort est
   /// introuvable dans le catalogue.
   int? familiarSpellId,
+
+  /// `subclasses.id` déjà enregistré pour la classe qui progresse (patron de
+  /// l'Occultiste), `null` si aucun (ou multiclassage : la nouvelle ligne n'a
+  /// pas de sous-classe). Le patron choisi dans cette même montée de niveau
+  /// est géré par l'écran.
+  int? knownSubclassId,
+
+  /// Sorts des listes étendues de patron, par `subclasses.id` — uniquement
+  /// pour l'Occultiste à l'étape "Sorts" : celui du patron déjà connu et ceux
+  /// des sous-classes proposées à ce niveau. Vide sinon. Le filtrage par
+  /// niveau est fait par `PatronExtendedSpells.merge` côté écran.
+  Map<int, List<PatronExtendedSpell>> patronExtendedSpells,
 });
 
 /// Options de multiclassage disponibles pour [detail] à cet instant — calcul
@@ -357,6 +370,7 @@ Future<LevelUpStepData> levelUpStepData(
   int effectiveHitDie;
   int effectiveClassLevel;
   int effectiveTargetLevel;
+  int? knownSubclassId;
 
   if (isMulticlassing) {
     final chosen = multiclassOptions.firstWhere(
@@ -423,6 +437,8 @@ Future<LevelUpStepData> levelUpStepData(
     // sous-classes proposées) correspondent à ce qui sera réellement écrit.
     effectiveClassLevel = targetClass.level;
     effectiveTargetLevel = targetClass.level + 1;
+    // Seule la sous-classe de LA ligne qui progresse compte (multiclassage).
+    knownSubclassId = targetClass.subclassId;
   }
 
   final levelData = await ref
@@ -539,6 +555,28 @@ Future<LevelUpStepData> levelUpStepData(
           );
   }
 
+  // Listes de sorts étendues des patrons d'Occultiste : lues pour le patron
+  // déjà connu ET pour ceux proposés à ce niveau (choisi dans la même montée
+  // de niveau, avant l'étape "Sorts"). Un échec ne bloque pas la montée de
+  // niveau : les sorts du patron sont simplement absents des candidats.
+  var patronExtendedSpells = const <int, List<PatronExtendedSpell>>{};
+  if (requiresSpellSelection &&
+      effectiveClassName == PatronExtendedSpells.warlockClassName) {
+    final subclassIds = <int>{
+      ?knownSubclassId,
+      if (choiceKind == LevelUpChoiceKind.subclass)
+        for (final option in levelData.availableSubclasses)
+          (option.id as num).toInt(),
+    };
+    try {
+      patronExtendedSpells = await ref
+          .watch(warlockPactSpellRepositoryProvider)
+          .fetchPatronExtendedSpells(subclassIds: subclassIds.toList());
+    } catch (_) {
+      patronExtendedSpells = const {};
+    }
+  }
+
   // Invocations occultistes — étape "Invocations", indépendante de
   // [choiceKind] (voir `domain/level_up_block_reason.dart` et
   // `domain/level_up_choice_kind.dart::LevelUpPendingChoiceResolver`).
@@ -647,6 +685,8 @@ Future<LevelUpStepData> levelUpStepData(
     knownSpellIds: knownSpellIds,
     pactCantripCandidates: pactCantripCandidates,
     familiarSpellId: familiarSpellId,
+    knownSubclassId: knownSubclassId,
+    patronExtendedSpells: patronExtendedSpells,
   );
 }
 
