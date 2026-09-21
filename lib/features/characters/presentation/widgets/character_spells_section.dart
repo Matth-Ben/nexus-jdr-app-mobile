@@ -46,11 +46,23 @@ class CharacterSpellsSection extends StatelessWidget {
     required this.onTogglePrepared,
     this.favorites = const [],
     this.pactSlot,
+    this.preparedLimit,
+    this.preparedCount = 0,
     this.actionsDisabled = false,
     super.key,
   });
 
   final List<SpellLevelGroup> groups;
+
+  /// Limite de sorts préparés (`CharacterDetail.preparedSpellLimit`), `null`
+  /// masque le compteur "PRÉPARÉS X / Y" (classe à sorts connus, non
+  /// lanceuse, ou multiclassage de plusieurs classes qui préparent). Simple
+  /// indicateur : n'empêche jamais de préparer un sort au-delà.
+  final int? preparedLimit;
+
+  /// Nombre de sorts préparés par le joueur (`CharacterDetail
+  /// .preparedSpellCount`, sorts mineurs et sorts accordés exclus).
+  final int preparedCount;
 
   /// Sorts épinglés (`CharacterSpellEntry.isFavorite`), toutes classes/tous
   /// niveaux confondus — voir la documentation de classe, section
@@ -114,6 +126,10 @@ class CharacterSpellsSection extends StatelessWidget {
               color: AppColors.textSecondary,
             ),
           ),
+          if (preparedLimit != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            PreparedSpellsCounter(count: preparedCount, limit: preparedLimit!),
+          ],
           if (favorites.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             _FavoritesSection(
@@ -149,6 +165,69 @@ class CharacterSpellsSection extends StatelessWidget {
               onTogglePrepared: onTogglePrepared,
               actionsDisabled: actionsDisabled,
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compteur "PRÉPARÉS X / Y" (classes qui préparent leurs sorts) : titre en
+/// `font.display` 11px à gauche, badge "X / Y" à droite — même patron que le
+/// badge de quota des étapes de sorts de l'assistant de création/de la montée
+/// de niveau (`_QuotaBadge`). Au-delà de la limite, le badge passe en
+/// [AppColors.accentBrick] (texte et liseré) et la phrase de sémantique le
+/// précise : aucun blocage, simple signal.
+class PreparedSpellsCounter extends StatelessWidget {
+  const PreparedSpellsCounter({
+    required this.count,
+    required this.limit,
+    super.key,
+  });
+
+  final int count;
+  final int limit;
+
+  @override
+  Widget build(BuildContext context) {
+    final over = count > limit;
+    return Semantics(
+      container: true,
+      excludeSemantics: true,
+      label:
+          'Sorts préparés : $count sur $limit'
+          '${over ? ', limite dépassée' : ''}',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'PRÉPARÉS',
+            style: AppTypography.display(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.parchmentCardAlt,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(
+                color: over ? AppColors.accentBrick : AppColors.woodLight,
+                width: 1,
+              ),
+            ),
+            child: Text(
+              '$count / $limit',
+              style: AppTypography.body(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: over ? AppColors.accentBrick : AppColors.textSecondary,
+              ),
+            ),
+          ),
         ],
       ),
     );

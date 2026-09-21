@@ -34,6 +34,7 @@ import '../domain/level_up_multiclass_option.dart';
 import '../domain/signed_modifier_formatter.dart';
 import '../domain/spell_slot_change.dart';
 import '../domain/warlock_pact.dart';
+import '../domain/warlock_pact_rewards.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
 import 'providers/level_up_provider.dart';
@@ -59,7 +60,10 @@ enum _AsiMethod { allocate, feat }
 /// plutôt que partagé (même rationale que les autres duplicatas de ce
 /// dépôt : ne jamais coupler la montée de niveau à l'assistant de création
 /// pour un bout de logique/état d'écran spécifique à chacun).
-enum _SpellSelectionTab { cantrip, spells }
+///
+/// [pact] : sorts mineurs du Livre des ombres (Pacte du grimoire), à choisir
+/// dans le catalogue de TOUTES les classes — voir [WarlockPactRewards].
+enum _SpellSelectionTab { cantrip, spells, pact }
 
 enum _LevelUpPhase {
   /// Nouvelle phase (multiclassage), en tête — voir [_buildClassDecision] et
@@ -236,6 +240,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   List<String> _selectedNewSpells = [];
   _SpellSelectionTab? _spellSelectionActiveTab;
 
+  /// Sorts mineurs du Livre des ombres choisis (noms), Pacte du grimoire
+  /// uniquement — jamais lue directement : voir [_effectivePactCantrips].
+  List<String> _selectedPactCantrips = [];
+
   /// État de la sélection d'invocations occultistes (étape "Invocations") —
   /// clés `invocation.id.toString()` (voir [_buildInvocationIds]), pour
   /// réutiliser directement `SpellsStepSelection.toggle`/`.isChoiceLocked`
@@ -268,6 +276,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   void _resetSpellSelectionState() {
     _selectedNewCantrips = [];
     _selectedNewSpells = [];
+    _selectedPactCantrips = [];
     _spellSelectionActiveTab = null;
   }
 
@@ -297,6 +306,71 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     });
   }
 
+  void _togglePactCantrip(String name, int quota) {
+    setState(() {
+      _selectedPactCantrips = SpellsStepSelection.toggle(
+        current: _selectedPactCantrips,
+        value: name,
+        quota: quota,
+      );
+    });
+  }
+
+  /// Pacte choisi dans CETTE montée de niveau (étape "Choix à faire"), `null`
+  /// si ce niveau ne propose pas de pacte ou qu'aucun n'est encore choisi —
+  /// contrairement à [_knownPactFor], ne retombe jamais sur un pacte déjà en
+  /// base : seul un pacte choisi maintenant accorde des sorts maintenant.
+  WarlockPact? _pactChosenNow(LevelUpStepData data) {
+    if (data.choiceKind != LevelUpChoiceKind.pact) return null;
+    final selected = _selectedListOptionId;
+    return WarlockPact.fromKey(selected is String ? selected : null);
+  }
+
+  /// Nombre de sorts mineurs à choisir pour le Livre des ombres (3 si le
+  /// Pacte du grimoire vient d'être choisi, 0 sinon).
+  int _pactCantripQuota(LevelUpStepData data) =>
+      WarlockPactRewards.cantripQuotaFor(_pactChosenNow(data));
+
+  /// [_selectedPactCantrips] restreinte aux candidats connus et au quota
+  /// courant : le joueur a pu revenir changer son pacte (grimoire -> chaîne),
+  /// une sélection périmée ne doit jamais être écrite.
+  List<String> _effectivePactCantrips(LevelUpStepData data) {
+    final quota = _pactCantripQuota(data);
+    if (quota == 0) return const [];
+    final candidateNames = {
+      for (final spell in data.pactCantripCandidates) spell.name,
+    };
+    return [
+      for (final name in _selectedPactCantrips)
+        if (candidateNames.contains(name)) name,
+    ].take(quota).toList();
+  }
+
+  /// `spells.id` des sorts mineurs du Livre des ombres effectivement choisis.
+  List<int> _pactCantripIds(LevelUpStepData data) {
+    final selected = _effectivePactCantrips(data).toSet();
+    return [
+      for (final spell in data.pactCantripCandidates)
+        if (selected.contains(spell.name)) spell.id,
+    ];
+  }
+
+  /// Ajouts de sorts de la faveur de pacte (sorts mineurs du grimoire ou
+  /// Appel de familier), sans doublon avec les sorts déjà connus ni
+  /// avec [alreadyPlanned] (sorts de classe choisis à cette montée de niveau).
+  List<int> _pactSpellIds(
+    LevelUpStepData data, {
+    Set<int> alreadyPlanned = const {},
+  }) {
+    return WarlockPactRewards.spellIdsToAdd(
+      pact: _pactChosenNow(data),
+      chosenCantripIds: _pactCantripIds(data),
+      familiarSpellId: data.familiarSpellId,
+      knownSpellIds: data.knownSpellIds,
+      alreadyPlannedSpellIds: alreadyPlanned,
+    );
+  }
+
   void _toggleInvocation(LevelUpStepData data, String invocationId, int quota) {
     setState(() {
       _selectedInvocationIds = SpellsStepSelection.toggle(
@@ -324,10 +398,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// montée de niveau.
   Set<int> _knownCantripIdsFor(LevelUpStepData data) {
     final catalog = data.spellSelectionCatalog;
+    // Sorts mineurs du Livre des ombres : comptent aussi comme sorts mineurs
+    // connus (ex. Décharge occulte), ce sont des sorts mineurs (niveau 0).
+    final pactCantripIds = _pactCantripIds(data);
     if (!data.requiresSpellSelection ||
         catalog == null ||
         _selectedNewCantrips.isEmpty) {
-      return data.knownCantripSpellIds;
+      return {...data.knownCantripSpellIds, ...pactCantripIds};
     }
     final rows = SpellSelectionResolver.resolve(
       cantripNames: _selectedNewCantrips,
@@ -335,7 +412,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       catalog: catalog,
       className: data.className,
     );
-    return {...data.knownCantripSpellIds, for (final row in rows) row.spellId};
+    return {
+      ...data.knownCantripSpellIds,
+      for (final row in rows) row.spellId,
+      ...pactCantripIds,
+    };
   }
 
   /// Niveau d'Occultiste CIBLE de cette montée de niveau.
@@ -380,15 +461,26 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// utilisé (le statut `'connu'`/`'préparé'` est recalculé par le
   /// repository depuis `className`, jamais transporté ici). Liste vide si ce
   /// niveau ne déclenche aucune sélection de sorts.
+  ///
+  /// Y ajoute les sorts de la faveur de pacte ([_pactSpellIds]) : même
+  /// statut 'connu' et même `source_class_id` (l'Occultiste, seule classe à
+  /// proposer un pacte) que les sorts de classe de la même montée de niveau.
   List<int> _buildNewSpellIds(LevelUpStepData data) {
-    if (!data.requiresSpellSelection) return const [];
-    final rows = SpellSelectionResolver.resolve(
-      cantripNames: _selectedNewCantrips,
-      levelOneSpellNames: _selectedNewSpells,
-      catalog: data.spellSelectionCatalog!,
-      className: data.className,
-    );
-    return [for (final row in rows) row.spellId];
+    final classSpellIds = data.requiresSpellSelection
+        ? [
+            for (final row in SpellSelectionResolver.resolve(
+              cantripNames: _selectedNewCantrips,
+              levelOneSpellNames: _selectedNewSpells,
+              catalog: data.spellSelectionCatalog!,
+              className: data.className,
+            ))
+              row.spellId,
+          ]
+        : const <int>[];
+    return [
+      ...classSpellIds,
+      ..._pactSpellIds(data, alreadyPlanned: classSpellIds.toSet()),
+    ];
   }
 
   /// Identifiants d'invocations prêts pour `CharacterRepository.applyLevelUp`
@@ -1027,7 +1119,8 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   bool _hasSpellsStep(LevelUpStepData data) =>
       data.spellSlotChanges.isNotEmpty ||
       data.requiresSpellSelection ||
-      data.pactSlotChange != null;
+      data.pactSlotChange != null ||
+      _pactCantripQuota(data) > 0;
 
   /// `true` si l'étape "Invocations" doit être affichée à ce niveau —
   /// Occultiste uniquement, voir [LevelUpStepData.requiresInvocationSelection].
@@ -1762,7 +1855,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   Widget _buildSpellsStep(LevelUpStepData data) {
     final stepNumber = data.choiceKind != null ? 4 : 3;
 
-    if (data.requiresSpellSelection) {
+    if (data.requiresSpellSelection || _pactCantripQuota(data) > 0) {
       return _buildSpellSelectionStep(data, stepNumber);
     }
 
@@ -1852,23 +1945,34 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// toujours modifier ses sorts connus manuellement depuis l'onglet Sorts
   /// existant de la fiche (déjà éditable) si besoin.
   Widget _buildSpellSelectionStep(LevelUpStepData data, int stepNumber) {
-    final catalog = data.spellSelectionCatalog!;
-    final cantripQuota = data.newCantripQuota;
-    final spellQuota = data.newSpellQuota;
+    // `null` quand seule la faveur de pacte déclenche cette étape (aucun
+    // nouveau sort de classe à ce niveau) : les listes de classe sont alors
+    // vides et leurs onglets masqués (quota nul).
+    final catalog = data.spellSelectionCatalog;
+    final cantripQuota = data.requiresSpellSelection ? data.newCantripQuota : 0;
+    final spellQuota = data.requiresSpellSelection ? data.newSpellQuota : 0;
+    final pactQuota = _pactCantripQuota(data);
     final showCantripTab = cantripQuota > 0;
     final showSpellsTab = spellQuota > 0;
+    final showPactTab = pactQuota > 0;
+    final visibleTabs = [
+      if (showCantripTab) _SpellSelectionTab.cantrip,
+      if (showSpellsTab) _SpellSelectionTab.spells,
+      if (showPactTab) _SpellSelectionTab.pact,
+    ];
 
-    // Onglet par défaut, déterminé une seule fois (même précédent que
-    // `SpellsStepScreen._activeTab`) : "Mineurs" s'il est visible, sinon
-    // "Sorts".
-    _spellSelectionActiveTab ??= showCantripTab
-        ? _SpellSelectionTab.cantrip
-        : _SpellSelectionTab.spells;
-    final activeTab = _spellSelectionActiveTab!;
-    final showTabSelector = showCantripTab && showSpellsTab;
+    // Onglet par défaut (même précédent que `SpellsStepScreen._activeTab`) :
+    // le premier visible — puis recalé si l'onglet actif a disparu (le joueur
+    // est revenu changer son pacte : grimoire -> chaîne/lame).
+    final activeTab = visibleTabs.contains(_spellSelectionActiveTab)
+        ? _spellSelectionActiveTab!
+        : visibleTabs.first;
+    _spellSelectionActiveTab = activeTab;
+    final showTabSelector = visibleTabs.length > 1;
+    final pactSelected = _effectivePactCantrips(data);
 
     final cantrips = [
-      for (final spell in catalog.spells)
+      for (final spell in catalog?.spells ?? const <SpellOption>[])
         if (spell.level == 0) spell,
     ];
     // Liste PLATE couvrant tous les niveaux de sort castables à ce niveau de
@@ -1877,7 +1981,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     // alphabétiquement.
     final spells =
         [
-          for (final spell in catalog.spells)
+          for (final spell in catalog?.spells ?? const <SpellOption>[])
             if (spell.level >= 1 && spell.level <= data.maxCastableSpellLevel)
               spell,
         ]..sort((a, b) {
@@ -1891,6 +1995,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       levelOneSpellQuota: spellQuota,
       selectedLevelOneSpells: _selectedNewSpells,
     );
+    final canContinue = canProceed && pactSelected.length == pactQuota;
 
     return Column(
       children: [
@@ -1903,15 +2008,22 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         if (showTabSelector) ...[
           const SizedBox(height: AppSpacing.sm),
           SpellLevelTabSelector<_SpellSelectionTab>(
-            options: const [
-              SpellLevelTabOption(
-                value: _SpellSelectionTab.cantrip,
-                label: 'Mineurs',
-              ),
-              SpellLevelTabOption(
-                value: _SpellSelectionTab.spells,
-                label: 'Sorts',
-              ),
+            options: [
+              if (showCantripTab)
+                const SpellLevelTabOption(
+                  value: _SpellSelectionTab.cantrip,
+                  label: 'Mineurs',
+                ),
+              if (showSpellsTab)
+                const SpellLevelTabOption(
+                  value: _SpellSelectionTab.spells,
+                  label: 'Sorts',
+                ),
+              if (showPactTab)
+                const SpellLevelTabOption(
+                  value: _SpellSelectionTab.pact,
+                  label: 'Grimoire',
+                ),
             ],
             value: activeTab,
             onChanged: (tab) => setState(() => _spellSelectionActiveTab = tab),
@@ -1940,6 +2052,17 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                     selected: _selectedNewCantrips,
                     candidates: cantrips,
                     onToggle: _toggleNewCantrip,
+                    showLevelSuffix: false,
+                  )
+                else if (activeTab == _SpellSelectionTab.pact)
+                  // Livre des ombres : sorts mineurs de N'IMPORTE QUELLE
+                  // classe (catalogue complet, déjà connus exclus).
+                  _spellSelectionSection(
+                    title: 'LIVRE DES OMBRES',
+                    quota: pactQuota,
+                    selected: pactSelected,
+                    candidates: data.pactCantripCandidates,
+                    onToggle: _togglePactCantrip,
                     showLevelSuffix: false,
                   )
                 else
@@ -2006,7 +2129,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           // atteints — même garde que l'étape 6/9 de l'assistant de création
           // (`SpellsStepSelection.canProceed`), spec visuelle
           // direction-artistique section 4.
-          onContinue: canProceed
+          onContinue: canContinue
               ? () => setState(() => _phase = _phaseAfterSpells(data))
               : null,
         ),
@@ -2388,6 +2511,24 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           color: AppColors.accentViolet,
           title: 'Nouveaux sorts appris',
           subtitle: _selectedNewSpells.join(', '),
+        ),
+      if (_effectivePactCantrips(data).isNotEmpty)
+        GainRow(
+          icon: Icons.menu_book,
+          color: AppColors.accentTeal,
+          title: 'Livre des ombres',
+          subtitle: _effectivePactCantrips(data).join(', '),
+        ),
+      if (WarlockPactRewards.willAddFamiliar(
+        pact: _pactChosenNow(data),
+        familiarSpellId: data.familiarSpellId,
+        knownSpellIds: data.knownSpellIds,
+      ))
+        const GainRow(
+          icon: Icons.pets,
+          color: AppColors.accentTeal,
+          title: 'Appel de familier ajouté',
+          subtitle: 'Pacte de la chaîne',
         ),
     ];
   }

@@ -26,6 +26,7 @@ import 'package:personnages/features/character_creation/domain/spell_option.dart
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
+import 'package:personnages/features/characters/data/warlock_pact_spell_repository.dart';
 import 'package:personnages/features/characters/domain/character_class_choice.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
@@ -130,6 +131,19 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
     required SpellCatalog spellCatalog,
     required ItemCatalog itemCatalog,
   }) => throw UnimplementedError();
+}
+
+/// Lectures de reference de la faveur de pacte : catalogue de sorts mineurs
+/// (toutes classes) et identifiant de Appel de familier.
+class _FakeWarlockPactSpellRepository implements WarlockPactSpellRepository {
+  List<SpellOption> cantrips = const [];
+  int? familiarSpellId;
+
+  @override
+  Future<List<SpellOption>> fetchAllCantrips() async => cantrips;
+
+  @override
+  Future<int?> findFamiliarSpellId() async => familiarSpellId;
 }
 
 class _FakeCharacterRepository implements CharacterRepository {
@@ -550,15 +564,20 @@ CharacterDetail _baseDetailAtLevel(int level) => _baseDetail.copyWith(
 void main() {
   late _FakeCharacterRepository fakeRepository;
   late _FakeCharacterCreationRepository fakeCreationRepository;
+  late _FakeWarlockPactSpellRepository fakePactRepository;
   late ProviderContainer container;
   late GoRouter router;
 
   setUp(() {
     fakeRepository = _FakeCharacterRepository();
     fakeCreationRepository = _FakeCharacterCreationRepository();
+    fakePactRepository = _FakeWarlockPactSpellRepository();
     container = ProviderContainer(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeRepository),
+        warlockPactSpellRepositoryProvider.overrideWithValue(
+          fakePactRepository,
+        ),
         characterCreationRepositoryProvider.overrideWithValue(
           fakeCreationRepository,
         ),
@@ -3269,8 +3288,179 @@ void main() {
         expect(choice.kind, LevelUpChoiceKind.pact);
         expect(choice.classFeatureId, 261);
         expect(choice.chosenValue, 'lame');
+        // Pacte de la lame : aucun sort supplementaire (seul le sort de
+        // classe choisi a l'etape Sorts est ecrit).
+        expect(fakeRepository.applyLevelUpCalls.single.initialSpellIds, [310]);
       },
     );
+
+    const knownLight = SpellOption(
+      id: 500,
+      name: 'Lumiere',
+      level: 0,
+      school: 'Evocation',
+      castingTime: '1 action',
+    );
+    const grimoireCantrips = [
+      knownLight,
+      SpellOption(
+        id: 501,
+        name: 'Aide-mage',
+        level: 0,
+        school: 'Invocation',
+        castingTime: '1 action',
+      ),
+      SpellOption(
+        id: 502,
+        name: 'Flamme sacree',
+        level: 0,
+        school: 'Evocation',
+        castingTime: '1 action',
+      ),
+      SpellOption(
+        id: 503,
+        name: 'Epargne des mourants',
+        level: 0,
+        school: 'Necromancie',
+        castingTime: '1 action',
+      ),
+      SpellOption(
+        id: 504,
+        name: 'Druidisme',
+        level: 0,
+        school: 'Transmutation',
+        castingTime: '1 action',
+      ),
+    ];
+
+    const lightSpell = CharacterSpellEntry(
+      id: 500,
+      name: 'Lumiere',
+      level: 0,
+      school: 'Evocation',
+      status: 'connu',
+    );
+
+    /// Franchit Points de vie/Aptitudes puis choisit [pactLabel] et arrive a
+    /// l'etape Sorts.
+    Future<void> chooseThePact(WidgetTester tester, String pactLabel) async {
+      await pushPastAnnouncement(tester, 3);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(pactLabel));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      expect(find.text('Étape 4 sur 5 · Sorts'), findsOneWidget);
+    }
+
+    testWidgets(
+      'Pacte du grimoire : onglet "Grimoire" avec les sorts mineurs de toutes '
+      'les classes (deja connus exclus), 3 requis, ecrits avec le sort de '
+      'classe et listes au recapitulatif',
+      (tester) async {
+        fakePactRepository.cantrips = grimoireCantrips;
+        fakeRepository.detailToReturn = fakeRepository.detailToReturn!.copyWith(
+          spells: const [lightSpell],
+        );
+
+        await chooseThePact(tester, 'Pacte du grimoire');
+
+        // Sort de classe d'abord (onglet "Sorts" par defaut).
+        await tester.tap(find.text('Fleche acide de Melf'));
+        await tester.pumpAndSettle();
+        // Continuer reste desactive tant que le grimoire n'a pas 3 sorts.
+        await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Étape 4 sur 5 · Sorts'), findsOneWidget);
+
+        await tester.tap(find.text('Grimoire'));
+        await tester.pumpAndSettle();
+        expect(find.text('LIVRE DES OMBRES'), findsOneWidget);
+        expect(find.text('0 / 3'), findsOneWidget);
+        // Sort mineur deja connu : exclu.
+        expect(find.text('Lumiere'), findsNothing);
+
+        await tester.tap(find.text('Aide-mage'));
+        await tester.tap(find.text('Flamme sacree'));
+        await tester.tap(find.text('Epargne des mourants'));
+        await tester.pumpAndSettle();
+        expect(find.text('3 / 3'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Livre des ombres'), findsOneWidget);
+        expect(
+          find.text('Aide-mage, Flamme sacree, Epargne des mourants'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.choice!.chosenValue, 'grimoire');
+        expect(applied.initialSpellIds, [310, 501, 502, 503]);
+      },
+    );
+
+    testWidgets(
+      'Pacte de la chaine : Appel de familier ajoutee au recapitulatif '
+      'et aux sorts ecrits',
+      (tester) async {
+        fakePactRepository.familiarSpellId = 777;
+
+        await chooseThePact(tester, 'Pacte de la chaîne');
+        // Aucun onglet Grimoire pour la chaine.
+        expect(find.text('Grimoire'), findsNothing);
+        await tester.tap(find.text('Fleche acide de Melf'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Appel de familier ajouté'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.initialSpellIds, [
+          310,
+          777,
+        ]);
+      },
+    );
+
+    testWidgets('Pacte de la chaine : pas de doublon si Appel de familier est '
+        'deja connue (ni ligne de recapitulatif, ni ecriture)', (tester) async {
+      fakePactRepository.familiarSpellId = 777;
+      fakeRepository.detailToReturn = fakeRepository.detailToReturn!.copyWith(
+        spells: const [
+          CharacterSpellEntry(
+            id: 777,
+            name: 'Appel de familier',
+            level: 1,
+            school: 'Invocation',
+            status: 'connu',
+          ),
+        ],
+      );
+
+      await chooseThePact(tester, 'Pacte de la chaîne');
+      await tester.tap(find.text('Fleche acide de Melf'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Appel de familier ajouté'), findsNothing);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyLevelUpCalls.single.initialSpellIds, [310]);
+    });
   });
 
   group('prerequis des invocations (etape Invocations)', () {

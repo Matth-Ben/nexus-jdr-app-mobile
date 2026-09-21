@@ -9,7 +9,7 @@ enum WarlockPact {
     key: 'chaine',
     label: 'Pacte de la chaîne',
     description:
-        'Vous apprenez le sort Convocation de familier et pouvez invoquer '
+        'Vous apprenez le sort Appel de familier et pouvez invoquer '
         'un familier amélioré : lutin, pseudodragon, quasit ou sprite.',
   ),
   blade(

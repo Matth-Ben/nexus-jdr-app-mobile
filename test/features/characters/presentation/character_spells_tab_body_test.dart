@@ -40,6 +40,7 @@ CharacterDetail _detail({
   CharacterSpellSlot? pactSpellSlot,
   List<CharacterDetailClassRow> classes = _defaultClasses,
   List<CharacterClassFeature> classFeatures = const [],
+  Map<String, int> abilityScores = const {},
 }) {
   return CharacterDetail(
     id: '1',
@@ -49,7 +50,7 @@ CharacterDetail _detail({
     currentHp: 10,
     maxHp: 10,
     temporaryHp: 0,
-    abilityScores: const {},
+    abilityScores: abilityScores,
     spells: spells,
     spellSlots: spellSlots,
     pactSpellSlot: pactSpellSlot,
@@ -946,6 +947,107 @@ void main() {
       final detail = _detail(spells: const [ordinary, granted, oath]);
       expect(detail.preparedSpellCount, 0);
       expect(detail.grantedSpells, hasLength(2));
+    });
+  });
+
+  group('compteur "PRÉPARÉS X / Y"', () {
+    const prepared = CharacterSpellEntry(
+      id: 10,
+      name: 'Bouclier',
+      level: 1,
+      school: 'Abjuration',
+      status: 'préparé',
+    );
+    const cantrip = CharacterSpellEntry(
+      id: 11,
+      name: 'Lumière',
+      level: 0,
+      school: 'Évocation',
+      status: 'préparé',
+    );
+    const known = CharacterSpellEntry(
+      id: 12,
+      name: 'Projectile magique',
+      level: 1,
+      school: 'Évocation',
+      status: 'connu',
+    );
+
+    CharacterDetailClassRow classRow(
+      int id,
+      String name,
+      int level, {
+      bool primary = true,
+    }) => CharacterDetailClassRow(
+      classId: id,
+      className: name,
+      level: level,
+      isPrimary: primary,
+      savingThrowProficiencies: const [],
+      hitDie: 8,
+    );
+
+    testWidgets('Magicien niveau 3, Int 16 : limite 6, sorts mineurs et '
+        'sorts connus non comptés', (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          classes: [classRow(1, 'Magicien', 3)],
+          abilityScores: const {'int': 16},
+          spells: const [prepared, cantrip, known],
+        ),
+      );
+
+      expect(find.text('PRÉPARÉS'), findsOneWidget);
+      expect(find.text('1 / 6'), findsOneWidget);
+    });
+
+    testWidgets('limite atteinte : le compteur reste affiché et l action '
+        '"Préparer" n est pas bloquée', (tester) async {
+      final toggled = <CharacterSpellEntry>[];
+      await _pump(
+        tester,
+        _detail(
+          abilityScores: const {'int': 10},
+          spells: const [prepared, known],
+        ),
+        onTogglePrepared: toggled.add,
+      );
+      // Magicien niveau 1, Int 10 : limite 1, déjà atteinte.
+      expect(find.text('1 / 1'), findsOneWidget);
+
+      await tester.tap(find.text('Projectile magique'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Préparer ce sort'));
+      await tester.pumpAndSettle();
+
+      expect(toggled, [known]);
+    });
+
+    testWidgets('classe à sorts connus : aucun compteur', (tester) async {
+      await _pump(
+        tester,
+        _detail(classes: [classRow(2, 'Barde', 3)], spells: const [known]),
+      );
+
+      expect(find.text('PRÉPARÉS'), findsNothing);
+    });
+
+    testWidgets('plusieurs classes qui préparent : aucun compteur', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _detail(
+          classes: [
+            classRow(1, 'Magicien', 3),
+            classRow(3, 'Clerc', 2, primary: false),
+          ],
+          spells: const [prepared],
+        ),
+      );
+
+      expect(find.text('PRÉPARÉS'), findsNothing);
     });
   });
 }

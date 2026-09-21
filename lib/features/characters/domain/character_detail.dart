@@ -13,6 +13,7 @@ import 'character_skill_row.dart';
 import 'character_spell_entry.dart';
 import 'character_spell_slot.dart';
 import 'inventory_weight_calculator.dart';
+import 'prepared_spells_limit.dart';
 import 'xp_table.dart';
 
 part 'character_detail.freezed.dart';
@@ -302,6 +303,14 @@ abstract class CharacterDetail with _$CharacterDetail {
             !spell.isAlwaysPrepared,
       )
       .length;
+
+  /// Limite de sorts préparés (le "Y" de "Préparés X / Y"), `null` si aucun
+  /// compteur ne doit s'afficher (aucune classe qui prépare, ou plusieurs —
+  /// voir [PreparedSpellsLimit.limitForCharacter]).
+  int? get preparedSpellLimit => PreparedSpellsLimit.limitForCharacter(
+    classes: classes,
+    abilityScores: abilityScores,
+  );
 
   /// Classe "principale" : celle marquée `is_primary`, ou la première de la
   /// liste à défaut (donnée incohérente, ne devrait normalement pas

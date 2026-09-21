@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../character_creation/domain/ability_score_rules.dart';
 import '../../../character_creation/domain/spell_catalog.dart';
+import '../../../character_creation/domain/spell_option.dart';
 import '../../../character_creation/presentation/providers/character_creation_providers.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/character_failure.dart';
@@ -20,6 +21,7 @@ import '../../domain/spell_slot_change.dart';
 import '../../domain/spell_slot_progression.dart';
 import '../../domain/spells_known_progression.dart';
 import '../../domain/warlock_pact.dart';
+import '../../domain/warlock_pact_rewards.dart';
 import 'character_detail_provider.dart';
 import 'character_providers.dart';
 
@@ -214,6 +216,20 @@ typedef LevelUpStepData = ({
 
   /// `spells.id` des sorts mineurs (niveau 0) déjà connus du personnage.
   Set<int> knownCantripSpellIds,
+
+  /// `spells.id` de TOUS les sorts déjà connus du personnage (tous niveaux) —
+  /// évite les doublons des sorts accordés par la faveur de pacte.
+  Set<int> knownSpellIds,
+
+  /// Sorts mineurs du catalogue (TOUTES classes) pas encore connus, proposés
+  /// par le Pacte du grimoire — non vide seulement quand [choiceKind] est
+  /// [LevelUpChoiceKind.pact] (aucune requête réseau supplémentaire sinon).
+  List<SpellOption> pactCantripCandidates,
+
+  /// `spells.id` de Appel de familier (Pacte de la chaîne), `null` si
+  /// [choiceKind] n'est pas [LevelUpChoiceKind.pact] ou si le sort est
+  /// introuvable dans le catalogue.
+  int? familiarSpellId,
 });
 
 /// Options de multiclassage disponibles pour [detail] à cet instant — calcul
@@ -538,6 +554,31 @@ Future<LevelUpStepData> levelUpStepData(
     for (final spell in detail.spells)
       if (spell.level == 0) spell.id,
   };
+  final knownSpellIds = {for (final spell in detail.spells) spell.id};
+
+  // Faveur de pacte (niveau 3) : le catalogue des sorts mineurs de TOUTES les
+  // classes (Pacte du grimoire) et l'identifiant de Appel de familier
+  // (Pacte de la chaîne) ne sont lus que quand ce niveau propose le choix de
+  // pacte — le pacte réellement retenu n'est connu que côté écran.
+  var pactCantripCandidates = const <SpellOption>[];
+  int? familiarSpellId;
+  if (choiceKind == LevelUpChoiceKind.pact) {
+    final pactRepository = ref.watch(warlockPactSpellRepositoryProvider);
+    final allCantrips = await pactRepository.fetchAllCantrips();
+    pactCantripCandidates = WarlockPactRewards.availableCantrips(
+      allCantrips,
+      idOf: (spell) => spell.id,
+      knownSpellIds: knownSpellIds,
+    );
+    // Bonus du pacte de la chaîne : un échec de cette recherche ne doit pas
+    // faire échouer toute la montée de niveau (le sort n'est simplement pas
+    // ajouté, comme s'il était introuvable).
+    try {
+      familiarSpellId = await pactRepository.findFamiliarSpellId();
+    } catch (_) {
+      familiarSpellId = null;
+    }
+  }
   var availableInvocations = const <LevelUpInvocationOption>[];
   var invocationQuota = 0;
   if (requiresInvocationSelection) {
@@ -603,6 +644,9 @@ Future<LevelUpStepData> levelUpStepData(
     invocationDelta: invocationDelta,
     knownPact: knownPact,
     knownCantripSpellIds: knownCantripSpellIds,
+    knownSpellIds: knownSpellIds,
+    pactCantripCandidates: pactCantripCandidates,
+    familiarSpellId: familiarSpellId,
   );
 }
 
