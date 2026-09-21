@@ -3205,6 +3205,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
       subclassSpellRows = await _client
           .from('subclass_spells')
           .select('subclass_id, spell_id, class_level')
+          // Les listes ÉTENDUES des patrons d'Occultiste ('extends_list')
+          // n'accordent aucun sort d'office.
+          .eq('grant_kind', 'always_prepared')
           .inFilter('subclass_id', [
             for (final entry in subclassProgress) entry.subclassId,
           ]);
