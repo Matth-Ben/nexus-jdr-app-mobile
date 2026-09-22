@@ -7,6 +7,7 @@ import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/inventory_category_rules.dart';
+import '../../domain/weapon_slot.dart';
 import '../../domain/weight_formatter.dart';
 
 /// Carte « ARMES ÉQUIPÉES » de l'onglet « Personnage » — même gabarit que
@@ -16,6 +17,17 @@ import '../../domain/weight_formatter.dart';
 /// (`item.category == 'arme' && item.equipped`) : cette carte se contente
 /// d'afficher la liste déjà résolue, sans logique d'écriture (équiper/
 /// déséquiper reste une action de l'onglet "Inventaire" uniquement).
+///
+/// Regroupée en deux sous-sections "SET PRINCIPAL"/"SET SECONDAIRE" (voir
+/// `domain/weapon_slot.dart::WeaponSlot`) plutôt qu'une liste plate — un
+/// [CharacterInventoryItem.weaponSlot] à `null` est traité comme principal
+/// (ne devrait pas arriver après le backfill de la migration qui a
+/// introduit `weapon_slot`, mais évite qu'une arme équipée disparaisse
+/// silencieusement de la carte si jamais). Un groupe vide affiche un texte
+/// discret ("Aucune arme dans ce set.") plutôt que d'être masqué, pour que
+/// le joueur voie qu'il a de la place — sauf si aucune arme n'est équipée du
+/// tout, auquel cas c'est l'état vide global ([_EmptyWeapons]) qui s'affiche
+/// à la place des deux sous-sections.
 ///
 /// Aucune puce "Maîtrisée"/"Arme magique" ici (contrairement à
 /// `CharacterPactWeaponCard`) : aucune donnée de maîtrise par arme
@@ -48,17 +60,68 @@ class CharacterEquippedWeaponsCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           if (weapons.isEmpty)
             const _EmptyWeapons()
-          else
-            for (var i = 0; i < weapons.length; i++) ...[
-              _Weapon(weapons[i]),
-              if (i < weapons.length - 1) ...[
-                const SizedBox(height: AppSpacing.sm),
-                const SheetActionDivider(),
-                const SizedBox(height: AppSpacing.sm),
+          else ...[
+            _WeaponSlotSection(
+              title: 'SET PRINCIPAL',
+              weapons: [
+                for (final weapon in weapons)
+                  if (weapon.weaponSlot != WeaponSlot.secondary) weapon,
               ],
-            ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            const SheetActionDivider(),
+            const SizedBox(height: AppSpacing.sm),
+            _WeaponSlotSection(
+              title: 'SET SECONDAIRE',
+              weapons: [
+                for (final weapon in weapons)
+                  if (weapon.weaponSlot == WeaponSlot.secondary) weapon,
+              ],
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// Sous-section "SET PRINCIPAL"/"SET SECONDAIRE" — voir la documentation de
+/// classe de [CharacterEquippedWeaponsCard].
+class _WeaponSlotSection extends StatelessWidget {
+  const _WeaponSlotSection({required this.title, required this.weapons});
+
+  final String title;
+  final List<CharacterInventoryItem> weapons;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: AppTypography.body(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (weapons.isEmpty)
+          Text(
+            'Aucune arme dans ce set.',
+            style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
+          )
+        else
+          for (var i = 0; i < weapons.length; i++) ...[
+            _Weapon(weapons[i]),
+            if (i < weapons.length - 1) ...[
+              const SizedBox(height: AppSpacing.sm),
+              const SheetActionDivider(),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+          ],
+      ],
     );
   }
 }

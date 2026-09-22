@@ -9,7 +9,9 @@ import '../../../../core/widgets/sheet_action_row.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/inventory_category_rules.dart';
+import '../../domain/weapon_slot.dart';
 import 'item_info_panel.dart';
+import 'weapon_slot_picker_sheet.dart';
 
 /// Callback d'exécution de l'action "Utiliser" un objet consommable —
 /// délègue toute la logique d'écriture (optimiste + réseau + message) à
@@ -37,6 +39,15 @@ typedef RemoveInventoryItemCallback = void Function(
   CharacterInventoryItem item,
 );
 
+/// Callback d'exécution de l'action "Équiper"/"Changer de set" d'une arme
+/// (choix du set fait via [showWeaponSlotPickerSheet]) — délègue toute la
+/// logique d'écriture (calcul du déséquipement automatique inclus) à
+/// l'appelant, voir `character_detail_screen.dart::_equipWeaponToSlot`.
+typedef EquipWeaponToSlotCallback = void Function(
+  CharacterInventoryItem item,
+  WeaponSlot slot,
+);
+
 /// Catégories pour lesquelles l'action "Équiper"/"Déséquiper" a un sens —
 /// voir la spec visuelle de la tâche.
 const Set<String> equippableInventoryCategories = {
@@ -53,6 +64,14 @@ const Set<String> equippableInventoryCategories = {
 /// (catégorie ∈ [equippableInventoryCategories]) affichées selon les
 /// conditions de la spec, puis "Retirer" (toujours, séparée par un
 /// [SheetActionDivider], couleur `accentBrick`).
+///
+/// Cas particulier d'une arme (`category == 'arme'`) : "Équiper"/
+/// "Déséquiper" ne bascule jamais directement — équiper une arme requiert de
+/// choisir un set ("set principal"/"set secondaire", voir
+/// [showWeaponSlotPickerSheet]), donc le libellé est "Équiper" (non équipée)
+/// ou "Changer de set" (déjà équipée), et une arme déjà équipée affiche en
+/// plus une action "Déséquiper" séparée (bascule directe, sans passer par la
+/// sheet de choix de set) — voir [onEquipWeaponToSlot]/[onToggleEquipped].
 ///
 /// Un objet personnalisé ([CharacterInventoryItem.isCustom]) n'a jamais
 /// "Utiliser" ni "Équiper"/"Déséquiper" ni "Harmoniser" (pas de
@@ -73,6 +92,8 @@ Future<void> showItemActionSheet(
   required ToggleInventoryItemAttunedCallback onToggleAttuned,
   required RemoveInventoryItemCallback onRemoveItem,
   required int attunedCount,
+  required List<CharacterInventoryItem> equippedWeapons,
+  required EquipWeaponToSlotCallback onEquipWeaponToSlot,
 }) async {
   final action = await showModalBottomSheet<_ItemSheetAction>(
     context: context,
@@ -99,6 +120,14 @@ Future<void> showItemActionSheet(
       onToggleEquipped(item);
     case _ItemSheetAction.toggleAttuned:
       onToggleAttuned(item);
+    case _ItemSheetAction.equipWeapon:
+      final slot = await showWeaponSlotPickerSheet(
+        context,
+        equippedWeapons: equippedWeapons,
+        currentItemId: item.id,
+      );
+      if (slot == null || !context.mounted) return;
+      onEquipWeaponToSlot(item, slot);
     case _ItemSheetAction.remove:
       await removeItemFlow(context, item: item, onRemoveItem: onRemoveItem);
   }
@@ -122,7 +151,14 @@ Future<void> removeItemFlow(
   onRemoveItem(item);
 }
 
-enum _ItemSheetAction { info, use, toggleEquipped, toggleAttuned, remove }
+enum _ItemSheetAction {
+  info,
+  use,
+  toggleEquipped,
+  toggleAttuned,
+  equipWeapon,
+  remove,
+}
 
 class _ItemActionSheetContent extends StatelessWidget {
   const _ItemActionSheetContent({
@@ -135,8 +171,11 @@ class _ItemActionSheetContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWeapon = !item.isCustom && item.category == 'arme';
     final equippable =
-        !item.isCustom && equippableInventoryCategories.contains(item.category);
+        !isWeapon &&
+        !item.isCustom &&
+        equippableInventoryCategories.contains(item.category);
     final usable = !item.isCustom && item.consumable;
     final attunable = !item.isCustom && item.requiresAttunement;
     final atAttunementCap =
@@ -183,7 +222,22 @@ class _ItemActionSheetContent extends StatelessWidget {
                 label: 'Utiliser',
                 onTap: () => Navigator.of(context).pop(_ItemSheetAction.use),
               ),
-            if (equippable)
+            if (isWeapon) ...[
+              SheetActionRow(
+                icon: Icons.checkroom_outlined,
+                label: item.equipped ? 'Changer de set' : 'Équiper',
+                onTap: () =>
+                    Navigator.of(context).pop(_ItemSheetAction.equipWeapon),
+              ),
+              if (item.equipped)
+                SheetActionRow(
+                  icon: Icons.remove_circle_outline,
+                  label: 'Déséquiper',
+                  onTap: () =>
+                      Navigator.of(context)
+                          .pop(_ItemSheetAction.toggleEquipped),
+                ),
+            ] else if (equippable)
               SheetActionRow(
                 icon: Icons.checkroom_outlined,
                 label: item.equipped ? 'Déséquiper' : 'Équiper',

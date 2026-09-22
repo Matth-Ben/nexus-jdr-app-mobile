@@ -18,6 +18,7 @@ import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
+import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_inventory_item_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_inventory_tab_body.dart';
 
@@ -64,6 +65,7 @@ class _Recorder {
   final List<(CurrencyKind, int)> adjustCurrencyCalls = [];
   final List<(InventoryCatalogItem, int)> addItemCalls = [];
   final List<(String, int)> addCustomItemCalls = [];
+  final List<(CharacterInventoryItem, WeaponSlot)> equipWeaponCalls = [];
 }
 
 Future<_Recorder> _pump(
@@ -88,6 +90,8 @@ Future<_Recorder> _pump(
               recorder.addItemCalls.add((item, quantity)),
           onAddCustomInventoryItem: (name, quantity) =>
               recorder.addCustomItemCalls.add((name, quantity)),
+          onEquipWeaponToSlot: (item, slot) =>
+              recorder.equipWeaponCalls.add((item, slot)),
         ),
       ),
     ),
@@ -309,20 +313,30 @@ void main() {
       expect(recorder.useCalls, [_potion]);
     });
 
-    testWidgets('"Équiper" (arme non équipée) appelle onToggleItemEquipped', (
-      tester,
-    ) async {
-      final recorder = await _pump(tester, _detail(inventory: const [_dagger]));
+    testWidgets(
+      '"Équiper" (arme non équipée) ouvre la sheet de choix de set puis '
+      'appelle onEquipWeaponToSlot',
+      (tester) async {
+        final recorder = await _pump(
+          tester,
+          _detail(inventory: const [_dagger]),
+        );
 
-      await tester.tap(find.text('Dague'));
-      await tester.pumpAndSettle();
-      expect(find.text('Équiper'), findsOneWidget);
+        await tester.tap(find.text('Dague'));
+        await tester.pumpAndSettle();
+        expect(find.text('Équiper'), findsOneWidget);
 
-      await tester.tap(find.text('Équiper'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Équiper'));
+        await tester.pumpAndSettle();
 
-      expect(recorder.toggleCalls, [_dagger]);
-    });
+        expect(find.text('CHOISIR UN SET'), findsOneWidget);
+        await tester.tap(find.text('Set principal'));
+        await tester.pumpAndSettle();
+
+        expect(recorder.equipWeaponCalls, [(_dagger, WeaponSlot.principal)]);
+        expect(recorder.toggleCalls, isEmpty);
+      },
+    );
 
     testWidgets(
       '"Retirer" ouvre une confirmation, "Retirer" du dialogue appelle '
@@ -450,6 +464,7 @@ void main() {
               onAdjustCurrency: (_, _) {},
               onAddInventoryItem: (_, _) {},
               onAddCustomInventoryItem: (_, _) {},
+              onEquipWeaponToSlot: (_, _) {},
               onAddReward: () => rewardTapCount++,
             ),
           ),

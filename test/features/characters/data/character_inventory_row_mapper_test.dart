@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/data/character_inventory_row_mapper.dart';
+import 'package:personnages/features/characters/domain/weapon_slot.dart';
 
 void main() {
   group('CharacterInventoryRowMapper.rowsOf', () {
@@ -428,6 +429,35 @@ void main() {
       expect(result[0].armorProperties, isNull);
       expect(result[1].armorProperties?.acBase, 16);
       expect(result[1].weaponProperties, isNull);
+    });
+
+    test('résout weapon_slot en WeaponSlot, null si absent/inconnu', () {
+      final rows = [
+        {
+          'id': 'inv-9',
+          'item_id': 12,
+          'quantity': 1,
+          'equipped': true,
+          'weapon_slot': 'secondaire',
+          'items': {'category': 'arme', 'weight': 1.0},
+        },
+        {
+          'id': 'inv-10',
+          'item_id': 13,
+          'quantity': 1,
+          'equipped': false,
+          'items': {'category': 'arme', 'weight': 1.0},
+        },
+      ];
+
+      final result = CharacterInventoryRowMapper.toCharacterInventoryItems(
+        rows,
+        names: const {'12': 'Dague', '13': 'Épée courte'},
+        descriptions: const {},
+      );
+
+      expect(result[0].weaponSlot, WeaponSlot.secondary);
+      expect(result[1].weaponSlot, isNull);
     });
   });
 }

@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
+import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
 
 const _longbow = CharacterInventoryItem(
@@ -14,6 +15,7 @@ const _longbow = CharacterInventoryItem(
   category: 'arme',
   quantity: 1,
   equipped: true,
+  weaponSlot: WeaponSlot.principal,
   weaponProperties: CharacterInventoryWeaponProperties(
     damageDice: '1d8',
     damageType: 'perforant',
@@ -30,6 +32,7 @@ const _dagger = CharacterInventoryItem(
   category: 'arme',
   quantity: 1,
   equipped: true,
+  weaponSlot: WeaponSlot.principal,
   weaponProperties: CharacterInventoryWeaponProperties(
     damageDice: '1d4',
     damageType: 'perforant',
@@ -67,7 +70,8 @@ void main() {
     });
 
     testWidgets(
-      'une arme : nom, dégâts, propriétés, portée avec max, pas de séparateur',
+      'une arme (set principal) : nom, dégâts, propriétés, portée avec max, '
+      'set secondaire affiche "Aucune arme dans ce set."',
       (tester) async {
         await _pumpCard(tester, const [_longbow]);
 
@@ -76,6 +80,9 @@ void main() {
         expect(find.text('lourde, munitions'), findsOneWidget);
         expect(find.text('Portée : 150 m (max 600 m)'), findsOneWidget);
         expect(find.text('Aucune arme équipée'), findsNothing);
+        expect(find.text('SET PRINCIPAL'), findsOneWidget);
+        expect(find.text('SET SECONDAIRE'), findsOneWidget);
+        expect(find.text('Aucune arme dans ce set.'), findsOneWidget);
       },
     );
 
@@ -88,14 +95,65 @@ void main() {
       expect(find.textContaining('Portée'), findsNothing);
     });
 
-    testWidgets('deux armes : séparateur entre les deux, pas après la '
-        'dernière', (tester) async {
-      await _pumpCard(tester, const [_longbow, _dagger]);
+    testWidgets(
+      'deux armes du même set (principal) : séparateur entre les deux, pas '
+      'après la dernière, set secondaire vide',
+      (tester) async {
+        await _pumpCard(tester, const [_longbow, _dagger]);
 
-      expect(find.text('Arc long'), findsOneWidget);
-      expect(find.text('Dague'), findsOneWidget);
-      expect(find.byType(Divider), findsOneWidget);
-    });
+        expect(find.text('Arc long'), findsOneWidget);
+        expect(find.text('Dague'), findsOneWidget);
+        // Un seul séparateur intra-groupe (set principal) : le séparateur
+        // entre les deux sous-sections utilise le même widget
+        // `SheetActionDivider`/`Divider` — total 2 (intra-groupe +
+        // inter-groupes).
+        expect(find.byType(Divider), findsNWidgets(2));
+        expect(find.text('Aucune arme dans ce set.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'une arme par set : chaque sous-section affiche son arme, aucun '
+      'message "Aucune arme dans ce set."',
+      (tester) async {
+        const secondaryDagger = CharacterInventoryItem(
+          id: 'inv-2b',
+          itemId: 11,
+          name: 'Dague de réserve',
+          category: 'arme',
+          quantity: 1,
+          equipped: true,
+          weaponSlot: WeaponSlot.secondary,
+        );
+        await _pumpCard(tester, const [_longbow, secondaryDagger]);
+
+        expect(find.text('SET PRINCIPAL'), findsOneWidget);
+        expect(find.text('SET SECONDAIRE'), findsOneWidget);
+        expect(find.text('Arc long'), findsOneWidget);
+        expect(find.text('Dague de réserve'), findsOneWidget);
+        expect(find.text('Aucune arme dans ce set.'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'une arme sans weaponSlot (null) est traitée comme principale, par '
+      'sécurité d\'affichage (ne devrait pas arriver après le backfill de '
+      'migration)',
+      (tester) async {
+        const noSlot = CharacterInventoryItem(
+          id: 'inv-4',
+          itemId: 13,
+          name: 'Masse ancienne',
+          category: 'arme',
+          quantity: 1,
+          equipped: true,
+        );
+        await _pumpCard(tester, const [noSlot]);
+
+        expect(find.text('SET PRINCIPAL'), findsOneWidget);
+        expect(find.text('Masse ancienne'), findsOneWidget);
+      },
+    );
 
     testWidgets('aucune puce "Maîtrisée"/"Arme magique"', (tester) async {
       await _pumpCard(tester, const [_longbow]);
