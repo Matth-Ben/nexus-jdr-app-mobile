@@ -17,6 +17,7 @@ import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/wood_back_header.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_adventure.dart';
+import 'package:personnages/features/characters/domain/character_class_choice.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
@@ -715,6 +716,116 @@ void main() {
       expect(find.text('Cha'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'la carte "ARMES ÉQUIPÉES" affiche uniquement les armes équipées, après '
+    'la carte "Jets de sauvegarde"',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        inventory: const [
+          CharacterInventoryItem(
+            id: 'inv-1',
+            itemId: 10,
+            name: 'Arc long',
+            category: 'arme',
+            quantity: 1,
+            equipped: true,
+            weaponProperties: CharacterInventoryWeaponProperties(
+              damageDice: '1d8',
+              damageType: 'perforant',
+              properties: ['lourde', 'munitions'],
+              rangeNormal: 150,
+              rangeMax: 600,
+            ),
+          ),
+          CharacterInventoryItem(
+            id: 'inv-2',
+            itemId: 11,
+            name: 'Dague rangée',
+            category: 'arme',
+            quantity: 1,
+            equipped: false,
+          ),
+        ],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('ARMES ÉQUIPÉES'), findsOneWidget);
+      expect(find.text('Arc long'), findsOneWidget);
+      expect(find.text('Portée : 150 m (max 600 m)'), findsOneWidget);
+      expect(find.text('Dague rangée'), findsNothing);
+
+      final savingThrowsPosition = tester.getTopLeft(
+        find.text('JETS DE SAUVEGARDE'),
+      );
+      final weaponsPosition = tester.getTopLeft(find.text('ARMES ÉQUIPÉES'));
+      expect(weaponsPosition.dy, greaterThan(savingThrowsPosition.dy));
+    },
+  );
+
+  testWidgets(
+    'aucune arme équipée : la carte "ARMES ÉQUIPÉES" affiche son état vide',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('ARMES ÉQUIPÉES'), findsOneWidget);
+      expect(find.text('Aucune arme équipée'), findsOneWidget);
+    },
+  );
+
+  group('carte "ARME DE PACTE" (Occultiste, Pacte de la lame)', () {
+    CharacterDetail warlockDetail() => _baseDetail.copyWith(
+      classes: const [
+        CharacterDetailClassRow(
+          classId: 1,
+          className: 'Occultiste',
+          level: 3,
+          isPrimary: true,
+          savingThrowProficiencies: [],
+          hitDie: 8,
+        ),
+      ],
+      classChoices: const [
+        CharacterClassChoice(
+          featureName: 'Faveur de pacte',
+          chosenValue: 'lame',
+        ),
+      ],
+    );
+
+    testWidgets(
+      'affichée sur l\'onglet "Personnage" (plus sur l\'onglet '
+      '"Inventaire")',
+      (tester) async {
+        fakeRepository.detailToReturn = warlockDetail();
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        expect(find.text('ARME DE PACTE'), findsOneWidget);
+        expect(find.text('Aucune forme choisie'), findsOneWidget);
+
+        await tester.tap(find.text('SAC'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('ARME DE PACTE'), findsNothing);
+      },
+    );
+
+    testWidgets('autre classe/pacte : aucune carte', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('ARME DE PACTE'), findsNothing);
+    });
+  });
 
   testWidgets(
     'la carte "Apparence physique" (données structurées) n\'est plus '

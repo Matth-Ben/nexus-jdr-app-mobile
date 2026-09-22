@@ -15,7 +15,6 @@ import 'add_item_flow.dart';
 import 'character_inventory_capacity_gauge.dart';
 import 'character_inventory_item_card.dart';
 import 'character_inventory_stat_boxes_row.dart';
-import 'character_pact_weapon_card.dart';
 import 'currency_adjustment_sheet.dart';
 import 'inventory_category_filter_sheet.dart';
 import 'item_action_sheet.dart';
@@ -58,7 +57,6 @@ class CharacterInventoryTabBody extends StatefulWidget {
     required this.onAddInventoryItem,
     required this.onAddCustomInventoryItem,
     this.onAddReward,
-    this.onChangePactWeapon,
     this.actionsDisabled = false,
     this.filterAnchorKey,
     super.key,
@@ -91,11 +89,6 @@ class CharacterInventoryTabBody extends StatefulWidget {
   /// `shared_character_view_screen.dart`, où ajouter une récompense n'a pas
   /// de sens).
   final VoidCallback? onAddReward;
-
-  /// Ouvre la feuille de choix de la forme de l'arme de pacte (Pacte de la
-  /// lame) — `null` masque entièrement la carte « Arme de pacte » (vue
-  /// partagée en lecture seule).
-  final VoidCallback? onChangePactWeapon;
 
   /// `true` pendant qu'une écriture de cet onglet est en vol (voir
   /// `character_detail_screen.dart::_isWritingInventory`) : désactive le tap
@@ -204,16 +197,6 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
         ),
         const SizedBox(height: AppSpacing.md),
         CharacterInventoryCapacityGauge(detail: detail),
-        if (detail.hasBladePact && widget.onChangePactWeapon != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          CharacterPactWeaponCard(
-            weapon: detail.pactWeapon,
-            hasCursedBlade: detail.hasCursedBladeSubclass,
-            onChangeForm: widget.actionsDisabled
-                ? null
-                : widget.onChangePactWeapon,
-          ),
-        ],
         if (!isEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           KeyedSubtree(

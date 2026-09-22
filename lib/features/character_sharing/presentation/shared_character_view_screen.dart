@@ -13,7 +13,9 @@ import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_identity_formatter.dart';
 import '../../characters/presentation/widgets/character_ability_score_grid.dart';
 import '../../characters/presentation/widgets/character_detail_tab_bar.dart';
+import '../../characters/presentation/widgets/character_equipped_weapons_card.dart';
 import '../../characters/presentation/widgets/character_inventory_tab_body.dart';
+import '../../characters/presentation/widgets/character_pact_weapon_card.dart';
 import '../../characters/presentation/widgets/character_skills_tab_body.dart';
 import '../../characters/presentation/widgets/character_spells_tab_body.dart';
 import '../../characters/presentation/widgets/character_stat_pills_row.dart';
@@ -179,6 +181,21 @@ class _CharacterTabBody extends StatelessWidget {
         _SharedVitalsCard(detail: detail),
         const SizedBox(height: AppSpacing.md),
         CharacterAbilityScoreGrid(abilityScores: detail.abilityScores),
+        const SizedBox(height: AppSpacing.md),
+        CharacterEquippedWeaponsCard(
+          weapons: detail.inventory
+              .where((i) => i.category == 'arme' && i.equipped)
+              .toList(),
+        ),
+        if (detail.hasBladePact) ...[
+          const SizedBox(height: AppSpacing.md),
+          CharacterPactWeaponCard(
+            weapon: detail.pactWeapon,
+            hasCursedBlade: detail.hasCursedBladeSubclass,
+            onChangeForm: null,
+            readOnly: true,
+          ),
+        ],
         const SizedBox(height: AppSpacing.md),
         // Texte explicatif (recettage direction-artistique du 13/09/2026,
         // écran "Partage — Vue en lecture seule") : indique où trouver le

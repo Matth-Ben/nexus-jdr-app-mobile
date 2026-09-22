@@ -9,22 +9,26 @@ import '../../domain/inventory_category_rules.dart';
 import '../../domain/pact_weapon_option.dart';
 import 'character_name_tag_chip.dart';
 
-/// Carte « ARME DE PACTE » de l'onglet « Inventaire » (Occultiste, Pacte de
+/// Carte « ARME DE PACTE » de l'onglet « Personnage » (Occultiste, Pacte de
 /// la lame) — même gabarit que `CharacterInvocationsCard`.
 ///
 /// L'arme de pacte n'est PAS un objet d'inventaire (ni poids porté, ni
 /// « ÉQUIPÉ ») : cette carte affiche seulement la forme courante
 /// (`CharacterDetail.pactWeapon`, [weapon]) et le bouton qui ouvre la
 /// feuille de choix. L'appelant décide de la monter (Pacte de la lame
-/// uniquement, jamais en vue partagée).
+/// uniquement) — y compris en vue partagée en lecture seule
+/// (`shared_character_view_screen.dart`), à condition de passer
+/// `readOnly: true` (voir [readOnly]).
 ///
 /// [onChangeForm] `null` : bouton verrouillé (écriture d'inventaire en
-/// cours).
+/// cours) — sans effet quand [readOnly] est vrai (le bouton n'est alors pas
+/// rendu du tout, voir sa documentation).
 class CharacterPactWeaponCard extends StatelessWidget {
   const CharacterPactWeaponCard({
     required this.weapon,
     required this.hasCursedBlade,
     required this.onChangeForm,
+    this.readOnly = false,
     super.key,
   });
 
@@ -35,6 +39,12 @@ class CharacterPactWeaponCard extends StatelessWidget {
   final bool hasCursedBlade;
 
   final VoidCallback? onChangeForm;
+
+  /// `true` en vue partagée en lecture seule : le bouton "Choisir une
+  /// forme"/"Changer de forme" n'est alors pas rendu du tout, plutôt que
+  /// rendu désactivé (`onChangeForm: null` seul laisserait une affordance
+  /// d'édition visible, à proscrire en lecture seule).
+  final bool readOnly;
 
   static const String cursedBladeText =
       'Lame maudite : vous pouvez utiliser le Charisme à la place de la '
@@ -75,12 +85,16 @@ class CharacterPactWeaponCard extends StatelessWidget {
             reminderText,
             style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          CompactActionButton(
-            icon: Icons.swap_horiz,
-            label: current == null ? 'Choisir une forme' : 'Changer de forme',
-            onTap: onChangeForm,
-          ),
+          if (!readOnly) ...[
+            const SizedBox(height: AppSpacing.sm),
+            CompactActionButton(
+              icon: Icons.swap_horiz,
+              label: current == null
+                  ? 'Choisir une forme'
+                  : 'Changer de forme',
+              onTap: onChangeForm,
+            ),
+          ],
         ],
       ),
     );

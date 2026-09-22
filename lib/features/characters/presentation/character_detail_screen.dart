@@ -34,8 +34,10 @@ import 'widgets/add_xp_sheet.dart';
 import 'widgets/character_ability_score_grid.dart';
 import 'widgets/character_adventures_card.dart';
 import 'widgets/character_detail_tab_bar.dart';
+import 'widgets/character_equipped_weapons_card.dart';
 import 'widgets/character_identity_card.dart';
 import 'widgets/character_inventory_tab_body.dart';
+import 'widgets/character_pact_weapon_card.dart';
 import 'widgets/character_saving_throws_card.dart';
 import 'widgets/character_stat_pills_row.dart';
 import 'widgets/character_skills_tab_body.dart';
@@ -1934,7 +1936,6 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           onApply: (deltas, items) => _addReward(detail, deltas, items),
         ),
         actionsDisabled: _isWritingInventory,
-        onChangePactWeapon: () => _changePactWeapon(detail),
         filterAnchorKey: _inventoryFilterKey,
       ),
       CharacterDetailTab.story => CharacterStoryTabBody(
@@ -1993,6 +1994,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           );
         },
         hpActionsDisabled: _isApplyingRest,
+        onChangePactWeapon: () => _changePactWeapon(detail),
+        pactWeaponActionsDisabled: _isWritingInventory,
       ),
     };
   }
@@ -2009,6 +2012,8 @@ class _CharacterTabBody extends StatelessWidget {
     required this.onTapToggleInspiration,
     required this.onTapRest,
     required this.hpActionsDisabled,
+    this.onChangePactWeapon,
+    this.pactWeaponActionsDisabled = false,
   });
 
   final CharacterDetail detail;
@@ -2033,6 +2038,18 @@ class _CharacterTabBody extends StatelessWidget {
 
   /// Voir `_CharacterDetailScreenState._isApplyingRest`.
   final bool hpActionsDisabled;
+
+  /// Ouvre la feuille de choix de la forme de l'arme de pacte (Pacte de la
+  /// lame) — voir `_CharacterDetailScreenState._changePactWeapon`. `null`
+  /// laisse `CharacterPactWeaponCard.onChangeForm` verrouillé (ne devrait pas
+  /// arriver en pratique, cet onglet étant toujours monté avec un callback
+  /// non nul).
+  final VoidCallback? onChangePactWeapon;
+
+  /// Voir `_CharacterDetailScreenState._isWritingInventory` — même verrou
+  /// que l'onglet "Inventaire" (dont la carte « Arme de pacte » est issue),
+  /// pas un nouveau garde-fou dédié.
+  final bool pactWeaponActionsDisabled;
 
   @override
   Widget build(BuildContext context) {
@@ -2069,6 +2086,22 @@ class _CharacterTabBody extends StatelessWidget {
         CharacterAbilityScoreGrid(abilityScores: detail.abilityScores),
         const SizedBox(height: AppSpacing.md),
         CharacterSavingThrowsCard(results: savingThrows),
+        const SizedBox(height: AppSpacing.md),
+        CharacterEquippedWeaponsCard(
+          weapons: detail.inventory
+              .where((i) => i.category == 'arme' && i.equipped)
+              .toList(),
+        ),
+        if (detail.hasBladePact) ...[
+          const SizedBox(height: AppSpacing.md),
+          CharacterPactWeaponCard(
+            weapon: detail.pactWeapon,
+            hasCursedBlade: detail.hasCursedBladeSubclass,
+            onChangeForm: pactWeaponActionsDisabled
+                ? null
+                : onChangePactWeapon,
+          ),
+        ],
         // `CharacterAppearanceCard` (7 champs Sexe/Âge/Taille/Poids/Yeux/
         // Peau/Cheveux) n'est plus insérée ici depuis le recettage
         // direction-artistique du 13/09 — absente de la maquette actuelle de

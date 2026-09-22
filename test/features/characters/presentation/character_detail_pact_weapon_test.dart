@@ -145,8 +145,8 @@ Future<(_FakeCharacterRepository, _FakePactWeaponRepository)> _pump(
     ),
   );
   await tester.pumpAndSettle();
-  await tester.tap(find.text('SAC'));
-  await tester.pumpAndSettle();
+  // La carte « Arme de pacte » est désormais sur l'onglet « Personnage »
+  // (par défaut), plus besoin de naviguer vers l'onglet « Inventaire ».
   return (characters, pact);
 }
 
