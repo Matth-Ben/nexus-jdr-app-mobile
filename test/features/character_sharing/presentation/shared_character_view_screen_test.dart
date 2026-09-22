@@ -12,11 +12,15 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/features/character_sharing/data/character_sharing_repository.dart';
 import 'package:personnages/features/character_sharing/presentation/providers/character_sharing_providers.dart';
 import 'package:personnages/features/character_sharing/presentation/shared_character_view_screen.dart';
+import 'package:personnages/features/characters/domain/character_class_choice.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_gallery_photo.dart';
+import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/character_journal_entry.dart';
+import 'package:personnages/features/characters/domain/pact_weapon_option.dart';
+import 'package:personnages/features/characters/presentation/widgets/character_pact_weapon_card.dart';
 
 class _FakeCharacterSharingRepository implements CharacterSharingRepository {
   CharacterDetail? detailToReturn;
@@ -270,6 +274,109 @@ void main() {
         expect(find.text('JOURNAL DE CAMPAGNE'), findsNothing);
       },
     );
+  });
+
+  group('carte "ARMES ÉQUIPÉES" (onglet "Personnage")', () {
+    testWidgets('arme équipée : nom, dégâts, propriétés, portée', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        inventory: const [
+          CharacterInventoryItem(
+            id: 'inv-1',
+            itemId: 10,
+            name: 'Arc long',
+            category: 'arme',
+            quantity: 1,
+            equipped: true,
+            weaponProperties: CharacterInventoryWeaponProperties(
+              damageDice: '1d8',
+              damageType: 'perforant',
+              properties: ['lourde', 'munitions'],
+              rangeNormal: 150,
+              rangeMax: 600,
+            ),
+          ),
+          CharacterInventoryItem(
+            id: 'inv-2',
+            itemId: 11,
+            name: 'Dague non équipée',
+            category: 'arme',
+            quantity: 1,
+            equipped: false,
+          ),
+        ],
+      );
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('ARMES ÉQUIPÉES'), findsOneWidget);
+      expect(find.text('Arc long'), findsOneWidget);
+      expect(find.text('1d8 perforant'), findsOneWidget);
+      expect(find.text('lourde, munitions'), findsOneWidget);
+      expect(find.text('Portée : 150 m (max 600 m)'), findsOneWidget);
+      expect(find.text('Dague non équipée'), findsNothing);
+    });
+
+    testWidgets('aucune arme équipée : état vide', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aucune arme équipée'), findsOneWidget);
+    });
+  });
+
+  group('carte "ARME DE PACTE" en lecture seule (Pacte de la lame)', () {
+    testWidgets('Occultiste Pacte de la lame : carte affichée sans bouton', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: const [
+          CharacterDetailClassRow(
+            classId: 1,
+            className: 'Occultiste',
+            level: 3,
+            isPrimary: true,
+            savingThrowProficiencies: [],
+            hitDie: 8,
+          ),
+        ],
+        classChoices: const [
+          CharacterClassChoice(
+            featureName: 'Faveur de pacte',
+            chosenValue: 'lame',
+          ),
+        ],
+        pactWeapon: const PactWeaponOption(
+          id: 1,
+          name: 'Rapière',
+          damageDice: '1d8',
+          damageType: 'perforant',
+          properties: ['finesse'],
+        ),
+      );
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CharacterPactWeaponCard), findsOneWidget);
+      expect(find.text('ARME DE PACTE'), findsOneWidget);
+      expect(find.text('Rapière'), findsOneWidget);
+      expect(find.text('Choisir une forme'), findsNothing);
+      expect(find.text('Changer de forme'), findsNothing);
+    });
+
+    testWidgets('autre classe/pacte : aucune carte', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CharacterPactWeaponCard), findsNothing);
+    });
   });
 
   testWidgets(

@@ -1,13 +1,11 @@
-// Tests de widget de la carte « ARME DE PACTE » et de son intégration à
-// l'onglet « Inventaire » (`CharacterInventoryTabBody`).
+// Tests de widget de la carte « ARME DE PACTE » (onglet « Personnage »,
+// voir `character_detail_pact_weapon_test.dart` pour son câblage complet
+// dans `character_detail_screen.dart`, et `shared_character_view_screen_test.dart`
+// pour son rendu `readOnly: true`).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:personnages/features/characters/domain/character_class_choice.dart';
-import 'package:personnages/features/characters/domain/character_detail.dart';
-import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/pact_weapon_option.dart';
-import 'package:personnages/features/characters/presentation/widgets/character_inventory_tab_body.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_pact_weapon_card.dart';
 
 const _rapier = PactWeaponOption(
@@ -18,41 +16,12 @@ const _rapier = PactWeaponOption(
   properties: ['finesse'],
 );
 
-CharacterDetail _detail({
-  String className = 'Occultiste',
-  String pact = 'lame',
-  String? subclassName,
-  PactWeaponOption? pactWeapon,
-}) => CharacterDetail(
-  id: '1',
-  name: 'Test',
-  classes: [
-    CharacterDetailClassRow(
-      classId: 1,
-      className: className,
-      level: 3,
-      isPrimary: true,
-      savingThrowProficiencies: const [],
-      hitDie: 8,
-      subclassName: subclassName,
-    ),
-  ],
-  xp: 0,
-  currentHp: 1,
-  maxHp: 1,
-  temporaryHp: 0,
-  abilityScores: const {},
-  classChoices: [
-    CharacterClassChoice(featureName: 'Faveur de pacte', chosenValue: pact),
-  ],
-  pactWeapon: pactWeapon,
-);
-
 Future<void> _pumpCard(
   WidgetTester tester, {
   PactWeaponOption? weapon,
   bool cursed = false,
   VoidCallback? onChangeForm,
+  bool readOnly = false,
 }) => tester.pumpWidget(
   MaterialApp(
     home: Scaffold(
@@ -61,31 +30,8 @@ Future<void> _pumpCard(
           weapon: weapon,
           hasCursedBlade: cursed,
           onChangeForm: onChangeForm,
+          readOnly: readOnly,
         ),
-      ),
-    ),
-  ),
-);
-
-Future<void> _pumpTab(
-  WidgetTester tester,
-  CharacterDetail detail, {
-  VoidCallback? onChangePactWeapon,
-  bool actionsDisabled = false,
-}) => tester.pumpWidget(
-  MaterialApp(
-    home: Scaffold(
-      body: CharacterInventoryTabBody(
-        detail: detail,
-        actionsDisabled: actionsDisabled,
-        onChangePactWeapon: onChangePactWeapon,
-        onUseItem: (_) {},
-        onToggleItemEquipped: (_) {},
-        onToggleItemAttuned: (_) {},
-        onRemoveItem: (_) {},
-        onAdjustCurrency: (_, _) {},
-        onAddInventoryItem: (_, _) {},
-        onAddCustomInventoryItem: (_, _) {},
       ),
     ),
   ),
@@ -190,87 +136,32 @@ void main() {
       );
       expect(inkWell.onTap, isNull);
     });
-  });
 
-  group('CharacterInventoryTabBody : carte Arme de pacte', () {
-    testWidgets('Occultiste Pacte de la lame : carte visible, inventaire '
-        'vide compris', (tester) async {
-      await _pumpTab(
-        tester,
-        _detail(pactWeapon: _rapier),
-        onChangePactWeapon: () {},
-      );
+    testWidgets('readOnly : aucun bouton, reste affiché normalement', (
+      tester,
+    ) async {
+      await _pumpCard(tester, weapon: _rapier, cursed: true, readOnly: true);
 
-      expect(find.byType(CharacterPactWeaponCard), findsOneWidget);
-      expect(find.text('INVENTAIRE VIDE'), findsOneWidget);
+      expect(find.text('Choisir une forme'), findsNothing);
+      expect(find.text('Changer de forme'), findsNothing);
+      expect(find.byType(InkWell), findsNothing);
+      // Le reste (nom, dégâts, propriétés, ligne Lame maudite, rappel) reste
+      // affiché normalement.
       expect(find.text('Rapière'), findsOneWidget);
-    });
-
-    testWidgets('Lame maudite transmise à la carte', (tester) async {
-      await _pumpTab(
-        tester,
-        _detail(subclassName: 'Lame maudite'),
-        onChangePactWeapon: () {},
-      );
-
+      expect(find.text('1d8 perforant'), findsOneWidget);
+      expect(find.text('finesse'), findsOneWidget);
       expect(
         find.text(CharacterPactWeaponCard.cursedBladeText),
         findsOneWidget,
       );
+      expect(find.text(CharacterPactWeaponCard.reminderText), findsOneWidget);
     });
 
-    testWidgets('autre pacte ou autre classe : aucune carte', (tester) async {
-      await _pumpTab(
-        tester,
-        _detail(pact: 'chaine'),
-        onChangePactWeapon: () {},
-      );
-      expect(find.byType(CharacterPactWeaponCard), findsNothing);
+    testWidgets('readOnly avec état vide : aucun bouton', (tester) async {
+      await _pumpCard(tester, readOnly: true);
 
-      await _pumpTab(
-        tester,
-        _detail(className: 'Guerrier'),
-        onChangePactWeapon: () {},
-      );
-      expect(find.byType(CharacterPactWeaponCard), findsNothing);
-    });
-
-    testWidgets('vue partagée (sans callback) : aucune carte', (tester) async {
-      await _pumpTab(tester, _detail(pactWeapon: _rapier));
-
-      expect(find.byType(CharacterPactWeaponCard), findsNothing);
-    });
-
-    testWidgets('tap sur le bouton : relaie onChangePactWeapon', (
-      tester,
-    ) async {
-      var taps = 0;
-      await _pumpTab(tester, _detail(), onChangePactWeapon: () => taps++);
-
-      await tester.tap(find.text('Choisir une forme'));
-      expect(taps, 1);
-    });
-
-    testWidgets('écriture d\'inventaire en cours : bouton verrouillé', (
-      tester,
-    ) async {
-      var taps = 0;
-      await _pumpTab(
-        tester,
-        _detail(),
-        onChangePactWeapon: () => taps++,
-        actionsDisabled: true,
-      );
-
-      await tester.tap(find.text('Choisir une forme'), warnIfMissed: false);
-      expect(taps, 0);
-      final opacity = tester.widget<Opacity>(
-        find.ancestor(
-          of: find.text('Choisir une forme'),
-          matching: find.byType(Opacity),
-        ),
-      );
-      expect(opacity.opacity, 0.6);
+      expect(find.text('Aucune forme choisie'), findsOneWidget);
+      expect(find.text('Choisir une forme'), findsNothing);
     });
   });
 }
