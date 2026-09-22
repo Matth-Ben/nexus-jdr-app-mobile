@@ -140,12 +140,7 @@ void main() {
     testWidgets('readOnly : aucun bouton, reste affiché normalement', (
       tester,
     ) async {
-      await _pumpCard(
-        tester,
-        weapon: _rapier,
-        cursed: true,
-        readOnly: true,
-      );
+      await _pumpCard(tester, weapon: _rapier, cursed: true, readOnly: true);
 
       expect(find.text('Choisir une forme'), findsNothing);
       expect(find.text('Changer de forme'), findsNothing);

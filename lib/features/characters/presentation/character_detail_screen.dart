@@ -2097,9 +2097,7 @@ class _CharacterTabBody extends StatelessWidget {
           CharacterPactWeaponCard(
             weapon: detail.pactWeapon,
             hasCursedBlade: detail.hasCursedBladeSubclass,
-            onChangeForm: pactWeaponActionsDisabled
-                ? null
-                : onChangePactWeapon,
+            onChangeForm: pactWeaponActionsDisabled ? null : onChangePactWeapon,
           ),
         ],
         // `CharacterAppearanceCard` (7 champs Sexe/Âge/Taille/Poids/Yeux/

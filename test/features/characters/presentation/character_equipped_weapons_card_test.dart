@@ -52,9 +52,7 @@ Future<void> _pumpCard(
 
 void main() {
   group('CharacterEquippedWeaponsCard', () {
-    testWidgets('liste vide : état vide, pas de titre d\'arme', (
-      tester,
-    ) async {
+    testWidgets('liste vide : état vide, pas de titre d\'arme', (tester) async {
       await _pumpCard(tester, const []);
 
       expect(find.text('ARMES ÉQUIPÉES'), findsOneWidget);

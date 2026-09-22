@@ -798,24 +798,21 @@ void main() {
       ],
     );
 
-    testWidgets(
-      'affichée sur l\'onglet "Personnage" (plus sur l\'onglet '
-      '"Inventaire")',
-      (tester) async {
-        fakeRepository.detailToReturn = warlockDetail();
+    testWidgets('affichée sur l\'onglet "Personnage" (plus sur l\'onglet '
+        '"Inventaire")', (tester) async {
+      fakeRepository.detailToReturn = warlockDetail();
 
-        await pumpDetail(tester);
-        await tester.pumpAndSettle();
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
 
-        expect(find.text('ARME DE PACTE'), findsOneWidget);
-        expect(find.text('Aucune forme choisie'), findsOneWidget);
+      expect(find.text('ARME DE PACTE'), findsOneWidget);
+      expect(find.text('Aucune forme choisie'), findsOneWidget);
 
-        await tester.tap(find.text('SAC'));
-        await tester.pumpAndSettle();
+      await tester.tap(find.text('SAC'));
+      await tester.pumpAndSettle();
 
-        expect(find.text('ARME DE PACTE'), findsNothing);
-      },
-    );
+      expect(find.text('ARME DE PACTE'), findsNothing);
+    });
 
     testWidgets('autre classe/pacte : aucune carte', (tester) async {
       fakeRepository.detailToReturn = _baseDetail;

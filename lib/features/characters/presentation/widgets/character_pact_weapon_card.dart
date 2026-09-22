@@ -89,9 +89,7 @@ class CharacterPactWeaponCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             CompactActionButton(
               icon: Icons.swap_horiz,
-              label: current == null
-                  ? 'Choisir une forme'
-                  : 'Changer de forme',
+              label: current == null ? 'Choisir une forme' : 'Changer de forme',
               onTap: onChangeForm,
             ),
           ],
