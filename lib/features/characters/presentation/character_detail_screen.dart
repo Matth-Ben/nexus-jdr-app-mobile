@@ -28,6 +28,7 @@ import '../domain/saving_throw_calculator.dart';
 import '../domain/write_outcome.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
+import 'providers/pact_weapon_providers.dart';
 import 'widgets/add_reward_sheet.dart';
 import 'widgets/add_xp_sheet.dart';
 import 'widgets/character_ability_score_grid.dart';
@@ -43,6 +44,7 @@ import 'widgets/character_story_edit_sheet.dart';
 import 'widgets/character_story_tab_body.dart';
 import 'widgets/character_vitals_card.dart';
 import 'widgets/hp_adjustment_sheet.dart';
+import 'widgets/pact_weapon_picker_sheet.dart';
 import 'widgets/portrait_upload_sheet.dart';
 import 'widgets/rest_sheet.dart';
 
@@ -1165,6 +1167,39 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Carte « Arme de pacte » (Pacte de la lame) : ouvre la feuille « FORME DE
+  /// L'ARME » puis enregistre la forme choisie (upsert
+  /// `character_pact_weapons`, voir `PactWeaponRepository`). Retaper la forme
+  /// courante ne déclenche aucune écriture. Verrouille l'onglet le temps de
+  /// l'appel, refetch inclus (voir [_isWritingInventory]).
+  Future<void> _changePactWeapon(CharacterDetail detail) async {
+    final picked = await showPactWeaponPickerSheet(
+      context,
+      currentWeaponId: detail.pactWeapon?.id,
+    );
+    if (picked == null || !mounted) return;
+    if (picked.id == detail.pactWeapon?.id) return;
+
+    setState(() => _isWritingInventory = true);
+    try {
+      final outcome = await ref
+          .read(pactWeaponRepositoryProvider)
+          .setPactWeapon(characterId: widget.characterId, itemId: picked.id);
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      await _refreshCharacterDetail();
+      _showSnackBar("Forme de l'arme de pacte : ${picked.name}.");
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar("Impossible de changer la forme de l'arme. Réessayez.");
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
   int _currentCurrencyAmount(CharacterDetail detail, CurrencyKind currency) =>
       switch (currency) {
         CurrencyKind.platinum => detail.currencyPp,
@@ -1899,6 +1934,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           onApply: (deltas, items) => _addReward(detail, deltas, items),
         ),
         actionsDisabled: _isWritingInventory,
+        onChangePactWeapon: () => _changePactWeapon(detail),
         filterAnchorKey: _inventoryFilterKey,
       ),
       CharacterDetailTab.story => CharacterStoryTabBody(

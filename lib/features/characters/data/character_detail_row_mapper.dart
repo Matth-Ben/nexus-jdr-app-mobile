@@ -10,6 +10,7 @@ import '../domain/character_skill_row.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
 import '../domain/multiclass_proficiencies.dart';
+import '../domain/pact_weapon_option.dart';
 import '../domain/spell_grant_source.dart';
 import '../domain/subclass_spell_grant_resolver.dart';
 
@@ -682,6 +683,7 @@ abstract final class CharacterDetailRowMapper {
     List<String> knownInvocationNames = const [],
     List<CharacterInventoryItem> inventory = const [],
     List<CharacterAdventure> adventures = const [],
+    PactWeaponOption? pactWeapon,
     int? speed,
   }) {
     final raceId = row['race_id'];
@@ -732,6 +734,7 @@ abstract final class CharacterDetailRowMapper {
       spellSlots: spellSlots,
       pactSpellSlot: parsePactSpellSlot(row),
       knownInvocationNames: knownInvocationNames,
+      pactWeapon: pactWeapon,
       currencyGp: (row['currency_gp'] as num?)?.toInt() ?? 0,
       currencyPp: (row['currency_pp'] as num?)?.toInt() ?? 0,
       currencyEp: (row['currency_ep'] as num?)?.toInt() ?? 0,

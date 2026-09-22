@@ -1557,6 +1557,183 @@ void main() {
       expect(detail.grantedSpells, isEmpty);
     });
   });
+
+  group('SupabaseCharacterRepository.fetchCharacterDetail (arme de pacte)', () {
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const characterId = 'char-1';
+    const ownerId = 'owner-1';
+    final cacheKey = 'character_detail:$ownerId:$characterId';
+
+    Map<String, List<Map<String, dynamic>>> warlockRows({
+      String pact = 'lame',
+      bool withPactWeapon = true,
+    }) => {
+      'characters': [
+        {
+          'id': characterId,
+          'name': 'Sylas',
+          'xp': 0,
+          'current_hp': 10,
+          'max_hp': 10,
+          'temporary_hp': 0,
+          'race_id': null,
+          'character_classes': [
+            {
+              'class_id': 2,
+              'subclass_id': 31,
+              'level': 3,
+              'is_primary': true,
+              'classes': {'saving_throw_proficiencies': [], 'hit_die': 8},
+            },
+          ],
+          'character_class_options': [
+            {'class_feature_id': 60, 'level': 3, 'chosen_value': pact},
+          ],
+        },
+      ],
+      'class_features': [
+        {'id': 60, 'class_id': 2, 'level': 3},
+      ],
+      'translations': [
+        {'entity_id': '2', 'value': 'Occultiste'},
+        {'entity_id': '31', 'value': 'Lame maudite'},
+        {'entity_id': '60', 'value': 'Faveur de pacte'},
+        {'entity_id': '77', 'value': 'Rapière'},
+      ],
+      'character_pact_weapons': [
+        if (withPactWeapon) {'item_id': 77},
+      ],
+      'items': [
+        {
+          'id': 77,
+          'category': 'arme',
+          'weapon_properties': {
+            'damage_dice': '1d8',
+            'damage_type': 'perforant',
+            'properties': ['finesse'],
+          },
+        },
+      ],
+    };
+
+    Future<SupabaseCharacterRepository> repositoryFor(
+      Map<String, List<Map<String, dynamic>>> rows, {
+      List<String>? requestedTables,
+    }) async => SupabaseCharacterRepository(
+      await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        tableRows: rows,
+        onRequest: requestedTables == null
+            ? null
+            : (request) => requestedTables.add(request.url.pathSegments.last),
+      ),
+      cache,
+      pendingWrites,
+      _AlwaysOnlineConnectivityChecker(),
+    );
+
+    Future<SupabaseCharacterRepository> offlineRepository() async =>
+        SupabaseCharacterRepository(
+          await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            failureStatusCode: 500,
+          ),
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+    void verifyPactWeapon(dynamic detail) {
+      expect(detail.hasBladePact, isTrue);
+      expect(detail.hasCursedBladeSubclass, isTrue);
+      expect(detail.pactWeapon.id, 77);
+      expect(detail.pactWeapon.name, 'Rapière');
+      expect(detail.pactWeapon.damageLabel, '1d8 perforant');
+      expect(detail.pactWeapon.properties, ['finesse']);
+      expect(detail.inventory, isEmpty);
+    }
+
+    test(
+      'Pacte de la lame avec forme choisie : la forme est chargée',
+      () async {
+        final repository = await repositoryFor(warlockRows());
+        verifyPactWeapon(await repository.fetchCharacterDetail(characterId));
+      },
+    );
+
+    test('hors ligne : le cache restitue la même forme', () async {
+      await (await repositoryFor(warlockRows()))
+          .fetchCharacterDetail(characterId);
+      verifyPactWeapon(
+        await (await offlineRepository()).fetchCharacterDetail(characterId),
+      );
+    });
+
+    test(
+      'un ancien cache sans donnée d\'arme de pacte reste lisible',
+      () async {
+        await (await repositoryFor(warlockRows()))
+            .fetchCharacterDetail(characterId);
+        final payload =
+            Map<String, dynamic>.from(
+                await cache.get(cacheKey) as Map<String, dynamic>,
+              )
+              ..remove('pactWeaponItemRow')
+              ..remove('pactWeaponNameRows');
+        await cache.put(cacheKey, payload);
+
+        final detail = await (await offlineRepository()).fetchCharacterDetail(
+          characterId,
+        );
+
+        expect(detail.hasBladePact, isTrue);
+        expect(detail.pactWeapon, isNull);
+      },
+    );
+
+    test('Pacte de la lame sans forme choisie : pactWeapon nul, items non '
+        'interrogé', () async {
+      final requested = <String>[];
+      final repository = await repositoryFor(
+        warlockRows(withPactWeapon: false),
+        requestedTables: requested,
+      );
+
+      final detail = await repository.fetchCharacterDetail(characterId);
+
+      expect(detail.hasBladePact, isTrue);
+      expect(detail.pactWeapon, isNull);
+      expect(requested, contains('character_pact_weapons'));
+      expect(requested, isNot(contains('items')));
+    });
+
+    test('autre pacte : aucune requête character_pact_weapons', () async {
+      final requested = <String>[];
+      final repository = await repositoryFor(
+        warlockRows(pact: 'chaine'),
+        requestedTables: requested,
+      );
+
+      final detail = await repository.fetchCharacterDetail(characterId);
+
+      expect(detail.hasBladePact, isFalse);
+      expect(detail.pactWeapon, isNull);
+      expect(requested, isNot(contains('character_pact_weapons')));
+    });
+  });
 }
 
 /// Toujours "connecté" — utilisé par les groupes de tests qui n'exercent pas

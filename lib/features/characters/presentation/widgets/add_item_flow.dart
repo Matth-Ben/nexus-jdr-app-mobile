@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
+import '../../../../core/widgets/error_retry_state.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
@@ -214,7 +215,7 @@ class _ItemCatalogPickerContentState
                       color: AppColors.woodMedium,
                     ),
                   ),
-                  error: (error, stackTrace) => _CatalogErrorState(
+                  error: (error, stackTrace) => ErrorRetryState(
                     message: error is CharacterFailure
                         ? error.message
                         : "Impossible de charger le catalogue d'objets. "
@@ -367,40 +368,6 @@ class _CatalogItemRow extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CatalogErrorState extends StatelessWidget {
-  const _CatalogErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              size: 48,
-              color: AppColors.accentBrick,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: AppTypography.body(color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
-          ],
         ),
       ),
     );
