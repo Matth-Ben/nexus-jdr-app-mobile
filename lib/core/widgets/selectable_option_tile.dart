@@ -22,6 +22,7 @@ class SelectableOptionTile extends StatelessWidget {
     this.subtitle,
     this.leading,
     this.selectedDetail,
+    this.subtitleMaxLines = 1,
     super.key,
   });
 
@@ -43,6 +44,10 @@ class SelectableOptionTile extends StatelessWidget {
   /// existants (race, sous-race, classe) ne le fournissent pas et n'affichent
   /// donc rien de plus qu'avant.
   final String? selectedDetail;
+
+  /// Nombre maximal de lignes de [subtitle] (1 par défaut, tronqué par une
+  /// ellipse). `null` : pas de troncature, la tuile s'agrandit.
+  final int? subtitleMaxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -83,8 +88,10 @@ class SelectableOptionTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         subtitle!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: subtitleMaxLines,
+                        overflow: subtitleMaxLines == null
+                            ? TextOverflow.clip
+                            : TextOverflow.ellipsis,
                         style: AppTypography.body(
                           fontSize: 12,
                           color: AppColors.textSecondary,

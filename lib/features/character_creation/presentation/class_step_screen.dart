@@ -13,19 +13,25 @@ import '../../../core/widgets/step_progress_bar.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/class_catalog.dart';
 import '../domain/creation_step_help.dart';
+import '../domain/subclass_choice_catalog.dart';
+import '../domain/subclass_choice_rules.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
+import 'providers/subclass_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/draft_autosave_footer.dart';
+import 'widgets/subclass_choice_block.dart';
 import 'widgets/step_help_sheet.dart';
 
 /// Étape 2/9 de l'assistant de création de personnage : choix de la classe
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
 /// point 2, maquette `03_étape_2_classe.png`).
 ///
-/// Plus simple que l'étape 1 "Race" : ni sous-classe (ne s'y ajoute pas à
-/// cette étape, décision du chef de projet), ni "classe personnalisée" —
-/// "Suivant" s'active dès qu'une classe est choisie.
+/// Plus simple que l'étape 1 "Race" : pas de "classe personnalisée". Pour les
+/// classes qui choisissent leur sous-classe dès le niveau 1 (déterminées par
+/// les données, voir `SubclassChoiceCatalog`), un bloc de choix s'insère sous
+/// la tuile de la classe sélectionnée et "Suivant" attend ce choix ; pour
+/// toutes les autres, "Suivant" s'active dès qu'une classe est choisie.
 ///
 /// En-tête bois plein dupliqué depuis `race_step_screen.dart`
 /// (`_Header` ci-dessous) plutôt que factorisé dans `core/widgets` : même
@@ -42,6 +48,11 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
   static const int _totalSteps = 9;
 
   int? _selectedClassId;
+  int? _selectedSubclassId;
+
+  /// Ancre du bloc de sous-classe, pour le faire défiler dans la vue après la
+  /// sélection d'une classe concernée.
+  final GlobalKey _subclassBlockKey = GlobalKey();
 
   @override
   void initState() {
@@ -56,11 +67,31 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
     _selectedClassId = ref
         .read(characterCreationDraftControllerProvider)
         .classId;
+    _selectedSubclassId = ref
+        .read(characterCreationDraftControllerProvider)
+        .subclassId;
   }
 
   void _selectClass(int classId) {
+    final previous = _selectedClassId;
     setState(() {
+      // Une classe DIFFÉRENTE efface la sous-classe (locale ; le brouillon
+      // n'est écrit qu'à "Suivant") ; recliquer la même classe ne change rien.
+      _selectedSubclassId = SubclassChoiceRules.subclassAfterClassChange(
+        previousClassId: previous,
+        newClassId: classId,
+        currentSubclassId: _selectedSubclassId,
+      );
       _selectedClassId = classId;
+    });
+    if (previous == classId) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final blockContext = _subclassBlockKey.currentContext;
+      if (!mounted || blockContext == null) return;
+      Scrollable.ensureVisible(
+        blockContext,
+        duration: const Duration(milliseconds: 250),
+      );
     });
   }
 
@@ -72,10 +103,26 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
 
   /// Met à jour le brouillon en mémoire et passe à l'étape suivante — aucun
   /// appel réseau ici, même rationale que `RaceStepScreen._submit`.
-  void _submit() {
+  ///
+  /// Si le catalogue de sous-classes est encore en cours de chargement (sans
+  /// valeur connue), on attend son résultat avant de trancher : "Suivant"
+  /// n'est jamais bloqué pour une classe non concernée, mais une classe
+  /// concernée ne doit pas passer sans son choix.
+  Future<void> _submit() async {
+    var subclassAsync = ref.read(subclassChoiceCatalogProvider);
+    if (subclassAsync.isLoading && !subclassAsync.hasValue) {
+      try {
+        await ref.read(subclassChoiceCatalogProvider.future);
+      } catch (_) {
+        // Échec : dégradé en "aucune sous-classe requise" (voir _canProceed).
+      }
+      if (!mounted) return;
+      subclassAsync = ref.read(subclassChoiceCatalogProvider);
+    }
+    if (!_canProceed(subclassAsync)) return;
     ref
         .read(characterCreationDraftControllerProvider.notifier)
-        .setClass(classId: _selectedClassId!);
+        .setClass(classId: _selectedClassId!, subclassId: _selectedSubclassId);
     context.push('/characters/new/step-3');
   }
 
@@ -134,8 +181,33 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
     );
   }
 
+  /// `true` si le catalogue de sous-classes (éventuellement une valeur
+  /// précédente, conservée pendant un rechargement ou après un échec) indique
+  /// que [classId] choisit sa sous-classe au niveau 1.
+  bool _isKnownConcerned(
+    AsyncValue<SubclassChoiceCatalog> subclassAsync,
+    int classId,
+  ) => subclassAsync.value?.isConcerned(classId) ?? false;
+
+  /// "Suivant" est actif si une classe est choisie et, seulement quand elle
+  /// est CONNUE pour choisir une sous-classe au niveau 1, que ce choix est
+  /// fait. Une classe non concernée, ou dont on ne sait rien (catalogue en
+  /// cours de chargement ou indisponible : ni réseau ni cache), n'est jamais
+  /// bloquée ; une liste d'options vide non plus. Pendant un rechargement ou
+  /// après un échec d'une classe connue concernée, "Suivant" reste désactivé.
+  bool _canProceed(AsyncValue<SubclassChoiceCatalog> subclassAsync) {
+    final classId = _selectedClassId;
+    if (classId == null) return false;
+    if (!_isKnownConcerned(subclassAsync, classId)) return true;
+    if (subclassAsync.isLoading || subclassAsync.hasError) return false;
+    final options = subclassAsync.requireValue.optionsFor(classId);
+    if (options == null || options.isEmpty) return true;
+    return options.any((option) => option.id == _selectedSubclassId);
+  }
+
   Widget _buildContent(ClassCatalog catalog) {
-    final canProceed = _selectedClassId != null;
+    final subclassAsync = ref.watch(subclassChoiceCatalogProvider);
+    final canProceed = _canProceed(subclassAsync);
 
     return Column(
       children: [
@@ -186,6 +258,25 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                           ),
                           onTap: () => _selectClass(catalog.classes[i].id),
                         ),
+                        if (_selectedClassId == catalog.classes[i].id &&
+                            _isKnownConcerned(
+                              subclassAsync,
+                              catalog.classes[i].id,
+                            ))
+                          KeyedSubtree(
+                            key: _subclassBlockKey,
+                            child: SubclassChoiceBlock(
+                              key: ValueKey(catalog.classes[i].id),
+                              classId: catalog.classes[i].id,
+                              className: catalog.classes[i].name,
+                              catalogAsync: subclassAsync,
+                              selectedSubclassId: _selectedSubclassId,
+                              onSelect: (id) =>
+                                  setState(() => _selectedSubclassId = id),
+                              onRetry: () =>
+                                  ref.invalidate(subclassChoiceCatalogProvider),
+                            ),
+                          ),
                       ],
                     ],
                   ),
@@ -207,7 +298,7 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                           Expanded(
                             child: PrimaryButton(
                               label: 'Suivant',
-                              onPressed: canProceed ? _submit : null,
+                              onPressed: canProceed ? () => _submit() : null,
                             ),
                           ),
                         ],

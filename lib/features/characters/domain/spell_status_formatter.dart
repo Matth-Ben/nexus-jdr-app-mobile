@@ -21,6 +21,8 @@ abstract final class SpellStatusFormatter {
   /// sorts de niveau ≥ 1 "connu"/"préparé".
   static String? subtitle(CharacterSpellEntry spell) {
     if (spell.level == 0) return null;
+    final grant = spell.grantSource;
+    if (grant != null) return 'toujours préparé · ${grant.label}';
     switch (spell.status) {
       case 'connu':
         return 'connu, non préparé';
@@ -45,9 +47,12 @@ abstract final class SpellStatusFormatter {
 
   /// `true` si la bascule "Préparer ce sort"/"Ne plus préparer" a un sens
   /// pour ce sort — jamais pour un sort mineur (niveau 0) ni un sort inné
-  /// ('inné'), qui n'ont pas de notion de préparation à faire varier.
+  /// ('inné'), qui n'ont pas de notion de préparation à faire varier, ni pour
+  /// un sort accordé par une sous-classe (toujours préparé).
   static bool canTogglePrepared(CharacterSpellEntry spell) {
     if (spell.level == 0) return false;
+    // Sort accordé par une sous-classe : toujours préparé, jamais retirable.
+    if (spell.isAlwaysPrepared) return false;
     return spell.status == 'connu' || spell.status == 'préparé';
   }
 }

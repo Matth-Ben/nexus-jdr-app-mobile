@@ -2,9 +2,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../character_creation/domain/ability_score_rules.dart';
 import '../../../character_creation/domain/spell_catalog.dart';
+import '../../../character_creation/domain/spell_option.dart';
 import '../../../character_creation/presentation/providers/character_creation_providers.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/character_failure.dart';
+import '../../domain/invocation_selection_rules.dart';
 import '../../domain/invocations_known_progression.dart';
 import '../../domain/level_up_block_reason.dart';
 import '../../domain/level_up_choice_kind.dart';
@@ -15,9 +17,12 @@ import '../../domain/level_up_multiclass_option.dart';
 import '../../domain/level_up_subclass_option.dart';
 import '../../domain/multiclass_prerequisites.dart';
 import '../../domain/multiclass_proficiencies.dart';
+import '../../domain/patron_extended_spells.dart';
 import '../../domain/spell_slot_change.dart';
 import '../../domain/spell_slot_progression.dart';
 import '../../domain/spells_known_progression.dart';
+import '../../domain/warlock_pact.dart';
+import '../../domain/warlock_pact_rewards.dart';
 import 'character_detail_provider.dart';
 import 'character_providers.dart';
 
@@ -61,7 +66,7 @@ typedef LevelUpStepData = ({
   /// `class_features.id` de la ligne `choice_type` de ce niveau — voir
   /// `domain/level_up_level_data.dart::choiceClassFeatureId`. Pertinent
   /// seulement pour [LevelUpChoiceKind.fightingStyle]/
-  /// [LevelUpChoiceKind.favoredEnemy].
+  /// [LevelUpChoiceKind.favoredEnemy]/[LevelUpChoiceKind.pact].
   int? choiceClassFeatureId,
 
   /// Sous-classes disponibles à ce niveau — non vide seulement pour
@@ -189,11 +194,55 @@ typedef LevelUpStepData = ({
   List<LevelUpInvocationOption> availableInvocations,
 
   /// Quota EFFECTIF d'invocations à choisir à ce niveau — `min(delta RAW,
-  /// availableInvocations.length)`, jamais le delta RAW brut (spec visuelle
+  /// invocations ÉLIGIBLES)`, jamais le delta RAW brut (spec visuelle
   /// direction-artistique section 3 : l'app ne doit jamais promettre un
   /// quota qu'elle ne peut pas tenir). 0 si [requiresInvocationSelection] est
   /// `false`.
+  ///
+  /// Calculé sur l'état DÉJÀ EN BASE (pacte et sorts mineurs connus) : l'écran
+  /// le recalcule avec les choix faits dans la même montée de niveau (pacte
+  /// choisi à l'étape "Choix à faire", sorts mineurs de l'étape "Sorts"), voir
+  /// `domain/invocation_selection_rules.dart`.
   int invocationQuota,
+
+  /// Delta RAW d'invocations de ce niveau (0 si
+  /// [requiresInvocationSelection] est `false`) — base du quota effectif
+  /// recalculé par l'écran.
+  int invocationDelta,
+
+  /// Pacte de l'Occultiste déjà enregistré en base
+  /// (`character_class_options`), `null` si aucun — le pacte choisi dans la
+  /// même montée de niveau est géré par l'écran.
+  WarlockPact? knownPact,
+
+  /// `spells.id` des sorts mineurs (niveau 0) déjà connus du personnage.
+  Set<int> knownCantripSpellIds,
+
+  /// `spells.id` de TOUS les sorts déjà connus du personnage (tous niveaux) —
+  /// évite les doublons des sorts accordés par la faveur de pacte.
+  Set<int> knownSpellIds,
+
+  /// Sorts mineurs du catalogue (TOUTES classes) pas encore connus, proposés
+  /// par le Pacte du grimoire — non vide seulement quand [choiceKind] est
+  /// [LevelUpChoiceKind.pact] (aucune requête réseau supplémentaire sinon).
+  List<SpellOption> pactCantripCandidates,
+
+  /// `spells.id` de Appel de familier (Pacte de la chaîne), `null` si
+  /// [choiceKind] n'est pas [LevelUpChoiceKind.pact] ou si le sort est
+  /// introuvable dans le catalogue.
+  int? familiarSpellId,
+
+  /// `subclasses.id` déjà enregistré pour la classe qui progresse (patron de
+  /// l'Occultiste), `null` si aucun (ou multiclassage : la nouvelle ligne n'a
+  /// pas de sous-classe). Le patron choisi dans cette même montée de niveau
+  /// est géré par l'écran.
+  int? knownSubclassId,
+
+  /// Sorts des listes étendues de patron, par `subclasses.id` — uniquement
+  /// pour l'Occultiste à l'étape "Sorts" : celui du patron déjà connu et ceux
+  /// des sous-classes proposées à ce niveau. Vide sinon. Le filtrage par
+  /// niveau est fait par `PatronExtendedSpells.merge` côté écran.
+  Map<int, List<PatronExtendedSpell>> patronExtendedSpells,
 });
 
 /// Options de multiclassage disponibles pour [detail] à cet instant — calcul
@@ -321,6 +370,7 @@ Future<LevelUpStepData> levelUpStepData(
   int effectiveHitDie;
   int effectiveClassLevel;
   int effectiveTargetLevel;
+  int? knownSubclassId;
 
   if (isMulticlassing) {
     final chosen = multiclassOptions.firstWhere(
@@ -387,6 +437,8 @@ Future<LevelUpStepData> levelUpStepData(
     // sous-classes proposées) correspondent à ce qui sera réellement écrit.
     effectiveClassLevel = targetClass.level;
     effectiveTargetLevel = targetClass.level + 1;
+    // Seule la sous-classe de LA ligne qui progresse compte (multiclassage).
+    knownSubclassId = targetClass.subclassId;
   }
 
   final levelData = await ref
@@ -503,6 +555,28 @@ Future<LevelUpStepData> levelUpStepData(
           );
   }
 
+  // Listes de sorts étendues des patrons d'Occultiste : lues pour le patron
+  // déjà connu ET pour ceux proposés à ce niveau (choisi dans la même montée
+  // de niveau, avant l'étape "Sorts"). Un échec ne bloque pas la montée de
+  // niveau : les sorts du patron sont simplement absents des candidats.
+  var patronExtendedSpells = const <int, List<PatronExtendedSpell>>{};
+  if (requiresSpellSelection &&
+      effectiveClassName == PatronExtendedSpells.warlockClassName) {
+    final subclassIds = <int>{
+      ?knownSubclassId,
+      if (choiceKind == LevelUpChoiceKind.subclass)
+        for (final option in levelData.availableSubclasses)
+          (option.id as num).toInt(),
+    };
+    try {
+      patronExtendedSpells = await ref
+          .watch(warlockPactSpellRepositoryProvider)
+          .fetchPatronExtendedSpells(subclassIds: subclassIds.toList());
+    } catch (_) {
+      patronExtendedSpells = const {};
+    }
+  }
+
   // Invocations occultistes — étape "Invocations", indépendante de
   // [choiceKind] (voir `domain/level_up_block_reason.dart` et
   // `domain/level_up_choice_kind.dart::LevelUpPendingChoiceResolver`).
@@ -510,6 +584,39 @@ Future<LevelUpStepData> levelUpStepData(
       ? InvocationsKnownProgression.newInvocationsAt(effectiveTargetLevel)
       : 0;
   final requiresInvocationSelection = invocationDelta > 0;
+  WarlockPact? knownPact;
+  for (final choice in detail.classChoices) {
+    knownPact ??= choice.pact;
+  }
+  final knownCantripSpellIds = {
+    for (final spell in detail.spells)
+      if (spell.level == 0) spell.id,
+  };
+  final knownSpellIds = {for (final spell in detail.spells) spell.id};
+
+  // Faveur de pacte (niveau 3) : le catalogue des sorts mineurs de TOUTES les
+  // classes (Pacte du grimoire) et l'identifiant de Appel de familier
+  // (Pacte de la chaîne) ne sont lus que quand ce niveau propose le choix de
+  // pacte — le pacte réellement retenu n'est connu que côté écran.
+  var pactCantripCandidates = const <SpellOption>[];
+  int? familiarSpellId;
+  if (choiceKind == LevelUpChoiceKind.pact) {
+    final pactRepository = ref.watch(warlockPactSpellRepositoryProvider);
+    final allCantrips = await pactRepository.fetchAllCantrips();
+    pactCantripCandidates = WarlockPactRewards.availableCantrips(
+      allCantrips,
+      idOf: (spell) => spell.id,
+      knownSpellIds: knownSpellIds,
+    );
+    // Bonus du pacte de la chaîne : un échec de cette recherche ne doit pas
+    // faire échouer toute la montée de niveau (le sort n'est simplement pas
+    // ajouté, comme s'il était introuvable).
+    try {
+      familiarSpellId = await pactRepository.findFamiliarSpellId();
+    } catch (_) {
+      familiarSpellId = null;
+    }
+  }
   var availableInvocations = const <LevelUpInvocationOption>[];
   var invocationQuota = 0;
   if (requiresInvocationSelection) {
@@ -519,9 +626,13 @@ Future<LevelUpStepData> levelUpStepData(
     // Quota EFFECTIF (spec visuelle direction-artistique section 3) : jamais
     // le delta RAW brut, un personnage haut niveau peut avoir épuisé les 32
     // invocations peuplées en base.
-    invocationQuota = invocationDelta < availableInvocations.length
-        ? invocationDelta
-        : availableInvocations.length;
+    invocationQuota = InvocationSelectionRules.effectiveQuota(
+      availableInvocations,
+      delta: invocationDelta,
+      warlockLevel: effectiveTargetLevel,
+      knownPact: knownPact,
+      knownCantripSpellIds: knownCantripSpellIds,
+    );
   }
 
   // Dons — étape "Choix à faire", sous-mode "don" (voir
@@ -568,6 +679,14 @@ Future<LevelUpStepData> levelUpStepData(
     requiresInvocationSelection: requiresInvocationSelection,
     availableInvocations: availableInvocations,
     invocationQuota: invocationQuota,
+    invocationDelta: invocationDelta,
+    knownPact: knownPact,
+    knownCantripSpellIds: knownCantripSpellIds,
+    knownSpellIds: knownSpellIds,
+    pactCantripCandidates: pactCantripCandidates,
+    familiarSpellId: familiarSpellId,
+    knownSubclassId: knownSubclassId,
+    patronExtendedSpells: patronExtendedSpells,
   );
 }
 

@@ -2,6 +2,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
+import '../../../characters/domain/patron_extended_spells.dart';
+import '../../../characters/presentation/providers/character_providers.dart';
 import '../../data/character_creation_repository.dart';
 import '../../domain/background_catalog.dart';
 import '../../domain/background_equipment_entry.dart';
@@ -18,6 +20,7 @@ import '../../domain/skill_catalog.dart';
 import '../../domain/spell_catalog.dart';
 import '../../domain/tool_catalog.dart';
 import 'character_creation_draft_provider.dart';
+import 'subclass_choice_providers.dart';
 
 part 'character_creation_providers.g.dart';
 
@@ -147,6 +150,45 @@ Future<SpellCatalog> spellCatalog(Ref ref, {required int classId}) {
       .fetchSpellCatalog(classId: classId);
 }
 
+/// Sorts candidats de la classe [classId] pour la création : la liste de
+/// classe, à laquelle s'ajoutent, pour tout [subclassId] non nul, les sorts de
+/// niveau 1 de la liste ÉTENDUE de cette sous-classe
+/// (`subclass_spells.grant_kind = 'extends_list'`, `class_level <= 1`) — c'est
+/// la base qui décide quelles sous-classes en ont (patrons d'Occultiste), pas
+/// le nom de la classe. Même logique que la montée de niveau
+/// (`PatronExtendedSpells.merge`), plafond de niveau de sort 1. Utilisé par
+/// l'étape Sorts ET par le récapitulatif : `createCharacter` résout les noms
+/// choisis contre ce catalogue.
+///
+/// Un échec de lecture des sorts de patron (ni réseau ni cache) n'échoue pas
+/// l'écran : on continue avec le catalogue de classe seul, comme la montée de
+/// niveau. [subclassId] est un paramètre de la `family` (celui du brouillon)
+/// pour ne pas recharger à chaque modification d'un autre champ.
+@Riverpod(retry: _noRetry)
+Future<SpellCatalog> creationSpellCatalog(
+  Ref ref, {
+  required int classId,
+  int? subclassId,
+}) async {
+  final base = await ref.watch(spellCatalogProvider(classId: classId).future);
+  if (subclassId == null) return base;
+
+  try {
+    final extended = await ref
+        .watch(warlockPactSpellRepositoryProvider)
+        .fetchPatronExtendedSpells(subclassIds: [subclassId]);
+    return PatronExtendedSpells.merge(
+      base: base,
+      extended: extended[subclassId] ?? const [],
+      warlockLevel: 1,
+      maxSpellLevel: 1,
+    ).catalog;
+  } catch (_) {
+    // `CharacterFailure` (caractères) ou autre : dégradé sans sorts de patron.
+    return base;
+  }
+}
+
 /// Données déjà résolues nécessaires à l'étape 6/9 "Sorts" : la [ClassOption]
 /// déjà choisie à l'étape 2/9 (pour son nom, utilisé par
 /// `SpellcastingRules` pour les quotas), plus le [SpellCatalog] complet de
@@ -166,7 +208,10 @@ Future<SpellsStepData> spellsStepData(Ref ref) async {
   );
 
   final spellCatalog = await ref.watch(
-    spellCatalogProvider(classId: classOption.id).future,
+    creationSpellCatalogProvider(
+      classId: classOption.id,
+      subclassId: draft.subclassId,
+    ).future,
   );
 
   return (classOption: classOption, spellCatalog: spellCatalog);
@@ -262,6 +307,10 @@ typedef SummaryStepData = ({
   LanguageCatalog languageCatalog,
   SpellCatalog spellCatalog,
   ItemCatalog itemCatalog,
+
+  /// Nom de la sous-classe choisie à l'étape 2/9, `null` si aucune ou si son
+  /// nom n'a pu être résolu (l'écran affiche alors un repli).
+  String? subclassName,
 });
 
 @Riverpod(retry: _noRetry)
@@ -291,8 +340,28 @@ Future<SummaryStepData> summaryStepData(Ref ref) async {
   );
 
   final spellCatalog = await ref.watch(
-    spellCatalogProvider(classId: classOption.id).future,
+    creationSpellCatalogProvider(
+      classId: classOption.id,
+      subclassId: draft.subclassId,
+    ).future,
   );
+
+  // Nom de la sous-classe : lecture best-effort (hors-ligne sans cache, le
+  // récapitulatif ne doit pas échouer) ; l'écran affiche un repli si `null`.
+  String? subclassName;
+  if (draft.subclassId != null) {
+    try {
+      final subclassCatalog = await ref.watch(
+        subclassChoiceCatalogProvider.future,
+      );
+      subclassName = subclassCatalog.nameOf(
+        classId: classOption.id,
+        subclassId: draft.subclassId!,
+      );
+    } catch (_) {
+      subclassName = null;
+    }
+  }
 
   return (
     raceCatalog: raceCatalog,
@@ -303,6 +372,7 @@ Future<SummaryStepData> summaryStepData(Ref ref) async {
     languageCatalog: languageCatalog,
     spellCatalog: spellCatalog,
     itemCatalog: itemCatalog,
+    subclassName: subclassName,
   );
 }
 

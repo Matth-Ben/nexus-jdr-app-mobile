@@ -7,6 +7,7 @@ import '../../characters/domain/character_journal_entry.dart';
 import '../../characters/domain/character_skill_row.dart';
 import '../../characters/domain/character_spell_entry.dart';
 import '../../characters/domain/character_spell_slot.dart';
+import '../../characters/domain/spell_grant_source.dart';
 import 'shared_character_skill_catalog.dart';
 
 /// Convertit le jsonb renvoyé par `public.get_shared_character(p_token)`
@@ -88,7 +89,7 @@ CharacterDetail mapSharedCharacterJson(Map<String, dynamic> json) {
       for (final row in _listOfMaps(json['languages']))
         if (row['language_name'] is String) row['language_name'] as String,
     ],
-    spells: [for (final row in _listOfMaps(json['spells'])) _mapSpell(row)],
+    spells: _mapSpellsWithGrants(json),
     spellSlots: [
       for (final row in _listOfMaps(json['spell_slots']))
         _mapSpellSlot(row, isPact: false),
@@ -286,13 +287,68 @@ String _toolLabel(Map<String, dynamic> row) {
   return row['tool_name'] as String? ?? 'Outil';
 }
 
-CharacterSpellEntry _mapSpell(Map<String, dynamic> row) {
+/// Sorts de `spells` (lignes `character_spells`) fusionnés avec
+/// `subclass_spells` (sorts toujours préparés accordés par une sous-classe,
+/// déjà filtrés par niveau de classe côté RPC) — même règle que la fiche du
+/// propriétaire : un sort déjà choisi ET accordé n'apparaît qu'une fois,
+/// marqué accordé ; un sort accordé sans ligne `character_spells` est ajouté
+/// (`isPersisted: false`).
+List<CharacterSpellEntry> _mapSpellsWithGrants(Map<String, dynamic> json) {
+  final classNameById = <int, String>{
+    for (final row in _listOfMaps(json['classes']))
+      _asInt(row['class_id']): row['class_name'] as String? ?? '',
+  };
+  final grants = <int, SpellGrantSource>{};
+  final grantRows = <int, Map<String, dynamic>>{};
+  for (final row in _listOfMaps(json['subclass_spells'])) {
+    final spellId = _asInt(row['spell_id']);
+    grants.putIfAbsent(
+      spellId,
+      () => SpellGrantSource.forClassName(
+        classNameById[_asInt(row['class_id'])] ?? '',
+      ),
+    );
+    grantRows.putIfAbsent(spellId, () => row);
+  }
+
+  final result = <CharacterSpellEntry>[];
+  final seen = <int>{};
+  for (final row in _listOfMaps(json['spells'])) {
+    final entry = _mapSpell(row);
+    seen.add(entry.id);
+    final grant = grants[entry.id];
+    result.add(
+      grant == null
+          ? entry
+          : _mapSpell(row, grantSource: grant, status: 'préparé'),
+    );
+  }
+  for (final entry in grantRows.entries) {
+    if (seen.contains(entry.key)) continue;
+    result.add(
+      _mapSpell(
+        entry.value,
+        grantSource: grants[entry.key],
+        status: 'préparé',
+        isPersisted: false,
+      ),
+    );
+  }
+  return result;
+}
+
+CharacterSpellEntry _mapSpell(
+  Map<String, dynamic> row, {
+  SpellGrantSource? grantSource,
+  String? status,
+  bool isPersisted = true,
+}) {
   return CharacterSpellEntry(
     id: _asInt(row['spell_id']),
     name: row['spell_name'] as String? ?? 'Sort',
     level: _asInt(row['level']),
     school: row['school'] as String? ?? '',
-    status: row['status'] as String? ?? 'connu',
+    status: status ?? row['status'] as String? ?? 'connu',
     castingTime: row['casting_time'] as String? ?? '',
     range: row['range'] as String? ?? '',
     components: _mapOf(row['components']) ?? const {},
@@ -300,6 +356,8 @@ CharacterSpellEntry _mapSpell(Map<String, dynamic> row) {
     concentration: row['concentration'] == true,
     description: row['description'] as String? ?? '',
     isFavorite: row['is_favorite'] == true,
+    grantSource: grantSource,
+    isPersisted: isPersisted,
   );
 }
 

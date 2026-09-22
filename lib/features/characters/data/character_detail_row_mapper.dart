@@ -10,6 +10,9 @@ import '../domain/character_skill_row.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
 import '../domain/multiclass_proficiencies.dart';
+import '../domain/pact_weapon_option.dart';
+import '../domain/spell_grant_source.dart';
+import '../domain/subclass_spell_grant_resolver.dart';
 
 /// Fonctions de mapping pures entre la ligne brute `characters` (avec ses
 /// relations imbriquées `character_classes`/`character_ability_scores`)
@@ -79,6 +82,56 @@ abstract final class CharacterDetailRowMapper {
       }
     }
     return ids;
+  }
+
+  /// Sous-classes choisies avec le niveau de LEUR classe (`character_classes
+  /// .level` de la ligne qui porte le `subclass_id`, jamais le niveau total)
+  /// et l'origine des sorts accordés déduite du nom de classe — entrée de
+  /// `SubclassSpellGrantResolver`. Une ligne sans `subclass_id` est ignorée.
+  static List<SubclassProgress> collectSubclassProgress(
+    Map<String, dynamic> row, {
+    required Map<String, String> classNames,
+  }) {
+    final progress = <SubclassProgress>[];
+    for (final classRow in classRowsOf(row)) {
+      final subclassId = classRow['subclass_id'];
+      if (subclassId is! num) continue;
+      final classId = classRow['class_id'];
+      progress.add(
+        SubclassProgress(
+          subclassId: subclassId.toInt(),
+          classLevel: (classRow['level'] as num?)?.toInt() ?? 0,
+          source: SpellGrantSource.forClassName(
+            classId == null ? '' : classNames[classId.toString()] ?? '',
+          ),
+        ),
+      );
+    }
+    return progress;
+  }
+
+  /// Parse les lignes brutes `subclass_spells`. Une ligne incomplète est
+  /// ignorée.
+  static List<SubclassSpellGrant> parseSubclassSpellGrants(
+    List<Map<String, dynamic>> rows,
+  ) {
+    final grants = <SubclassSpellGrant>[];
+    for (final grantRow in rows) {
+      final subclassId = grantRow['subclass_id'];
+      final spellId = grantRow['spell_id'];
+      final classLevel = grantRow['class_level'];
+      if (subclassId is! num || spellId is! num || classLevel is! num) {
+        continue;
+      }
+      grants.add(
+        SubclassSpellGrant(
+          subclassId: subclassId.toInt(),
+          spellId: spellId.toInt(),
+          classLevel: classLevel.toInt(),
+        ),
+      );
+    }
+    return grants;
   }
 
   /// Identifiants de classe en `int` (pas stringifiés), pour interroger
@@ -562,6 +615,7 @@ abstract final class CharacterDetailRowMapper {
           subclassName: subclassId != null
               ? subclassNames[subclassId.toString()]
               : null,
+          subclassId: subclassId is num ? subclassId.toInt() : null,
         ),
       );
     }
@@ -629,6 +683,7 @@ abstract final class CharacterDetailRowMapper {
     List<String> knownInvocationNames = const [],
     List<CharacterInventoryItem> inventory = const [],
     List<CharacterAdventure> adventures = const [],
+    PactWeaponOption? pactWeapon,
     int? speed,
   }) {
     final raceId = row['race_id'];
@@ -679,6 +734,7 @@ abstract final class CharacterDetailRowMapper {
       spellSlots: spellSlots,
       pactSpellSlot: parsePactSpellSlot(row),
       knownInvocationNames: knownInvocationNames,
+      pactWeapon: pactWeapon,
       currencyGp: (row['currency_gp'] as num?)?.toInt() ?? 0,
       currencyPp: (row['currency_pp'] as num?)?.toInt() ?? 0,
       currencyEp: (row['currency_ep'] as num?)?.toInt() ?? 0,

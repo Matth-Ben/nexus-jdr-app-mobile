@@ -21,6 +21,7 @@ class CharacterDetailClassRow {
     this.armorProficiencies = const [],
     this.weaponProficiencies = const [],
     this.subclassName,
+    this.subclassId,
   });
 
   /// Identifiant de la classe (`classes.id`, entier côté Supabase, gardé en
@@ -107,4 +108,10 @@ class CharacterDetailClassRow {
   /// section "Reste à faire") : cette colonne était déjà écrite mais jamais
   /// relue par `fetchCharacterDetail` avant cet ajout.
   final String? subclassName;
+
+  /// `character_classes.subclass_id` (`subclasses.id`), `null` tant qu'aucune
+  /// sous-classe n'est choisie. Sert notamment à retrouver le patron d'un
+  /// Occultiste (listes de sorts étendues, `subclass_spells.grant_kind =
+  /// 'extends_list'`) pendant la montée de niveau.
+  final int? subclassId;
 }

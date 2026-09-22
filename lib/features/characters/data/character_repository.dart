@@ -26,6 +26,8 @@ import '../domain/portrait_storage_path_resolver.dart';
 import '../domain/rest_type.dart';
 import '../domain/reward_item_draft.dart';
 import '../domain/spell_slot_progression.dart';
+import '../domain/subclass_spell_grant_resolver.dart';
+import '../domain/warlock_pact.dart';
 import '../domain/write_outcome.dart';
 import 'character_detail_row_mapper.dart';
 import 'character_error_mapper.dart';
@@ -38,6 +40,7 @@ import 'inventory_catalog_row_mapper.dart';
 import 'level_up_choice_row_mapper.dart';
 import 'level_up_feat_row_mapper.dart';
 import 'level_up_invocation_row_mapper.dart';
+import 'pact_weapon_row_mapper.dart';
 
 /// Langue d'affichage des noms de race/classe, en dur pour l'instant : l'app
 /// démarre en français uniquement (`docs/cahier-des-charges/07-source-donnees-i18n.md`),
@@ -518,8 +521,9 @@ abstract class CharacterRepository {
   ///   combiné dans le même `UPDATE`/`INSERT` que `level` (sur la ligne
   ///   fraîchement créée en cas de multiclassage, pas sur la classe
   ///   primaire).
-  /// - [LevelUpChoiceKind.fightingStyle]/[LevelUpChoiceKind.favoredEnemy] :
-  ///   insert `character_class_options`.
+  /// - [LevelUpChoiceKind.fightingStyle]/[LevelUpChoiceKind.favoredEnemy]/
+  ///   [LevelUpChoiceKind.pact] : insert `character_class_options`
+  ///   (`chosen_value` = `'chaine'`/`'lame'`/`'grimoire'` pour le pacte).
   ///
   /// Recalcule aussi `character_spell_slots`, depuis zéro (upsert complet
   /// pour le nouveau niveau, jamais un delta — voir
@@ -1889,10 +1893,18 @@ class SupabaseCharacterRepository implements CharacterRepository {
         entityIds: ids,
       );
 
+      final cantripNames = await _fetchTranslatedNames(
+        entityType: 'spell',
+        entityIds: LevelUpInvocationRowMapper.collectCantripSpellIds(
+          availableRows,
+        ),
+      );
+
       return LevelUpInvocationRowMapper.toInvocationOptions(
         availableRows,
         names: names,
         descriptions: descriptions,
+        cantripNames: cantripNames,
       );
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
@@ -2814,6 +2826,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         );
       case LevelUpChoiceKind.fightingStyle:
       case LevelUpChoiceKind.favoredEnemy:
+      case LevelUpChoiceKind.pact:
         await _client.from('character_class_options').insert({
           'character_id': characterId,
           'class_feature_id': choice.classFeatureId,
@@ -3177,9 +3190,42 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // `20260825090300_create_reference_spells_items_tables.sql` côté dépôt
     // web) — elle vit dans `translations` au même titre que le nom, même
     // pattern que `itemDescriptionRows` ci-dessous pour les objets.
-    final spellIds = CharacterSpellRowMapper.collectSpellIds(
-      CharacterDetailRowMapper.characterSpellRowsOf(row),
+    //
+    // Sorts "toujours préparés" des sous-classes (`subclass_spells`, Clerc/
+    // Paladin) : table de référence lue en entier pour la/les sous-classe(s)
+    // du personnage (jamais filtrée par niveau ici — le filtrage par niveau de
+    // classe est fait au mapping, voir [_mapCharacterDetailPayload], pour que
+    // le cache hors-ligne reste cohérent) ; seuls les sorts déjà atteints sont
+    // ajoutés aux `spells`/`translations` à résoudre. Aucune écriture dans
+    // `character_spells`.
+    final subclassProgress = CharacterDetailRowMapper.collectSubclassProgress(
+      row,
+      classNames: CharacterRowMapper.parseTranslatedNames(classNameRows),
     );
+    var subclassSpellRows = const <Map<String, dynamic>>[];
+    if (subclassProgress.isNotEmpty) {
+      subclassSpellRows = await _client
+          .from('subclass_spells')
+          .select('subclass_id, spell_id, class_level')
+          // Les listes ÉTENDUES des patrons d'Occultiste ('extends_list')
+          // n'accordent aucun sort d'office.
+          .eq('grant_kind', 'always_prepared')
+          .inFilter('subclass_id', [
+            for (final entry in subclassProgress) entry.subclassId,
+          ]);
+    }
+    final grantedSpellIds = SubclassSpellGrantResolver.resolve(
+      progress: subclassProgress,
+      grants: CharacterDetailRowMapper.parseSubclassSpellGrants(
+        subclassSpellRows,
+      ),
+    ).keys;
+    final spellIds = <int>{
+      ...CharacterSpellRowMapper.collectSpellIds(
+        CharacterDetailRowMapper.characterSpellRowsOf(row),
+      ),
+      ...grantedSpellIds,
+    };
     var spellRows = const <Map<String, dynamic>>[];
     var spellNameRows = const <Map<String, dynamic>>[];
     var spellDescriptionRows = const <Map<String, dynamic>>[];
@@ -3229,9 +3275,52 @@ class SupabaseCharacterRepository implements CharacterRepository {
       entityIds: inventoryItemIds,
     );
 
+    // Forme courante de l'arme de pacte (Pacte de la lame,
+    // `character_pact_weapons`) : lue seulement si le personnage a choisi ce
+    // pacte, pour ne coûter aucune requête aux autres personnages. Absente
+    // (`null`) des payloads mis en cache avant cet ajout.
+    Map<String, dynamic>? pactWeaponItemRow;
+    var pactWeaponNameRows = const <Map<String, dynamic>>[];
+    final hasBladePact = CharacterDetailRowMapper.classOptionRowsOf(row)
+        .any((option) => option['chosen_value'] == WarlockPact.blade.key);
+    if (hasBladePact) {
+      // Carte accessoire : un échec de lecture ne doit jamais empêcher la
+      // fiche de se charger (la forme reste simplement non affichée).
+      try {
+        final pactWeaponRow = await _client
+            .from('character_pact_weapons')
+            .select('item_id')
+            .eq('character_id', row['id'] as String)
+            .maybeSingle();
+        final pactItemId = pactWeaponRow?['item_id'];
+        if (pactItemId != null) {
+          final itemRow = await _client
+              .from('items')
+              .select(
+                'id, category, '
+                'weapon_properties(damage_dice, damage_type, properties)',
+              )
+              .eq('id', pactItemId)
+              .maybeSingle();
+          final nameRows = await _fetchTranslationRows(
+            entityType: 'item',
+            fieldName: 'name',
+            entityIds: {pactItemId.toString()},
+          );
+          pactWeaponItemRow = itemRow;
+          pactWeaponNameRows = nameRows;
+        }
+      } catch (_) {
+        pactWeaponItemRow = null;
+        pactWeaponNameRows = const <Map<String, dynamic>>[];
+      }
+    }
+
     return <String, dynamic>{
       'row': row,
       'raceRow': raceRow,
+      'pactWeaponItemRow': pactWeaponItemRow,
+      'pactWeaponNameRows': pactWeaponNameRows,
       'raceNameRows': raceNameRows,
       'subraceNameRows': subraceNameRows,
       'classNameRows': classNameRows,
@@ -3247,6 +3336,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       'toolNameRows': toolNameRows,
       'languageNameRows': languageNameRows,
       'spellRows': spellRows,
+      'subclassSpellRows': subclassSpellRows,
       'spellNameRows': spellNameRows,
       'spellDescriptionRows': spellDescriptionRows,
       'itemNameRows': itemNameRows,
@@ -3349,8 +3439,21 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final spellDescriptions = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['spellDescriptionRows']),
     );
+    // Absent des payloads mis en cache avant l'introduction de
+    // `subclass_spells` : `_rowsOf(null)` retombe sur une liste vide, donc
+    // aucun sort accordé (jamais de crash sur un ancien cache).
+    final spellGrants = SubclassSpellGrantResolver.resolve(
+      progress: CharacterDetailRowMapper.collectSubclassProgress(
+        row,
+        classNames: classNames,
+      ),
+      grants: CharacterDetailRowMapper.parseSubclassSpellGrants(
+        _rowsOf(payload['subclassSpellRows']),
+      ),
+    );
     final spells = CharacterSpellRowMapper.toCharacterSpellEntries(
       _rowsOf(payload['spellRows']),
+      grants: spellGrants,
       names: spellNames,
       descriptions: spellDescriptions,
       statuses: CharacterSpellRowMapper.parseStatuses(
@@ -3381,6 +3484,17 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final raceRow = payload['raceRow'] as Map<String, dynamic>?;
     final speed = (raceRow?['speed'] as num?)?.toInt();
 
+    // Absente des payloads mis en cache avant l'arme de pacte : `null`.
+    final pactWeaponItemRow = payload['pactWeaponItemRow'];
+    final pactWeapon = pactWeaponItemRow is Map
+        ? PactWeaponRowMapper.toOption(
+            Map<String, dynamic>.from(pactWeaponItemRow),
+            names: CharacterRowMapper.parseTranslatedNames(
+              _rowsOf(payload['pactWeaponNameRows']),
+            ),
+          )
+        : null;
+
     return CharacterDetailRowMapper.toCharacterDetail(
       row,
       speed: speed,
@@ -3400,6 +3514,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       knownInvocationNames: knownInvocationNames,
       inventory: inventory,
       adventures: adventures,
+      pactWeapon: pactWeapon,
     );
   }
 

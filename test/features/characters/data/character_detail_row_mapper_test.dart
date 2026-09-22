@@ -1040,6 +1040,19 @@ void main() {
       expect(choices[1].chosenValue, 'Morts-vivants');
     });
 
+    test('parseClassChoices conserve la clé du pacte (utilisée pour les '
+        'prérequis d\'invocations) et displayValue la traduit', () {
+      final choices = CharacterDetailRowMapper.parseClassChoices(
+        [
+          {'class_feature_id': 261, 'level': 3, 'chosen_value': 'lame'},
+        ],
+        featureNames: const {'261': 'Faveur de pacte'},
+      );
+      expect(choices.single.featureName, 'Faveur de pacte');
+      expect(choices.single.chosenValue, 'lame');
+      expect(choices.single.displayValue, 'Pacte de la lame');
+    });
+
     test('parseClassChoices ignore une ligne dont class_feature_id ne '
         'résout à aucun nom (ne devrait pas arriver)', () {
       final rows = [

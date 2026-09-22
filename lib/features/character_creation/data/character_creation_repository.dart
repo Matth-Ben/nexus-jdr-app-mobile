@@ -932,7 +932,10 @@ class SupabaseCharacterCreationRepository
       await _client.from('character_classes').insert({
         'character_id': characterId,
         'class_id': classOption.id,
-        'subclass_id': null,
+        // Sous-classe choisie à l'étape 2/9 pour les classes qui la choisissent
+        // au niveau 1 (Clerc, Occultiste, Ensorceleur) ; `null` sinon. Même
+        // colonne que celle écrite par `applyLevelUp`.
+        'subclass_id': draft.subclassId,
         'level': 1,
         'is_primary': true,
       });

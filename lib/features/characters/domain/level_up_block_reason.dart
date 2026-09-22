@@ -73,7 +73,9 @@ abstract final class LevelUpBlockRules {
   /// `class_features.choice_type` désormais gérés sans jamais bloquer le
   /// flux — `'sous_classe'`/`'style_combat'`/`'ennemi_jure'` mènent à l'étape
   /// "Choix à faire" (increment 2, voir `domain/level_up_choice_kind.dart`),
-  /// `'invocation'` à la nouvelle étape "Invocations" (voir la doc de classe
+  /// `'pacte'` (Faveur de pacte de l'Occultiste, niveau 3) à l'étape "Choix à
+  /// faire" (`LevelUpChoiceKind.pact`), `'invocation'` à la nouvelle étape
+  /// "Invocations" (voir la doc de classe
   /// ci-dessus) — ce dernier ne passe PAS par
   /// [LevelUpPendingChoiceResolver.resolve] vers un [LevelUpChoiceKind].
   static const Set<String> resolvedChoiceTypes = {
@@ -81,6 +83,7 @@ abstract final class LevelUpBlockRules {
     'style_combat',
     'ennemi_jure',
     'invocation',
+    'pacte',
   };
 
   /// Évalue si [targetLevel] doit bloquer tout le flux de montée de niveau,

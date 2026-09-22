@@ -45,12 +45,37 @@ class CharacterCreationDraftController
     );
   }
 
-  /// Met à jour le choix de classe de l'étape 2. Ne touche à aucun autre
-  /// champ (fusion partielle via `copyWith`, contrairement à [setRace]) :
-  /// cette étape n'a pas de sous-choix à effacer en fonction de la classe
-  /// choisie (pas de sous-classe ici, voir `domain/class_catalog.dart`).
-  void setClass({required int classId}) {
-    state = state.copyWith(classId: classId);
+  /// Met à jour le choix de classe (et de sous-classe, [subclassId] `null`
+  /// pour une classe sans choix de niveau 1) de l'étape 2. Fusion partielle
+  /// via `copyWith`, avec un effacement des choix qui dépendent de la classe :
+  /// - classe DIFFÉRENTE d'une classe déjà enregistrée : compétences/outils de
+  ///   classe et sorts (étapes 5 et 6) sont vidés, ils ne valent que pour la
+  ///   classe précédente ;
+  /// - même classe mais sous-classe différente : seuls les sorts sont vidés
+  ///   (les listes étendues d'un patron d'Occultiste diffèrent d'un patron à
+  ///   l'autre).
+  /// Les autres champs (race, historique, équipement...) sont conservés.
+  void setClass({required int classId, int? subclassId}) {
+    final previousClassId = state.classId;
+    final classChanged = previousClassId != null && previousClassId != classId;
+    final subclassChanged =
+        previousClassId == classId && state.subclassId != subclassId;
+    state = state.copyWith(
+      classId: classId,
+      subclassId: subclassId,
+      classSkillChoices: classChanged
+          ? const <String>[]
+          : state.classSkillChoices,
+      classToolChoices: classChanged
+          ? const <String>[]
+          : state.classToolChoices,
+      classCantripChoices: classChanged || subclassChanged
+          ? const <String>[]
+          : state.classCantripChoices,
+      classLevelOneSpellChoices: classChanged || subclassChanged
+          ? const <String>[]
+          : state.classLevelOneSpellChoices,
+    );
   }
 
   /// Met à jour le choix d'historique de l'étape 3. Fusion partielle via

@@ -36,6 +36,10 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/spells_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
+import 'package:personnages/features/characters/data/warlock_pact_spell_repository.dart';
+import 'package:personnages/features/characters/domain/character_failure.dart';
+import 'package:personnages/features/characters/domain/patron_extended_spells.dart';
+import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   ClassCatalog? classCatalogToReturn;
@@ -102,6 +106,27 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
     required SpellCatalog spellCatalog,
     required ItemCatalog itemCatalog,
   }) async => throw UnimplementedError();
+}
+
+class _FakeWarlockPactSpellRepository implements WarlockPactSpellRepository {
+  Map<int, List<PatronExtendedSpell>> extended = const {};
+  List<List<int>> requestedSubclassIds = [];
+  Object? errorToThrow;
+
+  @override
+  Future<Map<int, List<PatronExtendedSpell>>> fetchPatronExtendedSpells({
+    required List<int> subclassIds,
+  }) async {
+    requestedSubclassIds.add(subclassIds);
+    if (errorToThrow != null) throw errorToThrow!;
+    return extended;
+  }
+
+  @override
+  Future<List<SpellOption>> fetchAllCantrips() async => const [];
+
+  @override
+  Future<int?> findFamiliarSpellId() async => null;
 }
 
 // Barde : cantrips (quota 2) ET sorts de niveau 1 (quota 4) -> les deux
@@ -189,14 +214,19 @@ const _paladinSpellCatalog = SpellCatalog(
 
 void main() {
   late _FakeCharacterCreationRepository fakeRepository;
+  late _FakeWarlockPactSpellRepository fakeWarlockRepository;
   late ProviderContainer container;
   late GoRouter router;
 
   setUp(() {
     fakeRepository = _FakeCharacterCreationRepository();
+    fakeWarlockRepository = _FakeWarlockPactSpellRepository();
     container = ProviderContainer(
       overrides: [
         characterCreationRepositoryProvider.overrideWithValue(fakeRepository),
+        warlockPactSpellRepositoryProvider.overrideWithValue(
+          fakeWarlockRepository,
+        ),
       ],
     );
   });
@@ -703,5 +733,134 @@ void main() {
         expect(find.text('Abandonner la création ?'), findsOneWidget);
       },
     );
+  });
+
+  group('Occultiste avec patron (listes étendues)', () {
+    const occultiste = ClassOption(
+      id: 9,
+      name: 'Occultiste',
+      description: '',
+      hitDie: 8,
+    );
+    const mainsBrulantes = SpellOption(
+      id: 20,
+      name: 'Mains brûlantes',
+      level: 1,
+      school: 'Évocation',
+      castingTime: '1 action',
+    );
+    const boule = SpellOption(
+      id: 21,
+      name: 'Boule de feu',
+      level: 3,
+      school: 'Évocation',
+      castingTime: '1 action',
+    );
+    const fracasser = SpellOption(
+      id: 22,
+      name: 'Fracasser',
+      level: 2,
+      school: 'Évocation',
+      castingTime: '1 action',
+    );
+    const classSpells = SpellCatalog(spells: [_traitDeFeu, _benediction]);
+
+    setUp(() {
+      fakeRepository.classCatalogToReturn = const ClassCatalog(
+        classes: [occultiste],
+      );
+      fakeRepository.spellCatalogToReturn = classSpells;
+      fakeWarlockRepository.extended = {
+        91: [
+          const PatronExtendedSpell(spell: mainsBrulantes, classLevel: 1),
+          const PatronExtendedSpell(spell: fracasser, classLevel: 3),
+          const PatronExtendedSpell(spell: boule, classLevel: 5),
+          // Déjà dans la liste de classe : pas de doublon.
+          const PatronExtendedSpell(spell: _benediction, classLevel: 1),
+        ],
+      };
+    });
+
+    test('creationSpellCatalog ajoute les sorts de patron de niveau 1 '
+        '(plafond 1), sans doublon', () async {
+      final catalog = await container.read(
+        creationSpellCatalogProvider(classId: 9, subclassId: 91).future,
+      );
+
+      expect(catalog.spells.map((s) => s.name), [
+        'Bénédiction',
+        'Mains brûlantes',
+        'Trait de feu',
+      ]);
+      expect(fakeWarlockRepository.requestedSubclassIds, [
+        [91],
+      ]);
+    });
+
+    test(
+      'sans patron : catalogue de classe inchangé, aucune requête patron',
+      () async {
+        final catalog = await container.read(
+          creationSpellCatalogProvider(classId: 9).future,
+        );
+
+        expect(catalog, classSpells);
+        expect(fakeWarlockRepository.requestedSubclassIds, isEmpty);
+      },
+    );
+
+    test('sous-classe sans liste étendue (ex. domaine de Clerc, clé absente) : '
+        'catalogue de classe inchangé', () async {
+      final catalog = await container.read(
+        creationSpellCatalogProvider(classId: 2, subclassId: 55).future,
+      );
+
+      // La base décide : la requête est faite quel que soit le nom de classe.
+      expect(fakeWarlockRepository.requestedSubclassIds, [
+        [55],
+      ]);
+      expect(catalog, classSpells);
+    });
+
+    test(
+      'patron dont la liste étendue est vide : catalogue inchangé',
+      () async {
+        fakeWarlockRepository.extended = {91: const []};
+
+        final catalog = await container.read(
+          creationSpellCatalogProvider(classId: 9, subclassId: 91).future,
+        );
+
+        expect(catalog, classSpells);
+      },
+    );
+
+    test('échec de lecture des sorts de patron : on continue avec la liste '
+        'de classe seule', () async {
+      fakeWarlockRepository.errorToThrow = const CharacterFailure('réseau');
+
+      final catalog = await container.read(
+        creationSpellCatalogProvider(classId: 9, subclassId: 91).future,
+      );
+
+      expect(catalog, classSpells);
+    });
+
+    testWidgets("l'étape Sorts propose le sort du patron choisi", (
+      tester,
+    ) async {
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setClass(classId: 9, subclassId: 91);
+
+      await pumpSpellsStep(tester);
+      await tester.tap(find.text('Niveau 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mains brûlantes'), findsOneWidget);
+      expect(find.text('Bénédiction'), findsOneWidget);
+      expect(find.text('Fracasser'), findsNothing);
+      expect(find.text('Boule de feu'), findsNothing);
+    });
   });
 }

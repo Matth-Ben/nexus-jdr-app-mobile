@@ -26,13 +26,18 @@ import 'package:personnages/features/character_creation/domain/spell_option.dart
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
+import 'package:personnages/features/characters/data/warlock_pact_spell_repository.dart';
+import 'package:personnages/features/characters/domain/character_class_choice.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
+import 'package:personnages/features/characters/domain/character_spell_entry.dart';
+import 'package:personnages/features/characters/domain/patron_extended_spells.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
+import 'package:personnages/features/characters/domain/invocation_prerequisites.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
 import 'package:personnages/features/characters/domain/level_up_feat_option.dart';
 import 'package:personnages/features/characters/domain/level_up_invocation_option.dart';
@@ -42,6 +47,7 @@ import 'package:personnages/features/characters/domain/level_up_level_data.dart'
 import 'package:personnages/features/characters/domain/level_up_subclass_option.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
+import 'package:personnages/features/characters/domain/warlock_pact.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/level_up_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
@@ -126,6 +132,30 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
     required SpellCatalog spellCatalog,
     required ItemCatalog itemCatalog,
   }) => throw UnimplementedError();
+}
+
+/// Lectures de reference de la faveur de pacte : catalogue de sorts mineurs
+/// (toutes classes) et identifiant de Appel de familier.
+class _FakeWarlockPactSpellRepository implements WarlockPactSpellRepository {
+  List<SpellOption> cantrips = const [];
+  int? familiarSpellId;
+
+  @override
+  Future<List<SpellOption>> fetchAllCantrips() async => cantrips;
+
+  @override
+  Future<int?> findFamiliarSpellId() async => familiarSpellId;
+
+  Map<int, List<PatronExtendedSpell>> patronSpells = const {};
+  final List<List<int>> patronRequests = [];
+
+  @override
+  Future<Map<int, List<PatronExtendedSpell>>> fetchPatronExtendedSpells({
+    required List<int> subclassIds,
+  }) async {
+    patronRequests.add(subclassIds);
+    return patronSpells;
+  }
 }
 
 class _FakeCharacterRepository implements CharacterRepository {
@@ -546,15 +576,20 @@ CharacterDetail _baseDetailAtLevel(int level) => _baseDetail.copyWith(
 void main() {
   late _FakeCharacterRepository fakeRepository;
   late _FakeCharacterCreationRepository fakeCreationRepository;
+  late _FakeWarlockPactSpellRepository fakePactRepository;
   late ProviderContainer container;
   late GoRouter router;
 
   setUp(() {
     fakeRepository = _FakeCharacterRepository();
     fakeCreationRepository = _FakeCharacterCreationRepository();
+    fakePactRepository = _FakeWarlockPactSpellRepository();
     container = ProviderContainer(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeRepository),
+        warlockPactSpellRepositoryProvider.overrideWithValue(
+          fakePactRepository,
+        ),
         characterCreationRepositoryProvider.overrideWithValue(
           fakeCreationRepository,
         ),
@@ -3172,6 +3207,542 @@ void main() {
 
         expect(find.textContaining('invocation occultiste'), findsNothing);
 
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.invocationIds, isEmpty);
+      },
+    );
+  });
+
+  group('Occultiste : sorts etendus du patron (extends_list)', () {
+    CharacterDetailClassRow occultisteClass({int? subclassId}) =>
+        CharacterDetailClassRow(
+          classId: 9,
+          hitDie: 8,
+          className: 'Occultiste',
+          level: 5,
+          isPrimary: true,
+          savingThrowProficiencies: const [],
+          subclassId: subclassId,
+        );
+
+    PatronExtendedSpell patron(
+      int id,
+      String name,
+      int level,
+      int classLevel,
+    ) => PatronExtendedSpell(
+      spell: SpellOption(
+        id: id,
+        name: name,
+        level: level,
+        school: 'Ecole',
+        castingTime: '1 action',
+      ),
+      classLevel: classLevel,
+    );
+
+    setUp(() {
+      fakeRepository.levelDataByLevel = {
+        6: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+      fakeCreationRepository.spellCatalogByClassId = {
+        9: const SpellCatalog(
+          spells: [
+            SpellOption(
+              id: 300,
+              name: 'Armure de mage',
+              level: 1,
+              school: 'Abjuration',
+              castingTime: '1 action',
+            ),
+          ],
+        ),
+      };
+      fakePactRepository.patronSpells = {
+        40: [
+          patron(350, 'Mains brulantes', 1, 1),
+          patron(351, 'Fracasser', 2, 3),
+          patron(352, 'Boule de feu', 3, 5),
+          // Pas encore atteint : niveau d'Occultiste 7 requis.
+          patron(353, 'Mur de feu', 4, 7),
+        ],
+      };
+    });
+
+    Future<void> goToSpellsStep(WidgetTester tester) async {
+      await pushPastAnnouncement(tester, 6);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'patron connu : les sorts accessibles au niveau cible sont ajoutes aux '
+      'candidats (marques "Patron"), choisir un sort du patron l ecrit comme '
+      'sort connu ordinaire',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [occultisteClass(subclassId: 40)],
+          xp: 0,
+        );
+
+        await goToSpellsStep(tester);
+
+        expect(fakePactRepository.patronRequests.single, [40]);
+        expect(find.text('Armure de mage'), findsOneWidget);
+        expect(find.text('Mains brulantes'), findsOneWidget);
+        expect(find.text('Fracasser'), findsOneWidget);
+        expect(find.text('Boule de feu'), findsOneWidget);
+        expect(find.text('Mur de feu'), findsNothing);
+        expect(find.textContaining('· Patron'), findsNWidgets(3));
+
+        await tester.tap(find.text('Fracasser'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.initialSpellIds, [351]);
+      },
+    );
+
+    testWidgets('sans patron : candidats de la liste de classe inchanges', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [occultisteClass()],
+        xp: 0,
+      );
+
+      await goToSpellsStep(tester);
+
+      expect(fakePactRepository.patronRequests.single, isEmpty);
+      expect(find.text('Armure de mage'), findsOneWidget);
+      expect(find.text('Mains brulantes'), findsNothing);
+      expect(find.textContaining('· Patron'), findsNothing);
+    });
+  });
+
+  group('Faveur de pacte (Occultiste niveau 3, choice_type pacte)', () {
+    CharacterDetailClassRow occultisteClass({required int level}) =>
+        CharacterDetailClassRow(
+          classId: 9,
+          hitDie: 8,
+          className: 'Occultiste',
+          level: level,
+          isPrimary: true,
+          savingThrowProficiencies: const [],
+        );
+
+    setUp(() {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [occultisteClass(level: 2)],
+        xp: 0,
+      );
+      fakeRepository.levelDataByLevel = {
+        3: const LevelUpLevelData(
+          choiceType: 'pacte',
+          choiceClassFeatureId: 261,
+          automaticFeatures: [],
+        ),
+      };
+      fakeCreationRepository.spellCatalogByClassId = {
+        9: const SpellCatalog(
+          spells: [
+            SpellOption(
+              id: 310,
+              name: 'Fleche acide de Melf',
+              level: 2,
+              school: 'Evocation',
+              castingTime: '1 action',
+            ),
+          ],
+        ),
+      };
+    });
+
+    testWidgets(
+      'le niveau 3 ne bloque plus : etape "Faveur de pacte" avec les 3 '
+      'pactes et leur description, choix ecrit (chosen_value = cle) et '
+      'affiche au recapitulatif',
+      (tester) async {
+        await pushPastAnnouncement(tester, 3);
+        expect(find.text('Étape 1 sur 5 · Points de vie'), findsOneWidget);
+        expect(find.textContaining('Il reste un choix'), findsNothing);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 5 · Faveur de pacte'), findsOneWidget);
+        expect(find.text('Choisissez votre Faveur de pacte.'), findsOneWidget);
+        for (final pact in WarlockPact.values) {
+          expect(find.text(pact.label), findsOneWidget);
+          expect(find.text(pact.description), findsOneWidget);
+        }
+
+        // Continuer désactivé tant qu'aucun pacte n'est choisi.
+        await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Étape 3 sur 5 · Faveur de pacte'), findsOneWidget);
+
+        await tester.tap(find.text('Pacte de la lame'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Sorts'), findsOneWidget);
+        await tester.tap(find.text('Fleche acide de Melf'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Faveur de pacte'), findsOneWidget);
+        expect(find.text('Pacte de la lame'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final choice = fakeRepository.applyLevelUpCalls.single.choice!;
+        expect(choice.kind, LevelUpChoiceKind.pact);
+        expect(choice.classFeatureId, 261);
+        expect(choice.chosenValue, 'lame');
+        // Pacte de la lame : aucun sort supplementaire (seul le sort de
+        // classe choisi a l'etape Sorts est ecrit).
+        expect(fakeRepository.applyLevelUpCalls.single.initialSpellIds, [310]);
+      },
+    );
+
+    const knownLight = SpellOption(
+      id: 500,
+      name: 'Lumiere',
+      level: 0,
+      school: 'Evocation',
+      castingTime: '1 action',
+    );
+    const grimoireCantrips = [
+      knownLight,
+      SpellOption(
+        id: 501,
+        name: 'Aide-mage',
+        level: 0,
+        school: 'Invocation',
+        castingTime: '1 action',
+      ),
+      SpellOption(
+        id: 502,
+        name: 'Flamme sacree',
+        level: 0,
+        school: 'Evocation',
+        castingTime: '1 action',
+      ),
+      SpellOption(
+        id: 503,
+        name: 'Epargne des mourants',
+        level: 0,
+        school: 'Necromancie',
+        castingTime: '1 action',
+      ),
+      SpellOption(
+        id: 504,
+        name: 'Druidisme',
+        level: 0,
+        school: 'Transmutation',
+        castingTime: '1 action',
+      ),
+    ];
+
+    const lightSpell = CharacterSpellEntry(
+      id: 500,
+      name: 'Lumiere',
+      level: 0,
+      school: 'Evocation',
+      status: 'connu',
+    );
+
+    /// Franchit Points de vie/Aptitudes puis choisit [pactLabel] et arrive a
+    /// l'etape Sorts.
+    Future<void> chooseThePact(WidgetTester tester, String pactLabel) async {
+      await pushPastAnnouncement(tester, 3);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(pactLabel));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      expect(find.text('Étape 4 sur 5 · Sorts'), findsOneWidget);
+    }
+
+    testWidgets(
+      'Pacte du grimoire : onglet "Grimoire" avec les sorts mineurs de toutes '
+      'les classes (deja connus exclus), 3 requis, ecrits avec le sort de '
+      'classe et listes au recapitulatif',
+      (tester) async {
+        fakePactRepository.cantrips = grimoireCantrips;
+        fakeRepository.detailToReturn = fakeRepository.detailToReturn!.copyWith(
+          spells: const [lightSpell],
+        );
+
+        await chooseThePact(tester, 'Pacte du grimoire');
+
+        // Sort de classe d'abord (onglet "Sorts" par defaut).
+        await tester.tap(find.text('Fleche acide de Melf'));
+        await tester.pumpAndSettle();
+        // Continuer reste desactive tant que le grimoire n'a pas 3 sorts.
+        await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Étape 4 sur 5 · Sorts'), findsOneWidget);
+
+        await tester.tap(find.text('Grimoire'));
+        await tester.pumpAndSettle();
+        expect(find.text('LIVRE DES OMBRES'), findsOneWidget);
+        expect(find.text('0 / 3'), findsOneWidget);
+        // Sort mineur deja connu : exclu.
+        expect(find.text('Lumiere'), findsNothing);
+
+        await tester.tap(find.text('Aide-mage'));
+        await tester.tap(find.text('Flamme sacree'));
+        await tester.tap(find.text('Epargne des mourants'));
+        await tester.pumpAndSettle();
+        expect(find.text('3 / 3'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Livre des ombres'), findsOneWidget);
+        expect(
+          find.text('Aide-mage, Flamme sacree, Epargne des mourants'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.choice!.chosenValue, 'grimoire');
+        expect(applied.initialSpellIds, [310, 501, 502, 503]);
+      },
+    );
+
+    testWidgets(
+      'Pacte de la chaine : Appel de familier ajoutee au recapitulatif '
+      'et aux sorts ecrits',
+      (tester) async {
+        fakePactRepository.familiarSpellId = 777;
+
+        await chooseThePact(tester, 'Pacte de la chaîne');
+        // Aucun onglet Grimoire pour la chaine.
+        expect(find.text('Grimoire'), findsNothing);
+        await tester.tap(find.text('Fleche acide de Melf'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Appel de familier ajouté'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.initialSpellIds, [
+          310,
+          777,
+        ]);
+      },
+    );
+
+    testWidgets('Pacte de la chaine : pas de doublon si Appel de familier est '
+        'deja connue (ni ligne de recapitulatif, ni ecriture)', (tester) async {
+      fakePactRepository.familiarSpellId = 777;
+      fakeRepository.detailToReturn = fakeRepository.detailToReturn!.copyWith(
+        spells: const [
+          CharacterSpellEntry(
+            id: 777,
+            name: 'Appel de familier',
+            level: 1,
+            school: 'Invocation',
+            status: 'connu',
+          ),
+        ],
+      );
+
+      await chooseThePact(tester, 'Pacte de la chaîne');
+      await tester.tap(find.text('Fleche acide de Melf'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Appel de familier ajouté'), findsNothing);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyLevelUpCalls.single.initialSpellIds, [310]);
+    });
+  });
+
+  group('prerequis des invocations (etape Invocations)', () {
+    CharacterDetailClassRow occultisteClass({required int level}) =>
+        CharacterDetailClassRow(
+          classId: 9,
+          hitDie: 8,
+          className: 'Occultiste',
+          level: level,
+          isPrimary: true,
+          savingThrowProficiencies: const [],
+        );
+
+    const free = LevelUpInvocationOption(
+      id: 601,
+      name: 'Agile esquive',
+      description: '',
+    );
+    const bladeOnly = LevelUpInvocationOption(
+      id: 602,
+      name: 'Frappe assoiffee',
+      description: '',
+      prerequisites: InvocationPrerequisites(pact: WarlockPact.blade),
+    );
+    const level20 = LevelUpInvocationOption(
+      id: 603,
+      name: 'Maitre des mille formes',
+      description: '',
+      prerequisites: InvocationPrerequisites(level: 20),
+    );
+    const blastOnly = LevelUpInvocationOption(
+      id: 604,
+      name: 'Decharge agonisante',
+      description: '',
+      prerequisites: InvocationPrerequisites(cantripSpellId: 42),
+      cantripName: 'Decharge occulte',
+    );
+
+    Future<void> goToInvocationsStep(WidgetTester tester) async {
+      fakeRepository.levelDataByLevel = {
+        18: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+      await pushPastAnnouncement(tester, 18);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      expect(find.text('Étape 3 sur 4 · Invocations'), findsOneWidget);
+    }
+
+    testWidgets(
+      'sans pacte ni sort mineur connu : les inéligibles affichent leur '
+      'raison, ne sont pas sélectionnables et le quota effectif ne compte '
+      'que les éligibles',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [occultisteClass(level: 17)],
+          xp: 0,
+        );
+        fakeRepository.invocationsToReturn = const [
+          free,
+          bladeOnly,
+          level20,
+          blastOnly,
+        ];
+
+        await goToInvocationsStep(tester);
+
+        expect(find.text('0 / 1'), findsOneWidget);
+        expect(find.text('Pacte de la lame requis'), findsOneWidget);
+        expect(find.text('Niveau 20 requis'), findsOneWidget);
+        expect(
+          find.text('Sort mineur Decharge occulte requis'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Frappe assoiffee'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('0 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('Agile esquive'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.invocationIds, [601]);
+      },
+    );
+
+    testWidgets(
+      'pacte et sort mineur déjà connus : les invocations correspondantes '
+      'deviennent sélectionnables (niveau 20 requis reste bloqué au 18)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [occultisteClass(level: 17)],
+          xp: 0,
+          classChoices: const [
+            CharacterClassChoice(
+              featureName: 'Faveur de pacte',
+              chosenValue: 'lame',
+            ),
+          ],
+          spells: const [
+            CharacterSpellEntry(
+              id: 42,
+              name: 'Decharge occulte',
+              level: 0,
+              school: 'Evocation',
+              status: 'connu',
+            ),
+          ],
+        );
+        fakeRepository.invocationsToReturn = const [
+          free,
+          bladeOnly,
+          level20,
+          blastOnly,
+        ];
+
+        await goToInvocationsStep(tester);
+
+        expect(find.text('Pacte de la lame requis'), findsNothing);
+        expect(find.text('Sort mineur Decharge occulte requis'), findsNothing);
+        expect(find.text('Niveau 20 requis'), findsOneWidget);
+
+        await tester.tap(find.text('Frappe assoiffee'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.invocationIds, [602]);
+      },
+    );
+
+    testWidgets(
+      'aucune invocation éligible : quota effectif 0, Continuer actif, '
+      'aucune invocation écrite',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [occultisteClass(level: 17)],
+          xp: 0,
+        );
+        fakeRepository.invocationsToReturn = const [bladeOnly, level20];
+
+        await goToInvocationsStep(tester);
+
+        expect(find.text('0 / 0'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 

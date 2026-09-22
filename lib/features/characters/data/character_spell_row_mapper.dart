@@ -1,4 +1,5 @@
 import '../domain/character_spell_entry.dart';
+import '../domain/spell_grant_source.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes renvoyées par
 /// PostgREST (`character_spells`, `spells`, `translations`) et
@@ -60,25 +61,37 @@ abstract final class CharacterSpellRowMapper {
   /// `translations` comme le nom, voir `data/character_repository.dart`) et
   /// des statuts déjà résolus (`statuses`, voir [parseStatuses]). Un sort
   /// sans statut résolu (ne devrait pas arriver, `spellRows` est dérivé de
-  /// `character_spells`) retombe sur 'connu' plutôt que de crasher.
+  /// `character_spells`, sauf pour un sort accordé — voir [grants]) retombe
+  /// sur 'connu' plutôt que de crasher.
+  ///
+  /// [grants] : `{spell_id: origine}` des sorts accordés par une sous-classe
+  /// (voir `SubclassSpellGrantResolver.resolve`) ; `spellRows` doit
+  /// contenir ces sorts même sans ligne `character_spells`.
   static List<CharacterSpellEntry> toCharacterSpellEntries(
     List<Map<String, dynamic>> spellRows, {
     required Map<String, String> names,
     required Map<String, String> descriptions,
     required Map<int, String> statuses,
     Map<int, bool> favorites = const {},
+    Map<int, SpellGrantSource> grants = const {},
   }) {
     final result = <CharacterSpellEntry>[];
     for (final row in spellRows) {
       final id = (row['id'] as num).toInt();
       final components = row['components'];
+      // Sort accordé par une sous-classe (`grants`, voir
+      // `SubclassSpellGrantResolver`) : toujours 'préparé', une seule entrée
+      // même s'il a aussi une ligne `character_spells` (`statuses`), qui
+      // n'existe alors plus que pour porter son éventuel favori.
+      final grant = grants[id];
       result.add(
         CharacterSpellEntry(
           id: id,
           name: names[id.toString()] ?? 'Sort #$id',
           level: (row['level'] as num?)?.toInt() ?? 0,
           school: row['school'] as String? ?? '',
-          status: statuses[id] ?? 'connu',
+          status: grant != null ? 'préparé' : statuses[id] ?? 'connu',
+          storedStatus: grant != null ? statuses[id] : null,
           castingTime: row['casting_time'] as String? ?? '',
           range: row['range'] as String? ?? '',
           components: components is Map<String, dynamic>
@@ -88,6 +101,8 @@ abstract final class CharacterSpellRowMapper {
           concentration: row['concentration'] == true,
           description: descriptions[id.toString()] ?? '',
           isFavorite: favorites[id] ?? false,
+          grantSource: grant,
+          isPersisted: grant == null || statuses.containsKey(id),
         ),
       );
     }

@@ -15,6 +15,7 @@ import 'package:personnages/features/characters/data/pending_character_write_syn
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
+import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -1358,6 +1359,379 @@ void main() {
             "l'entrée d'owner-2 doit rester intacte, jamais synchronisée "
             'ni supprimée par la session d\'owner-1',
       );
+    });
+  });
+
+  group('SupabaseCharacterRepository.fetchCharacterDetail (sorts de '
+      'sous-classe)', () {
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const characterId = 'char-1';
+    const ownerId = 'owner-1';
+
+    Map<String, List<Map<String, dynamic>>> clericRows({
+      int level = 5,
+      int? subclassId = 30,
+    }) => {
+      'characters': [
+        {
+          'id': characterId,
+          'name': 'Soren',
+          'xp': 0,
+          'current_hp': 10,
+          'max_hp': 10,
+          'temporary_hp': 0,
+          'race_id': null,
+          'character_classes': [
+            {
+              'class_id': 2,
+              'subclass_id': subclassId,
+              'level': level,
+              'is_primary': true,
+              'classes': {'saving_throw_proficiencies': [], 'hit_die': 8},
+            },
+          ],
+          'character_spells': [
+            {'spell_id': 20, 'status': 'connu', 'is_favorite': false},
+            {'spell_id': 22, 'status': 'connu', 'is_favorite': true},
+          ],
+        },
+      ],
+      'translations': [
+        {'entity_id': '2', 'value': 'Clerc'},
+        {'entity_id': '30', 'value': 'Domaine de la Vie'},
+        {'entity_id': '20', 'value': 'Bouclier'},
+        {'entity_id': '21', 'value': 'Bénédiction'},
+        {'entity_id': '22', 'value': 'Soins'},
+        {'entity_id': '23', 'value': 'Revigorer'},
+        {'entity_id': '24', 'value': 'Protection contre la mort'},
+      ],
+      'subclass_spells': [
+        {'subclass_id': 30, 'spell_id': 21, 'class_level': 1},
+        {'subclass_id': 30, 'spell_id': 22, 'class_level': 3},
+        {'subclass_id': 30, 'spell_id': 23, 'class_level': 5},
+        {'subclass_id': 30, 'spell_id': 24, 'class_level': 7},
+      ],
+      'spells': [
+        for (final id in [20, 21, 22, 23, 24])
+          {'id': id, 'level': 1 + (id - 20) ~/ 2, 'school': 'évocation'},
+      ],
+    };
+
+    // Le double ignore la query string : on ne renvoie pour `spells` que les
+    // ids réellement demandés (`id=in.(..)`), comme le vrai PostgREST — sinon
+    // le sort de niveau 7 (non atteint) reviendrait à tort.
+    List<Map<String, dynamic>>? onlyRequestedSpells(
+      http.Request request,
+      Map<String, List<Map<String, dynamic>>> rows,
+    ) {
+      if (request.url.pathSegments.last != 'spells') return null;
+      final filter = request.url.queryParameters['id'] ?? '';
+      final wanted = RegExp(r'\d+')
+          .allMatches(filter)
+          .map((m) => int.parse(m.group(0)!))
+          .toSet();
+      return [
+        for (final row in rows['spells']!)
+          if (wanted.contains(row['id'])) row,
+      ];
+    }
+
+    Future<SupabaseCharacterRepository> repositoryFor(
+      Map<String, List<Map<String, dynamic>>> rows,
+    ) async => SupabaseCharacterRepository(
+      await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        tableRows: rows,
+        rowsOverride: (request) => onlyRequestedSpells(request, rows),
+      ),
+      cache,
+      pendingWrites,
+      _AlwaysOnlineConnectivityChecker(),
+    );
+
+    void verifyGranted(dynamic detail) {
+      final byName = {for (final spell in detail.spells) spell.name: spell};
+      expect(byName.keys.toSet(), {
+        'Bouclier',
+        'Bénédiction',
+        'Soins',
+        'Revigorer',
+      });
+      // Sort de domaine sans ligne character_spells : dérivé pur.
+      expect(byName['Bénédiction'].grantSource, SpellGrantSource.domain);
+      expect(byName['Bénédiction'].status, 'préparé');
+      expect(byName['Bénédiction'].isPersisted, isFalse);
+      // Sort choisi ET accordé : une seule entrée, favori conservé.
+      expect(byName['Soins'].grantSource, SpellGrantSource.domain);
+      expect(byName['Soins'].isPersisted, isTrue);
+      expect(byName['Soins'].isFavorite, isTrue);
+      expect(byName['Revigorer'].grantSource, SpellGrantSource.domain);
+      // Sort ordinaire inchangé, jamais compté comme préparé.
+      expect(byName['Bouclier'].grantSource, isNull);
+      expect(byName['Bouclier'].status, 'connu');
+      expect(detail.preparedSpellCount, 0);
+    }
+
+    test('dérive les sorts de domaine atteints (niveau de classe 5, pas 7) '
+        'sans doublon', () async {
+      final repository = await repositoryFor(clericRows());
+      verifyGranted(await repository.fetchCharacterDetail(characterId));
+    });
+
+    test('hors ligne : le cache restitue les mêmes sorts accordés', () async {
+      await (await repositoryFor(clericRows()))
+          .fetchCharacterDetail(characterId);
+
+      final offline = SupabaseCharacterRepository(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          failureStatusCode: 500,
+        ),
+        cache,
+        pendingWrites,
+        _AlwaysOnlineConnectivityChecker(),
+      );
+      verifyGranted(await offline.fetchCharacterDetail(characterId));
+    });
+
+    test('sans sous-classe : aucune requête subclass_spells, aucun sort '
+        'accordé', () async {
+      final requestedTables = <String>[];
+      final rows = clericRows(subclassId: null);
+      final repository = SupabaseCharacterRepository(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: rows,
+          onRequest: (request) =>
+              requestedTables.add(request.url.pathSegments.last),
+          rowsOverride: (request) => onlyRequestedSpells(request, rows),
+        ),
+        cache,
+        pendingWrites,
+        _AlwaysOnlineConnectivityChecker(),
+      );
+
+      final detail = await repository.fetchCharacterDetail(characterId);
+
+      expect(requestedTables, isNot(contains('subclass_spells')));
+      expect(detail.grantedSpells, isEmpty);
+      expect(detail.spells.map((spell) => spell.name).toSet(), {
+        'Bouclier',
+        'Soins',
+      });
+    });
+
+    test('un ancien cache sans subclassSpellRows ne plante pas', () async {
+      final repository = await repositoryFor(clericRows());
+      await repository.fetchCharacterDetail(characterId);
+      final key = 'character_detail:$ownerId:$characterId';
+      final payload = Map<String, dynamic>.from(
+        await cache.get(key) as Map<String, dynamic>,
+      )..remove('subclassSpellRows');
+      await cache.put(key, payload);
+
+      final offline = SupabaseCharacterRepository(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          failureStatusCode: 500,
+        ),
+        cache,
+        pendingWrites,
+        _AlwaysOnlineConnectivityChecker(),
+      );
+      final detail = await offline.fetchCharacterDetail(characterId);
+
+      expect(detail.grantedSpells, isEmpty);
+    });
+  });
+
+  group('SupabaseCharacterRepository.fetchCharacterDetail (arme de pacte)', () {
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const characterId = 'char-1';
+    const ownerId = 'owner-1';
+    final cacheKey = 'character_detail:$ownerId:$characterId';
+
+    Map<String, List<Map<String, dynamic>>> warlockRows({
+      String pact = 'lame',
+      bool withPactWeapon = true,
+    }) => {
+      'characters': [
+        {
+          'id': characterId,
+          'name': 'Sylas',
+          'xp': 0,
+          'current_hp': 10,
+          'max_hp': 10,
+          'temporary_hp': 0,
+          'race_id': null,
+          'character_classes': [
+            {
+              'class_id': 2,
+              'subclass_id': 31,
+              'level': 3,
+              'is_primary': true,
+              'classes': {'saving_throw_proficiencies': [], 'hit_die': 8},
+            },
+          ],
+          'character_class_options': [
+            {'class_feature_id': 60, 'level': 3, 'chosen_value': pact},
+          ],
+        },
+      ],
+      'class_features': [
+        {'id': 60, 'class_id': 2, 'level': 3},
+      ],
+      'translations': [
+        {'entity_id': '2', 'value': 'Occultiste'},
+        {'entity_id': '31', 'value': 'Lame maudite'},
+        {'entity_id': '60', 'value': 'Faveur de pacte'},
+        {'entity_id': '77', 'value': 'Rapière'},
+      ],
+      'character_pact_weapons': [
+        if (withPactWeapon) {'item_id': 77},
+      ],
+      'items': [
+        {
+          'id': 77,
+          'category': 'arme',
+          'weapon_properties': {
+            'damage_dice': '1d8',
+            'damage_type': 'perforant',
+            'properties': ['finesse'],
+          },
+        },
+      ],
+    };
+
+    Future<SupabaseCharacterRepository> repositoryFor(
+      Map<String, List<Map<String, dynamic>>> rows, {
+      List<String>? requestedTables,
+    }) async => SupabaseCharacterRepository(
+      await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        tableRows: rows,
+        onRequest: requestedTables == null
+            ? null
+            : (request) => requestedTables.add(request.url.pathSegments.last),
+      ),
+      cache,
+      pendingWrites,
+      _AlwaysOnlineConnectivityChecker(),
+    );
+
+    Future<SupabaseCharacterRepository> offlineRepository() async =>
+        SupabaseCharacterRepository(
+          await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            failureStatusCode: 500,
+          ),
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+    void verifyPactWeapon(dynamic detail) {
+      expect(detail.hasBladePact, isTrue);
+      expect(detail.hasCursedBladeSubclass, isTrue);
+      expect(detail.pactWeapon.id, 77);
+      expect(detail.pactWeapon.name, 'Rapière');
+      expect(detail.pactWeapon.damageLabel, '1d8 perforant');
+      expect(detail.pactWeapon.properties, ['finesse']);
+      expect(detail.inventory, isEmpty);
+    }
+
+    test(
+      'Pacte de la lame avec forme choisie : la forme est chargée',
+      () async {
+        final repository = await repositoryFor(warlockRows());
+        verifyPactWeapon(await repository.fetchCharacterDetail(characterId));
+      },
+    );
+
+    test('hors ligne : le cache restitue la même forme', () async {
+      await (await repositoryFor(warlockRows()))
+          .fetchCharacterDetail(characterId);
+      verifyPactWeapon(
+        await (await offlineRepository()).fetchCharacterDetail(characterId),
+      );
+    });
+
+    test(
+      'un ancien cache sans donnée d\'arme de pacte reste lisible',
+      () async {
+        await (await repositoryFor(warlockRows()))
+            .fetchCharacterDetail(characterId);
+        final payload =
+            Map<String, dynamic>.from(
+                await cache.get(cacheKey) as Map<String, dynamic>,
+              )
+              ..remove('pactWeaponItemRow')
+              ..remove('pactWeaponNameRows');
+        await cache.put(cacheKey, payload);
+
+        final detail = await (await offlineRepository()).fetchCharacterDetail(
+          characterId,
+        );
+
+        expect(detail.hasBladePact, isTrue);
+        expect(detail.pactWeapon, isNull);
+      },
+    );
+
+    test('Pacte de la lame sans forme choisie : pactWeapon nul, items non '
+        'interrogé', () async {
+      final requested = <String>[];
+      final repository = await repositoryFor(
+        warlockRows(withPactWeapon: false),
+        requestedTables: requested,
+      );
+
+      final detail = await repository.fetchCharacterDetail(characterId);
+
+      expect(detail.hasBladePact, isTrue);
+      expect(detail.pactWeapon, isNull);
+      expect(requested, contains('character_pact_weapons'));
+      expect(requested, isNot(contains('items')));
+    });
+
+    test('autre pacte : aucune requête character_pact_weapons', () async {
+      final requested = <String>[];
+      final repository = await repositoryFor(
+        warlockRows(pact: 'chaine'),
+        requestedTables: requested,
+      );
+
+      final detail = await repository.fetchCharacterDetail(characterId);
+
+      expect(detail.hasBladePact, isFalse);
+      expect(detail.pactWeapon, isNull);
+      expect(requested, isNot(contains('character_pact_weapons')));
     });
   });
 }

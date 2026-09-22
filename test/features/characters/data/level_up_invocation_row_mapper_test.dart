@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/data/level_up_invocation_row_mapper.dart';
+import 'package:personnages/features/characters/domain/warlock_pact.dart';
 
 void main() {
   group('LevelUpInvocationRowMapper.collectInvocationIds', () {
@@ -88,6 +89,69 @@ void main() {
 
       expect(options.single.name, 'Invocation #99');
       expect(options.single.description, '');
+    });
+
+    test('expose les prérequis structurés et le nom du sort mineur requis', () {
+      final rows = [
+        {
+          'id': 5,
+          'prerequisites': {
+            'text': 'Pacte de la lame',
+            'level': 5,
+            'pact': 'lame',
+            'cantrip_spell_id': 42,
+          },
+        },
+      ];
+
+      final options = LevelUpInvocationRowMapper.toInvocationOptions(
+        rows,
+        names: {'5': 'Frappe assoiffée'},
+        descriptions: const {},
+        cantripNames: {'42': 'Décharge occulte'},
+      );
+
+      final option = options.single;
+      expect(option.prerequisites.level, 5);
+      expect(option.prerequisites.pact, WarlockPact.blade);
+      expect(option.prerequisites.cantripSpellId, 42);
+      expect(option.cantripName, 'Décharge occulte');
+      expect(option.prerequisiteText, 'Pacte de la lame');
+    });
+
+    test('collectCantripSpellIds : ids de sorts mineurs requis, sans doublon '
+        'ni valeur invalide', () {
+      final rows = [
+        {
+          'id': 1,
+          'prerequisites': {'cantrip_spell_id': 42},
+        },
+        {
+          'id': 2,
+          'prerequisites': {'cantrip_spell_id': 42},
+        },
+        {
+          'id': 3,
+          'prerequisites': {'cantrip_spell_id': 'x'},
+        },
+        {'id': 4, 'prerequisites': null},
+      ];
+      expect(LevelUpInvocationRowMapper.collectCantripSpellIds(rows), {'42'});
+    });
+
+    test('prérequis structurés absents -> aucune contrainte', () {
+      final rows = [
+        {
+          'id': 1,
+          'prerequisites': {'text': 'Niveau 5 requis'},
+        },
+      ];
+      final option = LevelUpInvocationRowMapper.toInvocationOptions(
+        rows,
+        names: const {},
+        descriptions: const {},
+      ).single;
+      expect(option.prerequisites.isEmpty, isTrue);
     });
 
     test('ignore les lignes sans id', () {

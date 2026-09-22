@@ -17,6 +17,7 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/destructive_button.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
+import 'package:personnages/features/character_creation/data/subclass_choice_repository.dart';
 import 'package:personnages/features/character_creation/domain/alignment_catalog.dart';
 import 'package:personnages/features/character_creation/domain/background_catalog.dart';
 import 'package:personnages/features/character_creation/domain/background_option.dart';
@@ -35,11 +36,17 @@ import 'package:personnages/features/character_creation/domain/skill_catalog.dar
 import 'package:personnages/features/character_creation/domain/skill_option.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_option.dart';
+import 'package:personnages/features/character_creation/domain/subclass_choice_catalog.dart';
+import 'package:personnages/features/character_creation/domain/subclass_choice_option.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_return_route_provider.dart';
+import 'package:personnages/features/character_creation/presentation/providers/subclass_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/summary_step_screen.dart';
+import 'package:personnages/features/characters/data/warlock_pact_spell_repository.dart';
+import 'package:personnages/features/characters/domain/patron_extended_spells.dart';
+import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
@@ -136,6 +143,32 @@ const _elfe = RaceOption(
   abilityBonuses: {'dex': 2},
   traits: [],
 );
+
+class _FakeSubclassChoiceRepository implements SubclassChoiceRepository {
+  _FakeSubclassChoiceRepository(this.catalog, {this.fail = false});
+
+  final SubclassChoiceCatalog catalog;
+  final bool fail;
+
+  @override
+  Future<SubclassChoiceCatalog> fetchLevelOneSubclassChoices() async {
+    if (fail) throw const CharacterCreationFailure('hors-ligne');
+    return catalog;
+  }
+}
+
+class _FakeWarlockPactSpellRepository implements WarlockPactSpellRepository {
+  @override
+  Future<Map<int, List<PatronExtendedSpell>>> fetchPatronExtendedSpells({
+    required List<int> subclassIds,
+  }) async => const {};
+
+  @override
+  Future<List<SpellOption>> fetchAllCantrips() async => const [];
+
+  @override
+  Future<int?> findFamiliarSpellId() async => null;
+}
 
 const _magicien = ClassOption(
   id: 2,
@@ -824,5 +857,128 @@ void main() {
         expect(find.text('Liste des personnages'), findsOneWidget);
       },
     );
+  });
+
+  group('sous-classe choisie à la création', () {
+    const clerc = ClassOption(
+      id: 5,
+      name: 'Clerc',
+      description: '',
+      hitDie: 8,
+      skillChoices: ClassSkillChoices(count: 1, choices: ['Histoire']),
+    );
+    const occultiste = ClassOption(
+      id: 6,
+      name: 'Occultiste',
+      description: '',
+      hitDie: 8,
+      skillChoices: ClassSkillChoices(count: 1, choices: ['Histoire']),
+    );
+    const catalog = SubclassChoiceCatalog(
+      optionsByClassId: {
+        5: [SubclassChoiceOption(id: 51, name: 'Domaine de la Vie')],
+        6: [SubclassChoiceOption(id: 61, name: 'Le Grand Ancien')],
+      },
+    );
+
+    Future<void> pumpWith(
+      WidgetTester tester, {
+      required ClassOption classOption,
+      int? subclassId,
+      bool subclassFetchFails = false,
+    }) async {
+      container.dispose();
+      fakeRepository.classCatalogToReturn = ClassCatalog(
+        classes: [classOption],
+      );
+      container = ProviderContainer(
+        overrides: [
+          characterCreationRepositoryProvider.overrideWithValue(fakeRepository),
+          subclassChoiceRepositoryProvider.overrideWithValue(
+            _FakeSubclassChoiceRepository(catalog, fail: subclassFetchFails),
+          ),
+          warlockPactSpellRepositoryProvider.overrideWithValue(
+            _FakeWarlockPactSpellRepository(),
+          ),
+        ],
+      );
+      container.read(characterCreationDraftControllerProvider.notifier).state =
+          _fullDraft.copyWith(classId: classOption.id, subclassId: subclassId);
+      await pumpSummaryStep(tester);
+    }
+
+    testWidgets('Clerc : ligne "Domaine divin" et sous-titre avec la '
+        'sous-classe, sans troncature', (tester) async {
+      await pumpWith(tester, classOption: clerc, subclassId: 51);
+
+      expect(find.text('Domaine divin'), findsOneWidget);
+      expect(find.text('Domaine de la Vie'), findsOneWidget);
+      const subtitle = 'Elfe · Clerc (Domaine de la Vie) · Niveau 1';
+      expect(find.text(subtitle), findsOneWidget);
+      expect(tester.widget<Text>(find.text(subtitle)).maxLines, isNull);
+
+      // La ligne ouvre la liste (avant "Caractéristiques").
+      expect(
+        tester.getTopLeft(find.text('Domaine divin')).dy,
+        lessThan(tester.getTopLeft(find.text('Caractéristiques')).dy),
+      );
+    });
+
+    testWidgets('catalogue de sous-classes indisponible (hors-ligne sans '
+        'cache) : le récapitulatif s affiche, ligne avec repli Sous-classe', (
+      tester,
+    ) async {
+      await pumpWith(
+        tester,
+        classOption: clerc,
+        subclassId: 51,
+        subclassFetchFails: true,
+      );
+
+      expect(find.text('Domaine divin'), findsOneWidget);
+      expect(find.text('Sous-classe'), findsOneWidget);
+      expect(find.text('Elfe · Clerc · Niveau 1'), findsOneWidget);
+    });
+
+    testWidgets('Occultiste : libellé "Patron protecteur"', (tester) async {
+      await pumpWith(tester, classOption: occultiste, subclassId: 61);
+
+      expect(find.text('Patron protecteur'), findsOneWidget);
+      expect(find.text('Le Grand Ancien'), findsOneWidget);
+      expect(
+        find.text('Elfe · Occultiste (Le Grand Ancien) · Niveau 1'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('le crayon de la ligne renvoie à l\'étape 2 Classe', (
+      tester,
+    ) async {
+      await pumpWith(tester, classOption: clerc, subclassId: 51);
+
+      await tester.tap(
+        find
+            .ancestor(
+              of: find.text('Domaine divin'),
+              matching: find.byType(InkWell),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape Classe'), findsOneWidget);
+    });
+
+    testWidgets('classe sans sous-classe : aucune ligne, sous-titre inchangé', (
+      tester,
+    ) async {
+      await pumpSummaryStep(tester);
+
+      expect(find.text('Domaine divin'), findsNothing);
+      expect(find.text('Patron protecteur'), findsNothing);
+      expect(find.text('Origine magique'), findsNothing);
+      expect(find.text('Sous-classe'), findsNothing);
+      expect(find.text('Elfe · Magicien · Niveau 1'), findsOneWidget);
+    });
   });
 }

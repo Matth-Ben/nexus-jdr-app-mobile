@@ -52,6 +52,15 @@ class LevelUpChoiceSelection {
        subclassId = null,
        featId = null;
 
+  /// Faveur de pacte de l'Occultiste : [chosenValue] = `WarlockPact.key` (`domain/warlock_pact.dart`).
+  const LevelUpChoiceSelection.pact({
+    required this.classFeatureId,
+    required this.chosenValue,
+  }) : kind = LevelUpChoiceKind.pact,
+       abilityAllocations = null,
+       subclassId = null,
+       featId = null;
+
   final LevelUpChoiceKind kind;
 
   /// [kind] == [LevelUpChoiceKind.abilityScoreImprovement] ET [featId] est

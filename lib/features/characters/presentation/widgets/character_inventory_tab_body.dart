@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/compact_action_button.dart';
 import '../../../../core/widgets/dashed_add_tile.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
@@ -14,6 +15,7 @@ import 'add_item_flow.dart';
 import 'character_inventory_capacity_gauge.dart';
 import 'character_inventory_item_card.dart';
 import 'character_inventory_stat_boxes_row.dart';
+import 'character_pact_weapon_card.dart';
 import 'currency_adjustment_sheet.dart';
 import 'inventory_category_filter_sheet.dart';
 import 'item_action_sheet.dart';
@@ -56,6 +58,7 @@ class CharacterInventoryTabBody extends StatefulWidget {
     required this.onAddInventoryItem,
     required this.onAddCustomInventoryItem,
     this.onAddReward,
+    this.onChangePactWeapon,
     this.actionsDisabled = false,
     this.filterAnchorKey,
     super.key,
@@ -89,6 +92,11 @@ class CharacterInventoryTabBody extends StatefulWidget {
   /// de sens).
   final VoidCallback? onAddReward;
 
+  /// Ouvre la feuille de choix de la forme de l'arme de pacte (Pacte de la
+  /// lame) — `null` masque entièrement la carte « Arme de pacte » (vue
+  /// partagée en lecture seule).
+  final VoidCallback? onChangePactWeapon;
+
   /// `true` pendant qu'une écriture de cet onglet est en vol (voir
   /// `character_detail_screen.dart::_isWritingInventory`) : désactive le tap
   /// sur chaque carte d'objet, chaque stat box de monnaie et la tuile
@@ -99,7 +107,7 @@ class CharacterInventoryTabBody extends StatefulWidget {
   final bool actionsDisabled;
 
   /// Clé posée sur le bouton "Filtrer par catégorie" (voir
-  /// [_InventoryFilterButton]) pour que l'icône filtre du bandeau bois
+  /// `CompactActionButton`) pour que l'icône filtre du bandeau bois
   /// (`character_detail_screen.dart`) puisse y faire défiler la vue
   /// (`Scrollable.ensureVisible`) — `null` laisse ce comportement de côté
   /// (ex. `shared_character_view_screen.dart`, qui n'a pas cette icône).
@@ -141,7 +149,7 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
   }
 
   /// Ouvre [showInventoryCategoryFilterSheet] (icône filtre du bandeau bois
-  /// ou bouton [_InventoryFilterButton] en tête de liste) — remplace
+  /// ou bouton `CompactActionButton` en tête de liste) — remplace
   /// l'ancienne bascule segmentée à 5 segments, dont les libellés cassaient
   /// sur petit écran faute de place. `null` en retour (sheet fermée sans
   /// choix) laisse [_filter] inchangé.
@@ -196,12 +204,23 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
         ),
         const SizedBox(height: AppSpacing.md),
         CharacterInventoryCapacityGauge(detail: detail),
+        if (detail.hasBladePact && widget.onChangePactWeapon != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          CharacterPactWeaponCard(
+            weapon: detail.pactWeapon,
+            hasCursedBlade: detail.hasCursedBladeSubclass,
+            onChangeForm: widget.actionsDisabled
+                ? null
+                : widget.onChangePactWeapon,
+          ),
+        ],
         if (!isEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           KeyedSubtree(
             key: widget.filterAnchorKey,
-            child: _InventoryFilterButton(
-              filter: _filter,
+            child: CompactActionButton(
+              icon: Icons.filter_list,
+              label: 'Filtre : ${_filter.label}',
               onTap: widget.actionsDisabled
                   ? null
                   : () => _openCategoryFilter(context),
@@ -231,72 +250,6 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
           onAddReward: widget.actionsDisabled ? null : widget.onAddReward,
         ),
       ],
-    );
-  }
-}
-
-/// Bouton "Filtrer par catégorie" — remplace l'ancienne bascule segmentée à
-/// 5 segments ([SegmentedToggle], `core/widgets/segmented_toggle.dart`),
-/// dont les libellés ("Consomm."/"Divers"...) se cassaient sur petit écran
-/// (5 segments de largeur égale forcée). Un seul bouton compact, aligné à
-/// gauche (pas pleine largeur, contrairement à [_AddRowButtons] : c'est un
-/// simple filtre, pas une action primaire de l'écran), affichant le filtre
-/// actif et ouvrant [showInventoryCategoryFilterSheet] au tap.
-class _InventoryFilterButton extends StatelessWidget {
-  const _InventoryFilterButton({required this.filter, required this.onTap});
-
-  final InventoryCategoryFilter filter;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return Opacity(
-      opacity: enabled ? 1 : 0.6,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            onTap: onTap,
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 44),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.sm,
-                vertical: AppSpacing.xs,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.parchmentCardAlt,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(
-                  color: AppColors.woodLight,
-                  width: AppBorders.card,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.filter_list,
-                    size: 16,
-                    color: AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    'Filtre : ${filter.label}',
-                    style: AppTypography.body(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

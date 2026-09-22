@@ -14,8 +14,10 @@ import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
+import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_spells_tab_body.dart';
 import 'package:personnages/features/characters/presentation/widgets/class_feature_action_sheet.dart';
+import 'package:personnages/features/characters/presentation/widgets/spell_action_sheet.dart';
 
 /// Classe de départ par défaut : lanceuse de sorts (Magicien), pour que les
 /// tests portant sur le contenu/l'état vide "générique" (`AUCUN SORT`)
@@ -38,6 +40,7 @@ CharacterDetail _detail({
   CharacterSpellSlot? pactSpellSlot,
   List<CharacterDetailClassRow> classes = _defaultClasses,
   List<CharacterClassFeature> classFeatures = const [],
+  Map<String, int> abilityScores = const {},
 }) {
   return CharacterDetail(
     id: '1',
@@ -47,7 +50,7 @@ CharacterDetail _detail({
     currentHp: 10,
     maxHp: 10,
     temporaryHp: 0,
-    abilityScores: const {},
+    abilityScores: abilityScores,
     spells: spells,
     spellSlots: spellSlots,
     pactSpellSlot: pactSpellSlot,
@@ -59,15 +62,17 @@ Future<void> _pump(
   WidgetTester tester,
   CharacterDetail detail, {
   UseClassFeatureCallback? onUseFeature,
+  CastSpellCallback? onCastSpell,
+  ToggleSpellFlagCallback? onTogglePrepared,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
         body: CharacterSpellsTabBody(
           detail: detail,
-          onCastSpell: (_, _) {},
+          onCastSpell: onCastSpell ?? (_, _) {},
           onToggleFavorite: (_) {},
-          onTogglePrepared: (_) {},
+          onTogglePrepared: onTogglePrepared ?? (_) {},
           onUseFeature: onUseFeature,
         ),
       ),
@@ -831,6 +836,218 @@ void main() {
 
       expect(find.text('Boule de feu'), findsOneWidget);
       expect(find.text('Bouclier'), findsOneWidget);
+    });
+  });
+
+  group('sorts accordés par une sous-classe', () {
+    const ordinary = CharacterSpellEntry(
+      id: 1,
+      name: 'Bouclier',
+      level: 1,
+      school: 'Abjuration',
+      status: 'connu',
+    );
+    const granted = CharacterSpellEntry(
+      id: 2,
+      name: 'Bénédiction',
+      level: 1,
+      school: 'Enchantement',
+      status: 'préparé',
+      grantSource: SpellGrantSource.domain,
+      isPersisted: false,
+    );
+    const oath = CharacterSpellEntry(
+      id: 3,
+      name: 'Faveur divine',
+      level: 1,
+      school: 'Évocation',
+      status: 'préparé',
+      grantSource: SpellGrantSource.oath,
+      isPersisted: false,
+    );
+    const slots = [CharacterSpellSlot(level: 1, total: 2, used: 0)];
+
+    testWidgets('badge DOMAINE/SERMENT visible sur les sorts accordés '
+        'uniquement, avec sous-titre "toujours préparé"', (tester) async {
+      await _pump(
+        tester,
+        _detail(spells: const [ordinary, granted, oath], spellSlots: slots),
+      );
+
+      expect(find.text('DOMAINE'), findsOneWidget);
+      expect(find.text('SERMENT'), findsOneWidget);
+      expect(find.text('toujours préparé · Domaine'), findsOneWidget);
+      expect(find.text('toujours préparé · Serment'), findsOneWidget);
+      expect(find.text('connu, non préparé'), findsOneWidget);
+    });
+
+    testWidgets('pas d’étoile de favori sur un sort accordé sans ligne '
+        'character_spells (étoile conservée sur un sort ordinaire)', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _detail(spells: const [ordinary, granted], spellSlots: slots),
+      );
+
+      // Une seule étoile (vide) : celle du sort ordinaire.
+      expect(find.byIcon(Icons.star_border), findsOneWidget);
+    });
+
+    testWidgets('non retirable : le panneau Infos d’un sort accordé ne '
+        'propose ni "Préparer" ni "Ne plus préparer"', (tester) async {
+      var toggled = 0;
+      await _pump(
+        tester,
+        _detail(spells: const [granted], spellSlots: slots),
+        onTogglePrepared: (_) => toggled++,
+      );
+
+      await tester.tap(find.text('Bénédiction'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('Toujours préparé — sort de domaine'),
+        findsOneWidget,
+      );
+      expect(find.text('Ne plus préparer'), findsNothing);
+      expect(find.text('Préparer ce sort'), findsNothing);
+      expect(toggled, 0);
+    });
+
+    testWidgets('un sort ordinaire "connu" garde la bascule "Préparer ce '
+        'sort" (contrôle négatif)', (tester) async {
+      await _pump(tester, _detail(spells: const [ordinary], spellSlots: slots));
+
+      await tester.tap(find.text('Bouclier'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Préparer ce sort'), findsOneWidget);
+    });
+
+    testWidgets('lancer un sort accordé fonctionne comme un sort préparé', (
+      tester,
+    ) async {
+      final cast = <CharacterSpellEntry>[];
+      await _pump(
+        tester,
+        _detail(spells: const [granted], spellSlots: slots),
+        onCastSpell: (spell, slot) => cast.add(spell),
+      );
+
+      await tester.tap(find.text('LANCER'));
+      await tester.pumpAndSettle();
+
+      expect(cast, [granted]);
+    });
+
+    testWidgets('la fiche n’affiche jamais de décompte préparés qui '
+        'inclurait un sort accordé (le décompte vit dans '
+        'CharacterDetail.preparedSpellCount)', (tester) async {
+      final detail = _detail(spells: const [ordinary, granted, oath]);
+      expect(detail.preparedSpellCount, 0);
+      expect(detail.grantedSpells, hasLength(2));
+    });
+  });
+
+  group('compteur "PRÉPARÉS X / Y"', () {
+    const prepared = CharacterSpellEntry(
+      id: 10,
+      name: 'Bouclier',
+      level: 1,
+      school: 'Abjuration',
+      status: 'préparé',
+    );
+    const cantrip = CharacterSpellEntry(
+      id: 11,
+      name: 'Lumière',
+      level: 0,
+      school: 'Évocation',
+      status: 'préparé',
+    );
+    const known = CharacterSpellEntry(
+      id: 12,
+      name: 'Projectile magique',
+      level: 1,
+      school: 'Évocation',
+      status: 'connu',
+    );
+
+    CharacterDetailClassRow classRow(
+      int id,
+      String name,
+      int level, {
+      bool primary = true,
+    }) => CharacterDetailClassRow(
+      classId: id,
+      className: name,
+      level: level,
+      isPrimary: primary,
+      savingThrowProficiencies: const [],
+      hitDie: 8,
+    );
+
+    testWidgets('Magicien niveau 3, Int 16 : limite 6, sorts mineurs et '
+        'sorts connus non comptés', (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          classes: [classRow(1, 'Magicien', 3)],
+          abilityScores: const {'int': 16},
+          spells: const [prepared, cantrip, known],
+        ),
+      );
+
+      expect(find.text('PRÉPARÉS'), findsOneWidget);
+      expect(find.text('1 / 6'), findsOneWidget);
+    });
+
+    testWidgets('limite atteinte : le compteur reste affiché et l action '
+        '"Préparer" n est pas bloquée', (tester) async {
+      final toggled = <CharacterSpellEntry>[];
+      await _pump(
+        tester,
+        _detail(
+          abilityScores: const {'int': 10},
+          spells: const [prepared, known],
+        ),
+        onTogglePrepared: toggled.add,
+      );
+      // Magicien niveau 1, Int 10 : limite 1, déjà atteinte.
+      expect(find.text('1 / 1'), findsOneWidget);
+
+      await tester.tap(find.text('Projectile magique'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Préparer ce sort'));
+      await tester.pumpAndSettle();
+
+      expect(toggled, [known]);
+    });
+
+    testWidgets('classe à sorts connus : aucun compteur', (tester) async {
+      await _pump(
+        tester,
+        _detail(classes: [classRow(2, 'Barde', 3)], spells: const [known]),
+      );
+
+      expect(find.text('PRÉPARÉS'), findsNothing);
+    });
+
+    testWidgets('plusieurs classes qui préparent : aucun compteur', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _detail(
+          classes: [
+            classRow(1, 'Magicien', 3),
+            classRow(3, 'Clerc', 2, primary: false),
+          ],
+          spells: const [prepared],
+        ),
+      );
+
+      expect(find.text('PRÉPARÉS'), findsNothing);
     });
   });
 }

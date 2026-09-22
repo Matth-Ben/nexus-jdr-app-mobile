@@ -122,6 +122,19 @@ class _SpellInfoPanelContent extends StatelessWidget {
                           color: AppColors.textSecondary,
                         ),
                       ),
+                      if (spell.grantSource != null) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'Toujours préparé — sort de '
+                          '${spell.grantSource!.label.toLowerCase()} '
+                          '(ne compte pas dans la limite de sorts préparés)',
+                          style: AppTypography.body(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                       if (SpellStatusFormatter.canTogglePrepared(spell)) ...[
                         const SizedBox(height: AppSpacing.sm),
                         _TogglePreparedLink(

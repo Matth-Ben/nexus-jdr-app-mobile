@@ -12,10 +12,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/theme/app_colors.dart';
+import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/core/widgets/selectable_option_tile.dart';
 import 'package:personnages/core/widgets/step_progress_bar.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
+import 'package:personnages/features/character_creation/data/subclass_choice_repository.dart';
 import 'package:personnages/features/character_creation/domain/alignment_catalog.dart';
 import 'package:personnages/features/character_creation/domain/background_catalog.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
@@ -28,10 +30,13 @@ import 'package:personnages/features/character_creation/domain/language_catalog.
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
+import 'package:personnages/features/character_creation/domain/subclass_choice_catalog.dart';
+import 'package:personnages/features/character_creation/domain/subclass_choice_option.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/class_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
+import 'package:personnages/features/character_creation/presentation/providers/subclass_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
@@ -97,6 +102,23 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   }) async => throw UnimplementedError();
 }
 
+class _FakeSubclassChoiceRepository implements SubclassChoiceRepository {
+  SubclassChoiceCatalog catalog = const SubclassChoiceCatalog(
+    optionsByClassId: {},
+  );
+  Object? errorToThrow;
+  Completer<SubclassChoiceCatalog>? completer;
+  int calls = 0;
+
+  @override
+  Future<SubclassChoiceCatalog> fetchLevelOneSubclassChoices() async {
+    calls++;
+    if (completer != null) return completer!.future;
+    if (errorToThrow != null) throw errorToThrow!;
+    return catalog;
+  }
+}
+
 const _magicien = ClassOption(
   id: 1,
   name: 'Magicien',
@@ -113,14 +135,19 @@ const _guerrier = ClassOption(
 
 void main() {
   late _FakeCharacterCreationRepository fakeRepository;
+  late _FakeSubclassChoiceRepository fakeSubclassRepository;
   late ProviderContainer container;
   late GoRouter router;
 
   setUp(() {
     fakeRepository = _FakeCharacterCreationRepository();
+    fakeSubclassRepository = _FakeSubclassChoiceRepository();
     container = ProviderContainer(
       overrides: [
         characterCreationRepositoryProvider.overrideWithValue(fakeRepository),
+        subclassChoiceRepositoryProvider.overrideWithValue(
+          fakeSubclassRepository,
+        ),
       ],
     );
   });
@@ -506,5 +533,308 @@ void main() {
         expect(find.text('Abandonner la création ?'), findsOneWidget);
       },
     );
+  });
+
+  group('choix de sous-classe au niveau 1', () {
+    const clerc = ClassOption(
+      id: 3,
+      name: 'Clerc',
+      description: 'Prêtre.',
+      hitDie: 8,
+    );
+    const vie = SubclassChoiceOption(
+      id: 31,
+      name: 'Domaine de la Vie',
+      description:
+          'Soigne les blessures. Une description volontairement longue pour '
+          "vérifier qu'elle n'est jamais tronquée sur une seule ligne dans "
+          "la tuile de sous-classe affichée à l'écran.",
+    );
+    const guerre = SubclassChoiceOption(id: 32, name: 'Domaine de la Guerre');
+
+    void givenClericCatalog({List<SubclassChoiceOption>? options}) {
+      fakeRepository.catalogToReturn = const ClassCatalog(
+        classes: [_magicien, _guerrier, clerc],
+      );
+      fakeSubclassRepository.catalog = SubclassChoiceCatalog(
+        optionsByClassId: {
+          3: options ?? const [vie, guerre],
+        },
+      );
+    }
+
+    Future<void> pumpClassStepWithoutSettling(WidgetTester tester) async {
+      await tester.pumpWidget(buildTestWidget());
+      router.push('/characters/new/step-2');
+      await tester.pump();
+      await tester.pump();
+    }
+
+    bool nextEnabled(WidgetTester tester) =>
+        tester.widget<PrimaryButton>(find.byType(PrimaryButton)).onPressed !=
+        null;
+
+    testWidgets('aucun bloc pour une classe non concernée, "Suivant" actif', (
+      tester,
+    ) async {
+      givenClericCatalog();
+      await pumpClassStep(tester);
+
+      await tester.tap(find.text('Guerrier'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Domaine divin'), findsNothing);
+      expect(find.text('Domaine de la Vie'), findsNothing);
+      expect(nextEnabled(tester), isTrue);
+    });
+
+    testWidgets(
+      'classe concernée : bloc sous la tuile, "Suivant" bloqué jusqu\'au '
+      'choix, description non tronquée, brouillon écrit',
+      (tester) async {
+        givenClericCatalog();
+        await pumpClassStep(tester);
+
+        await tester.tap(find.text('Clerc'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Domaine divin'), findsOneWidget);
+        expect(
+          find.text('Ce choix se fait dès le niveau 1 pour cette classe.'),
+          findsOneWidget,
+        );
+        expect(find.text('Choisis une option pour continuer.'), findsOneWidget);
+        expect(nextEnabled(tester), isFalse);
+
+        final clercTop = tester.getTopLeft(find.text('Clerc')).dy;
+        final blockTop = tester.getTopLeft(find.text('Domaine divin')).dy;
+        expect(blockTop, greaterThan(clercTop));
+
+        final descriptionText = tester.widget<Text>(
+          find.textContaining('Soigne les blessures'),
+        );
+        expect(descriptionText.maxLines, isNull);
+
+        await tester.tap(find.text('Domaine de la Vie'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Choisis une option pour continuer.'), findsNothing);
+        expect(nextEnabled(tester), isTrue);
+
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(readDraft().classId, 3);
+        expect(readDraft().subclassId, 31);
+        expect(find.text('Étape suivante'), findsOneWidget);
+      },
+    );
+
+    testWidgets('changer de classe efface la sous-classe, recliquer la même '
+        'classe la conserve', (tester) async {
+      tester.view.physicalSize = const Size(800, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      givenClericCatalog();
+      await pumpClassStep(tester);
+
+      await tester.tap(find.text('Clerc'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Domaine de la Vie'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Clerc'));
+      await tester.pumpAndSettle();
+      expect(nextEnabled(tester), isTrue);
+
+      await tester.tap(find.text('Guerrier'));
+      await tester.pumpAndSettle();
+      expect(find.text('Domaine divin'), findsNothing);
+
+      await tester.tap(find.text('Clerc'));
+      await tester.pumpAndSettle();
+      expect(find.text('Choisis une option pour continuer.'), findsOneWidget);
+      expect(nextEnabled(tester), isFalse);
+    });
+
+    testWidgets('réhydrate la sous-classe depuis le brouillon', (tester) async {
+      givenClericCatalog();
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setClass(classId: 3, subclassId: 32);
+
+      await pumpClassStep(tester);
+
+      final tiles = tester.widgetList<SelectableOptionTile>(
+        find.byType(SelectableOptionTile),
+      );
+      expect(
+        tiles.firstWhere((t) => t.title == 'Domaine de la Guerre').selected,
+        isTrue,
+      );
+      expect(nextEnabled(tester), isTrue);
+    });
+
+    testWidgets('chargement : indicateur réservé, "Suivant" désactivé', (
+      tester,
+    ) async {
+      givenClericCatalog();
+      await pumpClassStep(tester);
+      // Le catalogue de sous-classes est déjà résolu : on simule le
+      // chargement en invalidant puis en bloquant la nouvelle requête.
+      fakeSubclassRepository.completer = Completer<SubclassChoiceCatalog>();
+      container.invalidate(subclassChoiceCatalogProvider);
+
+      await tester.tap(find.text('Clerc'));
+      await tester.pump();
+
+      expect(find.text('Domaine divin'), findsOneWidget);
+      final box = tester.widget<SizedBox>(
+        find
+            .ancestor(
+              of: find.byType(CircularProgressIndicator),
+              matching: find.byType(SizedBox),
+            )
+            .first,
+      );
+      expect(box.height, 72);
+      expect(nextEnabled(tester), isFalse);
+    });
+
+    testWidgets('erreur sur une classe CONNUE concernée : message, '
+        '"Réessayer" relance, "Suivant" désactivé', (tester) async {
+      givenClericCatalog();
+      await pumpClassStep(tester);
+      // Le catalogue a déjà été chargé (Clerc connu concerné) ; un
+      // rechargement échoue ensuite.
+      fakeSubclassRepository.errorToThrow = const CharacterCreationFailure('x');
+      container.invalidate(subclassChoiceCatalogProvider);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Clerc'));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(
+        find.text(
+          'Impossible de charger les sous-classes disponibles. Réessaie.',
+        ),
+        findsOneWidget,
+      );
+      expect(nextEnabled(tester), isFalse);
+      final callsBefore = fakeSubclassRepository.calls;
+
+      fakeSubclassRepository.errorToThrow = null;
+      await tester.tap(find.text('RÉESSAYER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeSubclassRepository.calls, callsBefore + 1);
+      expect(find.text('Domaine de la Vie'), findsOneWidget);
+    });
+
+    testWidgets('catalogue indisponible (ni réseau ni cache) : Guerrier, '
+        '"Suivant" actif, aucun bloc ni erreur', (tester) async {
+      givenClericCatalog();
+      fakeSubclassRepository.errorToThrow = const CharacterCreationFailure('x');
+      await pumpClassStep(tester);
+
+      await tester.tap(find.text('Guerrier'));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsNothing);
+      expect(find.text('RÉESSAYER'), findsNothing);
+      expect(nextEnabled(tester), isTrue);
+
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(readDraft().classId, 2);
+      expect(readDraft().subclassId, isNull);
+      expect(find.text('Étape suivante'), findsOneWidget);
+    });
+
+    testWidgets('catalogue en cours de chargement : Guerrier, "Suivant" actif '
+        'et passe une fois la réponse reçue', (tester) async {
+      givenClericCatalog();
+      fakeSubclassRepository.completer = Completer<SubclassChoiceCatalog>();
+      await pumpClassStepWithoutSettling(tester);
+
+      await tester.tap(find.text('Guerrier'));
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(nextEnabled(tester), isTrue);
+
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pump();
+      expect(find.text('Étape suivante'), findsNothing);
+
+      fakeSubclassRepository.completer!.complete(
+        fakeSubclassRepository.catalog,
+      );
+      await tester.pumpAndSettle();
+
+      expect(readDraft().classId, 2);
+      expect(find.text('Étape suivante'), findsOneWidget);
+    });
+
+    testWidgets('catalogue en cours de chargement : Clerc ne passe pas sans '
+        'son choix une fois la réponse reçue', (tester) async {
+      givenClericCatalog();
+      fakeSubclassRepository.completer = Completer<SubclassChoiceCatalog>();
+      await pumpClassStepWithoutSettling(tester);
+
+      await tester.tap(find.text('Clerc'));
+      await tester.pump();
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pump();
+
+      fakeSubclassRepository.completer!.complete(
+        fakeSubclassRepository.catalog,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape suivante'), findsNothing);
+      expect(find.text('Domaine divin'), findsOneWidget);
+      expect(nextEnabled(tester), isFalse);
+    });
+
+    testWidgets('liste vide (cas défensif) : message et "Suivant" débloqué, '
+        'sous-classe null', (tester) async {
+      givenClericCatalog(options: const []);
+      await pumpClassStep(tester);
+
+      await tester.tap(find.text('Clerc'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining("Aucune sous-classe n'est disponible"),
+        findsOneWidget,
+      );
+      expect(nextEnabled(tester), isTrue);
+
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(readDraft().classId, 3);
+      expect(readDraft().subclassId, isNull);
+    });
+
+    testWidgets('sémantique : conteneur "<titre>, choix obligatoire"', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      givenClericCatalog();
+      await pumpClassStep(tester);
+
+      await tester.tap(find.text('Clerc'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.bySemanticsLabel(RegExp('Domaine divin, choix obligatoire')),
+        findsOneWidget,
+      );
+      handle.dispose();
+    });
   });
 }

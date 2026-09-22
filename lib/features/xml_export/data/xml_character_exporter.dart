@@ -322,6 +322,10 @@ abstract final class XmlCharacterExporter {
   /// import).
   static void _writeSpells(XmlBuilder builder, CharacterDetail detail) {
     for (final spell in detail.spells) {
+      // Sorts accordés par une sous-classe sans ligne `character_spells` :
+      // dérivés à la lecture, jamais exportés (re-dérivés à l'ouverture de la
+      // fiche réimportée).
+      if (!spell.isPersisted) continue;
       final tagName = spell.status == 'inné' ? 'innateSpell' : 'knownSpell';
       builder.element(
         tagName,

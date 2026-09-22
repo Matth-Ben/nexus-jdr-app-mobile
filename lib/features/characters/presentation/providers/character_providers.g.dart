@@ -57,6 +57,66 @@ final class CharacterRepositoryProvider
 String _$characterRepositoryHash() =>
     r'208385b8ada01b47c8c2bb0331b74548ca6a9b80';
 
+/// Lectures de référence de la faveur de pacte de l'Occultiste (sorts mineurs
+/// du Livre des ombres, Appel de familier) — voir
+/// `WarlockPactSpellRepository`.
+
+@ProviderFor(warlockPactSpellRepository)
+final warlockPactSpellRepositoryProvider =
+    WarlockPactSpellRepositoryProvider._();
+
+/// Lectures de référence de la faveur de pacte de l'Occultiste (sorts mineurs
+/// du Livre des ombres, Appel de familier) — voir
+/// `WarlockPactSpellRepository`.
+
+final class WarlockPactSpellRepositoryProvider
+    extends
+        $FunctionalProvider<
+          WarlockPactSpellRepository,
+          WarlockPactSpellRepository,
+          WarlockPactSpellRepository
+        >
+    with $Provider<WarlockPactSpellRepository> {
+  /// Lectures de référence de la faveur de pacte de l'Occultiste (sorts mineurs
+  /// du Livre des ombres, Appel de familier) — voir
+  /// `WarlockPactSpellRepository`.
+  WarlockPactSpellRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'warlockPactSpellRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$warlockPactSpellRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<WarlockPactSpellRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  WarlockPactSpellRepository create(Ref ref) {
+    return warlockPactSpellRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(WarlockPactSpellRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<WarlockPactSpellRepository>(value),
+    );
+  }
+}
+
+String _$warlockPactSpellRepositoryHash() =>
+    r'b04f8c77e7d05ed53afbf5ff4bebfc15d1fb26a9';
+
 /// Vide, best-effort, la file d'attente PV/XP hors-ligne — voir
 /// `PendingCharacterWriteSyncer`. Seul consommateur :
 /// `character_write_sync_coordinator.dart` (déclenche [sync] au démarrage et

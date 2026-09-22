@@ -167,6 +167,8 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
             favorites: favorites,
             spellSlots: detail.spellSlots,
             pactSlot: detail.pactSpellSlot,
+            preparedLimit: detail.preparedSpellLimit,
+            preparedCount: detail.preparedSpellCount,
             onCastSpell: widget.onCastSpell,
             onToggleFavorite: widget.onToggleFavorite,
             onTogglePrepared: widget.onTogglePrepared,

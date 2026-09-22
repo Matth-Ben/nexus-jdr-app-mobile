@@ -13,6 +13,10 @@ import 'character_skill_row.dart';
 import 'character_spell_entry.dart';
 import 'character_spell_slot.dart';
 import 'inventory_weight_calculator.dart';
+import 'pact_weapon_option.dart';
+import 'pact_weapon_rules.dart';
+import 'warlock_pact.dart';
+import 'prepared_spells_limit.dart';
 import 'xp_table.dart';
 
 part 'character_detail.freezed.dart';
@@ -194,6 +198,13 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// "invocation"), jamais relues par `fetchCharacterDetail`.
     @Default(<String>[]) List<String> knownInvocationNames,
 
+    /// Forme courante de l'arme de pacte (`character_pact_weapons`, Pacte de
+    /// la lame), `null` si aucune forme n'a été choisie — ou pour un ancien
+    /// cache hors-ligne écrit avant l'introduction de cette donnée. Lue
+    /// seulement pour un personnage ayant choisi le Pacte de la lame (voir
+    /// [hasBladePact]).
+    PactWeaponOption? pactWeapon,
+
     /// Monnaie du personnage (`characters.currency_gp/pp/ep/sp/cp`) — onglet
     /// "Inventaire", rangée de stat boxes (voir
     /// `domain/inventory_stat_boxes_resolver.dart`). `@Default(0)` comme les
@@ -282,6 +293,35 @@ abstract class CharacterDetail with _$CharacterDetail {
   /// [CharacterDetailClassRow] plutôt que sur [CharacterClassRow].
   int get totalLevel => classes.fold(0, (sum, row) => sum + row.level);
 
+  /// Sorts accordés automatiquement par une sous-classe (domaine de Clerc,
+  /// serment de Paladin), dérivés à la lecture — voir
+  /// [CharacterSpellEntry.grantSource].
+  List<CharacterSpellEntry> get grantedSpells => [
+    for (final spell in spells)
+      if (spell.isAlwaysPrepared) spell,
+  ];
+
+  /// Nombre de sorts (niveau >= 1) que le joueur a lui-même préparés — le
+  /// numérateur de tout décompte "sorts préparés X / Y". Exclut les sorts
+  /// accordés par une sous-classe ([CharacterSpellEntry.isAlwaysPrepared]) :
+  /// toujours préparés, ils ne comptent pas dans la limite RAW 5e.
+  int get preparedSpellCount => spells
+      .where(
+        (spell) =>
+            spell.level > 0 &&
+            spell.status == 'préparé' &&
+            !spell.isAlwaysPrepared,
+      )
+      .length;
+
+  /// Limite de sorts préparés (le "Y" de "Préparés X / Y"), `null` si aucun
+  /// compteur ne doit s'afficher (aucune classe qui prépare, ou plusieurs —
+  /// voir [PreparedSpellsLimit.limitForCharacter]).
+  int? get preparedSpellLimit => PreparedSpellsLimit.limitForCharacter(
+    classes: classes,
+    abilityScores: abilityScores,
+  );
+
   /// Classe "principale" : celle marquée `is_primary`, ou la première de la
   /// liste à défaut (donnée incohérente, ne devrait normalement pas
   /// arriver). `null` si le personnage n'a aucune classe enregistrée.
@@ -335,6 +375,20 @@ abstract class CharacterDetail with _$CharacterDetail {
   int get armorClass => ArmorClassCalculator.compute(
     abilityScores: abilityScores,
     inventory: inventory,
+  );
+
+  /// `true` pour un Occultiste ayant choisi le Pacte de la lame
+  /// (`character_class_options.chosen_value = 'lame'`) : seul cas où la carte
+  /// « Arme de pacte » de l'onglet « Inventaire » est affichée.
+  bool get hasBladePact =>
+      classes.any((row) => row.className == 'Occultiste') &&
+      classChoices.any((choice) => choice.pact == WarlockPact.blade);
+
+  /// `true` si la sous-classe de la ligne Occultiste est la Lame maudite.
+  bool get hasCursedBladeSubclass => classes.any(
+    (row) =>
+        row.className == 'Occultiste' &&
+        PactWeaponRules.isCursedBlade(row.subclassName),
   );
 
   /// Poids total de [inventory], en kilogrammes — voir

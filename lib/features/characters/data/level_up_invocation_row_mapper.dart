@@ -1,3 +1,4 @@
+import '../domain/invocation_prerequisites.dart';
 import '../domain/level_up_invocation_option.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes
@@ -36,6 +37,23 @@ abstract final class LevelUpInvocationRowMapper {
     return null;
   }
 
+  /// Prérequis structurés (`level`/`pact`/`cantrip_spell_id`) d'une ligne
+  /// `invocations` brute — tolérant, voir [InvocationPrerequisites.fromJson].
+  static InvocationPrerequisites structuredPrerequisitesFor(
+    Map<String, dynamic> row,
+  ) => InvocationPrerequisites.fromJson(row['prerequisites']);
+
+  /// `spells.id` des sorts mineurs requis par au moins une des [rows], à
+  /// résoudre via `translations` (`entity_type = 'spell'`), normalisés en
+  /// `String`.
+  static Set<String> collectCantripSpellIds(List<Map<String, dynamic>> rows) {
+    return {
+      for (final row in rows)
+        if (structuredPrerequisitesFor(row).cantripSpellId case final id?)
+          id.toString(),
+    };
+  }
+
   /// Construit les [LevelUpInvocationOption] à partir des lignes brutes
   /// `invocations` (déjà filtrées pour exclure les invocations connues, voir
   /// `SupabaseCharacterRepository.fetchAvailableInvocations`) et des
@@ -45,6 +63,7 @@ abstract final class LevelUpInvocationRowMapper {
     List<Map<String, dynamic>> rows, {
     required Map<String, String> names,
     required Map<String, String> descriptions,
+    Map<String, String> cantripNames = const {},
   }) {
     final options = [
       for (final row in rows)
@@ -54,6 +73,10 @@ abstract final class LevelUpInvocationRowMapper {
             name: names[row['id'].toString()] ?? 'Invocation #${row['id']}',
             description: descriptions[row['id'].toString()] ?? '',
             prerequisiteText: prerequisiteTextFor(row),
+            prerequisites: structuredPrerequisitesFor(row),
+            cantripName:
+                cantripNames[structuredPrerequisitesFor(row).cantripSpellId
+                    ?.toString()],
           ),
     ]..sort((a, b) => a.name.compareTo(b.name));
     return options;

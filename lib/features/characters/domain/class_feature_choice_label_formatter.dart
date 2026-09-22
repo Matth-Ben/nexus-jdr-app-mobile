@@ -25,6 +25,7 @@ abstract final class ClassFeatureChoiceLabelFormatter {
     'ennemi_jure': 'Ennemi juré',
     'invocation': 'Invocation occulte',
     'sort_domaine': 'Sort de domaine',
+    'pacte': 'Faveur de pacte',
   };
 
   static String labelFor(String choiceType) {

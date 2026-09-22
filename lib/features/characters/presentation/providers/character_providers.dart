@@ -5,6 +5,7 @@ import '../../../../core/network/connectivity_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/character_repository.dart';
 import '../../data/pending_character_write_syncer.dart';
+import '../../data/warlock_pact_spell_repository.dart';
 import '../../domain/character_summary.dart';
 import '../../domain/inventory_catalog_item.dart';
 
@@ -17,6 +18,17 @@ CharacterRepository characterRepository(Ref ref) {
     ref.watch(referenceDataCacheProvider),
     ref.watch(pendingCharacterWriteQueueProvider),
     ref.watch(connectivityCheckerProvider),
+  );
+}
+
+/// Lectures de référence de la faveur de pacte de l'Occultiste (sorts mineurs
+/// du Livre des ombres, Appel de familier) — voir
+/// `WarlockPactSpellRepository`.
+@Riverpod(keepAlive: true)
+WarlockPactSpellRepository warlockPactSpellRepository(Ref ref) {
+  return SupabaseWarlockPactSpellRepository(
+    ref.watch(supabaseClientProvider),
+    ref.watch(referenceDataCacheProvider),
   );
 }
 
