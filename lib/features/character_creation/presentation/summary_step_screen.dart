@@ -19,9 +19,11 @@ import '../domain/equipment_choice_tab.dart';
 import '../domain/final_ability_scores_resolver.dart';
 import '../domain/skill_proficiency_resolver.dart';
 import '../domain/spellcasting_rules.dart';
+import '../domain/subclass_choice_rules.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'providers/character_creation_return_route_provider.dart';
+import 'providers/subclass_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
@@ -300,6 +302,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
                   ref.invalidate(toolCatalogProvider);
                   ref.invalidate(languageCatalogProvider);
                   ref.invalidate(itemCatalogProvider);
+                  ref.invalidate(subclassChoiceCatalogProvider);
                   final classId = ref
                       .read(characterCreationDraftControllerProvider)
                       .classId;
@@ -338,7 +341,18 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
     final showLevelOneRow =
         SpellcastingRules.levelOneSpellQuotaFor(className) > 0;
 
+    final subclassName = data.subclassName;
+
     final rows = <({String title, String value, int stepNumber})>[
+      // Pas de ligne "Classe" dans ce récapitulatif (la classe n'apparaît que
+      // dans l'en-tête) : la sous-classe ouvre donc la liste, avec le libellé
+      // propre à la classe, et renvoie à l'étape 2 "Classe".
+      if (draft.subclassId != null)
+        (
+          title: SubclassChoiceRules.titleFor(className),
+          value: subclassName ?? SubclassChoiceRules.fallbackTitle,
+          stepNumber: 2,
+        ),
       (
         title: 'Caractéristiques',
         value: _formatAbilityScores(finalAbilityScores),
@@ -533,7 +547,11 @@ String _formatHeaderSubtitle(
     raceSegment = draft.raceCustomText!.trim();
   }
 
-  final segments = [?raceSegment, data.classOption.name, 'Niveau 1'];
+  final subclassName = data.subclassName;
+  final classSegment = subclassName != null
+      ? '${data.classOption.name} ($subclassName)'
+      : data.classOption.name;
+  final segments = [?raceSegment, classSegment, 'Niveau 1'];
   return segments.join(' · ');
 }
 

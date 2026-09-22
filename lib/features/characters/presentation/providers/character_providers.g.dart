@@ -115,7 +115,7 @@ final class WarlockPactSpellRepositoryProvider
 }
 
 String _$warlockPactSpellRepositoryHash() =>
-    r'169e8306a2cfdbb7f0cb8b8133e9df37da8c2aee';
+    r'b04f8c77e7d05ed53afbf5ff4bebfc15d1fb26a9';
 
 /// Vide, best-effort, la file d'attente PV/XP hors-ligne — voir
 /// `PendingCharacterWriteSyncer`. Seul consommateur :

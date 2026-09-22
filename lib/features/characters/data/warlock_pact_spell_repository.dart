@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/cache/reference_data_cache.dart';
 import '../../character_creation/data/spell_row_mapper.dart';
 import '../../character_creation/domain/spell_option.dart';
 import '../domain/character_failure.dart';
@@ -44,9 +45,13 @@ abstract class WarlockPactSpellRepository {
 }
 
 class SupabaseWarlockPactSpellRepository implements WarlockPactSpellRepository {
-  const SupabaseWarlockPactSpellRepository(this._client);
+  const SupabaseWarlockPactSpellRepository(this._client, [this._cache]);
 
   final SupabaseClient _client;
+
+  /// Cache de secours des listes étendues de patron (réseau d'abord ; en cas
+  /// d'échec, dernière lecture réussie). `null` : pas de repli.
+  final ReferenceDataCache? _cache;
 
   @override
   Future<List<SpellOption>> fetchAllCantrips() async {
@@ -87,6 +92,8 @@ class SupabaseWarlockPactSpellRepository implements WarlockPactSpellRepository {
     required List<int> subclassIds,
   }) async {
     if (subclassIds.isEmpty) return const {};
+    final cacheKey =
+        'patron_extended_spells:${(subclassIds.toList()..sort()).join(',')}';
     try {
       final grantRows = await _client
           .from('subclass_spells')
@@ -94,29 +101,59 @@ class SupabaseWarlockPactSpellRepository implements WarlockPactSpellRepository {
           .eq('grant_kind', 'extends_list')
           .inFilter('subclass_id', subclassIds);
       final spellIds = PatronExtendedSpellRowMapper.collectSpellIds(grantRows);
-      if (spellIds.isEmpty) return const {};
-
-      final spellRows = await _client
-          .from('spells')
-          .select('id, level, school, casting_time, is_incomplete')
-          .inFilter('id', spellIds.toList());
-      final nameRows = await _client
-          .from('translations')
-          .select('entity_id, value')
-          .eq('entity_type', 'spell')
-          .eq('field_name', 'name')
-          .eq('locale', _locale)
-          .inFilter('entity_id', SpellRowMapper.collectIds(spellRows).toList());
-      return PatronExtendedSpellRowMapper.parse(
-        grantRows: grantRows,
-        spellRows: spellRows,
-        names: SpellRowMapper.parseTranslatedValues(nameRows),
-      );
-    } on PostgrestException catch (error) {
-      throw mapCharacterError(error);
-    } catch (_) {
+      var spellRows = const <Map<String, dynamic>>[];
+      var nameRows = const <Map<String, dynamic>>[];
+      if (spellIds.isNotEmpty) {
+        spellRows = await _client
+            .from('spells')
+            .select('id, level, school, casting_time, is_incomplete')
+            .inFilter('id', spellIds.toList());
+        nameRows = await _client
+            .from('translations')
+            .select('entity_id, value')
+            .eq('entity_type', 'spell')
+            .eq('field_name', 'name')
+            .eq('locale', _locale)
+            .inFilter(
+              'entity_id',
+              SpellRowMapper.collectIds(spellRows).toList(),
+            );
+      }
+      final payload = <String, dynamic>{
+        'grants': grantRows,
+        'spells': spellRows,
+        'names': nameRows,
+      };
+      try {
+        await _cache?.put(cacheKey, payload);
+      } catch (_) {
+        // Best-effort.
+      }
+      return _parsePatronPayload(payload);
+    } catch (error) {
+      try {
+        final cached = await _cache?.get(cacheKey);
+        if (cached is Map<String, dynamic>) return _parsePatronPayload(cached);
+      } catch (_) {
+        // Cache illisible : on relance l'erreur d'origine.
+      }
+      if (error is PostgrestException) throw mapCharacterError(error);
       throw mapUnknownCharacterError();
     }
+  }
+
+  static List<Map<String, dynamic>> _rows(Object? value) => value is List
+      ? [for (final row in value) Map<String, dynamic>.from(row as Map)]
+      : const [];
+
+  Map<int, List<PatronExtendedSpell>> _parsePatronPayload(
+    Map<String, dynamic> payload,
+  ) {
+    return PatronExtendedSpellRowMapper.parse(
+      grantRows: _rows(payload['grants']),
+      spellRows: _rows(payload['spells']),
+      names: SpellRowMapper.parseTranslatedValues(_rows(payload['names'])),
+    );
   }
 
   @override

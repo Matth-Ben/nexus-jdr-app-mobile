@@ -491,6 +491,167 @@ final class SpellCatalogFamily extends $Family
   String toString() => r'spellCatalogProvider';
 }
 
+/// Sorts candidats de la classe [classId] pour la création : la liste de
+/// classe, à laquelle s'ajoutent, pour tout [subclassId] non nul, les sorts de
+/// niveau 1 de la liste ÉTENDUE de cette sous-classe
+/// (`subclass_spells.grant_kind = 'extends_list'`, `class_level <= 1`) — c'est
+/// la base qui décide quelles sous-classes en ont (patrons d'Occultiste), pas
+/// le nom de la classe. Même logique que la montée de niveau
+/// (`PatronExtendedSpells.merge`), plafond de niveau de sort 1. Utilisé par
+/// l'étape Sorts ET par le récapitulatif : `createCharacter` résout les noms
+/// choisis contre ce catalogue.
+///
+/// Un échec de lecture des sorts de patron (ni réseau ni cache) n'échoue pas
+/// l'écran : on continue avec le catalogue de classe seul, comme la montée de
+/// niveau. [subclassId] est un paramètre de la `family` (celui du brouillon)
+/// pour ne pas recharger à chaque modification d'un autre champ.
+
+@ProviderFor(creationSpellCatalog)
+final creationSpellCatalogProvider = CreationSpellCatalogFamily._();
+
+/// Sorts candidats de la classe [classId] pour la création : la liste de
+/// classe, à laquelle s'ajoutent, pour tout [subclassId] non nul, les sorts de
+/// niveau 1 de la liste ÉTENDUE de cette sous-classe
+/// (`subclass_spells.grant_kind = 'extends_list'`, `class_level <= 1`) — c'est
+/// la base qui décide quelles sous-classes en ont (patrons d'Occultiste), pas
+/// le nom de la classe. Même logique que la montée de niveau
+/// (`PatronExtendedSpells.merge`), plafond de niveau de sort 1. Utilisé par
+/// l'étape Sorts ET par le récapitulatif : `createCharacter` résout les noms
+/// choisis contre ce catalogue.
+///
+/// Un échec de lecture des sorts de patron (ni réseau ni cache) n'échoue pas
+/// l'écran : on continue avec le catalogue de classe seul, comme la montée de
+/// niveau. [subclassId] est un paramètre de la `family` (celui du brouillon)
+/// pour ne pas recharger à chaque modification d'un autre champ.
+
+final class CreationSpellCatalogProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<SpellCatalog>,
+          SpellCatalog,
+          FutureOr<SpellCatalog>
+        >
+    with $FutureModifier<SpellCatalog>, $FutureProvider<SpellCatalog> {
+  /// Sorts candidats de la classe [classId] pour la création : la liste de
+  /// classe, à laquelle s'ajoutent, pour tout [subclassId] non nul, les sorts de
+  /// niveau 1 de la liste ÉTENDUE de cette sous-classe
+  /// (`subclass_spells.grant_kind = 'extends_list'`, `class_level <= 1`) — c'est
+  /// la base qui décide quelles sous-classes en ont (patrons d'Occultiste), pas
+  /// le nom de la classe. Même logique que la montée de niveau
+  /// (`PatronExtendedSpells.merge`), plafond de niveau de sort 1. Utilisé par
+  /// l'étape Sorts ET par le récapitulatif : `createCharacter` résout les noms
+  /// choisis contre ce catalogue.
+  ///
+  /// Un échec de lecture des sorts de patron (ni réseau ni cache) n'échoue pas
+  /// l'écran : on continue avec le catalogue de classe seul, comme la montée de
+  /// niveau. [subclassId] est un paramètre de la `family` (celui du brouillon)
+  /// pour ne pas recharger à chaque modification d'un autre champ.
+  CreationSpellCatalogProvider._({
+    required CreationSpellCatalogFamily super.from,
+    required ({int classId, int? subclassId}) super.argument,
+  }) : super(
+         retry: _noRetry,
+         name: r'creationSpellCatalogProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$creationSpellCatalogHash();
+
+  @override
+  String toString() {
+    return r'creationSpellCatalogProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<SpellCatalog> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<SpellCatalog> create(Ref ref) {
+    final argument = this.argument as ({int classId, int? subclassId});
+    return creationSpellCatalog(
+      ref,
+      classId: argument.classId,
+      subclassId: argument.subclassId,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is CreationSpellCatalogProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$creationSpellCatalogHash() =>
+    r'b44343ef4af5b97deb3304eff3363306ecb55194';
+
+/// Sorts candidats de la classe [classId] pour la création : la liste de
+/// classe, à laquelle s'ajoutent, pour tout [subclassId] non nul, les sorts de
+/// niveau 1 de la liste ÉTENDUE de cette sous-classe
+/// (`subclass_spells.grant_kind = 'extends_list'`, `class_level <= 1`) — c'est
+/// la base qui décide quelles sous-classes en ont (patrons d'Occultiste), pas
+/// le nom de la classe. Même logique que la montée de niveau
+/// (`PatronExtendedSpells.merge`), plafond de niveau de sort 1. Utilisé par
+/// l'étape Sorts ET par le récapitulatif : `createCharacter` résout les noms
+/// choisis contre ce catalogue.
+///
+/// Un échec de lecture des sorts de patron (ni réseau ni cache) n'échoue pas
+/// l'écran : on continue avec le catalogue de classe seul, comme la montée de
+/// niveau. [subclassId] est un paramètre de la `family` (celui du brouillon)
+/// pour ne pas recharger à chaque modification d'un autre champ.
+
+final class CreationSpellCatalogFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<SpellCatalog>,
+          ({int classId, int? subclassId})
+        > {
+  CreationSpellCatalogFamily._()
+    : super(
+        retry: _noRetry,
+        name: r'creationSpellCatalogProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Sorts candidats de la classe [classId] pour la création : la liste de
+  /// classe, à laquelle s'ajoutent, pour tout [subclassId] non nul, les sorts de
+  /// niveau 1 de la liste ÉTENDUE de cette sous-classe
+  /// (`subclass_spells.grant_kind = 'extends_list'`, `class_level <= 1`) — c'est
+  /// la base qui décide quelles sous-classes en ont (patrons d'Occultiste), pas
+  /// le nom de la classe. Même logique que la montée de niveau
+  /// (`PatronExtendedSpells.merge`), plafond de niveau de sort 1. Utilisé par
+  /// l'étape Sorts ET par le récapitulatif : `createCharacter` résout les noms
+  /// choisis contre ce catalogue.
+  ///
+  /// Un échec de lecture des sorts de patron (ni réseau ni cache) n'échoue pas
+  /// l'écran : on continue avec le catalogue de classe seul, comme la montée de
+  /// niveau. [subclassId] est un paramètre de la `family` (celui du brouillon)
+  /// pour ne pas recharger à chaque modification d'un autre champ.
+
+  CreationSpellCatalogProvider call({required int classId, int? subclassId}) =>
+      CreationSpellCatalogProvider._(
+        argument: (classId: classId, subclassId: subclassId),
+        from: this,
+      );
+
+  @override
+  String toString() => r'creationSpellCatalogProvider';
+}
+
 @ProviderFor(spellsStepData)
 final spellsStepDataProvider = SpellsStepDataProvider._();
 
@@ -528,7 +689,7 @@ final class SpellsStepDataProvider
   }
 }
 
-String _$spellsStepDataHash() => r'71ebd0f72755c4a0e0319666d19a679a135b6ecc';
+String _$spellsStepDataHash() => r'f6cb5fc2b0332b027d9fe98a154b6ce27cb1e312';
 
 /// Catalogue complet des objets de l'étape 7/9 "Équipement de départ",
 /// exposé à `EquipmentStepScreen` — même rationale que [toolCatalog]
@@ -708,4 +869,4 @@ final class SummaryStepDataProvider
   }
 }
 
-String _$summaryStepDataHash() => r'73f3d798a33d20315e60fae778d32fbd1df47dd3';
+String _$summaryStepDataHash() => r'1d2adb24357eee3139671fe3eb2deeedc97becca';

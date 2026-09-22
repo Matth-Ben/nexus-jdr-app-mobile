@@ -26,7 +26,10 @@ CharacterRepository characterRepository(Ref ref) {
 /// `WarlockPactSpellRepository`.
 @Riverpod(keepAlive: true)
 WarlockPactSpellRepository warlockPactSpellRepository(Ref ref) {
-  return SupabaseWarlockPactSpellRepository(ref.watch(supabaseClientProvider));
+  return SupabaseWarlockPactSpellRepository(
+    ref.watch(supabaseClientProvider),
+    ref.watch(referenceDataCacheProvider),
+  );
 }
 
 /// Vide, best-effort, la file d'attente PV/XP hors-ligne — voir

@@ -328,4 +328,109 @@ void main() {
     final draft = container.read(characterCreationDraftControllerProvider);
     expect(draft.characterName, isNull);
   });
+
+  group('setClass et sous-classe', () {
+    test('enregistre classId et subclassId ensemble', () {
+      final controller = container.read(
+        characterCreationDraftControllerProvider.notifier,
+      );
+      controller.setClass(classId: 3, subclassId: 31);
+
+      final draft = container.read(characterCreationDraftControllerProvider);
+      expect(draft.classId, 3);
+      expect(draft.subclassId, 31);
+    });
+
+    test('classe différente : sous-classe, compétences, outils et sorts '
+        'sont vidés, les autres choix conservés', () {
+      final controller = container.read(
+        characterCreationDraftControllerProvider.notifier,
+      );
+      controller.setRace(raceId: 7);
+      controller.setClass(classId: 3, subclassId: 31);
+      controller.setBackground(backgroundId: 5);
+      controller.setSkillsAndTools(
+        classSkillChoices: ['Arcanes'],
+        classToolChoices: ['Luth'],
+        backgroundLanguageChoices: ['Elfique'],
+      );
+      controller.setSpells(
+        classCantripChoices: ['Lumière'],
+        classLevelOneSpellChoices: ['Soin'],
+      );
+
+      controller.setClass(classId: 2);
+
+      final draft = container.read(characterCreationDraftControllerProvider);
+      expect(draft.classId, 2);
+      expect(draft.subclassId, isNull);
+      expect(draft.classSkillChoices, isEmpty);
+      expect(draft.classToolChoices, isEmpty);
+      expect(draft.classCantripChoices, isEmpty);
+      expect(draft.classLevelOneSpellChoices, isEmpty);
+      expect(draft.raceId, 7);
+      expect(draft.backgroundId, 5);
+      expect(draft.backgroundLanguageChoices, ['Elfique']);
+    });
+
+    test("même classe et même sous-classe : rien n'est vidé", () {
+      final controller = container.read(
+        characterCreationDraftControllerProvider.notifier,
+      );
+      controller.setClass(classId: 3, subclassId: 31);
+      controller.setSkillsAndTools(
+        classSkillChoices: ['Arcanes'],
+        classToolChoices: [],
+        backgroundLanguageChoices: [],
+      );
+      controller.setSpells(
+        classCantripChoices: ['Lumière'],
+        classLevelOneSpellChoices: ['Soin'],
+      );
+
+      controller.setClass(classId: 3, subclassId: 31);
+
+      final draft = container.read(characterCreationDraftControllerProvider);
+      expect(draft.classSkillChoices, ['Arcanes']);
+      expect(draft.classCantripChoices, ['Lumière']);
+      expect(draft.classLevelOneSpellChoices, ['Soin']);
+    });
+
+    test('même classe, autre sous-classe : seuls les sorts sont vidés', () {
+      final controller = container.read(
+        characterCreationDraftControllerProvider.notifier,
+      );
+      controller.setClass(classId: 3, subclassId: 31);
+      controller.setSkillsAndTools(
+        classSkillChoices: ['Arcanes'],
+        classToolChoices: [],
+        backgroundLanguageChoices: [],
+      );
+      controller.setSpells(
+        classCantripChoices: ['Lumière'],
+        classLevelOneSpellChoices: ['Sort de patron'],
+      );
+
+      controller.setClass(classId: 3, subclassId: 32);
+
+      final draft = container.read(characterCreationDraftControllerProvider);
+      expect(draft.subclassId, 32);
+      expect(draft.classSkillChoices, ['Arcanes']);
+      expect(draft.classCantripChoices, isEmpty);
+      expect(draft.classLevelOneSpellChoices, isEmpty);
+    });
+
+    test('reset remet subclassId à zéro', () {
+      final controller = container.read(
+        characterCreationDraftControllerProvider.notifier,
+      );
+      controller.setClass(classId: 3, subclassId: 31);
+      controller.reset();
+
+      expect(
+        container.read(characterCreationDraftControllerProvider).subclassId,
+        isNull,
+      );
+    });
+  });
 }

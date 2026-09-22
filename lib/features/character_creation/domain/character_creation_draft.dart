@@ -31,9 +31,15 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     String? raceCustomText,
 
     /// Classe choisie à l'étape 2, `null` si pas encore choisie. Pas de
-    /// sous-classe ni de "classe personnalisée" à cette étape (décision du
-    /// chef de projet, voir `domain/class_catalog.dart`).
+    /// "classe personnalisée" à cette étape (décision du chef de projet, voir
+    /// `domain/class_catalog.dart`).
     int? classId,
+
+    /// Sous-classe choisie à l'étape 2 (`subclasses.id`), uniquement pour les
+    /// classes qui la choisissent au niveau 1 (Clerc, Occultiste,
+    /// Ensorceleur — voir `domain/subclass_choice_catalog.dart`). `null`
+    /// pour toutes les autres classes ou tant que rien n'est choisi.
+    int? subclassId,
 
     /// Historique choisi à l'étape 3, `null` si pas encore choisi. Pas
     /// d'historique personnalisé à cette étape (décision du chef de projet,
