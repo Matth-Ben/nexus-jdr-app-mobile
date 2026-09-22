@@ -1,3 +1,5 @@
+import 'weapon_slot.dart';
+
 /// Une ligne `character_inventory` résolue pour l'onglet "Inventaire" —
 /// `presentation/widgets/character_inventory_tab_body.dart`. Voir
 /// `data/character_inventory_row_mapper.dart` pour la résolution depuis
@@ -27,6 +29,7 @@ class CharacterInventoryItem {
     this.notes,
     this.weaponProperties,
     this.armorProperties,
+    this.weaponSlot,
   });
 
   /// `character_inventory.id` (uuid).
@@ -150,6 +153,13 @@ class CharacterInventoryItem {
   /// `item_id`), `null` pour tout objet qui n'est pas une armure/un bouclier
   /// du catalogue.
   final CharacterInventoryArmorProperties? armorProperties;
+
+  /// `character_inventory.weapon_slot` — non-`null` seulement pour une arme
+  /// actuellement équipée assignée à un set (« set principal »/« set
+  /// secondaire »), voir `weapon_slot_rules.dart::WeaponSlotRules`. `null`
+  /// pour toute autre ligne (objet non équipé, armure/bouclier équipé,
+  /// objet personnalisé).
+  final WeaponSlot? weaponSlot;
 
   /// Vrai pour un objet hors catalogue (`item_id` nul) — affiché avec un
   /// badge en pointillés plutôt qu'une icône de catégorie, voir

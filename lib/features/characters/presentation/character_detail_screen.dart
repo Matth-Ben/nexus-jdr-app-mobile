@@ -25,6 +25,8 @@ import '../domain/proficiency_bonus.dart';
 import '../domain/rest_type.dart';
 import '../domain/reward_item_draft.dart';
 import '../domain/saving_throw_calculator.dart';
+import '../domain/weapon_slot.dart';
+import '../domain/weapon_slot_rules.dart';
 import '../domain/write_outcome.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
@@ -1169,6 +1171,79 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Action "Équiper"/"Changer de set" d'une arme (sheet d'actions d'objet,
+  /// choix du set via `weapon_slot_picker_sheet.dart`) : calcule les armes à
+  /// déséquiper au préalable dans [slot] (voir
+  /// `WeaponSlotRules.itemsToAutoUnequip`, jamais dans l'autre set), les
+  /// déséquipe séquentiellement, puis équipe [item] dans [slot]. Retaper le
+  /// set déjà courant de [item] ne déclenche aucune écriture (même principe
+  /// que [_changePactWeapon] retapant la forme courante).
+  ///
+  /// Enchaîne plusieurs requêtes (une par arme déséquipée, puis l'équipement
+  /// final) : même risque d'échec partiel que [_addReward] (voir sa
+  /// documentation) — [_refreshCharacterDetail] est donc appelée aussi bien
+  /// au succès qu'à l'échec qu'à une interruption par [WriteOutcome.queued],
+  /// pour repartir d'un état serveur frais même après un échec partiel (par
+  /// exemple : le déséquipement d'une arme a réellement été persisté avant
+  /// que la connexion tombe et que l'équipement final reparte en file
+  /// d'attente hors-ligne).
+  Future<void> _equipWeaponToSlot(
+    CharacterDetail detail,
+    CharacterInventoryItem item,
+    WeaponSlot slot,
+  ) async {
+    if (item.equipped && item.weaponSlot == slot) return;
+
+    final toUnequip = WeaponSlotRules.itemsToAutoUnequip(
+      inventory: detail.inventory,
+      slot: slot,
+      candidate: item,
+    );
+
+    setState(() => _isWritingInventory = true);
+    try {
+      final repository = ref.read(characterRepositoryProvider);
+      for (final weapon in toUnequip) {
+        final outcome = await repository.setInventoryItemEquipped(
+          characterId: widget.characterId,
+          inventoryId: weapon.id,
+          equipped: false,
+        );
+        if (outcome == WriteOutcome.queued) {
+          await _refreshCharacterDetail();
+          _showSnackBar(_offlineNotPersistedMessage);
+          return;
+        }
+      }
+      final outcome = await repository.equipWeaponToSlot(
+        characterId: widget.characterId,
+        inventoryId: item.id,
+        slot: slot,
+      );
+      if (outcome == WriteOutcome.queued) {
+        await _refreshCharacterDetail();
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      await _refreshCharacterDetail();
+      _showSnackBar(
+        toUnequip.isEmpty
+            ? '${item.name} équipé (${slot.label}).'
+            : '${item.name} équipé (${slot.label}) — '
+                  '${toUnequip.map((w) => w.name).join(', ')} '
+                  'déséquipé(e)(s).',
+      );
+    } on CharacterFailure catch (failure) {
+      await _refreshCharacterDetail();
+      _showSnackBar(failure.message);
+    } catch (_) {
+      await _refreshCharacterDetail();
+      _showSnackBar("Impossible d'équiper cette arme. Réessayez.");
+    } finally {
+      if (mounted) setState(() => _isWritingInventory = false);
+    }
+  }
+
   /// Carte « Arme de pacte » (Pacte de la lame) : ouvre la feuille « FORME DE
   /// L'ARME » puis enregistre la forme choisie (upsert
   /// `character_pact_weapons`, voir `PactWeaponRepository`). Retaper la forme
@@ -1931,6 +2006,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onAdjustCurrency: _adjustCurrency,
         onAddInventoryItem: _addInventoryItem,
         onAddCustomInventoryItem: _addCustomInventoryItem,
+        onEquipWeaponToSlot: (item, slot) =>
+            _equipWeaponToSlot(detail, item, slot),
         onAddReward: () => showAddRewardSheet(
           context,
           onApply: (deltas, items) => _addReward(detail, deltas, items),

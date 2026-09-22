@@ -1,4 +1,5 @@
 import '../domain/character_inventory_item.dart';
+import '../domain/weapon_slot.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes `character_inventory`
 /// (avec `items` embarqué via une vraie relation de clé étrangère,
@@ -199,6 +200,7 @@ abstract final class CharacterInventoryRowMapper {
           notes: row['notes'] as String?,
           weaponProperties: parseWeaponProperties(itemRow),
           armorProperties: parseArmorProperties(itemRow),
+          weaponSlot: WeaponSlot.fromValue(row['weapon_slot'] as String?),
         ),
       );
     }

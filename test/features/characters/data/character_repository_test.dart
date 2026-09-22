@@ -16,6 +16,7 @@ import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
+import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -762,6 +763,154 @@ void main() {
         );
 
         expect(outcome, WriteOutcome.synced);
+      });
+
+      test(
+        'setInventoryItemEquipped(equipped: true) : payload sans la clé '
+        '`weapon_slot` (armure/bouclier équipé, jamais un set d\'arme)',
+        () async {
+          String? capturedBody;
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            onRequest: (request) {
+              if (request.url.pathSegments.last == 'character_inventory' &&
+                  request.method == 'PATCH') {
+                capturedBody = request.body;
+              }
+            },
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
+
+          final outcome = await repository.setInventoryItemEquipped(
+            characterId: characterId,
+            inventoryId: inventoryId,
+            equipped: true,
+          );
+
+          expect(outcome, WriteOutcome.synced);
+          expect(capturedBody, isNotNull);
+          final payload = jsonDecode(capturedBody!) as Map<String, dynamic>;
+          expect(payload, {'equipped': true});
+          expect(
+            payload.containsKey('weapon_slot'),
+            isFalse,
+            reason:
+                'équiper une armure/un bouclier ne doit jamais envoyer '
+                '`weapon_slot` (réservé aux armes via equipWeaponToSlot)',
+          );
+        },
+      );
+
+      test('setInventoryItemEquipped(equipped: false) : payload avec '
+          '`weapon_slot: null` (déséquiper efface le set d\'arme)', () async {
+        String? capturedBody;
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          onRequest: (request) {
+            if (request.url.pathSegments.last == 'character_inventory' &&
+                request.method == 'PATCH') {
+              capturedBody = request.body;
+            }
+          },
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.setInventoryItemEquipped(
+          characterId: characterId,
+          inventoryId: inventoryId,
+          equipped: false,
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(capturedBody, isNotNull);
+        final payload = jsonDecode(capturedBody!) as Map<String, dynamic>;
+        expect(payload, {'equipped': false, 'weapon_slot': null});
+      });
+
+      test('equipWeaponToSlot : connectivité absente -> retourne queued sans '
+          'tenter le réseau, jamais mise en file', () async {
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          throwOnRequest: true,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: false),
+        );
+
+        final outcome = await repository.equipWeaponToSlot(
+          characterId: characterId,
+          inventoryId: inventoryId,
+          slot: WeaponSlot.principal,
+        );
+
+        expect(outcome, WriteOutcome.queued);
+        expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+      });
+
+      test('equipWeaponToSlot : connectivité présente + écriture réussie -> '
+          'synced', () async {
+        final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.equipWeaponToSlot(
+          characterId: characterId,
+          inventoryId: inventoryId,
+          slot: WeaponSlot.secondary,
+        );
+
+        expect(outcome, WriteOutcome.synced);
+      });
+
+      test('equipWeaponToSlot : payload exactement `{equipped: true, '
+          'weapon_slot: <slot>}`', () async {
+        String? capturedBody;
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          onRequest: (request) {
+            if (request.url.pathSegments.last == 'character_inventory' &&
+                request.method == 'PATCH') {
+              capturedBody = request.body;
+            }
+          },
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.equipWeaponToSlot(
+          characterId: characterId,
+          inventoryId: inventoryId,
+          slot: WeaponSlot.secondary,
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(capturedBody, isNotNull);
+        final payload = jsonDecode(capturedBody!) as Map<String, dynamic>;
+        expect(payload, {
+          'equipped': true,
+          'weapon_slot': WeaponSlot.secondary.value,
+        });
       });
 
       test('setInventoryItemAttuned : connectivité présente + écriture '

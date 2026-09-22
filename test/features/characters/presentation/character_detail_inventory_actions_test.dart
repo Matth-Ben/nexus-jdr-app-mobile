@@ -30,6 +30,7 @@ import 'package:personnages/features/characters/domain/level_up_choice_selection
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
+import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
@@ -45,11 +46,15 @@ class FakeRepository implements CharacterRepository {
   int addCustomInventoryItemCallCount = 0;
   int addRewardCallCount = 0;
   int fetchCharacterDetailCallCount = 0;
+  int equipWeaponToSlotCallCount = 0;
 
   String? lastInventoryId;
   int? lastNewQuantity;
   bool? lastEquipped;
   bool? lastAttuned;
+  List<String> setEquippedCallOrder = [];
+  List<String> equipWeaponToSlotCallOrder = [];
+  WeaponSlot? lastEquippedWeaponSlot;
   CurrencyKind? lastCurrency;
   int? lastNewAmount;
   String? lastCustomName;
@@ -132,8 +137,101 @@ class FakeRepository implements CharacterRepository {
     required bool equipped,
   }) async {
     setEquippedCallCount++;
+    setEquippedCallOrder.add(inventoryId);
     lastInventoryId = inventoryId;
     lastEquipped = equipped;
+    if (outcomeToReturn == WriteOutcome.queued) return outcomeToReturn;
+    current = current.copyWith(
+      inventory: [
+        for (final item in current.inventory)
+          if (item.id == inventoryId)
+            CharacterInventoryItem(
+              id: item.id,
+              itemId: item.itemId,
+              name: item.name,
+              category: item.category,
+              quantity: item.quantity,
+              equipped: equipped,
+              totalWeight: item.totalWeight,
+              unitWeight: item.unitWeight,
+              costAmount: item.costAmount,
+              description: item.description,
+              rarity: item.rarity,
+              requiresAttunement: item.requiresAttunement,
+              isAttuned: item.isAttuned,
+              consumable: item.consumable,
+              notes: item.notes,
+              weaponProperties: item.weaponProperties,
+              armorProperties: item.armorProperties,
+              weaponSlot: equipped ? item.weaponSlot : null,
+            )
+          else
+            item,
+      ],
+    );
+    return outcomeToReturn;
+  }
+
+  /// Fait échouer le *prochain* appel à [equipWeaponToSlot] (consommé après
+  /// usage) — simule un échec réseau une fois la séquence de déséquipement
+  /// automatique déjà résolue, voir le groupe de tests "échec réseau" de
+  /// `_equipWeaponToSlot` ci-dessous.
+  bool failNextEquipWeaponToSlot = false;
+
+  /// Fait retourner [WriteOutcome.queued] au *prochain* appel à
+  /// [equipWeaponToSlot] (consommé après usage), sans affecter
+  /// [setInventoryItemEquipped] — simule une connexion perdue juste après un
+  /// déséquipement automatique déjà persisté avec succès, voir le test
+  /// "désynchro" de `_equipWeaponToSlot` ci-dessous.
+  bool queueNextEquipWeaponToSlot = false;
+
+  @override
+  Future<WriteOutcome> equipWeaponToSlot({
+    required String characterId,
+    required String inventoryId,
+    required WeaponSlot slot,
+  }) async {
+    equipWeaponToSlotCallCount++;
+    equipWeaponToSlotCallOrder.add(inventoryId);
+    lastInventoryId = inventoryId;
+    lastEquippedWeaponSlot = slot;
+    if (failNextEquipWeaponToSlot) {
+      failNextEquipWeaponToSlot = false;
+      throw const CharacterFailure('Écriture échouée (échec simulé).');
+    }
+    if (queueNextEquipWeaponToSlot) {
+      queueNextEquipWeaponToSlot = false;
+      return WriteOutcome.queued;
+    }
+    if (outcomeToReturn == WriteOutcome.queued) return outcomeToReturn;
+    current = current.copyWith(
+      inventory: [
+        for (final item in current.inventory)
+          if (item.id == inventoryId)
+            CharacterInventoryItem(
+              id: item.id,
+              itemId: item.itemId,
+              name: item.name,
+              category: item.category,
+              quantity: item.quantity,
+              equipped: true,
+              totalWeight: item.totalWeight,
+              unitWeight: item.unitWeight,
+              costAmount: item.costAmount,
+              description: item.description,
+              rarity: item.rarity,
+              requiresAttunement: item.requiresAttunement,
+              isAttuned: item.isAttuned,
+              consumable: item.consumable,
+              notes: item.notes,
+              weaponProperties: item.weaponProperties,
+              armorProperties: item.armorProperties,
+              weaponSlot: slot,
+            )
+          else
+            item,
+      ],
+    );
     return outcomeToReturn;
   }
 
@@ -530,8 +628,8 @@ Future<void> openInventoryTab(WidgetTester tester) async {
 
 void main() {
   testWidgets(
-    '"Utiliser" un objet à quantité > 1 : useInventoryItem(quantity - 1), '
-    'snackbar "utilisé" (pas "retiré")',
+    '"Équiper" une arme non équipée : choisir "Set principal" appelle '
+    'equipWeaponToSlot, snackbar "équipé (Set principal)."',
     (tester) async {
       final repository = await pumpDetail(tester);
       await openInventoryTab(tester);
@@ -541,10 +639,14 @@ void main() {
       await tester.tap(find.text('Équiper'));
       await tester.pumpAndSettle();
 
-      expect(repository.setEquippedCallCount, 1);
+      expect(find.text('CHOISIR UN SET'), findsOneWidget);
+      await tester.tap(find.text('Set principal'));
+      await tester.pumpAndSettle();
+
+      expect(repository.equipWeaponToSlotCallCount, 1);
       expect(repository.lastInventoryId, 'inv-1');
-      expect(repository.lastEquipped, isTrue);
-      expect(find.text('Dague équipé.'), findsOneWidget);
+      expect(repository.lastEquippedWeaponSlot, WeaponSlot.principal);
+      expect(find.text('Dague équipé (Set principal).'), findsOneWidget);
     },
   );
 
@@ -941,4 +1043,218 @@ void main() {
       expect(find.text('RÉCOMPENSE'), findsNothing);
     },
   );
+
+  group('_equipWeaponToSlot (sets d\'armes équipées)', () {
+    const sword1 = CharacterInventoryItem(
+      id: 'inv-10',
+      itemId: 20,
+      name: 'Épée courte',
+      category: 'arme',
+      quantity: 1,
+      equipped: true,
+      weaponSlot: WeaponSlot.principal,
+    );
+
+    const sword2 = CharacterInventoryItem(
+      id: 'inv-11',
+      itemId: 21,
+      name: 'Hachette',
+      category: 'arme',
+      quantity: 1,
+      equipped: true,
+      weaponSlot: WeaponSlot.principal,
+    );
+
+    const newDagger = CharacterInventoryItem(
+      id: 'inv-12',
+      itemId: 22,
+      name: 'Poignard',
+      category: 'arme',
+      quantity: 1,
+      equipped: false,
+    );
+
+    testWidgets('équiper dans un set vide : equipWeaponToSlot seul, aucun '
+        'déséquipement, message sans mention de déséquipement', (tester) async {
+      final repository = await pumpDetail(tester);
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Dague'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Équiper'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Set principal'));
+      await tester.pumpAndSettle();
+
+      expect(repository.setEquippedCallCount, 0);
+      expect(repository.equipWeaponToSlotCallCount, 1);
+      expect(repository.lastInventoryId, 'inv-1');
+      expect(repository.lastEquippedWeaponSlot, WeaponSlot.principal);
+      expect(find.text('Dague équipé (Set principal).'), findsOneWidget);
+    });
+
+    testWidgets(
+      'équiper avec set plein : déséquipe automatiquement la première arme '
+      'du set (ordre de l\'inventaire), message listant ce qui a été '
+      'déséquipé',
+      (tester) async {
+        final repository = await pumpDetail(
+          tester,
+          initialDetail: detail.copyWith(
+            inventory: [sword1, sword2, newDagger],
+          ),
+        );
+        await openInventoryTab(tester);
+
+        await tester.tap(find.text('Poignard'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Équiper'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('CHOISIR UN SET'), findsOneWidget);
+        expect(find.text('Épée courte, Hachette'), findsOneWidget);
+
+        await tester.tap(find.text('Set principal'));
+        await tester.pumpAndSettle();
+
+        expect(repository.setEquippedCallOrder, ['inv-10']);
+        expect(repository.equipWeaponToSlotCallOrder, ['inv-12']);
+        expect(repository.lastEquippedWeaponSlot, WeaponSlot.principal);
+        expect(
+          find.text(
+            'Poignard équipé (Set principal) — Épée courte déséquipé(e)(s).',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'retaper le set déjà courant d\'une arme équipée : aucune écriture',
+      (tester) async {
+        final repository = await pumpDetail(
+          tester,
+          initialDetail: detail.copyWith(inventory: [sword1, sword2]),
+        );
+        await openInventoryTab(tester);
+
+        await tester.tap(find.text('Épée courte'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Changer de set'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Set principal'));
+        await tester.pumpAndSettle();
+
+        expect(repository.setEquippedCallCount, 0);
+        expect(repository.equipWeaponToSlotCallCount, 0);
+      },
+    );
+
+    testWidgets(
+      'WriteOutcome.queued (hors ligne) pendant le déséquipement automatique '
+      'interrompt la séquence : equipWeaponToSlot jamais appelé, message '
+      'honnête',
+      (tester) async {
+        final repository = await pumpDetail(
+          tester,
+          initialDetail: detail.copyWith(
+            inventory: [sword1, sword2, newDagger],
+          ),
+        );
+        repository.outcomeToReturn = WriteOutcome.queued;
+        await openInventoryTab(tester);
+
+        await tester.tap(find.text('Poignard'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Équiper'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Set principal'));
+        await tester.pumpAndSettle();
+
+        expect(repository.setEquippedCallCount, 1);
+        expect(repository.equipWeaponToSlotCallCount, 0);
+        expect(
+          find.textContaining("n'a pas pu être enregistrée"),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'WriteOutcome.queued sur l\'écriture finale (après déséquipement '
+      'automatique déjà persisté avec succès) : fiche tout de même '
+      'rafraîchie, pas seulement le SnackBar hors-ligne',
+      (tester) async {
+        final repository = await pumpDetail(
+          tester,
+          initialDetail: detail.copyWith(
+            inventory: [sword1, sword2, newDagger],
+          ),
+        );
+        repository.queueNextEquipWeaponToSlot = true;
+        await openInventoryTab(tester);
+
+        final fetchCountBefore = repository.fetchCharacterDetailCallCount;
+
+        await tester.tap(find.text('Poignard'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Équiper'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Set principal'));
+        await tester.pumpAndSettle();
+
+        expect(repository.setEquippedCallCount, 1);
+        expect(repository.equipWeaponToSlotCallCount, 1);
+        expect(
+          find.textContaining("n'a pas pu être enregistrée"),
+          findsOneWidget,
+        );
+        expect(
+          repository.fetchCharacterDetailCallCount,
+          greaterThan(fetchCountBefore),
+          reason:
+              'le déséquipement automatique a réellement été persisté avant '
+              'que l\'équipement final reparte en file d\'attente : la fiche '
+              'doit être rafraîchie pour ne pas continuer à afficher '
+              '"Épée courte" comme équipée alors qu\'elle ne l\'est plus '
+              'côté serveur.',
+        );
+      },
+    );
+
+    testWidgets(
+      'échec réseau sur l\'écriture finale (après déséquipement automatique '
+      'déjà résolu) : message d\'erreur affiché, fiche rafraîchie',
+      (tester) async {
+        final repository = await pumpDetail(
+          tester,
+          initialDetail: detail.copyWith(
+            inventory: [sword1, sword2, newDagger],
+          ),
+        );
+        repository.failNextEquipWeaponToSlot = true;
+        await openInventoryTab(tester);
+
+        final fetchCountBefore = repository.fetchCharacterDetailCallCount;
+
+        await tester.tap(find.text('Poignard'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Équiper'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Set principal'));
+        await tester.pumpAndSettle();
+
+        expect(repository.setEquippedCallCount, 1);
+        expect(repository.equipWeaponToSlotCallCount, 1);
+        expect(find.text('Écriture échouée (échec simulé).'), findsOneWidget);
+        expect(
+          repository.fetchCharacterDetailCallCount,
+          greaterThan(fetchCountBefore),
+          reason:
+              'la fiche doit être rafraîchie même après un échec partiel '
+              '(déséquipement déjà persisté), même principe que addReward.',
+        );
+      },
+    );
+  });
 }

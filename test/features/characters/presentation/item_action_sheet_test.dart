@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
+import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/item_action_sheet.dart';
 
 const _customItem = CharacterInventoryItem(
@@ -36,6 +37,16 @@ const _sword = CharacterInventoryItem(
     rangeNormal: null,
     rangeMax: null,
   ),
+);
+
+const _swordEquipped = CharacterInventoryItem(
+  id: 'inv-sword-2',
+  itemId: 6,
+  name: 'Épée courte',
+  category: 'arme',
+  quantity: 1,
+  equipped: true,
+  weaponSlot: WeaponSlot.principal,
 );
 
 const _armor = CharacterInventoryItem(
@@ -79,16 +90,19 @@ void main() {
   List<CharacterInventoryItem> toggleCalls = [];
   List<CharacterInventoryItem> toggleAttunedCalls = [];
   List<CharacterInventoryItem> removeCalls = [];
+  List<(CharacterInventoryItem, WeaponSlot)> equipWeaponCalls = [];
 
   Future<void> pumpSheet(
     WidgetTester tester, {
     required CharacterInventoryItem item,
     int attunedCount = 0,
+    List<CharacterInventoryItem> equippedWeapons = const [],
   }) async {
     useCalls = [];
     toggleCalls = [];
     toggleAttunedCalls = [];
     removeCalls = [];
+    equipWeaponCalls = [];
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
@@ -103,6 +117,9 @@ void main() {
                   onToggleAttuned: toggleAttunedCalls.add,
                   onRemoveItem: removeCalls.add,
                   attunedCount: attunedCount,
+                  equippedWeapons: equippedWeapons,
+                  onEquipWeaponToSlot: (item, slot) =>
+                      equipWeaponCalls.add((item, slot)),
                 ),
                 child: const Text('Ouvrir'),
               ),
@@ -131,17 +148,77 @@ void main() {
     });
 
     testWidgets(
-      'une arme non équipée : "Équiper" (pas "Utiliser", pas consommable)',
+      'une arme non équipée : "Équiper" (pas "Utiliser", pas consommable) '
+      'ouvre la sheet de choix de set puis appelle onEquipWeaponToSlot',
       (tester) async {
         await pumpSheet(tester, item: _sword);
 
         expect(find.text('Équiper'), findsOneWidget);
         expect(find.text('Utiliser'), findsNothing);
+        expect(find.text('Déséquiper'), findsNothing);
 
         await tester.tap(find.text('Équiper'));
         await tester.pumpAndSettle();
 
-        expect(toggleCalls, [_sword]);
+        expect(find.text('CHOISIR UN SET'), findsOneWidget);
+        await tester.tap(find.text('Set principal'));
+        await tester.pumpAndSettle();
+
+        expect(equipWeaponCalls, [(_sword, WeaponSlot.principal)]);
+        expect(toggleCalls, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'une arme déjà équipée : libellé "Changer de set" (choix de set) + '
+      '"Déséquiper" séparée (bascule directe)',
+      (tester) async {
+        await pumpSheet(
+          tester,
+          item: _swordEquipped,
+          equippedWeapons: [_swordEquipped],
+        );
+
+        expect(find.text('Changer de set'), findsOneWidget);
+        expect(find.text('Déséquiper'), findsOneWidget);
+        expect(find.text('Équiper'), findsNothing);
+
+        await tester.tap(find.text('Déséquiper'));
+        await tester.pumpAndSettle();
+
+        expect(toggleCalls, [_swordEquipped]);
+        expect(equipWeaponCalls, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'une arme déjà équipée : "Changer de set" ouvre la sheet, un set '
+      'occupé affiche le nom de l\'arme qui l\'occupe',
+      (tester) async {
+        const other = CharacterInventoryItem(
+          id: 'inv-sword-3',
+          itemId: 7,
+          name: 'Hachette',
+          category: 'arme',
+          quantity: 1,
+          equipped: true,
+          weaponSlot: WeaponSlot.secondary,
+        );
+        await pumpSheet(
+          tester,
+          item: _swordEquipped,
+          equippedWeapons: [_swordEquipped, other],
+        );
+
+        await tester.tap(find.text('Changer de set'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Hachette'), findsOneWidget);
+
+        await tester.tap(find.text('Set secondaire'));
+        await tester.pumpAndSettle();
+
+        expect(equipWeaponCalls, [(_swordEquipped, WeaponSlot.secondary)]);
       },
     );
 
@@ -275,8 +352,11 @@ void main() {
   });
 
   group('panneau "Infos"', () {
-    testWidgets('une arme : poids unitaire, coût, dégâts, propriétés, '
-        'description, footer "Équiper"', (tester) async {
+    testWidgets('une arme non équipée : poids unitaire, coût, dégâts, '
+        'propriétés, description, AUCUN bouton en pied (choisir un set ne '
+        'peut pas se représenter par un simple bouton bascule)', (
+      tester,
+    ) async {
       await pumpSheet(tester, item: _sword);
 
       await tester.tap(find.text('Infos'));
@@ -293,19 +373,28 @@ void main() {
       expect(find.text('polyvalente(1d10)'), findsOneWidget);
       // Pas de portée (arme de corps à corps, rangeNormal nul).
       expect(find.text('Portée'), findsNothing);
+      // Non équipée -> aucune ligne "Set".
+      expect(find.text('Set'), findsNothing);
       expect(find.text('DESCRIPTION'), findsOneWidget);
       expect(find.text('Une lame affûtée.'), findsOneWidget);
 
-      final button = tester.widget<PrimaryButton>(
-        find.widgetWithText(PrimaryButton, 'ÉQUIPER'),
-      );
-      expect(button.onPressed, isNotNull);
-
-      await tester.tap(find.widgetWithText(PrimaryButton, 'ÉQUIPER'));
-      await tester.pumpAndSettle();
-
-      expect(toggleCalls, [_sword]);
+      expect(find.byType(PrimaryButton), findsNothing);
     });
+
+    testWidgets(
+      'une arme équipée assignée à un set : ligne "Set" en lecture seule, '
+      'toujours aucun bouton en pied',
+      (tester) async {
+        await pumpSheet(tester, item: _swordEquipped);
+
+        await tester.tap(find.text('Infos'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Set'), findsOneWidget);
+        expect(find.text('Set principal'), findsOneWidget);
+        expect(find.byType(PrimaryButton), findsNothing);
+      },
+    );
 
     testWidgets('une armure : CA de base, bonus Dex, désavantage discrétion, '
         'force requise omise si nulle', (tester) async {

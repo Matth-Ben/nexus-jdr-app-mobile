@@ -11,6 +11,7 @@ import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/inventory_armor_dex_bonus_formatter.dart';
 import '../../domain/inventory_rarity_formatter.dart';
+import '../../domain/weapon_slot.dart';
 import '../../domain/weight_formatter.dart';
 import 'item_action_sheet.dart';
 
@@ -22,7 +23,13 @@ import 'item_action_sheet.dart';
 /// bouton contextuel en pied ("Utiliser" ou "Équiper"/"Déséquiper", voir
 /// [_ItemInfoPanelContent.build]) qui délègue directement à
 /// [onUseItem]/[onToggleEquipped] (mêmes états/logique que la sheet
-/// d'actions, pour éviter l'aller-retour).
+/// d'actions, pour éviter l'aller-retour). Une arme (`category == 'arme'`)
+/// n'affiche jamais ce bouton : choisir un set ne peut pas se représenter
+/// par un simple bouton bascule, ce pied ne représentant jamais plus d'un
+/// bouton (invariant volontaire) — le joueur passe par la sheet d'actions
+/// (`item_action_sheet.dart`) pour équiper une arme. Une arme équipée
+/// affiche en revanche une ligne d'info en lecture seule "Set" (voir
+/// [_ItemInfoRow]) quand son set est connu.
 ///
 /// [onToggleAttuned]/[attunedCount] : voir `item_action_sheet.dart` pour le
 /// même mécanisme de bascule/plafond, dupliqué ici pour le lien
@@ -76,8 +83,16 @@ class _ItemInfoPanelContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Une arme n'affiche jamais le bouton "Équiper"/"Déséquiper" de ce pied
+    // (armure/bouclier gardent le leur inchangé) : équiper une arme requiert
+    // de choisir un set ("set principal"/"set secondaire", voir
+    // `weapon_slot_picker_sheet.dart`), ce que ce pied (au plus un bouton
+    // contextuel, voir la documentation de classe) ne peut pas représenter —
+    // le joueur passe par la sheet d'actions d'objet pour équiper une arme.
     final equippable =
-        !item.isCustom && equippableInventoryCategories.contains(item.category);
+        !item.isCustom &&
+        item.category != 'arme' &&
+        equippableInventoryCategories.contains(item.category);
     final usable = !item.isCustom && item.consumable;
     final attunable = !item.isCustom && item.requiresAttunement;
     final atAttunementCap =
@@ -97,6 +112,8 @@ class _ItemInfoPanelContent extends StatelessWidget {
           label: 'Coût',
           value: '${GoldAmountFormatter.format(costAmount)} po',
         ),
+      if (item.category == 'arme' && item.equipped && item.weaponSlot != null)
+        _ItemInfoRow(label: 'Set', value: item.weaponSlot!.label),
       if (weapon != null) ...[
         if (weapon.damageDice != null && weapon.damageType != null)
           _ItemInfoRow(

@@ -39,6 +39,7 @@ import 'package:personnages/features/characters/domain/level_up_choice_selection
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
+import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_detail_provider.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
@@ -478,6 +479,15 @@ class _FakeCharacterRepository implements CharacterRepository {
     required String characterId,
     required String inventoryId,
     required bool equipped,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<WriteOutcome> equipWeaponToSlot({
+    required String characterId,
+    required String inventoryId,
+    required WeaponSlot slot,
   }) {
     throw UnimplementedError();
   }

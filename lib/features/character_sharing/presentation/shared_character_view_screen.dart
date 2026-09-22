@@ -138,6 +138,7 @@ class _SharedCharacterViewScreenState
         onAdjustCurrency: (currency, newAmount) {},
         onAddInventoryItem: (item, quantity) {},
         onAddCustomInventoryItem: (customName, quantity) {},
+        onEquipWeaponToSlot: (_, _) {},
         actionsDisabled: true,
       ),
       // `actionsDisabled: true` couvre les 9 champs de texte (état vide sans

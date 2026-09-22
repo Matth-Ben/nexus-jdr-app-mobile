@@ -28,6 +28,7 @@ import '../domain/reward_item_draft.dart';
 import '../domain/spell_slot_progression.dart';
 import '../domain/subclass_spell_grant_resolver.dart';
 import '../domain/warlock_pact.dart';
+import '../domain/weapon_slot.dart';
 import '../domain/write_outcome.dart';
 import 'character_detail_row_mapper.dart';
 import 'character_error_mapper.dart';
@@ -353,11 +354,34 @@ abstract class CharacterRepository {
   /// jamais un champ de classe d'armure (n'existe nulle part dans
   /// [CharacterDetail] à cette itération, voir la spec de la tâche).
   ///
+  /// Quand [equipped] est `false`, écrit aussi `weapon_slot = null` — pour
+  /// qu'une arme déséquipée n'apparaisse plus assignée à aucun set (voir
+  /// [WeaponSlot]). Quand [equipped] est `true`, ne touche jamais
+  /// `weapon_slot` : ce chemin ne sert plus à équiper une arme (voir
+  /// [equipWeaponToSlot]), seulement une armure/un bouclier, catégories
+  /// pour lesquelles `weapon_slot` n'a de toute façon aucun sens.
+  ///
   /// Mode hors ligne : mêmes règles que [useInventoryItem].
   Future<WriteOutcome> setInventoryItemEquipped({
     required String characterId,
     required String inventoryId,
     required bool equipped,
+  });
+
+  /// Action "Équiper" une arme dans un set (`weapon_slot`) — écrit
+  /// `equipped = true, weapon_slot = slot.value`. L'appelant a déjà décidé
+  /// quelles autres armes du même set déséquiper au préalable (voir
+  /// `WeaponSlotRules.itemsToAutoUnequip`, appelé côté
+  /// `character_detail_screen.dart` avant cet appel, via
+  /// [setInventoryItemEquipped] pour chacune) — cette méthode ne fait que la
+  /// dernière écriture (équiper la nouvelle arme dans le set choisi).
+  ///
+  /// Mode hors ligne : mêmes règles que [useInventoryItem] (jamais mise en
+  /// file, voir sa documentation).
+  Future<WriteOutcome> equipWeaponToSlot({
+    required String characterId,
+    required String inventoryId,
+    required WeaponSlot slot,
   });
 
   /// Action "Harmoniser cet objet"/"Ne plus harmoniser" — écrit
@@ -897,7 +921,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_class_options(class_feature_id, level, chosen_value),
             character_invocations(invocation_id),
             character_inventory(
-              id, item_id, custom_name, quantity, equipped, is_attuned, notes,
+              id, item_id, custom_name, quantity, equipped, weapon_slot, is_attuned, notes,
               items(
                 category, weight, cost, rarity, requires_attunement, consumable,
                 weapon_properties(damage_dice, damage_type, properties, range),
@@ -1511,7 +1535,32 @@ class SupabaseCharacterRepository implements CharacterRepository {
     try {
       await _client
           .from('character_inventory')
-          .update({'equipped': equipped})
+          .update({'equipped': equipped, if (!equipped) 'weapon_slot': null})
+          .eq('id', inventoryId)
+          .eq('character_id', characterId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> equipWeaponToSlot({
+    required String characterId,
+    required String inventoryId,
+    required WeaponSlot slot,
+  }) async {
+    _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('character_inventory')
+          .update({'equipped': true, 'weapon_slot': slot.value})
           .eq('id', inventoryId)
           .eq('character_id', characterId);
       return WriteOutcome.synced;

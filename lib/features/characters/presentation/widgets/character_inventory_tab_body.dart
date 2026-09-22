@@ -56,6 +56,7 @@ class CharacterInventoryTabBody extends StatefulWidget {
     required this.onAdjustCurrency,
     required this.onAddInventoryItem,
     required this.onAddCustomInventoryItem,
+    required this.onEquipWeaponToSlot,
     this.onAddReward,
     this.actionsDisabled = false,
     this.filterAnchorKey,
@@ -80,6 +81,11 @@ class CharacterInventoryTabBody extends StatefulWidget {
 
   /// Reçoit le nom saisi et la quantité (sheet "Objet personnalisé").
   final void Function(String customName, int quantity) onAddCustomInventoryItem;
+
+  /// Action "Équiper"/"Changer de set" d'une arme (sheet "Actions d'objet",
+  /// choix du set via `weapon_slot_picker_sheet.dart`) — voir
+  /// `character_detail_screen.dart::_equipWeaponToSlot`.
+  final EquipWeaponToSlotCallback onEquipWeaponToSlot;
 
   /// Ouvre `showAddRewardSheet` (recettage direction-artistique du 13/09) —
   /// relogé depuis l'icône `Icons.card_giftcard` du bandeau bois (retirée,
@@ -126,6 +132,10 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
       onToggleAttuned: widget.onToggleItemAttuned,
       onRemoveItem: widget.onRemoveItem,
       attunedCount: widget.detail.attunedItemCount,
+      equippedWeapons: widget.detail.inventory
+          .where((item) => item.category == 'arme' && item.equipped)
+          .toList(),
+      onEquipWeaponToSlot: widget.onEquipWeaponToSlot,
     );
   }
 
