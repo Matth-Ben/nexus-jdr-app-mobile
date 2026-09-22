@@ -42,12 +42,20 @@ const _dagger = CharacterInventoryItem(
 
 Future<void> _pumpCard(
   WidgetTester tester,
-  List<CharacterInventoryItem> weapons,
-) => tester.pumpWidget(
+  List<CharacterInventoryItem> weapons, {
+  Map<String, int> abilityScores = const {},
+  int proficiencyBonus = 2,
+  List<String> weaponProficiencyNames = const [],
+}) => tester.pumpWidget(
   MaterialApp(
     home: Scaffold(
       body: SingleChildScrollView(
-        child: CharacterEquippedWeaponsCard(weapons: weapons),
+        child: CharacterEquippedWeaponsCard(
+          weapons: weapons,
+          abilityScores: abilityScores,
+          proficiencyBonus: proficiencyBonus,
+          weaponProficiencyNames: weaponProficiencyNames,
+        ),
       ),
     ),
   ),
@@ -70,15 +78,24 @@ void main() {
     });
 
     testWidgets(
-      'une arme (set principal) : nom, dégâts, propriétés, portée avec max, '
-      'set secondaire affiche "Aucune arme dans ce set."',
+      'une arme (set principal) : nom, attaque, dégâts avec modificateur '
+      '(sans propriétés/portée visibles), set secondaire affiche "Aucune '
+      'arme dans ce set."',
       (tester) async {
-        await _pumpCard(tester, const [_longbow]);
+        await _pumpCard(
+          tester,
+          const [_longbow],
+          abilityScores: const {'dex': 16},
+          weaponProficiencyNames: const ['martiales'],
+        );
 
         expect(find.text('Arc long'), findsOneWidget);
-        expect(find.text('1d8 perforant'), findsOneWidget);
-        expect(find.text('lourde, munitions'), findsOneWidget);
-        expect(find.text('Portée : 150 m (max 600 m)'), findsOneWidget);
+        // Arc long : munitions -> Dextérité (16 -> +3) + maîtrise (martiale,
+        // token 'martiales') +2 = +5.
+        expect(find.text('Attaque : +5'), findsOneWidget);
+        expect(find.text('1d8+3 perforant'), findsOneWidget);
+        expect(find.text('lourde, munitions'), findsNothing);
+        expect(find.textContaining('Portée'), findsNothing);
         expect(find.text('Aucune arme équipée'), findsNothing);
         expect(find.text('SET PRINCIPAL'), findsOneWidget);
         expect(find.text('SET SECONDAIRE'), findsOneWidget);
@@ -86,14 +103,18 @@ void main() {
       },
     );
 
-    testWidgets('arme sans portée : aucune ligne "Portée"', (tester) async {
-      await _pumpCard(tester, const [_dagger]);
+    testWidgets(
+      'arme sans modificateur applicable (caractéristiques par défaut à '
+      '10) : dégâts sans signe (modificateur nul)',
+      (tester) async {
+        await _pumpCard(tester, const [_dagger]);
 
-      expect(find.text('Dague'), findsOneWidget);
-      expect(find.text('1d4 perforant'), findsOneWidget);
-      expect(find.text('légère, finesse'), findsOneWidget);
-      expect(find.textContaining('Portée'), findsNothing);
-    });
+        expect(find.text('Dague'), findsOneWidget);
+        expect(find.text('1d4 perforant'), findsOneWidget);
+        expect(find.text('légère, finesse'), findsNothing);
+        expect(find.textContaining('Portée'), findsNothing);
+      },
+    );
 
     testWidgets(
       'deux armes du même set (principal) : séparateur entre les deux, pas '
@@ -163,15 +184,21 @@ void main() {
     });
 
     testWidgets(
-      'libellé sémantique « Arme équipée : nom, dés type, Portée : ... »',
+      'libellé sémantique inclut toujours attaque, dégâts, propriétés et '
+      'portée (accessibilité conservée même si retirés visuellement)',
       (tester) async {
         final handle = tester.ensureSemantics();
-        await _pumpCard(tester, const [_longbow]);
+        await _pumpCard(
+          tester,
+          const [_longbow],
+          abilityScores: const {'dex': 16},
+          weaponProficiencyNames: const ['martiales'],
+        );
 
         expect(
           find.bySemanticsLabel(
-            'Arme équipée : Arc long, 1d8 perforant, '
-            'Portée : 150 m (max 600 m)',
+            'Arme équipée : Arc long, Attaque : +5, 1d8+3 perforant, '
+            'lourde, munitions, Portée : 150 m (max 600 m)',
           ),
           findsOneWidget,
         );
@@ -199,5 +226,36 @@ void main() {
       );
       handle.dispose();
     });
+
+    testWidgets(
+      'tap sur une arme ouvre le panneau "Infos" en lecture seule (propriétés '
+      'et portée y redeviennent visibles, aucun bouton d\'action)',
+      (tester) async {
+        await _pumpCard(
+          tester,
+          const [_longbow],
+          abilityScores: const {'dex': 16},
+          weaponProficiencyNames: const ['martiales'],
+        );
+
+        await tester.tap(find.text('Arc long'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('ARC LONG'), findsOneWidget);
+        expect(find.text('Attaque'), findsOneWidget);
+        expect(find.text('+5'), findsOneWidget);
+        expect(find.text('Dégâts'), findsOneWidget);
+        // Le texte "1d8+3 perforant" apparaît deux fois : une fois sur la
+        // carte (toujours dans l'arbre sous le panneau), une fois dans le
+        // panneau "Infos" lui-même.
+        expect(find.text('1d8+3 perforant'), findsNWidgets(2));
+        expect(find.text('Propriétés'), findsOneWidget);
+        expect(find.text('lourde, munitions'), findsOneWidget);
+        expect(find.text('Portée'), findsOneWidget);
+        // Aucune action possible depuis cette vue en lecture seule (ni
+        // bouton en pied, ni lien d'harmonisation).
+        expect(find.text('Harmoniser cet objet'), findsNothing);
+      },
+    );
   });
 }

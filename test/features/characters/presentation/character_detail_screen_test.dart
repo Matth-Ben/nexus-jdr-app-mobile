@@ -764,7 +764,13 @@ void main() {
 
       expect(find.text('ARMES ÉQUIPÉES'), findsOneWidget);
       expect(find.text('Arc long'), findsOneWidget);
-      expect(find.text('Portée : 150 m (max 600 m)'), findsOneWidget);
+      // Dex 14 -> +2, aucune maîtrise déclarée -> bonus d'attaque +2 seul ;
+      // même modificateur intégré aux dégâts. Portée retirée de cette ligne
+      // compacte (visible uniquement dans le panneau "Infos" au tap, voir
+      // `character_equipped_weapons_card_test.dart`).
+      expect(find.text('Attaque : +2'), findsOneWidget);
+      expect(find.text('1d8+2 perforant'), findsOneWidget);
+      expect(find.textContaining('Portée'), findsNothing);
       expect(find.text('Dague rangée'), findsNothing);
 
       final savingThrowsPosition = tester.getTopLeft(

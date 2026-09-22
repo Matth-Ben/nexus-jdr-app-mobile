@@ -94,6 +94,8 @@ Future<void> showItemActionSheet(
   required int attunedCount,
   required List<CharacterInventoryItem> equippedWeapons,
   required EquipWeaponToSlotCallback onEquipWeaponToSlot,
+  int? weaponAttackBonus,
+  int? weaponDamageModifier,
 }) async {
   final action = await showModalBottomSheet<_ItemSheetAction>(
     context: context,
@@ -113,6 +115,8 @@ Future<void> showItemActionSheet(
         onToggleEquipped: onToggleEquipped,
         onToggleAttuned: onToggleAttuned,
         attunedCount: attunedCount,
+        weaponAttackBonus: weaponAttackBonus,
+        weaponDamageModifier: weaponDamageModifier,
       );
     case _ItemSheetAction.use:
       onUseItem(item);

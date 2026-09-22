@@ -277,47 +277,53 @@ void main() {
   });
 
   group('carte "ARMES ÉQUIPÉES" (onglet "Personnage")', () {
-    testWidgets('arme équipée : nom, dégâts, propriétés, portée', (
-      tester,
-    ) async {
-      fakeRepository.detailToReturn = _baseDetail.copyWith(
-        inventory: const [
-          CharacterInventoryItem(
-            id: 'inv-1',
-            itemId: 10,
-            name: 'Arc long',
-            category: 'arme',
-            quantity: 1,
-            equipped: true,
-            weaponProperties: CharacterInventoryWeaponProperties(
-              damageDice: '1d8',
-              damageType: 'perforant',
-              properties: ['lourde', 'munitions'],
-              rangeNormal: 150,
-              rangeMax: 600,
+    testWidgets(
+      'arme équipée : nom, attaque, dégâts avec modificateur (propriétés/'
+      'portée retirées de cette ligne compacte)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          inventory: const [
+            CharacterInventoryItem(
+              id: 'inv-1',
+              itemId: 10,
+              name: 'Arc long',
+              category: 'arme',
+              quantity: 1,
+              equipped: true,
+              weaponProperties: CharacterInventoryWeaponProperties(
+                damageDice: '1d8',
+                damageType: 'perforant',
+                properties: ['lourde', 'munitions'],
+                rangeNormal: 150,
+                rangeMax: 600,
+              ),
             ),
-          ),
-          CharacterInventoryItem(
-            id: 'inv-2',
-            itemId: 11,
-            name: 'Dague non équipée',
-            category: 'arme',
-            quantity: 1,
-            equipped: false,
-          ),
-        ],
-      );
+            CharacterInventoryItem(
+              id: 'inv-2',
+              itemId: 11,
+              name: 'Dague non équipée',
+              category: 'arme',
+              quantity: 1,
+              equipped: false,
+            ),
+          ],
+        );
 
-      await pumpSharedView(tester);
-      await tester.pumpAndSettle();
+        await pumpSharedView(tester);
+        await tester.pumpAndSettle();
 
-      expect(find.text('ARMES ÉQUIPÉES'), findsOneWidget);
-      expect(find.text('Arc long'), findsOneWidget);
-      expect(find.text('1d8 perforant'), findsOneWidget);
-      expect(find.text('lourde, munitions'), findsOneWidget);
-      expect(find.text('Portée : 150 m (max 600 m)'), findsOneWidget);
-      expect(find.text('Dague non équipée'), findsNothing);
-    });
+        expect(find.text('ARMES ÉQUIPÉES'), findsOneWidget);
+        expect(find.text('Arc long'), findsOneWidget);
+        // Munitions -> Dextérité (14 -> +2), aucune maîtrise déclarée sur
+        // `_baseDetail` -> bonus d'attaque +2 seul, même modificateur
+        // intégré aux dégâts.
+        expect(find.text('Attaque : +2'), findsOneWidget);
+        expect(find.text('1d8+2 perforant'), findsOneWidget);
+        expect(find.text('lourde, munitions'), findsNothing);
+        expect(find.textContaining('Portée'), findsNothing);
+        expect(find.text('Dague non équipée'), findsNothing);
+      },
+    );
 
     testWidgets('aucune arme équipée : état vide', (tester) async {
       fakeRepository.detailToReturn = _baseDetail;

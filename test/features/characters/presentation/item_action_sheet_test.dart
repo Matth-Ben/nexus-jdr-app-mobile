@@ -12,6 +12,7 @@ import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/item_action_sheet.dart';
+import 'package:personnages/features/characters/presentation/widgets/item_info_panel.dart';
 
 const _customItem = CharacterInventoryItem(
   id: 'inv-custom',
@@ -97,6 +98,8 @@ void main() {
     required CharacterInventoryItem item,
     int attunedCount = 0,
     List<CharacterInventoryItem> equippedWeapons = const [],
+    int? weaponAttackBonus,
+    int? weaponDamageModifier,
   }) async {
     useCalls = [];
     toggleCalls = [];
@@ -120,6 +123,8 @@ void main() {
                   equippedWeapons: equippedWeapons,
                   onEquipWeaponToSlot: (item, slot) =>
                       equipWeaponCalls.add((item, slot)),
+                  weaponAttackBonus: weaponAttackBonus,
+                  weaponDamageModifier: weaponDamageModifier,
                 ),
                 child: const Text('Ouvrir'),
               ),
@@ -491,6 +496,76 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(useCalls, [_potion]);
+      },
+    );
+
+    testWidgets(
+      'weaponAttackBonus/weaponDamageModifier : ligne "Attaque" et dégâts '
+      'avec le modificateur intégré ("1d8+3 tranchant")',
+      (tester) async {
+        await pumpSheet(
+          tester,
+          item: _sword,
+          weaponAttackBonus: 5,
+          weaponDamageModifier: 3,
+        );
+
+        await tester.tap(find.text('Infos'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Attaque'), findsOneWidget);
+        expect(find.text('+5'), findsOneWidget);
+        expect(find.text('Dégâts'), findsOneWidget);
+        expect(find.text('1d8+3 tranchant'), findsOneWidget);
+      },
+    );
+
+    testWidgets('weaponAttackBonus/weaponDamageModifier absents : pas de ligne '
+        '"Attaque", dégâts sans modificateur ("1d8 tranchant")', (
+      tester,
+    ) async {
+      await pumpSheet(tester, item: _sword);
+
+      await tester.tap(find.text('Infos'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Attaque'), findsNothing);
+      expect(find.text('1d8 tranchant'), findsOneWidget);
+    });
+
+    testWidgets(
+      'readOnly: true (ex. tap depuis la carte "ARMES ÉQUIPÉES") : ni le '
+      'lien d\'harmonisation ni le bouton en pied ne sont rendus',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () => showItemInfoPanel(
+                      context,
+                      item: _magicItem,
+                      onUseItem: (_) {},
+                      onToggleEquipped: (_) {},
+                      onToggleAttuned: (_) {},
+                      attunedCount: 0,
+                      readOnly: true,
+                    ),
+                    child: const Text('Ouvrir'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Ouvrir'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('AMULETTE DE VITALITÉ'), findsOneWidget);
+        expect(find.text('Rareté'), findsOneWidget);
+        expect(find.text('Harmoniser cet objet'), findsNothing);
+        expect(find.byType(PrimaryButton), findsNothing);
       },
     );
   });
