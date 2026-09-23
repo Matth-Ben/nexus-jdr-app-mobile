@@ -8,7 +8,6 @@ import '../../domain/spell_name_filter.dart';
 import '../../domain/spellcasting_class_names.dart';
 import '../../domain/spells_by_level_grouper.dart';
 import 'character_class_features_card.dart';
-import 'character_spell_slots_summary_card.dart';
 import 'character_spells_section.dart';
 import 'class_feature_action_sheet.dart';
 import 'spell_action_sheet.dart';
@@ -103,9 +102,6 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
     ];
     final showLimitedUseCard =
         onUseFeature != null && limitedUseFeatures.isNotEmpty;
-    final showSlotsSummary = CharacterSpellSlotsSummaryCard.hasContent(
-      detail.spellSlots,
-    );
 
     if (detail.spells.isEmpty) {
       final isSpellcaster = detail.classes.any(
@@ -120,10 +116,6 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
                   characterName: detail.name,
                   className: detail.primaryClass?.className ?? 'cette classe',
                 ),
-          if (showSlotsSummary) ...[
-            const SizedBox(height: AppSpacing.md),
-            CharacterSpellSlotsSummaryCard(spellSlots: detail.spellSlots),
-          ],
           if (showLimitedUseCard) ...[
             const SizedBox(height: AppSpacing.md),
             CharacterClassFeaturesCard(
@@ -155,10 +147,6 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
       children: [
         _SpellSearchField(controller: _searchController, focusNode: _focusNode),
         const SizedBox(height: AppSpacing.md),
-        if (showSlotsSummary) ...[
-          CharacterSpellSlotsSummaryCard(spellSlots: detail.spellSlots),
-          const SizedBox(height: AppSpacing.md),
-        ],
         if (spellGroups.isEmpty)
           _NoSearchMatchState(query: _searchController.text.trim())
         else
