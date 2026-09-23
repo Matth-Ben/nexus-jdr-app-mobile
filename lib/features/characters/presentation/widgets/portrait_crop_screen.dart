@@ -104,7 +104,11 @@ class _PortraitCropScreenState extends ConsumerState<PortraitCropScreen> {
 
   void _cancel() {
     if (_isUploading) return;
-    Navigator.of(context).pop(false);
+    // `pop()` sans résultat plutôt que `pop(false)` : en mode local
+    // (`characterId == null`), la route est typée `Uint8List` — y renvoyer
+    // un `bool` levait une erreur de type et l'écran ne se fermait jamais.
+    // `null` vaut "annulé" pour les deux appelants.
+    Navigator.of(context).pop();
   }
 
   @override

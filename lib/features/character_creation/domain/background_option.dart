@@ -87,10 +87,20 @@ abstract class BackgroundOption with _$BackgroundOption {
   String get skillsSummaryLine =>
       'Compétences : ${skillProficiencies.join(', ')}';
 
-  /// Ligne "Aptitude : {featureName} — {featureDescription}" affichée
-  /// seulement pour la ligne sélectionnée (maquette) — voir
-  /// `SelectableOptionTile.selectedDetail`, utilisé par
-  /// `presentation/background_step_screen.dart`.
+  /// Texte complet du panneau ⓘ de l'étape 3/9 (l'aptitude n'est plus
+  /// dépliée sous la ligne sélectionnée, pour garder des tuiles de hauteur
+  /// fixe).
+  String get infoText => [
+    skillsSummaryLine,
+    featureSummaryLine,
+    if (toolOrLanguageGrantedTools.isNotEmpty)
+      'Outils : ${toolOrLanguageGrantedTools.join(', ')}',
+    if (languageChoiceCount != null && languageChoiceCount! > 0)
+      'Langues : $languageChoiceCount au choix',
+    if (equipment.isNotEmpty) 'Équipement : ${equipment.join(', ')}',
+  ].join(String.fromCharCodes(const [10, 10]));
+
+  /// Ligne "Aptitude : {featureName} — {featureDescription}" du panneau ⓘ.
   String get featureSummaryLine =>
       'Aptitude : $featureName — $featureDescription';
 }

@@ -23,6 +23,8 @@ class SelectableOptionTile extends StatelessWidget {
     this.leading,
     this.selectedDetail,
     this.subtitleMaxLines = 1,
+    this.onInfo,
+    this.infoTooltip = 'Informations',
     super.key,
   });
 
@@ -48,6 +50,15 @@ class SelectableOptionTile extends StatelessWidget {
   /// Nombre maximal de lignes de [subtitle] (1 par défaut, tronqué par une
   /// ellipse). `null` : pas de troncature, la tuile s'agrandit.
   final int? subtitleMaxLines;
+
+  /// Affiche un bouton ⓘ (icône seule) à gauche du bouton radio, qui ouvre
+  /// le détail de l'option sans la sélectionner — permet de garder une tuile
+  /// de hauteur fixe au lieu de l'agrandir à la sélection (demande
+  /// utilisateur, 2026-09-24). `null` : pas de bouton.
+  final VoidCallback? onInfo;
+
+  /// Libellé d'accessibilité du bouton ⓘ.
+  final String infoTooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +122,17 @@ class SelectableOptionTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
+              if (onInfo != null)
+                IconButton(
+                  tooltip: infoTooltip,
+                  onPressed: onInfo,
+                  icon: const Icon(
+                    Icons.info_outline_rounded,
+                    color: AppColors.textSecondary,
+                  ),
+                )
+              else
+                const SizedBox(width: AppSpacing.sm),
               _RadioIndicator(selected: selected),
             ],
           ),
