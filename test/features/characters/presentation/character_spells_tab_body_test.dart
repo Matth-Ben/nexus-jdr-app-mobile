@@ -881,6 +881,12 @@ void main() {
       );
 
       expect(find.text('PRÉPARÉS'), findsNothing);
+      // Ni compteur "PRÉPARÉS", ni favori, ni magie de pacte : la carte
+      // "SORTS" ne porterait plus que son titre tout seul, elle est donc
+      // entièrement masquée (demande utilisateur du 23/09/2026) — chaque
+      // niveau de sort reste identifié par son propre titre de carte
+      // ("Niveau 1"), pas besoin d'un bloc "SORTS" vide au-dessus.
+      expect(find.text('SORTS'), findsNothing);
     });
 
     testWidgets('plusieurs classes qui préparent : aucun compteur', (
