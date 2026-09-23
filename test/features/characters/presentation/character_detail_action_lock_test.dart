@@ -437,7 +437,7 @@ void main() {
     (tester) async {
       final repository = await pumpDetail(tester);
 
-      await tester.tap(find.text('COMP.'));
+      await tester.tap(find.text('APT.'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Rage'));
       await tester.pumpAndSettle();

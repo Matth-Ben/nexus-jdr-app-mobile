@@ -8,7 +8,7 @@ import '../../../../core/theme/app_typography.dart';
 /// contenu réel ([character]/[skills]/[spells]/[inventory]/[story]).
 enum CharacterDetailTab {
   character(icon: Icons.person, label: 'PERSO', headerTitle: 'FICHE'),
-  skills(icon: Icons.star_outline, label: 'COMP.', headerTitle: 'COMPÉTENCES'),
+  skills(icon: Icons.star_outline, label: 'APT.', headerTitle: 'APTITUDES'),
   spells(
     icon: Icons.auto_fix_high_outlined,
     label: 'SORTS',

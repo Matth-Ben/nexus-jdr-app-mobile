@@ -30,12 +30,14 @@ import 'item_action_sheet.dart';
 /// `CharacterSpellsTabBody`/`onCastSpell` — cet écran se contente
 /// d'orchestrer l'ouverture des sheets et de relayer leur résultat.
 ///
-/// Les objets sont affichés dans l'ordre renvoyé par la requête
+/// Les objets équipés (`CharacterInventoryItem.equipped`) sont affichés en
+/// premier, avant les objets non équipés — au sein de chaque groupe
+/// (équipé/non équipé), l'ordre reste celui renvoyé par la requête
 /// (`SupabaseCharacterRepository._buildCharacterDetailPayload`/
-/// `_mapCharacterDetailPayload`), sans tri ni
-/// regroupement par catégorie : `character_inventory` n'a pas de colonne de
+/// `_mapCharacterDetailPayload`) : `character_inventory` n'a pas de colonne de
 /// tri naturelle côté schéma (vérifié contre les migrations réelles), et la
-/// maquette ne montre elle-même aucun regroupement visuel par catégorie.
+/// maquette ne montre elle-même aucun regroupement visuel par catégorie —
+/// seul le statut équipé/non équipé est distingué.
 ///
 /// `StatefulWidget` (depuis l'ajout de la bascule de filtre "Tout"/"Armes"/
 /// "Armures"/"Consomm."/"Divers", voir `domain/inventory_category_filter.dart`)
@@ -194,6 +196,13 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
       detail.inventory,
       _filter,
     );
+    // Objets équipés en premier, ordre relatif conservé dans chaque groupe
+    // (partition + concaténation plutôt qu'un `List.sort` : sa stabilité
+    // n'est pas garantie de façon fiable pour ce cas).
+    final sortedItems = [
+      ...filteredItems.where((item) => item.equipped),
+      ...filteredItems.where((item) => !item.equipped),
+    ];
     final noFilterMatch = !isEmpty && filteredItems.isEmpty;
 
     return ListView(
@@ -226,7 +235,7 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
         else if (noFilterMatch)
           const _NoFilterMatchState()
         else
-          for (final item in filteredItems) ...[
+          for (final item in sortedItems) ...[
             CharacterInventoryItemCard(
               item: item,
               onTap: widget.actionsDisabled

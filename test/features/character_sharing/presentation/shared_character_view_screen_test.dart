@@ -147,7 +147,7 @@ void main() {
     expect(find.text('Halltesse Ambrelune'), findsOneWidget);
     expect(find.text('Elfe · Magicienne · Niveau 5'), findsOneWidget);
     expect(find.text('PERSO'), findsOneWidget);
-    expect(find.text('COMP.'), findsOneWidget);
+    expect(find.text('APT.'), findsOneWidget);
     expect(find.text('SORTS'), findsOneWidget);
     expect(find.text('SAC'), findsOneWidget);
     expect(find.text('HIST.'), findsOneWidget);
@@ -214,10 +214,10 @@ void main() {
     await pumpSharedView(tester);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('COMP.'));
+    await tester.tap(find.text('APT.'));
     await tester.pumpAndSettle();
 
-    expect(find.text('COMPÉTENCES'), findsOneWidget);
+    expect(find.text('APTITUDES'), findsOneWidget);
   });
 
   group('onglet Histoire (docs/cahier-des-charges/'

@@ -50,19 +50,11 @@ CharacterDetail _detail({
   );
 }
 
-Future<void> _pump(
-  WidgetTester tester,
-  CharacterDetail detail, {
-  VoidCallback? onNavigateToSpells,
-}) async {
+Future<void> _pump(WidgetTester tester, CharacterDetail detail) async {
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
-        body: CharacterSkillsTabBody(
-          detail: detail,
-          onUseFeature: (_) {},
-          onNavigateToSpells: onNavigateToSpells,
-        ),
+        body: CharacterSkillsTabBody(detail: detail, onUseFeature: (_) {}),
       ),
     ),
   );
@@ -238,50 +230,6 @@ void main() {
       );
     },
   );
-
-  group('bandeau "SORTS →" (recettage direction-artistique du 13/09)', () {
-    testWidgets('toujours affiché, entre "APTITUDES DE CLASSE" et "LES 18 '
-        'COMPÉTENCES"', (tester) async {
-      await _pump(
-        tester,
-        _detail(
-          classFeatures: const [
-            CharacterClassFeature(id: 1, name: 'Rage', level: 1),
-          ],
-        ),
-      );
-
-      expect(
-        find.text('Les sorts et emplacements sont dans l\'onglet dédié.'),
-        findsOneWidget,
-      );
-      expect(find.text('SORTS →'), findsOneWidget);
-
-      final featuresY = tester.getTopLeft(find.text('APTITUDES DE CLASSE')).dy;
-      final bannerY = tester
-          .getTopLeft(
-            find.text(
-              'Les sorts et emplacements sont dans '
-              'l\'onglet dédié.',
-            ),
-          )
-          .dy;
-      final skillsY = tester.getTopLeft(find.text('LES 18 COMPÉTENCES')).dy;
-
-      expect(featuresY, lessThan(bannerY));
-      expect(bannerY, lessThan(skillsY));
-    });
-
-    testWidgets('taper le bandeau appelle onNavigateToSpells', (tester) async {
-      var navigateCount = 0;
-      await _pump(tester, _detail(), onNavigateToSpells: () => navigateCount++);
-
-      await tester.tap(find.text('SORTS →'));
-      await tester.pumpAndSettle();
-
-      expect(navigateCount, 1);
-    });
-  });
 
   testWidgets('affiche une aptitude à usage limité avec son compteur', (
     tester,
@@ -558,9 +506,8 @@ void main() {
   testWidgets(
     "la scission des onglets \"Compétences\"/\"Sorts\" est étanche : des "
     'sorts non vides sur `detail` ne font fuiter aucun contenu "Sorts" dans '
-    'CharacterSkillsTabBody (hors le bandeau "SORTS →", volontairement '
-    'toujours affiché) — voir `character_spells_tab_body_test.dart` pour la '
-    'contrepartie (les sorts vivent désormais uniquement dans '
+    'CharacterSkillsTabBody — voir `character_spells_tab_body_test.dart` pour '
+    'la contrepartie (les sorts vivent désormais uniquement dans '
     "`CharacterSpellsTabBody`), régression garde-fou pour la scission de "
     "l'onglet \"Compétences\" en 2 (\"Compétences\" + \"Sorts\").",
     (tester) async {

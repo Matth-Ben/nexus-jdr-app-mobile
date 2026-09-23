@@ -5,7 +5,6 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
-import '../../domain/spell_cast_eligibility.dart';
 import '../../domain/spell_grant_source.dart';
 import '../../domain/spell_status_formatter.dart';
 import '../../domain/spells_by_level_grouper.dart';
@@ -517,19 +516,6 @@ class _SpellRow extends StatelessWidget {
         ? ['niv. ${spell.level}', ?statusText].join(' · ')
         : statusText;
 
-    // Éligibilité "Lancer" identique à celle du bouton du panneau "Infos"
-    // (`spell_info_panel.dart::_SpellInfoPanelContent`) : un emplacement
-    // disponible (fusion classique + pacte) ET le statut du sort le permet
-    // (`SpellStatusFormatter.canCast`, ex. jamais un sort simplement "connu"
-    // non préparé) — recettage direction-artistique du 13/09, ajoute un
-    // second point d'entrée "Lancer" directement sur la ligne, sans passer
-    // par le panneau "Infos".
-    final hasSlot = SpellCastEligibility.hasAvailableSlot(
-      spellSlots: [...spellSlots, ?pactSlot],
-      spellLevel: spell.level,
-    );
-    final canCast = enabled && hasSlot && SpellStatusFormatter.canCast(spell);
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -564,49 +550,16 @@ class _SpellRow extends StatelessWidget {
                       const SizedBox(width: AppSpacing.xs),
                       _GrantBadge(source: spell.grantSource!),
                     ],
-                    const SizedBox(width: AppSpacing.xs),
-                    // Groupe étoile/boutons aligné en fin de ligne (voir
-                    // `Expanded` ci-dessus), espacement régulier entre les 3
-                    // éléments plutôt que l'écart inégal précédent (xs entre
-                    // étoile/"Infos", xs/2 entre "Infos"/"Lancer").
                     // Un sort accordé par une sous-classe sans ligne
                     // `character_spells` (dérivé pur) n'a rien sur quoi
                     // écrire un favori : pas d'étoile.
                     if (spell.isPersisted) ...[
+                      const SizedBox(width: AppSpacing.xs),
                       _FavoriteStar(
                         isFavorite: spell.isFavorite,
                         onTap: enabled ? () => onToggleFavorite(spell) : null,
                       ),
-                      const SizedBox(width: AppSpacing.xs),
                     ],
-                    _SpellRowActionButton(
-                      label: 'Infos',
-                      primary: false,
-                      onTap: enabled
-                          ? () => showSpellInfoPanel(
-                              context,
-                              spell: spell,
-                              spellSlots: spellSlots,
-                              pactSlot: pactSlot,
-                              onCastSpell: onCastSpell,
-                              onTogglePrepared: onTogglePrepared,
-                            )
-                          : null,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    _SpellRowActionButton(
-                      label: 'Lancer',
-                      primary: true,
-                      onTap: canCast
-                          ? () => castSpellFlow(
-                              context,
-                              spell: spell,
-                              spellSlots: spellSlots,
-                              pactSlot: pactSlot,
-                              onCastSpell: onCastSpell,
-                            )
-                          : null,
-                    ),
                   ],
                 ),
                 if (subtitle != null)
@@ -666,65 +619,6 @@ class _GrantBadge extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Bouton compact "Infos"/"Lancer" en bout de [_SpellRow] — recettage
-/// direction-artistique du 13/09 : [primary] rend un fond dégradé doré
-/// (`Lancer`, castable), sinon un simple liseré `wood.light` sur fond
-/// transparent (`Infos`).
-///
-/// Volontairement plus compact que [PrimaryButton]/[SecondaryButton]
-/// (`core/widgets/`, hauteur minimale 48px imposée par le design système) :
-/// leur gabarit ne tient pas sur une ligne de liste dense à côté du nom du
-/// sort et de l'étoile de favori. Écart d'accessibilité assumé (zone de tap
-/// ~32px, sous le minimum 44px du design système section 7) — même
-/// compromis déjà accepté sur cette ligne pour [_FavoriteStar] (zone de tap
-/// ~26px), pas un précédent nouveau introduit ici.
-class _SpellRowActionButton extends StatelessWidget {
-  const _SpellRowActionButton({
-    required this.label,
-    required this.primary,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool primary;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return Opacity(
-      opacity: enabled ? 1 : 0.45,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          onTap: onTap,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 32),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              gradient: primary ? AppColors.primaryButtonGradient : null,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              border: Border.all(color: AppColors.woodLight, width: 1),
-            ),
-            child: Text(
-              label.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: AppTypography.display(
-                fontSize: 9,
-                color: primary ? AppColors.woodDark : AppColors.textSecondary,
-              ),
-            ),
-          ),
         ),
       ),
     );

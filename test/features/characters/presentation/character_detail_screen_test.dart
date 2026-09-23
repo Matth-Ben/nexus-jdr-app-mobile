@@ -1497,11 +1497,11 @@ void main() {
     expect(find.text('Halltesse Ambrelune'), findsOneWidget);
     expect(find.text('FICHE'), findsOneWidget);
 
-    await tester.tap(find.text('COMP.'));
+    await tester.tap(find.text('APT.'));
     await tester.pumpAndSettle();
     expect(find.text('LES 18 COMPÉTENCES'), findsOneWidget);
     expect(find.text('Halltesse Ambrelune'), findsNothing);
-    expect(find.text('COMPÉTENCES'), findsOneWidget);
+    expect(find.text('APTITUDES'), findsOneWidget);
     expect(find.text('FICHE'), findsNothing);
 
     await tester.tap(find.text('SORTS'));
@@ -1558,7 +1558,7 @@ void main() {
 
         await pumpDetail(tester);
         await tester.pumpAndSettle();
-        await tester.tap(find.text('COMP.'));
+        await tester.tap(find.text('APT.'));
         await tester.pumpAndSettle();
 
         final searchField = find.widgetWithText(
@@ -2238,7 +2238,7 @@ void main() {
 
       await pumpDetail(tester);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('COMP.'));
+      await tester.tap(find.text('APT.'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Rage'));
       await tester.pumpAndSettle();
