@@ -12,6 +12,18 @@
         android:label="Nexus JDR"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Analytics produit (`core/analytics/`, décision chef de projet
+             RGPD) : coupe la collecte automatique de Firebase Analytics au
+             niveau natif dès le démarrage du process, avant même que
+             `lib/main.dart` n'ait pu lire la préférence locale "Partager mes
+             données d'usage" et appeler explicitement
+             `FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(...)`
+             — sans ce `meta-data`, la collecte automatique par défaut du SDK
+             (activée par défaut) pourrait capturer un événement avant que
+             ce garde applicatif ne s'applique. -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

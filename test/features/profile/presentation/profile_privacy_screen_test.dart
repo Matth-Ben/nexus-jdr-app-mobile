@@ -5,14 +5,20 @@
 // icône de fin `north_east` uniquement sur "Autorisations de l'appareil"
 // [qui ouvre une sheet système] — "Politique de confidentialité" garde le
 // chevron par défaut depuis qu'elle pousse l'écran interne
-// `ProfilePrivacyPolicyScreen`), section "ZONE DANGEREUSE"
+// `ProfilePrivacyPolicyScreen`), bascule "Partager mes données d'usage"
+// (`core/analytics/`, voir plus bas), section "ZONE DANGEREUSE"
 // (`DestructiveMenuTile` isolée "Supprimer mon compte", jamais une simple
 // tuile) — recettage direction-artistique du 13/09/2026.
 //
 // Aucune donnée à charger (écran 100% synchrone) : `currentUserProvider`
 // tout de même overridé (`authRepositoryProvider`/`connectivityCheckerProvider`
 // aussi) car `showDeleteAccountSheet` en dépend dès l'ouverture de l'écran —
-// même stratégie que `profile_screen_test.dart`.
+// même stratégie que `profile_screen_test.dart`. `SharedPreferences.setMockInitialValues`
+// (vide à chaque test) pour `AnalyticsPreferencesController`
+// (`core/analytics/analytics_preferences_provider.dart`, lu par la bascule
+// "Partager mes données d'usage"), et `analyticsServiceProvider` overridé par
+// un `_FakeAnalyticsService` pour observer `setEnabled` sans jamais toucher
+// à un vrai SDK.
 
 import 'dart:typed_data';
 
@@ -20,6 +26,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/analytics/analytics_preferences_provider.dart';
+import 'package:personnages/core/analytics/analytics_service.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/core/widgets/destructive_menu_tile.dart';
@@ -31,7 +39,32 @@ import 'package:personnages/features/profile/presentation/profile_delete_account
 import 'package:personnages/features/profile/presentation/profile_privacy_policy_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_privacy_screen.dart';
 import 'package:personnages/features/profile/presentation/providers/data_export_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Enregistre les appels `setEnabled` reçus pour assertions — voir la doc de
+/// classe d'`AnalyticsService` : "FakeAnalyticsService dans les tests si
+/// besoin".
+class _FakeAnalyticsService implements AnalyticsService {
+  final List<bool> setEnabledCalls = [];
+
+  @override
+  bool get isInitialized => true;
+
+  @override
+  Future<void> trackEvent(
+    String name, {
+    Map<String, Object?> parameters = const {},
+  }) async {}
+
+  @override
+  Future<void> trackScreen(String screenName) async {}
+
+  @override
+  Future<void> setEnabled(bool enabled) async {
+    setEnabledCalls.add(enabled);
+  }
+}
 
 class _FakeAuthRepository implements AuthRepository {
   @override
@@ -95,7 +128,10 @@ User _fakeUser() {
   );
 }
 
-Future<void> _pumpScreen(WidgetTester tester) async {
+Future<void> _pumpScreen(
+  WidgetTester tester, {
+  AnalyticsService? analyticsService,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -106,6 +142,9 @@ Future<void> _pumpScreen(WidgetTester tester) async {
         ),
         connectivityCheckerProvider.overrideWithValue(
           _AlwaysOnlineConnectivityChecker(),
+        ),
+        analyticsServiceProvider.overrideWithValue(
+          analyticsService ?? const NoopAnalyticsService(),
         ),
       ],
       child: MaterialApp.router(
@@ -145,6 +184,10 @@ Future<void> _pumpScreen(WidgetTester tester) async {
 }
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets(
     'affiche le bandeau bois "CONFIDENTIALITÉ", la section "MES DONNÉES" '
     '(3 tuiles avec leurs icônes dédiées, regroupées dans un '
@@ -272,5 +315,53 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ouvrir'), findsOneWidget);
+  });
+
+  group('bascule "Partager mes données d\'usage" (core/analytics/)', () {
+    testWidgets(
+      'affiche la rangée bascule, activée par défaut (rien de persisté)',
+      (tester) async {
+        await _pumpScreen(tester);
+
+        expect(find.text("Partager mes données d'usage"), findsOneWidget);
+        expect(
+          find.text(
+            "Statistiques d'utilisation anonymes, pour améliorer l'app. "
+            'Désactivable à tout moment.',
+          ),
+          findsOneWidget,
+        );
+        final switchWidget = tester.widget<Switch>(find.byType(Switch));
+        expect(switchWidget.value, isTrue);
+      },
+    );
+
+    testWidgets('taper la bascule la désactive immédiatement et appelle '
+        'AnalyticsService.setEnabled(false)', (tester) async {
+      final fakeAnalyticsService = _FakeAnalyticsService();
+      await _pumpScreen(tester, analyticsService: fakeAnalyticsService);
+
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+
+      final switchWidget = tester.widget<Switch>(find.byType(Switch));
+      expect(switchWidget.value, isFalse);
+      expect(fakeAnalyticsService.setEnabledCalls, [false]);
+    });
+
+    testWidgets(
+      'une préférence déjà désactivée en SharedPreferences est reflétée à '
+      "l'ouverture de l'écran",
+      (tester) async {
+        SharedPreferences.setMockInitialValues({
+          analyticsEnabledPrefsKey: false,
+        });
+
+        await _pumpScreen(tester);
+
+        final switchWidget = tester.widget<Switch>(find.byType(Switch));
+        expect(switchWidget.value, isFalse);
+      },
+    );
   });
 }

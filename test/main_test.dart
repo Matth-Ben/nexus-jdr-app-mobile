@@ -14,11 +14,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:personnages/core/analytics/analytics_preferences_provider.dart';
 import 'package:personnages/features/app_update/data/app_version_repository.dart';
 import 'package:personnages/features/app_update/presentation/force_update_screen.dart';
 import 'package:personnages/features/app_update/presentation/providers/app_version_providers.dart';
 import 'package:personnages/features/splash/presentation/splash_screen.dart';
 import 'package:personnages/main.dart';
+
+/// Construit un [BootstrapResult] "tout va bien" par défaut pour les tests
+/// qui n'ont pas besoin de faire varier la disponibilité des SDK d'analytics
+/// — seul [supabaseReady] varie dans la plupart des tests de ce fichier.
+BootstrapResult _bootstrapResult({
+  bool supabaseReady = true,
+  bool firebaseAnalyticsReady = false,
+  bool postHogReady = false,
+}) => (
+  supabaseReady: supabaseReady,
+  firebaseAnalyticsReady: firebaseAnalyticsReady,
+  postHogReady: postHogReady,
+);
 
 class _FakeAppVersionRepository implements AppVersionRepository {
   _FakeAppVersionRepository(this._row);
@@ -44,7 +58,7 @@ void main() {
     'affiche SplashScreen pendant l\'initialisation, puis bascule sur '
     '`child` une fois celle-ci résolue',
     (tester) async {
-      final completer = Completer<bool>();
+      final completer = Completer<BootstrapResult>();
 
       await tester.pumpWidget(
         ProviderScope(
@@ -70,7 +84,7 @@ void main() {
       expect(find.byType(SplashScreen), findsOneWidget);
       expect(find.text('App prête'), findsNothing);
 
-      completer.complete(true);
+      completer.complete(_bootstrapResult());
       // Plusieurs `pump` supplémentaires (toujours pas `pumpAndSettle`, même
       // rationale) : depuis l'introduction de la vérification de version
       // (`appVersionCheckProvider`, voir la doc de classe d'`AppBootstrap`),
@@ -98,7 +112,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: AppBootstrap(
-            initialize: () async => (++attempt) > 1,
+            initialize: () async =>
+                _bootstrapResult(supabaseReady: (++attempt) > 1),
             child: const MaterialApp(
               home: Scaffold(body: Center(child: Text('App prête'))),
             ),
@@ -134,7 +149,7 @@ void main() {
     '`initialize` qui lève malgré tout (défense en profondeur, ne devrait '
     'plus arriver en pratique) -> écran de repli, jamais `child`',
     (tester) async {
-      final completer = Completer<bool>();
+      final completer = Completer<BootstrapResult>();
 
       await tester.pumpWidget(
         ProviderScope(
@@ -163,6 +178,52 @@ void main() {
     },
   );
 
+  testWidgets(
+    'disponibilité analytics ([BootstrapResult.firebaseAnalyticsReady]/'
+    '[postHogReady]) résolue par `initialize` -> `child` la lit bien via '
+    '`analyticsAvailabilityProvider`, surchargé dans le `ProviderScope` '
+    'imbriqué construit par `AppBootstrap` autour de `child`',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: AppBootstrap(
+            initialize: () async => _bootstrapResult(
+              firebaseAnalyticsReady: true,
+              postHogReady: false,
+            ),
+            // `Consumer` plutôt qu'un texte statique : vérifie que `child`
+            // (donc un descendant de `AppBootstrap`) lit bien la valeur
+            // surchargée, pas une valeur par défaut (`AnalyticsAvailability
+            // .none`) qui rendrait ce test faussement vert.
+            child: Consumer(
+              builder: (context, ref, _) {
+                final availability = ref.watch(analyticsAvailabilityProvider);
+                return MaterialApp(
+                  home: Scaffold(
+                    body: Center(
+                      child: Text(
+                        'firebase=${availability.firebaseAnalyticsReady} '
+                        'posthog=${availability.postHogReady}',
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      // Même rationale que `pumpBootstrap` plus bas dans ce fichier :
+      // `initialize`/la chaîne `appVersionCheckProvider` se résolvent chacun
+      // via un `Future`, jamais synchrone même sans `await` explicite.
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+
+      expect(find.text('firebase=true posthog=false'), findsOneWidget);
+    },
+  );
+
   group('vérification de version une fois `initialize` résolu '
       '(`appVersionCheckProvider`, recettage direction-artistique du '
       '13/09/2026)', () {
@@ -176,7 +237,7 @@ void main() {
             appVersionRepositoryProvider.overrideWithValue(repository),
           ],
           child: AppBootstrap(
-            initialize: () async => true,
+            initialize: () async => _bootstrapResult(),
             child: const MaterialApp(
               home: Scaffold(body: Center(child: Text('App prête'))),
             ),

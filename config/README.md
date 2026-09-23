@@ -20,8 +20,11 @@ préféré plus tard (ex. alignement avec un choix déjà fait côté app web).
 ## Fichiers
 
 - `config/dev.json`, `config/staging.json`, `config/prod.json` : contiennent
-  les vraies valeurs (`SUPABASE_URL`, `SUPABASE_ANON_KEY`). **Ignorés par
-  Git** (voir `.gitignore` à la racine) — ne jamais les committer.
+  les vraies valeurs (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, et désormais
+  `POSTHOG_API_KEY`/`POSTHOG_HOST` — analytics produit, voir
+  `lib/core/analytics/`, facultatif : son absence n'empêche jamais l'app de
+  démarrer, contrairement à `SUPABASE_URL`/`SUPABASE_ANON_KEY`). **Ignorés
+  par Git** (voir `.gitignore` à la racine) — ne jamais les committer.
 - `config/*.json.example` : versions avec des valeurs placeholder, committées,
   pour que chaque développeur sache quoi remplir localement.
 - `config/integration.json` : même mécanisme, mais pour les tests
