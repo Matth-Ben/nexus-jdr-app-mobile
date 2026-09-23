@@ -87,6 +87,17 @@ dependencies:
   url_launcher: ^6.3.2
   firebase_core: ^4.14.0
   firebase_messaging: ^16.6.0
+  # Analytics produit (`lib/core/analytics/`), avec PostHog ci-dessous —
+  # bascule utilisateur "Partager mes données d'usage" dans l'écran
+  # "Confidentialité" (`features/profile/presentation/profile_privacy_screen.dart`).
+  # Android uniquement pour l'instant, même garde que `firebase_messaging`
+  # (`firebase_options.dart` ne couvre pas encore iOS).
+  firebase_analytics: ^12.6.0
+  # Analytics produit, second SDK indépendant de Firebase (voir
+  # `lib/core/analytics/`) — s'initialise sur toutes les plateformes cibles
+  # dès que sa config (`POSTHOG_API_KEY`) est renseignée, contrairement à
+  # `firebase_analytics` ci-dessus.
+  posthog_flutter: ^5.46.0
   # Persiste la fermeture de la bannière "Mise à jour suggérée"
   # (`features/app_update/presentation/widgets/update_suggested_banner.dart`)
   # par version, pour qu'elle ne réapparaisse pas en boucle à chaque

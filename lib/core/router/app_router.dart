@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:posthog_flutter/posthog_flutter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../features/auth/presentation/login_screen.dart';
@@ -40,6 +42,7 @@ import '../../features/profile/presentation/profile_privacy_policy_screen.dart';
 import '../../features/profile/presentation/profile_privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/xml_import/presentation/xml_import_review_screen.dart';
+import '../analytics/analytics_preferences_provider.dart';
 import '../network/supabase_client_provider.dart';
 import 'route_observer_provider.dart';
 
@@ -63,6 +66,7 @@ GoRouter appRouter(Ref ref) {
     client.auth.onAuthStateChange,
   );
   ref.onDispose(refreshListenable.dispose);
+  final analyticsAvailability = ref.watch(analyticsAvailabilityProvider);
 
   return GoRouter(
     initialLocation: '/',
@@ -72,7 +76,24 @@ GoRouter appRouter(Ref ref) {
     // `RouteAware.didPopNext` au retour d'une route poussée par-dessus lui,
     // sans avoir à chasser chaque point d'écriture qui pourrait la rendre
     // obsolète.
-    observers: [ref.watch(routeObserverProvider)],
+    //
+    // `FirebaseAnalyticsObserver`/`PosthogObserver` (analytics produit,
+    // `core/analytics/`) : ajoutés uniquement si le SDK correspondant est
+    // effectivement démarré (`analyticsAvailabilityProvider`, voir la doc de
+    // classe d'`AnalyticsAvailability`) — jamais un observateur pointant vers
+    // un SDK non initialisé. Les deux lisent `RouteSettings.name` (`state
+    // .name` posé par `go_router` sur chaque `GoRoute`, voir
+    // `GoRouteInformationParser`) : chaque `GoRoute` de ce fichier porte
+    // désormais un `name:` explicite (kebab-case, dérivé du chemin) pour que
+    // ces observateurs remontent bien un événement d'écran automatique à
+    // chaque navigation, en plus des événements explicites
+    // (`AnalyticsService.trackEvent`).
+    observers: [
+      ref.watch(routeObserverProvider),
+      if (analyticsAvailability.firebaseAnalyticsReady)
+        FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
+      if (analyticsAvailability.postHogReady) PosthogObserver(),
+    ],
     redirect: (context, state) => computeAuthRedirect(
       isLoggedIn: client.auth.currentSession != null,
       // `state.uri` (pas `state.matchedLocation`, qui omet la query) : la
@@ -83,11 +104,17 @@ GoRouter appRouter(Ref ref) {
     ),
     routes: [
       GoRoute(
+        name: 'character-list',
         path: '/',
         builder: (context, state) => const CharacterListScreen(),
       ),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
+        name: 'login',
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        name: 'character-creation-race',
         path: '/characters/new',
         builder: (context, state) => const RaceStepScreen(),
       ),
@@ -95,10 +122,12 @@ GoRouter appRouter(Ref ref) {
         // Atteinte uniquement depuis '/characters/new' (étape 1 "Race")
         // quand la race choisie a des sous-races (`RaceStepScreen._submit`)
         // — sinon '/characters/new/step-2' est atteinte directement.
+        name: 'character-creation-subrace',
         path: '/characters/new/subrace',
         builder: (context, state) => const SubraceStepScreen(),
       ),
       GoRoute(
+        name: 'character-creation-class',
         path: '/characters/new/step-2',
         builder: (context, state) => const ClassStepScreen(),
       ),
@@ -107,22 +136,27 @@ GoRouter appRouter(Ref ref) {
         // "Classe") quand la classe choisie a une sous-classe au niveau 1
         // (`ClassStepScreen._submit`) — sinon '/characters/new/step-3' est
         // atteinte directement.
+        name: 'character-creation-subclass',
         path: '/characters/new/subclass',
         builder: (context, state) => const SubclassStepScreen(),
       ),
       GoRoute(
+        name: 'character-creation-background',
         path: '/characters/new/step-3',
         builder: (context, state) => const BackgroundStepScreen(),
       ),
       GoRoute(
+        name: 'character-creation-ability-scores',
         path: '/characters/new/step-4',
         builder: (context, state) => const AbilityScoreStepScreen(),
       ),
       GoRoute(
+        name: 'character-creation-skills-tools',
         path: '/characters/new/step-5',
         builder: (context, state) => const SkillsAndToolsStepScreen(),
       ),
       GoRoute(
+        name: 'character-creation-spells',
         path: '/characters/new/step-6',
         builder: (context, state) => const SpellsStepScreen(),
       ),
@@ -130,16 +164,19 @@ GoRouter appRouter(Ref ref) {
         // Atteinte directement depuis l'étape 5/9 pour une classe non
         // lanceuse de sorts (`SkillsAndToolsStepScreen._submit` saute
         // l'étape 6/9) — voir `domain/spellcasting_rules.dart`.
+        name: 'character-creation-equipment',
         path: '/characters/new/step-7',
         builder: (context, state) => const EquipmentStepScreen(),
       ),
       GoRoute(
+        name: 'character-creation-appearance-backstory',
         path: '/characters/new/step-8',
         builder: (context, state) => const AppearanceAndBackstoryStepScreen(),
       ),
       GoRoute(
         // Étape 9/9 "Récapitulatif" : dernière étape, seule à écrire en
         // base (voir `presentation/summary_step_screen.dart`).
+        name: 'character-creation-summary',
         path: '/characters/new/step-9',
         builder: (context, state) => const SummaryStepScreen(),
       ),
@@ -155,6 +192,7 @@ GoRouter appRouter(Ref ref) {
         // contrairement au niveau ciblé d'une montée de niveau — choix
         // technique signalé au chef de projet plutôt qu'un des deux
         // mécaniques déjà en place.
+        name: 'character-xml-import',
         path: '/characters/import',
         builder: (context, state) {
           final args = state.extra! as ({String fileName, String xmlSource});
@@ -170,6 +208,7 @@ GoRouter appRouter(Ref ref) {
         // personnages (`character_list_screen.dart::_ProfileButton`), qui
         // ouvrait auparavant un bottom sheet minimal réduit à "Se
         // déconnecter" — voir la doc de classe de `ProfileScreen`.
+        name: 'profile',
         path: '/profile',
         builder: (context, state) => const ProfileScreen(),
       ),
@@ -177,6 +216,7 @@ GoRouter appRouter(Ref ref) {
         // Sous-écran "Modifier le profil" (pseudo/avatar/mot de passe/
         // adresse email), poussé depuis la tuile "Modifier le profil" de
         // `ProfileScreen` — voir la doc de classe de `ProfileEditScreen`.
+        name: 'profile-edit',
         path: '/profile/edit',
         builder: (context, state) => const ProfileEditScreen(),
       ),
@@ -184,6 +224,7 @@ GoRouter appRouter(Ref ref) {
         // Sous-écran "Confidentialité et données" (`features/profile/`),
         // poussé depuis la tuile éponyme de `ProfileScreen` — voir la doc de
         // classe de `ProfilePrivacyScreen`.
+        name: 'profile-privacy',
         path: '/profile/privacy',
         builder: (context, state) => const ProfilePrivacyScreen(),
       ),
@@ -191,6 +232,7 @@ GoRouter appRouter(Ref ref) {
         // Sous-écran "Aide et support" (`features/profile/`), poussé depuis
         // la tuile éponyme de `ProfileScreen` — voir la doc de classe de
         // `ProfileHelpScreen`.
+        name: 'profile-help',
         path: '/profile/help',
         builder: (context, state) => const ProfileHelpScreen(),
       ),
@@ -198,6 +240,7 @@ GoRouter appRouter(Ref ref) {
         // Écran "Politique de confidentialité" (`features/profile/`),
         // poussé depuis la tuile éponyme de `ProfilePrivacyScreen` — voir la
         // doc de classe de `ProfilePrivacyPolicyScreen`.
+        name: 'profile-privacy-policy',
         path: '/profile/privacy/policy',
         builder: (context, state) => const ProfilePrivacyPolicyScreen(),
       ),
@@ -205,6 +248,7 @@ GoRouter appRouter(Ref ref) {
         // Écran "Mentions légales / CGU" (`features/profile/`), poussé
         // depuis la tuile éponyme de `ProfileHelpScreen` — voir la doc de
         // classe de `ProfileLegalScreen`.
+        name: 'profile-help-legal',
         path: '/profile/help/legal',
         builder: (context, state) => const ProfileLegalScreen(),
       ),
@@ -212,6 +256,7 @@ GoRouter appRouter(Ref ref) {
         // Écran "Crédits & licences" (`features/profile/`), poussé depuis
         // la tuile éponyme de `ProfileHelpScreen` — voir la doc de classe de
         // `ProfileCreditsScreen`.
+        name: 'profile-help-credits',
         path: '/profile/help/credits',
         builder: (context, state) => const ProfileCreditsScreen(),
       ),
@@ -232,6 +277,7 @@ GoRouter appRouter(Ref ref) {
         // `ProfileFaqScreen` traite déjà `null`/un id hors bornes de façon
         // gracieuse (aucune question pré-ouverte), même filet de sécurité
         // appliqué ici en amont.
+        name: 'profile-help-faq',
         path: '/profile/help/faq',
         builder: (context, state) {
           final question = state.uri.queryParameters['question'];
@@ -247,6 +293,7 @@ GoRouter appRouter(Ref ref) {
         // `showDeleteAccountSheet` (recettage direction-artistique du
         // 13/09/2026, la maquette attend un écran plein dédié) — voir la
         // doc de classe de `ProfileDeleteAccountScreen`.
+        name: 'profile-privacy-delete-account',
         path: '/profile/privacy/delete-account',
         builder: (context, state) => const ProfileDeleteAccountScreen(),
       ),
@@ -256,10 +303,12 @@ GoRouter appRouter(Ref ref) {
         // `docs/cahier-des-charges/15-profil-parametres.md` section 3),
         // poussé depuis la tuile "Notifications" de `ProfileScreen` — voir
         // la doc de classe de `ProfileNotificationsScreen`.
+        name: 'profile-notifications',
         path: '/profile/notifications',
         builder: (context, state) => const ProfileNotificationsScreen(),
       ),
       GoRoute(
+        name: 'character-detail',
         path: '/characters/:id',
         builder: (context, state) =>
             CharacterDetailScreen(characterId: state.pathParameters['id']!),
@@ -270,6 +319,7 @@ GoRouter appRouter(Ref ref) {
         // de précédent `extra` dans ce dépôt (voir `app_router.dart`), et un
         // paramètre de requête reste simple/inspectable pour un flux qui
         // n'a de toute façon pas vocation à être deep-linké.
+        name: 'character-level-up',
         path: '/characters/:id/level-up',
         builder: (context, state) => LevelUpScreen(
           characterId: state.pathParameters['id']!,
@@ -281,6 +331,7 @@ GoRouter appRouter(Ref ref) {
         // lecture seule), voir `docs/cahier-des-charges/
         // 12-partage-et-groupes.md` section 1 —
         // `character_sharing/presentation/character_share_screen.dart`.
+        name: 'character-share',
         path: '/characters/:id/share',
         builder: (context, state) =>
             CharacterShareScreen(characterId: state.pathParameters['id']!),
@@ -292,6 +343,7 @@ GoRouter appRouter(Ref ref) {
         // d'authentification (voir [computeAuthRedirect], qui exempte
         // explicitement ce préfixe) : c'est tout l'intérêt de ce lien,
         // consultable sans compte Nexus JDR.
+        name: 'shared-character-view',
         path: '/p/:token',
         builder: (context, state) =>
             SharedCharacterViewScreen(token: state.pathParameters['token']!),
@@ -302,6 +354,7 @@ GoRouter appRouter(Ref ref) {
         // section 7.1. Étape 1/4 : saisie du code, jamais atteinte via le
         // deep link `nexus-jdr.app/join/{code}` (voir `/join/:code`
         // ci-dessous, qui pousse directement l'étape 2/4).
+        name: 'join-code',
         path: '/join',
         builder: (context, state) =>
             JoinCodeStepScreen(initialCode: state.uri.queryParameters['code']),
@@ -313,6 +366,7 @@ GoRouter appRouter(Ref ref) {
         // d'invitation reste simple/inspectable, contrairement au contenu
         // XML entier de `/characters/import`, seule route de ce dépôt à
         // utiliser `extra` (voir sa documentation).
+        name: 'join-confirmation',
         path: '/join/step-2',
         builder: (context, state) => JoinConfirmationStepScreen(
           code: state.uri.queryParameters['code']!,
@@ -324,6 +378,7 @@ GoRouter appRouter(Ref ref) {
         // `JoinCharacterStepScreen._startCharacterCreation`, qui le
         // réinjecte dans la route de retour posée avant de lancer
         // l'assistant de création).
+        name: 'join-character',
         path: '/join/step-3',
         builder: (context, state) =>
             JoinCharacterStepScreen(code: state.uri.queryParameters['code']!),
@@ -340,6 +395,7 @@ GoRouter appRouter(Ref ref) {
         // iOS, fichiers `.well-known`) reste à faire, voir le rapport de la
         // tâche qui a introduit cette route pour le détail de ce qui
         // manque côté configuration native/serveur.
+        name: 'join-deep-link',
         path: '/join/:code',
         builder: (context, state) =>
             JoinConfirmationStepScreen(code: state.pathParameters['code']!),
@@ -351,12 +407,14 @@ GoRouter appRouter(Ref ref) {
         // Déclarée AVANT `/groups/new`/`/groups/join`/`/groups/:id` par
         // simple cohérence de lecture (littéral le plus court en premier),
         // `go_router` ne les confondrait de toute façon pas entre eux.
+        name: 'group-list',
         path: '/groups',
         builder: (context, state) => const GroupListScreen(),
       ),
       GoRoute(
         // Écran "Créer un groupe" (`features/groups/`) — voir
         // `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.
+        name: 'group-create',
         path: '/groups/new',
         builder: (context, state) => const GroupCreateScreen(),
       ),
@@ -366,6 +424,7 @@ GoRouter appRouter(Ref ref) {
         // recettage direction-artistique du 13/09/2026, voir la doc de
         // classe de `GroupJoinScreen`), pour ne pas casser les liens déjà
         // utilisés depuis `group_list_screen.dart`.
+        name: 'group-join',
         path: '/groups/join',
         builder: (context, state) =>
             GroupJoinScreen(initialCode: state.uri.queryParameters['code']),
@@ -373,6 +432,7 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         // Écran "Groupe" (`features/groups/`), onglets Membres/Butin — voir
         // `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2.
+        name: 'group-detail',
         path: '/groups/:id',
         builder: (context, state) =>
             GroupScreen(groupId: state.pathParameters['id']!),
@@ -383,6 +443,7 @@ GoRouter appRouter(Ref ref) {
         // 13/09/2026, voir la doc de classe de `GroupSettingsScreen`),
         // poussé depuis l'icône réglages du `WoodBackHeader` de l'écran
         // "Groupe" (`group_screen.dart`, owner uniquement).
+        name: 'group-settings',
         path: '/groups/:id/settings',
         builder: (context, state) =>
             GroupSettingsScreen(groupId: state.pathParameters['id']!),
