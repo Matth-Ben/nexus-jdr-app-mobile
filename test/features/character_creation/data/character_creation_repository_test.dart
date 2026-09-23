@@ -315,6 +315,124 @@ void main() {
       },
     );
 
+    group('filtrage du contenu marqué is_incomplete', () {
+      // Un seul test par catalogue suffit : le filtre vit dans
+      // `_mapXxxCatalogPayload`, le même mapper que celui utilisé sur le
+      // chemin de lecture depuis le cache (`_mappedFromCache`/
+      // `_mappedFromFreshCache`) — voir la doc de classe de
+      // `SupabaseCharacterCreationRepository`.
+      test('fetchRaceCatalog omet une race is_incomplete: true', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'races': [
+                {
+                  'id': 1,
+                  'ability_bonuses': {'dex': 2},
+                  'traits': <Map<String, dynamic>>[],
+                  'is_incomplete': false,
+                },
+                {
+                  'id': 26,
+                  'ability_bonuses': <String, dynamic>{},
+                  'traits': <Map<String, dynamic>>[],
+                  'is_incomplete': true,
+                },
+              ],
+              'subraces': const <Map<String, dynamic>>[],
+              'translations': [
+                {'entity_id': '1', 'value': 'Humain'},
+                {'entity_id': '26', 'value': 'Conil'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchRaceCatalog();
+
+        expect(catalog.races, hasLength(1));
+        expect(catalog.races.single.name, 'Humain');
+      });
+
+      test(
+        'fetchBackgroundCatalog omet un historique is_incomplete: true',
+        () async {
+          final repository = SupabaseCharacterCreationRepository(
+            _buildFakeSupabaseClient(
+              tableRows: {
+                'backgrounds': [
+                  {
+                    'id': 3,
+                    'skill_proficiencies': ['Perception'],
+                    'tool_or_language_choices': <String, dynamic>{},
+                    'equipment': ['Une arme'],
+                    'is_incomplete': false,
+                  },
+                  {
+                    'id': 4,
+                    'skill_proficiencies': <String>[],
+                    'tool_or_language_choices': <String, dynamic>{},
+                    'equipment': <String>[],
+                    'is_incomplete': true,
+                  },
+                ],
+                'translations': [
+                  {'entity_id': '3', 'value': 'Soldat'},
+                  {'entity_id': '4', 'value': 'Incomplet'},
+                ],
+              },
+            ),
+            cache,
+          );
+
+          final catalog = await repository.fetchBackgroundCatalog();
+
+          expect(catalog.backgrounds, hasLength(1));
+          expect(catalog.backgrounds.single.name, 'Soldat');
+        },
+      );
+
+      test('fetchSpellCatalog omet un sort is_incomplete: true', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'spell_classes': [
+                {'spell_id': 5},
+                {'spell_id': 6},
+              ],
+              'spells': [
+                {
+                  'id': 5,
+                  'level': 1,
+                  'school': 'évocation',
+                  'casting_time': '1 action',
+                  'is_incomplete': false,
+                },
+                {
+                  'id': 6,
+                  'level': 1,
+                  'school': 'évocation',
+                  'casting_time': '1 action',
+                  'is_incomplete': true,
+                },
+              ],
+              'translations': [
+                {'entity_id': '5', 'value': 'Projectile magique'},
+                {'entity_id': '6', 'value': 'Sort incomplet'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchSpellCatalog(classId: 1);
+
+        expect(catalog.spells, hasLength(1));
+        expect(catalog.spells.single.name, 'Projectile magique');
+      });
+    });
+
     test(
       'régression : la requête .select() sur `alignments` ne référence '
       'jamais `name` (colonne inexistante sur cette table — vit dans '

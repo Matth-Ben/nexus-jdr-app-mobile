@@ -6,26 +6,22 @@
 /// fichier) :
 /// - Race personnalisée (homebrew) sélectionnée : le texte libre doit être
 ///   non vide (hors espaces).
-/// - Race du catalogue sélectionnée : suffisant, sauf si cette race a des
-///   sous-races, auquel cas une sous-race doit aussi être choisie.
+/// - Race du catalogue sélectionnée : suffisant.
 /// - Aucune race sélectionnée : jamais activé.
+///
+/// Le choix de sous-race n'est plus une condition de CETTE étape : les races
+/// qui en ont sont envoyées vers `SubraceStepScreen` (sa propre étape, voir
+/// `domain/subrace_step_selection.dart`), atteinte après validation de la
+/// race — voir `presentation/race_step_screen.dart::_submit`.
 abstract final class RaceStepSelection {
   static bool canProceed({
     required bool isCustomRace,
     required String customRaceText,
     required int? selectedRaceId,
-    required bool selectedRaceHasSubraces,
-    required int? selectedSubraceId,
   }) {
     if (isCustomRace) {
       return customRaceText.trim().isNotEmpty;
     }
-    if (selectedRaceId == null) {
-      return false;
-    }
-    if (selectedRaceHasSubraces && selectedSubraceId == null) {
-      return false;
-    }
-    return true;
+    return selectedRaceId != null;
   }
 }

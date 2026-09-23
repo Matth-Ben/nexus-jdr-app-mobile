@@ -13,6 +13,8 @@ import '../../features/character_creation/presentation/equipment_step_screen.dar
 import '../../features/character_creation/presentation/race_step_screen.dart';
 import '../../features/character_creation/presentation/skills_and_tools_step_screen.dart';
 import '../../features/character_creation/presentation/spells_step_screen.dart';
+import '../../features/character_creation/presentation/subclass_step_screen.dart';
+import '../../features/character_creation/presentation/subrace_step_screen.dart';
 import '../../features/character_creation/presentation/summary_step_screen.dart';
 import '../../features/character_sharing/presentation/character_share_screen.dart';
 import '../../features/character_sharing/presentation/shared_character_view_screen.dart';
@@ -90,8 +92,23 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const RaceStepScreen(),
       ),
       GoRoute(
+        // Atteinte uniquement depuis '/characters/new' (étape 1 "Race")
+        // quand la race choisie a des sous-races (`RaceStepScreen._submit`)
+        // — sinon '/characters/new/step-2' est atteinte directement.
+        path: '/characters/new/subrace',
+        builder: (context, state) => const SubraceStepScreen(),
+      ),
+      GoRoute(
         path: '/characters/new/step-2',
         builder: (context, state) => const ClassStepScreen(),
+      ),
+      GoRoute(
+        // Atteinte uniquement depuis '/characters/new/step-2' (étape 2
+        // "Classe") quand la classe choisie a une sous-classe au niveau 1
+        // (`ClassStepScreen._submit`) — sinon '/characters/new/step-3' est
+        // atteinte directement.
+        path: '/characters/new/subclass',
+        builder: (context, state) => const SubclassStepScreen(),
       ),
       GoRoute(
         path: '/characters/new/step-3',

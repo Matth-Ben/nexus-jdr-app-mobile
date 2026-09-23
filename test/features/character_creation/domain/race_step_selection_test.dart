@@ -9,50 +9,18 @@ void main() {
           isCustomRace: false,
           customRaceText: '',
           selectedRaceId: null,
-          selectedRaceHasSubraces: false,
-          selectedSubraceId: null,
         ),
         isFalse,
       );
     });
 
-    test('race sans sous-race sélectionnée -> true', () {
+    test('race du catalogue sélectionnée -> true (le choix de sous-race ne '
+        'conditionne plus cette étape, voir SubraceStepSelection)', () {
       expect(
         RaceStepSelection.canProceed(
           isCustomRace: false,
           customRaceText: '',
           selectedRaceId: 1,
-          selectedRaceHasSubraces: false,
-          selectedSubraceId: null,
-        ),
-        isTrue,
-      );
-    });
-
-    test(
-      'race avec sous-races requises mais aucune sous-race choisie -> false',
-      () {
-        expect(
-          RaceStepSelection.canProceed(
-            isCustomRace: false,
-            customRaceText: '',
-            selectedRaceId: 1,
-            selectedRaceHasSubraces: true,
-            selectedSubraceId: null,
-          ),
-          isFalse,
-        );
-      },
-    );
-
-    test('race avec sous-races requises et sous-race choisie -> true', () {
-      expect(
-        RaceStepSelection.canProceed(
-          isCustomRace: false,
-          customRaceText: '',
-          selectedRaceId: 1,
-          selectedRaceHasSubraces: true,
-          selectedSubraceId: 3,
         ),
         isTrue,
       );
@@ -64,8 +32,6 @@ void main() {
           isCustomRace: true,
           customRaceText: '   ',
           selectedRaceId: null,
-          selectedRaceHasSubraces: false,
-          selectedSubraceId: null,
         ),
         isFalse,
       );
@@ -77,8 +43,6 @@ void main() {
           isCustomRace: true,
           customRaceText: 'Golem vivant',
           selectedRaceId: null,
-          selectedRaceHasSubraces: false,
-          selectedSubraceId: null,
         ),
         isTrue,
       );

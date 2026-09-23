@@ -14,7 +14,6 @@ import '../domain/character_creation_failure.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/race_catalog.dart';
 import '../domain/race_step_selection.dart';
-import '../domain/subrace_option.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
@@ -24,6 +23,13 @@ import 'widgets/step_help_sheet.dart';
 /// Étape 1/9 de l'assistant de création de personnage : choix de la race
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
 /// point 1, maquette `02_étape_1_race.png`).
+///
+/// Le choix de sous-race n'est PAS traité sur cet écran : pour une race qui
+/// en a, `_submit` pousse `SubraceStepScreen`, une étape séparée (même
+/// principe que l'étape 6/9 "Sorts" déjà sautée pour une classe non
+/// lanceuse de sorts, voir le commentaire de `/characters/new/step-7` dans
+/// `core/router/app_router.dart`) — pour une race sans sous-race,
+/// `/characters/new/step-2` est atteinte directement.
 ///
 /// En-tête bois plein (pas le dégradé "scène") : `Scaffold` classique plutôt
 /// que `SceneScaffold`, avec un bandeau `wood.medium` posé manuellement au
@@ -51,7 +57,6 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   final _customRaceController = TextEditingController();
 
   int? _selectedRaceId;
-  int? _selectedSubraceId;
   bool _isCustomRaceSelected = false;
 
   @override
@@ -63,10 +68,11 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
     // en arrière sans perdre les choix déjà faits." Le brouillon `keepAlive`
     // ne perd jamais la donnée, mais sans cette lecture l'écran repartait à
     // zéro visuellement. Si le brouillon est vide (première visite), rien ne
-    // change : les trois champs valent `null`/`false` comme avant.
+    // change : les deux champs valent `null`/`false` comme avant. La
+    // sous-race (`draft.subraceId`) n'est pas réhydratée ici : elle
+    // n'appartient plus à cet écran, voir `SubraceStepScreen`.
     final draft = ref.read(characterCreationDraftControllerProvider);
     _selectedRaceId = draft.raceId;
-    _selectedSubraceId = draft.subraceId;
     _isCustomRaceSelected = draft.raceCustomText != null;
     if (_isCustomRaceSelected) {
       _customRaceController.text = draft.raceCustomText!;
@@ -82,16 +88,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   void _selectRace(int raceId) {
     setState(() {
       _isCustomRaceSelected = false;
-      if (raceId != _selectedRaceId) {
-        _selectedSubraceId = null;
-      }
       _selectedRaceId = raceId;
-    });
-  }
-
-  void _selectSubrace(int subraceId) {
-    setState(() {
-      _selectedSubraceId = subraceId;
     });
   }
 
@@ -99,7 +96,6 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
     setState(() {
       _isCustomRaceSelected = true;
       _selectedRaceId = null;
-      _selectedSubraceId = null;
     });
   }
 
@@ -120,17 +116,41 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   /// de chargement ni de gestion d'erreur réseau nécessaires ici (à la
   /// différence du chargement du catalogue races/sous-races, un vrai appel
   /// réseau).
-  void _submit() {
+  ///
+  /// `subraceId` n'est mis à `null` que si la race sélectionnée diffère
+  /// réellement de celle déjà en brouillon (y compris un changement vers/
+  /// depuis une race personnalisée) : retour en arrière SANS changer de race,
+  /// puis "Suivant" à nouveau, doit conserver `draft.subraceId` tel quel pour
+  /// ne pas effacer à tort un choix déjà fait sur `SubraceStepScreen`. Pour
+  /// une race réellement différente, `subraceId` reste `null` ici quelle
+  /// qu'elle soit : il sera (ré)écrit par `SubraceStepScreen` pour les races
+  /// qui en ont — voir la doc de classe. La navigation dépend de [catalog]
+  /// (déjà chargé, voir `_buildContent`) : une race avec sous-races pousse
+  /// l'étape "Sous-race" ; sinon, l'étape 2/9 "Classe" est atteinte
+  /// directement.
+  void _submit(RaceCatalog catalog) {
+    final draft = ref.read(characterCreationDraftControllerProvider);
+    final newRaceId = _isCustomRaceSelected ? null : _selectedRaceId;
+    final raceChanged =
+        _isCustomRaceSelected != (draft.raceCustomText != null) ||
+        draft.raceId != newRaceId;
     ref
         .read(characterCreationDraftControllerProvider.notifier)
         .setRace(
-          raceId: _isCustomRaceSelected ? null : _selectedRaceId,
-          subraceId: _isCustomRaceSelected ? null : _selectedSubraceId,
+          raceId: newRaceId,
+          subraceId: raceChanged ? null : draft.subraceId,
           raceCustomText: _isCustomRaceSelected
               ? _customRaceController.text.trim()
               : null,
         );
-    context.push('/characters/new/step-2');
+    final selectedRaceId = _selectedRaceId;
+    if (!_isCustomRaceSelected &&
+        selectedRaceId != null &&
+        catalog.subracesOf(selectedRaceId).isNotEmpty) {
+      context.push('/characters/new/subrace');
+    } else {
+      context.push('/characters/new/step-2');
+    }
   }
 
   @override
@@ -187,16 +207,10 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   }
 
   Widget _buildContent(RaceCatalog catalog) {
-    final subracesForSelectedRace = _selectedRaceId != null
-        ? catalog.subracesOf(_selectedRaceId!)
-        : const <SubraceOption>[];
-
     final canProceed = RaceStepSelection.canProceed(
       isCustomRace: _isCustomRaceSelected,
       customRaceText: _customRaceController.text,
       selectedRaceId: _selectedRaceId,
-      selectedRaceHasSubraces: subracesForSelectedRace.isNotEmpty,
-      selectedSubraceId: _selectedSubraceId,
     );
 
     return Column(
@@ -251,37 +265,6 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                           onTap: () => _selectRace(catalog.races[i].id),
                         ),
                       ],
-                      if (subracesForSelectedRace.isNotEmpty) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          'Choisis une sous-race.',
-                          style: AppTypography.body(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        for (
-                          var i = 0;
-                          i < subracesForSelectedRace.length;
-                          i++
-                        ) ...[
-                          if (i > 0) const SizedBox(height: AppSpacing.sm),
-                          SelectableOptionTile(
-                            title: subracesForSelectedRace[i].name,
-                            subtitle: subracesForSelectedRace[i].summaryLine,
-                            selected:
-                                _selectedSubraceId ==
-                                subracesForSelectedRace[i].id,
-                            leading: AccentIconBadge(
-                              index: i,
-                              icon: Icons.shield_rounded,
-                            ),
-                            onTap: () =>
-                                _selectSubrace(subracesForSelectedRace[i].id),
-                          ),
-                        ],
-                      ],
                       const SizedBox(height: AppSpacing.sm),
                       SelectableOptionTile(
                         title: 'Race personnalisée',
@@ -323,7 +306,9 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                           Expanded(
                             child: PrimaryButton(
                               label: 'Suivant',
-                              onPressed: canProceed ? _submit : null,
+                              onPressed: canProceed
+                                  ? () => _submit(catalog)
+                                  : null,
                             ),
                           ),
                         ],
