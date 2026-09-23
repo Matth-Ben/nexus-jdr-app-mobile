@@ -5,138 +5,99 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/widgets/accent_icon_badge.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
-import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/class_catalog.dart';
+import '../domain/class_option.dart';
 import '../domain/creation_step_help.dart';
+import '../domain/subclass_step_selection.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'providers/subclass_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
+import 'widgets/subclass_choice_block.dart';
 
-/// Étape 2/9 de l'assistant de création de personnage : choix de la classe
-/// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
-/// point 2, maquette `03_étape_2_classe.png`).
+/// Étape 2/9 "Sous-classe" de l'assistant de création de personnage, second
+/// écran de l'étape "Classe" — atteinte uniquement depuis `ClassStepScreen`
+/// (`_submit`) quand la classe choisie choisit sa sous-classe dès le
+/// niveau 1 (`SubclassChoiceCatalog.isConcerned`).
 ///
-/// Plus simple que l'étape 1 "Race" : pas de "classe personnalisée".
-/// "Suivant" s'active dès qu'une classe est choisie — le choix de
-/// sous-classe (pour les classes qui la choisissent dès le niveau 1,
-/// déterminées par les données, voir `SubclassChoiceCatalog`) n'est PAS
-/// traité sur cet écran : `_submit` pousse `SubclassStepScreen`, une étape
-/// séparée, pour les classes concernées (même principe que le choix de
-/// sous-race de l'étape 1, voir `race_step_screen.dart`).
+/// Ne fait PAS avancer le compteur d'étape (`currentStep: 2`, comme
+/// `ClassStepScreen`) : c'est un second écran de la même étape logique, pas
+/// une étape à part entière du parcours en 9 étapes — même principe que
+/// `SubraceStepScreen` (étape 1 "Race").
 ///
-/// En-tête bois plein dupliqué depuis `race_step_screen.dart`
-/// (`_Header` ci-dessous) plutôt que factorisé dans `core/widgets` : même
-/// principe que `ClassRowMapper` dupliqué depuis `RaceRowMapper`, pour ne pas
-/// coupler les deux étapes entre elles.
-class ClassStepScreen extends ConsumerStatefulWidget {
-  const ClassStepScreen({super.key});
+/// Réutilise `SubclassChoiceBlock` (`widgets/subclass_choice_block.dart`)
+/// tel quel comme corps principal : ce widget est déjà autonome (chargement/
+/// erreur/retry/liste, voir sa doc de classe "sans carte englobante"),
+/// auparavant inséré sous la tuile de classe de `ClassStepScreen`.
+///
+/// `_Header`/`_MinimalHeader` dupliqués localement plutôt que factorisés
+/// avec `ClassStepScreen` : voir la doc de classe de
+/// `RaceStepScreen`/`SubraceStepScreen` pour le rationale de cette
+/// duplication assumée dans tout ce module.
+class SubclassStepScreen extends ConsumerStatefulWidget {
+  const SubclassStepScreen({super.key});
 
   @override
-  ConsumerState<ClassStepScreen> createState() => _ClassStepScreenState();
+  ConsumerState<SubclassStepScreen> createState() => _SubclassStepScreenState();
 }
 
-class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
+class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
   static const int _totalSteps = 9;
 
-  int? _selectedClassId;
+  int? _classId;
+  int? _selectedSubclassId;
 
   @override
   void initState() {
     super.initState();
-    // Réhydrate la sélection depuis le brouillon déjà en mémoire (retour en
-    // arrière depuis une étape suivante) — voir
-    // `docs/cahier-des-charges/05-ux-navigation.md` : "Possibilité de revenir
-    // en arrière sans perdre les choix déjà faits." Le brouillon `keepAlive`
-    // ne perd jamais la donnée, mais sans cette lecture l'écran repartait à
-    // zéro visuellement. Si le brouillon est vide (première visite), rien ne
-    // change : `classId` est `null`. La sous-classe (`draft.subclassId`)
-    // n'est pas réhydratée ici : elle n'appartient plus à cet écran, voir
-    // `SubclassStepScreen`.
-    _selectedClassId = ref
-        .read(characterCreationDraftControllerProvider)
-        .classId;
+    final draft = ref.read(characterCreationDraftControllerProvider);
+    _classId = draft.classId;
+    // Réhydrate le choix déjà fait (retour en arrière depuis une étape
+    // suivante) — même rationale que `ClassStepScreen.initState`.
+    _selectedSubclassId = draft.subclassId;
+
+    if (_classId == null) {
+      // Cas défensif (ex. deep-link direct sur cette route) : cet écran
+      // n'est censé être atteint que depuis `ClassStepScreen`, qui a déjà
+      // écrit `classId` dans le brouillon avant de pousser cette route.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.go('/characters/new/step-2');
+      });
+    }
   }
 
-  void _selectClass(int classId) {
-    setState(() {
-      _selectedClassId = classId;
-    });
-  }
-
-  /// Toujours poussée depuis `/characters/new` (étape 1 "Race") via
-  /// `context.push` : `pop()` suffit, pas besoin du repli `context.go('/')`
-  /// de `RaceStepScreen._goToCharacterList` (qui, lui, peut être la première
-  /// route de la pile).
   void _goBack() => context.pop();
 
-  /// Met à jour le brouillon en mémoire et décide de la navigation — aucun
-  /// appel réseau supplémentaire fait par cet écran, même rationale que
-  /// `RaceStepScreen._submit` (le catalogue de sous-classes est déjà chargé/
-  /// en cours de chargement via [subclassChoiceCatalogProvider]).
-  ///
-  /// `subclassId` n'est mis à `null` que si la classe sélectionnée diffère
-  /// réellement de celle déjà en brouillon (retour en arrière SANS changer de
-  /// classe, puis "Suivant" à nouveau) : sinon on repasse `draft.subclassId`
-  /// tel quel à `setClass`, pour ne pas effacer à tort un choix de
-  /// sous-classe déjà fait sur `SubclassStepScreen` (et les choix de sorts
-  /// qui en dépendent, voir `CharacterCreationDraftController.setClass`). Pour
-  /// une classe réellement différente, `subclassId` reste `null` ici quelle
-  /// qu'elle soit : il sera (ré)écrit par `SubclassStepScreen` pour les
-  /// classes concernées — voir la doc de classe. Si le catalogue de
-  /// sous-classes est encore en cours de chargement (sans valeur connue), on
-  /// attend son résultat avant de trancher la navigation : une classe non
-  /// concernée doit toujours filer directement vers l'étape 3, mais une
-  /// classe concernée ne doit jamais manquer sa propre étape faute d'avoir
-  /// attendu la réponse réseau.
-  Future<void> _submit() async {
-    var subclassAsync = ref.read(subclassChoiceCatalogProvider);
-    if (subclassAsync.isLoading && !subclassAsync.hasValue) {
-      try {
-        await ref.read(subclassChoiceCatalogProvider.future);
-      } catch (_) {
-        // Échec : dégradé en "aucune sous-classe requise" (voir ci-dessous).
-      }
-      if (!mounted) return;
-      subclassAsync = ref.read(subclassChoiceCatalogProvider);
-    }
-    final classId = _selectedClassId!;
-    final draft = ref.read(characterCreationDraftControllerProvider);
+  /// Met à jour le brouillon en mémoire et passe à l'étape suivante — aucun
+  /// appel réseau ici, même rationale que `ClassStepScreen._submit`.
+  void _submit() {
     ref
         .read(characterCreationDraftControllerProvider.notifier)
-        .setClass(
-          classId: classId,
-          subclassId: draft.classId == classId ? draft.subclassId : null,
-        );
-    final concerned = subclassAsync.value?.isConcerned(classId) ?? false;
-    if (concerned) {
-      context.push('/characters/new/subclass');
-    } else {
-      context.push('/characters/new/step-3');
-    }
+        .setClass(classId: _classId!, subclassId: _selectedSubclassId);
+    context.push('/characters/new/step-3');
   }
 
   @override
   Widget build(BuildContext context) {
-    final catalogAsync = ref.watch(classCatalogProvider);
-    // Pré-charge et garde vivant le catalogue de sous-classes pendant toute
-    // la durée de vie de cet écran (`autoDispose` : sans ce `watch`, un
-    // simple `ref.read` isolé dans `_submit` peut se faire recréer/redisposer
-    // avant d'avoir résolu, faisant repartir la requête réseau à zéro à
-    // chaque lecture) — jamais utilisé pour le rendu ici (voir `_submit`,
-    // seul point qui en a besoin, et `SubclassStepScreen` pour son affichage).
-    ref.watch(subclassChoiceCatalogProvider);
+    final classId = _classId;
+    if (classId == null) {
+      // Redirection défensive déjà programmée dans `initState` : rien à
+      // afficher le temps qu'elle se déclenche.
+      return const Scaffold(body: SizedBox.shrink());
+    }
+
+    final classCatalogAsync = ref.watch(classCatalogProvider);
 
     return Scaffold(
-      body: catalogAsync.when(
-        data: _buildContent,
+      body: classCatalogAsync.when(
+        data: (catalog) => _buildContent(catalog, classId),
         loading: () => Column(
           children: [
             _MinimalHeader(
@@ -185,12 +146,25 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
     );
   }
 
-  /// "Suivant" est actif dès qu'une classe est choisie : le choix de
-  /// sous-classe (pour les classes concernées) n'est plus une condition de
-  /// CET écran, voir la doc de classe et `SubclassStepScreen`.
-  bool get _canProceed => _selectedClassId != null;
+  Widget _buildContent(ClassCatalog classCatalog, int classId) {
+    final className = classCatalog.classes
+        .firstWhere(
+          (classOption) => classOption.id == classId,
+          orElse: () => ClassOption(
+            id: classId,
+            name: 'cette classe',
+            description: '',
+            hitDie: 6,
+          ),
+        )
+        .name;
+    final subclassAsync = ref.watch(subclassChoiceCatalogProvider);
+    final canProceed = SubclassStepSelection.canProceed(
+      catalogAsync: subclassAsync,
+      classId: classId,
+      selectedSubclassId: _selectedSubclassId,
+    );
 
-  Widget _buildContent(ClassCatalog catalog) {
     return Column(
       children: [
         _Header(
@@ -214,7 +188,7 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Choisis la voie que ton personnage empruntera.',
+                      'Ce choix se fait dès le niveau 1 pour $className.',
                       style: AppTypography.body(fontSize: 14),
                     ),
                   ),
@@ -228,19 +202,16 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                       AppSpacing.md,
                     ),
                     children: [
-                      for (var i = 0; i < catalog.classes.length; i++) ...[
-                        if (i > 0) const SizedBox(height: AppSpacing.sm),
-                        SelectableOptionTile(
-                          title: catalog.classes[i].name,
-                          subtitle: catalog.classes[i].summaryLine,
-                          selected: _selectedClassId == catalog.classes[i].id,
-                          leading: AccentIconBadge(
-                            index: i,
-                            icon: Icons.auto_awesome,
-                          ),
-                          onTap: () => _selectClass(catalog.classes[i].id),
-                        ),
-                      ],
+                      SubclassChoiceBlock(
+                        classId: classId,
+                        className: className,
+                        catalogAsync: subclassAsync,
+                        selectedSubclassId: _selectedSubclassId,
+                        onSelect: (id) =>
+                            setState(() => _selectedSubclassId = id),
+                        onRetry: () =>
+                            ref.invalidate(subclassChoiceCatalogProvider),
+                      ),
                     ],
                   ),
                 ),
@@ -261,7 +232,7 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                           Expanded(
                             child: PrimaryButton(
                               label: 'Suivant',
-                              onPressed: _canProceed ? () => _submit() : null,
+                              onPressed: canProceed ? _submit : null,
                             ),
                           ),
                         ],
@@ -283,9 +254,8 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
 }
 
 /// Bandeau bois plein en tête d'écran, avec le titre d'étape et la barre de
-/// progression — copié depuis `equipment_step_screen.dart`/
-/// `summary_step_screen.dart` (voir la documentation de classe de
-/// [ClassStepScreen]).
+/// progression — copié depuis `class_step_screen.dart` (voir sa doc de
+/// classe pour le rationale de ne pas factoriser ce composant).
 class _Header extends StatelessWidget {
   const _Header({
     required this.onBack,
@@ -352,7 +322,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '2. Classe',
+                          '2. Sous-classe',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -385,7 +355,7 @@ class _Header extends StatelessWidget {
 }
 
 /// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
-/// chargement/l'erreur — copie exacte du pattern des étapes 6/7/9.
+/// chargement/l'erreur — copie exacte du pattern des autres étapes.
 class _MinimalHeader extends StatelessWidget {
   const _MinimalHeader({required this.onBack, required this.onHelp});
 

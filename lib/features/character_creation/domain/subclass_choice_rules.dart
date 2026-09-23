@@ -23,13 +23,4 @@ abstract final class SubclassChoiceRules {
         ? 'Choisis ta sous-classe.'
         : 'Choisis ton ${title.toLowerCase()}.';
   }
-
-  /// Sous-classe à conserver quand la sélection de classe passe de
-  /// [previousClassId] à [newClassId] : reste [currentSubclassId] si la
-  /// classe est identique, `null` dès qu'elle diffère.
-  static int? subclassAfterClassChange({
-    required int? previousClassId,
-    required int newClassId,
-    required int? currentSubclassId,
-  }) => previousClassId == newClassId ? currentSubclassId : null;
 }

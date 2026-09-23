@@ -133,27 +133,12 @@ const _humain = RaceOption(
   traits: [],
 );
 
-const _nain = RaceOption(
-  id: 3,
-  name: 'Nain',
-  abilityBonuses: {'con': 2},
-  traits: [RaceTrait(name: 'Robustesse naine', description: '...')],
-);
-
 const _hautElfe = SubraceOption(
   id: 10,
   raceId: 1,
   name: 'Haut-elfe',
   abilityBonuses: {'int': 1},
   traits: [RaceTrait(name: 'Cantrip elfique', description: '...')],
-);
-
-const _nainDesCollines = SubraceOption(
-  id: 20,
-  raceId: 3,
-  name: 'Nain des collines',
-  abilityBonuses: {'wis': 1},
-  traits: [RaceTrait(name: 'Ténacité naine', description: '...')],
 );
 
 void main() {
@@ -186,6 +171,11 @@ void main() {
         GoRoute(
           path: '/characters/new',
           builder: (context, state) => const RaceStepScreen(),
+        ),
+        GoRoute(
+          path: '/characters/new/subrace',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('Étape sous-race'))),
         ),
         GoRoute(
           path: '/characters/new/step-2',
@@ -374,8 +364,9 @@ void main() {
   );
 
   testWidgets(
-    'sélectionner une race avec sous-races affiche la liste de sous-races '
-    'et bloque "Suivant" tant qu\'aucune n\'est choisie',
+    'sélectionner une race avec sous-races active immédiatement "Suivant" '
+    '(le choix de sous-race est sa propre étape, voir SubraceStepScreen) et '
+    'navigue vers "/characters/new/subrace"',
     (WidgetTester tester) async {
       fakeRepository.catalogToReturn = const RaceCatalog(
         races: [_elfe],
@@ -385,108 +376,26 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      expect(find.text('Haut-elfe'), findsNothing);
-
-      await tester.tap(find.text('Elfe'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Choisis une sous-race.'), findsOneWidget);
-      expect(find.text('Haut-elfe'), findsOneWidget);
-
-      await tester.tap(find.text('SUIVANT'));
-      await tester.pumpAndSettle();
-      expect(readDraft(), const CharacterCreationDraft());
-
-      await tester.tap(find.text('Haut-elfe'));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('SUIVANT'));
-      await tester.pumpAndSettle();
-
-      expect(
-        readDraft(),
-        const CharacterCreationDraft(raceId: 1, subraceId: 10),
-      );
-    },
-  );
-
-  testWidgets(
-    'changer de race après avoir choisi une sous-race désélectionne cette '
-    'sous-race si la nouvelle race n\'en a pas, et active "Suivant" '
-    'immédiatement',
-    (WidgetTester tester) async {
-      fakeRepository.catalogToReturn = const RaceCatalog(
-        races: [_elfe, _humain],
-        subraces: [_hautElfe],
-      );
-
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Elfe'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Haut-elfe'));
-      await tester.pumpAndSettle();
-
-      // Changement vers une race sans sous-race : la sous-race précédemment
-      // choisie ne doit plus être ni affichée, ni envoyée dans le brouillon.
-      await tester.tap(find.text('Humain'));
-      await tester.pumpAndSettle();
-
+      // Aucun bloc de sous-race sur cet écran, quelle que soit la race.
       expect(find.text('Haut-elfe'), findsNothing);
       expect(find.text('Choisis une sous-race.'), findsNothing);
 
+      await tester.tap(find.text('Elfe'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Haut-elfe'), findsNothing);
+
       await tester.tap(find.text('SUIVANT'));
       await tester.pumpAndSettle();
 
       expect(
         readDraft(),
-        const CharacterCreationDraft(raceId: 2, subraceId: null),
+        const CharacterCreationDraft(raceId: 1, subraceId: null),
       );
+      expect(find.text('Étape sous-race'), findsOneWidget);
+      expect(find.text('Étape suivante'), findsNothing);
     },
   );
-
-  testWidgets('changer de race entre deux races ayant chacune des sous-races '
-      'réinitialise le choix de sous-race plutôt que de conserver l\'ancien '
-      'identifiant', (WidgetTester tester) async {
-    fakeRepository.catalogToReturn = const RaceCatalog(
-      races: [_elfe, _nain],
-      subraces: [_hautElfe, _nainDesCollines],
-    );
-
-    await tester.pumpWidget(buildTestWidget());
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Elfe'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Haut-elfe'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Nain'));
-    await tester.pumpAndSettle();
-
-    // La sous-race de l'ancienne race ne doit plus apparaître, celle de la
-    // nouvelle race doit être proposée mais pas encore sélectionnée.
-    expect(find.text('Haut-elfe'), findsNothing);
-    expect(find.text('Nain des collines'), findsOneWidget);
-
-    await tester.tap(find.text('SUIVANT'), warnIfMissed: false);
-    await tester.pumpAndSettle();
-    expect(
-      readDraft(),
-      const CharacterCreationDraft(),
-      reason:
-          'la nouvelle race exige une sous-race, "Suivant" doit rester '
-          'bloqué tant qu\'aucune n\'est choisie pour CETTE race',
-    );
-
-    await tester.tap(find.text('Nain des collines'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('SUIVANT'));
-    await tester.pumpAndSettle();
-
-    expect(readDraft(), const CharacterCreationDraft(raceId: 3, subraceId: 20));
-  });
 
   testWidgets(
     'sélectionner "Race personnalisée" affiche un champ texte requis pour '
@@ -587,44 +496,14 @@ void main() {
   );
 
   testWidgets(
-    'retaper sur la race déjà sélectionnée ne réinitialise pas la sous-race '
-    'déjà choisie',
-    (WidgetTester tester) async {
-      fakeRepository.catalogToReturn = const RaceCatalog(
-        races: [_elfe],
-        subraces: [_hautElfe],
-      );
-
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Elfe'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Haut-elfe'));
-      await tester.pumpAndSettle();
-
-      // Retaper sur "Elfe" (déjà sélectionnée) ne doit rien changer : la
-      // sous-race choisie doit rester affichée et "Suivant" doit rester
-      // actif immédiatement, sans re-choisir "Haut-elfe".
-      await tester.tap(find.text('Elfe'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Haut-elfe'), findsOneWidget);
-
-      await tester.tap(find.text('SUIVANT'));
-      await tester.pumpAndSettle();
-
-      expect(
-        readDraft(),
-        const CharacterCreationDraft(raceId: 1, subraceId: 10),
-      );
-    },
-  );
-
-  testWidgets(
-    'revenir sur l\'étape avec un brouillon déjà rempli affiche la race et '
-    'la sous-race déjà choisies (retour en arrière depuis une étape '
-    'suivante, docs/cahier-des-charges/05-ux-navigation.md)',
+    'revenir sur l\'étape avec un brouillon déjà rempli affiche la race déjà '
+    'choisie (retour en arrière depuis une étape suivante, '
+    'docs/cahier-des-charges/05-ux-navigation.md) — la sous-race '
+    'précédemment choisie n\'est pas affichée sur cet écran (voir '
+    'SubraceStepScreen) mais, la race n\'ayant pas changé, elle est '
+    'conservée dans le brouillon plutôt qu\'effacée à tort '
+    '(régression corrigée : `_submit` passait `subraceId: null` '
+    'inconditionnellement, y compris sans changement de race)',
     (WidgetTester tester) async {
       fakeRepository.catalogToReturn = const RaceCatalog(
         races: [_elfe, _humain],
@@ -637,7 +516,7 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      expect(find.text('Haut-elfe'), findsOneWidget);
+      expect(find.text('Haut-elfe'), findsNothing);
       final tiles = tester.widgetList<SelectableOptionTile>(
         find.byType(SelectableOptionTile),
       );
@@ -646,13 +525,13 @@ void main() {
         tiles.firstWhere((tile) => tile.title == 'Humain').selected,
         false,
       );
-      expect(
-        tiles.firstWhere((tile) => tile.title == 'Haut-elfe').selected,
-        true,
-      );
 
       // "Suivant" doit déjà être actif : pas besoin de re-choisir quoi que
-      // ce soit pour avancer.
+      // ce soit pour avancer. La race a des sous-races : "Suivant" pousse
+      // l'étape "Sous-race" plutôt que l'étape 2/9. La race n'a pas changé
+      // (toujours Elfe) : le brouillon conserve la sous-race déjà choisie
+      // (`SubraceStepScreen` la réhydratera, et l'écrasera si l'utilisateur
+      // en choisit une autre).
       await tester.tap(find.text('SUIVANT'));
       await tester.pumpAndSettle();
 
@@ -660,6 +539,81 @@ void main() {
         readDraft(),
         const CharacterCreationDraft(raceId: 1, subraceId: 10),
       );
+      expect(find.text('Étape sous-race'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'revenir sur l\'étape SANS changer de race et retaper "Suivant" ne doit '
+    'pas effacer une sous-race déjà choisie sur `SubraceStepScreen` '
+    '(régression : `_submit` passait `subraceId: null` inconditionnellement, '
+    'même sans changement de race)',
+    (WidgetTester tester) async {
+      fakeRepository.catalogToReturn = const RaceCatalog(
+        races: [_elfe, _humain],
+        subraces: [_hautElfe],
+      );
+      // Simule un retour en arrière depuis `SubraceStepScreen`, qui a déjà
+      // écrit `subraceId` dans le brouillon.
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setRace(raceId: 1, subraceId: 10);
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      // "Elfe" doit déjà apparaître sélectionné (réhydratation) : on ne
+      // retape aucune tuile, on retape directement "Suivant".
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(
+        readDraft(),
+        const CharacterCreationDraft(raceId: 1, subraceId: 10),
+      );
+      expect(find.text('Étape sous-race'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'changer de race après un choix de sous-race efface bien la sous-race '
+    'devenue obsolète (la nouvelle race pousse toujours vers '
+    '`SubraceStepScreen`, qui réécrira `subraceId`)',
+    (WidgetTester tester) async {
+      const autreElfe = RaceOption(
+        id: 3,
+        name: 'Elfe des bois',
+        abilityBonuses: {'dex': 2},
+        traits: [],
+      );
+      const autreSousRace = SubraceOption(
+        id: 20,
+        raceId: 3,
+        name: 'Sylvain',
+        abilityBonuses: {},
+        traits: [],
+      );
+      fakeRepository.catalogToReturn = const RaceCatalog(
+        races: [_elfe, autreElfe],
+        subraces: [_hautElfe, autreSousRace],
+      );
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setRace(raceId: 1, subraceId: 10);
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Elfe des bois'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(
+        readDraft(),
+        const CharacterCreationDraft(raceId: 3, subraceId: null),
+      );
+      expect(find.text('Étape sous-race'), findsOneWidget);
     },
   );
 

@@ -319,8 +319,17 @@ class SupabaseCharacterCreationRepository
       _rowsOf(payload['subraceNames']),
     );
     return RaceCatalog(
+      // Une race `is_incomplete: true` (contenu de référence encore en cours
+      // de peuplement — pas de traits/bonus/sous-race saisis, voir la doc de
+      // classe de `RaceOption.isIncomplete`) n'est jamais proposée à la
+      // création de personnage, filtrée ici plutôt que dans `RaceRowMapper`
+      // (qui doit continuer à exposer le flag tel quel, ex. pour un futur
+      // écran d'administration) — même rationale que le filtrage de
+      // `items.rarity` ailleurs dans ce dépôt. Pas de filtre équivalent sur
+      // `subraces` : pas de colonne `is_incomplete` sur cette table.
       races: _rowsOf(payload['races'])
           .map((row) => RaceRowMapper.toRaceOption(row, names: raceNames))
+          .where((race) => !race.isIncomplete)
           .toList(),
       subraces: _rowsOf(payload['subraces'])
           .map((row) => RaceRowMapper.toSubraceOption(row, names: subraceNames))
@@ -470,6 +479,9 @@ class SupabaseCharacterCreationRepository
       _rowsOf(payload['featureDescriptions']),
     );
     return BackgroundCatalog(
+      // Même filtre que `_mapRaceCatalogPayload` : un historique
+      // `is_incomplete: true` (contenu de référence encore en cours de
+      // peuplement) n'est jamais proposé à la création de personnage.
       backgrounds: _rowsOf(payload['backgrounds'])
           .map(
             (row) => BackgroundRowMapper.toBackgroundOption(
@@ -479,6 +491,7 @@ class SupabaseCharacterCreationRepository
               featureDescriptions: featureDescriptions,
             ),
           )
+          .where((background) => !background.isIncomplete)
           .toList(),
     );
   }
@@ -650,9 +663,14 @@ class SupabaseCharacterCreationRepository
     final names = SpellRowMapper.parseTranslatedValues(
       _rowsOf(payload['spellNames']),
     );
+    // Même filtre que `_mapRaceCatalogPayload`/`_mapBackgroundCatalogPayload` :
+    // un sort `is_incomplete: true` (contenu de référence encore en cours de
+    // peuplement) n'est jamais proposé à la création de personnage —
+    // appliqué avant le tri alphabétique ci-dessous.
     final spells =
         _rowsOf(payload['spells'])
             .map((row) => SpellRowMapper.toSpellOption(row, names: names))
+            .where((spell) => !spell.isIncomplete)
             .toList()
           ..sort((a, b) => a.name.compareTo(b.name));
     return SpellCatalog(spells: spells);
