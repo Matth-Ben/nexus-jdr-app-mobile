@@ -8,13 +8,13 @@ abstract final class CharacterSheetHelp {
   static const personnage = StepHelpContent(
     title: 'La fiche personnage',
     body:
-        'VITESSE : distance que ton personnage parcourt en un tour.\n'
+        'VIT. (vitesse) : distance que ton personnage parcourt en un tour.\n'
         "CA (classe d'armure) : le score qu'un ennemi doit atteindre pour "
         'te toucher, calculé depuis ton armure, ton bouclier et ta '
         'Dextérité.\n'
         'INIT. (initiative) : ton bonus au jet qui fixe l\'ordre de jeu '
         'en combat — touche la tuile pour le lancer.\n'
-        'INSPIRATION : accordée par le MJ, touche la tuile pour '
+        'INSP. (inspiration) : accordée par le MJ, touche la tuile pour '
         "l'activer ou la dépenser.\n\n"
         'Points de vie : utilise les boutons de la carte pour encaisser '
         'des dégâts, te soigner ou prendre un repos.\n\n'

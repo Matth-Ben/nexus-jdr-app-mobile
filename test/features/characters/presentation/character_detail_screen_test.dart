@@ -1322,7 +1322,7 @@ void main() {
         await pumpDetail(tester);
         await tester.pumpAndSettle();
 
-        expect(find.text('VITESSE'), findsOneWidget);
+        expect(find.text('VIT.'), findsOneWidget);
         expect(find.text('9 m'), findsOneWidget);
         expect(find.text('CA'), findsOneWidget);
         // dex 14 -> modificateur +2, aucune armure équipée -> 10 + 2 = 12.
@@ -1345,7 +1345,7 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(find.text('INSPIRATION'), findsOneWidget);
+        expect(find.text('INSP.'), findsOneWidget);
         expect(find.text('—'), findsOneWidget);
       },
     );
@@ -1359,7 +1359,7 @@ void main() {
         await pumpDetail(tester);
         await tester.pumpAndSettle();
 
-        expect(find.text('VITESSE'), findsOneWidget);
+        expect(find.text('VIT.'), findsOneWidget);
         // Deux "—" attendus ici : vitesse ET inspiration inactive.
         expect(find.text('—'), findsNWidgets(2));
       },
@@ -1383,7 +1383,7 @@ void main() {
         await pumpDetail(tester);
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('INSPIRATION'));
+        await tester.tap(find.text('INSP.'));
         await tester.pumpAndSettle();
 
         expect(fakeRepository.setInspirationCallCount, 1);
@@ -1402,7 +1402,7 @@ void main() {
         await pumpDetail(tester);
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('INSPIRATION'));
+        await tester.tap(find.text('INSP.'));
         await tester.pumpAndSettle();
 
         expect(

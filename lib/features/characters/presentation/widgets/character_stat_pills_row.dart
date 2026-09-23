@@ -5,15 +5,15 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/signed_modifier_formatter.dart';
 
-/// Rangée "VITESSE / CA / INIT. / INSPIRATION" en tête de l'onglet
+/// Rangée "VIT. / CA / INIT. / INSP." en tête de l'onglet
 /// "Personnage", juste sous la carte d'identité — voir
 /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md` section "Onglet
 /// Personnage" et la maquette "Fiche — Personnage"
 /// (`09-maquettes-captures.md`). Composant "Tuile de statistique" du design
 /// système (section 4), 4 tuiles de largeur égale plutôt que défilables
 /// (contrairement à `CharacterInventoryStatBoxesRow`, qui peut compter
-/// jusqu'à 6 entrées) : toujours exactement 4 ici. Libellés courts ("CA",
-/// "INIT.", demande utilisateur du 2026-09-24) pour tenir à 4 par rangée.
+/// jusqu'à 6 entrées) : toujours exactement 4 ici. Libellés abrégés
+/// (demande utilisateur du 2026-09-24) pour tenir à 4 par rangée.
 ///
 /// Réutilisée telle quelle par `SharedCharacterViewScreen` (vue en lecture
 /// seule) avec [onTapInspiration] à `null` — voir sa documentation de
@@ -57,7 +57,7 @@ class CharacterStatPillsRow extends StatelessWidget {
       children: [
         Expanded(
           child: _StatPill(
-            label: 'VITESSE',
+            label: 'VIT.',
             value: speed != null ? '$speed m' : '—',
           ),
         ),
@@ -76,7 +76,7 @@ class CharacterStatPillsRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _StatPill(
-            label: 'INSPIRATION',
+            label: 'INSP.',
             value: inspiration ? '✓' : '—',
             emphasized: inspiration,
             onTap: onTapInspiration,
@@ -123,21 +123,15 @@ class _StatPill extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // `scaleDown` plutôt qu'une ellipse : à 4 tuiles par rangée,
-          // "INSPIRATION" ne tient pas toujours en entier sur un écran
-          // étroit (~360dp) — mieux vaut le réduire légèrement que le
-          // tronquer.
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              style: AppTypography.body(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary,
-              ),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.body(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: 2),
