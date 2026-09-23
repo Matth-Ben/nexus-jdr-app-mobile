@@ -9,7 +9,7 @@
          `features/groups/presentation/widgets/group_notes_tab_body.dart`). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
-        android:label="personnages"
+        android:label="Nexus JDR"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
