@@ -195,7 +195,8 @@ void main() {
 
     expect(find.text('VITESSE'), findsOneWidget);
     expect(find.text('9 m'), findsOneWidget);
-    expect(find.text("CLASSE D'ARMURE"), findsOneWidget);
+    expect(find.text('CA'), findsOneWidget);
+    expect(find.text('INIT.'), findsOneWidget);
     expect(find.text('INSPIRATION'), findsOneWidget);
     expect(find.text('✓'), findsOneWidget);
 

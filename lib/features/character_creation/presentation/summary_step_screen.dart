@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -197,7 +199,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
     final draft = ref.read(characterCreationDraftControllerProvider);
 
     try {
-      await repository.createCharacter(
+      final characterId = await repository.createCharacter(
         draft: draft,
         characterName: name,
         raceCatalog: data.raceCatalog,
@@ -209,6 +211,23 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
         spellCatalog: data.spellCatalog,
         itemCatalog: data.itemCatalog,
       );
+
+      // Portrait choisi à l'étape 8 : envoyé seulement maintenant, l'upload
+      // Storage ayant besoin de l'identifiant du personnage. Best-effort —
+      // le personnage est déjà créé, un échec ici ne doit pas le faire
+      // paraître raté : simple message, le portrait reste ajoutable depuis
+      // la fiche.
+      final portraitBytes = draft.portraitBytes;
+      var portraitFailed = false;
+      if (portraitBytes != null) {
+        try {
+          await ref
+              .read(characterRepositoryProvider)
+              .uploadPortrait(characterId: characterId, bytes: portraitBytes);
+        } catch (_) {
+          portraitFailed = true;
+        }
+      }
 
       // Invalide la liste des personnages *avant* de naviguer, pour qu'elle
       // réaffiche immédiatement le nouveau personnage sans pull-to-refresh
@@ -223,7 +242,18 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
       final returnRoute = ref
           .read(characterCreationReturnRouteControllerProvider.notifier)
           .consume();
+      final messenger = ScaffoldMessenger.of(context);
       context.go(returnRoute ?? '/');
+      if (portraitFailed) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Personnage créé, mais le portrait n'a pas pu être envoyé. "
+              'Ajoutez-le depuis la fiche.',
+            ),
+          ),
+        );
+      }
     } on CharacterCreationFailure catch (failure) {
       if (!mounted) return;
       setState(() {
@@ -424,6 +454,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _HeaderCard(
+                  portraitBytes: draft.portraitBytes,
                   name: trimmedName,
                   subtitle: _formatHeaderSubtitle(draft, data),
                 ),
@@ -633,11 +664,16 @@ class _NameFieldBlock extends StatelessWidget {
   }
 }
 
-/// Carte d'en-tête : portrait (toujours vide à cette itération), nom saisi et
+/// Carte d'en-tête : portrait (choisi à l'étape 8, vide sinon), nom saisi et
 /// résumé race/classe/niveau — voir la spec visuelle.
 class _HeaderCard extends StatelessWidget {
-  const _HeaderCard({required this.name, required this.subtitle});
+  const _HeaderCard({
+    required this.portraitBytes,
+    required this.name,
+    required this.subtitle,
+  });
 
+  final Uint8List? portraitBytes;
   final String name;
   final String subtitle;
 
@@ -656,7 +692,11 @@ class _HeaderCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PortraitFrame(portraitUrl: null, size: 64),
+          PortraitFrame(
+            portraitUrl: null,
+            portraitBytes: portraitBytes,
+            size: 64,
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(

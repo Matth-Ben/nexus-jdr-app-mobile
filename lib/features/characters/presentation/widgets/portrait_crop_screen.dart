@@ -29,12 +29,16 @@ import '../providers/character_providers.dart';
 /// de recadrage face à la matrice de transformation de l'`InteractiveViewer`.
 class PortraitCropScreen extends ConsumerStatefulWidget {
   const PortraitCropScreen({
-    required this.characterId,
+    this.characterId,
     required this.imageBytes,
     super.key,
   });
 
-  final String characterId;
+  /// Personnage dont le portrait est envoyé à la validation. `null` : mode
+  /// local (assistant de création, le personnage n'existe pas encore) —
+  /// l'écran se referme alors en renvoyant le PNG recadré (`Uint8List`)
+  /// sans rien envoyer.
+  final String? characterId;
   final Uint8List imageBytes;
 
   @override
@@ -68,13 +72,18 @@ class _PortraitCropScreenState extends ConsumerState<PortraitCropScreen> {
         );
       }
 
+      final pngBytes = byteData.buffer.asUint8List();
+      final characterId = widget.characterId;
+      if (characterId == null) {
+        if (!mounted) return;
+        Navigator.of(context).pop(pngBytes);
+        return;
+      }
+
       await ref
           .read(characterRepositoryProvider)
-          .uploadPortrait(
-            characterId: widget.characterId,
-            bytes: byteData.buffer.asUint8List(),
-          );
-      ref.invalidate(characterDetailProvider(widget.characterId));
+          .uploadPortrait(characterId: characterId, bytes: pngBytes);
+      ref.invalidate(characterDetailProvider(characterId));
 
       if (!mounted) return;
       Navigator.of(context).pop(true);

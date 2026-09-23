@@ -31,6 +31,8 @@ import '../domain/write_outcome.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
 import 'providers/pact_weapon_providers.dart';
+import '../../character_creation/presentation/widgets/step_help_sheet.dart';
+import '../domain/character_sheet_help.dart';
 import 'widgets/add_reward_sheet.dart';
 import 'widgets/add_xp_sheet.dart';
 import 'widgets/character_ability_score_grid.dart';
@@ -47,6 +49,7 @@ import 'widgets/character_spells_tab_body.dart';
 import 'widgets/character_story_edit_sheet.dart';
 import 'widgets/character_story_tab_body.dart';
 import 'widgets/character_vitals_card.dart';
+import 'widgets/dice_roll_sheet.dart';
 import 'widgets/hp_adjustment_sheet.dart';
 import 'widgets/pact_weapon_picker_sheet.dart';
 import 'widgets/portrait_upload_sheet.dart';
@@ -1830,6 +1833,21 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                           width: 44,
                           height: 44,
                           child: IconButton(
+                            tooltip: 'Aide',
+                            onPressed: () => showStepHelpSheet(
+                              context,
+                              CharacterSheetHelp.personnage,
+                            ),
+                            icon: const Icon(
+                              Icons.info_outline,
+                              color: AppColors.textOnWood,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: IconButton(
                             tooltip: 'Partager',
                             onPressed: () => context.push(
                               '/characters/${widget.characterId}/share',
@@ -2145,8 +2163,14 @@ class _CharacterTabBody extends StatelessWidget {
         CharacterStatPillsRow(
           speed: detail.speed,
           armorClass: detail.armorClass,
+          initiative: detail.initiative,
           inspiration: detail.inspiration,
           onTapInspiration: onTapToggleInspiration,
+          onTapInitiative: () => showDiceRollSheet(
+            context,
+            label: 'Initiative',
+            modifier: detail.initiative,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         CharacterVitalsCard(

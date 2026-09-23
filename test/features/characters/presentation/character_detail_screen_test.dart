@@ -695,15 +695,15 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(CharacterAbilityScoreGrid),
-          matching: find.text('INTELLIGENCE'),
+          matching: find.text('INT'),
         ),
       );
       await tester.pumpAndSettle();
 
-      // "INTELLIGENCE" apparaît maintenant deux fois (la tuile de la grille,
-      // toujours montée sous la sheet modale, ET le titre de la sheet
-      // elle-même) : seule la ligne de détail du jet, propre à la sheet,
-      // identifie sans ambiguïté qu'elle s'est bien ouverte.
+      // La tuile affiche l'abréviation ("INT"), la sheet garde le nom
+      // complet ; la ligne de détail du jet, propre à la sheet, identifie
+      // sans ambiguïté qu'elle s'est bien ouverte.
+      expect(find.text('INTELLIGENCE'), findsOneWidget);
       expect(find.textContaining('+4 ='), findsOneWidget);
     },
   );
@@ -1324,7 +1324,7 @@ void main() {
 
         expect(find.text('VITESSE'), findsOneWidget);
         expect(find.text('9 m'), findsOneWidget);
-        expect(find.text("CLASSE D'ARMURE"), findsOneWidget);
+        expect(find.text('CA'), findsOneWidget);
         // dex 14 -> modificateur +2, aucune armure équipée -> 10 + 2 = 12.
         // Recherche restreinte à la rangée de tuiles : "12" est aussi la
         // valeur de la caractéristique CON de _baseDetail, affichée par la
@@ -1333,6 +1333,15 @@ void main() {
           find.descendant(
             of: find.byType(CharacterStatPillsRow),
             matching: find.text('12'),
+          ),
+          findsOneWidget,
+        );
+        // Initiative = modificateur de Dextérité (dex 14 -> +2).
+        expect(find.text('INIT.'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(CharacterStatPillsRow),
+            matching: find.text('+2'),
           ),
           findsOneWidget,
         );
@@ -2245,7 +2254,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Rage'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Utiliser'));
+      await tester.tap(find.text('UTILISER'));
       await tester.pumpAndSettle();
     }
 

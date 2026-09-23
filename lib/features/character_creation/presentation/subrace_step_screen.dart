@@ -208,6 +208,8 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
                         SelectableOptionTile(
                           title: subraces[i].name,
                           subtitle: subraces[i].summaryLine,
+                          subtitleMaxLines: null,
+                          selectedDetail: subraces[i].traitDetails,
                           selected: _selectedSubraceId == subraces[i].id,
                           leading: AccentIconBadge(
                             index: i,

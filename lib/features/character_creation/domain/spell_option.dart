@@ -5,15 +5,10 @@ part 'spell_option.freezed.dart';
 /// Un sort sélectionnable à l'étape 6/9 "Sorts" de l'assistant de création
 /// (`spells`, voir `docs/cahier-des-charges/02-modele-donnees.md`).
 ///
-/// Ne porte volontairement que les champs affichés par la maquette réelle de
-/// cette étape (carte de sort sobre, une seule ligne de méta "École ·
-/// casting_time") : ni `range`/`duration`/`components`/`concentration`/
-/// `ritual`/`source`, qui existent bien sur `spells` mais n'ont aucun usage à
-/// cet écran — même principe que [LanguageOption.type] (gardé) mais ici les
-/// colonnes non affichées ne sont même pas lues, pour ne pas faire porter à
-/// ce modèle un usage futur hypothétique (fiche personnage/grimoire, pas
-/// encore implémentés) qui redéfinira probablement son propre modèle dédié le
-/// moment venu.
+/// Porte aussi portée/composantes/durée/concentration/description, affichées
+/// dans le panneau d'information ouvert depuis le bouton ⓘ de chaque sort
+/// (demande utilisateur, 2026-09-24 : pouvoir lire un sort avant de le
+/// choisir).
 @freezed
 abstract class SpellOption with _$SpellOption {
   const SpellOption._();
@@ -38,6 +33,22 @@ abstract class SpellOption with _$SpellOption {
     /// réelle inclut toujours la quantité) — seconde moitié de la ligne de
     /// méta.
     required String castingTime,
+
+    /// Portée (`spells.range`).
+    @Default('') String range,
+
+    /// Composantes (`spells.components`, jsonb `{verbal, somatic, material,
+    /// material_desc}`), formatées par `SpellComponentsFormatter`.
+    @Default(<String, dynamic>{}) Map<String, dynamic> components,
+
+    /// Durée (`spells.duration`).
+    @Default('') String duration,
+
+    /// `spells.concentration`.
+    @Default(false) bool concentration,
+
+    /// Description FR (`translations`, `field_name = 'description'`).
+    @Default('') String description,
 
     /// `spells.is_incomplete` — `true` pour une entrée placeholder créée par
     /// l'import XML aidedd.org quand l'utilisateur choisit "Garder comme

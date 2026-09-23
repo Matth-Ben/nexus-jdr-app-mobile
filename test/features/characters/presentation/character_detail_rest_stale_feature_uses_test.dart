@@ -403,7 +403,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Rage'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Utiliser'));
+      await tester.tap(find.text('UTILISER'));
       await tester.pumpAndSettle();
 
       // Un repos court démarre et résout pendant que l'utilisation

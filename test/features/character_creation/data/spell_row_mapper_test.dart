@@ -52,6 +52,30 @@ void main() {
   });
 
   group('toSpellOption', () {
+    test("lit les détails affichés dans le panneau d'information (portée, "
+        'composantes, durée, concentration, description)', () {
+      final spell = SpellRowMapper.toSpellOption(
+        {
+          'id': 1,
+          'level': 1,
+          'school': 'Enchantement',
+          'casting_time': '1 action',
+          'range': '9 mètres',
+          'components': {'verbal': true, 'somatic': true},
+          'duration': '1 minute',
+          'concentration': true,
+        },
+        names: {'1': 'Charme-personne'},
+        descriptions: {'1': 'Tu tentes de charmer un humanoïde.'},
+      );
+
+      expect(spell.range, '9 mètres');
+      expect(spell.components, {'verbal': true, 'somatic': true});
+      expect(spell.duration, '1 minute');
+      expect(spell.concentration, isTrue);
+      expect(spell.description, 'Tu tentes de charmer un humanoïde.');
+    });
+
     test('résout le nom via la map de traductions et lit les colonnes de '
         'méta', () {
       final spell = SpellRowMapper.toSpellOption(

@@ -441,12 +441,16 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Rage'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Utiliser'));
+      await tester.tap(find.text('UTILISER'));
       await tester.pumpAndSettle();
 
       expect(repository.useClassFeatureCallCount, 1);
 
+      // Le tap ouvre toujours le panneau de description (lecture), mais son
+      // bouton "Utiliser" reste désactivé tant que l'appel est en vol.
       await tester.tap(find.text('Rage'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('UTILISER'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(
@@ -456,8 +460,6 @@ void main() {
             'Un second tap pendant que le premier est en vol ne doit '
             'jamais déclencher un second appel réseau.',
       );
-      expect(find.text('Infos'), findsNothing);
-
       repository.useFeatureGate.complete();
       await tester.pumpAndSettle();
 

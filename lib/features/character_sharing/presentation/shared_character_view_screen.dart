@@ -177,6 +177,7 @@ class _CharacterTabBody extends StatelessWidget {
         CharacterStatPillsRow(
           speed: detail.speed,
           armorClass: detail.armorClass,
+          initiative: detail.initiative,
           inspiration: detail.inspiration,
         ),
         const SizedBox(height: AppSpacing.md),

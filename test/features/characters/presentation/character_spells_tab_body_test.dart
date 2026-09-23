@@ -557,7 +557,7 @@ void main() {
 
       await tester.tap(find.text('Invocation occulte'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Utiliser'));
+      await tester.tap(find.text('UTILISER'));
       await tester.pumpAndSettle();
 
       expect(used?.id, 1);

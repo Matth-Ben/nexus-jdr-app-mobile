@@ -3,15 +3,17 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../domain/signed_modifier_formatter.dart';
 
-/// Rangée "VITESSE / CLASSE D'ARMURE / INSPIRATION" en tête de l'onglet
+/// Rangée "VITESSE / CA / INIT. / INSPIRATION" en tête de l'onglet
 /// "Personnage", juste sous la carte d'identité — voir
 /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md` section "Onglet
 /// Personnage" et la maquette "Fiche — Personnage"
 /// (`09-maquettes-captures.md`). Composant "Tuile de statistique" du design
-/// système (section 4), 3 tuiles de largeur égale plutôt que défilables
+/// système (section 4), 4 tuiles de largeur égale plutôt que défilables
 /// (contrairement à `CharacterInventoryStatBoxesRow`, qui peut compter
-/// jusqu'à 6 entrées) : toujours exactement 3 ici.
+/// jusqu'à 6 entrées) : toujours exactement 4 ici. Libellés courts ("CA",
+/// "INIT.", demande utilisateur du 2026-09-24) pour tenir à 4 par rangée.
 ///
 /// Réutilisée telle quelle par `SharedCharacterViewScreen` (vue en lecture
 /// seule) avec [onTapInspiration] à `null` — voir sa documentation de
@@ -20,8 +22,10 @@ class CharacterStatPillsRow extends StatelessWidget {
   const CharacterStatPillsRow({
     required this.speed,
     required this.armorClass,
+    required this.initiative,
     required this.inspiration,
     this.onTapInspiration,
+    this.onTapInitiative,
     super.key,
   });
 
@@ -32,6 +36,13 @@ class CharacterStatPillsRow extends StatelessWidget {
 
   /// `CharacterDetail.armorClass`, déjà calculé par l'appelant.
   final int armorClass;
+
+  /// Bonus d'initiative (modificateur de Dextérité, D&D 5e), déjà calculé
+  /// par l'appelant.
+  final int initiative;
+
+  /// Lance un jet d'initiative au tap — `null` désactive le tap.
+  final VoidCallback? onTapInitiative;
 
   /// `CharacterDetail.inspiration`.
   final bool inspiration;
@@ -52,7 +63,15 @@ class CharacterStatPillsRow extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: _StatPill(label: "CLASSE D'ARMURE", value: '$armorClass'),
+          child: _StatPill(label: 'CA', value: '$armorClass'),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _StatPill(
+            label: 'INIT.',
+            value: SignedModifierFormatter.format(initiative),
+            onTap: onTapInitiative,
+          ),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
@@ -80,7 +99,7 @@ class _StatPill extends StatelessWidget {
   final String value;
 
   /// Bordure dorée d'emphase (voir "INSPIRATION" active sur la maquette) —
-  /// `false` pour Vitesse/Classe d'Armure, toujours statiques.
+  /// `false` pour Vitesse/CA/Initiative.
   final bool emphasized;
 
   final VoidCallback? onTap;
@@ -104,15 +123,21 @@ class _StatPill extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.body(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
+          // `scaleDown` plutôt qu'une ellipse : à 4 tuiles par rangée,
+          // "INSPIRATION" ne tient pas toujours en entier sur un écran
+          // étroit (~360dp) — mieux vaut le réduire légèrement que le
+          // tronquer.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: AppTypography.body(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
           const SizedBox(height: 2),

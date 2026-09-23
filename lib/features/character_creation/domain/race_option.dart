@@ -39,4 +39,8 @@ abstract class RaceOption with _$RaceOption {
     abilityBonuses: abilityBonuses,
     traits: traits,
   );
+
+  /// Tous les traits avec leur description complète, voir
+  /// [RaceSummaryFormatter.formatTraitDetails].
+  String? get traitDetails => RaceSummaryFormatter.formatTraitDetails(traits);
 }

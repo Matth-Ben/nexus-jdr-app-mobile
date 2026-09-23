@@ -233,6 +233,7 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                         SelectableOptionTile(
                           title: catalog.classes[i].name,
                           subtitle: catalog.classes[i].summaryLine,
+                          subtitleMaxLines: null,
                           selected: _selectedClassId == catalog.classes[i].id,
                           leading: AccentIconBadge(
                             index: i,

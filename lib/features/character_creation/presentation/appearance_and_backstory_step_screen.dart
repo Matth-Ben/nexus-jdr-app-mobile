@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import '../../../core/widgets/dashed_border_painter.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../characters/presentation/widgets/portrait_upload_sheet.dart';
 import '../domain/creation_step_help.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'widgets/abandon_creation_flow.dart';
@@ -21,8 +24,8 @@ import 'widgets/step_help_sheet.dart';
 ///
 /// Contrairement aux étapes précédentes, cet écran ne lit aucune donnée de
 /// référence côté serveur : les 9 champs sont du texte libre et le portrait
-/// n'est qu'un placeholder non fonctionnel pour cette itération (voir
-/// [_PortraitTile]) — construction entièrement synchrone, pas de
+/// est choisi localement (voir [_PortraitTile]), envoyé seulement à l'étape
+/// 9 — construction entièrement synchrone, pas de
 /// `FutureProvider`/`.when(data/loading/error)` comme les étapes catalogue,
 /// et donc pas d'état de chargement/erreur réseau à prévoir ici.
 ///
@@ -176,13 +179,22 @@ class _AppearanceAndBackstoryStepScreenState
     context.push('/characters/new/step-9');
   }
 
-  /// Tap sur la tuile "Portrait" : aucun flux d'upload fonctionnel à cette
-  /// itération (décision du chef de projet, voir le commentaire de classe) —
-  /// se contente de signaler que la fonctionnalité arrive plus tard, sans
-  /// naviguer ni écrire quoi que ce soit.
-  void _showPortraitComingSoon() {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Bientôt disponible')));
+  /// Tap sur la tuile "Portrait" : même choix de source et même recadrage
+  /// que la fiche personnage (`pickLocalPortrait`), mais le PNG recadré est
+  /// seulement gardé dans le brouillon — envoyé dans Storage à l'étape 9,
+  /// une fois le personnage créé.
+  Future<void> _pickPortrait() async {
+    final draftController = ref.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+    final result = await pickLocalPortrait(
+      context,
+      hasPortrait:
+          ref.read(characterCreationDraftControllerProvider).portraitBytes !=
+          null,
+    );
+    if (result == null || !mounted) return;
+    draftController.setPortraitBytes(result.bytes);
   }
 
   @override
@@ -219,7 +231,14 @@ class _AppearanceAndBackstoryStepScreenState
                 AppSpacing.md,
               ),
               children: [
-                _PortraitTile(onTap: _showPortraitComingSoon),
+                _PortraitTile(
+                  portraitBytes: ref.watch(
+                    characterCreationDraftControllerProvider.select(
+                      (draft) => draft.portraitBytes,
+                    ),
+                  ),
+                  onTap: _pickPortrait,
+                ),
                 const SizedBox(height: AppSpacing.md),
                 for (var i = 0; i < _fieldSpecs.length; i++) ...[
                   if (i > 0) const SizedBox(height: AppSpacing.md),
@@ -341,19 +360,17 @@ class _TextFieldBlock extends StatelessWidget {
   }
 }
 
-/// Tuile "Portrait" en tête du corps de l'écran : simple placeholder non
-/// fonctionnel pour cette itération (décision du chef de projet, voir le
-/// commentaire de classe de [AppearanceAndBackstoryStepScreen]) — aucun flux
-/// d'upload caméra/galerie/URL/recadrage, le vrai flux sera une tâche
-/// séparée future réutilisée aussi par la fiche personnage
-/// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 5).
+/// Tuile "Portrait" en tête du corps de l'écran : ouvre le flux de choix +
+/// recadrage (`pickLocalPortrait`, partagé avec la fiche personnage) ;
+/// affiche la miniature une fois un portrait choisi.
 ///
 /// Carré pointillé via [DashedBorderPainter], extrait de
 /// `core/widgets/portrait_frame.dart` pour être partagé ici sans dupliquer
 /// le peintre (même stroke/dash/gap/couleur que [PortraitFrame]).
 class _PortraitTile extends StatelessWidget {
-  const _PortraitTile({required this.onTap});
+  const _PortraitTile({required this.portraitBytes, required this.onTap});
 
+  final Uint8List? portraitBytes;
   final VoidCallback onTap;
 
   @override
@@ -372,16 +389,20 @@ class _PortraitTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               clipBehavior: Clip.antiAlias,
-              child: CustomPaint(
-                painter: const DashedBorderPainter(color: AppColors.textMuted),
-                child: const Center(
-                  child: Icon(
-                    Icons.image_outlined,
-                    size: 28,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ),
+              child: portraitBytes != null
+                  ? Image.memory(portraitBytes!, fit: BoxFit.cover)
+                  : CustomPaint(
+                      painter: const DashedBorderPainter(
+                        color: AppColors.textMuted,
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.image_outlined,
+                          size: 28,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -398,7 +419,9 @@ class _PortraitTile extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Optionnel — ajoutable plus tard',
+                    portraitBytes != null
+                        ? 'Touchez pour changer ou retirer'
+                        : 'Optionnel — touchez pour en ajouter un',
                     style: AppTypography.body(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

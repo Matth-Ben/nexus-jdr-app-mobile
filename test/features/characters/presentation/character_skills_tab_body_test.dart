@@ -295,30 +295,37 @@ void main() {
   });
 
   testWidgets(
-    'une aptitude passive n\'est pas cliquable (pas de chevron, tap sans '
-    'effet)',
+    'une aptitude passive est cliquable et ouvre son panneau de description, '
+    'sans bouton "Utiliser"',
     (tester) async {
       await _pump(
         tester,
         _detail(
           classFeatures: const [
-            CharacterClassFeature(id: 2, name: 'Défense sans armure', level: 1),
+            CharacterClassFeature(
+              id: 2,
+              name: 'Défense sans armure',
+              level: 1,
+              description: 'Sans armure, CA = 10 + Dex + Con.',
+            ),
           ],
         ),
       );
 
-      expect(find.byIcon(Icons.chevron_right), findsNothing);
+      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
 
-      await tester.tap(find.text('Défense sans armure'), warnIfMissed: false);
+      await tester.tap(find.text('Défense sans armure'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Infos'), findsNothing);
+      expect(find.text('DÉFENSE SANS ARMURE'), findsOneWidget);
+      expect(find.text('Sans armure, CA = 10 + Dex + Con.'), findsOneWidget);
+      expect(find.text('UTILISER'), findsNothing);
     },
   );
 
   testWidgets(
     'une aptitude à usage limité est cliquable (chevron affiché) et ouvre '
-    'la sheet d\'actions',
+    'directement son panneau de description',
     (tester) async {
       await _pump(
         tester,
@@ -341,17 +348,17 @@ void main() {
       await tester.tap(find.text('Conduit divin'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Infos'), findsOneWidget);
-      expect(find.text('Utiliser'), findsOneWidget);
-      // Épuisée (0 restant) : "Utiliser" désactivée.
-      expect(find.text('Épuisée'), findsOneWidget);
+      expect(find.text('CONDUIT DIVIN'), findsOneWidget);
+      expect(find.text('DESCRIPTION'), findsOneWidget);
+      expect(find.text('UTILISER'), findsOneWidget);
     },
   );
 
   testWidgets(
-    'actionsDisabled désactive le tap sur les aptitudes à usage limité '
+    'actionsDisabled laisse lire la description mais désactive "Utiliser" '
     '(repos en vol)',
     (tester) async {
+      var used = false;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -368,17 +375,21 @@ void main() {
                   ),
                 ],
               ),
-              onUseFeature: (_) {},
+              onUseFeature: (_) => used = true,
               actionsDisabled: true,
             ),
           ),
         ),
       );
 
-      await tester.tap(find.text('Conduit divin'), warnIfMissed: false);
+      await tester.tap(find.text('Conduit divin'));
+      await tester.pumpAndSettle();
+      expect(find.text('CONDUIT DIVIN'), findsOneWidget);
+
+      await tester.tap(find.text('UTILISER'), warnIfMissed: false);
       await tester.pumpAndSettle();
 
-      expect(find.text('Infos'), findsNothing);
+      expect(used, isFalse);
     },
   );
 

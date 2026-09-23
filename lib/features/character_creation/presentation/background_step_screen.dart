@@ -190,6 +190,7 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
                         SelectableOptionTile(
                           title: catalog.backgrounds[i].name,
                           subtitle: catalog.backgrounds[i].skillsSummaryLine,
+                          subtitleMaxLines: null,
                           selectedDetail:
                               catalog.backgrounds[i].featureSummaryLine,
                           selected:

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../domain/ability_score_method.dart';
@@ -194,6 +196,13 @@ class CharacterCreationDraftController
   /// saisi.
   void setCharacterName(String? characterName) {
     state = state.copyWith(characterName: characterName);
+  }
+
+  /// Définit (ou retire, avec `null`) le portrait de l'étape 8 — le
+  /// `copyWith` de freezed distingue bien un `null` explicite d'un paramètre
+  /// omis.
+  void setPortraitBytes(Uint8List? portraitBytes) {
+    state = state.copyWith(portraitBytes: portraitBytes);
   }
 
   /// Remet le brouillon à zéro. Appelé par `CharacterListScreen` avant de

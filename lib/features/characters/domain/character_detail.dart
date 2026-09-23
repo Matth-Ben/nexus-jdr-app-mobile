@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../character_creation/domain/ability_score_rules.dart';
 import 'armor_class_calculator.dart';
 import 'carrying_capacity_calculator.dart';
 import 'character_adventure.dart';
@@ -376,6 +377,11 @@ abstract class CharacterDetail with _$CharacterDetail {
     abilityScores: abilityScores,
     inventory: inventory,
   );
+
+  /// Bonus d'initiative (D&D 5e : modificateur de Dextérité), calculé à la
+  /// volée — même repli à 10 que [armorClass] si la Dextérité est absente.
+  int get initiative =>
+      AbilityScoreRules.abilityModifier(abilityScores['dex'] ?? 10);
 
   /// `true` pour un Occultiste ayant choisi le Pacte de la lame
   /// (`character_class_options.chosen_value = 'lame'`) : seul cas où la carte
