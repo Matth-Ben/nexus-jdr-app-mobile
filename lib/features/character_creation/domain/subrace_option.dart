@@ -27,7 +27,10 @@ abstract class SubraceOption with _$SubraceOption {
     traits: traits,
   );
 
-  /// Tous les traits avec leur description complète, voir
-  /// [RaceSummaryFormatter.formatTraitDetails].
-  String? get traitDetails => RaceSummaryFormatter.formatTraitDetails(traits);
+  /// Texte complet du panneau ⓘ (bonus + traits détaillés), voir
+  /// [RaceSummaryFormatter.formatInfo].
+  String get infoText => RaceSummaryFormatter.formatInfo(
+    abilityBonuses: abilityBonuses,
+    traits: traits,
+  );
 }

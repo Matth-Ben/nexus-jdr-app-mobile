@@ -62,4 +62,39 @@ void main() {
     expect(expandedHeight.height, greaterThan(truncatedHeight.height));
     expect(truncatedHeight.height, greaterThanOrEqualTo(44));
   });
+
+  testWidgets(
+    'onInfo : le bouton info appelle onInfo sans déclencher la sélection',
+    (tester) async {
+      var infoTaps = 0;
+      var selectTaps = 0;
+      await tester.pumpWidget(
+        _wrap(
+          SelectableOptionTile(
+            title: 'Titre',
+            subtitle: longSubtitle,
+            selected: false,
+            onTap: () => selectTaps++,
+            onInfo: () => infoTaps++,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.info_outline_rounded));
+      await tester.pump();
+
+      expect(infoTaps, 1);
+      expect(selectTaps, 0);
+    },
+  );
+
+  testWidgets('sans onInfo, aucun bouton info', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        SelectableOptionTile(title: 'Titre', selected: false, onTap: () {}),
+      ),
+    );
+
+    expect(find.byIcon(Icons.info_outline_rounded), findsNothing);
+  });
 }

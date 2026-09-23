@@ -25,6 +25,16 @@ import 'package:personnages/features/character_creation/presentation/widgets/dra
 // Ordre canonique des 9 champs, voir le commentaire de classe de
 // `AppearanceAndBackstoryStepScreen` — les tests s'appuient sur cet ordre
 // pour retrouver le bon `TextFormField` par index.
+const _identityLabels = [
+  'SEXE',
+  'ÂGE',
+  'TAILLE',
+  'POIDS',
+  'YEUX',
+  'PEAU',
+  'CHEVEUX',
+];
+
 const _labels = [
   'APPARENCE PHYSIQUE',
   'TRAITS DE PERSONNALITÉ',
@@ -105,7 +115,11 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Finder fieldAt(int index) => find.byType(TextFormField).at(index);
+  // Les 7 champs courts d'identité précèdent les 9 champs texte : `fieldAt`
+  // indexe les champs texte, `identityFieldAt` les champs d'identité.
+  Finder identityFieldAt(int index) => find.byType(TextFormField).at(index);
+  Finder fieldAt(int index) =>
+      find.byType(TextFormField).at(_identityLabels.length + index);
 
   // `TextFormField` ne réexpose pas `focusNode`/`textInputAction` en champs
   // publics (ils ne servent qu'à construire le `TextField` interne) : on
@@ -121,10 +135,10 @@ void main() {
     expect(find.text('Optionnel — touchez pour en ajouter un'), findsOneWidget);
     expect(find.byIcon(Icons.image_outlined), findsOneWidget);
 
-    for (final label in _labels) {
+    for (final label in [..._identityLabels, ..._labels]) {
       expect(find.text(label), findsOneWidget);
     }
-    expect(find.byType(TextFormField), findsNWidgets(9));
+    expect(find.byType(TextFormField), findsNWidgets(16));
   });
 
   testWidgets(
@@ -180,6 +194,13 @@ void main() {
       container
           .read(characterCreationDraftControllerProvider.notifier)
           .setAppearanceAndBackstory(
+            sexe: null,
+            age: null,
+            height: null,
+            weight: null,
+            eyes: null,
+            skin: null,
+            hair: null,
             appearanceText: 'Grand et mince',
             traitsText: 'Curieux',
             idealsText: 'La justice',
@@ -237,6 +258,48 @@ void main() {
     },
   );
 
+  testWidgets('les 7 champs d\'identité (sexe, âge, taille, poids, yeux, peau, '
+      'cheveux) sont propagés au brouillon et réhydratés au retour', (
+    WidgetTester tester,
+  ) async {
+    await pumpStep(tester);
+
+    const values = [
+      'Femme',
+      '27 ans',
+      '1,75 m',
+      '70 kg',
+      'Verts',
+      'Hâlée',
+      'Bruns, courts',
+    ];
+    for (var i = 0; i < values.length; i++) {
+      await tester.enterText(identityFieldAt(i), values[i]);
+    }
+    await tester.pump();
+
+    await tester.tap(find.text('SUIVANT'));
+    await tester.pumpAndSettle();
+
+    final draft = readDraft();
+    expect([
+      draft.sexe,
+      draft.age,
+      draft.height,
+      draft.weight,
+      draft.eyes,
+      draft.skin,
+      draft.hair,
+    ], values);
+
+    router.pop();
+    await tester.pumpAndSettle();
+    for (var i = 0; i < values.length; i++) {
+      final field = tester.widget<TextFormField>(identityFieldAt(i));
+      expect(field.controller!.text, values[i]);
+    }
+  });
+
   testWidgets(
     'un champ rempli puis entièrement effacé (espaces uniquement) redevient '
     'null dans le brouillon après validation',
@@ -244,6 +307,13 @@ void main() {
       container
           .read(characterCreationDraftControllerProvider.notifier)
           .setAppearanceAndBackstory(
+            sexe: null,
+            age: null,
+            height: null,
+            weight: null,
+            eyes: null,
+            skin: null,
+            hair: null,
             appearanceText: 'Grand et mince',
             traitsText: null,
             idealsText: null,

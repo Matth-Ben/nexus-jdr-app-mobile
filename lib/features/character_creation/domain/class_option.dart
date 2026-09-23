@@ -71,6 +71,16 @@ abstract class ClassOption with _$ClassOption {
   /// vie d6", maquette `03_étape_2_classe.png`), en omettant la description
   /// si elle n'a pas pu être résolue (pas de ' · ' orphelin en tête) — même
   /// pattern que `_summaryLine` de `character_card.dart`.
+  /// Texte complet du panneau ⓘ de l'étape 2/9.
+  String get infoText => [
+    if (description.isNotEmpty) description,
+    'Dé de vie : d$hitDie',
+    if (skillChoices.count > 0)
+      'Compétences : ${skillChoices.count} au choix parmi '
+          '${skillChoices.choices.join(', ')}',
+    if (grantedToolNames.isNotEmpty) 'Outils : ${grantedToolNames.join(', ')}',
+  ].join(String.fromCharCodes(const [10, 10]));
+
   String get summaryLine {
     final segments = [
       if (description.isNotEmpty) description,

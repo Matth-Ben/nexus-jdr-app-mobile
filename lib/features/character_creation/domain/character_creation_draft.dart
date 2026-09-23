@@ -130,6 +130,29 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// destinées aux colonnes `characters.appearance_text`/`traits_text`/...
     String? appearanceText,
 
+    /// Identité physique saisie à l'étape 8 (champs courts, texte libre) —
+    /// colonnes `characters.sexe`/`age`/`height`/`weight`/`eyes`/`skin`/
+    /// `hair`, toutes `text` nullables. `null` = jamais renseigné.
+    String? sexe,
+
+    /// Voir [sexe] — `characters.age`.
+    String? age,
+
+    /// Voir [sexe] — `characters.height`.
+    String? height,
+
+    /// Voir [sexe] — `characters.weight`.
+    String? weight,
+
+    /// Voir [sexe] — `characters.eyes`.
+    String? eyes,
+
+    /// Voir [sexe] — `characters.skin`.
+    String? skin,
+
+    /// Voir [sexe] — `characters.hair`.
+    String? hair,
+
     /// Voir [appearanceText] — `characters.traits_text`.
     String? traitsText,
 

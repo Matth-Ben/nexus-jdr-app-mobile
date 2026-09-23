@@ -59,6 +59,20 @@ abstract final class RaceSummaryFormatter {
         .join('\n\n');
   }
 
+  /// Texte complet du panneau ⓘ d'une race/sous-race : bonus de
+  /// caractéristiques puis tous les traits avec leur description.
+  static String formatInfo({
+    required Map<String, dynamic> abilityBonuses,
+    required List<RaceTrait> traits,
+  }) {
+    final abilityPart = _formatAbilityBonuses(abilityBonuses);
+    final traitPart = formatTraitDetails(traits);
+    return [
+      if (abilityPart.isNotEmpty) 'Bonus : $abilityPart',
+      ?traitPart,
+    ].join(String.fromCharCodes(const [10, 10]));
+  }
+
   static String _formatAbilityBonuses(Map<String, dynamic> abilityBonuses) {
     final hasUniformBonusToAllAbilities = _abilityAbbreviations.keys.every(
       (key) => abilityBonuses[key] == 1,
