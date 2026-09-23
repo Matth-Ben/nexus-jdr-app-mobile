@@ -376,6 +376,61 @@ void main() {
 
       expect(find.text('Infos'), findsNothing);
     });
+
+    testWidgets(
+      'panneau "Infos" d\'une arme : affiche le bonus d\'attaque et les '
+      'dégâts avec le modificateur de caractéristique intégré',
+      (tester) async {
+        const sword = CharacterInventoryItem(
+          id: 'inv-sword',
+          itemId: 20,
+          name: 'Épée courte',
+          category: 'arme',
+          quantity: 1,
+          equipped: false,
+          weaponProperties: CharacterInventoryWeaponProperties(
+            damageDice: '1d6',
+            damageType: 'perforant',
+            properties: ['finesse', 'légère'],
+          ),
+        );
+        await _pump(
+          tester,
+          _detail(
+            inventory: const [sword],
+            abilityScores: const {'str': 10, 'dex': 16},
+          ),
+        );
+
+        await tester.tap(find.text('Épée courte'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Infos'));
+        await tester.pumpAndSettle();
+
+        // Finesse -> meilleur de Force (10 -> +0) et Dextérité (16 -> +3) ;
+        // aucune maîtrise déclarée -> bonus d'attaque +3 seul, même
+        // modificateur intégré aux dégâts.
+        expect(find.text('Attaque'), findsOneWidget);
+        expect(find.text('+3'), findsOneWidget);
+        expect(find.text('Dégâts'), findsOneWidget);
+        expect(find.text('1d6+3 perforant'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'panneau "Infos" d\'un objet sans dé de dégâts : ni "Attaque" ni '
+      'modificateur ajouté',
+      (tester) async {
+        await _pump(tester, _detail(inventory: const [_potion]));
+
+        await tester.tap(find.text('Potion de soins'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Infos'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Attaque'), findsNothing);
+      },
+    );
   });
 
   group('stat box de monnaie cliquable -> sheet d\'ajustement', () {

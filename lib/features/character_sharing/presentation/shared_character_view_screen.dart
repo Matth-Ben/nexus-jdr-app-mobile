@@ -11,6 +11,7 @@ import '../../../core/widgets/wood_back_header.dart';
 import '../../characters/domain/character_detail.dart';
 import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_identity_formatter.dart';
+import '../../characters/domain/proficiency_bonus.dart';
 import '../../characters/presentation/widgets/character_ability_score_grid.dart';
 import '../../characters/presentation/widgets/character_detail_tab_bar.dart';
 import '../../characters/presentation/widgets/character_equipped_weapons_card.dart';
@@ -187,6 +188,11 @@ class _CharacterTabBody extends StatelessWidget {
           weapons: detail.inventory
               .where((i) => i.category == 'arme' && i.equipped)
               .toList(),
+          abilityScores: detail.abilityScores,
+          proficiencyBonus: ProficiencyBonusRules.forTotalLevel(
+            detail.totalLevel,
+          ),
+          weaponProficiencyNames: detail.weaponProficiencyNames,
         ),
         if (detail.hasBladePact) ...[
           const SizedBox(height: AppSpacing.md),

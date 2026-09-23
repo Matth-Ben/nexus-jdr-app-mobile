@@ -2166,6 +2166,9 @@ class _CharacterTabBody extends StatelessWidget {
           weapons: detail.inventory
               .where((i) => i.category == 'arme' && i.equipped)
               .toList(),
+          abilityScores: detail.abilityScores,
+          proficiencyBonus: proficiencyBonus,
+          weaponProficiencyNames: detail.weaponProficiencyNames,
         ),
         if (detail.hasBladePact) ...[
           const SizedBox(height: AppSpacing.md),

@@ -11,6 +11,8 @@ import '../../domain/currency_kind.dart';
 import '../../domain/inventory_catalog_item.dart';
 import '../../domain/inventory_category_filter.dart';
 import '../../domain/inventory_stat_boxes_resolver.dart';
+import '../../domain/proficiency_bonus.dart';
+import '../../domain/weapon_attack_calculator.dart';
 import 'add_item_flow.dart';
 import 'character_inventory_capacity_gauge.dart';
 import 'character_inventory_item_card.dart';
@@ -126,6 +128,25 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
     BuildContext context,
     CharacterInventoryItem item,
   ) {
+    int? attackBonus;
+    int? damageModifier;
+    if (item.category == 'arme' && item.weaponProperties?.damageDice != null) {
+      final proficiencyBonus = ProficiencyBonusRules.forTotalLevel(
+        widget.detail.totalLevel,
+      );
+      attackBonus = WeaponAttackCalculator.attackBonus(
+        weaponName: item.name,
+        weaponProperties: item.weaponProperties!.properties,
+        abilityScores: widget.detail.abilityScores,
+        proficiencyTokens: widget.detail.weaponProficiencyNames,
+        proficiencyBonus: proficiencyBonus,
+      );
+      damageModifier = WeaponAttackCalculator.abilityModifierFor(
+        weaponProperties: item.weaponProperties!.properties,
+        abilityScores: widget.detail.abilityScores,
+      );
+    }
+
     return showItemActionSheet(
       context,
       item: item,
@@ -138,6 +159,8 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
           .where((item) => item.category == 'arme' && item.equipped)
           .toList(),
       onEquipWeaponToSlot: widget.onEquipWeaponToSlot,
+      weaponAttackBonus: attackBonus,
+      weaponDamageModifier: damageModifier,
     );
   }
 

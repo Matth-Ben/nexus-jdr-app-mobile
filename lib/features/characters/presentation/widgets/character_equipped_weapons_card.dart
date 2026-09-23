@@ -7,8 +7,11 @@ import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/inventory_category_rules.dart';
+import '../../domain/signed_modifier_formatter.dart';
+import '../../domain/weapon_attack_calculator.dart';
 import '../../domain/weapon_slot.dart';
 import '../../domain/weight_formatter.dart';
+import 'item_info_panel.dart';
 
 /// Carte « ARMES ÉQUIPÉES » de l'onglet « Personnage » — même gabarit que
 /// `CharacterPactWeaponCard`/les autres cartes de ce dossier.
@@ -16,7 +19,17 @@ import '../../domain/weight_formatter.dart';
 /// L'appelant filtre en amont [weapons] depuis `CharacterDetail.inventory`
 /// (`item.category == 'arme' && item.equipped`) : cette carte se contente
 /// d'afficher la liste déjà résolue, sans logique d'écriture (équiper/
-/// déséquiper reste une action de l'onglet "Inventaire" uniquement).
+/// déséquiper/harmoniser reste une action de l'onglet "Inventaire"
+/// uniquement).
+///
+/// Affichage simplifié par arme : nom, bonus d'attaque (`+n`, voir
+/// [WeaponAttackCalculator.attackBonus]) et dégâts avec le modificateur de
+/// caractéristique déjà intégré (ex. "1d8+3 tranchant", voir
+/// [WeaponAttackCalculator.abilityModifierFor]) — propriétés et portée ne
+/// sont plus affichées ici (retirées de cette ligne compacte, spec de la
+/// tâche), seulement dans le panneau "Infos" ouvert au tap (voir
+/// [showItemInfoPanel], `readOnly: true` : aucune action possible depuis
+/// cette carte, seulement la consultation du détail complet).
 ///
 /// Regroupée en deux sous-sections "SET PRINCIPAL"/"SET SECONDAIRE" (voir
 /// `domain/weapon_slot.dart::WeaponSlot`) plutôt qu'une liste plate — un
@@ -32,11 +45,32 @@ import '../../domain/weight_formatter.dart';
 /// Aucune puce "Maîtrisée"/"Arme magique" ici (contrairement à
 /// `CharacterPactWeaponCard`) : aucune donnée de maîtrise par arme
 /// disponible côté schéma — `CharacterWeaponProficienciesCard` de l'onglet
-/// "Compétences" couvre déjà les maîtrises générales.
+/// "Compétences" couvre déjà les maîtrises générales. [weaponProficiencyNames]
+/// (voir `CharacterDetail.weaponProficiencyNames`) sert uniquement au calcul
+/// interne du bonus d'attaque, jamais affiché tel quel ici.
 class CharacterEquippedWeaponsCard extends StatelessWidget {
-  const CharacterEquippedWeaponsCard({required this.weapons, super.key});
+  const CharacterEquippedWeaponsCard({
+    required this.weapons,
+    required this.abilityScores,
+    required this.proficiencyBonus,
+    required this.weaponProficiencyNames,
+    super.key,
+  });
 
   final List<CharacterInventoryItem> weapons;
+
+  /// Voir `CharacterDetail.abilityScores` — utilisé par
+  /// [WeaponAttackCalculator] pour dériver le modificateur de caractéristique
+  /// de chaque arme.
+  final Map<String, int> abilityScores;
+
+  /// Bonus de maîtrise du personnage (`ProficiencyBonusRules.forTotalLevel`,
+  /// calculé une seule fois par l'appelant) — appliqué au bonus d'attaque
+  /// d'une arme maîtrisée.
+  final int proficiencyBonus;
+
+  /// Voir `CharacterDetail.weaponProficiencyNames`.
+  final List<String> weaponProficiencyNames;
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +101,9 @@ class CharacterEquippedWeaponsCard extends StatelessWidget {
                 for (final weapon in weapons)
                   if (weapon.weaponSlot != WeaponSlot.secondary) weapon,
               ],
+              abilityScores: abilityScores,
+              proficiencyBonus: proficiencyBonus,
+              weaponProficiencyNames: weaponProficiencyNames,
             ),
             const SizedBox(height: AppSpacing.sm),
             const SheetActionDivider(),
@@ -77,6 +114,9 @@ class CharacterEquippedWeaponsCard extends StatelessWidget {
                 for (final weapon in weapons)
                   if (weapon.weaponSlot == WeaponSlot.secondary) weapon,
               ],
+              abilityScores: abilityScores,
+              proficiencyBonus: proficiencyBonus,
+              weaponProficiencyNames: weaponProficiencyNames,
             ),
           ],
         ],
@@ -88,10 +128,19 @@ class CharacterEquippedWeaponsCard extends StatelessWidget {
 /// Sous-section "SET PRINCIPAL"/"SET SECONDAIRE" — voir la documentation de
 /// classe de [CharacterEquippedWeaponsCard].
 class _WeaponSlotSection extends StatelessWidget {
-  const _WeaponSlotSection({required this.title, required this.weapons});
+  const _WeaponSlotSection({
+    required this.title,
+    required this.weapons,
+    required this.abilityScores,
+    required this.proficiencyBonus,
+    required this.weaponProficiencyNames,
+  });
 
   final String title;
   final List<CharacterInventoryItem> weapons;
+  final Map<String, int> abilityScores;
+  final int proficiencyBonus;
+  final List<String> weaponProficiencyNames;
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +163,12 @@ class _WeaponSlotSection extends StatelessWidget {
           )
         else
           for (var i = 0; i < weapons.length; i++) ...[
-            _Weapon(weapons[i]),
+            _Weapon(
+              weapons[i],
+              abilityScores: abilityScores,
+              proficiencyBonus: proficiencyBonus,
+              weaponProficiencyNames: weaponProficiencyNames,
+            ),
             if (i < weapons.length - 1) ...[
               const SizedBox(height: AppSpacing.sm),
               const SheetActionDivider(),
@@ -127,18 +181,23 @@ class _WeaponSlotSection extends StatelessWidget {
 }
 
 class _Weapon extends StatelessWidget {
-  const _Weapon(this.item);
+  const _Weapon(
+    this.item, {
+    required this.abilityScores,
+    required this.proficiencyBonus,
+    required this.weaponProficiencyNames,
+  });
 
   final CharacterInventoryItem item;
+  final Map<String, int> abilityScores;
+  final int proficiencyBonus;
+  final List<String> weaponProficiencyNames;
 
   @override
   Widget build(BuildContext context) {
     final weapon = item.weaponProperties;
     final damageDice = weapon?.damageDice;
     final damageType = weapon?.damageType;
-    final damage = damageDice != null && damageType != null
-        ? '$damageDice $damageType'
-        : null;
     final properties = weapon?.properties ?? const <String>[];
     final rangeNormal = weapon?.rangeNormal;
     final rangeMax = weapon?.rangeMax;
@@ -149,64 +208,106 @@ class _Weapon extends StatelessWidget {
               : '${WeightFormatter.format(rangeNormal)} m'
         : null;
 
+    final attackBonus = damageDice != null
+        ? WeaponAttackCalculator.attackBonus(
+            weaponName: item.name,
+            weaponProperties: properties,
+            abilityScores: abilityScores,
+            proficiencyTokens: weaponProficiencyNames,
+            proficiencyBonus: proficiencyBonus,
+          )
+        : null;
+    final damageModifier = damageDice != null
+        ? WeaponAttackCalculator.abilityModifierFor(
+            weaponProperties: properties,
+            abilityScores: abilityScores,
+          )
+        : null;
+    final damage = damageDice != null && damageType != null
+        ? '$damageDice'
+              '${damageModifier == null || damageModifier == 0 ? '' : SignedModifierFormatter.format(damageModifier)} '
+              '$damageType'
+        : null;
+
     final semanticsLabel = StringBuffer('Arme équipée : ${item.name}');
+    if (attackBonus != null) {
+      semanticsLabel.write(
+        ', Attaque : ${SignedModifierFormatter.format(attackBonus)}',
+      );
+    }
     if (damage != null) semanticsLabel.write(', $damage');
+    if (properties.isNotEmpty) {
+      semanticsLabel.write(', ${properties.join(', ')}');
+    }
     if (range != null) semanticsLabel.write(', Portée : $range');
 
     return Semantics(
       container: true,
       excludeSemantics: true,
       label: semanticsLabel.toString(),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AccentIconBadge(
-            icon: InventoryCategoryRules.iconFor('arme'),
-            color: InventoryCategoryRules.colorFor('arme'),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          onTap: () => showItemInfoPanel(
+            context,
+            item: item,
+            onUseItem: (_) {},
+            onToggleEquipped: (_) {},
+            onToggleAttuned: (_) {},
+            attunedCount: 0,
+            readOnly: true,
+            weaponAttackBonus: attackBonus,
+            weaponDamageModifier: damageModifier,
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.body(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                AccentIconBadge(
+                  icon: InventoryCategoryRules.iconFor('arme'),
+                  color: InventoryCategoryRules.colorFor('arme'),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.body(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (attackBonus != null)
+                        Text(
+                          'Attaque : '
+                          '${SignedModifierFormatter.format(attackBonus)}',
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      if (damage != null)
+                        Text(
+                          damage,
+                          style: AppTypography.body(
+                            fontSize: 13,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                if (damage != null)
-                  Text(
-                    damage,
-                    style: AppTypography.body(
-                      fontSize: 13,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                if (properties.isNotEmpty)
-                  Text(
-                    properties.join(', '),
-                    style: AppTypography.body(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                if (range != null)
-                  Text(
-                    'Portée : $range',
-                    style: AppTypography.body(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
