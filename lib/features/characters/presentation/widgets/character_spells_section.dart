@@ -515,6 +515,13 @@ class _SpellRow extends StatelessWidget {
     final subtitle = showLevelInSubtitle
         ? ['niv. ${spell.level}', ?statusText].join(' · ')
         : statusText;
+    // Un sort mineur (niveau 0) n'a jamais de sous-titre (voir
+    // `SpellStatusFormatter.subtitle`) : sur une seule ligne de contenu, le
+    // plancher tactile standard de 44 (repris pour un sort de niveau ≥ 1,
+    // sur deux lignes) laissait un grand espace vide sous le nom, donnant
+    // l'impression d'un écart excessif entre chaque sort mineur d'une liste
+    // souvent longue — demande utilisateur du 23/09/2026.
+    final rowMinHeight = spell.level == 0 ? 32.0 : 44.0;
 
     return Material(
       color: Colors.transparent,
@@ -530,7 +537,7 @@ class _SpellRow extends StatelessWidget {
               )
             : null,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
+          constraints: BoxConstraints(minHeight: rowMinHeight),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs / 2),
             child: Column(
