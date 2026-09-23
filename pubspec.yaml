@@ -126,6 +126,15 @@ dev_dependencies:
   # fois via `dart run flutter_native_splash:create`, ce package n'est pas
   # utilisé au runtime de l'app.
   flutter_native_splash: ^2.4.8
+  # Génère les icônes natives Android/iOS (mipmaps + Assets.xcassets) à partir
+  # de `docs/assets/IconAppStore@1x.png` (voir section `flutter_launcher_icons:`
+  # plus bas) — même logo que le splash screen/l'écran de connexion
+  # (`AppBrandBadge`, `core/widgets/app_brand_badge.dart`), déjà l'image
+  # officielle App Store/Play Store du dépôt. Dev dependency uniquement, même
+  # principe que `flutter_native_splash` ci-dessus : le rendu natif est
+  # produit une fois via `dart run flutter_launcher_icons`, ce package n'est
+  # pas utilisé au runtime de l'app.
+  flutter_launcher_icons: ^0.14.4
   # `package:http/testing.dart` (`MockClient`) — utilisé uniquement par
   # `test/features/character_creation/data/character_creation_repository_test.dart`
   # pour fabriquer un `SupabaseClient` de test qui n'ouvre aucune vraie
@@ -220,3 +229,33 @@ flutter_native_splash:
     color: "#6B4226"
     image: "assets/splash/splash_icon_android12.png"
     branding: "assets/splash/splash_branding_android12.png"
+
+# Configuration de `flutter_launcher_icons` (voir la dev dependency
+# ci-dessus) — génère les icônes natives Android (mipmap-*/ic_launcher.png)
+# et iOS (Assets.xcassets/AppIcon.appiconset) à partir de
+# `docs/assets/IconAppStore@1x.png` (1024×1024, déjà l'icône officielle App
+# Store/Play Store du dépôt — même emblème que `AppBrandBadge`
+# (`core/widgets/app_brand_badge.dart`), réutilisé tel quel plutôt que
+# régénéré).
+#
+# `remove_alpha_ios: true` : l'App Store exige une icône sans canal alpha ;
+# le PNG source est en RGBA (fond bois opaque mais canal alpha présent).
+#
+# Pas de calque premier plan adaptatif Android dédié (aucun asset "badge
+# seul, fond transparent" fidèle au design actuel disponible à ce jour) :
+# `docs/assets/IconAppStore@1x.png` sert aussi de premier plan adaptatif,
+# avec `adaptive_icon_background` en aplat de secours (`AppColors.woodDark`)
+# pour les rares cas où le masque du lanceur déborderait du fond bois de
+# l'image — écart mineur assumé plutôt que produire un nouvel asset non
+# demandé par la tâche.
+#
+# Après toute modification de cette section, régénérer avec :
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "docs/assets/IconAppStore@1x.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#3E2415"
+  adaptive_icon_foreground: "docs/assets/IconAppStore@1x.png"
