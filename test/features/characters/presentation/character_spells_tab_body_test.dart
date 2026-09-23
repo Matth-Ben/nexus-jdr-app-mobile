@@ -177,119 +177,35 @@ void main() {
     },
   );
 
-  testWidgets('un sort porte deux boutons inline "Infos"/"Lancer" (recettage '
-      'direction-artistique du 13/09, remplace le chevron) ; taper la ligne '
-      'ouvre toujours directement le panneau "Infos" (plus de sheet '
-      'intermédiaire "Infos"/"Lancer")', (tester) async {
-    await _pump(
-      tester,
-      _detail(
-        spells: const [
-          CharacterSpellEntry(
-            id: 1,
-            name: 'Lumière',
-            level: 0,
-            school: 'Évocation',
-            status: 'connu',
-          ),
-        ],
-      ),
-    );
-
-    expect(find.byIcon(Icons.chevron_right), findsNothing);
-    expect(find.text('INFOS'), findsOneWidget);
-    expect(find.text('LANCER'), findsOneWidget);
-
-    await tester.tap(find.text('Lumière'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('LUMIÈRE'), findsOneWidget);
-    expect(find.text('Infos'), findsNothing);
-  });
-
-  testWidgets('bouton inline "Lancer" d\'un sort niveau 0 appelle directement '
-      'onCastSpell(spell, null), sans ouvrir le panneau "Infos"', (
-    tester,
-  ) async {
-    CharacterSpellEntry? castSpell;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: CharacterSpellsTabBody(
-            detail: _detail(
-              spells: const [
-                CharacterSpellEntry(
-                  id: 1,
-                  name: 'Lumière',
-                  level: 0,
-                  school: 'Évocation',
-                  status: 'connu',
-                ),
-              ],
-            ),
-            onCastSpell: (spell, slot) => castSpell = spell,
-            onToggleFavorite: (_) {},
-            onTogglePrepared: (_) {},
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('LANCER'));
-    await tester.pumpAndSettle();
-
-    expect(castSpell?.name, 'Lumière');
-    expect(find.text('LUMIÈRE'), findsNothing);
-  });
-
   testWidgets(
-    'bouton inline "Lancer" visuellement désactivé (opacité réduite) pour '
-    'un sort \'connu\' non préparé (niveau >= 1, pas encore castable) — un '
-    'tap dessus n\'appelle jamais onCastSpell directement (le `InkWell` '
-    'désactivé ne consomme pas le geste, qui remonte au `InkWell` de la '
-    'ligne elle-même, ouvrant alors le panneau "Infos" comme n\'importe où '
-    'ailleurs sur la ligne — comportement standard Flutter, pas un bug : le '
-    'panneau "Infos" désactive lui aussi correctement "Lancer" dans ce cas, '
-    'voir `spell_info_panel_test.dart`)',
+    'une ligne de sort ne porte plus de boutons inline "Infos"/"Lancer" '
+    '(redondants avec le panneau) ; taper la ligne ouvre directement le '
+    'panneau "Infos", qui porte son propre bouton "Lancer" en pied (voir '
+    '`spell_info_panel_test.dart`)',
     (tester) async {
-      CharacterSpellEntry? castSpell;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: CharacterSpellsTabBody(
-              detail: _detail(
-                spells: const [
-                  CharacterSpellEntry(
-                    id: 1,
-                    name: 'Bouclier',
-                    level: 1,
-                    school: 'Abjuration',
-                    status: 'connu',
-                  ),
-                ],
-                spellSlots: const [
-                  CharacterSpellSlot(level: 1, total: 2, used: 0),
-                ],
-              ),
-              onCastSpell: (spell, slot) => castSpell = spell,
-              onToggleFavorite: (_) {},
-              onTogglePrepared: (_) {},
+      await _pump(
+        tester,
+        _detail(
+          spells: const [
+            CharacterSpellEntry(
+              id: 1,
+              name: 'Lumière',
+              level: 0,
+              school: 'Évocation',
+              status: 'connu',
             ),
-          ),
+          ],
         ),
       );
 
-      final lancerFinder = find.text('LANCER');
-      expect(lancerFinder, findsOneWidget);
-      final opacity = tester.widget<Opacity>(
-        find.ancestor(of: lancerFinder, matching: find.byType(Opacity)).first,
-      );
-      expect(opacity.opacity, lessThan(1));
+      expect(find.byIcon(Icons.chevron_right), findsNothing);
+      expect(find.text('INFOS'), findsNothing);
+      expect(find.text('LANCER'), findsNothing);
 
-      await tester.tap(lancerFinder, warnIfMissed: false);
+      await tester.tap(find.text('Lumière'));
       await tester.pumpAndSettle();
 
-      expect(castSpell, isNull);
+      expect(find.text('LUMIÈRE'), findsOneWidget);
     },
   );
 
@@ -935,6 +851,8 @@ void main() {
         onCastSpell: (spell, slot) => cast.add(spell),
       );
 
+      await tester.tap(find.text('Bénédiction'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('LANCER'));
       await tester.pumpAndSettle();
 

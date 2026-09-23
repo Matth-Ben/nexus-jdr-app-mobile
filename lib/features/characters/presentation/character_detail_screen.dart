@@ -71,7 +71,7 @@ enum _CharacterHeaderMenuAction {
 /// `CharacterDetailPlaceholderScreen`. Les 5 onglets (voir
 /// `CharacterDetailTab`) ont désormais tous un vrai contenu (même approche
 /// "un onglet à la fois" que l'assistant de création : "Personnage",
-/// "Compétences", "Sorts", "Inventaire" puis "Histoire" livrés séparément).
+/// "Aptitudes", "Sorts", "Inventaire" puis "Histoire" livrés séparément).
 class CharacterDetailScreen extends ConsumerStatefulWidget {
   const CharacterDetailScreen({required this.characterId, super.key});
 
@@ -85,7 +85,7 @@ class CharacterDetailScreen extends ConsumerStatefulWidget {
 class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   CharacterDetailTab _tab = CharacterDetailTab.character;
 
-  /// Focus programmatique du champ de recherche de l'onglet "Compétences"
+  /// Focus programmatique du champ de recherche de l'onglet "Aptitudes"
   /// (icône loupe du bandeau bois, recettage direction-artistique du
   /// 13/09) — voir `CharacterSkillsTabBody.searchFocusNode`.
   final FocusNode _skillsSearchFocusNode = FocusNode();
@@ -1982,8 +1982,6 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         onUseFeature: (feature) =>
             _useClassFeature(_effectiveDetail(detail), feature),
         actionsDisabled: _isApplyingRest || _isUsingFeature,
-        onNavigateToSpells: () =>
-            setState(() => _tab = CharacterDetailTab.spells),
         searchFocusNode: _skillsSearchFocusNode,
       ),
       CharacterDetailTab.spells => CharacterSpellsTabBody(

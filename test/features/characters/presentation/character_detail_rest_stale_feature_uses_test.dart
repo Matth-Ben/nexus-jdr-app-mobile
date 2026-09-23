@@ -399,7 +399,7 @@ void main() {
       final repository = await pumpDetail(tester);
 
       // Utilise "Rage" (1 restant) : appel réseau gaté, reste en vol.
-      await tester.tap(find.text('COMP.'));
+      await tester.tap(find.text('APT.'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Rage'));
       await tester.pumpAndSettle();

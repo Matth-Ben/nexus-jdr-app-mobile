@@ -16,15 +16,13 @@ import 'character_tool_proficiencies_card.dart';
 import 'character_weapon_proficiencies_card.dart';
 import 'class_feature_action_sheet.dart';
 
-/// Contenu de l'onglet "Compétences" de la fiche personnage — voir
-/// `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`, section
-/// "Onglet Compétences".
+/// Contenu de l'onglet "Aptitudes" de la fiche personnage (anciennement
+/// "Compétences", voir `character_detail_tab_bar.dart::CharacterDetailTab
+/// .skills`) — voir `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`,
+/// section "Onglet Compétences".
 ///
 /// Les sorts (aptitudes/emplacements) ont leur propre onglet "Sorts" — voir
 /// `character_spells_tab_body.dart` — depuis la scission de cet onglet en 2.
-/// Un bandeau "SORTS →" ([_SpellsShortcutBanner], recettage
-/// direction-artistique du 13/09) rappelle ce découpage et navigue vers cet
-/// onglet via [onNavigateToSpells].
 ///
 /// [onUseFeature]/[actionsDisabled] délégués tels quels à
 /// [CharacterClassFeaturesCard] — voir sa documentation de classe. Le reste
@@ -45,7 +43,6 @@ class CharacterSkillsTabBody extends StatefulWidget {
     required this.detail,
     required this.onUseFeature,
     this.actionsDisabled = false,
-    this.onNavigateToSpells,
     this.searchFocusNode,
     super.key,
   });
@@ -53,13 +50,6 @@ class CharacterSkillsTabBody extends StatefulWidget {
   final CharacterDetail detail;
   final UseClassFeatureCallback onUseFeature;
   final bool actionsDisabled;
-
-  /// Navigue vers l'onglet "Sorts" (bouton "SORTS →" de
-  /// [_SpellsShortcutBanner]) — `null` reste possible pour les usages qui
-  /// n'ont pas de notion d'onglets voisins (aucun connu à ce jour, mais pas
-  /// de raison de forcer un callback partout), auquel cas le bandeau reste
-  /// affiché mais son bouton ne fait rien.
-  final VoidCallback? onNavigateToSpells;
 
   /// Focus programmatique du champ de recherche (icône loupe du bandeau bois,
   /// voir `character_detail_screen.dart`) — `null` crée un `FocusNode`
@@ -122,8 +112,6 @@ class _CharacterSkillsTabBodyState extends State<CharacterSkillsTabBody> {
           ),
           const SizedBox(height: AppSpacing.md),
         ],
-        _SpellsShortcutBanner(onTap: widget.onNavigateToSpells),
-        const SizedBox(height: AppSpacing.md),
         _SkillSearchField(controller: _searchController, focusNode: _focusNode),
         const SizedBox(height: AppSpacing.sm),
         if (skillResults.isEmpty && _searchController.text.trim().isNotEmpty)
@@ -214,82 +202,6 @@ class _NoSkillMatchState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textMuted),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Bandeau "Les sorts et emplacements sont dans l'onglet dédié" + bouton doré
-/// "SORTS →" — inséré entre "APTITUDES DE CLASSE" et "LES 18 COMPÉTENCES"
-/// (recettage direction-artistique du 13/09). Toute la carte est tappable
-/// (même principe que d'autres liens de la fiche, ex.
-/// `character_vitals_card.dart::_RestLink`), pas seulement le libellé "SORTS
-/// →".
-class _SpellsShortcutBanner extends StatelessWidget {
-  const _SpellsShortcutBanner({required this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: AppColors.parchmentCard,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(
-              color: AppColors.woodLight,
-              width: AppBorders.card,
-            ),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.auto_fix_high_outlined,
-                size: 20,
-                color: AppColors.accentTeal,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  'Les sorts et emplacements sont dans l\'onglet dédié.',
-                  style: AppTypography.body(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryButtonGradient,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  border: Border.all(
-                    color: AppColors.woodLight,
-                    width: AppBorders.card,
-                  ),
-                ),
-                child: Text(
-                  'SORTS →',
-                  style: AppTypography.display(
-                    fontSize: 11,
-                    color: AppColors.woodDark,
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

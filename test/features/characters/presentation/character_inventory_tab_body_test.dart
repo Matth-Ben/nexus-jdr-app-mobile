@@ -826,6 +826,74 @@ void main() {
     );
   });
 
+  group(
+    'tri "objets équipés en premier" (partition stable, pas de List.sort)',
+    () {
+      testWidgets(
+        'les objets équipés apparaissent tous avant les non équipés, l\'ordre '
+        'relatif à l\'intérieur de chaque groupe (équipé/non équipé) restant '
+        'celui de la requête d\'origine',
+        (tester) async {
+          const potion = CharacterInventoryItem(
+            id: 'inv-1',
+            itemId: 1,
+            name: 'Potion de soins',
+            category: 'equipement_general',
+            quantity: 1,
+            equipped: false,
+          );
+          const dagger = CharacterInventoryItem(
+            id: 'inv-2',
+            itemId: 2,
+            name: 'Dague',
+            category: 'arme',
+            quantity: 1,
+            equipped: true,
+          );
+          const rope = CharacterInventoryItem(
+            id: 'inv-3',
+            itemId: 3,
+            name: 'Corde',
+            category: 'equipement_general',
+            quantity: 1,
+            equipped: false,
+          );
+          const armor = CharacterInventoryItem(
+            id: 'inv-4',
+            itemId: 4,
+            name: 'Armure de plates',
+            category: 'armure',
+            quantity: 1,
+            equipped: true,
+          );
+
+          // Ordre brut de la requête : non équipé, équipé, non équipé,
+          // équipé — attendu à l'écran : les deux équipés dans leur ordre
+          // d'origine (dague puis armure), puis les deux non équipés dans
+          // leur ordre d'origine (potion puis corde).
+          await _pump(
+            tester,
+            _detail(inventory: const [potion, dagger, rope, armor]),
+          );
+
+          final renderedNames = tester
+              .widgetList<CharacterInventoryItemCard>(
+                find.byType(CharacterInventoryItemCard),
+              )
+              .map((card) => card.item.name)
+              .toList();
+
+          expect(renderedNames, [
+            'Dague',
+            'Armure de plates',
+            'Potion de soins',
+            'Corde',
+          ]);
+        },
+      );
+    },
+  );
+
   group('capacité de transport (docs/cahier-des-charges/'
       '11-fonctionnalites-a-ajouter.md section 3)', () {
     testWidgets(
