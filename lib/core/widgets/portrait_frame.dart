@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
@@ -25,6 +27,7 @@ import 'dashed_border_painter.dart';
 class PortraitFrame extends StatelessWidget {
   const PortraitFrame({
     required this.portraitUrl,
+    this.portraitBytes,
     this.size = 64,
     this.fallbackIcon = Icons.person_outline,
     this.classThemeColor,
@@ -32,6 +35,10 @@ class PortraitFrame extends StatelessWidget {
   });
 
   final String? portraitUrl;
+
+  /// Image locale pas encore envoyée (ex. portrait choisi dans l'assistant
+  /// de création) — prioritaire sur [portraitUrl].
+  final Uint8List? portraitBytes;
   final double size;
   final IconData fallbackIcon;
 
@@ -61,7 +68,9 @@ class PortraitFrame extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: portraitUrl == null
+      child: portraitBytes != null
+          ? Image.memory(portraitBytes!, fit: BoxFit.cover)
+          : portraitUrl == null
           ? _buildEmptyPlaceholder()
           : Image.network(
               portraitUrl!,

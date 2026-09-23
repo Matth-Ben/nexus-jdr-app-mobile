@@ -30,11 +30,15 @@ Future<void> showStepHelpSheet(BuildContext context, StepHelpContent content) {
           mainAxisSize: MainAxisSize.min,
           children: [
             SheetHeaderBar(title: content.title.toUpperCase()),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Text(
-                content.body,
-                style: AppTypography.body(fontSize: 14, height: 1.4),
+            // `Flexible` + défilement : un texte long (ex. l'aide de la
+            // fiche personnage) ne doit jamais déborder du panneau.
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Text(
+                  content.body,
+                  style: AppTypography.body(fontSize: 14, height: 1.4),
+                ),
               ),
             ),
           ],

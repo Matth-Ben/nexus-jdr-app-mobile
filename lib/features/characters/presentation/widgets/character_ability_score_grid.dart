@@ -106,8 +106,10 @@ class _AbilityScoreCard extends StatelessWidget {
             children: [
               Icon(definition.icon, size: 22, color: definition.accentColor),
               const SizedBox(height: AppSpacing.xs),
+              // Abréviation plutôt que le libellé complet (demande
+              // utilisateur, 2026-09-24).
               Text(
-                definition.label.toUpperCase(),
+                definition.abbreviation.toUpperCase(),
                 style: AppTypography.body(
                   // Plancher d'accessibilité strict du design système
                   // (section 7 : "taille de police minimale 11px, jamais

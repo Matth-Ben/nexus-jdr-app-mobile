@@ -70,7 +70,7 @@ const String _createCharacterErrorMessage =
     'Impossible de créer le personnage. Réessayez.';
 
 /// Clés de cache (`ReferenceDataCache`) des 7 catalogues non paramétrés —
-/// `fetchSpellCatalog` construit la sienne dynamiquement (`'spell_catalog:$classId'`,
+/// `fetchSpellCatalog` construit la sienne dynamiquement (`'spell_catalog_v2:$classId'`,
 /// voir sa documentation), les 7 autres sont globales (une seule entrée pour
 /// tous les utilisateurs/personnages, ce sont des données de référence).
 const String _raceCatalogCacheKey = 'race_catalog';
@@ -611,7 +611,10 @@ class SupabaseCharacterCreationRepository
     // Paramétrée par classId (contrairement aux 7 autres catalogues,
     // globaux) : une entrée de cache distincte par classe, voir la doc de
     // classe de `SupabaseCharacterCreationRepository`.
-    final cacheKey = 'spell_catalog:$classId';
+    // Suffixe `v2` : les entrées en cache avant l'ajout des détails
+    // (portée, description...) n'en portent pas — les ignorer plutôt que
+    // d'afficher des panneaux d'information vides.
+    final cacheKey = 'spell_catalog_v2:$classId';
     final freshCached = await _mappedFromFreshCache(
       cacheKey,
       _mapSpellCatalogPayload,
@@ -627,21 +630,32 @@ class SupabaseCharacterCreationRepository
 
       var spellRows = const <Map<String, dynamic>>[];
       var spellNameRows = const <Map<String, dynamic>>[];
+      var spellDescriptionRows = const <Map<String, dynamic>>[];
       if (spellIds.isNotEmpty) {
         spellRows = await _client
             .from('spells')
-            .select('id, level, school, casting_time, is_incomplete')
+            .select(
+              'id, level, school, casting_time, range, components, '
+              'duration, concentration, is_incomplete',
+            )
             .inFilter('id', spellIds.toList())
             .order('id', ascending: true);
+        final ids = SpellRowMapper.collectIds(spellRows);
         spellNameRows = await _fetchTranslationRows(
           entityType: 'spell',
-          entityIds: SpellRowMapper.collectIds(spellRows),
+          entityIds: ids,
+        );
+        spellDescriptionRows = await _fetchTranslationRows(
+          entityType: 'spell',
+          entityIds: ids,
+          fieldName: 'description',
         );
       }
 
       final payload = <String, dynamic>{
         'spells': spellRows,
         'spellNames': spellNameRows,
+        'spellDescriptions': spellDescriptionRows,
       };
       await _writeCacheBestEffort(cacheKey, payload);
       return _mapSpellCatalogPayload(payload);
@@ -663,13 +677,22 @@ class SupabaseCharacterCreationRepository
     final names = SpellRowMapper.parseTranslatedValues(
       _rowsOf(payload['spellNames']),
     );
+    final descriptions = SpellRowMapper.parseTranslatedValues(
+      _rowsOf(payload['spellDescriptions']),
+    );
     // Même filtre que `_mapRaceCatalogPayload`/`_mapBackgroundCatalogPayload` :
     // un sort `is_incomplete: true` (contenu de référence encore en cours de
     // peuplement) n'est jamais proposé à la création de personnage —
     // appliqué avant le tri alphabétique ci-dessous.
     final spells =
         _rowsOf(payload['spells'])
-            .map((row) => SpellRowMapper.toSpellOption(row, names: names))
+            .map(
+              (row) => SpellRowMapper.toSpellOption(
+                row,
+                names: names,
+                descriptions: descriptions,
+              ),
+            )
             .where((spell) => !spell.isIncomplete)
             .toList()
           ..sort((a, b) => a.name.compareTo(b.name));

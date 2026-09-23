@@ -10,6 +10,7 @@ class AbilityScoreDefinition {
   const AbilityScoreDefinition({
     required this.key,
     required this.label,
+    required this.abbreviation,
     required this.icon,
     required this.accentColor,
   });
@@ -22,6 +23,11 @@ class AbilityScoreDefinition {
 
   /// Libellé affiché ("Force", "Dextérité"...).
   final String label;
+
+  /// Abréviation à 3 lettres ("For", "Dex"...), mêmes valeurs que
+  /// `RaceSummaryFormatter._abilityAbbreviations` — utilisée par les tuiles
+  /// de la fiche personnage, trop étroites pour le libellé complet.
+  final String abbreviation;
 
   /// Icône Material affichée dans le badge coloré à gauche de la ligne.
   final IconData icon;
@@ -62,36 +68,42 @@ const List<AbilityScoreDefinition> abilityScoreDefinitions = [
   AbilityScoreDefinition(
     key: 'str',
     label: 'Force',
+    abbreviation: 'For',
     icon: Icons.star_rounded,
     accentColor: AppColors.accentBrick,
   ),
   AbilityScoreDefinition(
     key: 'dex',
     label: 'Dextérité',
+    abbreviation: 'Dex',
     icon: Icons.expand_less_rounded,
     accentColor: AppColors.accentTeal,
   ),
   AbilityScoreDefinition(
     key: 'con',
     label: 'Constitution',
+    abbreviation: 'Con',
     icon: Icons.home_rounded,
     accentColor: AppColors.goldEnd,
   ),
   AbilityScoreDefinition(
     key: 'int',
     label: 'Intelligence',
+    abbreviation: 'Int',
     icon: Icons.track_changes_rounded,
     accentColor: AppColors.accentBlue,
   ),
   AbilityScoreDefinition(
     key: 'wis',
     label: 'Sagesse',
+    abbreviation: 'Sag',
     icon: Icons.diamond_rounded,
     accentColor: AppColors.accentViolet,
   ),
   AbilityScoreDefinition(
     key: 'cha',
     label: 'Charisme',
+    abbreviation: 'Cha',
     icon: Icons.favorite_rounded,
     accentColor: AppColors.accentBrick,
   ),

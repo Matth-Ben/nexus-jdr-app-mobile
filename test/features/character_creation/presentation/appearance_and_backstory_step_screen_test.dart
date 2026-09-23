@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 // Tests de widget de l'étape 8/9 de l'assistant de création ("Apparence,
 // histoire et portrait").
 //
@@ -116,7 +118,7 @@ void main() {
     await pumpStep(tester);
 
     expect(find.text('Portrait'), findsOneWidget);
-    expect(find.text('Optionnel — ajoutable plus tard'), findsOneWidget);
+    expect(find.text('Optionnel — touchez pour en ajouter un'), findsOneWidget);
     expect(find.byIcon(Icons.image_outlined), findsOneWidget);
 
     for (final label in _labels) {
@@ -322,17 +324,112 @@ void main() {
   );
 
   testWidgets(
-    'la tuile "Portrait" n\'est pas fonctionnelle : le tap ne plante pas et '
-    'n\'écrit rien dans le brouillon',
+    'la tuile "Portrait" ouvre le choix de source (caméra, galerie, URL) '
+    "sans rien écrire dans le brouillon tant que rien n'est choisi",
     (WidgetTester tester) async {
       await pumpStep(tester);
 
       await tester.tap(find.text('Portrait'));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
+      expect(find.text('Prendre une photo'), findsOneWidget);
+      expect(find.text('Choisir dans la galerie'), findsOneWidget);
+      expect(find.text('Utiliser une URL'), findsOneWidget);
+      // Aucun portrait encore choisi : pas d'option "Retirer".
+      expect(find.text('Retirer le portrait'), findsNothing);
       expect(readDraft(), const CharacterCreationDraft());
-      expect(find.text('Bientôt disponible'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    "un portrait déjà dans le brouillon s'affiche en miniature et peut être "
+    'retiré',
+    (WidgetTester tester) async {
+      // PNG 1×1 transparent.
+      final png = Uint8List.fromList(const [
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,
+        0x00,
+        0x00,
+        0x00,
+        0x0D,
+        0x49,
+        0x48,
+        0x44,
+        0x52,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x08,
+        0x06,
+        0x00,
+        0x00,
+        0x00,
+        0x1F,
+        0x15,
+        0xC4,
+        0x89,
+        0x00,
+        0x00,
+        0x00,
+        0x0D,
+        0x49,
+        0x44,
+        0x41,
+        0x54,
+        0x78,
+        0x9C,
+        0x63,
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x05,
+        0x00,
+        0x01,
+        0x0D,
+        0x0A,
+        0x2D,
+        0xB4,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x49,
+        0x45,
+        0x4E,
+        0x44,
+        0xAE,
+        0x42,
+        0x60,
+        0x82,
+      ]);
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setPortraitBytes(png);
+      await pumpStep(tester);
+
+      expect(find.text('Touchez pour changer ou retirer'), findsOneWidget);
+      expect(find.byIcon(Icons.image_outlined), findsNothing);
+
+      await tester.tap(find.text('Portrait'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Retirer le portrait'));
+      await tester.pumpAndSettle();
+
+      expect(readDraft().portraitBytes, isNull);
+      expect(find.byIcon(Icons.image_outlined), findsOneWidget);
     },
   );
 

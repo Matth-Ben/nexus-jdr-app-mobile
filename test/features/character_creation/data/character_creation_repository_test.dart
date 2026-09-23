@@ -221,7 +221,7 @@ void main() {
 
       _testCatalogCaching(
         description: 'chemin de secours',
-        cacheKey: 'spell_catalog:1',
+        cacheKey: 'spell_catalog_v2:1',
         cache: () => cache,
         fetch: (repository) => repository.fetchSpellCatalog(classId: 1),
         tableRows: tableRowsForClass1,
@@ -240,9 +240,9 @@ void main() {
 
         await repository.fetchSpellCatalog(classId: 1);
 
-        expect(await cache.get('spell_catalog:1'), isNotNull);
+        expect(await cache.get('spell_catalog_v2:1'), isNotNull);
         expect(
-          await cache.get('spell_catalog:2'),
+          await cache.get('spell_catalog_v2:2'),
           isNull,
           reason:
               'la clé de cache doit être paramétrée par classId, pas '
@@ -523,7 +523,7 @@ void main() {
         description:
             'fetchSpellCatalog (clé de cache paramétrée par classId, même '
             'TTL)',
-        cacheKey: 'spell_catalog:1',
+        cacheKey: 'spell_catalog_v2:1',
         db: () => db,
         cache: () => cache,
         fetch: (repository) => repository.fetchSpellCatalog(classId: 1),

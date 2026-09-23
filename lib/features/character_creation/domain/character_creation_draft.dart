@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'ability_score_method.dart';
@@ -159,5 +161,12 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// ce brouillon, il n'a donc pas d'étape "propriétaire" antérieure,
     /// seule `presentation/summary_step_screen.dart` le lit/l'écrit.
     String? characterName,
+
+    /// Portrait choisi et recadré à l'étape 8 (PNG carré, sortie de
+    /// `PortraitCropScreen` en mode local) — `null` si aucun. Gardé en
+    /// mémoire uniquement (le brouillon n'est jamais persisté) et envoyé
+    /// dans Storage juste après la création du personnage à l'étape 9, une
+    /// fois son identifiant connu (voir `summary_step_screen.dart`).
+    Uint8List? portraitBytes,
   }) = _CharacterCreationDraft;
 }

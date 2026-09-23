@@ -255,6 +255,8 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                         SelectableOptionTile(
                           title: catalog.races[i].name,
                           subtitle: catalog.races[i].summaryLine,
+                          subtitleMaxLines: null,
+                          selectedDetail: catalog.races[i].traitDetails,
                           selected:
                               !_isCustomRaceSelected &&
                               _selectedRaceId == catalog.races[i].id,

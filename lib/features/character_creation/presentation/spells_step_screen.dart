@@ -20,6 +20,7 @@ import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/draft_autosave_footer.dart';
+import 'widgets/spell_option_info_sheet.dart';
 import 'widgets/step_help_sheet.dart';
 
 /// Étape 6/9 de l'assistant de création de personnage : sorts
@@ -343,7 +344,9 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
     required void Function(String name, int quota) onToggle,
   }) {
     final isSelected = selected.contains(spell.name);
-    return CheckableOptionTile(
+    // Bouton ⓘ hors de la tuile : reste actif même quand la tuile est
+    // désactivée (quota atteint), pour pouvoir lire n'importe quel sort.
+    final tile = CheckableOptionTile(
       title: spell.name,
       subtitle: spell.metaLine,
       leading: AccentIconBadge(index: index, icon: Icons.auto_awesome),
@@ -354,6 +357,19 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
         quota: quota,
       ),
       onTap: () => onToggle(spell.name, quota),
+    );
+    return Row(
+      children: [
+        Expanded(child: tile),
+        IconButton(
+          tooltip: 'Description de ${spell.name}',
+          icon: const Icon(
+            Icons.info_outline_rounded,
+            color: AppColors.textSecondary,
+          ),
+          onPressed: () => showSpellOptionInfoSheet(context, spell: spell),
+        ),
+      ],
     );
   }
 }

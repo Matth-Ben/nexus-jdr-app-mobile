@@ -44,6 +44,21 @@ abstract final class RaceSummaryFormatter {
     return segments.join(' · ');
   }
 
+  /// Détail complet des traits ("Nom : description", un paragraphe par
+  /// trait), affiché sous la tuile sélectionnée de l'étape race/sous-race
+  /// (demande utilisateur, 2026-09-24 : voir la description entière, pas
+  /// seulement les noms des deux premiers traits). `null` si aucun trait.
+  static String? formatTraitDetails(List<RaceTrait> traits) {
+    if (traits.isEmpty) return null;
+    return traits
+        .map(
+          (trait) => trait.description.isEmpty
+              ? trait.name
+              : '${trait.name} : ${trait.description}',
+        )
+        .join('\n\n');
+  }
+
   static String _formatAbilityBonuses(Map<String, dynamic> abilityBonuses) {
     final hasUniformBonusToAllAbilities = _abilityAbbreviations.keys.every(
       (key) => abilityBonuses[key] == 1,

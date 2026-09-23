@@ -67,14 +67,21 @@ abstract final class SpellRowMapper {
   static SpellOption toSpellOption(
     Map<String, dynamic> row, {
     required Map<String, String> names,
+    Map<String, String> descriptions = const {},
   }) {
     final id = (row['id'] as num).toInt();
+    final components = row['components'];
     return SpellOption(
       id: id,
       name: names[id.toString()] ?? 'Sort #$id',
       level: (row['level'] as num?)?.toInt() ?? 0,
       school: row['school'] as String? ?? '',
       castingTime: row['casting_time'] as String? ?? '',
+      range: row['range'] as String? ?? '',
+      components: components is Map<String, dynamic> ? components : const {},
+      duration: row['duration'] as String? ?? '',
+      concentration: row['concentration'] == true,
+      description: descriptions[id.toString()] ?? '',
       isIncomplete: row['is_incomplete'] as bool? ?? false,
     );
   }

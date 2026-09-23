@@ -6,17 +6,16 @@ import '../../../../core/theme/app_typography.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/class_feature_usage_formatter.dart';
 import 'class_feature_action_sheet.dart';
+import 'class_feature_info_panel.dart';
 
 /// Carte "APTITUDES DE CLASSE" de l'onglet "Compétences" : une ligne par
 /// aptitude de classe déjà atteinte par le niveau actuel du personnage, avec
 /// à droite soit un compteur d'usage ("X / Y · repos long"/"repos court")
 /// pour une aptitude à usage limité, soit "Passive" sinon.
 ///
-/// Une aptitude à usage limité (`!feature.isPassive`) est cliquable, ouvrant
-/// la sheet d'actions "Infos"/"Utiliser" ([showClassFeatureActionSheet]).
-/// Une aptitude passive reste non cliquable, sans chevron ni interaction —
-/// hors périmètre explicite de cette itération (voir la spec visuelle de la
-/// tâche qui a introduit ce comportement).
+/// Chaque aptitude (passive comprise) est cliquable et ouvre directement son
+/// panneau de description ([showClassFeatureInfoPanel]), qui porte aussi le
+/// bouton "Utiliser" d'une aptitude à usage limité.
 ///
 /// N'affiche rien tant que [features] est vide — appelant responsable de ne
 /// pas monter cette carte dans ce cas (voir `character_skills_tab_body.dart`).
@@ -111,30 +110,25 @@ class _FeatureRow extends StatelessWidget {
               color: AppColors.textMuted,
             ),
           ),
-          if (!feature.isPassive) ...[
-            const SizedBox(width: AppSpacing.xs / 2),
-            const Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: AppColors.textMuted,
-            ),
-          ],
+          const SizedBox(width: AppSpacing.xs / 2),
+          const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
         ],
       ),
     );
 
-    if (feature.isPassive) return row;
-
+    // Toute aptitude (passive comprise) ouvre directement son panneau de
+    // description au tap (demande utilisateur, 2026-09-24) ; pour une
+    // aptitude à usage limité, ce panneau porte aussi le bouton "Utiliser",
+    // désactivé tant que [enabled] est faux.
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: enabled
-            ? () => showClassFeatureActionSheet(
-                context,
-                feature: feature,
-                onUseFeature: onUseFeature,
-              )
-            : null,
+        onTap: () => showClassFeatureInfoPanel(
+          context,
+          feature: feature,
+          onUseFeature: onUseFeature,
+          canUse: enabled,
+        ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: row,

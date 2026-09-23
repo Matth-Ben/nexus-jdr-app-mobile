@@ -89,4 +89,20 @@ void main() {
       expect(summary, 'Polyvalence');
     });
   });
+
+  group('formatTraitDetails', () {
+    test('aucun trait -> null', () {
+      expect(RaceSummaryFormatter.formatTraitDetails(const []), isNull);
+    });
+
+    test('un paragraphe "Nom : description" par trait, nom seul si la '
+        'description est vide', () {
+      final details = RaceSummaryFormatter.formatTraitDetails(const [
+        RaceTrait(name: 'Vision dans le noir', description: 'Voit à 18 m.'),
+        RaceTrait(name: 'Transe', description: ''),
+      ]);
+
+      expect(details, 'Vision dans le noir : Voit à 18 m.\n\nTranse');
+    });
+  });
 }

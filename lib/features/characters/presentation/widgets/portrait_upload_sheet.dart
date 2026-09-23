@@ -56,6 +56,57 @@ Future<void> showPortraitUploadSheet(
   }
 }
 
+/// Variante locale de [showPortraitUploadSheet] pour l'assistant de
+/// création (le personnage n'existe pas encore) : mêmes sources (caméra,
+/// galerie, URL) et même recadrage, mais rien n'est envoyé — renvoie le PNG
+/// recadré. `null` : annulé ; `(bytes: null)` : "Retirer le portrait"
+/// choisi (proposé seulement si [hasPortrait]).
+Future<({Uint8List? bytes})?> pickLocalPortrait(
+  BuildContext context, {
+  required bool hasPortrait,
+}) async {
+  final action = await showModalBottomSheet<_PortraitUploadAction>(
+    context: context,
+    backgroundColor: AppColors.parchmentCard,
+    builder: (sheetContext) =>
+        _PortraitUploadSheetContent(hasPortrait: hasPortrait),
+  );
+  if (action == null || !context.mounted) return null;
+
+  Uint8List? source;
+  switch (action) {
+    case _PortraitUploadAction.remove:
+      return (bytes: null);
+    case _PortraitUploadAction.url:
+      source = await showPortraitUrlDialog(context);
+    case _PortraitUploadAction.camera:
+      source = await _pickImageBytes(ImageSource.camera);
+    case _PortraitUploadAction.gallery:
+      source = await _pickImageBytes(ImageSource.gallery);
+  }
+  if (source == null || !context.mounted) return null;
+
+  final imageBytes = source;
+  final cropped = await Navigator.of(context).push<Uint8List>(
+    MaterialPageRoute(
+      builder: (_) => PortraitCropScreen(imageBytes: imageBytes),
+    ),
+  );
+  return cropped == null ? null : (bytes: cropped);
+}
+
+Future<Uint8List?> _pickImageBytes(ImageSource source) async {
+  try {
+    final file = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 95,
+    );
+    return await file?.readAsBytes();
+  } catch (_) {
+    return null;
+  }
+}
+
 Future<void> _pickAndCrop(
   BuildContext context,
   String characterId,

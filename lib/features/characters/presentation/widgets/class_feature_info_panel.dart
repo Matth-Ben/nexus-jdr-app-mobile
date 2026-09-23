@@ -9,7 +9,9 @@ import '../../domain/character_class_feature.dart';
 import '../../domain/class_feature_usage_formatter.dart';
 import 'class_feature_action_sheet.dart';
 
-/// Ouvre le panneau "Infos" d'une aptitude de classe à usage limité —
+/// Ouvre le panneau "Infos" d'une aptitude de classe (passive ou à usage
+/// limité ; ouvert directement au tap sur la ligne depuis le 2026-09-24,
+/// demande utilisateur) —
 /// gabarit B ([SheetHeaderBar], contenu scrollable, pied fixe) : niveau
 /// d'obtention, compteur d'utilisation (`ClassFeatureUsageFormatter.format`,
 /// littéral), puis description, avec un bouton "Utiliser" en pied qui
@@ -19,12 +21,14 @@ Future<void> showClassFeatureInfoPanel(
   BuildContext context, {
   required CharacterClassFeature feature,
   required UseClassFeatureCallback onUseFeature,
+  bool canUse = true,
 }) async {
   final shouldUse = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (sheetContext) => _ClassFeatureInfoPanelContent(feature: feature),
+    builder: (sheetContext) =>
+        _ClassFeatureInfoPanelContent(feature: feature, canUse: canUse),
   );
   if (shouldUse != true || !context.mounted) return;
 
@@ -32,13 +36,21 @@ Future<void> showClassFeatureInfoPanel(
 }
 
 class _ClassFeatureInfoPanelContent extends StatelessWidget {
-  const _ClassFeatureInfoPanelContent({required this.feature});
+  const _ClassFeatureInfoPanelContent({
+    required this.feature,
+    required this.canUse,
+  });
 
   final CharacterClassFeature feature;
 
+  /// `false` : bouton "Utiliser" désactivé (écriture en cours côté fiche).
+  final bool canUse;
+
   @override
   Widget build(BuildContext context) {
-    final remaining = feature.usesRemaining ?? feature.usesMax!;
+    // Aptitude passive : pas de compteur ni de bouton "Utiliser".
+    final isPassive = feature.isPassive;
+    final remaining = isPassive ? 0 : feature.usesRemaining ?? feature.usesMax!;
     final exhausted = remaining <= 0;
 
     return SafeArea(
@@ -66,7 +78,9 @@ class _ClassFeatureInfoPanelContent extends StatelessWidget {
                       const SizedBox(height: AppSpacing.md),
                       _FeatureInfoRow(
                         label: 'Utilisations',
-                        value: ClassFeatureUsageFormatter.format(feature) ?? '',
+                        value:
+                            ClassFeatureUsageFormatter.format(feature) ??
+                            'Passive',
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
@@ -78,27 +92,30 @@ class _ClassFeatureInfoPanelContent extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        feature.description,
+                        feature.description.isEmpty
+                            ? 'Description indisponible.'
+                            : feature.description,
                         style: AppTypography.body(fontSize: 14, height: 1.4),
                       ),
                     ],
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
+              if (!isPassive)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: PrimaryButton(
+                    label: 'Utiliser',
+                    onPressed: exhausted || !canUse
+                        ? null
+                        : () => Navigator.of(context).pop(true),
+                  ),
                 ),
-                child: PrimaryButton(
-                  label: 'Utiliser',
-                  onPressed: exhausted
-                      ? null
-                      : () => Navigator.of(context).pop(true),
-                ),
-              ),
             ],
           ),
         ),
