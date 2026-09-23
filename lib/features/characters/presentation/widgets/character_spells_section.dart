@@ -107,65 +107,86 @@ class CharacterSpellsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final slotsByLevel = {for (final slot in spellSlots) slot.level: slot};
+    final hasPact = pactSlot != null && pactSlot!.total > 0;
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.parchmentCard,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'SORTS',
-            style: AppTypography.display(
-              fontSize: 11,
-              color: AppColors.textSecondary,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.parchmentCard,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: AppColors.woodLight,
+              width: AppBorders.card,
             ),
           ),
-          if (preparedLimit != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            PreparedSpellsCounter(count: preparedCount, limit: preparedLimit!),
-          ],
-          if (favorites.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.sm),
-            _FavoritesSection(
-              favorites: favorites,
-              spellSlots: spellSlots,
-              pactSlot: pactSlot,
-              onCastSpell: onCastSpell,
-              onToggleFavorite: onToggleFavorite,
-              onTogglePrepared: onTogglePrepared,
-              enabled: !actionsDisabled,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Container(height: 1, color: AppColors.gaugeTrack),
-          ],
-          // Bloc de section (pas un groupe de sorts) affiché une seule fois,
-          // uniquement pour un Occultiste (ou un Occultiste multiclassé) —
-          // même garde défensive que `showPips` ci-dessous (`total > 0`).
-          if (pactSlot != null && pactSlot!.total > 0) ...[
-            const SizedBox(height: AppSpacing.sm),
-            _PactSlotBanner(slot: pactSlot!),
-            const SizedBox(height: AppSpacing.sm),
-            Container(height: 1, color: AppColors.gaugeTrack),
-            const SizedBox(height: AppSpacing.sm),
-          ],
-          for (final group in groups)
-            _SpellLevelGroupSection(
-              group: group,
-              slot: slotsByLevel[group.level],
-              spellSlots: spellSlots,
-              pactSlot: pactSlot,
-              onCastSpell: onCastSpell,
-              onToggleFavorite: onToggleFavorite,
-              onTogglePrepared: onTogglePrepared,
-              actionsDisabled: actionsDisabled,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'SORTS',
+                style: AppTypography.display(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              if (preparedLimit != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                PreparedSpellsCounter(
+                  count: preparedCount,
+                  limit: preparedLimit!,
+                ),
+              ],
+              if (favorites.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _FavoritesSection(
+                  favorites: favorites,
+                  spellSlots: spellSlots,
+                  pactSlot: pactSlot,
+                  onCastSpell: onCastSpell,
+                  onToggleFavorite: onToggleFavorite,
+                  onTogglePrepared: onTogglePrepared,
+                  enabled: !actionsDisabled,
+                ),
+                // Séparateur entre favoris et magie de pacte uniquement
+                // (plus de groupes par niveau après, désormais leurs propres
+                // blocs distincts sous cette carte — voir [groups]
+                // ci-dessous) : jamais de séparateur en pied de carte sans
+                // rien après.
+                if (hasPact) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Container(height: 1, color: AppColors.gaugeTrack),
+                ],
+              ],
+              // Bloc de section (pas un groupe de sorts) affiché une seule
+              // fois, uniquement pour un Occultiste (ou un Occultiste
+              // multiclassé) — même garde défensive que [hasPact].
+              if (hasPact) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _PactSlotBanner(slot: pactSlot!),
+              ],
+            ],
+          ),
+        ),
+        // Un bloc distinct par niveau (« Sorts mineurs », « Niveau 1»...)
+        // plutôt que des sous-sections empilées dans la carte "SORTS"
+        // ci-dessus — demande utilisateur du 23/09/2026.
+        for (final group in groups) ...[
+          const SizedBox(height: AppSpacing.md),
+          _SpellLevelGroupSection(
+            group: group,
+            slot: slotsByLevel[group.level],
+            spellSlots: spellSlots,
+            pactSlot: pactSlot,
+            onCastSpell: onCastSpell,
+            onToggleFavorite: onToggleFavorite,
+            onTogglePrepared: onTogglePrepared,
+            actionsDisabled: actionsDisabled,
+          ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -369,8 +390,13 @@ class _SpellLevelGroupSection extends StatelessWidget {
     // donné, ex. personnage pas encore assez haut niveau).
     final showPips = group.level > 0 && slot != null && slot!.total > 0;
 
-    return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.sm),
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.parchmentCard,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

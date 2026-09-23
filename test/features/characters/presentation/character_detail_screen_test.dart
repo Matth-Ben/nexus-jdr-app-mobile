@@ -2038,13 +2038,10 @@ void main() {
           findsNothing,
         );
         // Revert : l'état optimiste (1 restant) ne doit pas rester affiché
-        // puisque rien ne sera synchronisé plus tard. Deux occurrences
-        // depuis le recettage direction-artistique du 13/09 (carte de
-        // synthèse "EMPLACEMENTS DE SORTS" + groupe par niveau, voir
-        // `character_spells_tab_body_test.dart`).
+        // puisque rien ne sera synchronisé plus tard.
         expect(
           find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 3'),
-          findsNWidgets(2),
+          findsOneWidget,
         );
       },
     );
@@ -2078,7 +2075,7 @@ void main() {
         // sur la valeur optimiste jamais confirmée.
         expect(
           find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 3'),
-          findsNWidgets(2),
+          findsOneWidget,
           reason:
               "L'état optimiste (1 restant) ne doit pas rester affiché après "
               "l'échec de l'appel réseau.",

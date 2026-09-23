@@ -116,10 +116,7 @@ void main() {
     expect(find.text('SORTS'), findsOneWidget);
     expect(find.text('Sorts mineurs'), findsOneWidget);
     expect(find.text('Lumière'), findsOneWidget);
-    // "Niveau 1" apparaît deux fois depuis le recettage direction-artistique
-    // du 13/09 : une fois dans la carte de synthèse "EMPLACEMENTS DE
-    // SORTS" en tête d'onglet, une fois comme titre du groupe par niveau.
-    expect(find.text('Niveau 1'), findsNWidgets(2));
+    expect(find.text('Niveau 1'), findsOneWidget);
     expect(find.text('Bouclier'), findsOneWidget);
     // L'école ("(Évocation)"/"(Abjuration)") n'est plus affichée en bout de
     // ligne depuis le recettage direction-artistique du 13/09.
@@ -130,12 +127,9 @@ void main() {
     // corrigé en revue direction-artistique — voir
     // `character_spells_section.dart::_SpellSlotDots`) : on vérifie le
     // libellé d'accessibilité plutôt qu'un `find.text` sur un caractère.
-    // Deux occurrences depuis le recettage du 13/09 : la carte de synthèse
-    // "EMPLACEMENTS DE SORTS" en tête d'onglet porte les mêmes pastilles que
-    // le groupe par niveau plus bas.
     expect(
       find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 3'),
-      findsNWidgets(2),
+      findsOneWidget,
     );
 
     semanticsHandle.dispose();
@@ -450,68 +444,6 @@ void main() {
       expect(find.byIcon(Icons.local_fire_department), findsNothing);
     },
   );
-
-  group('carte "EMPLACEMENTS DE SORTS" (recettage direction-artistique du '
-      '13/09)', () {
-    testWidgets(
-      'affiche une ligne par niveau d\'emplacement en tête d\'onglet, avec '
-      'la mention de réinitialisation au repos long',
-      (tester) async {
-        final semanticsHandle = tester.ensureSemantics();
-
-        await _pump(
-          tester,
-          _detail(
-            spells: const [
-              CharacterSpellEntry(
-                id: 1,
-                name: 'Bouclier',
-                level: 1,
-                school: 'Abjuration',
-                status: 'connu',
-              ),
-            ],
-            spellSlots: const [
-              CharacterSpellSlot(level: 1, total: 3, used: 1),
-              CharacterSpellSlot(level: 2, total: 2, used: 0),
-            ],
-          ),
-        );
-
-        expect(find.text('EMPLACEMENTS DE SORTS'), findsOneWidget);
-        expect(find.text('Niveau 1'), findsWidgets);
-        expect(find.text('Niveau 2'), findsOneWidget);
-        expect(
-          find.text('Se réinitialisent lors d\'un repos long.'),
-          findsOneWidget,
-        );
-
-        semanticsHandle.dispose();
-      },
-    );
-
-    testWidgets(
-      'absente quand aucun niveau n\'a d\'emplacement réel (total > 0)',
-      (tester) async {
-        await _pump(
-          tester,
-          _detail(
-            spells: const [
-              CharacterSpellEntry(
-                id: 1,
-                name: 'Lumière',
-                level: 0,
-                school: 'Évocation',
-                status: 'connu',
-              ),
-            ],
-          ),
-        );
-
-        expect(find.text('EMPLACEMENTS DE SORTS'), findsNothing);
-      },
-    );
-  });
 
   group('carte "INVOCATIONS & APTITUDES À USAGE LIMITÉ" (recettage '
       'direction-artistique du 13/09)', () {
