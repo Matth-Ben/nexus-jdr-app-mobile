@@ -5,6 +5,7 @@ import '../../../../core/network/supabase_client_provider.dart';
 import '../../../characters/domain/patron_extended_spells.dart';
 import '../../../characters/presentation/providers/character_providers.dart';
 import '../../data/character_creation_repository.dart';
+import '../../domain/alignment_catalog.dart';
 import '../../domain/background_catalog.dart';
 import '../../domain/background_equipment_entry.dart';
 import '../../domain/background_equipment_parser.dart';
@@ -282,6 +283,14 @@ Future<EquipmentStepData> equipmentStepData(Ref ref) async {
 @Riverpod(retry: _noRetry)
 Future<SkillCatalog> skillCatalog(Ref ref) {
   return ref.watch(characterCreationRepositoryProvider).fetchSkillCatalog();
+}
+
+/// Catalogue des alignements, exposé à la feuille "Modifier le personnage"
+/// de la fiche (`characters/presentation/widgets/character_identity_edit_sheet
+/// .dart`) — même rationale que [skillCatalog].
+@Riverpod(retry: _noRetry)
+Future<AlignmentCatalog> alignmentCatalog(Ref ref) {
+  return ref.watch(characterCreationRepositoryProvider).fetchAlignmentCatalog();
 }
 
 /// Données déjà résolues nécessaires à l'étape 9/9 "Récapitulatif" : la

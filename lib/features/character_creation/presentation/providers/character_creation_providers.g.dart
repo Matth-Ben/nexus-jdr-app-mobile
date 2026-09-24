@@ -832,6 +832,56 @@ final class SkillCatalogProvider
 
 String _$skillCatalogHash() => r'a714ff5e0126d605d6ff0084293eab63cfe29f87';
 
+/// Catalogue des alignements, exposé à la feuille "Modifier le personnage"
+/// de la fiche (`characters/presentation/widgets/character_identity_edit_sheet
+/// .dart`) — même rationale que [skillCatalog].
+
+@ProviderFor(alignmentCatalog)
+final alignmentCatalogProvider = AlignmentCatalogProvider._();
+
+/// Catalogue des alignements, exposé à la feuille "Modifier le personnage"
+/// de la fiche (`characters/presentation/widgets/character_identity_edit_sheet
+/// .dart`) — même rationale que [skillCatalog].
+
+final class AlignmentCatalogProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<AlignmentCatalog>,
+          AlignmentCatalog,
+          FutureOr<AlignmentCatalog>
+        >
+    with $FutureModifier<AlignmentCatalog>, $FutureProvider<AlignmentCatalog> {
+  /// Catalogue des alignements, exposé à la feuille "Modifier le personnage"
+  /// de la fiche (`characters/presentation/widgets/character_identity_edit_sheet
+  /// .dart`) — même rationale que [skillCatalog].
+  AlignmentCatalogProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: _noRetry,
+        name: r'alignmentCatalogProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$alignmentCatalogHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<AlignmentCatalog> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<AlignmentCatalog> create(Ref ref) {
+    return alignmentCatalog(ref);
+  }
+}
+
+String _$alignmentCatalogHash() => r'152a617f83c5efbf86d5b7ce623445026697ef2a';
+
 @ProviderFor(summaryStepData)
 final summaryStepDataProvider = SummaryStepDataProvider._();
 

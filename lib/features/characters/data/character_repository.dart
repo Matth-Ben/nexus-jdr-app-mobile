@@ -729,6 +729,39 @@ abstract class CharacterRepository {
     String? treasureText,
   });
 
+  /// Met à jour l'identité du personnage — feuille "Modifier le personnage"
+  /// du menu ⋮ de la fiche (`presentation/widgets/character_identity_edit
+  /// _sheet.dart`, décision utilisateur du 2026-09-24 : identité seule, aucune
+  /// valeur de jeu) : nom, alignement, sexe/âge/taille/poids/yeux/peau/
+  /// cheveux et les 9 textes d'apparence/histoire, en une seule écriture.
+  ///
+  /// Valeurs déjà `trim`ées par l'appelant, `null` = champ vidé. Les 9
+  /// textes sont coalescés vers `''` (colonnes `not null`, voir
+  /// [updateStoryFields]) ; les 7 champs d'identité et [alignmentId] restent
+  /// `null` (colonnes nullables). Jamais mise en file hors ligne, même règle
+  /// que [updateStoryFields].
+  Future<WriteOutcome> updateIdentity({
+    required String characterId,
+    required String name,
+    int? alignmentId,
+    String? sexe,
+    String? age,
+    String? height,
+    String? weight,
+    String? eyes,
+    String? skin,
+    String? hair,
+    String? appearanceText,
+    String? traitsText,
+    String? idealsText,
+    String? bondsText,
+    String? flawsText,
+    String? backstoryText,
+    String? alliesText,
+    String? featuresText,
+    String? treasureText,
+  });
+
   /// Supprime le rattachement [characterCampaignId] (`character_campaigns`)
   /// — lien "Quitter l'histoire", carte "Aventures" de l'onglet
   /// "Personnage" (`presentation/widgets/character_adventures_card.dart`).
@@ -2516,6 +2549,68 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .update({
             // Coalescé vers `''` (jamais `null` littéral) — voir la
             // documentation de [CharacterRepository.updateStoryFields].
+            'appearance_text': appearanceText ?? '',
+            'traits_text': traitsText ?? '',
+            'ideals_text': idealsText ?? '',
+            'bonds_text': bondsText ?? '',
+            'flaws_text': flawsText ?? '',
+            'backstory_text': backstoryText ?? '',
+            'allies_text': alliesText ?? '',
+            'features_text': featuresText ?? '',
+            'treasure_text': treasureText ?? '',
+          })
+          .eq('id', characterId)
+          .eq('owner_id', ownerId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> updateIdentity({
+    required String characterId,
+    required String name,
+    int? alignmentId,
+    String? sexe,
+    String? age,
+    String? height,
+    String? weight,
+    String? eyes,
+    String? skin,
+    String? hair,
+    String? appearanceText,
+    String? traitsText,
+    String? idealsText,
+    String? bondsText,
+    String? flawsText,
+    String? backstoryText,
+    String? alliesText,
+    String? featuresText,
+    String? treasureText,
+  }) async {
+    final ownerId = _requireOwnerId();
+
+    // Voir la documentation de [CharacterRepository.updateIdentity].
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('characters')
+          .update({
+            'name': name,
+            'alignment_id': alignmentId,
+            'sexe': sexe,
+            'age': age,
+            'height': height,
+            'weight': weight,
+            'eyes': eyes,
+            'skin': skin,
+            'hair': hair,
             'appearance_text': appearanceText ?? '',
             'traits_text': traitsText ?? '',
             'ideals_text': idealsText ?? '',
