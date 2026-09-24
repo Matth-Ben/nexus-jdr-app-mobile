@@ -81,10 +81,11 @@ class CharacterSpellEntry {
   /// ([isPersisted] `true`).
   final SpellGrantSource? grantSource;
 
-  /// `false` uniquement pour un sort accordé qui n'a AUCUNE ligne
-  /// `character_spells` (dérivé pur) : rien à écrire dessus, donc ni
-  /// favori ni statut modifiable. `true` pour tout sort ordinaire et pour un
-  /// sort accordé doublé d'une ligne réelle.
+  /// `false` pour un sort sans AUCUNE ligne `character_spells` (dérivé pur) :
+  /// sort accordé par une sous-classe, ou sort de la liste de classe d'un
+  /// lanceur à préparation jamais préparé (sa ligne est créée quand il est
+  /// préparé). Pas de favori possible, et exclu des exports. `true` pour
+  /// tout sort doté d'une ligne réelle.
   final bool isPersisted;
 
   /// Statut réellement stocké dans `character_spells.status`, quand il diffère

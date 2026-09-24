@@ -128,4 +128,24 @@ void main() {
       },
     );
   });
+
+  test('un sort sans ligne character_spells (liste de classe jamais '
+      'préparée) est "connu" et non persisté', () {
+    final result = CharacterSpellRowMapper.toCharacterSpellEntries(
+      const [
+        {'id': 7, 'level': 2, 'school': 'Évocation'},
+        {'id': 8, 'level': 1, 'school': 'Abjuration'},
+      ],
+      names: const {},
+      descriptions: const {},
+      statuses: const {8: 'préparé'},
+    );
+
+    final classListSpell = result.firstWhere((spell) => spell.id == 7);
+    expect(classListSpell.status, 'connu');
+    expect(classListSpell.isPersisted, isFalse);
+    final chosenSpell = result.firstWhere((spell) => spell.id == 8);
+    expect(chosenSpell.status, 'préparé');
+    expect(chosenSpell.isPersisted, isTrue);
+  });
 }
