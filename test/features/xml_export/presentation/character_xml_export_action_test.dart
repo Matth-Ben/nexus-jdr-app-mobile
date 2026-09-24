@@ -26,6 +26,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
@@ -48,6 +49,28 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
 /// `UnimplementedError` (jamais atteint : ces tests n'interagissent avec
 /// aucun autre onglet/aucune autre écriture).
 class _FakeCharacterRepository implements CharacterRepository {
+  @override
+  Future<WriteOutcome> updateIdentity({
+    required String characterId,
+    required String name,
+    int? alignmentId,
+    String? sexe,
+    String? age,
+    String? height,
+    String? weight,
+    String? eyes,
+    String? skin,
+    String? hair,
+    String? appearanceText,
+    String? traitsText,
+    String? idealsText,
+    String? bondsText,
+    String? flawsText,
+    String? backstoryText,
+    String? alliesText,
+    String? featuresText,
+    String? treasureText,
+  }) async => WriteOutcome.synced;
   CharacterDetail? detailToReturn;
 
   @override

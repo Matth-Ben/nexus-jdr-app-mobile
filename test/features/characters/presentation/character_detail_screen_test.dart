@@ -44,6 +44,28 @@ import 'package:personnages/features/characters/presentation/widgets/character_a
 import 'package:personnages/features/characters/presentation/widgets/character_stat_pills_row.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
+  @override
+  Future<WriteOutcome> updateIdentity({
+    required String characterId,
+    required String name,
+    int? alignmentId,
+    String? sexe,
+    String? age,
+    String? height,
+    String? weight,
+    String? eyes,
+    String? skin,
+    String? hair,
+    String? appearanceText,
+    String? traitsText,
+    String? idealsText,
+    String? bondsText,
+    String? flawsText,
+    String? backstoryText,
+    String? alliesText,
+    String? featuresText,
+    String? treasureText,
+  }) async => WriteOutcome.synced;
   CharacterDetail? detailToReturn;
   Object? detailErrorToThrow;
   Completer<CharacterDetail>? detailCompleter;
@@ -1012,6 +1034,27 @@ void main() {
     await tester.tap(find.byTooltip('Plus d\'options'));
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'le menu "…" propose "Modifier" en premier (au-dessus de "Exporter en '
+    'XML"), qui ouvre la feuille "Modifier le personnage"',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+      await openCharacterHeaderMenu(tester);
+
+      final modifier = tester.getTopLeft(find.text('Modifier'));
+      final export = tester.getTopLeft(find.text('Exporter en XML'));
+      expect(modifier.dy, lessThan(export.dy));
+
+      await tester.tap(find.text('Modifier'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('MODIFIER LE PERSONNAGE'), findsOneWidget);
+    },
+  );
 
   group('Marquer comme mort / Ressusciter (menu "…" du bandeau bois)', () {
     testWidgets(

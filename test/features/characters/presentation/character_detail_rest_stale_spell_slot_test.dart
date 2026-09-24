@@ -38,6 +38,28 @@ import 'package:personnages/features/characters/presentation/character_detail_sc
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 
 class FakeRepository implements CharacterRepository {
+  @override
+  Future<WriteOutcome> updateIdentity({
+    required String characterId,
+    required String name,
+    int? alignmentId,
+    String? sexe,
+    String? age,
+    String? height,
+    String? weight,
+    String? eyes,
+    String? skin,
+    String? hair,
+    String? appearanceText,
+    String? traitsText,
+    String? idealsText,
+    String? bondsText,
+    String? flawsText,
+    String? backstoryText,
+    String? alliesText,
+    String? featuresText,
+    String? treasureText,
+  }) async => WriteOutcome.synced;
   CharacterDetail current = detail;
   final Completer<void> castSpellGate = Completer<void>();
 

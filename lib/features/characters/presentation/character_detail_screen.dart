@@ -39,6 +39,7 @@ import 'widgets/character_ability_score_grid.dart';
 import 'widgets/character_adventures_card.dart';
 import 'widgets/character_detail_tab_bar.dart';
 import 'widgets/character_equipped_weapons_card.dart';
+import 'widgets/character_identity_edit_sheet.dart';
 import 'widgets/character_identity_card.dart';
 import 'widgets/character_inventory_tab_body.dart';
 import 'widgets/character_pact_weapon_card.dart';
@@ -64,6 +65,9 @@ import 'widgets/rest_sheet.dart';
 /// "paramètres" existant pour un personnage dans ce dépôt — voir
 /// `_CharacterDetailScreenState._deleteCharacter`).
 enum _CharacterHeaderMenuAction {
+  /// "Modifier" : identité seule (feuille `character_identity_edit_sheet
+  /// .dart`, décision utilisateur du 2026-09-24).
+  edit,
   exportXml,
   toggleArchived,
   toggleDead,
@@ -1868,6 +1872,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                               color: AppColors.textOnWood,
                             ),
                             onSelected: (action) => switch (action) {
+                              _CharacterHeaderMenuAction.edit =>
+                                showCharacterIdentityEditSheet(
+                                  context,
+                                  characterId: widget.characterId,
+                                  detail: currentDetail,
+                                ),
                               _CharacterHeaderMenuAction.exportXml =>
                                 exportCharacterAsXml(context, currentDetail),
                               _CharacterHeaderMenuAction.toggleArchived =>
@@ -1878,6 +1888,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                                 _deleteCharacter(currentDetail),
                             },
                             itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: _CharacterHeaderMenuAction.edit,
+                                child: Text('Modifier'),
+                              ),
                               const PopupMenuItem(
                                 value: _CharacterHeaderMenuAction.exportXml,
                                 child: Text('Exporter en XML'),
