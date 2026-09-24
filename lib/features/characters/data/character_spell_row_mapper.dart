@@ -60,9 +60,9 @@ abstract final class CharacterSpellRowMapper {
   /// `spells` n'a pas de colonne `description` directe, elle vit dans
   /// `translations` comme le nom, voir `data/character_repository.dart`) et
   /// des statuts déjà résolus (`statuses`, voir [parseStatuses]). Un sort
-  /// sans statut résolu (ne devrait pas arriver, `spellRows` est dérivé de
-  /// `character_spells`, sauf pour un sort accordé — voir [grants]) retombe
-  /// sur 'connu' plutôt que de crasher.
+  /// sans statut résolu (sort accordé — voir [grants] — ou sort de la liste
+  /// de classe d'un lanceur à préparation jamais préparé) retombe sur
+  /// 'connu', et n'est pas marqué [CharacterSpellEntry.isPersisted].
   ///
   /// [grants] : `{spell_id: origine}` des sorts accordés par une sous-classe
   /// (voir `SubclassSpellGrantResolver.resolve`) ; `spellRows` doit
@@ -102,7 +102,7 @@ abstract final class CharacterSpellRowMapper {
           description: descriptions[id.toString()] ?? '',
           isFavorite: favorites[id] ?? false,
           grantSource: grant,
-          isPersisted: grant == null || statuses.containsKey(id),
+          isPersisted: statuses.containsKey(id),
         ),
       );
     }

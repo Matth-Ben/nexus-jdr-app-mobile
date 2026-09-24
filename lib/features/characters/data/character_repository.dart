@@ -23,6 +23,7 @@ import '../domain/level_up_level_data.dart';
 import '../domain/level_up_subclass_option.dart';
 import '../domain/multiclass_prerequisites.dart';
 import '../domain/portrait_storage_path_resolver.dart';
+import '../domain/prepared_caster_spell_list.dart';
 import '../domain/rest_type.dart';
 import '../domain/reward_item_draft.dart';
 import '../domain/spell_slot_progression.dart';
@@ -1426,11 +1427,24 @@ class SupabaseCharacterRepository implements CharacterRepository {
     }
 
     try {
-      await _client
+      final updated = await _client
           .from('character_spells')
           .update({'status': prepared ? 'préparé' : 'connu'})
           .eq('character_id', characterId)
-          .eq('spell_id', spellId);
+          .eq('spell_id', spellId)
+          .select('id');
+      // Sort de la liste de classe d'un lanceur à préparation, sans ligne
+      // `character_spells` tant qu'il n'a jamais été préparé (voir
+      // `_fetchPreparedCasterClassListSpellIds`) : la créer. Pas d'upsert
+      // possible, la table n'a pas de contrainte unique (character_id,
+      // spell_id).
+      if (updated.isEmpty && prepared) {
+        await _client.from('character_spells').insert({
+          'character_id': characterId,
+          'spell_id': spellId,
+          'status': 'préparé',
+        });
+      }
       return WriteOutcome.synced;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
@@ -3269,11 +3283,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
         subclassSpellRows,
       ),
     ).keys;
+    final classListSpellIds = await _fetchPreparedCasterClassListSpellIds(
+      row,
+      classNames: CharacterRowMapper.parseTranslatedNames(classNameRows),
+    );
     final spellIds = <int>{
       ...CharacterSpellRowMapper.collectSpellIds(
         CharacterDetailRowMapper.characterSpellRowsOf(row),
       ),
       ...grantedSpellIds,
+      ...classListSpellIds,
     };
     var spellRows = const <Map<String, dynamic>>[];
     var spellNameRows = const <Map<String, dynamic>>[];
@@ -3391,6 +3410,51 @@ class SupabaseCharacterRepository implements CharacterRepository {
       'itemNameRows': itemNameRows,
       'itemDescriptionRows': itemDescriptionRows,
     };
+  }
+
+  /// Sorts de la liste de classe d'un lanceur à préparation (Clerc, Druide,
+  /// Paladin — voir `domain/prepared_caster_spell_list.dart`) : tous les
+  /// sorts de la classe du niveau 1 au plus haut niveau lançable, hors
+  /// contenu incomplet. Ils rejoignent `spellRows` comme les autres ; ceux
+  /// sans ligne `character_spells` sont affichés "connu, non préparé" et
+  /// [setSpellPrepared] crée leur ligne quand le joueur les prépare.
+  /// Ensemble vide (aucune requête) pour toute autre classe.
+  Future<Set<int>> _fetchPreparedCasterClassListSpellIds(
+    Map<String, dynamic> row, {
+    required Map<String, String> classNames,
+  }) async {
+    final ids = <int>{};
+    for (final classRow in CharacterDetailRowMapper.classRowsOf(row)) {
+      final classId = classRow['class_id'];
+      if (classId is! num) continue;
+      final maxLevel = PreparedCasterSpellList.maxSpellLevelFor(
+        classNames[classId.toString()] ?? '',
+        (classRow['level'] as num?)?.toInt() ?? 0,
+      );
+      if (maxLevel < 1) continue;
+
+      final spellClassRows = await _client
+          .from('spell_classes')
+          .select('spell_id')
+          .eq('class_id', classId);
+      final candidateIds = CharacterSpellRowMapper.collectSpellIds(
+        spellClassRows,
+      );
+      if (candidateIds.isEmpty) continue;
+
+      final spellRows = await _client
+          .from('spells')
+          .select('id')
+          .inFilter('id', candidateIds.toList())
+          .gte('level', 1)
+          .lte('level', maxLevel)
+          .not('is_incomplete', 'is', true);
+      for (final spellRow in spellRows) {
+        final id = spellRow['id'];
+        if (id is num) ids.add(id.toInt());
+      }
+    }
+    return ids;
   }
 
   /// Reconstruit un [CharacterDetail] complet à partir d'un [payload] déjà

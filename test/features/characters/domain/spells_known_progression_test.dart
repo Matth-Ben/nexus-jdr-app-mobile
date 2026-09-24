@@ -125,4 +125,36 @@ void main() {
       SpellsKnownProgression.spellsKnownByLevel['Rôdeur']![20],
     );
   });
+
+  group('lanceurs à préparation (ajout du 2026-09-24)', () {
+    test('Clerc et Magicien : 3 sorts mineurs au niveau 1, +1 aux niveaux 4 '
+        'et 10', () {
+      for (final className in ['Clerc', 'Magicien']) {
+        expect(SpellsKnownProgression.newCantripsAt(className, 1), 3);
+        expect(SpellsKnownProgression.newCantripsAt(className, 4), 1);
+        expect(SpellsKnownProgression.newCantripsAt(className, 5), 0);
+        expect(SpellsKnownProgression.newCantripsAt(className, 10), 1);
+      }
+    });
+
+    test('Druide : 2 sorts mineurs au niveau 1, +1 aux niveaux 4 et 10', () {
+      expect(SpellsKnownProgression.newCantripsAt('Druide', 1), 2);
+      expect(SpellsKnownProgression.newCantripsAt('Druide', 4), 1);
+      expect(SpellsKnownProgression.newCantripsAt('Druide', 10), 1);
+    });
+
+    test('grimoire du Magicien : 6 sorts au niveau 1, puis 2 par niveau', () {
+      expect(SpellsKnownProgression.newSpellsKnownAt('Magicien', 1), 6);
+      for (var level = 2; level <= 20; level++) {
+        expect(SpellsKnownProgression.newSpellsKnownAt('Magicien', level), 2);
+      }
+    });
+
+    test('Clerc/Druide/Paladin ne choisissent aucun sort à la montée : ils '
+        'préparent depuis toute leur liste de classe', () {
+      for (final className in ['Clerc', 'Druide', 'Paladin']) {
+        expect(SpellsKnownProgression.newSpellsKnownAt(className, 5), 0);
+      }
+    });
+  });
 }
