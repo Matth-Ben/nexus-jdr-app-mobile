@@ -7,6 +7,63 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:315814084339:android:7b49965100001829e94186",
+        "android_client_info": {
+          "package_name": "com.nexus_jdr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOaVXxTLxT7OWKAmKQXhAZwCJZDCQr94c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:315814084339:android:475cb63d46632c22e94186",
+        "android_client_info": {
+          "package_name": "com.nexus_jdr.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOaVXxTLxT7OWKAmKQXhAZwCJZDCQr94c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:315814084339:android:947b1c138d08cf82e94186",
+        "android_client_info": {
+          "package_name": "com.nexus_jdr.staging"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOaVXxTLxT7OWKAmKQXhAZwCJZDCQr94c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:315814084339:android:3ad14580e856fa12e94186",
         "android_client_info": {
           "package_name": "com.nexusjdr.personnages"
