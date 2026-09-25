@@ -17,8 +17,10 @@ import '../domain/skill_ability_mapping.dart';
 import '../domain/skills_and_tools_step_selection.dart';
 import '../domain/spellcasting_rules.dart';
 import 'providers/character_creation_draft_provider.dart';
+import 'providers/character_edit_session_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -122,9 +124,16 @@ class _SkillsAndToolsStepScreenState
           classToolChoices: _selectedClassTools,
           backgroundLanguageChoices: _selectedBackgroundLanguages,
         );
-    final nextStepRoute =
-        SpellcastingRules.isSpellcastingClass(classOption.name)
+    // Mode modification : étape Sorts réservée au niveau 1, étape
+    // Équipement toujours sautée (l'inventaire se gère depuis l'onglet Sac).
+    final editSession = ref.read(characterEditSessionControllerProvider);
+    final spellsStepApplies =
+        SpellcastingRules.isSpellcastingClass(classOption.name) &&
+        (editSession?.canEditSpells ?? true);
+    final nextStepRoute = spellsStepApplies
         ? '/characters/new/step-6'
+        : editSession != null
+        ? '/characters/new/step-8'
         : '/characters/new/step-7';
     context.push(nextStepRoute);
   }
@@ -568,8 +577,7 @@ class _Header extends StatelessWidget {
                         color: AppColors.textOnWood,
                       ),
                     ),
-                    Text(
-                      'CRÉATION',
+                    CreationModeTitle(
                       style: AppTypography.display(
                         fontSize: 11,
                         color: AppColors.textOnWood,
@@ -656,8 +664,7 @@ class _MinimalHeader extends StatelessWidget {
                   color: AppColors.textOnWood,
                 ),
               ),
-              Text(
-                'CRÉATION',
+              CreationModeTitle(
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textOnWood,

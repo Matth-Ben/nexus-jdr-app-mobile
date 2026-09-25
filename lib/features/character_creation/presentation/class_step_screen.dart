@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/accent_icon_badge.dart';
+import '../../../core/widgets/info_banner.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
@@ -15,8 +16,10 @@ import '../domain/class_catalog.dart';
 import '../domain/creation_step_help.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
+import 'providers/character_edit_session_provider.dart';
 import 'providers/subclass_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -65,7 +68,16 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
         .classId;
   }
 
+  /// Mode modification d'un personnage de niveau > 1 : la classe est
+  /// affichée mais ne peut plus changer (décision utilisateur du
+  /// 2026-09-25 — changer de classe invaliderait toute la progression).
+  bool get _isClassLocked {
+    final session = ref.read(characterEditSessionControllerProvider);
+    return session != null && !session.canChangeClass;
+  }
+
   void _selectClass(int classId) {
+    if (_isClassLocked) return;
     setState(() {
       _selectedClassId = classId;
     });
@@ -97,6 +109,11 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
   /// classe concernée ne doit jamais manquer sa propre étape faute d'avoir
   /// attendu la réponse réseau.
   Future<void> _submit() async {
+    // Classe verrouillée : ni sous-classe à choisir ni brouillon à changer.
+    if (_isClassLocked) {
+      context.push('/characters/new/step-3');
+      return;
+    }
     var subclassAsync = ref.read(subclassChoiceCatalogProvider);
     if (subclassAsync.isLoading && !subclassAsync.hasValue) {
       try {
@@ -228,6 +245,15 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
                       AppSpacing.md,
                     ),
                     children: [
+                      if (_isClassLocked) ...[
+                        const InfoBanner(
+                          message:
+                              "La classe et la sous-classe ne peuvent être "
+                              "modifiées qu'au niveau 1.",
+                          icon: Icons.lock_outline,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
                       for (var i = 0; i < catalog.classes.length; i++) ...[
                         if (i > 0) const SizedBox(height: AppSpacing.sm),
                         SelectableOptionTile(
@@ -331,8 +357,7 @@ class _Header extends StatelessWidget {
                         color: AppColors.textOnWood,
                       ),
                     ),
-                    Text(
-                      'CRÉATION',
+                    CreationModeTitle(
                       style: AppTypography.display(
                         fontSize: 11,
                         color: AppColors.textOnWood,
@@ -419,8 +444,7 @@ class _MinimalHeader extends StatelessWidget {
                   color: AppColors.textOnWood,
                 ),
               ),
-              Text(
-                'CRÉATION',
+              CreationModeTitle(
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textOnWood,

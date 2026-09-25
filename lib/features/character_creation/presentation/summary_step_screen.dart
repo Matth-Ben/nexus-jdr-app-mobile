@@ -12,10 +12,12 @@ import '../../../core/widgets/portrait_frame.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../characters/presentation/providers/character_detail_provider.dart';
 import '../../characters/presentation/providers/character_providers.dart';
 import '../domain/ability_score_definitions.dart';
 import '../domain/character_creation_draft.dart';
 import '../domain/character_creation_failure.dart';
+import '../domain/character_edit_planner.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/equipment_choice_tab.dart';
 import '../domain/final_ability_scores_resolver.dart';
@@ -25,8 +27,11 @@ import '../domain/subclass_choice_rules.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'providers/character_creation_return_route_provider.dart';
+import 'providers/character_edit_session_provider.dart';
 import 'providers/subclass_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/character_edit_flow.dart';
+import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -165,8 +170,13 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
     _persistNameToDraft();
 
     final className = _data?.classOption.name;
+    final editSession = ref.read(characterEditSessionControllerProvider);
+    // Mode modification : étape Sorts absente au-delà du niveau 1 (voir
+    // `SkillsAndToolsStepScreen._submit`).
     final isSpellcaster =
-        className != null && SpellcastingRules.isSpellcastingClass(className);
+        className != null &&
+        SpellcastingRules.isSpellcastingClass(className) &&
+        (editSession?.canEditSpells ?? true);
 
     var popsNeeded = _totalSteps - stepNumber;
     // L'étape 6/9 "Sorts" est absente de la pile pour une classe non
@@ -176,6 +186,10 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
     // lui-même : aucune ligne ne le cible pour une telle classe (lignes
     // "Sorts mineurs"/"Sorts niveau 1" masquées, voir [_buildContent]).
     if (!isSpellcaster && stepNumber <= 5) {
+      popsNeeded -= 1;
+    }
+    // Mode modification : l'étape 7/9 "Équipement" n'est jamais empilée.
+    if (editSession != null && stepNumber <= 6) {
       popsNeeded -= 1;
     }
 
@@ -189,6 +203,12 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
     final data = _data;
     final name = _nameController.text.trim();
     if (data == null || name.isEmpty || _isSubmitting) return;
+
+    final editSession = ref.read(characterEditSessionControllerProvider);
+    if (editSession != null) {
+      await _saveEdit(editSession, data, name);
+      return;
+    }
 
     setState(() {
       _isSubmitting = true;
@@ -254,6 +274,60 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
           ),
         );
       }
+    } on CharacterCreationFailure catch (failure) {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+        _errorMessage = failure.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isSubmitting = false;
+        _errorMessage = 'Une erreur est survenue. Réessayez.';
+      });
+    }
+  }
+
+  /// Mode modification : calcule les écritures à faire
+  /// (`CharacterEditPlanner`) puis les enregistre, et revient sur la fiche.
+  Future<void> _saveEdit(
+    CharacterEditSession session,
+    SummaryStepData data,
+    String name,
+  ) async {
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+    _persistNameToDraft();
+    final draft = ref.read(characterCreationDraftControllerProvider);
+    final plan = CharacterEditPlanner.plan(
+      snapshot: session.snapshot,
+      original: session.originalDraft,
+      edited: draft.copyWith(characterName: name),
+      originalClass: session.originalClass,
+      editedClass: data.classOption,
+      originalBackground: session.originalBackground,
+      editedBackground: data.backgroundOption,
+      skillCatalog: data.skillCatalog,
+      toolCatalog: data.toolCatalog,
+      languageCatalog: data.languageCatalog,
+      originalSpellCatalog: session.originalSpellCatalog,
+      editedSpellCatalog: data.spellCatalog,
+    );
+    try {
+      await ref
+          .read(characterEditRepositoryProvider)
+          .save(characterId: session.characterId, plan: plan);
+      if (!mounted) return;
+      ref.invalidate(characterDetailProvider(session.characterId));
+      ref.invalidate(charactersProvider);
+      final messenger = ScaffoldMessenger.of(context);
+      finishCharacterEdit(context, ref);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Modifications enregistrées.')),
+      );
     } on CharacterCreationFailure catch (failure) {
       if (!mounted) return;
       setState(() {
@@ -359,16 +433,23 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
     _data = data;
     final draft = ref.watch(characterCreationDraftControllerProvider);
 
-    final finalAbilityScores = FinalAbilityScoresResolver.resolve(
-      baseScores: draft.abilityScores ?? const {},
-      raceCatalog: data.raceCatalog,
-      raceId: draft.raceId,
-      subraceId: draft.subraceId,
-    );
+    final editSession = ref.watch(characterEditSessionControllerProvider);
+    // Mode modification : scores déjà finaux (voir `AbilityScoreStepScreen`).
+    final finalAbilityScores = editSession != null
+        ? draft.abilityScores ?? const <String, int>{}
+        : FinalAbilityScoresResolver.resolve(
+            baseScores: draft.abilityScores ?? const {},
+            raceCatalog: data.raceCatalog,
+            raceId: draft.raceId,
+            subraceId: draft.subraceId,
+          );
 
     final className = data.classOption.name;
-    final showCantripRow = SpellcastingRules.cantripQuotaFor(className) > 0;
+    final spellsEditable = editSession?.canEditSpells ?? true;
+    final showCantripRow =
+        spellsEditable && SpellcastingRules.cantripQuotaFor(className) > 0;
     final showLevelOneRow =
+        spellsEditable &&
         SpellcastingRules.levelOneSpellQuotaFor(className) > 0;
 
     final subclassName = data.subclassName;
@@ -420,11 +501,13 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
           value: '${draft.classLevelOneSpellChoices.length} sélectionné(s)',
           stepNumber: 6,
         ),
-      (
-        title: 'Équipement',
-        value: _formatEquipmentSummary(draft, data),
-        stepNumber: 7,
-      ),
+      // Mode modification : l'inventaire se gère depuis l'onglet Sac.
+      if (editSession == null)
+        (
+          title: 'Équipement',
+          value: _formatEquipmentSummary(draft, data),
+          stepNumber: 7,
+        ),
       (
         title: 'Histoire & portrait',
         value: _hasAnyAppearanceText(draft) ? 'Renseignés' : 'Non renseignés',
@@ -455,6 +538,17 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
                 const SizedBox(height: AppSpacing.md),
                 _HeaderCard(
                   portraitBytes: draft.portraitBytes,
+                  portraitUrl: editSession == null
+                      ? null
+                      : ref
+                                .watch(
+                                  characterDetailProvider(
+                                    editSession.characterId,
+                                  ),
+                                )
+                                .value
+                                ?.portraitUrl ??
+                            editSession.snapshot.portraitUrl,
                   name: trimmedName,
                   subtitle: _formatHeaderSubtitle(draft, data),
                 ),
@@ -503,7 +597,9 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 PrimaryButton(
-                  label: 'Créer le personnage',
+                  label: editSession != null
+                      ? 'Enregistrer les modifications'
+                      : 'Créer le personnage',
                   isLoading: _isSubmitting,
                   onPressed: canSubmit ? _submit : null,
                 ),
@@ -669,11 +765,15 @@ class _NameFieldBlock extends StatelessWidget {
 class _HeaderCard extends StatelessWidget {
   const _HeaderCard({
     required this.portraitBytes,
+    this.portraitUrl,
     required this.name,
     required this.subtitle,
   });
 
   final Uint8List? portraitBytes;
+
+  /// Portrait déjà enregistré (mode modification).
+  final String? portraitUrl;
   final String name;
   final String subtitle;
 
@@ -693,7 +793,7 @@ class _HeaderCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           PortraitFrame(
-            portraitUrl: null,
+            portraitUrl: portraitUrl,
             portraitBytes: portraitBytes,
             size: 64,
           ),
@@ -855,8 +955,7 @@ class _Header extends StatelessWidget {
                         color: AppColors.textOnWood,
                       ),
                     ),
-                    Text(
-                      'CRÉATION',
+                    CreationModeTitle(
                       style: AppTypography.display(
                         fontSize: 11,
                         color: AppColors.textOnWood,
@@ -943,8 +1042,7 @@ class _MinimalHeader extends StatelessWidget {
                   color: AppColors.textOnWood,
                 ),
               ),
-              Text(
-                'CRÉATION',
+              CreationModeTitle(
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textOnWood,

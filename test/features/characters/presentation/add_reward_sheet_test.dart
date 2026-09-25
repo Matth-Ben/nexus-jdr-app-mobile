@@ -38,28 +38,6 @@ List<RewardItemDraft>? lastItems;
 /// que le reste de ce dépôt) plutôt que partagé, chaque fichier de test
 /// restant lisible seul.
 class _FakeInventoryCatalogRepository implements CharacterRepository {
-  @override
-  Future<WriteOutcome> updateIdentity({
-    required String characterId,
-    required String name,
-    int? alignmentId,
-    String? sexe,
-    String? age,
-    String? height,
-    String? weight,
-    String? eyes,
-    String? skin,
-    String? hair,
-    String? appearanceText,
-    String? traitsText,
-    String? idealsText,
-    String? bondsText,
-    String? flawsText,
-    String? backstoryText,
-    String? alliesText,
-    String? featuresText,
-    String? treasureText,
-  }) async => WriteOutcome.synced;
   _FakeInventoryCatalogRepository({this.catalog = const []});
 
   final List<InventoryCatalogItem> catalog;

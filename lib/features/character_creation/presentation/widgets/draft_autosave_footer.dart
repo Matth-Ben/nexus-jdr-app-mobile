@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../providers/character_edit_session_provider.dart';
 
 /// Texte de pied de page affiché sous la `Row` Retour/Suivant des étapes 1 à
 /// 8 de l'assistant de création : "↻ Brouillon sauvegardé automatiquement ·
@@ -20,20 +22,25 @@ import '../../../../core/theme/app_typography.dart';
 /// décision du chef de projet (suite à une remarque `code-reviewer`) pour ne
 /// jamais perdre silencieusement la capacité d'abandonner une création en
 /// cours — voir la documentation de classe de `SummaryStepScreen`.
-class DraftAutosaveFooter extends StatelessWidget {
+class DraftAutosaveFooter extends ConsumerWidget {
   const DraftAutosaveFooter({required this.onAbandon, super.key});
 
   final VoidCallback onAbandon;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Mode modification : rien n'est enregistré avant « Enregistrer les
+    // modifications », d'où un libellé différent.
+    final editing = ref.watch(characterEditSessionControllerProvider) != null;
     return Center(
       child: Wrap(
         alignment: WrapAlignment.center,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(
-            '↻ Brouillon sauvegardé automatiquement · ',
+            editing
+                ? 'Modification en cours · '
+                : '↻ Brouillon sauvegardé automatiquement · ',
             style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
           ),
           InkWell(
@@ -42,7 +49,7 @@ class DraftAutosaveFooter extends StatelessWidget {
               constraints: const BoxConstraints(minHeight: 44),
               child: Center(
                 child: Text(
-                  'Abandonner',
+                  editing ? 'Annuler les modifications' : 'Abandonner',
                   // `fontWeight.w600` : même convention que le lien tapable
                   // "‹ Retour" de `summary_step_screen.dart` (texte inline
                   // légèrement plus appuyé que le corps de texte qui

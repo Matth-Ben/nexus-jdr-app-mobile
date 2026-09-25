@@ -9,6 +9,8 @@ import '../../../../core/widgets/destructive_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../providers/character_creation_draft_provider.dart';
 import '../providers/character_creation_return_route_provider.dart';
+import '../providers/character_edit_session_provider.dart';
+import 'character_edit_flow.dart';
 
 /// Orchestre l'abandon de la création en cours (icône croix du bandeau bois
 /// de chaque écran d'étape) — voir `docs/cahier-des-charges/`
@@ -30,6 +32,17 @@ Future<void> abandonCharacterCreation(
   BuildContext context,
   WidgetRef ref,
 ) async {
+  // Mode modification : « Annuler les modifications », retour sur la fiche.
+  if (ref.read(characterEditSessionControllerProvider) != null) {
+    final confirmed = await showAbandonCreationConfirmationDialog(
+      context,
+      editing: true,
+    );
+    if (confirmed != true || !context.mounted) return;
+    finishCharacterEdit(context, ref);
+    return;
+  }
+
   final confirmed = await showAbandonCreationConfirmationDialog(context);
   if (confirmed != true || !context.mounted) return;
 
@@ -47,7 +60,10 @@ Future<void> abandonCharacterCreation(
 /// ce dépôt, voir `RaceRowMapper`) : un seul usage ici, pas besoin de la
 /// généricité titre/message/libellé de la version "Groupe". Retourne `true`
 /// si le joueur confirme, `false`/`null` sinon.
-Future<bool?> showAbandonCreationConfirmationDialog(BuildContext context) {
+Future<bool?> showAbandonCreationConfirmationDialog(
+  BuildContext context, {
+  bool editing = false,
+}) {
   return showDialog<bool>(
     context: context,
     builder: (context) => Dialog(
@@ -66,7 +82,9 @@ Future<bool?> showAbandonCreationConfirmationDialog(BuildContext context) {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Abandonner la création ?',
+              editing
+                  ? 'Annuler les modifications ?'
+                  : 'Abandonner la création ?',
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -74,8 +92,11 @@ Future<bool?> showAbandonCreationConfirmationDialog(BuildContext context) {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Les choix déjà faits dans ce brouillon seront perdus. Cette '
-              'action est définitive.',
+              editing
+                  ? "Le personnage reste tel qu'il était : rien de ce qui a "
+                        'été changé dans cet assistant ne sera enregistré.'
+                  : 'Les choix déjà faits dans ce brouillon seront perdus. '
+                        'Cette action est définitive.',
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -94,7 +115,7 @@ Future<bool?> showAbandonCreationConfirmationDialog(BuildContext context) {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: DestructiveButton(
-                    label: 'Abandonner',
+                    label: editing ? 'Annuler' : 'Abandonner',
                     onPressed: () => Navigator.of(context).pop(true),
                   ),
                 ),

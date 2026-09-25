@@ -73,6 +73,11 @@ abstract final class RaceSummaryFormatter {
     ].join(String.fromCharCodes(const [10, 10]));
   }
 
+  /// Bonus de caractéristiques seuls ("+2 Dex, +1 Sag"), chaîne vide si
+  /// aucun.
+  static String formatAbilityBonuses(Map<String, dynamic> abilityBonuses) =>
+      _formatAbilityBonuses(abilityBonuses);
+
   static String _formatAbilityBonuses(Map<String, dynamic> abilityBonuses) {
     final hasUniformBonusToAllAbilities = _abilityAbbreviations.keys.every(
       (key) => abilityBonuses[key] == 1,

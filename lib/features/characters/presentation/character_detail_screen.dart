@@ -31,6 +31,7 @@ import '../domain/write_outcome.dart';
 import 'providers/character_detail_provider.dart';
 import 'providers/character_providers.dart';
 import 'providers/pact_weapon_providers.dart';
+import '../../character_creation/presentation/widgets/character_edit_flow.dart';
 import '../../character_creation/presentation/widgets/step_help_sheet.dart';
 import '../domain/character_sheet_help.dart';
 import 'widgets/add_reward_sheet.dart';
@@ -39,7 +40,6 @@ import 'widgets/character_ability_score_grid.dart';
 import 'widgets/character_adventures_card.dart';
 import 'widgets/character_detail_tab_bar.dart';
 import 'widgets/character_equipped_weapons_card.dart';
-import 'widgets/character_identity_edit_sheet.dart';
 import 'widgets/character_identity_card.dart';
 import 'widgets/character_inventory_tab_body.dart';
 import 'widgets/character_pact_weapon_card.dart';
@@ -65,8 +65,8 @@ import 'widgets/rest_sheet.dart';
 /// "paramètres" existant pour un personnage dans ce dépôt — voir
 /// `_CharacterDetailScreenState._deleteCharacter`).
 enum _CharacterHeaderMenuAction {
-  /// "Modifier" : identité seule (feuille `character_identity_edit_sheet
-  /// .dart`, décision utilisateur du 2026-09-24).
+  /// "Modifier" : rouvre l'assistant de création en mode modification
+  /// (`startCharacterEdit`, demande utilisateur du 2026-09-25).
   edit,
   exportXml,
   toggleArchived,
@@ -1873,10 +1873,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                             ),
                             onSelected: (action) => switch (action) {
                               _CharacterHeaderMenuAction.edit =>
-                                showCharacterIdentityEditSheet(
+                                startCharacterEdit(
                                   context,
+                                  ref,
                                   characterId: widget.characterId,
-                                  detail: currentDetail,
                                 ),
                               _CharacterHeaderMenuAction.exportXml =>
                                 exportCharacterAsXml(context, currentDetail),

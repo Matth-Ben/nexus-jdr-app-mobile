@@ -832,16 +832,14 @@ final class SkillCatalogProvider
 
 String _$skillCatalogHash() => r'a714ff5e0126d605d6ff0084293eab63cfe29f87';
 
-/// Catalogue des alignements, exposé à la feuille "Modifier le personnage"
-/// de la fiche (`characters/presentation/widgets/character_identity_edit_sheet
-/// .dart`) — même rationale que [skillCatalog].
+/// Catalogue des alignements, exposé au choix d'alignement de l'étape 8/9
+/// — même rationale que [skillCatalog].
 
 @ProviderFor(alignmentCatalog)
 final alignmentCatalogProvider = AlignmentCatalogProvider._();
 
-/// Catalogue des alignements, exposé à la feuille "Modifier le personnage"
-/// de la fiche (`characters/presentation/widgets/character_identity_edit_sheet
-/// .dart`) — même rationale que [skillCatalog].
+/// Catalogue des alignements, exposé au choix d'alignement de l'étape 8/9
+/// — même rationale que [skillCatalog].
 
 final class AlignmentCatalogProvider
     extends
@@ -851,9 +849,8 @@ final class AlignmentCatalogProvider
           FutureOr<AlignmentCatalog>
         >
     with $FutureModifier<AlignmentCatalog>, $FutureProvider<AlignmentCatalog> {
-  /// Catalogue des alignements, exposé à la feuille "Modifier le personnage"
-  /// de la fiche (`characters/presentation/widgets/character_identity_edit_sheet
-  /// .dart`) — même rationale que [skillCatalog].
+  /// Catalogue des alignements, exposé au choix d'alignement de l'étape 8/9
+  /// — même rationale que [skillCatalog].
   AlignmentCatalogProvider._()
     : super(
         from: null,

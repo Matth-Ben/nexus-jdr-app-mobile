@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/accent_icon_badge.dart';
+import '../../../core/widgets/info_banner.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/segmented_toggle.dart';
@@ -18,9 +19,12 @@ import '../domain/ability_score_rules.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/race_catalog.dart';
+import '../domain/race_summary_formatter.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
+import 'providers/character_edit_session_provider.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -59,9 +63,18 @@ class _AbilityScoreStepScreenState
   int? _raceId;
   int? _subraceId;
 
+  /// Mode modification (décision utilisateur du 2026-09-25) : les 6 scores
+  /// FINAUX se saisissent librement (1 à 30), sans méthode de génération ni
+  /// bonus racial ajouté — ils incluent déjà race et améliorations.
+  CharacterEditSession? _editSession;
+
+  static const int _minFinalScore = 1;
+  static const int _maxFinalScore = 30;
+
   @override
   void initState() {
     super.initState();
+    _editSession = ref.read(characterEditSessionControllerProvider);
     // Réhydrate la sélection depuis le brouillon déjà en mémoire (retour en
     // arrière depuis une étape suivante) — même rationale que
     // `RaceStepScreen`/`ClassStepScreen`/`BackgroundStepScreen`. Si le
@@ -72,7 +85,10 @@ class _AbilityScoreStepScreenState
     _subraceId = draft.subraceId;
     final draftMethod = draft.abilityScoreMethod;
     final draftScores = draft.abilityScores;
-    if (draftMethod != null && draftScores != null) {
+    if (_editSession != null && draftScores != null) {
+      _method = AbilityScoreMethod.standardArray;
+      _scores = Map.of(draftScores);
+    } else if (draftMethod != null && draftScores != null) {
       _method = draftMethod;
       _scores = draftScores;
     } else {
@@ -102,6 +118,7 @@ class _AbilityScoreStepScreenState
   }
 
   bool _canIncrement(String key) {
+    if (_editSession != null) return _scores[key]! < _maxFinalScore;
     return switch (_method) {
       AbilityScoreMethod.standardArray ||
       AbilityScoreMethod.diceRoll => AbilityScoreRules.canSwapUp(_scores, key),
@@ -113,6 +130,7 @@ class _AbilityScoreStepScreenState
   }
 
   bool _canDecrement(String key) {
+    if (_editSession != null) return _scores[key]! > _minFinalScore;
     return switch (_method) {
       AbilityScoreMethod.standardArray || AbilityScoreMethod.diceRoll =>
         AbilityScoreRules.canSwapDown(_scores, key),
@@ -124,6 +142,10 @@ class _AbilityScoreStepScreenState
   }
 
   void _increment(String key) {
+    if (_editSession != null) {
+      setState(() => _scores = {..._scores, key: _scores[key]! + 1});
+      return;
+    }
     setState(() {
       _scores = switch (_method) {
         AbilityScoreMethod.standardArray ||
@@ -137,6 +159,10 @@ class _AbilityScoreStepScreenState
   }
 
   void _decrement(String key) {
+    if (_editSession != null) {
+      setState(() => _scores = {..._scores, key: _scores[key]! - 1});
+      return;
+    }
     setState(() {
       _scores = switch (_method) {
         AbilityScoreMethod.standardArray ||
@@ -159,9 +185,14 @@ class _AbilityScoreStepScreenState
   /// actif : pas de validation bloquante sur cette étape (voir la
   /// documentation de la classe).
   void _submit() {
-    ref
-        .read(characterCreationDraftControllerProvider.notifier)
-        .setAbilityScores(method: _method, scores: _scores);
+    final controller = ref.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+    if (_editSession != null) {
+      controller.setFinalAbilityScores(_scores);
+    } else {
+      controller.setAbilityScores(method: _method, scores: _scores);
+    }
     context.push('/characters/new/step-5');
   }
 
@@ -219,6 +250,59 @@ class _AbilityScoreStepScreenState
     );
   }
 
+  /// Bonus raciaux (race + sous-race) de [raceId]/[subraceId], formatés.
+  static String _racialBonusesLabel(
+    RaceCatalog catalog,
+    int? raceId,
+    int? subraceId,
+  ) {
+    final parts = [
+      for (final race in catalog.races)
+        if (race.id == raceId)
+          RaceSummaryFormatter.formatAbilityBonuses(race.abilityBonuses),
+      for (final subrace in catalog.subraces)
+        if (subrace.id == subraceId)
+          RaceSummaryFormatter.formatAbilityBonuses(subrace.abilityBonuses),
+    ].where((part) => part.isNotEmpty);
+    return parts.isEmpty ? 'aucun' : parts.join(', ');
+  }
+
+  Widget _buildEditIntro(RaceCatalog catalog) {
+    final original = _editSession!.originalDraft;
+    final raceChanged =
+        original.raceId != _raceId || original.subraceId != _subraceId;
+    final before = _racialBonusesLabel(
+      catalog,
+      original.raceId,
+      original.subraceId,
+    );
+    final after = _racialBonusesLabel(catalog, _raceId, _subraceId);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const InfoBanner(
+          message:
+              'Scores finaux : bonus de race et améliorations déjà inclus. '
+              'Ajuste-les librement (1 à 30).',
+          icon: Icons.edit_outlined,
+        ),
+        if (raceChanged) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Race modifiée — reporte toi-même la différence de bonus :\n'
+            'avant : $before\n'
+            'maintenant : $after',
+            style: AppTypography.body(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildContent(RaceCatalog catalog) {
     return Column(
       children: [
@@ -241,59 +325,61 @@ class _AbilityScoreStepScreenState
                     AppSpacing.lg,
                     0,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SegmentedToggle<AbilityScoreMethod>(
-                        options: const [
-                          SegmentedToggleOption(
-                            value: AbilityScoreMethod.standardArray,
-                            label: 'Tableau',
-                          ),
-                          SegmentedToggleOption(
-                            value: AbilityScoreMethod.pointBuy,
-                            label: 'Points',
-                          ),
-                          SegmentedToggleOption(
-                            value: AbilityScoreMethod.diceRoll,
-                            label: 'Dés',
-                          ),
-                        ],
-                        value: _method,
-                        onChanged: _selectMethod,
-                      ),
-                      if (_method == AbilityScoreMethod.pointBuy) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          'Points restants : '
-                          '${AbilityScoreRules.pointBuyRemaining(_scores)}'
-                          '/${AbilityScoreRules.pointBuyBudget}',
-                          style: AppTypography.body(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                      if (_method == AbilityScoreMethod.diceRoll) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton(
-                            onPressed: _rerollDice,
-                            child: Text(
-                              'Relancer les dés',
-                              style: AppTypography.body(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textSecondary,
-                              ),
+                  child: _editSession != null
+                      ? _buildEditIntro(catalog)
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SegmentedToggle<AbilityScoreMethod>(
+                              options: const [
+                                SegmentedToggleOption(
+                                  value: AbilityScoreMethod.standardArray,
+                                  label: 'Tableau',
+                                ),
+                                SegmentedToggleOption(
+                                  value: AbilityScoreMethod.pointBuy,
+                                  label: 'Points',
+                                ),
+                                SegmentedToggleOption(
+                                  value: AbilityScoreMethod.diceRoll,
+                                  label: 'Dés',
+                                ),
+                              ],
+                              value: _method,
+                              onChanged: _selectMethod,
                             ),
-                          ),
+                            if (_method == AbilityScoreMethod.pointBuy) ...[
+                              const SizedBox(height: AppSpacing.sm),
+                              Text(
+                                'Points restants : '
+                                '${AbilityScoreRules.pointBuyRemaining(_scores)}'
+                                '/${AbilityScoreRules.pointBuyBudget}',
+                                style: AppTypography.body(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                            if (_method == AbilityScoreMethod.diceRoll) ...[
+                              const SizedBox(height: AppSpacing.sm),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton(
+                                  onPressed: _rerollDice,
+                                  child: Text(
+                                    'Relancer les dés',
+                                    style: AppTypography.body(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                      ],
-                    ],
-                  ),
                 ),
                 Expanded(
                   child: ListView(
@@ -313,16 +399,22 @@ class _AbilityScoreStepScreenState
                         _AbilityRow(
                           definition: abilityScoreDefinitions[i],
                           score: _scores[abilityScoreDefinitions[i].key]!,
-                          modifier: AbilityScoreModifierCalculator.modifierFor(
-                            baseScore: _scores[abilityScoreDefinitions[i].key]!,
-                            racialBonus:
-                                AbilityScoreModifierCalculator.racialBonusFor(
-                                  abilityKey: abilityScoreDefinitions[i].key,
-                                  catalog: catalog,
-                                  raceId: _raceId,
-                                  subraceId: _subraceId,
+                          modifier: _editSession != null
+                              ? AbilityScoreRules.abilityModifier(
+                                  _scores[abilityScoreDefinitions[i].key]!,
+                                )
+                              : AbilityScoreModifierCalculator.modifierFor(
+                                  baseScore:
+                                      _scores[abilityScoreDefinitions[i].key]!,
+                                  racialBonus:
+                                      AbilityScoreModifierCalculator.racialBonusFor(
+                                        abilityKey:
+                                            abilityScoreDefinitions[i].key,
+                                        catalog: catalog,
+                                        raceId: _raceId,
+                                        subraceId: _subraceId,
+                                      ),
                                 ),
-                          ),
                           canIncrement: _canIncrement(
                             abilityScoreDefinitions[i].key,
                           ),
@@ -488,8 +580,7 @@ class _Header extends StatelessWidget {
                         color: AppColors.textOnWood,
                       ),
                     ),
-                    Text(
-                      'CRÉATION',
+                    CreationModeTitle(
                       style: AppTypography.display(
                         fontSize: 11,
                         color: AppColors.textOnWood,
@@ -576,8 +667,7 @@ class _MinimalHeader extends StatelessWidget {
                   color: AppColors.textOnWood,
                 ),
               ),
-              Text(
-                'CRÉATION',
+              CreationModeTitle(
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textOnWood,

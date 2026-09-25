@@ -36,28 +36,6 @@ import 'package:personnages/features/characters/presentation/providers/character
 import 'package:personnages/features/characters/presentation/widgets/character_journal_entry_edit_sheet.dart';
 
 class FakeRepository implements CharacterRepository {
-  @override
-  Future<WriteOutcome> updateIdentity({
-    required String characterId,
-    required String name,
-    int? alignmentId,
-    String? sexe,
-    String? age,
-    String? height,
-    String? weight,
-    String? eyes,
-    String? skin,
-    String? hair,
-    String? appearanceText,
-    String? traitsText,
-    String? idealsText,
-    String? bondsText,
-    String? flawsText,
-    String? backstoryText,
-    String? alliesText,
-    String? featuresText,
-    String? treasureText,
-  }) async => WriteOutcome.synced;
   final Completer<void> gate = Completer<void>();
   bool gateAdd = false;
 
