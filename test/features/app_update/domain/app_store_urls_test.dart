@@ -5,7 +5,7 @@ void main() {
   test('playStore() pointe vers la fiche Play Store du bundle id du dépôt', () {
     expect(
       AppStoreUrls.playStore().toString(),
-      'https://play.google.com/store/apps/details?id=com.nexusjdr.personnages',
+      'https://play.google.com/store/apps/details?id=com.nexus_jdr',
     );
   });
 

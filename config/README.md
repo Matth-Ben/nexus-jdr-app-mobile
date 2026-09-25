@@ -64,9 +64,12 @@ flutter run --dart-define-from-file=config/prod.json --flavor prod -t lib/main.d
 Les product flavors sont déclarés dans `android/app/build.gradle.kts`
 (`flavorDimensions` + bloc `productFlavors`) :
 
-- `dev` → `applicationId` suffixé `.dev` (`com.nexusjdr.personnages.dev`)
-- `staging` → `applicationId` suffixé `.staging` (`com.nexusjdr.personnages.staging`)
-- `prod` → `applicationId` inchangé (`com.nexusjdr.personnages`)
+- `dev` → `applicationId` suffixé `.dev` (`com.nexus_jdr.dev`)
+- `staging` → `applicationId` suffixé `.staging` (`com.nexus_jdr.staging`)
+- `prod` → `applicationId` inchangé (`com.nexus_jdr`)
+
+L'`applicationId` Android (`com.nexus_jdr`, imposé par la fiche Google Play)
+diffère de l'identifiant iOS (`com.nexusjdr.personnages`, ci-dessous).
 
 ## iOS — à faire manuellement sur une machine avec Xcode
 

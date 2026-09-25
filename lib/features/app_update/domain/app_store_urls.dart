@@ -13,8 +13,13 @@ import 'dart:io';
 /// `PRODUCT_BUNDLE_IDENTIFIER`) est `com.nexusjdr.personnages`. C'est cette
 /// valeur, celle effectivement utilisée par les builds natifs, qui est
 /// utilisée ici plutôt que celle mentionnée dans la tâche.
+///
+/// Depuis le 2026-09-25, l'`applicationId` Android est `com.nexus_jdr` (nom
+/// de package de la fiche Google Play, figé côté Google) : Android et iOS
+/// n'ont donc plus le même identifiant.
 abstract final class AppStoreUrls {
-  static const String _applicationId = 'com.nexusjdr.personnages';
+  static const String _androidApplicationId = 'com.nexus_jdr';
+  static const String _iosBundleId = 'com.nexusjdr.personnages';
 
   /// Fiche Play Store — format canonique
   /// `https://play.google.com/store/apps/details?id=<applicationId>`,
@@ -26,7 +31,7 @@ abstract final class AppStoreUrls {
   /// doit toujours pointer vers la fiche publique de l'app, jamais vers un
   /// identifiant qui n'existe pas sur le store.
   static Uri playStore() => Uri.parse(
-    'https://play.google.com/store/apps/details?id=$_applicationId',
+    'https://play.google.com/store/apps/details?id=$_androidApplicationId',
   );
 
   /// Fiche App Store — **approximation documentée** : contrairement au Play
@@ -44,7 +49,7 @@ abstract final class AppStoreUrls {
   /// échoue. À remplacer par l'URL `id`-préfixée dès la première publication
   /// iOS.
   static Uri appStore() =>
-      Uri.parse('https://apps.apple.com/app/$_applicationId');
+      Uri.parse('https://apps.apple.com/app/$_iosBundleId');
 
   /// URL de la fiche store de la plateforme courante — `Platform.isIOS`,
   /// même discipline que `AppVersionRepository._platformLabel`.

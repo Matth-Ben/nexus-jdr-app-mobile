@@ -16,9 +16,14 @@ section 4.
 1. "Créer une application" → nom "Nexus JDR — Personnages", langue par
    défaut français, catégorie "Jeux de rôle" ou "Outils" selon ce qui
    correspond le mieux.
-2. Le **nom de package doit être exactement** `com.nexusjdr.personnages`
-   (celui déjà configuré dans `android/app/build.gradle.kts` — irréversible
-   une fois le premier .aab uploadé, ne peut jamais changer).
+2. Le **nom de package est** `com.nexus_jdr` (celui de la fiche créée
+   dans la Play Console, figé par Google ; `applicationId` de
+   `android/app/build.gradle.kts` aligné dessus le 2026-09-25 — il était
+   auparavant `com.nexusjdr.personnages`, refusé par la fiche).
+   À garder alignés : `google-services.json` (apps Firebase `com.nexus_jdr`,
+   `.dev`, `.staging`) et `assetlinks.json` du site web (liens profonds
+   `/join` et `/p`, avec l'empreinte SHA-256 de la clé de signature d'app
+   Google Play en plus de celle de la clé d'import).
 
 ## 3. Ce qu'il faut préparer AVANT de pouvoir soumettre (fiche store)
 
@@ -77,7 +82,7 @@ fois la fiche créée (section 2-4 ci-dessus faites) :
 2. Dans Google Cloud Console, sur ce compte de service : générer une clé
    JSON, la télécharger.
 3. Dans Play Console, donner à ce compte de service la permission
-   "Release manager" (ou plus large) sur l'app `com.nexusjdr.personnages`.
+   "Release manager" (ou plus large) sur l'app `com.nexus_jdr`.
 4. Ajouter le **contenu entier de ce fichier JSON** comme secret GitHub
    `PLAY_SERVICE_ACCOUNT_JSON` (voir section 6 ci-dessous pour comment
    ajouter un secret).
@@ -89,7 +94,7 @@ fois la fiche créée (section 2-4 ci-dessus faites) :
      uses: r0adkll/upload-google-play@v1
      with:
        serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-       packageName: com.nexusjdr.personnages
+       packageName: com.nexus_jdr
        releaseFiles: build/app/outputs/bundle/prodRelease/app-prod-release.aab
        track: internal
    ```
