@@ -19,10 +19,8 @@ import '../../../core/widgets/wood_back_header.dart';
 /// séparées par le motif "`SizedBox(lg)` + `Divider` + `SizedBox(lg)`" —
 /// voir sa doc de classe pour le rationale complet, non répété ici).
 ///
-/// Le placeholder `[À COMPLÉTER : identité de l'éditeur]` (section
-/// "Éditeur") est affiché tel quel, verbatim depuis le contenu validé par
-/// le chef de projet — même remarque que
-/// `ProfilePrivacyPolicyScreen._sections`.
+/// Section "Éditeur" : Matthias Benoit (renseigné le 2026-09-25, même
+/// identité que la politique de confidentialité).
 ///
 /// Lecture 100% synchrone à l'ouverture (texte statique, aucun appel
 /// réseau).
@@ -34,10 +32,7 @@ class ProfileLegalScreen extends StatelessWidget {
   static const List<LegalSectionBlock> _sections = [
     LegalSectionBlock(
       title: 'Éditeur',
-      paragraphs: [
-        '[À COMPLÉTER : identité de l\'éditeur]',
-        'Contact : support@nexus-jdr.app',
-      ],
+      paragraphs: ['Matthias Benoit', 'Contact : support@nexus-jdr.app'],
     ),
     LegalSectionBlock(
       title: 'Hébergement',
@@ -109,7 +104,7 @@ class ProfileLegalScreen extends StatelessWidget {
                   ],
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'Dernière mise à jour : 15 septembre 2026',
+                    'Dernière mise à jour : 25 septembre 2026',
                     style: AppTypography.body(
                       fontSize: 11,
                       color: AppColors.textMuted,
