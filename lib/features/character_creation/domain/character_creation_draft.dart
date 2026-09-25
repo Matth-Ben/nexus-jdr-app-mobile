@@ -191,5 +191,9 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// dans Storage juste après la création du personnage à l'étape 9, une
     /// fois son identifiant connu (voir `summary_step_screen.dart`).
     Uint8List? portraitBytes,
+
+    /// Alignement choisi à l'étape 8 (`characters.alignment_id`), `null` si
+    /// aucun.
+    int? alignmentId,
   }) = _CharacterCreationDraft;
 }

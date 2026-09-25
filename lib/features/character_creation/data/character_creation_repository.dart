@@ -928,7 +928,7 @@ class SupabaseCharacterCreationRepository
             'subrace_id': draft.subraceId,
             'race_custom_text': draft.raceCustomText,
             'background_id': draft.backgroundId,
-            'alignment_id': null,
+            'alignment_id': draft.alignmentId,
             'xp': 0,
             'max_hp': maxHp,
             'current_hp': maxHp,

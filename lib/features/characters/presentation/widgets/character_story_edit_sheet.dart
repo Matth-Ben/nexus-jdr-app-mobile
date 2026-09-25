@@ -64,10 +64,11 @@ Future<void> showCharacterStoryEditSheet(
 
 /// Libellé + placeholder d'un des 9 champs — copie exacte de
 /// `appearance_and_backstory_step_screen.dart::_TextFieldSpec`/
-/// `_fieldSpecs`. Publique : réutilisée aussi par la feuille "Modifier le
-/// personnage" (`character_identity_edit_sheet.dart`).
-class StoryFieldSpec {
-  const StoryFieldSpec({required this.label, required this.hint});
+/// `_fieldSpecs` (seul précédent de saisie de ces 9 champs). Duplication
+/// assumée plutôt que factorisation prématurée (2e usage seulement) — voir
+/// la spec direction-artistique de la tâche qui a introduit ce fichier.
+class _StoryFieldSpec {
+  const _StoryFieldSpec({required this.label, required this.hint});
 
   final String label;
   final String hint;
@@ -80,40 +81,40 @@ class StoryFieldSpec {
 /// direction-artistique) : la vue lecture suit la maquette, la vue édition
 /// calque l'étape 8/9 de l'assistant de création (seul précédent de saisie),
 /// qui est mono-colonne.
-const List<StoryFieldSpec> storyFieldSpecs = [
-  StoryFieldSpec(
+const List<_StoryFieldSpec> _fieldSpecs = [
+  _StoryFieldSpec(
     label: 'APPARENCE PHYSIQUE',
     hint: "Décris l'apparence physique de ton personnage…",
   ),
-  StoryFieldSpec(
+  _StoryFieldSpec(
     label: 'TRAITS DE PERSONNALITÉ',
     hint: 'Décris les traits de personnalité de ton personnage…',
   ),
-  StoryFieldSpec(
+  _StoryFieldSpec(
     label: 'IDÉAUX',
     hint: 'Quels idéaux guident ton personnage ?',
   ),
-  StoryFieldSpec(
+  _StoryFieldSpec(
     label: 'LIENS',
     hint: "Quels liens unissent ton personnage à d'autres ?",
   ),
-  StoryFieldSpec(
+  _StoryFieldSpec(
     label: 'DÉFAUTS',
     hint: 'Quels défauts ou faiblesses a ton personnage ?',
   ),
-  StoryFieldSpec(
+  _StoryFieldSpec(
     label: 'HISTOIRE PERSONNELLE',
     hint: "Raconte l'histoire personnelle de ton personnage…",
   ),
-  StoryFieldSpec(
+  _StoryFieldSpec(
     label: 'ALLIÉS',
     hint: 'Quels alliés ou organisations soutiennent ton personnage ?',
   ),
-  StoryFieldSpec(
+  _StoryFieldSpec(
     label: 'PARTICULARITÉS',
     hint: 'Décris les particularités de ton personnage…',
   ),
-  StoryFieldSpec(
+  _StoryFieldSpec(
     label: 'TRÉSOR',
     hint: 'Quels trésors ou objets précieux possède ton personnage ?',
   ),
@@ -297,10 +298,10 @@ class _CharacterStoryEditSheetContentState
                           AlertBanner(message: _errorMessage!),
                           const SizedBox(height: AppSpacing.md),
                         ],
-                        for (var i = 0; i < storyFieldSpecs.length; i++) ...[
+                        for (var i = 0; i < _fieldSpecs.length; i++) ...[
                           if (i > 0) const SizedBox(height: AppSpacing.md),
                           _StoryTextFieldBlock(
-                            spec: storyFieldSpecs[i],
+                            spec: _fieldSpecs[i],
                             controller: _controllers[i],
                           ),
                         ],
@@ -355,7 +356,7 @@ class _CharacterStoryEditSheetContentState
 class _StoryTextFieldBlock extends StatelessWidget {
   const _StoryTextFieldBlock({required this.spec, required this.controller});
 
-  final StoryFieldSpec spec;
+  final _StoryFieldSpec spec;
   final TextEditingController controller;
 
   @override

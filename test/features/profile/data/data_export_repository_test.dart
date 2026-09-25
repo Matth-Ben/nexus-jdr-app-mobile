@@ -11,7 +11,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
@@ -36,28 +35,6 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
 /// exercés par `DataExportRepository`, le reste lève
 /// `UnimplementedError` (jamais atteint par ces tests).
 class _FakeCharacterRepository implements CharacterRepository {
-  @override
-  Future<WriteOutcome> updateIdentity({
-    required String characterId,
-    required String name,
-    int? alignmentId,
-    String? sexe,
-    String? age,
-    String? height,
-    String? weight,
-    String? eyes,
-    String? skin,
-    String? hair,
-    String? appearanceText,
-    String? traitsText,
-    String? idealsText,
-    String? bondsText,
-    String? flawsText,
-    String? backstoryText,
-    String? alliesText,
-    String? featuresText,
-    String? treasureText,
-  }) async => WriteOutcome.synced;
   List<CharacterSummary> summaries = const [];
   final Map<String, CharacterDetail> detailsById = {};
   Object? detailErrorToThrow;

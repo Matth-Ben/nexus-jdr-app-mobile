@@ -13,8 +13,12 @@ import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/step_progress_bar.dart';
 import '../../characters/presentation/widgets/portrait_upload_sheet.dart';
 import '../domain/creation_step_help.dart';
+import '../../characters/presentation/providers/character_detail_provider.dart';
 import 'providers/character_creation_draft_provider.dart';
+import 'providers/character_creation_providers.dart';
+import 'providers/character_edit_session_provider.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
@@ -205,6 +209,18 @@ class _AppearanceAndBackstoryStepScreenState
   /// seulement gardé dans le brouillon — envoyé dans Storage à l'étape 9,
   /// une fois le personnage créé.
   Future<void> _pickPortrait() async {
+    // Mode modification : le personnage existe déjà, le portrait est donc
+    // envoyé/retiré tout de suite par le flux habituel de la fiche.
+    final session = ref.read(characterEditSessionControllerProvider);
+    if (session != null) {
+      await showPortraitUploadSheet(
+        context,
+        ref: ref,
+        characterId: session.characterId,
+        portraitUrl: _currentPortraitUrl(session, listen: false),
+      );
+      return;
+    }
     final draftController = ref.read(
       characterCreationDraftControllerProvider.notifier,
     );
@@ -217,6 +233,18 @@ class _AppearanceAndBackstoryStepScreenState
     if (result == null || !mounted) return;
     draftController.setPortraitBytes(result.bytes);
   }
+
+  /// Portrait actuel du personnage modifié (rafraîchi après un envoi).
+  String? _currentPortraitUrl(
+    CharacterEditSession session, {
+    bool listen = true,
+  }) =>
+      (listen
+              ? ref.watch(characterDetailProvider(session.characterId))
+              : ref.read(characterDetailProvider(session.characterId)))
+          .value
+          ?.portraitUrl ??
+      session.snapshot.portraitUrl;
 
   /// Nombre de champs courts d'identité en tête de [_fieldSpecs].
   static final int _shortFieldCount = _fieldSpecs
@@ -261,6 +289,7 @@ class _AppearanceAndBackstoryStepScreenState
   }
 
   Widget _buildContent() {
+    final editSession = ref.watch(characterEditSessionControllerProvider);
     return SafeArea(
       top: false,
       child: Column(
@@ -280,8 +309,13 @@ class _AppearanceAndBackstoryStepScreenState
                       (draft) => draft.portraitBytes,
                     ),
                   ),
+                  portraitUrl: editSession == null
+                      ? null
+                      : _currentPortraitUrl(editSession),
                   onTap: _pickPortrait,
                 ),
+                const SizedBox(height: AppSpacing.md),
+                const _AlignmentField(),
                 const SizedBox(height: AppSpacing.md),
                 // Champs courts d'identité, deux par ligne.
                 for (var i = 0; i < _shortFieldCount; i += 2) ...[
@@ -420,13 +454,27 @@ class _TextFieldBlock extends StatelessWidget {
 /// `core/widgets/portrait_frame.dart` pour être partagé ici sans dupliquer
 /// le peintre (même stroke/dash/gap/couleur que [PortraitFrame]).
 class _PortraitTile extends StatelessWidget {
-  const _PortraitTile({required this.portraitBytes, required this.onTap});
+  const _PortraitTile({
+    required this.portraitBytes,
+    required this.onTap,
+    this.portraitUrl,
+  });
 
   final Uint8List? portraitBytes;
+
+  /// Portrait déjà enregistré (mode modification uniquement).
+  final String? portraitUrl;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final placeholder = CustomPaint(
+      painter: const DashedBorderPainter(color: AppColors.textMuted),
+      child: const Center(
+        child: Icon(Icons.image_outlined, size: 28, color: AppColors.textMuted),
+      ),
+    );
+    final hasPortrait = portraitBytes != null || portraitUrl != null;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -443,18 +491,13 @@ class _PortraitTile extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               child: portraitBytes != null
                   ? Image.memory(portraitBytes!, fit: BoxFit.cover)
-                  : CustomPaint(
-                      painter: const DashedBorderPainter(
-                        color: AppColors.textMuted,
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.image_outlined,
-                          size: 28,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ),
+                  : portraitUrl != null
+                  ? Image.network(
+                      portraitUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => placeholder,
+                    )
+                  : placeholder,
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -471,7 +514,7 @@ class _PortraitTile extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    portraitBytes != null
+                    hasPortrait
                         ? 'Touchez pour changer ou retirer'
                         : 'Optionnel — touchez pour en ajouter un',
                     style: AppTypography.body(
@@ -486,6 +529,74 @@ class _PortraitTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Choix de l'alignement (`characters.alignment_id`), écrit tout de suite
+/// dans le brouillon. Facultatif : "Aucun" par défaut.
+class _AlignmentField extends ConsumerWidget {
+  const _AlignmentField();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final alignmentId = ref.watch(
+      characterCreationDraftControllerProvider.select(
+        (draft) => draft.alignmentId,
+      ),
+    );
+    final catalogAsync = ref.watch(alignmentCatalogProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ALIGNEMENT',
+          style: AppTypography.body(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        catalogAsync.when(
+          data: (catalog) => DropdownButtonFormField<int?>(
+            initialValue:
+                catalog.alignments.any((option) => option.id == alignmentId)
+                ? alignmentId
+                : null,
+            isExpanded: true,
+            items: [
+              const DropdownMenuItem<int?>(child: Text('Aucun')),
+              for (final option in catalog.alignments)
+                DropdownMenuItem<int?>(
+                  value: option.id,
+                  child: Text(option.name),
+                ),
+            ],
+            onChanged: (value) => ref
+                .read(characterCreationDraftControllerProvider.notifier)
+                .setAlignment(value),
+          ),
+          loading: () => const LinearProgressIndicator(),
+          error: (_, _) => Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Impossible de charger les alignements.',
+                  style: AppTypography.body(
+                    fontSize: 13,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => ref.invalidate(alignmentCatalogProvider),
+                child: const Text('Réessayer'),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -533,8 +644,7 @@ class _Header extends StatelessWidget {
                         color: AppColors.textOnWood,
                       ),
                     ),
-                    Text(
-                      'CRÉATION',
+                    CreationModeTitle(
                       style: AppTypography.display(
                         fontSize: 11,
                         color: AppColors.textOnWood,

@@ -36,28 +36,6 @@ import 'package:personnages/features/characters/presentation/widgets/character_s
 /// même rationale de duplication que le reste de ce dépôt (voir
 /// `add_reward_sheet_test.dart::_FakeInventoryCatalogRepository`).
 class FakeRepository implements CharacterRepository {
-  @override
-  Future<WriteOutcome> updateIdentity({
-    required String characterId,
-    required String name,
-    int? alignmentId,
-    String? sexe,
-    String? age,
-    String? height,
-    String? weight,
-    String? eyes,
-    String? skin,
-    String? hair,
-    String? appearanceText,
-    String? traitsText,
-    String? idealsText,
-    String? bondsText,
-    String? flawsText,
-    String? backstoryText,
-    String? alliesText,
-    String? featuresText,
-    String? treasureText,
-  }) async => WriteOutcome.synced;
   final Completer<void> gate = Completer<void>();
   bool gateUpdateStoryFields = false;
 

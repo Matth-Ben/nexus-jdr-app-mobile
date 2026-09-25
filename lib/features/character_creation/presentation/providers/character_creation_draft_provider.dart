@@ -102,6 +102,12 @@ class CharacterCreationDraftController
     state = state.copyWith(abilityScoreMethod: method, abilityScores: scores);
   }
 
+  /// Mode modification : scores FINAUX saisis directement (bonus de race et
+  /// améliorations compris), sans méthode de génération.
+  void setFinalAbilityScores(Map<String, int> scores) {
+    state = state.copyWith(abilityScoreMethod: null, abilityScores: scores);
+  }
+
   /// Met à jour les compétences/outils/langues choisis à l'étape 5. Fusion
   /// partielle via `copyWith` (même rationale que [setClass]/[setBackground]/
   /// [setAbilityScores]) : cette étape n'a pas de champ à effacer sur les
@@ -218,6 +224,16 @@ class CharacterCreationDraftController
   void setPortraitBytes(Uint8List? portraitBytes) {
     state = state.copyWith(portraitBytes: portraitBytes);
   }
+
+  /// Définit (ou retire, avec `null`) l'alignement de l'étape 8.
+  void setAlignment(int? alignmentId) {
+    state = state.copyWith(alignmentId: alignmentId);
+  }
+
+  /// Remplace tout le brouillon — utilisé uniquement pour pré-remplir
+  /// l'assistant en mode modification d'un personnage existant (voir
+  /// `CharacterEditHydrator`).
+  void replaceWith(CharacterCreationDraft draft) => state = draft;
 
   /// Remet le brouillon à zéro. Appelé par `CharacterListScreen` avant de
   /// démarrer une nouvelle création ("+ Créer"), pour ne jamais reprendre

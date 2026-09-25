@@ -42,28 +42,6 @@ import 'package:personnages/features/characters/presentation/widgets/character_c
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
-  @override
-  Future<WriteOutcome> updateIdentity({
-    required String characterId,
-    required String name,
-    int? alignmentId,
-    String? sexe,
-    String? age,
-    String? height,
-    String? weight,
-    String? eyes,
-    String? skin,
-    String? hair,
-    String? appearanceText,
-    String? traitsText,
-    String? idealsText,
-    String? bondsText,
-    String? flawsText,
-    String? backstoryText,
-    String? alliesText,
-    String? featuresText,
-    String? treasureText,
-  }) async => WriteOutcome.synced;
   int fetchCallCount = 0;
   List<CharacterSummary>? charactersToReturn;
   Object? errorToThrow;

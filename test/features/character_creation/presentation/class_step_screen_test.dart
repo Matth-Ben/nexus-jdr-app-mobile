@@ -10,6 +10,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/features/character_creation/domain/character_edit_snapshot.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_edit_session_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
@@ -755,5 +757,70 @@ void main() {
         expect(find.text('Étape sous-classe'), findsOneWidget);
       },
     );
+  });
+
+  group('mode modification (personnage existant)', () {
+    void startEditSession({required int totalLevel}) {
+      const draft = CharacterCreationDraft(classId: 2);
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .replaceWith(draft);
+      container
+          .read(characterEditSessionControllerProvider.notifier)
+          .start(
+            CharacterEditSession(
+              snapshot: CharacterEditSnapshot(
+                characterId: 'c1',
+                name: 'Brunhilde',
+                primaryClassId: 2,
+                primaryClassLevel: totalLevel,
+                totalLevel: totalLevel,
+                maxHp: 40,
+                currentHp: 40,
+              ),
+              originalDraft: draft,
+            ),
+          );
+    }
+
+    testWidgets('au-delà du niveau 1 : classe verrouillée, message affiché, '
+        '"Suivant" passe directement à l\'étape 3 sans rien changer', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.catalogToReturn = const ClassCatalog(
+        classes: [_magicien, _guerrier],
+      );
+      startEditSession(totalLevel: 5);
+      await pumpClassStep(tester);
+
+      expect(find.textContaining("modifiées qu'au niveau 1"), findsOneWidget);
+
+      await tester.tap(find.text('Magicien'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape suivante'), findsOneWidget);
+      expect(readDraft().classId, 2);
+    });
+
+    testWidgets('au niveau 1 : la classe reste modifiable', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.catalogToReturn = const ClassCatalog(
+        classes: [_magicien, _guerrier],
+      );
+      startEditSession(totalLevel: 1);
+      await pumpClassStep(tester);
+
+      expect(find.textContaining("modifiées qu'au niveau 1"), findsNothing);
+
+      await tester.tap(find.text('Magicien'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(readDraft().classId, 1);
+    });
   });
 }

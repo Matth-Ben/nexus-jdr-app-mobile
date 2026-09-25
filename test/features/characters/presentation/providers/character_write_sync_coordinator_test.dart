@@ -293,28 +293,6 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
 /// exerce par ces tests (compte les appels, par characterId, pour detecter
 /// une invalidation suivie d'un rafraichissement effectif).
 class _FakeCharacterRepository implements CharacterRepository {
-  @override
-  Future<WriteOutcome> updateIdentity({
-    required String characterId,
-    required String name,
-    int? alignmentId,
-    String? sexe,
-    String? age,
-    String? height,
-    String? weight,
-    String? eyes,
-    String? skin,
-    String? hair,
-    String? appearanceText,
-    String? traitsText,
-    String? idealsText,
-    String? bondsText,
-    String? flawsText,
-    String? backstoryText,
-    String? alliesText,
-    String? featuresText,
-    String? treasureText,
-  }) async => WriteOutcome.synced;
   CharacterDetail? detailToReturn;
   final Map<String, CharacterDetail> detailByCharacterId = {};
   final Map<String, int> _fetchCallCountByCharacterId = {};

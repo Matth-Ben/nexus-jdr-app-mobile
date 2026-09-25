@@ -285,9 +285,8 @@ Future<SkillCatalog> skillCatalog(Ref ref) {
   return ref.watch(characterCreationRepositoryProvider).fetchSkillCatalog();
 }
 
-/// Catalogue des alignements, exposé à la feuille "Modifier le personnage"
-/// de la fiche (`characters/presentation/widgets/character_identity_edit_sheet
-/// .dart`) — même rationale que [skillCatalog].
+/// Catalogue des alignements, exposé au choix d'alignement de l'étape 8/9
+/// — même rationale que [skillCatalog].
 @Riverpod(retry: _noRetry)
 Future<AlignmentCatalog> alignmentCatalog(Ref ref) {
   return ref.watch(characterCreationRepositoryProvider).fetchAlignmentCatalog();

@@ -25,6 +25,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/features/character_creation/domain/character_edit_snapshot.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_edit_session_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/step_progress_bar.dart';
@@ -582,5 +584,83 @@ void main() {
         expect(find.text('Abandonner la création ?'), findsOneWidget);
       },
     );
+  });
+
+  group('mode modification (personnage existant)', () {
+    const finalScores = {
+      'str': 16,
+      'dex': 14,
+      'con': 14,
+      'int': 10,
+      'wis': 12,
+      'cha': 8,
+    };
+
+    void startEditSession({int totalLevel = 5}) {
+      const draft = CharacterCreationDraft(
+        raceId: 1,
+        abilityScores: finalScores,
+      );
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .replaceWith(draft);
+      container
+          .read(characterEditSessionControllerProvider.notifier)
+          .start(
+            CharacterEditSession(
+              snapshot: CharacterEditSnapshot(
+                characterId: 'c1',
+                name: 'Brunhilde',
+                primaryClassId: 2,
+                primaryClassLevel: totalLevel,
+                totalLevel: totalLevel,
+                maxHp: 40,
+                currentHp: 40,
+                raceId: 1,
+              ),
+              originalDraft: draft,
+            ),
+          );
+    }
+
+    testWidgets(
+      'saisie libre des scores finaux : pas de choix de méthode, bandeau '
+      '« MODIFICATION », +/- modifient directement le score final',
+      (WidgetTester tester) async {
+        startEditSession();
+        await pumpAbilityScoreStep(tester);
+
+        expect(find.text('MODIFICATION'), findsOneWidget);
+        expect(find.text('Tableau'), findsNothing);
+        expect(find.textContaining('Scores finaux'), findsOneWidget);
+        expect(find.text('Annuler les modifications'), findsOneWidget);
+
+        await tester.tap(
+          find.descendant(
+            of: rowFor('FORCE'),
+            matching: find.byIcon(Icons.add),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(readDraft().abilityScores, {...finalScores, 'str': 17});
+        expect(readDraft().abilityScoreMethod, isNull);
+      },
+    );
+
+    testWidgets('race modifiée : rappel des bonus raciaux avant/après', (
+      WidgetTester tester,
+    ) async {
+      startEditSession();
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setRace(raceId: 99, subraceId: null);
+      await pumpAbilityScoreStep(tester);
+
+      expect(find.textContaining('Race modifiée'), findsOneWidget);
+      expect(find.textContaining('avant : +2 Dex'), findsOneWidget);
+    });
   });
 }

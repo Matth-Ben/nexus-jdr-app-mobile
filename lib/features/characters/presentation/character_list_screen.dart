@@ -16,6 +16,7 @@ import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../app_update/presentation/widgets/update_suggested_banner.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
+import '../../character_creation/presentation/providers/character_edit_session_provider.dart';
 import '../../character_creation/presentation/providers/character_creation_return_route_provider.dart';
 import '../domain/character_list_filter.dart';
 import '../domain/character_status_filter.dart';
@@ -259,6 +260,9 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   /// reprise silencieusement à la prochaine tentative de "+ Créer".
   void _startCreation(BuildContext context, WidgetRef ref) {
     ref.read(characterCreationDraftControllerProvider.notifier).reset();
+    // Une modification de personnage abandonnée sans passer par « Annuler »
+    // ne doit jamais faire passer cette création en mode modification.
+    ref.read(characterEditSessionControllerProvider.notifier).clear();
     // Filet de sécurité : efface toute route de retour laissée par une
     // session "Rejoindre une histoire" abandonnée avant l'étape 9 (voir la
     // documentation de classe de `CharacterCreationReturnRouteController`) —

@@ -32,28 +32,6 @@ import 'package:personnages/features/characters/presentation/providers/character
 import 'package:personnages/features/characters/presentation/widgets/character_journal_card.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
-  @override
-  Future<WriteOutcome> updateIdentity({
-    required String characterId,
-    required String name,
-    int? alignmentId,
-    String? sexe,
-    String? age,
-    String? height,
-    String? weight,
-    String? eyes,
-    String? skin,
-    String? hair,
-    String? appearanceText,
-    String? traitsText,
-    String? idealsText,
-    String? bondsText,
-    String? flawsText,
-    String? backstoryText,
-    String? alliesText,
-    String? featuresText,
-    String? treasureText,
-  }) async => WriteOutcome.synced;
   int addJournalEntryCallCount = 0;
   int updateJournalEntryCallCount = 0;
   int removeJournalEntryCallCount = 0;

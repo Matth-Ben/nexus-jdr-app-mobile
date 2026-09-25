@@ -17,8 +17,10 @@ import '../domain/spell_option.dart';
 import '../domain/spellcasting_rules.dart';
 import '../domain/spells_step_selection.dart';
 import 'providers/character_creation_draft_provider.dart';
+import 'providers/character_edit_session_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
+import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/spell_option_info_sheet.dart';
 import 'widgets/step_help_sheet.dart';
@@ -117,7 +119,12 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
           classCantripChoices: _selectedCantrips,
           classLevelOneSpellChoices: _selectedLevelOneSpells,
         );
-    context.push('/characters/new/step-7');
+    // Mode modification : étape Équipement sautée.
+    context.push(
+      ref.read(characterEditSessionControllerProvider) != null
+          ? '/characters/new/step-8'
+          : '/characters/new/step-7',
+    );
   }
 
   @override
@@ -497,8 +504,7 @@ class _Header extends StatelessWidget {
                         color: AppColors.textOnWood,
                       ),
                     ),
-                    Text(
-                      'CRÉATION',
+                    CreationModeTitle(
                       style: AppTypography.display(
                         fontSize: 11,
                         color: AppColors.textOnWood,
@@ -604,8 +610,7 @@ class _MinimalHeader extends StatelessWidget {
                   color: AppColors.textOnWood,
                 ),
               ),
-              Text(
-                'CRÉATION',
+              CreationModeTitle(
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textOnWood,
