@@ -58,61 +58,59 @@ void main() {
 
     for (final title in const [
       'Introduction',
-      'Données collectées',
-      'Pourquoi ces données',
-      'Stockage et hébergement',
-      'Conservation',
-      'Tes droits',
-      'Sécurité',
-      'Contact et éditeur',
+      '1. Qui est responsable de tes données',
+      '2. Données collectées',
+      '3. Ce que nous ne collectons pas',
+      '4. Pourquoi nous utilisons ces données',
+      '5. Avec qui tes données sont partagées',
+      '6. Durée de conservation',
+      '7. Tes droits',
+      '8. Sécurité',
+      '9. Modifications de cette politique',
     ]) {
       expect(find.text(title), findsOneWidget);
     }
-    expect(find.byType(LegalSectionBlock), findsNWidgets(8));
+    expect(find.byType(LegalSectionBlock), findsNWidgets(10));
   });
 
   testWidgets(
-    'affiche le contenu exact validé (échantillon : introduction, e-mail '
-    'de contact, placeholder éditeur)',
+    'affiche le contenu exact (échantillon : responsable du traitement, '
+    'sous-traitants, signalements de bug sans e-mail)',
     (tester) async {
       await _pumpScreen(tester);
 
       expect(
         find.text(
-          'Cette politique explique quelles données Nexus JDR — '
-          'Personnages collecte, pourquoi, et comment tu peux y '
-          "accéder, les exporter ou les supprimer. Elle s'applique à "
-          "cette application ainsi qu'à l'app web « Histoires », qui "
-          'partagent le même compte.',
+          'Responsable du traitement : Matthias Benoit, éditeur de Nexus '
+          'JDR. Contact : support@nexus-jdr.app.',
         ),
         findsOneWidget,
       );
+      expect(find.textContaining('• Google Firebase'), findsOneWidget);
+      expect(find.textContaining('• PostHog'), findsOneWidget);
       expect(
-        find.text('Pour toute question : support@nexus-jdr.app'),
+        find.textContaining('sans ton adresse e-mail ni ton nom'),
         findsOneWidget,
       );
-      expect(
-        find.text('[À COMPLÉTER : identité de l\'éditeur]'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('COMPLÉTER'), findsNothing);
     },
   );
 
-  testWidgets('sépare chaque section par un Divider (7 séparateurs pour '
-      '8 sections, jamais après la dernière)', (tester) async {
+  testWidgets('sépare chaque section par un Divider (9 séparateurs pour '
+      '10 sections, jamais après la dernière)', (tester) async {
     await _pumpScreen(tester);
 
-    expect(find.byType(Divider), findsNWidgets(7));
+    expect(find.byType(Divider), findsNWidgets(9));
   });
 
   testWidgets('affiche le pied de page "Dernière mise à jour"', (tester) async {
     await _pumpScreen(tester);
 
     await tester.ensureVisible(
-      find.text('Dernière mise à jour : 15 septembre 2026'),
+      find.text('Dernière mise à jour : 25 septembre 2026'),
     );
     final footer = tester.widget<Text>(
-      find.text('Dernière mise à jour : 15 septembre 2026'),
+      find.text('Dernière mise à jour : 25 septembre 2026'),
     );
     expect(footer.style?.fontSize, 11);
     expect(footer.style?.color, AppColors.textMuted);
