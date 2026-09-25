@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Requis par `image_picker` (fiche personnage, upload de portrait) pour
          la prise de photo (la sélection en galerie passe par le sélecteur
          photo système, sans permission dédiée sur les versions d'Android
@@ -8,6 +9,15 @@
          l'onglet "Notes" de l'écran "Groupe",
          `features/groups/presentation/widgets/group_notes_tab_body.dart`). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Identifiant publicitaire : ajouté automatiquement par Firebase
+         Analytics (play-services-measurement), jamais utilisé par l'app (aucune
+         publicité). Retiré pour rester conforme à la politique de
+         confidentialité et à la déclaration Google Play ("aucun identifiant
+         publicitaire"). Voir aussi `google_analytics_adid_collection_enabled`
+         plus bas. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove"/>
     <application
         android:label="Nexus JDR"
         android:name="${applicationName}"
@@ -113,6 +123,11 @@
         <meta-data
             android:name="flutter_deeplinking_enabled"
             android:value="true" />
+        <!-- Firebase Analytics : ne jamais collecter l'identifiant publicitaire
+             (voir les permissions AD_ID retirées en tête de fichier). -->
+        <meta-data
+            android:name="google_analytics_adid_collection_enabled"
+            android:value="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
