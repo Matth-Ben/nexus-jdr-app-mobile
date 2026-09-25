@@ -5,9 +5,9 @@
 // personnalisé à tester ici (contrairement à Race) : "Suivant" s'active dès
 // qu'un historique est sélectionné.
 //
-// Couvre en plus la spécificité de cette étape : seule la ligne
-// sélectionnée affiche la ligne "Aptitude : ...", et ce texte se déplace
-// bien d'une ligne à l'autre quand la sélection change.
+// Couvre en plus la spécificité de cette étape : l'aptitude n'est jamais
+// dépliée sous la ligne sélectionnée (tuile de hauteur fixe), elle est
+// affichée par le panneau du bouton ⓘ de chaque ligne.
 
 import 'dart:async';
 
@@ -281,8 +281,8 @@ void main() {
   );
 
   testWidgets(
-    'sélectionner un historique affiche son aptitude, uniquement sur sa '
-    'ligne',
+    'sélectionner un historique ne déplie rien sous sa ligne (tuile de '
+    'hauteur fixe) : l\'aptitude reste dans le panneau ⓘ',
     (WidgetTester tester) async {
       fakeRepository.catalogToReturn = const BackgroundCatalog(
         backgrounds: [_ermite, _soldat],
@@ -290,29 +290,24 @@ void main() {
 
       await pumpBackgroundStep(tester);
 
+      final heightBefore = tester
+          .getSize(find.byType(SelectableOptionTile).first)
+          .height;
       await tester.tap(find.text('Ermite'));
       await tester.pumpAndSettle();
 
+      expect(find.textContaining('Aptitude : '), findsNothing);
       expect(
-        find.text(
-          'Aptitude : Découverte — un secret qui a changé ta vision du '
-          'monde.',
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.text(
-          'Aptitude : Grade militaire — les soldats vous '
-          'reconnaissent.',
-        ),
-        findsNothing,
+        tester.getSize(find.byType(SelectableOptionTile).first).height,
+        // Seule la bordure d'emphase (2 -> 3 px de chaque côté) varie.
+        closeTo(heightBefore, 2),
       );
     },
   );
 
   testWidgets(
-    'changer de sélection déplace l\'affichage de l\'aptitude d\'une ligne à '
-    'l\'autre',
+    'le bouton ⓘ d\'une ligne ouvre son détail (compétences, aptitude) sans '
+    'la sélectionner',
     (WidgetTester tester) async {
       fakeRepository.catalogToReturn = const BackgroundCatalog(
         backgrounds: [_ermite, _soldat],
@@ -320,33 +315,20 @@ void main() {
 
       await pumpBackgroundStep(tester);
 
-      await tester.tap(find.text('Ermite'));
+      await tester.tap(find.byTooltip('Informations').last);
       await tester.pumpAndSettle();
+
+      expect(find.text('SOLDAT'), findsOneWidget);
       expect(
-        find.text(
-          'Aptitude : Découverte — un secret qui a changé ta vision du '
-          'monde.',
+        find.textContaining(
+          'Aptitude : Grade militaire — les soldats vous reconnaissent.',
         ),
         findsOneWidget,
       );
-
-      await tester.tap(find.text('Soldat'));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text(
-          'Aptitude : Découverte — un secret qui a changé ta vision du '
-          'monde.',
-        ),
-        findsNothing,
+      final tiles = tester.widgetList<SelectableOptionTile>(
+        find.byType(SelectableOptionTile),
       );
-      expect(
-        find.text(
-          'Aptitude : Grade militaire — les soldats vous '
-          'reconnaissent.',
-        ),
-        findsOneWidget,
-      );
+      expect(tiles.every((tile) => !tile.selected), isTrue);
     },
   );
 
@@ -561,9 +543,19 @@ void main() {
 
       await tester.tap(find.text('Ermite (variante)'));
       await tester.pumpAndSettle();
-
       expect(
-        find.text('Aptitude : Retraite — un lieu isolé où se retirer.'),
+        tester
+            .widget<SelectableOptionTile>(find.byType(SelectableOptionTile))
+            .selected,
+        isTrue,
+      );
+
+      await tester.tap(find.byTooltip('Informations'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining(
+          'Aptitude : Retraite — un lieu isolé où se retirer.',
+        ),
         findsOneWidget,
       );
     },
@@ -586,8 +578,8 @@ void main() {
     },
   );
 
-  testWidgets('retaper la ligne déjà sélectionnée ne fait pas disparaître son '
-      'aptitude (pas de bascule on/off)', (WidgetTester tester) async {
+  testWidgets('retaper la ligne déjà sélectionnée ne la désélectionne pas '
+      '(pas de bascule on/off)', (WidgetTester tester) async {
     fakeRepository.catalogToReturn = const BackgroundCatalog(
       backgrounds: [_ermite, _soldat],
     );
@@ -599,43 +591,12 @@ void main() {
     await tester.tap(find.text('Ermite'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text(
-        'Aptitude : Découverte — un secret qui a changé ta vision du '
-        'monde.',
-      ),
-      findsOneWidget,
+    final tiles = tester.widgetList<SelectableOptionTile>(
+      find.byType(SelectableOptionTile),
     );
-    expect(
-      find.text(
-        'Aptitude : Grade militaire — les soldats vous '
-        'reconnaissent.',
-      ),
-      findsNothing,
-    );
+    expect(tiles.firstWhere((tile) => tile.title == 'Ermite').selected, true);
+    expect(tiles.firstWhere((tile) => tile.title == 'Soldat').selected, false);
   });
-
-  testWidgets(
-    'allers-retours répétés entre deux historiques ne laissent jamais deux '
-    'aptitudes affichées simultanément',
-    (WidgetTester tester) async {
-      fakeRepository.catalogToReturn = const BackgroundCatalog(
-        backgrounds: [_ermite, _soldat],
-      );
-
-      await pumpBackgroundStep(tester);
-
-      for (var i = 0; i < 3; i++) {
-        await tester.tap(find.text('Ermite'));
-        await tester.pumpAndSettle();
-        expect(find.textContaining('Aptitude : '), findsOneWidget);
-
-        await tester.tap(find.text('Soldat'));
-        await tester.pumpAndSettle();
-        expect(find.textContaining('Aptitude : '), findsOneWidget);
-      }
-    },
-  );
 
   testWidgets(
     'revenir sur l\'étape avec un brouillon déjà rempli affiche l\'historique '
@@ -658,12 +619,6 @@ void main() {
       expect(
         tiles.firstWhere((tile) => tile.title == 'Ermite').selected,
         false,
-      );
-      expect(
-        find.text(
-          'Aptitude : Grade militaire — les soldats vous reconnaissent.',
-        ),
-        findsOneWidget,
       );
 
       // "Suivant" doit déjà être actif : pas besoin de re-sélectionner.

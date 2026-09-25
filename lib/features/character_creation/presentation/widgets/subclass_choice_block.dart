@@ -8,8 +8,10 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/selectable_option_tile.dart';
+import '../../domain/creation_step_help.dart';
 import '../../domain/subclass_choice_catalog.dart';
 import '../../domain/subclass_choice_rules.dart';
+import 'step_help_sheet.dart';
 
 /// Bloc de choix de sous-classe de l'étape 2/9, inséré juste sous la tuile de
 /// la classe sélectionnée (voir `ClassStepScreen`).
@@ -186,7 +188,15 @@ class _SubclassChoiceBlockState extends State<SubclassChoiceBlock> {
               SelectableOptionTile(
                 title: options[i].name,
                 subtitle: options[i].description,
-                subtitleMaxLines: null,
+                onInfo: options[i].description == null
+                    ? null
+                    : () => showStepHelpSheet(
+                        context,
+                        StepHelpContent(
+                          title: options[i].name,
+                          body: options[i].description!,
+                        ),
+                      ),
                 selected: widget.selectedSubclassId == options[i].id,
                 leading: AccentIconBadge(index: i, icon: Icons.auto_awesome),
                 onTap: () => widget.onSelect(options[i].id),

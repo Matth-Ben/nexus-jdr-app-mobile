@@ -33,11 +33,11 @@ import 'widgets/step_help_sheet.dart';
 /// colonnes `characters.*` (décision du chef de projet), **pas** l'ordre
 /// partiel visible sur la maquette d'origine (qui n'en montre que 4 sur 9,
 /// coupée avant la fin — extrait tronqué, pas une réduction volontaire du
-/// périmètre). Les 7 colonnes structurées `characters.sexe`/`age`/`height`/
-/// `weight`/`eyes`/`skin`/`hair` ne sont pas dans le périmètre de cette
-/// étape (absentes de la maquette et de l'énoncé fonctionnel).
+/// périmètre). Ils sont précédés des 7 champs courts d'identité
+/// (`characters.sexe`/`age`/`height`/`weight`/`eyes`/`skin`/`hair`, ajoutés
+/// à la demande de l'utilisateur le 2026-09-24), affichés deux par ligne.
 ///
-/// "Suivant" est toujours actif dès l'affichage : les 9 champs sont
+/// "Suivant" est toujours actif dès l'affichage : les 16 champs sont
 /// optionnels, aucune validation ni quota à cette étape.
 ///
 /// En-tête bois plein portant le titre d'étape et la barre de progression
@@ -62,12 +62,19 @@ class _AppearanceAndBackstoryStepScreenState
     extends ConsumerState<AppearanceAndBackstoryStepScreen> {
   static const int _totalSteps = 9;
 
-  /// Ordre canonique des 9 champs texte, voir le commentaire de classe
-  /// ci-dessus. L'index dans cette liste est aussi l'index utilisé dans
+  /// Les 7 champs courts d'identité puis les 9 champs texte dans l'ordre
+  /// canonique, voir le commentaire de classe ci-dessus. L'index dans cette liste est aussi l'index utilisé dans
   /// [_controllers]/[_focusNodes] et dans [_submit] pour retrouver la bonne
   /// valeur du brouillon — les deux listes ci-dessous doivent donc toujours
   /// rester alignées avec celle-ci.
   static const List<_TextFieldSpec> _fieldSpecs = [
+    _TextFieldSpec(label: 'SEXE', hint: 'Ex. femme', isShort: true),
+    _TextFieldSpec(label: 'ÂGE', hint: 'Ex. 27 ans', isShort: true),
+    _TextFieldSpec(label: 'TAILLE', hint: 'Ex. 1,75 m', isShort: true),
+    _TextFieldSpec(label: 'POIDS', hint: 'Ex. 70 kg', isShort: true),
+    _TextFieldSpec(label: 'YEUX', hint: 'Ex. verts', isShort: true),
+    _TextFieldSpec(label: 'PEAU', hint: 'Ex. hâlée', isShort: true),
+    _TextFieldSpec(label: 'CHEVEUX', hint: 'Ex. bruns, courts', isShort: true),
     _TextFieldSpec(
       label: 'APPARENCE PHYSIQUE',
       hint: "Décris l'apparence physique de ton personnage…",
@@ -112,7 +119,7 @@ class _AppearanceAndBackstoryStepScreenState
   @override
   void initState() {
     super.initState();
-    // Réhydrate les 9 champs depuis le brouillon déjà en mémoire (retour en
+    // Réhydrate les 16 champs depuis le brouillon déjà en mémoire (retour en
     // arrière depuis l'étape 9) — même rationale que les étapes précédentes.
     // `ref.read` (pas `ref.watch`) : cet écran ne doit réagir à aucune
     // modification externe du brouillon pendant qu'il est affiché, seule sa
@@ -120,6 +127,13 @@ class _AppearanceAndBackstoryStepScreenState
     // "Suivant".
     final draft = ref.read(characterCreationDraftControllerProvider);
     final draftValues = <String?>[
+      draft.sexe,
+      draft.age,
+      draft.height,
+      draft.weight,
+      draft.eyes,
+      draft.skin,
+      draft.hair,
       draft.appearanceText,
       draft.traitsText,
       draft.idealsText,
@@ -166,15 +180,22 @@ class _AppearanceAndBackstoryStepScreenState
     ref
         .read(characterCreationDraftControllerProvider.notifier)
         .setAppearanceAndBackstory(
-          appearanceText: valueAt(0),
-          traitsText: valueAt(1),
-          idealsText: valueAt(2),
-          bondsText: valueAt(3),
-          flawsText: valueAt(4),
-          backstoryText: valueAt(5),
-          alliesText: valueAt(6),
-          featuresText: valueAt(7),
-          treasureText: valueAt(8),
+          sexe: valueAt(0),
+          age: valueAt(1),
+          height: valueAt(2),
+          weight: valueAt(3),
+          eyes: valueAt(4),
+          skin: valueAt(5),
+          hair: valueAt(6),
+          appearanceText: valueAt(7),
+          traitsText: valueAt(8),
+          idealsText: valueAt(9),
+          bondsText: valueAt(10),
+          flawsText: valueAt(11),
+          backstoryText: valueAt(12),
+          alliesText: valueAt(13),
+          featuresText: valueAt(14),
+          treasureText: valueAt(15),
         );
     context.push('/characters/new/step-9');
   }
@@ -195,6 +216,28 @@ class _AppearanceAndBackstoryStepScreenState
     );
     if (result == null || !mounted) return;
     draftController.setPortraitBytes(result.bytes);
+  }
+
+  /// Nombre de champs courts d'identité en tête de [_fieldSpecs].
+  static final int _shortFieldCount = _fieldSpecs
+      .where((spec) => spec.isShort)
+      .length;
+
+  Widget _fieldBlock(int i) {
+    final isLast = i == _fieldSpecs.length - 1;
+    return _TextFieldBlock(
+      spec: _fieldSpecs[i],
+      controller: _controllers[i],
+      focusNode: _focusNodes[i],
+      textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
+      onFieldSubmitted: (_) {
+        if (isLast) {
+          _focusNodes[i].unfocus();
+        } else {
+          FocusScope.of(context).requestFocus(_focusNodes[i + 1]);
+        }
+      },
+    );
   }
 
   @override
@@ -240,23 +283,25 @@ class _AppearanceAndBackstoryStepScreenState
                   onTap: _pickPortrait,
                 ),
                 const SizedBox(height: AppSpacing.md),
-                for (var i = 0; i < _fieldSpecs.length; i++) ...[
+                // Champs courts d'identité, deux par ligne.
+                for (var i = 0; i < _shortFieldCount; i += 2) ...[
                   if (i > 0) const SizedBox(height: AppSpacing.md),
-                  _TextFieldBlock(
-                    spec: _fieldSpecs[i],
-                    controller: _controllers[i],
-                    focusNode: _focusNodes[i],
-                    textInputAction: i == _fieldSpecs.length - 1
-                        ? TextInputAction.done
-                        : TextInputAction.next,
-                    onFieldSubmitted: (_) {
-                      if (i == _fieldSpecs.length - 1) {
-                        _focusNodes[i].unfocus();
-                      } else {
-                        FocusScope.of(context).requestFocus(_focusNodes[i + 1]);
-                      }
-                    },
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _fieldBlock(i)),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: i + 1 < _shortFieldCount
+                            ? _fieldBlock(i + 1)
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
                   ),
+                ],
+                for (var i = _shortFieldCount; i < _fieldSpecs.length; i++) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _fieldBlock(i),
                 ],
                 // Marge basse supplémentaire pour que le 9e champ ("Trésor")
                 // ne reste jamais masqué par le clavier une fois focus —
@@ -303,14 +348,21 @@ class _AppearanceAndBackstoryStepScreenState
   }
 }
 
-/// Libellé + placeholder d'un des 9 champs texte, afin de garder
+/// Libellé + placeholder d'un des 16 champs texte, afin de garder
 /// [_AppearanceAndBackstoryStepScreenState._fieldSpecs] lisible comme un
 /// tableau de données plutôt que 9 blocs de code dupliqués.
 class _TextFieldSpec {
-  const _TextFieldSpec({required this.label, required this.hint});
+  const _TextFieldSpec({
+    required this.label,
+    required this.hint,
+    this.isShort = false,
+  });
 
   final String label;
   final String hint;
+
+  /// Champ court d'identité (une seule ligne, affiché deux par ligne).
+  final bool isShort;
 }
 
 /// Titre + `TextFormField` d'un champ texte de l'étape (maquette, spec
@@ -350,7 +402,7 @@ class _TextFieldBlock extends StatelessWidget {
           controller: controller,
           focusNode: focusNode,
           minLines: 1,
-          maxLines: null,
+          maxLines: spec.isShort ? 1 : null,
           textInputAction: textInputAction,
           onFieldSubmitted: onFieldSubmitted,
           decoration: InputDecoration(hintText: spec.hint),

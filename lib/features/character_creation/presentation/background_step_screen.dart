@@ -28,9 +28,8 @@ import 'widgets/step_help_sheet.dart';
 /// historique est choisi.
 ///
 /// Différence par rapport à Race/Classe : chaque ligne affiche en plus
-/// "Compétences : X, Y" (toujours visible), et la ligne **sélectionnée
-/// uniquement** affiche "Aptitude : {nom} — {description}" en dessous, via le
-/// slot `SelectableOptionTile.selectedDetail`.
+/// "Compétences : X, Y" (toujours visible) ; l'aptitude et le reste du
+/// détail sont dans le panneau ouvert par le bouton ⓘ de la ligne.
 ///
 /// En-tête bois plein dupliqué depuis `class_step_screen.dart`/
 /// `race_step_screen.dart` (`_Header` ci-dessous) plutôt que factorisé dans
@@ -190,9 +189,13 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
                         SelectableOptionTile(
                           title: catalog.backgrounds[i].name,
                           subtitle: catalog.backgrounds[i].skillsSummaryLine,
-                          subtitleMaxLines: null,
-                          selectedDetail:
-                              catalog.backgrounds[i].featureSummaryLine,
+                          onInfo: () => showStepHelpSheet(
+                            context,
+                            StepHelpContent(
+                              title: catalog.backgrounds[i].name,
+                              body: catalog.backgrounds[i].infoText,
+                            ),
+                          ),
                           selected:
                               _selectedBackgroundId ==
                               catalog.backgrounds[i].id,

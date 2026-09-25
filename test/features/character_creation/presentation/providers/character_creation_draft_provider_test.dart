@@ -211,6 +211,13 @@ void main() {
     controller.setClass(classId: 42);
     controller.setBackground(backgroundId: 5);
     controller.setAppearanceAndBackstory(
+      sexe: null,
+      age: null,
+      height: null,
+      weight: null,
+      eyes: null,
+      skin: null,
+      hair: null,
       appearanceText: 'Grand et mince',
       traitsText: 'Curieux',
       idealsText: 'La justice',
@@ -243,6 +250,13 @@ void main() {
     );
 
     controller.setAppearanceAndBackstory(
+      sexe: null,
+      age: null,
+      height: null,
+      weight: null,
+      eyes: null,
+      skin: null,
+      hair: null,
       appearanceText: null,
       traitsText: null,
       idealsText: null,
@@ -265,6 +279,13 @@ void main() {
     );
 
     controller.setAppearanceAndBackstory(
+      sexe: null,
+      age: null,
+      height: null,
+      weight: null,
+      eyes: null,
+      skin: null,
+      hair: null,
       appearanceText: 'Grand et mince',
       traitsText: 'Curieux',
       idealsText: 'La justice',

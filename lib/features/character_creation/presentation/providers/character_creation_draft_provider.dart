@@ -154,13 +154,20 @@ class CharacterCreationDraftController
     );
   }
 
-  /// Met à jour les 9 champs texte libres de l'étape 8 "Apparence, histoire
+  /// Met à jour les 7 champs d'identité et les 9 champs texte libres de l'étape 8 "Apparence, histoire
   /// et portrait". Fusion partielle via `copyWith` (même rationale que
   /// [setSpells]/[setEquipment]) : cette étape n'a pas de champ à effacer sur
   /// l'étape suivante en fonction du choix fait ici. Les 9 valeurs sont
   /// toujours fournies ensemble (même si un champ est resté vide, auquel cas
   /// l'appelant fournit `null`) — voir `domain/character_creation_draft.dart`.
   void setAppearanceAndBackstory({
+    required String? sexe,
+    required String? age,
+    required String? height,
+    required String? weight,
+    required String? eyes,
+    required String? skin,
+    required String? hair,
     required String? appearanceText,
     required String? traitsText,
     required String? idealsText,
@@ -172,6 +179,13 @@ class CharacterCreationDraftController
     required String? treasureText,
   }) {
     state = state.copyWith(
+      sexe: sexe,
+      age: age,
+      height: height,
+      weight: weight,
+      eyes: eyes,
+      skin: skin,
+      hair: hair,
       appearanceText: appearanceText,
       traitsText: traitsText,
       idealsText: idealsText,

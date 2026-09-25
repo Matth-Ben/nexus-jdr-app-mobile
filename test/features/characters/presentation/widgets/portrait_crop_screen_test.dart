@@ -63,6 +63,28 @@ final Uint8List _fakePngBytes = base64Decode(
 /// `UnimplementedError`, même principe que `_FakeCharacterRepository` dans
 /// `character_detail_screen_test.dart`.
 class _FakeCharacterRepository implements CharacterRepository {
+  @override
+  Future<WriteOutcome> updateIdentity({
+    required String characterId,
+    required String name,
+    int? alignmentId,
+    String? sexe,
+    String? age,
+    String? height,
+    String? weight,
+    String? eyes,
+    String? skin,
+    String? hair,
+    String? appearanceText,
+    String? traitsText,
+    String? idealsText,
+    String? bondsText,
+    String? flawsText,
+    String? backstoryText,
+    String? alliesText,
+    String? featuresText,
+    String? treasureText,
+  }) async => WriteOutcome.synced;
   final Completer<void> gate = Completer<void>();
   bool gateUploadPortrait = false;
 
@@ -403,6 +425,8 @@ Future<void> _tapValiderAndSettle(WidgetTester tester) async {
 }
 
 void main() {
+  _localModeTests();
+
   testWidgets('affiche le cadre de recadrage et les boutons Annuler/Valider', (
     tester,
   ) async {
@@ -542,4 +566,53 @@ void main() {
       expect(find.text('RECADRAGE'), findsNothing);
     },
   );
+}
+
+void _localModeTests() {
+  // Régression : en mode local (assistant de création, route typée
+  // `Uint8List`), "Annuler" et le retour du bandeau renvoyaient `false` et
+  // levaient une erreur de type — l'écran ne se fermait jamais.
+  for (final trigger in ['ANNULER', 'retour']) {
+    testWidgets("mode local : '$trigger' ferme l'écran sans résultat", (
+      tester,
+    ) async {
+      Object? result = 'pas encore fermé';
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      result = await Navigator.of(context).push<Uint8List>(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              PortraitCropScreen(imageBytes: _fakePngBytes),
+                        ),
+                      );
+                    },
+                    child: const Text('Ouvrir'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Ouvrir'));
+      await tester.pumpAndSettle();
+
+      if (trigger == 'ANNULER') {
+        await tester.tap(find.widgetWithText(SecondaryButton, 'ANNULER'));
+      } else {
+        await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
+      }
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('RECADRAGE'), findsNothing);
+      expect(result, isNull);
+    });
+  }
 }

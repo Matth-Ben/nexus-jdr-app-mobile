@@ -160,6 +160,28 @@ class _FakeWarlockPactSpellRepository implements WarlockPactSpellRepository {
 }
 
 class _FakeCharacterRepository implements CharacterRepository {
+  @override
+  Future<WriteOutcome> updateIdentity({
+    required String characterId,
+    required String name,
+    int? alignmentId,
+    String? sexe,
+    String? age,
+    String? height,
+    String? weight,
+    String? eyes,
+    String? skin,
+    String? hair,
+    String? appearanceText,
+    String? traitsText,
+    String? idealsText,
+    String? bondsText,
+    String? flawsText,
+    String? backstoryText,
+    String? alliesText,
+    String? featuresText,
+    String? treasureText,
+  }) async => WriteOutcome.synced;
   CharacterDetail? detailToReturn;
   Object? detailErrorToThrow;
   Completer<CharacterDetail>? detailCompleter;
@@ -2049,27 +2071,27 @@ void main() {
 
     testWidgets(
       'totalSteps == 5 quand "Choix à faire" (ASI) ET "Sorts" sont toutes '
-      'les deux déclenchées au même niveau (niveau 4, Clerc) : numérotation '
+      'les deux déclenchées au même niveau (niveau 8, Clerc — le niveau 4 ajoute désormais un sort mineur) : numérotation '
       '3/5 puis 4/5, "Retour" de "Sorts" ramène à "Choix à faire", '
       'récapitulatif dans l\'ordre PV -> Aptitudes -> Choix -> Sorts',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail.copyWith(
-          classes: [clercClass(level: 3)],
+          classes: [clercClass(level: 7)],
           xp: 0,
         );
-        // Niveau 4 : niveau ASI standard, sans choice_type déclaré ici — le
+        // Niveau 8 : niveau ASI standard, sans choice_type déclaré ici — le
         // choix ASI est résolu indépendamment de `class_features`, voir
         // `LevelUpBlockRules.abilityScoreImprovementLevels`.
         fakeRepository.levelDataByLevel = {
-          4: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+          8: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
         };
         fakeRepository.applyResultToReturn = const LevelUpApplyResult(
-          newLevel: 4,
+          newLevel: 8,
           newMaxHp: 30,
           newCurrentHp: 26,
         );
 
-        await pushPastAnnouncement(tester, 4);
+        await pushPastAnnouncement(tester, 8);
         expect(find.text('Étape 1 sur 5 · Points de vie'), findsOneWidget);
 
         await tester.tap(find.text('CONTINUER'));
@@ -2101,7 +2123,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Emplacements de sorts renforcés'), findsOneWidget);
-        expect(find.text('Niveau 2 : 2 → 3 (+1)'), findsOneWidget);
+        expect(find.text('Niveau 4 : 1 → 2 (+1)'), findsOneWidget);
 
         // "Retour" de l'étape "Sorts" : ramène à "Choix à faire" (présente à
         // ce niveau), jamais directement à "Aptitudes".
@@ -2123,7 +2145,7 @@ void main() {
         expect(find.text('Amélioration de caractéristique'), findsOneWidget);
         expect(find.text('Force +2'), findsOneWidget);
         expect(find.text('Emplacements de sorts renforcés'), findsOneWidget);
-        expect(find.text('Niveau 2 : 2 → 3 (+1)'), findsOneWidget);
+        expect(find.text('Niveau 4 : 1 → 2 (+1)'), findsOneWidget);
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
