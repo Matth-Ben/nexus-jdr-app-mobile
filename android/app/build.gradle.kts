@@ -30,8 +30,10 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.nexusjdr.personnages"
+        // Nom de package de la fiche Google Play Console (figé côté Google,
+        // voir docs/GOOGLE_PLAY_PUBLISHING.md). Volontairement distinct de
+        // `namespace` ci-dessus (package Kotlin/R, sans lien avec le store).
+        applicationId = "com.nexus_jdr"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -46,7 +48,7 @@ android {
 
     // Flavors dev/staging/prod, alignés sur les fichiers de configuration
     // Supabase de config/ (voir config/README.md). L'applicationId de prod
-    // reste celui déclaré ci-dessus (com.nexusjdr.personnages) ; dev et
+    // reste celui déclaré ci-dessus (com.nexus_jdr) ; dev et
     // staging sont suffixés pour pouvoir être installés côte à côte sur le
     // même appareil.
     flavorDimensions += "environment"
