@@ -115,6 +115,7 @@ dependencies:
   # par un service distant du fabricant (Google/Apple), hors de notre
   # contrôle.
   speech_to_text: ^7.5.0
+  in_app_update: ^5.0.0
 
 dev_dependencies:
   flutter_test:
@@ -174,6 +175,11 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # CHANGELOG.md embarqué : affiché dans Profil › Nouveautés et mises à jour
+  # (notes de version rédigées pour les joueurs, voir changelog_parser.dart).
+  assets:
+    - CHANGELOG.md
 
   # To add assets to your application, add an assets section, like this:
   # assets:
