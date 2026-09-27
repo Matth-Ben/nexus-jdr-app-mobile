@@ -97,24 +97,28 @@ class _AddToGroupTreasureSheetContentState
 
   bool get _canApply => _currencyDeltas.isNotEmpty || _items.isNotEmpty;
 
-  Future<void> _addItem() async {
-    final picked = await pickInventoryAddition(context);
-    if (picked == null || !mounted) return;
+  /// Plusieurs objets du catalogue d'un coup (sélection multiple, voir
+  /// `pickInventoryAdditions`) plutôt qu'un par un.
+  Future<void> _addItems() async {
+    final picked = await pickInventoryAdditions(context);
+    if (picked.isEmpty || !mounted) return;
 
     setState(() {
-      _items.add(
-        picked.isCustom
-            ? RewardItemDraft(
-                customName: picked.customName,
-                displayName: picked.displayName,
-                quantity: picked.quantity,
-              )
-            : RewardItemDraft(
-                itemId: picked.item!.id,
-                displayName: picked.displayName,
-                quantity: picked.quantity,
-              ),
-      );
+      for (final addition in picked) {
+        _items.add(
+          addition.isCustom
+              ? RewardItemDraft(
+                  customName: addition.customName,
+                  displayName: addition.displayName,
+                  quantity: addition.quantity,
+                )
+              : RewardItemDraft(
+                  itemId: addition.item!.id,
+                  displayName: addition.displayName,
+                  quantity: addition.quantity,
+                ),
+        );
+      }
     });
   }
 
@@ -195,7 +199,10 @@ class _AddToGroupTreasureSheetContentState
                         ),
                         const SizedBox(height: AppSpacing.xs),
                       ],
-                      DashedAddTile(label: 'Ajouter un objet', onTap: _addItem),
+                      DashedAddTile(
+                        label: 'Ajouter des objets',
+                        onTap: _addItems,
+                      ),
                     ],
                   ),
                 ),

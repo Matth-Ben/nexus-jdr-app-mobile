@@ -435,7 +435,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.textContaining('Seuls les PV et le statut sont visibles ici'),
+        find.textContaining('voir sa fiche complète, en lecture seule'),
         findsOneWidget,
       );
     });

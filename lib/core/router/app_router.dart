@@ -448,6 +448,17 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) =>
             GroupSettingsScreen(groupId: state.pathParameters['id']!),
       ),
+      GoRoute(
+        // Fiche complète, en lecture seule, d'un autre membre du groupe —
+        // touchée depuis l'onglet « Membres » (demande utilisateur du
+        // 2026-09-27, RPC `get_group_member_character`).
+        name: 'group-member-character',
+        path: '/groups/:id/members/:characterId',
+        builder: (context, state) => SharedCharacterViewScreen.groupMember(
+          groupId: state.pathParameters['id']!,
+          characterId: state.pathParameters['characterId']!,
+        ),
+      ),
     ],
   );
 }

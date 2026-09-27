@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -8,6 +9,7 @@ import '../../../../core/widgets/portrait_frame.dart';
 import '../../domain/character_vital_status.dart';
 import '../../domain/group_detail.dart';
 import '../../domain/group_member.dart';
+import 'group_invite_code_chip.dart';
 
 /// Callback "Exclure {personnage}" (owner uniquement, jamais sur sa propre
 /// ligne) — la confirmation est gérée par l'appelant (`group_screen.dart`),
@@ -62,18 +64,27 @@ class GroupMembersTabBody extends StatelessWidget {
         const _LiveUpdateIndicator(),
         const SizedBox(height: AppSpacing.md),
         if (showBanner) ...[
-          InfoBanner(
+          const InfoBanner(
             icon: Icons.share_outlined,
             message:
-                "Partage le code ${detail.inviteCode} pour inviter d'autres "
-                'joueurs.',
+                "Partage ce code pour inviter d'autres joueurs (touche-le "
+                'pour le copier) :',
           ),
+          const SizedBox(height: AppSpacing.sm),
+          GroupInviteCodeChip(code: detail.inviteCode),
           const SizedBox(height: AppSpacing.md),
         ],
         for (final member in members) ...[
           _MemberCard(
             member: member,
             isSelf: member.userId == detail.currentUserId,
+            // Sa propre fiche s'ouvre normalement (modifiable) ; celle des
+            // autres membres en lecture seule.
+            onOpen: () => context.push(
+              member.userId == detail.currentUserId
+                  ? '/characters/${member.characterId}'
+                  : '/groups/${detail.id}/members/${member.characterId}',
+            ),
             canRemove: detail.isOwner && member.userId != detail.currentUserId,
             onRemove: () => onRemoveMember(member),
           ),
@@ -122,12 +133,17 @@ class _MemberCard extends StatelessWidget {
   const _MemberCard({
     required this.member,
     required this.isSelf,
+    required this.onOpen,
     required this.canRemove,
     required this.onRemove,
   });
 
   final GroupMember member;
   final bool isSelf;
+
+  /// Ouvre la fiche du personnage (la sienne, ou celle d'un autre membre en
+  /// lecture seule).
+  final VoidCallback onOpen;
   final bool canRemove;
   final VoidCallback onRemove;
 
@@ -138,6 +154,25 @@ class _MemberCard extends StatelessWidget {
 
     final portrait = PortraitFrame(portraitUrl: member.portraitUrl, size: 64);
 
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: _buildCard(
+          isDead: isDead,
+          nameColor: nameColor,
+          portrait: portrait,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCard({
+    required bool isDead,
+    required Color nameColor,
+    required Widget portrait,
+  }) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -410,8 +445,8 @@ class _PrivacyExplanation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      'Seuls les PV et le statut sont visibles ici — compétences, sorts, '
-      'inventaire et histoire restent privés.',
+      'Touche un membre pour voir sa fiche complète, en lecture seule. '
+      'Personne ne peut modifier le personnage d\u2019un autre.',
       textAlign: TextAlign.center,
       style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
     );

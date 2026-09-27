@@ -23,6 +23,16 @@ import 'package:personnages/features/characters/domain/pact_weapon_option.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_pact_weapon_card.dart';
 
 class _FakeCharacterSharingRepository implements CharacterSharingRepository {
+  @override
+  Future<CharacterDetail?> fetchGroupMemberCharacter({
+    required String groupId,
+    required String characterId,
+  }) async {
+    lastGroupMember = (groupId: groupId, characterId: characterId);
+    return detailToReturn;
+  }
+
+  ({String groupId, String characterId})? lastGroupMember;
   CharacterDetail? detailToReturn;
   Object? errorToThrow;
   Completer<CharacterDetail?>? completer;
@@ -407,6 +417,66 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Halltesse Ambrelune'), findsOneWidget);
+    },
+  );
+
+  group(
+    'fiche d’un membre de groupe (SharedCharacterViewScreen.groupMember)',
+    () {
+      Future<void> pumpGroupMemberView(WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(800, 2000));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              characterSharingRepositoryProvider.overrideWithValue(
+                fakeRepository,
+              ),
+            ],
+            child: MaterialApp.router(
+              routerConfig: GoRouter(
+                initialLocation: '/groups/g-1/members/c-9',
+                routes: [
+                  GoRoute(
+                    path: '/groups/:id/members/:characterId',
+                    builder: (context, state) =>
+                        SharedCharacterViewScreen.groupMember(
+                          groupId: state.pathParameters['id']!,
+                          characterId: state.pathParameters['characterId']!,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets(
+        'charge la fiche via le groupe et l’affiche en lecture seule',
+        (tester) async {
+          fakeRepository.detailToReturn = _baseDetail;
+
+          await pumpGroupMemberView(tester);
+
+          expect(fakeRepository.lastGroupMember?.groupId, 'g-1');
+          expect(fakeRepository.lastGroupMember?.characterId, 'c-9');
+          expect(find.text('Vue en lecture seule'), findsOneWidget);
+          expect(find.text('PERSO'), findsOneWidget);
+        },
+      );
+
+      testWidgets('fiche inaccessible (résultat null) : message propre au '
+          'groupe, sans parler de lien', (tester) async {
+        fakeRepository.detailToReturn = null;
+
+        await pumpGroupMemberView(tester);
+
+        expect(find.text('MEMBRE DU GROUPE'), findsOneWidget);
+        expect(find.text("Cette fiche n'est plus accessible"), findsOneWidget);
+        expect(find.textContaining('lien'), findsNothing);
+      });
     },
   );
 }

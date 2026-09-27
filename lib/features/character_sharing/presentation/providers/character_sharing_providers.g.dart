@@ -186,3 +186,106 @@ final class SharedCharacterFamily extends $Family
   @override
   String toString() => r'sharedCharacterProvider';
 }
+
+/// Fiche d'un autre membre d'un groupe, en lecture seule — voir
+/// [CharacterSharingRepository.fetchGroupMemberCharacter].
+
+@ProviderFor(groupMemberCharacter)
+final groupMemberCharacterProvider = GroupMemberCharacterFamily._();
+
+/// Fiche d'un autre membre d'un groupe, en lecture seule — voir
+/// [CharacterSharingRepository.fetchGroupMemberCharacter].
+
+final class GroupMemberCharacterProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<CharacterDetail?>,
+          CharacterDetail?,
+          FutureOr<CharacterDetail?>
+        >
+    with $FutureModifier<CharacterDetail?>, $FutureProvider<CharacterDetail?> {
+  /// Fiche d'un autre membre d'un groupe, en lecture seule — voir
+  /// [CharacterSharingRepository.fetchGroupMemberCharacter].
+  GroupMemberCharacterProvider._({
+    required GroupMemberCharacterFamily super.from,
+    required ({String groupId, String characterId}) super.argument,
+  }) : super(
+         retry: _noRetry,
+         name: r'groupMemberCharacterProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$groupMemberCharacterHash();
+
+  @override
+  String toString() {
+    return r'groupMemberCharacterProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<CharacterDetail?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<CharacterDetail?> create(Ref ref) {
+    final argument = this.argument as ({String groupId, String characterId});
+    return groupMemberCharacter(
+      ref,
+      groupId: argument.groupId,
+      characterId: argument.characterId,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is GroupMemberCharacterProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$groupMemberCharacterHash() =>
+    r'24f3fa52334643f264177b0959f884d1ae46be3b';
+
+/// Fiche d'un autre membre d'un groupe, en lecture seule — voir
+/// [CharacterSharingRepository.fetchGroupMemberCharacter].
+
+final class GroupMemberCharacterFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<CharacterDetail?>,
+          ({String groupId, String characterId})
+        > {
+  GroupMemberCharacterFamily._()
+    : super(
+        retry: _noRetry,
+        name: r'groupMemberCharacterProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Fiche d'un autre membre d'un groupe, en lecture seule — voir
+  /// [CharacterSharingRepository.fetchGroupMemberCharacter].
+
+  GroupMemberCharacterProvider call({
+    required String groupId,
+    required String characterId,
+  }) => GroupMemberCharacterProvider._(
+    argument: (groupId: groupId, characterId: characterId),
+    from: this,
+  );
+
+  @override
+  String toString() => r'groupMemberCharacterProvider';
+}

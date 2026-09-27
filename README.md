@@ -17,6 +17,10 @@ web**. Un personnage peut aussi être importé depuis un export XML
 aidedd.org, ou rattaché à une histoire de l'app web via un code
 d'invitation (le MJ obtient alors un accès en lecture à la fiche).
 
+L'app est publiée sous le nom **Nexus JDR** (package Android `com.nexus_jdr`),
+en test fermé sur Google Play depuis la version 1.0.3 — voir
+[`CHANGELOG.md`](CHANGELOG.md) pour le contenu de chaque version.
+
 Le cahier des charges complet (vision, modèle de données, UX, design
 system, roadmap détaillée...) est la source de vérité du projet — voir
 [`CLAUDE.md`](CLAUDE.md) pour la table des matières et où le trouver.
@@ -41,10 +45,13 @@ dans `docs/cahier-des-charges/08-direction-artistique.md` et
   7. Équipement ([`equipment_step_screen.dart`](lib/features/character_creation/presentation/equipment_step_screen.dart))
   8. Apparence et histoire personnelle ([`appearance_and_backstory_step_screen.dart`](lib/features/character_creation/presentation/appearance_and_backstory_step_screen.dart))
   9. Récapitulatif et création ([`summary_step_screen.dart`](lib/features/character_creation/presentation/summary_step_screen.dart)) — seule étape qui écrit en base
+
+  Chaque choix (race, sous-race, classe, historique, sous-classe, sort) a un bouton ⓘ qui affiche son détail complet sans le sélectionner. L'étape 8 inclut portrait, alignement et sexe/âge/taille/poids/yeux/peau/cheveux.
+- **Modifier un personnage** ([`character_edit_flow.dart`](lib/features/character_creation/presentation/widgets/character_edit_flow.dart)) — l'entrée « Modifier » du menu ⋮ de la fiche rouvre l'assistant de création pré-rempli (bandeau « MODIFICATION ») : classe/sous-classe modifiables au niveau 1 uniquement, caractéristiques saisies en valeurs finales, étape Équipement sautée, étape Sorts limitée au niveau 1. L'enregistrement n'écrit que la différence (`CharacterEditPlanner`) : rien de ce qui vient d'une montée de niveau n'est effacé ; PV max recalculés si la Constitution change.
 - **Fiche personnage** ([`character_detail_screen.dart`](lib/features/characters/presentation/character_detail_screen.dart)) — 5 onglets, tous avec un contenu réel **et** des actions d'écriture câblées (pas juste de la lecture) :
-  1. Personnage — identité, caractéristiques, jets de sauvegarde, points de vie ajustables, apparence physique, portrait avec recadrage, repos court/long, montée de niveau, section "Aventures" (histoires rejointes, voir plus bas).
+  1. Personnage — identité, tuiles VIT./CA/INIT./INSP. (initiative lançable), caractéristiques, jets de sauvegarde, points de vie ajustables, apparence physique, portrait avec recadrage, repos court/long, montée de niveau, section "Aventures" (histoires rejointes, voir plus bas).
   2. Compétences ([`character_skills_tab_body.dart`](lib/features/characters/presentation/widgets/character_skills_tab_body.dart)) — aptitudes de classe, les 18 compétences avec bonus calculé, maîtrises d'outils, langues connues. Onglet en lecture seule par nature (aucune action de jeu à y déclencher).
-  3. Sorts ([`character_spells_tab_body.dart`](lib/features/characters/presentation/widgets/character_spells_tab_body.dart)) — sorts connus/préparés par niveau avec emplacements disponibles ; chaque sort ouvre un panneau Infos/Lancer (décompte d'emplacement), chaque aptitude de classe non passive un panneau Infos/Utiliser (décompte d'usage par repos).
+  3. Sorts ([`character_spells_tab_body.dart`](lib/features/characters/presentation/widgets/character_spells_tab_body.dart)) — sorts connus/préparés par niveau avec emplacements disponibles (Clerc/Druide/Paladin : toute la liste de la classe jusqu'au plus haut niveau lançable, à préparer) ; chaque sort ouvre un panneau Infos/Lancer (décompte d'emplacement), chaque aptitude de classe non passive un panneau Infos/Utiliser (décompte d'usage par repos).
   4. Inventaire ([`character_inventory_tab_body.dart`](lib/features/characters/presentation/widgets/character_inventory_tab_body.dart)) — monnaie ajustable, objets avec catégorie/poids/statut équipé ; chaque objet ouvre un panneau Infos/Utiliser/Équiper-Déséquiper/Retirer, ajout d'objet (catalogue ou personnalisé), flux "Ajouter une récompense" (monnaie et objets en une fois).
   5. Histoire ([`character_story_tab_body.dart`](lib/features/characters/presentation/widgets/character_story_tab_body.dart)) — apparence, personnalité, idéaux/défauts, liens, histoire personnelle, alliés, particularités, trésor ; les 9 champs sont éditables depuis une sheet dédiée (icône crayon), plus seulement à la création.
 
@@ -52,7 +59,8 @@ dans `docs/cahier-des-charges/08-direction-artistique.md` et
 - **Montée de niveau** — déclenchement automatique dès que l'XP franchit un seuil, popin d'annonce ("Niveau N atteint !" avec les aptitudes automatiques gagnées) avant chaque niveau d'une chaîne, choix à faire selon la classe (caractéristiques/dons, sorts appris, etc.), calcul des PV et des emplacements de sorts, récapitulatif avant validation.
 - **Import de personnage XML** ([`xml_import_review_screen.dart`](lib/features/xml_import/presentation/xml_import_review_screen.dart)) — sélection d'un export aidedd.org, parsing et résolution des champs (par nom pour les champs en clair, par table de correspondance pour les champs codés — voir [`docs/xml-import-reference-mapping.md`](docs/xml-import-reference-mapping.md)), écran de vérification avec correction manuelle des champs non reconnus, sauvegarde comme un personnage créé manuellement.
 - **Rejoindre une histoire** ([`lib/features/join_story/`](lib/features/join_story/)) — parcours en 4 étapes (code d'invitation → confirmation → choix du personnage → validation) qui rattache un personnage à une histoire de l'app web "Histoires" via deux edge functions Supabase dédiées ; section "Aventures" sur la fiche personnage pour consulter/quitter les histoires rejointes.
-- **Profil / paramètres du compte** ([`lib/features/profile/`](lib/features/profile/)) — avatar (upload/recadrage/retrait), nom d'affichage éditable, email, mot de passe (stockés dans Supabase Auth, partagé avec l'app web), bandeau "Compte lié à l'app Histoires", bouton "Signaler un bug" (crée une issue GitHub), déconnexion. **Confidentialité et données** : export JSON de mes données, suppression de compte (confirmation par mot de passe, cascade complète y compris les histoires possédées côté app web), gestion des autorisations appareil. **Aide et support** : contact du support par email pré-rempli (version app/device), FAQ et mentions légales/CGU en "Bientôt disponible" (aucun contenu rédigé). Notifications en "Bientôt disponible" (infrastructure push/email non construite).
+- **Profil / paramètres du compte** ([`lib/features/profile/`](lib/features/profile/)) — avatar (upload/recadrage/retrait), nom d'affichage éditable, email, mot de passe (stockés dans Supabase Auth, partagé avec l'app web), bandeau "Compte lié à l'app Histoires", bouton "Signaler un bug" (crée une issue GitHub), déconnexion. **Confidentialité et données** : export JSON de mes données, suppression de compte (confirmation par mot de passe, cascade complète y compris les histoires possédées côté app web), gestion des autorisations appareil. **Aide et support** : contact du support par email pré-rempli (version app/device), FAQ, mentions légales/CGU et politique de confidentialité (même contenu que la page publique https://nexus-jdr.app/confidentialite). Préférences de notifications (voir plus bas).
+- **Groupes** ([`lib/features/groups/`](lib/features/groups/)) — créer ou rejoindre un groupe par code (copiable d'un toucher), PV et statut des membres en temps réel, fiche complète d'un autre membre en lecture seule au toucher de sa carte (RPC `get_group_member_character`), butin commun avec sélection multiple d'objets du catalogue, notes de groupe avec dictée vocale.
 
 ### Maquettes
 
@@ -99,6 +107,15 @@ et y renseigner l'URL/clé du projet Supabase (voir
 [`config/README.md`](config/README.md) — un seul projet Supabase existe pour
 l'instant, partagé par les trois flavors).
 
+## Versions et publication
+
+Le contenu de chaque version et les notes de version prêtes à coller dans
+la Play Console sont dans [`CHANGELOG.md`](CHANGELOG.md), qui décrit aussi
+la procédure : PR de montée de version (`pubspec.yaml`, build `+N` toujours
+croissant), puis tag `vX.Y.Z` sur le commit de merge, qui déclenche
+`release-android.yml` (App Bundle signé joint à la Release GitHub, à
+téléverser dans la Play Console).
+
 ## Tests
 
 - `flutter test` : suite unitaire/widgets habituelle (`test/`), rapide, sans
@@ -136,11 +153,13 @@ Suit la roadmap détaillée dans `docs/cahier-des-charges/06-roadmap.md`.
 ### Reste à faire
 
 **Pour publier une v1 sur les stores :**
-- [ ] **Google Play** : compte développeur (~25 $, pas encore créé), fiche store complète (icônes, captures, **politique de confidentialité — page inexistante**, formulaire data safety), secrets GitHub pour l'upload automatique, premier upload manuel du `.aab` déjà produit par la Release `v1.0.0` — checklist complète dans [`docs/GOOGLE_PLAY_PUBLISHING.md`](docs/GOOGLE_PLAY_PUBLISHING.md).
-- [ ] ⚠️ **Le keystore Android de production généré le 2026-09-01 doit être considéré compromis** (contenu et mot de passe apparus par erreur dans une session de travail) — à régénérer et re-signer avant toute vraie soumission au Play Store, voir la note dédiée dans `docs/GOOGLE_PLAY_PUBLISHING.md`.
+- [x] **Google Play — test fermé** : fiche créée (package `com.nexus_jdr`), politique de confidentialité et page de suppression de compte publiques (https://nexus-jdr.app/confidentialite, https://nexus-jdr.app/suppression-compte), formulaire « Sécurité des données » rempli, version 1.0.3 puis 1.0.4 en test fermé.
+- [ ] **Google Play — production** : 12 testeurs inscrits pendant 14 jours (compte personnel), captures d'écran et image de présentation, secrets GitHub pour l'upload automatique — checklist dans [`docs/GOOGLE_PLAY_PUBLISHING.md`](docs/GOOGLE_PLAY_PUBLISHING.md).
+- [ ] **Liens profonds Android depuis le Play Store** : ajouter `com.nexus_jdr` et l'empreinte SHA-256 de la clé de signature d'application Google Play à `apps/web/public/.well-known/assetlinks.json` (dépôt web), sinon `/join` et `/p` s'ouvrent dans le navigateur.
+- [ ] ⚠️ **Le keystore Android de production généré le 2026-09-01 doit être considéré compromis** (contenu et mot de passe apparus par erreur dans une session de travail). Il sert désormais de clé d'import Google Play (signature d'application Play activée) : demander une réinitialisation de la clé d'import depuis la Play Console (« Intégrité de l'app ») et mettre à jour les secrets de `release-android.yml`, voir la note dédiée dans `docs/GOOGLE_PLAY_PUBLISHING.md`.
 - [ ] **Apple** : tout est bloqué sur la création du compte Apple Developer Program (~99 $/an) — Team ID nécessaire pour `apple-app-site-association` (deep linking iOS) et pour le raccordement de `Runner.entitlements` dans Xcode. Rien côté CI/CD iOS non plus.
 - [ ] **Deep linking iOS** (`nexus-jdr.app/join/{code}`) — bloqué sur le même compte Apple Developer que ci-dessus. Côté Android : entièrement fonctionnel et vérifié.
-- [ ] **Pages légales** : politique de confidentialité (exigée par les stores ET par l'écran "Confidentialité et données" de l'app, actuellement en "Bientôt disponible") et mentions légales/CGU (écran "Aide et support", même statut) — aucun contenu rédigé à ce jour. Doivent créditer Open5e/le System Reference Document (CC-BY 4.0) dont sont issus les sorts, invocations et le don "Empoignade" (voir `07-source-donnees-i18n.md`).
+- [x] **Pages légales** : politique de confidentialité (app + page publique), mentions légales/CGU (éditeur renseigné), page publique de suppression de compte.
 - [ ] Projets Supabase distincts pour `staging`/`prod` (actuellement les trois flavors pointent vers le même projet que le dev).
 
 **Fonctionnalités et contenu :**

@@ -15,6 +15,7 @@ import '../domain/group_failure.dart';
 import 'providers/group_providers.dart';
 import 'widgets/group_confirmation_dialog.dart';
 import 'widgets/group_dissolve_sheet.dart';
+import 'widgets/group_invite_code_chip.dart';
 
 const String _genericRenameErrorMessage =
     "Impossible d'enregistrer les modifications. Réessayez.";
@@ -249,7 +250,9 @@ class _GroupSettingsScreenState extends ConsumerState<GroupSettingsScreen> {
                 const SizedBox(height: AppSpacing.xs),
                 Row(
                   children: [
-                    Expanded(child: _InviteCodeChip(code: detail.inviteCode)),
+                    Expanded(
+                      child: GroupInviteCodeChip(code: detail.inviteCode),
+                    ),
                     const SizedBox(width: AppSpacing.sm),
                     SecondaryButton(
                       label: 'Régénérer',
@@ -341,41 +344,6 @@ class _SectionLabel extends StatelessWidget {
         fontSize: 15,
         fontWeight: FontWeight.w800,
         color: AppColors.textPrimary,
-      ),
-    );
-  }
-}
-
-/// Même style visuel que l'ancien `group_screen.dart::_InviteCodeChip`
-/// (retiré de ce fichier avec le bandeau d'identité par une tâche parallèle
-/// à celle-ci, voir la doc de classe de [GroupSettingsScreen]) — classe
-/// privée à son fichier d'origine, jamais partageable telle quelle, même
-/// rationale de duplication que le reste de ce dépôt (voir
-/// `GroupMemberRowMapper`).
-class _InviteCodeChip extends StatelessWidget {
-  const _InviteCodeChip({required this.code});
-
-  final String code;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.parchmentCard,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
-      ),
-      child: Text(
-        code,
-        textAlign: TextAlign.center,
-        style: AppTypography.body(
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
-        ).copyWith(letterSpacing: 3),
       ),
     );
   }

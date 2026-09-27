@@ -496,4 +496,159 @@ void main() {
       expect(result!.displayName, 'Amulette de famille');
     });
   });
+
+  group('sélection multiple (pickInventoryAdditions)', () {
+    Future<List<PickedInventoryAddition>> Function() pumpMulti(
+      WidgetTester tester,
+    ) {
+      List<PickedInventoryAddition>? result;
+      return () async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              characterRepositoryProvider.overrideWithValue(
+                FakeRepository(catalog: const [_dagger, _kit]),
+              ),
+            ],
+            child: MaterialApp(
+              home: Builder(
+                builder: (context) => Scaffold(
+                  body: Center(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        result = await pickInventoryAdditions(context);
+                      },
+                      child: const Text('Ouvrir'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Ouvrir'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Depuis le catalogue'));
+        await tester.pumpAndSettle();
+        return result ?? const [];
+      };
+    }
+
+    testWidgets('coche plusieurs objets, ajuste une quantité, "Ajouter (2)" '
+        'renvoie toute la sélection dans l\'ordre', (tester) async {
+      List<PickedInventoryAddition>? result;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            characterRepositoryProvider.overrideWithValue(
+              FakeRepository(catalog: const [_dagger, _kit]),
+            ),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      result = await pickInventoryAdditions(context);
+                    },
+                    child: const Text('Ouvrir'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Ouvrir'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Depuis le catalogue'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AJOUTER DES OBJETS'), findsOneWidget);
+      final addButton = tester.widget<PrimaryButton>(
+        find.byType(PrimaryButton),
+      );
+      expect(addButton.onPressed, isNull);
+
+      await tester.tap(find.text('Dague'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kit de crochetage'));
+      await tester.pumpAndSettle();
+      // Quantité de la dague : 1 -> 3.
+      final increment = find.byWidgetPredicate(
+        (widget) => widget is Icon && widget.semanticLabel == 'Augmenter',
+      );
+      await tester.tap(increment.first);
+      await tester.pumpAndSettle();
+      await tester.tap(increment.first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER (2)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AJOUTER DES OBJETS'), findsNothing);
+      expect(result, isNotNull);
+      expect(result!.map((pick) => pick.item), [_dagger, _kit]);
+      expect(result!.map((pick) => pick.quantity), [3, 1]);
+    });
+
+    testWidgets('« − » à la quantité 1 retire l\'objet de la sélection', (
+      tester,
+    ) async {
+      await pumpMulti(tester)();
+
+      await tester.tap(find.text('Dague'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(PrimaryButton, 'AJOUTER (1)'), findsOneWidget);
+
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) => widget is Icon && widget.semanticLabel == 'Diminuer',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(PrimaryButton, 'AJOUTER'), findsOneWidget);
+    });
+
+    testWidgets('fermer la sheet sans valider renvoie une liste vide', (
+      tester,
+    ) async {
+      List<PickedInventoryAddition>? result;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            characterRepositoryProvider.overrideWithValue(
+              FakeRepository(catalog: const [_dagger]),
+            ),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      result = await pickInventoryAdditions(context);
+                    },
+                    child: const Text('Ouvrir'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Ouvrir'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Depuis le catalogue'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dague'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      expect(result, isEmpty);
+    });
+  });
 }
