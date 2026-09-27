@@ -20,6 +20,15 @@ dans la Play Console (« Notes de version », 500 caractères max, balise
    joint à la Release GitHub.
 4. Téléverser `app-prod-release.aab` dans la Play Console (piste de test ou
    production) et coller les notes de version.
+5. Mettre à jour `latest_version` (et au besoin `min_supported_version`) de
+   la ligne `android` de la table Supabase `app_versions` : c'est elle qui
+   déclenche la bannière « mise à jour disponible » et le repli du bouton
+   « Rechercher une mise à jour » hors Google Play.
+
+Les notes de version (stores) de chaque version sont aussi affichées dans
+l'app (Profil › Nouveautés et mises à jour), lues depuis ce fichier embarqué
+comme asset : seules les versions qui ont un bloc « Notes de version
+(stores) » y apparaissent, la section « Non publié » jamais.
 
 ---
 
@@ -33,6 +42,8 @@ Groupes :
 • Touche le code d'invitation pour le copier
 • Touche un membre pour voir sa fiche complète (en lecture seule)
 • Butin : sélectionne plusieurs objets du catalogue d'un coup avant de les ajouter
+Profil :
+• Nouveautés et mises à jour : consulte les notes de chaque version et installe la dernière en un toucher
 </fr-FR>
 ```
 
@@ -43,6 +54,12 @@ Groupes :
   `20260927100000_group_member_character_sheet.sql`, dépôt web) déployée.
 - Butin du groupe : sélection multiple dans le catalogue d'objets, avec
   quantité par objet, puis « Ajouter (N) ».
+
+- Profil › Nouveautés et mises à jour : notes de version de chaque version
+  publiée (ce fichier, embarqué comme asset) et bouton « Rechercher une mise
+  à jour » (mise à jour intégrée Google Play en mode immédiat via
+  `in_app_update` ; repli sur `app_versions` et la fiche store hors Google
+  Play).
 
 ### Modifié
 - Groupes : le code d'invitation (onglet Membres et réglages) se copie d'un

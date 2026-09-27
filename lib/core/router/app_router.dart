@@ -38,6 +38,7 @@ import '../../features/profile/presentation/profile_faq_screen.dart';
 import '../../features/profile/presentation/profile_help_screen.dart';
 import '../../features/profile/presentation/profile_legal_screen.dart';
 import '../../features/profile/presentation/profile_notifications_screen.dart';
+import '../../features/app_update/presentation/app_updates_screen.dart';
 import '../../features/profile/presentation/profile_privacy_policy_screen.dart';
 import '../../features/profile/presentation/profile_privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -306,6 +307,14 @@ GoRouter appRouter(Ref ref) {
         name: 'profile-notifications',
         path: '/profile/notifications',
         builder: (context, state) => const ProfileNotificationsScreen(),
+      ),
+      GoRoute(
+        // Écran "Nouveautés et mises à jour" (`features/app_update/`), poussé
+        // depuis la tuile éponyme de `ProfileScreen` : notes de version
+        // (CHANGELOG.md embarqué) et recherche de mise à jour.
+        name: 'profile-updates',
+        path: '/profile/updates',
+        builder: (context, state) => const AppUpdatesScreen(),
       ),
       GoRoute(
         name: 'character-detail',

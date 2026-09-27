@@ -119,6 +119,12 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       MenuTile(
                         standalone: false,
+                        icon: Icons.new_releases_outlined,
+                        label: 'Nouveautés et mises à jour',
+                        onTap: () => context.push('/profile/updates'),
+                      ),
+                      MenuTile(
+                        standalone: false,
                         icon: Icons.help_outline,
                         label: 'Aide et support',
                         onTap: () => context.push('/profile/help'),

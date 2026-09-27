@@ -254,7 +254,7 @@ void main() {
   });
 
   testWidgets(
-    'affiche les 4 lignes de menu (regroupées dans un SettingsListCard) avec '
+    'affiche les 5 lignes de menu (regroupées dans un SettingsListCard) avec '
     'leurs icônes dédiées, sans "Signaler un bug"',
     (tester) async {
       await pumpProfile(tester, user: _fakeUser());
@@ -263,6 +263,7 @@ void main() {
         'Modifier le profil',
         'Notifications',
         'Confidentialité et données',
+        'Nouveautés et mises à jour',
         'Aide et support',
       ]) {
         expect(find.text(label), findsOneWidget);
@@ -271,9 +272,10 @@ void main() {
       expect(find.byIcon(Icons.person_outline), findsOneWidget);
       expect(find.byIcon(Icons.notifications_none), findsOneWidget);
       expect(find.byIcon(Icons.privacy_tip_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.new_releases_outlined), findsOneWidget);
       expect(find.byIcon(Icons.help_outline), findsOneWidget);
       expect(find.byIcon(Icons.bug_report_outlined), findsNothing);
-      expect(find.byIcon(Icons.chevron_right), findsNWidgets(4));
+      expect(find.byIcon(Icons.chevron_right), findsNWidgets(5));
       expect(find.byType(SettingsListCard), findsOneWidget);
     },
   );
