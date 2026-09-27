@@ -46,9 +46,24 @@ import 'providers/character_sharing_providers.dart';
 /// classe de `shared_character_mapper.dart` pour le rationale complet de
 /// cette réutilisation.
 class SharedCharacterViewScreen extends ConsumerStatefulWidget {
-  const SharedCharacterViewScreen({required this.token, super.key});
+  const SharedCharacterViewScreen({required String this.token, super.key})
+    : groupId = null,
+      characterId = null;
 
-  final String token;
+  /// Fiche d'un autre membre du groupe [groupId], ouverte depuis l'onglet
+  /// « Membres » (demande utilisateur, 2026-09-27) — même vue en lecture
+  /// seule, alimentée par `groupMemberCharacterProvider` au lieu d'un token.
+  const SharedCharacterViewScreen.groupMember({
+    required String this.groupId,
+    required String this.characterId,
+    super.key,
+  }) : token = null;
+
+  final String? token;
+  final String? groupId;
+  final String? characterId;
+
+  bool get isGroupMember => token == null;
 
   @override
   ConsumerState<SharedCharacterViewScreen> createState() =>
@@ -69,7 +84,14 @@ class _SharedCharacterViewScreenState
 
   @override
   Widget build(BuildContext context) {
-    final sharedAsync = ref.watch(sharedCharacterProvider(token: widget.token));
+    final sharedAsync = widget.isGroupMember
+        ? ref.watch(
+            groupMemberCharacterProvider(
+              groupId: widget.groupId!,
+              characterId: widget.characterId!,
+            ),
+          )
+        : ref.watch(sharedCharacterProvider(token: widget.token!));
 
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,
@@ -78,13 +100,18 @@ class _SharedCharacterViewScreenState
           WoodBackHeader(
             title: sharedAsync.value != null
                 ? _tab.headerTitle
+                : widget.isGroupMember
+                ? 'MEMBRE DU GROUPE'
                 : 'PERSONNAGE PARTAGÉ',
             onBack: _goBack,
           ),
           Expanded(
             child: sharedAsync.when(
               data: (detail) => detail == null
-                  ? _InvalidLinkState(onRetry: _retry)
+                  ? _InvalidLinkState(
+                      onRetry: _retry,
+                      isGroupMember: widget.isGroupMember,
+                    )
                   : _buildTabBody(detail),
               loading: () => const Center(
                 child: CircularProgressIndicator(color: AppColors.woodMedium),
@@ -112,7 +139,16 @@ class _SharedCharacterViewScreenState
   }
 
   void _retry() {
-    ref.invalidate(sharedCharacterProvider(token: widget.token));
+    if (widget.isGroupMember) {
+      ref.invalidate(
+        groupMemberCharacterProvider(
+          groupId: widget.groupId!,
+          characterId: widget.characterId!,
+        ),
+      );
+    } else {
+      ref.invalidate(sharedCharacterProvider(token: widget.token!));
+    }
   }
 
   Widget _buildTabBody(CharacterDetail detail) {
@@ -468,9 +504,12 @@ class _Gauge extends StatelessWidget {
 }
 
 class _InvalidLinkState extends StatelessWidget {
-  const _InvalidLinkState({required this.onRetry});
+  const _InvalidLinkState({required this.onRetry, this.isGroupMember = false});
 
   final VoidCallback onRetry;
+
+  /// Fiche ouverte depuis un groupe : pas de lien en jeu, message adapté.
+  final bool isGroupMember;
 
   @override
   Widget build(BuildContext context) {
@@ -483,7 +522,9 @@ class _InvalidLinkState extends StatelessWidget {
             const Icon(Icons.link_off, size: 48, color: AppColors.accentBrick),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Ce lien de partage n\'est plus valide',
+              isGroupMember
+                  ? "Cette fiche n'est plus accessible"
+                  : "Ce lien de partage n'est plus valide",
               textAlign: TextAlign.center,
               style: AppTypography.display(
                 fontSize: 11,
@@ -492,8 +533,11 @@ class _InvalidLinkState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Le partage a peut-être été désactivé, ou le lien a été mal '
-              'recopié. Demande un nouveau lien à son propriétaire.',
+              isGroupMember
+                  ? 'Ce personnage a peut-être quitté le groupe.'
+                  : 'Le partage a peut-être été désactivé, ou le lien a été '
+                        'mal recopié. Demande un nouveau lien à son '
+                        'propriétaire.',
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textMuted),
             ),

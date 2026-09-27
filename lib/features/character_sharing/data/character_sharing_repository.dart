@@ -33,6 +33,15 @@ abstract class CharacterSharingRepository {
   /// recopié) : à distinguer par l'appelant d'une erreur réseau (celle-ci
   /// lève une [CharacterFailure], `null` est un résultat légitime).
   Future<CharacterDetail?> fetchSharedCharacter(String token);
+
+  /// Fiche complète, en lecture seule, du personnage [characterId] d'un
+  /// autre membre du groupe [groupId] (RPC `get_group_member_character`,
+  /// dépôt web). `null` si l'appelant n'est pas membre de ce groupe ou si ce
+  /// personnage n'y participe plus. Même format que [fetchSharedCharacter].
+  Future<CharacterDetail?> fetchGroupMemberCharacter({
+    required String groupId,
+    required String characterId,
+  });
 }
 
 class SupabaseCharacterSharingRepository implements CharacterSharingRepository {
@@ -102,6 +111,25 @@ class SupabaseCharacterSharingRepository implements CharacterSharingRepository {
       final result = await _client.rpc(
         'get_shared_character',
         params: {'p_token': token},
+      );
+      if (result == null) return null;
+      return mapSharedCharacterJson(result as Map<String, dynamic>);
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<CharacterDetail?> fetchGroupMemberCharacter({
+    required String groupId,
+    required String characterId,
+  }) async {
+    try {
+      final result = await _client.rpc(
+        'get_group_member_character',
+        params: {'p_group_id': groupId, 'p_character_id': characterId},
       );
       if (result == null) return null;
       return mapSharedCharacterJson(result as Map<String, dynamic>);

@@ -91,6 +91,31 @@ Future<PickedInventoryAddition?> pickInventoryAddition(
   }
 }
 
+/// Variante « plusieurs objets » de [pickInventoryAddition] (demande
+/// utilisateur, 2026-09-27 : sélectionner plusieurs objets du catalogue
+/// avant de les ajouter au butin du groupe, plutôt qu'un par un). « Depuis
+/// le catalogue » ouvre le catalogue en sélection multiple ; « Objet
+/// personnalisé » reste unitaire (une saisie de nom). Liste vide si annulé.
+Future<List<PickedInventoryAddition>> pickInventoryAdditions(
+  BuildContext context,
+) async {
+  final choice = await showAddItemEntrySheet(context);
+  if (choice == null || !context.mounted) return const [];
+
+  switch (choice) {
+    case AddItemEntryChoice.catalog:
+      final picked = await showItemCatalogMultiPickerSheet(context);
+      return [
+        for (final result in picked)
+          PickedInventoryAddition.catalog(result.item, result.quantity),
+      ];
+    case AddItemEntryChoice.custom:
+      final picked = await showCustomItemPickerSheet(context);
+      if (picked == null) return const [];
+      return [PickedInventoryAddition.custom(picked.name, picked.quantity)];
+  }
+}
+
 class _AddItemEntrySheetContent extends StatelessWidget {
   const _AddItemEntrySheetContent();
 
@@ -139,8 +164,27 @@ Future<CatalogPickResult?> showItemCatalogPickerSheet(BuildContext context) {
   );
 }
 
+/// Catalogue en sélection multiple : toucher une ligne la coche (quantité
+/// 1, ajustable sur la ligne), « Ajouter (N) » renvoie toute la sélection.
+/// Liste vide si la sheet est fermée sans valider.
+Future<List<CatalogPickResult>> showItemCatalogMultiPickerSheet(
+  BuildContext context,
+) async {
+  final result = await showModalBottomSheet<List<CatalogPickResult>>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) =>
+        const _ItemCatalogPickerContent(multiSelect: true),
+  );
+  return result ?? const [];
+}
+
 class _ItemCatalogPickerContent extends ConsumerStatefulWidget {
-  const _ItemCatalogPickerContent();
+  const _ItemCatalogPickerContent({this.multiSelect = false});
+
+  /// `true` : sélection multiple (voir [showItemCatalogMultiPickerSheet]).
+  final bool multiSelect;
 
   @override
   ConsumerState<_ItemCatalogPickerContent> createState() =>
@@ -150,6 +194,23 @@ class _ItemCatalogPickerContent extends ConsumerStatefulWidget {
 class _ItemCatalogPickerContentState
     extends ConsumerState<_ItemCatalogPickerContent> {
   final TextEditingController _searchController = TextEditingController();
+
+  /// Mode multiple : objets cochés -> quantité, dans l'ordre de sélection.
+  final Map<int, CatalogPickResult> _selected = {};
+
+  void _toggle(InventoryCatalogItem item) {
+    setState(() {
+      if (_selected.remove(item.id) == null) {
+        _selected[item.id] = CatalogPickResult(item, 1);
+      }
+    });
+  }
+
+  void _setQuantity(InventoryCatalogItem item, int quantity) {
+    setState(() => _selected[item.id] = CatalogPickResult(item, quantity));
+  }
+
+  int get _selectedCount => _selected.length;
 
   @override
   void initState() {
@@ -191,7 +252,11 @@ class _ItemCatalogPickerContentState
           decoration: const BoxDecoration(color: AppColors.parchmentBg),
           child: Column(
             children: [
-              const SheetHeaderBar(title: 'AJOUTER UN OBJET'),
+              SheetHeaderBar(
+                title: widget.multiSelect
+                    ? 'AJOUTER DES OBJETS'
+                    : 'AJOUTER UN OBJET',
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.lg,
@@ -224,6 +289,25 @@ class _ItemCatalogPickerContentState
                   ),
                 ),
               ),
+              if (widget.multiSelect)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: PrimaryButton(
+                    label: _selectedCount == 0
+                        ? 'Ajouter'
+                        : 'Ajouter ($_selectedCount)',
+                    onPressed: _selectedCount == 0
+                        ? null
+                        : () =>
+                              Navigator.of(context)
+                                  .pop(_selected.values.toList()),
+                  ),
+                ),
             ],
           ),
         ),
@@ -266,10 +350,31 @@ class _ItemCatalogPickerContentState
       widgets.add(const SizedBox(height: AppSpacing.sm));
       for (var i = 0; i < categoryItems.length; i++) {
         if (i > 0) widgets.add(const SizedBox(height: AppSpacing.xs));
+        final item = categoryItems[i];
+        final selection = _selected[item.id];
         widgets.add(
           _CatalogItemRow(
-            item: categoryItems[i],
-            onTap: () => _pickItem(categoryItems[i]),
+            item: item,
+            onTap: widget.multiSelect
+                ? () => _toggle(item)
+                : () => _pickItem(item),
+            selected: selection != null,
+            trailing: !widget.multiSelect
+                ? null
+                : selection == null
+                ? const Icon(
+                    Icons.add_circle_outline,
+                    color: AppColors.textMuted,
+                  )
+                : StepperCounter(
+                    value: selection.quantity,
+                    onIncrement: () =>
+                        _setQuantity(item, selection.quantity + 1),
+                    // À 1, « − » retire l'objet de la sélection.
+                    onDecrement: () => selection.quantity > 1
+                        ? _setQuantity(item, selection.quantity - 1)
+                        : _toggle(item),
+                  ),
           ),
         );
       }
@@ -310,10 +415,21 @@ class _CatalogSectionHeader extends StatelessWidget {
 /// `equipment_step_screen.dart`/la création de personnage (spec de la
 /// tâche).
 class _CatalogItemRow extends StatelessWidget {
-  const _CatalogItemRow({required this.item, required this.onTap});
+  const _CatalogItemRow({
+    required this.item,
+    required this.onTap,
+    this.selected = false,
+    this.trailing,
+  });
 
   final InventoryCatalogItem item;
   final VoidCallback onTap;
+
+  /// Mode multiple : ligne cochée (fond mis en avant).
+  final bool selected;
+
+  /// Mode multiple : icône « ajouter » ou sélecteur de quantité.
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -324,7 +440,8 @@ class _CatalogItemRow extends StatelessWidget {
         : '${GoldAmountFormatter.format(item.costAmount)} po';
 
     return Material(
-      color: Colors.transparent,
+      color: selected ? AppColors.parchmentCard : Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.md),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -365,6 +482,10 @@ class _CatalogItemRow extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (trailing != null) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  trailing!,
+                ],
               ],
             ),
           ),

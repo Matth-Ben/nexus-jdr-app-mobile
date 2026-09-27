@@ -28,4 +28,17 @@ Future<CharacterDetail?> sharedCharacter(Ref ref, {required String token}) {
       .fetchSharedCharacter(token);
 }
 
+/// Fiche d'un autre membre d'un groupe, en lecture seule — voir
+/// [CharacterSharingRepository.fetchGroupMemberCharacter].
+@Riverpod(retry: _noRetry)
+Future<CharacterDetail?> groupMemberCharacter(
+  Ref ref, {
+  required String groupId,
+  required String characterId,
+}) {
+  return ref
+      .watch(characterSharingRepositoryProvider)
+      .fetchGroupMemberCharacter(groupId: groupId, characterId: characterId);
+}
+
 Duration? _noRetry(int retryCount, Object error) => null;

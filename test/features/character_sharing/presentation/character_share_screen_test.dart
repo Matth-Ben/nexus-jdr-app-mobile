@@ -276,6 +276,11 @@ class _FakeCharacterRepository implements CharacterRepository {
 }
 
 class _FakeCharacterSharingRepository implements CharacterSharingRepository {
+  @override
+  Future<CharacterDetail?> fetchGroupMemberCharacter({
+    required String groupId,
+    required String characterId,
+  }) async => null;
   String? tokenToReturn;
   Object? regenerateErrorToThrow;
   Object? disableErrorToThrow;
