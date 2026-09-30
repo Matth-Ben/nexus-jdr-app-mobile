@@ -14,11 +14,15 @@ import 'race_catalog.dart';
 /// fichier ne fait qu'itérer les 6 clés et sommer, pour rester testable
 /// isolément sans reconstruire cette boucle inline dans le dépôt de données.
 abstract final class FinalAbilityScoresResolver {
+  /// [racialBonusChoices] : bonus raciaux au choix répartis par le joueur
+  /// (`CharacterCreationDraft.racialBonusChoices`, voir
+  /// `domain/racial_bonus_choice.dart`), ajoutés aux bonus fixes.
   static Map<String, int> resolve({
     required Map<String, int> baseScores,
     required RaceCatalog raceCatalog,
     required int? raceId,
     required int? subraceId,
+    Map<String, int> racialBonusChoices = const {},
   }) {
     return {
       for (final entry in baseScores.entries)
@@ -29,7 +33,8 @@ abstract final class FinalAbilityScoresResolver {
               catalog: raceCatalog,
               raceId: raceId,
               subraceId: subraceId,
-            ),
+            ) +
+            (racialBonusChoices[entry.key] ?? 0),
     };
   }
 }

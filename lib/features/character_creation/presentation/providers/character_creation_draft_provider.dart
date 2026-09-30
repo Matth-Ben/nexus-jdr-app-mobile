@@ -40,10 +40,16 @@ class CharacterCreationDraftController
   /// revenir à l'étape 1 puis retaper "Suivant" ne doit pas effacer les
   /// choix déjà faits aux étapes suivantes.
   void setRace({int? raceId, int? subraceId, String? raceCustomText}) {
+    final raceChanged =
+        state.raceId != raceId || state.subraceId != subraceId;
     state = state.copyWith(
       raceId: raceId,
       subraceId: subraceId,
       raceCustomText: raceCustomText,
+      // Les bonus raciaux au choix ne valent que pour la race précédente.
+      racialBonusChoices: raceChanged
+          ? const <String, int>{}
+          : state.racialBonusChoices,
     );
   }
 
@@ -98,8 +104,13 @@ class CharacterCreationDraftController
   void setAbilityScores({
     required AbilityScoreMethod method,
     required Map<String, int> scores,
+    Map<String, int> racialBonusChoices = const {},
   }) {
-    state = state.copyWith(abilityScoreMethod: method, abilityScores: scores);
+    state = state.copyWith(
+      abilityScoreMethod: method,
+      abilityScores: scores,
+      racialBonusChoices: racialBonusChoices,
+    );
   }
 
   /// Mode modification : scores FINAUX saisis directement (bonus de race et

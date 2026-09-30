@@ -43,7 +43,7 @@ void main() {
       expect(summary, '+2 For, +1 Con · Robustesse');
     });
 
-    test('ignore la clé spéciale choice_others dans le résumé court', () {
+    test('ajoute la règle de choice_others après les bonus fixes', () {
       final summary = RaceSummaryFormatter.format(
         abilityBonuses: const {
           'cha': 2,
@@ -52,7 +52,7 @@ void main() {
         traits: const [],
       );
 
-      expect(summary, '+2 Cha');
+      expect(summary, '+2 Cha, +1 à 2 caractéristiques au choix');
     });
 
     test('plus de deux traits : seuls les deux premiers sont affichés', () {
@@ -77,8 +77,8 @@ void main() {
       expect(summary, isEmpty);
     });
 
-    test('uniquement choice_others (aucune caractéristique fixe) -> seuls les '
-        'traits apparaissent', () {
+    test('uniquement choice_others (aucune caractéristique fixe) -> la règle '
+        'puis les traits', () {
       final summary = RaceSummaryFormatter.format(
         abilityBonuses: const {
           'choice_others': {'amount': 1, 'count': 2},
@@ -86,7 +86,7 @@ void main() {
         traits: const [RaceTrait(name: 'Polyvalence', description: '...')],
       );
 
-      expect(summary, 'Polyvalence');
+      expect(summary, '+1 à 2 caractéristiques au choix · Polyvalence');
     });
   });
 
