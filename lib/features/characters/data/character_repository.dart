@@ -11,6 +11,7 @@ import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
 import '../domain/character_list_sorter.dart';
 import '../domain/character_summary.dart';
+import '../domain/hit_point_bonus_rules.dart';
 import '../domain/currency_kind.dart';
 import '../domain/gallery_photo_storage_path_resolver.dart';
 import '../domain/inventory_catalog_item.dart';
@@ -921,6 +922,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_feature_uses(class_feature_id, uses_remaining),
             character_class_options(class_feature_id, level, chosen_value),
             character_invocations(invocation_id),
+            character_feats(feat_id),
             character_inventory(
               id, item_id, custom_name, quantity, equipped, weapon_slot, is_attuned, notes,
               items(
@@ -2199,12 +2201,31 @@ class SupabaseCharacterRepository implements CharacterRepository {
         afterClasses: afterClasses,
       );
 
+      final newTotalLevel = afterClasses.fold(
+        0,
+        (sum, entry) => sum + entry.level,
+      );
+
+      var finalMaxHp = newMaxHp;
+      var finalCurrentHp = newCurrentHp;
       if (choice != null) {
-        await _applyChoice(
+        // PV rétroactifs du choix (Constitution augmentée, don Robuste),
+        // voir `domain/hit_point_bonus_rules.dart`.
+        final retroactiveHp = await _applyChoice(
           characterId: characterId,
           level: newClassLevel,
+          totalLevel: newTotalLevel,
           choice: choice,
         );
+        if (retroactiveHp != 0) {
+          finalMaxHp += retroactiveHp;
+          finalCurrentHp += retroactiveHp;
+          await _client
+              .from('characters')
+              .update({'max_hp': finalMaxHp, 'current_hp': finalCurrentHp})
+              .eq('id', characterId)
+              .eq('owner_id', ownerId);
+        }
       }
 
       if (initialSpellIds.isNotEmpty) {
@@ -2241,11 +2262,6 @@ class SupabaseCharacterRepository implements CharacterRepository {
         ]);
       }
 
-      final newTotalLevel = afterClasses.fold(
-        0,
-        (sum, entry) => sum + entry.level,
-      );
-
       await _client.from('character_level_hp').insert({
         'character_id': characterId,
         'level': newTotalLevel,
@@ -2255,8 +2271,8 @@ class SupabaseCharacterRepository implements CharacterRepository {
 
       return LevelUpApplyResult(
         newLevel: newTotalLevel,
-        newMaxHp: newMaxHp,
-        newCurrentHp: newCurrentHp,
+        newMaxHp: finalMaxHp,
+        newCurrentHp: finalCurrentHp,
       );
     } on CharacterFailure {
       rethrow;
@@ -2861,14 +2877,20 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// [CharacterRepository.applyLevelUp]. Ne fait rien pour
   /// [LevelUpChoiceKind.subclass] : déjà écrit dans le même `UPDATE` que
   /// `character_classes.level` par l'appelant.
-  Future<void> _applyChoice({
+  ///
+  /// Renvoie les PV maximum à ajouter rétroactivement ([totalLevel] = niveau
+  /// total du personnage après cette montée) : don Robuste pris, ou
+  /// modificateur de Constitution augmenté — voir
+  /// `domain/hit_point_bonus_rules.dart`. 0 sinon.
+  Future<int> _applyChoice({
     required String characterId,
     required int level,
+    required int totalLevel,
     required LevelUpChoiceSelection choice,
   }) async {
     switch (choice.kind) {
       case LevelUpChoiceKind.subclass:
-        return;
+        return 0;
       case LevelUpChoiceKind.abilityScoreImprovement:
         if (choice.featId != null) {
           // Don choisi en alternative à l'ASI (spec visuelle
@@ -2880,11 +2902,19 @@ class SupabaseCharacterRepository implements CharacterRepository {
             'feat_id': choice.featId,
             'level_taken': level,
           });
-          return;
+          final featName = (await _fetchTranslationRows(
+            entityType: 'feat',
+            fieldName: 'name',
+            entityIds: {'${choice.featId}'},
+          )).firstOrNull?['value'];
+          return featName == HitPointBonusRules.toughFeatName
+              ? HitPointBonusRules.toughFeatRetroactiveBonus(totalLevel)
+              : 0;
         }
-        await _applyAbilityScoreImprovement(
+        return _applyAbilityScoreImprovement(
           characterId: characterId,
           level: level,
+          totalLevel: totalLevel,
           allocations: choice.abilityAllocations!,
         );
       case LevelUpChoiceKind.fightingStyle:
@@ -2896,6 +2926,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
           'level': level,
           'chosen_value': choice.chosenValue,
         });
+        return 0;
     }
   }
 
@@ -2927,11 +2958,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// auraient déjà été appliqués — incohérence mineure et déjà dans la même
   /// famille de compromis que `createCharacter`, pas une régression propre à
   /// cette méthode.
-  Future<void> _applyAbilityScoreImprovement({
+  ///
+  /// Renvoie les PV maximum à ajouter rétroactivement si la Constitution
+  /// augmentée change de modificateur (× [totalLevel]), 0 sinon.
+  Future<int> _applyAbilityScoreImprovement({
     required String characterId,
     required int level,
+    required int totalLevel,
     required Map<String, int> allocations,
   }) async {
+    var retroactiveHp = 0;
     final abilityIds = allocations.keys.toList();
     final currentRows = await _client
         .from('character_ability_scores')
@@ -2985,7 +3021,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
         'increase': increase,
         'source': 'asi',
       });
+
+      if (abilityId == 'con') {
+        retroactiveHp += HitPointBonusRules.constitutionRetroactiveBonus(
+          oldScore: currentScore,
+          newScore: newScore,
+          totalLevel: totalLevel,
+        );
+      }
     }
+    return retroactiveHp;
   }
 
   /// Tous les scores de caractéristiques finaux de [characterId]
@@ -3155,6 +3200,15 @@ class SupabaseCharacterRepository implements CharacterRepository {
       entityIds: CharacterDetailRowMapper.collectInvocationIds(
         CharacterDetailRowMapper.invocationRowsOf(row),
       ).map((id) => id.toString()).toSet(),
+    );
+    // Noms des dons possédés (`character_feats`) — bonus de PV du don
+    // Robuste, voir `domain/hit_point_bonus_rules.dart`.
+    final featNameRows = await _fetchTranslationRows(
+      entityType: 'feat',
+      fieldName: 'name',
+      entityIds: CharacterDetailRowMapper.collectFeatIds(
+        CharacterDetailRowMapper.featRowsOf(row),
+      ),
     );
 
     // Les 18 [CharacterSkillRow] de l'onglet "Compétences" : `skills` est
@@ -3396,6 +3450,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       'alignmentNameRows': alignmentNameRows,
       'subclassNameRows': subclassNameRows,
       'invocationNameRows': invocationNameRows,
+      'featNameRows': featNameRows,
       'skillRows': skillRows,
       'skillNameRows': skillNameRows,
       'classFeatureRows': classFeatureRows,
@@ -3490,6 +3545,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
       CharacterDetailRowMapper.invocationRowsOf(row),
       invocationNames: invocationNames,
     );
+    // Absente d'un cache écrit avant l'ajout des dons : `_rowsOf` renvoie
+    // alors une liste vide (aucun don connu, comportement antérieur).
+    final featNames = CharacterRowMapper.parseTranslatedNames(
+      _rowsOf(payload['featNameRows']),
+    ).values.toList()..sort();
 
     final skillNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['skillNameRows']),
@@ -3625,6 +3685,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       spells: spells,
       spellSlots: CharacterDetailRowMapper.parseSpellSlots(row),
       knownInvocationNames: knownInvocationNames,
+      featNames: featNames,
       inventory: inventory,
       adventures: adventures,
       pactWeapon: pactWeapon,

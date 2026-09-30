@@ -599,11 +599,18 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         : LevelUpHitPointsCalculator.averageValue(hitDie);
   }
 
-  int _hpGain({required int hitDie, required int constitutionModifier}) {
+  /// Gain de PV du niveau : dé (ou moyenne) + Constitution, plancher à 1,
+  /// puis [bonus] fixe (`LevelUpStepData.hpBonusPerLevel`).
+  int _hpGain({
+    required int hitDie,
+    required int constitutionModifier,
+    required int bonus,
+  }) {
     return LevelUpHitPointsCalculator.hpGain(
-      rolledOrAverageValue: _hpRolledValue(hitDie),
-      constitutionModifier: constitutionModifier,
-    );
+          rolledOrAverageValue: _hpRolledValue(hitDie),
+          constitutionModifier: constitutionModifier,
+        ) +
+        bonus;
   }
 
   String? _remainingLevelsLabel(int currentXp) {
@@ -664,6 +671,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     final hpGain = _hpGain(
       hitDie: data.hitDie,
       constitutionModifier: data.constitutionModifier,
+      bonus: data.hpBonusPerLevel,
     );
     final hpMethod = _hpMethod == _HpMethod.roll ? 'lance' : 'moyenne';
 
@@ -1216,6 +1224,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     final gain = _hpGain(
       hitDie: data.hitDie,
       constitutionModifier: data.constitutionModifier,
+      bonus: data.hpBonusPerLevel,
     );
     final newMaxHp = data.currentMaxHp + gain;
     final modText = SignedModifierFormatter.format(data.constitutionModifier);
@@ -2623,6 +2632,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     final gain = _hpGain(
       hitDie: data.hitDie,
       constitutionModifier: data.constitutionModifier,
+      bonus: data.hpBonusPerLevel,
     );
     final newMaxHp = data.currentMaxHp + gain;
 

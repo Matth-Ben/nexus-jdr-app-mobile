@@ -406,6 +406,18 @@ abstract final class CharacterDetailRowMapper {
     return choices;
   }
 
+  static List<Map<String, dynamic>> featRowsOf(Map<String, dynamic> row) {
+    final raw = row['character_feats'] as List<dynamic>?;
+    return raw?.cast<Map<String, dynamic>>() ?? const [];
+  }
+
+  /// Identifiants de dons (`character_feats.feat_id`) à résoudre via
+  /// `translations` (`entity_type = 'feat'`).
+  static Set<String> collectFeatIds(List<Map<String, dynamic>> rows) => {
+    for (final row in rows)
+      if (row['feat_id'] case final num featId) featId.toInt().toString(),
+  };
+
   static List<Map<String, dynamic>> invocationRowsOf(Map<String, dynamic> row) {
     final raw = row['character_invocations'] as List<dynamic>?;
     return raw?.cast<Map<String, dynamic>>() ?? const [];
@@ -681,6 +693,7 @@ abstract final class CharacterDetailRowMapper {
     List<CharacterSpellEntry> spells = const [],
     List<CharacterSpellSlot> spellSlots = const [],
     List<String> knownInvocationNames = const [],
+    List<String> featNames = const [],
     List<CharacterInventoryItem> inventory = const [],
     List<CharacterAdventure> adventures = const [],
     PactWeaponOption? pactWeapon,
@@ -734,6 +747,7 @@ abstract final class CharacterDetailRowMapper {
       spellSlots: spellSlots,
       pactSpellSlot: parsePactSpellSlot(row),
       knownInvocationNames: knownInvocationNames,
+      featNames: featNames,
       pactWeapon: pactWeapon,
       currencyGp: (row['currency_gp'] as num?)?.toInt() ?? 0,
       currencyPp: (row['currency_pp'] as num?)?.toInt() ?? 0,

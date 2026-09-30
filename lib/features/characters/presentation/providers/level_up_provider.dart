@@ -6,6 +6,7 @@ import '../../../character_creation/domain/spell_option.dart';
 import '../../../character_creation/presentation/providers/character_creation_providers.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/character_failure.dart';
+import '../../domain/hit_point_bonus_rules.dart';
 import '../../domain/invocation_selection_rules.dart';
 import '../../domain/invocations_known_progression.dart';
 import '../../domain/level_up_block_reason.dart';
@@ -50,6 +51,11 @@ typedef LevelUpStepData = ({
   String className,
   int hitDie,
   int constitutionModifier,
+
+  /// PV maximum ajoutés au gain de ce niveau hors dé de vie et Constitution
+  /// (Nain des collines, don Robuste, Résilience draconique) — voir
+  /// `domain/hit_point_bonus_rules.dart`.
+  int hpBonusPerLevel,
   int currentLevel,
   int currentMaxHp,
   int currentXp,
@@ -371,6 +377,7 @@ Future<LevelUpStepData> levelUpStepData(
   int effectiveClassLevel;
   int effectiveTargetLevel;
   int? knownSubclassId;
+  String? effectiveSubclassName;
 
   if (isMulticlassing) {
     final chosen = multiclassOptions.firstWhere(
@@ -439,6 +446,7 @@ Future<LevelUpStepData> levelUpStepData(
     effectiveTargetLevel = targetClass.level + 1;
     // Seule la sous-classe de LA ligne qui progresse compte (multiclassage).
     knownSubclassId = targetClass.subclassId;
+    effectiveSubclassName = targetClass.subclassName;
   }
 
   final levelData = await ref
@@ -651,6 +659,12 @@ Future<LevelUpStepData> levelUpStepData(
     hitDie: effectiveHitDie,
     constitutionModifier: AbilityScoreRules.abilityModifier(
       detail.abilityScores['con'] ?? 10,
+    ),
+    hpBonusPerLevel: HitPointBonusRules.perLevelBonus(
+      subraceName: detail.subraceName,
+      hasToughFeat: detail.featNames.contains(HitPointBonusRules.toughFeatName),
+      levelingClassName: effectiveClassName,
+      levelingSubclassName: effectiveSubclassName,
     ),
     currentLevel: effectiveClassLevel,
     currentMaxHp: detail.maxHp,

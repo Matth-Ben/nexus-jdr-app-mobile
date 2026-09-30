@@ -199,6 +199,10 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// "invocation"), jamais relues par `fetchCharacterDetail`.
     @Default(<String>[]) List<String> knownInvocationNames,
 
+    /// Noms (FR) des dons possédés (`character_feats`) — sert notamment au
+    /// bonus de PV du don Robuste (`HitPointBonusRules`).
+    @Default(<String>[]) List<String> featNames,
+
     /// Forme courante de l'arme de pacte (`character_pact_weapons`, Pacte de
     /// la lame), `null` si aucune forme n'a été choisie — ou pour un ancien
     /// cache hors-ligne écrit avant l'introduction de cette donnée. Lue

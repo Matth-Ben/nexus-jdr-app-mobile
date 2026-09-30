@@ -13,6 +13,7 @@ import '../domain/class_catalog.dart';
 import '../domain/class_option.dart';
 import '../domain/equipment_choice_tab.dart';
 import '../domain/final_ability_scores_resolver.dart';
+import '../../characters/domain/hit_point_bonus_rules.dart';
 import '../domain/hit_points_calculator.dart';
 import '../domain/item_catalog.dart';
 import '../domain/language_catalog.dart';
@@ -906,10 +907,35 @@ class SupabaseCharacterCreationRepository
     final constitutionModifier = AbilityScoreRules.abilityModifier(
       finalAbilityScores['con'] ?? 10,
     );
-    final maxHp = HitPointsCalculator.maxHpAtLevel1(
-      hitDie: classOption.hitDie,
-      constitutionModifier: constitutionModifier,
-    );
+    String? subraceName;
+    for (final subrace in raceCatalog.subraces) {
+      if (subrace.id == draft.subraceId) subraceName = subrace.name;
+    }
+    // Sous-classe de niveau 1 (Ensorceleur) : seul son nom compte ici, pour
+    // la Résilience draconique.
+    String? subclassName;
+    if (classOption.name == HitPointBonusRules.sorcererClassName &&
+        draft.subclassId != null) {
+      final rows = await _client
+          .from('translations')
+          .select('value')
+          .eq('entity_type', 'subclass')
+          .eq('entity_id', '${draft.subclassId}')
+          .eq('field_name', 'name')
+          .eq('locale', 'fr');
+      subclassName = rows.firstOrNull?['value'] as String?;
+    }
+    final maxHp =
+        HitPointsCalculator.maxHpAtLevel1(
+          hitDie: classOption.hitDie,
+          constitutionModifier: constitutionModifier,
+        ) +
+        HitPointBonusRules.perLevelBonus(
+          subraceName: subraceName,
+          hasToughFeat: false,
+          levelingClassName: classOption.name,
+          levelingSubclassName: subclassName,
+        );
 
     final equipmentResolution = CharacterCreationEquipmentResolver.resolve(
       tab: draft.equipmentChoiceTab ?? EquipmentChoiceTab.background,
