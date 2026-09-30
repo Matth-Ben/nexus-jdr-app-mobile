@@ -33,11 +33,10 @@ Groupes :
 • Touche le code d'invitation pour le copier
 • Touche un membre pour voir sa fiche complète (en lecture seule)
 • Butin : sélectionne plusieurs objets du catalogue d'un coup avant de les ajouter
-Classe d'armure :
-• Armure et bouclier de départ équipés automatiquement à la création
-• Défense sans armure (Barbare, Moine), Résilience draconique et style Défense pris en compte
-Bonus raciaux au choix à la création ; PV corrigés (Constitution, Nain des collines, don Robuste)
-Équipement de départ de classe (options 2024) à la création
+Fiche et création :
+• CA corrigée (armure équipée d'office, Défense sans armure, style Défense)
+• Équipement de départ de classe, bonus raciaux au choix
+• PV corrigés (Constitution, Nain des collines, don Robuste)
 </fr-FR>
 ```
 
