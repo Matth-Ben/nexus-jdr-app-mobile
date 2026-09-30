@@ -33,6 +33,9 @@ Groupes :
 • Touche le code d'invitation pour le copier
 • Touche un membre pour voir sa fiche complète (en lecture seule)
 • Butin : sélectionne plusieurs objets du catalogue d'un coup avant de les ajouter
+Classe d'armure :
+• Armure et bouclier de départ équipés automatiquement à la création
+• Défense sans armure (Barbare, Moine), Résilience draconique et style Défense pris en compte
 </fr-FR>
 ```
 
@@ -49,6 +52,15 @@ Groupes :
   toucher, avec confirmation.
 - Onglet Membres : le texte de confidentialité annonce que les membres
   voient la fiche complète des autres, en lecture seule.
+
+### Corrigé
+- Classe d'armure : la première armure et le premier bouclier de
+  l'équipement de départ sont équipés à la création (sauf pour le Moine) —
+  auparavant rien n'était équipé et la CA restait à 10 + Dex.
+- Classe d'armure : prise en compte de la Défense sans armure du Barbare
+  (10 + Dex + Con) et du Moine (10 + Dex + Sag, sans bouclier), de la
+  Résilience draconique (13 + Dex) et du style de combat Défense (+1 en
+  armure).
 
 ---
 

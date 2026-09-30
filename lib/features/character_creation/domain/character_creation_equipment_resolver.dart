@@ -6,10 +6,15 @@ import 'equipment_step_selection.dart';
 import 'item_catalog.dart';
 
 /// Une ligne prête pour `character_inventory` (`item_id` nullable +
-/// `custom_name`, `quantity` — `equipped`/`notes` sont des constantes à
+/// `custom_name`, `quantity`, `equipped` — `notes` est une constante à
 /// l'écriture, voir `data/character_creation_repository.dart`), produite par
 /// [CharacterCreationEquipmentResolver.resolve].
-typedef InventoryLineDraft = ({int? itemId, String? customName, int quantity});
+typedef InventoryLineDraft = ({
+  int? itemId,
+  String? customName,
+  int quantity,
+  bool equipped,
+});
 
 /// Résout l'équipement de départ ET la devise `characters.currency_gp` selon
 /// l'onglet retenu à l'étape 7/9 (`CharacterCreationDraft.equipmentChoiceTab`),
@@ -22,12 +27,23 @@ typedef InventoryLineDraft = ({int? itemId, String? customName, int quantity});
 /// "Bourse" de l'historique choisi à l'étape 3/9 (décision déjà actée à
 /// l'étape 7/9, voir `presentation/equipment_step_screen.dart`) : [resolve]
 /// a donc toujours besoin de [backgroundOption], même sur cet onglet.
+///
+/// Armure et bouclier de départ équipés d'office (voir [_withStartingGearEquipped]) :
+/// sans cela, la Classe d'Armure d'un personnage fraîchement créé restait à
+/// `10 + Dex` tant que le joueur n'avait pas équipé son armure à la main
+/// depuis l'inventaire (`domain/armor_class_calculator.dart`).
 abstract final class CharacterCreationEquipmentResolver {
+  /// Nom de classe (FR, `translations`) du Moine : ses aptitudes Défense
+  /// sans armure et Arts martiaux exigent de ne porter ni armure ni
+  /// bouclier, rien n'est donc équipé d'office pour lui.
+  static const String monkClassName = 'Moine';
+
   static ({List<InventoryLineDraft> inventory, int currencyGp}) resolve({
     required EquipmentChoiceTab tab,
     required BackgroundOption backgroundOption,
     required Map<String, int> purchasedEquipment,
     required ItemCatalog itemCatalog,
+    String? className,
   }) {
     final startingGold =
         BackgroundEquipmentParser.extractStartingGold(
@@ -35,19 +51,59 @@ abstract final class CharacterCreationEquipmentResolver {
         ) ??
         0;
 
-    if (tab == EquipmentChoiceTab.purchase) {
-      return _resolvePurchase(
-        purchasedEquipment: purchasedEquipment,
-        itemCatalog: itemCatalog,
-        startingGold: startingGold,
-      );
-    }
-    return _resolveBackground(
-      backgroundOption: backgroundOption,
-      itemCatalog: itemCatalog,
-      startingGold: startingGold,
+    final resolution = tab == EquipmentChoiceTab.purchase
+        ? _resolvePurchase(
+            purchasedEquipment: purchasedEquipment,
+            itemCatalog: itemCatalog,
+            startingGold: startingGold,
+          )
+        : _resolveBackground(
+            backgroundOption: backgroundOption,
+            itemCatalog: itemCatalog,
+            startingGold: startingGold,
+          );
+    if (className == monkClassName) return resolution;
+    return (
+      inventory: _withStartingGearEquipped(resolution.inventory, itemCatalog),
+      currencyGp: resolution.currencyGp,
     );
   }
+
+  /// Marque comme équipés la première armure (`category = 'armure'`) et le
+  /// premier bouclier (`category = 'bouclier'`) de [inventory] — une seule
+  /// armure et un seul bouclier comptent pour la CA (voir
+  /// `ArmorClassCalculator`), les suivants restent dans le sac.
+  static List<InventoryLineDraft> _withStartingGearEquipped(
+    List<InventoryLineDraft> inventory,
+    ItemCatalog itemCatalog,
+  ) {
+    final categoryById = {
+      for (final item in itemCatalog.items) item.id: item.category,
+    };
+    var armorEquipped = false;
+    var shieldEquipped = false;
+    return [
+      for (final line in inventory)
+        switch (categoryById[line.itemId]) {
+          'armure' when !armorEquipped => () {
+            armorEquipped = true;
+            return _equipped(line);
+          }(),
+          'bouclier' when !shieldEquipped => () {
+            shieldEquipped = true;
+            return _equipped(line);
+          }(),
+          _ => line,
+        },
+    ];
+  }
+
+  static InventoryLineDraft _equipped(InventoryLineDraft line) => (
+    itemId: line.itemId,
+    customName: line.customName,
+    quantity: line.quantity,
+    equipped: true,
+  );
 
   /// Onglet "Historique" : réutilise `BackgroundEquipmentResolver` (étape
   /// 7/9) tel quel, une ligne `character_inventory` par entrée résolue
@@ -76,6 +132,7 @@ abstract final class CharacterCreationEquipmentResolver {
           itemId: entry.itemId,
           customName: entry.itemId == null ? entry.name : null,
           quantity: 1,
+          equipped: false,
         ),
     ];
 
@@ -101,7 +158,12 @@ abstract final class CharacterCreationEquipmentResolver {
     for (final entry in purchasedEquipment.entries) {
       final item = itemByName[entry.key];
       if (item == null) continue;
-      inventory.add((itemId: item.id, customName: null, quantity: entry.value));
+      inventory.add((
+        itemId: item.id,
+        customName: null,
+        quantity: entry.value,
+        equipped: false,
+      ));
     }
 
     final spent = EquipmentStepSelection.totalCost(

@@ -174,4 +174,92 @@ void main() {
       expect(result.currencyGp, 15);
     });
   });
+
+  group('armure et bouclier équipés d\'office', () {
+    const cuir = ItemOption(
+      id: 10,
+      name: 'Armure de cuir',
+      category: 'armure',
+      costAmount: 10,
+    );
+    const cotte = ItemOption(
+      id: 11,
+      name: 'Cotte de mailles',
+      category: 'armure',
+      costAmount: 75,
+    );
+    const bouclier = ItemOption(
+      id: 12,
+      name: 'Bouclier',
+      category: 'bouclier',
+      costAmount: 10,
+    );
+    final armoryCatalog = ItemCatalog(
+      items: [...catalog.items, cuir, cotte, bouclier],
+    );
+    const riche = BackgroundOption(
+      id: 3,
+      name: 'Riche',
+      skillProficiencies: [],
+      featureName: '',
+      featureDescription: '',
+      equipment: ['Bourse (200 po)'],
+    );
+
+    bool equippedOf(List<InventoryLineDraft> inventory, int itemId) =>
+        inventory.firstWhere((line) => line.itemId == itemId).equipped;
+
+    test('première armure et premier bouclier équipés, le reste non', () {
+      final result = CharacterCreationEquipmentResolver.resolve(
+        tab: EquipmentChoiceTab.purchase,
+        backgroundOption: riche,
+        purchasedEquipment: const {
+          'Armure de cuir': 1,
+          'Cotte de mailles': 1,
+          'Bouclier': 1,
+          'Dague': 1,
+        },
+        itemCatalog: armoryCatalog,
+        className: 'Guerrier',
+      );
+
+      expect(equippedOf(result.inventory, cuir.id), isTrue);
+      expect(equippedOf(result.inventory, cotte.id), isFalse);
+      expect(equippedOf(result.inventory, bouclier.id), isTrue);
+      expect(equippedOf(result.inventory, dague.id), isFalse);
+    });
+
+    test('Moine : rien n\'est équipé (Défense sans armure)', () {
+      final result = CharacterCreationEquipmentResolver.resolve(
+        tab: EquipmentChoiceTab.purchase,
+        backgroundOption: riche,
+        purchasedEquipment: const {'Armure de cuir': 1, 'Bouclier': 1},
+        itemCatalog: armoryCatalog,
+        className: CharacterCreationEquipmentResolver.monkClassName,
+      );
+
+      expect(result.inventory.every((line) => !line.equipped), isTrue);
+    });
+
+    test('onglet Historique : l\'armure de l\'historique est équipée', () {
+      const soldat = BackgroundOption(
+        id: 4,
+        name: 'Soldat',
+        skillProficiencies: [],
+        featureName: '',
+        featureDescription: '',
+        equipment: ['Armure de cuir', 'Dague', 'Bourse (10 po)'],
+      );
+
+      final result = CharacterCreationEquipmentResolver.resolve(
+        tab: EquipmentChoiceTab.background,
+        backgroundOption: soldat,
+        purchasedEquipment: const {},
+        itemCatalog: armoryCatalog,
+      );
+
+      expect(equippedOf(result.inventory, cuir.id), isTrue);
+      expect(equippedOf(result.inventory, dague.id), isFalse);
+    });
+  });
 }
