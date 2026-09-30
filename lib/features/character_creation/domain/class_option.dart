@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'class_skill_choices.dart';
+import 'class_starting_equipment.dart';
 import 'class_tool_choice.dart';
 
 part 'class_option.freezed.dart';
@@ -65,6 +66,12 @@ abstract class ClassOption with _$ClassOption {
     /// chaînes plutôt qu'un objet `{"count", "type"}` — voir le commentaire
     /// de classe pour le détail. Vide dans tous les autres cas.
     @Default(<String>[]) List<String> grantedToolNames,
+
+    /// Options d'équipement de départ (`classes.starting_equipment`, règles
+    /// 2024), choisies à l'étape 7/9 — voir `class_starting_equipment.dart`.
+    /// Vide si la colonne est absente (cache antérieur).
+    @Default(<ClassEquipmentOption>[])
+    List<ClassEquipmentOption> startingEquipment,
   }) = _ClassOption;
 
   /// Ligne de résumé affichée sous le nom ("Lanceur de sorts érudit · dé de

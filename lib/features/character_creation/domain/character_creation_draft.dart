@@ -125,6 +125,11 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// qui est effectivement retenu à l'étape 9.
     @Default(<String, int>{}) Map<String, int> purchasedEquipment,
 
+    /// Option d'équipement de départ de classe retenue à l'étape 7 ("A",
+    /// "B"...), voir `domain/class_starting_equipment.dart` — `null` = option
+    /// A par défaut. Effacée quand la classe change.
+    String? classEquipmentOption,
+
     /// Les 9 champs texte libres de l'étape 8 "Apparence, histoire et
     /// portrait" (`presentation/appearance_and_backstory_step_screen.dart`),
     /// tous optionnels — `null` tant que le champ n'a jamais été renseigné.

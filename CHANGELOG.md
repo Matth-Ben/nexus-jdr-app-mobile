@@ -37,6 +37,7 @@ Classe d'armure :
 • Armure et bouclier de départ équipés automatiquement à la création
 • Défense sans armure (Barbare, Moine), Résilience draconique et style Défense pris en compte
 Bonus raciaux au choix à la création ; PV corrigés (Constitution, Nain des collines, don Robuste)
+Équipement de départ de classe (options 2024) à la création
 </fr-FR>
 ```
 
@@ -69,6 +70,10 @@ Bonus raciaux au choix à la création ; PV corrigés (Constitution, Nain des co
   ses PV rétroactivement ; bonus du Nain des collines (+1/niveau), du don
   Robuste (+2/niveau, rétroactif) et de la Résilience draconique (+1/niveau
   d'Ensorceleur).
+- Équipement de départ : l'étape 7 propose l'équipement de classe (règles
+  2024 : option A objets + or, option B or seul) en plus de celui de
+  l'historique ; l'armure et le bouclier de classe sont équipés d'office et
+  l'or de classe s'ajoute au budget d'achat.
 
 ---
 

@@ -14,6 +14,7 @@ import '../../domain/background_option.dart';
 import '../../domain/character_creation_failure.dart';
 import '../../domain/class_catalog.dart';
 import '../../domain/class_option.dart';
+import '../../domain/class_starting_equipment.dart';
 import '../../domain/item_catalog.dart';
 import '../../domain/language_catalog.dart';
 import '../../domain/race_catalog.dart';
@@ -239,6 +240,10 @@ typedef EquipmentStepData = ({
   ItemCatalog itemCatalog,
   int startingGold,
   List<BackgroundEquipmentEntry> historyEquipment,
+
+  /// Options d'équipement de départ de la classe choisie à l'étape 2 (vide
+  /// si la classe n'en a pas) — voir `domain/class_starting_equipment.dart`.
+  List<ClassEquipmentOption> classEquipmentOptions,
 });
 
 @Riverpod(retry: _noRetry)
@@ -269,11 +274,20 @@ Future<EquipmentStepData> equipmentStepData(Ref ref) async {
     catalog: itemCatalog,
   );
 
+  final classCatalog = await ref.watch(classCatalogProvider.future);
+  var classEquipmentOptions = const <ClassEquipmentOption>[];
+  for (final option in classCatalog.classes) {
+    if (option.id == draft.classId) {
+      classEquipmentOptions = option.startingEquipment;
+    }
+  }
+
   return (
     backgroundOption: backgroundOption,
     itemCatalog: itemCatalog,
     startingGold: startingGold,
     historyEquipment: historyEquipment,
+    classEquipmentOptions: classEquipmentOptions,
   );
 }
 

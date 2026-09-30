@@ -1,5 +1,6 @@
 import '../domain/class_option.dart';
 import '../domain/class_skill_choices.dart';
+import '../domain/class_starting_equipment.dart';
 import '../domain/class_tool_choice.dart';
 import '../domain/skill_ability_mapping.dart';
 
@@ -69,6 +70,7 @@ abstract final class ClassRowMapper {
       skillChoices: parseSkillChoices(row['skill_choices']),
       toolChoice: parseToolChoice(row['tool_proficiencies']),
       grantedToolNames: parseGrantedToolNames(row['tool_proficiencies']),
+      startingEquipment: ClassEquipmentOption.parse(row['starting_equipment']),
     );
   }
 
