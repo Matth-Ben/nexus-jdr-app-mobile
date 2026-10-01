@@ -780,7 +780,7 @@ final class EquipmentStepDataProvider
   }
 }
 
-String _$equipmentStepDataHash() => r'3df34622f7dab34840e102fd86348fdc7858e453';
+String _$equipmentStepDataHash() => r'bc70b7eb4932e272f9695d6186bdbdbf9c7f03b1';
 
 /// Catalogue des 18 compétences de l'étape 9/9 "Récapitulatif", exposé à
 /// `SummaryStepScreen` — même rationale que [toolCatalog] (`autoDispose`,
