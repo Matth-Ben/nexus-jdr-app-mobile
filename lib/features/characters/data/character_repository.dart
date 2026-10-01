@@ -2905,11 +2905,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
             'feat_id': choice.featId,
             'level_taken': level,
           });
-          final featName = (await _fetchTranslationRows(
-            entityType: 'feat',
-            fieldName: 'name',
-            entityIds: {'${choice.featId}'},
-          )).firstOrNull?['value'] as String?;
+          final featName =
+              (await _fetchTranslationRows(
+                    entityType: 'feat',
+                    fieldName: 'name',
+                    entityIds: {'${choice.featId}'},
+                  )).firstOrNull?['value']
+                  as String?;
           final abilityHp = await _applyFeatAbilityIncrease(
             characterId: characterId,
             featId: choice.featId!,
