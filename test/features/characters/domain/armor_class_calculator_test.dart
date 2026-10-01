@@ -140,4 +140,96 @@ void main() {
       expect(ac, 10);
     });
   });
+
+  group('ArmorClassCalculator.compute — aptitudes de classe', () {
+    const barbarianScores = {'dex': 14, 'con': 16, 'wis': 10}; // +2 / +3
+
+    test('Barbare sans armure : 10 + Dex + Con', () {
+      final ac = ArmorClassCalculator.compute(
+        abilityScores: barbarianScores,
+        inventory: const [],
+        classNames: {ArmorClassCalculator.barbarianClassName},
+      );
+      expect(ac, 15);
+    });
+
+    test('Barbare sans armure garde son bouclier', () {
+      final ac = ArmorClassCalculator.compute(
+        abilityScores: barbarianScores,
+        inventory: [_shield(equipped: true)],
+        classNames: {ArmorClassCalculator.barbarianClassName},
+      );
+      expect(ac, 17);
+    });
+
+    test('Barbare en armure : la Défense sans armure ne s\'applique plus', () {
+      final ac = ArmorClassCalculator.compute(
+        abilityScores: barbarianScores,
+        inventory: [_armor(equipped: true, acBase: 12, acDexBonus: 'max_2')],
+        classNames: {ArmorClassCalculator.barbarianClassName},
+      );
+      expect(ac, 14);
+    });
+
+    test('Moine sans armure ni bouclier : 10 + Dex + Sag', () {
+      final ac = ArmorClassCalculator.compute(
+        abilityScores: const {'dex': 16, 'wis': 14}, // +3 / +2
+        inventory: const [],
+        classNames: {ArmorClassCalculator.monkClassName},
+      );
+      expect(ac, 15);
+    });
+
+    test('Moine avec bouclier : perd la Défense sans armure', () {
+      final ac = ArmorClassCalculator.compute(
+        abilityScores: const {'dex': 16, 'wis': 14},
+        inventory: [_shield(equipped: true)],
+        classNames: {ArmorClassCalculator.monkClassName},
+      );
+      expect(ac, 15); // 10 + 3 (dex) + 2 (bouclier), sans la Sagesse
+    });
+
+    test('Barbare/Moine multiclassé : la meilleure Défense sans armure', () {
+      final ac = ArmorClassCalculator.compute(
+        abilityScores: const {'dex': 14, 'con': 12, 'wis': 18}, // +2/+1/+4
+        inventory: const [],
+        classNames: {
+          ArmorClassCalculator.barbarianClassName,
+          ArmorClassCalculator.monkClassName,
+        },
+      );
+      expect(ac, 16); // 10 + 2 + 4 (Moine) > 10 + 2 + 1 (Barbare)
+    });
+
+    test('Ensorceleur du Lignage draconique sans armure : 13 + Dex', () {
+      final ac = ArmorClassCalculator.compute(
+        abilityScores: const {'dex': 14},
+        inventory: const [],
+        classNames: {'Ensorceleur'},
+        subclassNames: {ArmorClassCalculator.draconicSubclassName},
+      );
+      expect(ac, 15);
+    });
+
+    test('style de combat Défense : +1 en armure', () {
+      final ac = ArmorClassCalculator.compute(
+        abilityScores: const {'dex': 10},
+        inventory: [
+          _armor(equipped: true, acBase: 16, acDexBonus: 'aucun'),
+          _shield(equipped: true),
+        ],
+        fightingStyles: {ArmorClassCalculator.defenseFightingStyle},
+      );
+      expect(ac, 19);
+    });
+
+    test('style de combat Défense : aucun effet sans armure', () {
+      final ac = ArmorClassCalculator.compute(
+        abilityScores: const {'dex': 14},
+        inventory: const [],
+        fightingStyles: {ArmorClassCalculator.defenseFightingStyle},
+      );
+      expect(ac, 12);
+    });
+  });
 }

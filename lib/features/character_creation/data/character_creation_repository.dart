@@ -915,6 +915,7 @@ class SupabaseCharacterCreationRepository
       backgroundOption: backgroundOption,
       purchasedEquipment: draft.purchasedEquipment,
       itemCatalog: itemCatalog,
+      className: classOption.name,
     );
 
     String? characterId;
@@ -1076,7 +1077,7 @@ class SupabaseCharacterCreationRepository
               'item_id': line.itemId,
               'custom_name': line.customName,
               'quantity': line.quantity,
-              'equipped': false,
+              'equipped': line.equipped,
               'notes': null,
             },
         ]);

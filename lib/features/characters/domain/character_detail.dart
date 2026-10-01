@@ -376,6 +376,9 @@ abstract class CharacterDetail with _$CharacterDetail {
   int get armorClass => ArmorClassCalculator.compute(
     abilityScores: abilityScores,
     inventory: inventory,
+    classNames: {for (final row in classes) row.className},
+    subclassNames: {for (final row in classes) ?row.subclassName},
+    fightingStyles: {for (final choice in classChoices) choice.chosenValue},
   );
 
   /// Bonus d'initiative (D&D 5e : modificateur de Dextérité), calculé à la
