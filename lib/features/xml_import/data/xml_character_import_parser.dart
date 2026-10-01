@@ -69,6 +69,7 @@ abstract final class XmlCharacterImportParser {
     final raw = XmlCharacterImportRaw(
       race: race,
       raceCustom: _optionalText(character, 'raceCustom'),
+      scoresIncludeRacialBonuses: _int(character, 'nexusFinalScores') == 1,
       characterClass: characterClass,
       classPath: _optionalText(character, 'classPath'),
       level: _int(character, 'level') ?? 1,

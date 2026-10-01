@@ -23,6 +23,7 @@ import '../../domain/xml_character_import_resolver.dart';
 import '../../domain/xml_field_resolution.dart';
 import '../../domain/xml_import_parse_result.dart';
 import '../../domain/xml_name_resolver.dart';
+import '../../domain/xml_race_resolver.dart';
 
 part 'xml_import_providers.g.dart';
 
@@ -193,12 +194,28 @@ class XmlImportReviewController extends _$XmlImportReviewController {
   void correctRace(String name) {
     final current = state.value;
     if (current == null) return;
-    final match = XmlNameResolver.resolveByName(
+    // [name] peut désigner une sous-race (« Elfe — Haut-elfe », voir
+    // `XmlRaceResolver.labelOf`) : race et sous-race sont résolues ensemble,
+    // et les bonus raciaux au choix de l'ancienne race sont oubliés.
+    final match = XmlRaceResolver.resolve(
       rawName: name,
-      candidates: current.raceCatalog.races,
-      nameOf: (race) => race.name,
+      catalog: current.raceCatalog,
     );
-    _updateResolved(current.resolved.copyWith(race: match));
+    _updateResolved(
+      current.resolved.copyWith(
+        race: match.race,
+        subrace: match.subrace,
+        racialBonusChoices: const {},
+      ),
+    );
+  }
+
+  /// Bonus raciaux au choix répartis par l'utilisateur (carte « Bonus racial
+  /// au choix » de l'écran de vérification, voir `racial_bonus_choice.dart`).
+  void setRacialBonusChoices(Map<String, int> choices) {
+    final current = state.value;
+    if (current == null) return;
+    _updateResolved(current.resolved.copyWith(racialBonusChoices: choices));
   }
 
   void correctClass(String name) {
@@ -344,6 +361,8 @@ class XmlImportReviewController extends _$XmlImportReviewController {
     _updateResolved(
       current.resolved.copyWith(
         race: XmlFieldResolution<RaceOption>.recognized(option),
+        subrace: null,
+        racialBonusChoices: const {},
       ),
     );
   }

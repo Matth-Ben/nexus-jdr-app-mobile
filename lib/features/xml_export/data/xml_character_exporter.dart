@@ -56,7 +56,10 @@ import '../domain/aidedd_reverse_tables.dart';
 ///   reconstruire quoi que ce soit (`resolved.abilityScores` vient
 ///   directement de `raw.abilityScores`, jamais d'un recalcul depuis
 ///   `levels[].abilityIncreases`).
-/// - **Sous-classe** (`<classPath>`), **style de combat**
+/// - **Sous-classe** (`<classPath>`) : exportée depuis la classe primaire
+///   (`CharacterDetailClassRow.subclassName`), et **sous-race** écrite dans
+///   `<race>` à la place de la race.
+/// - **Style de combat**
 ///   (`<styleCombat1/2>`), **ennemis favoris** (`<favoredEnemy0/6/14>`),
 ///   **historique personnalisé** (`<backSpe>`), **paquetage de départ**
 ///   (`<pack>`), **invocations occultistes connues** (`<knownInvocation>`) :
@@ -182,18 +185,27 @@ abstract final class XmlCharacterExporter {
     // nom au réimport — voir `XmlCharacterImportRaw.raceCustom`) : `<race>`
     // ressortira alors `unrecognized` au réimport, cohérent avec le fait que
     // ce texte n'a jamais été un nom de race du catalogue.
-    final raceName = detail.raceName;
+    //
+    // Sous-race : écrite à la place de la race (« Haut-elfe »), comme le fait
+    // aidedd.org — `XmlRaceResolver` en déduit race et sous-race au réimport.
+    final raceName = detail.subraceName ?? detail.raceName;
     final raceCustomText = detail.raceCustomText;
     builder.element('race', nest: raceName ?? raceCustomText ?? '');
     if (raceCustomText != null && raceCustomText.isNotEmpty) {
       builder.element('raceCustom', nest: raceCustomText);
     }
+    // Balise propre à l'app : les scores exportés incluent déjà les bonus
+    // raciaux (et les PV maximum leurs bonus) — le réimport ne doit pas les
+    // ajouter une seconde fois, contrairement à un export aidedd.org (scores
+    // de base). Voir `XmlCharacterImportRaw.scoresIncludeRacialBonuses`.
+    builder.element('nexusFinalScores', nest: '1');
 
     final primaryClass = detail.primaryClass;
     builder.element('class', nest: primaryClass?.className ?? '');
-    // `<classPath>` (sous-classe) jamais exporté : voir la documentation de
-    // classe ("gap de lecture", `character_classes.subclass_id` n'est jamais
-    // renvoyé par `fetchCharacterDetail`).
+    final subclassName = primaryClass?.subclassName;
+    if (subclassName != null && subclassName.isNotEmpty) {
+      builder.element('classPath', nest: subclassName);
+    }
     builder.element(
       'level',
       nest: (primaryClass?.level ?? math.max(detail.totalLevel, 1)).toString(),

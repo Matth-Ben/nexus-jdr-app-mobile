@@ -11,6 +11,7 @@ import 'xml_coded_field_resolver.dart';
 import 'xml_field_resolution.dart';
 import 'xml_name_resolver.dart';
 import 'xml_named_option.dart';
+import 'xml_race_resolver.dart';
 
 /// Résout un [XmlCharacterImportRaw] (sortie pure de
 /// `data/xml_character_import_parser.dart`) en [XmlCharacterImportResolved]
@@ -48,13 +49,17 @@ abstract final class XmlCharacterImportResolver {
     List<XmlNamedOption> invocationCandidates = const [],
   }) {
     final classPath = raw.classPath?.trim();
+    // Race ET sous-race : `<race>` contient souvent la sous-race
+    // (« Haut-elfe »), voir `XmlRaceResolver`.
+    final raceResolution = XmlRaceResolver.resolve(
+      rawName: raw.race,
+      catalog: raceCatalog,
+    );
 
     return XmlCharacterImportResolved(
-      race: XmlNameResolver.resolveByName(
-        rawName: raw.race,
-        candidates: raceCatalog.races,
-        nameOf: (race) => race.name,
-      ),
+      race: raceResolution.race,
+      subrace: raceResolution.subrace,
+      scoresIncludeRacialBonuses: raw.scoresIncludeRacialBonuses,
       raceCustomText: raw.raceCustom,
       characterClass: XmlNameResolver.resolveByName(
         rawName: raw.characterClass,

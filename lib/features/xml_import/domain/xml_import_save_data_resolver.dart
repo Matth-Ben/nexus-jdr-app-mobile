@@ -7,6 +7,7 @@ import '../../character_creation/domain/language_option.dart';
 import '../../character_creation/domain/skill_catalog.dart';
 import '../../character_creation/domain/skill_option.dart';
 import '../../character_creation/domain/tool_option.dart';
+import '../../characters/domain/hit_point_bonus_rules.dart';
 import 'aidedd_reference_tables.dart';
 import 'xml_character_import_resolved.dart';
 import 'xml_field_resolution.dart';
@@ -54,17 +55,44 @@ abstract final class XmlImportSaveDataResolver {
     required SkillCatalog skillCatalog,
     required AlignmentCatalog alignmentCatalog,
   }) {
-    final constitutionModifier = AbilityScoreRules.abilityModifier(
-      resolved.abilityScores['con'] ?? 10,
-    );
-    final maxHp = XmlImportHitPointsCalculator.computeMaxHp(
-      levels: resolved.levels,
-      constitutionModifier: constitutionModifier,
-    );
-
     final raceValue = _recognizedValue(resolved.race);
     final classValue = _recognizedValue(resolved.characterClass);
     final backgroundValue = _recognizedValue(resolved.background);
+    // Une sous-race n'a de sens qu'avec sa race reconnue.
+    final subrace =
+        raceValue != null && resolved.subrace?.raceId == raceValue.id
+        ? resolved.subrace
+        : null;
+
+    final abilityScores = finalAbilityScores(
+      resolved: resolved,
+      raceBonuses: raceValue?.abilityBonuses,
+      subraceBonuses: subrace?.abilityBonuses,
+    );
+    final constitutionModifier = AbilityScoreRules.abilityModifier(
+      abilityScores['con'] ?? 10,
+    );
+    final subclassName = switch (resolved.subclass) {
+      XmlFieldResolutionRecognized(:final value) => value.name,
+      XmlFieldResolutionUnrecognized(:final rawValue) => rawValue,
+      _ => null,
+    };
+    // Export de l'app : PV maximum déjà définitifs (bonus compris), voir
+    // `xml_character_exporter.dart::_writeLevels`.
+    final hpBonusPerLevel = resolved.scoresIncludeRacialBonuses
+        ? 0
+        : HitPointBonusRules.perLevelBonus(
+            subraceName: subrace?.name,
+            hasToughFeat: false,
+            levelingClassName: classValue?.name ?? '',
+            levelingSubclassName: subclassName,
+          );
+    final maxHp =
+        XmlImportHitPointsCalculator.computeMaxHp(
+          levels: resolved.levels,
+          constitutionModifier: constitutionModifier,
+        ) +
+        resolved.level * hpBonusPerLevel;
 
     final sexeLabel = _labelOf(resolved.sexe) ?? 'Non renseigné';
 
@@ -75,6 +103,7 @@ abstract final class XmlImportSaveDataResolver {
 
     return (
       raceId: raceValue?.id,
+      subraceId: subrace?.id,
       raceCustomText: resolved.raceCustomText,
       backgroundId: backgroundValue?.id,
       backgroundCustomText: resolved.backgroundCustomText,
@@ -104,7 +133,7 @@ abstract final class XmlImportSaveDataResolver {
       currencyCp: resolved.cp,
       classId: classValue?.id,
       level: resolved.level,
-      abilityScores: resolved.abilityScores,
+      abilityScores: abilityScores,
       levelHp: [
         for (final entry in resolved.levels)
           if (entry.hpBrut > 0) (level: entry.level, hpRolled: entry.hpBrut),
@@ -170,6 +199,31 @@ abstract final class XmlImportSaveDataResolver {
       for (final id in toolIds) (toolId: id, customText: null),
       for (final text in customTexts) (toolId: null, customText: text),
     ];
+  }
+
+  /// Scores de caractéristiques à enregistrer : ceux du XML tels quels pour
+  /// un export de l'app (`scoresIncludeRacialBonuses`), sinon (export
+  /// aidedd.org, scores de base) + bonus raciaux fixes de la race et de la
+  /// sous-race + bonus au choix répartis sur l'écran de vérification.
+  static Map<String, int> finalAbilityScores({
+    required XmlCharacterImportResolved resolved,
+    required Map<String, dynamic>? raceBonuses,
+    required Map<String, dynamic>? subraceBonuses,
+  }) {
+    if (resolved.scoresIncludeRacialBonuses) return resolved.abilityScores;
+    int fixedBonus(Map<String, dynamic>? bonuses, String key) {
+      final value = bonuses?[key];
+      return value is num ? value.toInt() : 0;
+    }
+
+    return {
+      for (final entry in resolved.abilityScores.entries)
+        entry.key:
+            entry.value +
+            fixedBonus(raceBonuses, entry.key) +
+            fixedBonus(subraceBonuses, entry.key) +
+            (resolved.racialBonusChoices[entry.key] ?? 0),
+    };
   }
 
   static T? _recognizedValue<T>(XmlFieldResolution<T> resolution) {

@@ -280,6 +280,23 @@ qu'un champ correctement flagué "à corriger manuellement". Le champ doit
 rester visible et corrigeable manuellement dans l'écran de vérification,
 exactement comme un ID d'objet/arme non reconnu.
 
+## Sous-race et scores de caractéristiques (2026-10-01)
+
+- **Sous-race** : le XML n'a pas de champ dédié, `<race>` contient souvent la
+  sous-race (« Haut-elfe », « Nain des collines », « Drow ») ou les deux
+  (« Elfe (haut-elfe) »). `XmlRaceResolver` en déduit race **et** sous-race
+  (nom exact, alias entre parenthèses, puis correspondance par mots) ;
+  `characters.subrace_id` est désormais renseigné.
+- **Scores** : un export aidedd.org donne les scores **de base**, avant bonus
+  raciaux (les deux fixtures réelles coûtent exactement 27 points d'achat).
+  L'import ajoute les bonus fixes de la race et de la sous-race, et demande
+  la répartition des bonus au choix (Demi-elfe, races à bonus flexibles) sur
+  l'écran de vérification. Les PV maximum reçoivent les bonus par niveau
+  (Nain des collines, Lignage draconique).
+- **Export de l'app** : balise propre `<nexusFinalScores>1</nexusFinalScores>`
+  — scores et PV déjà définitifs, rien n'est ajouté au réimport. L'export
+  écrit aussi la sous-race dans `<race>` et la sous-classe dans `<classPath>`.
+
 ## Point encore ouvert : `raceCustom`
 
 Solan a `<raceCustom>1</raceCustom>` bien que « Aasimar » soit une race

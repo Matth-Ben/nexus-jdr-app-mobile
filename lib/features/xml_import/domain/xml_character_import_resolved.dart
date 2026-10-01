@@ -5,6 +5,7 @@ import '../../character_creation/domain/class_option.dart';
 import '../../character_creation/domain/language_option.dart';
 import '../../character_creation/domain/race_option.dart';
 import '../../character_creation/domain/spell_option.dart';
+import '../../character_creation/domain/subrace_option.dart';
 import '../../character_creation/domain/tool_option.dart';
 import 'xml_field_resolution.dart';
 import 'xml_named_option.dart';
@@ -52,6 +53,22 @@ abstract class XmlCharacterImportResolved with _$XmlCharacterImportResolved {
     /// `<raceCustom>` — jamais résolu par nom (voir `XmlCharacterImportRaw
     /// .raceCustom`), passé tel quel pour affichage informatif éventuel.
     String? raceCustomText,
+
+    /// Sous-race identifiée dans `<race>` (« Haut-elfe », « Elfe
+    /// (haut-elfe) »...) par `XmlRaceResolver`, `null` si le texte désigne
+    /// une race seule ou si la race n'est pas reconnue.
+    SubraceOption? subrace,
+
+    /// Bonus raciaux au choix répartis sur l'écran de vérification (Demi-elfe,
+    /// races à bonus flexibles — voir `racial_bonus_choice.dart`) : un export
+    /// aidedd.org ne précise pas ce choix.
+    @Default(<String, int>{}) Map<String, int> racialBonusChoices,
+
+    /// `true` si les scores du XML incluent déjà les bonus raciaux (export
+    /// de l'app, balise `<nexusFinalScores>`) ; `false` pour un export
+    /// aidedd.org, qui donne les scores de base — les bonus raciaux sont
+    /// alors ajoutés à l'enregistrement.
+    @Default(false) bool scoresIncludeRacialBonuses,
     required XmlFieldResolution<ClassOption> characterClass,
 
     /// `null` si `<classPath>` est absent/vide du XML (personnage n'ayant
