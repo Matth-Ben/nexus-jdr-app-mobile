@@ -57,8 +57,27 @@ abstract final class LevelUpFeatRowMapper {
             name: names[row['id'].toString()] ?? 'Don #${row['id']}',
             description: descriptions[row['id'].toString()] ?? '',
             prerequisiteText: prerequisiteTextFor(row),
+            increasableAbilities: increasableAbilitiesFor(row),
+            abilityIncreaseMax: abilityIncreaseMaxFor(row),
           ),
     ]..sort((a, b) => a.name.compareTo(b.name));
     return options;
+  }
+
+  /// `feats.ability_increase.abilities` (demi-dons), vide si absent.
+  static List<String> increasableAbilitiesFor(Map<String, dynamic> row) {
+    final increase = row['ability_increase'];
+    if (increase is! Map) return const [];
+    final abilities = increase['abilities'];
+    return abilities is List
+        ? abilities.whereType<String>().toList()
+        : const [];
+  }
+
+  /// `feats.ability_increase.max` (20 par défaut, 30 pour les faveurs).
+  static int abilityIncreaseMaxFor(Map<String, dynamic> row) {
+    final increase = row['ability_increase'];
+    final max = increase is Map ? increase['max'] : null;
+    return max is num ? max.toInt() : 20;
   }
 }

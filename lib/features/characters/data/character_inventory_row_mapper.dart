@@ -128,6 +128,7 @@ abstract final class CharacterInventoryRowMapper {
       acDexBonus: raw['ac_dex_bonus'] as String? ?? 'aucun',
       strengthRequirement: (raw['strength_requirement'] as num?)?.toInt(),
       stealthDisadvantage: raw['stealth_disadvantage'] == true,
+      slot: raw['slot'] as String?,
     );
   }
 
@@ -201,6 +202,8 @@ abstract final class CharacterInventoryRowMapper {
           weaponProperties: parseWeaponProperties(itemRow),
           armorProperties: parseArmorProperties(itemRow),
           weaponSlot: WeaponSlot.fromValue(row['weapon_slot'] as String?),
+          acBonus: (itemRow?['ac_bonus'] as num?)?.toInt(),
+          acBonusKind: itemRow?['ac_bonus_kind'] as String?,
         ),
       );
     }

@@ -117,11 +117,7 @@ class _ItemInfoPanelContent extends StatelessWidget {
     // `weapon_slot_picker_sheet.dart`), ce que ce pied (au plus un bouton
     // contextuel, voir la documentation de classe) ne peut pas représenter —
     // le joueur passe par la sheet d'actions d'objet pour équiper une arme.
-    final equippable =
-        !readOnly &&
-        !item.isCustom &&
-        item.category != 'arme' &&
-        equippableInventoryCategories.contains(item.category);
+    final equippable = !readOnly && isEquippableItem(item);
     final usable = !readOnly && !item.isCustom && item.consumable;
     final attunable = !readOnly && !item.isCustom && item.requiresAttunement;
     final atAttunementCap =

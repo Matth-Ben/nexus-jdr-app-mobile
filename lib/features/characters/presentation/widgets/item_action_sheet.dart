@@ -56,6 +56,17 @@ const Set<String> equippableInventoryCategories = {
   'bouclier',
 };
 
+/// `true` si "Équiper"/"Déséquiper" a un sens pour [item] (hors arme, qui
+/// passe par les sets d'armes) : armure/bouclier, ou objet magique qui
+/// agit sur la CA une fois porté (armure ou bouclier magique, anneau/cape
+/// de protection, Armure +N... — voir `domain/armor_class_calculator.dart`).
+bool isEquippableItem(CharacterInventoryItem item) =>
+    !item.isCustom &&
+    item.category != 'arme' &&
+    (equippableInventoryCategories.contains(item.category) ||
+        item.armorProperties != null ||
+        item.acBonus != null);
+
 /// Ouvre la sheet "Actions d'objet" (tap sur une carte de l'onglet
 /// "Inventaire", `character_inventory_item_card.dart`) — même gabarit A que
 /// `spell_action_sheet.dart`/`class_feature_action_sheet.dart` : "Infos"
@@ -176,10 +187,7 @@ class _ItemActionSheetContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isWeapon = !item.isCustom && item.category == 'arme';
-    final equippable =
-        !isWeapon &&
-        !item.isCustom &&
-        equippableInventoryCategories.contains(item.category);
+    final equippable = !isWeapon && isEquippableItem(item);
     final usable = !item.isCustom && item.consumable;
     final attunable = !item.isCustom && item.requiresAttunement;
     final atAttunementCap =

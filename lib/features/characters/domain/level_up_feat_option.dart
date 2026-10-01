@@ -18,7 +18,17 @@ class LevelUpFeatOption {
     required this.name,
     required this.description,
     this.prerequisiteText,
+    this.increasableAbilities = const [],
+    this.abilityIncreaseMax = 20,
   });
+
+  /// Demi-don (`feats.ability_increase`) : caractéristiques ('str'...) dont
+  /// une gagne +1 en prenant ce don — le joueur choisit s'il y en a
+  /// plusieurs. Vide pour un don sans augmentation.
+  final List<String> increasableAbilities;
+
+  /// Plafond du score augmenté (20, ou 30 pour les faveurs épiques).
+  final int abilityIncreaseMax;
 
   /// `feats.id` (entier côté Supabase, gardé en [Object] — même convention
   /// que `LevelUpSubclassOption.id`).

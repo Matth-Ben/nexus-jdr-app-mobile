@@ -223,6 +223,95 @@ void main() {
       expect(ac, 19);
     });
 
+    test('objets magiques : bouclier magique (slot), anneau harmonisé, '
+        'Armure +1 sur l\'armure portée', () {
+      CharacterInventoryItem magic({
+        required String id,
+        int? acBonus,
+        String? kind,
+        CharacterInventoryArmorProperties? armor,
+        bool attunement = false,
+        bool attuned = false,
+      }) => CharacterInventoryItem(
+        id: id,
+        itemId: id.hashCode,
+        name: id,
+        category: 'objet_magique',
+        quantity: 1,
+        equipped: true,
+        requiresAttunement: attunement,
+        isAttuned: attuned,
+        armorProperties: armor,
+        acBonus: acBonus,
+        acBonusKind: kind,
+      );
+
+      final ac = ArmorClassCalculator.compute(
+        abilityScores: const {'dex': 10},
+        inventory: [
+          _armor(equipped: true, acBase: 16, acDexBonus: 'aucun'),
+          magic(
+            id: 'bouclier+2',
+            armor: const CharacterInventoryArmorProperties(
+              acBase: 4,
+              acDexBonus: 'illimite',
+              stealthDisadvantage: false,
+              slot: 'bouclier',
+            ),
+          ),
+          magic(id: 'armure+1', acBonus: 1, kind: 'avec_armure'),
+          magic(
+            id: 'anneau',
+            acBonus: 1,
+            kind: 'toujours',
+            attunement: true,
+            attuned: true,
+          ),
+          magic(
+            id: 'cape-non-harmonisee',
+            acBonus: 1,
+            kind: 'toujours',
+            attunement: true,
+          ),
+        ],
+      );
+      expect(ac, 16 + 4 + 1 + 1); // la cape non harmonisée ne compte pas
+    });
+
+    test('objets magiques : Bracelets de défense et Robe de l\'archimage sans '
+        'armure', () {
+      const bracers = CharacterInventoryItem(
+        id: 'bracelets',
+        itemId: 120,
+        name: 'Bracelets de défense',
+        category: 'objet_magique',
+        quantity: 1,
+        equipped: true,
+        acBonus: 2,
+        acBonusKind: 'sans_armure_ni_bouclier',
+      );
+      const robe = CharacterInventoryItem(
+        id: 'robe',
+        itemId: 265,
+        name: "Robe de l'archimage",
+        category: 'objet_magique',
+        quantity: 1,
+        equipped: true,
+        acBonus: 15,
+        acBonusKind: 'base_sans_armure',
+      );
+      final ac = ArmorClassCalculator.compute(
+        abilityScores: const {'dex': 14}, // +2
+        inventory: const [bracers, robe],
+      );
+      expect(ac, 15 + 2 + 2);
+      final withShield = ArmorClassCalculator.compute(
+        abilityScores: const {'dex': 14},
+        inventory: [bracers, _shield(equipped: true)],
+      );
+      expect(withShield, 10 + 2 + 2); // bracelets inactifs avec un bouclier
+    });
+
     test('style de combat Défense : aucun effet sans armure', () {
       final ac = ArmorClassCalculator.compute(
         abilityScores: const {'dex': 14},

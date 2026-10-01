@@ -927,8 +927,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
               id, item_id, custom_name, quantity, equipped, weapon_slot, is_attuned, notes,
               items(
                 category, weight, cost, rarity, requires_attunement, consumable,
+                ac_bonus, ac_bonus_kind,
                 weapon_properties(damage_dice, damage_type, properties, range),
-                armor_properties(ac_base, ac_dex_bonus, strength_requirement, stealth_disadvantage)
+                armor_properties(ac_base, ac_dex_bonus, strength_requirement, stealth_disadvantage, slot)
               )
             ),
             character_campaigns(id, story_id, stories(title, cover_image_path, gm_display_name:stories_gm_display_name)),
@@ -1895,7 +1896,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
         for (final row in ownedRows) (row['feat_id'] as num).toInt(),
       };
 
-      final allRows = await _client.from('feats').select('id, prerequisites');
+      final allRows = await _client
+          .from('feats')
+          .select('id, prerequisites, ability_increase');
       final availableRows = [
         for (final row in allRows)
           if (!ownedIds.contains((row['id'] as num).toInt())) row,
@@ -2902,14 +2905,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
             'feat_id': choice.featId,
             'level_taken': level,
           });
-          final featName = (await _fetchTranslationRows(
-            entityType: 'feat',
-            fieldName: 'name',
-            entityIds: {'${choice.featId}'},
-          )).firstOrNull?['value'];
-          return featName == HitPointBonusRules.toughFeatName
-              ? HitPointBonusRules.toughFeatRetroactiveBonus(totalLevel)
-              : 0;
+          final featName =
+              (await _fetchTranslationRows(
+                    entityType: 'feat',
+                    fieldName: 'name',
+                    entityIds: {'${choice.featId}'},
+                  )).firstOrNull?['value']
+                  as String?;
+          final abilityHp = await _applyFeatAbilityIncrease(
+            characterId: characterId,
+            featId: choice.featId!,
+            ability: choice.featAbility,
+            level: level,
+            totalLevel: totalLevel,
+          );
+          return abilityHp +
+              HitPointBonusRules.featTakenBonus(
+                featName: featName,
+                totalLevel: totalLevel,
+              );
         }
         return _applyAbilityScoreImprovement(
           characterId: characterId,
@@ -3031,6 +3045,65 @@ class SupabaseCharacterRepository implements CharacterRepository {
       }
     }
     return retroactiveHp;
+  }
+
+  /// +1 d'un demi-don (`feats.ability_increase`) sur [ability] : relu en
+  /// base (caractéristiques éligibles, montant, plafond 20 ou 30) plutôt que
+  /// pris de l'écran, plafonné sans erreur (un don reste prenable même à
+  /// 20), tracé dans `character_ability_increases` (`source: 'feat'`).
+  /// Renvoie les PV rétroactifs si la Constitution change de modificateur.
+  /// Ne fait rien pour un don sans augmentation ou sans [ability] valide.
+  Future<int> _applyFeatAbilityIncrease({
+    required String characterId,
+    required Object featId,
+    required String? ability,
+    required int level,
+    required int totalLevel,
+  }) async {
+    if (ability == null) return 0;
+    final featRow = await _client
+        .from('feats')
+        .select('ability_increase')
+        .eq('id', featId)
+        .maybeSingle();
+    final increase = featRow?['ability_increase'];
+    if (increase is! Map) return 0;
+    final abilities = (increase['abilities'] as List?)?.whereType<String>();
+    if (abilities == null || !abilities.contains(ability)) return 0;
+    final amount = (increase['amount'] as num?)?.toInt() ?? 1;
+    final max = (increase['max'] as num?)?.toInt() ?? 20;
+
+    final scoreRow = await _client
+        .from('character_ability_scores')
+        .select('score')
+        .eq('character_id', characterId)
+        .eq('ability_id', ability)
+        .maybeSingle();
+    if (scoreRow == null) return 0;
+    final currentScore = (scoreRow['score'] as num).toInt();
+    final newScore = (currentScore + amount).clamp(currentScore, max);
+    if (newScore == currentScore) return 0;
+
+    await _client
+        .from('character_ability_scores')
+        .update({'score': newScore})
+        .eq('character_id', characterId)
+        .eq('ability_id', ability);
+    await _client.from('character_ability_increases').insert({
+      'character_id': characterId,
+      'level': level,
+      'ability_id': ability,
+      'increase': newScore - currentScore,
+      'source': 'feat',
+    });
+
+    return ability == 'con'
+        ? HitPointBonusRules.constitutionRetroactiveBonus(
+            oldScore: currentScore,
+            newScore: newScore,
+            totalLevel: totalLevel,
+          )
+        : 0;
   }
 
   /// Tous les scores de caractéristiques finaux de [characterId]

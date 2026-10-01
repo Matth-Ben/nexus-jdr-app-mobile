@@ -18,6 +18,7 @@ import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/spell_level_tab_selector.dart';
 import '../../../core/widgets/stepper_counter.dart';
 import '../../character_creation/domain/ability_score_definitions.dart';
+import '../domain/level_up_feat_option.dart';
 import '../../character_creation/domain/spell_catalog.dart';
 import '../../character_creation/domain/spell_option.dart';
 import '../../character_creation/domain/spell_selection_resolver.dart';
@@ -193,6 +194,31 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// [_resetChoiceState] : indépendant de [_abilityAllocations]/
   /// [_selectedListOptionId], basculer ne doit jamais effacer l'autre mode.
   _AsiMethod _asiMethod = _AsiMethod.allocate;
+
+  /// Caractéristique choisie pour le +1 d'un demi-don à plusieurs choix
+  /// (`LevelUpFeatOption.increasableAbilities`), voir [_featAbilityFor].
+  String? _featAbility;
+
+  /// Don actuellement sélectionné (sous-mode "don"), `null` sinon.
+  LevelUpFeatOption? _selectedFeat(LevelUpStepData data) {
+    for (final feat in data.availableFeats) {
+      if (feat.id == _selectedListOptionId) return feat;
+    }
+    return null;
+  }
+
+  /// Caractéristique du +1 pour [feat] : la seule possible, ou celle choisie
+  /// si elle reste valide pour ce don ; `null` tant qu'aucun choix n'est fait
+  /// (ou pour un don sans augmentation).
+  String? _featAbilityFor(LevelUpFeatOption? feat) {
+    if (feat == null || feat.increasableAbilities.isEmpty) return null;
+    if (feat.increasableAbilities.length == 1) {
+      return feat.increasableAbilities.single;
+    }
+    return feat.increasableAbilities.contains(_featAbility)
+        ? _featAbility
+        : null;
+  }
 
   /// Points alloués par caractéristique (0 à 2, clé
   /// `ability_score_definitions.dart`), variante amélioration de
@@ -635,7 +661,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       null => null,
       LevelUpChoiceKind.abilityScoreImprovement =>
         _asiMethod == _AsiMethod.feat
-            ? LevelUpChoiceSelection.feat(_selectedListOptionId!)
+            ? LevelUpChoiceSelection.feat(
+                _selectedListOptionId!,
+                featAbility: _featAbilityFor(_selectedFeat(data)),
+              )
             : LevelUpChoiceSelection.abilityScoreImprovement({
                 for (final entry
                     in _ensureAbilityAllocationsInitialized().entries)
@@ -1587,7 +1616,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   bool _canContinueChoiceStep(LevelUpStepData data, LevelUpChoiceKind kind) {
     if (kind == LevelUpChoiceKind.abilityScoreImprovement) {
       if (_asiMethod == _AsiMethod.feat) {
-        return _selectedListOptionId != null;
+        final feat = _selectedFeat(data);
+        // Demi-don : la caractéristique du +1 doit être choisie.
+        return feat != null &&
+            (feat.increasableAbilities.isEmpty ||
+                _featAbilityFor(feat) != null);
       }
       final allocations = _ensureAbilityAllocationsInitialized();
       final spent = allocations.values.fold(0, (sum, value) => sum + value);
@@ -1694,6 +1727,8 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                 onChanged: (method) => setState(() => _asiMethod = method),
               ),
               const SizedBox(height: AppSpacing.md),
+              if (_asiMethod == _AsiMethod.feat)
+                ..._featAbilityPicker(_selectedFeat(data)),
             ],
           ),
         ),
@@ -1716,6 +1751,40 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         ),
       ],
     );
+  }
+
+  /// Choix de la caractéristique du +1 d'un demi-don, affiché sous le
+  /// sélecteur de mode quand le don retenu en propose plusieurs (un seul
+  /// choix possible : appliqué d'office, rien à afficher).
+  List<Widget> _featAbilityPicker(LevelUpFeatOption? feat) {
+    if (feat == null || feat.increasableAbilities.length < 2) return const [];
+    final selected = _featAbilityFor(feat);
+    return [
+      Text(
+        'Caractéristique augmentée par ${feat.name} (+1) :',
+        style: AppTypography.body(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textOnWood,
+        ),
+      ),
+      const SizedBox(height: AppSpacing.xs),
+      Wrap(
+        spacing: AppSpacing.xs,
+        runSpacing: AppSpacing.xs,
+        children: [
+          for (final definition in abilityScoreDefinitions)
+            if (feat.increasableAbilities.contains(definition.key))
+              ChoiceChip(
+                label: Text(definition.label),
+                selected: selected == definition.key,
+                onSelected: (_) =>
+                    setState(() => _featAbility = definition.key),
+              ),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.md),
+    ];
   }
 
   /// Variante liste (sous-classe/style de combat/ennemi juré/don) — pas de
@@ -2516,14 +2585,22 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
 
     if (kind == LevelUpChoiceKind.abilityScoreImprovement) {
       if (_asiMethod == _AsiMethod.feat) {
-        final featName = data.availableFeats
-            .firstWhere((option) => option.id == _selectedListOptionId)
-            .name;
+        final feat = data.availableFeats.firstWhere(
+          (option) => option.id == _selectedListOptionId,
+        );
+        final ability = _featAbilityFor(feat);
+        final abilityLabel = ability == null
+            ? null
+            : abilityScoreDefinitions
+                  .firstWhere((definition) => definition.key == ability)
+                  .label;
         return GainRow(
           icon: Icons.checklist,
           color: AppColors.accentBlue,
           title: 'Don',
-          subtitle: featName,
+          subtitle: abilityLabel == null
+              ? feat.name
+              : '${feat.name} ($abilityLabel +1)',
         );
       }
       final subtitle = [
