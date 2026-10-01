@@ -36,6 +36,7 @@ Groupes :
 Classe d'armure :
 • Armure et bouclier de départ équipés automatiquement à la création
 • Défense sans armure (Barbare, Moine), Résilience draconique et style Défense pris en compte
+Bonus raciaux au choix à la création ; PV corrigés (Constitution, Nain des collines, don Robuste)
 </fr-FR>
 ```
 
@@ -61,6 +62,13 @@ Classe d'armure :
   (10 + Dex + Con) et du Moine (10 + Dex + Sag, sans bouclier), de la
   Résilience draconique (13 + Dex) et du style de combat Défense (+1 en
   armure).
+- Caractéristiques : les bonus raciaux au choix se répartissent à l'étape 4
+  (Demi-elfe, Forgelier, et les 23 races à bonus flexibles +2/+1 ou
+  +1/+1/+1 — Aasimar, Firbolg, Tabaxi, Conil...), qui n'en recevaient aucun.
+- Points de vie : une Constitution augmentée à la montée de niveau ajoute
+  ses PV rétroactivement ; bonus du Nain des collines (+1/niveau), du don
+  Robuste (+2/niveau, rétroactif) et de la Résilience draconique (+1/niveau
+  d'Ensorceleur).
 
 ---
 
