@@ -40,8 +40,7 @@ class CharacterCreationDraftController
   /// revenir à l'étape 1 puis retaper "Suivant" ne doit pas effacer les
   /// choix déjà faits aux étapes suivantes.
   void setRace({int? raceId, int? subraceId, String? raceCustomText}) {
-    final raceChanged =
-        state.raceId != raceId || state.subraceId != subraceId;
+    final raceChanged = state.raceId != raceId || state.subraceId != subraceId;
     state = state.copyWith(
       raceId: raceId,
       subraceId: subraceId,
