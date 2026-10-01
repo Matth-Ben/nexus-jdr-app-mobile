@@ -33,13 +33,22 @@ import 'character_inventory_item.dart';
 ///   pratique) en plus, jamais affecté par le Dex — un bouclier ne
 ///   remplace jamais la base, il s'additionne toujours.
 ///
+/// Objets magiques :
+/// - armures et boucliers magiques de type fixe : leurs `armor_properties`
+///   portent un `slot` ('armure'/'bouclier'), leur catégorie restant
+///   `objet_magique` ;
+/// - `items.ac_bonus` selon `ac_bonus_kind` : 'toujours' (Anneau/Cape de
+///   protection, bonus magique d'une armure à harmonisation), 'avec_armure'
+///   (Armure +N, s'ajoute à l'armure portée), 'sans_armure_ni_bouclier'
+///   (Bracelets de défense), 'base_sans_armure' (Robe de l'archimage : base
+///   `bonus + Dex` sans armure). Un objet équipé qui requiert une
+///   harmonisation ne donne ce bonus que s'il est harmonisé.
+///
 /// Non couvert (hors périmètre, "reste un simple affichage", même principe
 /// que le statut "mort" qui ne simule pas les règles complètes) : pénalité
 /// de vitesse/désavantage Discrétion d'une armure trop lourde pour la Force
-/// du personnage, objets magiques modifiant la CA en dehors
-/// d'`armor_properties` (armures +1, anneau de protection...), plusieurs
-/// armures/boucliers équipés simultanément (donnée incohérente, seul le
-/// premier trouvé de chaque catégorie compte).
+/// du personnage, plusieurs armures/boucliers équipés simultanément (donnée
+/// incohérente, seul le premier trouvé de chaque emplacement compte).
 abstract final class ArmorClassCalculator {
   /// Noms de classe (FR, `translations`) portant la Défense sans armure.
   static const String barbarianClassName = 'Barbare';
@@ -66,20 +75,40 @@ abstract final class ArmorClassCalculator {
 
     final equippedArmor = _firstEquippedWithArmorProperties(
       inventory,
-      category: 'armure',
+      slot: 'armure',
     );
     final equippedShield = _firstEquippedWithArmorProperties(
       inventory,
-      category: 'bouclier',
+      slot: 'bouclier',
     );
     final shieldBonus = equippedShield?.acBase ?? 0;
+
+    // Bonus des objets magiques équipés (et harmonisés si nécessaire).
+    var itemBonus = 0;
+    final magicUnarmoredBases = <int>[];
+    for (final item in inventory) {
+      final bonus = item.acBonus;
+      if (bonus == null || !_grantsMagicBonus(item)) continue;
+      switch (item.acBonusKind) {
+        case 'toujours':
+          itemBonus += bonus;
+        case 'avec_armure' when equippedArmor != null:
+          itemBonus += bonus;
+        case 'sans_armure_ni_bouclier'
+            when equippedArmor == null && equippedShield == null:
+          itemBonus += bonus;
+        case 'base_sans_armure' when equippedArmor == null:
+          magicUnarmoredBases.add(bonus + dexModifier);
+      }
+    }
 
     if (equippedArmor != null) {
       final defenseBonus = fightingStyles.contains(defenseFightingStyle) ? 1 : 0;
       return equippedArmor.acBase +
           _dexBonusFor(equippedArmor.acDexBonus, dexModifier) +
           defenseBonus +
-          shieldBonus;
+          shieldBonus +
+          itemBonus;
     }
 
     final unarmoredBases = [
@@ -89,19 +118,30 @@ abstract final class ArmorClassCalculator {
       if (classNames.contains(monkClassName) && equippedShield == null)
         10 + dexModifier + modifier('wis'),
       if (subclassNames.contains(draconicSubclassName)) 13 + dexModifier,
+      ...magicUnarmoredBases,
     ];
     final bestBase = unarmoredBases.reduce((a, b) => a > b ? a : b);
-    return bestBase + shieldBonus;
+    return bestBase + shieldBonus + itemBonus;
   }
+
+  /// Emplacement d'armure d'un objet : `armor_properties.slot` pour un objet
+  /// magique, sinon sa catégorie ('armure'/'bouclier').
+  static String? _slotOf(CharacterInventoryItem item) =>
+      item.armorProperties?.slot ?? item.category;
+
+  /// Un objet équipé donne son bonus magique de CA s'il ne requiert pas
+  /// d'harmonisation, ou s'il est harmonisé.
+  static bool _grantsMagicBonus(CharacterInventoryItem item) =>
+      item.equipped && (!item.requiresAttunement || item.isAttuned);
 
   static CharacterInventoryArmorProperties? _firstEquippedWithArmorProperties(
     List<CharacterInventoryItem> inventory, {
-    required String category,
+    required String slot,
   }) {
     for (final item in inventory) {
       if (item.equipped &&
-          item.category == category &&
-          item.armorProperties != null) {
+          item.armorProperties != null &&
+          _slotOf(item) == slot) {
         return item.armorProperties;
       }
     }

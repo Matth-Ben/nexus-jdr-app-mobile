@@ -15,14 +15,15 @@ class LevelUpChoiceSelection {
       subclassId = null,
       classFeatureId = null,
       chosenValue = null,
-      featId = null;
+      featId = null,
+      featAbility = null;
 
   /// Don choisi en alternative à la répartition de caractéristiques (même
   /// [kind], voir la spec visuelle direction-artistique section 1 de
   /// `presentation/level_up_screen.dart` : `SegmentedToggle` "Répartir +2" /
   /// "Choisir un don") — mutuellement exclusif avec
   /// [abilityAllocations] (jamais les deux non nuls à la fois).
-  const LevelUpChoiceSelection.feat(this.featId)
+  const LevelUpChoiceSelection.feat(this.featId, {this.featAbility})
     : kind = LevelUpChoiceKind.abilityScoreImprovement,
       abilityAllocations = null,
       subclassId = null,
@@ -34,7 +35,8 @@ class LevelUpChoiceSelection {
       abilityAllocations = null,
       classFeatureId = null,
       chosenValue = null,
-      featId = null;
+      featId = null,
+      featAbility = null;
 
   const LevelUpChoiceSelection.fightingStyle({
     required this.classFeatureId,
@@ -42,7 +44,8 @@ class LevelUpChoiceSelection {
   }) : kind = LevelUpChoiceKind.fightingStyle,
        abilityAllocations = null,
        subclassId = null,
-       featId = null;
+       featId = null,
+       featAbility = null;
 
   const LevelUpChoiceSelection.favoredEnemy({
     required this.classFeatureId,
@@ -50,7 +53,8 @@ class LevelUpChoiceSelection {
   }) : kind = LevelUpChoiceKind.favoredEnemy,
        abilityAllocations = null,
        subclassId = null,
-       featId = null;
+       featId = null,
+       featAbility = null;
 
   /// Faveur de pacte de l'Occultiste : [chosenValue] = `WarlockPact.key` (`domain/warlock_pact.dart`).
   const LevelUpChoiceSelection.pact({
@@ -59,7 +63,8 @@ class LevelUpChoiceSelection {
   }) : kind = LevelUpChoiceKind.pact,
        abilityAllocations = null,
        subclassId = null,
-       featId = null;
+       featId = null,
+       featAbility = null;
 
   final LevelUpChoiceKind kind;
 
@@ -76,6 +81,11 @@ class LevelUpChoiceSelection {
   /// (voir `data/character_repository.dart::applyLevelUp`). Mutuellement
   /// exclusif avec [abilityAllocations] : `null` en sous-mode "répartir +2".
   final Object? featId;
+
+  /// Sous-mode "don", demi-don uniquement (`feats.ability_increase`) :
+  /// caractéristique ('str'...) qui gagne le +1 du don. `null` pour un don
+  /// sans augmentation de caractéristique.
+  final String? featAbility;
 
   /// [kind] == [LevelUpChoiceKind.subclass] uniquement : `subclasses.id`
   /// choisi, écrit dans `character_classes.subclass_id`.

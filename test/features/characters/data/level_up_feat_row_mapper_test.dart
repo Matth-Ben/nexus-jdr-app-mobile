@@ -102,6 +102,40 @@ void main() {
       expect(options, isEmpty);
     });
 
+    test('demi-don : caractéristiques éligibles et plafond lus depuis '
+        'ability_increase, valeurs par défaut sinon', () {
+      final options = LevelUpFeatRowMapper.toFeatOptions(
+        const [
+          {
+            'id': 3,
+            'ability_increase': {
+              'abilities': ['str', 'dex'],
+              'amount': 1,
+              'max': 20,
+            },
+          },
+          {
+            'id': 43,
+            'ability_increase': {
+              'abilities': ['str', 'dex', 'con', 'int', 'wis', 'cha'],
+              'amount': 1,
+              'max': 30,
+            },
+          },
+          {'id': 24},
+        ],
+        names: const {'3': 'Athlète', '43': 'Faveur', '24': 'Robuste physiquement'},
+        descriptions: const {},
+      );
+      final byName = {for (final option in options) option.name: option};
+
+      expect(byName['Athlète']!.increasableAbilities, ['str', 'dex']);
+      expect(byName['Athlète']!.abilityIncreaseMax, 20);
+      expect(byName['Faveur']!.abilityIncreaseMax, 30);
+      expect(byName['Robuste physiquement']!.increasableAbilities, isEmpty);
+      expect(byName['Robuste physiquement']!.abilityIncreaseMax, 20);
+    });
+
     test('liste vide en entrée -> liste vide en sortie', () {
       expect(
         LevelUpFeatRowMapper.toFeatOptions(

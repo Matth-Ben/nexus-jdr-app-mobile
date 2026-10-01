@@ -30,7 +30,18 @@ class CharacterInventoryItem {
     this.weaponProperties,
     this.armorProperties,
     this.weaponSlot,
+    this.acBonus,
+    this.acBonusKind,
   });
+
+  /// `items.ac_bonus` — bonus de CA d'un objet magique (Anneau de
+  /// protection +1, Armure +2...), `null` sinon. S'applique selon
+  /// [acBonusKind], voir `domain/armor_class_calculator.dart`.
+  final int? acBonus;
+
+  /// `items.ac_bonus_kind` : 'toujours', 'avec_armure',
+  /// 'sans_armure_ni_bouclier' ou 'base_sans_armure'.
+  final String? acBonusKind;
 
   /// `character_inventory.id` (uuid).
   final String id;
@@ -216,7 +227,13 @@ class CharacterInventoryArmorProperties {
     required this.acDexBonus,
     this.strengthRequirement,
     required this.stealthDisadvantage,
+    this.slot,
   });
+
+  /// `armor_properties.slot` ('armure' | 'bouclier') — renseigné pour les
+  /// armures et boucliers magiques (catégorie `objet_magique`), `null` pour
+  /// les objets ordinaires (emplacement déduit de la catégorie).
+  final String? slot;
 
   /// `armor_properties.ac_base` — pour un bouclier, un bonus (+2) plutôt
   /// qu'une CA de base à proprement parler (voir le commentaire de la

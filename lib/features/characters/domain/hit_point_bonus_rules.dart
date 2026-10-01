@@ -3,10 +3,13 @@
 /// (`LevelUpHitPointsCalculator`) :
 ///
 /// - Nain des collines (Robustesse naine) : +1 par niveau de personnage ;
-/// - don Robuste : +2 par niveau de personnage (rétroactif quand le don est
+/// - don Tough (« Robuste physiquement » en base — « Robuste » y désigne
+///   Resilient) : +2 par niveau de personnage (rétroactif quand le don est
 ///   pris : +2 × niveau atteint) ;
 /// - Ensorceleur du Lignage draconique (Résilience draconique) : +1 par
-///   niveau d'Ensorceleur.
+///   niveau d'Ensorceleur ;
+/// - Faveur de robustesse (faveur épique) : +40 une fois, quand elle est
+///   prise.
 ///
 /// Et la règle de rétroactivité de la Constitution : quand son modificateur
 /// augmente, les PV maximum augmentent de la différence × niveau total.
@@ -15,7 +18,9 @@
 /// `ArmorClassCalculator`.
 abstract final class HitPointBonusRules {
   static const String hillDwarfSubraceName = 'Nain des collines';
-  static const String toughFeatName = 'Robuste';
+  static const String toughFeatName = 'Robuste physiquement';
+  static const String fortitudeBoonName = 'Faveur de robustesse';
+  static const int fortitudeBoonHitPoints = 40;
   static const String sorcererClassName = 'Ensorceleur';
   static const String draconicSubclassName = 'Lignage draconique';
 
@@ -41,6 +46,18 @@ abstract final class HitPointBonusRules {
   /// PV maximum gagnés rétroactivement en prenant le don Robuste au niveau
   /// total [totalLevel] (ce niveau inclus).
   static int toughFeatRetroactiveBonus(int totalLevel) => 2 * totalLevel;
+
+  /// PV maximum gagnés en prenant le don [featName] au niveau total
+  /// [totalLevel] : Robuste physiquement (rétroactif) ou Faveur de
+  /// robustesse, 0 pour tout autre don.
+  static int featTakenBonus({
+    required String? featName,
+    required int totalLevel,
+  }) => switch (featName) {
+    toughFeatName => toughFeatRetroactiveBonus(totalLevel),
+    fortitudeBoonName => fortitudeBoonHitPoints,
+    _ => 0,
+  };
 
   /// PV maximum gagnés quand la Constitution passe de [oldScore] à
   /// [newScore], pour un personnage de niveau total [totalLevel] — 0 si le

@@ -34,8 +34,8 @@ Groupes :
 • Touche un membre pour voir sa fiche complète (en lecture seule)
 • Butin : sélectionne plusieurs objets du catalogue d'un coup avant de les ajouter
 Fiche et création :
-• CA corrigée (armure équipée d'office, Défense sans armure, style Défense)
-• Équipement de départ de classe, bonus raciaux au choix
+• CA corrigée (armure équipée d'office, Défense sans armure, objets magiques)
+• Équipement de départ de classe, bonus raciaux au choix, demi-dons
 • PV corrigés (Constitution, Nain des collines, don Robuste)
 </fr-FR>
 ```
@@ -73,6 +73,13 @@ Fiche et création :
   2024 : option A objets + or, option B or seul) en plus de celui de
   l'historique ; l'armure et le bouclier de classe sont équipés d'office et
   l'or de classe s'ajoute au budget d'achat.
+- Demi-dons : le +1 à une caractéristique (Athlète, Observateur, Touché
+  par les fées, faveurs épiques...) est appliqué à la montée de niveau, avec
+  le choix de la caractéristique s'il y en a plusieurs ; don Tough
+  (« Robuste physiquement ») et Faveur de robustesse (+40 PV) pris en compte.
+- Classe d'armure : armures et boucliers magiques, Armure +N, anneau et
+  cape de protection (harmonisés), bracelets de défense et robe de
+  l'archimage ; ces objets magiques peuvent désormais être équipés.
 
 ---
 
