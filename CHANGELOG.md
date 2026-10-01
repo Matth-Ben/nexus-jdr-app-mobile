@@ -25,6 +25,12 @@ dans la Play Console (« Notes de version », 500 caractères max, balise
 
 ## [Non publié]
 
+_Rien pour l'instant._
+
+---
+
+## [1.0.5] — 2026-10-01 (build 6)
+
 ### Notes de version (stores)
 
 ```
@@ -37,6 +43,7 @@ Fiche et création :
 • CA corrigée (armure équipée d'office, Défense sans armure, objets magiques)
 • Équipement de départ de classe, bonus raciaux au choix, demi-dons
 • PV corrigés (Constitution, Nain des collines, don Robuste)
+• Import XML : sous-race reconnue, bonus raciaux appliqués
 </fr-FR>
 ```
 
