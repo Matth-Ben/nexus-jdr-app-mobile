@@ -15,6 +15,7 @@ import '../../../core/widgets/step_progress_bar.dart';
 import '../../../core/widgets/stepper_counter.dart';
 import '../domain/background_equipment_entry.dart';
 import '../domain/character_creation_failure.dart';
+import '../domain/class_starting_equipment.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/equipment_category_rules.dart';
 import '../domain/equipment_choice_tab.dart';
@@ -78,6 +79,9 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
   late EquipmentChoiceTab _activeTab;
   late Map<String, int> _cart;
 
+  /// Option d'équipement de classe choisie ("A", "B"...), `null` = option A.
+  String? _classOptionLabel;
+
   @override
   void initState() {
     super.initState();
@@ -88,6 +92,7 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
     final draft = ref.read(characterCreationDraftControllerProvider);
     _activeTab = draft.equipmentChoiceTab ?? EquipmentChoiceTab.background;
     _cart = Map.of(draft.purchasedEquipment);
+    _classOptionLabel = draft.classEquipmentOption;
   }
 
   /// Bascule d'onglet : ne réinitialise jamais le panier "Acheter" (voir la
@@ -119,7 +124,11 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
   void _submit() {
     ref
         .read(characterCreationDraftControllerProvider.notifier)
-        .setEquipment(activeTab: _activeTab, purchasedEquipment: _cart);
+        .setEquipment(
+          activeTab: _activeTab,
+          purchasedEquipment: _cart,
+          classEquipmentOption: _classOptionLabel,
+        );
     context.push('/characters/new/step-8');
   }
 
@@ -172,6 +181,7 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                 onRetry: () {
                   ref.invalidate(backgroundCatalogProvider);
                   ref.invalidate(itemCatalogProvider);
+                  ref.invalidate(classCatalogProvider);
                   ref.invalidate(equipmentStepDataProvider);
                 },
               ),
@@ -190,9 +200,16 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
 
   Widget _buildContent(EquipmentStepData data) {
     final items = data.itemCatalog.items;
+    final classOption = ClassEquipmentOption.select(
+      data.classEquipmentOptions,
+      _classOptionLabel,
+    );
+    // Or de départ = Bourse de l'historique + or de l'option de classe (le
+    // budget d'achat compris), même règle que `CharacterCreationEquipmentResolver`.
+    final startingGold = data.startingGold + (classOption?.gold ?? 0);
     final spent = EquipmentStepSelection.totalCost(cart: _cart, items: items);
     final remainingGold = EquipmentStepSelection.remainingGold(
-      startingGold: data.startingGold,
+      startingGold: startingGold,
       spent: spent,
     );
     final isOverBudget = EquipmentStepSelection.isOverBudget(remainingGold);
@@ -232,7 +249,7 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                         value: EquipmentChoiceTab.purchase,
                         label:
                             'Acheter '
-                            '(${GoldAmountFormatter.format(data.startingGold)} po)',
+                            '(${GoldAmountFormatter.format(startingGold)} po)',
                       ),
                     ],
                     value: _activeTab,
@@ -247,9 +264,12 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                       AppSpacing.lg,
                       AppSpacing.md,
                     ),
-                    children: isPurchaseTab
-                        ? _shopSection(items)
-                        : _historySection(data.historyEquipment),
+                    children: [
+                      ..._classSection(data.classEquipmentOptions, classOption),
+                      ...isPurchaseTab
+                          ? _shopSection(items)
+                          : _historySection(data.historyEquipment),
+                    ],
                   ),
                 ),
                 Padding(
@@ -272,7 +292,7 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
                           label: isPurchaseTab ? 'OR RESTANT' : 'OR DE DÉPART',
                           amount: isPurchaseTab
                               ? remainingGold
-                              : data.startingGold.toDouble(),
+                              : startingGold.toDouble(),
                         ),
                       const SizedBox(height: AppSpacing.sm),
                       Row(
@@ -306,6 +326,30 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
         ),
       ],
     );
+  }
+
+  /// Choix de l'équipement de départ de classe (règles 2024 : option A =
+  /// objets + or, B = or seul), affiché au-dessus des deux onglets — vide si
+  /// la classe n'a aucune option.
+  List<Widget> _classSection(
+    List<ClassEquipmentOption> options,
+    ClassEquipmentOption? selected,
+  ) {
+    if (options.isEmpty) return const [];
+    return [
+      const _SectionHeader(title: 'ÉQUIPEMENT DE CLASSE'),
+      const SizedBox(height: AppSpacing.sm),
+      for (var i = 0; i < options.length; i++) ...[
+        if (i > 0) const SizedBox(height: AppSpacing.xs),
+        CheckableOptionTile(
+          title: 'Option ${options[i].label}',
+          subtitle: options[i].summary,
+          checked: options[i].label == selected?.label,
+          onTap: () => setState(() => _classOptionLabel = options[i].label),
+        ),
+      ],
+      const SizedBox(height: AppSpacing.lg),
+    ];
   }
 
   /// Contenu de l'onglet "Historique" : titre de section (sans badge, aucun

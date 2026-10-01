@@ -25,7 +25,10 @@ mixin _$ClassOption {
 /// `classes.tool_proficiencies` quand cette colonne est une liste de
 /// chaînes plutôt qu'un objet `{"count", "type"}` — voir le commentaire
 /// de classe pour le détail. Vide dans tous les autres cas.
- List<String> get grantedToolNames;
+ List<String> get grantedToolNames;/// Options d'équipement de départ (`classes.starting_equipment`, règles
+/// 2024), choisies à l'étape 7/9 — voir `class_starting_equipment.dart`.
+/// Vide si la colonne est absente (cache antérieur).
+ List<ClassEquipmentOption> get startingEquipment;
 /// Create a copy of ClassOption
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -36,16 +39,16 @@ $ClassOptionCopyWith<ClassOption> get copyWith => _$ClassOptionCopyWithImpl<Clas
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ClassOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.hitDie, hitDie) || other.hitDie == hitDie)&&(identical(other.skillChoices, skillChoices) || other.skillChoices == skillChoices)&&(identical(other.toolChoice, toolChoice) || other.toolChoice == toolChoice)&&const DeepCollectionEquality().equals(other.grantedToolNames, grantedToolNames));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ClassOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.hitDie, hitDie) || other.hitDie == hitDie)&&(identical(other.skillChoices, skillChoices) || other.skillChoices == skillChoices)&&(identical(other.toolChoice, toolChoice) || other.toolChoice == toolChoice)&&const DeepCollectionEquality().equals(other.grantedToolNames, grantedToolNames)&&const DeepCollectionEquality().equals(other.startingEquipment, startingEquipment));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,description,hitDie,skillChoices,toolChoice,const DeepCollectionEquality().hash(grantedToolNames));
+int get hashCode => Object.hash(runtimeType,id,name,description,hitDie,skillChoices,toolChoice,const DeepCollectionEquality().hash(grantedToolNames),const DeepCollectionEquality().hash(startingEquipment));
 
 @override
 String toString() {
-  return 'ClassOption(id: $id, name: $name, description: $description, hitDie: $hitDie, skillChoices: $skillChoices, toolChoice: $toolChoice, grantedToolNames: $grantedToolNames)';
+  return 'ClassOption(id: $id, name: $name, description: $description, hitDie: $hitDie, skillChoices: $skillChoices, toolChoice: $toolChoice, grantedToolNames: $grantedToolNames, startingEquipment: $startingEquipment)';
 }
 
 
@@ -56,7 +59,7 @@ abstract mixin class $ClassOptionCopyWith<$Res>  {
   factory $ClassOptionCopyWith(ClassOption value, $Res Function(ClassOption) _then) = _$ClassOptionCopyWithImpl;
 @useResult
 $Res call({
- int id, String name, String description, int hitDie, ClassSkillChoices skillChoices, ClassToolChoice? toolChoice, List<String> grantedToolNames
+ int id, String name, String description, int hitDie, ClassSkillChoices skillChoices, ClassToolChoice? toolChoice, List<String> grantedToolNames, List<ClassEquipmentOption> startingEquipment
 });
 
 
@@ -73,7 +76,7 @@ class _$ClassOptionCopyWithImpl<$Res>
 
 /// Create a copy of ClassOption
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = null,Object? hitDie = null,Object? skillChoices = null,Object? toolChoice = freezed,Object? grantedToolNames = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? description = null,Object? hitDie = null,Object? skillChoices = null,Object? toolChoice = freezed,Object? grantedToolNames = null,Object? startingEquipment = null,}) {
   return _then(ClassOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -82,7 +85,8 @@ as String,hitDie: null == hitDie ? _self.hitDie : hitDie // ignore: cast_nullabl
 as int,skillChoices: null == skillChoices ? _self.skillChoices : skillChoices // ignore: cast_nullable_to_non_nullable
 as ClassSkillChoices,toolChoice: freezed == toolChoice ? _self.toolChoice : toolChoice // ignore: cast_nullable_to_non_nullable
 as ClassToolChoice?,grantedToolNames: null == grantedToolNames ? _self.grantedToolNames : grantedToolNames // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<String>,startingEquipment: null == startingEquipment ? _self.startingEquipment : startingEquipment // ignore: cast_nullable_to_non_nullable
+as List<ClassEquipmentOption>,
   ));
 }
 /// Create a copy of ClassOption
@@ -188,10 +192,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  String description,  int hitDie,  ClassSkillChoices skillChoices,  ClassToolChoice? toolChoice,  List<String> grantedToolNames)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  String description,  int hitDie,  ClassSkillChoices skillChoices,  ClassToolChoice? toolChoice,  List<String> grantedToolNames,  List<ClassEquipmentOption> startingEquipment)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ClassOption() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.hitDie,_that.skillChoices,_that.toolChoice,_that.grantedToolNames);case _:
+return $default(_that.id,_that.name,_that.description,_that.hitDie,_that.skillChoices,_that.toolChoice,_that.grantedToolNames,_that.startingEquipment);case _:
   return orElse();
 
 }
@@ -209,10 +213,10 @@ return $default(_that.id,_that.name,_that.description,_that.hitDie,_that.skillCh
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  String description,  int hitDie,  ClassSkillChoices skillChoices,  ClassToolChoice? toolChoice,  List<String> grantedToolNames)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  String description,  int hitDie,  ClassSkillChoices skillChoices,  ClassToolChoice? toolChoice,  List<String> grantedToolNames,  List<ClassEquipmentOption> startingEquipment)  $default,) {final _that = this;
 switch (_that) {
 case _ClassOption():
-return $default(_that.id,_that.name,_that.description,_that.hitDie,_that.skillChoices,_that.toolChoice,_that.grantedToolNames);case _:
+return $default(_that.id,_that.name,_that.description,_that.hitDie,_that.skillChoices,_that.toolChoice,_that.grantedToolNames,_that.startingEquipment);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -229,10 +233,10 @@ return $default(_that.id,_that.name,_that.description,_that.hitDie,_that.skillCh
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  String description,  int hitDie,  ClassSkillChoices skillChoices,  ClassToolChoice? toolChoice,  List<String> grantedToolNames)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  String description,  int hitDie,  ClassSkillChoices skillChoices,  ClassToolChoice? toolChoice,  List<String> grantedToolNames,  List<ClassEquipmentOption> startingEquipment)?  $default,) {final _that = this;
 switch (_that) {
 case _ClassOption() when $default != null:
-return $default(_that.id,_that.name,_that.description,_that.hitDie,_that.skillChoices,_that.toolChoice,_that.grantedToolNames);case _:
+return $default(_that.id,_that.name,_that.description,_that.hitDie,_that.skillChoices,_that.toolChoice,_that.grantedToolNames,_that.startingEquipment);case _:
   return null;
 
 }
@@ -244,7 +248,7 @@ return $default(_that.id,_that.name,_that.description,_that.hitDie,_that.skillCh
 
 
 class _ClassOption extends ClassOption {
-  const _ClassOption({required this.id, required this.name, required this.description, required this.hitDie, this.skillChoices = const ClassSkillChoices(count: 0, choices: []), this.toolChoice,  List<String> grantedToolNames = const <String>[]}): _grantedToolNames = grantedToolNames,super._();
+  const _ClassOption({required this.id, required this.name, required this.description, required this.hitDie, this.skillChoices = const ClassSkillChoices(count: 0, choices: []), this.toolChoice,  List<String> grantedToolNames = const <String>[],  List<ClassEquipmentOption> startingEquipment = const <ClassEquipmentOption>[]}): _grantedToolNames = grantedToolNames,_startingEquipment = startingEquipment,super._();
   
 
 @override final  int id;
@@ -274,6 +278,19 @@ class _ClassOption extends ClassOption {
   return EqualUnmodifiableListView(_grantedToolNames);
 }
 
+/// Options d'équipement de départ (`classes.starting_equipment`, règles
+/// 2024), choisies à l'étape 7/9 — voir `class_starting_equipment.dart`.
+/// Vide si la colonne est absente (cache antérieur).
+ final  List<ClassEquipmentOption> _startingEquipment;
+/// Options d'équipement de départ (`classes.starting_equipment`, règles
+/// 2024), choisies à l'étape 7/9 — voir `class_starting_equipment.dart`.
+/// Vide si la colonne est absente (cache antérieur).
+@override@JsonKey() List<ClassEquipmentOption> get startingEquipment {
+  if (_startingEquipment is EqualUnmodifiableListView) return _startingEquipment;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_startingEquipment);
+}
+
 
 /// Create a copy of ClassOption
 /// with the given fields replaced by the non-null parameter values.
@@ -285,16 +302,16 @@ _$ClassOptionCopyWith<_ClassOption> get copyWith => __$ClassOptionCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ClassOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.hitDie, hitDie) || other.hitDie == hitDie)&&(identical(other.skillChoices, skillChoices) || other.skillChoices == skillChoices)&&(identical(other.toolChoice, toolChoice) || other.toolChoice == toolChoice)&&const DeepCollectionEquality().equals(other._grantedToolNames, _grantedToolNames));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ClassOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.hitDie, hitDie) || other.hitDie == hitDie)&&(identical(other.skillChoices, skillChoices) || other.skillChoices == skillChoices)&&(identical(other.toolChoice, toolChoice) || other.toolChoice == toolChoice)&&const DeepCollectionEquality().equals(other._grantedToolNames, _grantedToolNames)&&const DeepCollectionEquality().equals(other._startingEquipment, _startingEquipment));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,description,hitDie,skillChoices,toolChoice,const DeepCollectionEquality().hash(_grantedToolNames));
+int get hashCode => Object.hash(runtimeType,id,name,description,hitDie,skillChoices,toolChoice,const DeepCollectionEquality().hash(_grantedToolNames),const DeepCollectionEquality().hash(_startingEquipment));
 
 @override
 String toString() {
-  return 'ClassOption(id: $id, name: $name, description: $description, hitDie: $hitDie, skillChoices: $skillChoices, toolChoice: $toolChoice, grantedToolNames: $grantedToolNames)';
+  return 'ClassOption(id: $id, name: $name, description: $description, hitDie: $hitDie, skillChoices: $skillChoices, toolChoice: $toolChoice, grantedToolNames: $grantedToolNames, startingEquipment: $startingEquipment)';
 }
 
 
@@ -305,7 +322,7 @@ abstract mixin class _$ClassOptionCopyWith<$Res> implements $ClassOptionCopyWith
   factory _$ClassOptionCopyWith(_ClassOption value, $Res Function(_ClassOption) _then) = __$ClassOptionCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String name, String description, int hitDie, ClassSkillChoices skillChoices, ClassToolChoice? toolChoice, List<String> grantedToolNames
+ int id, String name, String description, int hitDie, ClassSkillChoices skillChoices, ClassToolChoice? toolChoice, List<String> grantedToolNames, List<ClassEquipmentOption> startingEquipment
 });
 
 
@@ -322,7 +339,7 @@ class __$ClassOptionCopyWithImpl<$Res>
 
 /// Create a copy of ClassOption
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = null,Object? hitDie = null,Object? skillChoices = null,Object? toolChoice = freezed,Object? grantedToolNames = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? description = null,Object? hitDie = null,Object? skillChoices = null,Object? toolChoice = freezed,Object? grantedToolNames = null,Object? startingEquipment = null,}) {
   return _then(_ClassOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -331,7 +348,8 @@ as String,hitDie: null == hitDie ? _self.hitDie : hitDie // ignore: cast_nullabl
 as int,skillChoices: null == skillChoices ? _self.skillChoices : skillChoices // ignore: cast_nullable_to_non_nullable
 as ClassSkillChoices,toolChoice: freezed == toolChoice ? _self.toolChoice : toolChoice // ignore: cast_nullable_to_non_nullable
 as ClassToolChoice?,grantedToolNames: null == grantedToolNames ? _self._grantedToolNames : grantedToolNames // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<String>,startingEquipment: null == startingEquipment ? _self._startingEquipment : startingEquipment // ignore: cast_nullable_to_non_nullable
+as List<ClassEquipmentOption>,
   ));
 }
 

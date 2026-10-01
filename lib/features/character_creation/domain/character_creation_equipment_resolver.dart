@@ -1,6 +1,7 @@
 import 'background_equipment_parser.dart';
 import 'background_equipment_resolver.dart';
 import 'background_option.dart';
+import 'class_starting_equipment.dart';
 import 'equipment_choice_tab.dart';
 import 'equipment_step_selection.dart';
 import 'item_catalog.dart';
@@ -38,20 +39,26 @@ abstract final class CharacterCreationEquipmentResolver {
   /// bouclier, rien n'est donc équipé d'office pour lui.
   static const String monkClassName = 'Moine';
 
+  /// [classEquipment] : option d'équipement de départ de classe retenue
+  /// (`domain/class_starting_equipment.dart`) — ses objets passent en tête de
+  /// l'inventaire (l'armure de classe est donc celle équipée d'office) et
+  /// son or s'ajoute à la Bourse de l'historique, budget d'achat compris.
   static ({List<InventoryLineDraft> inventory, int currencyGp}) resolve({
     required EquipmentChoiceTab tab,
     required BackgroundOption backgroundOption,
     required Map<String, int> purchasedEquipment,
     required ItemCatalog itemCatalog,
     String? className,
+    ClassEquipmentOption? classEquipment,
   }) {
     final startingGold =
-        BackgroundEquipmentParser.extractStartingGold(
-          backgroundOption.equipment,
-        ) ??
-        0;
+        (BackgroundEquipmentParser.extractStartingGold(
+              backgroundOption.equipment,
+            ) ??
+            0) +
+        (classEquipment?.gold ?? 0);
 
-    final resolution = tab == EquipmentChoiceTab.purchase
+    final baseResolution = tab == EquipmentChoiceTab.purchase
         ? _resolvePurchase(
             purchasedEquipment: purchasedEquipment,
             itemCatalog: itemCatalog,
@@ -62,6 +69,13 @@ abstract final class CharacterCreationEquipmentResolver {
             itemCatalog: itemCatalog,
             startingGold: startingGold,
           );
+    final resolution = (
+      inventory: [
+        ..._classLines(classEquipment, itemCatalog),
+        ...baseResolution.inventory,
+      ],
+      currencyGp: baseResolution.currencyGp,
+    );
     if (className == monkClassName) return resolution;
     return (
       inventory: _withStartingGearEquipped(resolution.inventory, itemCatalog),
@@ -95,6 +109,26 @@ abstract final class CharacterCreationEquipmentResolver {
           }(),
           _ => line,
         },
+    ];
+  }
+
+  /// Lignes d'inventaire des objets de [option] : un nom trouvé dans
+  /// [itemCatalog] devient un `item_id`, sinon une ligne libre (paquetage,
+  /// grimoire, instrument au choix).
+  static List<InventoryLineDraft> _classLines(
+    ClassEquipmentOption? option,
+    ItemCatalog itemCatalog,
+  ) {
+    if (option == null) return const [];
+    final idByName = {for (final item in itemCatalog.items) item.name: item.id};
+    return [
+      for (final item in option.items)
+        (
+          itemId: idByName[item.name],
+          customName: idByName.containsKey(item.name) ? null : item.name,
+          quantity: item.quantity,
+          equipped: false,
+        ),
     ];
   }
 

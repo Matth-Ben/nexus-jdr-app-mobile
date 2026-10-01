@@ -82,6 +82,7 @@ class CharacterCreationDraftController
       classLevelOneSpellChoices: classChanged || subclassChanged
           ? const <String>[]
           : state.classLevelOneSpellChoices,
+      classEquipmentOption: classChanged ? null : state.classEquipmentOption,
     );
   }
 
@@ -163,10 +164,12 @@ class CharacterCreationDraftController
   void setEquipment({
     required EquipmentChoiceTab activeTab,
     required Map<String, int> purchasedEquipment,
+    String? classEquipmentOption,
   }) {
     state = state.copyWith(
       equipmentChoiceTab: activeTab,
       purchasedEquipment: purchasedEquipment,
+      classEquipmentOption: classEquipmentOption,
     );
   }
 

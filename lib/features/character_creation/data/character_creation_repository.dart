@@ -14,6 +14,7 @@ import '../domain/class_option.dart';
 import '../domain/equipment_choice_tab.dart';
 import '../domain/final_ability_scores_resolver.dart';
 import '../../characters/domain/hit_point_bonus_rules.dart';
+import '../domain/class_starting_equipment.dart';
 import '../domain/hit_points_calculator.dart';
 import '../domain/item_catalog.dart';
 import '../domain/language_catalog.dart';
@@ -348,7 +349,9 @@ class SupabaseCharacterCreationRepository
     try {
       final classRows = await _client
           .from('classes')
-          .select('id, hit_die, skill_choices, tool_proficiencies')
+          .select(
+            'id, hit_die, skill_choices, tool_proficiencies, starting_equipment',
+          )
           .order('id', ascending: true);
 
       final classIds = ClassRowMapper.collectIds(classRows);
@@ -943,6 +946,10 @@ class SupabaseCharacterCreationRepository
       purchasedEquipment: draft.purchasedEquipment,
       itemCatalog: itemCatalog,
       className: classOption.name,
+      classEquipment: ClassEquipmentOption.select(
+        classOption.startingEquipment,
+        draft.classEquipmentOption,
+      ),
     );
 
     String? characterId;

@@ -16,6 +16,7 @@ import '../../characters/presentation/providers/character_detail_provider.dart';
 import '../../characters/presentation/providers/character_providers.dart';
 import '../domain/ability_score_definitions.dart';
 import '../domain/character_creation_draft.dart';
+import '../domain/class_starting_equipment.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/character_edit_planner.dart';
 import '../domain/creation_step_help.dart';
@@ -690,10 +691,16 @@ String _formatEquipmentSummary(
   SummaryStepData data,
 ) {
   final tab = draft.equipmentChoiceTab ?? EquipmentChoiceTab.background;
-  if (tab == EquipmentChoiceTab.background) {
-    return 'Historique : ${data.backgroundOption.name}';
-  }
-  return 'Achat (${draft.purchasedEquipment.length} objets)';
+  final classOption = ClassEquipmentOption.select(
+    data.classOption.startingEquipment,
+    draft.classEquipmentOption,
+  );
+  final base = tab == EquipmentChoiceTab.background
+      ? 'Historique : ${data.backgroundOption.name}'
+      : 'Achat (${draft.purchasedEquipment.length} objets)';
+  return classOption == null
+      ? base
+      : 'Classe : option ${classOption.label} · $base';
 }
 
 /// `true` si au moins un des 9 champs texte de l'étape 8 est non-null (une
