@@ -11,30 +11,32 @@ import 'package:personnages/features/character_creation/domain/racial_bonus_choi
 void main() {
   group('RacialBonusChoiceSpec.from', () {
     test('race sans choix -> null', () {
-      expect(
-        RacialBonusChoiceSpec.from(raceBonuses: const {'dex': 2}),
-        isNull,
-      );
+      expect(RacialBonusChoiceSpec.from(raceBonuses: const {'dex': 2}), isNull);
       expect(RacialBonusChoiceSpec.from(raceBonuses: const {}), isNull);
     });
 
-    test('choice_others (Demi-elfe) : exclut la caractéristique à bonus fixe', () {
-      final spec = RacialBonusChoiceSpec.from(
-        raceBonuses: const {
-          'cha': 2,
-          'choice_others': {'count': 2, 'amount': 1},
-        },
-      );
-      expect(spec, isA<OthersRacialBonusSpec>());
-      final others = spec! as OthersRacialBonusSpec;
-      expect(others.count, 2);
-      expect(others.amount, 1);
-      expect(others.excluded, {'cha'});
-    });
+    test(
+      'choice_others (Demi-elfe) : exclut la caractéristique à bonus fixe',
+      () {
+        final spec = RacialBonusChoiceSpec.from(
+          raceBonuses: const {
+            'cha': 2,
+            'choice_others': {'count': 2, 'amount': 1},
+          },
+        );
+        expect(spec, isA<OthersRacialBonusSpec>());
+        final others = spec! as OthersRacialBonusSpec;
+        expect(others.count, 2);
+        expect(others.amount, 1);
+        expect(others.excluded, {'cha'});
+      },
+    );
 
     test('choice_flexible -> règle flexible', () {
       expect(
-        RacialBonusChoiceSpec.from(raceBonuses: const {'choice_flexible': true}),
+        RacialBonusChoiceSpec.from(
+          raceBonuses: const {'choice_flexible': true},
+        ),
         isA<FlexibleRacialBonusSpec>(),
       );
     });
@@ -71,17 +73,20 @@ void main() {
     });
   });
 
-  test('FinalAbilityScoresResolver ajoute les bonus au choix aux bonus fixes', () {
-    const catalog = RaceCatalog(races: [], subraces: []);
-    final scores = FinalAbilityScoresResolver.resolve(
-      baseScores: const {'str': 15, 'dex': 14, 'con': 13},
-      raceCatalog: catalog,
-      raceId: null,
-      subraceId: null,
-      racialBonusChoices: const {'str': 2, 'con': 1},
-    );
-    expect(scores, {'str': 17, 'dex': 14, 'con': 14});
-  });
+  test(
+    'FinalAbilityScoresResolver ajoute les bonus au choix aux bonus fixes',
+    () {
+      const catalog = RaceCatalog(races: [], subraces: []);
+      final scores = FinalAbilityScoresResolver.resolve(
+        baseScores: const {'str': 15, 'dex': 14, 'con': 13},
+        raceCatalog: catalog,
+        raceId: null,
+        subraceId: null,
+        racialBonusChoices: const {'str': 2, 'con': 1},
+      );
+      expect(scores, {'str': 17, 'dex': 14, 'con': 14});
+    },
+  );
 
   test('RaceSummaryFormatter affiche la règle des bonus au choix', () {
     expect(
@@ -92,7 +97,9 @@ void main() {
       '+2 Cha, +1 à 2 caractéristiques au choix',
     );
     expect(
-      RaceSummaryFormatter.formatAbilityBonuses(const {'choice_flexible': true}),
+      RaceSummaryFormatter.formatAbilityBonuses(const {
+        'choice_flexible': true,
+      }),
       '+2 à une caractéristique et +1 à une autre, ou +1 à trois',
     );
   });
