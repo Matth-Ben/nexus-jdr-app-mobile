@@ -39,26 +39,29 @@ void main() {
       );
     });
 
-    test('Résilience draconique : +1 seulement sur un niveau d\'Ensorceleur', () {
-      expect(
-        HitPointBonusRules.perLevelBonus(
-          subraceName: null,
-          hasToughFeat: false,
-          levelingClassName: HitPointBonusRules.sorcererClassName,
-          levelingSubclassName: HitPointBonusRules.draconicSubclassName,
-        ),
-        1,
-      );
-      expect(
-        HitPointBonusRules.perLevelBonus(
-          subraceName: null,
-          hasToughFeat: false,
-          levelingClassName: 'Guerrier',
-          levelingSubclassName: null,
-        ),
-        0,
-      );
-    });
+    test(
+      'Résilience draconique : +1 seulement sur un niveau d\'Ensorceleur',
+      () {
+        expect(
+          HitPointBonusRules.perLevelBonus(
+            subraceName: null,
+            hasToughFeat: false,
+            levelingClassName: HitPointBonusRules.sorcererClassName,
+            levelingSubclassName: HitPointBonusRules.draconicSubclassName,
+          ),
+          1,
+        );
+        expect(
+          HitPointBonusRules.perLevelBonus(
+            subraceName: null,
+            hasToughFeat: false,
+            levelingClassName: 'Guerrier',
+            levelingSubclassName: null,
+          ),
+          0,
+        );
+      },
+    );
 
     test('cumul : Nain des collines + Robuste + draconique = +4', () {
       expect(
@@ -77,27 +80,30 @@ void main() {
     expect(HitPointBonusRules.toughFeatRetroactiveBonus(8), 16);
   });
 
-  test('featTakenBonus : Robuste physiquement, Faveur de robustesse, autres', () {
-    expect(
-      HitPointBonusRules.featTakenBonus(
-        featName: 'Robuste physiquement',
-        totalLevel: 8,
-      ),
-      16,
-    );
-    expect(
-      HitPointBonusRules.featTakenBonus(
-        featName: 'Faveur de robustesse',
-        totalLevel: 19,
-      ),
-      40,
-    );
-    // « Robuste » est le don Resilient en base : aucun PV.
-    expect(
-      HitPointBonusRules.featTakenBonus(featName: 'Robuste', totalLevel: 8),
-      0,
-    );
-  });
+  test(
+    'featTakenBonus : Robuste physiquement, Faveur de robustesse, autres',
+    () {
+      expect(
+        HitPointBonusRules.featTakenBonus(
+          featName: 'Robuste physiquement',
+          totalLevel: 8,
+        ),
+        16,
+      );
+      expect(
+        HitPointBonusRules.featTakenBonus(
+          featName: 'Faveur de robustesse',
+          totalLevel: 19,
+        ),
+        40,
+      );
+      // « Robuste » est le don Resilient en base : aucun PV.
+      expect(
+        HitPointBonusRules.featTakenBonus(featName: 'Robuste', totalLevel: 8),
+        0,
+      );
+    },
+  );
 
   group('HitPointBonusRules.constitutionRetroactiveBonus', () {
     test('15 -> 16 (+2 -> +3) au niveau 8 : +8 PV', () {

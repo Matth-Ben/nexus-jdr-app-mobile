@@ -69,7 +69,9 @@ abstract final class LevelUpFeatRowMapper {
     final increase = row['ability_increase'];
     if (increase is! Map) return const [];
     final abilities = increase['abilities'];
-    return abilities is List ? abilities.whereType<String>().toList() : const [];
+    return abilities is List
+        ? abilities.whereType<String>().toList()
+        : const [];
   }
 
   /// `feats.ability_increase.max` (20 par défaut, 30 pour les faveurs).

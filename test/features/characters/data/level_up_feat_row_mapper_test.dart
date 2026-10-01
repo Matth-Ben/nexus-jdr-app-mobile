@@ -124,7 +124,11 @@ void main() {
           },
           {'id': 24},
         ],
-        names: const {'3': 'Athlète', '43': 'Faveur', '24': 'Robuste physiquement'},
+        names: const {
+          '3': 'Athlète',
+          '43': 'Faveur',
+          '24': 'Robuste physiquement',
+        },
         descriptions: const {},
       );
       final byName = {for (final option in options) option.name: option};

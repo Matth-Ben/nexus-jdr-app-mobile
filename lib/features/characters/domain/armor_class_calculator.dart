@@ -103,7 +103,9 @@ abstract final class ArmorClassCalculator {
     }
 
     if (equippedArmor != null) {
-      final defenseBonus = fightingStyles.contains(defenseFightingStyle) ? 1 : 0;
+      final defenseBonus = fightingStyles.contains(defenseFightingStyle)
+          ? 1
+          : 0;
       return equippedArmor.acBase +
           _dexBonusFor(equippedArmor.acDexBonus, dexModifier) +
           defenseBonus +
