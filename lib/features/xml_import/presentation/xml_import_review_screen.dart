@@ -12,13 +12,17 @@ import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/sheet_header_bar.dart';
 import '../../character_creation/domain/ability_score_definitions.dart';
 import '../../character_creation/domain/character_creation_failure.dart';
+import '../../character_creation/domain/race_option.dart';
+import '../../character_creation/domain/racial_bonus_choice.dart';
 import '../../character_creation/domain/spell_option.dart';
+import '../../character_creation/presentation/widgets/racial_bonus_choice_card.dart';
 import '../../characters/presentation/providers/character_providers.dart';
 import '../domain/aidedd_reference_tables.dart';
 import '../domain/xml_character_import_resolved.dart';
 import '../domain/xml_field_resolution.dart';
 import '../domain/xml_import_alert_summary.dart';
 import '../domain/xml_import_save_data_resolver.dart';
+import '../domain/xml_race_resolver.dart';
 import 'providers/xml_import_providers.dart';
 
 /// Écran de vérification/récapitulatif de l'import XML aidedd.org
@@ -271,10 +275,15 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
 
     final raceBlocked = data.resolved.race.isUnrecognized;
     final classBlocked = data.resolved.characterClass.isUnrecognized;
-    if (raceBlocked || classBlocked) {
+    final racialChoiceSpec = _racialChoiceSpecOf(data.resolved);
+    final racialChoicesBlocked =
+        racialChoiceSpec != null &&
+        !racialChoiceSpec.isComplete(data.resolved.racialBonusChoices);
+    if (raceBlocked || classBlocked || racialChoicesBlocked) {
       final missingFields = [
         if (raceBlocked) 'la race',
         if (classBlocked) 'la classe',
+        if (racialChoicesBlocked) 'les bonus raciaux au choix',
       ].join(' et ');
       setState(() {
         _saveErrorMessage =
@@ -290,6 +299,27 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       if (!context.mounted) return;
     }
     await _save(data);
+  }
+
+  /// Bonus raciaux à répartir pour la race/sous-race reconnues, `null` si
+  /// aucun choix n'est attendu — ou si les scores du fichier incluent déjà
+  /// les bonus raciaux (export de l'app, voir
+  /// `XmlCharacterImportResolved.scoresIncludeRacialBonuses`).
+  static RacialBonusChoiceSpec? _racialChoiceSpecOf(
+    XmlCharacterImportResolved resolved,
+  ) {
+    if (resolved.scoresIncludeRacialBonuses) return null;
+    final race = switch (resolved.race) {
+      XmlFieldResolutionRecognized<RaceOption>(:final value) => value,
+      _ => null,
+    };
+    if (race == null) return null;
+    return RacialBonusChoiceSpec.from(
+      raceBonuses: race.abilityBonuses,
+      subraceBonuses: resolved.subrace?.raceId == race.id
+          ? resolved.subrace?.abilityBonuses
+          : null,
+    );
   }
 
   Future<bool?> _showUnresolvedFieldsDialog(BuildContext context) {
@@ -443,20 +473,42 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
     // Nom.
     addSummary('Nom', resolved.name.isEmpty ? 'Sans nom' : resolved.name);
 
-    // Race.
+    // Race (et sous-race identifiée dans `<race>`, voir `XmlRaceResolver`).
     _addSingleCatalogField(
       addSummary: addSummary,
       addAlert: addAlert,
       title: 'Race',
       resolution: resolved.race,
-      valueOf: (race) => race.name,
-      candidates: [for (final race in data.raceCatalog.races) race.name],
+      valueOf: (race) => XmlRaceResolver.labelOf(race, resolved.subrace),
+      candidates: [
+        for (final race in data.raceCatalog.races) ...[
+          race.name,
+          for (final subrace in data.raceCatalog.subraces)
+            if (subrace.raceId == race.id)
+              XmlRaceResolver.labelOf(race, subrace),
+        ],
+      ],
       onCorrect: (label) => _controller().correctRace(label),
       onKeepAsPlaceholder: (rawValue) =>
           _controller().keepRaceAsPlaceholder(rawValue),
       isIncompleteOf: (race) => race.isIncomplete,
       placeholderFieldKey: 'race',
     );
+
+    // Bonus raciaux au choix : un export aidedd.org ne dit pas comment ils
+    // ont été répartis (Demi-elfe, races à bonus flexibles).
+    final racialChoiceSpec = _racialChoiceSpecOf(resolved);
+    if (racialChoiceSpec != null) {
+      addSpacer();
+      widgets.add(
+        RacialBonusChoiceCard(
+          spec: racialChoiceSpec,
+          choices: resolved.racialBonusChoices,
+          onChanged: (choices) =>
+              _controller().setRacialBonusChoices(choices),
+        ),
+      );
+    }
 
     // Classe.
     _addSingleCatalogField(

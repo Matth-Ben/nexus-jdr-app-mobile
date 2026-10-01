@@ -80,6 +80,12 @@ Fiche et création :
 - Classe d'armure : armures et boucliers magiques, Armure +N, anneau et
   cape de protection (harmonisés), bracelets de défense et robe de
   l'archimage ; ces objets magiques peuvent désormais être équipés.
+- Import XML : la sous-race écrite dans la race (« Haut-elfe », « Nain des
+  collines », « Elfe (haut-elfe) ») est reconnue et enregistrée ; les bonus
+  raciaux sont ajoutés aux scores de base d'un export aidedd.org (bonus au
+  choix à répartir sur l'écran de vérification) et les PV reçoivent leurs
+  bonus. L'export XML écrit la sous-race et la sous-classe, et marque ses
+  scores comme définitifs pour un réimport exact.
 
 ---
 

@@ -47,6 +47,10 @@ typedef XmlImportInventoryLine = ({
 /// `characterName` de `CharacterCreationRepository.createCharacter`).
 typedef XmlImportSaveData = ({
   int? raceId,
+
+  /// `characters.subrace_id` — sous-race identifiée dans `<race>`, voir
+  /// `xml_race_resolver.dart`.
+  int? subraceId,
   String? raceCustomText,
   int? backgroundId,
 

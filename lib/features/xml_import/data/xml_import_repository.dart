@@ -62,13 +62,11 @@ class SupabaseXmlImportRepository implements XmlImportRepository {
             'owner_id': ownerId,
             'name': characterName,
             'race_id': data.raceId,
-            // Le XML aidedd.org n'exporte aucun champ sous-race séparé de
-            // `<race>` (voir `docs/xml-import-reference-mapping.md`, section
-            // "Point encore ouvert : raceCustom" — `raceCustom` lui-même
-            // reste ambigu/non vérifié empiriquement, traité comme
-            // purement informatif via [XmlImportSaveData.raceCustomText],
-            // jamais comme une sous-race) : toujours `null`.
-            'subrace_id': null,
+            // Le XML n'a pas de champ sous-race séparé : la sous-race est
+            // identifiée dans `<race>` lui-même (« Haut-elfe », « Elfe
+            // (haut-elfe) »), voir `domain/xml_race_resolver.dart`.
+            // `raceCustom` reste purement informatif.
+            'subrace_id': data.subraceId,
             'race_custom_text': data.raceCustomText,
             'background_id': data.backgroundId,
             'background_custom_text': data.backgroundCustomText,

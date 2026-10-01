@@ -13,8 +13,10 @@ import 'package:personnages/features/character_creation/domain/item_option.dart'
 import 'package:personnages/features/character_creation/domain/race_option.dart';
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/skill_option.dart';
+import 'package:personnages/features/character_creation/domain/subrace_option.dart';
 import 'package:personnages/features/xml_import/domain/xml_character_import_resolved.dart';
 import 'package:personnages/features/xml_import/domain/xml_field_resolution.dart';
+import 'package:personnages/features/xml_import/domain/xml_import_save_data.dart';
 import 'package:personnages/features/xml_import/domain/xml_import_save_data_resolver.dart';
 import 'package:personnages/features/xml_import/domain/xml_raw_level_entry.dart';
 
@@ -407,6 +409,103 @@ void main() {
       );
 
       expect(data.sexe, 'Non renseigné');
+    });
+  });
+
+  group('XmlImportSaveDataResolver.resolve — sous-race, bonus raciaux, PV', () {
+    const nain = RaceOption(
+      id: 5,
+      name: 'Nain',
+      abilityBonuses: {'con': 2},
+      traits: [],
+    );
+    const nainCollines = SubraceOption(
+      id: 50,
+      raceId: 5,
+      name: 'Nain des collines',
+      abilityBonuses: {'wis': 1},
+      traits: [],
+    );
+    const flexible = RaceOption(
+      id: 6,
+      name: 'Conil',
+      abilityBonuses: {'choice_flexible': true},
+      traits: [],
+    );
+    const baseScores = {
+      'str': 15,
+      'dex': 14,
+      'con': 13,
+      'int': 12,
+      'wis': 10,
+      'cha': 8,
+    };
+    const levels = [
+      XmlRawLevelEntry(level: 1, hpBrut: 6, abilityIncreases: [-1, -1, -1]),
+      XmlRawLevelEntry(level: 2, hpBrut: 4, abilityIncreases: [-1, -1, -1]),
+      XmlRawLevelEntry(level: 3, hpBrut: 4, abilityIncreases: [-1, -1, -1]),
+    ];
+
+    XmlImportSaveData resolve(XmlCharacterImportResolved resolved) =>
+        XmlImportSaveDataResolver.resolve(
+          resolved: resolved,
+          itemCatalog: _itemCatalog,
+          skillCatalog: _skillCatalog,
+          alignmentCatalog: _alignmentCatalog,
+        );
+
+    test('export aidedd.org : sous-race enregistrée, bonus fixes de la race '
+        'et de la sous-race ajoutés, Robustesse naine dans les PV', () {
+      final data = resolve(
+        _resolved(
+          race: const XmlFieldResolution.recognized(nain),
+          abilityScores: baseScores,
+          levels: levels,
+        ).copyWith(subrace: nainCollines),
+      );
+
+      expect(data.raceId, nain.id);
+      expect(data.subraceId, nainCollines.id);
+      expect(data.abilityScores['con'], 15); // 13 + 2
+      expect(data.abilityScores['wis'], 11); // 10 + 1
+      // (6 + 4 + 4) + 3 × Con +2 + 3 × Nain des collines +1
+      expect(data.maxHp, 14 + 6 + 3);
+    });
+
+    test('race à bonus flexibles : bonus au choix ajoutés', () {
+      final data = resolve(
+        _resolved(
+          race: const XmlFieldResolution.recognized(flexible),
+          abilityScores: baseScores,
+        ).copyWith(racialBonusChoices: {'str': 2, 'dex': 1}),
+      );
+
+      expect(data.abilityScores['str'], 17);
+      expect(data.abilityScores['dex'], 15);
+      expect(data.subraceId, isNull);
+    });
+
+    test('export de l\'app (<nexusFinalScores>) : scores et PV déjà '
+        'définitifs, rien n\'est ajouté', () {
+      final data = resolve(
+        _resolved(
+          race: const XmlFieldResolution.recognized(nain),
+          abilityScores: baseScores,
+          levels: levels,
+        ).copyWith(subrace: nainCollines, scoresIncludeRacialBonuses: true),
+      );
+
+      expect(data.abilityScores, baseScores);
+      expect(data.maxHp, 14 + 3); // Con 13 : +1 × 3, aucun bonus ajouté
+    });
+
+    test('sous-race d\'une autre race que la race retenue : ignorée', () {
+      final data = resolve(
+        _resolved(abilityScores: baseScores).copyWith(subrace: nainCollines),
+      );
+
+      expect(data.subraceId, isNull);
+      expect(data.abilityScores['wis'], 10);
     });
   });
 }

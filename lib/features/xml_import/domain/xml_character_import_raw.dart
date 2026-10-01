@@ -36,6 +36,13 @@ abstract class XmlCharacterImportRaw with _$XmlCharacterImportRaw {
     /// par [XmlCharacterImportResolver], jamais bloquant).
     String? raceCustom,
 
+    /// `<nexusFinalScores>1</nexusFinalScores>` — balise propre à l'export
+    /// de l'app (`xml_character_exporter.dart`) : les scores de
+    /// caractéristiques incluent déjà les bonus raciaux. Absente d'un export
+    /// aidedd.org, qui donne les scores de base (vérifié sur les deux
+    /// fixtures réelles : 27 points d'achat exactement, avant bonus racial).
+    @Default(false) bool scoresIncludeRacialBonuses,
+
     /// `<class>` — champ nommé `characterClass` plutôt que `class`, mot
     /// réservé Dart.
     required String characterClass,
