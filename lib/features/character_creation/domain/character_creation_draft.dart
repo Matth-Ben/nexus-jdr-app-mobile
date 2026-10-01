@@ -61,6 +61,12 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// encore choisis.
     Map<String, int>? abilityScores,
 
+    /// Bonus raciaux au choix répartis à l'étape 4 (clé de caractéristique →
+    /// bonus), pour les races à `choice_others`/`choice_flexible` — voir
+    /// `domain/racial_bonus_choice.dart`. Vide pour une race sans choix ;
+    /// effacé quand la race ou la sous-race change.
+    @Default(<String, int>{}) Map<String, int> racialBonusChoices,
+
     /// Compétences de classe choisies à l'étape 5 (noms affichés, ex.
     /// "Arcanes", pas des ids `skills.id`). Liste vide tant qu'aucune n'est
     /// choisie.

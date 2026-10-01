@@ -20,12 +20,14 @@ import '../domain/character_creation_failure.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/race_catalog.dart';
 import '../domain/race_summary_formatter.dart';
+import '../domain/racial_bonus_choice.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
 import 'providers/character_edit_session_provider.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
+import 'widgets/racial_bonus_choice_card.dart';
 import 'widgets/step_help_sheet.dart';
 
 /// Étape 4/9 de l'assistant de création de personnage : scores de
@@ -39,9 +41,10 @@ import 'widgets/step_help_sheet.dart';
 /// `domain/ability_score_modifier_calculator.dart` pour le calcul du
 /// modificateur affiché (bonus racial/sous-racial inclus).
 ///
-/// Aucune validation bloquante ici : "Suivant" est toujours actif, un jeu de
-/// 6 scores est toujours valide quelle que soit la méthode (contrairement à
-/// Race/Classe/Historique, qui bloquent tant que rien n'est choisi).
+/// Un jeu de 6 scores est toujours valide quelle que soit la méthode : seule
+/// la répartition des bonus raciaux au choix (Demi-elfe, Forgelier, races à
+/// bonus flexibles — `domain/racial_bonus_choice.dart`) bloque "Suivant"
+/// tant qu'elle est incomplète.
 ///
 /// En-tête bois plein dupliqué depuis `background_step_screen.dart`
 /// (`_Header` ci-dessous) — même principe que les étapes précédentes, pour
@@ -63,6 +66,10 @@ class _AbilityScoreStepScreenState
   int? _raceId;
   int? _subraceId;
 
+  /// Bonus raciaux au choix répartis sur cette étape (voir
+  /// `domain/racial_bonus_choice.dart`), vide si la race n'en a pas.
+  late Map<String, int> _racialChoices;
+
   /// Mode modification (décision utilisateur du 2026-09-25) : les 6 scores
   /// FINAUX se saisissent librement (1 à 30), sans méthode de génération ni
   /// bonus racial ajouté — ils incluent déjà race et améliorations.
@@ -83,6 +90,7 @@ class _AbilityScoreStepScreenState
     final draft = ref.read(characterCreationDraftControllerProvider);
     _raceId = draft.raceId;
     _subraceId = draft.subraceId;
+    _racialChoices = draft.racialBonusChoices;
     final draftMethod = draft.abilityScoreMethod;
     final draftScores = draft.abilityScores;
     if (_editSession != null && draftScores != null) {
@@ -191,9 +199,31 @@ class _AbilityScoreStepScreenState
     if (_editSession != null) {
       controller.setFinalAbilityScores(_scores);
     } else {
-      controller.setAbilityScores(method: _method, scores: _scores);
+      controller.setAbilityScores(
+        method: _method,
+        scores: _scores,
+        racialBonusChoices: _racialChoices,
+      );
     }
     context.push('/characters/new/step-5');
+  }
+
+  /// Bonus raciaux à répartir pour la race/sous-race du brouillon, `null` si
+  /// aucun (ou en mode modification, où les scores sont déjà finaux).
+  RacialBonusChoiceSpec? _racialChoiceSpec(RaceCatalog catalog) {
+    if (_editSession != null || _raceId == null) return null;
+    Map<String, dynamic>? raceBonuses;
+    for (final race in catalog.races) {
+      if (race.id == _raceId) raceBonuses = race.abilityBonuses;
+    }
+    Map<String, dynamic>? subraceBonuses;
+    for (final subrace in catalog.subraces) {
+      if (subrace.id == _subraceId) subraceBonuses = subrace.abilityBonuses;
+    }
+    return RacialBonusChoiceSpec.from(
+      raceBonuses: raceBonuses,
+      subraceBonuses: subraceBonuses,
+    );
   }
 
   @override
@@ -304,6 +334,9 @@ class _AbilityScoreStepScreenState
   }
 
   Widget _buildContent(RaceCatalog catalog) {
+    final racialChoiceSpec = _racialChoiceSpec(catalog);
+    final racialChoicesComplete =
+        racialChoiceSpec?.isComplete(_racialChoices) ?? true;
     return Column(
       children: [
         _Header(
@@ -413,7 +446,10 @@ class _AbilityScoreStepScreenState
                                         catalog: catalog,
                                         raceId: _raceId,
                                         subraceId: _subraceId,
-                                      ),
+                                      ) +
+                                      (_racialChoices[abilityScoreDefinitions[i]
+                                              .key] ??
+                                          0),
                                 ),
                           canIncrement: _canIncrement(
                             abilityScoreDefinitions[i].key,
@@ -425,6 +461,15 @@ class _AbilityScoreStepScreenState
                               _increment(abilityScoreDefinitions[i].key),
                           onDecrement: () =>
                               _decrement(abilityScoreDefinitions[i].key),
+                        ),
+                      ],
+                      if (racialChoiceSpec != null) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        RacialBonusChoiceCard(
+                          spec: racialChoiceSpec,
+                          choices: _racialChoices,
+                          onChanged: (choices) =>
+                              setState(() => _racialChoices = choices),
                         ),
                       ],
                     ],
@@ -447,7 +492,9 @@ class _AbilityScoreStepScreenState
                           Expanded(
                             child: PrimaryButton(
                               label: 'Suivant',
-                              onPressed: _submit,
+                              // Bloqué tant que les bonus raciaux au choix
+                              // ne sont pas entièrement répartis.
+                              onPressed: racialChoicesComplete ? _submit : null,
                             ),
                           ),
                         ],

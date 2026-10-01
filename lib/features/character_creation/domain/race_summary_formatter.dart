@@ -1,4 +1,5 @@
 import 'race_trait.dart';
+import 'racial_bonus_choice.dart';
 
 /// Formatte la ligne de résumé affichée sous le nom d'une race/sous-race à
 /// l'étape 1/9 de l'assistant de création
@@ -13,11 +14,9 @@ import 'race_trait.dart';
 ///   affiche "+1 à toutes les caractéristiques" plutôt que de les lister une
 ///   à une.
 /// - Sinon, une entrée "+X Abr" par bonus de caractéristique présent dans
-///   `ability_bonuses`, dans l'ordre canonique For/Dex/Con/Int/Sag/Cha. La
-///   clé spéciale `choice_others` (bonus à caractéristiques au choix, ex.
-///   Demi-elfe) n'apparaît jamais dans [_abilityAbbreviations] : elle est
-///   donc ignorée ici sans traitement dédié, et sera détaillée à une étape
-///   ultérieure de l'assistant (répartition des caractéristiques).
+///   `ability_bonuses`, dans l'ordre canonique For/Dex/Con/Int/Sag/Cha, suivie
+///   de la règle des bonus au choix (`choice_others`/`choice_flexible`, voir
+///   `racial_bonus_choice.dart`), répartis à l'étape 4/9.
 /// - Complète avec les deux premiers traits, dans l'ordre où ils
 ///   apparaissent dans le jsonb `traits`.
 abstract final class RaceSummaryFormatter {
@@ -86,10 +85,12 @@ abstract final class RaceSummaryFormatter {
       return '+1 à toutes les caractéristiques';
     }
 
+    final choiceSpec = RacialBonusChoiceSpec.from(raceBonuses: abilityBonuses);
     final parts = <String>[
       for (final entry in _abilityAbbreviations.entries)
         if (abilityBonuses[entry.key] is num)
           '+${(abilityBonuses[entry.key] as num).toInt()} ${entry.value}',
+      ?choiceSpec?.ruleLabel,
     ];
     return parts.join(', ');
   }

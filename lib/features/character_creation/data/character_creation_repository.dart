@@ -901,6 +901,7 @@ class SupabaseCharacterCreationRepository
       raceCatalog: raceCatalog,
       raceId: draft.raceId,
       subraceId: draft.subraceId,
+      racialBonusChoices: draft.racialBonusChoices,
     );
     final constitutionModifier = AbilityScoreRules.abilityModifier(
       finalAbilityScores['con'] ?? 10,
