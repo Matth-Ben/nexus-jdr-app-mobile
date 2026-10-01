@@ -61,7 +61,10 @@ class _RacialBonusChoiceCardState extends State<RacialBonusChoiceCard> {
         children: [
           Text(
             'Bonus racial au choix',
-            style: AppTypography.body(fontSize: 15, fontWeight: FontWeight.w700),
+            style: AppTypography.body(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -110,7 +113,10 @@ class _RacialBonusChoiceCardState extends State<RacialBonusChoiceCard> {
     return [
       SegmentedToggle<_FlexiblePattern>(
         options: const [
-          SegmentedToggleOption(value: _FlexiblePattern.twoOne, label: '+2 / +1'),
+          SegmentedToggleOption(
+            value: _FlexiblePattern.twoOne,
+            label: '+2 / +1',
+          ),
           SegmentedToggleOption(
             value: _FlexiblePattern.oneOneOne,
             label: '+1 / +1 / +1',

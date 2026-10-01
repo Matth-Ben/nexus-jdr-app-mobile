@@ -39,26 +39,29 @@ void main() {
       );
     });
 
-    test('Résilience draconique : +1 seulement sur un niveau d\'Ensorceleur', () {
-      expect(
-        HitPointBonusRules.perLevelBonus(
-          subraceName: null,
-          hasToughFeat: false,
-          levelingClassName: HitPointBonusRules.sorcererClassName,
-          levelingSubclassName: HitPointBonusRules.draconicSubclassName,
-        ),
-        1,
-      );
-      expect(
-        HitPointBonusRules.perLevelBonus(
-          subraceName: null,
-          hasToughFeat: false,
-          levelingClassName: 'Guerrier',
-          levelingSubclassName: null,
-        ),
-        0,
-      );
-    });
+    test(
+      'Résilience draconique : +1 seulement sur un niveau d\'Ensorceleur',
+      () {
+        expect(
+          HitPointBonusRules.perLevelBonus(
+            subraceName: null,
+            hasToughFeat: false,
+            levelingClassName: HitPointBonusRules.sorcererClassName,
+            levelingSubclassName: HitPointBonusRules.draconicSubclassName,
+          ),
+          1,
+        );
+        expect(
+          HitPointBonusRules.perLevelBonus(
+            subraceName: null,
+            hasToughFeat: false,
+            levelingClassName: 'Guerrier',
+            levelingSubclassName: null,
+          ),
+          0,
+        );
+      },
+    );
 
     test('cumul : Nain des collines + Robuste + draconique = +4', () {
       expect(
