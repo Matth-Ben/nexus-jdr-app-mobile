@@ -504,8 +504,7 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
         RacialBonusChoiceCard(
           spec: racialChoiceSpec,
           choices: resolved.racialBonusChoices,
-          onChanged: (choices) =>
-              _controller().setRacialBonusChoices(choices),
+          onChanged: (choices) => _controller().setRacialBonusChoices(choices),
         ),
       );
     }

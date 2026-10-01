@@ -59,7 +59,8 @@ abstract final class XmlImportSaveDataResolver {
     final classValue = _recognizedValue(resolved.characterClass);
     final backgroundValue = _recognizedValue(resolved.background);
     // Une sous-race n'a de sens qu'avec sa race reconnue.
-    final subrace = raceValue != null && resolved.subrace?.raceId == raceValue.id
+    final subrace =
+        raceValue != null && resolved.subrace?.raceId == raceValue.id
         ? resolved.subrace
         : null;
 

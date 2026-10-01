@@ -63,9 +63,8 @@ abstract final class XmlRaceResolver {
     for (final subrace in catalog.subraces) {
       final race = raceOf(subrace);
       if (race == null) continue;
-      if (_aliasesOf(subrace.name).any(
-        (alias) => XmlNameNormalizer.normalize(alias) == target,
-      )) {
+      if (_aliasesOf(subrace.name)
+          .any((alias) => XmlNameNormalizer.normalize(alias) == target)) {
         return recognized(race, subrace);
       }
     }
@@ -113,7 +112,15 @@ abstract final class XmlRaceResolver {
   }
 
   static const Set<String> _stopWords = {
-    'de', 'des', 'du', 'la', 'le', 'les', 'l', 'd', 'et',
+    'de',
+    'des',
+    'du',
+    'la',
+    'le',
+    'les',
+    'l',
+    'd',
+    'et',
   };
 
   static Set<String> _tokens(String text) => {
