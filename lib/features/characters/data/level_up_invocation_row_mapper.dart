@@ -1,3 +1,4 @@
+import '../../../core/utils/french_text_normalizer.dart';
 import '../domain/invocation_prerequisites.dart';
 import '../domain/level_up_invocation_option.dart';
 
@@ -78,7 +79,7 @@ abstract final class LevelUpInvocationRowMapper {
                 cantripNames[structuredPrerequisitesFor(row).cantripSpellId
                     ?.toString()],
           ),
-    ]..sort((a, b) => a.name.compareTo(b.name));
+    ]..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name));
     return options;
   }
 }

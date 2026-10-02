@@ -1,3 +1,4 @@
+import '../../../core/utils/french_text_normalizer.dart';
 import '../../character_creation/domain/spell_catalog.dart';
 import '../../character_creation/domain/spell_option.dart';
 
@@ -54,7 +55,7 @@ abstract final class PatronExtendedSpells {
       return (catalog: base, patronOnlySpellIds: const <int>{});
     }
     final merged = [...base.spells, ...added]
-      ..sort((a, b) => a.name.compareTo(b.name));
+      ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name));
     return (
       catalog: SpellCatalog(spells: merged),
       patronOnlySpellIds: {for (final spell in added) spell.id},

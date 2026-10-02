@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/french_text_normalizer.dart';
 import '../../../core/widgets/accent_icon_badge.dart';
 import '../../../core/widgets/alert_banner.dart';
 import '../../../core/widgets/checkable_option_tile.dart';
@@ -402,7 +403,7 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
     for (final category in EquipmentCategoryRules.shopSectionOrder) {
       final categoryItems =
           items.where((item) => item.category == category).toList()
-            ..sort((a, b) => a.name.compareTo(b.name));
+            ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name));
       if (categoryItems.isEmpty) continue;
 
       if (widgets.isNotEmpty) {

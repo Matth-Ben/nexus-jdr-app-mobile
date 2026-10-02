@@ -433,6 +433,316 @@ void main() {
       });
     });
 
+    group('tri alphabétique normalisé des catalogues (accents ignorés)', () {
+      // Sous `String.compareTo` brut, "Élémentaire" se classerait APRÈS
+      // "Zénith" ou tout nom commençant par une lettre non accentuée
+      // tardive (« É » a un point de code UTF-16 supérieur à la plupart des
+      // lettres ASCII) — `FrenchTextNormalizer` corrige ce travers. Chaque
+      // test ci-dessous fournit volontairement les lignes dans l'ordre
+      // INVERSE de l'ordre alphabétique attendu, pour prouver que le tri est
+      // bien appliqué (et pas juste "déjà dans le bon ordre par hasard").
+
+      test(
+        'fetchRaceCatalog : races triées, sous-races triées par race',
+        () async {
+          final repository = SupabaseCharacterCreationRepository(
+            _buildFakeSupabaseClient(
+              tableRows: {
+                'races': [
+                  {
+                    'id': 2,
+                    'ability_bonuses': <String, dynamic>{},
+                    'traits': <Map<String, dynamic>>[],
+                  },
+                  {
+                    'id': 1,
+                    'ability_bonuses': <String, dynamic>{},
+                    'traits': <Map<String, dynamic>>[],
+                  },
+                ],
+                'subraces': [
+                  {
+                    'id': 12,
+                    'race_id': 1,
+                    'ability_bonuses': <String, dynamic>{},
+                    'traits': <Map<String, dynamic>>[],
+                  },
+                  {
+                    'id': 11,
+                    'race_id': 1,
+                    'ability_bonuses': <String, dynamic>{},
+                    'traits': <Map<String, dynamic>>[],
+                  },
+                ],
+                'translations': [
+                  {'entity_id': '1', 'value': 'Élémentin'},
+                  {'entity_id': '2', 'value': 'Zéphyrien'},
+                  {'entity_id': '11', 'value': 'Zéphyrien des sables'},
+                  {'entity_id': '12', 'value': 'Élémentin des cavernes'},
+                ],
+              },
+            ),
+            cache,
+          );
+
+          final catalog = await repository.fetchRaceCatalog();
+
+          expect(catalog.races.map((r) => r.name), ['Élémentin', 'Zéphyrien']);
+          expect(catalog.subracesOf(1).map((s) => s.name), [
+            'Élémentin des cavernes',
+            'Zéphyrien des sables',
+          ]);
+        },
+      );
+
+      test('fetchClassCatalog : classes triées', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'classes': [
+                {
+                  'id': 2,
+                  'hit_die': 8,
+                  'skill_choices': {'count': 0, 'choices': <String>[]},
+                  'tool_proficiencies': <String>[],
+                },
+                {
+                  'id': 1,
+                  'hit_die': 10,
+                  'skill_choices': {'count': 0, 'choices': <String>[]},
+                  'tool_proficiencies': <String>[],
+                },
+              ],
+              'translations': [
+                {'entity_id': '1', 'value': 'Éclaireur'},
+                {'entity_id': '2', 'value': 'Zélote'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchClassCatalog();
+
+        expect(catalog.classes.map((c) => c.name), ['Éclaireur', 'Zélote']);
+      });
+
+      test('fetchBackgroundCatalog : historiques triés', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'backgrounds': [
+                {
+                  'id': 2,
+                  'skill_proficiencies': <String>[],
+                  'tool_or_language_choices': <String, dynamic>{},
+                  'equipment': <String>[],
+                },
+                {
+                  'id': 1,
+                  'skill_proficiencies': <String>[],
+                  'tool_or_language_choices': <String, dynamic>{},
+                  'equipment': <String>[],
+                },
+              ],
+              'translations': [
+                {'entity_id': '1', 'value': 'Érudit de guerre'},
+                {'entity_id': '2', 'value': 'Zingaro'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchBackgroundCatalog();
+
+        expect(catalog.backgrounds.map((b) => b.name), [
+          'Érudit de guerre',
+          'Zingaro',
+        ]);
+      });
+
+      test('fetchToolCatalog : outils triés', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'tools': [
+                {'id': 2, 'category': 'instrument'},
+                {'id': 1, 'category': 'instrument'},
+              ],
+              'translations': [
+                {'entity_id': '1', 'value': 'Épinette'},
+                {'entity_id': '2', 'value': 'Zampogna'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchToolCatalog();
+
+        expect(catalog.tools.map((t) => t.name), ['Épinette', 'Zampogna']);
+      });
+
+      test('fetchLanguageCatalog : langues triées', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'languages': [
+                {'id': 2, 'type': 'standard'},
+                {'id': 1, 'type': 'standard'},
+              ],
+              'translations': [
+                {'entity_id': '1', 'value': 'Élfique ancien'},
+                {'entity_id': '2', 'value': 'Zahari'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchLanguageCatalog();
+
+        expect(catalog.languages.map((l) => l.name), [
+          'Élfique ancien',
+          'Zahari',
+        ]);
+      });
+
+      test('fetchSpellCatalog : sorts triés (harmonisation accents)', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'spell_classes': [
+                {'spell_id': 2},
+                {'spell_id': 1},
+              ],
+              'spells': [
+                {
+                  'id': 2,
+                  'level': 1,
+                  'school': 'évocation',
+                  'casting_time': '1 action',
+                },
+                {
+                  'id': 1,
+                  'level': 1,
+                  'school': 'évocation',
+                  'casting_time': '1 action',
+                },
+              ],
+              'translations': [
+                {'entity_id': '1', 'value': 'Éclair'},
+                {'entity_id': '2', 'value': 'Zone de silence'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchSpellCatalog(classId: 1);
+
+        expect(catalog.spells.map((s) => s.name), [
+          'Éclair',
+          'Zone de silence',
+        ]);
+      });
+    });
+
+    group('non-régression : catalogues qui doivent garder leur ordre '
+        'canonique (pas de tri alphabétique)', () {
+      test('fetchSkillCatalog : conserve l\'ordre `id` (ordre du Manuel des '
+          'Joueurs, groupé par caractéristique)', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'skills': [
+                {'id': 1, 'ability_id': 'str'},
+                {'id': 2, 'ability_id': 'wis'},
+              ],
+              'translations': [
+                // Volontairement "en désordre alphabétique" : Perception
+                // (id 2) devrait rester APRÈS Athlétisme (id 1) même si
+                // "Athlétisme" > "Perception" n'est pas le cas ici — on
+                // force l'inverse pour être sûr qu'aucun tri alphabétique
+                // n'est appliqué.
+                {'entity_id': '1', 'value': 'Zoologie (Athlétisme)'},
+                {'entity_id': '2', 'value': 'Alchimie (Perception)'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchSkillCatalog();
+
+        expect(catalog.skills.map((s) => s.name), [
+          'Zoologie (Athlétisme)',
+          'Alchimie (Perception)',
+        ]);
+      });
+
+      test('fetchAlignmentCatalog : conserve l\'ordre `id` (grille classique '
+          'Loyal/Neutre/Chaotique x Bon/Neutre/Mauvais)', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'alignments': [
+                {'id': 1},
+                {'id': 2},
+              ],
+              'translations': [
+                // Même principe que le test skills ci-dessus : "Zélé" (id 1)
+                // avant "Altruiste" (id 2) alors que l'ordre alphabétique
+                // voudrait l'inverse.
+                {'entity_id': '1', 'value': 'Zélé (Loyal bon)'},
+                {'entity_id': '2', 'value': 'Altruiste (Loyal neutre)'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchAlignmentCatalog();
+
+        expect(catalog.alignments.map((a) => a.name), [
+          'Zélé (Loyal bon)',
+          'Altruiste (Loyal neutre)',
+        ]);
+      });
+
+      test('fetchItemCatalog : conserve l\'ordre `id` (trié ailleurs, à '
+          'l\'affichage — equipment_step_screen.dart)', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'items': [
+                {
+                  'id': 1,
+                  'category': 'arme',
+                  'cost': {'amount': 1, 'currency': 'gp'},
+                },
+                {
+                  'id': 2,
+                  'category': 'arme',
+                  'cost': {'amount': 1, 'currency': 'gp'},
+                },
+              ],
+              'translations': [
+                {'entity_id': '1', 'value': 'Zweihänder'},
+                {'entity_id': '2', 'value': 'Arbalète'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchItemCatalog();
+
+        expect(catalog.items.map((i) => i.name), ['Zweihänder', 'Arbalète']);
+      });
+    });
+
     test(
       'régression : la requête .select() sur `alignments` ne référence '
       'jamais `name` (colonne inexistante sur cette table — vit dans '

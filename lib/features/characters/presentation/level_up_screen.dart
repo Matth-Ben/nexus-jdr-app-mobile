@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/french_text_normalizer.dart';
 import '../../../core/widgets/accent_icon_badge.dart';
 import '../../../core/widgets/alert_banner.dart';
 import '../../../core/widgets/checkable_option_tile.dart';
@@ -2105,7 +2106,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
               spell,
         ]..sort((a, b) {
           final byLevel = a.level.compareTo(b.level);
-          return byLevel != 0 ? byLevel : a.name.compareTo(b.name);
+          return byLevel != 0
+              ? byLevel
+              : FrenchTextNormalizer.compare(a.name, b.name);
         });
 
     // Le joueur a pu revenir changer de patron : un sort d'une liste de patron

@@ -290,6 +290,20 @@ const _kit = InventoryCatalogItem(
   costAmount: 25,
 );
 
+const _epee = InventoryCatalogItem(
+  id: 3,
+  name: 'Épée longue',
+  category: 'arme',
+  costAmount: 10,
+);
+
+const _zanbato = InventoryCatalogItem(
+  id: 4,
+  name: 'Zanbato',
+  category: 'arme',
+  costAmount: 20,
+);
+
 /// Monte un bouton "Ouvrir" qui déclenche [pickInventoryAddition] — utilisé
 /// par les tests qui n'ont pas besoin d'inspecter le résultat final (états
 /// intermédiaires des sheets), voir les tests dédiés plus bas pour ceux qui
@@ -346,6 +360,27 @@ void main() {
       expect(find.text('Kit de crochetage'), findsOneWidget);
       // Pas de poids connu -> pas de "· X kg" dans le sous-titre.
       expect(find.text('25 po'), findsOneWidget);
+    });
+
+    testWidgets('tri alphabétique normalisé (accents ignorés) à l\'intérieur '
+        'd\'une catégorie, pas un compareTo brut', (tester) async {
+      // Sous `String.compareTo` brut, "Épée longue" se classerait APRÈS
+      // "Zanbato" (« É » a un point de code UTF-16 supérieur à « Z ») —
+      // `FrenchTextNormalizer` corrige ce travers.
+      await _pumpAndPick(
+        tester,
+        repository: FakeRepository(catalog: const [_zanbato, _epee]),
+      );
+      await tester.tap(find.text('Depuis le catalogue'));
+      await tester.pumpAndSettle();
+
+      final epeeCenter = tester.getCenter(find.text('Épée longue'));
+      final zanbatoCenter = tester.getCenter(find.text('Zanbato'));
+      expect(
+        epeeCenter.dy,
+        lessThan(zanbatoCenter.dy),
+        reason: '"Épée longue" doit être affichée avant "Zanbato"',
+      );
     });
 
     testWidgets('le champ de recherche filtre la liste', (tester) async {

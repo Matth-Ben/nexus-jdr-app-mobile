@@ -1,3 +1,4 @@
+import '../../../core/utils/french_text_normalizer.dart';
 import 'character_spell_entry.dart';
 
 /// Un groupe de sorts d'un même niveau, pour la section "SORTS" de l'onglet
@@ -38,7 +39,8 @@ abstract final class SpellsByLevelGrouper {
         SpellLevelGroup(
           level: level,
           label: labelFor(level),
-          spells: byLevel[level]!..sort((a, b) => a.name.compareTo(b.name)),
+          spells: byLevel[level]!
+            ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name)),
         ),
     ];
   }

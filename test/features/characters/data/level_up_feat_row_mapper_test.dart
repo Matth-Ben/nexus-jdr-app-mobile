@@ -140,6 +140,26 @@ void main() {
       expect(byName['Robuste physiquement']!.abilityIncreaseMax, 20);
     });
 
+    test('tri alphabétique normalisé (accents ignorés, pas un compareTo '
+        'brut)', () {
+      // Sous `String.compareTo` brut (sensible à la casse/aux accents),
+      // "Éclat de givre" se classerait APRÈS "Zèle farouche" (« É » a un
+      // point de code UTF-16 supérieur à « Z ») — `FrenchTextNormalizer`
+      // corrige ce travers.
+      final rows = [
+        {'id': 1, 'prerequisites': <String, dynamic>{}},
+        {'id': 2, 'prerequisites': <String, dynamic>{}},
+      ];
+
+      final options = LevelUpFeatRowMapper.toFeatOptions(
+        rows,
+        names: {'1': 'Zèle farouche', '2': 'Éclat de givre'},
+        descriptions: const {},
+      );
+
+      expect(options.map((o) => o.name), ['Éclat de givre', 'Zèle farouche']);
+    });
+
     test('liste vide en entrée -> liste vide en sortie', () {
       expect(
         LevelUpFeatRowMapper.toFeatOptions(

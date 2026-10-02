@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/reference_data_cache.dart';
+import '../../../core/utils/french_text_normalizer.dart';
 import '../domain/ability_score_rules.dart';
 import '../domain/alignment_catalog.dart';
 import '../domain/alignment_option.dart';
@@ -329,13 +330,34 @@ class SupabaseCharacterCreationRepository
       // écran d'administration) — même rationale que le filtrage de
       // `items.rarity` ailleurs dans ce dépôt. Pas de filtre équivalent sur
       // `subraces` : pas de colonne `is_incomplete` sur cette table.
-      races: _rowsOf(payload['races'])
-          .map((row) => RaceRowMapper.toRaceOption(row, names: raceNames))
-          .where((race) => !race.isIncomplete)
-          .toList(),
-      subraces: _rowsOf(payload['subraces'])
-          .map((row) => RaceRowMapper.toSubraceOption(row, names: subraceNames))
-          .toList(),
+      //
+      // Tri alphabétique (normalisé, insensible aux accents/casse, voir
+      // `FrenchTextNormalizer`) plutôt que l'ordre `id` de la requête : la
+      // maquette liste les races par ordre alphabétique, pas par ordre de
+      // peuplement en base.
+      races:
+          _rowsOf(payload['races'])
+              .map((row) => RaceRowMapper.toRaceOption(row, names: raceNames))
+              .where((race) => !race.isIncomplete)
+              .toList()
+            ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name)),
+      // Triées par race (`raceId`) puis par nom au sein d'une même race :
+      // `RaceCatalog.subracesOf` filtre cette liste par race, le tri entre
+      // races elles-mêmes n'a donc aucun effet visible, seul compte le tri
+      // par nom au sein de chaque groupe.
+      subraces:
+          _rowsOf(payload['subraces'])
+              .map(
+                (row) =>
+                    RaceRowMapper.toSubraceOption(row, names: subraceNames),
+              )
+              .toList()
+            ..sort((a, b) {
+              final byRace = a.raceId.compareTo(b.raceId);
+              return byRace != 0
+                  ? byRace
+                  : FrenchTextNormalizer.compare(a.name, b.name);
+            }),
     );
   }
 
@@ -400,15 +422,18 @@ class SupabaseCharacterCreationRepository
       _rowsOf(payload['classDescriptions']),
     );
     return ClassCatalog(
-      classes: _rowsOf(payload['classes'])
-          .map(
-            (row) => ClassRowMapper.toClassOption(
-              row,
-              names: names,
-              descriptions: descriptions,
-            ),
-          )
-          .toList(),
+      // Tri alphabétique, même rationale que `_mapRaceCatalogPayload`.
+      classes:
+          _rowsOf(payload['classes'])
+              .map(
+                (row) => ClassRowMapper.toClassOption(
+                  row,
+                  names: names,
+                  descriptions: descriptions,
+                ),
+              )
+              .toList()
+            ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name)),
     );
   }
 
@@ -485,18 +510,21 @@ class SupabaseCharacterCreationRepository
     return BackgroundCatalog(
       // Même filtre que `_mapRaceCatalogPayload` : un historique
       // `is_incomplete: true` (contenu de référence encore en cours de
-      // peuplement) n'est jamais proposé à la création de personnage.
-      backgrounds: _rowsOf(payload['backgrounds'])
-          .map(
-            (row) => BackgroundRowMapper.toBackgroundOption(
-              row,
-              names: names,
-              featureNames: featureNames,
-              featureDescriptions: featureDescriptions,
-            ),
-          )
-          .where((background) => !background.isIncomplete)
-          .toList(),
+      // peuplement) n'est jamais proposé à la création de personnage. Même
+      // tri alphabétique que les autres catalogues de cette classe.
+      backgrounds:
+          _rowsOf(payload['backgrounds'])
+              .map(
+                (row) => BackgroundRowMapper.toBackgroundOption(
+                  row,
+                  names: names,
+                  featureNames: featureNames,
+                  featureDescriptions: featureDescriptions,
+                ),
+              )
+              .where((background) => !background.isIncomplete)
+              .toList()
+            ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name)),
     );
   }
 
@@ -549,9 +577,12 @@ class SupabaseCharacterCreationRepository
       _rowsOf(payload['toolNames']),
     );
     return ToolCatalog(
-      tools: _rowsOf(payload['tools'])
-          .map((row) => ToolRowMapper.toToolOption(row, names: names))
-          .toList(),
+      // Tri alphabétique, même rationale que `_mapRaceCatalogPayload`.
+      tools:
+          _rowsOf(payload['tools'])
+              .map((row) => ToolRowMapper.toToolOption(row, names: names))
+              .toList()
+            ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name)),
     );
   }
 
@@ -604,9 +635,14 @@ class SupabaseCharacterCreationRepository
       _rowsOf(payload['languageNames']),
     );
     return LanguageCatalog(
-      languages: _rowsOf(payload['languages'])
-          .map((row) => LanguageRowMapper.toLanguageOption(row, names: names))
-          .toList(),
+      // Tri alphabétique, même rationale que `_mapRaceCatalogPayload`.
+      languages:
+          _rowsOf(payload['languages'])
+              .map(
+                (row) => LanguageRowMapper.toLanguageOption(row, names: names),
+              )
+              .toList()
+            ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name)),
     );
   }
 
@@ -699,7 +735,7 @@ class SupabaseCharacterCreationRepository
             )
             .where((spell) => !spell.isIncomplete)
             .toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
+          ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name));
     return SpellCatalog(spells: spells);
   }
 
