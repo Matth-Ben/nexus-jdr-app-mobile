@@ -5,7 +5,9 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/dashed_border_painter.dart';
+import '../../../../core/widgets/dice_type_badge.dart';
 import '../../domain/character_inventory_item.dart';
+import '../../domain/dice_notation_parser.dart';
 import '../../domain/inventory_category_rules.dart';
 import '../../domain/weight_formatter.dart';
 
@@ -29,6 +31,10 @@ class CharacterInventoryItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dice = item.weaponProperties?.damageDice != null
+        ? DiceNotationParser.parse(item.weaponProperties!.damageDice!)
+        : null;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -73,6 +79,13 @@ class CharacterInventoryItemCard extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (dice != null) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          DiceTypeBadge(
+                            sides: dice.sides,
+                            label: '${dice.count}d${dice.sides}',
+                          ),
+                        ],
                       ],
                     ),
                     Text(

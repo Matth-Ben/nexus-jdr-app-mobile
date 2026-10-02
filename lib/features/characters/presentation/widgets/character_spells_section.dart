@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/dice_type_badge.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
+import '../../domain/spell_damage_dice_extractor.dart';
 import '../../domain/spell_grant_source.dart';
 import '../../domain/spell_status_formatter.dart';
 import '../../domain/spells_by_level_grouper.dart';
@@ -550,6 +552,7 @@ class _SpellRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dice = SpellDamageDiceExtractor.extract(spell.description);
     final statusText = SpellStatusFormatter.subtitle(spell);
     final subtitle = showLevelInSubtitle
         ? ['niv. ${spell.level}', ?statusText].join(' · ')
@@ -604,6 +607,13 @@ class _SpellRow extends StatelessWidget {
                       _FavoriteStar(
                         isFavorite: spell.isFavorite,
                         onTap: enabled ? () => onToggleFavorite(spell) : null,
+                      ),
+                    ],
+                    if (dice != null) ...[
+                      const SizedBox(width: AppSpacing.xs),
+                      DiceTypeBadge(
+                        sides: dice.sides,
+                        label: '${dice.count}d${dice.sides}',
                       ),
                     ],
                   ],
