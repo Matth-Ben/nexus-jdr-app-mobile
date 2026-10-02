@@ -20,9 +20,18 @@ import 'character_name_tag_chip.dart';
 /// N'affiche rien tant que [names] est vide — appelant responsable de ne pas
 /// monter cette carte dans ce cas (voir `character_skills_tab_body.dart`).
 class CharacterArmorProficienciesCard extends StatelessWidget {
-  const CharacterArmorProficienciesCard({required this.names, super.key});
+  const CharacterArmorProficienciesCard({
+    required this.names,
+    required this.onTapToken,
+    super.key,
+  });
 
   final List<String> names;
+
+  /// Tap sur une chip — ouvre le panneau "Infos" du token (voir
+  /// `showProficiencyDetailPanel`, `ProficiencyTokenKind.armor`). Même
+  /// rationale que `CharacterWeaponProficienciesCard.onTapToken`.
+  final void Function(String token) onTapToken;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +57,8 @@ class CharacterArmorProficienciesCard extends StatelessWidget {
             spacing: AppSpacing.xs,
             runSpacing: AppSpacing.xs,
             children: [
-              for (final name in names) CharacterNameTagChip(name: name),
+              for (final name in names)
+                CharacterNameTagChip(name: name, onTap: () => onTapToken(name)),
             ],
           ),
         ],

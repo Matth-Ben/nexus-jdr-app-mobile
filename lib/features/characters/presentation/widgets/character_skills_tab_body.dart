@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/proficiency_bonus.dart';
+import '../../domain/proficiency_token_resolver.dart';
 import '../../domain/skill_bonus_calculator.dart';
 import '../../domain/skill_name_filter.dart';
 import 'character_armor_proficiencies_card.dart';
@@ -15,6 +16,7 @@ import 'character_skills_card.dart';
 import 'character_tool_proficiencies_card.dart';
 import 'character_weapon_proficiencies_card.dart';
 import 'class_feature_action_sheet.dart';
+import 'proficiency_detail_panel.dart';
 
 /// Contenu de l'onglet "Aptitudes" de la fiche personnage (anciennement
 /// "Compétences", voir `character_detail_tab_bar.dart::CharacterDetailTab
@@ -120,12 +122,24 @@ class _CharacterSkillsTabBodyState extends State<CharacterSkillsTabBody> {
           CharacterSkillsCard(results: skillResults),
         if (detail.armorProficiencyNames.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          CharacterArmorProficienciesCard(names: detail.armorProficiencyNames),
+          CharacterArmorProficienciesCard(
+            names: detail.armorProficiencyNames,
+            onTapToken: (token) => showProficiencyDetailPanel(
+              context,
+              token: token,
+              kind: ProficiencyTokenKind.armor,
+            ),
+          ),
         ],
         if (detail.weaponProficiencyNames.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           CharacterWeaponProficienciesCard(
             names: detail.weaponProficiencyNames,
+            onTapToken: (token) => showProficiencyDetailPanel(
+              context,
+              token: token,
+              kind: ProficiencyTokenKind.weapon,
+            ),
           ),
         ],
         if (detail.toolProficiencyNames.isNotEmpty) ...[
