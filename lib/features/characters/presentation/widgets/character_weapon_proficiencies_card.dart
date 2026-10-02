@@ -20,9 +20,21 @@ import 'character_name_tag_chip.dart';
 /// N'affiche rien tant que [names] est vide — appelant responsable de ne pas
 /// monter cette carte dans ce cas (voir `character_skills_tab_body.dart`).
 class CharacterWeaponProficienciesCard extends StatelessWidget {
-  const CharacterWeaponProficienciesCard({required this.names, super.key});
+  const CharacterWeaponProficienciesCard({
+    required this.names,
+    required this.onTapToken,
+    super.key,
+  });
 
   final List<String> names;
+
+  /// Tap sur une chip — ouvre le panneau "Infos" du token (voir
+  /// `showProficiencyDetailPanel`, `ProficiencyTokenKind.weapon`). Câblé par
+  /// l'appelant (`character_skills_tab_body.dart`) plutôt qu'importé
+  /// directement ici : ce widget n'a besoin de rien connaître de Riverpod ni
+  /// du panneau, même rationale que `onUseFeature` de
+  /// `CharacterClassFeaturesCard`.
+  final void Function(String token) onTapToken;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +60,8 @@ class CharacterWeaponProficienciesCard extends StatelessWidget {
             spacing: AppSpacing.xs,
             runSpacing: AppSpacing.xs,
             children: [
-              for (final name in names) CharacterNameTagChip(name: name),
+              for (final name in names)
+                CharacterNameTagChip(name: name, onTap: () => onTapToken(name)),
             ],
           ),
         ],

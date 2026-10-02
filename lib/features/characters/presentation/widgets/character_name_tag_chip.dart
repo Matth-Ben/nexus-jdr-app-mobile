@@ -27,13 +27,22 @@ import '../../../../core/theme/app_typography.dart';
 /// tâche de le faire pointer ici (cross-feature, à arbitrer séparément si
 /// ça se reproduit une 3e fois côté création).
 class CharacterNameTagChip extends StatelessWidget {
-  const CharacterNameTagChip({required this.name, super.key});
+  const CharacterNameTagChip({required this.name, this.onTap, super.key});
 
   final String name;
 
+  /// Tap optionnel (`null` par défaut, comportement visuel inchangé) —
+  /// utilisé par `CharacterWeaponProficienciesCard`/
+  /// `CharacterArmorProficienciesCard` pour ouvrir le panneau "Infos" d'un
+  /// token de maîtrise (`proficiency_detail_panel.dart`).
+  /// `CharacterToolProficienciesCard`/`CharacterLanguagesCard` ne le
+  /// fournissent jamais et restent donc non interactives, rendu
+  /// byte-identique à avant l'ajout de ce paramètre.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final chip = Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
         vertical: 4,
@@ -49,6 +58,34 @@ class CharacterNameTagChip extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w700,
           color: AppColors.textSecondary,
+        ),
+      ),
+    );
+
+    final handler = onTap;
+    if (handler == null) return chip;
+
+    // Zone de tap élargie à >= 44x44 (padding autour, le rendu visuel du
+    // chip reste identique) — spec direction-artistique. `excludeSemantics:
+    // true` + `onTap` porté directement par ce `Semantics` (même patron que
+    // `DiceTypeBadge`) : sans ça, le label du `Text` descendant se
+    // combinerait avec [label] (comportement de fusion par défaut de
+    // Flutter), ce que la spec ne demande pas (un seul label explicite).
+    return Semantics(
+      button: true,
+      label: '$name, voir le détail',
+      onTap: handler,
+      container: true,
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: handler,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            child: Center(child: chip),
+          ),
         ),
       ),
     );
