@@ -1,3 +1,4 @@
+import '../../../core/utils/french_text_normalizer.dart';
 import '../domain/level_up_subclass_option.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes `subclasses`/
@@ -25,7 +26,8 @@ abstract final class LevelUpChoiceRowMapper {
   /// [collectSubclassIds]). [descriptions] peut ne pas couvrir tous les
   /// identifiants (`description` nullable en base) : retombe sur `null`
   /// plutôt que sur un texte de repli, voir la documentation de
-  /// [LevelUpSubclassOption.description].
+  /// [LevelUpSubclassOption.description]. Triées alphabétiquement (normalisé,
+  /// insensible aux accents/casse) plutôt que l'ordre `id` des lignes.
   static List<LevelUpSubclassOption> toSubclassOptions(
     List<Map<String, dynamic>> rows, {
     required Map<String, String> names,
@@ -39,6 +41,6 @@ abstract final class LevelUpChoiceRowMapper {
             name: names[row['id'].toString()] ?? 'Sous-classe #${row['id']}',
             description: descriptions[row['id'].toString()],
           ),
-    ];
+    ]..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name));
   }
 }

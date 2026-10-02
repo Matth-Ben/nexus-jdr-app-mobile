@@ -1,30 +1,16 @@
+import '../../../core/utils/french_text_normalizer.dart';
 import 'pact_weapon_option.dart';
 
 /// Règles pures de la feuille « FORME DE L'ARME » (Pacte de la lame) :
 /// éligibilité, tri et recherche — comparaisons sans accents ni casse.
 abstract final class PactWeaponRules {
-  static const Map<String, String> _accents = {
-    'à': 'a', 'á': 'a', 'â': 'a', 'ä': 'a', 'ã': 'a', 'å': 'a', //
-    'ç': 'c', //
-    'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e', //
-    'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i', //
-    'ñ': 'n', //
-    'ò': 'o', 'ó': 'o', 'ô': 'o', 'ö': 'o', 'õ': 'o', //
-    'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u', //
-    'ý': 'y', 'ÿ': 'y', //
-    'œ': 'oe', 'æ': 'ae', //
-  };
-
-  /// Minuscule et sans diacritiques (ex. « Épée » -> « epee »).
-  static String normalize(String value) {
-    final lower = value.trim().toLowerCase();
-    final buffer = StringBuffer();
-    for (final rune in lower.runes) {
-      final char = String.fromCharCode(rune);
-      buffer.write(_accents[char] ?? char);
-    }
-    return buffer.toString();
-  }
+  /// Minuscule et sans diacritiques (ex. « Épée » -> « epee »). Délègue à
+  /// [FrenchTextNormalizer] (normalisation partagée, voir sa documentation
+  /// de classe pour le rationale de factorisation) : ne garde qu'un alias
+  /// dédié à ce besoin d'éligibilité/recherche plutôt que de faire migrer
+  /// tous les appelants de ce fichier.
+  static String normalize(String value) =>
+      FrenchTextNormalizer.normalize(value);
 
   /// Une arme de pacte est une arme de corps à corps : `category == 'arme'`,
   /// un dé de dégâts, et aucune propriété « munitions » (peut être suffixée,

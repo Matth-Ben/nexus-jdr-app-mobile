@@ -193,6 +193,48 @@ void main() {
       expect(tables, ['class_features']);
     });
 
+    test('tri alphabétique normalisé des sous-classes candidates (accents '
+        'ignorés, pas l\'ordre des lignes id)', () async {
+      // Sous `String.compareTo` brut, "Évocation" se classerait APRÈS
+      // "Illusion" (« É » a un point de code UTF-16 supérieur à « I ») —
+      // `FrenchTextNormalizer` corrige ce travers. Lignes `subclasses`
+      // volontairement dans l'ordre inverse de l'ordre alphabétique attendu.
+      final client = _client((request) {
+        switch (request.url.pathSegments.last) {
+          case 'class_features':
+            return [
+              {
+                'class_id': 12,
+                'level': 1,
+                'choice_type': 'sous_classe',
+                'subclass_id': null,
+              },
+            ];
+          case 'subclasses':
+            return [
+              {'id': 122, 'class_id': 12, 'available_from_level': 1},
+              {'id': 121, 'class_id': 12, 'available_from_level': 1},
+            ];
+          case 'translations':
+            return [
+              {'entity_id': '121', 'value': 'Évocation'},
+              {'entity_id': '122', 'value': 'Illusion'},
+            ];
+        }
+        return const [];
+      });
+
+      final catalog = await SupabaseSubclassChoiceRepository(
+        client,
+        cache,
+      ).fetchLevelOneSubclassChoices();
+
+      expect(catalog.optionsFor(12)!.map((o) => o.name), [
+        'Évocation',
+        'Illusion',
+      ]);
+    });
+
     test('erreur HTTP : CharacterCreationFailure', () async {
       final client = _client(
         (request) => {'message': 'boom', 'code': 'PGRST000'},

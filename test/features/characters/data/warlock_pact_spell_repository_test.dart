@@ -122,4 +122,46 @@ void main() {
       expect(result, isEmpty);
     },
   );
+
+  test('fetchAllCantrips : tri alphabétique normalisé (accents ignorés), pas '
+      'un compareTo brut', () async {
+    // Sous `String.compareTo` brut, "Éclair" se classerait APRÈS "Zone de
+    // vérité" (« É » a un point de code UTF-16 supérieur à « Z ») —
+    // `FrenchTextNormalizer` corrige ce travers.
+    final client = _client((request) {
+      switch (request.url.pathSegments.last) {
+        case 'spells':
+          return [
+            {
+              'id': 1,
+              'level': 0,
+              'school': 'Évocation',
+              'casting_time': '1 action',
+              'is_incomplete': false,
+            },
+            {
+              'id': 2,
+              'level': 0,
+              'school': 'Divination',
+              'casting_time': '1 action',
+              'is_incomplete': false,
+            },
+          ];
+        case 'translations':
+          return [
+            {'entity_id': '1', 'value': 'Zone de vérité'},
+            {'entity_id': '2', 'value': 'Éclair'},
+          ];
+        default:
+          return const <Map<String, dynamic>>[];
+      }
+    });
+
+    final cantrips = await SupabaseWarlockPactSpellRepository(
+      client,
+      cache,
+    ).fetchAllCantrips();
+
+    expect(cantrips.map((spell) => spell.name), ['Éclair', 'Zone de vérité']);
+  });
 }

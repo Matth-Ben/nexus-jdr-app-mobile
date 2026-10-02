@@ -168,5 +168,24 @@ void main() {
         isEmpty,
       );
     });
+
+    test('tri alphabétique normalisé (accents ignorés, pas un compareTo '
+        'brut)', () {
+      // Même piège que `LevelUpFeatRowMapper` : « É » a un point de code
+      // UTF-16 supérieur à « Z », un `compareTo` brut classerait "Œil
+      // perçant" après "Zone de ténèbres".
+      final rows = [
+        {'id': 1, 'prerequisites': <String, dynamic>{}},
+        {'id': 2, 'prerequisites': <String, dynamic>{}},
+      ];
+
+      final options = LevelUpInvocationRowMapper.toInvocationOptions(
+        rows,
+        names: {'1': 'Zone de ténèbres', '2': 'Œil perçant'},
+        descriptions: const {},
+      );
+
+      expect(options.map((o) => o.name), ['Œil perçant', 'Zone de ténèbres']);
+    });
   });
 }

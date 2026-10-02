@@ -80,6 +80,25 @@ void main() {
     expect(result.catalog.spells.any((s) => s.id == 12), isFalse);
   });
 
+  test(
+    'tri alphabétique normalisé (accents ignorés), pas un compareTo brut',
+    () {
+      // Sous `String.compareTo` brut, "Éclair" se classerait APRÈS "Zone
+      // de vérité" (« É » a un point de code UTF-16 supérieur à « Z ») —
+      // `FrenchTextNormalizer` corrige ce travers.
+      final result = PatronExtendedSpells.merge(
+        base: const SpellCatalog(spells: []),
+        extended: [_ext(20, 'Zone de vérité', 1, 1), _ext(21, 'Éclair', 1, 1)],
+        warlockLevel: 5,
+        maxSpellLevel: 3,
+      );
+      expect(result.catalog.spells.map((s) => s.name), [
+        'Éclair',
+        'Zone de vérité',
+      ]);
+    },
+  );
+
   test('aucun doublon : sort deja dans la liste de classe ou repete', () {
     final result = PatronExtendedSpells.merge(
       base: base,

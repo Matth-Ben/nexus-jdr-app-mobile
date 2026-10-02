@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/utils/french_text_normalizer.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/error_retry_state.dart';
 import '../../../../core/widgets/primary_button.dart';
@@ -336,7 +337,7 @@ class _ItemCatalogPickerContentState
     for (final category in InventoryCategoryRules.categoryOrder) {
       final categoryItems =
           filtered.where((item) => item.category == category).toList()
-            ..sort((a, b) => a.name.compareTo(b.name));
+            ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name));
       if (categoryItems.isEmpty) continue;
 
       if (widgets.isNotEmpty) {

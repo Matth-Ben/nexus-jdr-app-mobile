@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/reference_data_cache.dart';
+import '../../../core/utils/french_text_normalizer.dart';
 import '../../character_creation/data/spell_row_mapper.dart';
 import '../../character_creation/domain/spell_option.dart';
 import '../domain/character_failure.dart';
@@ -77,7 +78,7 @@ class SupabaseWarlockPactSpellRepository implements WarlockPactSpellRepository {
       return [
         for (final row in spellRows)
           SpellRowMapper.toSpellOption(row, names: names),
-      ]..sort((a, b) => a.name.compareTo(b.name));
+      ]..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name));
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } on CharacterFailure {

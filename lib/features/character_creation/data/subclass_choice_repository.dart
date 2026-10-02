@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/reference_data_cache.dart';
+import '../../../core/utils/french_text_normalizer.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/subclass_choice_catalog.dart';
 import 'character_creation_error_mapper.dart';
@@ -116,7 +117,7 @@ class SupabaseSubclassChoiceRepository implements SubclassChoiceRepository {
       : const [];
 
   SubclassChoiceCatalog _map(Map<String, dynamic> payload) {
-    return SubclassChoiceRowMapper.toCatalog(
+    final catalog = SubclassChoiceRowMapper.toCatalog(
       concernedClassIds: SubclassChoiceRowMapper.collectConcernedClassIds(
         _rows(payload['features']),
       ),
@@ -125,6 +126,17 @@ class SupabaseSubclassChoiceRepository implements SubclassChoiceRepository {
       descriptions: ClassRowMapper.parseTranslatedValues(
         _rows(payload['descriptions']),
       ),
+    );
+    // Tri alphabétique (normalisé, insensible aux accents/casse) des
+    // sous-classes candidates de chaque classe, plutôt que l'ordre `id` des
+    // lignes `subclasses` — même rationale que les catalogues de
+    // `character_creation_repository.dart`.
+    return SubclassChoiceCatalog(
+      optionsByClassId: {
+        for (final entry in catalog.optionsByClassId.entries)
+          entry.key: [...entry.value]
+            ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name)),
+      },
     );
   }
 

@@ -1648,6 +1648,11 @@ void main() {
             expect(find.text(style), findsOneWidget);
           }
 
+          // "Duel" (tri alphabétique : 5ᵉ des 6 options) peut être hors du
+          // viewport initial du `SingleChildScrollView` sur la taille
+          // d'écran de test — `ensureVisible` le fait défiler avant le tap,
+          // même pattern que "Dragons" ci-dessous.
+          await tester.ensureVisible(find.text('Duel'));
           await tester.tap(find.text('Duel'));
           await tester.pumpAndSettle();
           await tester.tap(find.text('CONTINUER'));
@@ -1762,6 +1767,9 @@ void main() {
         );
 
         await pushToChoiceStep(tester, 5);
+        // "Duel" peut être hors du viewport initial (tri alphabétique),
+        // même rationale que le test ci-dessus.
+        await tester.ensureVisible(find.text('Duel'));
         await tester.tap(find.text('Duel'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('CONTINUER'));

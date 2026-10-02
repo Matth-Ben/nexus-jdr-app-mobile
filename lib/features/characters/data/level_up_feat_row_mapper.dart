@@ -1,3 +1,4 @@
+import '../../../core/utils/french_text_normalizer.dart';
 import '../domain/level_up_feat_option.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes `feats`/`translations`
@@ -42,7 +43,8 @@ abstract final class LevelUpFeatRowMapper {
   /// (déjà filtrées pour exclure les dons possédés, voir
   /// `SupabaseCharacterRepository.fetchAvailableFeats`) et des
   /// noms/descriptions déjà résolus (`names`/`descriptions`, voir
-  /// [collectFeatIds]) — triées alphabétiquement (cohérent avec le catalogue
+  /// [collectFeatIds]) — triées alphabétiquement (normalisé, insensible aux
+  /// accents/casse, voir `FrenchTextNormalizer` ; cohérent avec le catalogue
   /// de sorts, voir la spec visuelle direction-artistique section 2).
   static List<LevelUpFeatOption> toFeatOptions(
     List<Map<String, dynamic>> rows, {
@@ -60,7 +62,7 @@ abstract final class LevelUpFeatRowMapper {
             increasableAbilities: increasableAbilitiesFor(row),
             abilityIncreaseMax: abilityIncreaseMaxFor(row),
           ),
-    ]..sort((a, b) => a.name.compareTo(b.name));
+    ]..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name));
     return options;
   }
 

@@ -70,5 +70,23 @@ void main() {
 
       expect(options, isEmpty);
     });
+
+    test('tri alphabétique normalisé (accents ignorés), pas l\'ordre des '
+        'lignes `id`', () {
+      final rows = [
+        {'id': 5, 'available_from_level': 3},
+        {'id': 8, 'available_from_level': 3},
+      ];
+
+      final options = LevelUpChoiceRowMapper.toSubclassOptions(
+        rows,
+        // Inversé par rapport à l'ordre des lignes (id 5 puis 8) : "Zéphyr"
+        // doit malgré tout finir après "École".
+        names: const {'5': 'Zéphyr', '8': 'École des éléments'},
+        descriptions: const {},
+      );
+
+      expect(options.map((o) => o.name), ['École des éléments', 'Zéphyr']);
+    });
   });
 }
