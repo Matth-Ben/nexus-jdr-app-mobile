@@ -255,7 +255,19 @@ class _ClaimCurrencyFieldState extends State<_ClaimCurrencyField> {
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           onChanged: _clamp,
-          decoration: InputDecoration(hintText: '0 / ${widget.max}'),
+          textAlign: TextAlign.center,
+          decoration: const InputDecoration(hintText: '0'),
+        ),
+        const SizedBox(height: 2),
+        // Solde maximum disponible dans le butin, affiché SOUS le champ
+        // plutôt que dans le texte d'aide sur la même ligne ("0 / {max}")
+        // — plus lisible une fois les 3 champs de la ligne compressés par
+        // `Expanded` (retour utilisateur).
+        Center(
+          child: Text(
+            '/ ${widget.max}',
+            style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
+          ),
         ),
       ],
     );
