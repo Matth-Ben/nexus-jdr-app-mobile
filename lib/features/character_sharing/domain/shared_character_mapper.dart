@@ -1,3 +1,4 @@
+import '../../../core/utils/french_text_normalizer.dart';
 import '../../characters/domain/character_class_feature.dart';
 import '../../characters/domain/character_detail.dart';
 import '../../characters/domain/character_detail_class_row.dart';
@@ -69,10 +70,13 @@ CharacterDetail mapSharedCharacterJson(Map<String, dynamic> json) {
         : null,
     abilityScores: _mapAbilityScores(json['ability_scores']),
     skills: _mapSkills(json['skill_proficiencies']),
+    // Tri alphabétique (demande utilisateur, 2026-10-03), même règle que
+    // `character_repository.dart::_mapCharacterDetailPayload` côté fiche du
+    // propriétaire — cohérence entre les deux vues de la même donnée.
     classFeatures: [
       for (final row in _listOfMaps(json['class_features']))
         _mapClassFeature(row, json['feature_uses']),
-    ],
+    ]..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name)),
     armorProficiencyNames: _mergedProficiencyNames(
       classes,
       'armor_proficiencies',
