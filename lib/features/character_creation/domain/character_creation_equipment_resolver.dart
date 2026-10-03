@@ -83,10 +83,26 @@ abstract final class CharacterCreationEquipmentResolver {
     );
   }
 
-  /// Marque comme équipés la première armure (`category = 'armure'`) et le
-  /// premier bouclier (`category = 'bouclier'`) de [inventory] — une seule
-  /// armure et un seul bouclier comptent pour la CA (voir
-  /// `ArmorClassCalculator`), les suivants restent dans le sac.
+  /// Marque comme équipés la première armure (`category = 'armure'`), le
+  /// premier bouclier (`category = 'bouclier'`) et la première arme
+  /// (`category = 'arme'`) de [inventory] — une seule armure et un seul
+  /// bouclier comptent pour la CA (voir `ArmorClassCalculator`), les
+  /// suivants restent dans le sac.
+  ///
+  /// Arme : même règle "premier trouvé" que l'armure/le bouclier (retour
+  /// utilisateur, 2026-10-03 — un personnage fraîchement créé n'avait son
+  /// arme ni équipée ni visible dans la carte "ARMES ÉQUIPÉES" de l'onglet
+  /// Inventaire tant que le joueur ne l'équipait pas lui-même à la main).
+  /// Volontairement limité à une seule arme plutôt qu'à autant que le
+  /// premier set le permet (`WeaponSlotRules.slotCapacity`, 2 mains) :
+  /// [ItemOption] (catalogue de création) ne porte pas les propriétés
+  /// d'arme (`properties`, pour distinguer une arme à une main d'une arme à
+  /// deux mains, voir `domain/item_option.dart`), donc impossible de savoir
+  /// ici si une deuxième arme à une main tiendrait dans le même set sans
+  /// risquer d'équiper par erreur deux armes à deux mains à la fois. Laissé
+  /// dans le set "principal" (`weapon_slot` reste `null`, traité comme
+  /// principal par défaut — voir `character_equipped_weapons_card.dart`) ;
+  /// le joueur reste libre d'équiper une seconde arme à la main ensuite.
   static List<InventoryLineDraft> _withStartingGearEquipped(
     List<InventoryLineDraft> inventory,
     ItemCatalog itemCatalog,
@@ -96,6 +112,7 @@ abstract final class CharacterCreationEquipmentResolver {
     };
     var armorEquipped = false;
     var shieldEquipped = false;
+    var weaponEquipped = false;
     return [
       for (final line in inventory)
         switch (categoryById[line.itemId]) {
@@ -105,6 +122,10 @@ abstract final class CharacterCreationEquipmentResolver {
           }(),
           'bouclier' when !shieldEquipped => () {
             shieldEquipped = true;
+            return _equipped(line);
+          }(),
+          'arme' when !weaponEquipped => () {
+            weaponEquipped = true;
             return _equipped(line);
           }(),
           _ => line,

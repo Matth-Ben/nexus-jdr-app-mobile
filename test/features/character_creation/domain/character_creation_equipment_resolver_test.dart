@@ -175,7 +175,7 @@ void main() {
     });
   });
 
-  group('armure et bouclier équipés d\'office', () {
+  group('armure, bouclier et arme équipés d\'office', () {
     const cuir = ItemOption(
       id: 10,
       name: 'Armure de cuir',
@@ -209,7 +209,8 @@ void main() {
     bool equippedOf(List<InventoryLineDraft> inventory, int itemId) =>
         inventory.firstWhere((line) => line.itemId == itemId).equipped;
 
-    test('première armure et premier bouclier équipés, le reste non', () {
+    test('première armure, premier bouclier et première arme équipés, le '
+        'reste non', () {
       final result = CharacterCreationEquipmentResolver.resolve(
         tab: EquipmentChoiceTab.purchase,
         backgroundOption: riche,
@@ -226,7 +227,37 @@ void main() {
       expect(equippedOf(result.inventory, cuir.id), isTrue);
       expect(equippedOf(result.inventory, cotte.id), isFalse);
       expect(equippedOf(result.inventory, bouclier.id), isTrue);
-      expect(equippedOf(result.inventory, dague.id), isFalse);
+      expect(
+        equippedOf(result.inventory, dague.id),
+        isTrue,
+        reason:
+            'seule arme de l\'inventaire : équipée d\'office (retour '
+            'utilisateur, 2026-10-03)',
+      );
+    });
+
+    test('deux armes : seule la première est équipée d\'office, la seconde '
+        'reste dans le sac', () {
+      const hachette = ItemOption(
+        id: 13,
+        name: 'Hachette',
+        category: 'arme',
+        costAmount: 5,
+      );
+      final twoWeaponsCatalog = ItemCatalog(
+        items: [...armoryCatalog.items, hachette],
+      );
+
+      final result = CharacterCreationEquipmentResolver.resolve(
+        tab: EquipmentChoiceTab.purchase,
+        backgroundOption: riche,
+        purchasedEquipment: const {'Dague': 1, 'Hachette': 1},
+        itemCatalog: twoWeaponsCatalog,
+        className: 'Guerrier',
+      );
+
+      expect(equippedOf(result.inventory, dague.id), isTrue);
+      expect(equippedOf(result.inventory, hachette.id), isFalse);
     });
 
     test('Moine : rien n\'est équipé (Défense sans armure)', () {
@@ -241,7 +272,8 @@ void main() {
       expect(result.inventory.every((line) => !line.equipped), isTrue);
     });
 
-    test('onglet Historique : l\'armure de l\'historique est équipée', () {
+    test('onglet Historique : l\'armure et l\'arme de l\'historique sont '
+        'équipées', () {
       const soldat = BackgroundOption(
         id: 4,
         name: 'Soldat',
@@ -259,7 +291,7 @@ void main() {
       );
 
       expect(equippedOf(result.inventory, cuir.id), isTrue);
-      expect(equippedOf(result.inventory, dague.id), isFalse);
+      expect(equippedOf(result.inventory, dague.id), isTrue);
     });
   });
 }
