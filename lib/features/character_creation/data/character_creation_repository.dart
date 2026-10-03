@@ -761,7 +761,10 @@ class SupabaseCharacterCreationRepository
     try {
       final itemRows = await _client
           .from('items')
-          .select('id, category, cost')
+          .select(
+            'id, category, cost, '
+            'weapon_properties(properties)',
+          )
           .order('id', ascending: true);
 
       final nameRows = await _fetchTranslationRows(

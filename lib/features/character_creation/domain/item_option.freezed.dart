@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ItemOption {
 
- int get id; String get name; String get category; double get costAmount;
+ int get id; String get name; String get category; double get costAmount; bool get isTwoHanded;
 /// Create a copy of ItemOption
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +26,16 @@ $ItemOptionCopyWith<ItemOption> get copyWith => _$ItemOptionCopyWithImpl<ItemOpt
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ItemOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.category, category) || other.category == category)&&(identical(other.costAmount, costAmount) || other.costAmount == costAmount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ItemOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.category, category) || other.category == category)&&(identical(other.costAmount, costAmount) || other.costAmount == costAmount)&&(identical(other.isTwoHanded, isTwoHanded) || other.isTwoHanded == isTwoHanded));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,category,costAmount);
+int get hashCode => Object.hash(runtimeType,id,name,category,costAmount,isTwoHanded);
 
 @override
 String toString() {
-  return 'ItemOption(id: $id, name: $name, category: $category, costAmount: $costAmount)';
+  return 'ItemOption(id: $id, name: $name, category: $category, costAmount: $costAmount, isTwoHanded: $isTwoHanded)';
 }
 
 
@@ -46,7 +46,7 @@ abstract mixin class $ItemOptionCopyWith<$Res>  {
   factory $ItemOptionCopyWith(ItemOption value, $Res Function(ItemOption) _then) = _$ItemOptionCopyWithImpl;
 @useResult
 $Res call({
- int id, String name, String category, double costAmount
+ int id, String name, String category, double costAmount, bool isTwoHanded
 });
 
 
@@ -63,13 +63,14 @@ class _$ItemOptionCopyWithImpl<$Res>
 
 /// Create a copy of ItemOption
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? category = null,Object? costAmount = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? category = null,Object? costAmount = null,Object? isTwoHanded = null,}) {
   return _then(ItemOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
 as String,costAmount: null == costAmount ? _self.costAmount : costAmount // ignore: cast_nullable_to_non_nullable
-as double,
+as double,isTwoHanded: null == isTwoHanded ? _self.isTwoHanded : isTwoHanded // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -154,10 +155,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  String category,  double costAmount)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  String category,  double costAmount,  bool isTwoHanded)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ItemOption() when $default != null:
-return $default(_that.id,_that.name,_that.category,_that.costAmount);case _:
+return $default(_that.id,_that.name,_that.category,_that.costAmount,_that.isTwoHanded);case _:
   return orElse();
 
 }
@@ -175,10 +176,10 @@ return $default(_that.id,_that.name,_that.category,_that.costAmount);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  String category,  double costAmount)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  String category,  double costAmount,  bool isTwoHanded)  $default,) {final _that = this;
 switch (_that) {
 case _ItemOption():
-return $default(_that.id,_that.name,_that.category,_that.costAmount);case _:
+return $default(_that.id,_that.name,_that.category,_that.costAmount,_that.isTwoHanded);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -195,10 +196,10 @@ return $default(_that.id,_that.name,_that.category,_that.costAmount);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  String category,  double costAmount)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  String category,  double costAmount,  bool isTwoHanded)?  $default,) {final _that = this;
 switch (_that) {
 case _ItemOption() when $default != null:
-return $default(_that.id,_that.name,_that.category,_that.costAmount);case _:
+return $default(_that.id,_that.name,_that.category,_that.costAmount,_that.isTwoHanded);case _:
   return null;
 
 }
@@ -210,13 +211,14 @@ return $default(_that.id,_that.name,_that.category,_that.costAmount);case _:
 
 
 class _ItemOption implements ItemOption {
-  const _ItemOption({required this.id, required this.name, required this.category, required this.costAmount});
+  const _ItemOption({required this.id, required this.name, required this.category, required this.costAmount, this.isTwoHanded = false});
   
 
 @override final  int id;
 @override final  String name;
 @override final  String category;
 @override final  double costAmount;
+@override@JsonKey() final  bool isTwoHanded;
 
 /// Create a copy of ItemOption
 /// with the given fields replaced by the non-null parameter values.
@@ -228,16 +230,16 @@ _$ItemOptionCopyWith<_ItemOption> get copyWith => __$ItemOptionCopyWithImpl<_Ite
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ItemOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.category, category) || other.category == category)&&(identical(other.costAmount, costAmount) || other.costAmount == costAmount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ItemOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.category, category) || other.category == category)&&(identical(other.costAmount, costAmount) || other.costAmount == costAmount)&&(identical(other.isTwoHanded, isTwoHanded) || other.isTwoHanded == isTwoHanded));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,category,costAmount);
+int get hashCode => Object.hash(runtimeType,id,name,category,costAmount,isTwoHanded);
 
 @override
 String toString() {
-  return 'ItemOption(id: $id, name: $name, category: $category, costAmount: $costAmount)';
+  return 'ItemOption(id: $id, name: $name, category: $category, costAmount: $costAmount, isTwoHanded: $isTwoHanded)';
 }
 
 
@@ -248,7 +250,7 @@ abstract mixin class _$ItemOptionCopyWith<$Res> implements $ItemOptionCopyWith<$
   factory _$ItemOptionCopyWith(_ItemOption value, $Res Function(_ItemOption) _then) = __$ItemOptionCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String name, String category, double costAmount
+ int id, String name, String category, double costAmount, bool isTwoHanded
 });
 
 
@@ -265,13 +267,14 @@ class __$ItemOptionCopyWithImpl<$Res>
 
 /// Create a copy of ItemOption
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? category = null,Object? costAmount = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? category = null,Object? costAmount = null,Object? isTwoHanded = null,}) {
   return _then(_ItemOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
 as String,costAmount: null == costAmount ? _self.costAmount : costAmount // ignore: cast_nullable_to_non_nullable
-as double,
+as double,isTwoHanded: null == isTwoHanded ? _self.isTwoHanded : isTwoHanded // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
