@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
+import '../../../core/utils/french_text_normalizer.dart';
 import '../../../core/network/connectivity_checker.dart';
 import '../../character_creation/domain/spellcasting_rules.dart';
 import '../domain/character_detail.dart';
@@ -3648,6 +3649,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final usesRemaining = ClassFeatureRowMapper.parseUsesRemaining(
       CharacterDetailRowMapper.featureUsesRowsOf(row),
     );
+    // Tri alphabétique (demande utilisateur, 2026-10-03) pour l'affichage
+    // de la carte "APTITUDES DE CLASSE" — l'ordre `level` de la requête
+    // ci-dessus reste utile pour la déterminisme du fetch lui-même (voir le
+    // commentaire plus haut), mais n'est plus l'ordre final présenté au
+    // joueur. Revient sur l'exclusion initiale de ce chantier de tri
+    // alphabétique (ordre de niveau jugé a priori plus parlant) : le chef
+    // de projet a confirmé vouloir l'alphabétique ici aussi malgré la
+    // perte du regroupement chronologique.
     final classFeatures = [
       for (final featureRow in attainedFeatureRows)
         ClassFeatureRowMapper.toCharacterClassFeature(
@@ -3656,7 +3665,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
           descriptions: classFeatureDescriptions,
           usesRemaining: usesRemaining,
         ),
-    ];
+    ]..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name));
     final classChoices = CharacterDetailRowMapper.parseClassChoices(
       CharacterDetailRowMapper.classOptionRowsOf(row),
       featureNames: classFeatureNames,

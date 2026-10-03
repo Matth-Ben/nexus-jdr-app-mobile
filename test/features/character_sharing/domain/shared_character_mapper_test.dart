@@ -97,6 +97,25 @@ void main() {
       expect(detail.adventures, isEmpty);
     });
 
+    test('classFeatures : tri alphabétique (demande utilisateur, 2026-10-03), '
+        'pas par niveau d\'acquisition — cohérent avec la fiche du '
+        'propriétaire', () {
+      final detail = mapSharedCharacterJson({
+        'character': {'id': 'char-1', 'name': 'Test'},
+        'class_features': [
+          {'id': 50, 'name': 'Deuxième souffle', 'level': 3},
+          // Niveau 5 (postérieure), mais son nom la place AVANT
+          // alphabétiquement — prouve que l'ordre final est par nom.
+          {'id': 51, 'name': 'Action surhumaine', 'level': 5},
+        ],
+      });
+
+      expect(detail.classFeatures.map((f) => f.name), [
+        'Action surhumaine',
+        'Deuxième souffle',
+      ]);
+    });
+
     test('fusionne les tokens de maîtrise d\'armure/armes de toutes les '
         'classes (multiclassage), dédupliqués', () {
       final detail = mapSharedCharacterJson({

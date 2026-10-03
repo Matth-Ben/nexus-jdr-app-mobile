@@ -246,6 +246,50 @@ void main() {
         },
       );
 
+      test('classFeatures : tri alphabétique (demande utilisateur, '
+          '2026-10-03), pas par niveau d\'acquisition', () async {
+        // Copie locale de `tableRows` (jamais mutée en place : les deux
+        // clés ci-dessous sont réaffectées à de nouvelles listes) pour ne
+        // pas affecter les autres tests de ce groupe qui réutilisent la
+        // même fixture partagée.
+        final features2ndRows =
+            Map<String, List<Map<String, dynamic>>>.from(tableRows)..addAll({
+              'class_features': [
+                {
+                  'id': 50,
+                  'class_id': 2,
+                  'level': 3,
+                  'uses_per_rest': {'amount': 2, 'rest_type': 'repos_court'},
+                },
+                // Niveau 5 (postérieure à "Deuxième souffle", niveau 3), mais
+                // son nom la place AVANT alphabétiquement — prouve que
+                // l'ordre final est par nom, pas par niveau d'acquisition.
+                {'id': 51, 'class_id': 2, 'level': 5},
+              ],
+              'translations': [
+                ...tableRows['translations']!,
+                {'entity_id': '51', 'value': 'Action surhumaine'},
+              ],
+            });
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: features2ndRows,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+        final detail = await repository.fetchCharacterDetail(characterId);
+
+        expect(detail.classFeatures.map((f) => f.name), [
+          'Action surhumaine',
+          'Deuxième souffle',
+        ]);
+      });
+
       test('échec réseau + cache déjà présent : retombe sur le cache et '
           'produit la même fiche que le mapper direct', () async {
         final onlineClient = await _buildSignedInFakeSupabaseClient(
