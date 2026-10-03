@@ -141,6 +141,52 @@ void main() {
 
       expect(race.isIncomplete, isTrue);
     });
+
+    test('source absent de la ligne -> chaîne vide plutôt que crash', () {
+      final race = RaceRowMapper.toRaceOption(
+        {'id': 2, 'ability_bonuses': {}, 'traits': []},
+        names: const {'2': 'Elfe'},
+      );
+
+      expect(race.source, isEmpty);
+      expect(
+        race.isCoreSource,
+        isFalse,
+        reason:
+            'une source absente/inconnue est classée en extension par '
+            'défaut plutôt que de base (fallback conservateur)',
+      );
+    });
+
+    test('source reportée telle quelle sur RaceOption', () {
+      final race = RaceRowMapper.toRaceOption(
+        {
+          'id': 2,
+          'ability_bonuses': {},
+          'traits': [],
+          'source': 'Manuel des Joueurs (2024)',
+        },
+        names: const {'2': 'Elfe'},
+      );
+
+      expect(race.source, 'Manuel des Joueurs (2024)');
+      expect(race.isCoreSource, isTrue);
+    });
+
+    test('une source d\'extension (ne commence pas par "Manuel des Joueurs") '
+        '-> isCoreSource false', () {
+      final race = RaceRowMapper.toRaceOption(
+        {
+          'id': 2,
+          'ability_bonuses': {},
+          'traits': [],
+          'source': 'Monstres du Multivers',
+        },
+        names: const {'2': 'Aasimar'},
+      );
+
+      expect(race.isCoreSource, isFalse);
+    });
   });
 
   group('toSubraceOption', () {

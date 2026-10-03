@@ -159,6 +159,7 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
             name: 'cette race',
             abilityBonuses: const {},
             traits: const [],
+            source: '',
           ),
         )
         .name;

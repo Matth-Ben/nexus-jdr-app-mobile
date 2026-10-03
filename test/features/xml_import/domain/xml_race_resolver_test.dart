@@ -14,18 +14,21 @@ void main() {
     name: 'Elfe',
     abilityBonuses: {'dex': 2},
     traits: [],
+    source: '',
   );
   const nain = RaceOption(
     id: 2,
     name: 'Nain',
     abilityBonuses: {'con': 2},
     traits: [],
+    source: '',
   );
   const genasi = RaceOption(
     id: 3,
     name: 'Génasi',
     abilityBonuses: {'con': 2},
     traits: [],
+    source: '',
   );
   const hautElfe = SubraceOption(
     id: 10,

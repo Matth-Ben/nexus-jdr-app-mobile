@@ -92,7 +92,15 @@ XmlImportSaveData _reimport(
 void main() {
   group('profil mono-classe simple (Guerrier)', () {
     const raceCatalog = RaceCatalog(
-      races: [RaceOption(id: 1, name: 'Nain', abilityBonuses: {}, traits: [])],
+      races: [
+        RaceOption(
+          id: 1,
+          name: 'Nain',
+          abilityBonuses: {},
+          traits: [],
+          source: '',
+        ),
+      ],
       subraces: [],
     );
     const classCatalog = ClassCatalog(
@@ -389,7 +397,15 @@ void main() {
 
   group('profil lanceur de sorts (Magicien)', () {
     const raceCatalog = RaceCatalog(
-      races: [RaceOption(id: 2, name: 'Elfe', abilityBonuses: {}, traits: [])],
+      races: [
+        RaceOption(
+          id: 2,
+          name: 'Elfe',
+          abilityBonuses: {},
+          traits: [],
+          source: '',
+        ),
+      ],
       subraces: [],
     );
     const classCatalog = ClassCatalog(
@@ -566,7 +582,13 @@ void main() {
   group('profil inventaire varié', () {
     const raceCatalog = RaceCatalog(
       races: [
-        RaceOption(id: 3, name: 'Humain', abilityBonuses: {}, traits: []),
+        RaceOption(
+          id: 3,
+          name: 'Humain',
+          abilityBonuses: {},
+          traits: [],
+          source: '',
+        ),
       ],
       subraces: [],
     );

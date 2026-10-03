@@ -20,7 +20,13 @@ import 'package:personnages/features/xml_import/domain/xml_import_save_data.dart
 import 'package:personnages/features/xml_import/domain/xml_import_save_data_resolver.dart';
 import 'package:personnages/features/xml_import/domain/xml_raw_level_entry.dart';
 
-const _race = RaceOption(id: 1, name: 'Elfe', abilityBonuses: {}, traits: []);
+const _race = RaceOption(
+  id: 1,
+  name: 'Elfe',
+  abilityBonuses: {},
+  traits: [],
+  source: '',
+);
 const _classOption = ClassOption(
   id: 2,
   name: 'Magicien',
@@ -418,6 +424,7 @@ void main() {
       name: 'Nain',
       abilityBonuses: {'con': 2},
       traits: [],
+      source: '',
     );
     const nainCollines = SubraceOption(
       id: 50,
@@ -431,6 +438,7 @@ void main() {
       name: 'Conil',
       abilityBonuses: {'choice_flexible': true},
       traits: [],
+      source: '',
     );
     const baseScores = {
       'str': 15,
