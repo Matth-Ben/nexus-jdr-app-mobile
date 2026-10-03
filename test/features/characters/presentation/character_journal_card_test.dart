@@ -285,6 +285,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
     List<int> invocationIds = const [],
+    List<int> racialInnateSpellIds = const [],
   }) => throw UnimplementedError();
 
   @override

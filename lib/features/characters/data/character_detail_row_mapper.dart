@@ -714,9 +714,11 @@ abstract final class CharacterDetailRowMapper {
       name: row['name'] as String,
       portraitUrl: row['portrait_url'] as String?,
       raceName: raceId != null ? raceNames[raceId.toString()] : null,
+      raceId: raceId is num ? raceId.toInt() : null,
       subraceName: subraceId != null
           ? subraceNames[subraceId.toString()]
           : null,
+      subraceId: subraceId is num ? subraceId.toInt() : null,
       raceCustomText: row['race_custom_text'] as String?,
       backgroundName: backgroundId != null
           ? backgroundNames[backgroundId.toString()]

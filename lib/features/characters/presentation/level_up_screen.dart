@@ -549,6 +549,16 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     ];
   }
 
+  /// `spells.id` des sorts innés raciaux à écrire pour
+  /// `CharacterRepository.applyLevelUp` (paramètre `racialInnateSpellIds`) —
+  /// jamais un choix du joueur (contrairement aux autres sorts de cette
+  /// étape), simple reconversion de [LevelUpStepData.newRacialInnateSpells]
+  /// (déjà filtrés contre les sorts connus par `levelUpStepDataProvider`, voir
+  /// sa documentation) en identifiants.
+  List<int> _racialInnateSpellIds(LevelUpStepData data) => [
+    for (final grant in data.newRacialInnateSpells) grant.spellId,
+  ];
+
   /// Identifiants d'invocations prêts pour `CharacterRepository.applyLevelUp`
   /// (paramètre `invocationIds`) — simple reconversion de
   /// [_selectedInvocationIds] (`String`, voir sa documentation) en `int`.
@@ -717,6 +727,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         choice: _buildChoiceSelection(data),
         initialSpellIds: _buildNewSpellIds(data),
         invocationIds: _buildInvocationIds(data),
+        racialInnateSpellIds: _racialInnateSpellIds(data),
       );
 
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -2681,6 +2692,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           color: AppColors.accentTeal,
           title: 'Appel de familier ajouté',
           subtitle: 'Pacte de la chaîne',
+        ),
+      for (final grant in data.newRacialInnateSpells)
+        GainRow(
+          icon: Icons.auto_awesome,
+          color: AppColors.accentTeal,
+          title: 'Sort inné racial',
+          subtitle: grant.spellName,
         ),
     ];
   }

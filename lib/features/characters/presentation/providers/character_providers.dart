@@ -5,6 +5,7 @@ import '../../../../core/network/connectivity_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
 import '../../data/character_repository.dart';
 import '../../data/pending_character_write_syncer.dart';
+import '../../data/racial_innate_spell_repository.dart';
 import '../../data/warlock_pact_spell_repository.dart';
 import '../../domain/character_summary.dart';
 import '../../domain/inventory_catalog_item.dart';
@@ -27,6 +28,16 @@ CharacterRepository characterRepository(Ref ref) {
 @Riverpod(keepAlive: true)
 WarlockPactSpellRepository warlockPactSpellRepository(Ref ref) {
   return SupabaseWarlockPactSpellRepository(
+    ref.watch(supabaseClientProvider),
+    ref.watch(referenceDataCacheProvider),
+  );
+}
+
+/// Lecture de référence des sorts innés raciaux (`racial_innate_spells`,
+/// lignes sans choix de lignée) — voir `RacialInnateSpellRepository`.
+@Riverpod(keepAlive: true)
+RacialInnateSpellRepository racialInnateSpellRepository(Ref ref) {
+  return SupabaseRacialInnateSpellRepository(
     ref.watch(supabaseClientProvider),
     ref.watch(referenceDataCacheProvider),
   );

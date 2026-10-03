@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/utils/french_text_normalizer.dart';
+import '../../characters/data/racial_innate_spell_repository.dart';
 import '../domain/ability_score_rules.dart';
 import '../domain/alignment_catalog.dart';
 import '../domain/alignment_option.dart';
@@ -249,10 +250,27 @@ abstract class CharacterCreationRepository {
 /// [CharacterCreationRepository]).
 class SupabaseCharacterCreationRepository
     implements CharacterCreationRepository {
-  const SupabaseCharacterCreationRepository(this._client, this._cache);
+  /// [racialInnateSpellRepository] optionnel (`null` par défaut) : construit
+  /// sa propre lecture par défaut depuis [_client]/[_cache] plutôt que
+  /// d'exiger explicitement cette dépendance comme le reste de ce dépôt —
+  /// seule exception assumée, pour ne pas forcer une mise à jour mécanique
+  /// des ~25 doubles de test qui instancient déjà cette classe pour un tout
+  /// autre usage (catalogues de référence), aucun d'entre eux n'exerçant
+  /// [createCharacter] (seul site qui lit cette dépendance).
+  SupabaseCharacterCreationRepository(
+    this._client,
+    this._cache, [
+    RacialInnateSpellRepository? racialInnateSpellRepository,
+  ]) : _racialInnateSpellRepository =
+           racialInnateSpellRepository ??
+           SupabaseRacialInnateSpellRepository(_client, _cache);
 
   final SupabaseClient _client;
   final ReferenceDataCache _cache;
+
+  /// Lecture des sorts innés raciaux accordés à la création — voir
+  /// `RacialInnateSpellRepository` et la documentation de [createCharacter].
+  final RacialInnateSpellRepository _racialInnateSpellRepository;
 
   /// Durée de fraîcheur d'une entrée de cache de catalogue avant de retenter
   /// le réseau en priorité (voir la doc de classe, point 1) — 48h, valeur
@@ -1149,6 +1167,51 @@ class SupabaseCharacterCreationRepository
               'source_class_id': draft.classId,
             },
         ]);
+      }
+
+      // Sorts innés raciaux (`racial_innate_spells`, lignes sans choix de
+      // lignée — voir `RacialInnateSpellRepository`) accordés dès le niveau 1
+      // (le niveau du personnage à la création), ex. Thaumaturgie pour un
+      // Tieffelin. Aucune lecture si le personnage a une race personnalisée
+      // (`draft.raceId` nul). Écrits avec `status: 'inné'` et
+      // `source_class_id: null` (jamais `draft.classId`, qui n'a aucun
+      // rapport avec une race) — jamais en double avec un sort déjà prévu par
+      // [spellRows] (cas improbable à la création, un sort de classe et un
+      // sort inné racial étant rarement le même, mais vérifié par prudence).
+      // Un échec de cette lecture ne doit jamais empêcher la création du
+      // personnage : avalé silencieusement, le joueur n'obtient simplement
+      // pas le sort, comme s'il était introuvable.
+      final raceId = draft.raceId;
+      if (raceId != null) {
+        try {
+          final racialGrants = await _racialInnateSpellRepository
+              .fetchApplicableGrants(
+                raceId: raceId,
+                subraceId: draft.subraceId,
+                maxCharacterLevel: 1,
+              );
+          final alreadyPlannedSpellIds = {
+            for (final row in spellRows) row.spellId,
+          };
+          final newRacialSpellIds = {
+            for (final grant in racialGrants)
+              if (!alreadyPlannedSpellIds.contains(grant.spellId))
+                grant.spellId,
+          };
+          if (newRacialSpellIds.isNotEmpty) {
+            await _client.from('character_spells').insert([
+              for (final spellId in newRacialSpellIds)
+                {
+                  'character_id': characterId,
+                  'spell_id': spellId,
+                  'status': 'inné',
+                  'source_class_id': null,
+                },
+            ]);
+          }
+        } catch (_) {
+          // Best-effort : voir le commentaire ci-dessus.
+        }
       }
 
       if (equipmentResolution.inventory.isNotEmpty) {

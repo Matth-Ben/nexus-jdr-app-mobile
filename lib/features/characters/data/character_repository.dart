@@ -584,6 +584,19 @@ abstract class CharacterRepository {
   /// `domain/invocations_known_progression.dart`), déjà résolues en
   /// identifiants par l'appelant. Toujours vide hors de ce cas.
   ///
+  /// [racialInnateSpellIds] : sorts innés raciaux (`racial_innate_spells`,
+  /// lignes sans choix de lignée) devenus accessibles à ce nouveau niveau
+  /// TOTAL, déjà résolus et déjà filtrés contre les sorts connus par
+  /// `presentation/providers/level_up_provider.dart`
+  /// (`LevelUpStepData.newRacialInnateSpells`) — contrairement à
+  /// [initialSpellIds]/[invocationIds], jamais un choix du joueur : écrits
+  /// avec `status: 'inné'` et `source_class_id: null` (jamais celui de
+  /// [classId], qui n'a aucun rapport avec une race). Revérifiés contre
+  /// `character_spells` juste avant l'écriture (même discipline défensive
+  /// que [_applyAbilityScoreImprovement] pour le plafond ASI à 20) : ne
+  /// jamais écrire un sort déjà connu, même si l'appelant s'est basé sur une
+  /// lecture périmée. Toujours vide hors de ce cas.
+  ///
   /// [hpRolled] et [hpGain] sont déjà calculés par l'appelant (voir
   /// `domain/level_up_hit_points_calculator.dart`), cette méthode ne fait
   /// qu'écrire le résultat déjà calculé — même principe que [updateHp].
@@ -603,6 +616,7 @@ abstract class CharacterRepository {
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
     List<int> invocationIds = const [],
+    List<int> racialInnateSpellIds = const [],
   });
 
   /// Applique un repos (lien "Prendre un repos", onglet "Personnage" —
@@ -1994,6 +2008,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
     List<int> invocationIds = const [],
+    List<int> racialInnateSpellIds = const [],
   }) async {
     final ownerId = _requireOwnerId();
     try {
@@ -2264,6 +2279,38 @@ class SupabaseCharacterRepository implements CharacterRepository {
           for (final invocationId in invocationIds)
             {'character_id': characterId, 'invocation_id': invocationId},
         ]);
+      }
+
+      if (racialInnateSpellIds.isNotEmpty) {
+        // Sorts innés raciaux devenus accessibles à ce nouveau niveau TOTAL
+        // (voir la documentation de [CharacterRepository.applyLevelUp]) —
+        // revérifiés contre les sorts déjà connus juste avant l'écriture
+        // (jamais de confiance aveugle dans la lecture de l'appelant, même
+        // discipline que [_applyAbilityScoreImprovement]) : un sort déjà
+        // connu (par ce biais ou un autre) n'est jamais réécrit.
+        final knownRows = await _client
+            .from('character_spells')
+            .select('spell_id')
+            .eq('character_id', characterId);
+        final knownSpellIds = {
+          for (final row in knownRows)
+            if (row['spell_id'] is num) (row['spell_id'] as num).toInt(),
+        };
+        final newRacialSpellIds = {
+          for (final spellId in racialInnateSpellIds)
+            if (!knownSpellIds.contains(spellId)) spellId,
+        };
+        if (newRacialSpellIds.isNotEmpty) {
+          await _client.from('character_spells').insert([
+            for (final spellId in newRacialSpellIds)
+              {
+                'character_id': characterId,
+                'spell_id': spellId,
+                'status': 'inné',
+                'source_class_id': null,
+              },
+          ]);
+        }
       }
 
       await _client.from('character_level_hp').insert({
