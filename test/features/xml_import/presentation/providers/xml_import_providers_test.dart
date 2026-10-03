@@ -109,6 +109,7 @@ class _FakePlaceholderCatalogRepository
       name: rawName,
       abilityBonuses: const {},
       traits: const [],
+      source: '',
       isIncomplete: true,
     );
   }

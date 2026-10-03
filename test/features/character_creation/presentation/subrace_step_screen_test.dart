@@ -89,6 +89,7 @@ const _elfe = RaceOption(
   name: 'Elfe',
   abilityBonuses: {'dex': 2},
   traits: [],
+  source: '',
 );
 
 const _hautElfe = SubraceOption(

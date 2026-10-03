@@ -12,7 +12,13 @@ import 'package:personnages/features/xml_import/domain/xml_character_import_reso
 import 'package:personnages/features/xml_import/domain/xml_field_resolution.dart';
 import 'package:personnages/features/xml_import/domain/xml_import_alert_summary.dart';
 
-const _race = RaceOption(id: 1, name: 'Elfe', abilityBonuses: {}, traits: []);
+const _race = RaceOption(
+  id: 1,
+  name: 'Elfe',
+  abilityBonuses: {},
+  traits: [],
+  source: '',
+);
 const _classOption = ClassOption(
   id: 1,
   name: 'Magicien',

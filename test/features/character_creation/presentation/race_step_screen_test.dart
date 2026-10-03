@@ -124,6 +124,7 @@ const _elfe = RaceOption(
     RaceTrait(name: 'Vision dans le noir', description: '...'),
     RaceTrait(name: 'Transe', description: '...'),
   ],
+  source: 'Manuel des Joueurs',
 );
 
 const _humain = RaceOption(
@@ -131,6 +132,15 @@ const _humain = RaceOption(
   name: 'Humain',
   abilityBonuses: {'str': 1, 'dex': 1, 'con': 1, 'int': 1, 'wis': 1, 'cha': 1},
   traits: [],
+  source: 'Manuel des Joueurs',
+);
+
+const _aasimar = RaceOption(
+  id: 3,
+  name: 'Aasimar',
+  abilityBonuses: {'cha': 2},
+  traits: [],
+  source: 'Monstres du Multivers',
 );
 
 const _hautElfe = SubraceOption(
@@ -195,6 +205,35 @@ void main() {
 
   CharacterCreationDraft readDraft() =>
       container.read(characterCreationDraftControllerProvider);
+
+  // Distingue le `TextField` du champ "Race personnalisée" de celui,
+  // interne, du champ de recherche "Rechercher une race..." (un
+  // `TextFormField` est lui-même construit autour d'un `TextField` — voir
+  // la doc de classe de [RaceStepScreen]) : depuis l'ajout du champ de
+  // recherche, `find.byType(TextField)` seul trouve les deux et n'est donc
+  // plus sans ambiguïté.
+  Finder findCustomRaceTextField() => find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField &&
+        widget.decoration?.hintText == 'Nom de la race personnalisée',
+  );
+
+  // Surface de test agrandie en hauteur — même rationale que
+  // `equipment_step_screen_test.dart`/`ability_score_step_screen_test.dart`
+  // (voir leurs commentaires) : le champ de recherche + les en-têtes de
+  // section ajoutent assez de hauteur pour dépasser la hauteur par défaut
+  // (~600) et faire manquer certaines races/certains champs à
+  // `find.text(...)`/`find.byType(...)` (`ListView` ne construit que les
+  // éléments visibles).
+  Future<void> pumpTallRaceStep(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 1300);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+  }
 
   testWidgets(
     'affiche un indicateur de chargement pendant la récupération, avec un '
@@ -409,18 +448,18 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      expect(find.byType(TextField), findsNothing);
+      expect(findCustomRaceTextField(), findsNothing);
 
       await tester.tap(find.text('Race personnalisée'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(TextField), findsOneWidget);
+      expect(findCustomRaceTextField(), findsOneWidget);
 
       await tester.tap(find.text('SUIVANT'));
       await tester.pumpAndSettle();
       expect(readDraft(), const CharacterCreationDraft());
 
-      await tester.enterText(find.byType(TextField), 'Golem vivant');
+      await tester.enterText(findCustomRaceTextField(), 'Golem vivant');
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('SUIVANT'));
@@ -448,7 +487,7 @@ void main() {
       await tester.tap(find.text('Race personnalisée'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextField), '   ');
+      await tester.enterText(findCustomRaceTextField(), '   ');
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('SUIVANT'), warnIfMissed: false);
@@ -585,6 +624,7 @@ void main() {
         name: 'Elfe des bois',
         abilityBonuses: {'dex': 2},
         traits: [],
+        source: 'Manuel des Joueurs',
       );
       const autreSousRace = SubraceOption(
         id: 20,
@@ -631,8 +671,7 @@ void main() {
           .read(characterCreationDraftControllerProvider.notifier)
           .setRace(raceCustomText: 'Gobelours');
 
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
+      await pumpTallRaceStep(tester);
 
       final tiles = tester.widgetList<SelectableOptionTile>(
         find.byType(SelectableOptionTile),
@@ -648,7 +687,7 @@ void main() {
       );
 
       expect(find.text('Gobelours'), findsOneWidget);
-      final textField = tester.widget<TextField>(find.byType(TextField));
+      final textField = tester.widget<TextField>(findCustomRaceTextField());
       expect(textField.controller?.text, 'Gobelours');
 
       // "Suivant" doit déjà être actif : le texte n'est pas vide, pas besoin
@@ -662,6 +701,139 @@ void main() {
       );
     },
   );
+
+  group('regroupement races de base/extension et recherche (retour '
+      'utilisateur du 03/10/2026)', () {
+    testWidgets(
+      'affiche les en-têtes "RACES DE BASE" puis "RACES D\'EXTENSION" '
+      'dans cet ordre quand le catalogue contient les deux groupes '
+      '(le repository renvoie déjà ce regroupement, voir '
+      '`character_creation_repository_test.dart`)',
+      (tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe, _humain, _aasimar],
+          subraces: [],
+        );
+
+        await pumpTallRaceStep(tester);
+
+        expect(find.text('RACES DE BASE'), findsOneWidget);
+        expect(find.text("RACES D'EXTENSION"), findsOneWidget);
+        final baseHeaderY = tester.getTopLeft(find.text('RACES DE BASE')).dy;
+        final extensionHeaderY = tester
+            .getTopLeft(find.text("RACES D'EXTENSION"))
+            .dy;
+        expect(baseHeaderY, lessThan(extensionHeaderY));
+      },
+    );
+
+    testWidgets('un groupe devenu vide (aucune race d\'extension au catalogue) '
+        'n\'affiche pas son en-tête', (tester) async {
+      fakeRepository.catalogToReturn = const RaceCatalog(
+        races: [_elfe, _humain],
+        subraces: [],
+      );
+
+      await pumpTallRaceStep(tester);
+
+      expect(find.text('RACES DE BASE'), findsOneWidget);
+      expect(find.text("RACES D'EXTENSION"), findsNothing);
+    });
+
+    testWidgets(
+      'le champ de recherche filtre les races affichées, insensible aux '
+      'accents/à la casse, et masque l\'en-tête d\'un groupe devenu vide',
+      (tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe, _humain, _aasimar],
+          subraces: [],
+        );
+
+        await pumpTallRaceStep(tester);
+
+        expect(find.text('Elfe'), findsOneWidget);
+        expect(find.text('Humain'), findsOneWidget);
+        expect(find.text('Aasimar'), findsOneWidget);
+
+        // "ELFE" en majuscules sans accent : doit tout de même retrouver
+        // "Elfe" (comparaison normalisée, voir `FrenchTextNormalizer`).
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Rechercher une race...'),
+          'ELFE',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Elfe'), findsOneWidget);
+        expect(find.text('Humain'), findsNothing);
+        expect(find.text('Aasimar'), findsNothing);
+        // Seule "RACES DE BASE" reste représentée (Elfe) : "RACES
+        // D'EXTENSION" n'a plus aucune race correspondante, son en-tête
+        // disparaît entièrement plutôt que de s'afficher au-dessus d'une
+        // liste vide.
+        expect(find.text('RACES DE BASE'), findsOneWidget);
+        expect(find.text("RACES D'EXTENSION"), findsNothing);
+        // "Race personnalisée" reste toujours proposée, qu'elle
+        // corresponde ou non à la recherche en cours.
+        expect(find.text('Race personnalisée'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'une recherche sans résultat affiche un message dédié plutôt qu\'une '
+      'liste vide muette, "Race personnalisée" restant accessible',
+      (tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe, _humain],
+          subraces: [],
+        );
+
+        await pumpTallRaceStep(tester);
+
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Rechercher une race...'),
+          'Gobelours',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Aucune race trouvée.'), findsOneWidget);
+        expect(find.text('Race personnalisée'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'sélectionner une race avec sous-races après un filtre texte pousse '
+      'toujours "Suivant" vers l\'étape sous-race (le parcours sous-race '
+      'n\'est pas cassé par le filtre/regroupement)',
+      (tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe, _humain, _aasimar],
+          subraces: [_hautElfe],
+        );
+
+        await pumpTallRaceStep(tester);
+
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Rechercher une race...'),
+          'elf',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Elfe'), findsOneWidget);
+        expect(find.text('Humain'), findsNothing);
+
+        await tester.tap(find.text('Elfe'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(
+          readDraft(),
+          const CharacterCreationDraft(raceId: 1, subraceId: null),
+        );
+        expect(find.text('Étape sous-race'), findsOneWidget);
+      },
+    );
+  });
 
   group('aide contextuelle / abandon (docs/cahier-des-charges/'
       '11-fonctionnalites-a-ajouter.md section 3)', () {

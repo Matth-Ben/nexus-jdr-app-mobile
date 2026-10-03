@@ -271,7 +271,7 @@ class SupabaseCharacterCreationRepository
     try {
       final raceRows = await _client
           .from('races')
-          .select('id, ability_bonuses, traits, is_incomplete')
+          .select('id, ability_bonuses, traits, is_incomplete, source')
           .order('id', ascending: true);
       final subraceRows = await _client
           .from('subraces')
@@ -331,16 +331,28 @@ class SupabaseCharacterCreationRepository
       // `items.rarity` ailleurs dans ce dépôt. Pas de filtre équivalent sur
       // `subraces` : pas de colonne `is_incomplete` sur cette table.
       //
-      // Tri alphabétique (normalisé, insensible aux accents/casse, voir
-      // `FrenchTextNormalizer`) plutôt que l'ordre `id` de la requête : la
-      // maquette liste les races par ordre alphabétique, pas par ordre de
-      // peuplement en base.
+      // Tri à deux niveaux : races de base (Manuel des Joueurs) avant les
+      // races d'extension (`RaceOption.isCoreSource`), puis alphabétique
+      // (normalisé, insensible aux accents/casse, voir
+      // `FrenchTextNormalizer`) au sein de chaque groupe — demandé par le
+      // chef de projet (retour utilisateur du 03/10/2026) pour l'étape 1/9 ;
+      // remplace l'ancien tri purement alphabétique (la maquette d'origine
+      // ne distinguait pas encore les deux groupes). `race_step_screen.dart`
+      // s'appuie sur cet ordre déjà groupé pour construire ses deux sections
+      // sans retrier lui-même.
       races:
           _rowsOf(payload['races'])
               .map((row) => RaceRowMapper.toRaceOption(row, names: raceNames))
               .where((race) => !race.isIncomplete)
               .toList()
-            ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name)),
+            ..sort((a, b) {
+              final byGroup = (a.isCoreSource ? 0 : 1).compareTo(
+                b.isCoreSource ? 0 : 1,
+              );
+              return byGroup != 0
+                  ? byGroup
+                  : FrenchTextNormalizer.compare(a.name, b.name);
+            }),
       // Triées par race (`raceId`) puis par nom au sein d'une même race :
       // `RaceCatalog.subracesOf` filtre cette liste par race, le tri entre
       // races elles-mêmes n'a donc aucun effet visible, seul compte le tri

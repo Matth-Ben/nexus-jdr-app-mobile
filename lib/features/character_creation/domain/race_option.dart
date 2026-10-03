@@ -23,6 +23,17 @@ abstract class RaceOption with _$RaceOption {
     required Map<String, dynamic> abilityBonuses,
     required List<RaceTrait> traits,
 
+    /// `races.source` — livre d'origine ("Manuel des Joueurs", "Manuel des
+    /// Joueurs (2024)", "Eberron / Monstres du Multivers"...). Sert
+    /// uniquement à [isCoreSource] (regroupement races de base/extension de
+    /// l'étape 1/9, voir `presentation/race_step_screen.dart`) — jamais
+    /// affiché tel quel à l'utilisateur. Chaîne vide retombée pour une ligne
+    /// sans `source` exploitable (cache offline écrit avant l'introduction
+    /// de cette colonne) plutôt que de crasher — voir `RaceRowMapper
+    /// .toRaceOption` ; classée comme extension par [isCoreSource] dans ce
+    /// cas (fallback conservateur).
+    required String source,
+
     /// `races.is_incomplete` — `true` pour une entrée placeholder créée par
     /// l'import XML aidedd.org quand l'utilisateur choisit "Garder comme
     /// élément personnalisé" pour une race non cataloguée (voir
@@ -32,6 +43,18 @@ abstract class RaceOption with _$RaceOption {
     /// `dev-backend-supabase`.
     @Default(false) bool isIncomplete,
   }) = _RaceOption;
+
+  /// `true` si cette race vient du Manuel des Joueurs ("race de base"),
+  /// `false` pour toute race d'extension (tout autre supplément : Eberron,
+  /// Monstres du Multivers, Strixhaven...) — règle de classification
+  /// demandée par le chef de projet (retour utilisateur du 03/10/2026) :
+  /// basée sur le préfixe de [source] plutôt que sur la liste exacte de ses
+  /// valeurs actuelles (ex. "Manuel des Joueurs (2024) / SRD 5.2"), qui peut
+  /// évoluer avec un futur peuplement de contenu par `dev-backend-supabase`.
+  /// Utilisée pour le regroupement/tri à deux niveaux de l'étape 1/9, voir
+  /// `data/character_creation_repository.dart::_mapRaceCatalogPayload` et
+  /// `presentation/race_step_screen.dart`.
+  bool get isCoreSource => source.startsWith('Manuel des Joueurs');
 
   /// Ligne de résumé affichée sous le nom ("+2 Dex · Vision dans le noir ·
   /// Transe"), voir [RaceSummaryFormatter].

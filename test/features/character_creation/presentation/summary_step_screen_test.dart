@@ -142,6 +142,7 @@ const _elfe = RaceOption(
   name: 'Elfe',
   abilityBonuses: {'dex': 2},
   traits: [],
+  source: '',
 );
 
 class _FakeSubclassChoiceRepository implements SubclassChoiceRepository {

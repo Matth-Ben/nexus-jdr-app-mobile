@@ -171,6 +171,7 @@ class _FakePlaceholderCatalogRepository
       name: rawName,
       abilityBonuses: const {},
       traits: const [],
+      source: '',
       isIncomplete: true,
     );
   }
@@ -483,7 +484,13 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 }
 
-const _elfe = RaceOption(id: 1, name: 'Elfe', abilityBonuses: {}, traits: []);
+const _elfe = RaceOption(
+  id: 1,
+  name: 'Elfe',
+  abilityBonuses: {},
+  traits: [],
+  source: '',
+);
 const _magicien = ClassOption(
   id: 2,
   name: 'Magicien',
@@ -1074,6 +1081,7 @@ void main() {
           name: 'Race Maison Inventée',
           abilityBonuses: const {},
           traits: const [],
+          source: '',
           isIncomplete: true,
         ),
       );

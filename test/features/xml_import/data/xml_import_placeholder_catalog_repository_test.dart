@@ -64,6 +64,7 @@ void main() {
           name: 'Elfe Sylvestre',
           abilityBonuses: {'dex': 2},
           traits: [],
+          source: '',
         ),
       );
       expect(captured, hasLength(2));
@@ -99,6 +100,7 @@ void main() {
                 name: '',
                 abilityBonuses: {},
                 traits: [],
+                source: '',
               ),
             );
 

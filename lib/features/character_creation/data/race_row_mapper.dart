@@ -86,6 +86,8 @@ abstract final class RaceRowMapper {
   ///
   /// `row['is_incomplete']` absent (cache offline écrit avant l'introduction
   /// de cette colonne) retombe sur `false` — voir [RaceOption.isIncomplete].
+  /// `row['source']` absent retombe sur une chaîne vide — voir
+  /// [RaceOption.source].
   static RaceOption toRaceOption(
     Map<String, dynamic> row, {
     required Map<String, String> names,
@@ -96,6 +98,7 @@ abstract final class RaceRowMapper {
       name: names[id.toString()] ?? 'Race #$id',
       abilityBonuses: parseAbilityBonuses(row['ability_bonuses']),
       traits: parseTraits(row['traits']),
+      source: row['source'] as String? ?? '',
       isIncomplete: row['is_incomplete'] as bool? ?? false,
     );
   }

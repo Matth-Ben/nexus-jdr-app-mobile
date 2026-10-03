@@ -495,6 +495,71 @@ void main() {
         },
       );
 
+      test('fetchRaceCatalog : races de base avant races d\'extension, '
+          'alphabétique dans chaque groupe (retour utilisateur du '
+          '03/10/2026) — lignes volontairement désordonnées (extension triée '
+          'avant base alphabétiquement si on ignorait le regroupement, pour '
+          'prouver que le groupe prime bien sur le nom)', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'races': [
+                {
+                  'id': 1,
+                  'source': 'Eberron / Monstres du Multivers',
+                  'ability_bonuses': <String, dynamic>{},
+                  'traits': <Map<String, dynamic>>[],
+                },
+                {
+                  'id': 2,
+                  'source': 'Manuel des Joueurs',
+                  'ability_bonuses': <String, dynamic>{},
+                  'traits': <Map<String, dynamic>>[],
+                },
+                {
+                  'id': 3,
+                  'source': 'Manuel des Joueurs (2024)',
+                  'ability_bonuses': <String, dynamic>{},
+                  'traits': <Map<String, dynamic>>[],
+                },
+                {
+                  'id': 4,
+                  'source': 'Strixhaven : un programme de chaos',
+                  'ability_bonuses': <String, dynamic>{},
+                  'traits': <Map<String, dynamic>>[],
+                },
+              ],
+              'subraces': <Map<String, dynamic>>[],
+              'translations': [
+                // "Aasimar" (extension) alphabétiquement avant "Elfe" et
+                // "Humain" (base) : si le tri restait purement
+                // alphabétique, il apparaîtrait en tête de liste.
+                {'entity_id': '1', 'value': 'Aasimar'},
+                {'entity_id': '2', 'value': 'Humain'},
+                {'entity_id': '3', 'value': 'Elfe'},
+                {'entity_id': '4', 'value': 'Zariel'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchRaceCatalog();
+
+        expect(catalog.races.map((r) => r.name), [
+          'Elfe',
+          'Humain',
+          'Aasimar',
+          'Zariel',
+        ]);
+        expect(catalog.races.map((r) => r.isCoreSource), [
+          true,
+          true,
+          false,
+          false,
+        ]);
+      });
+
       test('fetchClassCatalog : classes triées', () async {
         final repository = SupabaseCharacterCreationRepository(
           _buildFakeSupabaseClient(

@@ -41,8 +41,20 @@ XmlCharacterImportRaw _parse(String fileName) {
 /// documentation de `XmlCharacterImportResolver`.
 const _raceCatalog = RaceCatalog(
   races: [
-    RaceOption(id: 1, name: 'Aasimar', abilityBonuses: {}, traits: []),
-    RaceOption(id: 2, name: 'Conil', abilityBonuses: {}, traits: []),
+    RaceOption(
+      id: 1,
+      name: 'Aasimar',
+      abilityBonuses: {},
+      traits: [],
+      source: '',
+    ),
+    RaceOption(
+      id: 2,
+      name: 'Conil',
+      abilityBonuses: {},
+      traits: [],
+      source: '',
+    ),
   ],
   subraces: [],
 );

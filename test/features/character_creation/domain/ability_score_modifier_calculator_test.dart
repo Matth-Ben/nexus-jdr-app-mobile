@@ -14,6 +14,7 @@ void main() {
     name: 'Elfe',
     abilityBonuses: {'dex': 2},
     traits: [],
+    source: '',
   );
   const hautElfe = SubraceOption(
     id: 10,
@@ -27,6 +28,7 @@ void main() {
     name: 'Demi-elfe',
     abilityBonuses: {'cha': 2, 'choice_others': 2},
     traits: [],
+    source: '',
   );
   const humain = RaceOption(
     id: 3,
@@ -40,6 +42,7 @@ void main() {
       'cha': 1,
     },
     traits: [],
+    source: '',
   );
 
   final catalog = const RaceCatalog(
@@ -103,6 +106,7 @@ void main() {
         name: 'Nain',
         abilityBonuses: {'con': 2},
         traits: [],
+        source: '',
       );
       final catalogWithNain = RaceCatalog(
         races: [...catalog.races, nain],

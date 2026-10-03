@@ -14,6 +14,7 @@ void main() {
     name: 'Elfe',
     abilityBonuses: {'dex': 2},
     traits: [],
+    source: '',
   );
   const hautElfe = SubraceOption(
     id: 10,

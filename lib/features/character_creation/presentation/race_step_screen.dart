@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/french_text_normalizer.dart';
 import '../../../core/widgets/accent_icon_badge.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
@@ -13,6 +14,7 @@ import '../../../core/widgets/step_progress_bar.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/race_catalog.dart';
+import '../domain/race_option.dart';
 import '../domain/race_step_selection.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
@@ -57,12 +59,19 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
 
   final _customRaceController = TextEditingController();
 
+  /// Champ "Rechercher une race..." au-dessus de la liste, même patron que
+  /// `pact_weapon_picker_sheet.dart` ("Rechercher une arme...") : filtre en
+  /// tapant, sans bouton de validation séparé (écouté via [_handleSearchChanged]
+  /// pour redessiner la liste à chaque frappe).
+  final _searchController = TextEditingController();
+
   int? _selectedRaceId;
   bool _isCustomRaceSelected = false;
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_handleSearchChanged);
     // Réhydrate la sélection depuis le brouillon déjà en mémoire (retour en
     // arrière depuis une étape suivante) — voir
     // `docs/cahier-des-charges/05-ux-navigation.md` : "Possibilité de revenir
@@ -82,8 +91,14 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
 
   @override
   void dispose() {
+    _searchController.removeListener(_handleSearchChanged);
+    _searchController.dispose();
     _customRaceController.dispose();
     super.dispose();
+  }
+
+  void _handleSearchChanged() {
+    if (mounted) setState(() {});
   }
 
   void _selectRace(int raceId) {
@@ -213,6 +228,19 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
       customRaceText: _customRaceController.text,
       selectedRaceId: _selectedRaceId,
     );
+    // `catalog.races` est déjà trié races de base puis races d'extension
+    // (voir `data/character_creation_repository.dart::_mapRaceCatalogPayload`)
+    // : un simple `where` préserve cet ordre dans chaque groupe, pas besoin
+    // de retrier ici.
+    final filteredRaces = _filterRaces(catalog.races);
+    final coreRaces = [
+      for (final race in filteredRaces)
+        if (race.isCoreSource) race,
+    ];
+    final extensionRaces = [
+      for (final race in filteredRaces)
+        if (!race.isCoreSource) race,
+    ];
 
     return Column(
       children: [
@@ -242,6 +270,24 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                     ),
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    0,
+                  ),
+                  child: TextFormField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      hintText: 'Rechercher une race...',
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
+                ),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(
@@ -251,26 +297,19 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                       AppSpacing.md,
                     ),
                     children: [
-                      for (var i = 0; i < catalog.races.length; i++) ...[
-                        if (i > 0) const SizedBox(height: AppSpacing.sm),
-                        SelectableOptionTile(
-                          title: catalog.races[i].name,
-                          subtitle: catalog.races[i].summaryLine,
-                          onInfo: () => showStepHelpSheet(
-                            context,
-                            StepHelpContent(
-                              title: catalog.races[i].name,
-                              body: catalog.races[i].infoText,
-                            ),
-                          ),
-                          selected:
-                              !_isCustomRaceSelected &&
-                              _selectedRaceId == catalog.races[i].id,
-                          leading: AccentIconBadge(
-                            index: i,
-                            icon: Icons.shield_rounded,
-                          ),
-                          onTap: () => _selectRace(catalog.races[i].id),
+                      if (coreRaces.isEmpty && extensionRaces.isEmpty)
+                        const _EmptySearchState()
+                      else ...[
+                        ..._raceGroupSection(
+                          title: 'RACES DE BASE',
+                          races: coreRaces,
+                          startIndex: 0,
+                        ),
+                        ..._raceGroupSection(
+                          title: "RACES D'EXTENSION",
+                          races: extensionRaces,
+                          startIndex: coreRaces.length,
+                          addSpacingBefore: coreRaces.isNotEmpty,
                         ),
                       ],
                       const SizedBox(height: AppSpacing.sm),
@@ -333,6 +372,101 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Races dont le nom contient le texte du champ de recherche (sans accents
+  /// ni casse, voir [FrenchTextNormalizer]) ; toutes si le champ est vide.
+  /// Même patron que `PactWeaponRules.search`, dupliqué ici plutôt que
+  /// factorisé (pas de couplage entre cette étape et la fiche personnage,
+  /// voir la doc de classe de [RaceStepScreen]).
+  List<RaceOption> _filterRaces(List<RaceOption> races) {
+    final needle = FrenchTextNormalizer.normalize(_searchController.text);
+    if (needle.isEmpty) return races;
+    return [
+      for (final race in races)
+        if (FrenchTextNormalizer.normalize(race.name).contains(needle)) race,
+    ];
+  }
+
+  /// Un en-tête de section ("RACES DE BASE"/"RACES D'EXTENSION") suivi
+  /// d'une tuile par race de [races] — liste vide pour un groupe devenu vide
+  /// après filtre, afin que son en-tête disparaisse entièrement plutôt que
+  /// de s'afficher au-dessus d'une liste vide (même patron que
+  /// `equipment_step_screen.dart::_classSection`/`_historySection`).
+  /// [startIndex] poursuit le cycle de couleurs de [AccentIconBadge] entre
+  /// les deux groupes plutôt que de le redémarrer à chaque section.
+  List<Widget> _raceGroupSection({
+    required String title,
+    required List<RaceOption> races,
+    required int startIndex,
+    bool addSpacingBefore = false,
+  }) {
+    if (races.isEmpty) return const [];
+    return [
+      if (addSpacingBefore) const SizedBox(height: AppSpacing.md),
+      _SectionHeader(title: title),
+      const SizedBox(height: AppSpacing.sm),
+      for (var i = 0; i < races.length; i++) ...[
+        if (i > 0) const SizedBox(height: AppSpacing.sm),
+        SelectableOptionTile(
+          title: races[i].name,
+          subtitle: races[i].summaryLine,
+          onInfo: () => showStepHelpSheet(
+            context,
+            StepHelpContent(title: races[i].name, body: races[i].infoText),
+          ),
+          selected: !_isCustomRaceSelected && _selectedRaceId == races[i].id,
+          leading: AccentIconBadge(
+            index: startIndex + i,
+            icon: Icons.shield_rounded,
+          ),
+          onTap: () => _selectRace(races[i].id),
+        ),
+      ],
+    ];
+  }
+}
+
+/// Titre de section ("RACES DE BASE"/"RACES D'EXTENSION"), sans badge de
+/// quota — même style que `equipment_step_screen.dart::_SectionHeader`,
+/// dupliqué ici pour ne jamais coupler les deux étapes entre elles (même
+/// rationale que les autres duplications déjà documentées dans ce fichier).
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        title,
+        style: AppTypography.body(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
+/// Affiché quand la recherche ne trouve aucune race (les deux groupes sont
+/// vides) — "Race personnalisée" reste toujours proposée en dessous (voir
+/// `_buildContent`), ce message ne porte donc que sur le catalogue.
+class _EmptySearchState extends StatelessWidget {
+  const _EmptySearchState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Text(
+        'Aucune race trouvée.',
+        style: AppTypography.body(color: AppColors.textMuted),
+      ),
     );
   }
 }
