@@ -312,6 +312,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
     List<int> invocationIds = const [],
+    List<int> racialInnateSpellIds = const [],
   }) async {
     applyLevelUpCallCount++;
     if (applyLevelUpErrorToThrow != null) throw applyLevelUpErrorToThrow!;

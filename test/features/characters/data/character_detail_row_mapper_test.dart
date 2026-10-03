@@ -375,6 +375,14 @@ void main() {
       expect(detail.id, 'char-1');
       expect(detail.name, 'Halltesse');
       expect(detail.raceName, 'Elfe');
+      expect(
+        detail.raceId,
+        1,
+        reason:
+            'passthrough depuis la ligne Supabase brute, consommé par '
+            'RacialInnateSpellRepository (sorts innés raciaux)',
+      );
+      expect(detail.subraceId, 4);
       expect(detail.subraceName, 'Haut-elfe');
       expect(detail.backgroundName, 'Noble');
       expect(detail.alignmentName, 'Loyal Bon');

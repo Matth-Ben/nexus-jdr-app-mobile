@@ -19,6 +19,7 @@ import '../../domain/level_up_subclass_option.dart';
 import '../../domain/multiclass_prerequisites.dart';
 import '../../domain/multiclass_proficiencies.dart';
 import '../../domain/patron_extended_spells.dart';
+import '../../domain/racial_innate_spell_grant.dart';
 import '../../domain/spell_slot_change.dart';
 import '../../domain/spell_slot_progression.dart';
 import '../../domain/spells_known_progression.dart';
@@ -249,6 +250,19 @@ typedef LevelUpStepData = ({
   /// des sous-classes proposées à ce niveau. Vide sinon. Le filtrage par
   /// niveau est fait par `PatronExtendedSpells.merge` côté écran.
   Map<int, List<PatronExtendedSpell>> patronExtendedSpells,
+
+  /// Sorts innés raciaux (`racial_innate_spells`, lignes sans choix de
+  /// lignée) devenus accessibles au niveau TOTAL atteint par ce niveau de
+  /// personnage ([newTotalLevel], voir le corps de [levelUpStepData]) et pas
+  /// encore connus — vide si le personnage n'a pas de race du catalogue
+  /// (`race_id` nul, ex. race personnalisée), ou si aucune nouvelle ligne
+  /// n'est accessible à ce niveau précis (cas le plus fréquent). Pilote la
+  /// ligne de récapitulatif "Sort inné racial" (voir
+  /// `presentation/level_up_screen.dart::_spellsKnownSummaryGainRows`), même
+  /// patron que [familiarSpellId]/[willAddFamiliar] du Pacte de la chaîne :
+  /// l'écran transmet ces identifiants à `CharacterRepository.applyLevelUp`
+  /// (paramètre `racialInnateSpellIds`) au moment de confirmer.
+  List<RacialInnateSpellGrant> newRacialInnateSpells,
 });
 
 /// Options de multiclassage disponibles pour [detail] à cet instant — calcul
@@ -504,6 +518,15 @@ Future<LevelUpStepData> levelUpStepData(
     afterClasses: afterClasses,
   );
 
+  // Niveau TOTAL du personnage APRÈS ce niveau — jamais [effectiveTargetLevel]
+  // (le niveau DANS la classe qui progresse, voir sa doc) : les sorts innés
+  // raciaux progressent avec le niveau TOTAL, pas le niveau d'une classe.
+  // Même calcul que `CharacterRepository.applyLevelUp::newTotalLevel`.
+  final newTotalLevel = afterClasses.fold(
+    0,
+    (int sum, entry) => sum + entry.level,
+  );
+
   // Magie de pacte de l'Occultiste — mécanisme séparé, jamais combiné avec
   // [spellSlotChanges] (voir `SpellSlotProgression.pactMagicFor`). Niveau
   // AVANT ce niveau : `0` si l'Occultiste vient d'être multiclassé ce niveau
@@ -601,6 +624,34 @@ Future<LevelUpStepData> levelUpStepData(
       if (spell.level == 0) spell.id,
   };
   final knownSpellIds = {for (final spell in detail.spells) spell.id};
+
+  // Sorts innés raciaux (`racial_innate_spells`, lignes sans choix de
+  // lignée) — voir la doc de [LevelUpStepData.newRacialInnateSpells]. Aucune
+  // lecture si le personnage n'a pas de race du catalogue (`race_id` nul,
+  // ex. race personnalisée) : `RacialInnateSpellRepository` a besoin d'un
+  // identifiant de race, jamais d'un nom. Un échec de cette lecture ne doit
+  // pas faire échouer toute la montée de niveau (même discipline que les
+  // sorts étendus de patron ci-dessus) : le personnage n'obtient simplement
+  // pas le sort, comme s'il était introuvable.
+  var newRacialInnateSpells = const <RacialInnateSpellGrant>[];
+  final raceId = detail.raceId;
+  if (raceId != null) {
+    try {
+      final grants = await ref
+          .watch(racialInnateSpellRepositoryProvider)
+          .fetchApplicableGrants(
+            raceId: raceId,
+            subraceId: detail.subraceId,
+            maxCharacterLevel: newTotalLevel,
+          );
+      newRacialInnateSpells = [
+        for (final grant in grants)
+          if (!knownSpellIds.contains(grant.spellId)) grant,
+      ];
+    } catch (_) {
+      newRacialInnateSpells = const [];
+    }
+  }
 
   // Faveur de pacte (niveau 3) : le catalogue des sorts mineurs de TOUTES les
   // classes (Pacte du grimoire) et l'identifiant de Appel de familier
@@ -701,6 +752,7 @@ Future<LevelUpStepData> levelUpStepData(
     familiarSpellId: familiarSpellId,
     knownSubclassId: knownSubclassId,
     patronExtendedSpells: patronExtendedSpells,
+    newRacialInnateSpells: newRacialInnateSpells,
   );
 }
 

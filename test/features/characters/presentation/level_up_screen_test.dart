@@ -26,6 +26,7 @@ import 'package:personnages/features/character_creation/domain/spell_option.dart
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
+import 'package:personnages/features/characters/data/racial_innate_spell_repository.dart';
 import 'package:personnages/features/characters/data/warlock_pact_spell_repository.dart';
 import 'package:personnages/features/characters/domain/character_class_choice.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
@@ -45,6 +46,7 @@ import 'package:personnages/features/characters/domain/level_up_choice_kind.dart
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/domain/level_up_subclass_option.dart';
+import 'package:personnages/features/characters/domain/racial_innate_spell_grant.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/warlock_pact.dart';
@@ -64,6 +66,7 @@ class _AppliedLevelUp {
     required this.choice,
     required this.initialSpellIds,
     required this.invocationIds,
+    required this.racialInnateSpellIds,
   });
 
   final Object classId;
@@ -75,6 +78,7 @@ class _AppliedLevelUp {
   final LevelUpChoiceSelection? choice;
   final List<int> initialSpellIds;
   final List<int> invocationIds;
+  final List<int> racialInnateSpellIds;
 }
 
 /// Fake minimal de `CharacterCreationRepository` — seul
@@ -159,6 +163,29 @@ class _FakeWarlockPactSpellRepository implements WarlockPactSpellRepository {
   }
 }
 
+/// Lecture de référence des sorts innés raciaux — vide par défaut (comportement
+/// neutre pour l'immense majorité des tests de ce fichier, qui ne portent pas
+/// sur une race ayant un sort inné).
+class _FakeRacialInnateSpellRepository implements RacialInnateSpellRepository {
+  List<RacialInnateSpellGrant> grantsToReturn = const [];
+  final List<({int raceId, int? subraceId, int maxCharacterLevel})> requests =
+      [];
+
+  @override
+  Future<List<RacialInnateSpellGrant>> fetchApplicableGrants({
+    required int raceId,
+    int? subraceId,
+    required int maxCharacterLevel,
+  }) async {
+    requests.add((
+      raceId: raceId,
+      subraceId: subraceId,
+      maxCharacterLevel: maxCharacterLevel,
+    ));
+    return grantsToReturn;
+  }
+}
+
 class _FakeCharacterRepository implements CharacterRepository {
   CharacterDetail? detailToReturn;
   Object? detailErrorToThrow;
@@ -223,6 +250,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
     List<int> invocationIds = const [],
+    List<int> racialInnateSpellIds = const [],
   }) async {
     applyLevelUpCalls.add(
       _AppliedLevelUp(
@@ -235,6 +263,7 @@ class _FakeCharacterRepository implements CharacterRepository {
         choice: choice,
         initialSpellIds: initialSpellIds,
         invocationIds: invocationIds,
+        racialInnateSpellIds: racialInnateSpellIds,
       ),
     );
     if (applyErrorToThrow != null) throw applyErrorToThrow!;
@@ -587,6 +616,7 @@ void main() {
   late _FakeCharacterRepository fakeRepository;
   late _FakeCharacterCreationRepository fakeCreationRepository;
   late _FakeWarlockPactSpellRepository fakePactRepository;
+  late _FakeRacialInnateSpellRepository fakeRacialInnateSpellRepository;
   late ProviderContainer container;
   late GoRouter router;
 
@@ -594,11 +624,15 @@ void main() {
     fakeRepository = _FakeCharacterRepository();
     fakeCreationRepository = _FakeCharacterCreationRepository();
     fakePactRepository = _FakeWarlockPactSpellRepository();
+    fakeRacialInnateSpellRepository = _FakeRacialInnateSpellRepository();
     container = ProviderContainer(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeRepository),
         warlockPactSpellRepositoryProvider.overrideWithValue(
           fakePactRepository,
+        ),
+        racialInnateSpellRepositoryProvider.overrideWithValue(
+          fakeRacialInnateSpellRepository,
         ),
         characterCreationRepositoryProvider.overrideWithValue(
           fakeCreationRepository,
@@ -3962,6 +3996,117 @@ void main() {
         final applied = fakeRepository.applyLevelUpCalls.single;
         expect(applied.className, 'Occultiste');
         expect(applied.isMulticlassing, isTrue);
+      },
+    );
+  });
+
+  group('sorts innés raciaux (racial_innate_spells)', () {
+    testWidgets(
+      'un sort inné racial devenu accessible est ajouté au récapitulatif '
+      'et aux sorts écrits',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetailAtLevel(2)
+            .copyWith(raceId: 9);
+        fakeRacialInnateSpellRepository.grantsToReturn = const [
+          RacialInnateSpellGrant(
+            spellId: 403,
+            spellName: 'Représailles infernales',
+            characterLevel: 3,
+          ),
+        ];
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER')); // Points de vie -> Aptitudes
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // Aptitudes -> Récapitulatif
+        await tester.pumpAndSettle();
+
+        expect(find.text('Sort inné racial'), findsOneWidget);
+        expect(find.text('Représailles infernales'), findsOneWidget);
+
+        // Requête faite avec la race/sous-race du personnage et le niveau
+        // TOTAL après ce niveau (3), pas le niveau de la classe Guerrier
+        // seule (identique ici, un personnage mono-classe).
+        expect(fakeRacialInnateSpellRepository.requests.single, (
+          raceId: 9,
+          subraceId: null,
+          maxCharacterLevel: 3,
+        ));
+
+        await tester.tap(find.text('CONTINUER')); // applique
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.racialInnateSpellIds, [
+          403,
+        ]);
+      },
+    );
+
+    testWidgets(
+      'pas de doublon si le sort inné racial est déjà connu (ni ligne de '
+      'récapitulatif, ni écriture)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetailAtLevel(2).copyWith(
+          raceId: 9,
+          spells: const [
+            CharacterSpellEntry(
+              id: 403,
+              name: 'Représailles infernales',
+              level: 1,
+              school: 'Évocation',
+              status: 'inné',
+            ),
+          ],
+        );
+        fakeRacialInnateSpellRepository.grantsToReturn = const [
+          RacialInnateSpellGrant(
+            spellId: 403,
+            spellName: 'Représailles infernales',
+            characterLevel: 3,
+          ),
+        ];
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Sort inné racial'), findsNothing);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(
+          fakeRepository.applyLevelUpCalls.single.racialInnateSpellIds,
+          isEmpty,
+        );
+      },
+    );
+
+    testWidgets(
+      'race personnalisée (raceId nul) : aucune lecture, aucune ligne de '
+      'récapitulatif',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetailAtLevel(2);
+        // Quand bien même le double renverrait un sort (ce qui ne devrait
+        // jamais arriver sans raceId), l'écran ne doit même pas l'interroger.
+        fakeRacialInnateSpellRepository.grantsToReturn = const [
+          RacialInnateSpellGrant(
+            spellId: 403,
+            spellName: 'Représailles infernales',
+            characterLevel: 3,
+          ),
+        ];
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Sort inné racial'), findsNothing);
+        expect(fakeRacialInnateSpellRepository.requests, isEmpty);
       },
     );
   });

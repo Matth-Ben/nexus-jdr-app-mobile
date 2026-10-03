@@ -31,6 +31,7 @@ CharacterCreationRepository characterCreationRepository(Ref ref) {
   return SupabaseCharacterCreationRepository(
     ref.watch(supabaseClientProvider),
     ref.watch(referenceDataCacheProvider),
+    ref.watch(racialInnateSpellRepositoryProvider),
   );
 }
 

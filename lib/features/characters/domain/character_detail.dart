@@ -45,9 +45,20 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// `race_id` nul).
     String? raceName,
 
+    /// `characters.race_id` brut, `null` si race personnalisée ou non
+    /// renseignée — contrairement à [raceName] (toujours une traduction),
+    /// nécessaire pour résoudre les sorts innés raciaux (`racial_innate_spells`,
+    /// voir `data/racial_innate_spell_repository.dart`), qui se lient à cet
+    /// identifiant plutôt qu'à un nom.
+    int? raceId,
+
     /// Nom de sous-race traduit, `null` si le personnage n'a pas de
     /// sous-race.
     String? subraceName,
+
+    /// `characters.subrace_id` brut, `null` si le personnage n'a pas de
+    /// sous-race — même rationale que [raceId].
+    int? subraceId,
 
     /// Texte libre de race personnalisée (`characters.race_custom_text`),
     /// `null` si le personnage a une race du catalogue.
