@@ -71,6 +71,16 @@ class CharacterNameTagChip extends StatelessWidget {
     // `DiceTypeBadge`) : sans ça, le label du `Text` descendant se
     // combinerait avec [label] (comportement de fusion par défaut de
     // Flutter), ce que la spec ne demande pas (un seul label explicite).
+    //
+    // PAS de `Center`/`Align` ici (régression trouvée en retour utilisateur,
+    // 2026-10-03) : ces deux cartes placent leurs chips dans un `Wrap`, qui
+    // donne des contraintes "lâches" (largeur max = largeur de la ligne,
+    // mais pas d'obligation de la remplir) à chacun de ses enfants — or
+    // `Center`/`Align` s'étirent pour occuper tout l'espace disponible sous
+    // des contraintes lâches, contrairement à `ConstrainedBox` seul (qui ne
+    // fait qu'imposer un minimum). Résultat observé : chaque chip
+    // s'étirait sur toute la largeur du `Wrap`, forçant les chips suivants
+    // chacun sur leur propre ligne plutôt que côte à côte.
     return Semantics(
       button: true,
       label: '$name, voir le détail',
@@ -84,7 +94,7 @@ class CharacterNameTagChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.sm),
           child: ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            child: Center(child: chip),
+            child: chip,
           ),
         ),
       ),

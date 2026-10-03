@@ -44,4 +44,40 @@ void main() {
     await tester.tap(find.text('courantes'));
     expect(tapped, ['dagues', 'courantes']);
   });
+
+  testWidgets(
+    'deux chips courts restent côte à côte, pas chacun sur sa propre ligne '
+    '(régression du 2026-10-03 : un `Center` à l\'intérieur du `Wrap` '
+    'forçait chaque chip à occuper toute la largeur disponible)',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CharacterWeaponProficienciesCard(
+              names: const ['courantes', 'martiales'],
+              onTapToken: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      final firstTop = tester.getTopLeft(find.text('courantes')).dy;
+      final secondTop = tester.getTopLeft(find.text('martiales')).dy;
+      expect(
+        firstTop,
+        secondTop,
+        reason:
+            'les deux chips doivent être sur la même ligne horizontale, '
+            'pas empilés verticalement',
+      );
+
+      final firstRight = tester.getTopRight(find.text('courantes')).dx;
+      final secondLeft = tester.getTopLeft(find.text('martiales')).dx;
+      expect(
+        secondLeft,
+        greaterThan(firstRight),
+        reason: 'le second chip doit être à droite du premier, pas dessous',
+      );
+    },
+  );
 }
