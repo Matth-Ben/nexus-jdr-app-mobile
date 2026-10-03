@@ -19,6 +19,18 @@ part 'item_option.freezed.dart';
 /// plutôt que `int` : vérifié contre le contenu peuplé, certains coûts sont
 /// fractionnaires (ex. 0.05 gp pour une flèche) — voir
 /// `domain/gold_amount_formatter.dart` pour leur affichage.
+///
+/// [isTwoHanded] : `true` si [category] vaut `'arme'` et que
+/// `weapon_properties.properties` contient « à deux mains » (calculé une
+/// fois pour toutes au mapping via `WeaponSlotRules.isTwoHanded`,
+/// `features/characters/domain/weapon_slot_rules.dart` — même règle que
+/// l'équipement manuel d'une arme depuis la fiche personnage). Choix du
+/// champ déjà calculé plutôt que de porter `properties: List<String>` brut
+/// comme `CharacterInventoryWeaponProperties` : le seul besoin de ce
+/// catalogue est de savoir combien de "mains" une arme de départ occupe
+/// (voir `domain/character_creation_equipment_resolver.dart`), jamais
+/// d'afficher ses propriétés. Toujours `false` pour un objet qui n'est pas
+/// une arme.
 @freezed
 abstract class ItemOption with _$ItemOption {
   const factory ItemOption({
@@ -26,5 +38,6 @@ abstract class ItemOption with _$ItemOption {
     required String name,
     required String category,
     required double costAmount,
+    @Default(false) bool isTwoHanded,
   }) = _ItemOption;
 }

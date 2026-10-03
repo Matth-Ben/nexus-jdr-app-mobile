@@ -236,8 +236,8 @@ void main() {
       );
     });
 
-    test('deux armes : seule la première est équipée d\'office, la seconde '
-        'reste dans le sac', () {
+    test('deux armes à une main : les deux sont équipées d\'office, elles '
+        'tiennent ensemble dans le set principal (2 mains)', () {
       const hachette = ItemOption(
         id: 13,
         name: 'Hachette',
@@ -257,7 +257,76 @@ void main() {
       );
 
       expect(equippedOf(result.inventory, dague.id), isTrue);
+      expect(equippedOf(result.inventory, hachette.id), isTrue);
+    });
+
+    test('arme à deux mains : équipée seule, aucune place pour une autre '
+        'arme ensuite', () {
+      const epeeDeuxMains = ItemOption(
+        id: 14,
+        name: 'Épée à deux mains',
+        category: 'arme',
+        costAmount: 50,
+        isTwoHanded: true,
+      );
+      const hachette = ItemOption(
+        id: 13,
+        name: 'Hachette',
+        category: 'arme',
+        costAmount: 5,
+      );
+      final twoHandedCatalog = ItemCatalog(
+        items: [...armoryCatalog.items, epeeDeuxMains, hachette],
+      );
+
+      final result = CharacterCreationEquipmentResolver.resolve(
+        tab: EquipmentChoiceTab.purchase,
+        backgroundOption: riche,
+        purchasedEquipment: const {'Épée à deux mains': 1, 'Hachette': 1},
+        itemCatalog: twoHandedCatalog,
+        className: 'Guerrier',
+      );
+
+      expect(equippedOf(result.inventory, epeeDeuxMains.id), isTrue);
       expect(equippedOf(result.inventory, hachette.id), isFalse);
+    });
+
+    test('arme à une main puis arme à deux mains : la deuxième ne tient pas '
+        '(1+2 > 2) et reste non équipée, mais une troisième arme à une main '
+        'après elle tient (1+1 = 2) — l\'algorithme continue de parcourir '
+        'l\'inventaire après un échec plutôt que de s\'arrêter', () {
+      const epeeDeuxMains = ItemOption(
+        id: 14,
+        name: 'Épée à deux mains',
+        category: 'arme',
+        costAmount: 50,
+        isTwoHanded: true,
+      );
+      const hachette = ItemOption(
+        id: 13,
+        name: 'Hachette',
+        category: 'arme',
+        costAmount: 5,
+      );
+      final catalogWithThreeWeapons = ItemCatalog(
+        items: [...armoryCatalog.items, epeeDeuxMains, hachette],
+      );
+
+      final result = CharacterCreationEquipmentResolver.resolve(
+        tab: EquipmentChoiceTab.purchase,
+        backgroundOption: riche,
+        purchasedEquipment: const {
+          'Dague': 1,
+          'Épée à deux mains': 1,
+          'Hachette': 1,
+        },
+        itemCatalog: catalogWithThreeWeapons,
+        className: 'Guerrier',
+      );
+
+      expect(equippedOf(result.inventory, dague.id), isTrue);
+      expect(equippedOf(result.inventory, epeeDeuxMains.id), isFalse);
+      expect(equippedOf(result.inventory, hachette.id), isTrue);
     });
 
     test('Moine : rien n\'est équipé (Défense sans armure)', () {
