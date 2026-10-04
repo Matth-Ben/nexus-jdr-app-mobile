@@ -1927,6 +1927,103 @@ void main() {
       expect(requested, isNot(contains('character_pact_weapons')));
     });
   });
+
+  group('SupabaseCharacterRepository.fetchLevelUpLevelData', () {
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const ownerId = 'owner-1';
+
+    Future<SupabaseCharacterRepository> repositoryFor(
+      Map<String, List<Map<String, dynamic>>> tableRows,
+    ) async => SupabaseCharacterRepository(
+      await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        tableRows: tableRows,
+      ),
+      cache,
+      pendingWrites,
+      _AlwaysOnlineConnectivityChecker(),
+    );
+
+    // Régression : `class_features.choice_type = 'amelioration_caracteristiques'`
+    // (ASI, niveaux 4/8/12/16/19) a été ajouté en base après l'écriture de
+    // `LevelUpBlockRules.resolvedChoiceTypes`, qui ne le connaît pas —
+    // bloquait tout le flux de montée de niveau avec "Clerc niveau 4 :
+    // Amélioration Caractéristique" avant ce correctif.
+    test(
+      "amelioration_caracteristiques (ASI) n'est jamais choisi comme ligne "
+      'de choix : traité comme une aptitude automatique',
+      () async {
+        final repository = await repositoryFor({
+          'class_features': [
+            {
+              'id': 186,
+              'class_id': 3,
+              'level': 4,
+              'choice_type': 'amelioration_caracteristiques',
+              'uses_per_rest': null,
+            },
+          ],
+          'translations': [
+            {'entity_id': '186', 'value': 'Amélioration de caractéristiques'},
+          ],
+        });
+
+        final data = await repository.fetchLevelUpLevelData(
+          classId: 3,
+          targetLevel: 4,
+        );
+
+        expect(data.choiceType, isNull);
+        expect(data.choiceClassFeatureId, isNull);
+        expect(data.automaticFeatures, hasLength(1));
+        expect(
+          data.automaticFeatures.single.name,
+          'Amélioration de caractéristiques',
+        );
+      },
+    );
+
+    test(
+      'une vraie ligne de choix (ex. sous_classe) reste la ligne de choix, '
+      'exclue des aptitudes automatiques',
+      () async {
+        final repository = await repositoryFor({
+          'class_features': [
+            {
+              'id': 9,
+              'class_id': 3,
+              'level': 1,
+              'choice_type': 'sous_classe',
+              'uses_per_rest': null,
+            },
+          ],
+          'subclasses': const [],
+        });
+
+        final data = await repository.fetchLevelUpLevelData(
+          classId: 3,
+          targetLevel: 1,
+        );
+
+        expect(data.choiceType, 'sous_classe');
+        expect(data.choiceClassFeatureId, 9);
+        expect(data.automaticFeatures, isEmpty);
+      },
+    );
+  });
 }
 
 /// Toujours "connecté" — utilisé par les groupes de tests qui n'exercent pas

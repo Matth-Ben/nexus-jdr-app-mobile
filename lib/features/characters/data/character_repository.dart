@@ -1806,13 +1806,26 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .eq('level', targetLevel)
           .order('id', ascending: true);
 
+      // `'amelioration_caracteristiques'` (ASI, niveaux 4/8/12/16/19) est
+      // traité comme une aptitude automatique, pas une ligne de choix : ce
+      // niveau ne déclenche déjà le flux ASI-ou-don qu'au travers de
+      // `LevelUpBlockRules.abilityScoreImprovementLevels` (codé en dur, même
+      // rationale que l'exclusion de `'invocation'` dans
+      // `LevelUpPendingChoiceResolver.resolve`) — sans cette exclusion, cette
+      // ligne devient `choiceRow` et bloque tout le flux via
+      // `LevelUpBlockRules.evaluate` (`choice_type` non nul et absent de
+      // `resolvedChoiceTypes`).
       final choiceRow = featureRows.firstWhere(
-        (row) => row['choice_type'] != null,
+        (row) =>
+            row['choice_type'] != null &&
+            row['choice_type'] != 'amelioration_caracteristiques',
         orElse: () => const <String, dynamic>{},
       );
       final automaticRows = [
         for (final row in featureRows)
-          if (row['choice_type'] == null) row,
+          if (row['choice_type'] == null ||
+              row['choice_type'] == 'amelioration_caracteristiques')
+            row,
       ];
 
       final featureNames = await _fetchTranslatedNames(
