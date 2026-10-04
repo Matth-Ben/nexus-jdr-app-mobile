@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/dashed_add_tile.dart';
 import '../../domain/character_detail.dart';
+import '../../domain/prepared_caster_spell_list.dart';
 import '../../domain/spell_name_filter.dart';
+import '../../domain/spell_status_formatter.dart';
 import '../../domain/spellcasting_class_names.dart';
 import '../../domain/spells_by_level_grouper.dart';
+import 'add_prepared_spells_sheet.dart';
 import 'character_class_features_card.dart';
 import 'character_spells_section.dart';
 import 'class_feature_action_sheet.dart';
@@ -133,35 +137,88 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
       spells: detail.spells,
       query: _searchController.text,
     );
-    final spellGroups = SpellsByLevelGrouper.group(filteredSpells);
-    // Filtrés par la même recherche : un favori qui ne correspond pas à la
-    // requête en cours n'a pas plus sa place ici que dans les groupes par
-    // niveau ci-dessous — voir la documentation de classe de
-    // `CharacterSpellsSection`.
+    // Pour les classes à préparation « liste complète » (Clerc/Druide/
+    // Paladin, voir `PreparedCasterSpellList`), `CharacterRepository` a déjà
+    // fusionné toute la liste de sorts de la classe dans `detail.spells`
+    // (`_fetchPreparedCasterClassListSpellIds`) : sans filtrage, l'onglet
+    // afficherait des dizaines de sorts jamais préparés. Seuls les sorts
+    // "visibles par défaut" (voir `SpellStatusFormatter
+    // .isVisibleInPreparedView`) restent affichés ici ; la totalité de la
+    // liste reste accessible depuis la sheet "Ajouter un sort" ci-dessous —
+    // décision confirmée le 05/10/2026. En cas de multiclassage avec une
+    // classe à sorts connus en plus, tout l'onglet passe en mode filtré
+    // (comportement le plus simple, pas de distinction par classe d'origine
+    // du sort).
+    final isPreparedCasterFiltered = detail.classes.any(
+      (classRow) =>
+          PreparedCasterSpellList.classNames.contains(classRow.className),
+    );
+    final visibleSpells = isPreparedCasterFiltered
+        ? filteredSpells
+              .where(SpellStatusFormatter.isVisibleInPreparedView)
+              .toList()
+        : filteredSpells;
+    final spellGroups = SpellsByLevelGrouper.group(visibleSpells);
+    // Filtrés par la même recherche (jamais par le filtrage de préparation
+    // ci-dessus) : un favori qui ne correspond pas à la requête en cours n'a
+    // pas plus sa place ici que dans les groupes par niveau ci-dessous —
+    // voir la documentation de classe de `CharacterSpellsSection`.
     final favorites = filteredSpells
         .where((spell) => spell.isFavorite)
         .toList();
+    final query = _searchController.text.trim();
+    // Distinct de l'état "recherche sans résultat" ci-dessous, qui ne
+    // regarde que la recherche : un groupe de niveau >= 1 peut disparaître
+    // uniquement parce qu'aucun de ses sorts n'est actuellement préparé,
+    // indépendamment de toute recherche active — les cantrips/sorts
+    // innés/accordés (toujours visibles) restent eux affichés normalement.
+    final showNoPreparedState =
+        isPreparedCasterFiltered &&
+        !spellGroups.any((group) => group.level > 0);
+    final noSearchMatch = spellGroups.isEmpty && query.isNotEmpty;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
         _SpellSearchField(controller: _searchController, focusNode: _focusNode),
         const SizedBox(height: AppSpacing.md),
-        if (spellGroups.isEmpty)
-          _NoSearchMatchState(query: _searchController.text.trim())
-        else
-          CharacterSpellsSection(
-            groups: spellGroups,
-            favorites: favorites,
-            spellSlots: detail.spellSlots,
-            pactSlot: detail.pactSpellSlot,
-            preparedLimit: detail.preparedSpellLimit,
-            preparedCount: detail.preparedSpellCount,
-            onCastSpell: widget.onCastSpell,
-            onToggleFavorite: widget.onToggleFavorite,
-            onTogglePrepared: widget.onTogglePrepared,
-            actionsDisabled: widget.actionsDisabled,
+        if (noSearchMatch)
+          _NoSearchMatchState(query: query)
+        else ...[
+          if (spellGroups.isNotEmpty)
+            CharacterSpellsSection(
+              groups: spellGroups,
+              favorites: favorites,
+              spellSlots: detail.spellSlots,
+              pactSlot: detail.pactSpellSlot,
+              preparedLimit: detail.preparedSpellLimit,
+              preparedCount: detail.preparedSpellCount,
+              onCastSpell: widget.onCastSpell,
+              onToggleFavorite: widget.onToggleFavorite,
+              onTogglePrepared: widget.onTogglePrepared,
+              actionsDisabled: widget.actionsDisabled,
+            ),
+          if (showNoPreparedState) ...[
+            if (spellGroups.isNotEmpty) const SizedBox(height: AppSpacing.md),
+            const _NoPreparedSpellsState(),
+          ],
+        ],
+        if (isPreparedCasterFiltered) ...[
+          const SizedBox(height: AppSpacing.md),
+          DashedAddTile(
+            label: 'Ajouter un sort',
+            onTap: widget.actionsDisabled
+                ? null
+                : () => showAddPreparedSpellsSheet(
+                    context,
+                    spells: detail.spells,
+                    spellSlots: detail.spellSlots,
+                    pactSlot: detail.pactSpellSlot,
+                    onTogglePrepared: widget.onTogglePrepared,
+                    onCastSpell: widget.onCastSpell,
+                  ),
           ),
+        ],
         if (showLimitedUseCard) ...[
           const SizedBox(height: AppSpacing.md),
           CharacterClassFeaturesCard(
@@ -274,6 +331,55 @@ class _EmptySpellsState extends StatelessWidget {
               'Aucun sort sur cette fiche pour l\'instant. Pour les classes '
               'qui lancent des sorts, ils se choisissent depuis l\'assistant '
               'de création ou à la montée de niveau.',
+              textAlign: TextAlign.center,
+              style: AppTypography.body(color: AppColors.textMuted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// État affiché à la place des groupes de niveau >= 1 pour un lanceur à
+/// préparation « liste complète » (voir [PreparedCasterSpellList]) n'ayant
+/// actuellement aucun sort préparé — les cantrips/sorts innés/accordés
+/// restent eux affichés normalement au-dessus (toujours visibles, voir
+/// `SpellStatusFormatter.isVisibleInPreparedView`). Même gabarit que
+/// [_EmptySpellsState]/[_NonCasterEmptyState] (icône 48px + titre
+/// `font.display` majuscules + corps centré). Pas de bouton ici : la tuile
+/// "Ajouter un sort" (`DashedAddTile`) reste affichée juste en dessous,
+/// inconditionnellement — même précédent que `_EmptyInventoryState` suivi de
+/// `_AddRowButtons` dans `character_inventory_tab_body.dart`.
+class _NoPreparedSpellsState extends StatelessWidget {
+  const _NoPreparedSpellsState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.bookmark_border,
+              size: 48,
+              color: AppColors.textMuted,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'AUCUN SORT PRÉPARÉ',
+              textAlign: TextAlign.center,
+              style: AppTypography.display(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Aucun sort préparé pour l\'instant. Utilisez « Ajouter un '
+              'sort » ci-dessous pour choisir parmi la liste complète.',
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textMuted),
             ),

@@ -55,4 +55,21 @@ abstract final class SpellStatusFormatter {
     if (spell.isAlwaysPrepared) return false;
     return spell.status == 'connu' || spell.status == 'préparé';
   }
+
+  /// `true` si ce sort doit apparaître par défaut dans l'onglet "Sorts" d'un
+  /// lanceur à préparation "liste complète" (Clerc/Druide/Paladin, voir
+  /// `domain/prepared_caster_spell_list.dart::PreparedCasterSpellList`) —
+  /// tous les sorts de la classe sont déjà fusionnés côté `CharacterDetail
+  /// .spells` par `CharacterRepository` (voir
+  /// `data/character_repository.dart::_fetchPreparedCasterClassListSpellIds`),
+  /// ce prédicat n'est qu'un filtre d'affichage.
+  ///
+  /// `!canTogglePrepared(spell)` couvre déjà sans distinction supplémentaire
+  /// les trois cas toujours visibles (sort mineur niveau 0, sort accordé par
+  /// une sous-classe, sort 'inné') : seule une entrée `status == 'connu'`
+  /// niveau >= 1 jamais préparée est masquée par défaut (elle reste
+  /// accessible depuis la sheet "Ajouter un sort",
+  /// `presentation/widgets/add_prepared_spells_sheet.dart`).
+  static bool isVisibleInPreparedView(CharacterSpellEntry spell) =>
+      !canTogglePrepared(spell) || spell.status == 'préparé';
 }

@@ -4,6 +4,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
+import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/characters/domain/spell_status_formatter.dart';
 
 CharacterSpellEntry _spell({required int level, required String status}) {
@@ -122,6 +123,61 @@ void main() {
           _spell(level: 1, status: 'préparé'),
         ),
         isTrue,
+      );
+    });
+  });
+
+  group('SpellStatusFormatter.isVisibleInPreparedView', () {
+    test('sort mineur -> toujours visible, quel que soit le statut', () {
+      expect(
+        SpellStatusFormatter.isVisibleInPreparedView(
+          _spell(level: 0, status: 'connu'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('sort inné -> toujours visible', () {
+      expect(
+        SpellStatusFormatter.isVisibleInPreparedView(
+          _spell(level: 3, status: 'inné'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('sort accordé par une sous-classe -> toujours visible', () {
+      expect(
+        SpellStatusFormatter.isVisibleInPreparedView(
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Bénédiction',
+            level: 1,
+            school: '',
+            status: 'préparé',
+            grantSource: SpellGrantSource.domain,
+            isPersisted: false,
+          ),
+        ),
+        isTrue,
+      );
+    });
+
+    test("sort niveau >= 1 'préparé' -> visible", () {
+      expect(
+        SpellStatusFormatter.isVisibleInPreparedView(
+          _spell(level: 1, status: 'préparé'),
+        ),
+        isTrue,
+      );
+    });
+
+    test("sort niveau >= 1 'connu' jamais préparé -> masqué par défaut", () {
+      expect(
+        SpellStatusFormatter.isVisibleInPreparedView(
+          _spell(level: 1, status: 'connu'),
+        ),
+        isFalse,
       );
     });
   });
