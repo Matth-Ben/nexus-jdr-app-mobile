@@ -117,6 +117,63 @@ final class WarlockPactSpellRepositoryProvider
 String _$warlockPactSpellRepositoryHash() =>
     r'b04f8c77e7d05ed53afbf5ff4bebfc15d1fb26a9';
 
+/// Lecture de référence des sorts innés raciaux (`racial_innate_spells`,
+/// lignes sans choix de lignée) — voir `RacialInnateSpellRepository`.
+
+@ProviderFor(racialInnateSpellRepository)
+final racialInnateSpellRepositoryProvider =
+    RacialInnateSpellRepositoryProvider._();
+
+/// Lecture de référence des sorts innés raciaux (`racial_innate_spells`,
+/// lignes sans choix de lignée) — voir `RacialInnateSpellRepository`.
+
+final class RacialInnateSpellRepositoryProvider
+    extends
+        $FunctionalProvider<
+          RacialInnateSpellRepository,
+          RacialInnateSpellRepository,
+          RacialInnateSpellRepository
+        >
+    with $Provider<RacialInnateSpellRepository> {
+  /// Lecture de référence des sorts innés raciaux (`racial_innate_spells`,
+  /// lignes sans choix de lignée) — voir `RacialInnateSpellRepository`.
+  RacialInnateSpellRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'racialInnateSpellRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$racialInnateSpellRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<RacialInnateSpellRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  RacialInnateSpellRepository create(Ref ref) {
+    return racialInnateSpellRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RacialInnateSpellRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RacialInnateSpellRepository>(value),
+    );
+  }
+}
+
+String _$racialInnateSpellRepositoryHash() =>
+    r'da3f71fc3d04010abac8ef70b84cf898c8c7f749';
+
 /// Vide, best-effort, la file d'attente PV/XP hors-ligne — voir
 /// `PendingCharacterWriteSyncer`. Seul consommateur :
 /// `character_write_sync_coordinator.dart` (déclenche [sync] au démarrage et

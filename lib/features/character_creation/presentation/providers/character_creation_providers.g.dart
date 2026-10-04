@@ -56,7 +56,7 @@ final class CharacterCreationRepositoryProvider
 }
 
 String _$characterCreationRepositoryHash() =>
-    r'72a361e8cf466add331bd561855b93a2f19983d1';
+    r'bc903e491c3a717c037ce8074bf63d863e77be8b';
 
 /// Catalogue races/sous-races de l'étape 1/9, exposé à `RaceStepScreen`.
 ///

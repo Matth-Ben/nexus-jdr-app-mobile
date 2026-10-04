@@ -8,7 +8,16 @@ import 'package:http/testing.dart';
 import 'package:personnages/core/cache/app_database.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
+import 'package:personnages/features/character_creation/domain/background_option.dart';
+import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
+import 'package:personnages/features/character_creation/domain/class_option.dart';
+import 'package:personnages/features/character_creation/domain/item_catalog.dart';
+import 'package:personnages/features/character_creation/domain/language_catalog.dart';
+import 'package:personnages/features/character_creation/domain/race_catalog.dart';
+import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
+import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
+import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Ces tests couvrent la stratégie "réseau d'abord, cache en secours" du
@@ -1105,6 +1114,204 @@ void _testCatalogTtl({
             'le TTL ne doit jamais faire disparaître un cache existant, '
             'seulement décider s\'il faut le rafraîchir en priorité',
       );
+    });
+  });
+
+  group('SupabaseCharacterCreationRepository.createCharacter — sorts innés '
+      'raciaux', () {
+    // JWT factice (exp lointain) : `recoverSession` l'accepte sans réseau —
+    // même principe que `subclass_choice_repository_test.dart`.
+    String jwt() {
+      String part(Map<String, Object> json) =>
+          base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+      return '${part({'alg': 'HS256', 'typ': 'JWT'})}.'
+          '${part({'sub': 'user-1', 'exp': 4102444800})}.sig';
+    }
+
+    // Transport HTTP fabriqué dédié (pas [_buildFakeSupabaseClient], qui
+    // encode toujours [tableRows] sous forme de tableau JSON) : l'insert
+    // `characters` utilise `.select('id').single()`, qui attend un OBJET
+    // JSON unique en réponse (jamais un tableau) — même principe que
+    // `subclass_choice_repository_test.dart::_client`.
+    Future<SupabaseClient> signedInClient({
+      required Map<String, List<Map<String, dynamic>>> tableRows,
+      void Function(http.Request request)? onRequest,
+    }) async {
+      final client = SupabaseClient(
+        'https://fake.supabase.test',
+        'fake-anon-key',
+        httpClient: MockClient((request) async {
+          onRequest?.call(request);
+          final table = request.url.pathSegments.last;
+          final Object body = table == 'characters'
+              ? const {'id': 'char-1'}
+              : (tableRows[table] ?? const <Map<String, dynamic>>[]);
+          return http.Response(
+            jsonEncode(body),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+        postgrestOptions: const PostgrestClientOptions(retryEnabled: false),
+        authOptions: const AuthClientOptions(
+          authFlowType: AuthFlowType.implicit,
+        ),
+      );
+      await client.auth.recoverSession(
+        jsonEncode({
+          'access_token': jwt(),
+          'refresh_token': 'r',
+          'token_type': 'bearer',
+          'expires_in': 3600,
+          'expires_at': 4102444800,
+          'user': {
+            'id': 'user-1',
+            'aud': 'authenticated',
+            'app_metadata': <String, dynamic>{},
+            'user_metadata': <String, dynamic>{},
+            'created_at': '2026-01-01T00:00:00Z',
+          },
+        }),
+      );
+      return client;
+    }
+
+    // Brouillon/catalogues minimaux : aucun choix de sorts de classe/
+    // compétences/outils/langues/équipement, pour qu'aucune autre table que
+    // `characters`/`character_classes`/`character_level_hp`/
+    // `character_spells` ne soit jamais écrite — même principe que
+    // `subclass_choice_repository_test.dart::classInsertBody`.
+    const classOption = ClassOption(
+      id: 3,
+      name: 'Clerc',
+      description: '',
+      hitDie: 8,
+    );
+    const backgroundOption = BackgroundOption(
+      id: 1,
+      name: 'Acolyte',
+      skillProficiencies: [],
+      featureName: '',
+      featureDescription: '',
+    );
+
+    Future<List<Map<String, dynamic>>> createAndCaptureSpellInserts({
+      required CharacterCreationDraft draft,
+      required Map<String, List<Map<String, dynamic>>> tableRows,
+    }) async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final spellInserts = <Map<String, dynamic>>[];
+      final client = await signedInClient(
+        tableRows: tableRows,
+        onRequest: (request) {
+          if (request.method == 'POST' &&
+              request.url.pathSegments.last == 'character_spells') {
+            final body = jsonDecode(request.body);
+            spellInserts.addAll(
+              (body as List).map(
+                (row) => Map<String, dynamic>.from(row as Map),
+              ),
+            );
+          }
+        },
+      );
+
+      await SupabaseCharacterCreationRepository(
+        client,
+        ReferenceDataCache(db),
+      ).createCharacter(
+        draft: draft,
+        characterName: 'Test',
+        raceCatalog: const RaceCatalog(races: [], subraces: []),
+        classOption: classOption,
+        backgroundOption: backgroundOption,
+        skillCatalog: const SkillCatalog(skills: []),
+        toolCatalog: const ToolCatalog(tools: []),
+        languageCatalog: const LanguageCatalog(languages: []),
+        spellCatalog: const SpellCatalog(spells: []),
+        itemCatalog: const ItemCatalog(items: []),
+      );
+
+      return spellInserts;
+    }
+
+    test(
+      'Tieffelin : Thaumaturgie accordée dès la création (niveau 1)',
+      () async {
+        final spellInserts = await createAndCaptureSpellInserts(
+          draft: const CharacterCreationDraft(classId: 3, raceId: 9),
+          tableRows: {
+            'racial_innate_spells': const [
+              {'spell_id': 24, 'subrace_id': null, 'character_level': 1},
+            ],
+            'translations': const [
+              {'entity_id': '24', 'value': 'Thaumaturgie'},
+            ],
+          },
+        );
+
+        expect(spellInserts, hasLength(1));
+        expect(spellInserts.single['spell_id'], 24);
+        expect(spellInserts.single['status'], 'inné');
+        expect(spellInserts.single['source_class_id'], isNull);
+      },
+    );
+
+    test(
+      "Drow : Ténèbres (niveau 5) PAS accordée dès la création (niveau 1)",
+      () async {
+        // Simule la vraie restriction serveur `character_level <= 1` : la
+        // ligne Ténèbres (`character_level: 5`) n'est donc jamais renvoyée
+        // à ce niveau, ce double de transport HTTP ne filtrant pas
+        // lui-même par query string (voir la doc de classe de ce fichier).
+        final spellInserts = await createAndCaptureSpellInserts(
+          draft: const CharacterCreationDraft(
+            classId: 3,
+            raceId: 2,
+            subraceId: 3,
+          ),
+          tableRows: const {'racial_innate_spells': [], 'translations': []},
+        );
+
+        expect(spellInserts, isEmpty);
+      },
+    );
+
+    test('Génasi : sort de sa sous-race accordé dès la création', () async {
+      final spellInserts = await createAndCaptureSpellInserts(
+        draft: const CharacterCreationDraft(
+          classId: 3,
+          raceId: 23,
+          subraceId: 25,
+        ),
+        tableRows: {
+          'racial_innate_spells': const [
+            {'spell_id': 77, 'subrace_id': 25, 'character_level': 1},
+          ],
+          'translations': const [
+            {'entity_id': '77', 'value': 'Lévitation'},
+          ],
+        },
+      );
+
+      expect(spellInserts, hasLength(1));
+      expect(spellInserts.single['spell_id'], 77);
+      expect(spellInserts.single['status'], 'inné');
+    });
+
+    test('race personnalisée (raceId nul) : aucune lecture de sorts innés '
+        'raciaux', () async {
+      final spellInserts = await createAndCaptureSpellInserts(
+        draft: const CharacterCreationDraft(
+          classId: 3,
+          raceCustomText: 'Race maison',
+        ),
+        tableRows: const {},
+      );
+
+      expect(spellInserts, isEmpty);
     });
   });
 }
