@@ -14,6 +14,7 @@ import 'package:personnages/features/character_creation/domain/character_creatio
 import 'package:personnages/features/character_creation/domain/class_option.dart';
 import 'package:personnages/features/character_creation/domain/item_catalog.dart';
 import 'package:personnages/features/character_creation/domain/language_catalog.dart';
+import 'package:personnages/features/character_creation/domain/language_option.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
@@ -1314,6 +1315,161 @@ void _testCatalogTtl({
       expect(spellInserts, isEmpty);
     });
   });
+
+  group(
+    'SupabaseCharacterCreationRepository.createCharacter — langue Commune',
+    () {
+      // Même principe que le harnais JWT/transport HTTP du groupe "sorts
+      // innés raciaux" ci-dessus (`signedInClient`), dupliqué ici plutôt que
+      // factorisé : ce groupe n'a besoin que de capturer les inserts
+      // `character_languages`, pas `character_spells`.
+      String jwt() {
+        String part(Map<String, Object> json) =>
+            base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+        return '${part({'alg': 'HS256', 'typ': 'JWT'})}.'
+            '${part({'sub': 'user-1', 'exp': 4102444800})}.sig';
+      }
+
+      Future<SupabaseClient> signedInClient({
+        required Map<String, List<Map<String, dynamic>>> tableRows,
+        void Function(http.Request request)? onRequest,
+      }) async {
+        final client = SupabaseClient(
+          'https://fake.supabase.test',
+          'fake-anon-key',
+          httpClient: MockClient((request) async {
+            onRequest?.call(request);
+            final table = request.url.pathSegments.last;
+            final Object body = table == 'characters'
+                ? const {'id': 'char-1'}
+                : (tableRows[table] ?? const <Map<String, dynamic>>[]);
+            return http.Response(
+              jsonEncode(body),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }),
+          postgrestOptions: const PostgrestClientOptions(retryEnabled: false),
+          authOptions: const AuthClientOptions(
+            authFlowType: AuthFlowType.implicit,
+          ),
+        );
+        await client.auth.recoverSession(
+          jsonEncode({
+            'access_token': jwt(),
+            'refresh_token': 'r',
+            'token_type': 'bearer',
+            'expires_in': 3600,
+            'expires_at': 4102444800,
+            'user': {
+              'id': 'user-1',
+              'aud': 'authenticated',
+              'app_metadata': <String, dynamic>{},
+              'user_metadata': <String, dynamic>{},
+              'created_at': '2026-01-01T00:00:00Z',
+            },
+          }),
+        );
+        return client;
+      }
+
+      const classOption = ClassOption(
+        id: 3,
+        name: 'Clerc',
+        description: '',
+        hitDie: 8,
+      );
+      const languageCatalog = LanguageCatalog(
+        languages: [
+          LanguageOption(id: 1, name: 'Commun', type: 'standard'),
+          LanguageOption(id: 2, name: 'Elfique', type: 'standard'),
+        ],
+      );
+
+      Future<List<Map<String, dynamic>>> createAndCaptureLanguageInserts({
+        required CharacterCreationDraft draft,
+        required BackgroundOption backgroundOption,
+      }) async {
+        final db = AppDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        final languageInserts = <Map<String, dynamic>>[];
+        final client = await signedInClient(
+          tableRows: const {},
+          onRequest: (request) {
+            if (request.method == 'POST' &&
+                request.url.pathSegments.last == 'character_languages') {
+              final body = jsonDecode(request.body);
+              languageInserts.addAll(
+                (body as List).map(
+                  (row) => Map<String, dynamic>.from(row as Map),
+                ),
+              );
+            }
+          },
+        );
+
+        await SupabaseCharacterCreationRepository(
+          client,
+          ReferenceDataCache(db),
+        ).createCharacter(
+          draft: draft,
+          characterName: 'Test',
+          raceCatalog: const RaceCatalog(races: [], subraces: []),
+          classOption: classOption,
+          backgroundOption: backgroundOption,
+          skillCatalog: const SkillCatalog(skills: []),
+          toolCatalog: const ToolCatalog(tools: []),
+          languageCatalog: languageCatalog,
+          spellCatalog: const SpellCatalog(spells: []),
+          itemCatalog: const ItemCatalog(items: []),
+        );
+
+        return languageInserts;
+      }
+
+      test('historique sans langue bonus (quota nul) : Commun est quand même '
+          'insérée', () async {
+        final inserts = await createAndCaptureLanguageInserts(
+          draft: const CharacterCreationDraft(classId: 3),
+          backgroundOption: const BackgroundOption(
+            id: 1,
+            name: 'Acolyte',
+            skillProficiencies: [],
+            featureName: '',
+            featureDescription: '',
+          ),
+        );
+
+        expect(inserts, hasLength(1));
+        expect(inserts.single['language_id'], 1);
+      });
+
+      test('historique avec une langue bonus choisie : Commun ET la langue '
+          'bonus sont insérées', () async {
+        final inserts = await createAndCaptureLanguageInserts(
+          draft: const CharacterCreationDraft(
+            classId: 3,
+            backgroundLanguageChoices: ['Elfique'],
+          ),
+          backgroundOption: const BackgroundOption(
+            id: 1,
+            name: 'Acolyte',
+            skillProficiencies: [],
+            featureName: '',
+            featureDescription: '',
+            languageChoiceCount: 1,
+          ),
+        );
+
+        expect(
+          inserts.map((row) => row['language_id']),
+          containsAll(<int>[1, 2]),
+        );
+        expect(inserts, hasLength(2));
+      });
+    },
+  );
 }
 
 /// Réécrit directement (hors `ReferenceDataCache`, en accédant à [db]) le

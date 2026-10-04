@@ -208,6 +208,7 @@ const _communLanguage = LanguageOption(
   type: 'standard',
 );
 const _nainLanguage = LanguageOption(id: 201, name: 'Nain', type: 'standard');
+const _orqueLanguage = LanguageOption(id: 203, name: 'Orque', type: 'standard');
 const _elfiqueLanguage = LanguageOption(
   id: 202,
   name: 'Elfique',
@@ -734,12 +735,15 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Étape suivante'), findsNothing);
 
-        await tester.tap(find.text('Commun'));
+        // Commun n'est plus un candidat du quota (toujours connue, voir
+        // `LanguageSelectionResolver.commonLanguageName`) : la langue bonus
+        // choisie ici est Nain.
+        await tester.tap(find.text('Nain'));
         await tester.pumpAndSettle();
         expect(find.text('1 / 1 choisies'), findsOneWidget);
 
-        // Quota atteint : Nain doit être verrouillée.
-        await tester.tap(find.text('Nain'), warnIfMissed: false);
+        // Quota atteint : Elfique doit être verrouillée.
+        await tester.tap(find.text('Elfique'), warnIfMissed: false);
         await tester.pumpAndSettle();
         expect(find.text('1 / 1 choisies'), findsOneWidget);
 
@@ -749,7 +753,7 @@ void main() {
         // Guerrier n'est pas lanceur de sorts : l'étape 6/9 est sautée, même
         // remarque que les tests "Guerrier" ci-dessus.
         expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
-        expect(readDraft().backgroundLanguageChoices, ['Commun']);
+        expect(readDraft().backgroundLanguageChoices, ['Nain']);
       },
     );
   });
@@ -931,7 +935,12 @@ void main() {
         tools: [_lutTool, _fluteTool, _desTool],
       );
       fakeRepository.languageCatalogToReturn = const LanguageCatalog(
-        languages: [_communLanguage, _nainLanguage, _elfiqueLanguage],
+        languages: [
+          _communLanguage,
+          _nainLanguage,
+          _elfiqueLanguage,
+          _orqueLanguage,
+        ],
       );
       selectClassAndBackground(classId: 2, backgroundId: 13);
     });
@@ -1006,24 +1015,26 @@ void main() {
         expect(find.text('Étape suivante'), findsNothing);
 
         // Quota de langues (3) atteint en dernier -> les 3 quotas
-        // interactifs sont maintenant exacts, "Suivant" s'active. Les 3
-        // candidats de langue sont regroupés en bas du `ListView`
-        // (chargement paresseux des enfants hors viewport, même remarque que
-        // le test de réhydratation ci-dessus) : un seul scroll jusqu'au
-        // dernier ("Elfique") les rend tous visibles/tapables d'un coup,
-        // contrairement à 3 `dragUntilVisible` séparés qui laissaient le
-        // geste de défilement dans un état intermédiaire faisant échouer le
-        // hit-test du tap suivant (repro constatée en écrivant ce test).
+        // interactifs sont maintenant exacts, "Suivant" s'active. Commun
+        // n'est plus un candidat du quota (toujours connue, voir
+        // `LanguageSelectionResolver.commonLanguageName`) : Nain/Elfique/
+        // Orque sont les 3 candidats choisis ici. Regroupés en bas du
+        // `ListView` (chargement paresseux des enfants hors viewport, même
+        // remarque que le test de réhydratation ci-dessus) : un seul scroll
+        // jusqu'au dernier ("Orque") les rend tous visibles/tapables d'un
+        // coup, contrairement à 3 `dragUntilVisible` séparés qui laissaient
+        // le geste de défilement dans un état intermédiaire faisant échouer
+        // le hit-test du tap suivant (repro constatée en écrivant ce test).
         await tester.dragUntilVisible(
-          find.text('Elfique'),
+          find.text('Orque'),
           find.byType(Scrollable),
           const Offset(0, -100),
         );
-        await tester.tap(find.text('Commun'));
-        await tester.pumpAndSettle();
         await tester.tap(find.text('Nain'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Elfique'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Orque'));
         await tester.pumpAndSettle();
         expect(find.text('3 / 3 choisies'), findsOneWidget);
 
@@ -1038,7 +1049,7 @@ void main() {
         expect(readDraft().classToolChoices, ['Luth']);
         expect(
           readDraft().backgroundLanguageChoices,
-          containsAll(['Commun', 'Nain', 'Elfique']),
+          containsAll(['Nain', 'Elfique', 'Orque']),
         );
         expect(readDraft().backgroundLanguageChoices.length, 3);
       },
