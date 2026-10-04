@@ -49,7 +49,18 @@ class CharacterCreationDraftController
       racialBonusChoices: raceChanged
           ? const <String, int>{}
           : state.racialBonusChoices,
+      // La lignée (Drakéide/Tieffelin/Goliath, voir `LineageStepScreen`) ne
+      // vaut que pour la race/sous-race précédente.
+      lineageId: raceChanged ? null : state.lineageId,
     );
+  }
+
+  /// Met à jour la lignée 2024 choisie à `LineageStepScreen`, second écran de
+  /// l'étape 1 "Race" pour les races qui en ont (voir
+  /// `domain/character_creation_draft.dart::lineageId`). Fusion partielle via
+  /// `copyWith`, même rationale que [setClass].
+  void setLineage(int lineageId) {
+    state = state.copyWith(lineageId: lineageId);
   }
 
   /// Met à jour le choix de classe (et de sous-classe, [subclassId] `null`

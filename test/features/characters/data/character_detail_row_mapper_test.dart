@@ -6,6 +6,7 @@ import 'package:personnages/features/characters/domain/character_inventory_item.
 Map<String, dynamic> _row({
   Object? raceId = 1,
   Object? subraceId,
+  Object? lineageId,
   Object? backgroundId = 2,
   Object? alignmentId = 3,
   String? raceCustomText,
@@ -22,6 +23,7 @@ Map<String, dynamic> _row({
     'temporary_hp': 5,
     'race_id': raceId,
     'subrace_id': subraceId,
+    'lineage_id': lineageId,
     'race_custom_text': raceCustomText,
     'background_id': backgroundId,
     'alignment_id': alignmentId,
@@ -346,6 +348,7 @@ void main() {
       final row = _row(
         raceId: 1,
         subraceId: 4,
+        lineageId: 31,
         backgroundId: 2,
         alignmentId: 3,
         characterClasses: [
@@ -383,6 +386,13 @@ void main() {
             'RacialInnateSpellRepository (sorts innés raciaux)',
       );
       expect(detail.subraceId, 4);
+      expect(
+        detail.lineageId,
+        31,
+        reason:
+            'passthrough depuis la ligne Supabase brute, consommé par '
+            'RacialInnateSpellRepository (sorts innés de la lignée choisie)',
+      );
       expect(detail.subraceName, 'Haut-elfe');
       expect(detail.backgroundName, 'Noble');
       expect(detail.alignmentName, 'Loyal Bon');

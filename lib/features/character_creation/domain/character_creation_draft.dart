@@ -32,6 +32,17 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// catalogue a été choisie à la place.
     String? raceCustomText,
 
+    /// Lignée 2024 choisie à l'étape 1 (`race_lineages.id`), uniquement pour
+    /// les races qui en ont un choix explicite SANS sous-race (Drakéide,
+    /// Tieffelin, Goliath à ce jour — voir
+    /// `domain/lineage_choice_catalog.dart` et
+    /// `presentation/lineage_step_screen.dart`). `null` pour toutes les
+    /// autres races, ou tant que rien n'est choisi. Pour les races dont la
+    /// lignée se déduit de la sous-race choisie (Gnome, Génasi), ce champ
+    /// reste `null` : la résolution se fait côté serveur à la création, voir
+    /// `data/character_creation_repository.dart::createCharacter`.
+    int? lineageId,
+
     /// Classe choisie à l'étape 2, `null` si pas encore choisie. Pas de
     /// "classe personnalisée" à cette étape (décision du chef de projet, voir
     /// `domain/class_catalog.dart`).

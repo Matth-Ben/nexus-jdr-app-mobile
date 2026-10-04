@@ -12,6 +12,7 @@ import '../../features/character_creation/presentation/appearance_and_backstory_
 import '../../features/character_creation/presentation/background_step_screen.dart';
 import '../../features/character_creation/presentation/class_step_screen.dart';
 import '../../features/character_creation/presentation/equipment_step_screen.dart';
+import '../../features/character_creation/presentation/lineage_step_screen.dart';
 import '../../features/character_creation/presentation/race_step_screen.dart';
 import '../../features/character_creation/presentation/skills_and_tools_step_screen.dart';
 import '../../features/character_creation/presentation/spells_step_screen.dart';
@@ -125,6 +126,17 @@ GoRouter appRouter(Ref ref) {
         name: 'character-creation-subrace',
         path: '/characters/new/subrace',
         builder: (context, state) => const SubraceStepScreen(),
+      ),
+      GoRoute(
+        // Atteinte uniquement depuis '/characters/new' (étape 1 "Race")
+        // quand la race choisie a des lignées 2024 à choisir SANS sous-race
+        // (`RaceStepScreen._submit`, voir `LineageChoiceCatalog.isConcerned`)
+        // — Drakéide, Tieffelin, Goliath à ce jour, jamais l'Elfe (qui a des
+        // sous-races) ni le Gnome/le Génasi (lignée déduite automatiquement
+        // de la sous-race choisie).
+        name: 'character-creation-lineage',
+        path: '/characters/new/lineage',
+        builder: (context, state) => const LineageStepScreen(),
       ),
       GoRoute(
         name: 'character-creation-class',

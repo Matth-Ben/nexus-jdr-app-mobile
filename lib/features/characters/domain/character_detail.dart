@@ -64,6 +64,18 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// `null` si le personnage a une race du catalogue.
     String? raceCustomText,
 
+    /// `characters.lineage_id` brut (`race_lineages.id`), `null` si le
+    /// personnage n'a pas de lignée 2024 (Drakéide/Tieffelin/Goliath, ou
+    /// Gnome/Génasi dont la lignée s'est déduite de la sous-race choisie à
+    /// la création — voir `character_creation/data/character_creation_repository.dart
+    /// ::createCharacter`) — nécessaire pour résoudre les sorts innés
+    /// raciaux de cette lignée précisément à la montée de niveau (voir
+    /// `data/racial_innate_spell_repository.dart`), même rationale que
+    /// [raceId]/[subraceId]. Simple passthrough, jamais de nom à résoudre
+    /// via `translations` ici (aucun écran n'affiche le nom de la lignée
+    /// dans la fiche personnage à ce jour).
+    int? lineageId,
+
     /// Nom d'historique traduit, `null` si `background_id` est nul.
     String? backgroundName,
 

@@ -18,6 +18,7 @@ import '../domain/race_option.dart';
 import '../domain/race_step_selection.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
+import 'providers/lineage_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
@@ -32,7 +33,12 @@ import 'widgets/step_help_sheet.dart';
 /// principe que l'étape 6/9 "Sorts" déjà sautée pour une classe non
 /// lanceuse de sorts, voir le commentaire de `/characters/new/step-7` dans
 /// `core/router/app_router.dart`) — pour une race sans sous-race,
-/// `/characters/new/step-2` est atteinte directement.
+/// `/characters/new/step-2` est atteinte directement, SAUF si cette race a
+/// des lignées 2024 à choisir (Drakéide, Tieffelin, Goliath à ce jour, voir
+/// `LineageChoiceCatalog.isConcerned`) : `_submit` pousse alors
+/// `LineageStepScreen` à la place — ces deux écrans de second niveau
+/// (sous-race / lignée) sont mutuellement exclusifs pour une race donnée
+/// (voir le critère de déclenchement dans `_submit`).
 ///
 /// En-tête bois plein (pas le dégradé "scène") : `Scaffold` classique plutôt
 /// que `SceneScaffold`, avec un bandeau `wood.medium` posé manuellement au
@@ -142,8 +148,16 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   /// qu'elle soit : il sera (ré)écrit par `SubraceStepScreen` pour les races
   /// qui en ont — voir la doc de classe. La navigation dépend de [catalog]
   /// (déjà chargé, voir `_buildContent`) : une race avec sous-races pousse
-  /// l'étape "Sous-race" ; sinon, l'étape 2/9 "Classe" est atteinte
-  /// directement.
+  /// l'étape "Sous-race" ; sinon, si elle a des lignées 2024 à choisir
+  /// (`lineageChoiceCatalogProvider`, déjà résolu à ce stade — voir
+  /// `_buildContent`, qui le `watch` pour qu'il soit préchargé pendant que
+  /// l'utilisateur parcourt cet écran), l'étape "Lignée" est poussée à la
+  /// place ; sinon, l'étape 2/9 "Classe" est atteinte directement. Un
+  /// catalogue de lignées pas encore résolu (chargement/erreur, rare — voir
+  /// `_buildContent`) retombe silencieusement sur l'étape 2/9 directement :
+  /// mieux vaut sauter ce choix que bloquer la progression de l'assistant
+  /// sur un second appel réseau que l'utilisateur ne voit jamais échouer
+  /// explicitement ici.
   void _submit(RaceCatalog catalog) {
     final draft = ref.read(characterCreationDraftControllerProvider);
     final newRaceId = _isCustomRaceSelected ? null : _selectedRaceId;
@@ -164,6 +178,13 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
         selectedRaceId != null &&
         catalog.subracesOf(selectedRaceId).isNotEmpty) {
       context.push('/characters/new/subrace');
+      return;
+    }
+    final lineageCatalog = ref.read(lineageChoiceCatalogProvider).value;
+    if (!_isCustomRaceSelected &&
+        selectedRaceId != null &&
+        (lineageCatalog?.isConcerned(selectedRaceId) ?? false)) {
+      context.push('/characters/new/lineage');
     } else {
       context.push('/characters/new/step-2');
     }
@@ -223,6 +244,11 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   }
 
   Widget _buildContent(RaceCatalog catalog) {
+    // `watch` (pas seulement `read` dans `_submit`) : déclenche son
+    // chargement dès l'affichage de cet écran plutôt qu'à la soumission,
+    // pour qu'il soit déjà résolu — pour N'IMPORTE QUELLE race — au moment
+    // où l'utilisateur tape "Suivant" (voir la doc de [_submit]).
+    ref.watch(lineageChoiceCatalogProvider);
     final canProceed = RaceStepSelection.canProceed(
       isCustomRace: _isCustomRaceSelected,
       customRaceText: _customRaceController.text,

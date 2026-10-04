@@ -156,7 +156,7 @@ final class LevelUpStepDataProvider
   }
 }
 
-String _$levelUpStepDataHash() => r'ca7c19abe241946648f052ec6d0da38ce892e6bc';
+String _$levelUpStepDataHash() => r'9c079c7ad986d8bea3eeb5c9bd8ca698ccb37321';
 
 /// Même rationale que [characterDetailProvider] : `autoDispose` par défaut,
 /// `retry: null` pour ne jamais masquer une erreur persistante derrière des
