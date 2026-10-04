@@ -3,6 +3,7 @@ import 'character_creation_draft.dart';
 import 'character_edit_snapshot.dart';
 import 'class_option.dart';
 import 'language_catalog.dart';
+import 'language_selection_resolver.dart';
 import 'skill_catalog.dart';
 import 'spell_catalog.dart';
 import 'spellcasting_rules.dart';
@@ -60,8 +61,13 @@ abstract final class CharacterEditHydrator {
       for (final language in languageCatalog.languages)
         language.id: language.name,
     };
+    // Commun exclue : jamais un choix de langue bonus (voir
+    // `LanguageSelectionResolver.commonLanguageName`), ne doit donc jamais
+    // consommer un emplacement du quota reconstruit ici.
     final languages = [
-      for (final id in snapshot.languageIds) ?languageNameById[id],
+      for (final id in snapshot.languageIds)
+        if (languageNameById[id] case final name?)
+          if (name != LanguageSelectionResolver.commonLanguageName) name,
     ].take(backgroundOption?.languageChoiceCount ?? 0).toList();
 
     var cantrips = const <String>[];

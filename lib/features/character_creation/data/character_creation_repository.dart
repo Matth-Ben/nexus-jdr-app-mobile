@@ -1143,10 +1143,18 @@ class SupabaseCharacterCreationRepository
         ]);
       }
 
-      final languageIds = LanguageSelectionResolver.resolve(
-        languageNames: draft.backgroundLanguageChoices,
-        catalog: languageCatalog,
-      );
+      // Commun toujours ajouté, en plus des langues bonus de l'historique
+      // (règle 5e, jamais un choix — voir
+      // `LanguageSelectionResolver.commonLanguageName`) : un `Set` dédoublonne
+      // au cas où le catalogue la proposerait aussi par erreur parmi les
+      // choix bonus.
+      final languageIds = {
+        ...LanguageSelectionResolver.resolve(
+          languageNames: draft.backgroundLanguageChoices,
+          catalog: languageCatalog,
+        ),
+        ?LanguageSelectionResolver.resolveCommonLanguageId(languageCatalog),
+      };
       if (languageIds.isNotEmpty) {
         await _client.from('character_languages').insert([
           for (final languageId in languageIds)

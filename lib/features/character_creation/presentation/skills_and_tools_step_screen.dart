@@ -13,6 +13,7 @@ import '../domain/background_option.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/class_option.dart';
 import '../domain/creation_step_help.dart';
+import '../domain/language_selection_resolver.dart';
 import '../domain/skill_ability_mapping.dart';
 import '../domain/skills_and_tools_step_selection.dart';
 import '../domain/spellcasting_rules.dart';
@@ -435,8 +436,14 @@ class _SkillsAndToolsStepScreenState
     SkillsAndToolsStepData data,
   ) {
     final quota = backgroundOption.languageChoiceCount ?? 0;
+    // Commun est toujours connue (règle 5e, jamais un choix) : exclue du
+    // quota de langues bonus de l'historique, affichée à part en octroi
+    // automatique non interactif (`enabled: false, checked: true`, même
+    // convention que "Kit d'herboriste" — voir la doc de classe de
+    // `CheckableOptionTile`).
     final candidates = data.languageCatalog.languages
         .map((language) => language.name)
+        .where((name) => name != LanguageSelectionResolver.commonLanguageName)
         .toList();
     return [
       _SectionHeader(
@@ -444,6 +451,12 @@ class _SkillsAndToolsStepScreenState
         badge: '${_selectedBackgroundLanguages.length} / $quota choisies',
       ),
       const SizedBox(height: AppSpacing.sm),
+      const CheckableOptionTile(
+        title: LanguageSelectionResolver.commonLanguageName,
+        checked: true,
+        enabled: false,
+      ),
+      const SizedBox(height: AppSpacing.xs),
       for (var i = 0; i < candidates.length; i++) ...[
         if (i > 0) const SizedBox(height: AppSpacing.xs),
         _languageTile(candidates[i], quota),
