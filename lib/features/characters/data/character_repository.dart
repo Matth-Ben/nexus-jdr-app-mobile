@@ -901,6 +901,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             share_token,
             race_id,
             subrace_id,
+            lineage_id,
             race_custom_text,
             background_id,
             background_custom_text,

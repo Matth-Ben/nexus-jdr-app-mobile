@@ -1470,6 +1470,183 @@ void _testCatalogTtl({
       });
     },
   );
+
+  group('SupabaseCharacterCreationRepository.createCharacter — lineage_id', () {
+    // Même principe que le harnais JWT/transport HTTP du groupe "sorts
+    // innés raciaux" ci-dessus (`signedInClient`), dupliqué ici plutôt que
+    // factorisé : ce groupe capture le corps de l'insert `characters`
+    // lui-même, pas celui de `character_spells`.
+    String jwt() {
+      String part(Map<String, Object> json) =>
+          base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+      return '${part({'alg': 'HS256', 'typ': 'JWT'})}.'
+          '${part({'sub': 'user-1', 'exp': 4102444800})}.sig';
+    }
+
+    Future<SupabaseClient> signedInClient({
+      required Map<String, List<Map<String, dynamic>>> tableRows,
+      void Function(http.Request request)? onRequest,
+    }) async {
+      final client = SupabaseClient(
+        'https://fake.supabase.test',
+        'fake-anon-key',
+        httpClient: MockClient((request) async {
+          onRequest?.call(request);
+          final table = request.url.pathSegments.last;
+          final Object body = table == 'characters'
+              ? const {'id': 'char-1'}
+              : (tableRows[table] ?? const <Map<String, dynamic>>[]);
+          return http.Response(
+            jsonEncode(body),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+        postgrestOptions: const PostgrestClientOptions(retryEnabled: false),
+        authOptions: const AuthClientOptions(
+          authFlowType: AuthFlowType.implicit,
+        ),
+      );
+      await client.auth.recoverSession(
+        jsonEncode({
+          'access_token': jwt(),
+          'refresh_token': 'r',
+          'token_type': 'bearer',
+          'expires_in': 3600,
+          'expires_at': 4102444800,
+          'user': {
+            'id': 'user-1',
+            'aud': 'authenticated',
+            'app_metadata': <String, dynamic>{},
+            'user_metadata': <String, dynamic>{},
+            'created_at': '2026-01-01T00:00:00Z',
+          },
+        }),
+      );
+      return client;
+    }
+
+    const classOption = ClassOption(
+      id: 3,
+      name: 'Clerc',
+      description: '',
+      hitDie: 8,
+    );
+    const backgroundOption = BackgroundOption(
+      id: 1,
+      name: 'Acolyte',
+      skillProficiencies: [],
+      featureName: '',
+      featureDescription: '',
+    );
+
+    Future<
+      ({Map<String, dynamic> characterInsert, List<String> requestedTables})
+    >
+    createAndCapture({
+      required CharacterCreationDraft draft,
+      Map<String, List<Map<String, dynamic>>> tableRows = const {},
+    }) async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      Map<String, dynamic>? characterInsert;
+      final requestedTables = <String>[];
+      final client = await signedInClient(
+        tableRows: tableRows,
+        onRequest: (request) {
+          requestedTables.add(request.url.pathSegments.last);
+          if (request.method == 'POST' &&
+              request.url.pathSegments.last == 'characters') {
+            characterInsert = Map<String, dynamic>.from(
+              jsonDecode(request.body) as Map,
+            );
+          }
+        },
+      );
+
+      await SupabaseCharacterCreationRepository(
+        client,
+        ReferenceDataCache(db),
+      ).createCharacter(
+        draft: draft,
+        characterName: 'Test',
+        raceCatalog: const RaceCatalog(races: [], subraces: []),
+        classOption: classOption,
+        backgroundOption: backgroundOption,
+        skillCatalog: const SkillCatalog(skills: []),
+        toolCatalog: const ToolCatalog(tools: []),
+        languageCatalog: const LanguageCatalog(languages: []),
+        spellCatalog: const SpellCatalog(spells: []),
+        itemCatalog: const ItemCatalog(items: []),
+      );
+
+      return (
+        characterInsert: characterInsert!,
+        requestedTables: requestedTables,
+      );
+    }
+
+    test('lignée choisie explicitement (Tieffelin) : lineage_id = son id, '
+        'aucune requête race_lineages (la dérivation ne sert qu\'aux races '
+        'sans choix explicite, voir Gnome/Génasi ci-dessous)', () async {
+      final result = await createAndCapture(
+        draft: const CharacterCreationDraft(
+          classId: 3,
+          raceId: 9,
+          lineageId: 32,
+        ),
+      );
+
+      expect(result.characterInsert['lineage_id'], 32);
+      expect(result.requestedTables, isNot(contains('race_lineages')));
+    });
+
+    test(
+      'Gnome des forêts (sous-race correspondant à une ligne race_lineages) '
+      ': lineage_id dérivé automatiquement de la sous-race choisie',
+      () async {
+        final result = await createAndCapture(
+          draft: const CharacterCreationDraft(
+            classId: 3,
+            raceId: 6,
+            subraceId: 8,
+          ),
+          tableRows: {
+            'race_lineages': const [
+              {'id': 23},
+            ],
+          },
+        );
+
+        expect(result.characterInsert['lineage_id'], 23);
+      },
+    );
+
+    test('Gnome des profondeurs (sous-race SANS ligne race_lineages '
+        'correspondante) : lineage_id reste absent/nul', () async {
+      final result = await createAndCapture(
+        draft: const CharacterCreationDraft(
+          classId: 3,
+          raceId: 6,
+          subraceId: 99,
+        ),
+        tableRows: const {'race_lineages': []},
+      );
+
+      expect(result.characterInsert['lineage_id'], isNull);
+    });
+
+    test('ni lignée explicite ni sous-race (ex. Humain) : aucune requête '
+        'race_lineages, lineage_id reste nul', () async {
+      final result = await createAndCapture(
+        draft: const CharacterCreationDraft(classId: 3, raceId: 2),
+      );
+
+      expect(result.characterInsert['lineage_id'], isNull);
+      expect(result.requestedTables, isNot(contains('race_lineages')));
+    });
+  });
 }
 
 /// Réécrit directement (hors `ReferenceDataCache`, en accédant à [db]) le

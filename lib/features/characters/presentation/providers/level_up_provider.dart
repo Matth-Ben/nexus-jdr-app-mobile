@@ -642,6 +642,7 @@ Future<LevelUpStepData> levelUpStepData(
           .fetchApplicableGrants(
             raceId: raceId,
             subraceId: detail.subraceId,
+            lineageId: detail.lineageId,
             maxCharacterLevel: newTotalLevel,
           );
       newRacialInnateSpells = [

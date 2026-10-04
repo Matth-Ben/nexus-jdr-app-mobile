@@ -997,6 +997,41 @@ class SupabaseCharacterCreationRepository
           .eq('locale', 'fr');
       subclassName = rows.firstOrNull?['value'] as String?;
     }
+
+    // `characters.lineage_id` : choix explicite de l'étape "Lignée"
+    // (Drakéide/Tieffelin/Goliath, voir `domain/lineage_choice_catalog.dart`
+    // et `presentation/lineage_step_screen.dart`) s'il existe ; sinon,
+    // dérivation automatique depuis la sous-race choisie pour les races
+    // dont la lignée s'en déduit entièrement (Gnome, Génasi — voir
+    // `race_lineages.subrace_id`, backfillé côté dépôt web) : une ligne
+    // `race_lineages` dont `race_id`/`subrace_id` correspondent exactement
+    // donne son `id` comme lignée ; sinon `lineage_id` reste `null` (ex.
+    // Gnome des profondeurs, qui n'a pas de ligne lignée). Aucune requête si
+    // ni l'un ni l'autre cas ne s'applique (race personnalisée, ou race/
+    // sous-race sans lignée du tout). Best-effort : un échec réseau de cette
+    // seule dérivation ne doit jamais empêcher la création du personnage,
+    // `lineage_id` reste simplement `null` comme s'il n'y avait pas de
+    // lignée à déduire.
+    var lineageId = draft.lineageId;
+    final raceIdForLineage = draft.raceId;
+    final subraceIdForLineage = draft.subraceId;
+    if (lineageId == null &&
+        raceIdForLineage != null &&
+        subraceIdForLineage != null) {
+      try {
+        final rows = await _client
+            .from('race_lineages')
+            .select('id')
+            .eq('race_id', raceIdForLineage)
+            .eq('subrace_id', subraceIdForLineage)
+            .limit(1);
+        final derivedId = rows.firstOrNull?['id'];
+        if (derivedId is num) lineageId = derivedId.toInt();
+      } catch (_) {
+        // Best-effort : voir le commentaire ci-dessus.
+      }
+    }
+
     final maxHp =
         HitPointsCalculator.maxHpAtLevel1(
           hitDie: classOption.hitDie,
@@ -1030,6 +1065,7 @@ class SupabaseCharacterCreationRepository
             'name': characterName,
             'race_id': draft.raceId,
             'subrace_id': draft.subraceId,
+            'lineage_id': lineageId,
             'race_custom_text': draft.raceCustomText,
             'background_id': draft.backgroundId,
             'alignment_id': draft.alignmentId,
@@ -1199,6 +1235,7 @@ class SupabaseCharacterCreationRepository
               .fetchApplicableGrants(
                 raceId: raceId,
                 subraceId: draft.subraceId,
+                lineageId: lineageId,
                 maxCharacterLevel: 1,
               );
           final alreadyPlannedSpellIds = {

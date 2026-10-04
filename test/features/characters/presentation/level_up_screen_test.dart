@@ -168,18 +168,22 @@ class _FakeWarlockPactSpellRepository implements WarlockPactSpellRepository {
 /// sur une race ayant un sort inné).
 class _FakeRacialInnateSpellRepository implements RacialInnateSpellRepository {
   List<RacialInnateSpellGrant> grantsToReturn = const [];
-  final List<({int raceId, int? subraceId, int maxCharacterLevel})> requests =
-      [];
+  final List<
+    ({int raceId, int? subraceId, int? lineageId, int maxCharacterLevel})
+  >
+  requests = [];
 
   @override
   Future<List<RacialInnateSpellGrant>> fetchApplicableGrants({
     required int raceId,
     int? subraceId,
+    int? lineageId,
     required int maxCharacterLevel,
   }) async {
     requests.add((
       raceId: raceId,
       subraceId: subraceId,
+      lineageId: lineageId,
       maxCharacterLevel: maxCharacterLevel,
     ));
     return grantsToReturn;
@@ -4030,6 +4034,7 @@ void main() {
         expect(fakeRacialInnateSpellRepository.requests.single, (
           raceId: 9,
           subraceId: null,
+          lineageId: null,
           maxCharacterLevel: 3,
         ));
 
@@ -4107,6 +4112,29 @@ void main() {
 
         expect(find.text('Sort inné racial'), findsNothing);
         expect(fakeRacialInnateSpellRepository.requests, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'la lignée du personnage (characters.lineage_id, ex. Tieffelin) est '
+      'transmise au dépôt pour résoudre les sorts innés de CETTE lignée '
+      'précisément',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetailAtLevel(2)
+            .copyWith(raceId: 9, lineageId: 32);
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRacialInnateSpellRepository.requests.single, (
+          raceId: 9,
+          subraceId: null,
+          lineageId: 32,
+          maxCharacterLevel: 3,
+        ));
       },
     );
   });

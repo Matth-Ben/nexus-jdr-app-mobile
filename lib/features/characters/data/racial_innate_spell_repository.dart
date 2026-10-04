@@ -14,13 +14,19 @@ const String _locale = 'fr';
 /// TOTAUX (ex. Tieffelin : Thaumaturgie niveau 1, Représailles infernales
 /// niveau 3, Ténèbres niveau 5).
 ///
-/// Périmètre volontairement restreint aux lignes **sans choix de lignée**
-/// (`lineage_id IS NULL`) — les races/variantes dont le sort dépend d'un
-/// choix de lignée/ascendance que le joueur ne fait pas encore à la création
-/// (Drakéide, variantes 2024 d'Elfe/Gnome/Tieffelin) sont hors périmètre,
-/// traitées séparément plus tard avec un écran de choix dédié. Une ligne dont
-/// `spell_id` est nul (pas de sort à ce palier pour cette race/sous-race,
-/// ex. la plupart des sous-races d'Elfe) n'est jamais résolue en
+/// Périmètre : les lignes **sans choix de lignée** (`lineage_id IS NULL`,
+/// toujours incluses), PLUS, quand [fetchApplicableGrants] reçoit un
+/// [RacialInnateSpellRepository.fetchApplicableGrants.lineageId] non nul,
+/// les lignes de CETTE lignée précisément (ex. Tieffelin : Thaumaturgie
+/// niveau 1, Représailles infernales niveau 3, Ténèbres niveau 5, selon la
+/// lignée fiélonne choisie à `LineageStepScreen` — voir
+/// `domain/lineage_choice_catalog.dart`). Les lignées d'une race que le
+/// joueur ne choisit pas encore explicitement à la création (Elfe 2024,
+/// Gnome quand sa sous-race n'a pas de lignée correspondante) restent hors
+/// périmètre : leurs lignes `lineage_id` ne sont jamais incluses tant
+/// qu'aucun `lineageId` correspondant n'est passé. Une ligne dont `spell_id`
+/// est nul (pas de sort à ce palier pour cette race/sous-race, ex. la
+/// plupart des sous-races d'Elfe) n'est jamais résolue en
 /// [RacialInnateSpellGrant].
 ///
 /// Lecture seule sur des tables de référence (`racial_innate_spells`,
@@ -34,13 +40,15 @@ const String _locale = 'fr';
 /// doubles de test de tous les autres écrans.
 abstract class RacialInnateSpellRepository {
   /// Sorts innés accordés par la race [raceId] (et sa sous-race [subraceId],
-  /// `null` si le personnage n'en a pas) à un niveau TOTAL de personnage au
-  /// plus [maxCharacterLevel] — triés par
+  /// `null` si le personnage n'en a pas, et sa lignée [lineageId], `null` si
+  /// le personnage n'en a pas choisi — voir `characters.lineage_id`) à un
+  /// niveau TOTAL de personnage au plus [maxCharacterLevel] — triés par
   /// [RacialInnateSpellGrant.characterLevel] croissant. Réseau d'abord,
   /// dernière lecture réussie en secours.
   Future<List<RacialInnateSpellGrant>> fetchApplicableGrants({
     required int raceId,
     int? subraceId,
+    int? lineageId,
     required int maxCharacterLevel,
   });
 }
@@ -56,16 +64,25 @@ class SupabaseRacialInnateSpellRepository
   Future<List<RacialInnateSpellGrant>> fetchApplicableGrants({
     required int raceId,
     int? subraceId,
+    int? lineageId,
     required int maxCharacterLevel,
   }) async {
     final cacheKey =
-        'racial_innate_spells:$raceId:${subraceId ?? '-'}:$maxCharacterLevel';
+        'racial_innate_spells:$raceId:${subraceId ?? '-'}:'
+        '${lineageId ?? '-'}:$maxCharacterLevel';
     try {
-      final rows = await _client
+      final baseQuery = _client
           .from('racial_innate_spells')
           .select('spell_id, subrace_id, character_level')
-          .eq('race_id', raceId)
-          .isFilter('lineage_id', null)
+          .eq('race_id', raceId);
+      // Lignes sans choix de lignée, PLUS celles de la lignée choisie
+      // (`lineageId` non nul) — voir la doc de classe. `.isFilter` seul
+      // (comportement historique, inchangé pour un personnage sans lignée)
+      // quand [lineageId] est `null`.
+      final filteredQuery = lineageId == null
+          ? baseQuery.isFilter('lineage_id', null)
+          : baseQuery.or('lineage_id.is.null,lineage_id.eq.$lineageId');
+      final rows = await filteredQuery
           .not('spell_id', 'is', null)
           .lte('character_level', maxCharacterLevel);
       final nameRows = await _fetchNameRows(

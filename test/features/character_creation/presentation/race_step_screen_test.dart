@@ -20,6 +20,7 @@ import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/core/widgets/selectable_option_tile.dart';
 import 'package:personnages/core/widgets/step_progress_bar.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
+import 'package:personnages/features/character_creation/data/lineage_choice_repository.dart';
 import 'package:personnages/features/character_creation/domain/alignment_catalog.dart';
 import 'package:personnages/features/character_creation/domain/background_catalog.dart';
 import 'package:personnages/features/character_creation/domain/background_option.dart';
@@ -29,6 +30,8 @@ import 'package:personnages/features/character_creation/domain/class_catalog.dar
 import 'package:personnages/features/character_creation/domain/class_option.dart';
 import 'package:personnages/features/character_creation/domain/item_catalog.dart';
 import 'package:personnages/features/character_creation/domain/language_catalog.dart';
+import 'package:personnages/features/character_creation/domain/lineage_choice_catalog.dart';
+import 'package:personnages/features/character_creation/domain/lineage_option.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_option.dart';
 import 'package:personnages/features/character_creation/domain/race_trait.dart';
@@ -38,6 +41,7 @@ import 'package:personnages/features/character_creation/domain/subrace_option.da
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
+import 'package:personnages/features/character_creation/presentation/providers/lineage_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/race_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
@@ -116,6 +120,20 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   }) async => throw UnimplementedError();
 }
 
+/// Catalogue de lignées factice — vide par défaut (`setUp`), surchargé par
+/// les tests dédiés au critère de déclenchement de `LineageStepScreen` (voir
+/// `RaceStepScreen._submit`). Toujours injecté (même vide) : sans ça,
+/// `_buildContent` toucherait le vrai `supabaseClientProvider` non
+/// initialisé en test — voir la doc de classe de `supabaseClientProvider`.
+class _FakeLineageChoiceRepository implements LineageChoiceRepository {
+  LineageChoiceCatalog catalog = const LineageChoiceCatalog(
+    optionsByRaceId: {},
+  );
+
+  @override
+  Future<LineageChoiceCatalog> fetchLineageChoices() async => catalog;
+}
+
 const _elfe = RaceOption(
   id: 1,
   name: 'Elfe',
@@ -151,15 +169,32 @@ const _hautElfe = SubraceOption(
   traits: [RaceTrait(name: 'Cantrip elfique', description: '...')],
 );
 
+// Race sans sous-race, utilisée uniquement par les tests du critère de
+// déclenchement de `LineageStepScreen` ci-dessous (id arbitraire : seul
+// compte qu'il corresponde entre `RaceCatalog`/`LineageChoiceCatalog` dans
+// ces tests, pas un vrai `races.id`).
+const _drakeide = RaceOption(
+  id: 5,
+  name: 'Drakéide',
+  abilityBonuses: {},
+  traits: [],
+  source: "Manuel des Joueurs",
+);
+
 void main() {
   late _FakeCharacterCreationRepository fakeRepository;
+  late _FakeLineageChoiceRepository fakeLineageRepository;
   late ProviderContainer container;
 
   setUp(() {
     fakeRepository = _FakeCharacterCreationRepository();
+    fakeLineageRepository = _FakeLineageChoiceRepository();
     container = ProviderContainer(
       overrides: [
         characterCreationRepositoryProvider.overrideWithValue(fakeRepository),
+        lineageChoiceRepositoryProvider.overrideWithValue(
+          fakeLineageRepository,
+        ),
       ],
     );
   });
@@ -186,6 +221,11 @@ void main() {
           path: '/characters/new/subrace',
           builder: (context, state) =>
               const Scaffold(body: Center(child: Text('Étape sous-race'))),
+        ),
+        GoRoute(
+          path: '/characters/new/lineage',
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('Étape lignée'))),
         ),
         GoRoute(
           path: '/characters/new/step-2',
@@ -925,4 +965,95 @@ void main() {
       },
     );
   });
+
+  group(
+    'critère de déclenchement de LineageStepScreen '
+    '(Drakéide/Tieffelin/Goliath, générique, voir RaceStepScreen._submit)',
+    () {
+      testWidgets(
+        'race sans sous-race mais avec des lignées 2024 (LineageChoiceCatalog'
+        '.isConcerned) pousse "/characters/new/lineage" plutôt que '
+        "l'étape 2/9 directement",
+        (WidgetTester tester) async {
+          fakeRepository.catalogToReturn = const RaceCatalog(
+            races: [_drakeide],
+            subraces: [],
+          );
+          fakeLineageRepository.catalog = const LineageChoiceCatalog(
+            optionsByRaceId: {
+              5: [LineageOption(id: 41, name: 'Dragon rouge')],
+            },
+          );
+
+          await tester.pumpWidget(buildTestWidget());
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Drakéide'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('SUIVANT'));
+          await tester.pumpAndSettle();
+
+          expect(
+            readDraft(),
+            const CharacterCreationDraft(raceId: 5, subraceId: null),
+          );
+          expect(find.text('Étape lignée'), findsOneWidget);
+          expect(find.text('Étape suivante'), findsNothing);
+          expect(find.text('Étape sous-race'), findsNothing);
+        },
+      );
+
+      testWidgets('race avec sous-races : la sous-race reste prioritaire, '
+          '"/characters/new/subrace" (jamais "/lineage", même si la race '
+          'apparaît aussi dans le catalogue de lignées — ne devrait pas '
+          "arriver en pratique, l'Elfe en est justement exclu côté données)", (
+        WidgetTester tester,
+      ) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe],
+          subraces: [_hautElfe],
+        );
+        fakeLineageRepository.catalog = const LineageChoiceCatalog(
+          optionsByRaceId: {
+            1: [LineageOption(id: 99, name: 'Lignée fictive')],
+          },
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Elfe'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape sous-race'), findsOneWidget);
+        expect(find.text('Étape lignée'), findsNothing);
+        expect(find.text('Étape suivante'), findsNothing);
+      });
+
+      testWidgets('race sans lignée ni sous-race : comportement inchangé, '
+          '"/characters/new/step-2" directement', (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_humain],
+          subraces: [],
+        );
+        // Catalogue de lignées vide par défaut (voir `setUp`) : ce test
+        // vérifie explicitement que ce cas-là n'est pas affecté par ce
+        // chantier.
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Humain'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape suivante'), findsOneWidget);
+        expect(find.text('Étape lignée'), findsNothing);
+        expect(find.text('Étape sous-race'), findsNothing);
+      });
+    },
+  );
 }

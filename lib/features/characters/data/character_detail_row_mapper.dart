@@ -719,6 +719,9 @@ abstract final class CharacterDetailRowMapper {
           ? subraceNames[subraceId.toString()]
           : null,
       subraceId: subraceId is num ? subraceId.toInt() : null,
+      lineageId: row['lineage_id'] is num
+          ? (row['lineage_id'] as num).toInt()
+          : null,
       raceCustomText: row['race_custom_text'] as String?,
       backgroundName: backgroundId != null
           ? backgroundNames[backgroundId.toString()]
