@@ -9,6 +9,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/widgets/dashed_add_tile.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
@@ -904,6 +905,200 @@ void main() {
       );
 
       expect(find.text('PRÉPARÉS'), findsNothing);
+    });
+  });
+
+  group('filtrage par défaut des lanceurs à préparation « liste complète » '
+      '(Clerc/Druide/Paladin)', () {
+    CharacterDetailClassRow clerc({int level = 1}) =>
+        const CharacterDetailClassRow(
+          classId: 5,
+          className: 'Clerc',
+          level: 1,
+          isPrimary: true,
+          savingThrowProficiencies: [],
+          hitDie: 8,
+        );
+
+    const cantrip = CharacterSpellEntry(
+      id: 1,
+      name: 'Lumière',
+      level: 0,
+      school: 'Évocation',
+      status: 'connu',
+    );
+    const preparedSpell = CharacterSpellEntry(
+      id: 2,
+      name: 'Bénédiction',
+      level: 1,
+      school: 'Enchantement',
+      status: 'préparé',
+    );
+    const unpreparedSpell = CharacterSpellEntry(
+      id: 3,
+      name: 'Soins',
+      level: 1,
+      school: 'Évocation',
+      status: 'connu',
+    );
+    const grantedSpell = CharacterSpellEntry(
+      id: 4,
+      name: 'Garde divine',
+      level: 1,
+      school: 'Abjuration',
+      status: 'préparé',
+      grantSource: SpellGrantSource.domain,
+      isPersisted: false,
+    );
+
+    testWidgets(
+      'masque un sort connu jamais préparé, garde les cantrips/sorts de '
+      'sous-classe/préparés visibles, affiche le bouton "Ajouter un sort"',
+      (tester) async {
+        await _pump(
+          tester,
+          _detail(
+            classes: [clerc()],
+            spells: const [
+              cantrip,
+              preparedSpell,
+              unpreparedSpell,
+              grantedSpell,
+            ],
+          ),
+        );
+
+        expect(find.text('Lumière'), findsOneWidget);
+        expect(find.text('Bénédiction'), findsOneWidget);
+        expect(find.text('Garde divine'), findsOneWidget);
+        expect(find.text('Soins'), findsNothing);
+        expect(
+          find.widgetWithText(DashedAddTile, 'Ajouter un sort'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'aucun sort préparé : affiche l\'état "AUCUN SORT PRÉPARÉ" à la '
+      'place des groupes de niveau >= 1, cantrip toujours visible '
+      'au-dessus, bouton "Ajouter un sort" toujours affiché',
+      (tester) async {
+        await _pump(
+          tester,
+          _detail(classes: [clerc()], spells: const [cantrip, unpreparedSpell]),
+        );
+
+        expect(find.text('AUCUN SORT PRÉPARÉ'), findsOneWidget);
+        expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
+        expect(find.text('Lumière'), findsOneWidget);
+        expect(find.text('Soins'), findsNothing);
+        expect(
+          find.widgetWithText(DashedAddTile, 'Ajouter un sort'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'groupe de niveau >= 1 avec seulement un sort accordé par sous-classe '
+      '(aucun sort réellement préparé) : "AUCUN SORT PRÉPARÉ" ne s\'affiche '
+      'pas, le sort accordé reste visible dans son groupe',
+      (tester) async {
+        await _pump(
+          tester,
+          _detail(classes: [clerc()], spells: const [cantrip, grantedSpell]),
+        );
+
+        expect(find.text('AUCUN SORT PRÉPARÉ'), findsNothing);
+        expect(find.text('Garde divine'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'un sort favori non préparé reste visible dans le bloc "FAVORIS" même '
+      'masqué du groupe de niveau par le filtrage préparation (comportement '
+      'préexistant, indépendant de ce filtrage)',
+      (tester) async {
+        const favoriteUnprepared = CharacterSpellEntry(
+          id: 5,
+          name: 'Flétrissure',
+          level: 1,
+          school: 'Nécromancie',
+          status: 'connu',
+          isFavorite: true,
+        );
+        await _pump(
+          tester,
+          _detail(
+            classes: [clerc()],
+            spells: const [cantrip, preparedSpell, favoriteUnprepared],
+          ),
+        );
+
+        expect(find.text('FAVORIS'), findsOneWidget);
+        // Présent une fois (bloc "FAVORIS"), absent des groupes par niveau
+        // (masqué par le filtrage préparation) : une seule occurrence au
+        // total, pas deux.
+        expect(find.text('Flétrissure'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'une classe à sorts connus (Magicien, classe de départ par défaut) '
+      'n\'est jamais filtrée ni dotée du bouton "Ajouter un sort"',
+      (tester) async {
+        await _pump(tester, _detail(spells: const [unpreparedSpell]));
+
+        expect(find.text('Soins'), findsOneWidget);
+        expect(find.byType(DashedAddTile), findsNothing);
+        expect(find.text('AUCUN SORT PRÉPARÉ'), findsNothing);
+      },
+    );
+
+    testWidgets('multiclassage Clerc + Magicien : tout l\'onglet passe en mode '
+        'filtré (comportement le plus simple, pas de distinction par classe '
+        'd\'origine du sort)', (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          classes: [
+            clerc(),
+            const CharacterDetailClassRow(
+              classId: 1,
+              className: 'Magicien',
+              level: 1,
+              isPrimary: false,
+              savingThrowProficiencies: [],
+              hitDie: 6,
+            ),
+          ],
+          spells: const [unpreparedSpell],
+        ),
+      );
+
+      expect(find.text('Soins'), findsNothing);
+      expect(find.byType(DashedAddTile), findsOneWidget);
+    });
+
+    testWidgets('taper "Ajouter un sort" ouvre la sheet "AJOUTER UN SORT"', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _detail(
+          classes: [clerc()],
+          spells: const [cantrip, preparedSpell, unpreparedSpell],
+        ),
+      );
+
+      await tester.tap(find.text('Ajouter un sort'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AJOUTER UN SORT'), findsOneWidget);
+      // La sheet affiche la liste complète (dont le sort masqué par
+      // défaut dans l'onglet).
+      expect(find.text('Soins'), findsOneWidget);
     });
   });
 }
