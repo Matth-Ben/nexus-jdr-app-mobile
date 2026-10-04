@@ -96,10 +96,7 @@ void main() {
         expect(find.text('Attaque'), findsOneWidget);
         expect(find.text('+5'), findsOneWidget);
         expect(find.text('1d8+3 perforant'), findsOneWidget);
-        expect(
-          find.widgetWithText(DiceTypeBadge, '1d8'),
-          findsOneWidget,
-        );
+        expect(find.widgetWithText(DiceTypeBadge, '1d8'), findsOneWidget);
         expect(find.text('lourde, munitions'), findsNothing);
         expect(find.textContaining('Portée'), findsNothing);
         expect(find.text('Aucune arme équipée'), findsNothing);

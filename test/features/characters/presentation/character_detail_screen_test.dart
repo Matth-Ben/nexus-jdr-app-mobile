@@ -772,7 +772,10 @@ void main() {
       // `character_equipped_weapons_card_test.dart`).
       final equippedWeaponsCard = find.byType(CharacterEquippedWeaponsCard);
       expect(
-        find.descendant(of: equippedWeaponsCard, matching: find.text('Attaque')),
+        find.descendant(
+          of: equippedWeaponsCard,
+          matching: find.text('Attaque'),
+        ),
         findsOneWidget,
       );
       expect(
