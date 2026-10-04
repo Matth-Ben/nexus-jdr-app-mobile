@@ -29,6 +29,64 @@ _Rien pour l'instant._
 
 ---
 
+## [1.0.6] — 2026-10-04 (build 7)
+
+### Notes de version (stores)
+
+```
+<fr-FR>
+Fiche et création :
+• Dé affiché sur chaque sort et arme des listes
+• Races groupées par extension (base/extension) + recherche
+• Armes de départ équipées par set (1 ou 2 mains)
+• Sorts innés raciaux accordés automatiquement (Tieffelin, Génasi, Drow)
+• Détail des maîtrises d'armes/armures (touche un chip)
+• Listes triées par ordre alphabétique (races, classes, historiques...)
+Groupes :
+• Solde max mieux affiché dans « S'attribuer de la monnaie »
+</fr-FR>
+```
+
+### Ajouté
+- Onglets Sorts et Inventaire : une icône de dé (d4 à d20, repli en cercle
+  pour tout nombre de faces non standard) à côté de chaque sort/arme,
+  indiquant le dé de dégâts nécessaire.
+- Onglet Compétences : chaque chip de maîtrise d'armes/armures ouvre un
+  panneau listant le contenu concret du token (ex. « armes de guerre » liste
+  les armes concernées, avec leurs dégâts/propriétés ; « armure
+  intermédiaire » liste les armures correspondantes avec CA/bonus de Dex).
+- Étape « Race » de la création : les races sont groupées en « RACES DE
+  BASE » (Manuel des Joueurs) puis « RACES D'EXTENSION », avec un champ de
+  recherche par nom.
+- Création de personnage : les armes de départ sont équipées par set (set
+  principal, 2 « mains »), en tenant compte du deux mains ou pas — deux
+  armes à une main peuvent être équipées ensemble.
+- Sorts innés raciaux (Tieffelin, Génasi, Drow) accordés automatiquement à
+  la création et à chaque montée de niveau qui en débloque un nouveau — les
+  races dont le sort dépend d'un choix de lignée/ascendance non encore
+  proposé au joueur (Drakéide, variantes 2024 d'Elfe/Gnome/Tieffelin)
+  restent pour un prochain chantier.
+
+### Modifié
+- Tri alphabétique français (accents ignorés) des catalogues de création et
+  de montée de niveau : races/sous-races, classes, historiques, outils,
+  langues, sous-classes, styles de combat, ennemis jurés — harmonisé avec les
+  listes déjà triées (dons, invocations, sorts, catalogue d'objets).
+- Fiche personnage : les aptitudes de classe sont triées par ordre
+  alphabétique plutôt que par niveau d'acquisition.
+- Groupes, « S'attribuer de la monnaie » : le solde maximum disponible
+  s'affiche sous le champ de saisie plutôt qu'à côté, plus lisible une fois
+  les champs compressés.
+
+### Corrigé
+- Création de personnage : l'arme de départ est désormais équipée d'office,
+  comme l'armure — auparavant seule l'armure l'était.
+- Onglet Compétences : les chips de maîtrise d'armes/armures restent côte à
+  côte au lieu de s'empiler chacune sur sa propre ligne (régression
+  introduite par le panneau de détail des maîtrises de cette version).
+
+---
+
 ## [1.0.5] — 2026-10-01 (build 6)
 
 ### Notes de version (stores)
