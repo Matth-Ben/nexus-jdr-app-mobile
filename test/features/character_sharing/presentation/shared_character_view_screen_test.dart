@@ -20,6 +20,7 @@ import 'package:personnages/features/characters/domain/character_gallery_photo.d
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/character_journal_entry.dart';
 import 'package:personnages/features/characters/domain/pact_weapon_option.dart';
+import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_pact_weapon_card.dart';
 
 class _FakeCharacterSharingRepository implements CharacterSharingRepository {
@@ -328,7 +329,18 @@ void main() {
         // Munitions -> Dextérité (14 -> +2), aucune maîtrise déclarée sur
         // `_baseDetail` -> bonus d'attaque +2 seul, même modificateur
         // intégré aux dégâts.
-        expect(find.text('Attaque : +2'), findsOneWidget);
+        final equippedWeaponsCard = find.byType(CharacterEquippedWeaponsCard);
+        expect(
+          find.descendant(
+            of: equippedWeaponsCard,
+            matching: find.text('Attaque'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: equippedWeaponsCard, matching: find.text('+2')),
+          findsOneWidget,
+        );
         expect(find.text('1d8+2 perforant'), findsOneWidget);
         expect(find.text('lourde, munitions'), findsNothing);
         expect(find.textContaining('Portée'), findsNothing);

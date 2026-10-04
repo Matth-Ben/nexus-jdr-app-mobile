@@ -4,8 +4,10 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
+import '../../../../core/widgets/dice_type_badge.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
 import '../../domain/character_inventory_item.dart';
+import '../../domain/dice_notation_parser.dart';
 import '../../domain/inventory_category_rules.dart';
 import '../../domain/signed_modifier_formatter.dart';
 import '../../domain/weapon_attack_calculator.dart';
@@ -197,6 +199,9 @@ class _Weapon extends StatelessWidget {
   Widget build(BuildContext context) {
     final weapon = item.weaponProperties;
     final damageDice = weapon?.damageDice;
+    final dice = damageDice != null
+        ? DiceNotationParser.parse(damageDice)
+        : null;
     final damageType = weapon?.damageType;
     final properties = weapon?.properties ?? const <String>[];
     final rangeNormal = weapon?.rangeNormal;
@@ -274,24 +279,49 @@ class _Weapon extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        item.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.body(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.body(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          if (dice != null) ...[
+                            const SizedBox(width: AppSpacing.xs),
+                            DiceTypeBadge(
+                              sides: dice.sides,
+                              label: '${dice.count}d${dice.sides}',
+                            ),
+                          ],
+                        ],
                       ),
                       if (attackBonus != null)
-                        Text(
-                          'Attaque : '
-                          '${SignedModifierFormatter.format(attackBonus)}',
-                          style: AppTypography.body(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Attaque',
+                              style: AppTypography.body(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            Text(
+                              SignedModifierFormatter.format(attackBonus),
+                              style: AppTypography.body(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
                       if (damage != null)
                         Text(

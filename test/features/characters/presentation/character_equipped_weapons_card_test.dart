@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
@@ -92,8 +93,13 @@ void main() {
         expect(find.text('Arc long'), findsOneWidget);
         // Arc long : munitions -> Dextérité (16 -> +3) + maîtrise (martiale,
         // token 'martiales') +2 = +5.
-        expect(find.text('Attaque : +5'), findsOneWidget);
+        expect(find.text('Attaque'), findsOneWidget);
+        expect(find.text('+5'), findsOneWidget);
         expect(find.text('1d8+3 perforant'), findsOneWidget);
+        expect(
+          find.widgetWithText(DiceTypeBadge, '1d8'),
+          findsOneWidget,
+        );
         expect(find.text('lourde, munitions'), findsNothing);
         expect(find.textContaining('Portée'), findsNothing);
         expect(find.text('Aucune arme équipée'), findsNothing);
@@ -242,8 +248,11 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('ARC LONG'), findsOneWidget);
-        expect(find.text('Attaque'), findsOneWidget);
-        expect(find.text('+5'), findsOneWidget);
+        // "Attaque"/"+5" apparaissent deux fois : une fois sur la carte
+        // (toujours dans l'arbre sous le panneau, même recette que
+        // "1d8+3 perforant" ci-dessous), une fois dans le panneau "Infos".
+        expect(find.text('Attaque'), findsNWidgets(2));
+        expect(find.text('+5'), findsNWidgets(2));
         expect(find.text('Dégâts'), findsOneWidget);
         // Le texte "1d8+3 perforant" apparaît deux fois : une fois sur la
         // carte (toujours dans l'arbre sous le panneau), une fois dans le

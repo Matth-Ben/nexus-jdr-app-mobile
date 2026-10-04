@@ -41,6 +41,7 @@ import 'package:personnages/core/widgets/portrait_frame.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_ability_score_grid.dart';
+import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_stat_pills_row.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
@@ -769,7 +770,15 @@ void main() {
       // même modificateur intégré aux dégâts. Portée retirée de cette ligne
       // compacte (visible uniquement dans le panneau "Infos" au tap, voir
       // `character_equipped_weapons_card_test.dart`).
-      expect(find.text('Attaque : +2'), findsOneWidget);
+      final equippedWeaponsCard = find.byType(CharacterEquippedWeaponsCard);
+      expect(
+        find.descendant(of: equippedWeaponsCard, matching: find.text('Attaque')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: equippedWeaponsCard, matching: find.text('+2')),
+        findsOneWidget,
+      );
       expect(find.text('1d8+2 perforant'), findsOneWidget);
       expect(find.textContaining('Portée'), findsNothing);
       expect(find.text('Dague rangée'), findsNothing);
