@@ -1,3 +1,4 @@
+import '../../characters/domain/weapon_slot_rules.dart';
 import '../domain/item_option.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes renvoyées par
@@ -54,6 +55,30 @@ abstract final class ItemRowMapper {
     return amount is num ? amount.toDouble() : 0;
   }
 
+  /// `weapon_properties` : objet direct (relation 1-1) ou liste à un
+  /// élément selon la version de PostgREST — même règle que
+  /// `PactWeaponRowMapper._weaponProperties`.
+  static Map<String, dynamic>? _weaponProperties(Object? value) {
+    if (value is Map) return Map<String, dynamic>.from(value);
+    if (value is List && value.isNotEmpty && value.first is Map) {
+      return Map<String, dynamic>.from(value.first as Map);
+    }
+    return null;
+  }
+
+  static List<String> _properties(Object? raw) =>
+      raw is List ? raw.whereType<String>().toList() : const <String>[];
+
+  /// `true` si `row['weapon_properties'].properties` contient « à deux
+  /// mains » (voir [ItemOption.isTwoHanded]). `false` si la jointure est
+  /// absente (objet qui n'est pas une arme).
+  static bool _isTwoHanded(Object? weaponPropertiesRaw) {
+    final weaponProperties = _weaponProperties(weaponPropertiesRaw);
+    return WeaponSlotRules.isTwoHanded(
+      _properties(weaponProperties?['properties']),
+    );
+  }
+
   /// Construit un [ItemOption] à partir d'une ligne brute `items` et des
   /// noms déjà résolus (`names`, clés en `String`, voir [collectIds]). Un id
   /// sans nom résolu retombe sur un libellé générique ("Objet #12") plutôt
@@ -71,6 +96,7 @@ abstract final class ItemRowMapper {
       name: names[id.toString()] ?? 'Objet #$id',
       category: row['category'] as String? ?? 'equipement_general',
       costAmount: parseCostAmount(row['cost']),
+      isTwoHanded: _isTwoHanded(row['weapon_properties']),
     );
   }
 }

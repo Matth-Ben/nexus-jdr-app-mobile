@@ -96,5 +96,64 @@ void main() {
 
       expect(item.category, 'equipement_general');
     });
+
+    test('weapon_properties.properties contient "à deux mains" -> '
+        'isTwoHanded true', () {
+      final item = ItemRowMapper.toItemOption(
+        {
+          'id': 14,
+          'category': 'arme',
+          'weapon_properties': {
+            'properties': ['à deux mains', 'lourde'],
+          },
+        },
+        names: {'14': 'Épée à deux mains'},
+      );
+
+      expect(item.isTwoHanded, isTrue);
+    });
+
+    test('weapon_properties sans "à deux mains" -> isTwoHanded false', () {
+      final item = ItemRowMapper.toItemOption(
+        {
+          'id': 1,
+          'category': 'arme',
+          'weapon_properties': {
+            'properties': ['légère', 'finesse'],
+          },
+        },
+        names: {'1': 'Dague'},
+      );
+
+      expect(item.isTwoHanded, isFalse);
+    });
+
+    test('weapon_properties absente (objet non-arme) -> isTwoHanded false '
+        'plutôt que de crasher', () {
+      final item = ItemRowMapper.toItemOption(
+        {'id': 2, 'category': 'equipement_general'},
+        names: {'2': 'Sac à dos'},
+      );
+
+      expect(item.isTwoHanded, isFalse);
+    });
+
+    test('weapon_properties renvoyée en liste à un élément (variante '
+        'PostgREST) -> gérée comme un objet direct', () {
+      final item = ItemRowMapper.toItemOption(
+        {
+          'id': 14,
+          'category': 'arme',
+          'weapon_properties': [
+            {
+              'properties': ['à deux mains'],
+            },
+          ],
+        },
+        names: {'14': 'Épée à deux mains'},
+      );
+
+      expect(item.isTwoHanded, isTrue);
+    });
   });
 }

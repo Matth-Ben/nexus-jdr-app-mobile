@@ -1,3 +1,4 @@
+import '../../characters/domain/weapon_slot_rules.dart';
 import 'background_equipment_parser.dart';
 import 'background_equipment_resolver.dart';
 import 'background_option.dart';
@@ -84,25 +85,28 @@ abstract final class CharacterCreationEquipmentResolver {
   }
 
   /// Marque comme équipés la première armure (`category = 'armure'`), le
-  /// premier bouclier (`category = 'bouclier'`) et la première arme
-  /// (`category = 'arme'`) de [inventory] — une seule armure et un seul
-  /// bouclier comptent pour la CA (voir `ArmorClassCalculator`), les
-  /// suivants restent dans le sac.
+  /// premier bouclier (`category = 'bouclier'`) de [inventory] — une seule
+  /// armure et un seul bouclier comptent pour la CA (voir
+  /// `ArmorClassCalculator`), les suivants restent dans le sac — ET remplit
+  /// le set "principal" (`weapon_slot` reste `null`, traité comme principal
+  /// par défaut — voir `character_equipped_weapons_card.dart`) de ses armes
+  /// de départ, dans la limite de ses 2 "mains" (`WeaponSlotRules
+  /// .slotCapacity`, même règle que l'équipement manuel d'une arme depuis
+  /// la fiche personnage, voir `weapon_slot_rules.dart`).
   ///
-  /// Arme : même règle "premier trouvé" que l'armure/le bouclier (retour
-  /// utilisateur, 2026-10-03 — un personnage fraîchement créé n'avait son
-  /// arme ni équipée ni visible dans la carte "ARMES ÉQUIPÉES" de l'onglet
-  /// Inventaire tant que le joueur ne l'équipait pas lui-même à la main).
-  /// Volontairement limité à une seule arme plutôt qu'à autant que le
-  /// premier set le permet (`WeaponSlotRules.slotCapacity`, 2 mains) :
-  /// [ItemOption] (catalogue de création) ne porte pas les propriétés
-  /// d'arme (`properties`, pour distinguer une arme à une main d'une arme à
-  /// deux mains, voir `domain/item_option.dart`), donc impossible de savoir
-  /// ici si une deuxième arme à une main tiendrait dans le même set sans
-  /// risquer d'équiper par erreur deux armes à deux mains à la fois. Laissé
-  /// dans le set "principal" (`weapon_slot` reste `null`, traité comme
-  /// principal par défaut — voir `character_equipped_weapons_card.dart`) ;
-  /// le joueur reste libre d'équiper une seconde arme à la main ensuite.
+  /// Arme : retour utilisateur, 2026-10-03 — un personnage fraîchement créé
+  /// n'avait son arme ni équipée ni visible dans la carte "ARMES ÉQUIPÉES"
+  /// de l'onglet Inventaire tant que le joueur ne l'équipait pas lui-même à
+  /// la main. Parcourt [inventory] dans l'ordre existant (équipement de
+  /// classe d'abord, puis historique/achat) et équipe chaque ligne `'arme'`
+  /// dont le coût en mains (1 pour une arme à une main, 2 — tout le set —
+  /// pour une arme à deux mains, voir `ItemOption.isTwoHanded`) tient encore
+  /// dans ce qu'il reste du set ; une ligne qui ne tient pas est seulement
+  /// ignorée (pas d'arrêt de la boucle) pour qu'une arme suivante plus
+  /// petite puisse quand même trouver sa place. Jamais le set secondaire :
+  /// aucun calcul automatique dessus, cohérent avec `WeaponSlotRules`/
+  /// `weapon_slot_picker_sheet.dart` qui documentent déjà que c'est un choix
+  /// exclusivement manuel du joueur.
   static List<InventoryLineDraft> _withStartingGearEquipped(
     List<InventoryLineDraft> inventory,
     ItemCatalog itemCatalog,
@@ -110,9 +114,12 @@ abstract final class CharacterCreationEquipmentResolver {
     final categoryById = {
       for (final item in itemCatalog.items) item.id: item.category,
     };
+    final isTwoHandedById = {
+      for (final item in itemCatalog.items) item.id: item.isTwoHanded,
+    };
     var armorEquipped = false;
     var shieldEquipped = false;
-    var weaponEquipped = false;
+    var weaponHandsUsed = 0;
     return [
       for (final line in inventory)
         switch (categoryById[line.itemId]) {
@@ -124,8 +131,14 @@ abstract final class CharacterCreationEquipmentResolver {
             shieldEquipped = true;
             return _equipped(line);
           }(),
-          'arme' when !weaponEquipped => () {
-            weaponEquipped = true;
+          'arme' => () {
+            final handCost = (isTwoHandedById[line.itemId] ?? false)
+                ? WeaponSlotRules.slotCapacity
+                : 1;
+            if (weaponHandsUsed + handCost > WeaponSlotRules.slotCapacity) {
+              return line;
+            }
+            weaponHandsUsed += handCost;
             return _equipped(line);
           }(),
           _ => line,
