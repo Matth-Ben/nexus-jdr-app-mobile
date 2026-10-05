@@ -22,6 +22,7 @@ import '../domain/character_edit_planner.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/equipment_choice_tab.dart';
 import '../domain/final_ability_scores_resolver.dart';
+import '../domain/race_option.dart';
 import '../domain/skill_proficiency_resolver.dart';
 import '../domain/spellcasting_rules.dart';
 import '../domain/subclass_choice_rules.dart';
@@ -456,6 +457,20 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
 
     final subclassName = data.subclassName;
 
+    // Octroi automatique de compétences par la race (ex. Satyre : Persuasion/
+    // Représentation, jamais un choix) — fusionné ici avec `raceSkillChoices`
+    // pour rester cohérent avec `createCharacter`, qui écrit les deux dans
+    // `character_skill_proficiencies`/`character_race_choices`.
+    RaceOption? raceOption;
+    if (draft.raceId != null) {
+      for (final race in data.raceCatalog.races) {
+        if (race.id == draft.raceId) {
+          raceOption = race;
+          break;
+        }
+      }
+    }
+
     final rows = <({String title, String value, int stepNumber})>[
       // Pas de ligne "Classe" dans ce récapitulatif (la classe n'apparaît que
       // dans l'en-tête) : la sous-classe ouvre donc la liste, avec le libellé
@@ -476,13 +491,20 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
         value: SkillProficiencyResolver.resolveNames(
           classSkillNames: draft.classSkillChoices,
           backgroundSkillNames: data.backgroundOption.skillProficiencies,
+          raceSkillNames: [
+            ...draft.raceSkillChoices,
+            ...?raceOption?.skillProficiencies,
+          ],
         ).join(', '),
         stepNumber: 5,
       ),
-      if (draft.classToolChoices.isNotEmpty)
+      if (draft.classToolChoices.isNotEmpty || draft.raceToolChoices.isNotEmpty)
         (
           title: 'Outils',
-          value: draft.classToolChoices.join(', '),
+          value: [
+            ...draft.classToolChoices,
+            ...draft.raceToolChoices,
+          ].join(', '),
           stepNumber: 5,
         ),
       if (draft.backgroundLanguageChoices.isNotEmpty)
