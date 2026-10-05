@@ -363,4 +363,121 @@ void main() {
       expect(equippedOf(result.inventory, dague.id), isTrue);
     });
   });
+
+  group('arme naturelle de race (naturalWeaponItemId)', () {
+    // `natureWeaponItemId` (120, « Griffes félines ») n'a volontairement
+    // aucune entrée dans `armoryCatalog` : exclue de tout catalogue d'items
+    // (voir `character_creation_repository.dart::_mapItemCatalogPayload`),
+    // son `item_id` suffit pour construire sa ligne (voir
+    // `CharacterCreationEquipmentResolver._naturalWeaponLine`).
+    const natureWeaponItemId = 120;
+
+    bool equippedOf(List<InventoryLineDraft> inventory, int itemId) =>
+        inventory.firstWhere((line) => line.itemId == itemId).equipped;
+
+    test('insérée déjà équipée dans le set principal (weapon_slot null, '
+        'quantity 1), même sans aucun autre équipement', () {
+      const sansOr = BackgroundOption(
+        id: 5,
+        name: 'Sans or',
+        skillProficiencies: [],
+        featureName: '',
+        featureDescription: '',
+        equipment: [],
+      );
+
+      final result = CharacterCreationEquipmentResolver.resolve(
+        tab: EquipmentChoiceTab.background,
+        backgroundOption: sansOr,
+        purchasedEquipment: const {},
+        itemCatalog: catalog,
+        naturalWeaponItemId: natureWeaponItemId,
+      );
+
+      final naturalLine = result.inventory.firstWhere(
+        (line) => line.itemId == natureWeaponItemId,
+      );
+      expect(naturalLine.equipped, isTrue);
+      expect(naturalLine.quantity, 1);
+      expect(naturalLine.customName, isNull);
+    });
+
+    test('occupe les 2 "mains" du set principal : une arme de départ de '
+        'classe/historique ne s\'auto-équipe plus dans ce même set, elle '
+        'reste dans l\'inventaire non équipée', () {
+      const soldat = BackgroundOption(
+        id: 6,
+        name: 'Soldat',
+        skillProficiencies: [],
+        featureName: '',
+        featureDescription: '',
+        equipment: ['Dague', 'Bourse (10 po)'],
+      );
+
+      final result = CharacterCreationEquipmentResolver.resolve(
+        tab: EquipmentChoiceTab.background,
+        backgroundOption: soldat,
+        purchasedEquipment: const {},
+        itemCatalog: catalog,
+        className: 'Guerrier',
+        naturalWeaponItemId: natureWeaponItemId,
+      );
+
+      expect(equippedOf(result.inventory, natureWeaponItemId), isTrue);
+      expect(
+        equippedOf(result.inventory, dague.id),
+        isFalse,
+        reason: 'l\'arme naturelle occupe déjà les 2 mains du set principal',
+      );
+    });
+
+    test('aucune arme naturelle (naturalWeaponItemId null, la grande '
+        'majorité des races) : comportement de l\'auto-équipement des '
+        'armes de départ inchangé', () {
+      const soldat = BackgroundOption(
+        id: 7,
+        name: 'Soldat',
+        skillProficiencies: [],
+        featureName: '',
+        featureDescription: '',
+        equipment: ['Dague', 'Bourse (10 po)'],
+      );
+
+      final result = CharacterCreationEquipmentResolver.resolve(
+        tab: EquipmentChoiceTab.background,
+        backgroundOption: soldat,
+        purchasedEquipment: const {},
+        itemCatalog: catalog,
+        className: 'Guerrier',
+      );
+
+      expect(equippedOf(result.inventory, dague.id), isTrue);
+    });
+
+    test('Moine avec arme naturelle : l\'arme naturelle reste équipée même '
+        'si aucun autre équipement de départ ne l\'est (Défense sans '
+        'armure)', () {
+      final result = CharacterCreationEquipmentResolver.resolve(
+        tab: EquipmentChoiceTab.purchase,
+        backgroundOption: acolyte,
+        purchasedEquipment: const {'Armure de cuir': 1},
+        itemCatalog: ItemCatalog(
+          items: [
+            ...catalog.items,
+            const ItemOption(
+              id: 10,
+              name: 'Armure de cuir',
+              category: 'armure',
+              costAmount: 10,
+            ),
+          ],
+        ),
+        className: CharacterCreationEquipmentResolver.monkClassName,
+        naturalWeaponItemId: natureWeaponItemId,
+      );
+
+      expect(equippedOf(result.inventory, natureWeaponItemId), isTrue);
+      expect(equippedOf(result.inventory, 10), isFalse);
+    });
+  });
 }

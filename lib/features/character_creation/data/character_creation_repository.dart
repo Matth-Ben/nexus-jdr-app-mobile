@@ -292,7 +292,8 @@ class SupabaseCharacterCreationRepository
           .from('races')
           .select(
             'id, ability_bonuses, traits, is_incomplete, source, '
-            'skill_choice, tool_choice, skill_proficiencies',
+            'skill_choice, tool_choice, skill_proficiencies, '
+            'natural_weapon_item_id',
           )
           .order('id', ascending: true);
       final subraceRows = await _client
@@ -861,7 +862,17 @@ class SupabaseCharacterCreationRepository
       _rowsOf(payload['itemNames']),
     );
     return ItemCatalog(
+      // Une arme naturelle (`weapon_properties.properties` contient
+      // « naturelle », voir `ItemRowMapper.isNaturalWeapon`) n'est jamais
+      // proposée dans ce catalogue : elle n'est ajoutée à l'inventaire
+      // qu'automatiquement, à la création, pour la race qui la possède
+      // (voir [createCharacter]) — jamais choisissable manuellement par un
+      // joueur d'une autre race, ni à l'étape 7/9 ni dans le catalogue
+      // d'ajout d'objet post-création (voir `features/characters/data
+      // /character_repository.dart::fetchInventoryCatalog`, filtré de la
+      // même façon).
       items: _rowsOf(payload['items'])
+          .where((row) => !ItemRowMapper.isNaturalWeapon(row))
           .map((row) => ItemRowMapper.toItemOption(row, names: names))
           .toList(),
     );
@@ -1105,6 +1116,11 @@ class SupabaseCharacterCreationRepository
         classOption.startingEquipment,
         draft.classEquipmentOption,
       ),
+      // Arme naturelle de race (Aarakocra/Centaure/Homme-lézard/Minotaure/
+      // Tabaxi/Tortue, voir `RaceOption.naturalWeaponItemId`) : `null` pour
+      // toute autre race (la grande majorité) — voir la doc de
+      // `CharacterCreationEquipmentResolver.resolve`.
+      naturalWeaponItemId: raceOption?.naturalWeaponItemId,
     );
 
     String? characterId;

@@ -119,6 +119,7 @@ abstract final class RaceRowMapper {
       skillChoice: parseSkillChoice(row['skill_choice']),
       toolChoice: parseToolChoice(row['tool_choice'], toolCatalog: toolCatalog),
       skillProficiencies: parseSkillProficiencies(row['skill_proficiencies']),
+      naturalWeaponItemId: (row['natural_weapon_item_id'] as num?)?.toInt(),
     );
   }
 

@@ -100,5 +100,45 @@ void main() {
       expect(result[0].name, 'Dague');
       expect(result[1].name, 'Kit de crochetage');
     });
+
+    test('omet une arme naturelle (jamais ajoutable manuellement)', () {
+      final rows = [
+        {'id': 1, 'category': 'arme', 'weight': 0.5, 'cost': null},
+        {
+          'id': 120,
+          'category': 'arme',
+          'weight': 0,
+          'cost': null,
+          'weapon_properties': {
+            'properties': ['à deux mains', 'naturelle'],
+          },
+        },
+      ];
+
+      final result = InventoryCatalogRowMapper.toInventoryCatalogItems(
+        rows,
+        names: const {'1': 'Dague', '120': 'Griffes félines'},
+      );
+
+      expect(result, hasLength(1));
+      expect(result.single.name, 'Dague');
+    });
+  });
+
+  group('InventoryCatalogRowMapper.isNaturalWeapon', () {
+    test('weapon_properties.properties contient "naturelle" -> true', () {
+      final row = {
+        'id': 120,
+        'weapon_properties': {
+          'properties': ['à deux mains', 'naturelle'],
+        },
+      };
+
+      expect(InventoryCatalogRowMapper.isNaturalWeapon(row), isTrue);
+    });
+
+    test('weapon_properties absente -> false plutôt que de crasher', () {
+      expect(InventoryCatalogRowMapper.isNaturalWeapon({'id': 1}), isFalse);
+    });
   });
 }

@@ -50,7 +50,15 @@ mixin _$RaceOption {
 /// (Satyre uniquement à ce jour : "Persuasion"/"Représentation"), même
 /// rôle que `BackgroundOption.skillProficiencies`. Vide pour toute autre
 /// race (la grande majorité).
- List<String> get skillProficiencies;
+ List<String> get skillProficiencies;/// `races.natural_weapon_item_id` — `item_id` de l'arme naturelle de
+/// cette race (Aarakocra/Centaure/Homme-lézard/Minotaure/Tabaxi/Tortue à
+/// ce jour, voir `item_row_mapper.dart`/`weapon_properties.properties`
+/// contenant « naturelle »), `null` pour toute autre race (la grande
+/// majorité). Utilisé à la création de personnage
+/// (`data/character_creation_repository.dart::createCharacter`) pour
+/// ajouter automatiquement cette arme, déjà équipée, à l'inventaire —
+/// jamais affiché tel quel dans l'UI de cette étape.
+ int? get naturalWeaponItemId;
 /// Create a copy of RaceOption
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -61,16 +69,16 @@ $RaceOptionCopyWith<RaceOption> get copyWith => _$RaceOptionCopyWithImpl<RaceOpt
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RaceOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.abilityBonuses, abilityBonuses)&&const DeepCollectionEquality().equals(other.traits, traits)&&(identical(other.source, source) || other.source == source)&&(identical(other.isIncomplete, isIncomplete) || other.isIncomplete == isIncomplete)&&(identical(other.skillChoice, skillChoice) || other.skillChoice == skillChoice)&&(identical(other.toolChoice, toolChoice) || other.toolChoice == toolChoice)&&const DeepCollectionEquality().equals(other.skillProficiencies, skillProficiencies));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RaceOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.abilityBonuses, abilityBonuses)&&const DeepCollectionEquality().equals(other.traits, traits)&&(identical(other.source, source) || other.source == source)&&(identical(other.isIncomplete, isIncomplete) || other.isIncomplete == isIncomplete)&&(identical(other.skillChoice, skillChoice) || other.skillChoice == skillChoice)&&(identical(other.toolChoice, toolChoice) || other.toolChoice == toolChoice)&&const DeepCollectionEquality().equals(other.skillProficiencies, skillProficiencies)&&(identical(other.naturalWeaponItemId, naturalWeaponItemId) || other.naturalWeaponItemId == naturalWeaponItemId));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(abilityBonuses),const DeepCollectionEquality().hash(traits),source,isIncomplete,skillChoice,toolChoice,const DeepCollectionEquality().hash(skillProficiencies));
+int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(abilityBonuses),const DeepCollectionEquality().hash(traits),source,isIncomplete,skillChoice,toolChoice,const DeepCollectionEquality().hash(skillProficiencies),naturalWeaponItemId);
 
 @override
 String toString() {
-  return 'RaceOption(id: $id, name: $name, abilityBonuses: $abilityBonuses, traits: $traits, source: $source, isIncomplete: $isIncomplete, skillChoice: $skillChoice, toolChoice: $toolChoice, skillProficiencies: $skillProficiencies)';
+  return 'RaceOption(id: $id, name: $name, abilityBonuses: $abilityBonuses, traits: $traits, source: $source, isIncomplete: $isIncomplete, skillChoice: $skillChoice, toolChoice: $toolChoice, skillProficiencies: $skillProficiencies, naturalWeaponItemId: $naturalWeaponItemId)';
 }
 
 
@@ -81,7 +89,7 @@ abstract mixin class $RaceOptionCopyWith<$Res>  {
   factory $RaceOptionCopyWith(RaceOption value, $Res Function(RaceOption) _then) = _$RaceOptionCopyWithImpl;
 @useResult
 $Res call({
- int id, String name, Map<String, dynamic> abilityBonuses, List<RaceTrait> traits, String source, bool isIncomplete, ClassSkillChoices? skillChoice, RaceToolChoice? toolChoice, List<String> skillProficiencies
+ int id, String name, Map<String, dynamic> abilityBonuses, List<RaceTrait> traits, String source, bool isIncomplete, ClassSkillChoices? skillChoice, RaceToolChoice? toolChoice, List<String> skillProficiencies, int? naturalWeaponItemId
 });
 
 
@@ -98,7 +106,7 @@ class _$RaceOptionCopyWithImpl<$Res>
 
 /// Create a copy of RaceOption
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? abilityBonuses = null,Object? traits = null,Object? source = null,Object? isIncomplete = null,Object? skillChoice = freezed,Object? toolChoice = freezed,Object? skillProficiencies = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? abilityBonuses = null,Object? traits = null,Object? source = null,Object? isIncomplete = null,Object? skillChoice = freezed,Object? toolChoice = freezed,Object? skillProficiencies = null,Object? naturalWeaponItemId = freezed,}) {
   return _then(RaceOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -109,7 +117,8 @@ as String,isIncomplete: null == isIncomplete ? _self.isIncomplete : isIncomplete
 as bool,skillChoice: freezed == skillChoice ? _self.skillChoice : skillChoice // ignore: cast_nullable_to_non_nullable
 as ClassSkillChoices?,toolChoice: freezed == toolChoice ? _self.toolChoice : toolChoice // ignore: cast_nullable_to_non_nullable
 as RaceToolChoice?,skillProficiencies: null == skillProficiencies ? _self.skillProficiencies : skillProficiencies // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<String>,naturalWeaponItemId: freezed == naturalWeaponItemId ? _self.naturalWeaponItemId : naturalWeaponItemId // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 /// Create a copy of RaceOption
@@ -218,10 +227,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits,  String source,  bool isIncomplete,  ClassSkillChoices? skillChoice,  RaceToolChoice? toolChoice,  List<String> skillProficiencies)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits,  String source,  bool isIncomplete,  ClassSkillChoices? skillChoice,  RaceToolChoice? toolChoice,  List<String> skillProficiencies,  int? naturalWeaponItemId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RaceOption() when $default != null:
-return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits,_that.source,_that.isIncomplete,_that.skillChoice,_that.toolChoice,_that.skillProficiencies);case _:
+return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits,_that.source,_that.isIncomplete,_that.skillChoice,_that.toolChoice,_that.skillProficiencies,_that.naturalWeaponItemId);case _:
   return orElse();
 
 }
@@ -239,10 +248,10 @@ return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits,_that.sour
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits,  String source,  bool isIncomplete,  ClassSkillChoices? skillChoice,  RaceToolChoice? toolChoice,  List<String> skillProficiencies)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits,  String source,  bool isIncomplete,  ClassSkillChoices? skillChoice,  RaceToolChoice? toolChoice,  List<String> skillProficiencies,  int? naturalWeaponItemId)  $default,) {final _that = this;
 switch (_that) {
 case _RaceOption():
-return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits,_that.source,_that.isIncomplete,_that.skillChoice,_that.toolChoice,_that.skillProficiencies);case _:
+return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits,_that.source,_that.isIncomplete,_that.skillChoice,_that.toolChoice,_that.skillProficiencies,_that.naturalWeaponItemId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -259,10 +268,10 @@ return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits,_that.sour
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits,  String source,  bool isIncomplete,  ClassSkillChoices? skillChoice,  RaceToolChoice? toolChoice,  List<String> skillProficiencies)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits,  String source,  bool isIncomplete,  ClassSkillChoices? skillChoice,  RaceToolChoice? toolChoice,  List<String> skillProficiencies,  int? naturalWeaponItemId)?  $default,) {final _that = this;
 switch (_that) {
 case _RaceOption() when $default != null:
-return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits,_that.source,_that.isIncomplete,_that.skillChoice,_that.toolChoice,_that.skillProficiencies);case _:
+return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits,_that.source,_that.isIncomplete,_that.skillChoice,_that.toolChoice,_that.skillProficiencies,_that.naturalWeaponItemId);case _:
   return null;
 
 }
@@ -274,7 +283,7 @@ return $default(_that.id,_that.name,_that.abilityBonuses,_that.traits,_that.sour
 
 
 class _RaceOption extends RaceOption {
-  const _RaceOption({required this.id, required this.name, required  Map<String, dynamic> abilityBonuses, required  List<RaceTrait> traits, required this.source, this.isIncomplete = false, this.skillChoice, this.toolChoice,  List<String> skillProficiencies = const <String>[]}): _abilityBonuses = abilityBonuses,_traits = traits,_skillProficiencies = skillProficiencies,super._();
+  const _RaceOption({required this.id, required this.name, required  Map<String, dynamic> abilityBonuses, required  List<RaceTrait> traits, required this.source, this.isIncomplete = false, this.skillChoice, this.toolChoice,  List<String> skillProficiencies = const <String>[], this.naturalWeaponItemId}): _abilityBonuses = abilityBonuses,_traits = traits,_skillProficiencies = skillProficiencies,super._();
   
 
 @override final  int id;
@@ -344,6 +353,15 @@ class _RaceOption extends RaceOption {
   return EqualUnmodifiableListView(_skillProficiencies);
 }
 
+/// `races.natural_weapon_item_id` — `item_id` de l'arme naturelle de
+/// cette race (Aarakocra/Centaure/Homme-lézard/Minotaure/Tabaxi/Tortue à
+/// ce jour, voir `item_row_mapper.dart`/`weapon_properties.properties`
+/// contenant « naturelle »), `null` pour toute autre race (la grande
+/// majorité). Utilisé à la création de personnage
+/// (`data/character_creation_repository.dart::createCharacter`) pour
+/// ajouter automatiquement cette arme, déjà équipée, à l'inventaire —
+/// jamais affiché tel quel dans l'UI de cette étape.
+@override final  int? naturalWeaponItemId;
 
 /// Create a copy of RaceOption
 /// with the given fields replaced by the non-null parameter values.
@@ -355,16 +373,16 @@ _$RaceOptionCopyWith<_RaceOption> get copyWith => __$RaceOptionCopyWithImpl<_Rac
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RaceOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other._abilityBonuses, _abilityBonuses)&&const DeepCollectionEquality().equals(other._traits, _traits)&&(identical(other.source, source) || other.source == source)&&(identical(other.isIncomplete, isIncomplete) || other.isIncomplete == isIncomplete)&&(identical(other.skillChoice, skillChoice) || other.skillChoice == skillChoice)&&(identical(other.toolChoice, toolChoice) || other.toolChoice == toolChoice)&&const DeepCollectionEquality().equals(other._skillProficiencies, _skillProficiencies));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RaceOption&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other._abilityBonuses, _abilityBonuses)&&const DeepCollectionEquality().equals(other._traits, _traits)&&(identical(other.source, source) || other.source == source)&&(identical(other.isIncomplete, isIncomplete) || other.isIncomplete == isIncomplete)&&(identical(other.skillChoice, skillChoice) || other.skillChoice == skillChoice)&&(identical(other.toolChoice, toolChoice) || other.toolChoice == toolChoice)&&const DeepCollectionEquality().equals(other._skillProficiencies, _skillProficiencies)&&(identical(other.naturalWeaponItemId, naturalWeaponItemId) || other.naturalWeaponItemId == naturalWeaponItemId));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(_abilityBonuses),const DeepCollectionEquality().hash(_traits),source,isIncomplete,skillChoice,toolChoice,const DeepCollectionEquality().hash(_skillProficiencies));
+int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(_abilityBonuses),const DeepCollectionEquality().hash(_traits),source,isIncomplete,skillChoice,toolChoice,const DeepCollectionEquality().hash(_skillProficiencies),naturalWeaponItemId);
 
 @override
 String toString() {
-  return 'RaceOption(id: $id, name: $name, abilityBonuses: $abilityBonuses, traits: $traits, source: $source, isIncomplete: $isIncomplete, skillChoice: $skillChoice, toolChoice: $toolChoice, skillProficiencies: $skillProficiencies)';
+  return 'RaceOption(id: $id, name: $name, abilityBonuses: $abilityBonuses, traits: $traits, source: $source, isIncomplete: $isIncomplete, skillChoice: $skillChoice, toolChoice: $toolChoice, skillProficiencies: $skillProficiencies, naturalWeaponItemId: $naturalWeaponItemId)';
 }
 
 
@@ -375,7 +393,7 @@ abstract mixin class _$RaceOptionCopyWith<$Res> implements $RaceOptionCopyWith<$
   factory _$RaceOptionCopyWith(_RaceOption value, $Res Function(_RaceOption) _then) = __$RaceOptionCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String name, Map<String, dynamic> abilityBonuses, List<RaceTrait> traits, String source, bool isIncomplete, ClassSkillChoices? skillChoice, RaceToolChoice? toolChoice, List<String> skillProficiencies
+ int id, String name, Map<String, dynamic> abilityBonuses, List<RaceTrait> traits, String source, bool isIncomplete, ClassSkillChoices? skillChoice, RaceToolChoice? toolChoice, List<String> skillProficiencies, int? naturalWeaponItemId
 });
 
 
@@ -392,7 +410,7 @@ class __$RaceOptionCopyWithImpl<$Res>
 
 /// Create a copy of RaceOption
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? abilityBonuses = null,Object? traits = null,Object? source = null,Object? isIncomplete = null,Object? skillChoice = freezed,Object? toolChoice = freezed,Object? skillProficiencies = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? abilityBonuses = null,Object? traits = null,Object? source = null,Object? isIncomplete = null,Object? skillChoice = freezed,Object? toolChoice = freezed,Object? skillProficiencies = null,Object? naturalWeaponItemId = freezed,}) {
   return _then(_RaceOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -403,7 +421,8 @@ as String,isIncomplete: null == isIncomplete ? _self.isIncomplete : isIncomplete
 as bool,skillChoice: freezed == skillChoice ? _self.skillChoice : skillChoice // ignore: cast_nullable_to_non_nullable
 as ClassSkillChoices?,toolChoice: freezed == toolChoice ? _self.toolChoice : toolChoice // ignore: cast_nullable_to_non_nullable
 as RaceToolChoice?,skillProficiencies: null == skillProficiencies ? _self._skillProficiencies : skillProficiencies // ignore: cast_nullable_to_non_nullable
-as List<String>,
+as List<String>,naturalWeaponItemId: freezed == naturalWeaponItemId ? _self.naturalWeaponItemId : naturalWeaponItemId // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

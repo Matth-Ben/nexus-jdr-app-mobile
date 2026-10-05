@@ -1778,7 +1778,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     try {
       final rows = await _client
           .from('items')
-          .select('id, category, weight, cost')
+          .select('id, category, weight, cost, weapon_properties(properties)')
           .order('id', ascending: true);
       final names = await _fetchTranslatedNames(
         entityType: 'item',

@@ -76,10 +76,27 @@ abstract final class WeaponAttackCalculator {
   /// [proficiencyTokens] (`CharacterDetail.weaponProficiencyNames` : tokens
   /// de catégorie 'courantes'/'martiales' et/ou noms d'armes spécifiques,
   /// parfois au pluriel, ex. « épées courtes »).
+  ///
+  /// [weaponProperties] (déjà normalisées via [PactWeaponRules.normalize] en
+  /// interne) : toujours compétent sans condition si elles contiennent
+  /// « naturelle » (griffes/cornes/sabots..., voir
+  /// `character_creation/domain/race_option.dart::RaceOption
+  /// .naturalWeaponItemId`) — on est toujours compétent avec ses propres
+  /// armes naturelles, indépendamment des maîtrises d'armes réelles du
+  /// personnage ([proficiencyTokens]). Vide par défaut : aucun appelant
+  /// existant avant l'introduction de ce paramètre n'a besoin de ce
+  /// comportement spécial.
   static bool isProficient({
     required String weaponName,
     required List<String> proficiencyTokens,
+    List<String> weaponProperties = const <String>[],
   }) {
+    if (weaponProperties.any(
+      (property) => PactWeaponRules.normalize(property) == 'naturelle',
+    )) {
+      return true;
+    }
+
     final normalizedWeaponName = _singularize(
       PactWeaponRules.normalize(weaponName),
     );
@@ -152,6 +169,7 @@ abstract final class WeaponAttackCalculator {
     final proficient = isProficient(
       weaponName: weaponName,
       proficiencyTokens: proficiencyTokens,
+      weaponProperties: weaponProperties,
     );
     return abilityModifier + (proficient ? proficiencyBonus : 0);
   }

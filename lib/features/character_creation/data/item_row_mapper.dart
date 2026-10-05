@@ -79,6 +79,19 @@ abstract final class ItemRowMapper {
     );
   }
 
+  /// `true` si `row['weapon_properties'].properties` contient « naturelle »
+  /// — marqueur introduit pour les 6 armes naturelles de race (Aarakocra/
+  /// Centaure/Homme-lézard/Minotaure/Tabaxi/Tortue, voir
+  /// `domain/race_option.dart::RaceOption.naturalWeaponItemId`), exclues de
+  /// tout catalogue d'équipement achetable/ajoutable librement — voir
+  /// `character_creation_repository.dart::_mapItemCatalogPayload` et
+  /// `features/characters/data/character_repository.dart::fetchInventoryCatalog`.
+  /// `false` si la jointure est absente (objet qui n'est pas une arme).
+  static bool isNaturalWeapon(Map<String, dynamic> row) {
+    final weaponProperties = _weaponProperties(row['weapon_properties']);
+    return _properties(weaponProperties?['properties']).contains('naturelle');
+  }
+
   /// Construit un [ItemOption] à partir d'une ligne brute `items` et des
   /// noms déjà résolus (`names`, clés en `String`, voir [collectIds]). Un id
   /// sans nom résolu retombe sur un libellé générique ("Objet #12") plutôt

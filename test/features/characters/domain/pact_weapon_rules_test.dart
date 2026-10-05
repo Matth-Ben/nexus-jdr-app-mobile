@@ -88,6 +88,13 @@ void main() {
     test('une propriété qui contient munitions sans commencer par : ok', () {
       expect(eligible(properties: ['sans munitions']), isTrue);
     });
+
+    test('arme naturelle (propriété « naturelle », ex. Griffes félines du '
+        'Tabaxi) : exclue — régression trouvée en revue de code, un '
+        'Occultiste d\'une autre race ne doit jamais pouvoir la choisir', () {
+      expect(eligible(properties: ['à deux mains', 'naturelle']), isFalse);
+      expect(eligible(properties: ['NATURELLE']), isFalse);
+    });
   });
 
   group('PactWeaponRules.sortByName / search', () {

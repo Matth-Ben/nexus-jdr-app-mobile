@@ -1209,6 +1209,50 @@ void main() {
         expect(catalog.single.costAmount, 2);
         expect(catalog.single.weight, 0.5);
       });
+
+      test(
+        'fetchInventoryCatalog : omet une arme naturelle de race (jamais '
+        'ajoutable manuellement, voir ItemRowMapper.isNaturalWeapon)',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            tableRows: {
+              'items': [
+                {
+                  'id': 1,
+                  'category': 'arme',
+                  'weight': 0.5,
+                  'cost': {'amount': 2, 'currency': 'gp'},
+                },
+                {
+                  'id': 120,
+                  'category': 'arme',
+                  'weight': 0,
+                  'cost': null,
+                  'weapon_properties': {
+                    'properties': ['à deux mains', 'naturelle'],
+                  },
+                },
+              ],
+              'translations': [
+                {'entity_id': '1', 'value': 'Dague'},
+                {'entity_id': '120', 'value': 'Griffes félines'},
+              ],
+            },
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
+
+          final catalog = await repository.fetchInventoryCatalog();
+
+          expect(catalog, hasLength(1));
+          expect(catalog.single.name, 'Dague');
+        },
+      );
     },
   );
 
