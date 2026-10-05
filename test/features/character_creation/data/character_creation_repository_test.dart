@@ -12,13 +12,18 @@ import 'package:personnages/features/character_creation/domain/background_option
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
 import 'package:personnages/features/character_creation/domain/class_option.dart';
+import 'package:personnages/features/character_creation/domain/class_skill_choices.dart';
 import 'package:personnages/features/character_creation/domain/item_catalog.dart';
 import 'package:personnages/features/character_creation/domain/language_catalog.dart';
 import 'package:personnages/features/character_creation/domain/language_option.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
+import 'package:personnages/features/character_creation/domain/race_option.dart';
+import 'package:personnages/features/character_creation/domain/race_tool_choice.dart';
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
+import 'package:personnages/features/character_creation/domain/skill_option.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
+import 'package:personnages/features/character_creation/domain/tool_option.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Ces tests couvrent la stratégie "réseau d'abord, cache en secours" du
@@ -851,6 +856,228 @@ void main() {
         expect(catalog.alignments.single.name, 'Loyal bon');
       },
     );
+
+    group('fetchRaceCatalog : résolution de skill_choice/tool_choice/'
+        'skill_proficiencies (choix de compétence(s)/outil(s) de race, carte '
+        '"CHOIX DE RACE" de la fiche)', () {
+      test(
+        'Changelin : skill_choice {count:2, choices:[liste nommée]}',
+        () async {
+          final repository = SupabaseCharacterCreationRepository(
+            _buildFakeSupabaseClient(
+              tableRows: {
+                'races': [
+                  {
+                    'id': 31,
+                    'ability_bonuses': <String, dynamic>{},
+                    'traits': <Map<String, dynamic>>[],
+                    'skill_choice': {
+                      'count': 2,
+                      'choices': [
+                        'Intimidation',
+                        'Perspicacité',
+                        'Persuasion',
+                        'Représentation',
+                        'Tromperie',
+                      ],
+                    },
+                  },
+                ],
+                'subraces': const <Map<String, dynamic>>[],
+                'translations': [
+                  {'entity_id': '31', 'value': 'Changelin'},
+                ],
+              },
+            ),
+            cache,
+          );
+
+          final catalog = await repository.fetchRaceCatalog();
+
+          final race = catalog.races.single;
+          expect(race.skillChoice!.count, 2);
+          expect(race.skillChoice!.choices, hasLength(5));
+          expect(race.toolChoice, isNull);
+          expect(race.skillProficiencies, isEmpty);
+        },
+      );
+
+      test('Demi-elfe : skill_choice {count:2, choices:null} -> développé en '
+          'les 18 compétences (choix libre)', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'races': [
+                {
+                  'id': 7,
+                  'ability_bonuses': <String, dynamic>{},
+                  'traits': <Map<String, dynamic>>[],
+                  'skill_choice': {'count': 2, 'choices': null},
+                },
+              ],
+              'subraces': const <Map<String, dynamic>>[],
+              'translations': [
+                {'entity_id': '7', 'value': 'Demi-elfe'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchRaceCatalog();
+
+        expect(catalog.races.single.skillChoice!.count, 2);
+        expect(catalog.races.single.skillChoice!.choices, hasLength(18));
+      });
+
+      test('Nain : tool_choice {count:1, choices:[liste nommée]} -> reporté '
+          'tel quel, sans besoin du catalogue `tools`', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'races': [
+                {
+                  'id': 3,
+                  'ability_bonuses': <String, dynamic>{},
+                  'traits': <Map<String, dynamic>>[],
+                  'tool_choice': {
+                    'count': 1,
+                    'choices': [
+                      'Outils de forgeron',
+                      'Outils de brasseur',
+                      'Outils de maçon',
+                    ],
+                  },
+                },
+              ],
+              'subraces': const <Map<String, dynamic>>[],
+              'translations': [
+                {'entity_id': '3', 'value': 'Nain'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchRaceCatalog();
+
+        final race = catalog.races.single;
+        expect(race.toolChoice!.count, 1);
+        expect(race.toolChoice!.choices, hasLength(3));
+        expect(race.skillChoice, isNull);
+      });
+
+      test('Satyre : tool_choice {count:1, categories:["instrument"]} '
+          'développé contre la table `tools` complète + skill_proficiencies '
+          '(octroi automatique, pas un choix)', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'races': [
+                {
+                  'id': 42,
+                  'ability_bonuses': <String, dynamic>{},
+                  'traits': <Map<String, dynamic>>[],
+                  'skill_proficiencies': ['Persuasion', 'Représentation'],
+                  'tool_choice': {
+                    'count': 1,
+                    'categories': ['instrument'],
+                  },
+                },
+              ],
+              'subraces': const <Map<String, dynamic>>[],
+              'translations': [
+                {'entity_id': '42', 'value': 'Satyre'},
+                {'entity_id': '100', 'value': 'Luth'},
+                {'entity_id': '101', 'value': 'Dés à jouer'},
+              ],
+              'tools': [
+                {'id': 100, 'category': 'instrument'},
+                {'id': 101, 'category': 'jeu'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchRaceCatalog();
+
+        final race = catalog.races.single;
+        expect(race.skillProficiencies, ['Persuasion', 'Représentation']);
+        expect(race.skillChoice, isNull);
+        expect(
+          race.toolChoice!.choices,
+          ['Luth'],
+          reason:
+              'seul "Luth" (catégorie instrument) doit apparaître, '
+              '"Dés à jouer" (catégorie jeu) doit être exclu',
+        );
+      });
+
+      test('Forgelier : ni skill_choice.choices ni tool_choice.choices/'
+          'categories -> choix libre, développé respectivement en les 18 '
+          'compétences et tout le catalogue `tools`', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'races': [
+                {
+                  'id': 49,
+                  'ability_bonuses': <String, dynamic>{},
+                  'traits': <Map<String, dynamic>>[],
+                  'skill_choice': {'count': 1},
+                  'tool_choice': {'count': 1},
+                },
+              ],
+              'subraces': const <Map<String, dynamic>>[],
+              'translations': [
+                {'entity_id': '49', 'value': 'Forgelier'},
+                {'entity_id': '100', 'value': 'Luth'},
+              ],
+              'tools': [
+                {'id': 100, 'category': 'instrument'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchRaceCatalog();
+
+        final race = catalog.races.single;
+        expect(race.skillChoice!.choices, hasLength(18));
+        expect(race.toolChoice!.choices, ['Luth']);
+      });
+
+      test('race sans aucune des 3 colonnes (la grande majorité) -> '
+          'skillChoice/toolChoice null, skillProficiencies vide', () async {
+        final repository = SupabaseCharacterCreationRepository(
+          _buildFakeSupabaseClient(
+            tableRows: {
+              'races': [
+                {
+                  'id': 1,
+                  'ability_bonuses': <String, dynamic>{},
+                  'traits': <Map<String, dynamic>>[],
+                },
+              ],
+              'subraces': const <Map<String, dynamic>>[],
+              'translations': [
+                {'entity_id': '1', 'value': 'Humain'},
+              ],
+            },
+          ),
+          cache,
+        );
+
+        final catalog = await repository.fetchRaceCatalog();
+
+        final race = catalog.races.single;
+        expect(race.skillChoice, isNull);
+        expect(race.toolChoice, isNull);
+        expect(race.skillProficiencies, isEmpty);
+      });
+    });
   });
 
   group(
@@ -1645,6 +1872,242 @@ void _testCatalogTtl({
 
       expect(result.characterInsert['lineage_id'], isNull);
       expect(result.requestedTables, isNot(contains('race_lineages')));
+    });
+  });
+
+  group('SupabaseCharacterCreationRepository.createCharacter — '
+      'character_race_choices (carte "CHOIX DE RACE" de la fiche)', () {
+    // Même principe que le harnais JWT/transport HTTP des groupes
+    // précédents (`signedInClient`), dupliqué ici plutôt que factorisé —
+    // voir la doc de classe de ce fichier.
+    String jwt() {
+      String part(Map<String, Object> json) =>
+          base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+      return '${part({'alg': 'HS256', 'typ': 'JWT'})}.'
+          '${part({'sub': 'user-1', 'exp': 4102444800})}.sig';
+    }
+
+    Future<SupabaseClient> signedInClient({
+      required Map<String, List<Map<String, dynamic>>> tableRows,
+      void Function(http.Request request)? onRequest,
+    }) async {
+      final client = SupabaseClient(
+        'https://fake.supabase.test',
+        'fake-anon-key',
+        httpClient: MockClient((request) async {
+          onRequest?.call(request);
+          final table = request.url.pathSegments.last;
+          final Object body = table == 'characters'
+              ? const {'id': 'char-1'}
+              : (tableRows[table] ?? const <Map<String, dynamic>>[]);
+          return http.Response(
+            jsonEncode(body),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+        postgrestOptions: const PostgrestClientOptions(retryEnabled: false),
+        authOptions: const AuthClientOptions(
+          authFlowType: AuthFlowType.implicit,
+        ),
+      );
+      await client.auth.recoverSession(
+        jsonEncode({
+          'access_token': jwt(),
+          'refresh_token': 'r',
+          'token_type': 'bearer',
+          'expires_in': 3600,
+          'expires_at': 4102444800,
+          'user': {
+            'id': 'user-1',
+            'aud': 'authenticated',
+            'app_metadata': <String, dynamic>{},
+            'user_metadata': <String, dynamic>{},
+            'created_at': '2026-01-01T00:00:00Z',
+          },
+        }),
+      );
+      return client;
+    }
+
+    const classOption = ClassOption(
+      id: 3,
+      name: 'Clerc',
+      description: '',
+      hitDie: 8,
+    );
+    const backgroundOption = BackgroundOption(
+      id: 1,
+      name: 'Acolyte',
+      skillProficiencies: [],
+      featureName: '',
+      featureDescription: '',
+    );
+    const skillCatalog = SkillCatalog(
+      skills: [
+        SkillOption(id: 201, name: 'Persuasion', abilityId: 'cha'),
+        SkillOption(id: 202, name: 'Représentation', abilityId: 'cha'),
+        SkillOption(id: 203, name: 'Tromperie', abilityId: 'cha'),
+      ],
+    );
+    const toolCatalog = ToolCatalog(
+      tools: [ToolOption(id: 301, name: 'Luth', category: 'instrument')],
+    );
+
+    Future<
+      ({
+        List<Map<String, dynamic>> raceChoiceInserts,
+        List<Map<String, dynamic>> skillInserts,
+        List<Map<String, dynamic>> toolInserts,
+      })
+    >
+    createAndCapture({
+      required CharacterCreationDraft draft,
+      required RaceCatalog raceCatalog,
+    }) async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final raceChoiceInserts = <Map<String, dynamic>>[];
+      final skillInserts = <Map<String, dynamic>>[];
+      final toolInserts = <Map<String, dynamic>>[];
+      final client = await signedInClient(
+        tableRows: const {},
+        onRequest: (request) {
+          if (request.method != 'POST') return;
+          final table = request.url.pathSegments.last;
+          final body = jsonDecode(request.body);
+          if (body is! List) return;
+          final rows = body.map((row) => Map<String, dynamic>.from(row as Map));
+          if (table == 'character_race_choices') {
+            raceChoiceInserts.addAll(rows);
+          } else if (table == 'character_skill_proficiencies') {
+            skillInserts.addAll(rows);
+          } else if (table == 'character_tool_proficiencies') {
+            toolInserts.addAll(rows);
+          }
+        },
+      );
+
+      await SupabaseCharacterCreationRepository(
+        client,
+        ReferenceDataCache(db),
+      ).createCharacter(
+        draft: draft,
+        characterName: 'Test',
+        raceCatalog: raceCatalog,
+        classOption: classOption,
+        backgroundOption: backgroundOption,
+        skillCatalog: skillCatalog,
+        toolCatalog: toolCatalog,
+        languageCatalog: const LanguageCatalog(languages: []),
+        spellCatalog: const SpellCatalog(spells: []),
+        itemCatalog: const ItemCatalog(items: []),
+      );
+
+      return (
+        raceChoiceInserts: raceChoiceInserts,
+        skillInserts: skillInserts,
+        toolInserts: toolInserts,
+      );
+    }
+
+    test('Changelin (choix interactif de compétences) : chaque compétence '
+        'choisie écrit une ligne character_skill_proficiencies ET une ligne '
+        'character_race_choices (kind: competence)', () async {
+      const changelin = RaceOption(
+        id: 31,
+        name: 'Changelin',
+        abilityBonuses: {},
+        traits: [],
+        source: '',
+        skillChoice: ClassSkillChoices(
+          count: 2,
+          choices: ['Persuasion', 'Représentation', 'Tromperie'],
+        ),
+      );
+      final result = await createAndCapture(
+        draft: const CharacterCreationDraft(
+          classId: 3,
+          raceId: 31,
+          raceSkillChoices: ['Persuasion', 'Tromperie'],
+        ),
+        raceCatalog: const RaceCatalog(races: [changelin], subraces: []),
+      );
+
+      expect(
+        result.skillInserts.map((row) => row['skill_id']),
+        containsAll(<int>[201, 203]),
+      );
+      expect(result.raceChoiceInserts, hasLength(2));
+      expect(
+        result.raceChoiceInserts.every((row) => row['kind'] == 'competence'),
+        isTrue,
+      );
+      expect(
+        result.raceChoiceInserts.map((row) => row['skill_id']),
+        containsAll(<int>[201, 203]),
+      );
+      expect(
+        result.raceChoiceInserts.every((row) => row['tool_id'] == null),
+        isTrue,
+      );
+    });
+
+    test(
+      'Satyre (octroi automatique, pas un choix) : skill_proficiencies '
+      'écrit aussi character_skill_proficiencies ET character_race_choices',
+      () async {
+        const satyre = RaceOption(
+          id: 42,
+          name: 'Satyre',
+          abilityBonuses: {},
+          traits: [],
+          source: '',
+          skillProficiencies: ['Persuasion', 'Représentation'],
+          toolChoice: RaceToolChoice(count: 1, choices: ['Luth']),
+        );
+        final result = await createAndCapture(
+          draft: const CharacterCreationDraft(
+            classId: 3,
+            raceId: 42,
+            raceToolChoices: ['Luth'],
+          ),
+          raceCatalog: const RaceCatalog(races: [satyre], subraces: []),
+        );
+
+        expect(
+          result.skillInserts.map((row) => row['skill_id']),
+          containsAll(<int>[201, 202]),
+        );
+        final competenceRows = result.raceChoiceInserts
+            .where((row) => row['kind'] == 'competence')
+            .toList();
+        expect(
+          competenceRows.map((row) => row['skill_id']),
+          containsAll(<int>[201, 202]),
+        );
+        final outilRows = result.raceChoiceInserts
+            .where((row) => row['kind'] == 'outil')
+            .toList();
+        expect(outilRows, hasLength(1));
+        expect(outilRows.single['tool_id'], 301);
+        expect(result.toolInserts.map((row) => row['tool_id']), contains(301));
+      },
+    );
+
+    test('race personnalisée (raceId nul) : aucune ligne '
+        'character_race_choices, même si des choix de la même étape sont '
+        'présents par erreur dans le brouillon', () async {
+      final result = await createAndCapture(
+        draft: const CharacterCreationDraft(
+          classId: 3,
+          raceCustomText: 'Race maison',
+        ),
+        raceCatalog: const RaceCatalog(races: [], subraces: []),
+      );
+
+      expect(result.raceChoiceInserts, isEmpty);
     });
   });
 }

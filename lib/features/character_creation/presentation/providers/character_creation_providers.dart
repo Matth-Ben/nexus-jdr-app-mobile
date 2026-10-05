@@ -18,6 +18,7 @@ import '../../domain/class_starting_equipment.dart';
 import '../../domain/item_catalog.dart';
 import '../../domain/language_catalog.dart';
 import '../../domain/race_catalog.dart';
+import '../../domain/race_option.dart';
 import '../../domain/skill_catalog.dart';
 import '../../domain/spell_catalog.dart';
 import '../../domain/tool_catalog.dart';
@@ -98,11 +99,19 @@ Future<LanguageCatalog> languageCatalog(Ref ref) {
 /// pattern Riverpod standard (`ref.watch(xProvider.future)` dans un provider
 /// `Future`), pas une rupture de convention, mais signalé ici puisqu'aucun
 /// écran précédent n'en avait eu besoin.
+///
+/// [raceOption] (ajouté après coup, pour les sections "(RACE)" de l'étape
+/// 5/9) : résolu depuis [raceCatalogProvider] seulement si la race choisie à
+/// l'étape 1/9 vient du catalogue (`draft.raceId` non `null`) — `null` pour
+/// une race personnalisée, pour ne jamais échouer cette étape sur ce cas (au
+/// contraire de [classOption]/[backgroundOption], toujours obligatoires à ce
+/// stade de l'assistant).
 typedef SkillsAndToolsStepData = ({
   ClassOption classOption,
   BackgroundOption backgroundOption,
   ToolCatalog toolCatalog,
   LanguageCatalog languageCatalog,
+  RaceOption? raceOption,
 });
 
 @Riverpod(retry: _noRetry)
@@ -129,11 +138,23 @@ Future<SkillsAndToolsStepData> skillsAndToolsStepData(Ref ref) async {
     ),
   );
 
+  RaceOption? raceOption;
+  if (draft.raceId != null) {
+    final raceCatalog = await ref.watch(raceCatalogProvider.future);
+    for (final option in raceCatalog.races) {
+      if (option.id == draft.raceId) {
+        raceOption = option;
+        break;
+      }
+    }
+  }
+
   return (
     classOption: classOption,
     backgroundOption: backgroundOption,
     toolCatalog: toolCatalog,
     languageCatalog: languageCatalog,
+    raceOption: raceOption,
   );
 }
 

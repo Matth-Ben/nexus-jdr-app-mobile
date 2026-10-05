@@ -406,6 +406,57 @@ abstract final class CharacterDetailRowMapper {
     return choices;
   }
 
+  static List<Map<String, dynamic>> raceChoiceRowsOf(Map<String, dynamic> row) {
+    final raw = row['character_race_choices'] as List<dynamic>?;
+    return raw?.cast<Map<String, dynamic>>() ?? const [];
+  }
+
+  /// Noms de compétences accordées par le trait racial à choix, carte
+  /// "CHOIX DE RACE" (`character_race_choices.kind = 'competence'`, voir
+  /// [raceChoiceRowsOf]) — [skillNames] est la même map déjà résolue pour
+  /// les 18 [CharacterSkillRow] de la carte "LES 18 COMPÉTENCES" (`skills`
+  /// est une table de référence à peuplement fixe, lue intégralement),
+  /// aucune requête `translations` supplémentaire nécessaire ici. Une ligne
+  /// `kind != 'competence'` ou dont `skill_id` ne résout à aucun nom (ne
+  /// devrait pas arriver) est ignorée plutôt que d'afficher un libellé vide.
+  static List<String> parseRaceSkillChoiceNames(
+    List<Map<String, dynamic>> rows, {
+    required Map<String, String> skillNames,
+  }) {
+    final names = <String>[];
+    for (final row in rows) {
+      if (row['kind'] != 'competence') continue;
+      final skillId = row['skill_id'];
+      if (skillId is! num) continue;
+      final name = skillNames[skillId.toInt().toString()];
+      if (name != null) names.add(name);
+    }
+    return names;
+  }
+
+  /// Même principe que [parseRaceSkillChoiceNames], pour les outils
+  /// (`character_race_choices.kind = 'outil'`) — [toolNames] est la même map
+  /// déjà résolue pour la carte "MAÎTRISES D'OUTILS" (voir
+  /// [parseToolProficiencyNames]) : chaque outil accordé par un trait
+  /// racial à choix écrit aussi une ligne `character_tool_proficiencies`
+  /// (voir `character_creation/data/character_creation_repository.dart
+  /// ::createCharacter`), donc déjà couvert par cette map sans requête
+  /// supplémentaire.
+  static List<String> parseRaceToolChoiceNames(
+    List<Map<String, dynamic>> rows, {
+    required Map<String, String> toolNames,
+  }) {
+    final names = <String>[];
+    for (final row in rows) {
+      if (row['kind'] != 'outil') continue;
+      final toolId = row['tool_id'];
+      if (toolId is! num) continue;
+      final name = toolNames[toolId.toInt().toString()];
+      if (name != null) names.add(name);
+    }
+    return names;
+  }
+
   static List<Map<String, dynamic>> featRowsOf(Map<String, dynamic> row) {
     final raw = row['character_feats'] as List<dynamic>?;
     return raw?.cast<Map<String, dynamic>>() ?? const [];
@@ -688,6 +739,8 @@ abstract final class CharacterDetailRowMapper {
     List<CharacterSkillRow> skills = const [],
     List<CharacterClassFeature> classFeatures = const [],
     List<CharacterClassChoice> classChoices = const [],
+    List<String> raceSkillChoiceNames = const [],
+    List<String> raceToolChoiceNames = const [],
     List<String> toolProficiencyNames = const [],
     List<String> knownLanguageNames = const [],
     List<CharacterSpellEntry> spells = const [],
@@ -732,6 +785,8 @@ abstract final class CharacterDetailRowMapper {
           : null,
       classes: parsedClasses,
       classChoices: classChoices,
+      raceSkillChoiceNames: raceSkillChoiceNames,
+      raceToolChoiceNames: raceToolChoiceNames,
       xp: (row['xp'] as num?)?.toInt() ?? 0,
       currentHp: (row['current_hp'] as num?)?.toInt() ?? 0,
       maxHp: (row['max_hp'] as num?)?.toInt() ?? 0,

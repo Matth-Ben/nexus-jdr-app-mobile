@@ -31,6 +31,16 @@ abstract final class SkillProficiencyResolver {
     required List<String> classSkillNames,
     required List<String> backgroundSkillNames,
     required SkillCatalog catalog,
+
+    /// Compétences de race (choix interactif `CharacterCreationDraft
+    /// .raceSkillChoices` + octroi automatique `RaceOption
+    /// .skillProficiencies`, étape 5/9, carte "CHOIX DE RACE" de la fiche) —
+    /// défaut vide pour ne pas casser les appelants existants qui n'en
+    /// tiennent pas compte (`CharacterEditPlanner`, mode modification, voir
+    /// le gap documenté dans le rapport de la tâche qui a introduit ce
+    /// paramètre). Dédupliquée par `skill_id` avec les deux autres sources,
+    /// même règle.
+    List<String> raceSkillNames = const [],
   }) {
     final idByName = {for (final skill in catalog.skills) skill.name: skill.id};
 
@@ -38,6 +48,7 @@ abstract final class SkillProficiencyResolver {
     for (final name in resolveNames(
       classSkillNames: classSkillNames,
       backgroundSkillNames: backgroundSkillNames,
+      raceSkillNames: raceSkillNames,
     )) {
       final id = idByName[name];
       if (id != null) {
@@ -60,10 +71,15 @@ abstract final class SkillProficiencyResolver {
   static List<String> resolveNames({
     required List<String> classSkillNames,
     required List<String> backgroundSkillNames,
+    List<String> raceSkillNames = const [],
   }) {
     final seen = <String>{};
     final names = <String>[];
-    for (final name in [...classSkillNames, ...backgroundSkillNames]) {
+    for (final name in [
+      ...classSkillNames,
+      ...backgroundSkillNames,
+      ...raceSkillNames,
+    ]) {
       if (seen.add(name)) {
         names.add(name);
       }

@@ -14,6 +14,8 @@ import 'package:personnages/features/character_creation/domain/background_option
 import 'package:personnages/features/character_creation/domain/class_option.dart';
 import 'package:personnages/features/character_creation/domain/class_skill_choices.dart';
 import 'package:personnages/features/character_creation/domain/class_tool_choice.dart';
+import 'package:personnages/features/character_creation/domain/race_option.dart';
+import 'package:personnages/features/character_creation/domain/race_tool_choice.dart';
 import 'package:personnages/features/character_creation/domain/skills_and_tools_step_selection.dart';
 
 const _classSansOutils = ClassOption(
@@ -77,6 +79,60 @@ const _backgroundAvecLanguesZero = BackgroundOption(
   featureName: '',
   featureDescription: '',
   languageChoiceCount: 0,
+);
+
+// Race sans aucun des 3 traits à choix (la grande majorité) : aucune des
+// 2 sections "(RACE)" ne doit jamais s'afficher pour elle.
+const _raceSansChoix = RaceOption(
+  id: 1,
+  name: 'Humain',
+  abilityBonuses: {},
+  traits: [],
+  source: '',
+);
+
+// Changelin : choix interactif de compétences, pas d'outil.
+const _changelin = RaceOption(
+  id: 31,
+  name: 'Changelin',
+  abilityBonuses: {},
+  traits: [],
+  source: '',
+  skillChoice: ClassSkillChoices(
+    count: 2,
+    choices: [
+      'Intimidation',
+      'Perspicacité',
+      'Persuasion',
+      'Représentation',
+      'Tromperie',
+    ],
+  ),
+);
+
+// Satyre : octroi automatique de compétences (pas un choix) + choix
+// interactif d'outil.
+const _satyre = RaceOption(
+  id: 42,
+  name: 'Satyre',
+  abilityBonuses: {},
+  traits: [],
+  source: '',
+  skillProficiencies: ['Persuasion', 'Représentation'],
+  toolChoice: RaceToolChoice(count: 1, choices: ['Luth', 'Flûte']),
+);
+
+// Nain : choix interactif d'outil seulement.
+const _nain = RaceOption(
+  id: 3,
+  name: 'Nain',
+  abilityBonuses: {},
+  traits: [],
+  source: '',
+  toolChoice: RaceToolChoice(
+    count: 1,
+    choices: ['Outils de forgeron', 'Outils de brasseur', 'Outils de maçon'],
+  ),
 );
 
 void main() {
@@ -155,6 +211,59 @@ void main() {
         SkillsAndToolsStepSelection.isLanguageSectionVisible(
           _backgroundAvecLangues,
         ),
+        isTrue,
+      );
+    });
+  });
+
+  group('isRaceSkillSectionVisible', () {
+    test('race null (personnalisée ou pas encore choisie) -> non visible', () {
+      expect(
+        SkillsAndToolsStepSelection.isRaceSkillSectionVisible(null),
+        isFalse,
+      );
+    });
+
+    test('race sans skillChoice ni skillProficiencies -> non visible', () {
+      expect(
+        SkillsAndToolsStepSelection.isRaceSkillSectionVisible(_raceSansChoix),
+        isFalse,
+      );
+    });
+
+    test('race avec un choix interactif (Changelin) -> visible', () {
+      expect(
+        SkillsAndToolsStepSelection.isRaceSkillSectionVisible(_changelin),
+        isTrue,
+      );
+    });
+
+    test('race avec seulement un octroi automatique (Satyre) -> visible', () {
+      expect(
+        SkillsAndToolsStepSelection.isRaceSkillSectionVisible(_satyre),
+        isTrue,
+      );
+    });
+  });
+
+  group('isRaceToolSectionVisible', () {
+    test('race null -> non visible', () {
+      expect(
+        SkillsAndToolsStepSelection.isRaceToolSectionVisible(null),
+        isFalse,
+      );
+    });
+
+    test('race sans toolChoice (Changelin) -> non visible', () {
+      expect(
+        SkillsAndToolsStepSelection.isRaceToolSectionVisible(_changelin),
+        isFalse,
+      );
+    });
+
+    test('race avec toolChoice (Nain) -> visible', () {
+      expect(
+        SkillsAndToolsStepSelection.isRaceToolSectionVisible(_nain),
         isTrue,
       );
     });
@@ -457,6 +566,114 @@ void main() {
           selectedClassSkills: const ['Acrobaties', 'Discrétion'],
           selectedClassTools: const ['Kit de forgeron'],
           selectedBackgroundLanguages: const ['Commun'],
+        ),
+        isTrue,
+      );
+    });
+
+    test('raceOption null (race personnalisée ou pas de choix) -> ne bloque '
+        'jamais, comportement inchangé', () {
+      expect(
+        SkillsAndToolsStepSelection.canProceed(
+          classOption: _classSansOutils,
+          backgroundOption: _backgroundSansRien,
+          selectedClassSkills: const ['Athlétisme', 'Intimidation'],
+          selectedClassTools: const [],
+          selectedBackgroundLanguages: const [],
+        ),
+        isTrue,
+      );
+    });
+
+    test('section compétences de race active (Changelin) : quota manquant '
+        '-> false même si les compétences de classe sont complètes', () {
+      expect(
+        SkillsAndToolsStepSelection.canProceed(
+          classOption: _classSansOutils,
+          backgroundOption: _backgroundSansRien,
+          selectedClassSkills: const ['Athlétisme', 'Intimidation'],
+          selectedClassTools: const [],
+          selectedBackgroundLanguages: const [],
+          raceOption: _changelin,
+          selectedRaceSkills: const ['Intimidation'],
+        ),
+        isFalse,
+      );
+    });
+
+    test('section compétences de race active (Changelin) : quota exact -> '
+        'true', () {
+      expect(
+        SkillsAndToolsStepSelection.canProceed(
+          classOption: _classSansOutils,
+          backgroundOption: _backgroundSansRien,
+          selectedClassSkills: const ['Athlétisme', 'Intimidation'],
+          selectedClassTools: const [],
+          selectedBackgroundLanguages: const [],
+          raceOption: _changelin,
+          selectedRaceSkills: const ['Intimidation', 'Persuasion'],
+        ),
+        isTrue,
+      );
+    });
+
+    test('race avec un octroi automatique seul (Satyre, sans toolChoice '
+        'sélectionné) -> false tant que le quota d\'outil de race manque', () {
+      expect(
+        SkillsAndToolsStepSelection.canProceed(
+          classOption: _classSansOutils,
+          backgroundOption: _backgroundSansRien,
+          selectedClassSkills: const ['Athlétisme', 'Intimidation'],
+          selectedClassTools: const [],
+          selectedBackgroundLanguages: const [],
+          raceOption: _satyre,
+          selectedRaceTools: const [],
+        ),
+        isFalse,
+      );
+    });
+
+    test('race avec un octroi automatique (Satyre) ET le quota d\'outil de '
+        'race atteint -> true (l\'octroi automatique ne bloque jamais)', () {
+      expect(
+        SkillsAndToolsStepSelection.canProceed(
+          classOption: _classSansOutils,
+          backgroundOption: _backgroundSansRien,
+          selectedClassSkills: const ['Athlétisme', 'Intimidation'],
+          selectedClassTools: const [],
+          selectedBackgroundLanguages: const [],
+          raceOption: _satyre,
+          selectedRaceTools: const ['Luth'],
+        ),
+        isTrue,
+      );
+    });
+
+    test('section outils de race active (Nain) : quota manquant -> false', () {
+      expect(
+        SkillsAndToolsStepSelection.canProceed(
+          classOption: _classSansOutils,
+          backgroundOption: _backgroundSansRien,
+          selectedClassSkills: const ['Athlétisme', 'Intimidation'],
+          selectedClassTools: const [],
+          selectedBackgroundLanguages: const [],
+          raceOption: _nain,
+          selectedRaceTools: const [],
+        ),
+        isFalse,
+      );
+    });
+
+    test('section outils de race active (Nain) : quota exact -> true', () {
+      expect(
+        SkillsAndToolsStepSelection.canProceed(
+          classOption: _classSansOutils,
+          backgroundOption: _backgroundSansRien,
+          selectedClassSkills: const ['Athlétisme', 'Intimidation'],
+          selectedClassTools: const [],
+          selectedBackgroundLanguages: const [],
+          raceOption: _nain,
+          selectedRaceTools: const ['Outils de forgeron'],
         ),
         isTrue,
       );

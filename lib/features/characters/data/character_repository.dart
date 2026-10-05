@@ -937,6 +937,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_pact_slots(slot_level, slots_total, slots_used),
             character_feature_uses(class_feature_id, uses_remaining),
             character_class_options(class_feature_id, level, chosen_value),
+            character_race_choices(kind, skill_id, tool_id),
             character_invocations(invocation_id),
             character_feats(feat_id),
             character_inventory(
@@ -3741,6 +3742,28 @@ class SupabaseCharacterRepository implements CharacterRepository {
           toolNames: toolNames,
         );
 
+    // Carte "CHOIX DE RACE" — `character_race_choices` est déjà embarquée
+    // dans [row] (relation réelle vers `characters`), aucune requête
+    // supplémentaire : [skillNames] (toutes les 18 compétences, déjà
+    // résolues ci-dessus) et [toolNames] (déjà résolues pour la carte
+    // "MAÎTRISES D'OUTILS") couvrent déjà tout `skill_id`/`tool_id` qu'une
+    // ligne `character_race_choices` peut porter (voir
+    // `character_creation/data/character_creation_repository.dart
+    // ::createCharacter`, qui écrit toujours la ligne
+    // `character_skill_proficiencies`/`character_tool_proficiencies`
+    // correspondante en même temps).
+    final raceChoiceRows = CharacterDetailRowMapper.raceChoiceRowsOf(row);
+    final raceSkillChoiceNames =
+        CharacterDetailRowMapper.parseRaceSkillChoiceNames(
+          raceChoiceRows,
+          skillNames: skillNames,
+        );
+    final raceToolChoiceNames =
+        CharacterDetailRowMapper.parseRaceToolChoiceNames(
+          raceChoiceRows,
+          toolNames: toolNames,
+        );
+
     final languageNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['languageNameRows']),
     );
@@ -3823,6 +3846,8 @@ class SupabaseCharacterRepository implements CharacterRepository {
       skills: skills,
       classFeatures: classFeatures,
       classChoices: classChoices,
+      raceSkillChoiceNames: raceSkillChoiceNames,
+      raceToolChoiceNames: raceToolChoiceNames,
       toolProficiencyNames: toolProficiencyNames,
       knownLanguageNames: knownLanguageNames,
       spells: spells,

@@ -24,6 +24,8 @@ CharacterDetail _detail({
   List<String> armorProficiencyNames = const [],
   List<String> weaponProficiencyNames = const [],
   List<String> toolProficiencyNames = const [],
+  List<String> raceSkillChoiceNames = const [],
+  List<String> raceToolChoiceNames = const [],
   List<String> knownLanguageNames = const [],
   List<String> knownInvocationNames = const [],
   List<CharacterSpellEntry> spells = const [],
@@ -43,6 +45,8 @@ CharacterDetail _detail({
     armorProficiencyNames: armorProficiencyNames,
     weaponProficiencyNames: weaponProficiencyNames,
     toolProficiencyNames: toolProficiencyNames,
+    raceSkillChoiceNames: raceSkillChoiceNames,
+    raceToolChoiceNames: raceToolChoiceNames,
     knownLanguageNames: knownLanguageNames,
     knownInvocationNames: knownInvocationNames,
     spells: spells,
@@ -405,10 +409,31 @@ void main() {
       expect(find.text("MAÎTRISES D'ARMURES"), findsNothing);
       expect(find.text("MAÎTRISES D'ARMES"), findsNothing);
       expect(find.text("MAÎTRISES D'OUTILS"), findsNothing);
+      expect(find.text('CHOIX DE RACE'), findsNothing);
       expect(find.text('LANGUES CONNUES'), findsNothing);
       expect(find.text('APTITUDES DE CLASSE'), findsNothing);
       expect(find.text('CHOIX DE CLASSE'), findsNothing);
       expect(find.text('INVOCATIONS CONNUES'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'la carte "CHOIX DE RACE" affiche compétence(s)/outil(s) de race quand '
+    'non vides (ex. Changelin/Nain) — contrairement à "CHOIX DE CLASSE", '
+    'elle reste insérée sur cet onglet (voir `character_skills_tab_body.dart`)',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          raceSkillChoiceNames: const ['Persuasion', 'Tromperie'],
+          raceToolChoiceNames: const ['Outils de forgeron'],
+        ),
+      );
+
+      expect(find.text('CHOIX DE RACE'), findsOneWidget);
+      expect(find.text('Persuasion'), findsOneWidget);
+      expect(find.text('Tromperie'), findsOneWidget);
+      expect(find.text('Outils de forgeron'), findsOneWidget);
     },
   );
 
@@ -457,7 +482,7 @@ void main() {
 
   testWidgets(
     'les cartes s\'affichent dans l\'ordre Compétences -> Armures -> Armes '
-    '-> Outils -> Langues -> Invocations',
+    '-> Outils -> Choix de race -> Langues -> Invocations',
     (tester) async {
       // Viewport agrandi (même technique que
       // `character_inventory_tab_body_test.dart`) : avec les 6 cartes de ce
@@ -480,6 +505,7 @@ void main() {
           armorProficiencyNames: const ['légère'],
           weaponProficiencyNames: const ['courantes'],
           toolProficiencyNames: const ['Outils de forgeron'],
+          raceSkillChoiceNames: const ['Persuasion'],
           knownLanguageNames: const ['Nain'],
           knownInvocationNames: const ['Vue démoniaque'],
         ),
@@ -489,6 +515,7 @@ void main() {
       final armorY = tester.getTopLeft(find.text("MAÎTRISES D'ARMURES")).dy;
       final weaponY = tester.getTopLeft(find.text("MAÎTRISES D'ARMES")).dy;
       final toolY = tester.getTopLeft(find.text("MAÎTRISES D'OUTILS")).dy;
+      final raceChoicesY = tester.getTopLeft(find.text('CHOIX DE RACE')).dy;
       final languageY = tester.getTopLeft(find.text('LANGUES CONNUES')).dy;
       final invocationY = tester
           .getTopLeft(find.text('INVOCATIONS CONNUES'))
@@ -497,7 +524,8 @@ void main() {
       expect(skillsY, lessThan(armorY));
       expect(armorY, lessThan(weaponY));
       expect(weaponY, lessThan(toolY));
-      expect(toolY, lessThan(languageY));
+      expect(toolY, lessThan(raceChoicesY));
+      expect(raceChoicesY, lessThan(languageY));
       expect(languageY, lessThan(invocationY));
     },
   );
