@@ -15,7 +15,12 @@ abstract final class PactWeaponRules {
   /// Une arme de pacte est une arme de corps à corps : `category == 'arme'`,
   /// un dé de dégâts, et aucune propriété « munitions » (peut être suffixée,
   /// ex. « munitions(24/96) ») — exclut arcs, arbalètes, fronde, sarbacane
-  /// et filet.
+  /// et filet. Exclut aussi toute arme portant la propriété « naturelle »
+  /// (Serre/Sabots/Morsure/Cornes/Griffes félines/Griffes, voir
+  /// `character_creation_equipment_resolver.dart`) : ce sont des parties du
+  /// corps propres à une race précise, jamais une arme que n'importe quel
+  /// Occultiste pourrait choisir comme forme de son pacte — trouvé en revue
+  /// de code sur le chantier qui a introduit cette propriété.
   static bool isEligible({
     required String? category,
     required String? damageDice,
@@ -24,7 +29,9 @@ abstract final class PactWeaponRules {
     if (category != 'arme') return false;
     if (damageDice == null || damageDice.trim().isEmpty) return false;
     return !properties.any(
-      (property) => normalize(property).startsWith('munitions'),
+      (property) =>
+          normalize(property).startsWith('munitions') ||
+          normalize(property) == 'naturelle',
     );
   }
 
