@@ -13,7 +13,9 @@ import 'package:personnages/features/character_creation/domain/character_creatio
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
 import 'package:personnages/features/character_creation/domain/class_option.dart';
 import 'package:personnages/features/character_creation/domain/class_skill_choices.dart';
+import 'package:personnages/features/character_creation/domain/class_starting_equipment.dart';
 import 'package:personnages/features/character_creation/domain/item_catalog.dart';
+import 'package:personnages/features/character_creation/domain/item_option.dart';
 import 'package:personnages/features/character_creation/domain/language_catalog.dart';
 import 'package:personnages/features/character_creation/domain/language_option.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
@@ -821,6 +823,44 @@ void main() {
 
         expect(catalog.items.map((i) => i.name), ['Zweihänder', 'Arbalète']);
       });
+
+      test(
+        'fetchItemCatalog : omet une arme naturelle de race (jamais '
+        'choisissable manuellement par un joueur d\'une autre race)',
+        () async {
+          final repository = SupabaseCharacterCreationRepository(
+            _buildFakeSupabaseClient(
+              tableRows: {
+                'items': [
+                  {
+                    'id': 1,
+                    'category': 'arme',
+                    'cost': {'amount': 1, 'currency': 'gp'},
+                  },
+                  {
+                    'id': 120,
+                    'category': 'arme',
+                    'cost': {'amount': 0, 'currency': 'gp'},
+                    'weapon_properties': {
+                      'properties': ['à deux mains', 'naturelle'],
+                    },
+                  },
+                ],
+                'translations': [
+                  {'entity_id': '1', 'value': 'Dague'},
+                  {'entity_id': '120', 'value': 'Griffes félines'},
+                ],
+              },
+            ),
+            cache,
+          );
+
+          final catalog = await repository.fetchItemCatalog();
+
+          expect(catalog.items, hasLength(1));
+          expect(catalog.items.single.name, 'Dague');
+        },
+      );
     });
 
     test(
@@ -2109,6 +2149,195 @@ void _testCatalogTtl({
 
       expect(result.raceChoiceInserts, isEmpty);
     });
+  });
+
+  group('SupabaseCharacterCreationRepository.createCharacter — arme naturelle '
+      'de race (RaceOption.naturalWeaponItemId)', () {
+    // Même principe que le harnais JWT/transport HTTP des groupes
+    // précédents (`signedInClient`), dupliqué ici plutôt que factorisé —
+    // voir la doc de classe de ce fichier.
+    String jwt() {
+      String part(Map<String, Object> json) =>
+          base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+      return '${part({'alg': 'HS256', 'typ': 'JWT'})}.'
+          '${part({'sub': 'user-1', 'exp': 4102444800})}.sig';
+    }
+
+    Future<SupabaseClient> signedInClient({
+      required Map<String, List<Map<String, dynamic>>> tableRows,
+      void Function(http.Request request)? onRequest,
+    }) async {
+      final client = SupabaseClient(
+        'https://fake.supabase.test',
+        'fake-anon-key',
+        httpClient: MockClient((request) async {
+          onRequest?.call(request);
+          final table = request.url.pathSegments.last;
+          final Object body = table == 'characters'
+              ? const {'id': 'char-1'}
+              : (tableRows[table] ?? const <Map<String, dynamic>>[]);
+          return http.Response(
+            jsonEncode(body),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+        postgrestOptions: const PostgrestClientOptions(retryEnabled: false),
+        authOptions: const AuthClientOptions(
+          authFlowType: AuthFlowType.implicit,
+        ),
+      );
+      await client.auth.recoverSession(
+        jsonEncode({
+          'access_token': jwt(),
+          'refresh_token': 'r',
+          'token_type': 'bearer',
+          'expires_in': 3600,
+          'expires_at': 4102444800,
+          'user': {
+            'id': 'user-1',
+            'aud': 'authenticated',
+            'app_metadata': <String, dynamic>{},
+            'user_metadata': <String, dynamic>{},
+            'created_at': '2026-01-01T00:00:00Z',
+          },
+        }),
+      );
+      return client;
+    }
+
+    // `natureWeaponItemId` (120, « Griffes félines ») n'a volontairement
+    // aucune entrée dans `itemCatalog` : exclue de tout catalogue d'items
+    // (voir `_mapItemCatalogPayload`), son `item_id` suffit à
+    // `createCharacter` pour construire sa ligne d'inventaire.
+    const natureWeaponItemId = 120;
+    const tabaxi = RaceOption(
+      id: 50,
+      name: 'Tabaxi',
+      abilityBonuses: {},
+      traits: [],
+      source: '',
+      naturalWeaponItemId: natureWeaponItemId,
+    );
+    const humain = RaceOption(
+      id: 1,
+      name: 'Humain',
+      abilityBonuses: {},
+      traits: [],
+      source: '',
+    );
+    const dague = ItemOption(
+      id: 1,
+      name: 'Dague',
+      category: 'arme',
+      costAmount: 2,
+    );
+    const guerrier = ClassOption(
+      id: 5,
+      name: 'Guerrier',
+      description: '',
+      hitDie: 10,
+      startingEquipment: [
+        ClassEquipmentOption(
+          label: 'A',
+          items: [(name: 'Dague', quantity: 1)],
+          gold: 0,
+        ),
+      ],
+    );
+    const backgroundOption = BackgroundOption(
+      id: 1,
+      name: 'Soldat',
+      skillProficiencies: [],
+      featureName: '',
+      featureDescription: '',
+    );
+
+    Future<List<Map<String, dynamic>>> createAndCaptureInventory({
+      required CharacterCreationDraft draft,
+      required RaceCatalog raceCatalog,
+    }) async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final inventoryInserts = <Map<String, dynamic>>[];
+      final client = await signedInClient(
+        tableRows: const {},
+        onRequest: (request) {
+          if (request.method != 'POST') return;
+          if (request.url.pathSegments.last != 'character_inventory') {
+            return;
+          }
+          final body = jsonDecode(request.body);
+          if (body is! List) return;
+          inventoryInserts.addAll(
+            body.map((row) => Map<String, dynamic>.from(row as Map)),
+          );
+        },
+      );
+
+      await SupabaseCharacterCreationRepository(
+        client,
+        ReferenceDataCache(db),
+      ).createCharacter(
+        draft: draft,
+        characterName: 'Test',
+        raceCatalog: raceCatalog,
+        classOption: guerrier,
+        backgroundOption: backgroundOption,
+        skillCatalog: const SkillCatalog(skills: []),
+        toolCatalog: const ToolCatalog(tools: []),
+        languageCatalog: const LanguageCatalog(languages: []),
+        spellCatalog: const SpellCatalog(spells: []),
+        itemCatalog: const ItemCatalog(items: [dague]),
+      );
+
+      return inventoryInserts;
+    }
+
+    test('Tabaxi : l\'arme naturelle est insérée déjà équipée, l\'arme de '
+        'départ de classe (Dague) reste dans l\'inventaire non équipée '
+        '(plus de place dans le set principal)', () async {
+      final inventory = await createAndCaptureInventory(
+        draft: const CharacterCreationDraft(classId: 5, raceId: 50),
+        raceCatalog: const RaceCatalog(races: [tabaxi], subraces: []),
+      );
+
+      final naturalLine = inventory.firstWhere(
+        (row) => row['item_id'] == natureWeaponItemId,
+      );
+      expect(naturalLine['equipped'], isTrue);
+      expect(naturalLine['quantity'], 1);
+
+      final dagueLine = inventory.firstWhere(
+        (row) => row['item_id'] == dague.id,
+      );
+      expect(
+        dagueLine['equipped'],
+        isFalse,
+        reason: 'l\'arme naturelle occupe déjà les 2 mains du set principal',
+      );
+    });
+
+    test(
+      'Humain (pas d\'arme naturelle) : comportement inchangé, l\'arme de '
+      'départ de classe s\'équipe normalement dans le set principal',
+      () async {
+        final inventory = await createAndCaptureInventory(
+          draft: const CharacterCreationDraft(classId: 5, raceId: 1),
+          raceCatalog: const RaceCatalog(races: [humain], subraces: []),
+        );
+
+        expect(
+          inventory.any((row) => row['item_id'] == natureWeaponItemId),
+          isFalse,
+        );
+        final dagueLine = inventory.firstWhere(
+          (row) => row['item_id'] == dague.id,
+        );
+        expect(dagueLine['equipped'], isTrue);
+      },
+    );
   });
 }
 

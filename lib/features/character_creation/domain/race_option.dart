@@ -69,6 +69,16 @@ abstract class RaceOption with _$RaceOption {
     /// rôle que `BackgroundOption.skillProficiencies`. Vide pour toute autre
     /// race (la grande majorité).
     @Default(<String>[]) List<String> skillProficiencies,
+
+    /// `races.natural_weapon_item_id` — `item_id` de l'arme naturelle de
+    /// cette race (Aarakocra/Centaure/Homme-lézard/Minotaure/Tabaxi/Tortue à
+    /// ce jour, voir `item_row_mapper.dart`/`weapon_properties.properties`
+    /// contenant « naturelle »), `null` pour toute autre race (la grande
+    /// majorité). Utilisé à la création de personnage
+    /// (`data/character_creation_repository.dart::createCharacter`) pour
+    /// ajouter automatiquement cette arme, déjà équipée, à l'inventaire —
+    /// jamais affiché tel quel dans l'UI de cette étape.
+    int? naturalWeaponItemId,
   }) = _RaceOption;
 
   /// `true` si cette race vient du Manuel des Joueurs ("race de base"),

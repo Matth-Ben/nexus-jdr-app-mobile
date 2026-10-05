@@ -42,6 +42,34 @@ abstract final class InventoryCatalogRowMapper {
   /// `null` si non renseigné en base, jamais `0`.
   static double? parseWeight(dynamic raw) => raw is num ? raw.toDouble() : null;
 
+  /// `weapon_properties` : objet direct (relation 1-1) ou liste à un élément
+  /// selon la version de PostgREST — même règle que
+  /// `character_creation/data/item_row_mapper.dart::ItemRowMapper
+  /// ._weaponProperties`.
+  static Map<String, dynamic>? _weaponProperties(Object? value) {
+    if (value is Map) return Map<String, dynamic>.from(value);
+    if (value is List && value.isNotEmpty && value.first is Map) {
+      return Map<String, dynamic>.from(value.first as Map);
+    }
+    return null;
+  }
+
+  static List<String> _properties(Object? raw) =>
+      raw is List ? raw.whereType<String>().toList() : const <String>[];
+
+  /// `true` si `row['weapon_properties'].properties` contient « naturelle »
+  /// — même marqueur/même rationale que `character_creation/data
+  /// /item_row_mapper.dart::ItemRowMapper.isNaturalWeapon` : exclut les 6
+  /// armes naturelles de race de cette sheet "Depuis le catalogue" (jamais
+  /// ajoutables manuellement par un joueur, même d'une race qui les
+  /// possède réellement — elles sont déjà ajoutées automatiquement à la
+  /// création). `false` si la jointure est absente (objet qui n'est pas une
+  /// arme).
+  static bool isNaturalWeapon(Map<String, dynamic> row) {
+    final weaponProperties = _weaponProperties(row['weapon_properties']);
+    return _properties(weaponProperties?['properties']).contains('naturelle');
+  }
+
   /// Construit un [InventoryCatalogItem] à partir d'une ligne brute `items`
   /// et des noms déjà résolus (`names`, clés en `String`, voir
   /// [collectIds]). Un id sans nom résolu retombe sur un libellé générique
@@ -63,10 +91,15 @@ abstract final class InventoryCatalogRowMapper {
     );
   }
 
+  /// Une arme naturelle (voir [isNaturalWeapon]) est omise du résultat :
+  /// jamais ajoutable manuellement depuis cette sheet.
   static List<InventoryCatalogItem> toInventoryCatalogItems(
     List<Map<String, dynamic>> rows, {
     required Map<String, String> names,
   }) {
-    return [for (final row in rows) toInventoryCatalogItem(row, names: names)];
+    return [
+      for (final row in rows)
+        if (!isNaturalWeapon(row)) toInventoryCatalogItem(row, names: names),
+    ];
   }
 }

@@ -156,4 +156,37 @@ void main() {
       expect(item.isTwoHanded, isTrue);
     });
   });
+
+  group('isNaturalWeapon', () {
+    test('weapon_properties.properties contient "naturelle" -> true', () {
+      final row = {
+        'id': 200,
+        'category': 'arme',
+        'weapon_properties': {
+          'properties': ['à deux mains', 'naturelle'],
+        },
+      };
+
+      expect(ItemRowMapper.isNaturalWeapon(row), isTrue);
+    });
+
+    test('weapon_properties sans "naturelle" -> false', () {
+      final row = {
+        'id': 1,
+        'category': 'arme',
+        'weapon_properties': {
+          'properties': ['légère', 'finesse'],
+        },
+      };
+
+      expect(ItemRowMapper.isNaturalWeapon(row), isFalse);
+    });
+
+    test('weapon_properties absente (objet non-arme) -> false plutôt que '
+        'de crasher', () {
+      final row = {'id': 2, 'category': 'equipement_general'};
+
+      expect(ItemRowMapper.isNaturalWeapon(row), isFalse);
+    });
+  });
 }

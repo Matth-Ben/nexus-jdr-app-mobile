@@ -76,6 +76,42 @@ void main() {
         isFalse,
       );
     });
+
+    test('weaponProperties contient "naturelle" -> toujours true, même sans '
+        'aucun token de maîtrise pertinent (griffes/cornes/sabots...)', () {
+      expect(
+        WeaponAttackCalculator.isProficient(
+          weaponName: 'Griffes félines',
+          proficiencyTokens: const [],
+          weaponProperties: const ['à deux mains', 'naturelle'],
+        ),
+        isTrue,
+      );
+    });
+
+    test('weaponProperties contient "naturelle" malgré des tokens de '
+        'maîtrise sans rapport -> reste true', () {
+      expect(
+        WeaponAttackCalculator.isProficient(
+          weaponName: 'Cornes',
+          proficiencyTokens: const ['dague'],
+          weaponProperties: const ['à deux mains', 'naturelle'],
+        ),
+        isTrue,
+      );
+    });
+
+    test('une arme normale (sans "naturelle") suit la vérification de '
+        'maîtrise habituelle, inchangée', () {
+      expect(
+        WeaponAttackCalculator.isProficient(
+          weaponName: 'Épée longue',
+          proficiencyTokens: const ['courantes'],
+          weaponProperties: const ['lourde', 'à deux mains'],
+        ),
+        isFalse,
+      );
+    });
   });
 
   group('abilityModifierFor', () {
@@ -165,6 +201,18 @@ void main() {
         proficiencyBonus: 2,
       );
       expect(bonus, -2); // Force 6 -> -2, non compétent (aucun token).
+    });
+
+    test('arme naturelle (« naturelle ») -> toujours le bonus de maîtrise, '
+        'même sans aucun token de maîtrise pertinent', () {
+      final bonus = WeaponAttackCalculator.attackBonus(
+        weaponName: 'Griffes félines',
+        weaponProperties: const ['à deux mains', 'naturelle'],
+        abilityScores: const {'str': 14, 'dex': 10},
+        proficiencyTokens: const [],
+        proficiencyBonus: 2,
+      );
+      expect(bonus, 4); // Force +2 + maîtrise +2 (toujours compétent).
     });
   });
 }

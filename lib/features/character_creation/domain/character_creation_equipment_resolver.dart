@@ -44,6 +44,21 @@ abstract final class CharacterCreationEquipmentResolver {
   /// (`domain/class_starting_equipment.dart`) — ses objets passent en tête de
   /// l'inventaire (l'armure de classe est donc celle équipée d'office) et
   /// son or s'ajoute à la Bourse de l'historique, budget d'achat compris.
+  /// [naturalWeaponItemId] : `RaceOption.naturalWeaponItemId` de la race
+  /// choisie (voir `domain/race_option.dart`), `null` pour toute race sans
+  /// arme naturelle (la grande majorité). Quand renseigné, sa ligne
+  /// d'inventaire est insérée déjà équipée en tête (voir
+  /// [_naturalWeaponLine]), AVANT toute résolution de l'équipement de
+  /// départ, et [_withStartingGearEquipped] démarre son compteur de "mains"
+  /// du set principal déjà plein (voir son paramètre [initialHandsUsed]) :
+  /// aucune arme de départ (classe/historique) ne peut donc s'auto-équiper
+  /// dans ce même set, elle reste simplement dans l'inventaire — même
+  /// traitement que n'importe quelle arme de départ qui ne "rentre" pas
+  /// (voir la doc de [_withStartingGearEquipped]). `itemCatalog` n'a plus
+  /// cette arme naturelle parmi ses entrées (exclue par
+  /// `character_creation_repository.dart::_mapItemCatalogPayload`), elle
+  /// n'a donc besoin d'aucune résolution de nom/catégorie ici : son
+  /// `item_id` suffit.
   static ({List<InventoryLineDraft> inventory, int currencyGp}) resolve({
     required EquipmentChoiceTab tab,
     required BackgroundOption backgroundOption,
@@ -51,6 +66,7 @@ abstract final class CharacterCreationEquipmentResolver {
     required ItemCatalog itemCatalog,
     String? className,
     ClassEquipmentOption? classEquipment,
+    int? naturalWeaponItemId,
   }) {
     final startingGold =
         (BackgroundEquipmentParser.extractStartingGold(
@@ -72,6 +88,8 @@ abstract final class CharacterCreationEquipmentResolver {
           );
     final resolution = (
       inventory: [
+        if (naturalWeaponItemId != null)
+          _naturalWeaponLine(naturalWeaponItemId),
         ..._classLines(classEquipment, itemCatalog),
         ...baseResolution.inventory,
       ],
@@ -79,10 +97,23 @@ abstract final class CharacterCreationEquipmentResolver {
     );
     if (className == monkClassName) return resolution;
     return (
-      inventory: _withStartingGearEquipped(resolution.inventory, itemCatalog),
+      inventory: _withStartingGearEquipped(
+        resolution.inventory,
+        itemCatalog,
+        initialHandsUsed: naturalWeaponItemId != null
+            ? WeaponSlotRules.slotCapacity
+            : 0,
+      ),
       currencyGp: resolution.currencyGp,
     );
   }
+
+  /// Ligne d'inventaire de l'arme naturelle de race, déjà équipée dans le
+  /// set principal (`weapon_slot: null`, voir [resolve]) — quantité 1,
+  /// jamais un objet personnalisé (`customName: null`) puisque son `item_id`
+  /// résout toujours à une vraie ligne `items`.
+  static InventoryLineDraft _naturalWeaponLine(int itemId) =>
+      (itemId: itemId, customName: null, quantity: 1, equipped: true);
 
   /// Marque comme équipés la première armure (`category = 'armure'`), le
   /// premier bouclier (`category = 'bouclier'`) de [inventory] — une seule
@@ -107,10 +138,23 @@ abstract final class CharacterCreationEquipmentResolver {
   /// aucun calcul automatique dessus, cohérent avec `WeaponSlotRules`/
   /// `weapon_slot_picker_sheet.dart` qui documentent déjà que c'est un choix
   /// exclusivement manuel du joueur.
+  ///
+  /// [initialHandsUsed] : nombre de "mains" du set principal déjà occupées
+  /// avant même de parcourir [inventory] (`0` par défaut, comportement
+  /// historique) — `WeaponSlotRules.slotCapacity` (plein) quand une arme
+  /// naturelle de race vient d'être insérée par [resolve] : son coût en
+  /// mains est alors déjà acté, aucune arme de départ ne peut plus tenir
+  /// dans ce même set (voir la doc de [resolve]). L'arme naturelle elle-même
+  /// n'est jamais re-traitée par la boucle ci-dessous : son `item_id` n'a
+  /// plus de ligne dans [itemCatalog] (exclue en amont, voir [resolve]),
+  /// `categoryById[line.itemId]` retombe donc sur `null` pour elle, qui
+  /// matche le cas par défaut (`line` renvoyée inchangée, donc toujours
+  /// équipée comme déjà posé par [_naturalWeaponLine]).
   static List<InventoryLineDraft> _withStartingGearEquipped(
     List<InventoryLineDraft> inventory,
-    ItemCatalog itemCatalog,
-  ) {
+    ItemCatalog itemCatalog, {
+    int initialHandsUsed = 0,
+  }) {
     final categoryById = {
       for (final item in itemCatalog.items) item.id: item.category,
     };
@@ -119,7 +163,7 @@ abstract final class CharacterCreationEquipmentResolver {
     };
     var armorEquipped = false;
     var shieldEquipped = false;
-    var weaponHandsUsed = 0;
+    var weaponHandsUsed = initialHandsUsed;
     return [
       for (final line in inventory)
         switch (categoryById[line.itemId]) {

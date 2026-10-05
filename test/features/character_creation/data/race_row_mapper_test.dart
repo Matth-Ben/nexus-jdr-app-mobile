@@ -424,6 +424,32 @@ void main() {
     });
   });
 
+  group('toRaceOption — natural_weapon_item_id', () {
+    test('Tabaxi : natural_weapon_item_id résolu en int', () {
+      final race = RaceRowMapper.toRaceOption(
+        {
+          'id': 50,
+          'ability_bonuses': {},
+          'traits': [],
+          'natural_weapon_item_id': 120,
+        },
+        names: const {'50': 'Tabaxi'},
+      );
+
+      expect(race.naturalWeaponItemId, 120);
+    });
+
+    test('natural_weapon_item_id absent -> null (la grande majorité des '
+        'races)', () {
+      final race = RaceRowMapper.toRaceOption(
+        {'id': 1, 'ability_bonuses': {}, 'traits': []},
+        names: const {'1': 'Humain'},
+      );
+
+      expect(race.naturalWeaponItemId, isNull);
+    });
+  });
+
   group('toSubraceOption', () {
     test('résout le nom via la map de traductions et porte le raceId', () {
       final subrace = RaceRowMapper.toSubraceOption(
