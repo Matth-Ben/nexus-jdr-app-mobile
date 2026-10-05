@@ -43,10 +43,18 @@ class CheckableOptionTile extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.showIndicator = true,
+    this.titleTrailing,
     super.key,
   });
 
   final String title;
+
+  /// Widget optionnel affiché juste après [title], sur la même ligne (ex.
+  /// un `DiceTypeBadge` — premier usage sur `add_prepared_spells_sheet.dart`,
+  /// pour afficher le dé de dégâts à côté du nom d'un sort, même convention
+  /// que `CharacterSpellsSection::_SpellRow`). `null` par défaut : les usages
+  /// existants n'en fournissent pas et gardent donc un simple `Text`.
+  final Widget? titleTrailing;
 
   /// Icône/illustration à gauche de la ligne, ex. un [AccentIconBadge] —
   /// même rôle que `SelectableOptionTile.leading`, ajouté ici pour son
@@ -159,12 +167,24 @@ class CheckableOptionTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        title,
-                        style: AppTypography.body(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.body(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          if (titleTrailing != null) ...[
+                            const SizedBox(width: AppSpacing.xs),
+                            titleTrailing!,
+                          ],
+                        ],
                       ),
                       if (subtitle != null) ...[
                         const SizedBox(height: 2),

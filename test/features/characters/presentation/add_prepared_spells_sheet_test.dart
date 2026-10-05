@@ -9,6 +9,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
+import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
@@ -34,6 +35,7 @@ const _unprepared = CharacterSpellEntry(
   level: 1,
   school: 'Évocation',
   status: 'connu',
+  description: 'Vous infligez 1d8 dégâts de force à la cible.',
 );
 const _granted = CharacterSpellEntry(
   id: 4,
@@ -96,6 +98,25 @@ void main() {
       // Sort mineur exclu de cette sheet (toujours visible ailleurs, aucune
       // notion de préparation à cocher).
       expect(find.text('Lumière'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'affiche le badge de dé de dégâts à côté du nom d\'un sort qui en a un',
+    (tester) async {
+      await pumpSheet(tester, spells: const [_unprepared]);
+
+      expect(find.byType(DiceTypeBadge), findsOneWidget);
+      expect(find.text('1d8'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'aucun badge de dé pour un sort sans dé de dégâts dans sa description',
+    (tester) async {
+      await pumpSheet(tester, spells: const [_prepared]);
+
+      expect(find.byType(DiceTypeBadge), findsNothing);
     },
   );
 

@@ -652,7 +652,7 @@ class _GrantBadge extends StatelessWidget {
       label: 'Toujours préparé, accordé par : ${source.label}',
       excludeSemantics: true,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         decoration: BoxDecoration(
           color: AppColors.parchmentCardAlt,
           borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -663,14 +663,14 @@ class _GrantBadge extends StatelessWidget {
           children: [
             const Icon(
               Icons.lock_outline,
-              size: 12,
+              size: 10,
               color: AppColors.woodMedium,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 3),
             Text(
               source.label.toUpperCase(),
               style: AppTypography.display(
-                fontSize: 11,
+                fontSize: 10,
                 color: AppColors.textSecondary,
               ),
             ),
