@@ -31,6 +31,33 @@ void main() {
     expect(find.text('Int'), findsOneWidget);
   });
 
+  testWidgets('titleTrailing affiche un widget juste après le titre', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        const CheckableOptionTile(
+          title: 'Lumière',
+          checked: false,
+          titleTrailing: Icon(Icons.casino),
+        ),
+      ),
+    );
+
+    expect(find.text('Lumière'), findsOneWidget);
+    expect(find.byIcon(Icons.casino), findsOneWidget);
+  });
+
+  testWidgets('sans titleTrailing, rien n\'est affiché après le titre', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(const CheckableOptionTile(title: 'Lumière', checked: false)),
+    );
+
+    expect(find.byIcon(Icons.casino), findsNothing);
+  });
+
   testWidgets('sans trailingLabel, aucun libellé secondaire n\'est affiché', (
     WidgetTester tester,
   ) async {

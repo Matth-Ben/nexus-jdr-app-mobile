@@ -4,9 +4,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/checkable_option_tile.dart';
+import '../../../../core/widgets/dice_type_badge.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
+import '../../domain/spell_damage_dice_extractor.dart';
 import '../../domain/spell_name_filter.dart';
 import '../../domain/spell_status_formatter.dart';
 import '../../domain/spells_by_level_grouper.dart';
@@ -365,6 +367,7 @@ class _SpellCheckRow extends StatelessWidget {
     // retirable — voir `CharacterSpellEntry.isAlwaysPrepared` et
     // `SpellStatusFormatter.canTogglePrepared`.
     final grantedBySubclass = spell.isAlwaysPrepared;
+    final dice = SpellDamageDiceExtractor.extract(spell.description);
 
     final tile = CheckableOptionTile(
       title: spell.name,
@@ -372,6 +375,12 @@ class _SpellCheckRow extends StatelessWidget {
       checked: checked,
       enabled: !grantedBySubclass,
       onTap: grantedBySubclass ? null : () => togglePrepared(spell),
+      titleTrailing: dice == null
+          ? null
+          : DiceTypeBadge(
+              sides: dice.sides,
+              label: '${dice.count}d${dice.sides}',
+            ),
     );
 
     return Padding(
