@@ -105,6 +105,23 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// [classSkillChoices].
     @Default(<String>[]) List<String> backgroundLanguageChoices,
 
+    /// Compétence(s) de race choisies à l'étape 5 (noms affichés), vide si
+    /// la race n'a pas de choix interactif de compétence
+    /// (`RaceOption.skillChoice` `null`) ou si aucune n'est encore choisie.
+    /// Même décision noms-plutôt-qu'ids que [classSkillChoices]. N'inclut
+    /// jamais l'octroi automatique (`RaceOption.skillProficiencies`, Satyre
+    /// uniquement) : celui-ci n'est pas un choix, donc jamais porté par le
+    /// brouillon, résolu directement depuis le catalogue à l'étape 9
+    /// "Récapitulatif" (voir `data/character_creation_repository.dart
+    /// ::createCharacter`).
+    @Default(<String>[]) List<String> raceSkillChoices,
+
+    /// Outil(s) de race choisis à l'étape 5 (noms affichés), vide si la race
+    /// n'a pas de choix interactif d'outil (`RaceOption.toolChoice` `null`)
+    /// ou si aucun n'est encore choisi. Même décision noms-plutôt-qu'ids que
+    /// [classSkillChoices].
+    @Default(<String>[]) List<String> raceToolChoices,
+
     /// Sorts mineurs ("cantrips") choisis à l'étape 6 (noms affichés). Vide
     /// tant qu'aucun n'est choisi, et reste vide en permanence pour une
     /// classe non lanceuse de sorts ou une classe lanceuse sans quota de

@@ -61,6 +61,35 @@ void main() {
     expect(rows, isEmpty);
   });
 
+  test('résout aussi les compétences de race (choix interactif + octroi '
+      'automatique), dédupliquées avec les 2 autres sources', () {
+    final rows = SkillProficiencyResolver.resolve(
+      classSkillNames: const ['Arcanes'],
+      backgroundSkillNames: const ['Religion'],
+      raceSkillNames: const ['Perception', 'Arcanes'],
+      catalog: catalog,
+    );
+
+    expect(rows, hasLength(3));
+    expect(rows.map((r) => r.skillId).toSet(), {
+      arcanes.id,
+      religion.id,
+      perception.id,
+    });
+  });
+
+  test('raceSkillNames par défaut vide -> comportement inchangé pour les '
+      'appelants existants (ex. CharacterEditPlanner, mode modification)', () {
+    final rows = SkillProficiencyResolver.resolve(
+      classSkillNames: const ['Arcanes'],
+      backgroundSkillNames: const [],
+      catalog: catalog,
+    );
+
+    expect(rows, hasLength(1));
+    expect(rows.single.skillId, arcanes.id);
+  });
+
   group('resolveNames (usage affichage, ex. récapitulatif étape 9/9)', () {
     test('concatène les compétences de classe puis d\'historique, sans '
         'catalogue', () {
@@ -89,6 +118,16 @@ void main() {
       );
 
       expect(names, isEmpty);
+    });
+
+    test('inclut les compétences de race en dernier, dédupliquées', () {
+      final names = SkillProficiencyResolver.resolveNames(
+        classSkillNames: const ['Arcanes'],
+        backgroundSkillNames: const ['Religion'],
+        raceSkillNames: const ['Religion', 'Perception'],
+      );
+
+      expect(names, ['Arcanes', 'Religion', 'Perception']);
     });
   });
 }

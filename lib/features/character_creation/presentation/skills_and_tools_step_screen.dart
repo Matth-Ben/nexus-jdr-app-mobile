@@ -14,6 +14,7 @@ import '../domain/character_creation_failure.dart';
 import '../domain/class_option.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/language_selection_resolver.dart';
+import '../domain/race_option.dart';
 import '../domain/skill_ability_mapping.dart';
 import '../domain/skills_and_tools_step_selection.dart';
 import '../domain/spellcasting_rules.dart';
@@ -54,6 +55,8 @@ class _SkillsAndToolsStepScreenState
   late List<String> _selectedClassSkills;
   late List<String> _selectedClassTools;
   late List<String> _selectedBackgroundLanguages;
+  late List<String> _selectedRaceSkills;
+  late List<String> _selectedRaceTools;
 
   @override
   void initState() {
@@ -67,6 +70,8 @@ class _SkillsAndToolsStepScreenState
     _selectedClassSkills = List.of(draft.classSkillChoices);
     _selectedClassTools = List.of(draft.classToolChoices);
     _selectedBackgroundLanguages = List.of(draft.backgroundLanguageChoices);
+    _selectedRaceSkills = List.of(draft.raceSkillChoices);
+    _selectedRaceTools = List.of(draft.raceToolChoices);
   }
 
   void _toggleClassSkill(String skill, int quota) {
@@ -99,6 +104,26 @@ class _SkillsAndToolsStepScreenState
     });
   }
 
+  void _toggleRaceSkill(String skill, int quota) {
+    setState(() {
+      _selectedRaceSkills = SkillsAndToolsStepSelection.toggle(
+        current: _selectedRaceSkills,
+        value: skill,
+        quota: quota,
+      );
+    });
+  }
+
+  void _toggleRaceTool(String tool, int quota) {
+    setState(() {
+      _selectedRaceTools = SkillsAndToolsStepSelection.toggle(
+        current: _selectedRaceTools,
+        value: tool,
+        quota: quota,
+      );
+    });
+  }
+
   /// Toujours poussée depuis `/characters/new/step-4` (étape 4
   /// "Caractéristiques") via `context.push` : `pop()` suffit, même
   /// rationale que les étapes précédentes.
@@ -124,6 +149,8 @@ class _SkillsAndToolsStepScreenState
           classSkillChoices: _selectedClassSkills,
           classToolChoices: _selectedClassTools,
           backgroundLanguageChoices: _selectedBackgroundLanguages,
+          raceSkillChoices: _selectedRaceSkills,
+          raceToolChoices: _selectedRaceTools,
         );
     // Mode modification : étape Sorts réservée au niveau 1, étape
     // Équipement toujours sautée (l'inventaire se gère depuis l'onglet Sac).
@@ -218,6 +245,21 @@ class _SkillsAndToolsStepScreenState
   Widget _buildContent(SkillsAndToolsStepData data) {
     final classOption = data.classOption;
     final backgroundOption = data.backgroundOption;
+    // Mode modification : les 2 sections "(RACE)" restent masquées, quelle
+    // que soit la race du personnage édité — `CharacterEditHydrator`/
+    // `CharacterEditPlanner` (hors périmètre de cette tâche, voir leur
+    // documentation) ne connaissent pas `draft.raceSkillChoices`/
+    // `raceToolChoices` : un choix fait ici en mode modification ne serait
+    // jamais ni pré-rempli (la ré-ouverture de l'assistant repartirait
+    // toujours d'une sélection vide) ni persisté par "Enregistrer" (silence
+    // trompeur pour le joueur). `raceOption` est donc traité comme `null`
+    // en mode modification (même effet que `isRace...SectionVisible` sur une
+    // race personnalisée) plutôt que de risquer d'exposer une section
+    // interactive dont la saisie serait perdue — même rationale que le gap
+    // déjà assumé pour le changement de race en mode modification (voir le
+    // rapport de la tâche "lignée").
+    final isEditMode = ref.read(characterEditSessionControllerProvider) != null;
+    final raceOption = isEditMode ? null : data.raceOption;
 
     final showClassTools =
         SkillsAndToolsStepSelection.isClassToolSectionVisible(classOption);
@@ -228,6 +270,11 @@ class _SkillsAndToolsStepScreenState
     final showLanguages = SkillsAndToolsStepSelection.isLanguageSectionVisible(
       backgroundOption,
     );
+    final showRaceSkills =
+        SkillsAndToolsStepSelection.isRaceSkillSectionVisible(raceOption);
+    final showRaceTools = SkillsAndToolsStepSelection.isRaceToolSectionVisible(
+      raceOption,
+    );
 
     final canProceed = SkillsAndToolsStepSelection.canProceed(
       classOption: classOption,
@@ -235,6 +282,9 @@ class _SkillsAndToolsStepScreenState
       selectedClassSkills: _selectedClassSkills,
       selectedClassTools: _selectedClassTools,
       selectedBackgroundLanguages: _selectedBackgroundLanguages,
+      raceOption: raceOption,
+      selectedRaceSkills: _selectedRaceSkills,
+      selectedRaceTools: _selectedRaceTools,
     );
 
     return Column(
@@ -315,6 +365,20 @@ class _SkillsAndToolsStepScreenState
                       if (showLanguages) ...[
                         const SizedBox(height: AppSpacing.md),
                         ..._languageSection(backgroundOption, data),
+                      ],
+
+                      // Section 5 : "COMPÉTENCES (RACE)" — si applicable
+                      // (choix interactif et/ou octroi automatique, voir
+                      // `SkillsAndToolsStepSelection.isRaceSkillSectionVisible`).
+                      if (showRaceSkills) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        ..._raceSkillSection(raceOption!),
+                      ],
+
+                      // Section 6 : "OUTILS (RACE)" — si applicable.
+                      if (showRaceTools) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        ..._raceToolSection(raceOption!),
                       ],
                     ],
                   ),
@@ -475,6 +539,91 @@ class _SkillsAndToolsStepScreenState
         quota: quota,
       ),
       onTap: () => _toggleBackgroundLanguage(language, quota),
+    );
+  }
+
+  /// Section 5 "COMPÉTENCES (RACE)" : un choix interactif
+  /// ([RaceOption.skillChoice], candidats déjà résolus en liste plate de
+  /// noms par `data/race_row_mapper.dart`), un octroi automatique
+  /// ([RaceOption.skillProficiencies], Satyre uniquement — tuiles non
+  /// interactives, même convention que "OUTILS (HISTORIQUE)"), ou les deux
+  /// dans le même bloc de section (générique, même si aucune des 10 races
+  /// actuelles n'a les deux en même temps — voir la consigne d'origine).
+  List<Widget> _raceSkillSection(RaceOption raceOption) {
+    final skillChoice = raceOption.skillChoice;
+    final automaticSkills = raceOption.skillProficiencies;
+    return [
+      _SectionHeader(
+        title: 'COMPÉTENCES (RACE)',
+        badge: skillChoice == null
+            ? null
+            : '${_selectedRaceSkills.length} / ${skillChoice.count} choisies',
+      ),
+      const SizedBox(height: AppSpacing.sm),
+      if (skillChoice != null)
+        for (var i = 0; i < skillChoice.choices.length; i++) ...[
+          if (i > 0) const SizedBox(height: AppSpacing.xs),
+          _raceSkillTile(skillChoice.choices[i], skillChoice.count),
+        ],
+      if (skillChoice != null && automaticSkills.isNotEmpty)
+        const SizedBox(height: AppSpacing.xs),
+      for (var i = 0; i < automaticSkills.length; i++) ...[
+        if (i > 0) const SizedBox(height: AppSpacing.xs),
+        CheckableOptionTile(
+          title: automaticSkills[i],
+          checked: true,
+          enabled: false,
+        ),
+      ],
+    ];
+  }
+
+  Widget _raceSkillTile(String skill, int quota) {
+    final isSelected = _selectedRaceSkills.contains(skill);
+    return CheckableOptionTile(
+      title: skill,
+      trailingLabel: SkillAbilityMapping.abbreviationFor(skill),
+      checked: isSelected,
+      enabled: !SkillsAndToolsStepSelection.isChoiceLocked(
+        isSelected: isSelected,
+        selectedCount: _selectedRaceSkills.length,
+        quota: quota,
+      ),
+      onTap: () => _toggleRaceSkill(skill, quota),
+    );
+  }
+
+  /// Section 6 "OUTILS (RACE)" : toujours un choix interactif
+  /// ([RaceOption.toolChoice] non `null`, garanti par
+  /// [SkillsAndToolsStepSelection.isRaceToolSectionVisible] avant d'appeler
+  /// cette méthode) — aucune race n'octroie d'outil automatiquement à ce
+  /// jour, contrairement aux compétences (voir [_raceSkillSection]).
+  List<Widget> _raceToolSection(RaceOption raceOption) {
+    final toolChoice = raceOption.toolChoice!;
+    return [
+      _SectionHeader(
+        title: 'OUTILS (RACE)',
+        badge: '${_selectedRaceTools.length} / ${toolChoice.count} choisies',
+      ),
+      const SizedBox(height: AppSpacing.sm),
+      for (var i = 0; i < toolChoice.choices.length; i++) ...[
+        if (i > 0) const SizedBox(height: AppSpacing.xs),
+        _raceToolTile(toolChoice.choices[i], toolChoice.count),
+      ],
+    ];
+  }
+
+  Widget _raceToolTile(String tool, int quota) {
+    final isSelected = _selectedRaceTools.contains(tool);
+    return CheckableOptionTile(
+      title: tool,
+      checked: isSelected,
+      enabled: !SkillsAndToolsStepSelection.isChoiceLocked(
+        isSelected: isSelected,
+        selectedCount: _selectedRaceTools.length,
+        quota: quota,
+      ),
+      onTap: () => _toggleRaceTool(tool, quota),
     );
   }
 }

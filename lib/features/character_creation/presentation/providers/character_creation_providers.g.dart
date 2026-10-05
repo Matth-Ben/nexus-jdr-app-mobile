@@ -365,7 +365,7 @@ final class SkillsAndToolsStepDataProvider
 }
 
 String _$skillsAndToolsStepDataHash() =>
-    r'baaeb5eafc430a19a126f1e0e291e21e36fd8ff5';
+    r'09aaf72abd58a73d419b5b61e6fdc29e3d0b0e0a';
 
 /// Sorts (mineurs et niveau 1 mélangés) accessibles à la classe [classId],
 /// exposé à `SpellsStepScreen` — étape 6/9 "Sorts". `family` (paramétré par

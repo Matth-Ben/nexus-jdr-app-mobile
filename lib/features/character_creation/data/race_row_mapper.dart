@@ -1,6 +1,10 @@
+import '../domain/class_skill_choices.dart';
 import '../domain/race_option.dart';
+import '../domain/race_tool_choice.dart';
 import '../domain/race_trait.dart';
+import '../domain/skill_ability_mapping.dart';
 import '../domain/subrace_option.dart';
+import '../domain/tool_catalog.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes renvoyées par
 /// PostgREST (`races`, `subraces`, `translations`) et les modèles du domaine
@@ -91,6 +95,18 @@ abstract final class RaceRowMapper {
   static RaceOption toRaceOption(
     Map<String, dynamic> row, {
     required Map<String, String> names,
+
+    /// Catalogue d'outils déjà résolu (nom + catégorie), nécessaire pour
+    /// développer la forme `categories` — ou l'absence des deux clés
+    /// (choix libre) — de `races.tool_choice` en liste plate de noms, voir
+    /// [parseToolChoice]. Vide par défaut : un ancien cache offline écrit
+    /// avant l'introduction de [RaceOption.toolChoice] n'a jamais ce
+    /// catalogue sous la main (voir `data/character_creation_repository.dart
+    /// ::_mapRaceCatalogPayload`) — une race avec un vrai `tool_choice` par
+    /// catégorie retombe alors sur une liste de candidats vide plutôt que de
+    /// crasher (gap assumé, même principe que les autres champs ajoutés
+    /// après la première version de ce mapper).
+    ToolCatalog toolCatalog = const ToolCatalog(tools: []),
   }) {
     final id = (row['id'] as num).toInt();
     return RaceOption(
@@ -100,7 +116,89 @@ abstract final class RaceRowMapper {
       traits: parseTraits(row['traits']),
       source: row['source'] as String? ?? '',
       isIncomplete: row['is_incomplete'] as bool? ?? false,
+      skillChoice: parseSkillChoice(row['skill_choice']),
+      toolChoice: parseToolChoice(row['tool_choice'], toolCatalog: toolCatalog),
+      skillProficiencies: parseSkillProficiencies(row['skill_proficiencies']),
     );
+  }
+
+  /// Parse la colonne jsonb `skill_choice` (`races.skill_choice`) — étape
+  /// 5/9 "Compétences et outils", carte "CHOIX DE RACE" de la fiche. `null`
+  /// si cette race n'a pas de choix de compétence (la grande majorité).
+  /// `choices: null` (choix libre, ex. Demi-elfe/Forgelier/Kenku) est
+  /// développée en la liste complète des 18 compétences
+  /// ([SkillAbilityMapping.allSkillNames]) — même principe que la forme
+  /// `"toutes"` du Barde, voir `ClassRowMapper.parseSkillChoices`. `count`
+  /// absent/type inattendu retombe sur `null` (pas de choix affiché) plutôt
+  /// que de crasher.
+  static ClassSkillChoices? parseSkillChoice(dynamic raw) {
+    if (raw is! Map) {
+      return null;
+    }
+    final count = (raw['count'] as num?)?.toInt();
+    if (count == null) {
+      return null;
+    }
+    final rawChoices = raw['choices'];
+    final choices = rawChoices is List
+        ? rawChoices.whereType<String>().toList()
+        : SkillAbilityMapping.allSkillNames;
+    return ClassSkillChoices(count: count, choices: choices);
+  }
+
+  /// Parse la colonne jsonb `tool_choice` (`races.tool_choice`) — même étape/
+  /// carte que [parseSkillChoice]. `null` si cette race n'a pas de choix
+  /// d'outil (la grande majorité). Trois formes brutes réelles (voir la
+  /// documentation de classe de [RaceToolChoice]), toutes développées ici en
+  /// liste plate de noms candidats contre [toolCatalog] :
+  /// - `choices` (liste de noms exacts, ex. Nain) : reportée telle quelle ;
+  /// - `categories` (liste de `tools.category`, ex. Satyre) : tous les outils
+  ///   de [toolCatalog] dont la catégorie est dans cette liste ;
+  /// - ni l'un ni l'autre (choix libre, ex. Forgelier) : tout [toolCatalog].
+  /// `count` absent/type inattendu retombe sur `null`.
+  static RaceToolChoice? parseToolChoice(
+    dynamic raw, {
+    required ToolCatalog toolCatalog,
+  }) {
+    if (raw is! Map) {
+      return null;
+    }
+    final count = (raw['count'] as num?)?.toInt();
+    if (count == null) {
+      return null;
+    }
+    final rawChoices = raw['choices'];
+    if (rawChoices is List) {
+      return RaceToolChoice(
+        count: count,
+        choices: rawChoices.whereType<String>().toList(),
+      );
+    }
+    final rawCategories = raw['categories'];
+    if (rawCategories is List) {
+      final categories = rawCategories.whereType<String>().toSet();
+      return RaceToolChoice(
+        count: count,
+        choices: [
+          for (final tool in toolCatalog.tools)
+            if (categories.contains(tool.category)) tool.name,
+        ],
+      );
+    }
+    return RaceToolChoice(
+      count: count,
+      choices: [for (final tool in toolCatalog.tools) tool.name],
+    );
+  }
+
+  /// Parse la colonne `skill_proficiencies` (`races.skill_proficiencies`,
+  /// `text[]`) — octroi automatique, PAS un choix (Satyre uniquement à ce
+  /// jour). `null`/type inattendu retombe sur une liste vide.
+  static List<String> parseSkillProficiencies(dynamic raw) {
+    if (raw is! List) {
+      return const [];
+    }
+    return raw.whereType<String>().toList();
   }
 
   /// Construit une [SubraceOption] à partir d'une ligne brute `subraces` et

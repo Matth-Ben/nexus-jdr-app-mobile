@@ -12,6 +12,7 @@ import 'character_armor_proficiencies_card.dart';
 import 'character_class_features_card.dart';
 import 'character_invocations_card.dart';
 import 'character_languages_card.dart';
+import 'character_race_choices_card.dart';
 import 'character_skills_card.dart';
 import 'character_tool_proficiencies_card.dart';
 import 'character_weapon_proficiencies_card.dart';
@@ -35,6 +36,15 @@ import 'proficiency_detail_panel.dart';
 /// cet onglet (widget conservé, juste son insertion sur cet écran retirée) :
 /// signalé au chef de projet, voir le rapport de la tâche qui a introduit ce
 /// retrait, faute d'un autre emplacement désigné pour ces deux informations.
+///
+/// [CharacterRaceChoicesCard] (compétence(s)/outil(s) accordé(s) par un
+/// trait racial à choix), à l'inverse, EST insérée ici (juste après
+/// [CharacterToolProficienciesCard]) malgré l'absence de
+/// `CharacterClassChoicesCard` ci-dessus — gap constaté en écrivant cette
+/// carte (la consigne d'origine demandait de la monter "juste à côté" de
+/// `CharacterClassChoicesCard`, qui n'existe en réalité plus sur cet écran) :
+/// signalé au chef de projet plutôt que de reproduire silencieusement le
+/// retrait sur cette nouvelle carte, faute d'indication contraire.
 ///
 /// `StatefulWidget` (depuis l'ajout du champ de recherche filtrant "LES 18
 /// COMPÉTENCES", recettage du 13/09) : même patron que
@@ -145,6 +155,10 @@ class _CharacterSkillsTabBodyState extends State<CharacterSkillsTabBody> {
         if (detail.toolProficiencyNames.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           CharacterToolProficienciesCard(names: detail.toolProficiencyNames),
+        ],
+        if (CharacterRaceChoicesCard.hasContent(detail)) ...[
+          const SizedBox(height: AppSpacing.md),
+          CharacterRaceChoicesCard(detail: detail),
         ],
         if (detail.knownLanguageNames.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),

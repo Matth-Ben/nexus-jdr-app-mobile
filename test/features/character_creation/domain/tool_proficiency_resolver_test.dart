@@ -88,4 +88,41 @@ void main() {
     expect(rows, hasLength(2));
     expect(rows.every((row) => row.customText == 'Un jeu au choix'), isTrue);
   });
+
+  test('résout un choix d\'outil de race (ex. Nain) comme un choix de '
+      'classe', () {
+    final rows = ToolProficiencyResolver.resolve(
+      classToolNames: const [],
+      classGrantedToolNames: const [],
+      backgroundGrantedToolTexts: const [],
+      raceToolNames: const ['Luth'],
+      catalog: catalog,
+    );
+
+    expect(rows, [(toolId: luth.id, customText: null)]);
+  });
+
+  test('déduplique un outil de race déjà choisi par la classe', () {
+    final rows = ToolProficiencyResolver.resolve(
+      classToolNames: const ['Luth'],
+      classGrantedToolNames: const [],
+      backgroundGrantedToolTexts: const [],
+      raceToolNames: const ['Luth'],
+      catalog: catalog,
+    );
+
+    expect(rows, [(toolId: luth.id, customText: null)]);
+  });
+
+  test('raceToolNames par défaut vide -> comportement inchangé pour les '
+      'appelants existants (ex. CharacterEditPlanner, mode modification)', () {
+    final rows = ToolProficiencyResolver.resolve(
+      classToolNames: const ['Luth'],
+      classGrantedToolNames: const [],
+      backgroundGrantedToolTexts: const [],
+      catalog: catalog,
+    );
+
+    expect(rows, [(toolId: luth.id, customText: null)]);
+  });
 }

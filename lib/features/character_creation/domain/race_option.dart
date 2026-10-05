@@ -1,6 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'class_skill_choices.dart';
 import 'race_summary_formatter.dart';
+import 'race_tool_choice.dart';
 import 'race_trait.dart';
 
 part 'race_option.freezed.dart';
@@ -42,6 +44,31 @@ abstract class RaceOption with _$RaceOption {
     /// contenu — `false` pour toute race peuplée normalement par l'équipe
     /// `dev-backend-supabase`.
     @Default(false) bool isIncomplete,
+
+    /// Choix interactif de compétence(s) de race (`races.skill_choice`,
+    /// jsonb), `null` si cette race n'en a pas (la grande majorité) — étape
+    /// 5/9 "Compétences et outils" de l'assistant de création, carte "CHOIX
+    /// DE RACE" de la fiche personnage. Réutilise [ClassSkillChoices] tel
+    /// quel (même shape `{count, choices}`, voir sa documentation de
+    /// classe) : `choices` est déjà développée en la liste complète des 18
+    /// compétences par `data/race_row_mapper.dart::parseSkillChoice` quand
+    /// la colonne porte `choices: null` (choix libre, ex. Demi-elfe/
+    /// Forgelier/Kenku), même principe que la forme `"toutes"` du Barde.
+    ClassSkillChoices? skillChoice,
+
+    /// Choix interactif d'outil(s) de race (`races.tool_choice`, jsonb),
+    /// `null` si cette race n'en a pas (la grande majorité) — même étape/
+    /// carte que [skillChoice]. Voir [RaceToolChoice] pour le détail des
+    /// trois formes brutes déjà résolues en une liste plate de noms
+    /// candidats.
+    RaceToolChoice? toolChoice,
+
+    /// Compétence(s) octroyée(s) automatiquement par la race
+    /// (`races.skill_proficiencies`, text[]) — PAS un choix du joueur
+    /// (Satyre uniquement à ce jour : "Persuasion"/"Représentation"), même
+    /// rôle que `BackgroundOption.skillProficiencies`. Vide pour toute autre
+    /// race (la grande majorité).
+    @Default(<String>[]) List<String> skillProficiencies,
   }) = _RaceOption;
 
   /// `true` si cette race vient du Manuel des Joueurs ("race de base"),

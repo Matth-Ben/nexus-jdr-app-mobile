@@ -32,6 +32,7 @@ import 'package:personnages/features/character_creation/domain/language_catalog.
 import 'package:personnages/features/character_creation/domain/language_option.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_option.dart';
+import 'package:personnages/features/character_creation/domain/race_tool_choice.dart';
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/skill_option.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
@@ -463,6 +464,43 @@ void main() {
       await pumpSummaryStep(tester);
 
       expect(find.text('Histoire, Arcanes'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'la ligne "Compétences" inclut le choix de compétence de race (étape 5) '
+    'et l\'octroi automatique de la race (ex. Satyre), "Outils" inclut le '
+    'choix d\'outil de race — régression : le récapitulatif ne les '
+    'affichait jamais avant la création du personnage',
+    (WidgetTester tester) async {
+      const raceWithChoices = RaceOption(
+        id: 42,
+        name: 'Satyre',
+        abilityBonuses: {},
+        traits: [],
+        source: '',
+        skillProficiencies: ['Persuasion', 'Représentation'],
+        toolChoice: RaceToolChoice(count: 1, choices: ['Flûte']),
+      );
+      fakeRepository.raceCatalogToReturn = const RaceCatalog(
+        races: [_elfe, raceWithChoices],
+        subraces: [],
+      );
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .state = _fullDraft.copyWith(
+        raceId: 42,
+        raceSkillChoices: const [],
+        raceToolChoices: const ['Flûte'],
+      );
+
+      await pumpSummaryStep(tester);
+
+      expect(
+        find.text('Histoire, Arcanes, Persuasion, Représentation'),
+        findsOneWidget,
+      );
+      expect(find.text('Flûte'), findsOneWidget);
     },
   );
 

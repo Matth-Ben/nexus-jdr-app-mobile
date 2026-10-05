@@ -174,6 +174,21 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// documentation de classe de [CharacterClassChoice].
     @Default(<CharacterClassChoice>[]) List<CharacterClassChoice> classChoices,
 
+    /// Compétence(s) accordée(s) par le trait racial à choix résolues
+    /// (`character_race_choices.kind = 'competence'`, noms déjà traduits) —
+    /// onglet "Compétences", carte "CHOIX DE RACE"
+    /// (`presentation/widgets/character_race_choices_card.dart`). Couvre à
+    /// la fois un choix interactif fait à la création (ex. Changelin) et un
+    /// octroi automatique (Satyre) : les deux écrivent une ligne dans cette
+    /// table, voir `character_creation/data/character_creation_repository
+    /// .dart::createCharacter`. Vide pour toute race sans ce genre de trait
+    /// (la grande majorité).
+    @Default(<String>[]) List<String> raceSkillChoiceNames,
+
+    /// Même principe que [raceSkillChoiceNames], pour les outils
+    /// (`character_race_choices.kind = 'outil'`).
+    @Default(<String>[]) List<String> raceToolChoiceNames,
+
     /// Tokens de maîtrise d'armures, fusionnés/dédupliqués sur toutes les
     /// classes du personnage — onglet "Compétences", carte "MAÎTRISES
     /// D'ARMURES". Voir `data/character_detail_row_mapper.dart`

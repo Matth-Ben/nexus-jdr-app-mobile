@@ -1111,6 +1111,93 @@ void main() {
       expect(names, ['Invocation #99']);
     });
 
+    test('raceChoiceRowsOf extrait la relation character_race_choices', () {
+      final row = _row();
+      row['character_race_choices'] = [
+        {'kind': 'competence', 'skill_id': 5, 'tool_id': null},
+      ];
+      expect(CharacterDetailRowMapper.raceChoiceRowsOf(row), [
+        {'kind': 'competence', 'skill_id': 5, 'tool_id': null},
+      ]);
+    });
+
+    test('raceChoiceRowsOf : relation absente -> liste vide (ancien cache '
+        'offline écrit avant cette carte)', () {
+      expect(CharacterDetailRowMapper.raceChoiceRowsOf(_row()), isEmpty);
+    });
+
+    test('parseRaceSkillChoiceNames résout les noms via skillNames (même map '
+        'que la carte "LES 18 COMPÉTENCES"), ignore les lignes kind=outil', () {
+      final rows = [
+        {'kind': 'competence', 'skill_id': 5, 'tool_id': null},
+        {'kind': 'outil', 'skill_id': null, 'tool_id': 7},
+      ];
+      final names = CharacterDetailRowMapper.parseRaceSkillChoiceNames(
+        rows,
+        skillNames: const {'5': 'Persuasion'},
+      );
+      expect(names, ['Persuasion']);
+    });
+
+    test('parseRaceSkillChoiceNames ignore une ligne dont skill_id ne '
+        'résout à aucun nom (ne devrait pas arriver)', () {
+      final names = CharacterDetailRowMapper.parseRaceSkillChoiceNames([
+        {'kind': 'competence', 'skill_id': 999, 'tool_id': null},
+      ], skillNames: const {});
+      expect(names, isEmpty);
+    });
+
+    test('parseRaceToolChoiceNames résout les noms via toolNames (même map '
+        'que la carte "MAÎTRISES D\'OUTILS"), ignore les lignes kind='
+        'competence', () {
+      final rows = [
+        {'kind': 'competence', 'skill_id': 5, 'tool_id': null},
+        {'kind': 'outil', 'skill_id': null, 'tool_id': 7},
+      ];
+      final names = CharacterDetailRowMapper.parseRaceToolChoiceNames(
+        rows,
+        toolNames: const {'7': 'Outils de forgeron'},
+      );
+      expect(names, ['Outils de forgeron']);
+    });
+
+    test('parseRaceToolChoiceNames ignore une ligne dont tool_id ne résout à '
+        'aucun nom (ne devrait pas arriver)', () {
+      final names = CharacterDetailRowMapper.parseRaceToolChoiceNames([
+        {'kind': 'outil', 'skill_id': null, 'tool_id': 999},
+      ], toolNames: const {});
+      expect(names, isEmpty);
+    });
+
+    test('toCharacterDetail expose raceSkillChoiceNames/raceToolChoiceNames '
+        'tels quels quand fournis, listes vides par défaut (carte "CHOIX DE '
+        'RACE")', () {
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        _row(),
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+        raceSkillChoiceNames: const ['Persuasion', 'Tromperie'],
+        raceToolChoiceNames: const ['Outils de forgeron'],
+      );
+
+      expect(detail.raceSkillChoiceNames, ['Persuasion', 'Tromperie']);
+      expect(detail.raceToolChoiceNames, ['Outils de forgeron']);
+
+      final withoutRaceChoices = CharacterDetailRowMapper.toCharacterDetail(
+        _row(),
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+      expect(withoutRaceChoices.raceSkillChoiceNames, isEmpty);
+      expect(withoutRaceChoices.raceToolChoiceNames, isEmpty);
+    });
+
     test('toCharacterDetail expose backgroundCustomText/classChoices/'
         'knownInvocationNames tels quels quand fournis, backgroundCustomText '
         'reste null par défaut', () {

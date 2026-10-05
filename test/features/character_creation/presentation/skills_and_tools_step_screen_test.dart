@@ -24,6 +24,7 @@ import 'package:personnages/features/character_creation/domain/background_catalo
 import 'package:personnages/features/character_creation/domain/background_option.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
+import 'package:personnages/features/character_creation/domain/character_edit_snapshot.dart';
 import 'package:personnages/features/character_creation/domain/class_catalog.dart';
 import 'package:personnages/features/character_creation/domain/class_option.dart';
 import 'package:personnages/features/character_creation/domain/class_skill_choices.dart';
@@ -32,12 +33,15 @@ import 'package:personnages/features/character_creation/domain/item_catalog.dart
 import 'package:personnages/features/character_creation/domain/language_catalog.dart';
 import 'package:personnages/features/character_creation/domain/language_option.dart';
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
+import 'package:personnages/features/character_creation/domain/race_option.dart';
+import 'package:personnages/features/character_creation/domain/race_tool_choice.dart';
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/domain/tool_option.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_edit_session_provider.dart';
 import 'package:personnages/features/character_creation/presentation/skills_and_tools_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 
@@ -46,12 +50,13 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   BackgroundCatalog? backgroundCatalogToReturn;
   ToolCatalog? toolCatalogToReturn;
   LanguageCatalog? languageCatalogToReturn;
+  RaceCatalog? raceCatalogToReturn;
   Object? classCatalogErrorToThrow;
   Completer<ClassCatalog>? classCatalogCompleter;
 
   @override
   Future<RaceCatalog> fetchRaceCatalog() async =>
-      const RaceCatalog(races: [], subraces: []);
+      raceCatalogToReturn ?? const RaceCatalog(races: [], subraces: []);
 
   @override
   Future<ClassCatalog> fetchClassCatalog() async {
@@ -157,6 +162,24 @@ const _ermite = BackgroundOption(
   featureDescription: '',
 );
 
+// Classe dédiée aux tests des sections 5/6 "(RACE)" : quota (1) ET candidats
+// ('Athlétisme'/'Perception') volontairement distincts/sans chevauchement
+// avec les candidats du Changelin/Satyre utilisés aux côtés de cette classe
+// dans ces tests — même rationale que les quotas distincts déjà choisis pour
+// `_noble`/`_ermiteComplet` plus haut dans ce fichier (éviter toute
+// ambiguïté de `find.text`/`tap()` entre deux candidats identiques ou deux
+// badges au même quota).
+const _classSansChevauchementRace = ClassOption(
+  id: 90,
+  name: 'Classe de test',
+  description: '',
+  hitDie: 10,
+  skillChoices: ClassSkillChoices(
+    count: 1,
+    choices: ['Athlétisme', 'Perception'],
+  ),
+);
+
 const _marin = BackgroundOption(
   id: 11,
   name: 'Marin',
@@ -196,6 +219,38 @@ const _ermiteComplet = BackgroundOption(
   featureDescription: '',
   toolOrLanguageGrantedTools: ["Outils d'herboriste"],
   languageChoiceCount: 3,
+);
+
+// Changelin : choix interactif de compétences de race, pas d'outil — section
+// 5 "COMPÉTENCES (RACE)" interactive seule.
+const _changelin = RaceOption(
+  id: 31,
+  name: 'Changelin',
+  abilityBonuses: {},
+  traits: [],
+  source: '',
+  skillChoice: ClassSkillChoices(
+    count: 2,
+    choices: [
+      'Intimidation',
+      'Perspicacité',
+      'Persuasion',
+      'Représentation',
+      'Tromperie',
+    ],
+  ),
+);
+
+// Satyre : octroi automatique de compétences (non interactif) ET choix
+// interactif d'outil — les deux sections "(RACE)" actives, l'une verrouillée.
+const _satyre = RaceOption(
+  id: 42,
+  name: 'Satyre',
+  abilityBonuses: {},
+  traits: [],
+  source: '',
+  skillProficiencies: ['Persuasion', 'Représentation'],
+  toolChoice: RaceToolChoice(count: 1, choices: ['Luth', 'Flûte']),
 );
 
 const _lutTool = ToolOption(id: 100, name: 'Luth', category: 'instrument');
@@ -243,7 +298,10 @@ void main() {
   // importe la route exacte pour eux) ; la route stub "étape 7" affiche un
   // texte distinct ("Étape suivante (sorts sautés)") uniquement pour le
   // groupe de tests dédié au saut de l'étape 6/9 pour une classe non
-  // lanceuse de sorts, qui a besoin de distinguer les deux routes.
+  // lanceuse de sorts, qui a besoin de distinguer les deux routes. La route
+  // stub "étape 8" (même texte que "étape 7") est la cible réelle en mode
+  // modification pour une classe non lanceuse (voir `_submit`), utilisée par
+  // le groupe de tests "mode modification" ci-dessous.
   GoRouter buildTestRouter() {
     router = GoRouter(
       initialLocation: '/characters/new/step-4',
@@ -269,6 +327,12 @@ void main() {
             body: Center(child: Text('Étape suivante (sorts sautés)')),
           ),
         ),
+        GoRoute(
+          path: '/characters/new/step-8',
+          builder: (context, state) => const Scaffold(
+            body: Center(child: Text('Étape suivante (sorts sautés)')),
+          ),
+        ),
       ],
     );
     return router;
@@ -287,12 +351,14 @@ void main() {
   void selectClassAndBackground({
     required int classId,
     required int backgroundId,
+    int? raceId,
   }) {
     final notifier = container.read(
       characterCreationDraftControllerProvider.notifier,
     );
     notifier.setClass(classId: classId);
     notifier.setBackground(backgroundId: backgroundId);
+    if (raceId != null) notifier.setRace(raceId: raceId);
   }
 
   // Surface de test agrandie en hauteur — même rationale que
@@ -757,6 +823,239 @@ void main() {
       },
     );
   });
+
+  group('section 5 "COMPÉTENCES (RACE)" — choix interactif (Changelin)', () {
+    setUp(() {
+      fakeRepository.classCatalogToReturn = const ClassCatalog(
+        classes: [_classSansChevauchementRace],
+      );
+      fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+        backgrounds: [_ermite],
+      );
+      fakeRepository.raceCatalogToReturn = const RaceCatalog(
+        races: [_changelin],
+        subraces: [],
+      );
+      selectClassAndBackground(classId: 90, backgroundId: 10, raceId: 31);
+    });
+
+    testWidgets('affichée avec le badge de quota et tous les candidats', (
+      WidgetTester tester,
+    ) async {
+      await pumpSkillsAndToolsStep(tester);
+
+      expect(find.text('COMPÉTENCES (RACE)'), findsOneWidget);
+      expect(find.text('0 / 2 choisies'), findsOneWidget);
+      expect(find.text('Persuasion'), findsOneWidget);
+      expect(find.text('Tromperie'), findsOneWidget);
+    });
+
+    testWidgets(
+      '"Suivant" exige le quota de compétences de race ET de classe',
+      (WidgetTester tester) async {
+        await pumpSkillsAndToolsStep(tester);
+
+        // Quota de classe (1) seul atteint -> toujours bloqué (race
+        // manquante).
+        await tester.tap(find.text('Athlétisme'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1 choisies'), findsOneWidget);
+        await tester.tap(find.text('SUIVANT'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Étape suivante'), findsNothing);
+
+        await tester.tap(find.text('Persuasion'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Étape suivante'), findsNothing);
+
+        await tester.tap(find.text('Tromperie'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
+        expect(
+          readDraft().raceSkillChoices,
+          containsAll(['Persuasion', 'Tromperie']),
+        );
+        expect(readDraft().raceSkillChoices.length, 2);
+      },
+    );
+  });
+
+  group('sections 5 "COMPÉTENCES (RACE)" (octroi automatique) et 6 "OUTILS '
+      '(RACE)" (choix interactif) simultanées (Satyre)', () {
+    setUp(() {
+      fakeRepository.classCatalogToReturn = const ClassCatalog(
+        classes: [_guerrier],
+      );
+      fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+        backgrounds: [_ermite],
+      );
+      fakeRepository.raceCatalogToReturn = const RaceCatalog(
+        races: [_satyre],
+        subraces: [],
+      );
+      fakeRepository.toolCatalogToReturn = const ToolCatalog(
+        tools: [_lutTool, _fluteTool],
+      );
+      selectClassAndBackground(classId: 1, backgroundId: 10, raceId: 42);
+    });
+
+    testWidgets(
+      'compétences octroyées automatiquement (non cliquables) ET outils '
+      'au choix affichés ensemble',
+      (WidgetTester tester) async {
+        await pumpSkillsAndToolsStep(tester);
+
+        expect(find.text('COMPÉTENCES (RACE)'), findsOneWidget);
+        expect(find.text('Persuasion'), findsOneWidget);
+        expect(find.text('Représentation'), findsOneWidget);
+
+        final automaticTile = tester.widget<CheckableOptionTile>(
+          find.ancestor(
+            of: find.text('Persuasion'),
+            matching: find.byType(CheckableOptionTile),
+          ),
+        );
+        expect(automaticTile.checked, isTrue);
+        expect(automaticTile.enabled, isFalse);
+
+        await tester.dragUntilVisible(
+          find.text('OUTILS (RACE)'),
+          find.byType(Scrollable),
+          const Offset(0, -100),
+        );
+        expect(find.text('OUTILS (RACE)'), findsOneWidget);
+        expect(find.text('0 / 1 choisies'), findsOneWidget);
+        expect(find.text('Luth'), findsOneWidget);
+        expect(find.text('Flûte'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      '"Suivant" exige le quota d\'outil de race, l\'octroi automatique de '
+      'compétence ne bloque jamais',
+      (WidgetTester tester) async {
+        await pumpSkillsAndToolsStep(tester);
+
+        await tester.tap(find.text('Athlétisme'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Intimidation'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Étape suivante'), findsNothing);
+
+        await tester.dragUntilVisible(
+          find.text('Luth'),
+          find.byType(Scrollable),
+          const Offset(0, -100),
+        );
+        await tester.tap(find.text('Luth'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
+        expect(readDraft().raceToolChoices, ['Luth']);
+        expect(
+          readDraft().raceSkillChoices,
+          isEmpty,
+          reason:
+              'octroi automatique : jamais porté par le brouillon, résolu '
+              'directement depuis RaceOption.skillProficiencies à '
+              "l'étape 9",
+        );
+      },
+    );
+  });
+
+  group(
+    'mode modification (personnage existant) : les sections "(RACE)" '
+    'restent masquées même pour une race à choix (gap documenté — '
+    'CharacterEditHydrator/CharacterEditPlanner ignorent '
+    'raceSkillChoices/raceToolChoices, voir skills_and_tools_step_screen.dart)',
+    () {
+      void startEditSession() {
+        const draft = CharacterCreationDraft(
+          classId: 1,
+          backgroundId: 10,
+          raceId: 31,
+        );
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .replaceWith(draft);
+        container
+            .read(characterEditSessionControllerProvider.notifier)
+            .start(
+              const CharacterEditSession(
+                snapshot: CharacterEditSnapshot(
+                  characterId: 'c1',
+                  name: 'Brunhilde',
+                  primaryClassId: 1,
+                  primaryClassLevel: 1,
+                  totalLevel: 1,
+                  maxHp: 10,
+                  currentHp: 10,
+                ),
+                originalDraft: draft,
+              ),
+            );
+      }
+
+      setUp(() {
+        fakeRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [_guerrier],
+        );
+        fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+          backgrounds: [_ermite],
+        );
+        // Changelin (choix interactif de compétences) : si ce gap n'était
+        // pas géré, la section 5 "COMPÉTENCES (RACE)" apparaîtrait ici.
+        fakeRepository.raceCatalogToReturn = const RaceCatalog(
+          races: [_changelin],
+          subraces: [],
+        );
+        startEditSession();
+      });
+
+      testWidgets(
+        'la section "COMPÉTENCES (RACE)" n\'apparaît pas, même si la race '
+        'du personnage édité en a une',
+        (WidgetTester tester) async {
+          await pumpSkillsAndToolsStep(tester);
+
+          // Assertion positive d'abord : vérifie que l'écran a bien chargé
+          // son contenu réel (pas resté en chargement/erreur, ce qui
+          // masquerait trivialement "COMPÉTENCES (RACE)" sans rien prouver).
+          expect(find.text('COMPÉTENCES DE CLASSE'), findsOneWidget);
+          expect(find.text('COMPÉTENCES (RACE)'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        '"Suivant" ne reste jamais bloqué par un quota de race invisible : '
+        'seul le quota de compétences de classe compte',
+        (WidgetTester tester) async {
+          await pumpSkillsAndToolsStep(tester);
+
+          await tester.tap(find.text('Athlétisme'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Intimidation'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('SUIVANT'));
+          await tester.pumpAndSettle();
+
+          // Mode modification, classe non lanceuse : étape Équipement
+          // toujours sautée (voir `_submit`), direction vers l'étape 8.
+          expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
+        },
+      );
+    },
+  );
 
   testWidgets(
     'revenir sur l\'étape avec un brouillon déjà rempli réhydrate les 3 '

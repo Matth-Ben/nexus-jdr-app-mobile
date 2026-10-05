@@ -31,6 +31,17 @@ abstract final class ToolProficiencyResolver {
     required List<String> classGrantedToolNames,
     required List<String> backgroundGrantedToolTexts,
     required ToolCatalog catalog,
+
+    /// Choix interactif d'outils de race (`CharacterCreationDraft
+    /// .raceToolChoices`, étape 5/9, carte "CHOIX DE RACE" de la fiche) —
+    /// défaut vide pour ne pas casser les appelants existants qui n'en
+    /// tiennent pas compte (`CharacterEditPlanner`, mode modification, même
+    /// gap documenté que `SkillProficiencyResolver.resolve`). Résolue comme
+    /// [classToolNames] (nom exact contre [catalog], repli `custom_text` si
+    /// non trouvé) — jamais de race avec un octroi automatique de type
+    /// "liste de noms précis" à ce jour (contrairement aux classes), donc
+    /// pas de pendant à [classGrantedToolNames] ici.
+    List<String> raceToolNames = const [],
   }) {
     final idByName = {for (final tool in catalog.tools) tool.name: tool.id};
     final entries = <({int? toolId, String? customText})>[];
@@ -51,6 +62,9 @@ abstract final class ToolProficiencyResolver {
       addResolvable(name);
     }
     for (final name in classGrantedToolNames) {
+      addResolvable(name);
+    }
+    for (final name in raceToolNames) {
       addResolvable(name);
     }
     for (final text in backgroundGrantedToolTexts) {

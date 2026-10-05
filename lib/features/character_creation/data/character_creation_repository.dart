@@ -22,6 +22,7 @@ import '../domain/item_catalog.dart';
 import '../domain/language_catalog.dart';
 import '../domain/language_selection_resolver.dart';
 import '../domain/race_catalog.dart';
+import '../domain/race_option.dart';
 import '../domain/skill_catalog.dart';
 import '../domain/skill_proficiency_resolver.dart';
 import '../domain/spell_catalog.dart';
@@ -289,7 +290,10 @@ class SupabaseCharacterCreationRepository
     try {
       final raceRows = await _client
           .from('races')
-          .select('id, ability_bonuses, traits, is_incomplete, source')
+          .select(
+            'id, ability_bonuses, traits, is_incomplete, source, '
+            'skill_choice, tool_choice, skill_proficiencies',
+          )
           .order('id', ascending: true);
       final subraceRows = await _client
           .from('subraces')
@@ -303,12 +307,31 @@ class SupabaseCharacterCreationRepository
         entityType: 'subrace',
         entityIds: RaceRowMapper.collectIds(subraceRows),
       );
+      // Catalogue d'outils complet, nécessaire pour développer la forme
+      // `categories`/le choix libre de `races.tool_choice` (voir
+      // `RaceRowMapper.parseToolChoice`) en liste plate de noms — mêmes
+      // colonnes que `fetchToolCatalog`, requêtées à nouveau ici (plutôt que
+      // via un appel à cette méthode) pour que le payload de CE cache
+      // (`race_catalog`) reste autonome : `_mapRaceCatalogPayload` doit
+      // rester synchrone (signature imposée par [_mappedFromCache]/
+      // [_mappedFromFreshCache]), donc ne peut pas déclencher lui-même une
+      // requête réseau/un second accès cache.
+      final toolRows = await _client
+          .from('tools')
+          .select('id, category')
+          .order('id', ascending: true);
+      final toolNameRows = await _fetchTranslationRows(
+        entityType: 'tool',
+        entityIds: ToolRowMapper.collectIds(toolRows),
+      );
 
       final payload = <String, dynamic>{
         'races': raceRows,
         'subraces': subraceRows,
         'raceNames': raceNameRows,
         'subraceNames': subraceNameRows,
+        'tools': toolRows,
+        'toolNames': toolNameRows,
       };
       await _writeCacheBestEffort(_raceCatalogCacheKey, payload);
       return _mapRaceCatalogPayload(payload);
@@ -339,6 +362,17 @@ class SupabaseCharacterCreationRepository
     final subraceNames = RaceRowMapper.parseTranslatedNames(
       _rowsOf(payload['subraceNames']),
     );
+    // Réutilise le mapper de `fetchToolCatalog` tel quel (même paire de clés
+    // 'tools'/'toolNames') plutôt que de dupliquer sa logique de résolution
+    // des noms — voir `RaceRowMapper.parseToolChoice`, qui a besoin de ce
+    // catalogue complet pour développer `races.tool_choice` par catégorie/
+    // choix libre. Un ancien cache écrit avant l'introduction de ces clés
+    // retombe sur un `ToolCatalog` vide (`_rowsOf(null) == []`), voir la doc
+    // de [RaceRowMapper.toRaceOption] pour le gap assumé dans ce cas.
+    final toolCatalogForRaces = _mapToolCatalogPayload({
+      'tools': payload['tools'],
+      'toolNames': payload['toolNames'],
+    });
     return RaceCatalog(
       // Une race `is_incomplete: true` (contenu de référence encore en cours
       // de peuplement — pas de traits/bonus/sous-race saisis, voir la doc de
@@ -360,7 +394,13 @@ class SupabaseCharacterCreationRepository
       // sans retrier lui-même.
       races:
           _rowsOf(payload['races'])
-              .map((row) => RaceRowMapper.toRaceOption(row, names: raceNames))
+              .map(
+                (row) => RaceRowMapper.toRaceOption(
+                  row,
+                  names: raceNames,
+                  toolCatalog: toolCatalogForRaces,
+                ),
+              )
               .where((race) => !race.isIncomplete)
               .toList()
             ..sort((a, b) {
@@ -983,6 +1023,17 @@ class SupabaseCharacterCreationRepository
     for (final subrace in raceCatalog.subraces) {
       if (subrace.id == draft.subraceId) subraceName = subrace.name;
     }
+    // Race choisie (pour ses choix de compétence(s)/outil(s) de race — carte
+    // "CHOIX DE RACE" de la fiche, voir plus bas) : `null` pour une race
+    // personnalisée (`draft.raceId` nul) ou si l'id ne résout à aucune race
+    // du catalogue (ne devrait pas arriver, [raceCatalog] vient du même
+    // écran "Récapitulatif" qui a affiché ce choix) — dans les deux cas,
+    // [raceOption] reste `null` et aucune ligne `character_race_choices`
+    // n'est écrite plus bas, même traitement défensif que [subraceName].
+    RaceOption? raceOption;
+    for (final race in raceCatalog.races) {
+      if (race.id == draft.raceId) raceOption = race;
+    }
     // Sous-classe de niveau 1 (Ensorceleur) : seul son nom compte ici, pour
     // la Résilience draconique.
     String? subclassName;
@@ -1146,9 +1197,24 @@ class SupabaseCharacterCreationRepository
         ]);
       }
 
+      // Compétences/outils de race (choix interactif `draft.raceSkillChoices`/
+      // `draft.raceToolChoices`, étape 5/9, + octroi automatique
+      // `raceOption.skillProficiencies`, Satyre uniquement) : les noms bruts
+      // voyagent directement dans les résolveurs ci-dessous (dédoublonnage
+      // par `skill_id`/`tool_id` avec les compétences/outils de classe/
+      // historique déjà géré par ces résolveurs) — [raceSkillNames] est
+      // recalculée séparément juste après pour résoudre les `skill_id`
+      // PRÉCISÉMENT dus à la race, nécessaires pour `character_race_choices`
+      // (voir plus bas), que `SkillProficiencyResolver.resolve` ne peut pas
+      // distinguer une fois les trois sources fusionnées/dédupliquées.
+      final raceSkillNames = <String>[
+        ...draft.raceSkillChoices,
+        ...(raceOption?.skillProficiencies ?? const <String>[]),
+      ];
       final skillRows = SkillProficiencyResolver.resolve(
         classSkillNames: draft.classSkillChoices,
         backgroundSkillNames: backgroundOption.skillProficiencies,
+        raceSkillNames: raceSkillNames,
         catalog: skillCatalog,
       );
       if (skillRows.isNotEmpty) {
@@ -1166,6 +1232,7 @@ class SupabaseCharacterCreationRepository
         classToolNames: draft.classToolChoices,
         classGrantedToolNames: classOption.grantedToolNames,
         backgroundGrantedToolTexts: backgroundOption.toolOrLanguageGrantedTools,
+        raceToolNames: draft.raceToolChoices,
         catalog: toolCatalog,
       );
       if (toolRows.isNotEmpty) {
@@ -1175,6 +1242,48 @@ class SupabaseCharacterCreationRepository
               'character_id': characterId,
               'tool_id': row.toolId,
               'custom_text': row.customText,
+            },
+        ]);
+      }
+
+      // `character_race_choices` : réaffichage précis, sur la fiche
+      // personnage (carte "CHOIX DE RACE"), de la/des compétence(s)/outil(s)
+      // venant du trait racial à choix — indispensable pour les races à
+      // choix LIBRE (Demi-elfe/Forgelier/Kenku, `choices: null`) où
+      // `character_skill_proficiencies`/`character_tool_proficiencies` seules
+      // ne permettent pas de déduire la source après coup (voir la consigne
+      // d'origine de cette table). Résolution par nom exact contre les
+      // mêmes catalogues que ci-dessus ; un nom sans correspondance (ne
+      // devrait pas arriver, voir [SkillProficiencyResolver]/
+      // [ToolProficiencyResolver]) est ignoré plutôt que de faire échouer
+      // toute la création.
+      final skillIdByName = {
+        for (final skill in skillCatalog.skills) skill.name: skill.id,
+      };
+      final raceSkillIds = <int>{
+        for (final name in raceSkillNames) ?skillIdByName[name],
+      };
+      final toolIdByName = {
+        for (final tool in toolCatalog.tools) tool.name: tool.id,
+      };
+      final raceToolIds = <int>{
+        for (final name in draft.raceToolChoices) ?toolIdByName[name],
+      };
+      if (raceSkillIds.isNotEmpty || raceToolIds.isNotEmpty) {
+        await _client.from('character_race_choices').insert([
+          for (final skillId in raceSkillIds)
+            {
+              'character_id': characterId,
+              'kind': 'competence',
+              'skill_id': skillId,
+              'tool_id': null,
+            },
+          for (final toolId in raceToolIds)
+            {
+              'character_id': characterId,
+              'kind': 'outil',
+              'skill_id': null,
+              'tool_id': toolId,
             },
         ]);
       }

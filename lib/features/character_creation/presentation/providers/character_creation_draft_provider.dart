@@ -52,6 +52,11 @@ class CharacterCreationDraftController
       // La lignée (Drakéide/Tieffelin/Goliath, voir `LineageStepScreen`) ne
       // vaut que pour la race/sous-race précédente.
       lineageId: raceChanged ? null : state.lineageId,
+      // Les compétences/outils de race choisis à l'étape 5 (carte "CHOIX DE
+      // RACE") ne valent que pour la race précédente — même rationale que
+      // `classSkillChoices`/`classToolChoices` dans [setClass].
+      raceSkillChoices: raceChanged ? const <String>[] : state.raceSkillChoices,
+      raceToolChoices: raceChanged ? const <String>[] : state.raceToolChoices,
     );
   }
 
@@ -133,20 +138,27 @@ class CharacterCreationDraftController
   /// Met à jour les compétences/outils/langues choisis à l'étape 5. Fusion
   /// partielle via `copyWith` (même rationale que [setClass]/[setBackground]/
   /// [setAbilityScores]) : cette étape n'a pas de champ à effacer sur les
-  /// étapes suivantes en fonction du choix fait ici. Les trois listes sont
-  /// toujours fournies ensemble (même si une section ne s'appliquait pas,
-  /// auquel cas l'appelant fournit une liste vide) : voir
-  /// `domain/character_creation_draft.dart` pour le rationale des noms
-  /// plutôt que des ids stockés.
+  /// étapes suivantes en fonction du choix fait ici. Les trois premières
+  /// listes sont toujours fournies ensemble par l'écran (même si une section
+  /// ne s'appliquait pas, auquel cas l'appelant fournit une liste vide) :
+  /// voir `domain/character_creation_draft.dart` pour le rationale des noms
+  /// plutôt que des ids stockés. [raceSkillChoices]/[raceToolChoices] à
+  /// défaut vide, même principe, pour les deux sections "(RACE)" qui ne
+  /// s'appliquent qu'à une minorité de races (voir `RaceOption.skillChoice`/
+  /// `toolChoice`).
   void setSkillsAndTools({
     required List<String> classSkillChoices,
     required List<String> classToolChoices,
     required List<String> backgroundLanguageChoices,
+    List<String> raceSkillChoices = const [],
+    List<String> raceToolChoices = const [],
   }) {
     state = state.copyWith(
       classSkillChoices: classSkillChoices,
       classToolChoices: classToolChoices,
       backgroundLanguageChoices: backgroundLanguageChoices,
+      raceSkillChoices: raceSkillChoices,
+      raceToolChoices: raceToolChoices,
     );
   }
 
