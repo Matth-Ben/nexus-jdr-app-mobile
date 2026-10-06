@@ -34,16 +34,24 @@
         <meta-data
             android:name="firebase_analytics_collection_enabled"
             android:value="false" />
-        <!-- Portrait uniquement (décision produit du 06/10/2026), appliqué dès la
-             création de l'activité, donc aussi pendant le splash natif.
-             Écrans d'au moins 600 dp de plus petite largeur (tablettes, pliables
-             dépliés) : Android 16+ ignore `screenOrientation` pour une app
-             ciblant l'API 36 ; la `<property>` ci-dessous le rétablit, mais
-             cesse de s'appliquer à `targetSdk` 37 (figé à 36 dans
-             `build.gradle.kts`). Voir
-             https://developer.android.com/about/versions/16/behavior-changes-16#adaptive-layouts
-             Garanti sur téléphone en plein écran ; le multi-fenêtre n'est pas
-             couvert. -->
+        <!-- Portrait uniquement, sans écran partagé (décisions produit du
+             06/10/2026), appliqué dès la création de l'activité, donc aussi
+             pendant le splash natif.
+             Téléphones (moins de 600 dp de plus petite largeur) : portrait
+             verrouillé, et `resizeableActivity="false"` retire l'app du
+             multi-fenêtre.
+             Tablettes et pliables dépliés (600 dp et plus) : Android 16+ ignore
+             ces deux attributs pour une app ciblant l'API 36 ; la `<property>`
+             ci-dessous les rétablit, mais cesse de s'appliquer à `targetSdk` 37
+             (figé à 36 dans `build.gradle.kts`). Le multi-fenêtre y reste
+             possible : l'app y est alors affichée en mode de compatibilité
+             (mise à l'échelle, bandes possibles ; rendu non vérifié sur
+             appareil). Sur ces écrans (Android 14+), l'utilisateur peut aussi
+             forcer le plein écran dans le format d'affichage de l'app, ce qui
+             la rend redimensionnable (voir
+             https://developer.android.com/guide/practices/device-compatibility-mode).
+             Voir
+             https://developer.android.com/about/versions/16/behavior-changes-16#adaptive-layouts -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -51,6 +59,7 @@
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:screenOrientation="portrait"
+            android:resizeableActivity="false"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
