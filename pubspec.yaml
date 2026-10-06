@@ -131,11 +131,10 @@ dev_dependencies:
   build_runner: ^2.16.0
   freezed: ^4.0.0
   json_serializable: ^6.14.1
-  # Génère les configurations natives Android/iOS du splash screen à partir
-  # d'une image + d'une couleur de fond (voir section `flutter_native_splash:`
-  # plus bas) — dev dependency uniquement : le rendu natif est produit une
-  # fois via `dart run flutter_native_splash:create`, ce package n'est pas
-  # utilisé au runtime de l'app.
+  # Génère les ressources natives Android/iOS du splash screen à partir des
+  # PNG de `assets/splash/` (voir section `flutter_native_splash:` plus bas)
+  # — dev dependency uniquement : lancé par `tool/generate_splash_assets.sh`,
+  # ce package n'est pas utilisé au runtime de l'app.
   flutter_native_splash: ^2.4.8
   # Génère les icônes natives Android/iOS (mipmaps + Assets.xcassets) à partir
   # de `docs/assets/IconAppStore@1x.png` (voir section `flutter_launcher_icons:`
@@ -208,38 +207,50 @@ flutter:
 
 # Configuration de `flutter_native_splash` (voir la dev dependency ci-dessus)
 # — génère les fichiers natifs Android/iOS de l'écran de chargement à partir
-# des PNG sources `assets/splash/*.png`. Ces PNG recyclent exactement
-# l'habillage de `lib/features/auth/presentation/login_screen.dart` (icône
-# `Icons.shield_rounded` + "NEXUS JDR" en `AppTypography.display`) : un splash
-# natif s'affichant avant le démarrage du moteur Flutter, ni la police pixel
-# ni l'icône Material ne sont dessinables nativement, donc ces PNG ont été
-# produits une fois via un script temporaire (`RenderRepaintBoundary.
-# toImage()` sur un widget hors-écran reproduisant exactement cette
-# composition, avec `Press Start 2P` et `MaterialIcons` chargés manuellement
-# via `FontLoader` — la police custom ne se charge pas dans le harnais de
-# test, et les icônes Material n'y sont jamais rasterisées par défaut), lancé
-# via `flutter test`, puis supprimé du dépôt (voir le rapport de la tâche
-# "splash screen" pour son contenu exact si besoin de le régénérer/l'ajuster).
+# des PNG sources `assets/splash/*.png`.
 #
-# Fond : `color`/`background_image` sont mutuellement exclusifs pour ce
-# package (voir son README) — le fond réel de l'écran de connexion
-# (`SceneScaffold`/`AppColors.sceneBackground`) est un dégradé, pas la
-# couleur unie `AppColors.woodMedium`, donc on utilise `background_image`
-# (le dégradé rasterisé) plutôt que `color` ici. Seule la section
-# `android_12` (qui n'autorise qu'une couleur unie, jamais d'image de fond)
-# retombe sur une couleur : `AppColors.woodMedium`, l'approximation unie la
-# plus proche de ce dégradé bois dans la palette du design system.
+# Ces PNG ne sont pas dessinés à la main : `tool/generate_splash_assets.sh`
+# les rend à partir des vrais widgets de l'écran de lancement Flutter
+# (`lib/features/splash/presentation/splash_screen.dart`), puis lance
+# `dart run flutter_native_splash:create`. Un splash natif s'affiche avant le
+# démarrage du moteur Flutter et ne peut contenir que des images : rendues
+# depuis le code, elles reprennent à l'identique le dégradé et l'emblème du
+# splash Flutter avant Android 12 et sur iOS (les joints de planches et le
+# grain de `SceneScaffold` n'y figurent pas). Sur Android 12 et plus, le
+# système centre l'icône à l'écran : saut vertical connu de l'emblème quand
+# Flutter prend le relais. Après toute modification de cette section ou de
+# ce que montre `SplashScreen`, relancer :
+#   tool/generate_splash_assets.sh
 #
-# Après toute modification de cette section, régénérer avec :
-#   dart run flutter_native_splash:create
+# Le package traite chaque image source comme du xxxhdpi (4 px par dp) et en
+# dérive les autres densités : une source ne doit donc jamais dépasser la
+# taille affichée x 4 (des sources de 8000 x 6000 px pesaient 192 Mo une
+# fois décodées, par image).
+#
+# - `background_image` (avant Android 12, et iOS) : 16 x 512 px, le dégradé
+#   vertical `AppColors.sceneBackground`, étiré à l'écran par
+#   `gravity="fill"`. `color` et `background_image` sont mutuellement
+#   exclusifs pour ce package, et le fond réel est un dégradé.
+# - `image` (avant Android 12, et iOS) : 640 x 876 px, soit 160 x 219 dp.
+#   Emblème + "NEXUS JDR" + "PERSONNAGES" en haut d'une toile transparente
+#   de la hauteur de la colonne complète de `SplashScreen` (hauteur mesurée
+#   par le script) : centrée par `gravity="center"`, elle place ces trois
+#   éléments là où Flutter les dessine. Ni les 3 points ni "Préparation de
+#   la taverne…" : un indicateur de chargement figé n'a pas de sens.
+# - `android_12.image` : 1152 x 1152 px, soit 288 x 288 dp, format imposé
+#   par Android pour une icône sans fond (contenu visible dans un cercle de
+#   192 dp de diamètre) ; l'emblème y fait 96 dp, comme dans `SplashScreen`.
+# - `android_12.color` : Android 12 et plus n'accepte qu'une couleur unie en
+#   fond. `AppColors.woodDark` est la teinte de la palette la plus proche du
+#   milieu du dégradé, là où se trouve l'emblème.
+# - Pas d'image de marque (`android_12.branding`) : décision du 07/10/2026.
 flutter_native_splash:
   background_image: "assets/splash/splash_background.png"
   image: "assets/splash/splash_logo.png"
 
   android_12:
-    color: "#6B4226"
+    color: "#3E2415"
     image: "assets/splash/splash_icon_android12.png"
-    branding: "assets/splash/splash_branding_android12.png"
 
 # Configuration de `flutter_launcher_icons` (voir la dev dependency
 # ci-dessus) — génère les icônes natives Android (mipmap-*/ic_launcher.png)
