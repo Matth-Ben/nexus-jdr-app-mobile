@@ -74,6 +74,15 @@ dehors du cahier des charges.
 | `dev-backend-supabase` | Backend/données | Schéma, migrations (dans le dépôt web), politiques RLS, edge functions |
 | `qa-testeur` | Testeur/QA | Écrire les tests, valider une fonctionnalité contre ses critères d'acceptation, chasser les régressions |
 | `code-reviewer` | Revue de code | Relire un diff avant merge (conventions, sécurité, architecture) |
+| `dette-technique` | Audit de dette technique | Analyser le code en place (périssable, fragile, mort) et produire un registre de dette priorisé — ne corrige rien lui-même |
+
+**Tout développement passe par ces sous-agents** (décision du 06/10/2026) :
+la conversation principale n'écrit pas elle-même le code ni les tests d'une
+fonctionnalité ou d'un correctif, elle délègue à `dev-flutter`/
+`dev-backend-supabase`, puis à `qa-testeur`, puis à `code-reviewer` avant de
+pousser la branche — y compris pour une petite modification. Seuls les
+fichiers de configuration et de documentation (ce fichier, `.claude/`,
+`docs/`) restent édités directement.
 
 ### Séquence type pour une fonctionnalité UI
 
@@ -87,6 +96,15 @@ dehors du cahier des charges.
 Pour une fonctionnalité backend/données (nouvelle table, RLS, edge function),
 remplacer l'étape 1 par `dev-backend-supabase`, et prévenir que la migration
 doit être ouverte en PR sur le dépôt **web**, pas ici.
+
+### Audit de dette technique
+
+`dette-technique` n'entre pas dans la séquence d'une fonctionnalité : il
+audite le code déjà en place. À invoquer en fin de phase de roadmap, avant
+d'attaquer une grosse fonctionnalité sur une zone déjà dense, ou sur
+demande. Il rend un registre priorisé ; le chef de projet choisit quoi
+traiter, puis chaque correction retenue suit la séquence habituelle
+(`dev-flutter` → `qa-testeur` → `code-reviewer`).
 
 ### Découpage par phase (voir `06-roadmap.md`)
 
