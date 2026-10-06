@@ -8,7 +8,6 @@ import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/spell_damage_dice_extractor.dart';
 import '../../domain/spell_grant_source.dart';
-import '../../domain/spell_status_formatter.dart';
 import '../../domain/spells_by_level_grouper.dart';
 import 'spell_action_sheet.dart';
 import 'spell_info_panel.dart';
@@ -28,13 +27,6 @@ import 'spell_info_panel.dart';
 /// (`character_detail_screen.dart::_castSpell`), même principe que
 /// `onTapAdjustHp`/`onTapRest` de `_CharacterTabBody`.
 ///
-/// Section "FAVORIS" (voir [favorites]) affichée en tête, avant même le
-/// bloc "Magie de pacte" — voir `docs/cahier-des-charges/`
-/// 11-fonctionnalites-a-ajouter.md, section "Onglet Sorts" : "Favoris /
-/// épinglage des sorts fréquemment utilisés (accès rapide en combat)".
-/// Absente du tout quand [favorites] est vide (aucun favori épinglé), même
-/// principe que le bloc "Magie de pacte".
-///
 /// N'affiche rien tant que [groups] est vide — appelant responsable de ne
 /// pas monter cette section dans ce cas (voir
 /// `character_spells_tab_body.dart`).
@@ -43,9 +35,7 @@ class CharacterSpellsSection extends StatelessWidget {
     required this.groups,
     required this.spellSlots,
     required this.onCastSpell,
-    required this.onToggleFavorite,
     required this.onTogglePrepared,
-    this.favorites = const [],
     this.pactSlot,
     this.preparedLimit,
     this.preparedCount = 0,
@@ -65,12 +55,6 @@ class CharacterSpellsSection extends StatelessWidget {
   /// .preparedSpellCount`, sorts mineurs et sorts accordés exclus).
   final int preparedCount;
 
-  /// Sorts épinglés (`CharacterSpellEntry.isFavorite`), toutes classes/tous
-  /// niveaux confondus — voir la documentation de classe, section
-  /// "FAVORIS". Déjà filtré par l'appelant (recherche active incluse, voir
-  /// `character_spells_tab_body.dart`).
-  final List<CharacterSpellEntry> favorites;
-
   /// Emplacements de sorts par niveau — indexé par niveau dans [build] pour
   /// afficher les pastilles du bon niveau à côté de chaque titre de groupe,
   /// et transmis tel quel à [showSpellInfoPanel] (calcul d'éligibilité).
@@ -85,9 +69,6 @@ class CharacterSpellsSection extends StatelessWidget {
 
   final CastSpellCallback onCastSpell;
 
-  /// Étoile de [_SpellRow] — voir `CharacterRepository.setSpellFavorite`.
-  final ToggleSpellFlagCallback onToggleFavorite;
-
   /// Bascule "Préparer ce sort"/"Ne plus préparer" du panneau "Infos" — voir
   /// `CharacterRepository.setSpellPrepared`. Jamais appelée pour un sort dont
   /// [SpellStatusFormatter.canTogglePrepared] est faux (le panneau masque
@@ -100,24 +81,22 @@ class CharacterSpellsSection extends StatelessWidget {
   /// même verrou déjà appliqué au bandeau PV (`CharacterVitalsCard
   /// .hpActionsDisabled`), ferme ici le même type de course qu'un lancer de
   /// sort démarré pendant que le repos écrit encore en base (voir la
-  /// documentation de `_castSpell`). N'affecte pas [onToggleFavorite]/
-  /// [onTogglePrepared] : épingler un sort ou basculer sa préparation
-  /// n'entre jamais en course avec un repos, contrairement au lancer d'un
-  /// sort.
+  /// documentation de `_castSpell`). N'affecte pas [onTogglePrepared] :
+  /// basculer la préparation d'un sort n'entre jamais en course avec un
+  /// repos, contrairement au lancer d'un sort.
   final bool actionsDisabled;
 
   @override
   Widget build(BuildContext context) {
     final slotsByLevel = {for (final slot in spellSlots) slot.level: slot};
     final hasPact = pactSlot != null && pactSlot!.total > 0;
-    // La carte "SORTS" (titre + compteur "PRÉPARÉS"/favoris/magie de pacte)
-    // n'a de sens que si elle porte au moins un de ces trois contenus —
+    // La carte "SORTS" (titre + compteur "PRÉPARÉS"/magie de pacte) n'a de
+    // sens que si elle porte au moins un de ces deux contenus —
     // sinon elle ne contiendrait que le titre "SORTS" tout seul, un bloc
     // vide au-dessus des cartes de niveau (chacune déjà clairement
     // identifiée par son propre titre "Sorts mineurs"/"Niveau N") — demande
     // utilisateur du 23/09/2026.
-    final hasMetaContent =
-        preparedLimit != null || favorites.isNotEmpty || hasPact;
+    final hasMetaContent = preparedLimit != null || hasPact;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,27 +129,6 @@ class CharacterSpellsSection extends StatelessWidget {
                     limit: preparedLimit!,
                   ),
                 ],
-                if (favorites.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _FavoritesSection(
-                    favorites: favorites,
-                    spellSlots: spellSlots,
-                    pactSlot: pactSlot,
-                    onCastSpell: onCastSpell,
-                    onToggleFavorite: onToggleFavorite,
-                    onTogglePrepared: onTogglePrepared,
-                    enabled: !actionsDisabled,
-                  ),
-                  // Séparateur entre favoris et magie de pacte uniquement
-                  // (plus de groupes par niveau après, désormais leurs
-                  // propres blocs distincts sous cette carte — voir
-                  // [groups] ci-dessous) : jamais de séparateur en pied de
-                  // carte sans rien après.
-                  if (hasPact) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    Container(height: 1, color: AppColors.gaugeTrack),
-                  ],
-                ],
                 // Bloc de section (pas un groupe de sorts) affiché une seule
                 // fois, uniquement pour un Occultiste (ou un Occultiste
                 // multiclassé) — même garde défensive que [hasPact].
@@ -196,7 +154,6 @@ class CharacterSpellsSection extends StatelessWidget {
             spellSlots: spellSlots,
             pactSlot: pactSlot,
             onCastSpell: onCastSpell,
-            onToggleFavorite: onToggleFavorite,
             onTogglePrepared: onTogglePrepared,
             actionsDisabled: actionsDisabled,
           ),
@@ -269,79 +226,6 @@ class PreparedSpellsCounter extends StatelessWidget {
   }
 }
 
-/// Section "FAVORIS" — carte à bordure/emphase dorée (même token que
-/// l'emplacement "PO" de `character_inventory_stat_boxes_row.dart`), une
-/// [_SpellRow] par sort épinglé avec `showLevelInSubtitle: true` (les
-/// favoris mélangent des sorts de plusieurs niveaux, contrairement aux
-/// groupes par niveau ci-dessous où le niveau est déjà porté par le titre de
-/// section).
-class _FavoritesSection extends StatelessWidget {
-  const _FavoritesSection({
-    required this.favorites,
-    required this.spellSlots,
-    this.pactSlot,
-    required this.onCastSpell,
-    required this.onToggleFavorite,
-    required this.onTogglePrepared,
-    required this.enabled,
-  });
-
-  final List<CharacterSpellEntry> favorites;
-  final List<CharacterSpellSlot> spellSlots;
-  final CharacterSpellSlot? pactSlot;
-  final CastSpellCallback onCastSpell;
-  final ToggleSpellFlagCallback onToggleFavorite;
-  final ToggleSpellFlagCallback onTogglePrepared;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.parchmentCardAlt,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: AppColors.goldEnd,
-          width: AppBorders.cardEmphasis,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.star, size: 14, color: AppColors.goldEnd),
-              const SizedBox(width: AppSpacing.xs / 2),
-              Text(
-                'FAVORIS',
-                style: AppTypography.display(
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          for (final spell in favorites)
-            _SpellRow(
-              spell: spell,
-              spellSlots: spellSlots,
-              pactSlot: pactSlot,
-              onCastSpell: onCastSpell,
-              onToggleFavorite: onToggleFavorite,
-              onTogglePrepared: onTogglePrepared,
-              enabled: enabled,
-              showLevelInSubtitle: true,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Bloc de section "Magie de pacte" (increment magie de pacte de
 /// l'Occultiste) : icône + libellé "Magie de pacte — Niveau {L}" + pips de
 /// pacte, spec visuelle direction-artistique. Jamais coloré en
@@ -382,7 +266,6 @@ class _SpellLevelGroupSection extends StatelessWidget {
     required this.spellSlots,
     this.pactSlot,
     required this.onCastSpell,
-    required this.onToggleFavorite,
     required this.onTogglePrepared,
     required this.actionsDisabled,
   });
@@ -392,7 +275,6 @@ class _SpellLevelGroupSection extends StatelessWidget {
   final List<CharacterSpellSlot> spellSlots;
   final CharacterSpellSlot? pactSlot;
   final CastSpellCallback onCastSpell;
-  final ToggleSpellFlagCallback onToggleFavorite;
   final ToggleSpellFlagCallback onTogglePrepared;
   final bool actionsDisabled;
 
@@ -437,7 +319,6 @@ class _SpellLevelGroupSection extends StatelessWidget {
               spellSlots: spellSlots,
               pactSlot: pactSlot,
               onCastSpell: onCastSpell,
-              onToggleFavorite: onToggleFavorite,
               onTogglePrepared: onTogglePrepared,
               enabled: !actionsDisabled,
             ),
@@ -531,39 +412,20 @@ class _SpellRow extends StatelessWidget {
     required this.spellSlots,
     this.pactSlot,
     required this.onCastSpell,
-    required this.onToggleFavorite,
     required this.onTogglePrepared,
     required this.enabled,
-    this.showLevelInSubtitle = false,
   });
 
   final CharacterSpellEntry spell;
   final List<CharacterSpellSlot> spellSlots;
   final CharacterSpellSlot? pactSlot;
   final CastSpellCallback onCastSpell;
-  final ToggleSpellFlagCallback onToggleFavorite;
   final ToggleSpellFlagCallback onTogglePrepared;
   final bool enabled;
-
-  /// `true` dans la section "FAVORIS" (mélange plusieurs niveaux, le niveau
-  /// doit donc être précisé) — `false` dans un groupe par niveau, où le
-  /// niveau est déjà porté par le titre de section ("Niveau 1"...).
-  final bool showLevelInSubtitle;
 
   @override
   Widget build(BuildContext context) {
     final dice = SpellDamageDiceExtractor.extract(spell.description);
-    final statusText = SpellStatusFormatter.subtitle(spell);
-    final subtitle = showLevelInSubtitle
-        ? ['niv. ${spell.level}', ?statusText].join(' · ')
-        : statusText;
-    // Un sort mineur (niveau 0) n'a jamais de sous-titre (voir
-    // `SpellStatusFormatter.subtitle`) : sur une seule ligne de contenu, le
-    // plancher tactile standard de 44 (repris pour un sort de niveau ≥ 1,
-    // sur deux lignes) laissait un grand espace vide sous le nom, donnant
-    // l'impression d'un écart excessif entre chaque sort mineur d'une liste
-    // souvent longue — demande utilisateur du 23/09/2026.
-    final rowMinHeight = spell.level == 0 ? 32.0 : 44.0;
 
     return Material(
       color: Colors.transparent,
@@ -579,55 +441,43 @@ class _SpellRow extends StatelessWidget {
               )
             : null,
         child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: rowMinHeight),
+          // Une seule ligne de contenu par sort (plus de sous-titre de
+          // statut) : même plancher réduit que celui déjà retenu pour les
+          // sorts mineurs (demande utilisateur du 23/09/2026), le plancher
+          // tactile standard de 44 laissant un grand vide sous le nom.
+          constraints: const BoxConstraints(minHeight: 32),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs / 2),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        spell.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.body(fontSize: 13),
+                // Nom + dé de dégâts collés l'un à l'autre à gauche, la
+                // pastille "DOMAINE"/"SERMENT" repoussée en face, à droite
+                // — demande utilisateur du 06/10/2026.
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          spell.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.body(fontSize: 13),
+                        ),
                       ),
-                    ),
-                    if (spell.grantSource != null) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      _GrantBadge(source: spell.grantSource!),
+                      if (dice != null) ...[
+                        const SizedBox(width: AppSpacing.xs),
+                        DiceTypeBadge(
+                          sides: dice.sides,
+                          label: '${dice.count}d${dice.sides}',
+                        ),
+                      ],
                     ],
-                    // Un sort accordé par une sous-classe sans ligne
-                    // `character_spells` (dérivé pur) n'a rien sur quoi
-                    // écrire un favori : pas d'étoile.
-                    if (spell.isPersisted) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      _FavoriteStar(
-                        isFavorite: spell.isFavorite,
-                        onTap: enabled ? () => onToggleFavorite(spell) : null,
-                      ),
-                    ],
-                    if (dice != null) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      DiceTypeBadge(
-                        sides: dice.sides,
-                        label: '${dice.count}d${dice.sides}',
-                      ),
-                    ],
-                  ],
-                ),
-                if (subtitle != null)
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.body(
-                      fontSize: 11,
-                      color: AppColors.textMuted,
-                    ),
                   ),
+                ),
+                if (spell.grantSource != null) ...[
+                  const SizedBox(width: AppSpacing.xs),
+                  _GrantBadge(source: spell.grantSource!),
+                ],
               ],
             ),
           ),
@@ -675,35 +525,6 @@ class _GrantBadge extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Étoile de favori, zone de tap indépendante de celle de la ligne (voir
-/// [_SpellRow.onTap]) — `Icons.star`/`AppColors.goldEnd` épinglé,
-/// `Icons.star_border`/`AppColors.textMuted` sinon.
-class _FavoriteStar extends StatelessWidget {
-  const _FavoriteStar({required this.isFavorite, required this.onTap});
-
-  final bool isFavorite;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xs / 2),
-          child: Icon(
-            isFavorite ? Icons.star : Icons.star_border,
-            size: 18,
-            color: isFavorite ? AppColors.goldEnd : AppColors.textMuted,
-          ),
         ),
       ),
     );

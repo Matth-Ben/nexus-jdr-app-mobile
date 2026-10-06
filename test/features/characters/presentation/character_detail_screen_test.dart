@@ -115,12 +115,6 @@ class _FakeCharacterRepository implements CharacterRepository {
   WriteOutcome setInspirationOutcomeToReturn = WriteOutcome.synced;
   Object? setInspirationErrorToThrow;
 
-  int? lastFavoritedSpellId;
-  bool? lastSetSpellFavoriteValue;
-  int setSpellFavoriteCallCount = 0;
-  WriteOutcome setSpellFavoriteOutcomeToReturn = WriteOutcome.synced;
-  Object? setSpellFavoriteErrorToThrow;
-
   int? lastPreparedSpellId;
   bool? lastSetSpellPreparedValue;
   int setSpellPreparedCallCount = 0;
@@ -184,15 +178,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     required String characterId,
     required int spellId,
     required bool isFavorite,
-  }) async {
-    setSpellFavoriteCallCount++;
-    lastFavoritedSpellId = spellId;
-    lastSetSpellFavoriteValue = isFavorite;
-    if (setSpellFavoriteErrorToThrow != null) {
-      throw setSpellFavoriteErrorToThrow!;
-    }
-    return setSpellFavoriteOutcomeToReturn;
-  }
+  }) => throw UnimplementedError();
 
   @override
   Future<WriteOutcome> setSpellPrepared({
@@ -2157,8 +2143,7 @@ void main() {
     });
   });
 
-  group('favoris de sorts, distinction connu/préparé (increment 6 — actions '
-      'd\'écriture)', () {
+  group('distinction connu/préparé (increment 6 — actions d\'écriture)', () {
     Future<void> pumpSpellsTab(WidgetTester tester) async {
       fakeRepository.detailToReturn = _baseDetail.copyWith(
         spells: const [
@@ -2178,42 +2163,6 @@ void main() {
       await tester.tap(find.text('SORTS'));
       await tester.pumpAndSettle();
     }
-
-    testWidgets(
-      "taper l'étoile d'un sort appelle setSpellFavorite avec le spellId et "
-      "la valeur inverse de l'état courant",
-      (tester) async {
-        await pumpSpellsTab(tester);
-
-        await tester.tap(find.byIcon(Icons.star_border));
-        await tester.pumpAndSettle();
-
-        expect(fakeRepository.setSpellFavoriteCallCount, 1);
-        expect(fakeRepository.lastFavoritedSpellId, 1);
-        expect(fakeRepository.lastSetSpellFavoriteValue, isTrue);
-      },
-    );
-
-    testWidgets(
-      'setSpellFavorite mis en file (mode hors-ligne) : même convention que '
-      'setInspiration — jamais mis en file côté repository',
-      (tester) async {
-        fakeRepository.setSpellFavoriteOutcomeToReturn = WriteOutcome.queued;
-
-        await pumpSpellsTab(tester);
-
-        await tester.tap(find.byIcon(Icons.star_border));
-        await tester.pumpAndSettle();
-
-        expect(
-          find.text(
-            "Hors ligne : cette action n'a pas pu être enregistrée. "
-            'Réessayez une fois reconnecté.',
-          ),
-          findsOneWidget,
-        );
-      },
-    );
 
     testWidgets('taper "Préparer ce sort" dans le panneau "Infos" appelle '
         'setSpellPrepared(prepared: true) pour un sort \'connu\'', (
