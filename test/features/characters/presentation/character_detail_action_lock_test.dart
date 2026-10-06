@@ -449,9 +449,9 @@ void main() {
 
       // Le tap ouvre toujours le panneau de description (lecture), mais son
       // bouton "Utiliser" reste désactivé tant que l'appel est en vol.
-      await tester.tap(find.text('Rage'), warnIfMissed: false);
+      await tester.tap(find.text('Rage'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('UTILISER'), warnIfMissed: false);
+      await tester.tap(find.text('UTILISER'));
       await tester.pumpAndSettle();
 
       expect(

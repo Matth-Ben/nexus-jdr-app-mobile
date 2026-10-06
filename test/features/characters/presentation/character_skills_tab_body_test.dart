@@ -390,7 +390,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('CONDUIT DIVIN'), findsOneWidget);
 
-      await tester.tap(find.text('UTILISER'), warnIfMissed: false);
+      await tester.tap(find.text('UTILISER'));
       await tester.pumpAndSettle();
 
       expect(used, isFalse);

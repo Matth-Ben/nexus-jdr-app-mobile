@@ -35,6 +35,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/core/router/route_observer_provider.dart';
 import 'package:personnages/core/theme/app_colors.dart';
+import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:personnages/core/widgets/dashed_border_painter.dart';
 import 'package:personnages/features/characters/presentation/character_list_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
@@ -394,6 +395,19 @@ class _FakeAppVersionRepository implements AppVersionRepository {
   @override
   Future<AppVersionRow> fetchCurrentPlatformVersion() async => _row;
 }
+
+/// Bouton de filtre de la barre de recherche, cible réelle du tap de
+/// l'utilisateur (l'`InkWell` 44×44 de `_FilterButton`, privé à l'écran).
+///
+/// Ne pas taper `find.byIcon(Icons.filter_list)` directement : dès qu'un
+/// filtre est actif, la pastille dorée `_FilterActiveDot` est superposée au
+/// centre du glyphe et intercepte le hit test à sa place. Le tap atteignait
+/// quand même l'`InkWell` (la sheet s'ouvrait), mais `tester.tap` émettait
+/// un avertissement "would not hit test on the specified widget".
+Finder _filterButton() => find.ancestor(
+  of: find.byIcon(Icons.filter_list),
+  matching: find.byType(InkWell),
+);
 
 void main() {
   // `packageInfoProvider` (lu par `appVersionCheckProvider`, dépendance de
@@ -1315,7 +1329,7 @@ void main() {
         await tester.pumpWidget(buildTestWidget());
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byIcon(Icons.filter_list));
+        await tester.tap(_filterButton());
         await tester.pumpAndSettle();
 
         expect(find.text('FILTRER'), findsOneWidget);
@@ -1351,7 +1365,7 @@ void main() {
         await tester.pumpWidget(buildTestWidget());
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byIcon(Icons.filter_list));
+        await tester.tap(_filterButton());
         await tester.pumpAndSettle();
         await tester.dragUntilVisible(
           find.text('Guerrier'),
@@ -1363,9 +1377,30 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Halltesse Ambrelune'), findsNothing);
 
-        await tester.tap(find.byIcon(Icons.filter_list));
+        await tester.tap(_filterButton());
         await tester.pumpAndSettle();
+        // La liste d'options est paresseuse : "Guerrier" doit être monté
+        // pour lire l'état de sa case.
+        await tester.dragUntilVisible(
+          find.text('Guerrier'),
+          find.byKey(const Key('characterListFilterOptions')),
+          const Offset(0, -100),
+        );
+        bool guerrierChecked() => tester
+            .widget<CheckableOptionTile>(
+              find.widgetWithText(CheckableOptionTile, 'Guerrier'),
+            )
+            .checked;
+        expect(guerrierChecked(), isTrue);
+
         await tester.tap(find.text('RÉINITIALISER'));
+        await tester.pump();
+        // Sheet encore ouverte, "Appliquer" pas encore tapé : la case est
+        // déjà décochée et le filtre de la liste, lui, n'a pas bougé.
+        expect(find.text('APPLIQUER'), findsOneWidget);
+        expect(guerrierChecked(), isFalse);
+        expect(find.text('Halltesse Ambrelune'), findsNothing);
+
         await tester.tap(find.text('APPLIQUER'));
         await tester.pumpAndSettle();
 
@@ -1383,7 +1418,7 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.filter_list));
+      await tester.tap(_filterButton());
       await tester.pumpAndSettle();
       await tester.dragUntilVisible(
         find.text('Roublard'),
@@ -1443,7 +1478,7 @@ void main() {
           await tester.pumpWidget(buildTestWidget());
           await tester.pumpAndSettle();
 
-          await tester.tap(find.byIcon(Icons.filter_list));
+          await tester.tap(_filterButton());
           await tester.pumpAndSettle();
 
           expect(find.text('STATUT'), findsOneWidget);
@@ -1468,7 +1503,7 @@ void main() {
         await tester.pumpWidget(buildTestWidget());
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byIcon(Icons.filter_list));
+        await tester.tap(_filterButton());
         await tester.pumpAndSettle();
         await tester.tap(find.text('Archivé'));
         await tester.tap(find.text('Mort'));
@@ -1489,14 +1524,14 @@ void main() {
           await tester.pumpWidget(buildTestWidget());
           await tester.pumpAndSettle();
 
-          await tester.tap(find.byIcon(Icons.filter_list));
+          await tester.tap(_filterButton());
           await tester.pumpAndSettle();
           await tester.tap(find.text('Mort'));
           await tester.tap(find.text('APPLIQUER'));
           await tester.pumpAndSettle();
           expect(find.text('Halltesse Ambrelune'), findsNothing);
 
-          await tester.tap(find.byIcon(Icons.filter_list));
+          await tester.tap(_filterButton());
           await tester.pumpAndSettle();
           await tester.tap(find.text('RÉINITIALISER'));
           await tester.tap(find.text('APPLIQUER'));
