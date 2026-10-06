@@ -20,6 +20,7 @@
 // jamais lever d'exception (piège rencontré et diagnostiqué pendant
 // l'écriture de ce fichier).
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -130,10 +131,15 @@ void main() {
   late Directory tempDir;
   final shareCalls = <MethodCall>[];
 
+  // Invoqué par le faux canal `share_plus` à chaque appel reçu : c'est
+  // l'événement qui marque la fin de l'export (voir [awaitShareCall]).
+  void Function()? onShareCall;
+
   const channel = MethodChannel('dev.fluttercommunity.plus/share');
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(channel, (call) async {
         shareCalls.add(call);
+        onShareCall?.call();
         if (call.method == 'share') return '';
         return null;
       });
@@ -143,6 +149,7 @@ void main() {
     tempDir = Directory.systemTemp.createTempSync('nexus-jdr-xml-export-test');
     PathProviderPlatform.instance = _FakePathProviderPlatform(tempDir.path);
     shareCalls.clear();
+    onShareCall = null;
   });
 
   tearDown(() {
@@ -182,17 +189,70 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  // Borne haute de l'attente de l'appel au partage. Volontairement très
+  // large : ce n'est pas une estimation du temps d'écriture, seulement un
+  // garde-fou pour qu'une régression (partage jamais demandé) échoue avec un
+  // message clair plutôt que de bloquer jusqu'au timeout global du test.
+  const shareCallTimeout = Duration(seconds: 10);
+
+  /// Exécute [trigger] (les taps qui lancent l'export) puis attend que
+  /// `exportCharacterAsXml` ait réellement demandé le partage — à appeler
+  /// **dans** `tester.runAsync`.
+  ///
+  /// Entre le tap et cet appel, la production écrit un vrai fichier
+  /// (`File.writeAsString`, E/S disque réelle de durée non bornée, hors de
+  /// l'horloge simulée) puis appelle `SharePlus.instance.share`, dernière
+  /// étape de l'export : le fichier est donc entièrement écrit quand le faux
+  /// canal reçoit l'appel. Une attente à durée fixe (historiquement 200 ms
+  /// d'horloge réelle) était une course contre cette écriture ; on attend
+  /// l'événement lui-même, signalé par `onShareCall`.
+  ///
+  /// Le `Completer` est créé ici, donc dans la zone réelle de `runAsync`, et
+  /// non dans le corps du test : un `Future` prévient ses auditeurs via la
+  /// zone où il a été créé, et celle du test (horloge simulée) est à
+  /// l'arrêt pendant `runAsync` — l'attente expirerait alors même si le
+  /// partage a bien été demandé.
+  Future<void> awaitShareCall(Future<void> Function() trigger) async {
+    final shared = Completer<void>();
+    onShareCall = () {
+      if (!shared.isCompleted) shared.complete();
+    };
+
+    await trigger();
+    await shared.future.timeout(
+      shareCallTimeout,
+      onTimeout: () => fail(
+        "Le partage (share_plus) n'a pas été demandé dans les "
+        "${shareCallTimeout.inSeconds} s suivant le tap d'export (écriture "
+        'du fichier XML jamais aboutie ?).',
+      ),
+    );
+    // Un tour de boucle d'événements : vide la file de microtâches, donc la
+    // fin de `exportCharacterAsXml` après la réponse du faux canal. Ce n'est
+    // pas une attente temporelle.
+    await Future<void>.delayed(Duration.zero);
+  }
+
   /// Ouvre le menu "…" du bandeau bois ET tape "Exporter en XML" dans le
   /// **même** `runAsync` (voir la note d'en-tête de fichier sur l'affinité
   /// de zone) : déclenche une vraie écriture disque, personnage
   /// mono-classe (aucun avertissement intermédiaire).
   Future<void> openHeaderMenuAndExport(WidgetTester tester) async {
     await tester.runAsync(() async {
-      await tester.tap(find.byTooltip('Plus d\'options'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Exporter en XML'));
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await awaitShareCall(() async {
+        await tester.tap(find.byTooltip('Plus d\'options'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Exporter en XML'));
+      });
     });
+    await tester.pumpAndSettle();
+  }
+
+  /// Ouvre le menu "…" du bandeau bois de l'onglet "Personnage" (recettage
+  /// direction-artistique du 13/09 : "Exporter en XML" y a été relogé
+  /// depuis sa propre icône, voir `character_detail_screen.dart`).
+  Future<void> openCharacterHeaderMenu(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('Plus d\'options'));
     await tester.pumpAndSettle();
   }
 
@@ -212,21 +272,14 @@ void main() {
   /// finirait par s'écrire bien après la fin du test (constaté par un
   /// verrou de fichier au moment du nettoyage), jamais avant l'assertion —
   /// piège rencontré et diagnostiqué pendant l'écriture de ce fichier.
-  /// Ouvre le menu "…" du bandeau bois de l'onglet "Personnage" (recettage
-  /// direction-artistique du 13/09 : "Exporter en XML" y a été relogé
-  /// depuis sa propre icône, voir `character_detail_screen.dart`).
-  Future<void> openCharacterHeaderMenu(WidgetTester tester) async {
-    await tester.tap(find.byTooltip('Plus d\'options'));
-    await tester.pumpAndSettle();
-  }
-
   Future<void> openMulticlassDialogAndConfirm(WidgetTester tester) async {
     await tester.runAsync(() async {
-      await openCharacterHeaderMenu(tester);
-      await tester.tap(find.text('Exporter en XML'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('EXPORTER QUAND MÊME'));
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await awaitShareCall(() async {
+        await openCharacterHeaderMenu(tester);
+        await tester.tap(find.text('Exporter en XML'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('EXPORTER QUAND MÊME'));
+      });
     });
     await tester.pumpAndSettle();
   }
