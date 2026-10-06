@@ -18,6 +18,13 @@ import 'spell_action_sheet.dart';
 /// est fixe, donc tout ce qu'elle gagne en hauteur est pris à la zone
 /// défilante. À 2.0 elle reste lisible (12 px -> 24 px effectifs) ; le bouton,
 /// lui, continue de suivre l'échelle système.
+///
+/// Ce plafond ne suffit que parce que les messages de [SpellCastBlockReason]
+/// sont courts : aucune limite de lignes ne borne la hauteur du pied. Le
+/// garde-fou est la matrice de mise en page de
+/// `test/features/characters/presentation/spell_info_panel_test.dart`, qui
+/// échoue si l'un de ces messages s'allonge au point de déborder ou d'écraser
+/// la zone défilante.
 const double _blockReasonMaxTextScale = 2;
 
 /// Ouvre le panneau "Infos" d'un sort — gabarit B ([SheetHeaderBar], contenu

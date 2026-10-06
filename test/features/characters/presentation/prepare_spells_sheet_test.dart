@@ -264,6 +264,7 @@ void main() {
   // de préparation local de la sheet vers le panneau "Infos".
   group('panneau "Infos" ouvert depuis la sheet : raison sous "Lancer"', () {
     final unpreparedMessage = SpellCastBlockReason.unprepared.message;
+    final noSlotMessage = SpellCastBlockReason.noSlotAvailable.message;
     const slots = [CharacterSpellSlot(level: 1, total: 2, used: 0)];
 
     bool castEnabled(WidgetTester tester) =>
@@ -277,8 +278,10 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    // Seul un emplacement de pacte est disponible : prouve aussi que la sheet
-    // transmet `pactSlot` au panneau (sinon "Lancer" resterait désactivé).
+    // Deux causes d'échec distinctes, signalées séparément : la préparation
+    // locale non propagée (raison "non préparé") et, seul un emplacement de
+    // pacte étant disponible, `pactSlot` non transmis au panneau (raison
+    // "plus d'emplacement").
     testWidgets('sort coché dans la sheet puis ⓘ, seul un emplacement de pacte '
         'disponible : le panneau reflète la préparation en cours (plus de '
         'raison "non préparé", "Lancer" actif)', (tester) async {
@@ -297,8 +300,23 @@ void main() {
       await tester.pumpAndSettle();
       await openInfo(tester);
 
-      expect(find.text(unpreparedMessage), findsNothing);
-      expect(castEnabled(tester), isTrue);
+      expect(
+        find.text(unpreparedMessage),
+        findsNothing,
+        reason: 'préparation locale de la sheet non propagée au panneau ?',
+      );
+      expect(
+        find.text(noSlotMessage),
+        findsNothing,
+        reason: 'pactSlot non transmis au panneau ?',
+      );
+      expect(
+        castEnabled(tester),
+        isTrue,
+        reason:
+            '"Lancer" désactivé sans raison affichée : préparation ou '
+            'pactSlot non pris en compte par le bouton ?',
+      );
       expect(find.text('Ne plus préparer'), findsOneWidget);
     });
 

@@ -21,7 +21,9 @@ enum SpellCastBlockReason {
 
   const SpellCastBlockReason(this.message);
 
-  /// Texte d'aide affiché tel quel au joueur.
+  /// Texte d'aide affiché tel quel au joueur. À garder court : la mise en
+  /// page du pied du panneau en dépend (matrice de mise en page de
+  /// `spell_info_panel_test.dart`).
   final String message;
 
   /// Raison bloquant le lancer de [spell], `null` s'il peut être lancé (donc

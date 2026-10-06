@@ -96,8 +96,8 @@ void main() {
     });
   });
 
-  // Ajouts QA — critère 6 (aucune régression de l'activation de "Lancer").
-  group('SpellCastBlockReason.of — non-régression (QA)', () {
+  // L'ajout de la raison ne doit pas changer quand "Lancer" est actif.
+  group('SpellCastBlockReason.of — activation de "Lancer" inchangée', () {
     test('équivalence stricte avec l\'ancienne règle '
         '(hasAvailableSlot && canCast) sur toute la matrice '
         'niveau x statut x origine x emplacements', () {
