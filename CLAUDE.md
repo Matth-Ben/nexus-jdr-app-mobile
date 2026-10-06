@@ -53,6 +53,12 @@ raison neuve) :
 - Tests unitaires sur la logique métier (modificateurs, montée de niveau,
   emplacements de sorts) + tests de widgets sur les écrans critiques.
 - Aucune clé/URL en dur — configuration par flavor (`dev`/`staging`/`prod`).
+- App en **portrait uniquement**, iPhone, iPad et Android (décision du
+  06/10/2026) : pas de mise en page paysage à concevoir, tester ni corriger.
+  Le verrou est posé en configuration native (`ios/Runner/Info.plist`,
+  `android/app/src/main/AndroidManifest.xml`, `targetSdk` figé dans
+  `android/app/build.gradle.kts`), dont les commentaires décrivent les
+  limites (tablettes, multi-fenêtre).
 - Les migrations SQL restent dans le dépôt **web** (`supabase/migrations/`) —
   ce dépôt ne contient aucun fichier de migration.
 - Conventional Commits (`feat:`, `fix:`, `chore:`...).
