@@ -14,6 +14,12 @@ import '../../domain/spell_status_formatter.dart';
 import '../../domain/spell_subtitle_formatter.dart';
 import 'spell_action_sheet.dart';
 
+/// Plafond d'échelle de texte de la ligne de raison sous "Lancer" : le pied
+/// est fixe, donc tout ce qu'elle gagne en hauteur est pris à la zone
+/// défilante. À 2.0 elle reste lisible (12 px -> 24 px effectifs) ; le bouton,
+/// lui, continue de suivre l'échelle système.
+const double _blockReasonMaxTextScale = 2;
+
 /// Ouvre le panneau "Infos" d'un sort — gabarit B ([SheetHeaderBar], contenu
 /// scrollable, pied fixe) : détail technique complet (temps d'incantation,
 /// portée, composantes, durée, concentration) puis description, avec un
@@ -184,13 +190,16 @@ class _SpellInfoPanelContent extends StatelessWidget {
                           : null,
                     ),
                     if (blockReason != null) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        blockReason.message,
-                        textAlign: TextAlign.center,
-                        style: AppTypography.body(
-                          fontSize: 12,
-                          color: AppColors.textMuted,
+                      const SizedBox(height: AppSpacing.sm),
+                      MediaQuery.withClampedTextScaling(
+                        maxScaleFactor: _blockReasonMaxTextScale,
+                        child: Text(
+                          blockReason.message,
+                          textAlign: TextAlign.center,
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
                     ],

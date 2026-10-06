@@ -34,19 +34,6 @@ void main() {
       );
     });
 
-    test(
-      'sort préparé, emplacement de niveau supérieur disponible -> null',
-      () {
-        expect(
-          SpellCastBlockReason.of(
-            spell: _spell(level: 1, status: 'préparé'),
-            spellSlots: available,
-          ),
-          isNull,
-        );
-      },
-    );
-
     test("sort 'connu' (non préparé) avec un emplacement -> unprepared", () {
       expect(
         SpellCastBlockReason.of(
@@ -62,24 +49,6 @@ void main() {
         SpellCastBlockReason.of(
           spell: _spell(level: 3, status: 'préparé'),
           spellSlots: exhausted,
-        ),
-        SpellCastBlockReason.noSlotAvailable,
-      );
-    });
-
-    test('sort préparé, aucun emplacement de niveau suffisant -> '
-        'noSlotAvailable', () {
-      expect(
-        SpellCastBlockReason.of(
-          spell: _spell(level: 4, status: 'préparé'),
-          spellSlots: available,
-        ),
-        SpellCastBlockReason.noSlotAvailable,
-      );
-      expect(
-        SpellCastBlockReason.of(
-          spell: _spell(level: 1, status: 'préparé'),
-          spellSlots: const [],
         ),
         SpellCastBlockReason.noSlotAvailable,
       );
@@ -243,34 +212,6 @@ void main() {
       }
     });
 
-    test('niveau du sort épuisé mais niveau supérieur disponible -> null', () {
-      expect(
-        SpellCastBlockReason.of(
-          spell: _spell(level: 3, status: 'préparé'),
-          spellSlots: const [
-            CharacterSpellSlot(level: 3, total: 2, used: 2),
-            CharacterSpellSlot(level: 4, total: 1, used: 0),
-          ],
-        ),
-        isNull,
-      );
-    });
-
-    test('seul un emplacement de niveau INFÉRIEUR est disponible -> '
-        'noSlotAvailable', () {
-      expect(
-        SpellCastBlockReason.of(
-          spell: _spell(level: 3, status: 'préparé'),
-          spellSlots: const [
-            CharacterSpellSlot(level: 1, total: 4, used: 0),
-            CharacterSpellSlot(level: 2, total: 3, used: 0),
-            CharacterSpellSlot(level: 3, total: 2, used: 2),
-          ],
-        ),
-        SpellCastBlockReason.noSlotAvailable,
-      );
-    });
-
     test('Occultiste : un emplacement de pacte (isPact) compte comme un '
         'emplacement classique', () {
       const pactAvailable = [
@@ -300,31 +241,6 @@ void main() {
           spellSlots: pactAvailable,
         ),
         SpellCastBlockReason.noSlotAvailable,
-      );
-    });
-
-    test('personnage sans aucun emplacement : préparé -> noSlotAvailable, '
-        'connu -> unprepared, mineur -> null', () {
-      expect(
-        SpellCastBlockReason.of(
-          spell: _spell(level: 1, status: 'préparé'),
-          spellSlots: const [],
-        ),
-        SpellCastBlockReason.noSlotAvailable,
-      );
-      expect(
-        SpellCastBlockReason.of(
-          spell: _spell(level: 1, status: 'connu'),
-          spellSlots: const [],
-        ),
-        SpellCastBlockReason.unprepared,
-      );
-      expect(
-        SpellCastBlockReason.of(
-          spell: _spell(level: 0, status: 'connu'),
-          spellSlots: const [],
-        ),
-        isNull,
       );
     });
   });

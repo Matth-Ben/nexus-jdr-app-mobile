@@ -13,6 +13,7 @@ import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
+import 'package:personnages/features/characters/domain/spell_cast_block_reason.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/characters/presentation/widgets/prepare_spells_sheet.dart';
 
@@ -56,6 +57,7 @@ void main() {
     WidgetTester tester, {
     required List<CharacterSpellEntry> spells,
     List<CharacterSpellSlot> spellSlots = const [],
+    CharacterSpellSlot? pactSlot,
     int? preparedLimit,
   }) async {
     toggled = [];
@@ -70,6 +72,7 @@ void main() {
                   context,
                   spells: spells,
                   spellSlots: spellSlots,
+                  pactSlot: pactSlot,
                   preparedLimit: preparedLimit,
                   onTogglePrepared: toggled.add,
                   onCastSpell: (spell, _) => cast.add(spell),
@@ -256,131 +259,73 @@ void main() {
     expect(find.text('SORTS PRÉPARÉS'), findsNothing);
   });
 
-  // Ajouts QA : la ligne de raison sous "Lancer" (voir
-  // `spell_info_panel_test.dart`) quand le panneau "Infos" est ouvert depuis
-  // cette sheet.
-  group(
-    'panneau "Infos" ouvert depuis la sheet : raison sous "Lancer" (QA)',
-    () {
-      const unpreparedMessage =
-          'Sort non préparé : préparez-le pour pouvoir le lancer.';
-      const noSlotMessage =
-          "Plus d'emplacement de sort disponible pour ce niveau ou un niveau "
-          'supérieur.';
-      const slots = [CharacterSpellSlot(level: 1, total: 2, used: 0)];
-      const exhausted = [CharacterSpellSlot(level: 1, total: 2, used: 2)];
+  // La raison sous "Lancer" elle-même est testée dans
+  // `spell_info_panel_test.dart` : ici, seulement la propagation de l'état
+  // de préparation local de la sheet vers le panneau "Infos".
+  group('panneau "Infos" ouvert depuis la sheet : raison sous "Lancer"', () {
+    final unpreparedMessage = SpellCastBlockReason.unprepared.message;
+    const slots = [CharacterSpellSlot(level: 1, total: 2, used: 0)];
 
-      bool castEnabled(WidgetTester tester) =>
-          tester
-              .widget<PrimaryButton>(
-                find.widgetWithText(PrimaryButton, 'LANCER'),
-              )
-              .onPressed !=
-          null;
+    bool castEnabled(WidgetTester tester) =>
+        tester
+            .widget<PrimaryButton>(find.widgetWithText(PrimaryButton, 'LANCER'))
+            .onPressed !=
+        null;
 
-      Future<void> openInfo(WidgetTester tester) async {
-        await tester.tap(find.byIcon(Icons.info_outline_rounded));
-        await tester.pumpAndSettle();
-      }
+    Future<void> openInfo(WidgetTester tester) async {
+      await tester.tap(find.byIcon(Icons.info_outline_rounded));
+      await tester.pumpAndSettle();
+    }
 
-      testWidgets(
-        'sort non préparé : "Lancer" désactivé + raison "non préparé"',
-        (tester) async {
-          await pumpSheet(
-            tester,
-            spells: const [_unprepared],
-            spellSlots: slots,
-          );
-          await openInfo(tester);
-
-          expect(castEnabled(tester), isFalse);
-          expect(find.text(unpreparedMessage), findsOneWidget);
-          expect(find.text(noSlotMessage), findsNothing);
-        },
-      );
-
-      testWidgets(
-        'sort préparé avec emplacement : "Lancer" actif, aucune ligne',
-        (tester) async {
-          await pumpSheet(tester, spells: const [_prepared], spellSlots: slots);
-          await openInfo(tester);
-
-          expect(castEnabled(tester), isTrue);
-          expect(find.text(unpreparedMessage), findsNothing);
-          expect(find.text(noSlotMessage), findsNothing);
-        },
-      );
-
-      testWidgets('sort préparé, emplacements épuisés : raison "plus '
-          'd\'emplacement"', (tester) async {
-        await pumpSheet(
-          tester,
-          spells: const [_prepared],
-          spellSlots: exhausted,
-        );
-        await openInfo(tester);
-
-        expect(castEnabled(tester), isFalse);
-        expect(find.text(noSlotMessage), findsOneWidget);
-        expect(find.text(unpreparedMessage), findsNothing);
-      });
-
-      testWidgets('sort accordé par une sous-classe : jamais "non préparé"', (
+    // Seul un emplacement de pacte est disponible : prouve aussi que la sheet
+    // transmet `pactSlot` au panneau (sinon "Lancer" resterait désactivé).
+    testWidgets('sort coché dans la sheet puis ⓘ, seul un emplacement de pacte '
+        'disponible : le panneau reflète la préparation en cours (plus de '
+        'raison "non préparé", "Lancer" actif)', (tester) async {
+      await pumpSheet(
         tester,
-      ) async {
-        await pumpSheet(tester, spells: const [_granted], spellSlots: slots);
-        await openInfo(tester);
-
-        expect(castEnabled(tester), isTrue);
-        expect(find.text(unpreparedMessage), findsNothing);
-        expect(find.text(noSlotMessage), findsNothing);
-      });
-
-      testWidgets(
-        'sort coché dans la sheet puis ⓘ : le panneau reflète la '
-        'préparation en cours (plus de raison "non préparé", "Lancer" actif)',
-        (tester) async {
-          await pumpSheet(
-            tester,
-            spells: const [_unprepared],
-            spellSlots: slots,
-          );
-
-          await tester.tap(find.text('Soins'));
-          await tester.pumpAndSettle();
-          await openInfo(tester);
-
-          expect(find.text(unpreparedMessage), findsNothing);
-          expect(castEnabled(tester), isTrue);
-          expect(find.text('Ne plus préparer'), findsOneWidget);
-        },
+        spells: const [_unprepared],
+        pactSlot: const CharacterSpellSlot(
+          level: 1,
+          total: 1,
+          used: 0,
+          isPact: true,
+        ),
       );
 
-      testWidgets('sort décoché dans la sheet puis ⓘ : la raison "non préparé" '
-          'apparaît et "Lancer" est désactivé', (tester) async {
-        await pumpSheet(tester, spells: const [_prepared], spellSlots: slots);
+      await tester.tap(find.text('Soins'));
+      await tester.pumpAndSettle();
+      await openInfo(tester);
 
-        await tester.tap(find.text('Bénédiction'));
-        await tester.pumpAndSettle();
-        await openInfo(tester);
+      expect(find.text(unpreparedMessage), findsNothing);
+      expect(castEnabled(tester), isTrue);
+      expect(find.text('Ne plus préparer'), findsOneWidget);
+    });
 
-        expect(find.text(unpreparedMessage), findsOneWidget);
-        expect(castEnabled(tester), isFalse);
-      });
+    testWidgets('sort décoché dans la sheet puis ⓘ : la raison "non préparé" '
+        'apparaît et "Lancer" est désactivé', (tester) async {
+      await pumpSheet(tester, spells: const [_prepared], spellSlots: slots);
 
-      testWidgets('préparer depuis le panneau puis le rouvrir : la raison "non '
-          'préparé" a disparu', (tester) async {
-        await pumpSheet(tester, spells: const [_unprepared], spellSlots: slots);
-        await openInfo(tester);
-        expect(find.text(unpreparedMessage), findsOneWidget);
+      await tester.tap(find.text('Bénédiction'));
+      await tester.pumpAndSettle();
+      await openInfo(tester);
 
-        await tester.tap(find.text('Préparer ce sort'));
-        await tester.pumpAndSettle();
-        await openInfo(tester);
+      expect(find.text(unpreparedMessage), findsOneWidget);
+      expect(castEnabled(tester), isFalse);
+    });
 
-        expect(find.text(unpreparedMessage), findsNothing);
-        expect(castEnabled(tester), isTrue);
-      });
-    },
-  );
+    testWidgets('préparer depuis le panneau puis le rouvrir : la raison "non '
+        'préparé" a disparu', (tester) async {
+      await pumpSheet(tester, spells: const [_unprepared], spellSlots: slots);
+      await openInfo(tester);
+      expect(find.text(unpreparedMessage), findsOneWidget);
+
+      await tester.tap(find.text('Préparer ce sort'));
+      await tester.pumpAndSettle();
+      await openInfo(tester);
+
+      expect(find.text(unpreparedMessage), findsNothing);
+      expect(castEnabled(tester), isTrue);
+    });
+  });
 }

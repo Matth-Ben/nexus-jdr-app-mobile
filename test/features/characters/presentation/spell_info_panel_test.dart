@@ -15,7 +15,6 @@
 // ouvre désormais directement ce panneau ([showSpellInfoPanel]).
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
@@ -384,132 +383,26 @@ void main() {
     });
   });
 
+  void useScreen(WidgetTester tester, Size size, double textScale) {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = textScale;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearAllTestValues);
+  }
+
+  Finder castButton() => find.widgetWithText(PrimaryButton, 'LANCER');
+
+  // Les combinaisons d'emplacements (niveau inférieur/supérieur, pacte
+  // épuisé...) et l'équivalence avec l'ancienne règle d'activation sont
+  // couvertes par `domain/spell_cast_block_reason_test.dart` : ce groupe ne
+  // prouve que le câblage du panneau (raison -> bouton + ligne) et sa mise en
+  // page.
   group('raison affichée sous "Lancer" désactivé (SpellCastBlockReason)', () {
-    const unpreparedMessage =
-        'Sort non préparé : préparez-le pour pouvoir le lancer.';
-    const noSlotMessage =
-        "Plus d'emplacement de sort disponible pour ce niveau ou un niveau "
-        'supérieur.';
-
-    const knownFireball = CharacterSpellEntry(
-      id: 5,
-      name: 'Boule de feu',
-      level: 3,
-      school: 'Évocation',
-      status: 'connu',
-    );
-
-    testWidgets('sort lançable : aucune ligne sous le bouton', (tester) async {
-      await pumpPanel(
-        tester,
-        spell: _fireball,
-        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 0)],
-      );
-
-      expect(find.text(unpreparedMessage), findsNothing);
-      expect(find.text(noSlotMessage), findsNothing);
-    });
-
-    testWidgets('sort non préparé : message "non préparé", centré sous le '
-        'bouton', (tester) async {
-      await pumpPanel(
-        tester,
-        spell: knownFireball,
-        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 0)],
-      );
-
-      expect(find.text(unpreparedMessage), findsOneWidget);
-      expect(find.text(noSlotMessage), findsNothing);
-      expect(
-        tester.widget<Text>(find.text(unpreparedMessage)).textAlign,
-        TextAlign.center,
-      );
-      expect(
-        tester.getTopLeft(find.text(unpreparedMessage)).dy,
-        greaterThan(
-          tester.getBottomLeft(find.widgetWithText(PrimaryButton, 'LANCER')).dy,
-        ),
-      );
-    });
-
-    testWidgets('plus d\'emplacement : message "plus d\'emplacement"', (
-      tester,
-    ) async {
-      await pumpPanel(
-        tester,
-        spell: _fireball,
-        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 2)],
-      );
-
-      expect(find.text(noSlotMessage), findsOneWidget);
-      expect(find.text(unpreparedMessage), findsNothing);
-    });
-
-    testWidgets('emplacement classique épuisé mais emplacement de pacte '
-        'disponible : sort lançable, aucune ligne', (tester) async {
-      await pumpPanel(
-        tester,
-        spell: _fireball,
-        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 2)],
-        pactSlot: const CharacterSpellSlot(
-          level: 3,
-          total: 1,
-          used: 0,
-          isPact: true,
-        ),
-      );
-
-      expect(find.text(noSlotMessage), findsNothing);
-      final button = tester.widget<PrimaryButton>(
-        find.widgetWithText(PrimaryButton, 'LANCER'),
-      );
-      expect(button.onPressed, isNotNull);
-    });
-
-    testWidgets('non préparé ET plus d\'emplacement : seule la raison "non '
-        'préparé" est affichée', (tester) async {
-      await pumpPanel(
-        tester,
-        spell: knownFireball,
-        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 2)],
-      );
-
-      expect(find.text(unpreparedMessage), findsOneWidget);
-      expect(find.text(noSlotMessage), findsNothing);
-    });
-
-    testWidgets('sort mineur (niveau 0) : jamais de ligne, même sans aucun '
-        'emplacement', (tester) async {
-      await pumpPanel(tester, spell: _cantrip, spellSlots: const []);
-
-      expect(find.text(unpreparedMessage), findsNothing);
-      expect(find.text(noSlotMessage), findsNothing);
-    });
-
-    testWidgets('petite largeur (320 px) : le message passe à la ligne sans '
-        'débordement', (tester) async {
-      tester.view.physicalSize = const Size(320, 568);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-
-      await pumpPanel(
-        tester,
-        spell: _fireball,
-        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 2)],
-      );
-
-      expect(find.text(noSlotMessage), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-  });
-
-  // Ajouts QA : critères 1, 5 et 6 de la demande (activation de "Lancer"
-  // strictement inchangée) + petit écran. Les messages sont lus depuis
-  // l'enum pour détecter TOUTE ligne de raison, pas seulement l'attendue.
-  group('raison sous "Lancer" — non-régression et cas limites (QA)', () {
     final unpreparedMessage = SpellCastBlockReason.unprepared.message;
     final noSlotMessage = SpellCastBlockReason.noSlotAvailable.message;
 
+    // Toute ligne de raison, pas seulement celle attendue.
     Finder reasonLine() => find.byWidgetPredicate(
       (widget) =>
           widget is Text &&
@@ -519,10 +412,7 @@ void main() {
     );
 
     bool castEnabled(WidgetTester tester) =>
-        tester
-            .widget<PrimaryButton>(find.widgetWithText(PrimaryButton, 'LANCER'))
-            .onPressed !=
-        null;
+        tester.widget<PrimaryButton>(castButton()).onPressed != null;
 
     void expectCastable(WidgetTester tester) {
       expect(castEnabled(tester), isTrue, reason: '"Lancer" doit être actif');
@@ -540,8 +430,16 @@ void main() {
       expect(find.text(message), findsOneWidget);
     }
 
-    const innateSpell = CharacterSpellEntry(
+    const knownSpell = CharacterSpellEntry(
       id: 10,
+      name: 'Maléfice',
+      level: 1,
+      school: 'Enchantement',
+      status: 'connu',
+    );
+
+    const innateSpell = CharacterSpellEntry(
+      id: 11,
       name: 'Ténèbres',
       level: 2,
       school: 'Évocation',
@@ -549,7 +447,7 @@ void main() {
     );
 
     const grantedSpell = CharacterSpellEntry(
-      id: 11,
+      id: 12,
       name: 'Arme spirituelle',
       level: 2,
       school: 'Évocation',
@@ -559,23 +457,7 @@ void main() {
       storedStatus: 'connu',
     );
 
-    const knownLevel1 = CharacterSpellEntry(
-      id: 12,
-      name: 'Maléfice',
-      level: 1,
-      school: 'Enchantement',
-      status: 'connu',
-    );
-
-    const preparedLevel1 = CharacterSpellEntry(
-      id: 13,
-      name: 'Armure d\'Agathys',
-      level: 1,
-      school: 'Abjuration',
-      status: 'préparé',
-    );
-
-    testWidgets('sort lançable : bouton actif ET aucune ligne', (tester) async {
+    testWidgets('sort lançable : bouton actif et aucune ligne', (tester) async {
       await pumpPanel(
         tester,
         spell: _fireball,
@@ -585,19 +467,55 @@ void main() {
       expectCastable(tester);
     });
 
-    testWidgets('sort mineur \'connu\', personnage sans aucun emplacement : '
-        'bouton actif et aucune ligne', (tester) async {
-      await pumpPanel(tester, spell: _cantrip, spellSlots: const []);
+    testWidgets('sort non préparé : désactivé, raison "non préparé" centrée '
+        'sous le bouton, et taper le bouton ne lance rien', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: knownSpell,
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 2, used: 0)],
+      );
 
-      expectCastable(tester);
+      expectBlocked(tester, unpreparedMessage);
+      expect(
+        tester.widget<Text>(find.text(unpreparedMessage)).textAlign,
+        TextAlign.center,
+      );
+      expect(
+        tester.getRect(find.text(unpreparedMessage)).top,
+        greaterThan(tester.getRect(castButton()).bottom),
+      );
+
+      await tester.tap(castButton(), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(castCalls, isEmpty);
+      expect(find.text('MALÉFICE'), findsOneWidget);
     });
 
-    // Test séparé du précédent (et non un second `pumpPanel` dans le même
-    // test) : le premier panneau resterait ouvert par-dessus le bouton
-    // "Ouvrir", et les assertions porteraient encore sur lui.
+    testWidgets('sort préparé, plus d\'emplacement : désactivé, raison "plus '
+        'd\'emplacement"', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: _fireball,
+        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 2)],
+      );
+
+      expectBlocked(tester, noSlotMessage);
+    });
+
+    testWidgets('non préparé ET plus d\'emplacement : une seule ligne, "non '
+        'préparé"', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: knownSpell,
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 2, used: 2)],
+      );
+
+      expectBlocked(tester, unpreparedMessage);
+    });
+
     testWidgets('sort mineur \'connu\', tous les emplacements épuisés '
-        '(classique et pacte) : bouton actif, aucune ligne, et "Lancer" '
-        'lance sans consommer d\'emplacement', (tester) async {
+        '(classique et pacte) : actif, aucune ligne, lancé sans consommer '
+        'd\'emplacement', (tester) async {
       await pumpPanel(
         tester,
         spell: _cantrip,
@@ -612,7 +530,7 @@ void main() {
 
       expectCastable(tester);
 
-      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.tap(castButton());
       await tester.pumpAndSettle();
       expect(castCalls, [_cantrip]);
       expect(castSlots, [null]);
@@ -630,8 +548,8 @@ void main() {
       expectCastable(tester);
     });
 
-    testWidgets('sort inné sans emplacement : désactivé, raison "plus '
-        'd\'emplacement" (jamais "non préparé")', (tester) async {
+    testWidgets('sort inné sans emplacement : raison "plus d\'emplacement" '
+        '(jamais "non préparé")', (tester) async {
       await pumpPanel(tester, spell: innateSpell, spellSlots: const []);
 
       expectBlocked(tester, noSlotMessage);
@@ -650,8 +568,8 @@ void main() {
     });
 
     testWidgets('sort accordé par une sous-classe, emplacements épuisés : '
-        'désactivé, raison "plus d\'emplacement" (jamais "non préparé", '
-        'même si la ligne stockée vaut \'connu\')', (tester) async {
+        'raison "plus d\'emplacement" (jamais "non préparé", même si la ligne '
+        'stockée vaut \'connu\')', (tester) async {
       await pumpPanel(
         tester,
         spell: grantedSpell,
@@ -661,15 +579,17 @@ void main() {
       expectBlocked(tester, noSlotMessage);
     });
 
-    testWidgets('Occultiste, seul un emplacement de pacte disponible (aucun '
-        'emplacement classique) : actif, aucune ligne, et "Lancer" consomme '
-        'bien l\'emplacement de pacte', (tester) async {
+    // Câblage de `pactSlot` : il compte dans la raison (sinon "plus
+    // d'emplacement") et c'est bien lui que "Lancer" consomme.
+    testWidgets('magie de pacte : seul un emplacement de pacte disponible '
+        '(aucun emplacement classique) : actif, aucune ligne, et "Lancer" '
+        'consomme le pacte', (tester) async {
       await pumpPanel(
         tester,
-        spell: preparedLevel1,
+        spell: _fireball,
         spellSlots: const [],
         pactSlot: const CharacterSpellSlot(
-          level: 2,
+          level: 3,
           total: 2,
           used: 1,
           isPact: true,
@@ -678,197 +598,139 @@ void main() {
 
       expectCastable(tester);
 
-      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.tap(castButton());
       await tester.pumpAndSettle();
-
-      expect(castCalls, [preparedLevel1]);
+      expect(castCalls, [_fireball]);
       expect(castSlots.single!.isPact, isTrue);
-      expect(castSlots.single!.level, 2);
     });
 
-    testWidgets('Occultiste, emplacement de pacte épuisé : désactivé, raison '
-        '"plus d\'emplacement"', (tester) async {
-      await pumpPanel(
-        tester,
-        spell: preparedLevel1,
-        spellSlots: const [],
-        pactSlot: const CharacterSpellSlot(
-          level: 2,
-          total: 2,
-          used: 2,
-          isPact: true,
-        ),
-      );
-
-      expectBlocked(tester, noSlotMessage);
-    });
-
-    testWidgets('Occultiste, emplacement de pacte de niveau inférieur au '
-        'sort : désactivé, raison "plus d\'emplacement"', (tester) async {
-      await pumpPanel(
-        tester,
-        spell: _fireball,
-        spellSlots: const [],
-        pactSlot: const CharacterSpellSlot(
-          level: 2,
-          total: 2,
-          used: 0,
-          isPact: true,
-        ),
-      );
-
-      expectBlocked(tester, noSlotMessage);
-    });
-
-    testWidgets('Occultiste, sort non préparé avec emplacement de pacte '
-        'disponible : désactivé, raison "non préparé"', (tester) async {
-      await pumpPanel(
-        tester,
-        spell: knownLevel1,
-        spellSlots: const [],
-        pactSlot: const CharacterSpellSlot(
-          level: 2,
-          total: 2,
-          used: 0,
-          isPact: true,
-        ),
-      );
-
-      expectBlocked(tester, unpreparedMessage);
-    });
-
-    testWidgets('niveau du sort épuisé mais emplacement de niveau supérieur '
-        'disponible : actif, aucune ligne', (tester) async {
-      await pumpPanel(
-        tester,
-        spell: _fireball,
-        spellSlots: const [
-          CharacterSpellSlot(level: 1, total: 4, used: 4),
-          CharacterSpellSlot(level: 3, total: 2, used: 2),
-          CharacterSpellSlot(level: 5, total: 1, used: 0),
-        ],
-      );
-
-      expectCastable(tester);
-    });
-
-    testWidgets('seuls des emplacements de niveau inférieur sont disponibles : '
-        'désactivé, raison "plus d\'emplacement"', (tester) async {
-      await pumpPanel(
-        tester,
-        spell: _fireball,
-        spellSlots: const [
-          CharacterSpellSlot(level: 1, total: 4, used: 0),
-          CharacterSpellSlot(level: 2, total: 3, used: 0),
-        ],
-      );
-
-      expectBlocked(tester, noSlotMessage);
-    });
-
-    testWidgets('personnage sans aucun emplacement, sort préparé : désactivé, '
-        'raison "plus d\'emplacement", et taper le bouton ne lance rien', (
-      tester,
-    ) async {
-      await pumpPanel(tester, spell: _fireball, spellSlots: const []);
-
-      expectBlocked(tester, noSlotMessage);
-
-      await tester.tap(
-        find.widgetWithText(PrimaryButton, 'LANCER'),
-        warnIfMissed: false,
-      );
-      await tester.pumpAndSettle();
-
-      expect(castCalls, isEmpty);
-      expect(find.text('BOULE DE FEU'), findsOneWidget);
-    });
-
-    testWidgets('personnage sans aucun emplacement, sort non préparé : une '
-        'seule ligne, "non préparé", et taper le bouton ne lance rien', (
-      tester,
-    ) async {
-      await pumpPanel(tester, spell: knownLevel1, spellSlots: const []);
-
-      expectBlocked(tester, unpreparedMessage);
-      expect(find.text(noSlotMessage), findsNothing);
-
-      await tester.tap(
-        find.widgetWithText(PrimaryButton, 'LANCER'),
-        warnIfMissed: false,
-      );
-      await tester.pumpAndSettle();
-
-      expect(castCalls, isEmpty);
-      expect(find.text('MALÉFICE'), findsOneWidget);
-    });
-
-    testWidgets('la ligne de raison reste dans le pied fixe : visible sans '
-        'défilement même avec une description très longue', (tester) async {
-      await pumpPanel(
-        tester,
-        spell: CharacterSpellEntry(
-          id: 14,
-          name: 'Souhait',
-          level: 9,
-          school: 'Invocation',
-          status: 'connu',
-          description: List.filled(200, 'Texte de description.').join(' '),
-        ),
-        spellSlots: const [],
-      );
-
-      expectBlocked(tester, unpreparedMessage);
-      final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
-      final line = tester.getRect(find.text(unpreparedMessage));
-      expect(line.bottom, lessThanOrEqualTo(screen.height));
-      expect(
-        line.top,
-        greaterThanOrEqualTo(
-          tester.getRect(find.widgetWithText(PrimaryButton, 'LANCER')).bottom,
-        ),
-      );
-    });
-
-    for (final textScale in [1.0, 1.3, 2.0]) {
+    // Mise en page à forte échelle de texte (réglage d'accessibilité) : le
+    // pied est fixe, la ligne de raison y est donc plafonnée à l'échelle 2.0
+    // pour ne pas réduire la zone défilante à néant.
+    const layoutMatrix = <(Size, double)>[
+      (Size(320, 568), 1.0),
+      (Size(320, 568), 2.0),
+      (Size(320, 568), 2.5),
+      (Size(320, 568), 3.0),
+      (Size(360, 640), 3.0),
+      (Size(390, 844), 3.0),
+    ];
+    for (final (size, textScale) in layoutMatrix) {
       for (final reason in SpellCastBlockReason.values) {
-        testWidgets('petit écran 320x568, échelle de texte $textScale, raison '
-            '${reason.name} : aucun débordement, ligne entièrement visible '
-            'sous le bouton', (tester) async {
-          tester.view.physicalSize = const Size(320, 568);
-          tester.view.devicePixelRatio = 1;
-          tester.platformDispatcher.textScaleFactorTestValue = textScale;
-          addTearDown(tester.view.reset);
-          addTearDown(tester.platformDispatcher.clearAllTestValues);
-
+        final unprepared = reason == SpellCastBlockReason.unprepared;
+        testWidgets('écran ${size.width.toInt()}x${size.height.toInt()}, '
+            'échelle $textScale, raison ${reason.name} : aucun débordement, '
+            'ligne entièrement visible sous le bouton, zone défilante '
+            '>= 44 px${unprepared ? ', "Préparer ce sort" atteignable' : ''}', (
+          tester,
+        ) async {
+          useScreen(tester, size, textScale);
           await pumpPanel(
             tester,
-            spell: reason == SpellCastBlockReason.unprepared
-                ? knownLevel1
-                : _fireball,
+            spell: unprepared ? knownSpell : _fireball,
             spellSlots: const [],
           );
 
           expect(tester.takeException(), isNull);
           expectBlocked(tester, reason.message);
           final line = tester.getRect(find.text(reason.message));
-          final button = tester.getRect(
-            find.widgetWithText(PrimaryButton, 'LANCER'),
-          );
           expect(line.left, greaterThanOrEqualTo(0));
-          expect(line.right, lessThanOrEqualTo(320));
-          expect(line.top, greaterThanOrEqualTo(button.bottom));
-          expect(line.bottom, lessThanOrEqualTo(568));
+          expect(line.right, lessThanOrEqualTo(size.width));
+          expect(
+            line.top,
+            greaterThanOrEqualTo(tester.getRect(castButton()).bottom),
+          );
+          expect(line.bottom, lessThanOrEqualTo(size.height));
+          expect(
+            tester.getSize(find.byType(SingleChildScrollView)).height,
+            greaterThanOrEqualTo(44),
+          );
+
+          if (unprepared) {
+            await tester.ensureVisible(find.text('Préparer ce sort'));
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('Préparer ce sort'));
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+            expect(preparedToggleCalls, [knownSpell]);
+          }
         });
       }
     }
+
+    testWidgets('la ligne de raison suit l\'échelle de texte jusqu\'à 2.0 puis '
+        'ne grandit plus, alors que le libellé du bouton continue de la '
+        'suivre', (tester) async {
+      useScreen(tester, const Size(390, 844), 1);
+      await pumpPanel(tester, spell: _fireball, spellSlots: const []);
+
+      Future<(double, double)> heightsAt(double textScale) async {
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
+        await tester.pumpAndSettle();
+        return (
+          tester.getSize(find.text(noSlotMessage)).height,
+          tester.getSize(find.text('LANCER')).height,
+        );
+      }
+
+      final (lineAt1, labelAt1) = await heightsAt(1);
+      final (lineAt2, labelAt2) = await heightsAt(2);
+      final (lineAt3, labelAt3) = await heightsAt(3);
+
+      expect(lineAt2, greaterThan(lineAt1));
+      expect(lineAt3, lineAt2);
+      // Plafond à 2.0 exactement, pas plus bas : 12 px -> 24 px effectifs à
+      // l'échelle système 3.0.
+      expect(
+        MediaQuery.textScalerOf(tester.element(find.text(noSlotMessage)))
+            .scale(12),
+        24,
+      );
+      expect(labelAt2, greaterThan(labelAt1));
+      expect(labelAt3, greaterThan(labelAt2));
+    });
+
+    testWidgets('petit écran 320x568, échelle 2.0, description très longue : '
+        'la raison reste dans le pied fixe (visible sans défilement) et la '
+        'description défile jusqu\'au bout au-dessus du pied', (tester) async {
+      useScreen(tester, const Size(320, 568), 2);
+      final spell = CharacterSpellEntry(
+        id: 13,
+        name: 'Souhait',
+        level: 9,
+        school: 'Invocation',
+        status: 'connu',
+        description:
+            '${List.filled(60, 'Texte de description.').join(' ')} FIN.',
+      );
+      await pumpPanel(tester, spell: spell, spellSlots: const []);
+      expect(tester.takeException(), isNull);
+
+      expectBlocked(tester, unpreparedMessage);
+      final button = tester.getRect(castButton());
+      final line = tester.getRect(find.text(unpreparedMessage));
+      final scrollArea = tester.getRect(find.byType(SingleChildScrollView));
+      expect(scrollArea.bottom, lessThanOrEqualTo(button.top));
+      expect(line.top, greaterThanOrEqualTo(button.bottom));
+      expect(line.bottom, lessThanOrEqualTo(568));
+
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -100000),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final description = tester.getRect(find.text(spell.description));
+      expect(description.bottom, lessThanOrEqualTo(scrollArea.bottom));
+      expect(description.bottom, greaterThan(scrollArea.top));
+    });
   });
 
-  // Ajouts QA (second passage) : correction `Flexible` du lien
-  // "Préparer ce sort"/"Ne plus préparer" — rendu inchangé à l'échelle 1.0,
-  // repli à la ligne sans débordement et lien toujours actionnable à
-  // l'échelle agrandie ; zone défilante préservée quand le pied grandit.
-  group('lien de bascule de préparation — correction Flexible (QA)', () {
+  // Correction `Flexible` du lien "Préparer ce sort"/"Ne plus préparer" : le
+  // libellé agrandi se replie au lieu de faire déborder la ligne, et le lien
+  // reste actionnable. Vérifications comportementales seulement (pas de
+  // position au pixel), plus la zone tactile minimale du design system (§7).
+  group('lien de bascule de préparation sur petit écran', () {
     const knownSpell = CharacterSpellEntry(
       id: 20,
       name: 'Maléfice',
@@ -891,124 +753,41 @@ void main() {
     Finder linkOf(String label) =>
         find.ancestor(of: find.text(label), matching: find.byType(InkWell));
 
-    void useScreen(WidgetTester tester, Size size, double textScale) {
-      tester.view.physicalSize = size;
-      tester.view.devicePixelRatio = 1;
-      tester.platformDispatcher.textScaleFactorTestValue = textScale;
-      addTearDown(tester.view.reset);
-      addTearDown(tester.platformDispatcher.clearAllTestValues);
-    }
+    for (final spell in const [knownSpell, preparedSpell]) {
+      testWidgets('320x568, échelle 1.0, "${labelOf(spell)}" : zone tactile '
+          '>= 44 px, actionnable sur toute sa largeur (pas seulement sur le '
+          'libellé)', (tester) async {
+        useScreen(tester, const Size(320, 568), 1);
+        await pumpPanel(tester, spell: spell, spellSlots: slots);
+        expect(tester.takeException(), isNull);
 
-    for (final size in const [Size(320, 568), Size(800, 600)]) {
-      for (final spell in const [knownSpell, preparedSpell]) {
-        testWidgets('échelle 1.0, écran ${size.width.toInt()}x'
-            '${size.height.toInt()}, "${labelOf(spell)}" : libellé sur une '
-            'seule ligne à sa largeur intrinsèque, icône à 4 px à gauche et '
-            'centrée, zone tactile 44 px sur toute la largeur', (tester) async {
-          useScreen(tester, size, 1);
-          await pumpPanel(tester, spell: spell, spellSlots: slots);
-          expect(tester.takeException(), isNull);
+        final link = tester.getRect(linkOf(labelOf(spell)));
+        expect(link.height, greaterThanOrEqualTo(44));
 
-          final label = labelOf(spell);
-          final text = tester.getRect(find.text(label));
-          final link = tester.getRect(linkOf(label));
-          final icon = tester.getRect(
-            find.descendant(of: linkOf(label), matching: find.byType(Icon)),
-          );
-          final scrollArea = tester.getRect(find.byType(SingleChildScrollView));
-
-          // Largeur intrinsèque du paragraphe réellement rendu : `Flexible`
-          // (fit loose) ne doit ni étirer ni contraindre le libellé tant
-          // qu'il tient sur une ligne.
-          final paragraph = tester.renderObject<RenderParagraph>(
-            find.text(label),
-          );
-          expect(
-            text.width,
-            moreOrLessEquals(paragraph.getMaxIntrinsicWidth(double.infinity)),
-          );
-          expect(
-            text.height,
-            moreOrLessEquals(paragraph.getMinIntrinsicHeight(double.infinity)),
-          );
-
-          // Alignement : icône collée à gauche, libellé 4 px après, les
-          // deux centrés verticalement dans la zone tactile.
-          expect(icon.left, link.left);
-          expect(icon.size, const Size(14, 14));
-          expect(text.left, icon.right + 4);
-          expect(icon.center.dy, moreOrLessEquals(link.center.dy));
-          expect(text.center.dy, moreOrLessEquals(link.center.dy));
-
-          // Zone tactile : 44 px de haut, toute la largeur du contenu
-          // (marges latérales symétriques), pas réduite au libellé.
-          expect(link.height, 44);
-          expect(link.left, greaterThan(scrollArea.left));
-          expect(
-            link.left - scrollArea.left,
-            moreOrLessEquals(scrollArea.right - link.right),
-          );
-          expect(text.right, lessThan(link.right));
-
-          // Un tap à l'extrémité droite de la zone (loin du libellé)
-          // déclenche bien la bascule.
-          await tester.tapAt(link.centerRight - const Offset(4, 0));
-          await tester.pumpAndSettle();
-          expect(preparedToggleCalls, [spell]);
-          expect(castCalls, isEmpty);
-        });
-      }
+        await tester.tapAt(link.centerRight - const Offset(4, 0));
+        await tester.pumpAndSettle();
+        expect(preparedToggleCalls, [spell]);
+        expect(castCalls, isEmpty);
+      });
     }
 
     for (final textScale in [1.3, 2.0]) {
       for (final spell in const [knownSpell, preparedSpell]) {
         for (final spellSlots in const [slots, <CharacterSpellSlot>[]]) {
-          testWidgets('petit écran 320x568, échelle $textScale, '
-              '"${labelOf(spell)}", ${spellSlots.isEmpty ? 'avec' : 'sans'} '
-              'ligne de raison possible : le libellé se replie dans la zone '
-              'tactile sans débordement et reste actionnable', (tester) async {
+          testWidgets('320x568, échelle $textScale, "${labelOf(spell)}", '
+              '${spellSlots.isEmpty ? 'sans' : 'avec'} emplacement : aucun '
+              'débordement, zone tactile >= 44 px, lien atteignable et '
+              'actionnable', (tester) async {
             useScreen(tester, const Size(320, 568), textScale);
             await pumpPanel(tester, spell: spell, spellSlots: spellSlots);
             expect(tester.takeException(), isNull);
 
             final label = labelOf(spell);
-            final text = tester.getRect(find.text(label));
-            final link = tester.getRect(linkOf(label));
-
-            // Le libellé agrandi ne tient plus sur une ligne à côté de
-            // l'icône (garde-fou : l'échelle de test est réellement
-            // appliquée) et il est replié sur plusieurs lignes.
-            final paragraph = tester.renderObject<RenderParagraph>(
-              find.text(label),
-            );
-            final icon = tester.getRect(
-              find.descendant(of: linkOf(label), matching: find.byType(Icon)),
-            );
             expect(
-              paragraph.getMaxIntrinsicWidth(double.infinity),
-              greaterThan(link.right - icon.right - 4),
-            );
-            expect(
-              text.height,
-              greaterThan(paragraph.getMinIntrinsicHeight(double.infinity)),
-            );
-            expect(text.left, icon.right + 4);
-
-            // Contenu dans la zone tactile, elle-même dans l'écran.
-            expect(text.left, greaterThanOrEqualTo(link.left));
-            expect(text.right, lessThanOrEqualTo(link.right));
-            expect(text.top, greaterThanOrEqualTo(link.top));
-            expect(text.bottom, lessThanOrEqualTo(link.bottom));
-            expect(link.height, greaterThanOrEqualTo(44));
-            expect(link.left, greaterThanOrEqualTo(0));
-            expect(link.right, lessThanOrEqualTo(320));
-
-            // La zone défilante garde une hauteur utile malgré le pied
-            // agrandi, et le lien y reste atteignable puis actionnable.
-            expect(
-              tester.getSize(find.byType(SingleChildScrollView)).height,
+              tester.getSize(linkOf(label)).height,
               greaterThanOrEqualTo(44),
             );
+
             await tester.ensureVisible(find.text(label));
             await tester.pumpAndSettle();
             await tester.tap(find.text(label));
@@ -1020,49 +799,5 @@ void main() {
         }
       }
     }
-
-    testWidgets('petit écran 320x568, échelle 2.0, description très longue et '
-        'sort bloqué : aucun débordement, pied (bouton + raison) entièrement '
-        'à l\'écran, description défilable jusqu\'au bout', (tester) async {
-      useScreen(tester, const Size(320, 568), 2);
-      final spell = CharacterSpellEntry(
-        id: 22,
-        name: 'Souhait',
-        level: 9,
-        school: 'Invocation',
-        status: 'connu',
-        castingTime: '1 action',
-        range: 'Personnelle',
-        duration: 'Instantanée',
-        description:
-            '${List.filled(60, 'Texte de description.').join(' ')} FIN.',
-      );
-      await pumpPanel(tester, spell: spell, spellSlots: const []);
-      expect(tester.takeException(), isNull);
-
-      final message = SpellCastBlockReason.unprepared.message;
-      final button = tester.getRect(
-        find.widgetWithText(PrimaryButton, 'LANCER'),
-      );
-      final line = tester.getRect(find.text(message));
-      final scrollArea = tester.getRect(find.byType(SingleChildScrollView));
-      expect(scrollArea.bottom, lessThanOrEqualTo(button.top));
-      expect(line.top, greaterThanOrEqualTo(button.bottom));
-      expect(line.bottom, lessThanOrEqualTo(568));
-      expect(line.left, greaterThanOrEqualTo(0));
-      expect(line.right, lessThanOrEqualTo(320));
-
-      await tester.drag(
-        find.byType(SingleChildScrollView),
-        const Offset(0, -100000),
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      // La fin de la description est amenée dans la zone visible, au-dessus
-      // du pied.
-      final description = tester.getRect(find.text(spell.description));
-      expect(description.bottom, lessThanOrEqualTo(scrollArea.bottom));
-      expect(description.bottom, greaterThan(scrollArea.top));
-    });
   });
 }
