@@ -10,6 +10,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/dashed_add_tile.dart';
+import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
@@ -72,7 +73,6 @@ Future<void> _pump(
         body: CharacterSpellsTabBody(
           detail: detail,
           onCastSpell: onCastSpell ?? (_, _) {},
-          onToggleFavorite: (_) {},
           onTogglePrepared: onTogglePrepared ?? (_) {},
           onUseFeature: onUseFeature,
         ),
@@ -204,56 +204,12 @@ void main() {
     },
   );
 
-  group('favoris de sorts, distinction connu/préparé (docs/cahier-des-charges/'
-      '11-fonctionnalites-a-ajouter.md section "Onglet Sorts")', () {
-    Future<List<CharacterSpellEntry>> pumpWithFavoriteCallback(
-      WidgetTester tester, {
-      required List<CharacterSpellEntry> spells,
-    }) async {
-      final toggled = <CharacterSpellEntry>[];
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: CharacterSpellsTabBody(
-              detail: _detail(spells: spells),
-              onCastSpell: (_, _) {},
-              onToggleFavorite: toggled.add,
-              onTogglePrepared: (_) {},
-            ),
-          ),
-        ),
-      );
-      return toggled;
-    }
-
-    testWidgets(
-      'aucun favori épinglé : pas de section "FAVORIS", le sort n\'apparaît '
-      'qu\'une fois (dans son groupe de niveau)',
-      (tester) async {
-        await pumpWithFavoriteCallback(
-          tester,
-          spells: const [
-            CharacterSpellEntry(
-              id: 1,
-              name: 'Bouclier',
-              level: 1,
-              school: 'Abjuration',
-              status: 'préparé',
-            ),
-          ],
-        );
-
-        expect(find.text('FAVORIS'), findsNothing);
-        expect(find.text('Bouclier'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'un sort épinglé (isFavorite) apparaît dans la section "FAVORIS" en '
-      'tête, en plus de son groupe de niveau habituel',
-      (tester) async {
-        await pumpWithFavoriteCallback(
-          tester,
+  group('ligne de sort : nom + dé, sans sous-titre de statut ni favori', () {
+    testWidgets('ni section "FAVORIS" ni étoile, même pour un sort marqué '
+        'isFavorite en base (donnée héritée)', (tester) async {
+      await _pump(
+        tester,
+        _detail(
           spells: const [
             CharacterSpellEntry(
               id: 1,
@@ -264,74 +220,20 @@ void main() {
               isFavorite: true,
             ),
           ],
-        );
-
-        expect(find.text('FAVORIS'), findsOneWidget);
-        // Une fois dans "FAVORIS", une fois dans le groupe "Niveau 1".
-        expect(find.text('Bouclier'), findsNWidgets(2));
-        // Dans la section "FAVORIS", le niveau est précisé dans le
-        // sous-titre (plusieurs niveaux peuvent s'y mélanger) — voir
-        // `character_spells_section.dart::_SpellRow.showLevelInSubtitle`.
-        expect(find.textContaining('niv. 1'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'taper l\'étoile d\'un sort non favori appelle onToggleFavorite sans '
-      'ouvrir le panneau "Infos" (zone de tap indépendante de la ligne)',
-      (tester) async {
-        final toggled = await pumpWithFavoriteCallback(
-          tester,
-          spells: const [
-            CharacterSpellEntry(
-              id: 1,
-              name: 'Bouclier',
-              level: 1,
-              school: 'Abjuration',
-              status: 'préparé',
-            ),
-          ],
-        );
-
-        await tester.tap(find.byIcon(Icons.star_border));
-        await tester.pumpAndSettle();
-
-        expect(toggled, hasLength(1));
-        expect(toggled.single.id, 1);
-        expect(find.text('BOUCLIER'), findsNothing);
-      },
-    );
-
-    testWidgets('un sort déjà favori affiche une étoile pleine (Icons.star)', (
-      tester,
-    ) async {
-      await pumpWithFavoriteCallback(
-        tester,
-        spells: const [
-          CharacterSpellEntry(
-            id: 1,
-            name: 'Bouclier',
-            level: 1,
-            school: 'Abjuration',
-            status: 'préparé',
-            isFavorite: true,
-          ),
-        ],
+        ),
       );
 
-      // Une étoile pleine par occurrence (FAVORIS + groupe de niveau), plus
-      // l'icône d'en-tête "★ FAVORIS" (`_FavoritesSection`), qui réutilise
-      // aussi `Icons.star`.
-      expect(find.byIcon(Icons.star), findsNWidgets(3));
+      expect(find.text('FAVORIS'), findsNothing);
+      expect(find.text('Bouclier'), findsOneWidget);
+      expect(find.byIcon(Icons.star), findsNothing);
       expect(find.byIcon(Icons.star_border), findsNothing);
     });
 
-    testWidgets(
-      'sous-titre "connu, non préparé" affiché pour un sort niveau >= 1 '
-      '\'connu\', absent pour un sort mineur',
-      (tester) async {
-        await pumpWithFavoriteCallback(
-          tester,
+    testWidgets('aucun sous-titre "connu, non préparé"/"préparé" sous le nom '
+        'd\'un sort', (tester) async {
+      await _pump(
+        tester,
+        _detail(
           spells: const [
             CharacterSpellEntry(
               id: 1,
@@ -342,17 +244,48 @@ void main() {
             ),
             CharacterSpellEntry(
               id: 2,
-              name: 'Lumière',
-              level: 0,
-              school: 'Évocation',
-              status: 'connu',
+              name: 'Armure de mage',
+              level: 1,
+              school: 'Abjuration',
+              status: 'préparé',
             ),
           ],
-        );
+        ),
+      );
 
-        expect(find.text('connu, non préparé'), findsOneWidget);
-      },
-    );
+      expect(find.text('connu, non préparé'), findsNothing);
+      expect(find.text('préparé'), findsNothing);
+    });
+
+    testWidgets('le dé de dégâts est collé au nom du sort, la pastille '
+        '"DOMAINE" en face à droite', (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          spells: const [
+            CharacterSpellEntry(
+              id: 1,
+              name: 'Éclair traçant',
+              level: 1,
+              school: 'Évocation',
+              status: 'préparé',
+              description: 'La cible subit 4d6 dégâts radiants.',
+              grantSource: SpellGrantSource.domain,
+              isPersisted: false,
+            ),
+          ],
+        ),
+      );
+
+      final nameRight = tester.getTopRight(find.text('Éclair traçant')).dx;
+      final diceRect = tester.getRect(find.byType(DiceTypeBadge));
+      final badgeLeft = tester.getTopLeft(find.text('DOMAINE')).dx;
+
+      // Dé immédiatement après le nom (simple gouttière), jamais repoussé à
+      // l'autre bout de la ligne.
+      expect(diceRect.left - nameRight, lessThan(16));
+      expect(badgeLeft, greaterThan(diceRect.right));
+    });
   });
 
   testWidgets(
@@ -584,7 +517,6 @@ void main() {
                 ],
               ),
               onCastSpell: (_, _) {},
-              onToggleFavorite: (_) {},
               onTogglePrepared: (_) {},
               actionsDisabled: true,
             ),
@@ -717,7 +649,7 @@ void main() {
     const slots = [CharacterSpellSlot(level: 1, total: 2, used: 0)];
 
     testWidgets('badge DOMAINE/SERMENT visible sur les sorts accordés '
-        'uniquement, avec sous-titre "toujours préparé"', (tester) async {
+        'uniquement, sans sous-titre "toujours préparé"', (tester) async {
       await _pump(
         tester,
         _detail(spells: const [ordinary, granted, oath], spellSlots: slots),
@@ -725,22 +657,7 @@ void main() {
 
       expect(find.text('DOMAINE'), findsOneWidget);
       expect(find.text('SERMENT'), findsOneWidget);
-      expect(find.text('toujours préparé · Domaine'), findsOneWidget);
-      expect(find.text('toujours préparé · Serment'), findsOneWidget);
-      expect(find.text('connu, non préparé'), findsOneWidget);
-    });
-
-    testWidgets('pas d’étoile de favori sur un sort accordé sans ligne '
-        'character_spells (étoile conservée sur un sort ordinaire)', (
-      tester,
-    ) async {
-      await _pump(
-        tester,
-        _detail(spells: const [ordinary, granted], spellSlots: slots),
-      );
-
-      // Une seule étoile (vide) : celle du sort ordinaire.
-      expect(find.byIcon(Icons.star_border), findsOneWidget);
+      expect(find.textContaining('toujours préparé'), findsNothing);
     });
 
     testWidgets('non retirable : le panneau Infos d’un sort accordé ne '
@@ -1012,35 +929,6 @@ void main() {
 
         expect(find.text('AUCUN SORT PRÉPARÉ'), findsNothing);
         expect(find.text('Garde divine'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'un sort favori non préparé reste visible dans le bloc "FAVORIS" même '
-      'masqué du groupe de niveau par le filtrage préparation (comportement '
-      'préexistant, indépendant de ce filtrage)',
-      (tester) async {
-        const favoriteUnprepared = CharacterSpellEntry(
-          id: 5,
-          name: 'Flétrissure',
-          level: 1,
-          school: 'Nécromancie',
-          status: 'connu',
-          isFavorite: true,
-        );
-        await _pump(
-          tester,
-          _detail(
-            classes: [clerc()],
-            spells: const [cantrip, preparedSpell, favoriteUnprepared],
-          ),
-        );
-
-        expect(find.text('FAVORIS'), findsOneWidget);
-        // Présent une fois (bloc "FAVORIS"), absent des groupes par niveau
-        // (masqué par le filtrage préparation) : une seule occurrence au
-        // total, pas deux.
-        expect(find.text('Flétrissure'), findsOneWidget);
       },
     );
 

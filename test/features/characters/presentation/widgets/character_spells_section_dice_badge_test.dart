@@ -20,7 +20,6 @@ void main() {
             groups: SpellsByLevelGrouper.group(spells),
             spellSlots: const [],
             onCastSpell: (_, _) {},
-            onToggleFavorite: (_) {},
             onTogglePrepared: (_) {},
           ),
         ),

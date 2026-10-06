@@ -33,7 +33,6 @@ class CharacterSpellsTabBody extends StatefulWidget {
   const CharacterSpellsTabBody({
     required this.detail,
     required this.onCastSpell,
-    required this.onToggleFavorite,
     required this.onTogglePrepared,
     this.onUseFeature,
     this.actionsDisabled = false,
@@ -43,7 +42,6 @@ class CharacterSpellsTabBody extends StatefulWidget {
 
   final CharacterDetail detail;
   final CastSpellCallback onCastSpell;
-  final ToggleSpellFlagCallback onToggleFavorite;
   final ToggleSpellFlagCallback onTogglePrepared;
 
   /// Carte de pied "INVOCATIONS & APTITUDES À USAGE LIMITÉ" (recettage
@@ -159,13 +157,6 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
               .toList()
         : filteredSpells;
     final spellGroups = SpellsByLevelGrouper.group(visibleSpells);
-    // Filtrés par la même recherche (jamais par le filtrage de préparation
-    // ci-dessus) : un favori qui ne correspond pas à la requête en cours n'a
-    // pas plus sa place ici que dans les groupes par niveau ci-dessous —
-    // voir la documentation de classe de `CharacterSpellsSection`.
-    final favorites = filteredSpells
-        .where((spell) => spell.isFavorite)
-        .toList();
     final query = _searchController.text.trim();
     // Distinct de l'état "recherche sans résultat" ci-dessous, qui ne
     // regarde que la recherche : un groupe de niveau >= 1 peut disparaître
@@ -188,13 +179,11 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
           if (spellGroups.isNotEmpty)
             CharacterSpellsSection(
               groups: spellGroups,
-              favorites: favorites,
               spellSlots: detail.spellSlots,
               pactSlot: detail.pactSpellSlot,
               preparedLimit: detail.preparedSpellLimit,
               preparedCount: detail.preparedSpellCount,
               onCastSpell: widget.onCastSpell,
-              onToggleFavorite: widget.onToggleFavorite,
               onTogglePrepared: widget.onTogglePrepared,
               actionsDisabled: widget.actionsDisabled,
             ),
