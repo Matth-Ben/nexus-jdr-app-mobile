@@ -109,13 +109,23 @@ class _Segment extends StatelessWidget {
                 gradient: selected ? AppColors.primaryButtonGradient : null,
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),
-              child: Text(
-                label.toUpperCase(),
-                style: AppTypography.display(
-                  fontSize: 11,
-                  color: selected
-                      ? AppColors.woodDark
-                      : AppColors.textSecondary,
+              // `FittedBox` : un libellé long sur un segment étroit (3
+              // segments sur petit écran, ex. "Non préparés" de l'onglet
+              // "Sorts") rétrécit au lieu de passer sur deux lignes.
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label.toUpperCase(),
+                    maxLines: 1,
+                    style: AppTypography.display(
+                      fontSize: 11,
+                      color: selected
+                          ? AppColors.woodDark
+                          : AppColors.textSecondary,
+                    ),
+                  ),
                 ),
               ),
             ),

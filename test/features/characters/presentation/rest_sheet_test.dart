@@ -26,6 +26,7 @@ void main() {
     int hitDiceSpent = 0,
     int constitutionModifier = 0,
     RestType initialType = RestType.long,
+    bool canChangePreparedSpells = false,
     required ValueChanged<RestSheetResult> onApply,
   }) async {
     await tester.pumpWidget(
@@ -43,6 +44,7 @@ void main() {
                   hitDiceSpent: hitDiceSpent,
                   constitutionModifier: constitutionModifier,
                   initialType: initialType,
+                  canChangePreparedSpells: canChangePreparedSpells,
                   onApply: onApply,
                 ),
                 child: const Text('Ouvrir'),
@@ -532,5 +534,84 @@ void main() {
 
     expect(applyCallCount, 0);
     expect(find.text('Repos'), findsNothing);
+  });
+
+  group('repos long : garder ou changer les sorts préparés', () {
+    testWidgets('question absente quand le personnage n\'a aucun sort à '
+        'préparer', (tester) async {
+      await pumpSheet(tester, currentHp: 12, maxHp: 30, onApply: (_) {});
+
+      expect(find.text('GARDER MA LISTE'), findsNothing);
+      expect(find.text('CHANGER MES SORTS'), findsNothing);
+    });
+
+    testWidgets('"Garder ma liste" par défaut : changePreparedSpells false', (
+      tester,
+    ) async {
+      RestSheetResult? applied;
+      await pumpSheet(
+        tester,
+        currentHp: 12,
+        maxHp: 30,
+        canChangePreparedSpells: true,
+        onApply: (result) => applied = result,
+      );
+
+      expect(find.text('GARDER MA LISTE'), findsOneWidget);
+      expect(find.text('CHANGER MES SORTS'), findsOneWidget);
+
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(applied!.type, RestType.long);
+      expect(applied!.changePreparedSpells, isFalse);
+    });
+
+    testWidgets('"Changer mes sorts" : changePreparedSpells true', (
+      tester,
+    ) async {
+      RestSheetResult? applied;
+      await pumpSheet(
+        tester,
+        currentHp: 12,
+        maxHp: 30,
+        canChangePreparedSpells: true,
+        onApply: (result) => applied = result,
+      );
+
+      await tester.tap(find.text('CHANGER MES SORTS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(applied!.changePreparedSpells, isTrue);
+    });
+
+    testWidgets('repos court : question masquée, changePreparedSpells '
+        'toujours false même après avoir choisi "Changer mes sorts"', (
+      tester,
+    ) async {
+      RestSheetResult? applied;
+      await pumpSheet(
+        tester,
+        currentHp: 12,
+        maxHp: 30,
+        canChangePreparedSpells: true,
+        onApply: (result) => applied = result,
+      );
+
+      await tester.tap(find.text('CHANGER MES SORTS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('REPOS COURT'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('CHANGER MES SORTS'), findsNothing);
+
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(applied!.type, RestType.short);
+      expect(applied!.changePreparedSpells, isFalse);
+    });
   });
 }

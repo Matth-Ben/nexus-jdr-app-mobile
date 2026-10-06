@@ -26,9 +26,17 @@ class RestSheetResult {
     required this.type,
     this.diceSpent = 0,
     this.appliedGain = 0,
+    this.changePreparedSpells = false,
   });
 
   final RestType type;
+
+  /// `true` si le joueur a choisi "Changer mes sorts" plutôt que "Garder ma
+  /// liste" (repos long uniquement, et seulement si la feuille a été ouverte
+  /// avec `canChangePreparedSpells`) : l'appelant ouvre alors la sheet
+  /// "Préparer mes sorts" une fois le repos appliqué — demande utilisateur
+  /// du 06/10/2026. Toujours `false` pour un repos court.
+  final bool changePreparedSpells;
 
   /// Nombre de dés de vie dépensés (repos court uniquement).
   final int diceSpent;
@@ -62,6 +70,11 @@ class RestSheetResult {
 /// sont alors ignorés. [constitutionModifier] : modificateur de
 /// Constitution du personnage, ajouté à chaque dé dépensé (voir
 /// `HitDiceSpendCalculator`).
+///
+/// [canChangePreparedSpells] : `true` si le personnage a au moins un sort
+/// qui se prépare — le repos long demande alors s'il faut garder la liste de
+/// sorts préparés ou la changer (voir [RestSheetResult
+/// .changePreparedSpells]).
 Future<void> showRestSheet(
   BuildContext context, {
   required int currentHp,
@@ -71,6 +84,7 @@ Future<void> showRestSheet(
   int hitDiceSpent = 0,
   int constitutionModifier = 0,
   RestType initialType = RestType.long,
+  bool canChangePreparedSpells = false,
   required ValueChanged<RestSheetResult> onApply,
 }) {
   return showModalBottomSheet<void>(
@@ -85,6 +99,7 @@ Future<void> showRestSheet(
       hitDiceSpent: hitDiceSpent,
       constitutionModifier: constitutionModifier,
       initialType: initialType,
+      canChangePreparedSpells: canChangePreparedSpells,
       onApply: onApply,
     ),
   );
@@ -99,6 +114,7 @@ class _RestSheetContent extends StatefulWidget {
     required this.hitDiceSpent,
     required this.constitutionModifier,
     required this.initialType,
+    required this.canChangePreparedSpells,
     required this.onApply,
   });
 
@@ -117,6 +133,7 @@ class _RestSheetContent extends StatefulWidget {
   /// différente du défaut : le joueur choisit désormais uniquement via cette
   /// bascule segmentée, après ouverture.
   final RestType initialType;
+  final bool canChangePreparedSpells;
   final ValueChanged<RestSheetResult> onApply;
 
   @override
@@ -128,6 +145,13 @@ class _RestSheetContentState extends State<_RestSheetContent> {
 
   int _diceToSpend = 0;
   HitDieMethod _method = HitDieMethod.roll;
+
+  /// Choix "Garder ma liste" (`false`, défaut)/"Changer mes sorts" (`true`)
+  /// du repos long — voir [RestSheetResult.changePreparedSpells].
+  bool _changePreparedSpells = false;
+
+  bool get _asksAboutPreparedSpells =>
+      widget.canChangePreparedSpells && _type == RestType.long;
 
   /// Un jet/une valeur moyenne par dé de [_diceToSpend], recalculé
   /// entièrement (voir [_rerollAll]) à chaque changement de [_diceToSpend]
@@ -182,6 +206,7 @@ class _RestSheetContentState extends State<_RestSheetContent> {
         // [RestSheetResult].
         diceSpent: _type == RestType.short ? _diceToSpend : 0,
         appliedGain: _type == RestType.short ? _appliedGain : 0,
+        changePreparedSpells: _asksAboutPreparedSpells && _changePreparedSpells,
       ),
     );
     Navigator.of(context).pop();
@@ -247,6 +272,14 @@ class _RestSheetContentState extends State<_RestSheetContent> {
               onReroll: () => setState(_rerollAll),
               appliedGain: _appliedGain,
             ),
+            if (_asksAboutPreparedSpells) ...[
+              const SizedBox(height: AppSpacing.md),
+              _PreparedSpellsChoice(
+                change: _changePreparedSpells,
+                onChanged: (change) =>
+                    setState(() => _changePreparedSpells = change),
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
             Row(
               children: [
@@ -268,6 +301,60 @@ class _RestSheetContentState extends State<_RestSheetContent> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Question "sorts préparés" du repos long (classes qui préparent leurs
+/// sorts) : garder la liste actuelle ou la changer une fois le repos
+/// appliqué — demande utilisateur du 06/10/2026, voir
+/// [RestSheetResult.changePreparedSpells].
+class _PreparedSpellsChoice extends StatelessWidget {
+  const _PreparedSpellsChoice({required this.change, required this.onChanged});
+
+  final bool change;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.bookmark,
+              size: 14,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Text(
+              'SORTS PRÉPARÉS',
+              style: AppTypography.display(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        SegmentedToggle<bool>(
+          options: const [
+            SegmentedToggleOption(value: false, label: 'Garder ma liste'),
+            SegmentedToggleOption(value: true, label: 'Changer mes sorts'),
+          ],
+          value: change,
+          onChanged: onChanged,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          change
+              ? 'Après le repos, la liste de vos sorts s\'ouvre pour '
+                    'choisir ceux à préparer.'
+              : 'Vos sorts préparés restent les mêmes après le repos.',
+          style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
+        ),
+      ],
     );
   }
 }

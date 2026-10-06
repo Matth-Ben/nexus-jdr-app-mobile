@@ -1,10 +1,10 @@
-// Tests de widget de la sheet "Ajouter un sort"
-// (`presentation/widgets/add_prepared_spells_sheet.dart`) — ouverte depuis le
-// bouton "Ajouter un sort" de l'onglet "Sorts" pour les lanceurs à
-// préparation « liste complète » (Clerc/Druide/Paladin, voir
-// `character_spells_tab_body_test.dart`). Même patron que
-// `spell_info_panel_test.dart` : la sheet est ouverte depuis un `Builder`
-// minimal, les callbacks sont de simples enregistreurs d'appels synchrones.
+// Tests de widget de la sheet "Préparer mes sorts"
+// (`presentation/widgets/prepare_spells_sheet.dart`) — proposée à la fin
+// d'un repos long quand le joueur choisit de changer ses sorts préparés
+// (voir `rest_sheet_test.dart`, `character_detail_screen_test.dart`). Même
+// patron que `spell_info_panel_test.dart` : la sheet est ouverte depuis un
+// `Builder` minimal, les callbacks sont de simples enregistreurs d'appels
+// synchrones.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,7 +13,7 @@ import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
-import 'package:personnages/features/characters/presentation/widgets/add_prepared_spells_sheet.dart';
+import 'package:personnages/features/characters/presentation/widgets/prepare_spells_sheet.dart';
 
 const _cantrip = CharacterSpellEntry(
   id: 1,
@@ -55,6 +55,7 @@ void main() {
     WidgetTester tester, {
     required List<CharacterSpellEntry> spells,
     List<CharacterSpellSlot> spellSlots = const [],
+    int? preparedLimit,
   }) async {
     toggled = [];
     cast = [];
@@ -64,10 +65,11 @@ void main() {
           builder: (context) => Scaffold(
             body: Center(
               child: ElevatedButton(
-                onPressed: () => showAddPreparedSpellsSheet(
+                onPressed: () => showPrepareSpellsSheet(
                   context,
                   spells: spells,
                   spellSlots: spellSlots,
+                  preparedLimit: preparedLimit,
                   onTogglePrepared: toggled.add,
                   onCastSpell: (spell, _) => cast.add(spell),
                 ),
@@ -91,7 +93,7 @@ void main() {
         spells: const [_cantrip, _prepared, _unprepared, _granted],
       );
 
-      expect(find.text('AJOUTER UN SORT'), findsOneWidget);
+      expect(find.text('PRÉPARER MES SORTS'), findsOneWidget);
       expect(find.text('Bénédiction'), findsOneWidget);
       expect(find.text('Soins'), findsOneWidget);
       expect(find.text('Garde divine'), findsOneWidget);
@@ -148,7 +150,7 @@ void main() {
 
       expect(toggled, [_unprepared]);
       // La sheet reste ouverte.
-      expect(find.text('AJOUTER UN SORT'), findsOneWidget);
+      expect(find.text('PRÉPARER MES SORTS'), findsOneWidget);
       expect(tester.widget<CheckableOptionTile>(tileFinder).checked, isTrue);
     },
   );
@@ -206,24 +208,50 @@ void main() {
     expect(find.text('SOINS'), findsOneWidget);
   });
 
+  testWidgets('basculer la préparation depuis le panneau "Infos" reste synchronisé '
+      'avec la case de la sheet "Préparer mes sorts" derrière', (tester) async {
+    await pumpSheet(tester, spells: const [_unprepared]);
+
+    await tester.tap(find.byIcon(Icons.info_outline_rounded));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Préparer ce sort'));
+    await tester.pumpAndSettle();
+
+    expect(toggled, [_unprepared]);
+    // Retour sur la sheet "Préparer mes sorts", la case est maintenant cochée.
+    final tile = tester.widget<CheckableOptionTile>(
+      find.byType(CheckableOptionTile),
+    );
+    expect(tile.checked, isTrue);
+  });
+
   testWidgets(
-    'basculer la préparation depuis le panneau "Infos" reste synchronisé '
-    'avec la case de la sheet "Ajouter" derrière',
+    'compteur "SORTS PRÉPARÉS X / Y" affiché avec une limite, mis à jour à '
+    'chaque case cochée (sorts accordés non comptés)',
     (tester) async {
-      await pumpSheet(tester, spells: const [_unprepared]);
-
-      await tester.tap(find.byIcon(Icons.info_outline_rounded));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Préparer ce sort'));
-      await tester.pumpAndSettle();
-
-      expect(toggled, [_unprepared]);
-      // Retour sur la sheet "Ajouter", la case est maintenant cochée.
-      final tile = tester.widget<CheckableOptionTile>(
-        find.byType(CheckableOptionTile),
+      await pumpSheet(
+        tester,
+        spells: const [_prepared, _unprepared, _granted],
+        preparedLimit: 2,
       );
-      expect(tile.checked, isTrue);
+
+      expect(find.text('SORTS PRÉPARÉS'), findsOneWidget);
+      expect(find.text('1 / 2'), findsOneWidget);
+
+      await tester.tap(find.text('Soins'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 / 2'), findsOneWidget);
+      expect(find.text('Limite atteinte'), findsOneWidget);
     },
   );
+
+  testWidgets('sans limite (preparedLimit null) : aucun compteur', (
+    tester,
+  ) async {
+    await pumpSheet(tester, spells: const [_prepared, _unprepared]);
+
+    expect(find.text('SORTS PRÉPARÉS'), findsNothing);
+  });
 }

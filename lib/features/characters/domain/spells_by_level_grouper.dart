@@ -1,5 +1,6 @@
 import '../../../core/utils/french_text_normalizer.dart';
 import 'character_spell_entry.dart';
+import 'spell_status_formatter.dart';
 
 /// Un groupe de sorts d'un même niveau, pour la section "SORTS" de l'onglet
 /// Compétences (`presentation/widgets/character_spells_section.dart`).
@@ -26,8 +27,14 @@ abstract final class SpellsByLevelGrouper {
       level == 0 ? 'Sorts mineurs' : 'Niveau $level';
 
   /// Groupes triés par niveau croissant (mineurs en premier), sorts triés
-  /// par nom au sein d'un même niveau.
-  static List<SpellLevelGroup> group(List<CharacterSpellEntry> spells) {
+  /// par nom au sein d'un même niveau. Avec [preparedFirst], les sorts
+  /// restant à préparer ([SpellStatusFormatter.isUnprepared]) passent après
+  /// tous les autres au sein de leur niveau (onglet "Sorts", demande
+  /// utilisateur du 06/10/2026).
+  static List<SpellLevelGroup> group(
+    List<CharacterSpellEntry> spells, {
+    bool preparedFirst = false,
+  }) {
     final byLevel = <int, List<CharacterSpellEntry>>{};
     for (final spell in spells) {
       byLevel.putIfAbsent(spell.level, () => []).add(spell);
@@ -40,7 +47,14 @@ abstract final class SpellsByLevelGrouper {
           level: level,
           label: labelFor(level),
           spells: byLevel[level]!
-            ..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name)),
+            ..sort((a, b) {
+              if (preparedFirst) {
+                final aUnprepared = SpellStatusFormatter.isUnprepared(a);
+                final bUnprepared = SpellStatusFormatter.isUnprepared(b);
+                if (aUnprepared != bUnprepared) return aUnprepared ? 1 : -1;
+              }
+              return FrenchTextNormalizer.compare(a.name, b.name);
+            }),
         ),
     ];
   }

@@ -207,7 +207,7 @@ class _SkillSearchField extends StatelessWidget {
 
 /// État "recherche sans résultat" de la carte "LES 18 COMPÉTENCES" — même
 /// agencement compact que
-/// `character_spells_tab_body.dart::_NoSearchMatchState`, mais ne remplace
+/// `character_spells_tab_body.dart::_NoMatchState`, mais ne remplace
 /// que cette carte (les autres cartes de l'onglet restent affichées).
 class _NoSkillMatchState extends StatelessWidget {
   const _NoSkillMatchState({required this.query});

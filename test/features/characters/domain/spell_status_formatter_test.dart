@@ -127,58 +127,44 @@ void main() {
     });
   });
 
-  group('SpellStatusFormatter.isVisibleInPreparedView', () {
-    test('sort mineur -> toujours visible, quel que soit le statut', () {
-      expect(
-        SpellStatusFormatter.isVisibleInPreparedView(
-          _spell(level: 0, status: 'connu'),
-        ),
-        isTrue,
-      );
+  group('SpellStatusFormatter.isUnprepared / preparationLabel', () {
+    test('sort mineur -> jamais "non préparé", aucun libellé', () {
+      final spell = _spell(level: 0, status: 'connu');
+      expect(SpellStatusFormatter.isUnprepared(spell), isFalse);
+      expect(SpellStatusFormatter.preparationLabel(spell), isNull);
     });
 
-    test('sort inné -> toujours visible', () {
-      expect(
-        SpellStatusFormatter.isVisibleInPreparedView(
-          _spell(level: 3, status: 'inné'),
-        ),
-        isTrue,
-      );
+    test('sort inné -> jamais "non préparé", aucun libellé', () {
+      final spell = _spell(level: 3, status: 'inné');
+      expect(SpellStatusFormatter.isUnprepared(spell), isFalse);
+      expect(SpellStatusFormatter.preparationLabel(spell), isNull);
     });
 
-    test('sort accordé par une sous-classe -> toujours visible', () {
-      expect(
-        SpellStatusFormatter.isVisibleInPreparedView(
-          CharacterSpellEntry(
-            id: 1,
-            name: 'Bénédiction',
-            level: 1,
-            school: '',
-            status: 'préparé',
-            grantSource: SpellGrantSource.domain,
-            isPersisted: false,
-          ),
-        ),
-        isTrue,
+    test('sort accordé par une sous-classe -> aucun libellé (porte déjà sa '
+        'pastille)', () {
+      const spell = CharacterSpellEntry(
+        id: 1,
+        name: 'Bénédiction',
+        level: 1,
+        school: '',
+        status: 'préparé',
+        grantSource: SpellGrantSource.domain,
+        isPersisted: false,
       );
+      expect(SpellStatusFormatter.isUnprepared(spell), isFalse);
+      expect(SpellStatusFormatter.preparationLabel(spell), isNull);
     });
 
-    test("sort niveau >= 1 'préparé' -> visible", () {
-      expect(
-        SpellStatusFormatter.isVisibleInPreparedView(
-          _spell(level: 1, status: 'préparé'),
-        ),
-        isTrue,
-      );
+    test("sort niveau >= 1 'préparé' -> libellé \"préparé\"", () {
+      final spell = _spell(level: 1, status: 'préparé');
+      expect(SpellStatusFormatter.isUnprepared(spell), isFalse);
+      expect(SpellStatusFormatter.preparationLabel(spell), 'préparé');
     });
 
-    test("sort niveau >= 1 'connu' jamais préparé -> masqué par défaut", () {
-      expect(
-        SpellStatusFormatter.isVisibleInPreparedView(
-          _spell(level: 1, status: 'connu'),
-        ),
-        isFalse,
-      );
+    test("sort niveau >= 1 'connu' -> non préparé", () {
+      final spell = _spell(level: 1, status: 'connu');
+      expect(SpellStatusFormatter.isUnprepared(spell), isTrue);
+      expect(SpellStatusFormatter.preparationLabel(spell), 'non préparé');
     });
   });
 }

@@ -371,7 +371,7 @@ class _RewardButton extends StatelessWidget {
 /// existe, mais aucun ne correspond au filtre actuellement actif (voir
 /// `domain/inventory_category_filter.dart`). Même
 /// agencement compact que
-/// `character_spells_tab_body.dart::_NoSearchMatchState`.
+/// `character_spells_tab_body.dart::_NoMatchState`.
 class _NoFilterMatchState extends StatelessWidget {
   const _NoFilterMatchState();
 

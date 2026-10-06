@@ -1948,6 +1948,62 @@ void main() {
       expect(find.text('30 / 30'), findsOneWidget);
     });
 
+    testWidgets('repos long avec "Changer mes sorts" : ouvre la sheet '
+        '"PRÉPARER MES SORTS" une fois le repos appliqué', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Bouclier',
+            level: 1,
+            school: 'Abjuration',
+            status: 'connu',
+          ),
+        ],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('REPOS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CHANGER MES SORTS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyRestCallCount, 1);
+      expect(find.text('PRÉPARER MES SORTS'), findsOneWidget);
+      expect(find.text('Bouclier'), findsOneWidget);
+    });
+
+    testWidgets('repos long avec "Garder ma liste" (défaut) : aucune sheet de '
+        'préparation', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Bouclier',
+            level: 1,
+            school: 'Abjuration',
+            status: 'connu',
+          ),
+        ],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('REPOS'));
+      await tester.pumpAndSettle();
+      expect(find.text('GARDER MA LISTE'), findsOneWidget);
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyRestCallCount, 1);
+      expect(find.text('PRÉPARER MES SORTS'), findsNothing);
+    });
+
     testWidgets('choisir le segment "Repos court" dans la sheet puis appliquer '
         'appelle applyRest(RestType.short) et affiche une confirmation sobre', (
       tester,
