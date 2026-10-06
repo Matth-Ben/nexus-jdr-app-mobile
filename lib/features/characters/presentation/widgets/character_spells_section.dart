@@ -8,6 +8,7 @@ import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/spell_damage_dice_extractor.dart';
 import '../../domain/spell_grant_source.dart';
+import '../../domain/spell_status_formatter.dart';
 import '../../domain/spells_by_level_grouper.dart';
 import 'spell_action_sheet.dart';
 import 'spell_info_panel.dart';
@@ -27,6 +28,10 @@ import 'spell_info_panel.dart';
 /// (`character_detail_screen.dart::_castSpell`), même principe que
 /// `onTapAdjustHp`/`onTapRest` de `_CharacterTabBody`.
 ///
+/// Au sein d'un niveau, les sorts restant à préparer sont affichés grisés,
+/// après les sorts préparés (ordre porté par [groups], voir
+/// `SpellsByLevelGrouper.group`) — demande utilisateur du 06/10/2026.
+///
 /// N'affiche rien tant que [groups] est vide — appelant responsable de ne
 /// pas monter cette section dans ce cas (voir
 /// `character_spells_tab_body.dart`).
@@ -37,23 +42,11 @@ class CharacterSpellsSection extends StatelessWidget {
     required this.onCastSpell,
     required this.onTogglePrepared,
     this.pactSlot,
-    this.preparedLimit,
-    this.preparedCount = 0,
     this.actionsDisabled = false,
     super.key,
   });
 
   final List<SpellLevelGroup> groups;
-
-  /// Limite de sorts préparés (`CharacterDetail.preparedSpellLimit`), `null`
-  /// masque le compteur "PRÉPARÉS X / Y" (classe à sorts connus, non
-  /// lanceuse, ou multiclassage de plusieurs classes qui préparent). Simple
-  /// indicateur : n'empêche jamais de préparer un sort au-delà.
-  final int? preparedLimit;
-
-  /// Nombre de sorts préparés par le joueur (`CharacterDetail
-  /// .preparedSpellCount`, sorts mineurs et sorts accordés exclus).
-  final int preparedCount;
 
   /// Emplacements de sorts par niveau — indexé par niveau dans [build] pour
   /// afficher les pastilles du bon niveau à côté de chaque titre de groupe,
@@ -90,18 +83,16 @@ class CharacterSpellsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final slotsByLevel = {for (final slot in spellSlots) slot.level: slot};
     final hasPact = pactSlot != null && pactSlot!.total > 0;
-    // La carte "SORTS" (titre + compteur "PRÉPARÉS"/magie de pacte) n'a de
-    // sens que si elle porte au moins un de ces deux contenus —
-    // sinon elle ne contiendrait que le titre "SORTS" tout seul, un bloc
-    // vide au-dessus des cartes de niveau (chacune déjà clairement
-    // identifiée par son propre titre "Sorts mineurs"/"Niveau N") — demande
-    // utilisateur du 23/09/2026.
-    final hasMetaContent = preparedLimit != null || hasPact;
+    // La carte "SORTS" ne porte plus que le bloc "Magie de pacte" (le
+    // compteur de sorts préparés vit désormais dans
+    // `spell_preparation_card.dart`, au-dessus de cette section) : sans
+    // magie de pacte elle ne contiendrait que son titre tout seul, elle est
+    // alors masquée — demande utilisateur du 23/09/2026.
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (hasMetaContent)
+        if (hasPact)
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
@@ -122,13 +113,6 @@ class CharacterSpellsSection extends StatelessWidget {
                     color: AppColors.textSecondary,
                   ),
                 ),
-                if (preparedLimit != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  PreparedSpellsCounter(
-                    count: preparedCount,
-                    limit: preparedLimit!,
-                  ),
-                ],
                 // Bloc de section (pas un groupe de sorts) affiché une seule
                 // fois, uniquement pour un Occultiste (ou un Occultiste
                 // multiclassé) — même garde défensive que [hasPact].
@@ -143,11 +127,11 @@ class CharacterSpellsSection extends StatelessWidget {
         // plutôt que des sous-sections empilées dans la carte "SORTS"
         // ci-dessus — demande utilisateur du 23/09/2026. Pas d'espacement
         // avant le tout premier bloc quand la carte "SORTS" est masquée
-        // ([hasMetaContent] faux) : l'appelant (`character_spells_tab_body
+        // ([hasPact] faux) : l'appelant (`character_spells_tab_body
         // .dart`) porte déjà son propre espacement au-dessus de
         // [CharacterSpellsSection].
         for (var i = 0; i < groups.length; i++) ...[
-          if (hasMetaContent || i > 0) const SizedBox(height: AppSpacing.md),
+          if (hasPact || i > 0) const SizedBox(height: AppSpacing.md),
           _SpellLevelGroupSection(
             group: groups[i],
             slot: slotsByLevel[groups[i].level],
@@ -159,69 +143,6 @@ class CharacterSpellsSection extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-/// Compteur "PRÉPARÉS X / Y" (classes qui préparent leurs sorts) : titre en
-/// `font.display` 11px à gauche, badge "X / Y" à droite — même patron que le
-/// badge de quota des étapes de sorts de l'assistant de création/de la montée
-/// de niveau (`_QuotaBadge`). Au-delà de la limite, le badge passe en
-/// [AppColors.accentBrick] (texte et liseré) et la phrase de sémantique le
-/// précise : aucun blocage, simple signal.
-class PreparedSpellsCounter extends StatelessWidget {
-  const PreparedSpellsCounter({
-    required this.count,
-    required this.limit,
-    super.key,
-  });
-
-  final int count;
-  final int limit;
-
-  @override
-  Widget build(BuildContext context) {
-    final over = count > limit;
-    return Semantics(
-      container: true,
-      excludeSemantics: true,
-      label:
-          'Sorts préparés : $count sur $limit'
-          '${over ? ', limite dépassée' : ''}',
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'PRÉPARÉS',
-            style: AppTypography.display(
-              fontSize: 11,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.parchmentCardAlt,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              border: Border.all(
-                color: over ? AppColors.accentBrick : AppColors.woodLight,
-                width: 1,
-              ),
-            ),
-            child: Text(
-              '$count / $limit',
-              style: AppTypography.body(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: over ? AppColors.accentBrick : AppColors.textSecondary,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -426,6 +347,8 @@ class _SpellRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dice = SpellDamageDiceExtractor.extract(spell.description);
+    final preparationLabel = SpellStatusFormatter.preparationLabel(spell);
+    final unprepared = SpellStatusFormatter.isUnprepared(spell);
 
     return Material(
       color: Colors.transparent,
@@ -440,49 +363,95 @@ class _SpellRow extends StatelessWidget {
                 onTogglePrepared: onTogglePrepared,
               )
             : null,
-        child: ConstrainedBox(
-          // Une seule ligne de contenu par sort (plus de sous-titre de
-          // statut) : même plancher réduit que celui déjà retenu pour les
-          // sorts mineurs (demande utilisateur du 23/09/2026), le plancher
-          // tactile standard de 44 laissant un grand vide sous le nom.
-          constraints: const BoxConstraints(minHeight: 32),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs / 2),
-            child: Row(
-              children: [
-                // Nom + dé de dégâts collés l'un à l'autre à gauche, la
-                // pastille "DOMAINE"/"SERMENT" repoussée en face, à droite
-                // — demande utilisateur du 06/10/2026.
-                Expanded(
-                  child: Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          spell.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.body(fontSize: 13),
+        // Sort restant à préparer : ligne entière atténuée (non lançable
+        // en l'état, mais toujours tappable pour ouvrir "Infos" et le
+        // préparer) — demande utilisateur du 06/10/2026.
+        child: Opacity(
+          opacity: unprepared ? 0.5 : 1,
+          child: ConstrainedBox(
+            // Une seule ligne de contenu par sort : même plancher réduit que
+            // celui déjà retenu pour les sorts mineurs (demande utilisateur du
+            // 23/09/2026), le plancher tactile standard de 44 laissant un
+            // grand vide sous le nom.
+            constraints: const BoxConstraints(minHeight: 32),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs / 2),
+              child: Row(
+                children: [
+                  // Nom + dé de dégâts collés l'un à l'autre à gauche, la
+                  // pastille "DOMAINE"/"SERMENT" repoussée en face, à droite
+                  // — demande utilisateur du 06/10/2026.
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            spell.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.body(fontSize: 13),
+                          ),
                         ),
-                      ),
-                      if (dice != null) ...[
-                        const SizedBox(width: AppSpacing.xs),
-                        DiceTypeBadge(
-                          sides: dice.sides,
-                          label: '${dice.count}d${dice.sides}',
-                        ),
+                        if (dice != null) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          DiceTypeBadge(
+                            sides: dice.sides,
+                            label: '${dice.count}d${dice.sides}',
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                if (spell.grantSource != null) ...[
-                  const SizedBox(width: AppSpacing.xs),
-                  _GrantBadge(source: spell.grantSource!),
+                  if (spell.grantSource != null) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    _GrantBadge(source: spell.grantSource!),
+                  ],
+                  if (preparationLabel != null) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    _PreparationStatus(
+                      label: preparationLabel,
+                      prepared: !unprepared,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// État de préparation d'un sort, en face de son nom ("PRÉPARÉ"/"NON
+/// PRÉPARÉ", voir `SpellStatusFormatter.preparationLabel`) : marque-page
+/// plein [AppColors.accentTeal] pour un sort préparé, vide sinon — même
+/// icône que le compteur "SORTS PRÉPARÉS" (`spell_preparation_card.dart`).
+class _PreparationStatus extends StatelessWidget {
+  const _PreparationStatus({required this.label, required this.prepared});
+
+  final String label;
+  final bool prepared;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          prepared ? Icons.bookmark : Icons.bookmark_border,
+          size: 12,
+          color: prepared ? AppColors.accentTeal : AppColors.textMuted,
+        ),
+        const SizedBox(width: 3),
+        Text(
+          label.toUpperCase(),
+          style: AppTypography.display(
+            fontSize: 10,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
     );
   }
 }

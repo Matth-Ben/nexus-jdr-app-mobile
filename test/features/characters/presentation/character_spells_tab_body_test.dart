@@ -9,7 +9,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:personnages/core/widgets/dashed_add_tile.dart';
 import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
@@ -114,7 +113,10 @@ void main() {
       ),
     );
 
-    expect(find.text('SORTS'), findsOneWidget);
+    // Magicien avec un sort à préparer : carte de préparation en tête ; la
+    // carte "SORTS" ne porte plus que la magie de pacte (absente ici).
+    expect(find.text('PRÉPARATION DES SORTS'), findsOneWidget);
+    expect(find.text('SORTS'), findsNothing);
     expect(find.text('Sorts mineurs'), findsOneWidget);
     expect(find.text('Lumière'), findsOneWidget);
     expect(find.text('Niveau 1'), findsOneWidget);
@@ -229,32 +231,56 @@ void main() {
       expect(find.byIcon(Icons.star_border), findsNothing);
     });
 
-    testWidgets('aucun sous-titre "connu, non préparé"/"préparé" sous le nom '
-        'd\'un sort', (tester) async {
+    testWidgets('état "PRÉPARÉ"/"NON PRÉPARÉ" en face du nom, ligne non '
+        'préparée atténuée, sorts préparés en premier', (tester) async {
       await _pump(
         tester,
         _detail(
           spells: const [
             CharacterSpellEntry(
               id: 1,
-              name: 'Bouclier',
+              name: 'Armure de mage',
               level: 1,
               school: 'Abjuration',
               status: 'connu',
             ),
             CharacterSpellEntry(
               id: 2,
-              name: 'Armure de mage',
+              name: 'Bouclier',
               level: 1,
               school: 'Abjuration',
               status: 'préparé',
+            ),
+            CharacterSpellEntry(
+              id: 3,
+              name: 'Lumière',
+              level: 0,
+              school: 'Évocation',
+              status: 'connu',
             ),
           ],
         ),
       );
 
-      expect(find.text('connu, non préparé'), findsNothing);
-      expect(find.text('préparé'), findsNothing);
+      // Un seul libellé de chaque : le sort mineur n'en porte aucun.
+      expect(find.text('PRÉPARÉ'), findsOneWidget);
+      expect(find.text('NON PRÉPARÉ'), findsOneWidget);
+
+      double opacityOf(String name) => tester
+          .widget<Opacity>(
+            find.ancestor(of: find.text(name), matching: find.byType(Opacity)),
+          )
+          .opacity;
+      expect(opacityOf('Bouclier'), 1);
+      expect(opacityOf('Lumière'), 1);
+      expect(opacityOf('Armure de mage'), lessThan(1));
+
+      // "Bouclier" (préparé) avant "Armure de mage" (non préparé), malgré
+      // l'ordre alphabétique.
+      expect(
+        tester.getTopLeft(find.text('Bouclier')).dy,
+        lessThan(tester.getTopLeft(find.text('Armure de mage')).dy),
+      );
     });
 
     testWidgets('le dé de dégâts est collé au nom du sort, la pastille '
@@ -718,7 +744,7 @@ void main() {
     });
   });
 
-  group('compteur "PRÉPARÉS X / Y"', () {
+  group('compteur "SORTS PRÉPARÉS X / Y"', () {
     const prepared = CharacterSpellEntry(
       id: 10,
       name: 'Bouclier',
@@ -766,7 +792,7 @@ void main() {
         ),
       );
 
-      expect(find.text('PRÉPARÉS'), findsOneWidget);
+      expect(find.text('SORTS PRÉPARÉS'), findsOneWidget);
       expect(find.text('1 / 6'), findsOneWidget);
     });
 
@@ -798,13 +824,46 @@ void main() {
         _detail(classes: [classRow(2, 'Barde', 3)], spells: const [known]),
       );
 
-      expect(find.text('PRÉPARÉS'), findsNothing);
-      // Ni compteur "PRÉPARÉS", ni favori, ni magie de pacte : la carte
-      // "SORTS" ne porterait plus que son titre tout seul, elle est donc
-      // entièrement masquée (demande utilisateur du 23/09/2026) — chaque
-      // niveau de sort reste identifié par son propre titre de carte
-      // ("Niveau 1"), pas besoin d'un bloc "SORTS" vide au-dessus.
+      expect(find.text('SORTS PRÉPARÉS'), findsNothing);
+      // Ni magie de pacte : la carte "SORTS" ne porterait plus que son titre
+      // tout seul, elle est donc entièrement masquée (demande utilisateur du
+      // 23/09/2026).
       expect(find.text('SORTS'), findsNothing);
+    });
+
+    testWidgets('limite dépassée : phrase d\'état dédiée', (tester) async {
+      const second = CharacterSpellEntry(
+        id: 13,
+        name: 'Sommeil',
+        level: 1,
+        school: 'Enchantement',
+        status: 'préparé',
+      );
+      await _pump(
+        tester,
+        _detail(
+          abilityScores: const {'int': 10},
+          spells: const [prepared, second],
+        ),
+      );
+
+      expect(find.text('2 / 1'), findsOneWidget);
+      expect(find.text('Limite dépassée de 1'), findsOneWidget);
+    });
+
+    testWidgets('sous la limite : nombre de sorts restant à préparer', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _detail(
+          classes: [classRow(1, 'Magicien', 3)],
+          abilityScores: const {'int': 16},
+          spells: const [prepared],
+        ),
+      );
+
+      expect(find.text('Encore 5 sorts à préparer'), findsOneWidget);
     });
 
     testWidgets('plusieurs classes qui préparent : aucun compteur', (
@@ -821,21 +880,19 @@ void main() {
         ),
       );
 
-      expect(find.text('PRÉPARÉS'), findsNothing);
+      expect(find.text('SORTS PRÉPARÉS'), findsNothing);
     });
   });
 
-  group('filtrage par défaut des lanceurs à préparation « liste complète » '
-      '(Clerc/Druide/Paladin)', () {
-    CharacterDetailClassRow clerc({int level = 1}) =>
-        const CharacterDetailClassRow(
-          classId: 5,
-          className: 'Clerc',
-          level: 1,
-          isPrimary: true,
-          savingThrowProficiencies: [],
-          hitDie: 8,
-        );
+  group('préparation : tous les sorts affichés, filtre et note', () {
+    CharacterDetailClassRow clerc() => const CharacterDetailClassRow(
+      classId: 5,
+      className: 'Clerc',
+      level: 1,
+      isPrimary: true,
+      savingThrowProficiencies: [],
+      hitDie: 8,
+    );
 
     const cantrip = CharacterSpellEntry(
       id: 1,
@@ -867,126 +924,94 @@ void main() {
       grantSource: SpellGrantSource.domain,
       isPersisted: false,
     );
+    const all = [cantrip, preparedSpell, unpreparedSpell, grantedSpell];
 
-    testWidgets(
-      'masque un sort connu jamais préparé, garde les cantrips/sorts de '
-      'sous-classe/préparés visibles, affiche le bouton "Ajouter un sort"',
-      (tester) async {
-        await _pump(
-          tester,
-          _detail(
-            classes: [clerc()],
-            spells: const [
-              cantrip,
-              preparedSpell,
-              unpreparedSpell,
-              grantedSpell,
-            ],
-          ),
-        );
+    testWidgets('par défaut ("Tous") : sorts non préparés affichés aussi, '
+        'plus de bouton "Ajouter un sort"', (tester) async {
+      await _pump(tester, _detail(classes: [clerc()], spells: all));
 
-        expect(find.text('Lumière'), findsOneWidget);
-        expect(find.text('Bénédiction'), findsOneWidget);
-        expect(find.text('Garde divine'), findsOneWidget);
-        expect(find.text('Soins'), findsNothing);
-        expect(
-          find.widgetWithText(DashedAddTile, 'Ajouter un sort'),
-          findsOneWidget,
-        );
-      },
-    );
-
-    testWidgets(
-      'aucun sort préparé : affiche l\'état "AUCUN SORT PRÉPARÉ" à la '
-      'place des groupes de niveau >= 1, cantrip toujours visible '
-      'au-dessus, bouton "Ajouter un sort" toujours affiché',
-      (tester) async {
-        await _pump(
-          tester,
-          _detail(classes: [clerc()], spells: const [cantrip, unpreparedSpell]),
-        );
-
-        expect(find.text('AUCUN SORT PRÉPARÉ'), findsOneWidget);
-        expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
-        expect(find.text('Lumière'), findsOneWidget);
-        expect(find.text('Soins'), findsNothing);
-        expect(
-          find.widgetWithText(DashedAddTile, 'Ajouter un sort'),
-          findsOneWidget,
-        );
-      },
-    );
-
-    testWidgets(
-      'groupe de niveau >= 1 avec seulement un sort accordé par sous-classe '
-      '(aucun sort réellement préparé) : "AUCUN SORT PRÉPARÉ" ne s\'affiche '
-      'pas, le sort accordé reste visible dans son groupe',
-      (tester) async {
-        await _pump(
-          tester,
-          _detail(classes: [clerc()], spells: const [cantrip, grantedSpell]),
-        );
-
-        expect(find.text('AUCUN SORT PRÉPARÉ'), findsNothing);
-        expect(find.text('Garde divine'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'une classe à sorts connus (Magicien, classe de départ par défaut) '
-      'n\'est jamais filtrée ni dotée du bouton "Ajouter un sort"',
-      (tester) async {
-        await _pump(tester, _detail(spells: const [unpreparedSpell]));
-
-        expect(find.text('Soins'), findsOneWidget);
-        expect(find.byType(DashedAddTile), findsNothing);
-        expect(find.text('AUCUN SORT PRÉPARÉ'), findsNothing);
-      },
-    );
-
-    testWidgets('multiclassage Clerc + Magicien : tout l\'onglet passe en mode '
-        'filtré (comportement le plus simple, pas de distinction par classe '
-        'd\'origine du sort)', (tester) async {
-      await _pump(
-        tester,
-        _detail(
-          classes: [
-            clerc(),
-            const CharacterDetailClassRow(
-              classId: 1,
-              className: 'Magicien',
-              level: 1,
-              isPrimary: false,
-              savingThrowProficiencies: [],
-              hitDie: 6,
-            ),
-          ],
-          spells: const [unpreparedSpell],
-        ),
-      );
-
-      expect(find.text('Soins'), findsNothing);
-      expect(find.byType(DashedAddTile), findsOneWidget);
+      expect(find.text('PRÉPARATION DES SORTS'), findsOneWidget);
+      expect(find.text('Lumière'), findsOneWidget);
+      expect(find.text('Bénédiction'), findsOneWidget);
+      expect(find.text('Garde divine'), findsOneWidget);
+      expect(find.text('Soins'), findsOneWidget);
+      expect(find.text('Ajouter un sort'), findsNothing);
     });
 
-    testWidgets('taper "Ajouter un sort" ouvre la sheet "AJOUTER UN SORT"', (
-      tester,
-    ) async {
+    testWidgets('filtre "Préparés" : masque les sorts restant à préparer, '
+        'garde sorts mineurs et sorts accordés', (tester) async {
+      await _pump(tester, _detail(classes: [clerc()], spells: all));
+
+      await tester.tap(find.text('PRÉPARÉS'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Soins'), findsNothing);
+      expect(find.text('Lumière'), findsOneWidget);
+      expect(find.text('Bénédiction'), findsOneWidget);
+      expect(find.text('Garde divine'), findsOneWidget);
+    });
+
+    testWidgets('filtre "Non préparés" : uniquement les sorts restant à '
+        'préparer', (tester) async {
+      await _pump(tester, _detail(classes: [clerc()], spells: all));
+
+      await tester.tap(find.text('NON PRÉPARÉS'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Soins'), findsOneWidget);
+      expect(find.text('Lumière'), findsNothing);
+      expect(find.text('Bénédiction'), findsNothing);
+      expect(find.text('Garde divine'), findsNothing);
+    });
+
+    testWidgets('filtre sans résultat : message dédié, la carte de '
+        'préparation reste affichée pour revenir en arrière', (tester) async {
+      await _pump(
+        tester,
+        _detail(classes: [clerc()], spells: const [cantrip, preparedSpell]),
+      );
+
+      await tester.tap(find.text('NON PRÉPARÉS'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aucun sort non préparé.'), findsOneWidget);
+      expect(find.text('PRÉPARATION DES SORTS'), findsOneWidget);
+
+      await tester.tap(find.text('TOUS'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Bénédiction'), findsOneWidget);
+    });
+
+    testWidgets('l\'icône ⓘ ouvre la note "PRÉPARATION DES SORTS" avec la '
+        'limite actuelle du personnage', (tester) async {
       await _pump(
         tester,
         _detail(
           classes: [clerc()],
-          spells: const [cantrip, preparedSpell, unpreparedSpell],
+          abilityScores: const {'wis': 14},
+          spells: all,
         ),
       );
 
-      await tester.tap(find.text('Ajouter un sort'));
+      await tester.tap(
+        find.byTooltip('Comment fonctionne la préparation des sorts ?'),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.text('AJOUTER UN SORT'), findsOneWidget);
-      // La sheet affiche la liste complète (dont le sort masqué par
-      // défaut dans l'onglet).
-      expect(find.text('Soins'), findsOneWidget);
+      expect(find.text('Préparer pour lancer'), findsOneWidget);
+      expect(find.text('Changer sa liste'), findsOneWidget);
+      // Clerc niveau 1, Sagesse 14 (+2) : limite 3.
+      expect(find.textContaining('Votre limite actuelle : 3.'), findsOneWidget);
+    });
+
+    testWidgets('personnage sans aucun sort à préparer (sorts mineurs/innés '
+        'uniquement) : ni carte de préparation ni filtre', (tester) async {
+      await _pump(tester, _detail(spells: const [cantrip]));
+
+      expect(find.text('PRÉPARATION DES SORTS'), findsNothing);
+      expect(find.text('NON PRÉPARÉS'), findsNothing);
+      expect(find.text('Lumière'), findsOneWidget);
     });
   });
 }

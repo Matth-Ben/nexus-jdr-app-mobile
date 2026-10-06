@@ -18,6 +18,7 @@ import '../domain/character_failure.dart';
 import '../domain/character_inventory_item.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
+import '../domain/spell_status_formatter.dart';
 import '../domain/currency_kind.dart';
 import '../domain/hp_adjustment.dart';
 import '../domain/inventory_catalog_item.dart';
@@ -54,6 +55,7 @@ import 'widgets/dice_roll_sheet.dart';
 import 'widgets/hp_adjustment_sheet.dart';
 import 'widgets/pact_weapon_picker_sheet.dart';
 import 'widgets/portrait_upload_sheet.dart';
+import 'widgets/prepare_spells_sheet.dart';
 import 'widgets/rest_sheet.dart';
 
 /// Actions du menu "…" du bandeau bois de l'onglet "Personnage" (recettage
@@ -1548,7 +1550,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// `CharacterVitalsCard` pendant toute la durée de ce repos, voir sa
   /// documentation pour le sens de course que ce verrou ferme (celui que
   /// [_restGeneration] seul ne couvre pas).
-  Future<void> _applyRest(
+  Future<bool> _applyRest(
     CharacterDetail detail,
     RestType type, {
     int diceSpent = 0,
@@ -1626,7 +1628,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             appliedGain: appliedGain,
           );
       ref.invalidate(characterDetailProvider(widget.characterId));
-      if (!mounted) return;
+      if (!mounted) return false;
       _showSnackBar(
         type == RestType.long
             ? 'Repos long effectué. PV restaurés au maximum.'
@@ -1635,6 +1637,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                   'vie dépensé(s)).'
             : 'Repos court effectué.',
       );
+      return true;
     } on CharacterFailure catch (failure) {
       if (touchesHp && mounted && _restGeneration == myRestGeneration) {
         setState(() {
@@ -1649,6 +1652,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         });
       }
       _showSnackBar(failure.message);
+      return false;
     } catch (_) {
       if (touchesHp && mounted && _restGeneration == myRestGeneration) {
         setState(() {
@@ -1663,9 +1667,52 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         });
       }
       _showSnackBar("Impossible d'effectuer le repos. Réessayez.");
+      return false;
     } finally {
       if (mounted) setState(() => _isApplyingRest = false);
     }
+  }
+
+  /// `onApply` de la feuille "Repos" : applique le repos ([_applyRest]) puis,
+  /// si le joueur a choisi "Changer mes sorts" au repos long
+  /// (`RestSheetResult.changePreparedSpells`) et que le repos a réussi, ouvre
+  /// la sheet "Préparer mes sorts" — demande utilisateur du 06/10/2026.
+  /// Attend la fiche rafraîchie par le repos pour que les emplacements de
+  /// sorts affichés dans cette sheet soient ceux d'après repos ; retombe sur
+  /// [detail] si ce rafraîchissement échoue (les statuts de préparation, eux,
+  /// ne sont jamais touchés par un repos).
+  Future<void> _applyRestFromSheet(
+    CharacterDetail detail,
+    RestSheetResult result,
+  ) async {
+    final applied = await _applyRest(
+      detail,
+      result.type,
+      diceSpent: result.diceSpent,
+      appliedGain: result.appliedGain,
+    );
+    if (!applied || !result.changePreparedSpells || !mounted) return;
+
+    CharacterDetail fresh;
+    try {
+      fresh = await ref.read(
+        characterDetailProvider(widget.characterId).future,
+      );
+    } catch (_) {
+      fresh = detail;
+    }
+    if (!mounted) return;
+    final effective = _effectiveDetail(fresh);
+    await showPrepareSpellsSheet(
+      context,
+      spells: effective.spells,
+      spellSlots: effective.spellSlots,
+      pactSlot: effective.pactSpellSlot,
+      preparedLimit: effective.preparedSpellLimit,
+      onTogglePrepared: _toggleSpellPrepared,
+      onCastSpell: (spell, slot) =>
+          _castSpell(_effectiveDetail(fresh), spell, slot),
+    );
   }
 
   /// Ouvre le flux "Montée de niveau" ciblant [targetLevel] — déclenchement
@@ -2064,12 +2111,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             // unique, voir `CharacterVitalsCard.onTapRest`) : `RestSheet`
             // garde son défaut `RestType.long`, le joueur choisit ensuite
             // via sa propre bascule segmentée.
-            onApply: (result) => _applyRest(
-              detail,
-              result.type,
-              diceSpent: result.diceSpent,
-              appliedGain: result.appliedGain,
+            canChangePreparedSpells: detail.spells.any(
+              SpellStatusFormatter.canTogglePrepared,
             ),
+            onApply: (result) => _applyRestFromSheet(detail, result),
           );
         },
         hpActionsDisabled: _isApplyingRest,

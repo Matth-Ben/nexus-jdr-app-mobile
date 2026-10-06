@@ -15,29 +15,32 @@ import '../../domain/spells_by_level_grouper.dart';
 import 'character_spells_section.dart';
 import 'spell_action_sheet.dart';
 import 'spell_info_panel.dart';
+import 'spell_preparation_card.dart';
 
-/// Ouvre la sheet "Ajouter un sort" de l'onglet "Sorts" — gabarit B du design
-/// système (même patron que [showSpellInfoPanel]) : [SheetHeaderBar] + champ
-/// de recherche + contenu scrollable, `FractionallySizedBox(heightFactor:
+/// Ouvre la sheet "Préparer mes sorts" — gabarit B du design système (même
+/// patron que [showSpellInfoPanel]) : [SheetHeaderBar] + champ de recherche
+/// + compteur + contenu scrollable, `FractionallySizedBox(heightFactor:
 /// 0.9)`. Pas de pied fixe/bouton "Valider" : chaque case écrit
 /// immédiatement, voir [ToggleSpellFlagCallback].
 ///
-/// Seul point d'entrée pour préparer un sort absent de la vue par défaut de
-/// l'onglet "Sorts" (`character_spells_tab_body.dart`), qui ne montre que les
-/// sorts déjà préparés pour les classes à préparation « liste complète »
-/// (Clerc/Druide/Paladin, voir `domain/prepared_caster_spell_list.dart
-/// ::PreparedCasterSpellList`) — voir `SpellStatusFormatter
-/// .isVisibleInPreparedView`.
+/// Proposée à la fin d'un repos long quand le joueur choisit de changer ses
+/// sorts préparés (`rest_sheet.dart`, `character_detail_screen.dart
+/// ::_applyRestFromSheet`) — demande utilisateur du 06/10/2026. Ancienne
+/// sheet "Ajouter un sort" de l'onglet "Sorts", dont le bouton a été retiré
+/// : l'onglet affiche désormais lui-même tous les sorts, préparés ou non.
 ///
 /// [spells] est la liste complète déjà fournie par `CharacterDetail.spells`
 /// (déjà fusionnée côté `CharacterRepository`
 /// `_fetchPreparedCasterClassListSpellIds`) — aucune requête réseau
 /// supplémentaire ici, uniquement du filtrage de présentation.
-Future<void> showAddPreparedSpellsSheet(
+/// [preparedLimit] (`CharacterDetail.preparedSpellLimit`) : `null` masque le
+/// compteur "SORTS PRÉPARÉS X / Y".
+Future<void> showPrepareSpellsSheet(
   BuildContext context, {
   required List<CharacterSpellEntry> spells,
   required List<CharacterSpellSlot> spellSlots,
   CharacterSpellSlot? pactSlot,
+  int? preparedLimit,
   required ToggleSpellFlagCallback onTogglePrepared,
   required CastSpellCallback onCastSpell,
 }) {
@@ -45,21 +48,23 @@ Future<void> showAddPreparedSpellsSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (sheetContext) => _AddPreparedSpellsSheetContent(
+    builder: (sheetContext) => _PrepareSpellsSheetContent(
       spells: spells,
       spellSlots: spellSlots,
       pactSlot: pactSlot,
+      preparedLimit: preparedLimit,
       onTogglePrepared: onTogglePrepared,
       onCastSpell: onCastSpell,
     ),
   );
 }
 
-class _AddPreparedSpellsSheetContent extends StatefulWidget {
-  const _AddPreparedSpellsSheetContent({
+class _PrepareSpellsSheetContent extends StatefulWidget {
+  const _PrepareSpellsSheetContent({
     required this.spells,
     required this.spellSlots,
     this.pactSlot,
+    this.preparedLimit,
     required this.onTogglePrepared,
     required this.onCastSpell,
   });
@@ -67,16 +72,17 @@ class _AddPreparedSpellsSheetContent extends StatefulWidget {
   final List<CharacterSpellEntry> spells;
   final List<CharacterSpellSlot> spellSlots;
   final CharacterSpellSlot? pactSlot;
+  final int? preparedLimit;
   final ToggleSpellFlagCallback onTogglePrepared;
   final CastSpellCallback onCastSpell;
 
   @override
-  State<_AddPreparedSpellsSheetContent> createState() =>
-      _AddPreparedSpellsSheetContentState();
+  State<_PrepareSpellsSheetContent> createState() =>
+      _PrepareSpellsSheetContentState();
 }
 
-class _AddPreparedSpellsSheetContentState
-    extends State<_AddPreparedSpellsSheetContent> {
+class _PrepareSpellsSheetContentState
+    extends State<_PrepareSpellsSheetContent> {
   final TextEditingController _searchController = TextEditingController();
 
   /// Identifiants des sorts actuellement cochés, dans cette sheet — état
@@ -109,6 +115,17 @@ class _AddPreparedSpellsSheetContentState
 
   bool _isPrepared(CharacterSpellEntry spell) =>
       _preparedIds.contains(spell.id);
+
+  /// Même décompte que `CharacterDetail.preparedSpellCount` (sorts mineurs
+  /// et sorts accordés exclus), mais sur l'état local [_preparedIds] : le
+  /// compteur suit chaque case cochée sans attendre le rafraîchissement de
+  /// la fiche.
+  int get _preparedCount => widget.spells
+      .where(
+        (spell) =>
+            spell.level > 0 && !spell.isAlwaysPrepared && _isPrepared(spell),
+      )
+      .length;
 
   /// Reconstruit [spell] avec un [CharacterSpellEntry.status] à jour de
   /// [_preparedIds] — `character_detail_screen.dart::_toggleSpellPrepared`
@@ -182,11 +199,24 @@ class _AddPreparedSpellsSheetContentState
           decoration: const BoxDecoration(color: AppColors.parchmentBg),
           child: Column(
             children: [
-              const SheetHeaderBar(title: 'AJOUTER UN SORT'),
+              const SheetHeaderBar(title: 'PRÉPARER MES SORTS'),
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 child: _SpellSearchField(controller: _searchController),
               ),
+              if (widget.preparedLimit != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                  ),
+                  child: PreparedSpellsCounter(
+                    count: _preparedCount,
+                    limit: widget.preparedLimit!,
+                  ),
+                ),
               Expanded(
                 child: groups.isEmpty
                     ? _NoMatchState(query: _searchController.text.trim())
@@ -252,7 +282,7 @@ class _SpellSearchField extends StatelessWidget {
 
 /// Aucun sort de niveau >= 1 ne correspond à la recherche en cours (ou la
 /// fiche n'en a aucun du tout, garde défensive) — même gabarit minimal que
-/// `character_spells_tab_body.dart::_NoSearchMatchState`.
+/// `character_spells_tab_body.dart::_NoMatchState`.
 class _NoMatchState extends StatelessWidget {
   const _NoMatchState({required this.query});
 

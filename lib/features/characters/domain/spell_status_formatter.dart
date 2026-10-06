@@ -56,20 +56,21 @@ abstract final class SpellStatusFormatter {
     return spell.status == 'connu' || spell.status == 'préparé';
   }
 
-  /// `true` si ce sort doit apparaître par défaut dans l'onglet "Sorts" d'un
-  /// lanceur à préparation "liste complète" (Clerc/Druide/Paladin, voir
-  /// `domain/prepared_caster_spell_list.dart::PreparedCasterSpellList`) —
-  /// tous les sorts de la classe sont déjà fusionnés côté `CharacterDetail
-  /// .spells` par `CharacterRepository` (voir
-  /// `data/character_repository.dart::_fetchPreparedCasterClassListSpellIds`),
-  /// ce prédicat n'est qu'un filtre d'affichage.
-  ///
-  /// `!canTogglePrepared(spell)` couvre déjà sans distinction supplémentaire
-  /// les trois cas toujours visibles (sort mineur niveau 0, sort accordé par
-  /// une sous-classe, sort 'inné') : seule une entrée `status == 'connu'`
-  /// niveau >= 1 jamais préparée est masquée par défaut (elle reste
-  /// accessible depuis la sheet "Ajouter un sort",
-  /// `presentation/widgets/add_prepared_spells_sheet.dart`).
-  static bool isVisibleInPreparedView(CharacterSpellEntry spell) =>
-      !canTogglePrepared(spell) || spell.status == 'préparé';
+  /// `true` si ce sort attend d'être préparé pour pouvoir être lancé : un
+  /// sort de niveau >= 1 simplement 'connu' — exactement les sorts pour
+  /// lesquels [canCast] est faux et [canTogglePrepared] vrai. Affiché grisé
+  /// et après les sorts préparés dans l'onglet "Sorts" (voir
+  /// `presentation/widgets/character_spells_section.dart::_SpellRow`,
+  /// `SpellsByLevelGrouper.group`).
+  static bool isUnprepared(CharacterSpellEntry spell) =>
+      canTogglePrepared(spell) && spell.status == 'connu';
+
+  /// Libellé d'état de préparation affiché en face du nom du sort dans
+  /// l'onglet "Sorts" ("préparé"/"non préparé"), `null` pour un sort sans
+  /// notion de préparation à faire varier (sort mineur, inné, accordé par une
+  /// sous-classe — ce dernier porte déjà sa pastille "DOMAINE"/"SERMENT").
+  static String? preparationLabel(CharacterSpellEntry spell) {
+    if (!canTogglePrepared(spell)) return null;
+    return spell.status == 'préparé' ? 'préparé' : 'non préparé';
+  }
 }

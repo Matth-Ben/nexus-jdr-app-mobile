@@ -50,7 +50,7 @@ class CheckableOptionTile extends StatelessWidget {
   final String title;
 
   /// Widget optionnel affiché juste après [title], sur la même ligne (ex.
-  /// un `DiceTypeBadge` — premier usage sur `add_prepared_spells_sheet.dart`,
+  /// un `DiceTypeBadge` — premier usage sur `prepare_spells_sheet.dart`,
   /// pour afficher le dé de dégâts à côté du nom d'un sort, même convention
   /// que `CharacterSpellsSection::_SpellRow`). `null` par défaut : les usages
   /// existants n'en fournissent pas et gardent donc un simple `Text`.

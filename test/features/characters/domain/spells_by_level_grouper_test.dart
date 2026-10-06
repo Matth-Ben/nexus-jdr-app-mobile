@@ -59,6 +59,39 @@ void main() {
       ]);
     });
 
+    test('preparedFirst : les sorts restant à préparer passent après les '
+        'autres au sein de leur niveau, chaque bloc trié par nom', () {
+      const unpreparedA = CharacterSpellEntry(
+        id: 1,
+        name: 'Armure de mage',
+        level: 1,
+        school: '',
+        status: 'connu',
+      );
+      const preparedZ = CharacterSpellEntry(
+        id: 2,
+        name: 'Zone de vérité',
+        level: 1,
+        school: '',
+        status: 'préparé',
+      );
+      const preparedB = CharacterSpellEntry(
+        id: 3,
+        name: 'Bouclier',
+        level: 1,
+        school: '',
+        status: 'préparé',
+      );
+
+      final groups = SpellsByLevelGrouper.group(const [
+        unpreparedA,
+        preparedZ,
+        preparedB,
+      ], preparedFirst: true);
+
+      expect(groups.single.spells, [preparedB, preparedZ, unpreparedA]);
+    });
+
     test('liste vide -> aucun groupe', () {
       expect(SpellsByLevelGrouper.group(const []), isEmpty);
     });
