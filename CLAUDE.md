@@ -112,6 +112,12 @@ demande. Il rend un registre priorisé ; le chef de projet choisit quoi
 traiter, puis chaque correction retenue suit la séquence habituelle
 (`dev-flutter` → `qa-testeur` → `code-reviewer`).
 
+Le registre courant vit dans `docs/dette-technique.md`. Il classe la dette en
+trois catégories (bloque la production / fait perdre des données ou donne une
+règle fausse au joueur / peut attendre). Quand une entrée est traitée, mettre
+à jour son état en citant la PR plutôt que supprimer la ligne ; un défaut
+découvert en cours de tâche s'y ajoute au lieu d'être corrigé au fil de l'eau.
+
 ### Découpage par phase (voir `06-roadmap.md`)
 
 - **Phase 0 (cadrage)** : chef de projet + `dev-flutter` (setup projet Flutter,
