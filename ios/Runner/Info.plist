@@ -70,18 +70,25 @@
 		<string>LaunchScreen</string>
 		<key>UIMainStoryboardFile</key>
 		<string>Main</string>
+		<!-- App en portrait uniquement, iPhone et iPad (décision produit du
+	     06/10/2026). Sur iPad, une app qui ne déclare pas les quatre
+	     orientations doit se retirer du multitâche avec
+	     `UIRequiresFullScreen`, sinon l'envoi à l'App Store est refusé.
+
+	     ATTENTION — clé dépréciée par Apple depuis iPadOS 26 (note technique
+	     TN3192) : construite avec le SDK iOS 27 ou plus récent, elle ne
+	     retire plus l'app du redimensionnement de fenêtre, et Apple annonce
+	     qu'elle sera ignorée dans une version future. Le verrou iPad est à
+	     valider sur appareil dès le premier build iOS (Xcode 27+ probable). -->
+		<key>UIRequiresFullScreen</key>
+		<true/>
 		<key>UISupportedInterfaceOrientations</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
 		<key>UISupportedInterfaceOrientations~ipad</key>
 		<array>
 			<string>UIInterfaceOrientationPortrait</string>
-			<string>UIInterfaceOrientationPortraitUpsideDown</string>
-			<string>UIInterfaceOrientationLandscapeLeft</string>
-			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
