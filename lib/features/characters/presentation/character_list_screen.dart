@@ -412,6 +412,14 @@ class _SearchRow extends StatelessWidget {
   }
 }
 
+/// Bouton de filtre 44×44 de la barre de recherche.
+///
+/// Sans texte visible : son nom d'accessibilité vient du [Semantics] qui
+/// l'enveloppe, fusionné avec l'action de tap de l'[InkWell] en un seul nœud
+/// de rôle bouton ("Filtrer les personnages", valeur "Filtre actif" quand
+/// [active], désactivé quand [onTap] est `null`). Pas de `Tooltip` : sur
+/// mobile il n'apparaît qu'à l'appui long et n'apporte rien de plus que le
+/// libellé sémantique (choix validé par direction-artistique).
 class _FilterButton extends StatelessWidget {
   const _FilterButton({required this.active, required this.onTap});
 
@@ -420,31 +428,43 @@ class _FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.parchmentCard,
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: InkWell(
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: 'Filtrer les personnages',
+      value: active ? 'Filtre actif' : null,
+      child: Material(
+        color: AppColors.parchmentCard,
         borderRadius: BorderRadius.circular(AppRadius.sm),
-        onTap: onTap,
-        child: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            border: Border.all(
-              color: AppColors.woodLight,
-              width: AppBorders.card,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          onTap: onTap,
+          // Pas d'`alignment` sur ce `Container` : la `Stack` doit recevoir
+          // des contraintes strictes et occuper tout l'intérieur du bouton
+          // (40×40 une fois la bordure de 2 px déduite). Réduite à la taille
+          // de l'icône (24×24), elle ferait se résoudre le `Positioned` de la
+          // pastille contre l'icône au lieu du coin du bouton.
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(
+                color: AppColors.woodLight,
+                width: AppBorders.card,
+              ),
             ),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.filter_list, color: AppColors.textSecondary),
-              if (active)
-                const Positioned(top: 6, right: 6, child: _FilterActiveDot()),
-            ],
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(Icons.filter_list, color: AppColors.textSecondary),
+                // Centre de la pastille en (34, 10) dans le repère 44×44 du
+                // bouton, soit `top: 3, right: 3` dans l'intérieur 40×40 :
+                // coin supérieur droit, tangente au pictogramme.
+                if (active)
+                  const Positioned(top: 3, right: 3, child: _FilterActiveDot()),
+              ],
+            ),
           ),
         ),
       ),
@@ -452,17 +472,25 @@ class _FilterButton extends StatelessWidget {
   }
 }
 
+/// Pastille "filtre actif" : disque `gold-end` de 8 px cerclé d'un liseré
+/// `wood.dark` de 1 px (diamètre hors tout 10 px), pour rester lisible sur
+/// le fond `parchment.card` du bouton. Purement décorative : l'état est
+/// porté par la valeur sémantique de [_FilterButton].
 class _FilterActiveDot extends StatelessWidget {
   const _FilterActiveDot();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 8,
-      height: 8,
-      decoration: const BoxDecoration(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
         color: AppColors.goldEnd,
         shape: BoxShape.circle,
+        border: Border.all(
+          color: AppColors.woodDark,
+          width: AppBorders.cardEmphasisHalo,
+        ),
       ),
     );
   }
