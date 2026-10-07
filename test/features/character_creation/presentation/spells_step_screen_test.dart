@@ -22,6 +22,8 @@ import 'package:personnages/features/character_creation/domain/background_catalo
 import 'package:personnages/features/character_creation/domain/background_option.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
+import 'package:personnages/features/character_creation/domain/character_edit_hydrator.dart';
+import 'package:personnages/features/character_creation/domain/character_edit_snapshot.dart';
 import 'package:personnages/features/character_creation/domain/class_catalog.dart';
 import 'package:personnages/features/character_creation/domain/class_option.dart';
 import 'package:personnages/features/character_creation/domain/class_skill_choices.dart';
@@ -34,6 +36,7 @@ import 'package:personnages/features/character_creation/domain/spell_option.dart
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_edit_session_provider.dart';
 import 'package:personnages/features/character_creation/presentation/spells_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
 import 'package:personnages/features/characters/data/warlock_pact_spell_repository.dart';
@@ -862,5 +865,119 @@ void main() {
       expect(find.text('Fracasser'), findsNothing);
       expect(find.text('Boule de feu'), findsNothing);
     });
+  });
+
+  group('mode modification (sorts innés raciaux, D09) — voir '
+      '`character_edit_test.dart`/`character_edit_repository_test.dart` pour '
+      'la couverture domaine/dépôt : ce groupe vérifie uniquement le rendu de '
+      'CETTE étape, pas le plan ni les requêtes PostgREST.', () {
+    // Tieffelin Barde : Lumières dansantes (2) inné racial, aussi présent
+    // dans la liste de sorts mineurs du Barde ; Trait de feu (1) déjà
+    // connu comme choix de classe ORDINAIRE.
+    final snapshot = const CharacterEditSnapshot(
+      characterId: 'c1',
+      name: 'Zariel',
+      primaryClassId: 2,
+      primaryClassLevel: 1,
+      totalLevel: 1,
+      maxHp: 8,
+      currentHp: 8,
+      backgroundId: 1,
+      spells: [(spellId: 2, status: 'inné'), (spellId: 1, status: 'connu')],
+    );
+    const background = BackgroundOption(
+      id: 1,
+      name: 'Ermite',
+      skillProficiencies: [],
+      featureName: 'Découverte',
+      featureDescription: '',
+    );
+
+    void startEditSession() {
+      final draft = CharacterEditHydrator.toDraft(
+        snapshot: snapshot,
+        classOption: _barde,
+        backgroundOption: background,
+        skillCatalog: const SkillCatalog(skills: []),
+        toolCatalog: const ToolCatalog(tools: []),
+        languageCatalog: const LanguageCatalog(languages: []),
+        spellCatalog: _bardeSpellCatalog,
+      );
+      // Le sort inné (2) n'est jamais lu comme un choix de classe (voir
+      // `CharacterEditSnapshot.classSpells`) : seul "Trait de feu" est
+      // repris dans le brouillon.
+      expect(draft.classCantripChoices, ['Trait de feu']);
+
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .replaceWith(draft);
+      container
+          .read(characterEditSessionControllerProvider.notifier)
+          .start(
+            CharacterEditSession(
+              snapshot: snapshot,
+              originalDraft: draft,
+              originalClass: _barde,
+              originalSpellCatalog: _bardeSpellCatalog,
+            ),
+          );
+    }
+
+    setUp(() {
+      fakeRepository.classCatalogToReturn = const ClassCatalog(
+        classes: [_barde],
+      );
+      fakeRepository.spellCatalogToReturn = _bardeSpellCatalog;
+      startEditSession();
+    });
+
+    testWidgets(
+      "un sort inné racial n'apparaît pas pré-coché et ne consomme pas le "
+      "quota ; un sort ordinaire déjà connu reste coché et normalement "
+      'décochable',
+      (WidgetTester tester) async {
+        await pumpSpellsStep(tester);
+
+        // Quota affiché : 1 / 2 (seul "Trait de feu" compte), pas 2 / 2 —
+        // si le sort inné consommait encore le quota, ce badge serait faux.
+        expect(find.text('1 / 2'), findsOneWidget);
+
+        final traitDeFeuTile = tester.widget<CheckableOptionTile>(
+          find.ancestor(
+            of: find.text('Trait de feu'),
+            matching: find.byType(CheckableOptionTile),
+          ),
+        );
+        expect(
+          traitDeFeuTile.checked,
+          isTrue,
+          reason: 'sort ordinaire déjà connu : coché normalement',
+        );
+
+        final lumieresDansantesTile = tester.widget<CheckableOptionTile>(
+          find.ancestor(
+            of: find.text('Lumières dansantes'),
+            matching: find.byType(CheckableOptionTile),
+          ),
+        );
+        expect(
+          lumieresDansantesTile.checked,
+          isFalse,
+          reason:
+              "sort inné racial : jamais pré-coché, même s'il figure dans "
+              "la liste de sorts de la classe (CharacterEditHydrator "
+              "l'écarte explicitement, D09)",
+        );
+
+        // Le sort ordinaire reste "normalement gérable" : décocher puis
+        // recocher fonctionne comme n'importe quel autre choix de classe.
+        await tester.tap(find.text('Trait de feu'));
+        await tester.pumpAndSettle();
+        expect(find.text('0 / 2'), findsOneWidget);
+        await tester.tap(find.text('Trait de feu'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 2'), findsOneWidget);
+      },
+    );
   });
 }

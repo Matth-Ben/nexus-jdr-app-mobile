@@ -76,8 +76,12 @@ abstract final class CharacterEditHydrator {
       final spellById = {
         for (final spell in spellCatalog.spells) spell.id: spell,
       };
+      // Sorts innés raciaux exclus : jamais un choix de classe, même quand
+      // le sort figure dans la liste de la classe (ex. Thaumaturgie pour un
+      // Tieffelin Clerc) — il ne doit ni apparaître coché à l'étape Sorts,
+      // ni consommer le quota.
       final known = [
-        for (final spell in snapshot.spells) ?spellById[spell.spellId],
+        for (final spell in snapshot.classSpells) ?spellById[spell.spellId],
       ];
       cantrips = [
         for (final spell in known)
