@@ -82,8 +82,20 @@ const _clercSpells = SpellCatalog(
       school: '',
       castingTime: '',
     ),
+    // Sort mineur de la liste du Clerc, qu'un Tieffelin reçoit aussi en sort
+    // inné racial.
+    SpellOption(
+      id: 103,
+      name: 'Thaumaturgie',
+      level: 0,
+      school: '',
+      castingTime: '',
+    ),
   ],
 );
+
+/// Sort inné racial absent de la liste du Clerc.
+const _innateOffListSpellId = 200;
 
 CharacterEditSnapshot _snapshot({
   int totalLevel = 5,
@@ -94,6 +106,7 @@ CharacterEditSnapshot _snapshot({
   List<int> skillIds = const [1, 3, 5, 6, 7],
   List<int> languageIds = const [10],
   List<int> spellIds = const [],
+  List<int> innateSpellIds = const [],
 }) {
   return CharacterEditSnapshot(
     characterId: 'c1',
@@ -119,7 +132,10 @@ CharacterEditSnapshot _snapshot({
       for (final id in skillIds) (skillId: id, proficiency: 'competente'),
     ],
     languageIds: languageIds,
-    spells: [for (final id in spellIds) (spellId: id, status: 'préparé')],
+    spells: [
+      for (final id in innateSpellIds) (spellId: id, status: 'inné'),
+      for (final id in spellIds) (spellId: id, status: 'préparé'),
+    ],
   );
 }
 
@@ -210,6 +226,25 @@ void main() {
       expect(snapshot.languageIds, [10]);
       expect(snapshot.spells.single.spellId, 100);
     });
+
+    test('classSpells écarte les lignes au statut inné, y compris quand le '
+        'même sort a aussi une ligne ordinaire', () {
+      final snapshot = CharacterEditSnapshot.fromRow({
+        'id': 'c1',
+        'character_spells': [
+          {'spell_id': 103, 'status': 'inné'},
+          {'spell_id': 100, 'status': 'inné'},
+          {'spell_id': 100, 'status': 'préparé'},
+          {'spell_id': 101, 'status': 'connu'},
+        ],
+      });
+
+      expect(snapshot.spells, hasLength(4));
+      expect(snapshot.classSpells, [
+        (spellId: 100, status: 'préparé'),
+        (spellId: 101, status: 'connu'),
+      ]);
+    });
   });
 
   group('CharacterEditHydrator', () {
@@ -231,6 +266,25 @@ void main() {
     test('niveau 1 lanceur : sorts mineurs et de niveau 1 repris', () {
       final draft = _hydrate(
         _snapshot(totalLevel: 1, classId: 2, spellIds: [100, 101]),
+        classOption: _clerc,
+        spellCatalog: _clercSpells,
+      );
+
+      expect(draft.classCantripChoices, ['Flamme sacrée']);
+      expect(draft.classLevelOneSpellChoices, ['Soins']);
+    });
+
+    test("un sort inné racial présent dans la liste de la classe n'est pas "
+        'repris comme choix de classe et ne consomme pas le quota', () {
+      // Tieffelin Clerc : Thaumaturgie (103) innée, lue AVANT les trois
+      // sorts mineurs choisis en classe (quota du Clerc : 3).
+      final draft = _hydrate(
+        _snapshot(
+          totalLevel: 1,
+          classId: 2,
+          innateSpellIds: [103],
+          spellIds: [100, 101],
+        ),
         classOption: _clerc,
         spellCatalog: _clercSpells,
       );
@@ -396,6 +450,211 @@ void main() {
       expect(plan.classChange, isNull);
       expect(plan.spellDeletes, {101});
       expect(plan.spellInserts.map((spell) => spell.spellId), [102]);
+    });
+
+    // D09 : les sorts innés viennent de la race (`racial_innate_spells`),
+    // aucune modification de classe ne doit les faire partir.
+    group('sorts innés raciaux (D09)', () {
+      test('niveau 1 : changer de classe ne supprime pas un sort inné', () {
+        final snapshot = _snapshot(
+          totalLevel: 1,
+          classId: 2,
+          maxHp: 10,
+          currentHp: 10,
+          innateSpellIds: [_innateOffListSpellId],
+          spellIds: [100, 101],
+        );
+        final original = _hydrate(
+          snapshot,
+          classOption: _clerc,
+          spellCatalog: _clercSpells,
+        );
+        final plan = _plan(
+          snapshot,
+          original,
+          original.copyWith(
+            classId: 1,
+            classCantripChoices: const [],
+            classLevelOneSpellChoices: const [],
+          ),
+          originalClass: _clerc,
+          originalSpellCatalog: _clercSpells,
+          editedSpellCatalog: const SpellCatalog(spells: []),
+        );
+
+        expect(plan.classChange?.classChanged, isTrue);
+        expect(plan.spellDeletes, {100, 101});
+        expect(plan.spellInserts, isEmpty);
+      });
+
+      test('niveau 1 : passer à une classe de lanceur ne supprime pas un '
+          'sort inné de la liste de cette classe', () {
+        // Tieffelin Guerrier qui devient Clerc sans choisir Thaumaturgie.
+        final snapshot = _snapshot(
+          totalLevel: 1,
+          maxHp: 12,
+          currentHp: 12,
+          innateSpellIds: [103],
+        );
+        final original = _hydrate(snapshot);
+        final plan = _plan(
+          snapshot,
+          original,
+          original.copyWith(
+            classId: 2,
+            classCantripChoices: ['Flamme sacrée'],
+            classLevelOneSpellChoices: ['Soins'],
+          ),
+          editedClass: _clerc,
+          editedSpellCatalog: _clercSpells,
+        );
+
+        expect(plan.spellDeletes, isEmpty);
+        expect(plan.spellInserts.map((spell) => spell.spellId), [100, 101]);
+      });
+
+      test('niveau 1, classe inchangée : un sort inné de la liste de la '
+          "classe n'est ni supprimé ni réécrit", () {
+        final snapshot = _snapshot(
+          totalLevel: 1,
+          classId: 2,
+          maxHp: 10,
+          currentHp: 10,
+          innateSpellIds: [103],
+          spellIds: [100, 101],
+        );
+        final original = _hydrate(
+          snapshot,
+          classOption: _clerc,
+          spellCatalog: _clercSpells,
+        );
+        final plan = _plan(
+          snapshot,
+          original,
+          original.copyWith(classLevelOneSpellChoices: ['Bénédiction']),
+          originalClass: _clerc,
+          editedClass: _clerc,
+          originalSpellCatalog: _clercSpells,
+          editedSpellCatalog: _clercSpells,
+        );
+
+        expect(plan.spellDeletes, {101});
+        expect(plan.spellInserts.map((spell) => spell.spellId), [102]);
+      });
+
+      test('changer de sous-classe seule ne touche à aucun sort', () {
+        final snapshot = _snapshot(
+          totalLevel: 1,
+          classId: 2,
+          maxHp: 10,
+          currentHp: 10,
+          innateSpellIds: [103, _innateOffListSpellId],
+          spellIds: [100, 101],
+        );
+        final original = _hydrate(
+          snapshot,
+          classOption: _clerc,
+          spellCatalog: _clercSpells,
+        );
+        final plan = _plan(
+          snapshot,
+          original,
+          original.copyWith(subclassId: 7),
+          originalClass: _clerc,
+          editedClass: _clerc,
+          originalSpellCatalog: _clercSpells,
+          editedSpellCatalog: _clercSpells,
+        );
+
+        expect(plan.classChange?.classChanged, isFalse);
+        expect(plan.classChange?.subclassId, 7);
+        expect(plan.spellDeletes, isEmpty);
+        expect(plan.spellInserts, isEmpty);
+      });
+
+      test('sort en double (inné + ordinaire) désélectionné côté classe : '
+          "seul l'identifiant du sort est planifié, la ligne innée étant "
+          'protégée par le dépôt', () {
+        final snapshot = _snapshot(
+          totalLevel: 1,
+          classId: 2,
+          maxHp: 10,
+          currentHp: 10,
+          innateSpellIds: [103],
+          spellIds: [103, 100, 101],
+        );
+        final original = _hydrate(
+          snapshot,
+          classOption: _clerc,
+          spellCatalog: _clercSpells,
+        );
+        expect(original.classCantripChoices, ['Thaumaturgie', 'Flamme sacrée']);
+
+        final plan = _plan(
+          snapshot,
+          original,
+          original.copyWith(classCantripChoices: ['Flamme sacrée']),
+          originalClass: _clerc,
+          editedClass: _clerc,
+          originalSpellCatalog: _clercSpells,
+          editedSpellCatalog: _clercSpells,
+        );
+
+        // La ligne ordinaire part ; `SupabaseCharacterEditRepository.save`
+        // exclut les lignes 'inné' de cette suppression.
+        expect(plan.spellDeletes, {103});
+        expect(plan.spellInserts, isEmpty);
+      });
+
+      test('choisir côté classe un sort déjà inné ajoute une ligne '
+          'ordinaire sans toucher à la ligne innée', () {
+        final snapshot = _snapshot(
+          totalLevel: 1,
+          classId: 2,
+          maxHp: 10,
+          currentHp: 10,
+          innateSpellIds: [103],
+          spellIds: [100, 101],
+        );
+        final original = _hydrate(
+          snapshot,
+          classOption: _clerc,
+          spellCatalog: _clercSpells,
+        );
+        final plan = _plan(
+          snapshot,
+          original,
+          original.copyWith(
+            classCantripChoices: ['Flamme sacrée', 'Thaumaturgie'],
+          ),
+          originalClass: _clerc,
+          editedClass: _clerc,
+          originalSpellCatalog: _clercSpells,
+          editedSpellCatalog: _clercSpells,
+        );
+
+        expect(plan.spellDeletes, isEmpty);
+        expect(plan.spellInserts, [(spellId: 103, status: 'préparé')]);
+      });
+
+      test('au-delà du niveau 1, aucun sort planifié', () {
+        final snapshot = _snapshot(
+          classId: 2,
+          innateSpellIds: [103, _innateOffListSpellId],
+          spellIds: [100, 101],
+        );
+        final original = _hydrate(snapshot, classOption: _clerc);
+        final plan = _plan(
+          snapshot,
+          original,
+          original.copyWith(classId: 1),
+          originalClass: _clerc,
+          editedSpellCatalog: const SpellCatalog(spells: []),
+        );
+
+        expect(plan.spellDeletes, isEmpty);
+        expect(plan.spellInserts, isEmpty);
+      });
     });
   });
 }

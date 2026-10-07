@@ -204,7 +204,13 @@ class SupabaseCharacterEditRepository implements CharacterEditRepository {
             .from('character_spells')
             .delete()
             .eq('character_id', characterId)
-            .inFilter('spell_id', plan.spellDeletes.toList());
+            .inFilter('spell_id', plan.spellDeletes.toList())
+            // Jamais une ligne 'inné' : un sort inné vient de la race, pas
+            // d'un choix de classe. Un même sort peut avoir deux lignes
+            // (une innée, une ordinaire — aucune contrainte d'unicité en
+            // base) : seule la ligne ordinaire part, la ligne innée garde
+            // son compteur `innate_uses_spent`.
+            .neq('status', CharacterEditSnapshot.innateStatus);
       }
       if (plan.spellInserts.isNotEmpty) {
         await _client.from('character_spells').insert([

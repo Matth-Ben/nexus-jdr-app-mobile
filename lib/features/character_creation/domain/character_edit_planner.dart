@@ -55,6 +55,12 @@ class CharacterEditPlan {
   final List<ToolRow> toolInserts;
   final Set<int> languageDeletes;
   final Set<int> languageInserts;
+
+  /// Identifiants des sorts dont les lignes ORDINAIRES sont à supprimer.
+  /// Jamais une ligne au statut `'inné'` : un même identifiant peut désigner
+  /// deux lignes (une innée, une ordinaire), et
+  /// `CharacterEditRepository.save` exclut les lignes innées de la
+  /// suppression.
   final Set<int> spellDeletes;
   final List<({int spellId, String status})> spellInserts;
 }
@@ -199,7 +205,17 @@ abstract final class CharacterEditPlanner {
     var spellDeletes = const <int>{};
     var spellInserts = const <({int spellId, String status})>[];
     if (canChangeClass && editedClass != null && editedSpellCatalog != null) {
-      final storedSpells = {for (final spell in snapshot.spells) spell.spellId};
+      // Lignes innées exclues (`CharacterEditSnapshot.classSpells`) : un
+      // sort inné vient de la race, aucune modification de classe ne le
+      // supprime — pas même un changement de classe, qui vide pourtant tous
+      // les autres sorts. Conséquence voulue : choisir côté classe un sort
+      // déjà inné AJOUTE une ligne ordinaire à côté de la ligne innée (aucune
+      // contrainte d'unicité en base, la ligne ordinaire l'emporte à la
+      // lecture de la fiche), que le joueur pourra retirer plus tard sans
+      // perdre le sort inné.
+      final storedSpells = {
+        for (final spell in snapshot.classSpells) spell.spellId,
+      };
       final oldSpells = originalSpellCatalog == null || originalClass == null
           ? const <int>{}
           : {
