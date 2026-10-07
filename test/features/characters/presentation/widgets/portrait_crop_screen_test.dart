@@ -66,6 +66,11 @@ class _FakeCharacterRepository implements CharacterRepository {
   final Completer<void> gate = Completer<void>();
   bool gateUploadPortrait = false;
 
+  /// Invoque des que `CharacterRepository.uploadPortrait` est appele : les
+  /// tests attendent cet evenement plutot qu'une duree fixe (voir
+  /// `_tapValiderAndAwaitCall`, qui le branche).
+  void Function()? onUploadPortrait;
+
   int uploadPortraitCallCount = 0;
   String? lastCharacterId;
   Uint8List? lastBytes;
@@ -77,6 +82,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     required Uint8List bytes,
   }) async {
     uploadPortraitCallCount++;
+    onUploadPortrait?.call();
     lastCharacterId = characterId;
     lastBytes = bytes;
     if (gateUploadPortrait) await gate.future;
@@ -391,15 +397,63 @@ Future<_FakeCharacterRepository> _pumpScreen(WidgetTester tester) async {
   return repository;
 }
 
-Future<void> _tapValiderAndSettle(WidgetTester tester) async {
+/// Borne haute de l'attente de l'appel au depot. Volontairement tres large :
+/// ce n'est pas une estimation du temps de capture, seulement un garde-fou
+/// pour qu'une regression (appel jamais emis) echoue avec un message clair
+/// plutot que de bloquer jusqu'au timeout global du test.
+const Duration _repositoryCallTimeout = Duration(seconds: 10);
+
+/// Tape "Valider" puis attend que `_submit` ait reellement appele le depot.
+///
+/// Entre le tap et cet appel, l'ecran enchaine `RenderRepaintBoundary
+/// .toImage()` (thread raster du moteur) puis `Image.toByteData(png)`
+/// (encodage sur un thread d'E/S du moteur) : du travail asynchrone reel, de
+/// duree non bornee, hors de l'horloge simulee. Une attente a duree fixe
+/// (historiquement 50 ms d'horloge reelle) etait une course - perdue de temps
+/// en temps quand la machine est chargee (suite complete), d'ou des
+/// `uploadPortraitCallCount` a 0 intermittents. On attend donc l'evenement
+/// lui-meme, signale par `_FakeCharacterRepository.onUploadPortrait`.
+///
+/// Le `Completer` est cree *dans* `runAsync`, et non dans le faux depot :
+/// un `Future` complete ses auditeurs via la zone ou il a ete cree. Cree
+/// dans le corps du test (zone a horloge simulee), il ne previendrait
+/// personne tant que `runAsync` garde cette zone a l'arret - l'attente
+/// expirerait alors meme si l'appel a bien eu lieu.
+Future<void> _tapValiderAndAwaitCall(
+  WidgetTester tester,
+  _FakeCharacterRepository repository,
+) async {
   await tester.runAsync(() async {
+    final called = Completer<void>();
+    repository.onUploadPortrait = () {
+      if (!called.isCompleted) called.complete();
+    };
+
     await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
     await tester.pump();
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-    await tester.pump();
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await called.future.timeout(
+      _repositoryCallTimeout,
+      onTimeout: () => fail(
+        "CharacterRepository.uploadPortrait n'a pas ete appele dans les "
+        '${_repositoryCallTimeout.inSeconds} s suivant le tap sur Valider '
+        "(capture/encodage de l'image jamais aboutis ?).",
+      ),
+    );
+    // Un tour de boucle d'evenements : vide la file de microtaches, donc
+    // toute la suite de `_submit` qui ne depend que de la reponse du faux
+    // depot (succes -> pop, erreur -> setState). Ce n'est pas une attente
+    // temporelle : cette suite est exclusivement faite de microtaches,
+    // toutes executees avant le prochain evenement de minuterie.
+    await Future<void>.delayed(Duration.zero);
     await tester.pump();
   });
+}
+
+Future<void> _tapValiderAndSettle(
+  WidgetTester tester,
+  _FakeCharacterRepository repository,
+) async {
+  await _tapValiderAndAwaitCall(tester, repository);
   await tester.pumpAndSettle();
 }
 
@@ -422,12 +476,7 @@ void main() {
     final repository = await _pumpScreen(tester);
     repository.gateUploadPortrait = true;
 
-    await tester.runAsync(() async {
-      await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
-      await tester.pump();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      await tester.pump();
-    });
+    await _tapValiderAndAwaitCall(tester, repository);
 
     expect(repository.uploadPortraitCallCount, 1);
 
@@ -450,7 +499,7 @@ void main() {
       "ferme l'ecran (pop(true))", (tester) async {
     final repository = await _pumpScreen(tester);
 
-    await _tapValiderAndSettle(tester);
+    await _tapValiderAndSettle(tester, repository);
 
     expect(repository.uploadPortraitCallCount, 1);
     expect(repository.lastCharacterId, 'char-1');
@@ -466,7 +515,7 @@ void main() {
       final repository = await _pumpScreen(tester);
       repository.errorToThrow = const CharacterFailure('Erreur serveur.');
 
-      await _tapValiderAndSettle(tester);
+      await _tapValiderAndSettle(tester, repository);
 
       expect(find.text('Erreur serveur.'), findsOneWidget);
       expect(find.text('RECADRAGE'), findsOneWidget);
@@ -479,7 +528,7 @@ void main() {
       final repository = await _pumpScreen(tester);
       repository.errorToThrow = Exception('boom');
 
-      await _tapValiderAndSettle(tester);
+      await _tapValiderAndSettle(tester, repository);
 
       expect(
         find.text("Impossible d'envoyer le portrait. Réessayez."),
@@ -494,17 +543,17 @@ void main() {
     final repository = await _pumpScreen(tester);
     repository.gateUploadPortrait = true;
 
-    await tester.runAsync(() async {
-      await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
-      await tester.pump();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      await tester.pump();
-    });
+    await _tapValiderAndAwaitCall(tester, repository);
 
     expect(repository.uploadPortraitCallCount, 1);
 
     await tester.tap(find.byIcon(Icons.arrow_back_ios_new));
     await tester.pump();
+    // Horloge simulee : laisse a une eventuelle transition de fermeture le
+    // temps de se terminer. Sans cette avance, l'ecran reste trouve pendant
+    // l'animation de sortie et l'assertion passe meme si le retour a ferme
+    // l'ecran (garde `_isUploading` retiree de `_cancel`).
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('RECADRAGE'), findsOneWidget);
 
@@ -520,12 +569,7 @@ void main() {
       final repository = await _pumpScreen(tester);
       repository.gateUploadPortrait = true;
 
-      await tester.runAsync(() async {
-        await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
-        await tester.pump();
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-        await tester.pump();
-      });
+      await _tapValiderAndAwaitCall(tester, repository);
 
       expect(repository.uploadPortraitCallCount, 1);
 
@@ -536,6 +580,11 @@ void main() {
       // autres tests de ce fichier qui interagissent pendant l'envoi.
       await tester.binding.handlePopRoute();
       await tester.pump();
+      // Horloge simulee : laisse a une eventuelle transition de fermeture
+      // le temps de se terminer. Sans cette avance, l'ecran reste trouve
+      // pendant l'animation de sortie et l'assertion passe meme avec
+      // `canPop: true`.
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('RECADRAGE'), findsOneWidget);
 
