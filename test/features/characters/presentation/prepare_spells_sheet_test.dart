@@ -10,8 +10,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:personnages/core/widgets/dice_type_badge.dart';
+import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
+import 'package:personnages/features/characters/domain/spell_cast_block_reason.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/characters/presentation/widgets/prepare_spells_sheet.dart';
 
@@ -55,6 +57,7 @@ void main() {
     WidgetTester tester, {
     required List<CharacterSpellEntry> spells,
     List<CharacterSpellSlot> spellSlots = const [],
+    CharacterSpellSlot? pactSlot,
     int? preparedLimit,
   }) async {
     toggled = [];
@@ -69,6 +72,7 @@ void main() {
                   context,
                   spells: spells,
                   spellSlots: spellSlots,
+                  pactSlot: pactSlot,
                   preparedLimit: preparedLimit,
                   onTogglePrepared: toggled.add,
                   onCastSpell: (spell, _) => cast.add(spell),
@@ -253,5 +257,93 @@ void main() {
     await pumpSheet(tester, spells: const [_prepared, _unprepared]);
 
     expect(find.text('SORTS PRÉPARÉS'), findsNothing);
+  });
+
+  // La raison sous "Lancer" elle-même est testée dans
+  // `spell_info_panel_test.dart` : ici, seulement la propagation de l'état
+  // de préparation local de la sheet vers le panneau "Infos".
+  group('panneau "Infos" ouvert depuis la sheet : raison sous "Lancer"', () {
+    final unpreparedMessage = SpellCastBlockReason.unprepared.message;
+    final noSlotMessage = SpellCastBlockReason.noSlotAvailable.message;
+    const slots = [CharacterSpellSlot(level: 1, total: 2, used: 0)];
+
+    bool castEnabled(WidgetTester tester) =>
+        tester
+            .widget<PrimaryButton>(find.widgetWithText(PrimaryButton, 'LANCER'))
+            .onPressed !=
+        null;
+
+    Future<void> openInfo(WidgetTester tester) async {
+      await tester.tap(find.byIcon(Icons.info_outline_rounded));
+      await tester.pumpAndSettle();
+    }
+
+    // Deux causes d'échec distinctes, signalées séparément : la préparation
+    // locale non propagée (raison "non préparé") et, seul un emplacement de
+    // pacte étant disponible, `pactSlot` non transmis au panneau (raison
+    // "plus d'emplacement").
+    testWidgets('sort coché dans la sheet puis ⓘ, seul un emplacement de pacte '
+        'disponible : le panneau reflète la préparation en cours (plus de '
+        'raison "non préparé", "Lancer" actif)', (tester) async {
+      await pumpSheet(
+        tester,
+        spells: const [_unprepared],
+        pactSlot: const CharacterSpellSlot(
+          level: 1,
+          total: 1,
+          used: 0,
+          isPact: true,
+        ),
+      );
+
+      await tester.tap(find.text('Soins'));
+      await tester.pumpAndSettle();
+      await openInfo(tester);
+
+      expect(
+        find.text(unpreparedMessage),
+        findsNothing,
+        reason: 'préparation locale de la sheet non propagée au panneau ?',
+      );
+      expect(
+        find.text(noSlotMessage),
+        findsNothing,
+        reason: 'pactSlot non transmis au panneau ?',
+      );
+      expect(
+        castEnabled(tester),
+        isTrue,
+        reason:
+            '"Lancer" désactivé sans raison affichée : préparation ou '
+            'pactSlot non pris en compte par le bouton ?',
+      );
+      expect(find.text('Ne plus préparer'), findsOneWidget);
+    });
+
+    testWidgets('sort décoché dans la sheet puis ⓘ : la raison "non préparé" '
+        'apparaît et "Lancer" est désactivé', (tester) async {
+      await pumpSheet(tester, spells: const [_prepared], spellSlots: slots);
+
+      await tester.tap(find.text('Bénédiction'));
+      await tester.pumpAndSettle();
+      await openInfo(tester);
+
+      expect(find.text(unpreparedMessage), findsOneWidget);
+      expect(castEnabled(tester), isFalse);
+    });
+
+    testWidgets('préparer depuis le panneau puis le rouvrir : la raison "non '
+        'préparé" a disparu', (tester) async {
+      await pumpSheet(tester, spells: const [_unprepared], spellSlots: slots);
+      await openInfo(tester);
+      expect(find.text(unpreparedMessage), findsOneWidget);
+
+      await tester.tap(find.text('Préparer ce sort'));
+      await tester.pumpAndSettle();
+      await openInfo(tester);
+
+      expect(find.text(unpreparedMessage), findsNothing);
+      expect(castEnabled(tester), isTrue);
+    });
   });
 }

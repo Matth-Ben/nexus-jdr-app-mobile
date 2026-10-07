@@ -8,11 +8,24 @@ import '../../../../core/widgets/sheet_action_row.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
-import '../../domain/spell_cast_eligibility.dart';
+import '../../domain/spell_cast_block_reason.dart';
 import '../../domain/spell_components_formatter.dart';
 import '../../domain/spell_status_formatter.dart';
 import '../../domain/spell_subtitle_formatter.dart';
 import 'spell_action_sheet.dart';
+
+/// Plafond d'échelle de texte de la ligne de raison sous "Lancer" : le pied
+/// est fixe, donc tout ce qu'elle gagne en hauteur est pris à la zone
+/// défilante. À 2.0 elle reste lisible (12 px -> 24 px effectifs) ; le bouton,
+/// lui, continue de suivre l'échelle système.
+///
+/// Ce plafond ne suffit que parce que les messages de [SpellCastBlockReason]
+/// sont courts : aucune limite de lignes ne borne la hauteur du pied. Le
+/// garde-fou est la matrice de mise en page de
+/// `test/features/characters/presentation/spell_info_panel_test.dart`, qui
+/// échoue si l'un de ces messages s'allonge au point de déborder ou d'écraser
+/// la zone défilante.
+const double _blockReasonMaxTextScale = 2;
 
 /// Ouvre le panneau "Infos" d'un sort — gabarit B ([SheetHeaderBar], contenu
 /// scrollable, pied fixe) : détail technique complet (temps d'incantation,
@@ -78,11 +91,13 @@ class _SpellInfoPanelContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasSlot = SpellCastEligibility.hasAvailableSlot(
+    // `null` : sort lançable. Sinon la raison est affichée sous le bouton
+    // "Lancer" désactivé (priorité "non préparé", voir le domaine).
+    final blockReason = SpellCastBlockReason.of(
+      spell: spell,
       spellSlots: [...spellSlots, ?pactSlot],
-      spellLevel: spell.level,
     );
-    final canCast = hasSlot && SpellStatusFormatter.canCast(spell);
+    final canCast = blockReason == null;
     final components = SpellComponentsFormatter.format(spell.components);
 
     final infoRows = <Widget>[
@@ -171,11 +186,31 @@ class _SpellInfoPanelContent extends StatelessWidget {
                   AppSpacing.lg,
                   AppSpacing.lg,
                 ),
-                child: PrimaryButton(
-                  label: 'Lancer',
-                  onPressed: canCast
-                      ? () => Navigator.of(context).pop(true)
-                      : null,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    PrimaryButton(
+                      label: 'Lancer',
+                      onPressed: canCast
+                          ? () => Navigator.of(context).pop(true)
+                          : null,
+                    ),
+                    if (blockReason != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      MediaQuery.withClampedTextScaling(
+                        maxScaleFactor: _blockReasonMaxTextScale,
+                        child: Text(
+                          blockReason.message,
+                          textAlign: TextAlign.center,
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
@@ -213,12 +248,18 @@ class _TogglePreparedLink extends StatelessWidget {
               color: AppColors.textSecondary,
             ),
             const SizedBox(width: 4),
-            Text(
-              prepared ? 'Ne plus préparer' : 'Préparer ce sort',
-              style: AppTypography.body(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textSecondary,
+            // `Flexible` : le libellé passe à la ligne plutôt que de faire
+            // déborder la `Row` sur petit écran avec un texte agrandi
+            // (réglage d'accessibilité) — sans effet tant qu'il tient sur
+            // une ligne.
+            Flexible(
+              child: Text(
+                prepared ? 'Ne plus préparer' : 'Préparer ce sort',
+                style: AppTypography.body(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
           ],
