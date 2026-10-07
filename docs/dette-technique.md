@@ -47,7 +47,7 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 | D10 | Import XML : sorts tous « connus », doublons | Ouvert |
 | D03 | Classes à sorts connus obligées de « préparer » | Corrigé (PR #81) |
 | D38 | Sort inné transformable en sort « préparé » depuis la sheet de préparation | Corrigé (PR #81) ; lignes déjà abîmées non réparables |
-| D08 | Sorts innés raciaux : emplacement exigé, pas de compteur | Ouvert, analyse faite |
+| D08 | Sorts innés raciaux : emplacement exigé, pas de compteur | Corrigé (PR #82, migration web PR #19) |
 | D14 | Emplacements jamais écrits à la création ni à l'import | Ouvert, confirmé en base le 08/10 : aucun déclencheur |
 | D12 | Aucun délai d'attente réseau | Ouvert |
 | D31 | Cache local jamais purgé à la déconnexion | Ouvert |
@@ -76,7 +76,7 @@ la version anglaise démarre : elle devient alors bloquante.
 | D05 | Écritures multi-étapes non atomiques | `character_repository.dart` (`applyLevelUp`, `applyRest`) ; `lib/features/character_creation/data/character_creation_repository.dart` ; `lib/features/character_creation/data/character_edit_repository.dart` | haute | Réseau instable pendant une montée de niveau ou une création | gros | Fonctions Postgres transactionnelles (`apply_level_up`, `create_character`, `apply_rest`) | dev-backend-supabase, dev-flutter | L | Ouvert |
 | D10 | Import XML : `connu` pour toutes les classes, doublons `inné`/`connu` | `lib/features/xml_import/domain/xml_import_save_data_resolver.dart` ; `lib/features/characters/data/character_spell_row_mapper.dart` ; `character_repository.dart` (`setSpellPrepared`) | haute | Tout import d'un Clerc, Druide, Magicien ou Paladin ; tout sort présent deux fois | moyen | Statut dérivé de la classe à l'import, dédoublonnage, contrainte unique `(character_id, spell_id)` avec migration de nettoyage | dev-flutter, dev-backend-supabase | L | Ouvert |
 | D09 | Sorts innés supprimés lors d'un changement de classe en édition | `lib/features/character_creation/domain/character_edit_planner.dart` ; `lib/features/character_creation/domain/character_edit_snapshot.dart` | haute | Personnage doté d'un sort inné qui change de classe | petit | Exclure `inné` de `storedSpells`, ajouter un test | dev-flutter, qa-testeur | L | Ouvert |
-| D08 | Sorts innés raciaux : emplacement exigé, pas de compteur d'usage | `lib/features/characters/domain/spell_cast_eligibility.dart` | haute | Toute race à sort inné de niveau 1 ou plus | moyen | Lancer sans emplacement, compteur « une fois par repos long » : colonne `innate_uses_spent` sur `character_spells` (migration côté web) | dev-backend-supabase, direction-artistique, dev-flutter | L | Ouvert. Analyse faite le 07/10 ; Matthias veut le compteur en même temps. |
+| D08 | Sorts innés raciaux : emplacement exigé, pas de compteur d'usage | `lib/features/characters/domain/spell_cast_eligibility.dart` | haute | Toute race à sort inné de niveau 1 ou plus | moyen | Lancer sans emplacement, compteur « une fois par repos long » : colonne `innate_uses_spent` sur `character_spells` (migration côté web) | dev-backend-supabase, direction-artistique, dev-flutter | L | Corrigé (PR #82 ; colonne et RPC de partage : dépôt web, PR #19). Suites : D43 à D52. |
 | D18 | Tests d'intégration hors CI | `test_integration/README.md` ; `.github/workflows/ci.yml` | haute | À chaque migration côté web | moyen | Job CI avec un Supabase éphémère, au moins quotidien | dev-backend-supabase, qa-testeur | L | Ouvert |
 | D12 | Aucun délai d'attente réseau ; « connecté » signifie seulement « interface active » | 0 occurrence de `.timeout(` pour 189 appels `.from(` ; `lib/core/network/connectivity_checker.dart` | haute | Wi-Fi sans débit ou signal faible ; durée d'attente réelle non mesurée | moyen | Délai sur le client HTTP ; traiter une expiration comme « hors ligne » pour PV/XP | dev-flutter | C + L | Ouvert |
 | D13 | Erreurs avalées, aucune remontée de plantage | 194 `catch (_)` dans `lib/` ; aucun gestionnaire global | haute | Dès maintenant (testeurs Play) | moyen | Remontée de plantages, journalisation dans les `catch` des dépôts | décision d'outil, dev-flutter | C + L | Ouvert |
@@ -246,17 +246,56 @@ d'usage ; treize classes, toutes nommées en français comme l'app l'attend.
 |---|---|---|---|---|
 | D03 | Classes à sorts connus obligées de « préparer » | haute | — | Corrigé (PR #81), règle dérivée à la lecture, sans migration |
 | D38 | Sort inné transformable en sort « préparé » puis « connu » depuis la sheet de préparation | moyenne | — | Corrigé (PR #81). Les lignes déjà abîmées ne sont pas réparables : rien ne permet de les reconnaître. |
-| D39 | Vue partagée : `get_shared_character` ne renvoie pas `source_class_id` sur les sorts ; un multiclassé mixte partagé affiche tous ses sorts « à préparer » | basse | Ajouter la colonne à la RPC (dépôt web) ; le mapper mobile la lit déjà | Ouvert |
+| D39 | Vue partagée : `get_shared_character` ne renvoie pas `source_class_id` sur les sorts ; un multiclassé mixte partagé affiche tous ses sorts « à préparer » | basse | Ajouter la colonne à la RPC (dépôt web) ; le mapper mobile la lit déjà | Corrigé côté base (dépôt web, PR #19), voir plus bas |
 | D40 | L'édition d'un personnage écrit `source_class_id` nul sans changement de classe ; `setSpellPrepared` n'écrit pas l'origine à l'insertion | basse | Écrire la classe d'origine sur ces deux chemins | Ouvert |
 | D41 | Artificier présent en base et proposé à la création, mais non modélisé : ni lanceur, ni emplacements, ni préparation | moyenne | Décision produit : le modéliser (demi-lanceur qui prépare) ou le retirer du catalogue | Ouvert |
 | D42 | `setSpellPrepared` : course entre lecture de contrôle et insertion, faute de contrainte unique | basse | Contrainte unique `(character_id, spell_id)` après nettoyage des doublons (voir D10) | Ouvert |
+
+## Ajouts liés aux sorts innés sans emplacement (PR #82)
+
+Vérifié en base, en lecture seule : aucune paire (personnage, sort) ne porte à la fois une
+ligne `'inné'` et une ligne ordinaire ; les politiques RLS de `character_spells` réservent
+l'écriture au propriétaire du personnage (`owns_character(character_id)`) ;
+`build_character_sheet_json` renvoie `source_class_id` et `innate_uses_spent`, ce qui
+ferme D39 côté base.
+
+| ID | Sujet | Gravité | Correction proposée | État |
+|---|---|---|---|---|
+| D08 | Sorts innés raciaux : emplacement exigé, pas de compteur | haute | — | Corrigé (PR #82). Lancer sans emplacement, une fois par repos long, compteur `character_spells.innate_uses_spent`. |
+| D39 | Vue partagée sans `source_class_id` | basse | — | Corrigé côté base (dépôt web, PR #19) ; jamais contrôlé sur un lien de partage réel |
+| D43 | Sort à la fois inné et connu : la ligne ordinaire l'emporte, le lancer gratuit est perdu | moyenne | Règle complète : un lancer gratuit par repos long, plus les emplacements. Décision produit. Aucun cas en base à ce jour. | Ouvert |
+| D44 | Sort inné aussi accordé par une sous-classe : traité comme préparé, donc avec emplacement | basse | À traiter avec D43 | Ouvert |
+| D45 | Réaffirmation pendant un repos encore en vol : si un lancer réussit pendant un repos long qui échoue ensuite, l'écran affiche « Épuisé » alors que la base vaut 0. Patron commun aux quatre `_reassert…State` (PV, emplacements, pacte, sorts innés) ; leur `finally` rouvre aussi le verrou de repos trop tôt. | moyenne | Ne réaffirmer qu'une fois le repos en vol terminé | Ouvert, reproduit en revue |
+| D46 | La réaffirmation relit une fiche qui peut déjà contenir l'écriture obsolète : un repos long peut être écrasé | basse | Réaffirmer depuis l'état local, pas depuis la fiche relue | Ouvert, lu, non reproduit |
+| D47 | Les réaffirmations ignorent une écriture non envoyée (hors ligne), sans message | basse | Traiter `queued` comme un échec affiché | Ouvert |
+| D48 | Lancer en vol qui échoue après un repos court : l'emplacement reste affiché dépensé. Corrigé pour les sorts innés, pas pour les emplacements (`_castSpell`). | basse | Même correction que pour les sorts innés | Ouvert, lu, non reproduit |
+| D49 | `setInnateSpellUsesSpent` répond « synchronisé » même si aucune ligne n'est modifiée | basse | Relire la ligne écrite et échouer si le résultat est vide | Ouvert |
+| D50 | Échec ambigu d'un lancer (délai dépassé après écriture effective) : l'écran revient à « disponible » sans recharger la fiche | basse | Recharger la fiche sur échec inattendu | Ouvert |
+| D51 | Vue partagée : un sort en double apparaît deux fois, une fois inné et une fois ordinaire | basse | Aligner sur la règle de la fiche ; à traiter avec D10 | Ouvert |
+| D52 | `CharacterSpellEntry` n'est pas `freezed` : copies manuelles de 17 champs, dont une dans `prepare_spells_sheet.dart` qui perd `innateUsesSpent` (sans effet aujourd'hui) | basse | Passer le modèle sous `freezed` | Ouvert |
+
+Constats sans identifiant :
+
+| Sujet | Détail | Source |
+|---|---|---|
+| Repos long à moitié appliqué | La remise à zéro des sorts innés est placée avant les dés de vie, donc son échec est rejouable. Un échec après les dés de vie ne l'est toujours pas. | Voir D05 |
+| Après un repos court, un lancer inné réussi n'affiche pas son message de confirmation | Le compteur est correct. | Lu par dev-flutter |
+| Rond doré du marqueur d'usage | Environ 2,4:1 sur le fond de la ligne, pour 3:1 attendu ; identique aux pastilles d'emplacements. L'état épuisé ne repose pas sur la couleur. | Calculé par direction-artistique |
+| Pastilles de ligne en 10 px | Le design system fixe 11 px minimum. « INNÉ » s'aligne sur l'existant ; `_PreparationStatus` garde un `10` en dur. | Direction artistique |
+| Cible tactile d'une ligne de sort à 32 px | 44 px attendus. Antérieur. | Direction artistique |
+| Titre « Niveau N » des groupes de sorts | Déborde à l'échelle 3.0 sur 320 et 390 px avec la police de test ; la ligne innée n'est donc pas testée à 3.0 sur le plus petit écran. | dev-flutter, direction-artistique |
+| Maquettes locales | `09-maquettes-captures.md` n'a pas de section pour l'onglet Sorts : copie locale à resynchroniser. | Direction artistique |
+| Double tap dans la même frame sur « Lancer » | Ferait deux fermetures de panneau. Antérieur, commun à tous les sorts, non testé. | Lu par QA |
+| `get_group_member_character` appelable sans connexion | Sans fuite constatée. | Lu en base |
+| `refresh_proposal_counts` appelable sans connexion et par tout compte | Migration à part, avec un test de vote (dépôt web). | Lu en base |
+| `build_character_sheet_json` appelable par tous du 27/09 au 08/10 | Fiche complète lisible avec son identifiant. Fermé par la migration `20261007090000` (dépôt web, PR #19). Aucun moyen de savoir si elle a été exploitée. | Lu en base |
 
 ## Décisions en attente
 
 1. Un Barde, Ensorceleur, Occultiste ou Rôdeur doit-il lancer ses sorts connus sans
    préparation ? **Oui, demandé par Matthias le 06/10.** (D03)
 2. Les sorts innés raciaux se lancent-ils sans emplacement, avec un compteur par repos
-   long ? **Oui, demandé par Matthias le 06/10 ; migration côté web nécessaire.** (D08)
+   long ? **Oui, demandé par Matthias le 06/10 ; fait (PR #82).** (D08)
 3. Un multiclassé suit-il ses dés de vie par classe ?
 4. La limite de sorts préparés doit-elle être bloquante, et non simplement affichée ?
    Aujourd'hui `setSpellPrepared` ne vérifie rien. (D03)
@@ -273,6 +312,11 @@ d'usage ; treize classes, toutes nommées en français comme l'app l'attend.
     (D31)
 12. Passe-t-on les règles de classe sur une clé stable avant la version anglaise ? (D04)
 13. Deux demi-lanceurs cumulés : addition puis division, ou moitié par classe ?
+14. Un sort à la fois inné et connu : applique-t-on la règle complète (un lancer gratuit
+    par repos long, plus les emplacements) ? Aujourd'hui la ligne ordinaire l'emporte.
+    (D43)
+15. Faut-il une confirmation avant de lancer un sort inné, puisqu'aucune sheet de choix
+    ne s'ouvre ?
 
 ## Ce que l'audit n'a pas couvert
 

@@ -21,6 +21,7 @@ import '../domain/character_spell_slot.dart';
 import '../domain/spell_status_formatter.dart';
 import '../domain/currency_kind.dart';
 import '../domain/hp_adjustment.dart';
+import '../domain/innate_spell_usage.dart';
 import '../domain/inventory_catalog_item.dart';
 import '../domain/proficiency_bonus.dart';
 import '../domain/rest_type.dart';
@@ -169,6 +170,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// repos donné se contente alors d'une réaffirmation sans effet (même
   /// valeur réécrite), jamais incorrecte.
   ///
+  /// Couvre aussi les usages des sorts innés ([_castInnateSpell], remis à
+  /// zéro par le repos long seulement) pour une écriture RÉUSSIE restée en
+  /// vol. Exception : le retour en arrière d'un lancer inné en échec ou non
+  /// envoyé ne dépend PAS de ce jeton (un repos court l'avance sans purger
+  /// [_localInnateUsesSpent]), voir `revertOverride` dans [_castInnateSpell].
+  ///
   /// Volontairement distinct d'un compteur générique incrémenté par *tout*
   /// ajustement PV : deux taps rapides successifs sur le stepper
   /// (`character_detail_hp_stepper_race_test.dart`) sont un cas normal déjà
@@ -294,6 +301,26 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// [CharacterClassFeature.id]. Voir [_useClassFeature]/[_effectiveDetail].
   Map<int, int> _localFeatureUsesRemaining = {};
 
+  /// État optimiste local des usages dépensés des sorts innés de niveau >= 1
+  /// (`character_spells.innate_uses_spent`) — `{spell_id:
+  /// innate_uses_spent}`, même principe que [_localFeatureUsesRemaining] mais
+  /// pour [CharacterSpellEntry.id]. Voir [_castInnateSpell]/
+  /// [_effectiveDetail]. Purgée par un repos long (seul à remettre ce
+  /// compteur à zéro), jamais par un repos court.
+  Map<int, int> _localInnateUsesSpent = {};
+
+  /// Instantané de [_localInnateUsesSpent] pris par un repos LONG juste avant
+  /// de la purger, non nul uniquement tant que ce repos est en vol — c'est
+  /// depuis ce champ que le repos rétablit la surcouche s'il échoue.
+  ///
+  /// Un champ d'état plutôt qu'une variable locale de [_applyRest] : un
+  /// lancer inné encore en vol qui échoue PENDANT ce repos doit aussi
+  /// retirer son entrée de l'instantané (voir `revertOverride` dans
+  /// [_castInnateSpell]), sans quoi un échec ultérieur du repos rétablirait
+  /// une entrée « dépensé » pour un lancer jamais enregistré (ligne
+  /// « Épuisé » alors que la base est à 0).
+  Map<int, int>? _innateOverrideBeforeRest;
+
   /// État optimiste local des charges de pacte consommées
   /// (`character_pact_slots.slots_used`), en avance sur la dernière valeur
   /// serveur connue — `null` tant qu'aucun lancer via ce pool n'est en vol ou
@@ -313,7 +340,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   }
 
   /// Fusionne [_localHpState]/[_localXp]/[_localSpellSlotsUsed]/
-  /// [_localFeatureUsesRemaining] (s'ils existent) par-dessus [detail] :
+  /// [_localInnateUsesSpent]/[_localFeatureUsesRemaining] (s'ils existent)
+  /// par-dessus [detail] :
   /// `max_hp` vient toujours de la dernière donnée serveur connue (jamais
   /// modifié localement), seuls `current_hp`/`temporary_hp`, `xp` et les
   /// entrées couvertes par ces deux maps peuvent être en avance.
@@ -359,6 +387,18 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           used: localPactUsed,
           isPact: true,
         ),
+      );
+    }
+
+    if (_localInnateUsesSpent.isNotEmpty) {
+      result = result.copyWith(
+        spells: [
+          for (final spell in result.spells)
+            if (_localInnateUsesSpent[spell.id] case final spent?)
+              spell.copyWithInnateUsesSpent(spent)
+            else
+              spell,
+        ],
       );
     }
 
@@ -545,6 +585,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     CharacterSpellSlot? slot,
   ) async {
     if (slot == null) {
+      // Sort inné de niveau >= 1 : lancé sans emplacement, mais son usage
+      // (une fois par repos long) est dépensé et persisté.
+      if (InnateSpellUsage.isLimited(spell)) {
+        await _castInnateSpell(detail, spell);
+        return;
+      }
       // Sort niveau 0 : rien à persister (spec de la tâche).
       _showSnackBar('${spell.name} lancé.');
       return;
@@ -697,6 +743,165 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       _showSnackBar('Impossible de lancer ce sort. Réessayez.');
     } finally {
       if (mounted) setState(() => _isCastingSpell = false);
+    }
+  }
+
+  /// Lancer d'un sort inné de niveau >= 1 (`domain/innate_spell_usage.dart`)
+  /// : aucun emplacement consommé, mais un usage dépensé
+  /// (`character_spells.innate_uses_spent`, `CharacterRepository
+  /// .setInnateSpellUsesSpent`). Même patron optimiste que
+  /// [_useClassFeature] — surcouche [_localInnateUsesSpent], verrou
+  /// [_isCastingSpell], revert sur échec ou hors ligne (jamais mis en file),
+  /// et même garde contre la course avec un repos ([_restGeneration],
+  /// [_reassertInnateUsesState]) : un repos long remet ce compteur à zéro.
+  /// La garde ne s'applique qu'à une écriture RÉUSSIE ; un lancer en échec
+  /// ou non envoyé est toujours annulé localement, repos ou non.
+  ///
+  /// [detail] doit déjà être la valeur *effective* (voir [_effectiveDetail]),
+  /// même règle que [_castSpell].
+  Future<void> _castInnateSpell(
+    CharacterDetail detail,
+    CharacterSpellEntry spell,
+  ) async {
+    var current = spell;
+    for (final candidate in detail.spells) {
+      if (candidate.id == spell.id && InnateSpellUsage.isLimited(candidate)) {
+        current = candidate;
+        break;
+      }
+    }
+    // Ne devrait pas arriver : "Lancer" est désactivé en amont une fois
+    // l'usage dépensé (voir `SpellCastBlockReason.innateUseSpent`).
+    if (!InnateSpellUsage.hasUseAvailable(current)) return;
+
+    final newSpent = current.innateUsesSpent + 1;
+    final previousOverride = _localInnateUsesSpent[spell.id];
+    final myRestGeneration = _restGeneration;
+    setState(() {
+      _localInnateUsesSpent = {..._localInnateUsesSpent, spell.id: newSpent};
+      _isCastingSpell = true;
+    });
+
+    // Retour en arrière du lancer non enregistré (échec ou hors ligne).
+    // Volontairement SANS condition sur [_restGeneration], contrairement à
+    // [_useClassFeature] : un repos court avance ce jeton mais ne purge pas
+    // [_localInnateUsesSpent] — sauter le retour en arrière laisserait la
+    // ligne « Épuisé » alors que rien n'est écrit en base.
+    //
+    // Selon l'état du repos long éventuel :
+    // - repos long terminé avec succès : la surcouche est purgée, retirer la
+    //   clé est sans effet ;
+    // - repos long terminé en échec : la surcouche a été rétablie avec
+    //   l'entrée de ce lancer, qui est retirée ici ;
+    // - repos long ENCORE EN VOL : la surcouche est purgée mais l'entrée de
+    //   ce lancer vit dans [_innateOverrideBeforeRest], que le repos
+    //   rétablira s'il échoue — elle y est donc retirée aussi.
+    //
+    // HYPOTHÈSE : `InnateSpellUsage.usesPerLongRest == 1`. Un sort ne se
+    // lance alors que sans entrée de surcouche, donc [previousOverride] est
+    // toujours `null` et « revenir en arrière » revient à retirer la clé. Si
+    // la constante passait à 2, [previousOverride] pourrait valoir 1 (premier
+    // lancer déjà affiché) : après un repos long RÉUSSI, ce retour en arrière
+    // réécrirait `{id: 1}` dans une surcouche que le repos vient de purger —
+    // ligne « 1 dépensé » alors que la base est à 0. Il faudrait alors ne
+    // rien rétablir une fois un repos long réussi passé.
+    //
+    // Aucun autre lancer ne peut avoir réécrit cette clé entre-temps
+    // ([_isCastingSpell]).
+    void revertOverride() {
+      final beforeRest = _innateOverrideBeforeRest;
+      if (beforeRest != null) {
+        _innateOverrideBeforeRest = _withRevertedOverride(
+          beforeRest,
+          spell.id,
+          previousOverride,
+        );
+      }
+      if (!mounted) return;
+      setState(
+        () => _localInnateUsesSpent = _withRevertedOverride(
+          _localInnateUsesSpent,
+          spell.id,
+          previousOverride,
+        ),
+      );
+    }
+
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .setInnateSpellUsesSpent(
+            characterId: widget.characterId,
+            spellId: spell.id,
+            usesSpent: newSpent,
+          );
+      if (outcome == WriteOutcome.queued) {
+        // Jamais mise en file (voir `CharacterRepository
+        // .setInnateSpellUsesSpent`) : le lancer n'est pas enregistré, la
+        // ligne revient à « disponible ». Testé AVANT la garde de course :
+        // rien n'a été écrit, il n'y a donc rien à réaffirmer en base, même
+        // si un repos a démarré entre-temps.
+        revertOverride();
+        _showSnackBar(_offlineNotPersistedMessage);
+        return;
+      }
+      if (_restGeneration != myRestGeneration) {
+        await _reassertInnateUsesState(spell.id);
+        return;
+      }
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar('${spell.name} lancé (sort inné).');
+    } on CharacterFailure catch (failure) {
+      revertOverride();
+      _showSnackBar(failure.message);
+    } catch (_) {
+      revertOverride();
+      _showSnackBar('Impossible de lancer ce sort. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isCastingSpell = false);
+    }
+  }
+
+  /// Réécrit en base `character_spells.innate_uses_spent` de [spellId] avec
+  /// l'état actuellement affiché (dernière valeur locale optimiste, ou
+  /// dernière donnée serveur connue à défaut) — appelé uniquement quand un
+  /// lancer de sort inné resté en vol vient de résoudre après qu'un repos a
+  /// démarré (voir [_restGeneration], appelé depuis [_castInnateSpell]).
+  /// Même principe que [_reassertFeatureUsesState] : après un repos long, la
+  /// surcouche est purgée et l'usage est réécrit tel que le repos l'a laissé ;
+  /// après un repos court (qui ne touche pas ce compteur), la surcouche est
+  /// intacte et la même valeur est simplement réécrite.
+  Future<void> _reassertInnateUsesState(int spellId) async {
+    if (!mounted) return;
+    final latest = ref.read(characterDetailProvider(widget.characterId)).value;
+    if (latest == null) return;
+    final effective = _effectiveDetail(latest);
+    CharacterSpellEntry? spell;
+    for (final candidate in effective.spells) {
+      if (candidate.id == spellId && InnateSpellUsage.isLimited(candidate)) {
+        spell = candidate;
+        break;
+      }
+    }
+    if (spell == null) return;
+
+    setState(() => _isApplyingRest = true);
+    try {
+      await ref
+          .read(characterRepositoryProvider)
+          .setInnateSpellUsesSpent(
+            characterId: widget.characterId,
+            spellId: spellId,
+            usesSpent: spell.innateUsesSpent,
+          );
+    } on CharacterFailure catch (failure) {
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar(failure.message);
+    } catch (_) {
+      ref.invalidate(characterDetailProvider(widget.characterId));
+      _showSnackBar('Impossible de synchroniser les sorts innés. Réessayez.');
+    } finally {
+      if (mounted) setState(() => _isApplyingRest = false);
     }
   }
 
@@ -1605,6 +1810,13 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // purgée/revertie dans les deux branches ci-dessous, jamais seulement la
     // branche `RestType.long`.
     final previousPactSlotOverride = _localPactSlotUsed;
+    // Sorts innés de niveau >= 1 : usage rendu par le repos LONG uniquement
+    // — purgée/revertie dans la seule branche `RestType.long`, un repos court
+    // la laisse intacte. L'instantané pré-repos est un champ d'état, pas une
+    // variable locale : voir [_innateOverrideBeforeRest].
+    if (type == RestType.long) {
+      _innateOverrideBeforeRest = _localInnateUsesSpent;
+    }
     // Avancé pour TOUT repos (court ou long), capturé avant l'appel réseau —
     // voir la documentation de [_restGeneration] : un repos court réinitialise
     // aussi `character_feature_uses`, ce jeton doit donc détecter les deux
@@ -1629,6 +1841,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         _localSpellSlotsUsed = {};
         _localFeatureUsesRemaining = {};
         _localPactSlotUsed = null;
+        _localInnateUsesSpent = {};
       });
     } else {
       setState(() {
@@ -1681,6 +1894,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         setState(() {
           _localFeatureUsesRemaining = previousFeatureUsesOverride;
           _localPactSlotUsed = previousPactSlotOverride;
+          if (type == RestType.long) {
+            _localInnateUsesSpent = _innateOverrideBeforeRest ?? {};
+          }
         });
       }
       _showSnackBar(failure.message);
@@ -1696,11 +1912,18 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         setState(() {
           _localFeatureUsesRemaining = previousFeatureUsesOverride;
           _localPactSlotUsed = previousPactSlotOverride;
+          if (type == RestType.long) {
+            _localInnateUsesSpent = _innateOverrideBeforeRest ?? {};
+          }
         });
       }
       _showSnackBar("Impossible d'effectuer le repos. Réessayez.");
       return false;
     } finally {
+      // Repos long résolu (succès ou échec) : l'instantané n'a plus d'usage.
+      if (type == RestType.long && _restGeneration == myRestGeneration) {
+        _innateOverrideBeforeRest = null;
+      }
       if (mounted) setState(() => _isApplyingRest = false);
     }
   }
@@ -1849,6 +2072,20 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           );
           if (remaining.length != _localFeatureUsesRemaining.length) {
             _localFeatureUsesRemaining = remaining;
+            shouldSetState = true;
+          }
+        }
+
+        // Même principe, pour [_localInnateUsesSpent] (sorts innés à charge).
+        if (_localInnateUsesSpent.isNotEmpty) {
+          final remaining = _confirmedEntriesRemoved(
+            _localInnateUsesSpent,
+            (spellId, spent) => detail.spells.any(
+              (spell) => spell.id == spellId && spell.innateUsesSpent == spent,
+            ),
+          );
+          if (remaining.length != _localInnateUsesSpent.length) {
+            _localInnateUsesSpent = remaining;
             shouldSetState = true;
           }
         }

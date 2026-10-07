@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
@@ -366,6 +367,7 @@ void main() {
   group('raison affichée sous "Lancer" désactivé (SpellCastBlockReason)', () {
     final unpreparedMessage = SpellCastBlockReason.unprepared.message;
     final noSlotMessage = SpellCastBlockReason.noSlotAvailable.message;
+    final innateSpentMessage = SpellCastBlockReason.innateUseSpent.message;
 
     // Toute ligne de raison, pas seulement celle attendue.
     Finder reasonLine() => find.byWidgetPredicate(
@@ -409,6 +411,16 @@ void main() {
       level: 2,
       school: 'Évocation',
       status: 'inné',
+    );
+
+    // Usage déjà dépensé depuis le dernier repos long.
+    const innateSpentSpell = CharacterSpellEntry(
+      id: 14,
+      name: 'Ténèbres',
+      level: 2,
+      school: 'Évocation',
+      status: 'inné',
+      innateUsesSpent: 1,
     );
 
     const grantedSpell = CharacterSpellEntry(
@@ -524,11 +536,55 @@ void main() {
       expectCastable(tester);
     });
 
-    testWidgets('sort inné sans emplacement : raison "plus d\'emplacement" '
-        '(jamais "non préparé")', (tester) async {
+    // Inversé (D08) : ce cas affichait la raison "plus d'emplacement".
+    testWidgets('sort inné sans emplacement : actif, aucune ligne de raison, '
+        'lancé sans emplacement', (tester) async {
       await pumpPanel(tester, spell: innateSpell, spellSlots: const []);
 
-      expectBlocked(tester, noSlotMessage);
+      expectCastable(tester);
+
+      await tester.tap(castButton());
+      await tester.pumpAndSettle();
+      expect(castCalls, [innateSpell]);
+      expect(castSlots, [null]);
+    });
+
+    testWidgets('sort inné, tous les emplacements épuisés (classique et '
+        'pacte) : actif, aucune ligne', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: innateSpell,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 1, used: 1)],
+        pactSlot: const CharacterSpellSlot(
+          level: 2,
+          total: 1,
+          used: 1,
+          isPact: true,
+        ),
+      );
+
+      expectCastable(tester);
+    });
+
+    testWidgets('sort inné épuisé, avec des emplacements disponibles : '
+        'désactivé, raison "déjà utilisé", rien n\'est lancé et le panneau '
+        'reste ouvert', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: innateSpentSpell,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+      );
+
+      expectBlocked(tester, innateSpentMessage);
+      expect(
+        tester.getRect(find.text(innateSpentMessage)).top,
+        greaterThan(tester.getRect(castButton()).bottom),
+      );
+
+      await tester.tap(castButton(), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(castCalls, isEmpty);
+      expect(find.text('TÉNÈBRES'), findsOneWidget);
     });
 
     testWidgets('sort accordé par une sous-classe avec emplacement : actif, '
@@ -603,7 +659,13 @@ void main() {
           useScreen(tester, size, textScale);
           await pumpPanel(
             tester,
-            spell: unprepared ? knownSpell : _fireball,
+            // Une fixture par raison : tout nouveau cas de l'enum doit
+            // fournir la sienne (le `switch` est exhaustif).
+            spell: switch (reason) {
+              SpellCastBlockReason.unprepared => knownSpell,
+              SpellCastBlockReason.noSlotAvailable => _fireball,
+              SpellCastBlockReason.innateUseSpent => innateSpentSpell,
+            },
             spellSlots: const [],
           );
 
@@ -896,6 +958,160 @@ void main() {
             .onPressed,
         isNotNull,
       );
+    });
+  });
+
+  // Sort inné de niveau >= 1 (D08) : lancé sans emplacement, une fois par
+  // repos long. Les règles sont couvertes par
+  // `domain/innate_spell_usage_test.dart`/`spell_cast_block_reason_test.dart`
+  // ; ce groupe prouve le câblage et l'affichage du panneau.
+  group('sort inné de niveau >= 1 (sans emplacement, une fois par repos '
+      'long)', () {
+    const sentence =
+        'Sort inné \u2014 se lance sans emplacement, 1 fois par repos long';
+
+    const innate = CharacterSpellEntry(
+      id: 30,
+      name: 'Ténèbres',
+      level: 2,
+      school: 'Évocation',
+      status: 'inné',
+      castingTime: '1 action',
+    );
+    const innateSpent = CharacterSpellEntry(
+      id: 30,
+      name: 'Ténèbres',
+      level: 2,
+      school: 'Évocation',
+      status: 'inné',
+      castingTime: '1 action',
+      innateUsesSpent: 1,
+    );
+    const innateCantrip = CharacterSpellEntry(
+      id: 31,
+      name: 'Lumières dansantes',
+      level: 0,
+      school: 'Évocation',
+      status: 'inné',
+    );
+
+    testWidgets('disponible : phrase sous le sous-titre, ligne '
+        '"Utilisations" 1 / 1 en tête du bloc technique, couleur par '
+        'défaut', (tester) async {
+      await pumpPanel(tester, spell: innate, spellSlots: const []);
+
+      final phrase = tester.widget<Text>(find.text(sentence));
+      expect(phrase.style!.fontSize, 13);
+      expect(phrase.style!.fontWeight, FontWeight.w700);
+      expect(phrase.style!.color, AppColors.textSecondary);
+      expect(
+        tester.getRect(find.text(sentence)).top,
+        greaterThan(tester.getRect(find.text('Évocation · Niveau 2')).bottom),
+      );
+
+      expect(find.text('Utilisations'), findsOneWidget);
+      final value = tester.widget<Text>(find.text('1 / 1 \u00B7 repos long'));
+      expect(value.style!.color, AppColors.textPrimary);
+      expect(value.style!.fontWeight, FontWeight.w400);
+      expect(
+        tester.getRect(find.text('Utilisations')).top,
+        greaterThan(tester.getRect(find.text(sentence)).bottom),
+      );
+      expect(
+        tester.getRect(find.text('Utilisations')).bottom,
+        lessThanOrEqualTo(tester.getRect(find.text("Temps d'incantation")).top),
+      );
+      // Ni préparation, ni raison.
+      expect(find.text('Préparer ce sort'), findsNothing);
+      expect(find.text('Ne plus préparer'), findsNothing);
+    });
+
+    testWidgets('épuisé : "0 / 1 · repos long" en accentBrick gras, "Lancer" '
+        'désactivé avec sa raison', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: innateSpent,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 1, used: 0)],
+      );
+
+      expect(find.text(sentence), findsOneWidget);
+      final value = tester.widget<Text>(find.text('0 / 1 \u00B7 repos long'));
+      expect(value.style!.color, AppColors.accentBrick);
+      expect(value.style!.fontWeight, FontWeight.w700);
+      expect(tester.widget<PrimaryButton>(castButton()).onPressed, isNull);
+      expect(
+        find.text('Déjà utilisé : disponible après un repos long.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('"Lancer" avec plusieurs emplacements éligibles : aucune '
+        'sheet de choix, appel direct sans emplacement, panneau fermé', (
+      tester,
+    ) async {
+      await pumpPanel(
+        tester,
+        spell: innate,
+        spellSlots: const [
+          CharacterSpellSlot(level: 2, total: 2, used: 0),
+          CharacterSpellSlot(level: 3, total: 1, used: 0),
+        ],
+        pactSlot: const CharacterSpellSlot(
+          level: 3,
+          total: 1,
+          used: 0,
+          isPact: true,
+        ),
+      );
+
+      await tester.tap(castButton());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text("Choisissez le niveau d'emplacement à utiliser."),
+        findsNothing,
+      );
+      expect(castCalls, [innate]);
+      expect(castSlots, [null]);
+      expect(find.text('TÉNÈBRES'), findsNothing);
+    });
+
+    testWidgets('sort mineur inné : ni phrase, ni ligne "Utilisations", '
+        'lancé à volonté', (tester) async {
+      await pumpPanel(tester, spell: innateCantrip, spellSlots: const []);
+
+      expect(find.text(sentence), findsNothing);
+      expect(find.text('Utilisations'), findsNothing);
+
+      await tester.tap(castButton());
+      await tester.pumpAndSettle();
+      expect(castCalls, [innateCantrip]);
+      expect(castSlots, [null]);
+    });
+
+    testWidgets('sort ordinaire : ni phrase, ni ligne "Utilisations"', (
+      tester,
+    ) async {
+      await pumpPanel(
+        tester,
+        spell: _fireball,
+        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 0)],
+      );
+
+      expect(find.text(sentence), findsNothing);
+      expect(find.text('Utilisations'), findsNothing);
+    });
+
+    testWidgets('320x568, échelle 3.0, disponible : aucun débordement, '
+        '"Lancer" actionnable', (tester) async {
+      useScreen(tester, const Size(320, 568), 3);
+      await pumpPanel(tester, spell: innate, spellSlots: const []);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(castButton());
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(castCalls, [innate]);
     });
   });
 }

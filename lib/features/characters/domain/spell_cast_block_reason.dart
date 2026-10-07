@@ -1,5 +1,6 @@
 import 'character_spell_entry.dart';
 import 'character_spell_slot.dart';
+import 'innate_spell_usage.dart';
 import 'spell_cast_eligibility.dart';
 import 'spell_status_formatter.dart';
 
@@ -17,7 +18,12 @@ enum SpellCastBlockReason {
   noSlotAvailable(
     "Plus d'emplacement de sort disponible pour ce niveau ou un niveau "
     'supérieur.',
-  );
+  ),
+
+  /// Sort inné de niveau >= 1 dont l'usage a déjà été dépensé depuis le
+  /// dernier repos long : [InnateSpellUsage.hasUseAvailable] est faux. Pas
+  /// de relance avec un emplacement dans cette version.
+  innateUseSpent('Déjà utilisé : disponible après un repos long.');
 
   const SpellCastBlockReason(this.message);
 
@@ -31,6 +37,11 @@ enum SpellCastBlockReason {
   /// ici sans les redéfinir : [SpellStatusFormatter.canCast] et
   /// [SpellCastEligibility.hasAvailableSlot]).
   ///
+  /// Un sort inné à charge ([InnateSpellUsage.isLimited]) est tranché en
+  /// premier, sans jamais regarder [spellSlots] : il se lance sans
+  /// emplacement, donc `null` tant qu'il lui reste un usage, [innateUseSpent]
+  /// sinon — jamais [unprepared] ni [noSlotAvailable].
+  ///
   /// [spellSlots] : tous les emplacements utilisables, magie de pacte
   /// comprise (fusionnés par l'appelant, comme pour
   /// [SpellCastEligibility.hasAvailableSlot]).
@@ -42,6 +53,9 @@ enum SpellCastBlockReason {
     required CharacterSpellEntry spell,
     required List<CharacterSpellSlot> spellSlots,
   }) {
+    if (InnateSpellUsage.isLimited(spell)) {
+      return InnateSpellUsage.hasUseAvailable(spell) ? null : innateUseSpent;
+    }
     if (!SpellStatusFormatter.canCast(spell)) return unprepared;
     final hasSlot = SpellCastEligibility.hasAvailableSlot(
       spellSlots: spellSlots,

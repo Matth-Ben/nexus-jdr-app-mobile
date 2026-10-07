@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/dice_type_badge.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
+import '../../domain/innate_spell_usage.dart';
 import '../../domain/spell_damage_dice_extractor.dart';
 import '../../domain/spell_grant_source.dart';
 import '../../domain/spell_status_formatter.dart';
@@ -327,6 +328,24 @@ class _SpellSlotDot extends StatelessWidget {
   }
 }
 
+/// Taille du texte des pastilles de ligne de sort ([_GrantBadge],
+/// [_InnateBadge]) — une seule constante pour qu'elles restent alignées.
+const double _rowBadgeFontSize = 10;
+
+/// Taille du texte du marqueur « Épuisé » d'un sort inné ([_InnateUsage]).
+const double _innateSpentFontSize = 11;
+
+/// Échelle de texte à partir de laquelle la ligne d'un sort inné à charge
+/// passe sur deux lignes (nom + dé, puis pastille + marqueur) : en dessous,
+/// tout tient en face du nom. Propre aux sorts innés, pas généralisé aux
+/// autres sorts (spec direction-artistique).
+const double _innateTwoLineTextScale = 1.3;
+
+/// Plafond d'échelle de texte de la pastille « INNÉ » et de son marqueur
+/// d'usage — même valeur que la ligne de raison du panneau « Infos »
+/// (`spell_info_panel.dart::_blockReasonMaxTextScale`).
+const double _innateUsageMaxTextScale = 2;
+
 class _SpellRow extends StatelessWidget {
   const _SpellRow({
     required this.spell,
@@ -349,6 +368,35 @@ class _SpellRow extends StatelessWidget {
     final dice = SpellDamageDiceExtractor.extract(spell.description);
     final preparationLabel = SpellStatusFormatter.preparationLabel(spell);
     final unprepared = SpellStatusFormatter.isUnprepared(spell);
+    // Sort inné de niveau >= 1 : pastille « INNÉ » + marqueur d'usage. Un
+    // sort mineur inné (à volonté) n'en porte pas.
+    // Jamais cumulé avec la pastille d'octroi ni le libellé de préparation
+    // (un sort accordé est présenté 'préparé', un sort inné ne se prépare
+    // pas) : la mise en page sur deux lignes n'a donc qu'eux à placer.
+    final innateLimited = InnateSpellUsage.isLimited(spell);
+    final twoLines =
+        innateLimited &&
+        MediaQuery.textScalerOf(context).scale(1) >= _innateTwoLineTextScale;
+
+    final nameAndDice = Row(
+      children: [
+        Flexible(
+          child: Text(
+            spell.name,
+            maxLines: twoLines ? 2 : 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.body(fontSize: 13),
+          ),
+        ),
+        if (dice != null) ...[
+          const SizedBox(width: AppSpacing.xs),
+          DiceTypeBadge(
+            sides: dice.sides,
+            label: '${dice.count}d${dice.sides}',
+          ),
+        ],
+      ],
+    );
 
     return Material(
       color: Colors.transparent,
@@ -376,45 +424,42 @@ class _SpellRow extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 32),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs / 2),
-              child: Row(
-                children: [
-                  // Nom + dé de dégâts collés l'un à l'autre à gauche, la
-                  // pastille "DOMAINE"/"SERMENT" repoussée en face, à droite
-                  // — demande utilisateur du 06/10/2026.
-                  Expanded(
-                    child: Row(
+              // Grandes polices (échelle >= 1.3), sort inné à charge
+              // uniquement : pastille et marqueur passent sous le nom,
+              // alignés à gauche, pour ne pas écraser le nom sur petit écran.
+              child: twoLines
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(
-                          child: Text(
-                            spell.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.body(fontSize: 13),
-                          ),
-                        ),
-                        if (dice != null) ...[
+                        nameAndDice,
+                        const SizedBox(height: AppSpacing.xs),
+                        _InnateUsage(spell: spell),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        // Nom + dé de dégâts collés l'un à l'autre à gauche,
+                        // la pastille "DOMAINE"/"SERMENT"/"INNÉ" repoussée en
+                        // face, à droite — demande utilisateur du 06/10/2026.
+                        Expanded(child: nameAndDice),
+                        if (spell.grantSource != null) ...[
                           const SizedBox(width: AppSpacing.xs),
-                          DiceTypeBadge(
-                            sides: dice.sides,
-                            label: '${dice.count}d${dice.sides}',
+                          _GrantBadge(source: spell.grantSource!),
+                        ],
+                        if (innateLimited) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          _InnateUsage(spell: spell),
+                        ],
+                        if (preparationLabel != null) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          _PreparationStatus(
+                            label: preparationLabel,
+                            prepared: !unprepared,
                           ),
                         ],
                       ],
                     ),
-                  ),
-                  if (spell.grantSource != null) ...[
-                    const SizedBox(width: AppSpacing.xs),
-                    _GrantBadge(source: spell.grantSource!),
-                  ],
-                  if (preparationLabel != null) ...[
-                    const SizedBox(width: AppSpacing.xs),
-                    _PreparationStatus(
-                      label: preparationLabel,
-                      prepared: !unprepared,
-                    ),
-                  ],
-                ],
-              ),
             ),
           ),
         ),
@@ -470,29 +515,99 @@ class _GrantBadge extends StatelessWidget {
     return Semantics(
       label: 'Toujours préparé, accordé par : ${source.label}',
       excludeSemantics: true,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        decoration: BoxDecoration(
-          color: AppColors.parchmentCardAlt,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(color: AppColors.woodLight, width: 1),
-        ),
+      child: _RowBadge(
+        label: source.label.toUpperCase(),
+        icon: Icons.lock_outline,
+      ),
+    );
+  }
+}
+
+/// Pastille de ligne de sort partagée par [_GrantBadge] et [_InnateUsage] :
+/// fond `parchment.card-alt`, liseré `wood.light` 1 px, `radius.sm`, texte
+/// `font.display` [_rowBadgeFontSize]. [icon] facultative, devant le
+/// libellé. Purement visuelle : la sémantique est portée par l'appelant.
+class _RowBadge extends StatelessWidget {
+  const _RowBadge({required this.label, this.icon});
+
+  final String label;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Text(
+      label,
+      style: AppTypography.display(
+        fontSize: _rowBadgeFontSize,
+        color: AppColors.textSecondary,
+      ),
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.parchmentCardAlt,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.woodLight, width: 1),
+      ),
+      child: icon == null
+          ? text
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 10, color: AppColors.woodMedium),
+                const SizedBox(width: 3),
+                text,
+              ],
+            ),
+    );
+  }
+}
+
+/// Pastille « INNÉ » + marqueur d'usage d'un sort inné de niveau >= 1
+/// (`InnateSpellUsage.isLimited`) : lancé sans emplacement, une fois par
+/// repos long. Marqueur : pastille pleine [AppColors.goldEnd] (identique à
+/// [_SpellSlotDot]) tant que l'usage est disponible, le mot « Épuisé » en
+/// [AppColors.accentBrick] sinon — la ligne elle-même n'est jamais atténuée.
+///
+/// Un seul nœud sémantique pour les deux (sans `container: true`, comme
+/// [_GrantBadge]) ; texte plafonné à [_innateUsageMaxTextScale].
+class _InnateUsage extends StatelessWidget {
+  const _InnateUsage({required this.spell});
+
+  final CharacterSpellEntry spell;
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = InnateSpellUsage.usesRemaining(spell);
+    const max = InnateSpellUsage.usesPerLongRest;
+    final available = remaining > 0;
+
+    return Semantics(
+      label: available
+          ? 'Sort inné, sans emplacement, $remaining '
+                '${remaining > 1 ? 'utilisations restantes' : 'utilisation restante'} '
+                'sur $max, repos long'
+          : 'Sort inné, épuisé, disponible après un repos long',
+      excludeSemantics: true,
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: _innateUsageMaxTextScale,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.lock_outline,
-              size: 10,
-              color: AppColors.woodMedium,
-            ),
-            const SizedBox(width: 3),
-            Text(
-              source.label.toUpperCase(),
-              style: AppTypography.display(
-                fontSize: 10,
-                color: AppColors.textSecondary,
+            const _RowBadge(label: 'INNÉ'),
+            const SizedBox(width: AppSpacing.xs),
+            if (available)
+              const _SpellSlotDot(filled: true, filledColor: AppColors.goldEnd)
+            else
+              Text(
+                'Épuisé',
+                style: AppTypography.body(
+                  fontSize: _innateSpentFontSize,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.accentBrick,
+                ),
               ),
-            ),
           ],
         ),
       ),

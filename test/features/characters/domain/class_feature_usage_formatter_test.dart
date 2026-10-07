@@ -80,4 +80,25 @@ void main() {
       expect(ClassFeatureUsageFormatter.format(feature), '2 / 2 · repos court');
     });
   });
+
+  group('ClassFeatureUsageFormatter.formatCounts', () {
+    test('même format que format, à partir de valeurs déjà résolues', () {
+      expect(
+        ClassFeatureUsageFormatter.formatCounts(
+          remaining: 0,
+          usesMax: 1,
+          restType: 'repos_long',
+        ),
+        '0 / 1 · repos long',
+      );
+      expect(
+        ClassFeatureUsageFormatter.formatCounts(
+          remaining: 2,
+          usesMax: 3,
+          restType: null,
+        ),
+        '2 / 3 · repos court',
+      );
+    });
+  });
 }

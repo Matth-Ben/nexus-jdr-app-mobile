@@ -395,6 +395,14 @@ CharacterSpellEntry _mapSpell(
     grantSource: grantSource,
     isPersisted: isPersisted,
     requiresPreparation: requiresPreparation,
+    // Renvoyé par le RPC depuis l'ajout du compteur de sort inné ; absent
+    // (réponse d'une version antérieure) ou inexploitable : 0, usage
+    // disponible. Lu ligne par ligne : cette vue produit une entrée par
+    // ligne `character_spells`.
+    innateUsesSpent: switch (row['innate_uses_spent']) {
+      final num value when value > 0 => value.toInt(),
+      _ => 0,
+    },
   );
 }
 

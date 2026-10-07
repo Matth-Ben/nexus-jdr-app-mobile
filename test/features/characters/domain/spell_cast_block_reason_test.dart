@@ -4,18 +4,24 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
+import 'package:personnages/features/characters/domain/innate_spell_usage.dart';
 import 'package:personnages/features/characters/domain/spell_cast_block_reason.dart';
 import 'package:personnages/features/characters/domain/spell_cast_eligibility.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/characters/domain/spell_status_formatter.dart';
 
-CharacterSpellEntry _spell({required int level, required String status}) {
+CharacterSpellEntry _spell({
+  required int level,
+  required String status,
+  int innateUsesSpent = 0,
+}) {
   return CharacterSpellEntry(
     id: 1,
     name: 'Test',
     level: level,
     school: '',
     status: status,
+    innateUsesSpent: innateUsesSpent,
   );
 }
 
@@ -64,20 +70,90 @@ void main() {
       );
     });
 
-    test("sort 'inné' : jamais unprepared, seul l'emplacement compte", () {
+    // Inversé (D08) : un sort inné de niveau >= 1 exigeait un emplacement
+    // (« sort 'inné' : jamais unprepared, seul l'emplacement compte »).
+    test("sort 'inné' de niveau >= 1, usage disponible : lançable sans "
+        'emplacement, quels que soient les emplacements', () {
+      for (final slots in [
+        available,
+        exhausted,
+        const <CharacterSpellSlot>[],
+      ]) {
+        expect(
+          SpellCastBlockReason.of(
+            spell: _spell(level: 3, status: 'inné'),
+            spellSlots: slots,
+          ),
+          isNull,
+          reason: '$slots',
+        );
+      }
+    });
+
+    test("sort 'inné' de niveau >= 1, usage dépensé : innateUseSpent, même "
+        'avec des emplacements disponibles (pas de relance avec un '
+        'emplacement)', () {
+      for (final slots in [
+        available,
+        exhausted,
+        const <CharacterSpellSlot>[],
+      ]) {
+        expect(
+          SpellCastBlockReason.of(
+            spell: _spell(level: 3, status: 'inné', innateUsesSpent: 1),
+            spellSlots: slots,
+          ),
+          SpellCastBlockReason.innateUseSpent,
+          reason: '$slots',
+        );
+      }
+    });
+
+    test("sort 'inné' épuisé d'une classe à préparation (origine inconnue) : "
+        'innateUseSpent prioritaire, jamais unprepared ni noSlotAvailable', () {
+      for (var level = 1; level <= 9; level++) {
+        for (final spent in [1, 2, 99]) {
+          expect(
+            SpellCastBlockReason.of(
+              spell: _spell(
+                level: level,
+                status: 'inné',
+                innateUsesSpent: spent,
+              ),
+              spellSlots: const [],
+            ),
+            SpellCastBlockReason.innateUseSpent,
+            reason: 'niveau $level, $spent dépensé(s)',
+          );
+        }
+      }
+    });
+
+    test('sort mineur inné (niveau 0) : à volonté, null même avec un '
+        'compteur dépensé aberrant', () {
       expect(
         SpellCastBlockReason.of(
-          spell: _spell(level: 3, status: 'inné'),
+          spell: _spell(level: 0, status: 'inné', innateUsesSpent: 1),
+          spellSlots: const [],
+        ),
+        isNull,
+      );
+    });
+
+    test("le compteur n'a aucun effet sur un sort qui n'est pas inné", () {
+      expect(
+        SpellCastBlockReason.of(
+          spell: _spell(level: 3, status: 'préparé', innateUsesSpent: 1),
           spellSlots: available,
         ),
         isNull,
       );
       expect(
         SpellCastBlockReason.of(
-          spell: _spell(level: 3, status: 'inné'),
-          spellSlots: exhausted,
+          spell: _spell(level: 3, status: 'connu', innateUsesSpent: 1),
+          spellSlots: available,
         ),
-        SpellCastBlockReason.noSlotAvailable,
+        SpellCastBlockReason.unprepared,
       );
     });
 
@@ -159,6 +235,15 @@ void main() {
               final context =
                   'niveau $level, statut "$status", origine $grant, '
                   '${config.key}';
+
+              // Seule exception à l'ancienne règle (D08) : un sort inné de
+              // niveau >= 1 se lance sans emplacement tant que son usage est
+              // disponible (compteur à 0 ici).
+              if (InnateSpellUsage.isLimited(spell)) {
+                expect(reason, isNull, reason: context);
+                checked++;
+                continue;
+              }
 
               expect(reason == null, legacyCanCast, reason: context);
               // La raison retournée doit être la bonne, pas seulement
@@ -255,6 +340,10 @@ void main() {
         SpellCastBlockReason.noSlotAvailable.message,
         "Plus d'emplacement de sort disponible pour ce niveau ou un niveau "
         'supérieur.',
+      );
+      expect(
+        SpellCastBlockReason.innateUseSpent.message,
+        'Déjà utilisé : disponible après un repos long.',
       );
     });
   });

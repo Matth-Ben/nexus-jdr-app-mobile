@@ -15,6 +15,7 @@ import 'package:personnages/features/character_sharing/presentation/shared_chara
 import 'package:personnages/features/characters/domain/character_class_choice.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
+import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_gallery_photo.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
@@ -230,6 +231,47 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('APTITUDES'), findsOneWidget);
+  });
+
+  // Sort inné de niveau >= 1 (D08) : pastille et marqueur affichés d'après
+  // `innate_uses_spent`, sans aucune action.
+  testWidgets('onglet Sorts : un sort inné épuisé affiche « INNÉ » et '
+      '« Épuisé », un sort inné disponible sa pastille, aucun tap', (
+    tester,
+  ) async {
+    fakeRepository.detailToReturn = _baseDetail.copyWith(
+      spells: const [
+        CharacterSpellEntry(
+          id: 1,
+          name: 'Ténèbres',
+          level: 2,
+          school: 'Évocation',
+          status: 'inné',
+          innateUsesSpent: 1,
+        ),
+        CharacterSpellEntry(
+          id: 2,
+          name: 'Lueurs féeriques',
+          level: 1,
+          school: 'Évocation',
+          status: 'inné',
+        ),
+      ],
+    );
+
+    await pumpSharedView(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SORTS'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('INNÉ'), findsNWidgets(2));
+    expect(find.text('Épuisé'), findsOneWidget);
+
+    await tester.tap(find.text('Ténèbres'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lueurs féeriques'));
+    await tester.pumpAndSettle();
+    expect(find.text('LANCER'), findsNothing);
   });
 
   group('onglet Histoire (docs/cahier-des-charges/'

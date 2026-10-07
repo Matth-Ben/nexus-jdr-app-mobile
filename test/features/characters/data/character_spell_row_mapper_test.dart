@@ -37,6 +37,53 @@ void main() {
     });
   });
 
+  group('CharacterSpellRowMapper.parseStatuses — lignes en double', () {
+    test("une ligne ordinaire l'emporte sur une ligne 'inné', quel que soit "
+        "l'ordre", () {
+      for (final ordinary in ['connu', 'préparé', 'autre']) {
+        final rows = [
+          {'spell_id': 1, 'status': 'inné'},
+          {'spell_id': 1, 'status': ordinary},
+        ];
+        expect(CharacterSpellRowMapper.parseStatuses(rows), {1: ordinary});
+        expect(CharacterSpellRowMapper.parseStatuses(rows.reversed.toList()), {
+          1: ordinary,
+        });
+      }
+    });
+
+    test("deux lignes 'inné' : le sort reste inné", () {
+      final rows = [
+        {'spell_id': 1, 'status': 'inné'},
+        {'spell_id': 1, 'status': 'inné'},
+      ];
+      expect(CharacterSpellRowMapper.parseStatuses(rows), {1: 'inné'});
+    });
+
+    test('lignes ordinaires de statuts différents : la dernière lue '
+        "l'emporte (inchangé)", () {
+      final rows = [
+        {'spell_id': 1, 'status': 'connu'},
+        {'spell_id': 1, 'status': 'préparé'},
+      ];
+      expect(CharacterSpellRowMapper.parseStatuses(rows), {1: 'préparé'});
+      expect(CharacterSpellRowMapper.parseStatuses(rows.reversed.toList()), {
+        1: 'connu',
+      });
+    });
+
+    test("un sort inné d'un autre identifiant n'est pas affecté", () {
+      final rows = [
+        {'spell_id': 1, 'status': 'connu'},
+        {'spell_id': 2, 'status': 'inné'},
+      ];
+      expect(CharacterSpellRowMapper.parseStatuses(rows), {
+        1: 'connu',
+        2: 'inné',
+      });
+    });
+  });
+
   group('CharacterSpellRowMapper.toCharacterSpellEntries', () {
     test('résout le nom, le niveau, l\'école et le statut', () {
       final spellRows = [
@@ -290,6 +337,91 @@ void main() {
           'toujours préparé · ${SpellGrantSource.domain.label}',
         );
       }
+    });
+  });
+
+  group('CharacterSpellRowMapper.parseInnateUsesSpent', () {
+    test(
+      "construit {spell_id: innate_uses_spent} depuis les lignes 'inné'",
+      () {
+        final rows = [
+          {'spell_id': 1, 'status': 'inné', 'innate_uses_spent': 1},
+          {'spell_id': 2, 'status': 'inné', 'innate_uses_spent': 0},
+        ];
+        expect(CharacterSpellRowMapper.parseInnateUsesSpent(rows), {
+          1: 1,
+          2: 0,
+        });
+      },
+    );
+
+    test('clé absente (cache antérieur à la colonne) ou valeur inexploitable '
+        ': rien, jamais de crash', () {
+      final rows = [
+        {'spell_id': 1, 'status': 'inné'},
+        {'spell_id': 2, 'status': 'inné', 'innate_uses_spent': null},
+        {'spell_id': 3, 'status': 'inné', 'innate_uses_spent': 'x'},
+        {'spell_id': null, 'status': 'inné', 'innate_uses_spent': 1},
+      ];
+      expect(CharacterSpellRowMapper.parseInnateUsesSpent(rows), isEmpty);
+    });
+
+    test("ligne ordinaire ('connu'/'préparé') : ignorée, même avec une valeur "
+        'renseignée', () {
+      final rows = [
+        {'spell_id': 1, 'status': 'connu', 'innate_uses_spent': 1},
+        {'spell_id': 2, 'status': 'préparé', 'innate_uses_spent': 1},
+      ];
+      expect(CharacterSpellRowMapper.parseInnateUsesSpent(rows), isEmpty);
+    });
+
+    test("lignes en double 'inné' divergentes : la valeur la plus haute est "
+        "retenue, quel que soit l'ordre des lignes", () {
+      final rows = [
+        {'spell_id': 1, 'status': 'inné', 'innate_uses_spent': 0},
+        {'spell_id': 1, 'status': 'inné', 'innate_uses_spent': 1},
+      ];
+      expect(CharacterSpellRowMapper.parseInnateUsesSpent(rows), {1: 1});
+      expect(
+        CharacterSpellRowMapper.parseInnateUsesSpent(rows.reversed.toList()),
+        {1: 1},
+      );
+    });
+
+    test("lignes en double 'inné' dépensée + ordinaire à 0 : la ligne "
+        "ordinaire ne masque pas l'usage dépensé, quel que soit l'ordre", () {
+      final rows = [
+        {'spell_id': 1, 'status': 'inné', 'innate_uses_spent': 1},
+        {'spell_id': 1, 'status': 'connu', 'innate_uses_spent': 0},
+      ];
+      expect(CharacterSpellRowMapper.parseInnateUsesSpent(rows), {1: 1});
+      expect(
+        CharacterSpellRowMapper.parseInnateUsesSpent(rows.reversed.toList()),
+        {1: 1},
+      );
+    });
+
+    test('valeur négative (impossible en base) : ramenée à 0', () {
+      final rows = [
+        {'spell_id': 1, 'status': 'inné', 'innate_uses_spent': -2},
+      ];
+      expect(CharacterSpellRowMapper.parseInnateUsesSpent(rows), {1: 0});
+    });
+
+    test('toCharacterSpellEntries reporte le compteur, 0 par défaut', () {
+      final result = CharacterSpellRowMapper.toCharacterSpellEntries(
+        [
+          {'id': 1, 'level': 2, 'school': ''},
+          {'id': 2, 'level': 2, 'school': ''},
+        ],
+        names: const {},
+        descriptions: const {},
+        statuses: const {1: 'inné', 2: 'inné'},
+        classes: const [],
+        innateUsesSpent: const {1: 1},
+      );
+      expect(result[0].innateUsesSpent, 1);
+      expect(result[1].innateUsesSpent, 0);
     });
   });
 }

@@ -25,6 +25,7 @@ class CharacterSpellEntry {
     this.isPersisted = true,
     this.storedStatus,
     this.requiresPreparation = true,
+    this.innateUsesSpent = 0,
   });
 
   final int id;
@@ -108,6 +109,37 @@ class CharacterSpellEntry {
   /// ou accordé par une sous-classe, dont les règles passent avant — voir
   /// `domain/spell_status_formatter.dart`.
   final bool requiresPreparation;
+
+  /// `character_spells.innate_uses_spent` : usages DÉPENSÉS depuis le dernier
+  /// repos long, pour un sort inné de niveau >= 1 (lancé sans emplacement —
+  /// voir `domain/innate_spell_usage.dart` pour la fréquence et les
+  /// dérivés). 0 par défaut, et toujours 0 pour un sort sans ligne 'inné'.
+  /// Sans signification pour tout autre sort (sort mineur inné compris : à
+  /// volonté).
+  final int innateUsesSpent;
+
+  /// Copie avec un autre compteur d'usages innés dépensés — surcouche
+  /// optimiste de `character_detail_screen.dart::_effectiveDetail`.
+  CharacterSpellEntry copyWithInnateUsesSpent(int innateUsesSpent) =>
+      CharacterSpellEntry(
+        id: id,
+        name: name,
+        level: level,
+        school: school,
+        status: status,
+        castingTime: castingTime,
+        range: range,
+        components: components,
+        duration: duration,
+        concentration: concentration,
+        description: description,
+        isFavorite: isFavorite,
+        grantSource: grantSource,
+        isPersisted: isPersisted,
+        storedStatus: storedStatus,
+        requiresPreparation: requiresPreparation,
+        innateUsesSpent: innateUsesSpent,
+      );
 
   /// `true` si le sort est accordé par une sous-classe ([grantSource] non
   /// nul) : toujours préparé, exclu du décompte des sorts préparés, non

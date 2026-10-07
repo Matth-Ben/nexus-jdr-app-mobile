@@ -253,11 +253,13 @@ Future<void> showSpellPreparationInfoSheet(
                       ),
                       const _InfoEntry(
                         icon: Icons.auto_awesome,
-                        title: 'Toujours disponibles',
+                        title: 'Sans préparation',
                         body:
                             'Les sorts mineurs, les sorts innés et les sorts '
                             'de domaine ou de serment n\'ont jamais à être '
-                            'préparés et ne comptent pas dans la limite.',
+                            'préparés et ne comptent pas dans la limite. Un '
+                            'sort inné de niveau 1 ou plus se lance sans '
+                            'emplacement, une fois par repos long.',
                       ),
                       const _InfoEntry(
                         icon: Icons.local_fire_department,
