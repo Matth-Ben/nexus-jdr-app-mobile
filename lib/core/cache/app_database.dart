@@ -65,6 +65,12 @@ class PendingCharacterWrites extends Table {
   TextColumn get ownerId => text()();
   TextColumn get kind => text()();
   TextColumn get payload => text()();
+  // Sert de numéro de version de l'entrée, pas de date fiable : stocké à la
+  // seconde, il avance d'au moins une seconde à chaque remplacement (voir
+  // `PendingCharacterWriteQueue.enqueue`/`removeIfUnchanged`) et peut donc
+  // se trouver dans le futur. Ne jamais l'utiliser pour trier ou faire
+  // expirer des entrées. (Commentaire `//` et non `///` : `drift_dev` recopie
+  // les commentaires de documentation des colonnes dans le code généré.)
   DateTimeColumn get queuedAt => dateTime()();
 
   @override

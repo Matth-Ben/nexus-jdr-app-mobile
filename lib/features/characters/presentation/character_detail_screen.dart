@@ -134,6 +134,20 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// serveur potentiellement obsolète le temps d'un aller-retour réseau.
   HpState? _localHpState;
 
+  /// XP optimiste locale, en avance sur la dernière fiche livrée par
+  /// `characterDetailProvider` — non `null` uniquement après un ajout d'XP
+  /// mis en file hors ligne ([WriteOutcome.queued], voir [_addXp]).
+  ///
+  /// Un ajout mis en file ne déclenche aucun rafraîchissement de la fiche
+  /// (rien à relire côté serveur) : sans cet état, le bandeau XP restait sur
+  /// l'ancienne valeur et un second ajout hors ligne, calculé en valeur
+  /// absolue à partir de cette même base, remplaçait le premier dans la file
+  /// au lieu de s'y ajouter — XP perdue sans message. Même principe que
+  /// [_localHpState] : fusionnée par [_effectiveDetail], relâchée par le
+  /// `ref.listen` de [build] dès que la fiche relue porte la même valeur
+  /// (réouverture, ou synchronisation au retour du réseau).
+  int? _localXp;
+
   /// Compteur incrémenté par tout repos réussi ([_applyRest], court ou
   /// long) — sert à détecter qu'un ajustement resté en vol (PV via
   /// [_applyHpState], emplacement de sort via [_castSpell], ou utilisation
@@ -298,13 +312,18 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
-  /// Fusionne [_localHpState]/[_localSpellSlotsUsed]/
+  /// Fusionne [_localHpState]/[_localXp]/[_localSpellSlotsUsed]/
   /// [_localFeatureUsesRemaining] (s'ils existent) par-dessus [detail] :
   /// `max_hp` vient toujours de la dernière donnée serveur connue (jamais
-  /// modifié localement), seuls `current_hp`/`temporary_hp` et les entrées
-  /// couvertes par ces deux maps peuvent être en avance.
+  /// modifié localement), seuls `current_hp`/`temporary_hp`, `xp` et les
+  /// entrées couvertes par ces deux maps peuvent être en avance.
   CharacterDetail _effectiveDetail(CharacterDetail detail) {
     var result = detail;
+
+    final localXp = _localXp;
+    if (localXp != null) {
+      result = result.copyWith(xp: localXp);
+    }
 
     final localHp = _localHpState;
     if (localHp != null) {
@@ -1336,6 +1355,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// visuelle section 1c : "une fois l'XP écrite en base, si le seuil est
   /// franchi, pousser immédiatement l'écran scène du flux sur la pile de
   /// navigation (pas juste revenir sur la fiche)".
+  ///
+  /// [detail] doit être la fiche effective ([_effectiveDetail]) : le nouveau
+  /// total part de l'XP réellement affichée, [_localXp] comprise.
   Future<void> _addXp(CharacterDetail detail, int amount) async {
     final newXp = detail.xp + amount;
     try {
@@ -1350,10 +1372,19 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // automatiquement l'écran de montée de niveau ici, il a lui-même
         // besoin du réseau (`fetchLevelUpLevelData`). Le déclenchement
         // attendra une prochaine interaction manuelle une fois reconnecté.
+        //
+        // Aucun rafraîchissement de la fiche pour une écriture mise en
+        // file : le nouveau total est gardé localement, pour que le bandeau
+        // XP l'affiche et qu'un ajout suivant en reparte (voir [_localXp]).
+        setState(() => _localXp = newXp);
         _showSnackBar(_offlineQueuedMessage);
         return;
       }
 
+      // Écriture confirmée par le serveur : la fiche rafraîchie ci-dessous
+      // fait de nouveau autorité, une éventuelle XP locale plus ancienne
+      // (ajout précédent mis en file) n'a plus lieu d'être.
+      if (_localXp != null) setState(() => _localXp = null);
       ref.invalidate(characterDetailProvider(widget.characterId));
 
       final threshold = detail.nextLevelXpThreshold;
@@ -1782,6 +1813,13 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           shouldSetState = true;
         }
 
+        // Même principe pour [_localXp] (ajout d'XP mis en file hors
+        // ligne) : relâchée dès que la fiche relue porte la même valeur.
+        if (_localXp != null && detail.xp == _localXp) {
+          _localXp = null;
+          shouldSetState = true;
+        }
+
         // Même principe que ci-dessus, généralisé aux maps
         // [_localSpellSlotsUsed]/[_localFeatureUsesRemaining] : ne relâche
         // que les entrées que [detail] confirme désormais exactement, jamais
@@ -2089,9 +2127,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         ),
         onTapAddXp: () => showAddXpSheet(
           context,
-          currentXp: detail.xp,
+          currentXp: _effectiveDetail(detail).xp,
           nextLevelXpThreshold: detail.nextLevelXpThreshold,
-          onApply: (amount) => _addXp(detail, amount),
+          onApply: (amount) => _addXp(_effectiveDetail(detail), amount),
           onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
         ),
         onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),

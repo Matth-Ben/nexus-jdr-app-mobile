@@ -235,7 +235,7 @@ final class PendingCharacterWriteSyncerProvider
 }
 
 String _$pendingCharacterWriteSyncerHash() =>
-    r'1fdd437867eb2afbdfee6c882ee08a97b7973222';
+    r'e9bee78591aeff14d1a0f6c77d97b938aced4c3e';
 
 /// Liste des personnages du joueur connecté, exposée à
 /// `CharacterListScreen`.
