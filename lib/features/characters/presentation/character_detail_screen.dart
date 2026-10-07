@@ -1522,10 +1522,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   ///
   /// [className] (`CharacterRepository.applyRest`) est résolu ici depuis la
   /// classe primaire de [detail] — chaîne vide si le personnage n'a aucune
-  /// classe, auquel cas `SpellSlotProgression.slotsForLevel` ne trouve
-  /// aucune correspondance et ne recalcule simplement aucun emplacement de
-  /// sort (comportement voulu, même repli que pour une classe non
-  /// lanceuse).
+  /// classe, auquel cas aucun emplacement de sort n'est recalculé
+  /// (comportement voulu, même repli que pour une classe non lanceuse). Les
+  /// classes secondaires d'un personnage multiclassé sont résolues par le
+  /// dépôt lui-même : le recalcul des emplacements au repos long porte sur
+  /// toutes les classes, pas seulement sur celle nommée ici.
   ///
   /// Pour un repos long, dont le résultat sur les PV est connu à l'avance
   /// (`current_hp = max_hp`, `temporary_hp = 0`), bascule optimiste

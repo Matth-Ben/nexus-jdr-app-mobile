@@ -75,6 +75,11 @@ class _FakeCharacterRepository implements CharacterRepository {
   int applyRestCallCount = 0;
   Object? applyRestErrorToThrow;
 
+  /// Fiche renvoyée par [fetchCharacterDetail] une fois un repos appliqué
+  /// avec succès — simule l'effet en base de `applyRest` (le vrai dépôt
+  /// recalcule les emplacements de sorts), `null` pour ne rien changer.
+  CharacterDetail? detailAfterRest;
+
   String? lastLeftCharacterCampaignId;
   int leaveStoryCallCount = 0;
   Object? leaveStoryErrorToThrow;
@@ -319,6 +324,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     if (applyRestErrorToThrow != null) throw applyRestErrorToThrow!;
     lastAppliedRestType = type;
     lastAppliedRestClassName = className;
+    if (detailAfterRest != null) detailToReturn = detailAfterRest;
   }
 
   @override
@@ -1946,6 +1952,104 @@ void main() {
       // l'avance pour un repos long), avant même que le rafraîchissement
       // réseau ne confirme la même valeur.
       expect(find.text('30 / 30'), findsOneWidget);
+    });
+
+    testWidgets('personnage multiclassé (Guerrier 5 / Magicien 3) : après un '
+        'repos long, la fiche affiche les emplacements restaurés du Magicien '
+        '(surcouche optimiste d\'un lancer purgée, fiche rechargée) et passe '
+        'le nom de la classe primaire au dépôt', (tester) async {
+      final multiclassDetail = _baseDetail.copyWith(
+        classes: const [
+          CharacterDetailClassRow(
+            classId: 1,
+            hitDie: 10,
+            className: 'Guerrier',
+            level: 5,
+            isPrimary: true,
+            savingThrowProficiencies: ['str', 'con'],
+          ),
+          CharacterDetailClassRow(
+            classId: 2,
+            hitDie: 6,
+            className: 'Magicien',
+            level: 3,
+            isPrimary: false,
+            savingThrowProficiencies: ['int', 'wis'],
+          ),
+        ],
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Bouclier',
+            level: 1,
+            school: 'Abjuration',
+            status: 'préparé',
+          ),
+          CharacterSpellEntry(
+            id: 2,
+            name: 'Image miroir',
+            level: 2,
+            school: 'Illusion',
+            status: 'préparé',
+          ),
+        ],
+        spellSlots: const [
+          CharacterSpellSlot(level: 1, total: 4, used: 3),
+          CharacterSpellSlot(level: 2, total: 2, used: 1),
+        ],
+      );
+      fakeRepository.detailToReturn = multiclassDetail;
+      fakeRepository.detailAfterRest = multiclassDetail.copyWith(
+        currentHp: multiclassDetail.maxHp,
+        spellSlots: const [
+          CharacterSpellSlot(level: 1, total: 4, used: 0),
+          CharacterSpellSlot(level: 2, total: 2, used: 0),
+        ],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      // Lance "Image miroir" (niveau 2, seul niveau d'emplacement éligible
+      // donc pas de sheet de choix) : dernier emplacement de niveau 2
+      // consommé, la surcouche optimiste locale passe à 2 utilisés sur 2.
+      await tester.tap(find.text('SORTS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Image miroir'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.pumpAndSettle();
+      expect(fakeRepository.castSpellCallCount, 1);
+      expect(
+        find.bySemanticsLabel('Emplacements de sorts : 1 restants sur 4'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Emplacements de sorts : 0 restants sur 2'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('PERSO'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('REPOS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyRestCallCount, 1);
+      expect(fakeRepository.lastAppliedRestType, RestType.long);
+      expect(fakeRepository.lastAppliedRestClassName, 'Guerrier');
+
+      await tester.tap(find.text('SORTS'));
+      await tester.pumpAndSettle();
+      expect(
+        find.bySemanticsLabel('Emplacements de sorts : 4 restants sur 4'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 2'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('repos long avec "Changer mes sorts" : ouvre la sheet '
