@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -64,9 +65,81 @@ class PendingCharacterWrite {
 /// `PendingCharacterWriteSyncer`) n'ont jamais à connaître le détail de la
 /// table drift sous-jacente.
 class PendingCharacterWriteQueue {
-  const PendingCharacterWriteQueue(this._db);
+  PendingCharacterWriteQueue(this._db);
 
   final AppDatabase _db;
+
+  /// Seuil de refus non rejouables **consécutifs** (D34 du registre de dette
+  /// technique) avant d'abandonner une entrée plutôt que de la retenter
+  /// indéfiniment — voir [recordNonRetryableFailure].
+  ///
+  /// Choix de 5, documenté ici plutôt que deviné en silence : la synchro est
+  /// déclenchée à chaque démarrage de l'app et à chaque retour de
+  /// connectivité (`CharacterWriteSyncCoordinator`), donc un réseau instable
+  /// peut produire plusieurs tentatives en quelques minutes sans qu'aucune
+  /// ne soit un vrai nouvel essai indépendant. 5 laisse largement le temps de
+  /// distinguer un refus réellement non rejouable (contrainte, RLS — qui, par
+  /// nature, échoue de façon identique à chaque tentative) d'un faux positif
+  /// de classification, sans pour autant laisser une entrée invalide masquer
+  /// indéfiniment la valeur serveur dans la fiche (voir
+  /// `SupabaseCharacterRepository._withPendingWrites`).
+  static const int abandonAfterConsecutiveFailures = 5;
+
+  /// Verrou en mémoire par `(characterId, kind)`, partagé entre
+  /// `SupabaseCharacterRepository.updateHp`/`addXp` (écriture en ligne) et
+  /// `PendingCharacterWriteSyncer.sync` (écriture de la file) — D33 du
+  /// registre de dette technique.
+  ///
+  /// Sans lui, les deux chemins peuvent envoyer au serveur, au même instant,
+  /// un `PATCH` du même type pour le même personnage (ex. réseau revenu
+  /// pendant que le joueur ajuste ses PV en ligne alors que la synchro de la
+  /// file est aussi en vol) : l'ordre d'arrivée réseau n'étant pas garanti,
+  /// celui qui arrive en second écrase celui qui arrive en premier même s'il
+  /// est plus ancien, et la valeur affichée peut régresser silencieusement.
+  ///
+  /// [runExclusive] sérialise les appels concurrents pour une même clé :
+  /// pendant qu'un appel est en cours pour `(characterId, kind)`, tout
+  /// nouvel appel pour la même clé attend qu'il se termine (succès ou échec)
+  /// avant de démarrer à son tour — jamais deux écritures du même type en vol
+  /// en même temps pour le même personnage. Deux clés différentes
+  /// (personnage ou type différents) ne s'attendent jamais entre elles.
+  ///
+  /// Verrou **en mémoire seulement** (une simple `Map`, pas une table drift) :
+  /// il ne protège que les appels concurrents au sein du même processus —
+  /// déjà suffisant ici, puisque le dépôt et le synchroniseur partagent
+  /// toujours la même instance de cette file (voir les providers `keepAlive`
+  /// de `character_providers.dart`/`cache_providers.dart`), donc le même
+  /// isolat principal de l'app.
+  final Map<String, Future<void>> _writeLocks = {};
+
+  /// Exécute [action] en exclusivité pour la clé `(characterId, kind)` — voir
+  /// la documentation de [_writeLocks]. Les appels concurrents pour la même
+  /// clé sont mis en file (ordre d'appel, FIFO) ; un appel qui échoue libère
+  /// quand même le verrou pour le suivant (ni blocage, ni perte de l'erreur :
+  /// elle continue de remonter normalement à l'appelant de [runExclusive]).
+  Future<T> runExclusive<T>({
+    required String characterId,
+    required PendingCharacterWriteKind kind,
+    required Future<T> Function() action,
+  }) async {
+    final key = '$characterId|${kind.storageKey}';
+    final previous = _writeLocks[key];
+    final gate = Completer<void>();
+    _writeLocks[key] = gate.future;
+    try {
+      if (previous != null) {
+        await previous;
+      }
+      return await action();
+    } finally {
+      gate.complete();
+      // Ne retire l'entrée que si personne n'a pris la suite entre-temps —
+      // sinon on supprimerait la référence que le prochain appelant attend.
+      if (identical(_writeLocks[key], gate.future)) {
+        _writeLocks.remove(key);
+      }
+    }
+  }
 
   /// Upsert sur `(characterId, kind)` : le mécanisme de coalescing —
   /// [payload] déjà mis en attente pour ce personnage/type est remplacé,
@@ -113,6 +186,20 @@ class PendingCharacterWriteQueue {
               kind: kind.storageKey,
               payload: jsonEncode(payload),
               queuedAt: queuedAt,
+              // Remet à zéro le compteur d'échecs (D34) : une entrée mise en
+              // file ici est une **nouvelle** valeur saisie par le joueur
+              // (même upsert que [existing] remplacée ci-dessus), jamais un
+              // simple renvoi de la même valeur — elle mérite un budget de
+              // tentatives neuf, même si l'entrée qu'elle remplace avait déjà
+              // été abandonnée. Sans ce reset explicite,
+              // `insertOnConflictUpdate` laisserait `failureCount`/`abandoned`
+              // de l'ancienne ligne tels quels (colonnes absentes de ce
+              // companion) : la nouvelle valeur du joueur serait alors
+              // ignorée pour toujours par `forCharacter`/`allForOwner`
+              // (filtrées sur `abandoned`), sans jamais repartir.
+              failureCount: const Value(0),
+              abandoned: const Value(false),
+              lastFailureMessage: const Value(null),
             ),
           );
     });
@@ -163,6 +250,11 @@ class PendingCharacterWriteQueue {
   /// l'app est ignorée au lieu de lever une erreur : elle ne peut de toute
   /// façon pas être superposée, et ne doit jamais empêcher d'afficher la
   /// fiche.
+  ///
+  /// Une entrée abandonnée (D34, voir la doc de classe de
+  /// [PendingCharacterWrites]) n'est jamais renvoyée ici : elle ne doit plus
+  /// masquer la valeur serveur dans la fiche une fois qu'elle a cessé d'être
+  /// retentée.
   Future<List<PendingCharacterWrite>> forCharacter({
     required String ownerId,
     required String characterId,
@@ -171,7 +263,8 @@ class PendingCharacterWriteQueue {
         await (_db.select(_db.pendingCharacterWrites)..where(
               (row) =>
                   row.ownerId.equals(ownerId) &
-                  row.characterId.equals(characterId),
+                  row.characterId.equals(characterId) &
+                  row.abandoned.equals(false),
             ))
             .get();
 
@@ -199,11 +292,16 @@ class PendingCharacterWriteQueue {
 
   /// Toutes les écritures en attente appartenant à [ownerId] — jamais celles
   /// d'un autre compte, même sur le même appareil (voir la doc de classe de
-  /// [PendingCharacterWrites] pour le rationale de ce filtre).
+  /// [PendingCharacterWrites] pour le rationale de ce filtre). Même exclusion
+  /// des entrées abandonnées que [forCharacter] : `PendingCharacterWriteSyncer
+  /// .sync` ne doit plus jamais les retenter une fois abandonnées.
   Future<List<PendingCharacterWrite>> allForOwner(String ownerId) async {
-    final rows = await (_db.select(
-      _db.pendingCharacterWrites,
-    )..where((row) => row.ownerId.equals(ownerId))).get();
+    final rows =
+        await (_db.select(_db.pendingCharacterWrites)..where(
+              (row) =>
+                  row.ownerId.equals(ownerId) & row.abandoned.equals(false),
+            ))
+            .get();
 
     return [
       for (final row in rows)
@@ -217,4 +315,94 @@ class PendingCharacterWriteQueue {
         ),
     ];
   }
+
+  /// Compte un refus **non rejouable** (contrainte, RLS — voir
+  /// `PendingCharacterWriteSyncer._isNonRetryable`) pour [write] : incrémente
+  /// son compteur d'échecs et, au-delà de [abandonAfterConsecutiveFailures],
+  /// marque l'entrée abandonnée avec [reason] comme message à afficher au
+  /// joueur (consommé plus tard par [consumeAbandonedMessages]). Retourne
+  /// `true` si cet appel vient de déclencher l'abandon.
+  ///
+  /// [write] doit être la version **tout juste relue** avant la tentative
+  /// refusée (voir `PendingCharacterWriteSyncer.sync`,
+  /// `_currentVersionOf`) : comme [removeIfUnchanged], cette méthode ne
+  /// touche qu'à la ligne qui correspond encore exactement à [write] (même
+  /// compte, même horodatage, même contenu) — si elle a été remplacée par une
+  /// valeur plus récente entre-temps, l'échec appartient à une version déjà
+  /// périmée et ne doit pas pénaliser la nouvelle valeur du joueur ; dans ce
+  /// cas, ne fait rien et retourne `false`.
+  Future<bool> recordNonRetryableFailure({
+    required PendingCharacterWrite write,
+    required String reason,
+  }) {
+    return _db.transaction(() async {
+      final row =
+          await (_db.select(_db.pendingCharacterWrites)..where(
+                (row) =>
+                    row.characterId.equals(write.characterId) &
+                    row.ownerId.equals(write.ownerId) &
+                    row.kind.equals(write.kind.storageKey) &
+                    row.queuedAt.equals(write.queuedAt) &
+                    row.payload.equals(write.rawPayload),
+              ))
+              .getSingleOrNull();
+      if (row == null) return false;
+
+      final failureCount = row.failureCount + 1;
+      final abandoned = failureCount >= abandonAfterConsecutiveFailures;
+      await (_db.update(_db.pendingCharacterWrites)..where(
+            (row) =>
+                row.characterId.equals(write.characterId) &
+                row.ownerId.equals(write.ownerId) &
+                row.kind.equals(write.kind.storageKey) &
+                row.queuedAt.equals(write.queuedAt) &
+                row.payload.equals(write.rawPayload),
+          ))
+          .write(
+            PendingCharacterWritesCompanion(
+              failureCount: Value(failureCount),
+              abandoned: Value(abandoned),
+              lastFailureMessage: abandoned
+                  ? Value(reason)
+                  : const Value.absent(),
+            ),
+          );
+      return abandoned;
+    });
+  }
+
+  /// Messages des entrées abandonnées de [ownerId] (toutes, tous personnages
+  /// confondus) — à afficher **une seule fois** : chaque appel supprime
+  /// définitivement les lignes renvoyées, elles ne sont donc jamais signalées
+  /// deux fois (voir `CharacterWriteSyncCoordinator`, seul appelant prévu,
+  /// qui les affiche par un `SnackBar` global dès qu'il en reçoit).
+  Future<List<String>> consumeAbandonedMessages({required String ownerId}) {
+    return _db.transaction(() async {
+      final rows =
+          await (_db.select(_db.pendingCharacterWrites)..where(
+                (row) =>
+                    row.ownerId.equals(ownerId) & row.abandoned.equals(true),
+              ))
+              .get();
+      if (rows.isEmpty) return const <String>[];
+
+      await (_db.delete(_db.pendingCharacterWrites)..where(
+            (row) => row.ownerId.equals(ownerId) & row.abandoned.equals(true),
+          ))
+          .go();
+
+      return [
+        for (final row in rows)
+          row.lastFailureMessage ?? _fallbackAbandonMessage,
+      ];
+    });
+  }
 }
+
+/// Repli si [PendingCharacterWrites.lastFailureMessage] est resté vide alors
+/// que la ligne est abandonnée — ne devrait jamais arriver en pratique
+/// (`recordNonRetryableFailure` le renseigne toujours au moment de
+/// l'abandon), gardé par robustesse plutôt que de risquer un message vide.
+const _fallbackAbandonMessage =
+    "Une modification restée en attente a été refusée par le serveur et n'a "
+    'pas pu être enregistrée.';

@@ -16,16 +16,21 @@
 // super() les exige, mais sync() override ne les touche jamais).
 
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:convert';
 
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/cache/app_database.dart';
+import 'package:personnages/core/cache/cache_providers.dart';
 import 'package:personnages/core/cache/pending_character_write_queue.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/core/network/supabase_client_provider.dart';
+import 'package:personnages/core/notifications/notification_providers.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
@@ -220,6 +225,176 @@ void main() {
       expect(fakeRepository.fetchDetailCallCountFor(idB), 2);
     });
   });
+
+  // D34 du registre de dette technique : une écriture abandonnée par
+  // `PendingCharacterWriteSyncer` (refus non rejouable répété au-delà du
+  // seuil) doit être signalée au joueur, pas disparaître silencieusement.
+  // Ces tests passent par un vrai `AppDatabase`/`PendingCharacterWriteQueue`
+  // (contrairement au reste de ce fichier) : `consumeAbandonedMessages` n'a
+  // pas de double, voir la doc de classe de `PendingCharacterWriteQueue`.
+  group('CharacterWriteSyncCoordinator : signalement des abandons (D34)', () {
+    late AppDatabase db;
+    late PendingCharacterWriteQueue queue;
+    late _ScriptedSyncer fakeSyncer;
+    late _FakeConnectivityChecker fakeConnectivity;
+    late SupabaseClient signedInClient;
+
+    setUp(() async {
+      db = AppDatabase(NativeDatabase.memory());
+      queue = PendingCharacterWriteQueue(db);
+      fakeSyncer = _ScriptedSyncer();
+      fakeConnectivity = _FakeConnectivityChecker();
+      signedInClient = await _buildSignedInClient(ownerId: 'owner-1');
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    /// Insère directement une ligne abandonnée (contourne le classement
+    /// d'erreur du synchroniseur, hors périmètre de ce test de la couche
+    /// présentation — déjà couvert par
+    /// `test/core/cache/pending_character_write_queue_test.dart` et
+    /// `character_repository_pending_writes_test.dart`).
+    Future<void> seedAbandonedWrite(String message) async {
+      await db
+          .into(db.pendingCharacterWrites)
+          .insert(
+            PendingCharacterWritesCompanion.insert(
+              characterId: 'char-1',
+              ownerId: 'owner-1',
+              kind: 'hp',
+              payload: '{"currentHp":1,"temporaryHp":0}',
+              queuedAt: DateTime.now(),
+              failureCount: const Value(5),
+              abandoned: const Value(true),
+              lastFailureMessage: Value(message),
+            ),
+          );
+    }
+
+    testWidgets("une écriture abandonnée affiche un SnackBar global dès que le "
+        'coordinateur démarre, et ne le réaffiche plus ensuite', (
+      tester,
+    ) async {
+      await seedAbandonedWrite('Vos PV abandonnés (test).');
+      fakeSyncer.resultToReturn = const {};
+      final messengerKey = GlobalKey<ScaffoldMessengerState>();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            pendingCharacterWriteSyncerProvider.overrideWithValue(fakeSyncer),
+            connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
+            pendingCharacterWriteQueueProvider.overrideWithValue(queue),
+            supabaseClientProvider.overrideWithValue(signedInClient),
+            scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
+          ],
+          child: MaterialApp(
+            scaffoldMessengerKey: messengerKey,
+            home: Consumer(
+              builder: (context, ref, _) {
+                ref.watch(characterWriteSyncCoordinatorProvider);
+                return const Scaffold(body: SizedBox());
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Vos PV abandonnés (test).'), findsOneWidget);
+      expect(
+        (await db.select(db.pendingCharacterWrites).get()),
+        isEmpty,
+        reason: 'consommée (et donc supprimée) une fois affichée',
+      );
+
+      // Un nouveau retour de connectivité ne doit plus rien réafficher :
+      // déjà consommée.
+      await tester.pumpWidget(Container());
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            pendingCharacterWriteSyncerProvider.overrideWithValue(fakeSyncer),
+            connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
+            pendingCharacterWriteQueueProvider.overrideWithValue(queue),
+            supabaseClientProvider.overrideWithValue(signedInClient),
+            scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
+          ],
+          child: MaterialApp(
+            scaffoldMessengerKey: messengerKey,
+            home: Consumer(
+              builder: (context, ref, _) {
+                ref.watch(characterWriteSyncCoordinatorProvider);
+                return const Scaffold(body: SizedBox());
+              },
+            ),
+          ),
+        ),
+      );
+      fakeConnectivity.emitRestored();
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Vos PV abandonnés (test).'),
+        findsNothing,
+        reason: "déjà consommée : ne doit jamais réapparaître à l'écran",
+      );
+    });
+
+    testWidgets("sans écriture abandonnée, aucun SnackBar n'est affiché", (
+      tester,
+    ) async {
+      fakeSyncer.resultToReturn = const {};
+      final messengerKey = GlobalKey<ScaffoldMessengerState>();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            pendingCharacterWriteSyncerProvider.overrideWithValue(fakeSyncer),
+            connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
+            pendingCharacterWriteQueueProvider.overrideWithValue(queue),
+            supabaseClientProvider.overrideWithValue(signedInClient),
+            scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
+          ],
+          child: MaterialApp(
+            scaffoldMessengerKey: messengerKey,
+            home: Consumer(
+              builder: (context, ref, _) {
+                ref.watch(characterWriteSyncCoordinatorProvider);
+                return const Scaffold(body: SizedBox());
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SnackBar), findsNothing);
+    });
+  });
+}
+
+/// Même mécanisme que `character_repository_pending_writes_test.dart::
+/// _buildSignedInClient` (transport HTTP fabriqué, session restaurée en
+/// mémoire sans requête) — voir sa documentation. Dupliqué ici plutôt que
+/// partagé : fichiers de test indépendants, par convention de ce dépôt (voir
+/// D17 du registre de dette technique).
+Future<SupabaseClient> _buildSignedInClient({required String ownerId}) async {
+  final client = SupabaseClient(
+    'https://fake.supabase.test',
+    'fake-anon-key',
+    authOptions: const AuthClientOptions(authFlowType: AuthFlowType.implicit),
+  );
+  await client.auth.recoverSession(
+    jsonEncode({
+      'access_token': 'fake-access-token-$ownerId',
+      'token_type': 'bearer',
+      'user': {'id': ownerId},
+    }),
+  );
+  return client;
 }
 
 CharacterDetail _detailWithHp(int currentHp, {String id = 'char-1'}) {

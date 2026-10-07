@@ -10,10 +10,12 @@ part of 'character_write_sync_coordinator.dart';
 // ignore_for_file: type=lint, type=warning
 /// Vit toute la durée de l'app (`keepAlive`, instancié tôt — voir
 /// `main.dart`) : orchestre la synchro hors-ligne PV/XP
-/// (`PendingCharacterWriteSyncer`) déclenchée par la connectivité, et
-/// invalide `characterDetailProvider` pour chaque personnage synchronisé
-/// avec succès (pour que la fiche, si affichée, se resynchronise proprement
-/// avec l'état serveur confirmé) — voir
+/// (`PendingCharacterWriteSyncer`) déclenchée par la connectivité, invalide
+/// `characterDetailProvider` pour chaque personnage synchronisé avec succès
+/// (pour que la fiche, si affichée, se resynchronise proprement avec l'état
+/// serveur confirmé), et signale au joueur toute écriture abandonnée après
+/// un refus non rejouable répété ([_notifyAbandonedWrites], D34 du registre
+/// de dette technique) — voir
 /// `docs/cahier-des-charges/01-architecture-technique.md`, section "Mode
 /// hors-ligne".
 ///
@@ -33,10 +35,12 @@ final characterWriteSyncCoordinatorProvider =
 
 /// Vit toute la durée de l'app (`keepAlive`, instancié tôt — voir
 /// `main.dart`) : orchestre la synchro hors-ligne PV/XP
-/// (`PendingCharacterWriteSyncer`) déclenchée par la connectivité, et
-/// invalide `characterDetailProvider` pour chaque personnage synchronisé
-/// avec succès (pour que la fiche, si affichée, se resynchronise proprement
-/// avec l'état serveur confirmé) — voir
+/// (`PendingCharacterWriteSyncer`) déclenchée par la connectivité, invalide
+/// `characterDetailProvider` pour chaque personnage synchronisé avec succès
+/// (pour que la fiche, si affichée, se resynchronise proprement avec l'état
+/// serveur confirmé), et signale au joueur toute écriture abandonnée après
+/// un refus non rejouable répété ([_notifyAbandonedWrites], D34 du registre
+/// de dette technique) — voir
 /// `docs/cahier-des-charges/01-architecture-technique.md`, section "Mode
 /// hors-ligne".
 ///
@@ -60,10 +64,12 @@ final class CharacterWriteSyncCoordinatorProvider
     with $Provider<CharacterWriteSyncCoordinator> {
   /// Vit toute la durée de l'app (`keepAlive`, instancié tôt — voir
   /// `main.dart`) : orchestre la synchro hors-ligne PV/XP
-  /// (`PendingCharacterWriteSyncer`) déclenchée par la connectivité, et
-  /// invalide `characterDetailProvider` pour chaque personnage synchronisé
-  /// avec succès (pour que la fiche, si affichée, se resynchronise proprement
-  /// avec l'état serveur confirmé) — voir
+  /// (`PendingCharacterWriteSyncer`) déclenchée par la connectivité, invalide
+  /// `characterDetailProvider` pour chaque personnage synchronisé avec succès
+  /// (pour que la fiche, si affichée, se resynchronise proprement avec l'état
+  /// serveur confirmé), et signale au joueur toute écriture abandonnée après
+  /// un refus non rejouable répété ([_notifyAbandonedWrites], D34 du registre
+  /// de dette technique) — voir
   /// `docs/cahier-des-charges/01-architecture-technique.md`, section "Mode
   /// hors-ligne".
   ///
