@@ -39,8 +39,8 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 |---|---|---|
 | D01 | Repos long d'un multiclassé : emplacements recalculés depuis la classe primaire | Corrigé (PR #78) |
 | D02 | PV et XP modifiés hors ligne perdus à la réouverture de la fiche | Corrigé (PR #80) |
-| D33 | Deux envois simultanés du même type (synchronisation et ajustement en ligne) arrivant dans le désordre | Ouvert, fenêtre réduite par la PR #80 |
-| D34 | Écriture en attente refusée indéfiniment : reste affichée, jamais retentée ni signalée | Ouvert |
+| D33 | Deux envois simultanés du même type (synchronisation et ajustement en ligne) arrivant dans le désordre | Corrigé (PR #86) |
+| D34 | Écriture en attente refusée indéfiniment : reste affichée, jamais retentée ni signalée | Corrigé (PR #86) |
 | D35 | Repos ou montée de niveau en ligne avec des PV encore en attente | Ouvert, décision de conception |
 | D05 | Montée de niveau, création et repos non atomiques | Ouvert |
 | D09 | Sorts innés supprimés lors d'un changement de classe en édition | Corrigé (PR #83) |
@@ -54,7 +54,7 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 
 ### C. Peut attendre
 
-D04, D11, D15, D16, D17, D20 à D30, D32, et les constats de session listés plus bas.
+D04, D11, D15, D16, D17, D20 à D30, D32, D61, D62, et les constats de session listés plus bas.
 D04 (règles indexées sur le nom français des classes) change de catégorie le jour où
 la version anglaise démarre : elle devient alors bloquante.
 
@@ -64,8 +64,8 @@ la version anglaise démarre : elle devient alors bloquante.
 |---|---|---|---|---|---|---|---|---|---|
 | D01 | Repos long multiclasse : emplacements recalculés depuis la classe primaire seule | `lib/features/characters/data/character_repository.dart` (`applyRest`, `_resetSpellSlots`) | critique | À chaque repos long d'un multiclassé lanceur | petit | `SpellSlotProgression.totalsForClasses` sur toutes les classes | dev-flutter, qa-testeur | L, puis confirmé par tests | Corrigé (PR #78). Tests d'intégration mis à jour mais jamais exécutés. |
 | D02 | PV/XP en file hors ligne absents de la fiche relue depuis le cache | `character_repository.dart` (`fetchCharacterDetail`, ajustements PV/XP) ; `lib/core/cache/pending_character_write_queue.dart` ; `lib/features/characters/presentation/character_detail_screen.dart` | critique | Fiche fermée puis rouverte hors ligne, puis nouvel ajustement | moyen | Superposer les écritures en attente à la lecture, ou corriger le cache à la mise en file | dev-flutter, qa-testeur | L, puis confirmé par tests | Corrigé (PR #80). Défaut plus large que décrit : six chemins de perte traités. Jamais essayé avec une vraie coupure réseau ni sur appareil. |
-| D33 | Deux PATCH du même type en vol, l'un du synchroniseur et l'autre du dépôt, peuvent arriver au serveur dans le désordre | `lib/features/characters/data/pending_character_write_syncer.dart` ; `character_repository.dart` (`updateHp`, `addXp`) | haute | Réseau lent, joueur qui ajuste pendant la synchronisation | moyen | Verrou par `(personnage, type)` partagé entre le synchroniseur et le dépôt | dev-flutter, qa-testeur | L (revue) | Ouvert. La PR #80 relit chaque entrée avant envoi : fenêtre réduite, pas fermée. |
-| D34 | Entrée de file refusée indéfiniment par le serveur : superposée à la fiche sans message, jamais abandonnée | `pending_character_write_syncer.dart` ; `character_write_sync_coordinator.dart` | haute | Contrainte en base, RLS, personnage modifié ailleurs | moyen | Compteur d'échecs, abandon ou signalement après un refus non rejouable ; nouvelle tentative périodique (voir D32) | dev-flutter, décision produit | L (QA, revue) | Ouvert. Avant la PR #80 l'entrée était invisible ; elle masque maintenant la valeur serveur jusqu'au prochain ajustement en ligne. |
+| D33 | Deux PATCH du même type en vol, l'un du synchroniseur et l'autre du dépôt, peuvent arriver au serveur dans le désordre | `lib/features/characters/data/pending_character_write_syncer.dart` ; `character_repository.dart` (`updateHp`, `addXp`) | haute | Réseau lent, joueur qui ajuste pendant la synchronisation | moyen | Verrou par `(personnage, type)` partagé entre le synchroniseur et le dépôt | dev-flutter, qa-testeur | L (revue) | Corrigé (PR #86). `PendingCharacterWriteQueue.runExclusive` sérialise par `(characterId, kind)`, confirmé par un test de concurrence réelle avec portillon serveur. |
+| D34 | Entrée de file refusée indéfiniment par le serveur : superposée à la fiche sans message, jamais abandonnée | `pending_character_write_syncer.dart` ; `character_write_sync_coordinator.dart` | haute | Contrainte en base, RLS, personnage modifié ailleurs | moyen | Compteur d'échecs, abandon ou signalement après un refus non rejouable ; nouvelle tentative périodique (voir D32) | dev-flutter, décision produit | L (QA, revue) | Corrigé (PR #86). Seuil de 5 échecs non rejouables (SQLSTATE `23xxx`/`22xxx`/`42501`) consécutifs, signalement par SnackBar (même mécanisme que les push), jamais réaffiché. Suites : D61, D62. |
 | D35 | Repos ou montée de niveau en ligne avec des PV en file : l'opération part de la valeur serveur, puis la synchronisation réécrit l'ancienne | `character_repository.dart` (`applyRest`, `applyLevelUp`) | moyenne | Repos ou montée de niveau peu après un retour du réseau | moyen | Synchroniser la file avant ces opérations ; la bonne réponse diffère entre repos long, repos court et montée de niveau | décision de conception, puis dev-flutter | L (dev-flutter, QA) | Ouvert |
 | D36 | `queuedAt` sert de numéro de version de l'entrée de file ; clé primaire de la file sans `ownerId` | `lib/core/cache/app_database.dart` ; `lib/core/cache/pending_character_write_queue.dart` | basse | Le jour où une migration du schéma local est de toute façon nécessaire | moyen | Colonne `version` dédiée et `ownerId` dans la clé primaire, avec migration drift testée | dev-flutter | L (revue) | Ouvert, astuce documentée sur la colonne |
 | D37 | Le cache de la fiche n'est mis à jour après confirmation que pour les PV et l'XP | `lib/features/characters/data/character_detail_cache.dart` | moyenne | Repos, montée de niveau ou inventaire en ligne suivis d'une relecture en échec, puis fiche rouverte hors ligne | moyen | Étendre le report aux autres écritures, ou relire après écriture avec repli | dev-flutter | L (dev-flutter) | Ouvert |
@@ -312,6 +312,16 @@ Constat sans identifiant, pour un futur passage de l'audit `dette-technique` :
 | Sujet | Détail | Source |
 |---|---|---|
 | Avertissement `drift` répété en test | `test/features/character_creation/data/character_creation_repository_test.dart` (groupe "TTL cache d'abord si frais") émet « AppDatabase multiple times » à plusieurs reprises. Présent avant la PR #83, tests passants malgré l'avertissement — à vérifier si c'est un artefact des fixtures (base recréée plusieurs fois dans la même suite) ou un pattern qui existe aussi en production. | Lu par qa-testeur |
+
+## Ajouts liés au verrou et au seuil d'abandon de la file hors ligne (PR #86)
+
+Constats relevés par `qa-testeur` et `code-reviewer` les 07-08/10/2026 en corrigeant
+D33/D34, non traités (sauf D33/D34 eux-mêmes).
+
+| ID | Sujet | Gravité | Correction proposée | État |
+|---|---|---|---|---|
+| D61 | Aucun test n'exerce un vrai code SQLSTATE `22xxx` pour `PendingCharacterWriteSyncer._isNonRetryable` (seuls `42501`/`23503` sont couverts en bout en bout) | basse | Ajouter une variante du test D34 « abandon après le seuil » avec un code `22xxx` | Ouvert |
+| D62 | Le correctif évitant la perte silencieuse du signalement D34 (`_notifyAbandonedWrites` ne consomme plus les lignes en base si `messenger` est encore `null`) n'a pas de test dédié exerçant ce chemin ; vérifié par lecture de code et raisonnement sur le câblage `main.dart` seulement | basse | Un `ProviderContainer` avec `scaffoldMessengerKeyProvider` surchargé par un `GlobalKey` jamais attaché suffit à le couvrir | Ouvert |
 
 ## Décisions en attente
 
