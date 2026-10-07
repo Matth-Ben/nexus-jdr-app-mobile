@@ -45,9 +45,10 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 | D05 | Montée de niveau, création et repos non atomiques | Ouvert |
 | D09 | Sorts innés supprimés lors d'un changement de classe en édition | Ouvert |
 | D10 | Import XML : sorts tous « connus », doublons | Ouvert |
-| D03 | Classes à sorts connus obligées de « préparer » | Ouvert, analyse faite |
+| D03 | Classes à sorts connus obligées de « préparer » | Corrigé (PR #81) |
+| D38 | Sort inné transformable en sort « préparé » depuis la sheet de préparation | Corrigé (PR #81) ; lignes déjà abîmées non réparables |
 | D08 | Sorts innés raciaux : emplacement exigé, pas de compteur | Ouvert, analyse faite |
-| D14 | Emplacements jamais écrits à la création ni à l'import | Ouvert, à confirmer en base |
+| D14 | Emplacements jamais écrits à la création ni à l'import | Ouvert, confirmé en base le 08/10 : aucun déclencheur |
 | D12 | Aucun délai d'attente réseau | Ouvert |
 | D31 | Cache local jamais purgé à la déconnexion | Ouvert |
 
@@ -232,6 +233,23 @@ travaillant sur autre chose. Aucun n'a été traité.
 | Splash sur Android 12 et plus | Le médaillon remonte d'environ 61,5 dp au passage du splash système au splash Flutter. Option : le remonter de 44 dp dans l'icône (saut de 17,5 dp). Décision en attente. | Calculé par QA et direction-artistique |
 | Script du splash | Télécharge les polices hors dépôt ; repli macOS non testé. | Revue |
 | Voile d'appui des boutons | Gris neutre, un peu froid pour la palette. | Direction artistique |
+
+## Ajouts du 08/10/2026 (correctif des classes à sorts connus, PR #81)
+
+Vérifié dans le schéma réel de la base ce jour-là : `character_spells.source_class_id`
+existe ; aucune contrainte unique sur `(character_id, spell_id)` ; aucun déclencheur sur
+`characters`, `character_spells`, `character_spell_slots` ni `character_classes` ; aucune
+contrainte `CHECK` sur les PV ; `racial_innate_spells` n'a aucune notion de fréquence
+d'usage ; treize classes, toutes nommées en français comme l'app l'attend.
+
+| ID | Sujet | Gravité | Correction proposée | État |
+|---|---|---|---|---|
+| D03 | Classes à sorts connus obligées de « préparer » | haute | — | Corrigé (PR #81), règle dérivée à la lecture, sans migration |
+| D38 | Sort inné transformable en sort « préparé » puis « connu » depuis la sheet de préparation | moyenne | — | Corrigé (PR #81). Les lignes déjà abîmées ne sont pas réparables : rien ne permet de les reconnaître. |
+| D39 | Vue partagée : `get_shared_character` ne renvoie pas `source_class_id` sur les sorts ; un multiclassé mixte partagé affiche tous ses sorts « à préparer » | basse | Ajouter la colonne à la RPC (dépôt web) ; le mapper mobile la lit déjà | Ouvert |
+| D40 | L'édition d'un personnage écrit `source_class_id` nul sans changement de classe ; `setSpellPrepared` n'écrit pas l'origine à l'insertion | basse | Écrire la classe d'origine sur ces deux chemins | Ouvert |
+| D41 | Artificier présent en base et proposé à la création, mais non modélisé : ni lanceur, ni emplacements, ni préparation | moyenne | Décision produit : le modéliser (demi-lanceur qui prépare) ou le retirer du catalogue | Ouvert |
+| D42 | `setSpellPrepared` : course entre lecture de contrôle et insertion, faute de contrainte unique | basse | Contrainte unique `(character_id, spell_id)` après nettoyage des doublons (voir D10) | Ouvert |
 
 ## Décisions en attente
 
