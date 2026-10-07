@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:drift/drift.dart';
+
 import 'app_database.dart';
 
 /// Petite abstraction de lecture/écriture au-dessus du DAO drift généré
@@ -63,6 +65,35 @@ class ReferenceDataCache {
       return null;
     }
     return jsonDecode(row.payload);
+  }
+
+  /// Remplace le payload de [key] par `transform(payload actuel)`, en une
+  /// seule transaction (aucune autre écriture de [key] ne peut s'intercaler
+  /// entre la lecture et l'écriture). Ne fait rien si [key] n'a jamais été
+  /// mise en cache, ou si [transform] retourne `null`.
+  ///
+  /// `cachedAt` n'est pas modifié : l'entrée n'est pas plus fraîche dans son
+  /// ensemble, seule une partie connue de son payload est corrigée — voir
+  /// `CharacterDetailCache.applyConfirmedColumns`, seul appelant.
+  Future<void> updateIfPresent(
+    String key,
+    Object? Function(Object? payload) transform,
+  ) {
+    return _db.transaction(() async {
+      final row = await _selectRow(key);
+      if (row == null) {
+        return;
+      }
+      final updated = transform(jsonDecode(row.payload));
+      if (updated == null) {
+        return;
+      }
+      await (_db.update(
+        _db.cachedReferenceEntries,
+      )..where((entry) => entry.key.equals(key))).write(
+        CachedReferenceEntriesCompanion(payload: Value(jsonEncode(updated))),
+      );
+    });
   }
 
   Future<CachedReferenceEntry?> _selectRow(String key) {

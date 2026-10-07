@@ -52,6 +52,7 @@ PendingCharacterWriteSyncer pendingCharacterWriteSyncer(Ref ref) {
   return PendingCharacterWriteSyncer(
     ref.watch(supabaseClientProvider),
     ref.watch(pendingCharacterWriteQueueProvider),
+    ref.watch(referenceDataCacheProvider),
   );
 }
 

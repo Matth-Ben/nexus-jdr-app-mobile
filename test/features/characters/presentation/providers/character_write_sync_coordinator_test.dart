@@ -23,6 +23,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/cache/app_database.dart';
 import 'package:personnages/core/cache/pending_character_write_queue.dart';
+import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
@@ -259,10 +260,13 @@ CharacterDetail _detailWithHp(int currentHp, {String id = 'char-1'}) {
 /// _pendingWrites du parent ne sont jamais lus par sync() overrides
 /// ci-dessous).
 class _ScriptedSyncer extends PendingCharacterWriteSyncer {
-  _ScriptedSyncer()
+  _ScriptedSyncer() : this._(AppDatabase(NativeDatabase.memory()));
+
+  _ScriptedSyncer._(AppDatabase db)
     : super(
         SupabaseClient('https://fake.supabase.test', 'fake-anon-key'),
-        PendingCharacterWriteQueue(AppDatabase(NativeDatabase.memory())),
+        PendingCharacterWriteQueue(db),
+        ReferenceDataCache(db),
       );
 
   Set<String> resultToReturn = const {};

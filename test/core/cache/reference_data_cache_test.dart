@@ -161,5 +161,55 @@ void main() {
         expect(result, {'races': []});
       });
     });
+
+    group('updateIfPresent', () {
+      test('remplace le payload par le résultat de la transformation, sans '
+          'toucher à cachedAt', () async {
+        await cache.put('fiche', {
+          'row': {'current_hp': 10, 'xp': 100},
+          'autre': [1, 2],
+        });
+        final before = await (db.select(db.cachedReferenceEntries)).getSingle();
+
+        await cache.updateIfPresent('fiche', (payload) {
+          final map = Map<String, dynamic>.from(payload! as Map);
+          return {
+            ...map,
+            'row': {...map['row'] as Map, 'current_hp': 7},
+          };
+        });
+
+        expect(await cache.get('fiche'), {
+          'row': {'current_hp': 7, 'xp': 100},
+          'autre': [1, 2],
+        });
+        final after = await (db.select(db.cachedReferenceEntries)).getSingle();
+        expect(after.cachedAt, before.cachedAt);
+      });
+
+      test("ne crée rien et n'appelle pas la transformation pour une clé "
+          'jamais mise en cache', () async {
+        var called = false;
+
+        await cache.updateIfPresent('inconnue', (payload) {
+          called = true;
+          return {'x': 1};
+        });
+
+        expect(called, isFalse);
+        expect(await cache.get('inconnue'), isNull);
+      });
+
+      test(
+        'laisse le payload intact si la transformation retourne null',
+        () async {
+          await cache.put('fiche', {'row': 1});
+
+          await cache.updateIfPresent('fiche', (payload) => null);
+
+          expect(await cache.get('fiche'), {'row': 1});
+        },
+      );
+    });
   });
 }

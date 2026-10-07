@@ -39,6 +39,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/core/widgets/portrait_frame.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
+import 'package:personnages/features/characters/presentation/providers/character_detail_provider.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_ability_score_grid.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
@@ -552,6 +553,36 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(800, 2400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(buildTestWidget());
+  }
+
+  /// Ouvre la feuille "+ XP", saisit [amount] et valide.
+  Future<void> addXpFromSheet(WidgetTester tester, String amount) async {
+    await tester.tap(find.widgetWithText(PrimaryButton, '+ XP'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), amount);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('AJOUTER'));
+    await tester.pumpAndSettle();
+  }
+
+  /// Ouvre la feuille d'ajustement des PV et applique "Soins" +1.
+  Future<void> healOneHpFromSheet(WidgetTester tester) async {
+    await tester.tap(find.text('POINTS DE VIE'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SOINS'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Augmenter'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('APPLIQUER'));
+    await tester.pumpAndSettle();
+  }
+
+  /// Invalide `characterDetailProvider` de l'extérieur de l'écran, comme le
+  /// fait `character_write_sync_coordinator.dart` après une synchro réussie.
+  void invalidateDetail(WidgetTester tester) {
+    ProviderScope.containerOf(
+      tester.element(find.byType(CharacterDetailScreen)),
+    ).invalidate(characterDetailProvider('1'));
   }
 
   testWidgets('affiche un indicateur de chargement pendant la récupération', (
@@ -1903,6 +1934,195 @@ void main() {
         // Aucun rafraîchissement depuis le serveur pour un résultat mis en
         // file (voir `_addXp` : `ref.invalidate` n'est appelé que pour
         // `WriteOutcome.synced`).
+        expect(fakeRepository.fetchDetailCallCount, 1);
+      },
+    );
+
+    // Régression (registre de dette technique, "PV/XP hors ligne") : un
+    // ajout d'XP mis en file ne rafraîchit pas la fiche — sans état local,
+    // le second ajout repartait de l'XP d'avant le premier (7000) et le
+    // remplaçait dans la file (valeur absolue) : 250 XP perdus sans message.
+    testWidgets(
+      'deux ajouts d\'XP mis en file sans fermer la fiche se cumulent, et le '
+      'bandeau XP affiche le total en attente',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.addXpOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        expect(find.text('7000 / 14000'), findsOneWidget);
+
+        await addXpFromSheet(tester, '250');
+
+        expect(fakeRepository.lastAddedXpNewXp, 7250);
+        expect(find.text('7250 / 14000'), findsOneWidget);
+
+        await addXpFromSheet(tester, '250');
+
+        expect(fakeRepository.addXpCallCount, 2);
+        expect(fakeRepository.lastAddedXpNewXp, 7500);
+        expect(find.text('7500 / 14000'), findsOneWidget);
+        expect(fakeRepository.fetchDetailCallCount, 1);
+      },
+    );
+
+    testWidgets(
+      'XP mise en file puis synchronisée au retour du réseau : la fiche '
+      'relue porte la même valeur, aucun saut visible, et l\'ajout suivant '
+      'en repart',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.addXpOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await addXpFromSheet(tester, '250');
+        expect(find.text('7250 / 14000'), findsOneWidget);
+
+        // Retour du réseau : la synchro a écrit 7250 en base, puis
+        // `character_write_sync_coordinator.dart` invalide la fiche.
+        fakeRepository.detailToReturn = _baseDetail.copyWith(xp: 7250);
+        fakeRepository.addXpOutcomeToReturn = WriteOutcome.synced;
+        invalidateDetail(tester);
+        await tester.pump();
+        expect(find.text('7250 / 14000'), findsOneWidget);
+        expect(find.text('7000 / 14000'), findsNothing);
+        await tester.pumpAndSettle();
+        expect(find.text('7250 / 14000'), findsOneWidget);
+
+        fakeRepository.detailToReturn = _baseDetail.copyWith(xp: 7350);
+        await addXpFromSheet(tester, '100');
+
+        expect(fakeRepository.lastAddedXpNewXp, 7350);
+        expect(find.text('7350 / 14000'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'XP mise en file puis ajout en ligne avant toute synchro : le nouvel '
+      'ajout repart du total en attente, et la fiche rafraîchie fait de '
+      'nouveau autorité',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.addXpOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await addXpFromSheet(tester, '250');
+
+        fakeRepository.addXpOutcomeToReturn = WriteOutcome.synced;
+        fakeRepository.detailToReturn = _baseDetail.copyWith(xp: 7350);
+        await addXpFromSheet(tester, '100');
+
+        expect(fakeRepository.lastAddedXpNewXp, 7350);
+        expect(find.text('7350 / 14000'), findsOneWidget);
+        expect(find.text('7250 / 14000'), findsNothing);
+      },
+    );
+
+    // Ajout QA (mutation survivante) : sans le relâchement de `_localXp` par
+    // le `ref.listen` de `build()`, l'XP locale masquerait indéfiniment toute
+    // valeur relue ensuite.
+    testWidgets(
+      'XP mise en file puis confirmée par la fiche relue : l\'état local est '
+      'relâché, une XP relue différente par la suite est bien affichée',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.addXpOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await addXpFromSheet(tester, '250');
+        expect(find.text('7250 / 14000'), findsOneWidget);
+
+        // Synchro réussie : la fiche relue confirme 7250.
+        fakeRepository.detailToReturn = _baseDetail.copyWith(xp: 7250);
+        invalidateDetail(tester);
+        await tester.pumpAndSettle();
+        expect(find.text('7250 / 14000'), findsOneWidget);
+
+        // Plus tard, la fiche relue porte une autre valeur serveur.
+        fakeRepository.detailToReturn = _baseDetail.copyWith(xp: 9000);
+        invalidateDetail(tester);
+        await tester.pumpAndSettle();
+        expect(find.text('9000 / 14000'), findsOneWidget);
+        expect(find.text('7250 / 14000'), findsNothing);
+      },
+    );
+  });
+
+  group('PV mis en file hors ligne (registre de dette technique)', () {
+    testWidgets(
+      'fiche rouverte hors ligne : affiche les PV/l\'XP renvoyés par le '
+      'dépôt (file superposée), et l\'ajustement suivant en repart',
+      (tester) async {
+        // Ce que `SupabaseCharacterRepository.fetchCharacterDetail` renvoie
+        // pour une fiche dont 15 PV et 7250 XP sont en file (voir
+        // `character_repository_pending_writes_test.dart`).
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          currentHp: 15,
+          xp: 7250,
+        );
+        fakeRepository.updateHpOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        expect(find.text('15 / 30'), findsOneWidget);
+        expect(find.text('7250 / 14000'), findsOneWidget);
+
+        await healOneHpFromSheet(tester);
+
+        expect(fakeRepository.lastUpdatedCurrentHp, 16);
+        expect(find.text('16 / 30'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'PV mis en file puis synchronisés au retour du réseau : la fiche '
+      'relue porte la même valeur, aucun saut visible, et l\'ajustement '
+      'suivant en repart',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.updateHpOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await healOneHpFromSheet(tester);
+        expect(find.text('19 / 30'), findsOneWidget);
+
+        fakeRepository.detailToReturn = _baseDetail.copyWith(currentHp: 19);
+        fakeRepository.updateHpOutcomeToReturn = WriteOutcome.synced;
+        invalidateDetail(tester);
+        await tester.pump();
+        expect(find.text('19 / 30'), findsOneWidget);
+        expect(find.text('18 / 30'), findsNothing);
+        await tester.pumpAndSettle();
+        expect(find.text('19 / 30'), findsOneWidget);
+
+        fakeRepository.detailToReturn = _baseDetail.copyWith(currentHp: 20);
+        await healOneHpFromSheet(tester);
+
+        expect(fakeRepository.lastUpdatedCurrentHp, 20);
+        expect(find.text('20 / 30'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'synchro en échec (aucune invalidation) : les PV en attente restent '
+      'affichés et les ajustements hors ligne suivants se cumulent',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.updateHpOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+        await healOneHpFromSheet(tester);
+        await healOneHpFromSheet(tester);
+
+        expect(fakeRepository.updateHpCallCount, 2);
+        expect(fakeRepository.lastUpdatedCurrentHp, 20);
+        expect(find.text('20 / 30'), findsOneWidget);
         expect(fakeRepository.fetchDetailCallCount, 1);
       },
     );

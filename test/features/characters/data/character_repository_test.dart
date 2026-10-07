@@ -1513,7 +1513,11 @@ void main() {
         payload: {'currentHp': 12, 'temporaryHp': 0},
       );
       final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
-      final syncer = PendingCharacterWriteSyncer(client, pendingWrites);
+      final syncer = PendingCharacterWriteSyncer(
+        client,
+        pendingWrites,
+        ReferenceDataCache(db),
+      );
 
       final synced = await syncer.sync();
 
@@ -1533,7 +1537,11 @@ void main() {
         ownerId: ownerId,
         failureStatusCode: 500,
       );
-      final syncer = PendingCharacterWriteSyncer(client, pendingWrites);
+      final syncer = PendingCharacterWriteSyncer(
+        client,
+        pendingWrites,
+        ReferenceDataCache(db),
+      );
 
       final synced = await syncer.sync();
 
@@ -1558,6 +1566,7 @@ void main() {
       final syncer = PendingCharacterWriteSyncer(
         anonymousClient,
         pendingWrites,
+        ReferenceDataCache(db),
       );
 
       final synced = await syncer.sync();
@@ -1584,7 +1593,11 @@ void main() {
       );
       // Connecté en tant qu'owner-1 uniquement.
       final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
-      final syncer = PendingCharacterWriteSyncer(client, pendingWrites);
+      final syncer = PendingCharacterWriteSyncer(
+        client,
+        pendingWrites,
+        ReferenceDataCache(db),
+      );
 
       final synced = await syncer.sync();
 

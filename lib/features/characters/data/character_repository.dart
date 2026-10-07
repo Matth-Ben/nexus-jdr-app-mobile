@@ -33,6 +33,7 @@ import '../domain/subclass_spell_grant_resolver.dart';
 import '../domain/warlock_pact.dart';
 import '../domain/weapon_slot.dart';
 import '../domain/write_outcome.dart';
+import 'character_detail_cache.dart';
 import 'character_detail_row_mapper.dart';
 import 'character_error_mapper.dart';
 import 'character_inventory_row_mapper.dart';
@@ -70,6 +71,12 @@ abstract class CharacterRepository {
   /// par construction (la policy RLS filtre la ligne avant qu'elle
   /// n'atteigne PostgREST), ce qui est le comportement voulu : ne jamais
   /// laisser deviner qu'un personnage existe chez un autre joueur.
+  ///
+  /// La fiche renvoyée tient compte des écritures [updateHp]/[addXp] encore
+  /// en attente de synchronisation (mode hors-ligne) : `currentHp`/
+  /// `temporaryHp`/`xp` valent alors la valeur mise en file, pas la valeur
+  /// serveur ou cache qu'elle remplacera — l'appelant peut donc toujours
+  /// calculer un nouvel ajustement à partir de la fiche reçue.
   Future<CharacterDetail> fetchCharacterDetail(String characterId);
 
   /// Écrit directement `characters.current_hp`/`temporary_hp` — pas de
@@ -97,7 +104,10 @@ abstract class CharacterRepository {
   ///   file** — mettre en file un échec qui n'est pas dû à l'absence de
   ///   réseau masquerait un vrai bug en le faisant échouer silencieusement
   ///   en boucle à chaque tentative de synchro future. Un succès retourne
-  ///   [WriteOutcome.synced].
+  ///   [WriteOutcome.synced] et retire de la file l'éventuelle écriture du
+  ///   même type restée en attente pour ce personnage : désormais périmée
+  ///   (valeurs absolues), elle écraserait sinon cette écriture plus
+  ///   récente à la synchronisation suivante.
   Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,
@@ -795,6 +805,15 @@ abstract class CharacterRepository {
 /// payload par [_mapCharacterDetailPayload] — le mapper pur partagé par les
 /// deux chemins (réseau et cache), jamais de logique de parsing dupliquée.
 ///
+/// Les écritures PV/XP encore en file (`PendingCharacterWriteQueue`) sont
+/// superposées au résultat renvoyé, quel que soit le chemin (réseau ou
+/// cache) — voir [_withPendingWrites]. Le cache, lui, ne contient jamais que
+/// le dernier état serveur connu : outre chaque lecture réseau réussie, une
+/// écriture PV/XP confirmée par le serveur (en ligne, ou synchronisée par
+/// `PendingCharacterWriteSyncer`) y reporte les colonnes qu'elle vient
+/// d'écrire (`CharacterDetailCache.applyConfirmedColumns`), jamais une
+/// valeur seulement mise en file.
+///
 /// Seule [fetchCharacterDetail] utilise ce cache : les autres méthodes de ce
 /// repository restent des appels réseau directs sans repli (écritures, ou
 /// lectures hors périmètre de la fiche elle-même comme
@@ -832,6 +851,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
   final ReferenceDataCache _cache;
   final PendingCharacterWriteQueue _pendingWrites;
   final ConnectivityChecker _connectivityChecker;
+
+  /// Clé, forme et correction ciblée de l'entrée de cache de la fiche — voir
+  /// [CharacterDetailCache].
+  late final CharacterDetailCache _detailCache = CharacterDetailCache(_cache);
 
   @override
   Future<List<CharacterSummary>> fetchCharacters() async {
@@ -887,7 +910,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final ownerId = _requireOwnerId();
     // Scopée par ownerId — voir la documentation de classe
     // ("Isolation par utilisateur").
-    final cacheKey = 'character_detail:$ownerId:$characterId';
+    final cacheKey = CharacterDetailCache.keyFor(
+      ownerId: ownerId,
+      characterId: characterId,
+    );
 
     try {
       final row = await _client
@@ -967,8 +993,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
       }
 
       final payload = await _buildCharacterDetailPayload(row);
+      // Le cache garde l'état serveur brut : les écritures en attente ne
+      // sont superposées qu'au résultat renvoyé (voir [_withPendingWrites]).
       await _writeCacheBestEffort(cacheKey, payload);
-      return _mapCharacterDetailPayload(payload);
+      return await _withPendingWrites(
+        _mapCharacterDetailPayload(payload),
+        ownerId: ownerId,
+        characterId: characterId,
+      );
     } on CharacterFailure {
       rethrow;
     } on PostgrestException catch (error) {
@@ -976,16 +1008,165 @@ class SupabaseCharacterRepository implements CharacterRepository {
         cacheKey,
         _mapCharacterDetailPayload,
       );
-      if (cached != null) return cached;
+      if (cached != null) {
+        return _withPendingWrites(
+          cached,
+          ownerId: ownerId,
+          characterId: characterId,
+        );
+      }
       throw mapCharacterError(error);
     } catch (_) {
       final cached = await _mappedFromCache(
         cacheKey,
         _mapCharacterDetailPayload,
       );
-      if (cached != null) return cached;
+      if (cached != null) {
+        return _withPendingWrites(
+          cached,
+          ownerId: ownerId,
+          characterId: characterId,
+        );
+      }
       throw mapUnknownCharacterError();
     }
+  }
+
+  /// Superpose à [detail] (fiche relue du serveur ou du cache) les écritures
+  /// PV/XP encore en attente de synchronisation pour ce personnage et ce
+  /// compte (`PendingCharacterWriteQueue.forCharacter`) : tant qu'une
+  /// écriture mise en file n'est pas partie, la fiche renvoyée doit refléter
+  /// cette écriture, pas la valeur serveur/cache qu'elle va remplacer.
+  ///
+  /// Sans cette superposition, une fiche fermée puis rouverte hors ligne
+  /// réaffichait les PV/l'XP d'avant l'ajustement ; l'ajustement suivant,
+  /// calculé par l'écran en valeur absolue à partir de cette base périmée,
+  /// remplaçait l'entrée en file et le premier ajustement était perdu sans
+  /// message (voir `character_repository_pending_writes_test.dart`). Même
+  /// perte en ligne, si la fiche était relue après le retour du réseau mais
+  /// avant que la synchronisation n'ait abouti.
+  ///
+  /// La file reste la seule source des écritures en attente : le cache de
+  /// la fiche n'est jamais modifié ici. Une fois la synchronisation réussie,
+  /// l'entrée disparaît de la file et le serveur porte exactement la valeur
+  /// qui était superposée — la fiche relue ne change donc pas. Si la
+  /// synchronisation échoue, l'entrée reste et continue d'être superposée.
+  ///
+  /// Limite assumée (comportement de synchronisation inchangé) : aucune
+  /// résolution de conflit. Si le personnage a été modifié entre-temps
+  /// depuis un autre appareil, la valeur en file masque la valeur serveur à
+  /// l'affichage puis l'écrase à la synchronisation ("dernière écriture
+  /// gagne") ; les champs sans entrée en file gardent leur valeur serveur.
+  ///
+  /// Lecture locale uniquement (aucune requête réseau), best-effort : une
+  /// lecture de file en échec ou un payload illisible ne doit jamais
+  /// empêcher d'afficher la fiche — [detail] est alors renvoyé tel quel.
+  Future<CharacterDetail> _withPendingWrites(
+    CharacterDetail detail, {
+    required String ownerId,
+    required String characterId,
+  }) async {
+    try {
+      final pending = await _pendingWrites.forCharacter(
+        ownerId: ownerId,
+        characterId: characterId,
+      );
+      var result = detail;
+      for (final write in pending) {
+        switch (write.kind) {
+          case PendingCharacterWriteKind.hp:
+            final currentHp = write.payload['currentHp'];
+            final temporaryHp = write.payload['temporaryHp'];
+            if (currentHp is num && temporaryHp is num) {
+              result = result.copyWith(
+                currentHp: currentHp.toInt(),
+                temporaryHp: temporaryHp.toInt(),
+              );
+            }
+          case PendingCharacterWriteKind.xp:
+            final newXp = write.payload['newXp'];
+            if (newXp is num) {
+              result = result.copyWith(xp: newXp.toInt());
+            }
+        }
+      }
+      return result;
+    } catch (_) {
+      // Best-effort : voir la documentation de cette méthode.
+      return detail;
+    }
+  }
+
+  /// Relève, juste avant une écriture PV/XP **en ligne**, l'entrée [kind]
+  /// éventuellement restée en file pour ce personnage (réseau revenu mais
+  /// synchronisation pas encore passée, ou en échec) — `null` s'il n'y en a
+  /// pas. À passer à [_recordConfirmedWrite] une fois l'écriture réussie.
+  ///
+  /// Lecture locale uniquement, best-effort : en cas d'échec, rien ne sera
+  /// retiré de la file après l'écriture.
+  Future<PendingCharacterWrite?> _pendingWriteBeforeOnlineWrite({
+    required String characterId,
+    required String ownerId,
+    required PendingCharacterWriteKind kind,
+  }) async {
+    try {
+      final pending = await _pendingWrites.forCharacter(
+        ownerId: ownerId,
+        characterId: characterId,
+      );
+      for (final write in pending) {
+        if (write.kind == kind) return write;
+      }
+    } catch (_) {
+      // Best-effort : voir la documentation de cette méthode.
+    }
+    return null;
+  }
+
+  /// Suites locales d'une écriture PV/XP **en ligne** réussie ([columns] est
+  /// le corps de l'`UPDATE` que le serveur vient d'accepter) :
+  ///
+  /// 1. retire de la file [supersededWrite], l'entrée du même type relevée
+  ///    **avant** l'écriture ([_pendingWriteBeforeOnlineWrite]) : `updateHp`/
+  ///    `addXp` écrivent des valeurs absolues, cette entrée est donc
+  ///    périmée — la laisser ferait réécrire l'ancienne valeur par-dessus la
+  ///    nouvelle à la synchronisation suivante, et la ferait réapparaître
+  ///    d'ici là dans la fiche relue ([_withPendingWrites]). Le retrait est
+  ///    conditionnel (`PendingCharacterWriteQueue.removeIfUnchanged`) : une
+  ///    entrée mise en file **pendant** l'écriture réseau (connectivité
+  ///    retombée, nouveau tap) est plus récente que celle-ci et doit rester ;
+  /// 2. reporte [columns] dans le cache de la fiche
+  ///    (`CharacterDetailCache.applyConfirmedColumns`) — si la relecture qui
+  ///    suit échoue (réseau retombé), la fiche relue depuis le cache porte
+  ///    quand même la valeur écrite, pas celle d'avant.
+  ///
+  /// Opérations locales uniquement, best-effort : l'écriture serveur a déjà
+  /// réussi, un échec ici ne doit pas la faire passer pour un échec.
+  Future<void> _recordConfirmedWrite({
+    required String characterId,
+    required String ownerId,
+    required Map<String, dynamic> columns,
+    required PendingCharacterWrite? supersededWrite,
+  }) async {
+    // Retrait d'abord, cache ensuite (ordre inverse de celui de
+    // `PendingCharacterWriteSyncer.sync`) : tant qu'elle est en file,
+    // l'entrée périmée peut être relevée par une synchro ou, si l'app est
+    // tuée ici, superposée puis réécrite sur le serveur au redémarrage —
+    // écrasant l'écriture qui vient d'être confirmée. Dans cet ordre, le
+    // pire cas n'est qu'un cache en retard d'une écriture, corrigé à la
+    // prochaine lecture en ligne.
+    if (supersededWrite != null) {
+      try {
+        await _pendingWrites.removeIfUnchanged(supersededWrite);
+      } catch (_) {
+        // Best-effort : voir la documentation de cette méthode.
+      }
+    }
+    await _detailCache.applyConfirmedColumns(
+      ownerId: ownerId,
+      characterId: characterId,
+      columns: columns,
+    );
   }
 
   @override
@@ -1006,12 +1187,28 @@ class SupabaseCharacterRepository implements CharacterRepository {
       return WriteOutcome.queued;
     }
 
+    final supersededWrite = await _pendingWriteBeforeOnlineWrite(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.hp,
+    );
+
     try {
+      final columns = <String, dynamic>{
+        'current_hp': currentHp,
+        'temporary_hp': temporaryHp,
+      };
       await _client
           .from('characters')
-          .update({'current_hp': currentHp, 'temporary_hp': temporaryHp})
+          .update(columns)
           .eq('id', characterId)
           .eq('owner_id', ownerId);
+      await _recordConfirmedWrite(
+        characterId: characterId,
+        ownerId: ownerId,
+        columns: columns,
+        supersededWrite: supersededWrite,
+      );
       return WriteOutcome.synced;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
@@ -1355,12 +1552,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
       return WriteOutcome.queued;
     }
 
+    final supersededWrite = await _pendingWriteBeforeOnlineWrite(
+      characterId: characterId,
+      ownerId: ownerId,
+      kind: PendingCharacterWriteKind.xp,
+    );
+
     try {
+      final columns = <String, dynamic>{'xp': newXp};
       await _client
           .from('characters')
-          .update({'xp': newXp})
+          .update(columns)
           .eq('id', characterId)
           .eq('owner_id', ownerId);
+      await _recordConfirmedWrite(
+        characterId: characterId,
+        ownerId: ownerId,
+        columns: columns,
+        supersededWrite: supersededWrite,
+      );
       return WriteOutcome.synced;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
@@ -3638,7 +3848,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     }
 
     return <String, dynamic>{
-      'row': row,
+      CharacterDetailCache.rowKey: row,
       'raceRow': raceRow,
       'pactWeaponItemRow': pactWeaponItemRow,
       'pactWeaponNameRows': pactWeaponNameRows,
@@ -3717,7 +3927,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// succès) et le chemin cache (`_mappedFromCache`, dans
   /// [fetchCharacterDetail]).
   CharacterDetail _mapCharacterDetailPayload(Map<String, dynamic> payload) {
-    final row = Map<String, dynamic>.from(payload['row'] as Map);
+    final row = Map<String, dynamic>.from(
+      payload[CharacterDetailCache.rowKey] as Map,
+    );
 
     final raceNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['raceNameRows']),
