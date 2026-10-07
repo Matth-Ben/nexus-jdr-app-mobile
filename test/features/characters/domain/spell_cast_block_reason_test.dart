@@ -258,4 +258,34 @@ void main() {
       );
     });
   });
+
+  group('sort qui ne se prépare pas (classe à sorts connus)', () {
+    const knownSpell = CharacterSpellEntry(
+      id: 1,
+      name: 'Test',
+      level: 3,
+      school: '',
+      status: 'connu',
+      requiresPreparation: false,
+    );
+
+    test("'connu' avec un emplacement disponible -> null (lançable)", () {
+      expect(
+        SpellCastBlockReason.of(spell: knownSpell, spellSlots: available),
+        isNull,
+      );
+    });
+
+    test("'connu', emplacements épuisés -> noSlotAvailable, jamais "
+        'unprepared', () {
+      expect(
+        SpellCastBlockReason.of(spell: knownSpell, spellSlots: exhausted),
+        SpellCastBlockReason.noSlotAvailable,
+      );
+      expect(
+        SpellCastBlockReason.of(spell: knownSpell, spellSlots: const []),
+        SpellCastBlockReason.noSlotAvailable,
+      );
+    });
+  });
 }

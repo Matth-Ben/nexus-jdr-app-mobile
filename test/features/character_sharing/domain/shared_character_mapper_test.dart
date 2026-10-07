@@ -327,4 +327,102 @@ void main() {
       });
     });
   });
+
+  // Même règle que la fiche du propriétaire : un sort d'une classe à sorts
+  // connus ne se prépare pas. `source_class_id` n'est exploité que s'il est
+  // renvoyé par le RPC `get_shared_character` (non vérifiable d'ici).
+  group('mapSharedCharacterJson : requiresPreparation', () {
+    Map<String, dynamic> cls(int id, String name) => {
+      'class_id': id,
+      'class_name': name,
+      'level': 3,
+      'is_primary': id == 1,
+    };
+    Map<String, dynamic> spell(
+      int id, {
+      String status = 'connu',
+      int level = 1,
+      int? source,
+      bool withSource = true,
+    }) => {
+      'spell_id': id,
+      'spell_name': 'S$id',
+      'level': level,
+      'status': status,
+      if (withSource) 'source_class_id': source,
+    };
+    Map<int, bool> requires(Map<String, dynamic> json) => {
+      for (final entry in mapSharedCharacterJson(json).spells)
+        entry.id: entry.requiresPreparation,
+    };
+
+    test('Barde seul, RPC sans source_class_id : aucun sort à préparer', () {
+      expect(
+        requires({
+          'classes': [cls(1, 'Barde')],
+          'spells': [spell(1, withSource: false), spell(2, withSource: false)],
+        }),
+        {1: false, 2: false},
+      );
+    });
+
+    test('Clerc seul, RPC sans source_class_id : tout reste à préparer', () {
+      expect(
+        requires({
+          'classes': [cls(2, 'Clerc')],
+          'spells': [spell(1, withSource: false)],
+        }),
+        {1: true},
+      );
+    });
+
+    test('Barde + Clerc, RPC sans source_class_id : repli sur les classes du '
+        'personnage, tout reste à préparer', () {
+      expect(
+        requires({
+          'classes': [cls(1, 'Barde'), cls(2, 'Clerc')],
+          'spells': [spell(1, withSource: false), spell(2, withSource: false)],
+        }),
+        {1: true, 2: true},
+      );
+    });
+
+    test('JSON sans classes, ou classe au nom absent (repli "Classe") : à '
+        'préparer, comme avant le correctif', () {
+      expect(
+        requires({
+          'spells': [spell(1, withSource: false)],
+        }),
+        {1: true},
+      );
+      expect(
+        requires({
+          'classes': [
+            {'class_id': 1, 'level': 3, 'is_primary': true},
+          ],
+          'spells': [spell(1, source: 1)],
+        }),
+        {1: true},
+      );
+    });
+
+    test('Barde + Clerc, source_class_id renvoyé : tranché par l\'origine', () {
+      final detail = mapSharedCharacterJson({
+        'classes': [cls(1, 'Barde'), cls(2, 'Clerc')],
+        'spells': [
+          spell(1, source: 1),
+          spell(2, source: 2),
+          spell(3),
+          spell(4, status: 'préparé', source: 1),
+          spell(5, status: 'préparé', source: 2),
+        ],
+      });
+      expect(
+        {for (final s in detail.spells) s.id: s.requiresPreparation},
+        {1: false, 2: true, 3: true, 4: false, 5: true},
+      );
+      // Seul le sort de Clerc préparé compte.
+      expect(detail.preparedSpellCount, 1);
+    });
+  });
 }

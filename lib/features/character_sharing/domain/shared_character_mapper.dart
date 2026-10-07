@@ -8,6 +8,7 @@ import '../../characters/domain/character_journal_entry.dart';
 import '../../characters/domain/character_skill_row.dart';
 import '../../characters/domain/character_spell_entry.dart';
 import '../../characters/domain/character_spell_slot.dart';
+import '../../characters/domain/prepared_spells_limit.dart';
 import '../../characters/domain/spell_grant_source.dart';
 import 'shared_character_skill_catalog.dart';
 
@@ -315,16 +316,45 @@ List<CharacterSpellEntry> _mapSpellsWithGrants(Map<String, dynamic> json) {
     grantRows.putIfAbsent(spellId, () => row);
   }
 
+  // Même dérivation que la fiche du propriétaire
+  // (`CharacterSpellRowMapper.toCharacterSpellEntries`) : un sort d'une
+  // classe à sorts connus ne se prépare pas. `source_class_id` n'est lu que
+  // s'il est renvoyé par le RPC (contenu non vérifiable depuis ce dépôt) ;
+  // absent, chaque sort est d'origine inconnue et la règle retombe sur les
+  // classes du personnage (`json['classes']`).
+  final classes = [
+    for (final row in _listOfMaps(json['classes'])) _mapClassRow(row),
+  ];
+  final sourceClassIds = <int, Set<int>>{};
+  for (final row in _listOfMaps(json['spells'])) {
+    final sourceClassId = row['source_class_id'];
+    if (sourceClassId is num) {
+      sourceClassIds
+          .putIfAbsent(_asInt(row['spell_id']), () => {})
+          .add(sourceClassId.toInt());
+    }
+  }
+  bool requiresPreparation(Map<String, dynamic> row) =>
+      PreparedSpellsLimit.spellRequiresPreparation(
+        classes: classes,
+        sourceClassIds: sourceClassIds[_asInt(row['spell_id'])] ?? const {},
+      );
+
   final result = <CharacterSpellEntry>[];
   final seen = <int>{};
   for (final row in _listOfMaps(json['spells'])) {
-    final entry = _mapSpell(row);
+    final entry = _mapSpell(row, requiresPreparation: requiresPreparation(row));
     seen.add(entry.id);
     final grant = grants[entry.id];
     result.add(
       grant == null
           ? entry
-          : _mapSpell(row, grantSource: grant, status: 'préparé'),
+          : _mapSpell(
+              row,
+              grantSource: grant,
+              status: 'préparé',
+              requiresPreparation: requiresPreparation(row),
+            ),
     );
   }
   for (final entry in grantRows.entries) {
@@ -335,6 +365,7 @@ List<CharacterSpellEntry> _mapSpellsWithGrants(Map<String, dynamic> json) {
         grantSource: grants[entry.key],
         status: 'préparé',
         isPersisted: false,
+        requiresPreparation: requiresPreparation(entry.value),
       ),
     );
   }
@@ -346,6 +377,7 @@ CharacterSpellEntry _mapSpell(
   SpellGrantSource? grantSource,
   String? status,
   bool isPersisted = true,
+  bool requiresPreparation = true,
 }) {
   return CharacterSpellEntry(
     id: _asInt(row['spell_id']),
@@ -362,6 +394,7 @@ CharacterSpellEntry _mapSpell(
     isFavorite: row['is_favorite'] == true,
     grantSource: grantSource,
     isPersisted: isPersisted,
+    requiresPreparation: requiresPreparation,
   );
 }
 

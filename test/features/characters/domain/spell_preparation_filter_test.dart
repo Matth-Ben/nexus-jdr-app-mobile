@@ -64,4 +64,27 @@ void main() {
   test('unprepared : uniquement les sorts restant à préparer', () {
     expect(SpellPreparationFilter.unprepared.apply(_all), [_unprepared]);
   });
+
+  group('sort qui ne se prépare pas (classe à sorts connus)', () {
+    const knownSpell = CharacterSpellEntry(
+      id: 6,
+      name: 'Mot de guérison',
+      level: 1,
+      school: '',
+      status: 'connu',
+      requiresPreparation: false,
+    );
+    const withKnown = [..._all, knownSpell];
+
+    test('prepared : rangé avec ce qui est lançable', () {
+      expect(
+        SpellPreparationFilter.prepared.apply(withKnown),
+        contains(knownSpell),
+      );
+    });
+
+    test('unprepared : jamais listé', () {
+      expect(SpellPreparationFilter.unprepared.apply(withKnown), [_unprepared]);
+    });
+  });
 }

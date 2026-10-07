@@ -316,6 +316,11 @@ abstract class CharacterRepository {
   /// règle 5e) : reste un simple flag, sans simulation des règles complètes
   /// — même principe que le statut "mort"
   /// (`docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2).
+  ///
+  /// Garde côté écriture : une ligne au statut 'inné' n'est jamais modifiée,
+  /// et un sort qui n'a que des lignes 'inné' ne reçoit aucune nouvelle
+  /// ligne (rien n'est écrit, [WriteOutcome.synced] quand même : la base est
+  /// déjà dans l'état voulu pour un sort inné).
   Future<WriteOutcome> setSpellPrepared({
     required String characterId,
     required int spellId,
@@ -963,7 +968,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_skill_proficiencies(skill_id, proficiency),
             character_tool_proficiencies(tool_id, custom_text),
             character_languages(language_id),
-            character_spells(spell_id, status, is_favorite),
+            character_spells(spell_id, status, is_favorite, source_class_id),
             character_spell_slots(slot_level, slots_total, slots_used),
             character_pact_slots(slot_level, slots_total, slots_used),
             character_feature_uses(class_feature_id, uses_remaining),
@@ -1667,6 +1672,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .update({'status': prepared ? 'préparé' : 'connu'})
           .eq('character_id', characterId)
           .eq('spell_id', spellId)
+          // Jamais une ligne 'inné' : un sort inné n'a pas de préparation,
+          // et la passer à 'préparé' puis 'connu' serait sans retour. Si le
+          // sort a des lignes en double (une innée, une ordinaire), seule la
+          // ligne ordinaire bouge.
+          .neq('status', 'inné')
           .select('id');
       // Sort de la liste de classe d'un lanceur à préparation, sans ligne
       // `character_spells` tant qu'il n'a jamais été préparé (voir
@@ -1674,6 +1684,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // possible, la table n'a pas de contrainte unique (character_id,
       // spell_id).
       if (updated.isEmpty && prepared) {
+        // Aucune ligne modifiée : soit le sort n'a aucune ligne, soit il
+        // n'a que des lignes 'inné' (exclues ci-dessus). Dans ce second
+        // cas, ne rien écrire — surtout pas une ligne en double.
+        final existing = await _client
+            .from('character_spells')
+            .select('id')
+            .eq('character_id', characterId)
+            .eq('spell_id', spellId)
+            .limit(1);
+        if (existing.isNotEmpty) return WriteOutcome.synced;
         await _client.from('character_spells').insert({
           'character_id': characterId,
           'spell_id': spellId,
@@ -4074,6 +4094,17 @@ class SupabaseCharacterRepository implements CharacterRepository {
         CharacterDetailRowMapper.characterSpellRowsOf(row),
       ),
       favorites: CharacterSpellRowMapper.parseFavorites(
+        CharacterDetailRowMapper.characterSpellRowsOf(row),
+      ),
+      // `source_class_id` est absent d'un payload mis en cache avant sa
+      // lecture : aucune origine connue, donc règle « origine inconnue »
+      // (à préparer, sauf si toutes les classes lanceuses du personnage sont
+      // à sorts connus), jamais de crash.
+      classes: CharacterDetailRowMapper.parseClasses(
+        row,
+        classNames: classNames,
+      ),
+      sourceClassIds: CharacterSpellRowMapper.parseSourceClassIds(
         CharacterDetailRowMapper.characterSpellRowsOf(row),
       ),
     );

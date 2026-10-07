@@ -9,6 +9,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/features/characters/domain/spell_cast_block_reason.dart';
+import 'package:personnages/features/characters/data/character_spell_row_mapper.dart';
+import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
@@ -819,11 +822,25 @@ void main() {
     });
 
     testWidgets('classe à sorts connus : aucun compteur', (tester) async {
-      await _pump(
-        tester,
-        _detail(classes: [classRow(2, 'Barde', 3)], spells: const [known]),
+      // Le sort est construit par le mapper, comme à la lecture de la fiche :
+      // pour un Barde, `requiresPreparation` est faux (le défaut `true` du
+      // constructeur décrirait un cas que la lecture ne produit plus).
+      final classes = [classRow(2, 'Barde', 3)];
+      final spells = CharacterSpellRowMapper.toCharacterSpellEntries(
+        const [
+          {'id': 12, 'level': 1, 'school': 'Évocation'},
+        ],
+        names: const {'12': 'Projectile magique'},
+        descriptions: const {},
+        statuses: const {12: 'connu'},
+        classes: classes,
       );
+      expect(spells.single.requiresPreparation, isFalse);
 
+      await _pump(tester, _detail(classes: classes, spells: spells));
+
+      expect(find.text('Projectile magique'), findsOneWidget);
+      expect(find.text('PRÉPARATION DES SORTS'), findsNothing);
       expect(find.text('SORTS PRÉPARÉS'), findsNothing);
       // Ni magie de pacte : la carte "SORTS" ne porterait plus que son titre
       // tout seul, elle est donc entièrement masquée (demande utilisateur du
@@ -1012,6 +1029,290 @@ void main() {
       expect(find.text('PRÉPARATION DES SORTS'), findsNothing);
       expect(find.text('NON PRÉPARÉS'), findsNothing);
       expect(find.text('Lumière'), findsOneWidget);
+    });
+  });
+
+  // Barde, Ensorceleur, Occultiste, Rôdeur : sorts connus, lançables sans
+  // préparation. Les sorts sont construits par le vrai mapper
+  // (`CharacterSpellRowMapper.toCharacterSpellEntries`) à partir des classes
+  // et de `source_class_id`, pour que ces tests couvrent la dérivation de
+  // `requiresPreparation` et pas seulement son effet à l'écran.
+  group('classes à sorts connus : lancer sans préparer', () {
+    CharacterDetailClassRow cls(int id, String name, {bool primary = false}) =>
+        CharacterDetailClassRow(
+          classId: id,
+          className: name,
+          level: 3,
+          isPrimary: primary,
+          savingThrowProficiencies: const [],
+          hitDie: 8,
+        );
+    final barde = cls(1, 'Barde', primary: true);
+    final clerc = cls(2, 'Clerc');
+
+    const spellRows = [
+      {'id': 10, 'level': 0, 'school': ''},
+      {'id': 11, 'level': 1, 'school': ''},
+      {'id': 12, 'level': 1, 'school': ''},
+      {'id': 13, 'level': 1, 'school': ''},
+      {'id': 14, 'level': 1, 'school': ''},
+    ];
+    const names = {
+      '10': 'Moquerie cruelle',
+      '11': 'Charme-personne',
+      '12': 'Héroïsme',
+      '13': 'Soins',
+      '14': 'Bénédiction',
+    };
+    // 11 : sort de Barde 'connu'. 12 : sort de Barde passé à 'préparé' par le
+    // joueur (contournement de l'ancien défaut). 13/14 : sorts de Clerc.
+    const statuses = {
+      10: 'connu',
+      11: 'connu',
+      12: 'préparé',
+      13: 'connu',
+      14: 'préparé',
+    };
+    const slots = [CharacterSpellSlot(level: 1, total: 4, used: 0)];
+
+    CharacterDetail detailFor(
+      List<CharacterDetailClassRow> classes, {
+      required Map<int, Set<int>> sources,
+      Set<int> only = const {10, 11, 12, 13, 14},
+    }) => _detail(
+      classes: classes,
+      abilityScores: const {'wis': 14},
+      spellSlots: slots,
+      spells: CharacterSpellRowMapper.toCharacterSpellEntries(
+        [
+          for (final row in spellRows)
+            if (only.contains(row['id'])) row,
+        ],
+        names: names,
+        descriptions: const {},
+        statuses: {
+          for (final entry in statuses.entries)
+            if (only.contains(entry.key)) entry.key: entry.value,
+        },
+        classes: classes,
+        sourceClassIds: sources,
+      ),
+    );
+
+    double opacityOf(WidgetTester tester, String name) => tester
+        .widget<Opacity>(
+          find.ancestor(of: find.text(name), matching: find.byType(Opacity)),
+        )
+        .opacity;
+
+    testWidgets('Barde seul : ni carte de préparation, ni filtre, ni '
+        'compteur, ni note, ni libellé, ni ligne atténuée', (tester) async {
+      await _pump(
+        tester,
+        detailFor(
+          [barde],
+          // 12 sans origine : un Barde seul n'a de toute façon rien à
+          // préparer.
+          sources: const {
+            11: {1},
+          },
+          only: const {10, 11, 12},
+        ),
+      );
+
+      expect(find.text('PRÉPARATION DES SORTS'), findsNothing);
+      expect(find.text('SORTS PRÉPARÉS'), findsNothing);
+      expect(find.text('TOUS'), findsNothing);
+      expect(find.text('PRÉPARÉS'), findsNothing);
+      expect(find.text('NON PRÉPARÉS'), findsNothing);
+      expect(
+        find.byTooltip('Comment fonctionne la préparation des sorts ?'),
+        findsNothing,
+      );
+      expect(find.text('PRÉPARÉ'), findsNothing);
+      expect(find.text('NON PRÉPARÉ'), findsNothing);
+
+      expect(find.text('Moquerie cruelle'), findsOneWidget);
+      expect(opacityOf(tester, 'Charme-personne'), 1);
+      expect(opacityOf(tester, 'Héroïsme'), 1);
+      // Ordre alphabétique simple : plus de bloc "non préparés" en fin de
+      // niveau.
+      expect(
+        tester.getTopLeft(find.text('Charme-personne')).dy,
+        lessThan(tester.getTopLeft(find.text('Héroïsme')).dy),
+      );
+    });
+
+    testWidgets('Barde seul, panneau "Infos" d\'un sort "connu" : "Lancer" '
+        'actif, ni lien de préparation ni ligne de raison', (tester) async {
+      final cast = <CharacterSpellEntry>[];
+      final toggled = <CharacterSpellEntry>[];
+      await _pump(
+        tester,
+        detailFor(
+          [barde],
+          sources: const {
+            11: {1},
+          },
+          only: const {10, 11, 12},
+        ),
+        onCastSpell: (spell, _) => cast.add(spell),
+        onTogglePrepared: toggled.add,
+      );
+
+      await tester.tap(find.text('Charme-personne'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Préparer ce sort'), findsNothing);
+      expect(find.text('Ne plus préparer'), findsNothing);
+      expect(find.text(SpellCastBlockReason.unprepared.message), findsNothing);
+      expect(
+        find.text(SpellCastBlockReason.noSlotAvailable.message),
+        findsNothing,
+      );
+      final button = tester.widget<PrimaryButton>(
+        find.widgetWithText(PrimaryButton, 'LANCER'),
+      );
+      expect(button.onPressed, isNotNull);
+
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.pumpAndSettle();
+
+      expect(cast.map((spell) => spell.name), ['Charme-personne']);
+      expect(toggled, isEmpty);
+    });
+
+    testWidgets('Barde seul, sort déjà passé à "préparé" en base : lançable, '
+        'sans bascule "Ne plus préparer"', (tester) async {
+      await _pump(
+        tester,
+        detailFor([barde], sources: const {}, only: const {10, 11, 12}),
+      );
+
+      await tester.tap(find.text('Héroïsme'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ne plus préparer'), findsNothing);
+      expect(find.text('Préparer ce sort'), findsNothing);
+      expect(
+        tester
+            .widget<PrimaryButton>(find.widgetWithText(PrimaryButton, 'LANCER'))
+            .onPressed,
+        isNotNull,
+      );
+    });
+
+    testWidgets('Barde seul sans emplacement : seule la raison "plus '
+        'd\'emplacement" est affichée', (tester) async {
+      final detail = detailFor([barde], sources: const {}, only: const {11})
+          .copyWith(
+            spellSlots: const [CharacterSpellSlot(level: 1, total: 4, used: 4)],
+          );
+      await _pump(tester, detail);
+
+      await tester.tap(find.text('Charme-personne'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(SpellCastBlockReason.noSlotAvailable.message),
+        findsOneWidget,
+      );
+      expect(find.text(SpellCastBlockReason.unprepared.message), findsNothing);
+    });
+
+    const mixedSources = {
+      11: {1},
+      12: {1},
+      13: {2},
+      14: {2},
+    };
+
+    testWidgets('Barde + Clerc : la carte reste, le compteur ne compte que '
+        'les sorts de Clerc, les sorts de Barde sont sans libellé', (
+      tester,
+    ) async {
+      final detail = detailFor([barde, clerc], sources: mixedSources);
+      await _pump(tester, detail);
+
+      expect(find.text('PRÉPARATION DES SORTS'), findsOneWidget);
+      expect(find.text('SORTS PRÉPARÉS'), findsOneWidget);
+      // Clerc niveau 3, Sag 14 : limite 5. Un seul sort compté
+      // ("Bénédiction") : "Héroïsme" (Barde, 'préparé' en base) est exclu.
+      expect(detail.preparedSpellCount, 1);
+      expect(find.text('1 / 5'), findsOneWidget);
+      // Un seul libellé de chaque : ceux des deux sorts de Clerc.
+      expect(find.text('PRÉPARÉ'), findsOneWidget);
+      expect(find.text('NON PRÉPARÉ'), findsOneWidget);
+      expect(opacityOf(tester, 'Charme-personne'), 1);
+      expect(opacityOf(tester, 'Héroïsme'), 1);
+      expect(opacityOf(tester, 'Bénédiction'), 1);
+      expect(opacityOf(tester, 'Soins'), lessThan(1));
+    });
+
+    testWidgets('Barde + Clerc, filtre "Préparés" : les sorts de Barde sont '
+        'rangés avec ce qui est lançable', (tester) async {
+      await _pump(tester, detailFor([barde, clerc], sources: mixedSources));
+
+      await tester.tap(find.text('PRÉPARÉS'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Charme-personne'), findsOneWidget);
+      expect(find.text('Héroïsme'), findsOneWidget);
+      expect(find.text('Bénédiction'), findsOneWidget);
+      expect(find.text('Moquerie cruelle'), findsOneWidget);
+      expect(find.text('Soins'), findsNothing);
+
+      await tester.tap(find.text('NON PRÉPARÉS'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Soins'), findsOneWidget);
+      expect(find.text('Charme-personne'), findsNothing);
+      expect(find.text('Héroïsme'), findsNothing);
+      expect(find.text('Bénédiction'), findsNothing);
+    });
+
+    testWidgets('Barde + Clerc, panneau "Infos" : sort de Barde lançable '
+        'sans bascule', (tester) async {
+      await _pump(tester, detailFor([barde, clerc], sources: mixedSources));
+
+      await tester.tap(find.text('Charme-personne'));
+      await tester.pumpAndSettle();
+      expect(find.text('Préparer ce sort'), findsNothing);
+      expect(find.text(SpellCastBlockReason.unprepared.message), findsNothing);
+      expect(
+        tester
+            .widget<PrimaryButton>(find.widgetWithText(PrimaryButton, 'LANCER'))
+            .onPressed,
+        isNotNull,
+      );
+    });
+
+    testWidgets('Barde + Clerc, panneau "Infos" : sort de Clerc "connu" '
+        'toujours à préparer', (tester) async {
+      await _pump(tester, detailFor([barde, clerc], sources: mixedSources));
+
+      await tester.tap(find.text('Soins'));
+      await tester.pumpAndSettle();
+      expect(find.text('Préparer ce sort'), findsOneWidget);
+      expect(
+        find.text(SpellCastBlockReason.unprepared.message),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<PrimaryButton>(find.widgetWithText(PrimaryButton, 'LANCER'))
+            .onPressed,
+        isNull,
+      );
+    });
+
+    testWidgets('Barde + Clerc, sort sans origine connue : à préparer '
+        '(comportement antérieur conservé)', (tester) async {
+      await _pump(tester, detailFor([barde, clerc], sources: const {}));
+
+      // 11 et 13 'connu' : tous deux "NON PRÉPARÉ" faute d'origine.
+      expect(find.text('NON PRÉPARÉ'), findsNWidgets(2));
+      expect(opacityOf(tester, 'Charme-personne'), lessThan(1));
     });
   });
 }

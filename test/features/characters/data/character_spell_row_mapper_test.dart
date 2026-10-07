@@ -1,4 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/features/characters/domain/spell_status_formatter.dart';
+import 'package:personnages/features/characters/domain/spell_grant_source.dart';
+import 'package:personnages/features/characters/domain/character_spell_entry.dart';
+import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/data/character_spell_row_mapper.dart';
 
 void main() {
@@ -44,6 +48,7 @@ void main() {
         names: const {'1': 'Boule de feu'},
         descriptions: const {},
         statuses: const {1: 'connu'},
+        classes: const [],
       );
 
       expect(result, hasLength(1));
@@ -63,6 +68,7 @@ void main() {
         names: const {},
         descriptions: const {},
         statuses: const {},
+        classes: const [],
       );
 
       expect(result.single.name, 'Sort #42');
@@ -91,6 +97,7 @@ void main() {
         names: const {'1': 'Bouclier'},
         descriptions: const {'1': 'Une description complète.'},
         statuses: const {1: 'connu'},
+        classes: const [],
       );
 
       expect(result.single.castingTime, '1 action');
@@ -117,6 +124,7 @@ void main() {
           names: const {},
           descriptions: const {},
           statuses: const {},
+          classes: const [],
         );
 
         expect(result.single.castingTime, '');
@@ -139,6 +147,7 @@ void main() {
       names: const {},
       descriptions: const {},
       statuses: const {8: 'préparé'},
+      classes: const [],
     );
 
     final classListSpell = result.firstWhere((spell) => spell.id == 7);
@@ -147,5 +156,140 @@ void main() {
     final chosenSpell = result.firstWhere((spell) => spell.id == 8);
     expect(chosenSpell.status, 'préparé');
     expect(chosenSpell.isPersisted, isTrue);
+  });
+
+  group('CharacterSpellRowMapper.parseSourceClassIds', () {
+    test('regroupe les origines non nulles par sort, doublons compris', () {
+      final rows = [
+        {'spell_id': 1, 'status': 'connu', 'source_class_id': 10},
+        {'spell_id': 2, 'status': 'connu', 'source_class_id': null},
+        {'spell_id': 3, 'status': 'connu'},
+        {'spell_id': 4, 'status': 'connu', 'source_class_id': 10},
+        {'spell_id': 4, 'status': 'préparé', 'source_class_id': 11},
+        {'spell_id': 4, 'status': 'préparé', 'source_class_id': null},
+      ];
+      expect(CharacterSpellRowMapper.parseSourceClassIds(rows), {
+        1: {10},
+        4: {10, 11},
+      });
+    });
+  });
+
+  group('toCharacterSpellEntries : requiresPreparation', () {
+    CharacterDetailClassRow cls(int id, String name) => CharacterDetailClassRow(
+      classId: id,
+      className: name,
+      level: 3,
+      isPrimary: id == 1,
+      savingThrowProficiencies: const [],
+      hitDie: 8,
+    );
+    const spellRows = [
+      {'id': 1, 'level': 1, 'school': ''},
+      {'id': 2, 'level': 1, 'school': ''},
+      {'id': 3, 'level': 1, 'school': ''},
+      {'id': 4, 'level': 0, 'school': ''},
+      {'id': 5, 'level': 2, 'school': ''},
+      {'id': 6, 'level': 1, 'school': ''},
+      {'id': 7, 'level': 1, 'school': ''},
+    ];
+    const statuses = {
+      1: 'connu',
+      2: 'connu',
+      3: 'connu',
+      4: 'connu',
+      5: 'inné',
+      6: 'connu',
+    };
+
+    Map<int, CharacterSpellEntry> map(
+      List<CharacterDetailClassRow> classes, {
+      Map<int, Set<int>> sources = const {},
+    }) => {
+      for (final spell in CharacterSpellRowMapper.toCharacterSpellEntries(
+        spellRows,
+        names: const {},
+        descriptions: const {},
+        statuses: statuses,
+        grants: const {6: SpellGrantSource.domain},
+        classes: classes,
+        sourceClassIds: sources,
+      ))
+        spell.id: spell,
+    };
+
+    test('Barde seul : aucun sort ne se prépare, avec ou sans origine', () {
+      final spells = map(
+        [cls(1, 'Barde')],
+        sources: const {
+          1: {1},
+        },
+      );
+      expect(spells[1]!.requiresPreparation, isFalse);
+      expect(spells[2]!.requiresPreparation, isFalse);
+      expect(SpellStatusFormatter.canCast(spells[1]!), isTrue);
+      expect(SpellStatusFormatter.canCast(spells[2]!), isTrue);
+    });
+
+    test('Clerc seul : tout se prépare (comportement inchangé)', () {
+      final spells = map(
+        [cls(2, 'Clerc')],
+        sources: const {
+          1: {2},
+        },
+      );
+      expect(spells[1]!.requiresPreparation, isTrue);
+      expect(spells[2]!.requiresPreparation, isTrue);
+      // Sort de la liste de classe sans ligne persistée.
+      expect(spells[7]!.requiresPreparation, isTrue);
+      expect(spells[7]!.isPersisted, isFalse);
+      expect(SpellStatusFormatter.canCast(spells[1]!), isFalse);
+    });
+
+    test('Barde + Clerc : tranché par source_class_id, origine inconnue à '
+        'préparer', () {
+      final spells = map(
+        [cls(1, 'Barde'), cls(2, 'Clerc')],
+        sources: const {
+          1: {1},
+          2: {2},
+        },
+      );
+      expect(spells[1]!.requiresPreparation, isFalse);
+      expect(spells[2]!.requiresPreparation, isTrue);
+      expect(spells[3]!.requiresPreparation, isTrue);
+      expect(spells[7]!.requiresPreparation, isTrue);
+    });
+
+    test('sort mineur, inné et accordé par une sous-classe : comportement '
+        'inchangé quelle que soit la classe', () {
+      for (final classes in [
+        [cls(1, 'Barde')],
+        [cls(2, 'Clerc')],
+        [cls(1, 'Barde'), cls(2, 'Clerc')],
+      ]) {
+        final spells = map(classes);
+        final cantrip = spells[4]!;
+        expect(SpellStatusFormatter.canCast(cantrip), isTrue);
+        expect(SpellStatusFormatter.canTogglePrepared(cantrip), isFalse);
+        expect(SpellStatusFormatter.subtitle(cantrip), isNull);
+
+        final innate = spells[5]!;
+        expect(innate.status, 'inné');
+        expect(SpellStatusFormatter.canCast(innate), isTrue);
+        expect(SpellStatusFormatter.canTogglePrepared(innate), isFalse);
+        expect(SpellStatusFormatter.subtitle(innate), isNull);
+
+        final granted = spells[6]!;
+        expect(granted.status, 'préparé');
+        expect(granted.storedStatus, 'connu');
+        expect(SpellStatusFormatter.canCast(granted), isTrue);
+        expect(SpellStatusFormatter.canTogglePrepared(granted), isFalse);
+        expect(
+          SpellStatusFormatter.subtitle(granted),
+          'toujours préparé · ${SpellGrantSource.domain.label}',
+        );
+      }
+    });
   });
 }

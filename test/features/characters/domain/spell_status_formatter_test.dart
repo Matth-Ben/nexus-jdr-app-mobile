@@ -167,4 +167,74 @@ void main() {
       expect(SpellStatusFormatter.preparationLabel(spell), 'non préparé');
     });
   });
+
+  // Barde, Ensorceleur, Occultiste, Rôdeur : leurs sorts ne se préparent pas
+  // (`CharacterSpellEntry.requiresPreparation` faux, dérivé à la lecture).
+  group('sort qui ne se prépare pas (classe à sorts connus)', () {
+    CharacterSpellEntry known({
+      required String status,
+      int level = 1,
+      SpellGrantSource? grant,
+    }) => CharacterSpellEntry(
+      id: 1,
+      name: 'Test',
+      level: level,
+      school: '',
+      status: status,
+      grantSource: grant,
+      requiresPreparation: false,
+    );
+
+    test("'connu' niveau >= 1 : lançable, sans bascule, libellé ni "
+        'sous-titre', () {
+      final spell = known(status: 'connu', level: 3);
+      expect(SpellStatusFormatter.canCast(spell), isTrue);
+      expect(SpellStatusFormatter.canTogglePrepared(spell), isFalse);
+      expect(SpellStatusFormatter.isUnprepared(spell), isFalse);
+      expect(SpellStatusFormatter.preparationLabel(spell), isNull);
+      expect(SpellStatusFormatter.subtitle(spell), isNull);
+    });
+
+    test("déjà passé à 'préparé' en base : lançable, ni \"préparé\" ni "
+        'bascule', () {
+      final spell = known(status: 'préparé');
+      expect(SpellStatusFormatter.canCast(spell), isTrue);
+      expect(SpellStatusFormatter.canTogglePrepared(spell), isFalse);
+      expect(SpellStatusFormatter.isUnprepared(spell), isFalse);
+      expect(SpellStatusFormatter.preparationLabel(spell), isNull);
+      expect(SpellStatusFormatter.subtitle(spell), isNull);
+    });
+
+    test('sort mineur : inchangé', () {
+      final spell = known(status: 'connu', level: 0);
+      expect(SpellStatusFormatter.canCast(spell), isTrue);
+      expect(SpellStatusFormatter.canTogglePrepared(spell), isFalse);
+      expect(SpellStatusFormatter.preparationLabel(spell), isNull);
+      expect(SpellStatusFormatter.subtitle(spell), isNull);
+    });
+
+    test('sort inné : inchangé', () {
+      final spell = known(status: 'inné', level: 2);
+      expect(SpellStatusFormatter.canCast(spell), isTrue);
+      expect(SpellStatusFormatter.canTogglePrepared(spell), isFalse);
+      expect(SpellStatusFormatter.preparationLabel(spell), isNull);
+      expect(SpellStatusFormatter.subtitle(spell), isNull);
+    });
+
+    test('sort accordé par une sous-classe : inchangé (sous-titre "toujours '
+        'préparé" conservé)', () {
+      final spell = known(status: 'préparé', grant: SpellGrantSource.domain);
+      expect(SpellStatusFormatter.canCast(spell), isTrue);
+      expect(SpellStatusFormatter.canTogglePrepared(spell), isFalse);
+      expect(SpellStatusFormatter.preparationLabel(spell), isNull);
+      expect(
+        SpellStatusFormatter.subtitle(spell),
+        'toujours préparé · ${SpellGrantSource.domain.label}',
+      );
+    });
+
+    test('requiresPreparation vaut true par défaut (règle historique)', () {
+      expect(_spell(level: 1, status: 'connu').requiresPreparation, isTrue);
+    });
+  });
 }

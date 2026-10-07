@@ -116,14 +116,23 @@ class _PrepareSpellsSheetContentState
   bool _isPrepared(CharacterSpellEntry spell) =>
       _preparedIds.contains(spell.id);
 
-  /// Même décompte que `CharacterDetail.preparedSpellCount` (sorts mineurs
-  /// et sorts accordés exclus), mais sur l'état local [_preparedIds] : le
-  /// compteur suit chaque case cochée sans attendre le rafraîchissement de
+  /// Sorts proposés par la sheet : niveau >= 1, et soit réellement
+  /// préparables ([SpellStatusFormatter.canTogglePrepared] : ni sort inné,
+  /// ni sort d'une classe à sorts connus), soit accordés par une sous-classe
+  /// (affichés cochés, non modifiables). Un sort inné n'est jamais listé :
+  /// le cocher ferait passer sa ligne de 'inné' à 'préparé'.
+  static bool _isListed(CharacterSpellEntry spell) =>
+      spell.level > 0 &&
+      (spell.isAlwaysPrepared || SpellStatusFormatter.canTogglePrepared(spell));
+
+  /// Même décompte que `CharacterDetail.preparedSpellCount` (sorts mineurs,
+  /// innés, accordés et sorts qui ne se préparent pas exclus), mais sur
+  /// l'état local [_preparedIds] : le compteur suit chaque case cochée sans attendre le rafraîchissement de
   /// la fiche.
   int get _preparedCount => widget.spells
       .where(
         (spell) =>
-            spell.level > 0 && !spell.isAlwaysPrepared && _isPrepared(spell),
+            SpellStatusFormatter.canTogglePrepared(spell) && _isPrepared(spell),
       )
       .length;
 
@@ -139,6 +148,9 @@ class _PrepareSpellsSheetContentState
   /// reconstruits : leur statut ne bouge jamais, non togglable.
   CharacterSpellEntry _withCurrentStatus(CharacterSpellEntry spell) {
     if (spell.isAlwaysPrepared) return spell;
+    // Jamais de réécriture du statut d'un sort sans préparation à faire
+    // varier (sort inné notamment) : il ne doit pas ressortir 'connu'.
+    if (!SpellStatusFormatter.canTogglePrepared(spell)) return spell;
     final status = _isPrepared(spell) ? 'préparé' : 'connu';
     if (spell.status == status) return spell;
     return CharacterSpellEntry(
@@ -157,6 +169,7 @@ class _PrepareSpellsSheetContentState
       grantSource: spell.grantSource,
       isPersisted: spell.isPersisted,
       storedStatus: spell.storedStatus,
+      requiresPreparation: spell.requiresPreparation,
     );
   }
 
@@ -181,11 +194,14 @@ class _PrepareSpellsSheetContentState
   Widget build(BuildContext context) {
     // Sorts mineurs exclus (voir la doc de la fonction) : jamais rien à
     // cocher d'utile pour eux (toujours visibles ailleurs, sans notion de
-    // préparation).
+    // préparation). Même raison pour les sorts d'une classe à sorts connus
+    // (`CharacterSpellEntry.requiresPreparation` faux, ex. sorts de Barde
+    // d'un Barde/Clerc) : rien à préparer, ils restent dans l'onglet "Sorts".
+    // Les sorts accordés par une sous-classe restent listés (cochés, figés).
     final candidates = SpellNameFilter.apply(
       spells: widget.spells,
       query: _searchController.text,
-    ).where((spell) => spell.level > 0).map(_withCurrentStatus).toList();
+    ).where(_isListed).map(_withCurrentStatus).toList();
     final groups = SpellsByLevelGrouper.group(candidates);
     final slotsByLevel = {
       for (final slot in widget.spellSlots) slot.level: slot,

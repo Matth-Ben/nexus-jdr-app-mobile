@@ -347,13 +347,17 @@ abstract class CharacterDetail with _$CharacterDetail {
   /// Nombre de sorts (niveau >= 1) que le joueur a lui-même préparés — le
   /// numérateur de tout décompte "sorts préparés X / Y". Exclut les sorts
   /// accordés par une sous-classe ([CharacterSpellEntry.isAlwaysPrepared]) :
-  /// toujours préparés, ils ne comptent pas dans la limite RAW 5e.
+  /// toujours préparés, ils ne comptent pas dans la limite RAW 5e. Exclut
+  /// aussi les sorts qui ne se préparent pas
+  /// ([CharacterSpellEntry.requiresPreparation] faux : sort de Barde d'un
+  /// Barde/Clerc, même si sa ligne vaut 'préparé' en base).
   int get preparedSpellCount => spells
       .where(
         (spell) =>
             spell.level > 0 &&
             spell.status == 'préparé' &&
-            !spell.isAlwaysPrepared,
+            !spell.isAlwaysPrepared &&
+            spell.requiresPreparation,
       )
       .length;
 

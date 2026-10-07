@@ -346,4 +346,128 @@ void main() {
       expect(castEnabled(tester), isTrue);
     });
   });
+
+  // Barde + Clerc : la sheet de préparation ne concerne que les sorts qui se
+  // préparent (`CharacterSpellEntry.requiresPreparation`).
+  group('sorts qui ne se préparent pas (classe à sorts connus)', () {
+    const bardKnown = CharacterSpellEntry(
+      id: 10,
+      name: 'Charme-personne',
+      level: 1,
+      school: 'Enchantement',
+      status: 'connu',
+      requiresPreparation: false,
+    );
+    const bardStoredPrepared = CharacterSpellEntry(
+      id: 11,
+      name: 'Héroïsme',
+      level: 1,
+      school: 'Enchantement',
+      status: 'préparé',
+      requiresPreparation: false,
+    );
+    const all = [
+      _cantrip,
+      _prepared,
+      _unprepared,
+      _granted,
+      bardKnown,
+      bardStoredPrepared,
+    ];
+
+    testWidgets('ne sont pas listés ; les sorts à préparer et les sorts '
+        'accordés le restent', (tester) async {
+      await pumpSheet(tester, spells: all);
+
+      expect(find.text('Charme-personne'), findsNothing);
+      expect(find.text('Héroïsme'), findsNothing);
+      expect(find.text('Bénédiction'), findsOneWidget);
+      expect(find.text('Soins'), findsOneWidget);
+      expect(find.text('Garde divine'), findsOneWidget);
+      expect(find.byType(CheckableOptionTile), findsNWidgets(3));
+    });
+
+    testWidgets('ne sont pas comptés, même au statut "préparé" en base', (
+      tester,
+    ) async {
+      await pumpSheet(tester, spells: all, preparedLimit: 4);
+
+      expect(find.text('1 / 4'), findsOneWidget);
+
+      await tester.tap(find.text('Soins'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 / 4'), findsOneWidget);
+      expect(toggled.map((spell) => spell.name), ['Soins']);
+    });
+
+    testWidgets('introuvables par la recherche', (tester) async {
+      await pumpSheet(tester, spells: all);
+
+      await tester.enterText(find.byType(TextField), 'Charme');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Charme-personne'), findsNothing);
+      expect(find.text('Aucun sort pour « Charme ».'), findsOneWidget);
+    });
+  });
+
+  // Caractérisation d'un défaut connu, antérieur au correctif D03 (rapport
+  // QA) : la sheet ne distingue pas un sort inné d'un sort à préparer. À
+  // inverser quand la sheet exclura les sorts 'inné'.
+  group('sort inné de niveau >= 1 (défaut connu)', () {
+    // Tel que la lecture le produit pour un Clerc : 'inné', origine inconnue,
+    // donc `requiresPreparation` vrai (une classe du personnage prépare).
+    const innate = CharacterSpellEntry(
+      id: 20,
+      name: 'Représailles infernales',
+      level: 2,
+      school: 'Évocation',
+      status: 'inné',
+    );
+
+    testWidgets('personnage qui prépare : non listé, donc ni case à cocher '
+        'ni panneau "Infos" proposant "Préparer ce sort"', (tester) async {
+      await pumpSheet(tester, spells: const [_prepared, innate]);
+
+      expect(find.text('Représailles infernales'), findsNothing);
+      expect(find.byType(CheckableOptionTile), findsOneWidget);
+      expect(find.text('Préparer ce sort'), findsNothing);
+      expect(toggled, isEmpty);
+    });
+
+    testWidgets('jamais compté dans "SORTS PRÉPARÉS X / Y"', (tester) async {
+      await pumpSheet(
+        tester,
+        spells: const [_prepared, innate],
+        preparedLimit: 4,
+      );
+
+      expect(find.text('1 / 4'), findsOneWidget);
+    });
+
+    testWidgets('introuvable par la recherche', (tester) async {
+      await pumpSheet(tester, spells: const [_prepared, innate]);
+
+      await tester.enterText(find.byType(TextField), 'Représailles');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Représailles infernales'), findsNothing);
+    });
+
+    testWidgets('personnage qui ne prépare pas (requiresPreparation faux) : '
+        'non listé', (tester) async {
+      const bardInnate = CharacterSpellEntry(
+        id: 20,
+        name: 'Représailles infernales',
+        level: 2,
+        school: 'Évocation',
+        status: 'inné',
+        requiresPreparation: false,
+      );
+      await pumpSheet(tester, spells: const [_prepared, bardInnate]);
+
+      expect(find.text('Représailles infernales'), findsNothing);
+    });
+  });
 }

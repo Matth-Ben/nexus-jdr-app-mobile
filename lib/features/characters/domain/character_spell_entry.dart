@@ -24,6 +24,7 @@ class CharacterSpellEntry {
     this.grantSource,
     this.isPersisted = true,
     this.storedStatus,
+    this.requiresPreparation = true,
   });
 
   final int id;
@@ -93,6 +94,20 @@ class CharacterSpellEntry {
   /// ligne en base peut valoir 'connu'). `null` = identique à [status]. Sert
   /// aux exports, fidèles aux données stockées.
   final String? storedStatus;
+
+  /// `false` si ce sort vient d'une classe à sorts connus (Barde,
+  /// Ensorceleur, Occultiste, Rôdeur) : il se lance sans être préparé et n'a
+  /// aucune notion de préparation, quel que soit [status] (y compris
+  /// 'préparé', hérité d'une version où il fallait le « préparer » pour le
+  /// lancer). Dérivé à la lecture des classes du personnage et de
+  /// `character_spells.source_class_id`, jamais stocké — voir
+  /// `PreparedSpellsLimit.spellRequiresPreparation`.
+  ///
+  /// `true` par défaut : c'est la règle historique (un sort 'connu' de
+  /// niveau >= 1 attend d'être préparé). Sans effet sur un sort mineur, inné
+  /// ou accordé par une sous-classe, dont les règles passent avant — voir
+  /// `domain/spell_status_formatter.dart`.
+  final bool requiresPreparation;
 
   /// `true` si le sort est accordé par une sous-classe ([grantSource] non
   /// nul) : toujours préparé, exclu du décompte des sorts préparés, non
