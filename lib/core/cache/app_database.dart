@@ -60,6 +60,18 @@ class CachedReferenceEntries extends Table {
 /// (`{"currentHp": ..., "temporaryHp": ...}` ou `{"newXp": ...}`) — voir
 /// `PendingCharacterWriteKind`/`PendingCharacterWrite`
 /// (`core/cache/pending_character_write_queue.dart`).
+///
+/// [failureCount]/[abandoned]/[lastFailureMessage] (schéma v3, D34 du
+/// registre de dette technique) : une entrée refusée par le serveur de façon
+/// non rejouable (contrainte, RLS) incrémente [failureCount] au lieu d'être
+/// retentée indéfiniment ; au-delà du seuil
+/// (`PendingCharacterWriteQueue.abandonAfterConsecutiveFailures`), [abandoned]
+/// passe à `true` et [lastFailureMessage] porte le message à afficher au
+/// joueur (voir `PendingCharacterWriteSyncer.sync`). Une entrée abandonnée
+/// n'est plus relue par `forCharacter`/`allForOwner` (donc plus ni retentée,
+/// ni superposée à la fiche) mais reste en base jusqu'à sa consommation par
+/// `PendingCharacterWriteQueue.consumeAbandonedMessages` (affichage puis
+/// suppression) — jamais perdue avant d'avoir été montrée.
 class PendingCharacterWrites extends Table {
   TextColumn get characterId => text()();
   TextColumn get ownerId => text()();
@@ -72,6 +84,12 @@ class PendingCharacterWrites extends Table {
   // expirer des entrées. (Commentaire `//` et non `///` : `drift_dev` recopie
   // les commentaires de documentation des colonnes dans le code généré.)
   DateTimeColumn get queuedAt => dateTime()();
+  // Refus non rejouables consécutifs (D34) — remis à zéro par `enqueue`
+  // (nouvelle valeur saisie par le joueur = nouvelle tentative), jamais par
+  // un échec réseau transitoire (voir `PendingCharacterWriteSyncer`).
+  IntColumn get failureCount => integer().withDefault(const Constant(0))();
+  BoolColumn get abandoned => boolean().withDefault(const Constant(false))();
+  TextColumn get lastFailureMessage => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {characterId, kind};
@@ -94,7 +112,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   // [PendingCharacterWrites] (schéma v2) a été ajoutée après la première
   // version livrée de ce cache (v1, [CachedReferenceEntries] seule) : une
@@ -102,13 +120,29 @@ class AppDatabase extends _$AppDatabase {
   // la base en v1 ne se retrouve avec la nouvelle table manquante (un simple
   // bump de [schemaVersion] sans `onUpgrade` laisserait le schéma existant
   // tel quel, `drift` ne recréant le schéma complet qu'au tout premier
-  // `onCreate`).
+  // `onCreate`). [failureCount]/[abandoned]/[lastFailureMessage] (schéma v3,
+  // D34) suivent le même principe : trois colonnes ajoutées à une table
+  // existante plutôt qu'une nouvelle table, migration de v2 par `addColumn`.
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         await m.createTable(pendingCharacterWrites);
+      }
+      if (from < 3) {
+        await m.addColumn(
+          pendingCharacterWrites,
+          pendingCharacterWrites.failureCount,
+        );
+        await m.addColumn(
+          pendingCharacterWrites,
+          pendingCharacterWrites.abandoned,
+        );
+        await m.addColumn(
+          pendingCharacterWrites,
+          pendingCharacterWrites.lastFailureMessage,
+        );
       }
     },
   );

@@ -1135,6 +1135,253 @@ void main() {
     );
   });
 
+  // D33 : verrou partagé entre le dépôt (écriture en ligne) et le
+  // synchroniseur (écriture de la file), par (characterId, kind) — plus
+  // aucun PATCH du même type en vol en même temps pour le même personnage.
+  group('D33 : verrou partagé repo/synchro', () {
+    test(
+      'deux ajustements PV en ligne concurrents pour le même personnage ne '
+      'partent plus en parallèle : le second attend la confirmation du '
+      'premier avant d\'envoyer son propre PATCH',
+      () async {
+        await openOnlineOnce();
+
+        final gate = Completer<void>();
+        server.characterWriteGate = gate;
+        final first = repository.updateHp(
+          characterId: _characterId,
+          currentHp: 8,
+          temporaryHp: 0,
+        );
+        await pumpEventQueue();
+        expect(
+          server.requests.where((r) => r == 'PATCH characters').length,
+          1,
+          reason: 'le premier PATCH est parti et en attente de réponse',
+        );
+
+        final second = repository.updateHp(
+          characterId: _characterId,
+          currentHp: 5,
+          temporaryHp: 0,
+        );
+        await pumpEventQueue();
+        expect(
+          server.requests.where((r) => r == 'PATCH characters').length,
+          1,
+          reason:
+              'le second appel est bloqué par le verrou (D33) : il ne doit '
+              'pas encore avoir envoyé son propre PATCH',
+        );
+
+        gate.complete();
+        expect(await first, WriteOutcome.synced);
+        expect(await second, WriteOutcome.synced);
+
+        expect(server.patchBodies, [
+          {'current_hp': 8, 'temporary_hp': 0},
+          {'current_hp': 5, 'temporary_hp': 0},
+        ]);
+        expect(server.characterRow['current_hp'], 5);
+      },
+    );
+
+    test(
+      'une synchronisation en vol et un ajustement en ligne du même type '
+      'pour le même personnage ne partent plus en parallèle : l\'ajustement '
+      'en ligne attend la fin de la synchro avant d\'envoyer son PATCH, et '
+      'le résultat final reflète bien le dernier (le plus récent)',
+      () async {
+        await openOnlineOnce();
+        goOffline();
+        await repository.updateHp(
+          characterId: _characterId,
+          currentHp: 7,
+          temporaryHp: 0,
+        );
+
+        goOnline();
+        final gate = Completer<void>();
+        server.characterWriteGate = gate;
+        final syncing = syncer.sync();
+        await pumpEventQueue();
+        expect(
+          server.requests.where((r) => r == 'PATCH characters').length,
+          1,
+          reason: 'la synchro a envoyé son PATCH (7) et attend la réponse',
+        );
+
+        final online = repository.updateHp(
+          characterId: _characterId,
+          currentHp: 3,
+          temporaryHp: 0,
+        );
+        await pumpEventQueue();
+        expect(
+          server.requests.where((r) => r == 'PATCH characters').length,
+          1,
+          reason:
+              'bloqué par le verrou (D33) : ne doit pas partir avant la fin '
+              'de la synchro en vol',
+        );
+
+        gate.complete();
+        expect(await syncing, {_characterId});
+        expect(await online, WriteOutcome.synced);
+
+        expect(server.patchBodies, [
+          {'current_hp': 7, 'temporary_hp': 0},
+          {'current_hp': 3, 'temporary_hp': 0},
+        ]);
+        expect(
+          server.characterRow['current_hp'],
+          3,
+          reason:
+              'le PATCH le plus récent (en ligne, 3) part bien après celui '
+              'de la synchro (7), jamais en parallèle ni dans le désordre',
+        );
+        expect(await pendingWrites.allForOwner(_ownerId), isEmpty);
+      },
+    );
+  });
+
+  // D34 : compteur d'échecs, abandon après refus non rejouables consécutifs,
+  // message consommable par le joueur.
+  group('D34 : refus non rejouable, abandon après le seuil', () {
+    test(
+      'un refus non rejouable (RLS) répété SOUS le seuil est retenté à '
+      'chaque synchro, sans être abandonné',
+      () async {
+        await openOnlineOnce();
+        goOffline();
+        await repository.updateHp(
+          characterId: _characterId,
+          currentHp: 7,
+          temporaryHp: 0,
+        );
+
+        goOnline();
+        server.network = _Network.writesRejected;
+        server.writeErrorCode = '42501';
+
+        for (
+          var i = 0;
+          i < PendingCharacterWriteQueue.abandonAfterConsecutiveFailures - 1;
+          i++
+        ) {
+          expect(await syncer.sync(), isEmpty);
+        }
+
+        expect(
+          await pendingPayload(PendingCharacterWriteKind.hp),
+          {'currentHp': 7, 'temporaryHp': 0},
+          reason: "toujours en file : le seuil n'est pas encore atteint",
+        );
+        expect(
+          await pendingWrites.consumeAbandonedMessages(ownerId: _ownerId),
+          isEmpty,
+        );
+      },
+    );
+
+    test(
+      "après abandonAfterConsecutiveFailures refus non rejouables "
+      "consécutifs, l'entrée est abandonnée : plus jamais retentée, plus "
+      'superposée à la fiche, message consommable exactement une fois',
+      () async {
+        await openOnlineOnce();
+        goOffline();
+        await repository.updateHp(
+          characterId: _characterId,
+          currentHp: 7,
+          temporaryHp: 0,
+        );
+
+        goOnline();
+        server.network = _Network.writesRejected;
+        server.writeErrorCode = '23503';
+
+        for (
+          var i = 0;
+          i < PendingCharacterWriteQueue.abandonAfterConsecutiveFailures;
+          i++
+        ) {
+          expect(await syncer.sync(), isEmpty);
+        }
+
+        expect(
+          await pendingWrites.allForOwner(_ownerId),
+          isEmpty,
+          reason: 'abandonnée : ne doit plus apparaître comme en attente',
+        );
+
+        // Le serveur redevient joignable : plus aucun PATCH n'est retenté
+        // pour cette entrée abandonnée.
+        server.network = _Network.online;
+        final patchCountBefore = server.patchBodies.length;
+        expect(await syncer.sync(), isEmpty);
+        expect(server.patchBodies.length, patchCountBefore);
+
+        // La fiche ne la superpose plus : valeur serveur d'origine, jamais
+        // écrasée puisque jamais réellement envoyée.
+        final detail = await repository.fetchCharacterDetail(_characterId);
+        expect(detail.currentHp, 10);
+
+        final messages = await pendingWrites.consumeAbandonedMessages(
+          ownerId: _ownerId,
+        );
+        expect(messages, hasLength(1));
+        expect(messages.single, contains('PV'));
+        expect(
+          await pendingWrites.consumeAbandonedMessages(ownerId: _ownerId),
+          isEmpty,
+          reason: 'consommé une fois : ne doit plus jamais être signalé',
+        );
+      },
+    );
+
+    test(
+      "un refus générique (transitoire, aucun code de contrainte/RLS) "
+      "n'est jamais compté comme non rejouable : jamais abandonné même "
+      'au-delà du seuil, toujours retenté (D32)',
+      () async {
+        await openOnlineOnce();
+        goOffline();
+        await repository.updateHp(
+          characterId: _characterId,
+          currentHp: 7,
+          temporaryHp: 0,
+        );
+
+        goOnline();
+        // Code par défaut du double : 'PGRST000', générique.
+        server.network = _Network.writesRejected;
+
+        for (
+          var i = 0;
+          i < PendingCharacterWriteQueue.abandonAfterConsecutiveFailures + 2;
+          i++
+        ) {
+          expect(await syncer.sync(), isEmpty);
+        }
+
+        expect(await pendingPayload(PendingCharacterWriteKind.hp), {
+          'currentHp': 7,
+          'temporaryHp': 0,
+        });
+        expect(
+          await pendingWrites.consumeAbandonedMessages(ownerId: _ownerId),
+          isEmpty,
+        );
+
+        // Le réseau redevient disponible : la synchro aboutit normalement.
+        server.network = _Network.online;
+        expect(await syncer.sync(), {_characterId});
+        expect(server.characterRow['current_hp'], 7);
+      },
+    );
+  });
+
   group('circuit complet avec characterDetailProvider et le coordinateur de '
       'synchro (fiche ouverte/fermée = provider écouté/libéré)', () {
     late ProviderContainer container;
@@ -1285,6 +1532,13 @@ class _FakeServer {
   /// puis sa réponse attend ce verrou (écriture en ligne "en vol").
   Completer<void>? characterWriteGate;
 
+  /// Code d'erreur Postgres/PostgREST renvoyé quand [network] vaut
+  /// [_Network.writesRejected] — `'PGRST000'` (erreur générique, transitoire
+  /// du point de vue de `PendingCharacterWriteSyncer._isNonRetryable`) par
+  /// défaut ; les tests D34 le changent pour simuler un refus non rejouable
+  /// (ex. `'42501'` RLS, `'23503'` contrainte de clé étrangère).
+  String writeErrorCode = 'PGRST000';
+
   Map<String, dynamic> characterRow = {
     'id': _characterId,
     'name': 'Aragorn',
@@ -1364,7 +1618,7 @@ class _FakeServer {
       if (network == _Network.writesRejected) {
         return _json(request, {
           'message': 'Écriture refusée (double de test).',
-          'code': 'PGRST000',
+          'code': writeErrorCode,
         }, statusCode: 500);
       }
       if (table == 'characters') {

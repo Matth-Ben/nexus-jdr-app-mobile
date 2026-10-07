@@ -1134,6 +1134,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// synchronisation pas encore passée, ou en échec) — `null` s'il n'y en a
   /// pas. À passer à [_recordConfirmedWrite] une fois l'écriture réussie.
   ///
+  /// Appelée uniquement depuis l'intérieur de
+  /// `PendingCharacterWriteQueue.runExclusive` (voir `updateHp`/`addXp`) :
+  /// aucune synchronisation de la file ne peut donc être en vol pour la même
+  /// clé `(characterId, kind)` entre cette lecture et la fin de l'écriture en
+  /// ligne qui suit (D33 du registre de dette technique) — sans ce verrou,
+  /// cette lecture pouvait être périmée dès la ligne suivante.
+  ///
   /// Lecture locale uniquement, best-effort : en cas d'échec, rien ne sera
   /// retiré de la file après l'écriture.
   Future<PendingCharacterWrite?> _pendingWriteBeforeOnlineWrite({
@@ -1219,27 +1226,35 @@ class SupabaseCharacterRepository implements CharacterRepository {
       return WriteOutcome.queued;
     }
 
-    final supersededWrite = await _pendingWriteBeforeOnlineWrite(
-      characterId: characterId,
-      ownerId: ownerId,
-      kind: PendingCharacterWriteKind.hp,
-    );
-
+    // Verrouillé (D33) : jamais en vol en même temps qu'une synchronisation
+    // de la file pour ce même personnage et ce même type — voir la doc de
+    // classe de `PendingCharacterWriteQueue.runExclusive`.
     try {
-      final columns = <String, dynamic>{
-        'current_hp': currentHp,
-        'temporary_hp': temporaryHp,
-      };
-      await _client
-          .from('characters')
-          .update(columns)
-          .eq('id', characterId)
-          .eq('owner_id', ownerId);
-      await _recordConfirmedWrite(
+      await _pendingWrites.runExclusive(
         characterId: characterId,
-        ownerId: ownerId,
-        columns: columns,
-        supersededWrite: supersededWrite,
+        kind: PendingCharacterWriteKind.hp,
+        action: () async {
+          final supersededWrite = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.hp,
+          );
+          final columns = <String, dynamic>{
+            'current_hp': currentHp,
+            'temporary_hp': temporaryHp,
+          };
+          await _client
+              .from('characters')
+              .update(columns)
+              .eq('id', characterId)
+              .eq('owner_id', ownerId);
+          await _recordConfirmedWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            columns: columns,
+            supersededWrite: supersededWrite,
+          );
+        },
       );
       return WriteOutcome.synced;
     } on PostgrestException catch (error) {
@@ -1584,24 +1599,30 @@ class SupabaseCharacterRepository implements CharacterRepository {
       return WriteOutcome.queued;
     }
 
-    final supersededWrite = await _pendingWriteBeforeOnlineWrite(
-      characterId: characterId,
-      ownerId: ownerId,
-      kind: PendingCharacterWriteKind.xp,
-    );
-
+    // Verrouillé (D33) : même rationale que `updateHp`.
     try {
-      final columns = <String, dynamic>{'xp': newXp};
-      await _client
-          .from('characters')
-          .update(columns)
-          .eq('id', characterId)
-          .eq('owner_id', ownerId);
-      await _recordConfirmedWrite(
+      await _pendingWrites.runExclusive(
         characterId: characterId,
-        ownerId: ownerId,
-        columns: columns,
-        supersededWrite: supersededWrite,
+        kind: PendingCharacterWriteKind.xp,
+        action: () async {
+          final supersededWrite = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.xp,
+          );
+          final columns = <String, dynamic>{'xp': newXp};
+          await _client
+              .from('characters')
+              .update(columns)
+              .eq('id', characterId)
+              .eq('owner_id', ownerId);
+          await _recordConfirmedWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            columns: columns,
+            supersededWrite: supersededWrite,
+          );
+        },
       );
       return WriteOutcome.synced;
     } on PostgrestException catch (error) {

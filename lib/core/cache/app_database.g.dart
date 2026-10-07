@@ -337,6 +337,44 @@ class $PendingCharacterWritesTable extends PendingCharacterWrites
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _failureCountMeta = const VerificationMeta(
+    'failureCount',
+  );
+  @override
+  late final GeneratedColumn<int> failureCount = GeneratedColumn<int>(
+    'failure_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _abandonedMeta = const VerificationMeta(
+    'abandoned',
+  );
+  @override
+  late final GeneratedColumn<bool> abandoned = GeneratedColumn<bool>(
+    'abandoned',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("abandoned" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _lastFailureMessageMeta =
+      const VerificationMeta('lastFailureMessage');
+  @override
+  late final GeneratedColumn<String> lastFailureMessage =
+      GeneratedColumn<String>(
+        'last_failure_message',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     characterId,
@@ -344,6 +382,9 @@ class $PendingCharacterWritesTable extends PendingCharacterWrites
     kind,
     payload,
     queuedAt,
+    failureCount,
+    abandoned,
+    lastFailureMessage,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -400,6 +441,30 @@ class $PendingCharacterWritesTable extends PendingCharacterWrites
     } else if (isInserting) {
       context.missing(_queuedAtMeta);
     }
+    if (data.containsKey('failure_count')) {
+      context.handle(
+        _failureCountMeta,
+        failureCount.isAcceptableOrUnknown(
+          data['failure_count']!,
+          _failureCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('abandoned')) {
+      context.handle(
+        _abandonedMeta,
+        abandoned.isAcceptableOrUnknown(data['abandoned']!, _abandonedMeta),
+      );
+    }
+    if (data.containsKey('last_failure_message')) {
+      context.handle(
+        _lastFailureMessageMeta,
+        lastFailureMessage.isAcceptableOrUnknown(
+          data['last_failure_message']!,
+          _lastFailureMessageMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -429,6 +494,18 @@ class $PendingCharacterWritesTable extends PendingCharacterWrites
         DriftSqlType.dateTime,
         data['${effectivePrefix}queued_at'],
       )!,
+      failureCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}failure_count'],
+      )!,
+      abandoned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}abandoned'],
+      )!,
+      lastFailureMessage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_failure_message'],
+      ),
     );
   }
 
@@ -445,12 +522,18 @@ class PendingCharacterWrite extends DataClass
   final String kind;
   final String payload;
   final DateTime queuedAt;
+  final int failureCount;
+  final bool abandoned;
+  final String? lastFailureMessage;
   const PendingCharacterWrite({
     required this.characterId,
     required this.ownerId,
     required this.kind,
     required this.payload,
     required this.queuedAt,
+    required this.failureCount,
+    required this.abandoned,
+    this.lastFailureMessage,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -460,6 +543,11 @@ class PendingCharacterWrite extends DataClass
     map['kind'] = Variable<String>(kind);
     map['payload'] = Variable<String>(payload);
     map['queued_at'] = Variable<DateTime>(queuedAt);
+    map['failure_count'] = Variable<int>(failureCount);
+    map['abandoned'] = Variable<bool>(abandoned);
+    if (!nullToAbsent || lastFailureMessage != null) {
+      map['last_failure_message'] = Variable<String>(lastFailureMessage);
+    }
     return map;
   }
 
@@ -470,6 +558,11 @@ class PendingCharacterWrite extends DataClass
       kind: Value(kind),
       payload: Value(payload),
       queuedAt: Value(queuedAt),
+      failureCount: Value(failureCount),
+      abandoned: Value(abandoned),
+      lastFailureMessage: lastFailureMessage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastFailureMessage),
     );
   }
 
@@ -484,6 +577,11 @@ class PendingCharacterWrite extends DataClass
       kind: serializer.fromJson<String>(json['kind']),
       payload: serializer.fromJson<String>(json['payload']),
       queuedAt: serializer.fromJson<DateTime>(json['queuedAt']),
+      failureCount: serializer.fromJson<int>(json['failureCount']),
+      abandoned: serializer.fromJson<bool>(json['abandoned']),
+      lastFailureMessage: serializer.fromJson<String?>(
+        json['lastFailureMessage'],
+      ),
     );
   }
   @override
@@ -495,6 +593,9 @@ class PendingCharacterWrite extends DataClass
       'kind': serializer.toJson<String>(kind),
       'payload': serializer.toJson<String>(payload),
       'queuedAt': serializer.toJson<DateTime>(queuedAt),
+      'failureCount': serializer.toJson<int>(failureCount),
+      'abandoned': serializer.toJson<bool>(abandoned),
+      'lastFailureMessage': serializer.toJson<String?>(lastFailureMessage),
     };
   }
 
@@ -504,12 +605,20 @@ class PendingCharacterWrite extends DataClass
     String? kind,
     String? payload,
     DateTime? queuedAt,
+    int? failureCount,
+    bool? abandoned,
+    Value<String?> lastFailureMessage = const Value.absent(),
   }) => PendingCharacterWrite(
     characterId: characterId ?? this.characterId,
     ownerId: ownerId ?? this.ownerId,
     kind: kind ?? this.kind,
     payload: payload ?? this.payload,
     queuedAt: queuedAt ?? this.queuedAt,
+    failureCount: failureCount ?? this.failureCount,
+    abandoned: abandoned ?? this.abandoned,
+    lastFailureMessage: lastFailureMessage.present
+        ? lastFailureMessage.value
+        : this.lastFailureMessage,
   );
   PendingCharacterWrite copyWithCompanion(
     PendingCharacterWritesCompanion data,
@@ -522,6 +631,13 @@ class PendingCharacterWrite extends DataClass
       kind: data.kind.present ? data.kind.value : this.kind,
       payload: data.payload.present ? data.payload.value : this.payload,
       queuedAt: data.queuedAt.present ? data.queuedAt.value : this.queuedAt,
+      failureCount: data.failureCount.present
+          ? data.failureCount.value
+          : this.failureCount,
+      abandoned: data.abandoned.present ? data.abandoned.value : this.abandoned,
+      lastFailureMessage: data.lastFailureMessage.present
+          ? data.lastFailureMessage.value
+          : this.lastFailureMessage,
     );
   }
 
@@ -532,14 +648,25 @@ class PendingCharacterWrite extends DataClass
           ..write('ownerId: $ownerId, ')
           ..write('kind: $kind, ')
           ..write('payload: $payload, ')
-          ..write('queuedAt: $queuedAt')
+          ..write('queuedAt: $queuedAt, ')
+          ..write('failureCount: $failureCount, ')
+          ..write('abandoned: $abandoned, ')
+          ..write('lastFailureMessage: $lastFailureMessage')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(characterId, ownerId, kind, payload, queuedAt);
+  int get hashCode => Object.hash(
+    characterId,
+    ownerId,
+    kind,
+    payload,
+    queuedAt,
+    failureCount,
+    abandoned,
+    lastFailureMessage,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -548,7 +675,10 @@ class PendingCharacterWrite extends DataClass
           other.ownerId == this.ownerId &&
           other.kind == this.kind &&
           other.payload == this.payload &&
-          other.queuedAt == this.queuedAt);
+          other.queuedAt == this.queuedAt &&
+          other.failureCount == this.failureCount &&
+          other.abandoned == this.abandoned &&
+          other.lastFailureMessage == this.lastFailureMessage);
 }
 
 class PendingCharacterWritesCompanion
@@ -558,6 +688,9 @@ class PendingCharacterWritesCompanion
   final Value<String> kind;
   final Value<String> payload;
   final Value<DateTime> queuedAt;
+  final Value<int> failureCount;
+  final Value<bool> abandoned;
+  final Value<String?> lastFailureMessage;
   final Value<int> rowid;
   const PendingCharacterWritesCompanion({
     this.characterId = const Value.absent(),
@@ -565,6 +698,9 @@ class PendingCharacterWritesCompanion
     this.kind = const Value.absent(),
     this.payload = const Value.absent(),
     this.queuedAt = const Value.absent(),
+    this.failureCount = const Value.absent(),
+    this.abandoned = const Value.absent(),
+    this.lastFailureMessage = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PendingCharacterWritesCompanion.insert({
@@ -573,6 +709,9 @@ class PendingCharacterWritesCompanion
     required String kind,
     required String payload,
     required DateTime queuedAt,
+    this.failureCount = const Value.absent(),
+    this.abandoned = const Value.absent(),
+    this.lastFailureMessage = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : characterId = Value(characterId),
        ownerId = Value(ownerId),
@@ -585,6 +724,9 @@ class PendingCharacterWritesCompanion
     Expression<String>? kind,
     Expression<String>? payload,
     Expression<DateTime>? queuedAt,
+    Expression<int>? failureCount,
+    Expression<bool>? abandoned,
+    Expression<String>? lastFailureMessage,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -593,6 +735,10 @@ class PendingCharacterWritesCompanion
       if (kind != null) 'kind': kind,
       if (payload != null) 'payload': payload,
       if (queuedAt != null) 'queued_at': queuedAt,
+      if (failureCount != null) 'failure_count': failureCount,
+      if (abandoned != null) 'abandoned': abandoned,
+      if (lastFailureMessage != null)
+        'last_failure_message': lastFailureMessage,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -603,6 +749,9 @@ class PendingCharacterWritesCompanion
     Value<String>? kind,
     Value<String>? payload,
     Value<DateTime>? queuedAt,
+    Value<int>? failureCount,
+    Value<bool>? abandoned,
+    Value<String?>? lastFailureMessage,
     Value<int>? rowid,
   }) {
     return PendingCharacterWritesCompanion(
@@ -611,6 +760,9 @@ class PendingCharacterWritesCompanion
       kind: kind ?? this.kind,
       payload: payload ?? this.payload,
       queuedAt: queuedAt ?? this.queuedAt,
+      failureCount: failureCount ?? this.failureCount,
+      abandoned: abandoned ?? this.abandoned,
+      lastFailureMessage: lastFailureMessage ?? this.lastFailureMessage,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -633,6 +785,15 @@ class PendingCharacterWritesCompanion
     if (queuedAt.present) {
       map['queued_at'] = Variable<DateTime>(queuedAt.value);
     }
+    if (failureCount.present) {
+      map['failure_count'] = Variable<int>(failureCount.value);
+    }
+    if (abandoned.present) {
+      map['abandoned'] = Variable<bool>(abandoned.value);
+    }
+    if (lastFailureMessage.present) {
+      map['last_failure_message'] = Variable<String>(lastFailureMessage.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -647,6 +808,9 @@ class PendingCharacterWritesCompanion
           ..write('kind: $kind, ')
           ..write('payload: $payload, ')
           ..write('queuedAt: $queuedAt, ')
+          ..write('failureCount: $failureCount, ')
+          ..write('abandoned: $abandoned, ')
+          ..write('lastFailureMessage: $lastFailureMessage, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -858,6 +1022,9 @@ typedef $$PendingCharacterWritesTableCreateCompanionBuilder =
       required String kind,
       required String payload,
       required DateTime queuedAt,
+      Value<int> failureCount,
+      Value<bool> abandoned,
+      Value<String?> lastFailureMessage,
       Value<int> rowid,
     });
 typedef $$PendingCharacterWritesTableUpdateCompanionBuilder =
@@ -867,6 +1034,9 @@ typedef $$PendingCharacterWritesTableUpdateCompanionBuilder =
       Value<String> kind,
       Value<String> payload,
       Value<DateTime> queuedAt,
+      Value<int> failureCount,
+      Value<bool> abandoned,
+      Value<String?> lastFailureMessage,
       Value<int> rowid,
     });
 
@@ -901,6 +1071,21 @@ class $$PendingCharacterWritesTableFilterComposer
 
   ColumnFilters<DateTime> get queuedAt => $composableBuilder(
     column: $table.queuedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get failureCount => $composableBuilder(
+    column: $table.failureCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get abandoned => $composableBuilder(
+    column: $table.abandoned,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastFailureMessage => $composableBuilder(
+    column: $table.lastFailureMessage,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -938,6 +1123,21 @@ class $$PendingCharacterWritesTableOrderingComposer
     column: $table.queuedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get failureCount => $composableBuilder(
+    column: $table.failureCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get abandoned => $composableBuilder(
+    column: $table.abandoned,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastFailureMessage => $composableBuilder(
+    column: $table.lastFailureMessage,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$PendingCharacterWritesTableAnnotationComposer
@@ -965,6 +1165,19 @@ class $$PendingCharacterWritesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get queuedAt =>
       $composableBuilder(column: $table.queuedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get failureCount => $composableBuilder(
+    column: $table.failureCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get abandoned =>
+      $composableBuilder(column: $table.abandoned, builder: (column) => column);
+
+  GeneratedColumn<String> get lastFailureMessage => $composableBuilder(
+    column: $table.lastFailureMessage,
+    builder: (column) => column,
+  );
 }
 
 class $$PendingCharacterWritesTableTableManager
@@ -1018,6 +1231,9 @@ class $$PendingCharacterWritesTableTableManager
                 Value<String> kind = const Value.absent(),
                 Value<String> payload = const Value.absent(),
                 Value<DateTime> queuedAt = const Value.absent(),
+                Value<int> failureCount = const Value.absent(),
+                Value<bool> abandoned = const Value.absent(),
+                Value<String?> lastFailureMessage = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PendingCharacterWritesCompanion(
                 characterId: characterId,
@@ -1025,6 +1241,9 @@ class $$PendingCharacterWritesTableTableManager
                 kind: kind,
                 payload: payload,
                 queuedAt: queuedAt,
+                failureCount: failureCount,
+                abandoned: abandoned,
+                lastFailureMessage: lastFailureMessage,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1034,6 +1253,9 @@ class $$PendingCharacterWritesTableTableManager
                 required String kind,
                 required String payload,
                 required DateTime queuedAt,
+                Value<int> failureCount = const Value.absent(),
+                Value<bool> abandoned = const Value.absent(),
+                Value<String?> lastFailureMessage = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PendingCharacterWritesCompanion.insert(
                 characterId: characterId,
@@ -1041,6 +1263,9 @@ class $$PendingCharacterWritesTableTableManager
                 kind: kind,
                 payload: payload,
                 queuedAt: queuedAt,
+                failureCount: failureCount,
+                abandoned: abandoned,
+                lastFailureMessage: lastFailureMessage,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
