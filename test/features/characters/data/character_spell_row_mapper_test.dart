@@ -60,15 +60,17 @@ void main() {
       expect(CharacterSpellRowMapper.parseStatuses(rows), {1: 'inné'});
     });
 
-    test('lignes ordinaires de statuts différents : la dernière lue '
-        "l'emporte (inchangé)", () {
+    test("lignes ordinaires de statuts différents ('connu'/'préparé') : "
+        "'préparé' l'emporte toujours, quel que soit l'ordre des lignes — "
+        'corrigé (D10) : avant ce correctif, la dernière ligne lue '
+        "l'emportait (ordre non garanti côté PostgREST)", () {
       final rows = [
         {'spell_id': 1, 'status': 'connu'},
         {'spell_id': 1, 'status': 'préparé'},
       ];
       expect(CharacterSpellRowMapper.parseStatuses(rows), {1: 'préparé'});
       expect(CharacterSpellRowMapper.parseStatuses(rows.reversed.toList()), {
-        1: 'connu',
+        1: 'préparé',
       });
     });
 
