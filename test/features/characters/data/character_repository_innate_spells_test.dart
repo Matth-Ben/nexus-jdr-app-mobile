@@ -338,7 +338,8 @@ void main() {
 
     test(
       'lignes ordinaires de statuts différents ("connu" + "préparé") : '
-      'la dernière lue l\'emporte (comportement historique inchangé)',
+      '"préparé" l\'emporte toujours, quel que soit l\'ordre des lignes — '
+      "corrigé (D10) : avant ce correctif, la dernière ligne lue l'emportait",
       () async {
         final preparedLast = await repository(
           rows: rowsWith([spellLine(30, 'connu'), spellLine(30, 'préparé')]),
@@ -356,7 +357,7 @@ void main() {
         );
         expect(
           spellOf(await knownLast.fetchCharacterDetail(characterId), 30).status,
-          'connu',
+          'préparé',
         );
       },
     );

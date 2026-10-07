@@ -13,6 +13,7 @@ import 'package:personnages/features/character_creation/domain/item_option.dart'
 import 'package:personnages/features/character_creation/domain/race_option.dart';
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/skill_option.dart';
+import 'package:personnages/features/character_creation/domain/spell_option.dart';
 import 'package:personnages/features/character_creation/domain/subrace_option.dart';
 import 'package:personnages/features/xml_import/domain/xml_character_import_resolved.dart';
 import 'package:personnages/features/xml_import/domain/xml_field_resolution.dart';
@@ -65,6 +66,30 @@ const _alignmentCatalog = AlignmentCatalog(
     AlignmentOption(id: 30, name: 'Loyal bon'),
     AlignmentOption(id: 31, name: 'Neutre'),
   ],
+);
+
+// Lanceur à liste complète (voir `prepared_caster_spell_list.dart`) : sert à
+// vérifier que le statut écrit à l'import ne dépend pas de la classe.
+const _paladinClass = ClassOption(
+  id: 7,
+  name: 'Paladin',
+  description: '',
+  hitDie: 10,
+);
+
+const _spellA = SpellOption(
+  id: 100,
+  name: 'Bénédiction',
+  level: 1,
+  school: 'Enchantement',
+  castingTime: '1 action',
+);
+const _spellB = SpellOption(
+  id: 101,
+  name: 'Lumière',
+  level: 0,
+  school: 'Évocation',
+  castingTime: '1 action',
 );
 
 XmlCharacterImportResolved _resolved({
@@ -371,6 +396,121 @@ void main() {
 
       expect(data.inventoryLines, hasLength(2));
       expect(data.inventoryLines.every((line) => line.itemId == null), isTrue);
+    });
+  });
+
+  group('XmlImportSaveDataResolver.resolve — sorts (D10)', () {
+    test('sort connu écrit avec le statut "connu" et la classe d\'origine, '
+        "même pour un lanceur à liste complète (Clerc/Druide/Paladin) : "
+        "l'export aidedd.org ne distingue pas les sorts accessibles des "
+        'sorts réellement préparés pour ces classes, voir la documentation '
+        'de `_resolveSpellLines` — ce n\'est pas une perte de donnée, rien '
+        "n'indique un statut de préparation dans le fichier source", () {
+      final data = XmlImportSaveDataResolver.resolve(
+        resolved: _resolved(
+          characterClass: const XmlFieldResolution.recognized(_paladinClass),
+          knownSpells: const [
+            (level: 1, resolution: XmlFieldResolution.recognized(_spellA)),
+          ],
+        ),
+        itemCatalog: _itemCatalog,
+        skillCatalog: _skillCatalog,
+        alignmentCatalog: _alignmentCatalog,
+      );
+
+      expect(data.spellLines, hasLength(1));
+      expect(data.spellLines.single.spellId, _spellA.id);
+      expect(data.spellLines.single.status, 'connu');
+      expect(data.spellLines.single.sourceClassId, _paladinClass.id);
+    });
+
+    test('sort connu ecrit avec le statut connu pour un Magicien aussi '
+        '(grimoire, pas liste de classe complete comme Clerc, Druide ou '
+        'Paladin) : ce resolveur ne differencie aucune classe (voir '
+        '_resolveSpellLines), la regle est la meme, verifiee ici '
+        'specifiquement pour ne pas la confondre avec le cas Paladin '
+        'ci-dessus', () {
+      final data = XmlImportSaveDataResolver.resolve(
+        resolved: _resolved(
+          characterClass: const XmlFieldResolution.recognized(_classOption),
+          knownSpells: const [
+            (level: 1, resolution: XmlFieldResolution.recognized(_spellA)),
+          ],
+        ),
+        itemCatalog: _itemCatalog,
+        skillCatalog: _skillCatalog,
+        alignmentCatalog: _alignmentCatalog,
+      );
+
+      expect(data.spellLines, hasLength(1));
+      expect(data.spellLines.single.spellId, _spellA.id);
+      expect(data.spellLines.single.status, 'connu');
+      expect(data.spellLines.single.sourceClassId, _classOption.id);
+    });
+
+    test('sort inné écrit avec le statut "inné" et la classe d\'origine', () {
+      final data = XmlImportSaveDataResolver.resolve(
+        resolved: _resolved(
+          innateSpells: const [
+            (level: 0, resolution: XmlFieldResolution.recognized(_spellB)),
+          ],
+        ),
+        itemCatalog: _itemCatalog,
+        skillCatalog: _skillCatalog,
+        alignmentCatalog: _alignmentCatalog,
+      );
+
+      expect(data.spellLines, hasLength(1));
+      expect(data.spellLines.single.spellId, _spellB.id);
+      expect(data.spellLines.single.status, 'inné');
+      expect(data.spellLines.single.sourceClassId, _classOption.id);
+    });
+
+    test('un même sort à la fois inné et connu (sort de départ retrouvé '
+        'dans la liste de sorts connus) produit deux lignes distinctes, '
+        'volontairement non dédoublonnées', () {
+      final data = XmlImportSaveDataResolver.resolve(
+        resolved: _resolved(
+          innateSpells: const [
+            (level: 1, resolution: XmlFieldResolution.recognized(_spellA)),
+          ],
+          knownSpells: const [
+            (level: 1, resolution: XmlFieldResolution.recognized(_spellA)),
+          ],
+        ),
+        itemCatalog: _itemCatalog,
+        skillCatalog: _skillCatalog,
+        alignmentCatalog: _alignmentCatalog,
+      );
+
+      expect(data.spellLines, hasLength(2));
+      expect(
+        data.spellLines.every((line) => line.spellId == _spellA.id),
+        isTrue,
+      );
+      expect(data.spellLines.map((line) => line.status).toSet(), {
+        'inné',
+        'connu',
+      });
+    });
+
+    test('un sort non reconnu au niveau aidedd est omis (spell_id non '
+        'nullable en base)', () {
+      final data = XmlImportSaveDataResolver.resolve(
+        resolved: _resolved(
+          knownSpells: const [
+            (
+              level: 1,
+              resolution: XmlFieldResolution.unrecognized('Sort maison'),
+            ),
+          ],
+        ),
+        itemCatalog: _itemCatalog,
+        skillCatalog: _skillCatalog,
+        alignmentCatalog: _alignmentCatalog,
+      );
+
+      expect(data.spellLines, isEmpty);
     });
   });
 
