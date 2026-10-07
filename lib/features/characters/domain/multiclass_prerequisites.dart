@@ -66,6 +66,14 @@ abstract final class MulticlassPrerequisites {
     ],
   };
 
+  /// `true` si [className] est l'une des 12 classes RAW couvertes par
+  /// [_requirementsByClassName] — seule énumération des classes connues du
+  /// domaine `characters`. Sert à distinguer une classe connue d'un nom non
+  /// reconnu (classe non modélisée, repli « Classe #id »), voir
+  /// `PreparedSpellsLimit.spellRequiresPreparation`.
+  static bool isKnownClass(String className) =>
+      _requirementsByClassName.containsKey(className);
+
   /// `true` ssi au moins une clause de [className] est entièrement remplie
   /// par [scoresByAbilityId] (`ability_id` -> score final). `false` pour une
   /// classe absente de [_requirementsByClassName] (ne devrait pas arriver

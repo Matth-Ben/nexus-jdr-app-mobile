@@ -12,10 +12,12 @@ import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
+import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
+import 'package:personnages/features/characters/domain/spell_status_formatter.dart';
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -1805,6 +1807,509 @@ void main() {
       final detail = await offline.fetchCharacterDetail(characterId);
 
       expect(detail.grantedSpells, isEmpty);
+    });
+  });
+
+  group('SupabaseCharacterRepository.fetchCharacterDetail (sorts des classes '
+      'à sorts connus)', () {
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const characterId = 'char-1';
+    const ownerId = 'owner-1';
+    const cacheKey = 'character_detail:$ownerId:$characterId';
+    const bardeId = 1;
+    const clercId = 2;
+
+    // 20 : sort de Barde 'connu'. 21 : sort de Clerc 'connu'. 22 : sort
+    // 'préparé' sans origine. 23 : sort de Barde passé à 'préparé' par le
+    // joueur. 24 : sort mineur. 25 : sort inné, sans origine.
+    Map<String, List<Map<String, dynamic>>> rowsFor(List<int> classIds) => {
+      'characters': [
+        {
+          'id': characterId,
+          'name': 'Lia',
+          'xp': 0,
+          'current_hp': 10,
+          'max_hp': 10,
+          'temporary_hp': 0,
+          'race_id': null,
+          'character_classes': [
+            for (final classId in classIds)
+              {
+                'class_id': classId,
+                'subclass_id': null,
+                'level': 3,
+                'is_primary': classId == classIds.first,
+                'classes': {'saving_throw_proficiencies': [], 'hit_die': 8},
+              },
+          ],
+          'character_spells': [
+            {
+              'spell_id': 20,
+              'status': 'connu',
+              'is_favorite': false,
+              'source_class_id': bardeId,
+            },
+            {
+              'spell_id': 21,
+              'status': 'connu',
+              'is_favorite': false,
+              'source_class_id': clercId,
+            },
+            {
+              'spell_id': 22,
+              'status': 'préparé',
+              'is_favorite': false,
+              'source_class_id': null,
+            },
+            {
+              'spell_id': 23,
+              'status': 'préparé',
+              'is_favorite': false,
+              'source_class_id': bardeId,
+            },
+            {
+              'spell_id': 24,
+              'status': 'connu',
+              'is_favorite': false,
+              'source_class_id': bardeId,
+            },
+            {
+              'spell_id': 25,
+              'status': 'inné',
+              'is_favorite': false,
+              'source_class_id': null,
+            },
+          ],
+        },
+      ],
+      'translations': [
+        {'entity_id': '1', 'value': 'Barde'},
+        {'entity_id': '2', 'value': 'Clerc'},
+        for (final id in [20, 21, 22, 23, 24, 25])
+          {'entity_id': '$id', 'value': 'S$id'},
+      ],
+      'spells': [
+        for (final id in [20, 21, 22, 23, 25])
+          {'id': id, 'level': 1, 'school': ''},
+        {'id': 24, 'level': 0, 'school': ''},
+      ],
+    };
+
+    Future<SupabaseCharacterRepository> online(
+      Map<String, List<Map<String, dynamic>>> rows, {
+      void Function(http.Request request)? onRequest,
+    }) async => SupabaseCharacterRepository(
+      await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        tableRows: rows,
+        onRequest: onRequest,
+      ),
+      cache,
+      pendingWrites,
+      _AlwaysOnlineConnectivityChecker(),
+    );
+
+    Future<SupabaseCharacterRepository> offline() async =>
+        SupabaseCharacterRepository(
+          await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            failureStatusCode: 500,
+          ),
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+    /// Réécrit le cache comme l'aurait laissé une version antérieure à la
+    /// lecture de `source_class_id`.
+    Future<void> stripSourceClassIdFromCache() async {
+      final payload = Map<String, dynamic>.from(
+        await cache.get(cacheKey) as Map<String, dynamic>,
+      );
+      final row = Map<String, dynamic>.from(payload['row'] as Map);
+      row['character_spells'] = [
+        for (final spellRow in row['character_spells'] as List)
+          Map<String, dynamic>.from(spellRow as Map)..remove('source_class_id'),
+      ];
+      payload['row'] = row;
+      await cache.put(cacheKey, payload);
+    }
+
+    Map<String, bool> requiresByName(CharacterDetail detail) => {
+      for (final spell in detail.spells) spell.name: spell.requiresPreparation,
+    };
+    Map<String, bool> castableByName(CharacterDetail detail) => {
+      for (final spell in detail.spells)
+        spell.name: SpellStatusFormatter.canCast(spell),
+    };
+
+    void verifyMixed(CharacterDetail detail) {
+      expect(requiresByName(detail), {
+        'S20': false,
+        'S21': true,
+        'S22': true,
+        'S23': false,
+        'S24': false,
+        'S25': true,
+      });
+      expect(castableByName(detail), {
+        'S20': true,
+        'S21': false,
+        'S22': true,
+        'S23': true,
+        'S24': true,
+        'S25': true,
+      });
+      // S22 seul : S23 (Barde, 'préparé' en base) ne compte pas.
+      expect(detail.preparedSpellCount, 1);
+      final byName = {for (final spell in detail.spells) spell.name: spell};
+      expect(SpellStatusFormatter.canTogglePrepared(byName['S20']!), isFalse);
+      expect(SpellStatusFormatter.canTogglePrepared(byName['S23']!), isFalse);
+      expect(SpellStatusFormatter.canTogglePrepared(byName['S21']!), isTrue);
+      // Sort inné : ni bascule ni sous-titre, comme avant.
+      expect(SpellStatusFormatter.canTogglePrepared(byName['S25']!), isFalse);
+      expect(SpellStatusFormatter.subtitle(byName['S25']!), isNull);
+    }
+
+    test(
+      'le select de la fiche relit character_spells.source_class_id',
+      () async {
+        String? select;
+        final repository = await online(
+          rowsFor([bardeId]),
+          onRequest: (request) {
+            if (request.url.pathSegments.last == 'characters') {
+              select = request.url.queryParameters['select'];
+            }
+          },
+        );
+
+        await repository.fetchCharacterDetail(characterId);
+
+        expect(
+          select!.replaceAll(RegExp(r'\s+'), ''),
+          contains(
+            'character_spells(spell_id,status,is_favorite,source_class_id)',
+          ),
+        );
+      },
+    );
+
+    test('Barde seul : tous les sorts sont lançables sans préparation, aucun '
+        'n\'est compté comme préparé', () async {
+      final detail = await (await online(rowsFor([bardeId])))
+          .fetchCharacterDetail(characterId);
+
+      expect(requiresByName(detail).values, everyElement(isFalse));
+      expect(castableByName(detail).values, everyElement(isTrue));
+      expect(
+        detail.spells.any(SpellStatusFormatter.canTogglePrepared),
+        isFalse,
+      );
+      expect(detail.preparedSpellCount, 0);
+      expect(detail.preparedSpellLimit, isNull);
+    });
+
+    test(
+      'Clerc seul : rien ne change, un sort "connu" reste à préparer',
+      () async {
+        final detail = await (await online(rowsFor([clercId])))
+            .fetchCharacterDetail(characterId);
+
+        // Les origines "Barde" (classe absente du personnage) sont ignorées.
+        expect(requiresByName(detail).values, everyElement(isTrue));
+        expect(castableByName(detail)['S20'], isFalse);
+        expect(castableByName(detail)['S21'], isFalse);
+        expect(detail.preparedSpellCount, 2);
+      },
+    );
+
+    test('Barde + Clerc : tranché par source_class_id, origine inconnue à '
+        'préparer', () async {
+      verifyMixed(
+        await (await online(rowsFor([bardeId, clercId])))
+            .fetchCharacterDetail(characterId),
+      );
+    });
+
+    test('hors ligne : le cache restitue la même dérivation', () async {
+      await (await online(rowsFor([bardeId, clercId])))
+          .fetchCharacterDetail(characterId);
+
+      verifyMixed(await (await offline()).fetchCharacterDetail(characterId));
+    });
+
+    test('ancien cache sans source_class_id, Barde + Clerc : tout sort '
+        'retombe sur "origine inconnue" (à préparer), sans erreur', () async {
+      await (await online(rowsFor([bardeId, clercId])))
+          .fetchCharacterDetail(characterId);
+      await stripSourceClassIdFromCache();
+
+      final detail = await (await offline()).fetchCharacterDetail(characterId);
+
+      expect(requiresByName(detail).values, everyElement(isTrue));
+      // Comportement d'avant le correctif : S20/S21 'connu' non lançables.
+      expect(castableByName(detail)['S20'], isFalse);
+      expect(detail.preparedSpellCount, 2);
+    });
+
+    test('ancien cache sans source_class_id, Barde seul : la classe du '
+        'personnage suffit', () async {
+      await (await online(rowsFor([bardeId])))
+          .fetchCharacterDetail(characterId);
+      await stripSourceClassIdFromCache();
+
+      final detail = await (await offline()).fetchCharacterDetail(characterId);
+
+      expect(requiresByName(detail).values, everyElement(isFalse));
+      expect(castableByName(detail).values, everyElement(isTrue));
+    });
+
+    test('lignes en double pour un même sort (aucune contrainte d\'unicité) : '
+        'une origine "Barde" suffit, quel que soit l\'ordre', () async {
+      for (final reversed in [false, true]) {
+        final rows = rowsFor([bardeId, clercId]);
+        final duplicates = [
+          {
+            'spell_id': 20,
+            'status': 'connu',
+            'is_favorite': false,
+            'source_class_id': clercId,
+          },
+          {
+            'spell_id': 20,
+            'status': 'connu',
+            'is_favorite': false,
+            'source_class_id': null,
+          },
+          {
+            'spell_id': 20,
+            'status': 'connu',
+            'is_favorite': false,
+            'source_class_id': bardeId,
+          },
+        ];
+        rows['characters']!.single['character_spells'] = reversed
+            ? duplicates.reversed.toList()
+            : duplicates;
+
+        final detail = await (await online(rows))
+            .fetchCharacterDetail(characterId);
+
+        final spell = detail.spells.singleWhere((s) => s.name == 'S20');
+        expect(
+          spell.requiresPreparation,
+          isFalse,
+          reason: 'reversed=$reversed',
+        );
+        expect(SpellStatusFormatter.canCast(spell), isTrue);
+      }
+    });
+  });
+
+  // `setSpellPrepared` ne doit jamais toucher une ligne au statut 'inné' :
+  // un sort inné n'a pas de notion de préparation, et le faire passer à
+  // 'préparé' puis 'connu' est sans retour possible depuis l'app.
+  group('SupabaseCharacterRepository.setSpellPrepared (lignes innées)', () {
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const characterId = 'char-1';
+    const ownerId = 'owner-1';
+    const spellId = 20;
+
+    /// Double minimal de la table `character_spells` pour UN sort : applique
+    /// le filtre `status` de la requête (`neq.`/`in.`), comme PostgREST, et
+    /// renvoie les lignes touchées.
+    Future<SupabaseCharacterRepository> repositoryOver(
+      List<Map<String, dynamic>> table,
+      List<String> methods,
+    ) async {
+      bool matches(Map<String, dynamic> row, http.Request request) {
+        final filter = request.url.queryParameters['status'];
+        if (filter == null) return true;
+        final status = row['status'] as String;
+        if (filter.startsWith('neq.')) return status != filter.substring(4);
+        if (filter.startsWith('eq.')) return status == filter.substring(3);
+        if (filter.startsWith('in.')) {
+          return filter
+              .substring(4, filter.length - 1)
+              .split(',')
+              .map((value) => value.replaceAll('"', ''))
+              .contains(status);
+        }
+        fail('filtre status inattendu : $filter');
+      }
+
+      return SupabaseCharacterRepository(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          rowsOverride: (request) {
+            if (request.url.pathSegments.last != 'character_spells') {
+              return null;
+            }
+            methods.add(request.method);
+            switch (request.method) {
+              case 'PATCH':
+                final patch = jsonDecode(request.body) as Map<String, dynamic>;
+                final touched = [
+                  for (final row in table)
+                    if (matches(row, request)) row,
+                ];
+                for (final row in touched) {
+                  row.addAll(patch);
+                }
+                return [
+                  for (final row in touched) {'id': row['id']},
+                ];
+              case 'POST':
+                final inserted = Map<String, dynamic>.from(
+                  jsonDecode(request.body) as Map,
+                )..['id'] = 'new-${table.length}';
+                table.add(inserted);
+                return const [];
+              default:
+                return [
+                  for (final row in table)
+                    if (matches(row, request)) {'id': row['id']},
+                ];
+            }
+          },
+        ),
+        cache,
+        pendingWrites,
+        _AlwaysOnlineConnectivityChecker(),
+      );
+    }
+
+    Map<String, dynamic> line(String id, String status) => {
+      'id': id,
+      'character_id': characterId,
+      'spell_id': spellId,
+      'status': status,
+    };
+    List<String> statusesOf(List<Map<String, dynamic>> table) => [
+      for (final row in table) row['status'] as String,
+    ];
+
+    test('une seule ligne "inné", demande de préparer : rien n\'est écrit, '
+        'aucune ligne en double insérée', () async {
+      final table = [line('a', 'inné')];
+      final methods = <String>[];
+      final repository = await repositoryOver(table, methods);
+
+      final outcome = await repository.setSpellPrepared(
+        characterId: characterId,
+        spellId: spellId,
+        prepared: true,
+      );
+
+      expect(statusesOf(table), ['inné']);
+      expect(methods, isNot(contains('POST')));
+      expect(outcome, WriteOutcome.synced);
+    });
+
+    test('une seule ligne "inné", demande de dé-préparer : rien n\'est '
+        'écrit', () async {
+      final table = [line('a', 'inné')];
+      final repository = await repositoryOver(table, <String>[]);
+
+      await repository.setSpellPrepared(
+        characterId: characterId,
+        spellId: spellId,
+        prepared: false,
+      );
+
+      expect(statusesOf(table), ['inné']);
+    });
+
+    test('lignes en double "inné" + "connu" : seule la ligne non innée est '
+        'préparée, puis dé-préparée', () async {
+      final table = [line('a', 'inné'), line('b', 'connu')];
+      final methods = <String>[];
+      final repository = await repositoryOver(table, methods);
+
+      await repository.setSpellPrepared(
+        characterId: characterId,
+        spellId: spellId,
+        prepared: true,
+      );
+      expect(statusesOf(table), ['inné', 'préparé']);
+
+      await repository.setSpellPrepared(
+        characterId: characterId,
+        spellId: spellId,
+        prepared: false,
+      );
+      expect(statusesOf(table), ['inné', 'connu']);
+      expect(methods, isNot(contains('POST')));
+    });
+
+    test('ligne "connu" : passe à "préparé" (inchangé)', () async {
+      final table = [line('a', 'connu')];
+      final repository = await repositoryOver(table, <String>[]);
+
+      await repository.setSpellPrepared(
+        characterId: characterId,
+        spellId: spellId,
+        prepared: true,
+      );
+
+      expect(statusesOf(table), ['préparé']);
+    });
+
+    test('aucune ligne (sort de la liste de classe jamais préparé) : la '
+        'ligne "préparé" est créée (inchangé)', () async {
+      final table = <Map<String, dynamic>>[];
+      final repository = await repositoryOver(table, <String>[]);
+
+      await repository.setSpellPrepared(
+        characterId: characterId,
+        spellId: spellId,
+        prepared: true,
+      );
+
+      expect(statusesOf(table), ['préparé']);
+      expect(table.single['spell_id'], spellId);
+      expect(table.single['character_id'], characterId);
+    });
+
+    test('aucune ligne, demande de dé-préparer : rien n\'est créé '
+        '(inchangé)', () async {
+      final table = <Map<String, dynamic>>[];
+      final repository = await repositoryOver(table, <String>[]);
+
+      await repository.setSpellPrepared(
+        characterId: characterId,
+        spellId: spellId,
+        prepared: false,
+      );
+
+      expect(table, isEmpty);
     });
   });
 

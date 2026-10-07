@@ -813,4 +813,89 @@ void main() {
       }
     }
   });
+
+  // Sort d'une classe à sorts connus (Barde, Ensorceleur, Occultiste,
+  // Rôdeur) : `requiresPreparation` faux, dérivé à la lecture de la fiche.
+  group('sort qui ne se prépare pas (classe à sorts connus)', () {
+    const knownSpell = CharacterSpellEntry(
+      id: 9,
+      name: 'Charme-personne',
+      level: 1,
+      school: 'Enchantement',
+      status: 'connu',
+      requiresPreparation: false,
+    );
+    const storedPrepared = CharacterSpellEntry(
+      id: 10,
+      name: 'Héroïsme',
+      level: 1,
+      school: 'Enchantement',
+      status: 'préparé',
+      requiresPreparation: false,
+    );
+
+    testWidgets('"connu" avec un emplacement : "Lancer" actif, ni lien '
+        '"Préparer ce sort" ni ligne de raison', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: knownSpell,
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 2, used: 0)],
+      );
+
+      expect(find.text('Préparer ce sort'), findsNothing);
+      expect(find.text('Ne plus préparer'), findsNothing);
+      expect(find.text(SpellCastBlockReason.unprepared.message), findsNothing);
+      expect(
+        find.text(SpellCastBlockReason.noSlotAvailable.message),
+        findsNothing,
+      );
+
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.pumpAndSettle();
+
+      expect(castCalls, [knownSpell]);
+      expect(castLevels, [1]);
+      expect(preparedToggleCalls, isEmpty);
+    });
+
+    testWidgets('"connu" sans emplacement : "Lancer" inactif, raison "plus '
+        'd\'emplacement" et jamais "non préparé"', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: knownSpell,
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 2, used: 2)],
+      );
+
+      expect(
+        tester
+            .widget<PrimaryButton>(find.widgetWithText(PrimaryButton, 'LANCER'))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        find.text(SpellCastBlockReason.noSlotAvailable.message),
+        findsOneWidget,
+      );
+      expect(find.text(SpellCastBlockReason.unprepared.message), findsNothing);
+      expect(find.text('Préparer ce sort'), findsNothing);
+    });
+
+    testWidgets('déjà "préparé" en base : aucune bascule "Ne plus préparer", '
+        '"Lancer" actif', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: storedPrepared,
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 2, used: 0)],
+      );
+
+      expect(find.text('Ne plus préparer'), findsNothing);
+      expect(find.text('Préparer ce sort'), findsNothing);
+      expect(
+        tester
+            .widget<PrimaryButton>(find.widgetWithText(PrimaryButton, 'LANCER'))
+            .onPressed,
+        isNotNull,
+      );
+    });
+  });
 }

@@ -12,6 +12,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/wood_back_header.dart';
@@ -2299,6 +2300,104 @@ void main() {
       expect(fakeRepository.applyRestCallCount, 1);
       expect(find.text('PRÉPARER MES SORTS'), findsOneWidget);
       expect(find.text('Bouclier'), findsOneWidget);
+    });
+
+    testWidgets('repos long d\'un Barde (sorts connus, rien à préparer) : '
+        'aucune offre "Changer mes sorts", aucune sheet de préparation', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: const [
+          CharacterDetailClassRow(
+            classId: 1,
+            hitDie: 8,
+            className: 'Barde',
+            level: 5,
+            isPrimary: true,
+            savingThrowProficiencies: ['dex', 'cha'],
+          ),
+        ],
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Charme-personne',
+            level: 1,
+            school: 'Enchantement',
+            status: 'connu',
+            requiresPreparation: false,
+          ),
+          CharacterSpellEntry(
+            id: 2,
+            name: 'Héroïsme',
+            level: 1,
+            school: 'Enchantement',
+            status: 'préparé',
+            requiresPreparation: false,
+          ),
+        ],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('REPOS'));
+      await tester.pumpAndSettle();
+      expect(find.text('CHANGER MES SORTS'), findsNothing);
+      expect(find.text('GARDER MA LISTE'), findsNothing);
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyRestCallCount, 1);
+      expect(find.text('PRÉPARER MES SORTS'), findsNothing);
+    });
+
+    testWidgets('repos long d\'un Barde + Clerc avec "Changer mes sorts" : '
+        'la sheet ne propose que les sorts qui se préparent', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Charme-personne',
+            level: 1,
+            school: 'Enchantement',
+            status: 'connu',
+            requiresPreparation: false,
+          ),
+          CharacterSpellEntry(
+            id: 2,
+            name: 'Soins',
+            level: 1,
+            school: 'Évocation',
+            status: 'connu',
+          ),
+        ],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('REPOS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CHANGER MES SORTS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('PRÉPARER MES SORTS'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(CheckableOptionTile),
+          matching: find.text('Soins'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(CheckableOptionTile),
+          matching: find.text('Charme-personne'),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('repos long avec "Garder ma liste" (défaut) : aucune sheet de '

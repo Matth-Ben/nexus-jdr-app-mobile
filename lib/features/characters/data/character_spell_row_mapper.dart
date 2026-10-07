@@ -1,4 +1,6 @@
+import '../domain/character_detail_class_row.dart';
 import '../domain/character_spell_entry.dart';
+import '../domain/prepared_spells_limit.dart';
 import '../domain/spell_grant_source.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes renvoyées par
@@ -53,6 +55,29 @@ abstract final class CharacterSpellRowMapper {
     return favorites;
   }
 
+  /// `{spell_id: {source_class_id, ...}}` — classes d'origine connues de
+  /// chaque sort (`character_spells.source_class_id`). Un ensemble, pas une
+  /// valeur : un même sort peut avoir plusieurs lignes (aucune contrainte
+  /// d'unicité en base), d'origines différentes ; toutes sont gardées et
+  /// c'est `PreparedSpellsLimit.spellRequiresPreparation` qui tranche. Une
+  /// origine nulle ou absente (cache antérieur à la lecture de cette
+  /// colonne) n'ajoute rien : le sort est alors d'origine inconnue.
+  static Map<int, Set<int>> parseSourceClassIds(
+    List<Map<String, dynamic>> rows,
+  ) {
+    final sources = <int, Set<int>>{};
+    for (final row in rows) {
+      final spellId = row['spell_id'];
+      final sourceClassId = row['source_class_id'];
+      if (spellId is num && sourceClassId is num) {
+        sources
+            .putIfAbsent(spellId.toInt(), () => {})
+            .add(sourceClassId.toInt());
+      }
+    }
+    return sources;
+  }
+
   /// Construit les [CharacterSpellEntry] à partir des lignes brutes `spells`
   /// (id, level, school, casting_time, range, components, duration,
   /// concentration) déjà filtrées sur les sorts du personnage, des noms déjà
@@ -67,11 +92,19 @@ abstract final class CharacterSpellRowMapper {
   /// [grants] : `{spell_id: origine}` des sorts accordés par une sous-classe
   /// (voir `SubclassSpellGrantResolver.resolve`) ; `spellRows` doit
   /// contenir ces sorts même sans ligne `character_spells`.
+  ///
+  /// [classes] (les classes du personnage) et [sourceClassIds] (voir
+  /// [parseSourceClassIds]) servent à dériver
+  /// [CharacterSpellEntry.requiresPreparation]. [classes] est obligatoire :
+  /// sans les classes, tout sort retombe sur « à préparer », et un Barde ne
+  /// pourrait plus lancer ses sorts.
   static List<CharacterSpellEntry> toCharacterSpellEntries(
     List<Map<String, dynamic>> spellRows, {
     required Map<String, String> names,
     required Map<String, String> descriptions,
     required Map<int, String> statuses,
+    required List<CharacterDetailClassRow> classes,
+    Map<int, Set<int>> sourceClassIds = const {},
     Map<int, bool> favorites = const {},
     Map<int, SpellGrantSource> grants = const {},
   }) {
@@ -103,6 +136,10 @@ abstract final class CharacterSpellRowMapper {
           isFavorite: favorites[id] ?? false,
           grantSource: grant,
           isPersisted: statuses.containsKey(id),
+          requiresPreparation: PreparedSpellsLimit.spellRequiresPreparation(
+            classes: classes,
+            sourceClassIds: sourceClassIds[id] ?? const {},
+          ),
         ),
       );
     }

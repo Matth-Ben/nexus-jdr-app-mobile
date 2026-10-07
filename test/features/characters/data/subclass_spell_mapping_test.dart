@@ -26,6 +26,7 @@ void main() {
         names: const {'1': 'A', '2': 'B', '3': 'C'},
         descriptions: const {},
         statuses: const {},
+        classes: const [],
         grants: const {2: SpellGrantSource.oath},
       );
 
@@ -43,6 +44,7 @@ void main() {
         names: const {},
         descriptions: const {},
         statuses: const {1: 'connu', 2: 'connu'},
+        classes: const [],
         favorites: const {2: true},
         grants: const {2: SpellGrantSource.domain},
       );
@@ -159,5 +161,41 @@ void main() {
         expect(detail.grantedSpells.map((s) => s.id), [5, 6]);
       },
     );
+
+    test('exclut les sorts qui ne se préparent pas, même passés à "préparé" '
+        'en base (sort de Barde d\'un Barde/Clerc)', () {
+      final detail = CharacterDetail(
+        id: '1',
+        name: 'Test',
+        classes: const [],
+        xp: 0,
+        currentHp: 1,
+        maxHp: 1,
+        temporaryHp: 0,
+        abilityScores: const {},
+        spells: [
+          spell(1, status: 'préparé'),
+          spell(2, status: 'connu'),
+          const CharacterSpellEntry(
+            id: 3,
+            name: 'S3',
+            level: 1,
+            school: '',
+            status: 'préparé',
+            requiresPreparation: false,
+          ),
+          const CharacterSpellEntry(
+            id: 4,
+            name: 'S4',
+            level: 2,
+            school: '',
+            status: 'connu',
+            requiresPreparation: false,
+          ),
+        ],
+      );
+
+      expect(detail.preparedSpellCount, 1);
+    });
   });
 }

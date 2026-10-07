@@ -96,4 +96,38 @@ void main() {
       expect(SpellsByLevelGrouper.group(const []), isEmpty);
     });
   });
+
+  test('preparedFirst : un sort qui ne se prépare pas (classe à sorts '
+      'connus) reste dans le premier bloc, même au statut "connu"', () {
+    const knownC = CharacterSpellEntry(
+      id: 1,
+      name: 'Charme-personne',
+      level: 1,
+      school: '',
+      status: 'connu',
+      requiresPreparation: false,
+    );
+    const unpreparedA = CharacterSpellEntry(
+      id: 2,
+      name: 'Armure de mage',
+      level: 1,
+      school: '',
+      status: 'connu',
+    );
+    const preparedZ = CharacterSpellEntry(
+      id: 3,
+      name: 'Zone de vérité',
+      level: 1,
+      school: '',
+      status: 'préparé',
+    );
+
+    final groups = SpellsByLevelGrouper.group(const [
+      unpreparedA,
+      preparedZ,
+      knownC,
+    ], preparedFirst: true);
+
+    expect(groups.single.spells, [knownC, preparedZ, unpreparedA]);
+  });
 }
