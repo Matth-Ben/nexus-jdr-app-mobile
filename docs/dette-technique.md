@@ -44,7 +44,7 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 | D35 | Repos ou montée de niveau en ligne avec des PV encore en attente | Ouvert, décision de conception |
 | D05 | Montée de niveau, création et repos non atomiques | Ouvert |
 | D09 | Sorts innés supprimés lors d'un changement de classe en édition | Corrigé (PR #83) |
-| D10 | Import XML : sorts tous « connus », doublons | Ouvert |
+| D10 | Import XML : sorts tous « connus », doublons | Partiel (PR #84) |
 | D03 | Classes à sorts connus obligées de « préparer » | Corrigé (PR #81) |
 | D38 | Sort inné transformable en sort « préparé » depuis la sheet de préparation | Corrigé (PR #81) ; lignes déjà abîmées non réparables |
 | D08 | Sorts innés raciaux : emplacement exigé, pas de compteur | Corrigé (PR #82, migration web PR #19) |
@@ -74,7 +74,7 @@ la version anglaise démarre : elle devient alors bloquante.
 | D03 | Les classes à sorts connus doivent « préparer » pour lancer | `lib/features/character_creation/domain/spellcasting_rules.dart` ; `lib/features/characters/domain/spell_status_formatter.dart` ; `character_repository.dart` (select de la fiche) | haute | Tout Barde, Ensorceleur, Occultiste ou Rôdeur | moyen | Dériver « ce sort se prépare-t-il ? » à la lecture, à partir des classes et de `source_class_id` (déjà écrit, jamais relu) ; pas de migration | dev-flutter | L | Ouvert. Analyse faite le 07/10 : faisable sans migration. |
 | D04 | Règles de classe indexées sur le libellé français, dispersées dans 19 fichiers | Voir « Détails » | haute | À l'arrivée de l'anglais, ou à toute correction d'un nom de classe en base | gros | Clé stable de classe, registre unique des règles, `enum` pour le statut de sort | dev-flutter, dev-backend-supabase | L + C | Ouvert |
 | D05 | Écritures multi-étapes non atomiques | `character_repository.dart` (`applyLevelUp`, `applyRest`) ; `lib/features/character_creation/data/character_creation_repository.dart` ; `lib/features/character_creation/data/character_edit_repository.dart` | haute | Réseau instable pendant une montée de niveau ou une création | gros | Fonctions Postgres transactionnelles (`apply_level_up`, `create_character`, `apply_rest`) | dev-backend-supabase, dev-flutter | L | Ouvert |
-| D10 | Import XML : `connu` pour toutes les classes, doublons `inné`/`connu` | `lib/features/xml_import/domain/xml_import_save_data_resolver.dart` ; `lib/features/characters/data/character_spell_row_mapper.dart` ; `character_repository.dart` (`setSpellPrepared`) | haute | Tout import d'un Clerc, Druide, Magicien ou Paladin ; tout sort présent deux fois | moyen | Statut dérivé de la classe à l'import, dédoublonnage, contrainte unique `(character_id, spell_id)` avec migration de nettoyage | dev-flutter, dev-backend-supabase | L | Ouvert |
+| D10 | Import XML : `connu` pour toutes les classes, doublons `inné`/`connu` | `lib/features/xml_import/domain/xml_import_save_data_resolver.dart` ; `lib/features/characters/data/character_spell_row_mapper.dart` ; `character_repository.dart` (`setSpellPrepared`) | haute | Tout import d'un Clerc, Druide, Magicien ou Paladin ; tout sort présent deux fois | moyen | Statut dérivé de la classe à l'import, dédoublonnage, contrainte unique `(character_id, spell_id)` avec migration de nettoyage | dev-flutter, dev-backend-supabase | L, puis vérifié contre les fixtures XML réelles et confirmé par tests | Partiel (PR #84). Vérifié le 09/10 : le statut `'connu'` à l'import n'est PAS un bug (l'export aidedd.org ne porte aucune notion de sort préparé, pour aucune classe) — l'audit du 07/10 avait mal qualifié ce point, corrigé dans le texte ci-dessous. Le vrai défaut (fusion non déterministe de deux lignes ordinaires en double à la lecture) est corrigé. Restent ouverts : la contrainte unique `(character_id, spell_id)` en base (D42/D56) et le fait que l'import crée toujours un nouveau personnage plutôt que de permettre une fusion. |
 | D09 | Sorts innés supprimés lors d'un changement de classe en édition | `lib/features/character_creation/domain/character_edit_planner.dart` ; `lib/features/character_creation/domain/character_edit_snapshot.dart` | haute | Personnage doté d'un sort inné qui change de classe | petit | Exclure `inné` de `storedSpells`, ajouter un test | dev-flutter, qa-testeur | L, puis confirmé par tests (mutation manuelle : retirer le filtre fait échouer 4 tests) | Corrigé (PR #83). Suites : D53 à D56. |
 | D08 | Sorts innés raciaux : emplacement exigé, pas de compteur d'usage | `lib/features/characters/domain/spell_cast_eligibility.dart` | haute | Toute race à sort inné de niveau 1 ou plus | moyen | Lancer sans emplacement, compteur « une fois par repos long » : colonne `innate_uses_spent` sur `character_spells` (migration côté web) | dev-backend-supabase, direction-artistique, dev-flutter | L | Corrigé (PR #82 ; colonne et RPC de partage : dépôt web, PR #19). Suites : D43 à D52. |
 | D18 | Tests d'intégration hors CI | `test_integration/README.md` ; `.github/workflows/ci.yml` | haute | À chaque migration côté web | moyen | Job CI avec un Supabase éphémère, au moins quotidien | dev-backend-supabase, qa-testeur | L | Ouvert |
@@ -133,10 +133,17 @@ de caractéristique.
 **D06.** Vérifié sur la machine de développement en comparant les URL des trois fichiers
 de configuration, sans afficher les valeurs : elles sont identiques.
 
-**D10.** Les doublons sont volontaires à l'import, mais la lecture les fusionne par
-`spell_id` (la dernière ligne gagne, ordre non garanti) et `setSpellPrepared` met à jour
-toutes les lignes du sort. Sa séquence « mise à jour puis insertion si rien » peut aussi
-créer un doublon sur deux appuis rapprochés.
+**D10.** Les doublons sont volontaires à l'import. **Mise à jour du 09/10/2026 (PR #84),
+corrige une affirmation fausse de l'audit du 07/10** : la fusion à la lecture par
+`spell_id` est déterministe depuis la PR #82 pour le cas inné/ordinaire (« ordinaire bat
+inné », déjà en place avant même cet audit), et l'est maintenant aussi pour deux lignes
+ordinaires en double (`'connu'`/`'préparé'`) via un rang de priorité fixe
+(`'préparé' > 'connu' > 'inné'`) — ce n'est plus « la dernière ligne gagne, ordre non
+garanti ». `setSpellPrepared` exclut déjà les lignes `'inné'` (`.neq('status', 'inné')`)
+et ne met donc à jour que les lignes ordinaires — l'affirmation « met à jour toutes les
+lignes du sort » reste vraie pour CES lignes-là uniquement, pas un problème pour le cas
+inné/ordinaire. Reste vrai et non corrigé : sa séquence « mise à jour puis insertion si
+rien » peut toujours créer un doublon sur deux appuis rapprochés (D42).
 
 **D11.** L'interface affiche bien un message honnête pour les écritures non persistées ;
 le périmètre réduit de la file (PV et XP) est une décision déclarée. La dette est le nom
@@ -312,6 +319,15 @@ Constat sans identifiant, pour un futur passage de l'audit `dette-technique` :
 | Sujet | Détail | Source |
 |---|---|---|
 | Avertissement `drift` répété en test | `test/features/character_creation/data/character_creation_repository_test.dart` (groupe "TTL cache d'abord si frais") émet « AppDatabase multiple times » à plusieurs reprises. Présent avant la PR #83, tests passants malgré l'avertissement — à vérifier si c'est un artefact des fixtures (base recréée plusieurs fois dans la même suite) ou un pattern qui existe aussi en production. | Lu par qa-testeur |
+
+## Ajouts liés à la fusion déterministe des sorts en double (PR #84)
+
+Constat relevé par `dev-flutter` et confirmé par `qa-testeur`/`code-reviewer` les
+08-09/10/2026 en corrigeant D10, non traité.
+
+| ID | Sujet | Gravité | Correction proposée | État |
+|---|---|---|---|---|
+| D57 | `CharacterSpellRowMapper.parseFavorites` a la même faiblesse de non-déterminisme que l'ancien `parseStatuses` : en cas de lignes en double pour un même sort avec `is_favorite` divergent, la dernière ligne lue l'emporte (ordre PostgREST non garanti). Aucune règle produit tranchée entre « favori gagne »/« non-favori gagne », contrairement au statut (où « préparé l'emporte » découle d'un principe déjà établi : ne jamais dépréparer silencieusement). Aucun test n'existe non plus pour `parseFavorites`, même sur le cas nominal. | basse | Décision produit d'abord (quelle règle de priorité), puis même patron que `_statusRank` ; ajouter la couverture de test manquante dans la foulée | Ouvert |
 
 ## Décisions en attente
 
