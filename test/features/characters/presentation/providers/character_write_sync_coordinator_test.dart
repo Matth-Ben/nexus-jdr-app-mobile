@@ -273,114 +273,106 @@ void main() {
           );
     }
 
-    testWidgets(
-      "une écriture abandonnée affiche un SnackBar global dès que le "
-      'coordinateur démarre, et ne le réaffiche plus ensuite',
-      (tester) async {
-        await seedAbandonedWrite('Vos PV abandonnés (test).');
-        fakeSyncer.resultToReturn = const {};
-        final messengerKey = GlobalKey<ScaffoldMessengerState>();
+    testWidgets("une écriture abandonnée affiche un SnackBar global dès que le "
+        'coordinateur démarre, et ne le réaffiche plus ensuite', (
+      tester,
+    ) async {
+      await seedAbandonedWrite('Vos PV abandonnés (test).');
+      fakeSyncer.resultToReturn = const {};
+      final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              pendingCharacterWriteSyncerProvider.overrideWithValue(
-                fakeSyncer,
-              ),
-              connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
-              pendingCharacterWriteQueueProvider.overrideWithValue(queue),
-              supabaseClientProvider.overrideWithValue(signedInClient),
-              scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
-            ],
-            child: MaterialApp(
-              scaffoldMessengerKey: messengerKey,
-              home: Consumer(
-                builder: (context, ref, _) {
-                  ref.watch(characterWriteSyncCoordinatorProvider);
-                  return const Scaffold(body: SizedBox());
-                },
-              ),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            pendingCharacterWriteSyncerProvider.overrideWithValue(fakeSyncer),
+            connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
+            pendingCharacterWriteQueueProvider.overrideWithValue(queue),
+            supabaseClientProvider.overrideWithValue(signedInClient),
+            scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
+          ],
+          child: MaterialApp(
+            scaffoldMessengerKey: messengerKey,
+            home: Consumer(
+              builder: (context, ref, _) {
+                ref.watch(characterWriteSyncCoordinatorProvider);
+                return const Scaffold(body: SizedBox());
+              },
             ),
           ),
-        );
-        await tester.pumpAndSettle();
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.text('Vos PV abandonnés (test).'), findsOneWidget);
-        expect(
-          (await db.select(db.pendingCharacterWrites).get()),
-          isEmpty,
-          reason: 'consommée (et donc supprimée) une fois affichée',
-        );
+      expect(find.text('Vos PV abandonnés (test).'), findsOneWidget);
+      expect(
+        (await db.select(db.pendingCharacterWrites).get()),
+        isEmpty,
+        reason: 'consommée (et donc supprimée) une fois affichée',
+      );
 
-        // Un nouveau retour de connectivité ne doit plus rien réafficher :
-        // déjà consommée.
-        await tester.pumpWidget(Container());
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              pendingCharacterWriteSyncerProvider.overrideWithValue(
-                fakeSyncer,
-              ),
-              connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
-              pendingCharacterWriteQueueProvider.overrideWithValue(queue),
-              supabaseClientProvider.overrideWithValue(signedInClient),
-              scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
-            ],
-            child: MaterialApp(
-              scaffoldMessengerKey: messengerKey,
-              home: Consumer(
-                builder: (context, ref, _) {
-                  ref.watch(characterWriteSyncCoordinatorProvider);
-                  return const Scaffold(body: SizedBox());
-                },
-              ),
+      // Un nouveau retour de connectivité ne doit plus rien réafficher :
+      // déjà consommée.
+      await tester.pumpWidget(Container());
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            pendingCharacterWriteSyncerProvider.overrideWithValue(fakeSyncer),
+            connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
+            pendingCharacterWriteQueueProvider.overrideWithValue(queue),
+            supabaseClientProvider.overrideWithValue(signedInClient),
+            scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
+          ],
+          child: MaterialApp(
+            scaffoldMessengerKey: messengerKey,
+            home: Consumer(
+              builder: (context, ref, _) {
+                ref.watch(characterWriteSyncCoordinatorProvider);
+                return const Scaffold(body: SizedBox());
+              },
             ),
           ),
-        );
-        fakeConnectivity.emitRestored();
-        await tester.pumpAndSettle();
+        ),
+      );
+      fakeConnectivity.emitRestored();
+      await tester.pumpAndSettle();
 
-        expect(
-          find.text('Vos PV abandonnés (test).'),
-          findsNothing,
-          reason: "déjà consommée : ne doit jamais réapparaître à l'écran",
-        );
-      },
-    );
+      expect(
+        find.text('Vos PV abandonnés (test).'),
+        findsNothing,
+        reason: "déjà consommée : ne doit jamais réapparaître à l'écran",
+      );
+    });
 
-    testWidgets(
-      "sans écriture abandonnée, aucun SnackBar n'est affiché",
-      (tester) async {
-        fakeSyncer.resultToReturn = const {};
-        final messengerKey = GlobalKey<ScaffoldMessengerState>();
+    testWidgets("sans écriture abandonnée, aucun SnackBar n'est affiché", (
+      tester,
+    ) async {
+      fakeSyncer.resultToReturn = const {};
+      final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              pendingCharacterWriteSyncerProvider.overrideWithValue(
-                fakeSyncer,
-              ),
-              connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
-              pendingCharacterWriteQueueProvider.overrideWithValue(queue),
-              supabaseClientProvider.overrideWithValue(signedInClient),
-              scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
-            ],
-            child: MaterialApp(
-              scaffoldMessengerKey: messengerKey,
-              home: Consumer(
-                builder: (context, ref, _) {
-                  ref.watch(characterWriteSyncCoordinatorProvider);
-                  return const Scaffold(body: SizedBox());
-                },
-              ),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            pendingCharacterWriteSyncerProvider.overrideWithValue(fakeSyncer),
+            connectivityCheckerProvider.overrideWithValue(fakeConnectivity),
+            pendingCharacterWriteQueueProvider.overrideWithValue(queue),
+            supabaseClientProvider.overrideWithValue(signedInClient),
+            scaffoldMessengerKeyProvider.overrideWithValue(messengerKey),
+          ],
+          child: MaterialApp(
+            scaffoldMessengerKey: messengerKey,
+            home: Consumer(
+              builder: (context, ref, _) {
+                ref.watch(characterWriteSyncCoordinatorProvider);
+                return const Scaffold(body: SizedBox());
+              },
             ),
           ),
-        );
-        await tester.pumpAndSettle();
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        expect(find.byType(SnackBar), findsNothing);
-      },
-    );
+      expect(find.byType(SnackBar), findsNothing);
+    });
   });
 }
 

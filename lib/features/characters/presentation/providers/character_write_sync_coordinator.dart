@@ -83,17 +83,34 @@ class CharacterWriteSyncCoordinator {
   ///
   /// Best-effort (comme [_sync]) : une erreur ici (pas de session active,
   /// lecture locale en échec) ne doit jamais empêcher la synchro elle-même.
+  ///
+  /// N'appelle [PendingCharacterWriteQueue.consumeAbandonedMessages] (qui
+  /// **supprime** les lignes en base, irréversible) que si un
+  /// `ScaffoldMessengerState` est déjà attaché à [scaffoldMessengerKeyProvider] :
+  /// ce coordinateur est instancié très tôt (`NexusJdrApp.build`, avant que
+  /// `MaterialApp.router` n'ait fini de construire/monter son arbre — voir
+  /// `main.dart`), donc le tout premier passage de [_sync] au démarrage peut
+  /// s'exécuter alors que la clé n'a pas encore de `currentState`. Sans cette
+  /// garde, les messages seraient consommés (donc perdus) sans jamais avoir
+  /// été montrés, à l'encontre de la garantie documentée sur
+  /// [PendingCharacterWrites]. Si le messenger n'est pas encore prêt, cette
+  /// méthode ne fait rien cette fois-ci : un prochain passage de [_sync]
+  /// (prochain retour de connectivité, ou prochain démarrage) retentera —
+  /// limite résiduelle acceptée : un très léger délai avant le tout premier
+  /// affichage possible d'un message d'abandon.
   Future<void> _notifyAbandonedWrites() async {
     try {
       final ownerId = _ref.read(supabaseClientProvider).auth.currentUser?.id;
       if (ownerId == null) return;
 
+      final messenger = _ref.read(scaffoldMessengerKeyProvider).currentState;
+      if (messenger == null) return;
+
       final messages = await _ref
           .read(pendingCharacterWriteQueueProvider)
           .consumeAbandonedMessages(ownerId: ownerId);
-      final messenger = _ref.read(scaffoldMessengerKeyProvider).currentState;
       for (final message in messages) {
-        messenger?.showSnackBar(SnackBar(content: Text(message)));
+        messenger.showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (_) {
       // Best-effort — voir la documentation de cette méthode.

@@ -296,9 +296,12 @@ class PendingCharacterWriteQueue {
   /// des entrées abandonnées que [forCharacter] : `PendingCharacterWriteSyncer
   /// .sync` ne doit plus jamais les retenter une fois abandonnées.
   Future<List<PendingCharacterWrite>> allForOwner(String ownerId) async {
-    final rows = await (_db.select(_db.pendingCharacterWrites)..where(
-          (row) => row.ownerId.equals(ownerId) & row.abandoned.equals(false),
-        )).get();
+    final rows =
+        await (_db.select(_db.pendingCharacterWrites)..where(
+              (row) =>
+                  row.ownerId.equals(ownerId) & row.abandoned.equals(false),
+            ))
+            .get();
 
     return [
       for (final row in rows)
@@ -351,7 +354,9 @@ class PendingCharacterWriteQueue {
             (row) =>
                 row.characterId.equals(write.characterId) &
                 row.ownerId.equals(write.ownerId) &
-                row.kind.equals(write.kind.storageKey),
+                row.kind.equals(write.kind.storageKey) &
+                row.queuedAt.equals(write.queuedAt) &
+                row.payload.equals(write.rawPayload),
           ))
           .write(
             PendingCharacterWritesCompanion(
@@ -382,8 +387,7 @@ class PendingCharacterWriteQueue {
       if (rows.isEmpty) return const <String>[];
 
       await (_db.delete(_db.pendingCharacterWrites)..where(
-            (row) =>
-                row.ownerId.equals(ownerId) & row.abandoned.equals(true),
+            (row) => row.ownerId.equals(ownerId) & row.abandoned.equals(true),
           ))
           .go();
 
