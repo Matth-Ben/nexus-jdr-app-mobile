@@ -296,7 +296,32 @@ abstract final class XmlImportSaveDataResolver {
   /// même sort connu à la fois "inné" et "connu" (ex. un sort de départ d'un
   /// Occultiste retrouvé dans sa liste de sorts connus) produit légitimement
   /// deux lignes distinctes, `character_spells.id` est une clé synthétique
-  /// (`uuid`), pas une clé composite sur `spell_id`.
+  /// (`uuid`), pas une clé composite sur `spell_id` (la lecture de la fiche
+  /// départage ce doublon volontaire de façon déterministe, voir
+  /// `CharacterSpellRowMapper.parseStatuses` côté `characters`).
+  ///
+  /// Statut écrit : toujours `'connu'` pour une entrée de `knownSpells`,
+  /// quelle que soit la classe — y compris un lanceur à liste complète
+  /// (Clerc, Druide, Paladin, voir
+  /// `characters/domain/prepared_caster_spell_list.dart`), qui pourtant lit
+  /// aussi `requiresPreparation` à la lecture de la fiche (voir
+  /// `characters/domain/prepared_spells_limit.dart`, mécanisme introduit par
+  /// la PR #81). Ce n'est **pas** un oubli : vérifié contre les deux exports
+  /// aidedd.org réels du dépôt (`test/fixtures/xml_import/solan-valerius.xml`,
+  /// un Paladin niveau 2) et contre le document `03-import-xml-aidedd.md` du
+  /// cahier des charges — aidedd.org exporte, pour ces classes, la liste
+  /// COMPLÈTE des sorts accessibles à la classe sous la balise correspondante
+  /// (11 sorts de niveau 1 pour un Paladin qui n'en prépare que 3 à ce
+  /// niveau), pas le sous-ensemble réellement préparé ce jour-là : aucune
+  /// balise ni attribut du format n'indique "préparé" pour ces classes
+  /// (confirmé sur les fixtures disponibles). Il n'y a donc aucune
+  /// information de préparation à préserver à l'import ; écrire `'connu'`
+  /// (= "accessible, pas encore préparé") est le même repli sûr que pour un
+  /// sort de classe jamais préparé créé après coup (voir
+  /// `CharacterRepository._fetchPreparedCasterClassListSpellIds`), pas une
+  /// perte de donnée. Un joueur qui avait des sorts préparés en jeu doit les
+  /// re-cocher après import — limitation du format source, pas de ce
+  /// résolveur.
   static List<XmlImportSpellLine> _resolveSpellLines({
     required List<XmlSpellResolution> innateSpells,
     required List<XmlSpellResolution> knownSpells,

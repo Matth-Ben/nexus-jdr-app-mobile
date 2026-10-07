@@ -30,14 +30,25 @@ abstract final class CharacterSpellRowMapper {
   /// exploitable est ignorée.
   ///
   /// Lignes en double pour un même sort (aucune contrainte d'unicité en
-  /// base, et le `select` n'a pas d'ordre garanti) : une ligne ordinaire
-  /// ('connu', 'préparé'...) l'emporte TOUJOURS sur une ligne 'inné', quel
-  /// que soit l'ordre de lecture. Le sort suit alors le circuit ordinaire
-  /// (emplacement), comme avant le compteur des sorts innés : il n'est pas
-  /// présenté comme inné et son compteur n'est jamais écrit — sans cette
-  /// règle, l'ordre des lignes déciderait si le lancer est gratuit ou non.
-  /// Entre plusieurs lignes ordinaires de statuts différents, la dernière
-  /// lue l'emporte (comportement historique, inchangé).
+  /// base, et le `select` n'a pas d'ordre garanti) : résolues par priorité
+  /// fixe (`'préparé' > 'connu' > 'inné'`), jamais par ordre de lecture —
+  /// voir [_statusRank]. Un même sort avec deux lignes de rangs différents
+  /// retient donc toujours le rang le plus haut, quel que soit l'ordre des
+  /// lignes :
+  /// - une ligne ordinaire ('connu', 'préparé'...) l'emporte TOUJOURS sur une
+  ///   ligne 'inné'. Le sort suit alors le circuit ordinaire (emplacement),
+  ///   comme avant le compteur des sorts innés : il n'est pas présenté comme
+  ///   inné et son compteur n'est jamais écrit — sans cette règle, l'ordre
+  ///   des lignes déciderait si le lancer est gratuit ou non (voir D43 dans
+  ///   `docs/dette-technique.md` : la question de départager différemment
+  ///   reste un choix produit ouvert, pas tranché ici).
+  /// - entre deux lignes ordinaires de statuts différents ('connu' et
+  ///   'préparé' — ex. doublon créé par la course de `setSpellPrepared` sans
+  ///   contrainte unique, voir D42/D10), 'préparé' l'emporte toujours :
+  ///   silencieusement « dépréparer » un sort que le joueur a explicitement
+  ///   préparé serait une règle fausse plus gênante qu'un ordre de lecture
+  ///   qui déciderait au hasard (avant ce correctif : « la dernière ligne lue
+  ///   l'emporte »).
   static Map<int, String> parseStatuses(List<Map<String, dynamic>> rows) {
     final statuses = <int, String>{};
     for (final row in rows) {
@@ -46,11 +57,23 @@ abstract final class CharacterSpellRowMapper {
       if (spellId is! num || status == null) continue;
       final id = spellId.toInt();
       final known = statuses[id];
-      if (status == 'inné' && known != null && known != 'inné') continue;
-      statuses[id] = status;
+      if (known == null || _statusRank(status) >= _statusRank(known)) {
+        statuses[id] = status;
+      }
     }
     return statuses;
   }
+
+  /// Rang de priorité d'un statut `character_spells.status` pour départager
+  /// deux lignes en double du même sort dans [parseStatuses]. Toute valeur
+  /// inattendue (ne devrait pas arriver, contrainte `CHECK` côté base) a le
+  /// même rang que 'connu' : ni favorisée ni pénalisée face aux deux statuts
+  /// valides.
+  static int _statusRank(String status) => switch (status) {
+    'préparé' => 2,
+    'inné' => 0,
+    _ => 1,
+  };
 
   /// `{spell_id: is_favorite}` — même principe que [parseStatuses]. Une
   /// ligne sans `spell_id`/`is_favorite` exploitable est ignorée (repli sur
