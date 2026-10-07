@@ -327,6 +327,28 @@ abstract class CharacterRepository {
     required bool prepared,
   });
 
+  /// Écrit `character_spells.innate_uses_spent` (usages DÉPENSÉS depuis le
+  /// dernier repos long) pour le sort inné [spellId] de [characterId], avec
+  /// [usesSpent] déjà calculé par l'appelant — valeur absolue, même principe
+  /// que [castSpell]/[useClassFeature] (voir
+  /// `presentation/character_detail_screen.dart::_castInnateSpell`). Action
+  /// "Lancer" d'un sort inné de niveau >= 1, qui se lance sans emplacement
+  /// (`domain/innate_spell_usage.dart`) : aucun emplacement n'est touché.
+  ///
+  /// Seules les lignes au statut 'inné' du sort sont mises à jour (toutes,
+  /// s'il y en a plusieurs : aucune contrainte d'unicité en base) — jamais
+  /// une ligne ordinaire du même sort. La remise à zéro est faite par
+  /// [applyRest] au repos long.
+  ///
+  /// Mode hors-ligne : mêmes règles exactement que [castSpell] (voir sa
+  /// documentation) — [WriteOutcome.queued] sans rien persister ni mettre en
+  /// file.
+  Future<WriteOutcome> setInnateSpellUsesSpent({
+    required String characterId,
+    required int spellId,
+    required int usesSpent,
+  });
+
   /// Écrit (upsert) `character_feature_uses.uses_remaining` pour
   /// [characterId]/[classFeatureId] avec [usesRemaining] (déjà calculé par
   /// l'appelant — valeur actuelle - 1, voir
@@ -655,7 +677,12 @@ abstract class CharacterRepository {
   ///   classe primaire : `character_classes.hit_dice_spent = max(0,
   ///   hit_dice_spent - max(1, level ~/ 2))`. Purement silencieux côté UI
   ///   (aucun retour transporté par cette méthode ne le reflète) — voir la
-  ///   spec visuelle direction-artistique de `rest_sheet.dart`.
+  ///   spec visuelle direction-artistique de `rest_sheet.dart`. Remet aussi
+  ///   à 0 `character_spells.innate_uses_spent` (sorts innés lancés sans
+  ///   emplacement, voir [setInnateSpellUsesSpent]) — juste après les
+  ///   emplacements de sorts et AVANT la récupération des dés de vie, seule
+  ///   écriture relative du repos long : un échec de cette remise à zéro ne
+  ///   laisse derrière lui que des écritures rejouables.
   /// - [RestType.short] : réinitialise uniquement (upsert) les
   ///   `character_feature_uses` (toutes classes, multiclassage inclus)
   ///   dont le `rest_type` correspondant vaut `'repos_court'`. Ne touche à
@@ -663,7 +690,7 @@ abstract class CharacterRepository {
   ///   [diceSpent] est strictement positif (règle RAW 5e "dépenser un dé de
   ///   vie", déjà entièrement calculée côté appelant — voir [diceSpent]/
   ///   [appliedGain] ci-dessous) ; ne touche jamais
-  ///   `character_spell_slots`.
+  ///   `character_spell_slots` ni `character_spells.innate_uses_spent`.
   ///
   /// [diceSpent] : nombre de dés de vie dépensés à ce repos (toujours 0 pour
   /// un repos long, voir `RestSheetResult`) — incrémente
@@ -968,7 +995,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_skill_proficiencies(skill_id, proficiency),
             character_tool_proficiencies(tool_id, custom_text),
             character_languages(language_id),
-            character_spells(spell_id, status, is_favorite, source_class_id),
+            character_spells(spell_id, status, is_favorite, source_class_id, innate_uses_spent),
             character_spell_slots(slot_level, slots_total, slots_used),
             character_pact_slots(slot_level, slots_total, slots_used),
             character_feature_uses(class_feature_id, uses_remaining),
@@ -1701,6 +1728,49 @@ class SupabaseCharacterRepository implements CharacterRepository {
         });
       }
       return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> setInnateSpellUsesSpent({
+    required String characterId,
+    required int spellId,
+    required int usesSpent,
+  }) async {
+    final ownerId = _requireOwnerId();
+
+    // Voir la documentation de [CharacterRepository.setInnateSpellUsesSpent]/
+    // [CharacterRepository.castSpell] : jamais mis en file.
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      final characterRow = await _client
+          .from('characters')
+          .select('id')
+          .eq('id', characterId)
+          .eq('owner_id', ownerId)
+          .maybeSingle();
+      if (characterRow == null) {
+        throw const CharacterFailure('Personnage introuvable.');
+      }
+
+      await _client
+          .from('character_spells')
+          .update({'innate_uses_spent': usesSpent})
+          .eq('character_id', characterId)
+          .eq('spell_id', spellId)
+          // Jamais une ligne ordinaire du même sort (lignes en double
+          // possibles) : seul un sort inné porte un compteur d'usage.
+          .eq('status', 'inné');
+      return WriteOutcome.synced;
+    } on CharacterFailure {
+      rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (_) {
@@ -2675,6 +2745,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
             ],
           );
         }
+
+        // Sorts innés de niveau >= 1 (lancés sans emplacement, une fois par
+        // repos long — `domain/innate_spell_usage.dart`) : compteur d'usages
+        // dépensés remis à 0 au repos LONG uniquement, jamais au repos court.
+        // Hors du bloc `classRows.isNotEmpty` : un sort inné vient de la
+        // race, pas d'une classe. Filtré sur les seules lignes réellement
+        // dépensées.
+        //
+        // Placé ICI, avant la récupération des dés de vie ci-dessous : cette
+        // dernière est RELATIVE (`hit_dice_spent - max(1, level ~/ 2)`), donc
+        // non rejouable. Tout ce qui précède cette remise à zéro (emplacements
+        // de sorts) et elle-même sont idempotents : si elle échoue, le repos
+        // peut être rejoué sans que le joueur récupère deux fois ses dés de
+        // vie.
+        await _client
+            .from('character_spells')
+            .update({'innate_uses_spent': 0})
+            .eq('character_id', characterId)
+            .gt('innate_uses_spent', 0);
 
         if (primaryClassRow.isNotEmpty) {
           // Récupération RAW 5e des dés de vie : la moitié du niveau de la
@@ -4105,6 +4194,12 @@ class SupabaseCharacterRepository implements CharacterRepository {
         classNames: classNames,
       ),
       sourceClassIds: CharacterSpellRowMapper.parseSourceClassIds(
+        CharacterDetailRowMapper.characterSpellRowsOf(row),
+      ),
+      // `innate_uses_spent` est absent d'un payload mis en cache avant sa
+      // lecture : aucun usage dépensé connu, le sort inné est affiché
+      // disponible (jamais de crash).
+      innateUsesSpent: CharacterSpellRowMapper.parseInnateUsesSpent(
         CharacterDetailRowMapper.characterSpellRowsOf(row),
       ),
     );

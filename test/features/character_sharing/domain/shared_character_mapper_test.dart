@@ -425,4 +425,47 @@ void main() {
       expect(detail.preparedSpellCount, 1);
     });
   });
+
+  // Compteur d'usage des sorts innés (D08) : `spells[].innate_uses_spent`
+  // est renvoyé par le RPC, lu s'il est présent.
+  group('mapSharedCharacterJson : innate_uses_spent', () {
+    Map<String, dynamic> spell(int id, {Object? spent, bool withKey = true}) =>
+        {
+          'spell_id': id,
+          'spell_name': 'S$id',
+          'level': 2,
+          'status': 'inné',
+          if (withKey) 'innate_uses_spent': spent,
+        };
+    Map<int, int> spentById(List<Map<String, dynamic>> spells) => {
+      for (final entry in mapSharedCharacterJson({'spells': spells}).spells)
+        entry.id: entry.innateUsesSpent,
+    };
+
+    test('valeur renvoyée par le RPC : reportée telle quelle', () {
+      expect(spentById([spell(1, spent: 1), spell(2, spent: 0)]), {1: 1, 2: 0});
+    });
+
+    test('clé absente (RPC antérieur), nulle, négative ou inexploitable : 0, '
+        'sans erreur', () {
+      expect(
+        spentById([
+          spell(1, withKey: false),
+          spell(2, spent: null),
+          spell(3, spent: -1),
+          spell(4, spent: 'x'),
+        ]),
+        {1: 0, 2: 0, 3: 0, 4: 0},
+      );
+    });
+
+    test('le statut inné et le niveau sont conservés (sort à charge)', () {
+      final entry = mapSharedCharacterJson({
+        'spells': [spell(1, spent: 1)],
+      }).spells.single;
+      expect(entry.status, 'inné');
+      expect(entry.level, 2);
+      expect(entry.innateUsesSpent, 1);
+    });
+  });
 }

@@ -8,6 +8,7 @@ import '../../../../core/widgets/sheet_action_row.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
+import '../../domain/innate_spell_usage.dart';
 import '../../domain/spell_cast_block_reason.dart';
 import '../../domain/spell_components_formatter.dart';
 import '../../domain/spell_status_formatter.dart';
@@ -100,7 +101,20 @@ class _SpellInfoPanelContent extends StatelessWidget {
     final canCast = blockReason == null;
     final components = SpellComponentsFormatter.format(spell.components);
 
+    // Sort inné de niveau >= 1 : lancé sans emplacement, une fois par repos
+    // long (sort mineur inné : à volonté, rien de plus à afficher).
+    final innateLimited = InnateSpellUsage.isLimited(spell);
+    final innateSpent =
+        innateLimited && !InnateSpellUsage.hasUseAvailable(spell);
+
     final infoRows = <Widget>[
+      if (innateLimited)
+        _SpellInfoRow(
+          label: 'Utilisations',
+          value: InnateSpellUsage.usageLabel(spell),
+          valueColor: innateSpent ? AppColors.accentBrick : null,
+          valueWeight: innateSpent ? FontWeight.w700 : null,
+        ),
       _SpellInfoRow(label: "Temps d'incantation", value: spell.castingTime),
       _SpellInfoRow(label: 'Portée', value: spell.range),
       _SpellComponentsInfoRow(formatted: components),
@@ -143,6 +157,19 @@ class _SpellInfoPanelContent extends StatelessWidget {
                           'Toujours préparé — sort de '
                           '${spell.grantSource!.label.toLowerCase()} '
                           '(ne compte pas dans la limite de sorts préparés)',
+                          style: AppTypography.body(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                      if (innateLimited) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'Sort inné — se lance sans emplacement, '
+                          '${InnateSpellUsage.usesPerLongRest} fois par '
+                          'repos long',
                           style: AppTypography.body(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,

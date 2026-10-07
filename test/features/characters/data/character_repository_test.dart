@@ -2002,7 +2002,7 @@ void main() {
         expect(
           select!.replaceAll(RegExp(r'\s+'), ''),
           contains(
-            'character_spells(spell_id,status,is_favorite,source_class_id)',
+            'character_spells(spell_id,status,is_favorite,source_class_id,',
           ),
         );
       },

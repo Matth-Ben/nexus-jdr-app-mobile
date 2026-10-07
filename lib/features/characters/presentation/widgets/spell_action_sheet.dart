@@ -8,12 +8,14 @@ import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/selectable_option_tile.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
+import '../../domain/innate_spell_usage.dart';
 import '../../domain/spell_cast_eligibility.dart';
 import 'character_spells_section.dart';
 import 'spell_info_panel.dart';
 
 /// Callback d'exécution d'un lancer de sort, appelé une fois l'emplacement
-/// retenu (ou `null` pour un sort niveau 0, rien à persister) — délègue
+/// retenu (ou `null` pour un sort niveau 0, rien à persister, et pour un
+/// sort inné de niveau >= 1, lancé sans emplacement) — délègue
 /// toute la logique d'écriture (optimiste + réseau + message) à l'appelant,
 /// voir `character_detail_screen.dart::_castSpell`.
 ///
@@ -38,7 +40,8 @@ typedef ToggleSpellFlagCallback = void Function(CharacterSpellEntry spell);
 /// [showSpellInfoPanel] — seul point d'entrée depuis l'onglet "Sorts", voir
 /// `character_spells_section.dart::_SpellRow`) : appelle directement
 /// [onCastSpell] quand un seul emplacement est éligible (ou pour un sort
-/// niveau 0, `slot: null`), ouvre sinon une sheet de choix
+/// niveau 0 ou un sort inné à charge, `slot: null`), ouvre sinon une sheet
+/// de choix
 /// ([_SpellSlotChoiceSheetContent]).
 ///
 /// [pactSlot] (magie de pacte de l'Occultiste, `null` si non applicable —
@@ -64,6 +67,15 @@ Future<void> castSpellFlow(
   required CastSpellCallback onCastSpell,
 }) async {
   if (spell.level <= 0) {
+    onCastSpell(spell, null);
+    return;
+  }
+
+  // Sort inné à charge : se lance sans emplacement, donc jamais de sheet de
+  // choix, même si le personnage a des emplacements (pas de relance avec un
+  // emplacement dans cette version) — `slot: null`, c'est l'appelant qui
+  // dépense l'usage (`character_detail_screen.dart::_castSpell`).
+  if (InnateSpellUsage.isLimited(spell)) {
     onCastSpell(spell, null);
     return;
   }

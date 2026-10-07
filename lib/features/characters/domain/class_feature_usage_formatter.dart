@@ -12,15 +12,26 @@ abstract final class ClassFeatureUsageFormatter {
     final usesMax = feature.usesMax;
     if (usesMax == null) return null;
 
-    final remaining = feature.usesRemaining ?? usesMax;
+    return formatCounts(
+      remaining: feature.usesRemaining ?? usesMax,
+      usesMax: usesMax,
+      restType: feature.restType,
+    );
+  }
+
+  /// Même format que [format], à partir de valeurs déjà résolues — partagé
+  /// avec le compteur d'un sort inné (`domain/innate_spell_usage.dart`).
+  static String formatCounts({
+    required int remaining,
+    required int usesMax,
+    required String? restType,
+  }) {
     // 'repos_long' est le seul cas qui affiche "repos long" ; toute autre
     // valeur (y compris `null`, ou une valeur inattendue côté donnée
     // serveur) retombe sur "repos court" plutôt que de crasher ou d'afficher
     // une valeur brute non traduite — couvert explicitement par
     // `class_feature_usage_formatter_test.dart`.
-    final restLabel = feature.restType == 'repos_long'
-        ? 'repos long'
-        : 'repos court';
+    final restLabel = restType == 'repos_long' ? 'repos long' : 'repos court';
     return '$remaining / $usesMax · $restLabel';
   }
 }

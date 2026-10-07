@@ -28,14 +28,26 @@ abstract final class CharacterSpellRowMapper {
   /// `{spell_id: status}` depuis les lignes brutes `character_spells`
   /// embarquées sous `characters`. Une ligne sans `spell_id`/`status`
   /// exploitable est ignorée.
+  ///
+  /// Lignes en double pour un même sort (aucune contrainte d'unicité en
+  /// base, et le `select` n'a pas d'ordre garanti) : une ligne ordinaire
+  /// ('connu', 'préparé'...) l'emporte TOUJOURS sur une ligne 'inné', quel
+  /// que soit l'ordre de lecture. Le sort suit alors le circuit ordinaire
+  /// (emplacement), comme avant le compteur des sorts innés : il n'est pas
+  /// présenté comme inné et son compteur n'est jamais écrit — sans cette
+  /// règle, l'ordre des lignes déciderait si le lancer est gratuit ou non.
+  /// Entre plusieurs lignes ordinaires de statuts différents, la dernière
+  /// lue l'emporte (comportement historique, inchangé).
   static Map<int, String> parseStatuses(List<Map<String, dynamic>> rows) {
     final statuses = <int, String>{};
     for (final row in rows) {
       final spellId = row['spell_id'];
       final status = row['status'] as String?;
-      if (spellId is num && status != null) {
-        statuses[spellId.toInt()] = status;
-      }
+      if (spellId is! num || status == null) continue;
+      final id = spellId.toInt();
+      final known = statuses[id];
+      if (status == 'inné' && known != null && known != 'inné') continue;
+      statuses[id] = status;
     }
     return statuses;
   }
@@ -78,6 +90,42 @@ abstract final class CharacterSpellRowMapper {
     return sources;
   }
 
+  /// `{spell_id: innate_uses_spent}` — usages innés dépensés depuis le
+  /// dernier repos long (`character_spells.innate_uses_spent`), lus sur les
+  /// seules lignes au statut 'inné'.
+  ///
+  /// Lignes en double pour un même sort (aucune contrainte d'unicité en
+  /// base) : la valeur la plus HAUTE des lignes 'inné' est retenue.
+  /// L'écriture (`CharacterRepository.setInnateSpellUsesSpent`) met à jour
+  /// toutes les lignes 'inné' du sort d'un coup, elles portent donc
+  /// normalement la même valeur ; si elles divergent, retenir le maximum
+  /// évite d'offrir un lancer gratuit de trop (jamais l'inverse). Une ligne
+  /// ordinaire ('connu'/'préparé') du même sort est ignorée : son compteur
+  /// n'est jamais écrit et vaut toujours 0, il masquerait l'usage dépensé.
+  ///
+  /// Si le sort a aussi une ligne ordinaire, [parseStatuses] le présente
+  /// avec le statut ordinaire : la valeur retournée ici est alors reportée
+  /// sur l'entrée mais jamais utilisée (`InnateSpellUsage.isLimited` faux).
+  ///
+  /// Clé absente (payload mis en cache avant la lecture de cette colonne)
+  /// ou valeur inexploitable : rien n'est ajouté, le sort retombe sur 0
+  /// (usage disponible) dans [toCharacterSpellEntries].
+  static Map<int, int> parseInnateUsesSpent(List<Map<String, dynamic>> rows) {
+    final spent = <int, int>{};
+    for (final row in rows) {
+      final spellId = row['spell_id'];
+      final value = row['innate_uses_spent'];
+      if (spellId is! num || value is! num || row['status'] != 'inné') {
+        continue;
+      }
+      final id = spellId.toInt();
+      final uses = value.toInt() < 0 ? 0 : value.toInt();
+      final known = spent[id];
+      if (known == null || uses > known) spent[id] = uses;
+    }
+    return spent;
+  }
+
   /// Construit les [CharacterSpellEntry] à partir des lignes brutes `spells`
   /// (id, level, school, casting_time, range, components, duration,
   /// concentration) déjà filtrées sur les sorts du personnage, des noms déjà
@@ -93,6 +141,8 @@ abstract final class CharacterSpellRowMapper {
   /// (voir `SubclassSpellGrantResolver.resolve`) ; `spellRows` doit
   /// contenir ces sorts même sans ligne `character_spells`.
   ///
+  /// [innateUsesSpent] : voir [parseInnateUsesSpent].
+  ///
   /// [classes] (les classes du personnage) et [sourceClassIds] (voir
   /// [parseSourceClassIds]) servent à dériver
   /// [CharacterSpellEntry.requiresPreparation]. [classes] est obligatoire :
@@ -107,6 +157,7 @@ abstract final class CharacterSpellRowMapper {
     Map<int, Set<int>> sourceClassIds = const {},
     Map<int, bool> favorites = const {},
     Map<int, SpellGrantSource> grants = const {},
+    Map<int, int> innateUsesSpent = const {},
   }) {
     final result = <CharacterSpellEntry>[];
     for (final row in spellRows) {
@@ -140,6 +191,7 @@ abstract final class CharacterSpellRowMapper {
             classes: classes,
             sourceClassIds: sourceClassIds[id] ?? const {},
           ),
+          innateUsesSpent: innateUsesSpent[id] ?? 0,
         ),
       );
     }

@@ -674,6 +674,158 @@ void main() {
     });
   });
 
+  // Sorts innés de niveau >= 1 (D08) : lancés sans emplacement, une fois par
+  // repos long — `character_spells.innate_uses_spent` remis à 0 au repos
+  // long uniquement.
+  group('applyRest — compteur des sorts innés (innate_uses_spent)', () {
+    List<_Recorded> innateWrites(List<_Recorded> recorded) => recorded
+        .where((r) => r.table == 'character_spells' && r.method != 'GET')
+        .toList();
+
+    List<String> writeSequence(List<_Recorded> recorded) => [
+      for (final r in recorded)
+        if (r.method != 'GET') '${r.method} ${r.table}',
+    ];
+
+    /// Même scénario que `applyRest`, mais avec des dés de vie déjà
+    /// dépensés : la récupération des dés de vie (écriture RELATIVE) a donc
+    /// lieu.
+    Future<List<_Recorded>> longRestWithSpentHitDice({
+      bool Function(String method, String table)? failOn,
+      List<_Recorded>? journal,
+    }) async {
+      final recorded = journal ?? <_Recorded>[];
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        recorded: recorded,
+        failOn: failOn,
+        tableRows: {
+          'characters': [
+            {'id': characterId, 'max_hp': 30, 'current_hp': 12},
+          ],
+          'character_classes': [
+            {
+              'id': 'cc-0',
+              'class_id': idOf('Magicien'),
+              'level': 5,
+              'is_primary': true,
+              'hit_dice_spent': 3,
+            },
+          ],
+          'translations': [
+            {'entity_id': idOf('Magicien').toString(), 'value': 'Magicien'},
+          ],
+        },
+      );
+      await SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _OnlineConnectivityChecker(),
+      ).applyRest(
+        characterId: characterId,
+        type: RestType.long,
+        className: 'Magicien',
+      );
+      return recorded;
+    }
+
+    test('repos long : remet à 0 les seules lignes dépensées du '
+        'personnage', () async {
+      final recorded = await applyRest(
+        classes: [(className: 'Magicien', level: 5)],
+      );
+
+      final writes = innateWrites(recorded);
+      expect(writes, hasLength(1));
+      expect(writes.single.method, 'PATCH');
+      expect(writes.single.body, {'innate_uses_spent': 0});
+      expect(writes.single.query['character_id'], 'eq.$characterId');
+      expect(writes.single.query['innate_uses_spent'], 'gt.0');
+      // Aucun filtre sur le sort : tous les sorts innés du personnage.
+      expect(writes.single.query.containsKey('spell_id'), isFalse);
+    });
+
+    // Retour QA : la récupération des dés de vie est relative
+    // (`hit_dice_spent - max(1, level ~/ 2)`), donc non rejouable. La remise
+    // à zéro des sorts innés (idempotente) doit passer AVANT elle.
+    test('repos long : la remise à 0 est écrite après les emplacements de '
+        'sorts et AVANT la récupération des dés de vie et les PV', () async {
+      final recorded = await longRestWithSpentHitDice();
+
+      expect(writeSequence(recorded).take(4), [
+        'POST character_spell_slots',
+        'PATCH character_spells',
+        'PATCH character_classes',
+        'PATCH characters',
+      ]);
+      final hitDice = recorded.firstWhere(
+        (r) => r.method == 'PATCH' && r.table == 'character_classes',
+      );
+      // Magicien 5, 3 dés dépensés : max(1, 5 ~/ 2) = 2 récupérés.
+      expect(hitDice.body, {'hit_dice_spent': 1});
+    });
+
+    test('échec de la remise à 0 : CharacterFailure, et seule une écriture '
+        'rejouable (emplacements de sorts) a eu lieu — ni dés de vie, ni PV : '
+        'un nouvel essai ne fait rien récupérer deux fois', () async {
+      final journal = <_Recorded>[];
+      await expectLater(
+        longRestWithSpentHitDice(
+          failOn: (method, table) =>
+              method == 'PATCH' && table == 'character_spells',
+          journal: journal,
+        ),
+        throwsA(isA<CharacterFailure>()),
+      );
+
+      expect(writeSequence(journal), [
+        'POST character_spell_slots',
+        'PATCH character_spells',
+      ]);
+    });
+
+    test('repos long, personnage sans aucune classe (sort inné racial seul) '
+        ': compteur tout de même remis à 0', () async {
+      final recorded = await applyRest(
+        classes: const [],
+        classNameArgument: '',
+      );
+
+      expect(innateWrites(recorded), hasLength(1));
+      expect(innateWrites(recorded).single.body, {'innate_uses_spent': 0});
+    });
+
+    test('repos long, classe non lanceuse (Guerrier 5) : compteur remis à '
+        '0', () async {
+      final recorded = await applyRest(
+        classes: [(className: 'Guerrier', level: 5)],
+      );
+
+      expect(innateWrites(recorded), hasLength(1));
+    });
+
+    test('repos court : aucune requête sur character_spells', () async {
+      final recorded = await applyRest(
+        type: RestType.short,
+        classes: [(className: 'Magicien', level: 5)],
+      );
+
+      expect(recorded.where((r) => r.table == 'character_spells'), isEmpty);
+    });
+
+    test('repos court d\'un Occultiste (pacte restauré) : compteur des sorts '
+        'innés intact', () async {
+      final recorded = await applyRest(
+        type: RestType.short,
+        classes: [(className: 'Occultiste', level: 3)],
+      );
+
+      expect(pactWrites(recorded), hasLength(1));
+      expect(recorded.where((r) => r.table == 'character_spells'), isEmpty);
+    });
+  });
+
   group('applyRest(short)', () {
     test('multiclassé lanceur (Guerrier 5 / Magicien 3) : aucune requête sur '
         'character_spell_slots, ni lecture ni écriture', () async {

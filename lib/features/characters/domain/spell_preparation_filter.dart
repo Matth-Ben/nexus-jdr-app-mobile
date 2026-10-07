@@ -14,9 +14,11 @@ enum SpellPreparationFilter {
 
   final String label;
 
-  /// [prepared] garde tout ce qui est lançable en l'état (sorts préparés,
-  /// mais aussi sorts mineurs, innés et accordés par une sous-classe, qui
-  /// n'ont jamais à être préparés) ; [unprepared] ne garde que les sorts
+  /// [prepared] garde tout ce qui n'attend pas d'être préparé (sorts
+  /// préparés, mais aussi sorts mineurs, innés et accordés par une
+  /// sous-classe, qui n'ont jamais à être préparés) — y compris un sort
+  /// momentanément non lançable (plus d'emplacement, sort inné épuisé
+  /// jusqu'au prochain repos long) ; [unprepared] ne garde que les sorts
   /// restant à préparer (voir [SpellStatusFormatter.isUnprepared]).
   List<CharacterSpellEntry> apply(List<CharacterSpellEntry> spells) =>
       switch (this) {

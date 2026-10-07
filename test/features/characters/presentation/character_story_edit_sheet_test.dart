@@ -184,6 +184,13 @@ class FakeRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<WriteOutcome> setInnateSpellUsesSpent({
+    required String characterId,
+    required int spellId,
+    required int usesSpent,
+  }) => throw UnimplementedError();
+
+  @override
   Future<WriteOutcome> useClassFeature({
     required String characterId,
     required int classFeatureId,
