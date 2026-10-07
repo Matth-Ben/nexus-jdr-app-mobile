@@ -121,7 +121,7 @@ void main() {
     /// helper que `level_up_repository_integration_test.dart`, nécessaire
     /// ici pour les tests du groupe "recalcul character_spell_slots"
     /// ci-dessous : `_resetSpellSlots` (`character_repository.dart`)
-    /// recalcule les totaux via `SpellSlotProgression.slotsForLevel`, qui
+    /// recalcule les totaux via `SpellSlotProgression.totalsForClasses`, qui
     /// n'attend que des noms de classe précis ("Clerc"...), jamais
     /// `shortRestClassId`/`longRestClassId` (résolues ci-dessus sur un tout
     /// autre critère : avoir une aptitude `repos_court`/`repos_long`, sans
@@ -217,8 +217,9 @@ void main() {
         );
 
         // Aucune ligne character_spell_slots créée : `className` fictif
-        // (voir plus haut), aucune classe lanceuse ne correspond, donc
-        // `SpellSlotProgression.slotsForLevel` retourne 9 zéros et
+        // (voir plus haut) pour l'unique classe du personnage, aucune classe
+        // lanceuse ne correspond, donc
+        // `SpellSlotProgression.totalsForClasses` retourne 9 zéros et
         // `_resetSpellSlots` n'upserte rien — voir le groupe "recalcul
         // character_spell_slots" plus bas pour le cas d'un vrai lanceur.
         final slotRows = await client
@@ -238,9 +239,11 @@ void main() {
     );
 
     test("applyRest(long) avec un className fictif (aucune classe lanceuse "
-        'correspondante) ne touche jamais une ligne character_spell_slots '
-        'déjà existante, mais écrase bien les character_feature_uses déjà '
-        'existants avec leur plein total', () async {
+        'correspondante) ne recalcule ni ne supprime une ligne '
+        'character_spell_slots déjà existante (total conservé) mais remet '
+        'ses emplacements utilisés à 0, et écrase bien les '
+        'character_feature_uses déjà existants avec leur plein '
+        'total', () async {
       final character = await client
           .from('characters')
           .insert({
@@ -287,16 +290,20 @@ void main() {
         className: 'Aucune Classe Lanceuse',
       );
 
-      // Inchangé : `longRestClassId` n'a aucune raison d'être une classe
-      // lanceuse de sorts (résolue sur son aptitude `repos_long`, sans
-      // rapport), et `className` ci-dessus est délibérément fictif.
+      // `className` ci-dessus est délibérément fictif et le personnage n'a
+      // qu'une classe : aucun total n'est calculé pour lui, la ligne est
+      // donc "hors calcul". Depuis le correctif "repos long multiclassé",
+      // une telle ligne n'est ni recalculée ni supprimée (total conservé),
+      // mais ses emplacements utilisés repassent à 0 comme tout emplacement
+      // existant au repos long (avant : `slots_used` restait à 3) — voir
+      // `character_repository.dart::_resetSpellSlots`.
       final slotRow = await client
           .from('character_spell_slots')
           .select('slots_total, slots_used')
           .eq('character_id', characterId)
           .single();
       expect(slotRow['slots_total'], 4);
-      expect(slotRow['slots_used'], 3);
+      expect(slotRow['slots_used'], 0);
 
       final longUse = await client
           .from('character_feature_uses')
@@ -660,7 +667,7 @@ void main() {
 
     group('recalcul character_spell_slots pour un vrai lanceur (repos long)', () {
       // Décision chef de projet (revue QA) : `_resetSpellSlots` doit
-      // recalculer les totaux via `SpellSlotProgression.slotsForLevel`
+      // recalculer les totaux via `SpellSlotProgression.totalsForClasses`
       // (même fonction que la montée de niveau), pas se contenter de
       // remettre à 0 les lignes déjà existantes — un personnage lanceur qui
       // n'a jamais monté de niveau via l'app n'a autrement aucune ligne

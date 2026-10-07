@@ -7,8 +7,9 @@
 enum RestType {
   /// Repos court : réinitialise uniquement les `character_feature_uses`
   /// dont la `class_features.uses_per_rest->>'rest_type'` correspondante
-  /// vaut `'repos_court'`, pour les aptitudes de classe atteintes par le
-  /// niveau de la classe primaire. Ne restaure aucun PV — le mécanisme RAW
+  /// vaut `'repos_court'`, pour les aptitudes de **toutes** les classes du
+  /// personnage (multiclassage inclus) atteintes par leur niveau respectif.
+  /// Ne restaure aucun PV — le mécanisme RAW
   /// "dépenser des dés de vie" n'est pas pris en charge (aucune colonne de
   /// suivi des dés de vie dans le schéma actuel, gap vérifié, hors
   /// périmètre de cette tâche).
@@ -19,8 +20,9 @@ enum RestType {
   /// survivent pas à un repos long — décision chef de projet), réinitialise
   /// tous les `character_spell_slots.slots_used` du personnage, et
   /// réinitialise tous les `character_feature_uses.uses_remaining` des
-  /// aptitudes atteintes par le niveau de la classe primaire, quel que soit
-  /// leur `rest_type` (règle 5e RAW : un repos long recharge tout ce qu'un
-  /// repos court recharge, et plus).
+  /// aptitudes de **toutes** les classes du personnage (multiclassage
+  /// inclus) atteintes par leur niveau respectif, quel que soit leur
+  /// `rest_type` (règle 5e RAW : un repos long recharge tout ce qu'un repos
+  /// court recharge, et plus).
   long,
 }

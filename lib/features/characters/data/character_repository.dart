@@ -627,9 +627,12 @@ abstract class CharacterRepository {
   ///   (chantier "Notifications" —
   ///   `docs/cahier-des-charges/15-profil-parametres.md` section 3, alimente
   ///   le rappel de repos long côté backend) ; recalcule (upsert) tous les
-  ///   `character_spell_slots` de la classe primaire pour son niveau actuel
-  ///   (`slots_used` toujours remis à 0), même fonction de progression que
-  ///   [applyLevelUp] ; réinitialise (upsert)
+  ///   `character_spell_slots` à partir de **toutes** les classes du
+  ///   personnage (niveau de lanceur combiné multiclasse,
+  ///   `SpellSlotProgression.totalsForClasses`, même règle que
+  ///   [applyLevelUp]), `slots_used` toujours remis à 0 — y compris sur une
+  ///   ligne existante d'un niveau de sort hors calcul, dont le total est
+  ///   laissé tel quel ; réinitialise (upsert)
   ///   `character_feature_uses.uses_remaining` pour toutes les
   ///   `class_features` de **toutes** les classes du personnage
   ///   (multiclassage inclus) atteintes par leur niveau respectif, quel que
@@ -675,10 +678,12 @@ abstract class CharacterRepository {
   /// idempotente et donc moins exposée.
   ///
   /// [className] : même rôle et même rationale que sur [applyLevelUp] (voir
-  /// sa documentation) — nécessaire au recalcul de
-  /// `character_spell_slots` pour un repos long, résolu par l'appelant
-  /// depuis la classe primaire (`character_detail_screen.dart`). Ignoré
-  /// pour un repos court (aucun recalcul de sorts).
+  /// sa documentation) — nom de la classe **primaire**, résolu par
+  /// l'appelant (`character_detail_screen.dart`), utilisé pour le recalcul
+  /// de `character_spell_slots` au repos long. Les autres classes d'un
+  /// personnage multiclassé sont nommées par cette méthode elle-même
+  /// (`translations`), jamais par l'appelant. Ignoré pour un repos court
+  /// (aucun recalcul de sorts).
   ///
   /// `character_spell_slots`/`character_feature_uses` ne sont jamais
   /// initialisées à la création de personnage (gaps pré-existants
@@ -2381,40 +2386,67 @@ class SupabaseCharacterRepository implements CharacterRepository {
       }
 
       // Toutes les classes du personnage (multiclassage inclus) — utilisées
-      // à la fois pour retrouver la classe primaire (repos long/court,
-      // recalcul des emplacements de sorts et suivi des dés de vie) et pour
-      // réinitialiser les aptitudes de *toutes* les classes (voir
-      // [_resetFeatureUses] : la lecture de la fiche,
-      // `_buildCharacterDetailPayload`/`_mapCharacterDetailPayload`, gère
-      // déjà explicitement ce cas, un repos doit suivre la même règle plutôt
-      // qu'ignorer silencieusement les classes secondaires).
+      // pour retrouver la classe primaire (suivi des dés de vie), pour
+      // recalculer les emplacements de sorts (niveau de lanceur combiné de
+      // *toutes* les classes, voir [_resetSpellSlots]), pour retrouver un
+      // éventuel Occultiste (magie de pacte) et pour réinitialiser les
+      // aptitudes de *toutes* les classes (voir [_resetFeatureUses] : la
+      // lecture de la fiche, `_buildCharacterDetailPayload`/
+      // `_mapCharacterDetailPayload`, gère déjà explicitement ce cas, un
+      // repos doit suivre la même règle plutôt qu'ignorer silencieusement
+      // les classes secondaires).
       final classRows = await _client
           .from('character_classes')
           .select('id, class_id, level, is_primary, hit_dice_spent')
           .eq('character_id', characterId);
 
-      // Classe primaire uniquement pour tout ce qui suit dans cette
-      // méthode (emplacements de sorts, dés de vie) : pas de calcul
-      // multiclassé, même convention déjà établie pour les emplacements de
-      // sorts à la montée de niveau ([applyLevelUp] rejette d'ailleurs
-      // explicitement un personnage multiclassé) — contrairement à la
-      // réinitialisation des aptitudes ci-dessous, qui doit couvrir toutes
-      // les classes. Reste une map vide (jamais `null`) si aucune classe
-      // n'est marquée primaire : chaque site d'utilisation ci-dessous garde
-      // déjà cette garde (`isNotEmpty`).
+      // Classe primaire : ne sert plus qu'au suivi des dés de vie ci-dessous
+      // (décision produit en attente pour un personnage multiclassé) et à
+      // savoir à quelle ligne s'applique [className]. Reste une map vide
+      // (jamais `null`) si aucune classe n'est marquée primaire : chaque
+      // site d'utilisation ci-dessous garde déjà cette garde (`isNotEmpty`).
       final primaryClassRow = classRows.firstWhere(
         (row) => row['is_primary'] == true,
         orElse: () => const <String, dynamic>{},
       );
 
+      // Noms (français) de toutes les classes du personnage, résolus une
+      // seule fois pour les deux usages ci-dessous : emplacements de sorts
+      // multiclasses (repos long) et recherche de l'Occultiste (magie de
+      // pacte, repos court ET long). Lecture seule, placée avant toute
+      // écriture : si elle échoue, le repos échoue sans avoir rien écrit.
+      // Aucune requête si le personnage n'a aucune classe.
+      final restClassNames = await _fetchTranslatedNames(
+        entityType: 'class',
+        entityIds: {
+          for (final row in classRows) (row['class_id'] as Object).toString(),
+        },
+      );
+
       if (type == RestType.long) {
-        if (primaryClassRow.isNotEmpty) {
+        if (classRows.isNotEmpty) {
+          // Même convention que [applyLevelUp] pour construire la liste des
+          // classes : [className] (résolu par l'appelant) nomme la classe
+          // primaire, les autres classes sont nommées depuis `translations`
+          // (chaîne vide si la traduction manque : classe alors traitée
+          // comme non lanceuse, jamais une erreur).
           await _resetSpellSlots(
             characterId: characterId,
-            className: className,
-            totalLevel: (primaryClassRow['level'] as num).toInt(),
+            classes: [
+              for (final row in classRows)
+                (
+                  className: identical(row, primaryClassRow)
+                      ? className
+                      : (restClassNames[(row['class_id'] as Object)
+                                .toString()] ??
+                            ''),
+                  level: (row['level'] as num).toInt(),
+                ),
+            ],
           );
+        }
 
+        if (primaryClassRow.isNotEmpty) {
           // Récupération RAW 5e des dés de vie : la moitié du niveau de la
           // classe primaire (arrondie à l'inférieur), au moins 1 — jamais en
           // dessous de 0 dé dépensé restant. Silencieux côté UI (voir la
@@ -2519,17 +2551,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // uniquement) — placé ici, en dehors du `if/else` ci-dessus, pour
       // s'exécuter dans les deux cas. L'Occultiste peut être une classe
       // SECONDAIRE (contrairement à [primaryClassRow], qui ne couvre que la
-      // classe primaire pour les emplacements classiques/dés de vie
-      // ci-dessus) : résolue depuis [classRows] (TOUTES les classes), les noms
-      // étant résolus via [_fetchTranslatedNames] (même méthode privée
-      // qu'[applyLevelUp]).
+      // classe primaire pour les dés de vie ci-dessus) : résolue depuis
+      // [classRows] (TOUTES les classes) et [restClassNames] (noms déjà
+      // résolus plus haut). Circuit indépendant des emplacements classiques :
+      // l'Occultiste n'entre jamais dans le niveau de lanceur combiné
+      // ([SpellSlotProgression.totalsForClasses] l'ignore), donc ses charges
+      // ne sont jamais comptées deux fois.
       if (classRows.isNotEmpty) {
-        final restClassNames = await _fetchTranslatedNames(
-          entityType: 'class',
-          entityIds: {
-            for (final row in classRows) (row['class_id'] as Object).toString(),
-          },
-        );
         Map<String, dynamic>? occultisteRow;
         for (final row in classRows) {
           if (restClassNames[(row['class_id'] as Object).toString()] ==
@@ -2637,35 +2665,45 @@ class SupabaseCharacterRepository implements CharacterRepository {
     }
   }
 
-  /// Repos long uniquement : réinitialise `character_spell_slots` pour la
-  /// classe primaire ([className]) à son niveau actuel ([totalLevel]), en
-  /// recalculant les totaux via [SpellSlotProgression.slotsForLevel] — même
-  /// fonction que [_upsertSpellSlots] (montée de niveau) — plutôt que de se
-  /// contenter de remettre à 0 les lignes déjà existantes.
+  /// Repos long uniquement : réinitialise `character_spell_slots` pour
+  /// [classes] — TOUTES les classes du personnage, multiclassage inclus — en
+  /// recalculant les totaux via [SpellSlotProgression.totalsForClasses], la
+  /// même fonction que [_upsertSpellSlots] (montée de niveau) : une seule
+  /// classe lanceuse garde sa propre table, deux ou plus passent au niveau
+  /// de lanceur combiné, l'Occultiste est toujours ignoré (magie de pacte,
+  /// voir [_resetPactSlot]). Un calcul sur la seule classe primaire laissait
+  /// un Guerrier/Magicien sans aucun emplacement restauré et écrasait à la
+  /// baisse les totaux d'un personnage à deux classes lanceuses.
   ///
-  /// Décision chef de projet (revue QA) : un simple `UPDATE` sur les lignes
-  /// déjà existantes est insuffisant, parce que `character_spell_slots`
-  /// n'est écrite nulle part à la création de personnage — seulement par
-  /// [_upsertSpellSlots] lors d'une montée de niveau passée par l'app. Un
-  /// personnage lanceur de sorts qui n'a jamais monté de niveau via l'app
-  /// (cas réel, y compris après un futur import XML, Phase 3) a donc zéro
-  /// ligne `character_spell_slots` : un simple `UPDATE` ne ferait alors
-  /// rien, et un repos long resterait sans effet visible sur ses
-  /// emplacements de sorts.
+  /// Recalcul plutôt que simple remise à 0 des lignes existantes (décision
+  /// chef de projet, revue QA) : `character_spell_slots` n'est écrite nulle
+  /// part à la création de personnage — seulement par [_upsertSpellSlots]
+  /// lors d'une montée de niveau passée par l'app. Un personnage lanceur de
+  /// sorts qui n'a jamais monté de niveau via l'app (cas réel, y compris
+  /// après un futur import XML, Phase 3) a donc zéro ligne
+  /// `character_spell_slots` : un simple `UPDATE` ne ferait alors rien, et
+  /// un repos long resterait sans effet visible sur ses emplacements.
   ///
-  /// `slots_used` est toujours remis à 0 (jamais préservé, contrairement à
-  /// [_upsertSpellSlots] où une montée de niveau ne doit pas effacer une
-  /// consommation déjà faite) : c'est tout le sens d'un repos long. Aucune
-  /// ligne écrite pour un niveau de sort à 0, même convention que
-  /// [_upsertSpellSlots]/`CharacterDetailRowMapper.parseSpellSlots`. Ne fait
-  /// rien pour une classe non lanceuse ou l'Occultiste, même limite que
-  /// [_upsertSpellSlots].
+  /// Pour chaque niveau de sort dont le total calculé est `> 0` : upsert de
+  /// `slots_total` (valeur calculée, qui remplace la valeur stockée même si
+  /// celle-ci était supérieure — comportement inchangé) et `slots_used = 0`
+  /// (jamais préservé, contrairement à [_upsertSpellSlots] : c'est tout le
+  /// sens d'un repos long). Aucune ligne créée pour un niveau de sort à 0,
+  /// même convention que [_upsertSpellSlots]/
+  /// `CharacterDetailRowMapper.parseSpellSlots`.
+  ///
+  /// Lignes déjà en base pour un niveau de sort HORS calcul (total calculé
+  /// à 0 — ex. donnée héritée d'un ancien état du personnage) : jamais
+  /// supprimées, `slots_total` jamais modifié, seul `slots_used` est remis à
+  /// 0 quand il ne l'est pas déjà (un repos long restaure tous les
+  /// emplacements existants ; décider de supprimer ces lignes relèverait
+  /// d'un autre chantier). Aucune écriture si rien n'est à restaurer (classe
+  /// non lanceuse ou Occultiste seul, sans ligne consommée).
   Future<void> _resetSpellSlots({
     required String characterId,
-    required String className,
-    required int totalLevel,
+    required List<({String className, int level})> classes,
   }) async {
-    final totals = SpellSlotProgression.slotsForLevel(className, totalLevel);
+    final totals = SpellSlotProgression.totalsForClasses(classes);
     final payload = [
       for (var i = 0; i < totals.length; i++)
         if (totals[i] > 0)
@@ -2676,11 +2714,36 @@ class SupabaseCharacterRepository implements CharacterRepository {
             'slots_used': 0,
           },
     ];
-    if (payload.isEmpty) return;
 
-    await _client
+    final existingRows = await _client
         .from('character_spell_slots')
-        .upsert(payload, onConflict: 'character_id,slot_level');
+        .select('slot_level, slots_used')
+        .eq('character_id', characterId);
+    final staleUsedLevels = <int>[];
+    for (final row in existingRows) {
+      final slotLevel = (row['slot_level'] as num?)?.toInt();
+      if (slotLevel == null) continue;
+      final isComputed =
+          slotLevel >= 1 &&
+          slotLevel <= totals.length &&
+          totals[slotLevel - 1] > 0;
+      final used = (row['slots_used'] as num?)?.toInt() ?? 0;
+      if (!isComputed && used != 0) staleUsedLevels.add(slotLevel);
+    }
+    staleUsedLevels.sort();
+
+    if (payload.isNotEmpty) {
+      await _client
+          .from('character_spell_slots')
+          .upsert(payload, onConflict: 'character_id,slot_level');
+    }
+    if (staleUsedLevels.isNotEmpty) {
+      await _client
+          .from('character_spell_slots')
+          .update({'slots_used': 0})
+          .eq('character_id', characterId)
+          .inFilter('slot_level', staleUsedLevels);
+    }
   }
 
   /// Réinitialise (upsert) `character_feature_uses.uses_remaining` pour les
