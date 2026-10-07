@@ -43,29 +43,42 @@ class _DevicePermissionsSheetContent extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SheetHeaderBar(title: 'GESTION DES AUTORISATIONS APPAREIL'),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Text(
-                'Nexus JDR utilise l\'appareil photo et la galerie '
-                'uniquement pour définir le portrait de ton personnage ou '
-                'ton avatar. Pour modifier ces autorisations, ouvre les '
-                'réglages de ton téléphone.',
-                style: AppTypography.body(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
+            // `Flexible` + défilement : la barre de tête grandit avec un texte
+            // agrandi dans les réglages du téléphone, le corps ne doit alors
+            // jamais déborder du panneau sur petit écran (même principe que
+            // `step_help_sheet.dart`). Sans effet tant que tout tient.
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Text(
+                        'Nexus JDR utilise l\'appareil photo et la galerie '
+                        'uniquement pour définir le portrait de ton personnage ou '
+                        'ton avatar. Pour modifier ces autorisations, ouvre les '
+                        'réglages de ton téléphone.',
+                        style: AppTypography.body(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        0,
+                        AppSpacing.lg,
+                        AppSpacing.lg,
+                      ),
+                      child: PrimaryButton(
+                        label: 'Ouvrir les réglages',
+                        onPressed: () => AppSettings.openAppSettings(),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                0,
-                AppSpacing.lg,
-                AppSpacing.lg,
-              ),
-              child: PrimaryButton(
-                label: 'Ouvrir les réglages',
-                onPressed: () => AppSettings.openAppSettings(),
               ),
             ),
           ],

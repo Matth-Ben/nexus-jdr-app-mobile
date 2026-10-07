@@ -47,20 +47,28 @@ class _InventoryCategoryFilterSheetContent extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SheetHeaderBar(title: 'FILTRER PAR CATÉGORIE'),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
-                children: [
-                  for (final option in InventoryCategoryFilter.values) ...[
-                    SelectableOptionTile(
-                      title: option.label,
-                      selected: option == current,
-                      onTap: () => Navigator.of(context).pop(option),
-                    ),
-                    if (option != InventoryCategoryFilter.values.last)
-                      const SizedBox(height: AppSpacing.sm),
+            // `Flexible` + défilement : la barre de tête grandit avec un texte
+            // agrandi dans les réglages du téléphone, les options ne doivent
+            // alors jamais déborder du panneau sur petit écran (même principe
+            // que `device_permissions_sheet.dart`). Sans effet tant que tout
+            // tient.
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final option in InventoryCategoryFilter.values) ...[
+                      SelectableOptionTile(
+                        title: option.label,
+                        selected: option == current,
+                        onTap: () => Navigator.of(context).pop(option),
+                      ),
+                      if (option != InventoryCategoryFilter.values.last)
+                        const SizedBox(height: AppSpacing.sm),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],

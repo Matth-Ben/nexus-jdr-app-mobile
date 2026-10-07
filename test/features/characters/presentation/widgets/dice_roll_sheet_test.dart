@@ -6,6 +6,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/widgets/sheet_header_bar.dart';
 import 'package:personnages/features/characters/presentation/widgets/dice_roll_sheet.dart';
 
 Future<void> _open(
@@ -171,4 +172,47 @@ void main() {
 
     expect(find.text('ATHLÉTISME'), findsNothing);
   });
+
+  testWidgets('texte agrandi à 200 % sur petit écran (320×568) : la barre de '
+      'tête grandit avec un libellé long sans faire déborder la sheet', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    // 20 naturel : la ligne "RÉUSSITE CRITIQUE" s'ajoute, cas le plus haut
+    // de la sheet. Tout débordement lèverait une exception, qui ferait
+    // échouer ce test.
+    await _open(
+      tester,
+      label: 'Escamotage de la main',
+      modifier: 3,
+      random: _AlwaysTwenty(),
+    );
+
+    expect(find.text('RÉUSSITE CRITIQUE'), findsOneWidget);
+    final header = tester.getRect(find.byType(SheetHeaderBar));
+    expect(header.height, greaterThan(56));
+    expect(header.top, greaterThanOrEqualTo(0));
+    expect(
+      tester.getRect(find.text('RELANCER')).bottom,
+      lessThanOrEqualTo(568),
+    );
+  });
+}
+
+/// Tire toujours 20 au d20 (`nextInt(20)` + 1) : force l'affichage de la
+/// ligne "RÉUSSITE CRITIQUE".
+class _AlwaysTwenty implements Random {
+  @override
+  int nextInt(int max) => max - 1;
+
+  @override
+  bool nextBool() => true;
+
+  @override
+  double nextDouble() => 0;
 }
