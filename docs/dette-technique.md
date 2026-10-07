@@ -32,6 +32,8 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 | D13 | Aucune remontée de plantage ; erreurs avalées | Décision d'outil, puis `dev-flutter` |
 | D18 | Tests d'intégration absents de la chaîne d'intégration | `dev-backend-supabase`, `qa-testeur` |
 | D19 | Publication Android sans analyse ni tests préalables | `dev-flutter` |
+| D58 | Colonne `is_incomplete` utilisée par des migrations du dépôt web sans qu'aucune migration ne la crée | `dev-backend-supabase` |
+| D60 | 3 suites pgTAP déjà en échec (`bug_reports_rls`, `character_share_token`, `content_proposals_rls`), jamais exécutées avant le 07/10 | `dev-backend-supabase` |
 
 ### B. Fait perdre des données ou donne une règle fausse au joueur
 
@@ -42,7 +44,7 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 | D33 | Deux envois simultanés du même type (synchronisation et ajustement en ligne) arrivant dans le désordre | Ouvert, fenêtre réduite par la PR #80 |
 | D34 | Écriture en attente refusée indéfiniment : reste affichée, jamais retentée ni signalée | Ouvert |
 | D35 | Repos ou montée de niveau en ligne avec des PV encore en attente | Ouvert, décision de conception |
-| D05 | Montée de niveau, création et repos non atomiques | Ouvert |
+| D05 | Montée de niveau, création et repos non atomiques | Partiel (PR #20, dépôt web) : `create_character` seule |
 | D09 | Sorts innés supprimés lors d'un changement de classe en édition | Corrigé (PR #83) |
 | D10 | Import XML : sorts tous « connus », doublons | Ouvert |
 | D03 | Classes à sorts connus obligées de « préparer » | Corrigé (PR #81) |
@@ -51,6 +53,7 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 | D14 | Emplacements jamais écrits à la création ni à l'import | Ouvert, confirmé en base le 08/10 : aucun déclencheur |
 | D12 | Aucun délai d'attente réseau | Ouvert |
 | D31 | Cache local jamais purgé à la déconnexion | Ouvert |
+| D59 | Peuplement des historiques (lot 7, dépôt web) : 71 au lieu de 72 attendus, un historique silencieusement ignoré par le dédoublonnage | Ouvert |
 
 ### C. Peut attendre
 
@@ -73,7 +76,7 @@ la version anglaise démarre : elle devient alors bloquante.
 | D07 | Keystore Android de production déclaré compromis, rotation non cochée | `README.md` « Reste à faire » ; `.github/workflows/release-android.yml` | haute | Avant la mise en production | petit | Réinitialiser la clé d'import dans la Play Console, mettre à jour les secrets | Matthias | L (état Play non vérifiable) | Ouvert |
 | D03 | Les classes à sorts connus doivent « préparer » pour lancer | `lib/features/character_creation/domain/spellcasting_rules.dart` ; `lib/features/characters/domain/spell_status_formatter.dart` ; `character_repository.dart` (select de la fiche) | haute | Tout Barde, Ensorceleur, Occultiste ou Rôdeur | moyen | Dériver « ce sort se prépare-t-il ? » à la lecture, à partir des classes et de `source_class_id` (déjà écrit, jamais relu) ; pas de migration | dev-flutter | L | Ouvert. Analyse faite le 07/10 : faisable sans migration. |
 | D04 | Règles de classe indexées sur le libellé français, dispersées dans 19 fichiers | Voir « Détails » | haute | À l'arrivée de l'anglais, ou à toute correction d'un nom de classe en base | gros | Clé stable de classe, registre unique des règles, `enum` pour le statut de sort | dev-flutter, dev-backend-supabase | L + C | Ouvert |
-| D05 | Écritures multi-étapes non atomiques | `character_repository.dart` (`applyLevelUp`, `applyRest`) ; `lib/features/character_creation/data/character_creation_repository.dart` ; `lib/features/character_creation/data/character_edit_repository.dart` | haute | Réseau instable pendant une montée de niveau ou une création | gros | Fonctions Postgres transactionnelles (`apply_level_up`, `create_character`, `apply_rest`) | dev-backend-supabase, dev-flutter | L | Ouvert |
+| D05 | Écritures multi-étapes non atomiques | `character_repository.dart` (`applyLevelUp`, `applyRest`) ; `lib/features/character_creation/data/character_creation_repository.dart` ; `lib/features/character_creation/data/character_edit_repository.dart` | haute | Réseau instable pendant une montée de niveau ou une création | gros | Fonctions Postgres transactionnelles (`apply_level_up`, `create_character`, `apply_rest`) | dev-backend-supabase, dev-flutter | L | Partiel (PR #20, dépôt web) : `create_character` en fonction `SECURITY DEFINER` transactionnelle, validée par 9 tests pgTAP exécutés en réel (privilèges, atomicité sur échec FK, rejet d'un `jsonb` malformé). Pas encore mergée, pas encore branchée côté mobile. `apply_level_up`/`apply_rest` restent à faire. |
 | D10 | Import XML : `connu` pour toutes les classes, doublons `inné`/`connu` | `lib/features/xml_import/domain/xml_import_save_data_resolver.dart` ; `lib/features/characters/data/character_spell_row_mapper.dart` ; `character_repository.dart` (`setSpellPrepared`) | haute | Tout import d'un Clerc, Druide, Magicien ou Paladin ; tout sort présent deux fois | moyen | Statut dérivé de la classe à l'import, dédoublonnage, contrainte unique `(character_id, spell_id)` avec migration de nettoyage | dev-flutter, dev-backend-supabase | L | Ouvert |
 | D09 | Sorts innés supprimés lors d'un changement de classe en édition | `lib/features/character_creation/domain/character_edit_planner.dart` ; `lib/features/character_creation/domain/character_edit_snapshot.dart` | haute | Personnage doté d'un sort inné qui change de classe | petit | Exclure `inné` de `storedSpells`, ajouter un test | dev-flutter, qa-testeur | L, puis confirmé par tests (mutation manuelle : retirer le filtre fait échouer 4 tests) | Corrigé (PR #83). Suites : D53 à D56. |
 | D08 | Sorts innés raciaux : emplacement exigé, pas de compteur d'usage | `lib/features/characters/domain/spell_cast_eligibility.dart` | haute | Toute race à sort inné de niveau 1 ou plus | moyen | Lancer sans emplacement, compteur « une fois par repos long » : colonne `innate_uses_spent` sur `character_spells` (migration côté web) | dev-backend-supabase, direction-artistique, dev-flutter | L | Corrigé (PR #82 ; colonne et RPC de partage : dépôt web, PR #19). Suites : D43 à D52. |
@@ -129,6 +132,13 @@ friction et une règle fausse, pas un blocage.
 tentative après une coupure peut ajouter les PV une seconde fois. `createCharacter`
 compte 13 appels avec un nettoyage au mieux. L'édition supprime puis réinsère les scores
 de caractéristique.
+
+**Note (PR #20, dépôt web) :** `create_character` (fonction Postgres transactionnelle,
+`SECURITY DEFINER`) couvre l'atomicité de l'échec partiel, mais reste **non idempotente** :
+un retry client après un succès serveur dont la réponse HTTP est perdue créerait un
+personnage dupliqué — limite déjà présente dans le code séquentiel actuel, pas une
+régression introduite par cette PR, à garder en tête par `dev-flutter` lors du
+branchement.
 
 **D06.** Vérifié sur la machine de développement en comparant les URL des trois fichiers
 de configuration, sans afficher les valeurs : elles sont identiques.
@@ -312,6 +322,28 @@ Constat sans identifiant, pour un futur passage de l'audit `dette-technique` :
 | Sujet | Détail | Source |
 |---|---|---|
 | Avertissement `drift` répété en test | `test/features/character_creation/data/character_creation_repository_test.dart` (groupe "TTL cache d'abord si frais") émet « AppDatabase multiple times » à plusieurs reprises. Présent avant la PR #83, tests passants malgré l'avertissement — à vérifier si c'est un artefact des fixtures (base recréée plusieurs fois dans la même suite) ou un pattern qui existe aussi en production. | Lu par qa-testeur |
+
+## Ajouts liés à la fonction transactionnelle create_character (PR #20, dépôt web)
+
+Constats relevés par `dev-backend-supabase` et `code-reviewer` le 07/10/2026 en
+préparant et validant `create_character` (point 10 de la partie B). Aucun rapport avec
+le dépôt mobile ; tous découverts en rejouant `supabase db reset` en local pour la
+première fois (jamais fait avant sur ce dépôt, cohérent avec les en-têtes de
+`character_spells_innate_uses_test.sql`/`character_share_token_test.sql` qui le
+signalaient déjà).
+
+| ID | Sujet | Gravité | Correction proposée | État |
+|---|---|---|---|---|
+| D58 | La colonne `is_incomplete` (`spells`, `races`, `backgrounds`) est utilisée par des migrations du dépôt web à partir du 21/09 mais n'est créée par aucune migration — elle n'existe que sur le projet distant, ajoutée hors migration. `supabase db reset` échoue dès `20260921090000_fix_spells_metadata_add_2024_spells.sql` sans elle. | haute | Migration `alter table ... add column if not exists is_incomplete ...` placée chronologiquement avant sa première utilisation | Ouvert |
+| D59 | `20260930140000_seed_backgrounds_complements.sql` (lot 7) attend au moins 72 historiques complets mais n'en obtient que 71 : une collision de nom fait que le dédoublonnage (`if not exists ... lower(tr.value) = lower(rec.name_fr)`) ignore silencieusement un des 57 historiques à insérer, le prenant pour un historique déjà présent sous un nom proche. | haute | Fiabiliser le dédoublonnage du lot 7 (comparaison exacte plutôt qu'approximative, ou vérification explicite du nombre de lignes insérées) | Ouvert |
+| D60 | 3 fichiers de tests pgTAP déjà en échec, sans rapport avec `create_character` : `bug_reports_rls_test.sql` (2/6, absence d'un `42501` attendu sur deux politiques), `character_share_token_test.sql` (7/14, régénération de jeton, aptitudes de classe exposées, `owner_id`/`character_campaigns` dans `get_shared_character`), `content_proposals_rls_test.sql` (3/31, privilèges de colonne). Jamais réparés car `db reset`/`test db --local` n'avaient apparemment jamais été rejoués en entier en local. | haute | Audit dédié par `dev-backend-supabase` : déterminer pour chacun si l'échec révèle un vrai bug RLS/partage en production, ou seulement un test à corriger | Ouvert |
+
+**Why ces trois-là n'ont pas été corrigés sur place** : hors périmètre de la tâche
+(ajouter les tests pgTAP de `create_character`), et un correctif sans contexte risquait
+de masquer un vrai bug métier plutôt que de le réparer. Les deux contournements
+temporaires utilisés pour dérouler `db reset` (colonne ajoutée, exceptions du lot 7
+changées en `notice`) ont été annulés avant de commiter ; la PR #20 ne contient que le
+nouveau fichier de test.
 
 ## Décisions en attente
 
