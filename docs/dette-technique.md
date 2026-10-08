@@ -29,7 +29,6 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 |---|---|---|
 | D06 | Les trois environnements pointent sur le même projet Supabase | Matthias, puis `dev-backend-supabase` |
 | D07 | Clé de signature Android déclarée compromise, rotation non faite | Matthias |
-| D13 | Aucune remontée de plantage ; erreurs avalées | Décision d'outil, puis `dev-flutter` |
 | D18 | Tests d'intégration absents de la chaîne d'intégration | `dev-backend-supabase`, `qa-testeur` |
 | D19 | Publication Android sans analyse ni tests préalables | `dev-flutter` |
 
@@ -54,7 +53,8 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 
 ### C. Peut attendre
 
-D04, D11, D15, D16, D17, D20 à D30, D32, D61, D62, D63, et les constats de session listés plus bas.
+D04, D11, D13 (reste), D15, D16, D17, D20 à D30, D32, D61, D62, D63, et les constats de
+session listés plus bas.
 D04 (règles indexées sur le nom français des classes) change de catégorie le jour où
 la version anglaise démarre : elle devient alors bloquante.
 
@@ -79,7 +79,7 @@ la version anglaise démarre : elle devient alors bloquante.
 | D08 | Sorts innés raciaux : emplacement exigé, pas de compteur d'usage | `lib/features/characters/domain/spell_cast_eligibility.dart` | haute | Toute race à sort inné de niveau 1 ou plus | moyen | Lancer sans emplacement, compteur « une fois par repos long » : colonne `innate_uses_spent` sur `character_spells` (migration côté web) | dev-backend-supabase, direction-artistique, dev-flutter | L | Corrigé (PR #82 ; colonne et RPC de partage : dépôt web, PR #19). Suites : D43 à D52. |
 | D18 | Tests d'intégration hors CI | `test_integration/README.md` ; `.github/workflows/ci.yml` | haute | À chaque migration côté web | moyen | Job CI avec un Supabase éphémère, au moins quotidien | dev-backend-supabase, qa-testeur | L | Ouvert |
 | D12 | Aucun délai d'attente réseau ; « connecté » signifie seulement « interface active » | 0 occurrence de `.timeout(` pour 189 appels `.from(` ; `lib/core/network/connectivity_checker.dart` | haute | Wi-Fi sans débit ou signal faible ; durée d'attente réelle non mesurée | moyen | Délai sur le client HTTP ; traiter une expiration comme « hors ligne » pour PV/XP | dev-flutter | C + L | Ouvert |
-| D13 | Erreurs avalées, aucune remontée de plantage | 194 `catch (_)` dans `lib/` ; aucun gestionnaire global | haute | Dès maintenant (testeurs Play) | moyen | Remontée de plantages, journalisation dans les `catch` des dépôts | décision d'outil, dev-flutter | C + L | Ouvert |
+| D13 | Erreurs avalées, aucune remontée de plantage | 194 `catch (_)` dans `lib/` ; aucun gestionnaire global | haute | Dès maintenant (testeurs Play) | moyen | Remontée de plantages, journalisation dans les `catch` des dépôts | décision d'outil, dev-flutter | C + L | Partiel (PR #91). Firebase Crashlytics choisi par Matthias, câblé : `FlutterError.onError`/`PlatformDispatcher.instance.onError` couvrent désormais TOUTE erreur fatale non interceptée (le vrai risque de catégorie A), validé par un build APK réel. 14 `catch` génériques instrumentés sur les écritures multi-tables à risque d'orphelin silencieux (sur ~202 au total). Les ~188 restants (lectures, replis hors ligne intentionnels, écritures mono-table déjà mappées vers une erreur visible côté UI) ne sont pas couverts — hors catégorie A désormais, passé en catégorie C pour la couverture non exhaustive restante. |
 | D16 | Fichiers trop gros pour être modifiés sans risque | `character_repository.dart` (3933 lignes), `level_up_screen.dart` (3208), `character_detail_screen.dart` (2353), `xml_import_review_screen.dart` (2163), `character_creation_repository.dart` (1539) | haute | Toute évolution du hors ligne ou du multiclassage | gros | Scinder le dépôt par domaine ; factoriser le patron optimiste, recopié dans environ 21 méthodes | dev-flutter | C + L | Ouvert |
 | D27 | Copie locale du cahier des charges périmée | `docs/cahier-des-charges/` (fichiers datés du 25/08) ; `CLAUDE.md` | haute (processus) | À chaque tâche qui « relit la spec » | petit | Resynchroniser depuis claude.ai, ajouter les documents 15 et 16 à `CLAUDE.md` | chef de projet | C + L | Ouvert |
 | D14 | Emplacements de sorts jamais écrits à la création ni à l'import | `character_repository.dart` ; aucune écriture dans `character_creation_repository.dart` | non estimée | Si aucun déclencheur en base ne compense : un lanceur neuf reste à 0 emplacement jusqu'au premier repos long | petit | Initialiser à la création et à l'import | dev-flutter | L partiel | Ouvert, à confirmer en base |
