@@ -236,9 +236,23 @@ Future<BootstrapResult> _initializeSupabaseAndFirebase() async {
       // `FlutterError.onError` — donc on chaîne vers le handler déjà en
       // place, `FlutterError.presentError` par défaut, pour ne jamais perdre
       // le dump console existant en plus de l'envoi à Crashlytics).
+      //
+      // `recordError(..., fatal: true)` plutôt que `recordFlutterFatalError` :
+      // ce dernier délègue en interne à `recordFlutterError`, qui appelle
+      // lui-même `FlutterError.presentError(details)` avant d'enregistrer
+      // dans Crashlytics (voir le code source du plugin
+      // `firebase_crashlytics`) — avec `previousOnError` qui vaut par défaut
+      // `FlutterError.presentError`, l'appeler ensuite aurait dupliqué le
+      // dump console à chaque erreur fatale au lieu de le préserver une
+      // seule fois.
       final previousOnError = FlutterError.onError;
       FlutterError.onError = (details) {
-        FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+        FirebaseCrashlytics.instance.recordError(
+          details.exception,
+          details.stack,
+          fatal: true,
+          information: [details.toString()],
+        );
         previousOnError?.call(details);
       };
       PlatformDispatcher.instance.onError = (error, stackTrace) {
