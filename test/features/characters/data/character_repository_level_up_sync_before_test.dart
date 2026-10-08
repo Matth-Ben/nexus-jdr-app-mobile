@@ -101,137 +101,124 @@ void main() {
   }
 
   // D35 : synchronisation de la file PV/XP avant la montée de niveau.
-  group(
-    'applyLevelUp — D35 : synchronisation de la file PV/XP avant la montée '
-    'de niveau',
-    () {
-      test(
-        'cas nominal, aucune entrée en file : comportement inchangé (la '
-        'montée de niveau continue normalement, PV = 12 + 6 = 18)',
-        () async {
-          expect(
-            await pendingWrites.forCharacter(
-              ownerId: ownerId,
-              characterId: characterId,
-            ),
-            isEmpty,
-            reason: 'précondition du scénario nominal',
-          );
-
-          final recorded = await applyLevelUp();
-
-          final charactersUpdate = recorded.firstWhere(
-            (r) => r.method == 'PATCH' && r.table == 'characters',
-          );
-          expect(charactersUpdate.body, {'max_hp': 36, 'current_hp': 18});
-          final classUpdate = recorded.firstWhere(
-            (r) => r.method == 'PATCH' && r.table == 'character_classes',
-          );
-          expect(classUpdate.body, {'level': 5});
-        },
+  group('applyLevelUp — D35 : synchronisation de la file PV/XP avant la montée '
+      'de niveau', () {
+    test('cas nominal, aucune entrée en file : comportement inchangé (la '
+        'montée de niveau continue normalement, PV = 12 + 6 = 18)', () async {
+      expect(
+        await pendingWrites.forCharacter(
+          ownerId: ownerId,
+          characterId: characterId,
+        ),
+        isEmpty,
+        reason: 'précondition du scénario nominal',
       );
 
-      test(
-        'entrée hp en file synchronisée avec succès avant la montée de '
-        'niveau : la file est vidée, puis la montée continue normalement',
-        () async {
-          await pendingWrites.enqueue(
-            characterId: characterId,
+      final recorded = await applyLevelUp();
+
+      final charactersUpdate = recorded.firstWhere(
+        (r) => r.method == 'PATCH' && r.table == 'characters',
+      );
+      expect(charactersUpdate.body, {'max_hp': 36, 'current_hp': 18});
+      final classUpdate = recorded.firstWhere(
+        (r) => r.method == 'PATCH' && r.table == 'character_classes',
+      );
+      expect(classUpdate.body, {'level': 5});
+    });
+
+    test(
+      'entrée hp en file synchronisée avec succès avant la montée de '
+      'niveau : la file est vidée, puis la montée continue normalement',
+      () async {
+        await pendingWrites.enqueue(
+          characterId: characterId,
+          ownerId: ownerId,
+          kind: PendingCharacterWriteKind.hp,
+          payload: {'currentHp': 9, 'temporaryHp': 0},
+        );
+
+        final recorded = await applyLevelUp();
+
+        expect(
+          await pendingWrites.forCharacter(
             ownerId: ownerId,
-            kind: PendingCharacterWriteKind.hp,
-            payload: {'currentHp': 9, 'temporaryHp': 0},
-          );
+            characterId: characterId,
+          ),
+          isEmpty,
+          reason:
+              'la synchronisation forcée en tout début de applyLevelUp '
+              'doit avoir vidé la file avant que la montée de niveau ne '
+              'continue',
+        );
+        final charactersWrites = recorded
+            .where((r) => r.method == 'PATCH' && r.table == 'characters')
+            .toList();
+        expect(
+          charactersWrites.first.body,
+          {'current_hp': 9, 'temporary_hp': 0},
+          reason:
+              "le premier PATCH 'characters' du journal doit être celui "
+              'de la synchronisation (colonnes PV de la file), avant '
+              'toute écriture propre à applyLevelUp',
+        );
+        // La lecture `current_hp`/`max_hp` qui alimente le calcul du
+        // gain de PV se fait ensuite sur `characters`, qui n'a pas
+        // réellement bougé côté double (double sans état) : le gain
+        // s'applique donc toujours à la valeur fixe de la fixture
+        // (12 + 6 = 18), seule l'absence de blocage est vérifiée ici.
+        expect(charactersWrites.last.body, {'max_hp': 36, 'current_hp': 18});
+      },
+    );
 
-          final recorded = await applyLevelUp();
-
-          expect(
-            await pendingWrites.forCharacter(
-              ownerId: ownerId,
-              characterId: characterId,
-            ),
-            isEmpty,
-            reason:
-                'la synchronisation forcée en tout début de applyLevelUp '
-                'doit avoir vidé la file avant que la montée de niveau ne '
-                'continue',
-          );
-          final charactersWrites = recorded
-              .where((r) => r.method == 'PATCH' && r.table == 'characters')
-              .toList();
-          expect(
-            charactersWrites.first.body,
-            {'current_hp': 9, 'temporary_hp': 0},
-            reason:
-                "le premier PATCH 'characters' du journal doit être celui "
-                'de la synchronisation (colonnes PV de la file), avant '
-                'toute écriture propre à applyLevelUp',
-          );
-          // La lecture `current_hp`/`max_hp` qui alimente le calcul du
-          // gain de PV se fait ensuite sur `characters`, qui n'a pas
-          // réellement bougé côté double (double sans état) : le gain
-          // s'applique donc toujours à la valeur fixe de la fixture
-          // (12 + 6 = 18), seule l'absence de blocage est vérifiée ici.
-          expect(charactersWrites.last.body, {
-            'max_hp': 36,
-            'current_hp': 18,
-          });
-        },
-      );
-
-      test(
-        'entrée hp en file dont la synchronisation échoue (refus '
+    test('entrée hp en file dont la synchronisation échoue (refus '
         'transitoire) : bloque la montée de niveau avec une CharacterFailure '
         "explicite, sans rien lire ni écrire d'autre — l'entrée reste en "
-        'file pour le prochain essai',
-        () async {
-          await pendingWrites.enqueue(
-            characterId: characterId,
-            ownerId: ownerId,
-            kind: PendingCharacterWriteKind.hp,
-            payload: {'currentHp': 9, 'temporaryHp': 0},
-          );
-          final journal = <_Recorded>[];
-
-          await expectLater(
-            applyLevelUp(
-              journal: journal,
-              failOn: (method, table) =>
-                  method == 'PATCH' && table == 'characters',
-            ),
-            throwsA(
-              isA<CharacterFailure>().having(
-                (failure) => failure.message,
-                'message',
-                contains('en attente de synchronisation'),
-              ),
-            ),
-          );
-
-          expect(
-            await pendingWrites.forCharacter(
-              ownerId: ownerId,
-              characterId: characterId,
-            ),
-            isNotEmpty,
-            reason:
-                'la synchronisation a échoué (refus transitoire) : '
-                "l'entrée doit rester en file pour un prochain essai, "
-                'jamais être abandonnée ni laissée de côté silencieusement',
-          );
-          expect(
-            journal.where((r) => r.method != 'GET'),
-            hasLength(1),
-            reason:
-                'seule la tentative de synchronisation (PATCH characters '
-                'refusé) doit apparaître : applyLevelUp ne doit rien lire '
-                "ni écrire de propre à lui-même une fois le blocage "
-                'détecté (ni lecture des classes, ni lecture de '
-                "characters)",
-          );
-        },
+        'file pour le prochain essai', () async {
+      await pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': 9, 'temporaryHp': 0},
       );
-    },
-  );
+      final journal = <_Recorded>[];
+
+      await expectLater(
+        applyLevelUp(
+          journal: journal,
+          failOn: (method, table) => method == 'PATCH' && table == 'characters',
+        ),
+        throwsA(
+          isA<CharacterFailure>().having(
+            (failure) => failure.message,
+            'message',
+            contains('en attente de synchronisation'),
+          ),
+        ),
+      );
+
+      expect(
+        await pendingWrites.forCharacter(
+          ownerId: ownerId,
+          characterId: characterId,
+        ),
+        isNotEmpty,
+        reason:
+            'la synchronisation a échoué (refus transitoire) : '
+            "l'entrée doit rester en file pour un prochain essai, "
+            'jamais être abandonnée ni laissée de côté silencieusement',
+      );
+      expect(
+        journal.where((r) => r.method != 'GET'),
+        hasLength(1),
+        reason:
+            'seule la tentative de synchronisation (PATCH characters '
+            'refusé) doit apparaître : applyLevelUp ne doit rien lire '
+            "ni écrire de propre à lui-même une fois le blocage "
+            'détecté (ni lecture des classes, ni lecture de '
+            "characters)",
+      );
+    });
+  });
 }
 
 /// Une requête PostgREST observée par le double de test.

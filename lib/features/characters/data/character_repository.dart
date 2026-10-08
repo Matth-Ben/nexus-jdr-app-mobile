@@ -2807,12 +2807,18 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // [_blockIfPendingHpOrXpWrites], appelée en tout premier (avant même
       // la vérification d'appartenance ci-dessous) UNIQUEMENT quand cette
       // méthode va effectivement relire/réécrire `current_hp` plus bas : un
-      // repos long (toujours), ou un repos court avec [diceSpent] > 0 (seule
-      // branche `RestType.short` qui touche `current_hp`/`max_hp`, voir plus
-      // bas). Un repos court sans dé de vie dépensé ne lit ni n'écrit jamais
-      // ces colonnes et n'a donc aucune raison d'être bloqué par un
+      // repos long (toujours), ou un repos court avec [appliedGain] > 0
+      // (seule condition qui déclenche la relecture/écriture de
+      // `current_hp`/`max_hp` plus bas, voir le bloc `if (appliedGain > 0)`
+      // ci-dessous — un repos court avec seulement `diceSpent > 0` écrit
+      // `hit_dice_spent` mais jamais `current_hp`, par exemple quand les PV
+      // sont déjà au maximum). Le RAW 5e interdit `appliedGain > 0` sans
+      // `diceSpent > 0`, donc cette condition ne risque jamais de sous-
+      // bloquer un repos court qui touche réellement `current_hp`. Un repos
+      // court sans dé de vie dépensé (ou sans PV restauré) ne lit ni n'écrit
+      // jamais ces colonnes et n'a donc aucune raison d'être bloqué par un
       // ajustement PV/XP hors ligne encore en attente pour ce personnage.
-      if (type == RestType.long || diceSpent > 0) {
+      if (type == RestType.long || appliedGain > 0) {
         await _blockIfPendingHpOrXpWrites(
           ownerId: ownerId,
           characterId: characterId,
