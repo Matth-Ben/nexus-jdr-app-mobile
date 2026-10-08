@@ -116,7 +116,7 @@ temps `supabase db reset` dans le dépôt web pour repartir d'une base propre.
 
 ## CI
 
-Branché depuis la PR #88 (D18) : `.github/workflows/integration-tests.yml`
+Branché depuis la PR #89 (D18) : `.github/workflows/integration-tests.yml`
 automatise exactement cette séquence — checkout croisé de ce dépôt et du
 dépôt web (`Matth-Ben/markdown-editor`), installation de la CLI Supabase du
 dépôt web, `supabase start` puis `supabase db reset`, génération de
