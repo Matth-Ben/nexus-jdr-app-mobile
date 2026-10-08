@@ -252,6 +252,14 @@ Future<BootstrapResult> _initializeSupabaseAndFirebase() async {
           details.stack,
           fatal: true,
           information: [details.toString()],
+          // `printDetails: false` (relecture code-reviewer, dette D13) :
+          // sans ce flag, le plugin imprime lui-même un second dump
+          // (format « FIREBASE CRASHLYTICS ») en mode debug, en plus de
+          // celui de `previousOnError` (`FlutterError.presentError`) ci-
+          // dessous — pas un doublon du même dump (voir le commentaire
+          // au-dessus sur `recordFlutterFatalError`), juste une console
+          // plus propre en debug.
+          printDetails: false,
         );
         previousOnError?.call(details);
       };
