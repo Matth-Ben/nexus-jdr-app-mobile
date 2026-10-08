@@ -34,6 +34,15 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Historique complet (branches + tags) nécessaire pour retrouver le
+          # tag v* précédent lors de la vérification du build number
+          # ci-dessous — le fetch-depth par défaut (1) ne récupère que le
+          # commit du tag courant.
+          fetch-depth: 0
+
+      - name: Récupère tous les tags (au cas où le checkout ci-dessus n'en ait pas ramené certains)
+        run: git fetch --tags --force
 
       - uses: subosito/flutter-action@v2
         with:
@@ -71,12 +80,55 @@ jobs:
 
       - run: dart run build_runner build --delete-conflicting-outputs
 
+      # Rejoue les mêmes vérifications que la pipeline "CI" avant de publier
+      # un App Bundle signé en prod : un tag poussé sur un commit qui n'a
+      # jamais passé (ou plus passé) la CI normale — erreur humaine, tag créé
+      # avant la fin de la CI de la PR — ne doit pas aboutir à une
+      # publication. Un échec ici bloque tout le reste du job (signature,
+      # build, publication de la Release) : comportement par défaut de
+      # GitHub Actions, une étape en échec arrête le job.
+      - name: flutter analyze
+        run: flutter analyze
+
+      - name: flutter test
+        run: flutter test
+
       - name: Vérifie que le build number a bien été incrémenté (pubspec.yaml)
         run: |
+          CURRENT_TAG="${GITHUB_REF_NAME}"
           BUILD_NUMBER=$(grep '^version:' pubspec.yaml | sed -E 's/.*\+([0-9]+)$/\1/')
+          echo "Tag courant : $CURRENT_TAG"
           echo "Build number de ce tag : $BUILD_NUMBER"
           if [ -z "$BUILD_NUMBER" ]; then
             echo "::error::Impossible de lire le build number depuis pubspec.yaml (format attendu: version: X.Y.Z+N)."
+            exit 1
+          fi
+
+          # Tag v* le plus élevé (tri sémantique, pas chronologique) parmi
+          # tous les tags existants autres que celui qui a déclenché ce run
+          # (voir docs/cahier-des-charges/13-depot-versioning-publication.md
+          # section 3.2 : un tag v{version} est créé sur le commit publié,
+          # jamais sur un commit ultérieur — en supposant que les tags sont
+          # créés dans l'ordre des versions, le tri sémantique coïncide avec
+          # l'ordre chronologique de publication).
+          PREVIOUS_TAG=$(git tag --list 'v*' --sort=-version:refname | grep -v -x "$CURRENT_TAG" | head -n 1)
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "Aucun tag v* précédent trouvé — premier tag publié, rien à comparer."
+            exit 0
+          fi
+
+          echo "Tag précédent le plus élevé : $PREVIOUS_TAG"
+          PREVIOUS_BUILD_NUMBER=$(git show "${PREVIOUS_TAG}:pubspec.yaml" | grep '^version:' | sed -E 's/.*\+([0-9]+)$/\1/')
+          echo "Build number de ce tag précédent : $PREVIOUS_BUILD_NUMBER"
+
+          if [ -z "$PREVIOUS_BUILD_NUMBER" ]; then
+            echo "::error::Impossible de lire le build number de $PREVIOUS_TAG (pubspec.yaml de ce tag introuvable ou mal formé) — comparaison impossible, publication bloquée par prudence."
+            exit 1
+          fi
+
+          if [ "$BUILD_NUMBER" -le "$PREVIOUS_BUILD_NUMBER" ]; then
+            echo "::error::Le build number de $CURRENT_TAG ($BUILD_NUMBER) n'est pas strictement supérieur à celui de $PREVIOUS_TAG ($PREVIOUS_BUILD_NUMBER). Les stores refusent une soumission dont le build number n'a pas augmenté — incrémente-le dans pubspec.yaml avant de retagger."
             exit 1
           fi
 
