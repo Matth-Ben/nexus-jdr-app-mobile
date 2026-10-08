@@ -758,9 +758,14 @@ abstract class CharacterRepository {
   ///
   /// D35 du registre de dette technique : même garde-fou qu'[applyLevelUp]
   /// (voir sa documentation), appelé en tout premier avant même la
-  /// vérification d'appartenance ci-dessus — un repos court comme long peut
-  /// relire/réécrire `current_hp` plus bas, jamais à partir d'une valeur que
-  /// la synchronisation différée réécrirait ensuite par-dessus.
+  /// vérification d'appartenance ci-dessus — **mais seulement quand cette
+  /// méthode va effectivement relire/réécrire `current_hp` plus bas** : un
+  /// repos long (toujours), ou un repos court avec [diceSpent] strictement
+  /// positif. Un repos court avec `diceSpent == 0` ne touche jamais
+  /// `current_hp`/`max_hp` (voir la branche `RestType.short` ci-dessus) et
+  /// n'a donc aucune raison d'être bloqué par un ajustement PV/XP hors ligne
+  /// encore en attente pour ce personnage — bloquer ce cas dégraderait
+  /// l'UX sans jamais lire de valeur périmée.
   Future<void> applyRest({
     required String characterId,
     required RestType type,
@@ -2800,14 +2805,19 @@ class SupabaseCharacterRepository implements CharacterRepository {
     try {
       // D35 du registre de dette technique — voir la documentation de
       // [_blockIfPendingHpOrXpWrites], appelée en tout premier (avant même
-      // la vérification d'appartenance ci-dessous) : cette méthode relit
-      // `current_hp`/`max_hp` depuis le serveur plus bas pour y appliquer un
-      // delta, et ne doit jamais partir d'une valeur périmée par un
+      // la vérification d'appartenance ci-dessous) UNIQUEMENT quand cette
+      // méthode va effectivement relire/réécrire `current_hp` plus bas : un
+      // repos long (toujours), ou un repos court avec [diceSpent] > 0 (seule
+      // branche `RestType.short` qui touche `current_hp`/`max_hp`, voir plus
+      // bas). Un repos court sans dé de vie dépensé ne lit ni n'écrit jamais
+      // ces colonnes et n'a donc aucune raison d'être bloqué par un
       // ajustement PV/XP hors ligne encore en attente pour ce personnage.
-      await _blockIfPendingHpOrXpWrites(
-        ownerId: ownerId,
-        characterId: characterId,
-      );
+      if (type == RestType.long || diceSpent > 0) {
+        await _blockIfPendingHpOrXpWrites(
+          ownerId: ownerId,
+          characterId: characterId,
+        );
+      }
 
       // Vérification d'appartenance explicite — avant toute écriture, y
       // compris pour un repos court qui ne touche jamais `characters` : sans
