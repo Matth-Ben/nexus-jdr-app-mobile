@@ -1,0 +1,103 @@
+name: Integration tests
+
+# Pipeline "Tests d'intégration" — automatise tool/run_integration_tests.sh
+# (voir test_integration/README.md pour le détail et comment relancer la
+# même séquence à la main). Ces tests exécutent les vraies implémentations
+# `Supabase*Repository` contre un vrai stack Supabase local (Postgres +
+# PostgREST + GoTrue) démarré pour l'occasion à partir des migrations du
+# dépôt web — ce que `test/` (doubles factices) ne peut par construction
+# jamais révéler : colonnes inexistantes, mismatchs de type, policies RLS
+# cassées (un vrai incident de ce genre est documenté dans
+# test_integration/README.md).
+#
+# Volontairement hors de `ci.yml` : ce job démarre un vrai Postgres (image
+# Docker + plusieurs minutes de migrations/seed), largement plus lourd/lent
+# qu'un `flutter test` classique — pas adapté à chaque push/PR. Programmé
+# une fois par nuit (heure Europe) plutôt que déclenché sur push, avec
+# `workflow_dispatch` pour pouvoir le relancer manuellement (ex. juste après
+# un merge touchant au dépôt web).
+#
+# Dépôt web : `Matth-Ben/markdown-editor` (public), qui héberge l'historique
+# unique de migrations SQL partagé avec l'app web "Histoires" — voir
+# docs/cahier-des-charges/13-depot-versioning-publication.md. Ce dépôt
+# mobile ne contient et ne doit jamais contenir de fichier de migration.
+#
+# N'écrit jamais sur un projet Supabase distant : uniquement un stack local
+# éphémère, détruit avec le runner à la fin du job.
+
+on:
+  schedule:
+    # 01h15 UTC == 02h15/03h15 heure de Paris selon l'heure d'été/hiver,
+    # nuit creuse en Europe. Décalé de l'heure pile pour éviter les pics de
+    # charge GitHub Actions sur les cron à heure ronde.
+    - cron: "15 1 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du dépôt mobile (ce dépôt)
+        uses: actions/checkout@v4
+
+      - name: Checkout du dépôt web (historique de migrations partagé)
+        uses: actions/checkout@v4
+        with:
+          repository: Matth-Ben/markdown-editor
+          path: web
+
+      # pnpm/action-setup avant setup-node : actions/setup-node@v4 avec
+      # cache: pnpm appelle `pnpm store path`, qui nécessite pnpm déjà
+      # installé sur le PATH.
+      - name: Installe pnpm (version déclarée par le dépôt web)
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+
+      - name: Installe Node.js (cache pnpm)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: pnpm install (dépôt web — installe aussi la CLI Supabase en devDependency)
+        working-directory: web
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+
+      - name: Démarre le stack Supabase local (dépôt web)
+        working-directory: web
+        run: |
+          set -euo pipefail
+          node_modules/.bin/supabase start
+
+      - name: Réinitialise la base (migrations + seeds, état propre)
+        working-directory: web
+        run: |
+          set -euo pipefail
+          node_modules/.bin/supabase db reset
+
+      - name: Génère config/integration.json (dépôt mobile) depuis `supabase status`
+        working-directory: web
+        run: |
+          set -euo pipefail
+          status_json="$(node_modules/.bin/supabase status -o json)"
+          api_url="$(echo "$status_json" | jq -r '.API_URL')"
+          anon_key="$(echo "$status_json" | jq -r '.ANON_KEY')"
+          jq -n --arg url "$api_url" --arg key "$anon_key" \
+            '{"SUPABASE_URL": $url, "SUPABASE_ANON_KEY": $key}' \
+            > "$GITHUB_WORKSPACE/config/integration.json"
+
+      - name: Installe Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.1"
+          channel: "stable"
+          cache: true
+
+      - run: flutter pub get
+
+      - name: flutter test test_integration
+        run: flutter test test_integration --dart-define-from-file=config/integration.json
