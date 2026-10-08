@@ -116,8 +116,17 @@ temps `supabase db reset` dans le dépôt web pour repartir d'une base propre.
 
 ## CI
 
-Pas encore branché : il faudrait un stack Supabase éphémère en CI (service
-Docker + CLI, `supabase start` puis `supabase db reset`) avant d'y lancer
-`flutter test test_integration`. Noté ici pour ne pas avoir à le
-redécouvrir — pas fait à ce stade car aucune pipeline CI n'existe encore
-dans ce dépôt (voir `13-depot-versioning-publication.md`).
+Branché depuis la PR #89 (D18) : `.github/workflows/integration-tests.yml`
+automatise exactement cette séquence — checkout croisé de ce dépôt et du
+dépôt web (`Matth-Ben/markdown-editor`), installation de la CLI Supabase du
+dépôt web, `supabase start` puis `supabase db reset`, génération de
+`config/integration.json`, puis `flutter test test_integration`. Déclenché
+par `schedule` (quotidien, nuit Europe) et `workflow_dispatch` (relance
+manuelle) — volontairement pas sur chaque PR/push, ce job étant plus lourd
+et plus lent qu'un `flutter test` classique.
+
+**Dépendance externe** : ce workflow échoue tant que la PR #21 du dépôt web
+(`fix/migration-history-gaps`, corrige une colonne `is_incomplete` manquante
+dans l'historique des migrations) n'est pas fusionnée dans `main` du dépôt
+web — un `supabase db reset` depuis zéro échoue sinon dès la migration
+`20260921090000_fix_spells_metadata_add_2024_spells.sql`.
