@@ -31,7 +31,6 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 | D07 | Clé de signature Android déclarée compromise, rotation non faite | Matthias |
 | D13 | Aucune remontée de plantage ; erreurs avalées | Décision d'outil, puis `dev-flutter` |
 | D18 | Tests d'intégration absents de la chaîne d'intégration | `dev-backend-supabase`, `qa-testeur` |
-| D19 | Publication Android sans analyse ni tests préalables | `dev-flutter` |
 
 ### B. Fait perdre des données ou donne une règle fausse au joueur
 
@@ -87,7 +86,7 @@ la version anglaise démarre : elle devient alors bloquante.
 | D32 | Synchronisation : déclencheurs incomplets, un type inconnu bloque toute la file | `character_write_sync_coordinator.dart` ; `pending_character_write_queue.dart` ; `pending_character_write_syncer.dart` | moyenne | Connexion après le démarrage ; ajout futur d'un type d'écriture | petit | Déclencher aussi à la connexion ; ignorer les lignes de type inconnu | dev-flutter | L | Ouvert |
 | D15 | Chargement de la fiche : 26 requêtes en série, relancées après chaque écriture | `character_repository.dart` ; `character_detail_screen.dart` | moyenne | Réseau mobile lent ; latence non mesurée | moyen | Paralléliser, ou une vue ou fonction serveur | dev-flutter, dev-backend-supabase | C | Ouvert |
 | D17 | 26 doubles de `CharacterRepository` dans les tests | 26 fichiers de `test/`, dont 5 avec `noSuchMethod` | moyenne | Chaque nouvelle méthode d'interface | moyen | Un double partagé dans `test/support/` | qa-testeur | C | Ouvert |
-| D19 | CI et publication | `.github/workflows/ci.yml` ; `.github/workflows/release-android.yml` | moyenne | Prochaine montée de Flutter ou d'AGP ; prochaine version | moyen | Build APK debug en CI ; `analyze` et `test` avant la publication ; vraie comparaison du numéro de build | dev-flutter | L | Ouvert |
+| D19 | CI et publication | `.github/workflows/ci.yml` ; `.github/workflows/release-android.yml` | moyenne | Prochaine montée de Flutter ou d'AGP ; prochaine version | moyen | Build APK debug en CI ; `analyze` et `test` avant la publication ; vraie comparaison du numéro de build | dev-flutter | L, puis confirmé par reproduction d'une régression simulée | Corrigé (PR #88). Les 3 correctifs livrés ; `qa-testeur` a trouvé un vrai bug dans la première version de la comparaison de build number (un tag `v*` mal formé pouvait se classer "plus haut" par le tri sémantique de Git et masquer une régression), corrigé par un filtrage strict `^v[0-9]+\.[0-9]+\.[0-9]+$` avant le tri. Suite : D64, D65. |
 | D20 | Configuration native périssable | `android/app/build.gradle.kts` ; `android/gradle.properties` ; `android/settings.gradle.kts` ; `ios/Runner/Info.plist` | moyenne | Prochaine montée de Flutter ou d'AGP ; `targetSdk` 37 ; SDK iOS 27 | moyen | Voir « Détails » | dev-flutter | L, R pour les dépréciations | Partiel (PR #77) : verrou portrait posé, `targetSdk` figé à 36, test de garde. Reste le détail ci-dessous. |
 | D22 | Polices téléchargées à l'exécution | `lib/core/theme/app_typography.dart` ; `pubspec.yaml` | moyenne | Premier lancement hors ligne ; mesures de test faussées | petit | Embarquer Press Start 2P et Work Sans, fixer `height` dans `display` | dev-flutter, direction-artistique | L | Ouvert |
 | D23 | Accessibilité : libellés et rôles manquants | `lib/core/widgets/sheet_header_bar.dart` ; `lib/features/characters/presentation/character_list_screen.dart` | moyenne | Lecteur d'écran ; non testé avec TalkBack ni VoiceOver | moyen | `Semantics(button, label)` dans les widgets partagés, test de garde | dev-flutter, qa-testeur | C + L | Partiel (PR #75) : bouton de filtre corrigé. Restent la croix des sheets, les boutons Groupes et Profil, et 13 widgets partagés sur 15. |
@@ -376,6 +375,15 @@ non traité (hors périmètre backend, suggestion produit/UX côté mobile).
 | ID | Sujet | Gravité | Correction proposée | État |
 |---|---|---|---|---|
 | D63 | Un rapporteur de signalement de bug (`bug_reports`) dont l'`UPDATE` est refusé par RLS (délibéré : aucune policy UPDATE, `GRANT` table-level + `using (false)`) ne reçoit aucune erreur côté client — `UPDATE 0` silencieux. Le joueur peut croire avoir modifié son signalement alors que rien n'a changé. | basse | Décision produit : faire remonter un message explicite côté mobile quand une modification de `bug_reports` n'affecte aucune ligne | Ouvert |
+
+## Ajouts liés au durcissement de la CI et de la publication (PR #88)
+
+Constats relevés par `code-reviewer` le 08/10/2026 en validant D19, non traités.
+
+| ID | Sujet | Gravité | Correction proposée | État |
+|---|---|---|---|---|
+| D64 | Le déclencheur `on.push.tags: "v*"` de `release-android.yml` reste un glob large : un tag mal formé (`vfoobar`, `v1.0.0-rc1`) déclenche quand même le job, et le `BUILD_NUMBER` courant n'est jamais revalidé contre le format `vX.Y.Z` (seul le tag *précédent* utilisé pour la comparaison est filtré, depuis le correctif D19) | basse | Valider aussi le format du tag courant en tout début de job, avant toute étape | Ouvert |
+| D65 | Dans `release-android.yml`, les secrets réels (keystore, `key.properties`, `config/prod.json`) sont écrits sur disque avant les étapes `flutter analyze`/`flutter test` ajoutées par D19 — pas un risque actuel (rien n'imprime leur contenu), mais une vigilance pour une future modification de ce fichier (ex. un test qui dumperait l'environnement) | basse | Écrire les secrets sur disque seulement après `analyze`/`test`, juste avant le build signé | Ouvert |
 
 ## Décisions en attente
 

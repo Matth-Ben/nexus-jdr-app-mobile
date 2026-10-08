@@ -2,7 +2,11 @@ name: CI
 
 # Pipeline "CI" — docs/cahier-des-charges/13-depot-versioning-publication.md
 # section 5 : lancée sur chaque pull request vers main, aucun accès aux
-# secrets de signature. Vérifie lint, format, code généré à jour et tests.
+# secrets de signature. Vérifie lint, format, code généré à jour, tests, et
+# compile un APK debug (flavor dev, config/dev.json.example — valeurs
+# placeholder, un build debug n'a besoin que de compiler) pour attraper un
+# bug de build spécifique à un flavor (ressources Android, configuration par
+# flavor) qu'analyze/test ne détecteraient pas.
 
 on:
   pull_request:
@@ -44,3 +48,6 @@ jobs:
 
       - name: flutter test
         run: flutter test
+
+      - name: Build APK debug (flavor dev) — détecte les erreurs de build spécifiques à un flavor
+        run: flutter build apk --flavor dev --debug --dart-define-from-file=config/dev.json.example -t lib/main.dart
