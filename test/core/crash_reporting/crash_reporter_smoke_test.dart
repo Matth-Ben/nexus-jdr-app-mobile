@@ -4,7 +4,8 @@ import 'package:personnages/core/crash_reporting/crash_reporter.dart';
 void main() {
   test('reportNonFatal ne lève jamais, meme sans Firebase initialise (etat de tout `flutter test`)', () async {
     expect(
-      () => reportNonFatal(Exception('boom'), StackTrace.current, reason: 'test'),
+      () =>
+          reportNonFatal(Exception('boom'), StackTrace.current, reason: 'test'),
       returnsNormally,
     );
     // Laisse le temps a la micro-tache interne (Future(() => ...)) de
