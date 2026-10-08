@@ -111,7 +111,13 @@ jobs:
           # jamais sur un commit ultérieur — en supposant que les tags sont
           # créés dans l'ordre des versions, le tri sémantique coïncide avec
           # l'ordre chronologique de publication).
-          PREVIOUS_TAG=$(git tag --list 'v*' --sort=-version:refname | grep -v -x "$CURRENT_TAG" | head -n 1)
+          #
+          # On filtre d'abord strictement au format vX.Y.Z (X/Y/Z
+          # numériques) avant de trier : un tag v* qui ne respecte pas ce
+          # format (typo, tag de test, future convention v*-rc/v*-beta) ne
+          # doit jamais pouvoir se classer "plus élevé" que les vrais tags
+          # de version par le tri sémantique de Git.
+          PREVIOUS_TAG=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -v -x "$CURRENT_TAG" | sort -V -r | head -n 1)
 
           if [ -z "$PREVIOUS_TAG" ]; then
             echo "Aucun tag v* précédent trouvé — premier tag publié, rien à comparer."
