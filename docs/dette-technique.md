@@ -31,8 +31,6 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 | D07 | Clé de signature Android déclarée compromise, rotation non faite | Matthias |
 | D13 | Aucune remontée de plantage ; erreurs avalées | Décision d'outil, puis `dev-flutter` |
 | D18 | Tests d'intégration absents de la chaîne d'intégration | `dev-backend-supabase`, `qa-testeur` |
-| D58 | Colonne `is_incomplete` utilisée par des migrations du dépôt web sans qu'aucune migration ne la crée | `dev-backend-supabase` |
-| D60 | 3 suites pgTAP déjà en échec (`bug_reports_rls`, `character_share_token`, `content_proposals_rls`), jamais exécutées avant le 07/10 | `dev-backend-supabase` |
 
 ### B. Fait perdre des données ou donne une règle fausse au joueur
 
@@ -52,11 +50,10 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 | D14 | Emplacements jamais écrits à la création ni à l'import | Ouvert, confirmé en base le 08/10 : aucun déclencheur |
 | D12 | Aucun délai d'attente réseau | Ouvert |
 | D31 | Cache local jamais purgé à la déconnexion | Ouvert |
-| D59 | Peuplement des historiques (lot 7, dépôt web) : 71 au lieu de 72 attendus, un historique silencieusement ignoré par le dédoublonnage | Ouvert |
 
 ### C. Peut attendre
 
-D04, D11, D15, D16, D17, D20 à D30, D32, D61, D62, et les constats de session listés plus bas.
+D04, D11, D15, D16, D17, D20 à D30, D32, D61, D62, D63, et les constats de session listés plus bas.
 D04 (règles indexées sur le nom français des classes) change de catégorie le jour où
 la version anglaise démarre : elle devient alors bloquante.
 
@@ -349,9 +346,9 @@ signalaient déjà).
 
 | ID | Sujet | Gravité | Correction proposée | État |
 |---|---|---|---|---|
-| D58 | La colonne `is_incomplete` (`spells`, `races`, `backgrounds`) est utilisée par des migrations du dépôt web à partir du 21/09 mais n'est créée par aucune migration — elle n'existe que sur le projet distant, ajoutée hors migration. `supabase db reset` échoue dès `20260921090000_fix_spells_metadata_add_2024_spells.sql` sans elle. | haute | Migration `alter table ... add column if not exists is_incomplete ...` placée chronologiquement avant sa première utilisation | Ouvert |
-| D59 | `20260930140000_seed_backgrounds_complements.sql` (lot 7) attend au moins 72 historiques complets mais n'en obtient que 71 : une collision de nom fait que le dédoublonnage (`if not exists ... lower(tr.value) = lower(rec.name_fr)`) ignore silencieusement un des 57 historiques à insérer, le prenant pour un historique déjà présent sous un nom proche. | haute | Fiabiliser le dédoublonnage du lot 7 (comparaison exacte plutôt qu'approximative, ou vérification explicite du nombre de lignes insérées) | Ouvert |
-| D60 | 3 fichiers de tests pgTAP déjà en échec, sans rapport avec `create_character` : `bug_reports_rls_test.sql` (2/6, absence d'un `42501` attendu sur deux politiques), `character_share_token_test.sql` (7/14, régénération de jeton, aptitudes de classe exposées, `owner_id`/`character_campaigns` dans `get_shared_character`), `content_proposals_rls_test.sql` (3/31, privilèges de colonne). Jamais réparés car `db reset`/`test db --local` n'avaient apparemment jamais été rejoués en entier en local. | haute | Audit dédié par `dev-backend-supabase` : déterminer pour chacun si l'échec révèle un vrai bug RLS/partage en production, ou seulement un test à corriger | Ouvert |
+| D58 | La colonne `is_incomplete` (`spells`, `races`, `backgrounds`) est utilisée par des migrations du dépôt web à partir du 21/09 mais n'est créée par aucune migration — elle n'existe que sur le projet distant, ajoutée hors migration. `supabase db reset` échoue dès `20260921090000_fix_spells_metadata_add_2024_spells.sql` sans elle. | haute | Migration `alter table ... add column if not exists is_incomplete ...` placée chronologiquement avant sa première utilisation | Corrigé (PR #21, dépôt web). Migration `20260920090000_add_reference_is_incomplete.sql` ajoutée avant son premier usage. |
+| D59 | `20260930140000_seed_backgrounds_complements.sql` (lot 7) attend au moins 72 historiques complets mais n'en obtient que 71 : une collision de nom fait que le dédoublonnage ignore silencieusement un des 57 historiques à insérer, le prenant pour un historique déjà présent sous un nom proche. | haute | Fiabiliser le dédoublonnage du lot 7 | Corrigé (PR #21, dépôt web). **Correction d'une affirmation fausse de l'audit du 07/10** : il n'y a jamais eu de collision de dédoublonnage. Les 56 tuples du lot 7 sont tous distincts ; le total attendu de 72 comptait à tort sur un placeholder (« Grand voyageur », id 16) qui, comme pour D58, n'existe que sur le projet distant, hors migration — en local, 15+56=71, jamais 72, indépendamment de tout bug. Seuil final corrigé à 71 (72 reste correct sur le distant) ; ajout d'une vraie garde (`v_inserted <> 56`) qui, elle, détecterait une future collision réelle. |
+| D60 | 3 fichiers de tests pgTAP déjà en échec, sans rapport avec `create_character` : `bug_reports_rls_test.sql`, `character_share_token_test.sql`, `content_proposals_rls_test.sql`. Jamais réparés car `db reset`/`test db --local` n'avaient apparemment jamais été rejoués en entier en local. | haute | Audit dédié par `dev-backend-supabase` : déterminer pour chacun si l'échec révèle un vrai bug RLS/partage en production, ou seulement un test à corriger | Corrigé (PR #21, dépôt web). Audit fait, **aucun vrai bug RLS/partage trouvé**, les 3 échecs étaient des défauts de test, vérifiés indépendamment par `code-reviewer` (lecture des migrations sources, pas de confiance aveugle) : `bug_reports_rls_test.sql` attendait à tort une exception sur un `UPDATE` sans policy, alors que le `GRANT` + RLS sans policy UPDATE retombe délibérément sur `using (false)` (comportement documenté dans la migration source, pas une faille) — corrigé pour vérifier l'absence réelle d'effet. `character_share_token_test.sql` avait 2 défauts d'écriture (comparaison MVCC dans une seule instruction ; accès direct à `characters` sous le rôle `anon`, qui n'arrive jamais en production puisque le token est reçu par lien, jamais relu en base) plus un vrai écart de contenu légitime (aptitude Barbare « Sens du danger », ajoutée au catalogue après l'écriture du test). `content_proposals_rls_test.sql` était déjà vert une fois D58/D59 corrigés ; le "3/31 en échec" de l'audit du 07/10 était un artefact de l'absence de `db reset` propre à ce moment-là. `supabase test db --local` : 73/73 tests verts, reproduit deux fois indépendamment. Suggestion non bloquante notée par `code-reviewer`, hors périmètre de cette PR : un rapporteur de bug dont l'`UPDATE` est silencieusement refusé par RLS ne reçoit aucun message d'erreur côté client — à voir avec `dev-flutter`/produit si un retour explicite est souhaitable. |
 
 **Why ces trois-là n'ont pas été corrigés sur place** : hors périmètre de la tâche
 (ajouter les tests pgTAP de `create_character`), et un correctif sans contexte risquait
@@ -369,6 +366,15 @@ D33/D34, non traités (sauf D33/D34 eux-mêmes).
 |---|---|---|---|---|
 | D61 | Aucun test n'exerce un vrai code SQLSTATE `22xxx` pour `PendingCharacterWriteSyncer._isNonRetryable` (seuls `42501`/`23503` sont couverts en bout en bout) | basse | Ajouter une variante du test D34 « abandon après le seuil » avec un code `22xxx` | Ouvert |
 | D62 | Le correctif évitant la perte silencieuse du signalement D34 (`_notifyAbandonedWrites` ne consomme plus les lignes en base si `messenger` est encore `null`) n'a pas de test dédié exerçant ce chemin ; vérifié par lecture de code et raisonnement sur le câblage `main.dart` seulement | basse | Un `ProviderContainer` avec `scaffoldMessengerKeyProvider` surchargé par un `GlobalKey` jamais attaché suffit à le couvrir | Ouvert |
+
+## Ajouts liés à la correction de l'historique des migrations (PR #21, dépôt web)
+
+Constat relevé par `code-reviewer` le 08/10/2026 en validant le correctif D58/D59/D60,
+non traité (hors périmètre backend, suggestion produit/UX côté mobile).
+
+| ID | Sujet | Gravité | Correction proposée | État |
+|---|---|---|---|---|
+| D63 | Un rapporteur de signalement de bug (`bug_reports`) dont l'`UPDATE` est refusé par RLS (délibéré : aucune policy UPDATE, `GRANT` table-level + `using (false)`) ne reçoit aucune erreur côté client — `UPDATE 0` silencieux. Le joueur peut croire avoir modifié son signalement alors que rien n'a changé. | basse | Décision produit : faire remonter un message explicite côté mobile quand une modification de `bug_reports` n'affecte aucune ligne | Ouvert |
 
 ## Ajouts liés au durcissement de la CI et de la publication (PR #88)
 
