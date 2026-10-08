@@ -178,7 +178,8 @@ schéma : le joueur voit une fiche périmée sans signal.
   `kotlin.incremental=false` est un contournement Windows appliqué partout.
 - `android.newDsl=false` et `android.builtInKotlin=false` sont des dérogations
   temporaires d'AGP 9, à l'échéance à confirmer.
-- Le plugin `google-services` est en 4.3.15 face à AGP 9.1.0.
+- Le plugin `google-services` est en 4.4.4 (relevé depuis 4.3.15 pour le plugin
+  Crashlytics, D13) face à AGP 9.1.0.
 - iOS n'a qu'un seul schéma, sans flavors, et n'a jamais été construit.
 
 **D21.** Quatre dépendances ont une version majeure de retard : `connectivity_plus`

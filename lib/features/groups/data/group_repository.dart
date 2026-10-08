@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../characters/domain/currency_kind.dart';
 import '../domain/created_group.dart';
 import '../domain/group_detail.dart';
@@ -605,7 +606,13 @@ class SupabaseGroupRepository implements GroupRepository {
           .eq('group_id', groupId);
     } on PostgrestException catch (error) {
       throw mapGroupError(error);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : transfert d'objet du butin
+      // commun vers l'inventaire personnel en deux écritures distinctes
+      // (voir le commentaire plus haut dans cette méthode) — un bug
+      // silencieux ici est exactement le scénario de duplication/perte
+      // documenté, jamais signalé jusqu'ici.
+      reportNonFatal(error, stackTrace);
       throw mapUnknownGroupError();
     }
   }

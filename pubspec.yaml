@@ -93,6 +93,13 @@ dependencies:
   # Android uniquement pour l'instant, même garde que `firebase_messaging`
   # (`firebase_options.dart` ne couvre pas encore iOS).
   firebase_analytics: ^12.6.0
+  # Remontée de plantage (dette D13, `docs/dette-technique.md`) — réutilise
+  # le même projet Firebase que `firebase_messaging`/`firebase_analytics`
+  # ci-dessus (`firebase_options.dart`), même garde Android uniquement pour
+  # l'instant (voir `main.dart::_initializeSupabaseAndFirebase`). Collecte
+  # désactivée en debug (`AppBootstrap`/`main.dart`), même principe que
+  # `AnalyticsPreferencesController` pour les deux SDK d'analytics ci-dessus.
+  firebase_crashlytics: ^5.4.0
   # Analytics produit, second SDK indépendant de Firebase (voir
   # `lib/core/analytics/`) — s'initialise sur toutes les plateformes cibles
   # dès que sa config (`POSTHOG_API_KEY`) est renseignée, contrairement à

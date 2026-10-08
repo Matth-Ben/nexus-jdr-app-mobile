@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
+import '../../../core/crash_reporting/crash_reporter.dart';
 import 'character_detail_cache.dart';
 
 /// Vide, best-effort, la file d'attente [PendingCharacterWrites]
@@ -142,12 +143,21 @@ class PendingCharacterWriteSyncer {
             synced.add(write.characterId);
           },
         );
-      } catch (_) {
+      } catch (error, stackTrace) {
         // Laisse l'entrée pour la prochaine tentative — voir la doc de
         // [sync]. Si elle vient d'être abandonnée par
         // `recordNonRetryableFailure` (D34), elle a aussi cessé d'être
         // retentée : ce `catch` ne fait alors que taire l'exception sans
         // plus d'effet, [consumeAbandonedMessages] ayant déjà la main dessus.
+        //
+        // Remonté à Crashlytics (dette D13) malgré le repli silencieux
+        // ci-dessus : ce `catch` couvre aussi bien un échec réseau
+        // transitoire attendu (jamais distingué ici d'une régression
+        // inattendue de `_detailCache.applyConfirmedColumns`/
+        // `_pendingWrites.removeIfUnchanged` *après* une écriture serveur
+        // déjà réussie, qui laisserait le cache local ou la file désynchronisés
+        // du serveur sans jamais être signalé) — non-fatal, jamais bloquant.
+        reportNonFatal(error, stackTrace);
       }
     }
 

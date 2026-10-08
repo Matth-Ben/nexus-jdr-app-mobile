@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../character_creation/data/background_row_mapper.dart';
 import '../../character_creation/data/race_row_mapper.dart';
 import '../../character_creation/data/spell_row_mapper.dart';
@@ -93,7 +94,13 @@ class SupabaseXmlImportPlaceholderCatalogRepository
         row,
         names: {insertedId.toString(): rawName},
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : création de placeholder "race",
+      // écriture multi-tables sans vraie transaction (voir la doc de classe
+      // de [XmlImportPlaceholderCatalogRepository]) — un bug silencieux ici
+      // pourrait laisser une ligne `races` orpheline si le nettoyage
+      // ci-dessous échoue lui-même.
+      reportNonFatal(error, stackTrace);
       await _cleanupPartialEntity('races', insertedId);
       rethrow;
     }
@@ -144,7 +151,12 @@ class SupabaseXmlImportPlaceholderCatalogRepository
         featureNames: const {},
         featureDescriptions: const {},
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : création de placeholder
+      // "historique", même rationale que [findOrCreateRace] ci-dessus — un
+      // bug silencieux ici pourrait laisser une ligne `backgrounds`
+      // orpheline si le nettoyage ci-dessous échoue lui-même.
+      reportNonFatal(error, stackTrace);
       await _cleanupPartialEntity('backgrounds', insertedId);
       rethrow;
     }
@@ -191,7 +203,12 @@ class SupabaseXmlImportPlaceholderCatalogRepository
         row,
         names: {insertedId.toString(): rawName},
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : création de placeholder "sort",
+      // même rationale que [findOrCreateRace] ci-dessus — un bug silencieux
+      // ici pourrait laisser une ligne `spells` orpheline si le nettoyage
+      // ci-dessous échoue lui-même.
+      reportNonFatal(error, stackTrace);
       await _cleanupPartialEntity('spells', insertedId);
       rethrow;
     }

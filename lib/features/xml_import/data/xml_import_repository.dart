@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../character_creation/data/character_creation_error_mapper.dart';
 import '../../character_creation/domain/character_creation_failure.dart';
 import '../domain/xml_import_save_data.dart';
@@ -213,7 +214,13 @@ class SupabaseXmlImportRepository implements XmlImportRepository {
         error,
         fallbackMessage: _saveImportedCharacterErrorMessage,
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : même patron exact que
+      // `CharacterCreationRepository.createCharacter`, repris à l'identique
+      // ici (voir la documentation de classe de ce fichier) — un bug
+      // silencieux ici pourrait laisser une ligne `characters` orpheline si
+      // le nettoyage ci-dessous échoue lui-même.
+      reportNonFatal(error, stackTrace);
       await _cleanupPartialCharacter(characterId);
       throw mapUnknownCharacterCreationError();
     }

@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/crash_reporting/crash_reporter.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/character_edit_planner.dart';
 import '../domain/character_edit_snapshot.dart';
@@ -230,7 +231,12 @@ class SupabaseCharacterEditRepository implements CharacterEditRepository {
         error,
         fallbackMessage: _saveErrorMessage,
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : modification de personnage,
+      // écritures séquentielles sans vraie transaction (voir la doc de
+      // [save]) — un bug silencieux ici pourrait laisser le personnage dans
+      // un état partiellement modifié sans jamais être signalé.
+      reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterCreationError();
     }
   }

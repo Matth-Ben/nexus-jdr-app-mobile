@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/reference_data_cache.dart';
+import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../../core/utils/french_text_normalizer.dart';
 import '../../characters/data/racial_innate_spell_repository.dart';
 import '../domain/ability_score_rules.dart';
@@ -1408,7 +1409,13 @@ class SupabaseCharacterCreationRepository
         error,
         fallbackMessage: _createCharacterErrorMessage,
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : création de personnage,
+      // écriture multi-tables sans vraie transaction (voir la doc de
+      // [createCharacter]) — un bug silencieux ici pourrait laisser une
+      // ligne `characters` orpheline si le nettoyage ci-dessous échoue
+      // lui-même.
+      reportNonFatal(error, stackTrace);
       await _cleanupPartialCharacter(characterId);
       throw mapUnknownCharacterCreationError();
     }

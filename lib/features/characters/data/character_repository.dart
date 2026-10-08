@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
+import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../../core/utils/french_text_normalizer.dart';
 import '../../../core/network/connectivity_checker.dart';
 import '../../character_creation/domain/spellcasting_rules.dart';
@@ -1259,7 +1260,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
       return WriteOutcome.synced;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : la mise à jour PV elle-même a
+      // pu réussir côté serveur avant qu'une étape locale inattendue
+      // (`_recordConfirmedWrite`) échoue — un bug silencieux ici
+      // désynchroniserait durablement le cache/la file hors-ligne sans
+      // jamais être signalé.
+      reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
     }
   }
@@ -1328,7 +1335,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
       return WriteOutcome.synced;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : suppression de personnage,
+      // écriture destructive — un bug silencieux ici ne doit jamais rester
+      // invisible.
+      reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
     }
   }
@@ -1627,7 +1638,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
       return WriteOutcome.synced;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : même rationale que [updateHp]
+      // ci-dessus (écriture XP éventuellement confirmée côté serveur avant
+      // un échec local inattendu).
+      reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
     }
   }
@@ -2002,7 +2017,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
       return WriteOutcome.synced;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : écriture monétaire, un bug
+      // silencieux ici pourrait désynchroniser durablement la bourse
+      // affichée de la valeur serveur réelle.
+      reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
     }
   }
@@ -2670,7 +2689,12 @@ class SupabaseCharacterRepository implements CharacterRepository {
       rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : montée de niveau, écriture
+      // multi-tables sans vraie transaction — un bug silencieux ici
+      // pourrait laisser le personnage dans un état de niveau partiellement
+      // appliqué sans jamais être signalé.
+      reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
     }
   }
@@ -2934,7 +2958,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
       rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : repos, écriture multi-étapes
+      // (PV, dés de vie, emplacements de sorts, aptitudes) sans vraie
+      // transaction — même rationale que [applyLevelUp] ci-dessus.
+      reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
     }
   }
