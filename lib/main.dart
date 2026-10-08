@@ -1,5 +1,6 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,9 +53,9 @@ typedef BootstrapResult = ({
 });
 
 /// Initialise Supabase, PostHog puis, sur Android, Firebase (Core +
-/// Analytics) — logique d'initialisation par défaut d'[AppBootstrap],
-/// extraite en fonction top-level pour rester substituable en test (voir
-/// [AppBootstrap.initialize]).
+/// Analytics + Crashlytics) — logique d'initialisation par défaut
+/// d'[AppBootstrap], extraite en fonction top-level pour rester substituable
+/// en test (voir [AppBootstrap.initialize]).
 ///
 /// **Analytics produit** (`core/analytics/`, décision chef de projet RGPD) :
 /// PostHog démarre indépendamment de Supabase/Firebase, sur toute
@@ -211,6 +212,43 @@ Future<BootstrapResult> _initializeSupabaseAndFirebase() async {
         analyticsEnabled,
       );
       firebaseAnalyticsReady = true;
+
+      // Remontée de plantage (dette D13, `docs/dette-technique.md`) —
+      // Crashlytics ne peut s'initialiser qu'une fois `Firebase.initializeApp`
+      // réussi, donc dans ce même bloc/`try`, juste après Firebase Analytics
+      // ci-dessus. Collecte coupée en debug (`!kDebugMode`) pour ne pas
+      // polluer le dashboard avec des crashes de développement — même
+      // principe que `PostHogConfig.optOut`/`setAnalyticsCollectionEnabled`
+      // plus haut, mais piloté par le mode de build plutôt que par la
+      // préférence utilisateur "Partager mes données d'usage" (un crash est
+      // un défaut de l'app à corriger, pas une donnée d'usage).
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+        !kDebugMode,
+      );
+
+      // Gestionnaires globaux (pattern standard documenté par le package) :
+      // `FlutterError.onError` couvre les erreurs levées pendant le cycle de
+      // build/layout/paint Flutter, `PlatformDispatcher.instance.onError`
+      // couvre tout le reste (code asynchrone hors framework, ex. un
+      // `Future` qui échoue sans jamais être attendu). Aucun des deux n'est
+      // personnalisé ailleurs dans ce dépôt (seuls des appels ponctuels à
+      // `FlutterError.reportError` existent, qui invoquent justement
+      // `FlutterError.onError` — donc on chaîne vers le handler déjà en
+      // place, `FlutterError.presentError` par défaut, pour ne jamais perdre
+      // le dump console existant en plus de l'envoi à Crashlytics).
+      final previousOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+        previousOnError?.call(details);
+      };
+      PlatformDispatcher.instance.onError = (error, stackTrace) {
+        FirebaseCrashlytics.instance.recordError(
+          error,
+          stackTrace,
+          fatal: true,
+        );
+        return true;
+      };
     } catch (error, stackTrace) {
       FlutterError.reportError(
         FlutterErrorDetails(
