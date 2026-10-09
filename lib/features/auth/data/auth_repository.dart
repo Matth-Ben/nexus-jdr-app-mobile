@@ -189,9 +189,13 @@ abstract class AuthRepository {
 /// synchroniser best-effort ([syncPendingWrites], typiquement
 /// `PendingCharacterWriteSyncer.sync` — injecté en fonction plutôt que la
 /// classe concrète de `features/characters/data/`, pour que cette classe
-/// reste libre de toute dépendance vers une autre `feature`, voir
-/// `features/auth/presentation/providers/auth_providers.dart` pour le point
-/// de câblage réel) puis vérifie s'il reste une écriture PV/XP en attente
+/// reste libre de toute dépendance vers une autre `feature` ; voir
+/// `core/sync/pending_write_sync_hook_provider.dart` pour l'indirection
+/// neutre qui lit ce provider depuis
+/// `features/auth/presentation/providers/auth_providers.dart`, et `lib/
+/// main.dart` pour le point de câblage réel vers
+/// `PendingCharacterWriteSyncer`) puis vérifie s'il reste une écriture PV/XP
+/// en attente
 /// pour le compte courant ([pendingWriteQueue.allForOwner]) : s'il en reste
 /// (vraiment hors ligne), lève une [AuthFailure] **sans purger ni procéder**
 /// à l'opération demandée plutôt que de perdre silencieusement un ajustement
@@ -200,7 +204,8 @@ abstract class AuthRepository {
 ///
 /// [pendingWriteQueue]/[referenceDataCache]/[syncPendingWrites] sont
 /// optionnels (`null` par défaut) : seul le câblage réel
-/// (`auth_providers.dart`) les fournit. Laissés `null`, [signOut]/
+/// (`auth_providers.dart` + l'`override` de `lib/main.dart`, voir plus haut)
+/// les fournit. Laissés `null`, [signOut]/
 /// [deleteAccount] se comportent exactement comme avant l'introduction de ce
 /// garde-fou (aucune synchro, aucune purge) — permet à l'existant
 /// `test/features/auth/data/auth_repository_test.dart` (qui construit

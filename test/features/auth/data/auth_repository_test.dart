@@ -1149,6 +1149,64 @@ void main() {
         expect(await cache.get('race_catalog'), isNull);
         expect(await queue.allForOwner('fake-user-id'), isEmpty);
       });
+
+      test(
+        'garde-fou franchi (file vide) mais le signOut() réseau échoue '
+        'ensuite : lève une AuthFailure réseau et ne purge rien — verrouille '
+        'par un test le fait que `_purgeLocalCache` est inatteignable '
+        "quand l'appel à `_client.auth.signOut()` lève (actuellement garanti "
+        'seulement par lecture de code, voir la doc de classe de '
+        '`SupabaseAuthRepository`)',
+        () async {
+          final client = _buildFakeSupabaseClient((request) async {
+            if (request.url.path.endsWith('/token')) {
+              return http.Response(
+                jsonEncode(_fakeSessionJson()),
+                200,
+                request: request,
+                headers: {'content-type': 'application/json'},
+              );
+            }
+            if (request.url.path.endsWith('/logout')) {
+              throw Exception('Pas de réseau (double de test).');
+            }
+            return http.Response('{}', 200, request: request);
+          });
+          await client.auth.signInWithPassword(
+            email: 'joueur@exemple.com',
+            password: 'password1234',
+          );
+          var syncCallCount = 0;
+
+          await expectLater(
+            SupabaseAuthRepository(
+              client,
+              pendingWriteQueue: queue,
+              referenceDataCache: cache,
+              syncPendingWrites: () async {
+                syncCallCount++;
+              },
+            ).signOut(),
+            throwsA(
+              isA<AuthFailure>().having(
+                (failure) => failure.message,
+                'message',
+                contains('connexion internet'),
+              ),
+            ),
+          );
+
+          expect(syncCallCount, 1, reason: 'le garde-fou a bien été exécuté');
+          expect(
+            await cache.get('race_catalog'),
+            isNotNull,
+            reason:
+                'aucune purge ne doit avoir lieu si le signOut() réseau '
+                'échoue, même après un garde-fou franchi avec succès',
+          );
+          expect(await queue.allForOwner('fake-user-id'), isEmpty);
+        },
+      );
     });
 
     group('deleteAccount', () {

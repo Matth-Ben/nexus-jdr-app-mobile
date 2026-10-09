@@ -3,17 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
-// Seul point de câblage de ce dépôt entre `features/auth/` et
-// `features/characters/` (D31 du registre de dette technique) : voir la doc
-// de classe de `SupabaseAuthRepository` (`../../data/auth_repository.dart`)
-// pour le rationale complet. `SupabaseAuthRepository` lui-même ne connaît
-// que `Future<void> Function()` (type générique), jamais
-// `PendingCharacterWriteSyncer` — seul ce fichier de câblage sait d'où vient
-// la fonction injectée. Signalé explicitement ici plutôt que laissé
-// implicite : à date, aucune autre `feature` de ce dépôt n'importe le code
-// d'une autre (voir l'historique git), ce fichier est donc la première
-// exception à cette organisation stricte.
-import '../../../characters/presentation/providers/character_providers.dart';
+import '../../../../core/sync/pending_write_sync_hook_provider.dart';
 import '../../data/auth_repository.dart';
 import '../../data/auth_state_stream.dart';
 
@@ -25,8 +15,14 @@ AuthRepository authRepository(Ref ref) {
     ref.watch(supabaseClientProvider),
     pendingWriteQueue: ref.watch(pendingCharacterWriteQueueProvider),
     referenceDataCache: ref.watch(referenceDataCacheProvider),
-    syncPendingWrites: () =>
-        ref.read(pendingCharacterWriteSyncerProvider).sync(),
+    // Indirection neutre (`core/sync/pending_write_sync_hook_provider.dart`,
+    // D31 du registre de dette technique) : jamais un import direct de
+    // `features/characters/presentation/providers/character_providers.dart`
+    // depuis `features/auth/` — le vrai câblage
+    // (`PendingCharacterWriteSyncer.sync`) est posé en `override` dans
+    // `lib/main.dart`, seul point de composition du dépôt qui connaît déjà
+    // toutes les `features`.
+    syncPendingWrites: () => ref.read(pendingWriteSyncHookProvider)(),
   );
 }
 
