@@ -435,160 +435,154 @@ void main() {
       }
     });
 
-    test(
-      'createCharacter n\'écrit aucune ligne character_spell_slots ni '
-      'character_pact_slots pour une classe non lanceuse de sorts (D14/D71 : '
-      'ne pas créer de ligne à 0, même convention que la lecture existante '
-      '— absence de ligne == 0)',
-      () async {
-        final repository = SupabaseCharacterCreationRepository(client, cache);
+    test('createCharacter n\'écrit aucune ligne character_spell_slots ni '
+        'character_pact_slots pour une classe non lanceuse de sorts (D14/D71 : '
+        'ne pas créer de ligne à 0, même convention que la lecture existante '
+        '— absence de ligne == 0)', () async {
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
-        final raceCatalog = await repository.fetchRaceCatalog();
-        final classCatalog = await repository.fetchClassCatalog();
-        final backgroundCatalog = await repository.fetchBackgroundCatalog();
-        final skillCatalog = await repository.fetchSkillCatalog();
-        final toolCatalog = await repository.fetchToolCatalog();
-        final languageCatalog = await repository.fetchLanguageCatalog();
-        final itemCatalog = await repository.fetchItemCatalog();
+      final raceCatalog = await repository.fetchRaceCatalog();
+      final classCatalog = await repository.fetchClassCatalog();
+      final backgroundCatalog = await repository.fetchBackgroundCatalog();
+      final skillCatalog = await repository.fetchSkillCatalog();
+      final toolCatalog = await repository.fetchToolCatalog();
+      final languageCatalog = await repository.fetchLanguageCatalog();
+      final itemCatalog = await repository.fetchItemCatalog();
 
-        // `reference.classId` est explicitement documenté comme "pas
-        // nécessairement lanceuse de sorts" (voir
-        // `ReferenceContent.spellcastingClassId`, contenu peuplé actuel :
-        // `classes.id = 1` est Barbare) — utilisé ici précisément pour ça.
-        final classOption = classCatalog.classes.singleWhere(
-          (c) => c.id == reference.classId,
-        );
-        final backgroundOption = backgroundCatalog.backgrounds.singleWhere(
-          (b) => b.id == reference.backgroundId,
-        );
+      // `reference.classId` est explicitement documenté comme "pas
+      // nécessairement lanceuse de sorts" (voir
+      // `ReferenceContent.spellcastingClassId`, contenu peuplé actuel :
+      // `classes.id = 1` est Barbare) — utilisé ici précisément pour ça.
+      final classOption = classCatalog.classes.singleWhere(
+        (c) => c.id == reference.classId,
+      );
+      final backgroundOption = backgroundCatalog.backgrounds.singleWhere(
+        (b) => b.id == reference.backgroundId,
+      );
 
-        final draft = CharacterCreationDraft(
-          raceId: reference.raceId as int,
-          classId: classOption.id,
-          backgroundId: backgroundOption.id,
-          abilityScores: const {
-            'str': 10,
-            'dex': 10,
-            'con': 10,
-            'int': 10,
-            'wis': 10,
-            'cha': 10,
-          },
-          equipmentChoiceTab: EquipmentChoiceTab.background,
-        );
+      final draft = CharacterCreationDraft(
+        raceId: reference.raceId as int,
+        classId: classOption.id,
+        backgroundId: backgroundOption.id,
+        abilityScores: const {
+          'str': 10,
+          'dex': 10,
+          'con': 10,
+          'int': 10,
+          'wis': 10,
+          'cha': 10,
+        },
+        equipmentChoiceTab: EquipmentChoiceTab.background,
+      );
 
-        final characterId = await repository.createCharacter(
-          draft: draft,
-          characterName: 'Test Intégration Sans Sorts',
-          raceCatalog: raceCatalog,
-          classOption: classOption,
-          backgroundOption: backgroundOption,
-          skillCatalog: skillCatalog,
-          toolCatalog: toolCatalog,
-          languageCatalog: languageCatalog,
-          spellCatalog: const SpellCatalog(spells: []),
-          itemCatalog: itemCatalog,
-        );
-        addTearDown(() async {
-          await client.from('characters').delete().eq('id', characterId);
-        });
+      final characterId = await repository.createCharacter(
+        draft: draft,
+        characterName: 'Test Intégration Sans Sorts',
+        raceCatalog: raceCatalog,
+        classOption: classOption,
+        backgroundOption: backgroundOption,
+        skillCatalog: skillCatalog,
+        toolCatalog: toolCatalog,
+        languageCatalog: languageCatalog,
+        spellCatalog: const SpellCatalog(spells: []),
+        itemCatalog: itemCatalog,
+      );
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', characterId);
+      });
 
-        final spellSlotRows = await client
-            .from('character_spell_slots')
-            .select()
-            .eq('character_id', characterId);
-        expect(spellSlotRows, isEmpty);
+      final spellSlotRows = await client
+          .from('character_spell_slots')
+          .select()
+          .eq('character_id', characterId);
+      expect(spellSlotRows, isEmpty);
 
-        final pactSlotRows = await client
-            .from('character_pact_slots')
-            .select()
-            .eq('character_id', characterId);
-        expect(pactSlotRows, isEmpty);
-      },
-    );
+      final pactSlotRows = await client
+          .from('character_pact_slots')
+          .select()
+          .eq('character_id', characterId);
+      expect(pactSlotRows, isEmpty);
+    });
 
-    test(
-      'createCharacter crée character_pact_slots au niveau 1 pour un '
-      'Occultiste (D71 : avant ce correctif, cette table n\'était jamais '
-      'écrite à la création, empêchant tout lancer de sort avant le premier '
-      'repos court)',
-      () async {
-        final repository = SupabaseCharacterCreationRepository(client, cache);
+    test('createCharacter crée character_pact_slots au niveau 1 pour un '
+        'Occultiste (D71 : avant ce correctif, cette table n\'était jamais '
+        'écrite à la création, empêchant tout lancer de sort avant le premier '
+        'repos court)', () async {
+      final repository = SupabaseCharacterCreationRepository(client, cache);
 
-        final raceCatalog = await repository.fetchRaceCatalog();
-        final classCatalog = await repository.fetchClassCatalog();
-        final backgroundCatalog = await repository.fetchBackgroundCatalog();
-        final skillCatalog = await repository.fetchSkillCatalog();
-        final toolCatalog = await repository.fetchToolCatalog();
-        final languageCatalog = await repository.fetchLanguageCatalog();
-        final itemCatalog = await repository.fetchItemCatalog();
+      final raceCatalog = await repository.fetchRaceCatalog();
+      final classCatalog = await repository.fetchClassCatalog();
+      final backgroundCatalog = await repository.fetchBackgroundCatalog();
+      final skillCatalog = await repository.fetchSkillCatalog();
+      final toolCatalog = await repository.fetchToolCatalog();
+      final languageCatalog = await repository.fetchLanguageCatalog();
+      final itemCatalog = await repository.fetchItemCatalog();
 
-        final classOption = classCatalog.classes.singleWhere(
-          (c) => c.name == 'Occultiste',
-        );
-        final backgroundOption = backgroundCatalog.backgrounds.singleWhere(
-          (b) => b.id == reference.backgroundId,
-        );
+      final classOption = classCatalog.classes.singleWhere(
+        (c) => c.name == 'Occultiste',
+      );
+      final backgroundOption = backgroundCatalog.backgrounds.singleWhere(
+        (b) => b.id == reference.backgroundId,
+      );
 
-        final draft = CharacterCreationDraft(
-          raceId: reference.raceId as int,
-          classId: classOption.id,
-          backgroundId: backgroundOption.id,
-          abilityScores: const {
-            'str': 10,
-            'dex': 10,
-            'con': 10,
-            'int': 10,
-            'wis': 10,
-            'cha': 15,
-          },
-          equipmentChoiceTab: EquipmentChoiceTab.background,
-        );
+      final draft = CharacterCreationDraft(
+        raceId: reference.raceId as int,
+        classId: classOption.id,
+        backgroundId: backgroundOption.id,
+        abilityScores: const {
+          'str': 10,
+          'dex': 10,
+          'con': 10,
+          'int': 10,
+          'wis': 10,
+          'cha': 15,
+        },
+        equipmentChoiceTab: EquipmentChoiceTab.background,
+      );
 
-        final characterId = await repository.createCharacter(
-          draft: draft,
-          characterName: 'Test Intégration Pacte Niveau 1',
-          raceCatalog: raceCatalog,
-          classOption: classOption,
-          backgroundOption: backgroundOption,
-          skillCatalog: skillCatalog,
-          toolCatalog: toolCatalog,
-          languageCatalog: languageCatalog,
-          spellCatalog: const SpellCatalog(spells: []),
-          itemCatalog: itemCatalog,
-        );
-        addTearDown(() async {
-          await client.from('characters').delete().eq('id', characterId);
-        });
+      final characterId = await repository.createCharacter(
+        draft: draft,
+        characterName: 'Test Intégration Pacte Niveau 1',
+        raceCatalog: raceCatalog,
+        classOption: classOption,
+        backgroundOption: backgroundOption,
+        skillCatalog: skillCatalog,
+        toolCatalog: toolCatalog,
+        languageCatalog: languageCatalog,
+        spellCatalog: const SpellCatalog(spells: []),
+        itemCatalog: itemCatalog,
+      );
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', characterId);
+      });
 
-        // D71 : comparé au calcul autoritaire
-        // `SpellSlotProgression.pactMagicFor`, jamais à des valeurs recopiées
-        // à la main ici — au niveau 1, une Occultiste a toujours 1 charge de
-        // pacte de niveau 1 (voir `_pactMagicSlots`).
-        final expectedPact = SpellSlotProgression.pactMagicFor(1);
-        expect(expectedPact, isNotNull);
+      // D71 : comparé au calcul autoritaire
+      // `SpellSlotProgression.pactMagicFor`, jamais à des valeurs recopiées
+      // à la main ici — au niveau 1, une Occultiste a toujours 1 charge de
+      // pacte de niveau 1 (voir `_pactMagicSlots`).
+      final expectedPact = SpellSlotProgression.pactMagicFor(1);
+      expect(expectedPact, isNotNull);
 
-        final pactSlotRows = await client
-            .from('character_pact_slots')
-            .select()
-            .eq('character_id', characterId);
-        expect(pactSlotRows, hasLength(1));
-        expect(pactSlotRows.single['slot_level'], expectedPact!.slotLevel);
-        expect(
-          (pactSlotRows.single['slots_total'] as num).toInt(),
-          expectedPact.charges,
-        );
-        expect((pactSlotRows.single['slots_used'] as num).toInt(), 0);
+      final pactSlotRows = await client
+          .from('character_pact_slots')
+          .select()
+          .eq('character_id', characterId);
+      expect(pactSlotRows, hasLength(1));
+      expect(pactSlotRows.single['slot_level'], expectedPact!.slotLevel);
+      expect(
+        (pactSlotRows.single['slots_total'] as num).toInt(),
+        expectedPact.charges,
+      );
+      expect((pactSlotRows.single['slots_used'] as num).toInt(), 0);
 
-        // Aucune ligne `character_spell_slots` : l'Occultiste n'est jamais
-        // un lanceur "non-pacte" (voir [SpellSlotProgression.slotsForLevel]).
-        final spellSlotRows = await client
-            .from('character_spell_slots')
-            .select()
-            .eq('character_id', characterId);
-        expect(spellSlotRows, isEmpty);
-      },
-    );
+      // Aucune ligne `character_spell_slots` : l'Occultiste n'est jamais
+      // un lanceur "non-pacte" (voir [SpellSlotProgression.slotsForLevel]).
+      final spellSlotRows = await client
+          .from('character_spell_slots')
+          .select()
+          .eq('character_id', characterId);
+      expect(spellSlotRows, isEmpty);
+    });
 
     test('createCharacter peuple aussi character_tool_proficiencies pour un '
         'choix interactif d\'outil de classe (gap de couverture identifié en '

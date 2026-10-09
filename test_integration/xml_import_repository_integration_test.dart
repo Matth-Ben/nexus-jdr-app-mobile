@@ -146,57 +146,54 @@ void main() {
       expect(pactSlotRows, isEmpty);
     });
 
-    test(
-      'saveImportedCharacter peuple character_pact_slots au niveau '
-      'RÉELLEMENT importé pour un Occultiste (D71 : avant ce correctif, '
-      'cette table n\'était jamais écrite à l\'import)',
-      () async {
-        final repository = SupabaseXmlImportRepository(client);
+    test('saveImportedCharacter peuple character_pact_slots au niveau '
+        'RÉELLEMENT importé pour un Occultiste (D71 : avant ce correctif, '
+        'cette table n\'était jamais écrite à l\'import)', () async {
+      final repository = SupabaseXmlImportRepository(client);
 
-        // Occultiste importé déjà au niveau 11 (pas 1) : vérifie que
-        // l'initialisation D71 utilise bien le niveau réellement importé —
-        // au niveau 11, les charges passent de 2 à 3 (voir
-        // `SpellSlotProgression._pactMagicSlots`), donc ce choix de niveau
-        // distingue bien ce correctif d'une simple initialisation au niveau
-        // 1 implicite.
-        final data = _minimalSaveData(
-          classId: occultisteClassId,
-          className: 'Occultiste',
-          level: 11,
-        );
+      // Occultiste importé déjà au niveau 11 (pas 1) : vérifie que
+      // l'initialisation D71 utilise bien le niveau réellement importé —
+      // au niveau 11, les charges passent de 2 à 3 (voir
+      // `SpellSlotProgression._pactMagicSlots`), donc ce choix de niveau
+      // distingue bien ce correctif d'une simple initialisation au niveau
+      // 1 implicite.
+      final data = _minimalSaveData(
+        classId: occultisteClassId,
+        className: 'Occultiste',
+        level: 11,
+      );
 
-        final characterId = await repository.saveImportedCharacter(
-          data: data,
-          characterName: 'Test Intégration Import Pacte',
-        );
-        addTearDown(() async {
-          await client.from('characters').delete().eq('id', characterId);
-        });
+      final characterId = await repository.saveImportedCharacter(
+        data: data,
+        characterName: 'Test Intégration Import Pacte',
+      );
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', characterId);
+      });
 
-        final expectedPact = SpellSlotProgression.pactMagicFor(11);
-        expect(expectedPact, isNotNull);
+      final expectedPact = SpellSlotProgression.pactMagicFor(11);
+      expect(expectedPact, isNotNull);
 
-        final pactSlotRows = await client
-            .from('character_pact_slots')
-            .select()
-            .eq('character_id', characterId);
-        expect(pactSlotRows, hasLength(1));
-        expect(pactSlotRows.single['slot_level'], expectedPact!.slotLevel);
-        expect(
-          (pactSlotRows.single['slots_total'] as num).toInt(),
-          expectedPact.charges,
-        );
-        expect((pactSlotRows.single['slots_used'] as num).toInt(), 0);
+      final pactSlotRows = await client
+          .from('character_pact_slots')
+          .select()
+          .eq('character_id', characterId);
+      expect(pactSlotRows, hasLength(1));
+      expect(pactSlotRows.single['slot_level'], expectedPact!.slotLevel);
+      expect(
+        (pactSlotRows.single['slots_total'] as num).toInt(),
+        expectedPact.charges,
+      );
+      expect((pactSlotRows.single['slots_used'] as num).toInt(), 0);
 
-        // Aucune ligne `character_spell_slots` : l'Occultiste n'est jamais
-        // un lanceur "non-pacte".
-        final spellSlotRows = await client
-            .from('character_spell_slots')
-            .select()
-            .eq('character_id', characterId);
-        expect(spellSlotRows, isEmpty);
-      },
-    );
+      // Aucune ligne `character_spell_slots` : l'Occultiste n'est jamais
+      // un lanceur "non-pacte".
+      final spellSlotRows = await client
+          .from('character_spell_slots')
+          .select()
+          .eq('character_id', characterId);
+      expect(spellSlotRows, isEmpty);
+    });
 
     test('saveImportedCharacter n\'écrit aucune ligne character_spell_slots '
         'ni character_pact_slots quand la classe importée est restée non '
