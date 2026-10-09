@@ -47,6 +47,7 @@ import 'level_up_choice_row_mapper.dart';
 import 'level_up_feat_row_mapper.dart';
 import 'level_up_invocation_row_mapper.dart';
 import 'pact_weapon_row_mapper.dart';
+import 'pending_character_write_syncer.dart';
 
 /// Langue d'affichage des noms de race/classe, en dur pour l'instant : l'app
 /// démarre en français uniquement (`docs/cahier-des-charges/07-source-donnees-i18n.md`),
@@ -643,6 +644,15 @@ abstract class CharacterRepository {
   /// [addXp] (déclenchement automatique au franchissement d'un seuil), soit
   /// le déclenchement est manuel et l'XP ne doit pas bouger (voir la spec de
   /// la tâche qui a produit cette méthode).
+  ///
+  /// D35 du registre de dette technique : en tout premier, avant toute
+  /// lecture/écriture, synchronise la file hors ligne PV/XP
+  /// (`SupabaseCharacterRepository._blockIfPendingHpOrXpWrites`) et lève une
+  /// [CharacterFailure] si un ajustement reste en attente pour
+  /// [characterId] une fois cette synchronisation tentée — cette méthode
+  /// relit `current_hp`/`max_hp` depuis le serveur pour y ajouter [hpGain],
+  /// et ne doit jamais partir d'une valeur que la synchronisation différée
+  /// réécrirait ensuite par-dessus.
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -745,6 +755,17 @@ abstract class CharacterRepository {
   /// Isolation cross-utilisateur : même garantie que le reste de ce
   /// fichier (vérification explicite de `characters.owner_id`, RLS en
   /// filet de sécurité).
+  ///
+  /// D35 du registre de dette technique : même garde-fou qu'[applyLevelUp]
+  /// (voir sa documentation), appelé en tout premier avant même la
+  /// vérification d'appartenance ci-dessus — **mais seulement quand cette
+  /// méthode va effectivement relire/réécrire `current_hp` plus bas** : un
+  /// repos long (toujours), ou un repos court avec [diceSpent] strictement
+  /// positif. Un repos court avec `diceSpent == 0` ne touche jamais
+  /// `current_hp`/`max_hp` (voir la branche `RestType.short` ci-dessus) et
+  /// n'a donc aucune raison d'être bloqué par un ajustement PV/XP hors ligne
+  /// encore en attente pour ce personnage — bloquer ce cas dégraderait
+  /// l'UX sans jamais lire de valeur périmée.
   Future<void> applyRest({
     required String characterId,
     required RestType type,
@@ -888,6 +909,68 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// Clé, forme et correction ciblée de l'entrée de cache de la fiche — voir
   /// [CharacterDetailCache].
   late final CharacterDetailCache _detailCache = CharacterDetailCache(_cache);
+
+  /// Construit à partir des dépendances déjà injectées ci-dessus (même
+  /// principe que [_detailCache]) plutôt qu'un paramètre de constructeur
+  /// supplémentaire : [PendingCharacterWriteSyncer] ne prend en entrée que
+  /// [_client]/[_pendingWrites]/[_cache], tous trois déjà présents ici — pas
+  /// de nouvelle dépendance réelle à faire exiger explicitement par les ~60
+  /// sites de construction de test de cette classe pour un simple
+  /// réassemblage d'objets déjà disponibles.
+  ///
+  /// Instance distincte de celle construite par
+  /// `character_providers.dart::pendingCharacterWriteSyncerProvider`, mais
+  /// sans conséquence : [PendingCharacterWriteSyncer] lui-même n'a aucun état
+  /// mutable propre (le verrouillage anti-concurrence D33 vit dans
+  /// [_pendingWrites], toujours la même instance partagée entre
+  /// `SupabaseCharacterRepository` et le coordinateur de synchro — voir les
+  /// providers `keepAlive` de `cache_providers.dart`) ; les deux instances se
+  /// comportent donc de façon strictement identique vis-à-vis de la même
+  /// file.
+  late final PendingCharacterWriteSyncer _pendingWriteSyncer =
+      PendingCharacterWriteSyncer(_client, _pendingWrites, _cache);
+
+  /// D35 du registre de dette technique : avant [applyRest]/[applyLevelUp],
+  /// qui relisent toutes deux `characters.current_hp`/`max_hp` depuis le
+  /// serveur pour y appliquer un delta, force d'abord la synchronisation
+  /// (best-effort, voir [PendingCharacterWriteSyncer.sync]) de tout
+  /// ajustement PV/XP encore en file pour CE personnage — sans cela, ces deux
+  /// opérations partiraient d'une valeur serveur périmée, que la
+  /// synchronisation différée réécrirait ensuite par-dessus avec une valeur
+  /// elle-même périmée après coup.
+  ///
+  /// [PendingCharacterWriteSyncer.sync] est best-effort sur TOUT le compte,
+  /// jamais garanti d'avoir vidé les entrées de [characterId] précisément
+  /// (vraiment hors ligne, ou refus non rejouable pas encore abandonné D34) :
+  /// une fois la synchronisation tentée, revérifie donc explicitement
+  /// [PendingCharacterWriteQueue.forCharacter] pour CE personnage — s'il y
+  /// reste une entrée (forcément `hp` ou `xp`, les deux seuls
+  /// [PendingCharacterWriteKind] existants), bloque l'opération avec une
+  /// [CharacterFailure] explicite plutôt que de continuer sur une valeur
+  /// potentiellement périmée. [applyRest]/[applyLevelUp] sont déjà des
+  /// opérations en ligne uniquement (aucun repli hors ligne existant) : ce
+  /// garde-fou rend simplement leur contrat plus strict, il ne le change pas.
+  ///
+  /// Appelée en tout début de chaque méthode, avant toute lecture/écriture —
+  /// y compris avant la vérification d'appartenance du personnage, qui suit
+  /// de toute façon normalement derrière (`CharacterFailure` sinon).
+  Future<void> _blockIfPendingHpOrXpWrites({
+    required String ownerId,
+    required String characterId,
+  }) async {
+    await _pendingWriteSyncer.sync();
+
+    final stillPending = await _pendingWrites.forCharacter(
+      ownerId: ownerId,
+      characterId: characterId,
+    );
+    if (stillPending.isNotEmpty) {
+      throw const CharacterFailure(
+        'Des ajustements de PV/XP sont encore en attente de '
+        'synchronisation — réessayez une fois la connexion rétablie.',
+      );
+    }
+  }
 
   @override
   Future<List<CharacterSummary>> fetchCharacters() async {
@@ -2372,6 +2455,17 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     final ownerId = _requireOwnerId();
     try {
+      // D35 du registre de dette technique — voir la documentation de
+      // [_blockIfPendingHpOrXpWrites] : avant toute lecture/écriture,
+      // synchronise puis bloque si un ajustement PV/XP hors ligne reste en
+      // attente pour ce personnage (cette méthode relit `current_hp`/
+      // `max_hp` depuis le serveur plus bas, et ne doit jamais partir d'une
+      // valeur périmée).
+      await _blockIfPendingHpOrXpWrites(
+        ownerId: ownerId,
+        characterId: characterId,
+      );
+
       final classRows = await _client
           .from('character_classes')
           .select('id, class_id, level')
@@ -2709,10 +2803,32 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     final ownerId = _requireOwnerId();
     try {
-      // Vérification d'appartenance explicite en tout premier — avant toute
-      // écriture, y compris pour un repos court qui ne touche jamais
-      // `characters` : sans ce garde-fou, un repos court n'aurait aucune
-      // requête filtrée sur `owner_id`, ne reposant que sur la RLS de
+      // D35 du registre de dette technique — voir la documentation de
+      // [_blockIfPendingHpOrXpWrites], appelée en tout premier (avant même
+      // la vérification d'appartenance ci-dessous) UNIQUEMENT quand cette
+      // méthode va effectivement relire/réécrire `current_hp` plus bas : un
+      // repos long (toujours), ou un repos court avec [appliedGain] > 0
+      // (seule condition qui déclenche la relecture/écriture de
+      // `current_hp`/`max_hp` plus bas, voir le bloc `if (appliedGain > 0)`
+      // ci-dessous — un repos court avec seulement `diceSpent > 0` écrit
+      // `hit_dice_spent` mais jamais `current_hp`, par exemple quand les PV
+      // sont déjà au maximum). Le RAW 5e interdit `appliedGain > 0` sans
+      // `diceSpent > 0`, donc cette condition ne risque jamais de sous-
+      // bloquer un repos court qui touche réellement `current_hp`. Un repos
+      // court sans dé de vie dépensé (ou sans PV restauré) ne lit ni n'écrit
+      // jamais ces colonnes et n'a donc aucune raison d'être bloqué par un
+      // ajustement PV/XP hors ligne encore en attente pour ce personnage.
+      if (type == RestType.long || appliedGain > 0) {
+        await _blockIfPendingHpOrXpWrites(
+          ownerId: ownerId,
+          characterId: characterId,
+        );
+      }
+
+      // Vérification d'appartenance explicite — avant toute écriture, y
+      // compris pour un repos court qui ne touche jamais `characters` : sans
+      // ce garde-fou, un repos court n'aurait aucune requête filtrée sur
+      // `owner_id`, ne reposant que sur la RLS de
       // `character_classes`/`class_features` (lecture seule) pour
       // l'isolation — insuffisant pour l'écriture `character_feature_uses`
       // qui suit. Existence/`owner_id` uniquement à ce stade : `current_hp`/
