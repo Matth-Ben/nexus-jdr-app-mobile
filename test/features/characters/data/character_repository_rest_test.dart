@@ -83,6 +83,8 @@ void main() {
     bool hasPrimary = true,
     bool Function(String method, String table)? failOn,
     List<_Recorded>? journal,
+    int diceSpent = 0,
+    int appliedGain = 0,
   }) async {
     final recorded = journal ?? <_Recorded>[];
     final client = await _buildSignedInFakeSupabaseClient(
@@ -125,6 +127,8 @@ void main() {
       // (`character_detail_screen.dart::_applyRest`) : le nom de la classe
       // primaire.
       className: classNameArgument ?? classes.first.className,
+      diceSpent: diceSpent,
+      appliedGain: appliedGain,
     );
     return recorded;
   }
@@ -162,6 +166,294 @@ void main() {
   List<_Recorded> pactWrites(List<_Recorded> recorded) => recorded
       .where((r) => r.table == 'character_pact_slots' && r.method != 'GET')
       .toList();
+
+  // D35 du registre de dette technique : `applyRest` relit `current_hp`/
+  // `max_hp` depuis le serveur pour y appliquer un delta — avant cette
+  // lecture, la méthode doit d'abord forcer la synchronisation de la file
+  // hors ligne PV/XP (`PendingCharacterWriteQueue`/`PendingCharacterWriteSyncer`,
+  // voir `SupabaseCharacterRepository._blockIfPendingHpOrXpWrites`) et
+  // bloquer l'opération si une entrée pour ce personnage y résiste encore.
+  group('applyRest — D35 : synchronisation de la file PV/XP avant le repos', () {
+    test('cas nominal, aucune entrée en file : comportement inchangé (aucune '
+        'tentative de synchronisation superflue, le repos continue '
+        'normalement)', () async {
+      expect(
+        await pendingWrites.forCharacter(
+          ownerId: ownerId,
+          characterId: characterId,
+        ),
+        isEmpty,
+        reason: 'précondition du scénario nominal',
+      );
+
+      final recorded = await applyRest(
+        classes: [(className: 'Magicien', level: 5)],
+      );
+
+      expect(upsertedSlots(recorded), {
+        1: (total: 4, used: 0),
+        2: (total: 3, used: 0),
+        3: (total: 2, used: 0),
+      });
+    });
+
+    test('entrée hp en file synchronisée avec succès avant le repos : la file '
+        'est vidée, puis le repos continue normalement', () async {
+      await pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': 9, 'temporaryHp': 0},
+      );
+
+      final recorded = await applyRest(
+        classes: [(className: 'Magicien', level: 5)],
+      );
+
+      expect(
+        await pendingWrites.forCharacter(
+          ownerId: ownerId,
+          characterId: characterId,
+        ),
+        isEmpty,
+        reason:
+            'la synchronisation forcée en tout début de applyRest doit '
+            'avoir vidé la file avant que le repos ne continue',
+      );
+      expect(
+        recorded
+            .where((r) => r.method == 'PATCH' && r.table == 'characters')
+            .first
+            .body,
+        {'current_hp': 9, 'temporary_hp': 0},
+        reason:
+            "le premier PATCH 'characters' du journal doit être celui de "
+            'la synchronisation (colonnes PV de la file), avant toute '
+            'écriture propre à applyRest',
+      );
+      expect(upsertedSlots(recorded), {
+        1: (total: 4, used: 0),
+        2: (total: 3, used: 0),
+        3: (total: 2, used: 0),
+      });
+    });
+
+    test(
+      'entrée hp en file dont la synchronisation échoue (refus transitoire) '
+      ': bloque le repos avec une CharacterFailure explicite, sans rien lire '
+      'ni écrire d\'autre — l\'entrée reste en file pour le prochain essai',
+      () async {
+        await pendingWrites.enqueue(
+          characterId: characterId,
+          ownerId: ownerId,
+          kind: PendingCharacterWriteKind.hp,
+          payload: {'currentHp': 9, 'temporaryHp': 0},
+        );
+        final journal = <_Recorded>[];
+
+        await expectLater(
+          applyRest(
+            classes: [(className: 'Magicien', level: 5)],
+            journal: journal,
+            failOn: (method, table) =>
+                method == 'PATCH' && table == 'characters',
+          ),
+          throwsA(
+            isA<CharacterFailure>().having(
+              (failure) => failure.message,
+              'message',
+              contains('en attente de synchronisation'),
+            ),
+          ),
+        );
+
+        expect(
+          await pendingWrites.forCharacter(
+            ownerId: ownerId,
+            characterId: characterId,
+          ),
+          isNotEmpty,
+          reason:
+              'la synchronisation a échoué (refus transitoire) : l\'entrée '
+              'doit rester en file pour un prochain essai, jamais être '
+              'abandonnée ni laissée de côté silencieusement',
+        );
+        expect(
+          journal.where((r) => r.method != 'GET'),
+          hasLength(1),
+          reason:
+              'seule la tentative de synchronisation (PATCH characters '
+              'refusé) doit apparaître : applyRest ne doit rien lire ni '
+              'écrire de propre à lui-même une fois le blocage détecté '
+              '(ni vérification d\'appartenance, ni lecture des classes)',
+        );
+      },
+    );
+
+    test('repos court avec diceSpent == 0 (aucun dé de vie dépensé) : le '
+        'blocage ne s\'applique PAS, même avec une entrée hp en file dont la '
+        'synchronisation échoue — ce chemin ne relit ni n\'écrit jamais '
+        'current_hp/max_hp, il n\'y a donc jamais de valeur périmée à '
+        'craindre (correctif qa-testeur : avant lui, ce repos aurait été '
+        'bloqué à tort)', () async {
+      await pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': 9, 'temporaryHp': 0},
+      );
+      final journal = <_Recorded>[];
+
+      final recorded = await applyRest(
+        type: RestType.short,
+        diceSpent: 0,
+        classes: [(className: 'Magicien', level: 5)],
+        journal: journal,
+        // La synchronisation de la file, si elle était tentée, échouerait
+        // ici — la preuve que ce repos réussit quand même est la preuve
+        // qu'elle n'a jamais été tentée.
+        failOn: (method, table) => method == 'PATCH' && table == 'characters',
+      );
+
+      expect(
+        recorded.where((r) => r.table == 'characters' && r.method != 'GET'),
+        isEmpty,
+        reason:
+            'un repos court sans dé de vie dépensé ne touche jamais '
+            '`characters` (ni synchronisation forcée, ni écriture propre)',
+      );
+      expect(
+        await pendingWrites.forCharacter(
+          ownerId: ownerId,
+          characterId: characterId,
+        ),
+        isNotEmpty,
+        reason:
+            'l\'entrée en file n\'a pas été synchronisée (jamais tentée), '
+            'elle reste donc en attente — mais elle n\'a pas empêché ce '
+            'repos de réussir',
+      );
+    });
+
+    test('repos court avec diceSpent > 0 ET appliedGain > 0 : le blocage '
+        's\'applique bien, comme un repos long — cette branche relit/écrit '
+        'current_hp plus bas', () async {
+      await pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': 9, 'temporaryHp': 0},
+      );
+
+      await expectLater(
+        applyRest(
+          type: RestType.short,
+          diceSpent: 1,
+          appliedGain: 4,
+          classes: [(className: 'Magicien', level: 5)],
+          failOn: (method, table) => method == 'PATCH' && table == 'characters',
+        ),
+        throwsA(
+          isA<CharacterFailure>().having(
+            (failure) => failure.message,
+            'message',
+            contains('en attente de synchronisation'),
+          ),
+        ),
+      );
+    });
+
+    test('repos court avec diceSpent > 0 MAIS appliedGain == 0 (PV déjà au '
+        'maximum) : le blocage ne s\'applique PAS, même avec une entrée hp en '
+        'file dont la synchronisation échoue — ce chemin écrit hit_dice_spent '
+        'mais ne relit ni n\'écrit jamais current_hp/max_hp (correctif '
+        'code-reviewer : avant lui, ce repos aurait été bloqué à tort, comme '
+        'pour diceSpent == 0)', () async {
+      await pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': 9, 'temporaryHp': 0},
+      );
+      final journal = <_Recorded>[];
+
+      final recorded = await applyRest(
+        type: RestType.short,
+        diceSpent: 1,
+        appliedGain: 0,
+        classes: [(className: 'Magicien', level: 5)],
+        journal: journal,
+        // La synchronisation de la file, si elle était tentée,
+        // échouerait ici — la preuve que ce repos réussit quand même est
+        // la preuve qu'elle n'a jamais été tentée.
+        failOn: (method, table) => method == 'PATCH' && table == 'characters',
+      );
+
+      expect(
+        recorded.where((r) => r.table == 'characters' && r.method != 'GET'),
+        isEmpty,
+        reason:
+            'un repos court avec diceSpent > 0 mais appliedGain == 0 ne '
+            'touche jamais `characters` (ni synchronisation forcée, ni '
+            'écriture propre), seulement `character_classes.hit_dice_spent`',
+      );
+      expect(
+        await pendingWrites.forCharacter(
+          ownerId: ownerId,
+          characterId: characterId,
+        ),
+        isNotEmpty,
+        reason:
+            'l\'entrée en file n\'a pas été synchronisée (jamais tentée), '
+            'elle reste donc en attente — mais elle n\'a pas empêché ce '
+            'repos de réussir',
+      );
+    });
+
+    test('entrée hp abandonnée (D34, refus non rejouable au-delà du seuil) : '
+        'jamais prise en compte par le blocage — le repos (long, qui relit '
+        'toujours current_hp/max_hp) réussit normalement, comme si la file '
+        'était vide', () async {
+      await pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': 9, 'temporaryHp': 0},
+      );
+      final write = (await pendingWrites.forCharacter(
+        ownerId: ownerId,
+        characterId: characterId,
+      )).single;
+      for (
+        var i = 0;
+        i < PendingCharacterWriteQueue.abandonAfterConsecutiveFailures;
+        i++
+      ) {
+        await pendingWrites.recordNonRetryableFailure(
+          write: write,
+          reason: 'Raison de test',
+        );
+      }
+      expect(
+        await pendingWrites.forCharacter(
+          ownerId: ownerId,
+          characterId: characterId,
+        ),
+        isEmpty,
+        reason: 'précondition : entrée bien abandonnée (exclue par D34)',
+      );
+
+      final recorded = await applyRest(
+        classes: [(className: 'Magicien', level: 5)],
+      );
+
+      expect(upsertedSlots(recorded), {
+        1: (total: 4, used: 0),
+        2: (total: 3, used: 0),
+        3: (total: 2, used: 0),
+      });
+    });
+  });
 
   group('applyRest(long) — emplacements de sorts classiques', () {
     test('classe unique lanceuse (Magicien 5) : totaux de sa propre table, '
