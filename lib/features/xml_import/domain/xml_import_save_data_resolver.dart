@@ -132,6 +132,7 @@ abstract final class XmlImportSaveDataResolver {
       currencySp: resolved.sp,
       currencyCp: resolved.cp,
       classId: classValue?.id,
+      className: classValue?.name,
       level: resolved.level,
       abilityScores: abilityScores,
       levelHp: [
