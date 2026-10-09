@@ -2,8 +2,25 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/cache/pending_character_write_queue.dart';
+import '../../../core/cache/reference_data_cache.dart';
 import '../domain/auth_failure.dart';
 import 'auth_error_mapper.dart';
+
+/// Message de l'[AuthFailure] levée par [SupabaseAuthRepository.signOut]/
+/// [SupabaseAuthRepository.deleteAccount] quand des écritures PV/XP restent
+/// en attente de synchro après une tentative (D31 du registre de dette
+/// technique) — voir la doc de classe de [SupabaseAuthRepository]. Exporté
+/// (plutôt qu'un littéral répété) pour que
+/// `features/profile/presentation/profile_delete_account_screen.dart`
+/// puisse distinguer ce cas précis de toute autre erreur de suppression de
+/// compte, qu'il affiche sinon derrière un message générique fixe (spec de
+/// la tâche d'origine de cet écran) — ce message-ci, contrairement aux
+/// erreurs serveur brutes que ce générique masque volontairement, est déjà
+/// un texte applicatif sûr à afficher tel quel.
+const String pendingHpXpWritesBlockedMessage =
+    'Des ajustements de PV/XP sont encore en attente de synchronisation — '
+    'réessayez une fois la connexion rétablie.';
 
 /// Passerelle vers l'authentification par e-mail/mot de passe.
 ///
@@ -28,6 +45,17 @@ abstract class AuthRepository {
 
   /// Déconnecte l'utilisateur courant (ex. action "Se déconnecter" du menu
   /// profil de la liste des personnages).
+  ///
+  /// D31 du registre de dette technique ("cache local jamais purgé") : avant
+  /// de déconnecter, tente de synchroniser toute écriture PV/XP encore en
+  /// attente (`core/cache/pending_character_write_queue.dart`) puis purge le
+  /// cache local (catalogue de référence + file d'attente du compte) une
+  /// fois la déconnexion effective — voir la doc de classe de
+  /// [SupabaseAuthRepository] pour le détail. S'il reste une écriture en
+  /// attente après la tentative de synchro (vraiment hors ligne), lève une
+  /// [AuthFailure] **sans déconnecter** plutôt que de perdre silencieusement
+  /// l'ajustement : l'appelant doit pouvoir réessayer une fois la connexion
+  /// rétablie.
   Future<void> signOut();
 
   /// Déclenche l'envoi d'un e-mail de réinitialisation de mot de passe.
@@ -126,6 +154,15 @@ abstract class AuthRepository {
   /// (voir la doc de classe de `ProfileDeleteAccountScreen`), pour que la
   /// séquence "supprimer puis déconnecter" reste explicite et visible d'un
   /// seul coup d'œil côté UI plutôt que cachée dans ce repository.
+  ///
+  /// D31 du registre de dette technique : même garde-fou que [signOut],
+  /// appliqué **avant** l'appel à l'edge function (une écriture PV/XP encore
+  /// en attente après tentative de synchro bloque la suppression elle-même,
+  /// avec une [AuthFailure] explicite — le compte n'est alors jamais
+  /// supprimé). Le cache local n'est purgé qu'**après** une suppression
+  /// effectivement confirmée par le serveur : à ce stade il n'y a plus de
+  /// session à synchroniser, la purge peut donc être inconditionnelle (voir
+  /// la doc de classe de [SupabaseAuthRepository]).
   Future<void> deleteAccount();
 }
 
@@ -135,10 +172,68 @@ abstract class AuthRepository {
 /// (`04-fonctionnalites-app-mobile.md` section 1) : ce dépôt ne fait
 /// qu'appeler Supabase Auth normalement, aucune logique de compte séparée
 /// côté mobile.
+///
+/// **D31 du registre de dette technique** ("cache local jamais purgé") :
+/// [signOut]/[deleteAccount] purgent le cache local (drift,
+/// `core/cache/app_database.dart`) — catalogue de référence
+/// ([ReferenceDataCache], jamais spécifique à un compte, purge totale) et
+/// file d'attente PV/XP hors-ligne ([PendingCharacterWriteQueue], scopée par
+/// `ownerId`) — pour qu'un appareil partagé ou un compte supprimé ne laisse
+/// jamais de donnée d'un ancien compte traîner localement. [auth] dépendant
+/// de `core/cache` ne crée pas de cycle (`core/cache` ne dépend d'aucune
+/// `feature`).
+///
+/// Avant toute purge, un garde-fou (D31, même patron que D35 —
+/// `CharacterRepository._blockIfPendingHpOrXpWrites`,
+/// `features/characters/data/character_repository.dart`) tente de
+/// synchroniser best-effort ([syncPendingWrites], typiquement
+/// `PendingCharacterWriteSyncer.sync` — injecté en fonction plutôt que la
+/// classe concrète de `features/characters/data/`, pour que cette classe
+/// reste libre de toute dépendance vers une autre `feature` ; voir
+/// `core/sync/pending_write_sync_hook_provider.dart` pour l'indirection
+/// neutre qui lit ce provider depuis
+/// `features/auth/presentation/providers/auth_providers.dart`, et `lib/
+/// main.dart` pour le point de câblage réel vers
+/// `PendingCharacterWriteSyncer`) puis vérifie s'il reste une écriture PV/XP
+/// en attente
+/// pour le compte courant ([pendingWriteQueue.allForOwner]) : s'il en reste
+/// (vraiment hors ligne), lève une [AuthFailure] **sans purger ni procéder**
+/// à l'opération demandée plutôt que de perdre silencieusement un ajustement
+/// de PV/XP — le joueur doit pouvoir réessayer une fois la connexion
+/// rétablie.
+///
+/// [pendingWriteQueue]/[referenceDataCache]/[syncPendingWrites] sont
+/// optionnels (`null` par défaut) : seul le câblage réel
+/// (`auth_providers.dart` + l'`override` de `lib/main.dart`, voir plus haut)
+/// les fournit. Laissés `null`, [signOut]/
+/// [deleteAccount] se comportent exactement comme avant l'introduction de ce
+/// garde-fou (aucune synchro, aucune purge) — permet à l'existant
+/// `test/features/auth/data/auth_repository_test.dart` (qui construit
+/// `SupabaseAuthRepository` avec le seul `client`, pour des méthodes sans
+/// rapport avec ce garde-fou) de continuer à compiler et passer sans
+/// modification.
 class SupabaseAuthRepository implements AuthRepository {
-  const SupabaseAuthRepository(this._client);
+  const SupabaseAuthRepository(
+    this._client, {
+    this.pendingWriteQueue,
+    this.referenceDataCache,
+    this.syncPendingWrites,
+  });
 
   final SupabaseClient _client;
+
+  /// Voir la doc de classe. `null` : garde-fou/purge désactivés (voir la doc
+  /// de classe).
+  final PendingCharacterWriteQueue? pendingWriteQueue;
+
+  /// Voir la doc de classe. `null` : garde-fou/purge désactivés (voir la doc
+  /// de classe).
+  final ReferenceDataCache? referenceDataCache;
+
+  /// Tentative de synchronisation best-effort de la file d'attente PV/XP du
+  /// compte courant — voir la doc de classe. `null` : garde-fou/purge
+  /// désactivés (voir la doc de classe).
+  final Future<void> Function()? syncPendingWrites;
 
   /// Bucket Storage réutilisé tel quel pour les avatars de profil — même
   /// bucket que `PortraitStoragePathResolver.bucket`
@@ -188,6 +283,9 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() async {
+    final ownerId = _client.auth.currentUser?.id;
+    await _ensureNoPendingWrites(ownerId);
+
     try {
       await _client.auth.signOut();
     } on AuthException catch (error) {
@@ -195,6 +293,8 @@ class SupabaseAuthRepository implements AuthRepository {
     } catch (_) {
       throw mapUnknownError();
     }
+
+    await _purgeLocalCache(ownerId);
   }
 
   @override
@@ -341,6 +441,15 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> deleteAccount() async {
+    final ownerId = _client.auth.currentUser?.id;
+    // Garde-fou AVANT l'appel réseau de suppression (voir la doc de
+    // `AuthRepository.deleteAccount`) : une écriture PV/XP encore en attente
+    // doit bloquer la suppression elle-même, jamais seulement la purge qui
+    // la suit — supprimer le compte puis découvrir un ajustement non
+    // synchronisé serait trop tard, il n'y aurait plus de compte vers lequel
+    // le rejouer.
+    await _ensureNoPendingWrites(ownerId);
+
     try {
       // Aucun corps requis (voir la doc de
       // `AuthRepository.deleteAccount`) : le jeton d'authentification déjà
@@ -354,6 +463,52 @@ class SupabaseAuthRepository implements AuthRepository {
       throw mapDeleteAccountError(error);
     } catch (_) {
       throw mapUnknownError();
+    }
+
+    // Purge APRÈS une suppression confirmée par le serveur (voir la doc de
+    // `AuthRepository.deleteAccount`) : plus de session à synchroniser à ce
+    // stade, la purge peut être inconditionnelle plutôt que re-vérifiée.
+    await _purgeLocalCache(ownerId);
+  }
+
+  /// D31 du registre de dette technique — voir la doc de classe de
+  /// [SupabaseAuthRepository] pour le rationale complet. Ne fait rien si
+  /// [pendingWriteQueue]/[syncPendingWrites] n'ont pas été injectés, ou si
+  /// [ownerId] est `null` (personne de connecté : rien à synchroniser ni à
+  /// vérifier).
+  Future<void> _ensureNoPendingWrites(String? ownerId) async {
+    final queue = pendingWriteQueue;
+    final sync = syncPendingWrites;
+    if (queue == null || sync == null || ownerId == null) return;
+
+    await sync();
+
+    final stillPending = await queue.allForOwner(ownerId);
+    if (stillPending.isNotEmpty) {
+      throw const AuthFailure(pendingHpXpWritesBlockedMessage);
+    }
+  }
+
+  /// D31 du registre de dette technique — voir la doc de classe de
+  /// [SupabaseAuthRepository]. Toujours appelée seulement après
+  /// [_ensureNoPendingWrites] (jamais de vérification propre ici) : purge le
+  /// catalogue de référence sans condition ([ReferenceDataCache.clear],
+  /// jamais spécifique à un compte) et la file d'attente PV/XP de [ownerId]
+  /// ([PendingCharacterWriteQueue.removeAllForOwner], y compris d'éventuelles
+  /// entrées déjà abandonnées — D34 — dont le message n'a pas encore été
+  /// consommé, plus personne à qui l'afficher une fois le compte
+  /// déconnecté/supprimé). Ne fait rien si [referenceDataCache]/
+  /// [pendingWriteQueue] n'ont pas été injectés, ou pour la seule partie
+  /// `ownerId` si celui-ci est `null`.
+  Future<void> _purgeLocalCache(String? ownerId) async {
+    final cache = referenceDataCache;
+    if (cache != null) {
+      await cache.clear();
+    }
+
+    final queue = pendingWriteQueue;
+    if (queue != null && ownerId != null) {
+      await queue.removeAllForOwner(ownerId);
     }
   }
 

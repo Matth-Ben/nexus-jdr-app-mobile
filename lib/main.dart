@@ -11,14 +11,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/analytics/analytics_preferences_provider.dart';
 import 'core/analytics/analytics_service.dart';
 import 'core/network/env_config.dart';
+import 'core/network/timeout_http_client.dart';
 import 'core/notifications/notification_providers.dart';
 import 'core/notifications/push_token_registrar.dart';
 import 'core/router/app_router.dart';
+import 'core/sync/pending_write_sync_hook_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'features/app_update/domain/app_version_status.dart';
 import 'features/app_update/presentation/force_update_screen.dart';
 import 'features/app_update/presentation/providers/app_version_providers.dart';
 import 'features/character_creation/presentation/providers/character_creation_catalog_preloader.dart';
+import 'features/characters/presentation/providers/character_providers.dart';
 import 'features/characters/presentation/providers/character_write_sync_coordinator.dart';
 import 'features/splash/presentation/splash_screen.dart';
 import 'firebase_options.dart';
@@ -117,6 +120,11 @@ Future<BootstrapResult> _initializeSupabaseAndFirebase() async {
       // désormais ce paramètre sous le nom `publishableKey` (anonKey est
       // dépréciée).
       publishableKey: EnvConfig.supabaseAnonKey,
+      // Dette D12 : délai global de 15s sur toute requête HTTP sortante
+      // (Postgrest, GoTrue, Storage...) — voir la doc de classe de
+      // `TimeoutHttpClient` pour le rationale complet (pourquoi global
+      // plutôt que `.timeout(...)` dispersé sur chaque appel `.from(...)`).
+      httpClient: TimeoutHttpClient(),
     );
     supabaseReady = true;
   } catch (error, stackTrace) {
@@ -430,6 +438,20 @@ class _AppBootstrapState extends ConsumerState<AppBootstrap> {
   /// Enveloppe [widget.child] dans un `ProviderScope` imbriqué surchargeant
   /// `analyticsAvailabilityProvider` avec la disponibilité réelle des SDK
   /// d'analytics — voir la doc de classe d'[AppBootstrap].
+  ///
+  /// Câble aussi ici `pendingWriteSyncHookProvider`
+  /// (`core/sync/pending_write_sync_hook_provider.dart`, D31 du registre de
+  /// dette technique) vers la vraie implémentation
+  /// (`PendingCharacterWriteSyncer.sync`, `features/characters/`) : ce
+  /// provider neutre de `core/` reste sans dépendance vers une `feature`
+  /// (lu par `features/auth/presentation/providers/auth_providers.dart`),
+  /// mais ce `main.dart` est le seul point de composition du dépôt qui
+  /// connaît déjà toutes les `features` — c'est donc ici, et nulle part
+  /// ailleurs, que les deux sont reliés pour de vrai. `widget.child`
+  /// (`NexusJdrApp` par défaut) est le premier endroit du dépôt où
+  /// `authRepositoryProvider` est effectivement lu (après confirmation que
+  /// Supabase est prêt), donc l'`override` posé sur ce `ProviderScope`
+  /// imbriqué s'applique bien avant toute lecture réelle.
   Widget _wrapChild(BootstrapResult result) {
     return ProviderScope(
       overrides: [
@@ -438,6 +460,10 @@ class _AppBootstrapState extends ConsumerState<AppBootstrap> {
             firebaseAnalyticsReady: result.firebaseAnalyticsReady,
             postHogReady: result.postHogReady,
           ),
+        ),
+        pendingWriteSyncHookProvider.overrideWith(
+          (ref) =>
+              () => ref.read(pendingCharacterWriteSyncerProvider).sync(),
         ),
       ],
       child: widget.child,

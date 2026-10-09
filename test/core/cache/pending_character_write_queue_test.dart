@@ -361,6 +361,76 @@ void main() {
       },
     );
 
+    test('removeAllForOwner (D31) supprime toutes les entrées de ownerId sans '
+        'toucher à celles d\'un autre compte', () async {
+      await queue.enqueue(
+        characterId: 'char-1',
+        ownerId: 'owner-1',
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': 5, 'temporaryHp': 0},
+      );
+      await queue.enqueue(
+        characterId: 'char-1',
+        ownerId: 'owner-1',
+        kind: PendingCharacterWriteKind.xp,
+        payload: {'newXp': 200},
+      );
+      await queue.enqueue(
+        characterId: 'char-2',
+        ownerId: 'owner-2',
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': 30, 'temporaryHp': 0},
+      );
+
+      await queue.removeAllForOwner('owner-1');
+
+      expect(await queue.allForOwner('owner-1'), isEmpty);
+      expect(await queue.allForOwner('owner-2'), hasLength(1));
+    });
+
+    test(
+      'removeAllForOwner (D31) supprime aussi une entrée déjà abandonnée '
+      '(D34), que consumeAbandonedMessages n\'aurait pas encore consommée',
+      () async {
+        await queue.enqueue(
+          characterId: 'char-1',
+          ownerId: 'owner-1',
+          kind: PendingCharacterWriteKind.hp,
+          payload: {'currentHp': 5, 'temporaryHp': 0},
+        );
+        final write = (await queue.allForOwner('owner-1')).single;
+        for (
+          var i = 0;
+          i < PendingCharacterWriteQueue.abandonAfterConsecutiveFailures;
+          i++
+        ) {
+          await queue.recordNonRetryableFailure(
+            write: write,
+            reason: 'Raison de test',
+          );
+        }
+        // Le message n'a pas encore été consommé : toujours en base malgré
+        // l'exclusion de `allForOwner` (D34).
+        expect(await queue.allForOwner('owner-1'), isEmpty);
+
+        await queue.removeAllForOwner('owner-1');
+
+        expect(
+          await queue.consumeAbandonedMessages(ownerId: 'owner-1'),
+          isEmpty,
+          reason: 'plus aucune ligne en base pour owner-1, abandonnée ou non',
+        );
+      },
+    );
+
+    test('removeAllForOwner (D31) ne lève jamais pour un compte sans '
+        'aucune entrée en attente', () async {
+      await expectLater(
+        queue.removeAllForOwner('owner-sans-entree'),
+        completes,
+      );
+    });
+
     test('forCharacter ignore une ligne de type inconnu au lieu de lever une '
         'erreur', () async {
       await db

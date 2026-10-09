@@ -31,9 +31,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:personnages/core/cache/app_database.dart'
+    hide PendingCharacterWrite;
+import 'package:personnages/core/cache/pending_character_write_queue.dart';
+import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -993,6 +998,312 @@ void main() {
         );
       },
     );
+  });
+
+  // D31 du registre de dette technique ("cache local jamais purgé") :
+  // garde-fou (synchro best-effort + vérification) et purge de
+  // `PendingCharacterWriteQueue`/`ReferenceDataCache` injectées sur
+  // `signOut`/`deleteAccount` — voir la doc de classe de
+  // `SupabaseAuthRepository`. Base drift en mémoire, jamais un vrai fichier
+  // disque (même principe que `test/core/cache/*_test.dart`).
+  group('SupabaseAuthRepository — D31 garde-fou PV/XP + purge du cache '
+      'local', () {
+    late AppDatabase db;
+    late PendingCharacterWriteQueue queue;
+    late ReferenceDataCache cache;
+
+    setUp(() async {
+      db = AppDatabase(NativeDatabase.memory());
+      queue = PendingCharacterWriteQueue(db);
+      cache = ReferenceDataCache(db);
+      await cache.put('race_catalog', {'races': []});
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    /// `SupabaseClient` déjà connecté (`fake-user-id`), `/logout` et
+    /// `/functions/v1/delete-account` répondant systématiquement avec
+    /// succès — seul le comportement du garde-fou/de la purge est exercé
+    /// par les tests de ce groupe, jamais le mapping d'erreurs réseau (déjà
+    /// couvert par les groupes `signOut`/`deleteAccount` ci-dessus).
+    Future<SupabaseClient> buildSignedInClient() async {
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          return http.Response(
+            jsonEncode(_fakeSessionJson()),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.contains('/functions/v1/delete-account')) {
+          return http.Response(
+            jsonEncode({'deleted': true}),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      });
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
+      return client;
+    }
+
+    group('signOut', () {
+      test('file vide : déconnecte et purge le cache local (catalogue de '
+          'référence + file PV/XP du compte)', () async {
+        final client = await buildSignedInClient();
+        var syncCallCount = 0;
+
+        await SupabaseAuthRepository(
+          client,
+          pendingWriteQueue: queue,
+          referenceDataCache: cache,
+          syncPendingWrites: () async {
+            syncCallCount++;
+          },
+        ).signOut();
+
+        expect(syncCallCount, 1);
+        expect(client.auth.currentSession, isNull);
+        expect(
+          await cache.get('race_catalog'),
+          isNull,
+          reason: 'le catalogue de référence doit être purgé',
+        );
+        expect(await queue.allForOwner('fake-user-id'), isEmpty);
+      });
+
+      test('écriture PV/XP encore en attente après la tentative de synchro : '
+          'bloque avec une AuthFailure explicite, ne déconnecte pas, ne purge '
+          'rien', () async {
+        await queue.enqueue(
+          characterId: 'char-1',
+          ownerId: 'fake-user-id',
+          kind: PendingCharacterWriteKind.hp,
+          payload: {'currentHp': 5, 'temporaryHp': 0},
+        );
+        final client = await buildSignedInClient();
+        var syncCallCount = 0;
+
+        await expectLater(
+          SupabaseAuthRepository(
+            client,
+            pendingWriteQueue: queue,
+            referenceDataCache: cache,
+            // Best-effort mais n'aboutit à rien ici (simule "vraiment
+            // hors ligne") : la file reste telle quelle après l'appel.
+            syncPendingWrites: () async {
+              syncCallCount++;
+            },
+          ).signOut(),
+          throwsA(
+            isA<AuthFailure>().having(
+              (failure) => failure.message,
+              'message',
+              pendingHpXpWritesBlockedMessage,
+            ),
+          ),
+        );
+
+        expect(syncCallCount, 1, reason: 'une tentative a bien eu lieu');
+        expect(
+          client.auth.currentSession,
+          isNotNull,
+          reason: 'la déconnexion ne doit jamais avoir lieu si bloquée',
+        );
+        expect(
+          await cache.get('race_catalog'),
+          isNotNull,
+          reason: 'aucune purge si bloqué',
+        );
+        expect(await queue.allForOwner('fake-user-id'), hasLength(1));
+      });
+
+      test('écriture PV/XP en attente mais la synchro réussit : débloque, '
+          'déconnecte et purge normalement', () async {
+        await queue.enqueue(
+          characterId: 'char-1',
+          ownerId: 'fake-user-id',
+          kind: PendingCharacterWriteKind.hp,
+          payload: {'currentHp': 5, 'temporaryHp': 0},
+        );
+        final client = await buildSignedInClient();
+
+        await SupabaseAuthRepository(
+          client,
+          pendingWriteQueue: queue,
+          referenceDataCache: cache,
+          // Simule une synchro qui réussit réellement : vide la file
+          // avant que le garde-fou ne la relise.
+          syncPendingWrites: () => queue.removeAllForOwner('fake-user-id'),
+        ).signOut();
+
+        expect(client.auth.currentSession, isNull);
+        expect(await cache.get('race_catalog'), isNull);
+        expect(await queue.allForOwner('fake-user-id'), isEmpty);
+      });
+
+      test('garde-fou franchi (file vide) mais le signOut() réseau échoue '
+          'ensuite : lève une AuthFailure réseau et ne purge rien — verrouille '
+          'par un test le fait que `_purgeLocalCache` est inatteignable '
+          "quand l'appel à `_client.auth.signOut()` lève (actuellement garanti "
+          'seulement par lecture de code, voir la doc de classe de '
+          '`SupabaseAuthRepository`)', () async {
+        final client = _buildFakeSupabaseClient((request) async {
+          if (request.url.path.endsWith('/token')) {
+            return http.Response(
+              jsonEncode(_fakeSessionJson()),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          if (request.url.path.endsWith('/logout')) {
+            throw Exception('Pas de réseau (double de test).');
+          }
+          return http.Response('{}', 200, request: request);
+        });
+        await client.auth.signInWithPassword(
+          email: 'joueur@exemple.com',
+          password: 'password1234',
+        );
+        var syncCallCount = 0;
+
+        await expectLater(
+          SupabaseAuthRepository(
+            client,
+            pendingWriteQueue: queue,
+            referenceDataCache: cache,
+            syncPendingWrites: () async {
+              syncCallCount++;
+            },
+          ).signOut(),
+          throwsA(
+            isA<AuthFailure>().having(
+              (failure) => failure.message,
+              'message',
+              contains('connexion internet'),
+            ),
+          ),
+        );
+
+        expect(syncCallCount, 1, reason: 'le garde-fou a bien été exécuté');
+        expect(
+          await cache.get('race_catalog'),
+          isNotNull,
+          reason:
+              'aucune purge ne doit avoir lieu si le signOut() réseau '
+              'échoue, même après un garde-fou franchi avec succès',
+        );
+        expect(await queue.allForOwner('fake-user-id'), isEmpty);
+      });
+    });
+
+    group('deleteAccount', () {
+      test('file vide : supprime puis purge le cache local', () async {
+        final client = await buildSignedInClient();
+
+        await SupabaseAuthRepository(
+          client,
+          pendingWriteQueue: queue,
+          referenceDataCache: cache,
+          syncPendingWrites: () async {},
+        ).deleteAccount();
+
+        expect(await cache.get('race_catalog'), isNull);
+        expect(await queue.allForOwner('fake-user-id'), isEmpty);
+      });
+
+      test('écriture PV/XP encore en attente après la tentative de synchro : '
+          'bloque AVANT l\'appel à l\'edge function (compte jamais supprimé), '
+          'ne purge rien', () async {
+        await queue.enqueue(
+          characterId: 'char-1',
+          ownerId: 'fake-user-id',
+          kind: PendingCharacterWriteKind.hp,
+          payload: {'currentHp': 5, 'temporaryHp': 0},
+        );
+        var deleteAccountCalled = false;
+        final client = _buildFakeSupabaseClient((request) async {
+          if (request.url.path.endsWith('/token')) {
+            return http.Response(
+              jsonEncode(_fakeSessionJson()),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          if (request.url.path.contains('/functions/v1/delete-account')) {
+            deleteAccountCalled = true;
+            return http.Response(
+              jsonEncode({'deleted': true}),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('{}', 200, request: request);
+        });
+        await client.auth.signInWithPassword(
+          email: 'joueur@exemple.com',
+          password: 'password1234',
+        );
+
+        await expectLater(
+          SupabaseAuthRepository(
+            client,
+            pendingWriteQueue: queue,
+            referenceDataCache: cache,
+            syncPendingWrites: () async {},
+          ).deleteAccount(),
+          throwsA(
+            isA<AuthFailure>().having(
+              (failure) => failure.message,
+              'message',
+              pendingHpXpWritesBlockedMessage,
+            ),
+          ),
+        );
+
+        expect(
+          deleteAccountCalled,
+          isFalse,
+          reason:
+              'le compte ne doit jamais être supprimé si une écriture '
+              'PV/XP reste en attente',
+        );
+        expect(await cache.get('race_catalog'), isNotNull);
+        expect(await queue.allForOwner('fake-user-id'), hasLength(1));
+      });
+
+      test('écriture PV/XP en attente mais la synchro réussit : débloque, '
+          'supprime puis purge', () async {
+        await queue.enqueue(
+          characterId: 'char-1',
+          ownerId: 'fake-user-id',
+          kind: PendingCharacterWriteKind.hp,
+          payload: {'currentHp': 5, 'temporaryHp': 0},
+        );
+        final client = await buildSignedInClient();
+
+        await SupabaseAuthRepository(
+          client,
+          pendingWriteQueue: queue,
+          referenceDataCache: cache,
+          syncPendingWrites: () => queue.removeAllForOwner('fake-user-id'),
+        ).deleteAccount();
+
+        expect(await cache.get('race_catalog'), isNull);
+        expect(await queue.allForOwner('fake-user-id'), isEmpty);
+      });
+    });
   });
 }
 

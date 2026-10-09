@@ -306,6 +306,32 @@ void main() {
     },
   );
 
+  testWidgets(
+    'D31 : `deleteAccount` bloqué par des écritures PV/XP encore en attente '
+    '(AuthFailure dédiée) affiche son message explicite, pas le bandeau '
+    'générique — jamais de déconnexion, le compte n\'a pas été supprimé',
+    (tester) async {
+      final repository = await _pumpScreen(tester);
+      repository.deleteAccountErrorToThrow = const AuthFailure(
+        pendingHpXpWritesBlockedMessage,
+      );
+      await _checkConfirmationBox(tester);
+      await tester.enterText(find.byType(TextFormField), 'bon-mdp-1234');
+      await tester.pump();
+
+      await tester.tap(_submitButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text(pendingHpXpWritesBlockedMessage), findsOneWidget);
+      expect(
+        find.text('Impossible de supprimer le compte. Réessayez.'),
+        findsNothing,
+      );
+      expect(repository.signOutCallCount, 0);
+      expect(find.byType(TextFormField), findsOneWidget);
+    },
+  );
+
   testWidgets('hors-ligne -> bandeau générique hors-ligne, aucune tentative de '
       'vérification du mot de passe', (tester) async {
     final repository = await _pumpScreen(tester, connected: false);
