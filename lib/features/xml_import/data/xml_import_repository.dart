@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../character_creation/data/character_creation_error_mapper.dart';
 import '../../character_creation/domain/character_creation_failure.dart';
+import '../../characters/domain/spell_slot_progression.dart';
 import '../domain/xml_import_save_data.dart';
 
 const String _saveImportedCharacterErrorMessage =
@@ -121,6 +122,43 @@ class SupabaseXmlImportRepository implements XmlImportRepository {
           'level': data.level,
           'is_primary': true,
         });
+
+        // `character_spell_slots` au niveau RÉELLEMENT importé (dette D14,
+        // `docs/dette-technique.md`) : même correctif que
+        // `CharacterCreationRepository.createCharacter`, mais ici au niveau
+        // d'arrivée du personnage importé (`data.level`, pas forcément 1 —
+        // un export aidedd.org peut arriver à n'importe quel niveau),
+        // jamais relu à partir de `character_level_hp` qui ne porte que les
+        // PV. `data.className` vient de la même résolution que `data.classId`
+        // (`XmlImportSaveDataResolver.resolve`, `classValue?.name`/
+        // `classValue?.id`), donc non nul ici dès que `data.classId` l'est —
+        // gardé par `if` plutôt que `!` pour rester défensif si cette
+        // garantie venait à changer. Un simple `insert`, même rationale que
+        // `createCharacter` : `characterId` vient d'être créé, aucune ligne
+        // `character_spell_slots` préexistante à préserver. Multiclassage
+        // non couvert ici : le format d'import ne porte actuellement qu'une
+        // seule classe (`data.classId`/`data.level`, voir la documentation
+        // de classe de `XmlImportSaveData`) — [SpellSlotProgression
+        // .nonZeroSlotTotals] gère déjà le calcul combiné si cette
+        // limitation est levée un jour (couvert dès aujourd'hui par ses
+        // propres tests unitaires).
+        final resolvedClassName = data.className;
+        if (resolvedClassName != null) {
+          final initialSpellSlots = SpellSlotProgression.nonZeroSlotTotals([
+            (className: resolvedClassName, level: data.level),
+          ]);
+          if (initialSpellSlots.isNotEmpty) {
+            await _client.from('character_spell_slots').insert([
+              for (final slot in initialSpellSlots)
+                {
+                  'character_id': characterId,
+                  'slot_level': slot.slotLevel,
+                  'slots_total': slot.total,
+                  'slots_used': 0,
+                },
+            ]);
+          }
+        }
       }
 
       if (data.levelHp.isNotEmpty) {

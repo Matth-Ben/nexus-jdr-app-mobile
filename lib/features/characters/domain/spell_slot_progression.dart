@@ -360,4 +360,35 @@ abstract final class SpellSlotProgression {
           ),
     ];
   }
+
+  /// Paires (niveau de sort, total) strictement positives pour [classes],
+  /// filtrées depuis [totalsForClasses] — dette D14
+  /// (`docs/dette-technique.md`) : `character_spell_slots` n'était écrit
+  /// nulle part à la création d'un personnage ni à l'import XML, seulement
+  /// recalculé en place à la montée de niveau
+  /// (`characters/data/character_repository.dart::_upsertSpellSlots`). Ce
+  /// dernier a en plus besoin de relire les lignes déjà existantes pour
+  /// préserver `slots_used` d'un personnage qui a déjà consommé des
+  /// emplacements (voir sa documentation) — un besoin qui ne se présente
+  /// jamais ici : un personnage tout juste créé ou tout juste importé n'a
+  /// **jamais** de ligne `character_spell_slots` préexistante, donc rien à
+  /// préserver. D'où ce point de factorisation minimal, volontairement
+  /// limité au calcul (seule partie qui ne doit jamais être dupliquée) : les
+  /// deux appelants (`character_creation/data/character_creation_repository
+  /// .dart::createCharacter`, `xml_import/data/xml_import_repository.dart
+  /// ::saveImportedCharacter`) construisent eux-mêmes leur ligne d'insert
+  /// (`character_id`/`slots_used: 0` leur appartiennent, pas au domaine).
+  ///
+  /// Vide si aucune classe de [classes] n'est lanceuse "non-pacte" (classe
+  /// non lanceuse ou Occultiste seul) — même garde que [totalsForClasses],
+  /// qui retourne alors 9 zéros.
+  static List<({int slotLevel, int total})> nonZeroSlotTotals(
+    List<({String className, int level})> classes,
+  ) {
+    final totals = totalsForClasses(classes);
+    return [
+      for (var i = 0; i < totals.length; i++)
+        if (totals[i] > 0) (slotLevel: i + 1, total: totals[i]),
+    ];
+  }
 }
