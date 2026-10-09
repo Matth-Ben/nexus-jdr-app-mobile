@@ -58,120 +58,111 @@ void main() {
       magicienClassId = await _fetchClassIdByName(client, 'Magicien');
     });
 
-    test(
-      'saveImportedCharacter peuple character_spell_slots au niveau '
-      'RÉELLEMENT importé (pas forcément 1) pour une classe lanceuse de '
-      'sorts',
-      () async {
-        final repository = SupabaseXmlImportRepository(client);
+    test('saveImportedCharacter peuple character_spell_slots au niveau '
+        'RÉELLEMENT importé (pas forcément 1) pour une classe lanceuse de '
+        'sorts', () async {
+      final repository = SupabaseXmlImportRepository(client);
 
-        // Un lanceur de sorts complet (Magicien) importé déjà au niveau 5
-        // (pas 1) : vérifie que l'initialisation D14 utilise bien le niveau
-        // réellement importé, pas un niveau 1 implicite (contrairement à
-        // `createCharacter`, qui lui n'a jamais que le niveau 1 à la
-        // création).
-        final data = _minimalSaveData(
-          classId: magicienClassId,
-          className: 'Magicien',
-          level: 5,
-        );
+      // Un lanceur de sorts complet (Magicien) importé déjà au niveau 5
+      // (pas 1) : vérifie que l'initialisation D14 utilise bien le niveau
+      // réellement importé, pas un niveau 1 implicite (contrairement à
+      // `createCharacter`, qui lui n'a jamais que le niveau 1 à la
+      // création).
+      final data = _minimalSaveData(
+        classId: magicienClassId,
+        className: 'Magicien',
+        level: 5,
+      );
 
-        final characterId = await repository.saveImportedCharacter(
-          data: data,
-          characterName: 'Test Intégration Import Sorts',
-        );
-        addTearDown(() async {
-          await client.from('characters').delete().eq('id', characterId);
-        });
+      final characterId = await repository.saveImportedCharacter(
+        data: data,
+        characterName: 'Test Intégration Import Sorts',
+      );
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', characterId);
+      });
 
-        final expectedSlots = SpellSlotProgression.nonZeroSlotTotals([
-          (className: 'Magicien', level: 5),
-        ]);
+      final expectedSlots = SpellSlotProgression.nonZeroSlotTotals([
+        (className: 'Magicien', level: 5),
+      ]);
+      expect(
+        expectedSlots,
+        isNotEmpty,
+        reason: 'niveau 5 : le Magicien a toujours au moins le palier 1',
+      );
+
+      final spellSlotRows = await client
+          .from('character_spell_slots')
+          .select()
+          .eq('character_id', characterId)
+          .order('slot_level', ascending: true);
+      expect(spellSlotRows, hasLength(expectedSlots.length));
+      for (var i = 0; i < expectedSlots.length; i++) {
+        expect(spellSlotRows[i]['slot_level'], expectedSlots[i].slotLevel);
         expect(
-          expectedSlots,
-          isNotEmpty,
-          reason: 'niveau 5 : le Magicien a toujours au moins le palier 1',
+          (spellSlotRows[i]['slots_total'] as num).toInt(),
+          expectedSlots[i].total,
         );
+        expect((spellSlotRows[i]['slots_used'] as num).toInt(), 0);
+      }
+    });
 
-        final spellSlotRows = await client
-            .from('character_spell_slots')
-            .select()
-            .eq('character_id', characterId)
-            .order('slot_level', ascending: true);
-        expect(spellSlotRows, hasLength(expectedSlots.length));
-        for (var i = 0; i < expectedSlots.length; i++) {
-          expect(spellSlotRows[i]['slot_level'], expectedSlots[i].slotLevel);
-          expect(
-            (spellSlotRows[i]['slots_total'] as num).toInt(),
-            expectedSlots[i].total,
-          );
-          expect((spellSlotRows[i]['slots_used'] as num).toInt(), 0);
-        }
-      },
-    );
+    test('saveImportedCharacter n\'écrit aucune ligne character_spell_slots '
+        'pour une classe non lanceuse de sorts (même garde-fou que '
+        'createCharacter)', () async {
+      final repository = SupabaseXmlImportRepository(client);
 
-    test(
-      'saveImportedCharacter n\'écrit aucune ligne character_spell_slots '
-      'pour une classe non lanceuse de sorts (même garde-fou que '
-      'createCharacter)',
-      () async {
-        final repository = SupabaseXmlImportRepository(client);
+      // `reference.classId` n'est pas garanti lanceur de sorts (contenu
+      // peuplé actuel : Barbare) — voir la documentation de
+      // `ReferenceContent.spellcastingClassId`.
+      final data = _minimalSaveData(
+        classId: reference.classId as int,
+        className: reference.className,
+        level: 3,
+      );
 
-        // `reference.classId` n'est pas garanti lanceur de sorts (contenu
-        // peuplé actuel : Barbare) — voir la documentation de
-        // `ReferenceContent.spellcastingClassId`.
-        final data = _minimalSaveData(
-          classId: reference.classId as int,
-          className: reference.className,
-          level: 3,
-        );
+      final characterId = await repository.saveImportedCharacter(
+        data: data,
+        characterName: 'Test Intégration Import Sans Sorts',
+      );
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', characterId);
+      });
 
-        final characterId = await repository.saveImportedCharacter(
-          data: data,
-          characterName: 'Test Intégration Import Sans Sorts',
-        );
-        addTearDown(() async {
-          await client.from('characters').delete().eq('id', characterId);
-        });
+      final spellSlotRows = await client
+          .from('character_spell_slots')
+          .select()
+          .eq('character_id', characterId);
+      expect(spellSlotRows, isEmpty);
+    });
 
-        final spellSlotRows = await client
-            .from('character_spell_slots')
-            .select()
-            .eq('character_id', characterId);
-        expect(spellSlotRows, isEmpty);
-      },
-    );
+    test('saveImportedCharacter n\'écrit aucune ligne character_spell_slots '
+        'quand la classe importée est restée non reconnue (classId/className '
+        'nuls)', () async {
+      final repository = SupabaseXmlImportRepository(client);
 
-    test(
-      'saveImportedCharacter n\'écrit aucune ligne character_spell_slots '
-      'quand la classe importée est restée non reconnue (classId/className '
-      'nuls)',
-      () async {
-        final repository = SupabaseXmlImportRepository(client);
+      final data = _minimalSaveData(classId: null, className: null, level: 1);
 
-        final data = _minimalSaveData(classId: null, className: null, level: 1);
+      final characterId = await repository.saveImportedCharacter(
+        data: data,
+        characterName: 'Test Intégration Import Classe Inconnue',
+      );
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', characterId);
+      });
 
-        final characterId = await repository.saveImportedCharacter(
-          data: data,
-          characterName: 'Test Intégration Import Classe Inconnue',
-        );
-        addTearDown(() async {
-          await client.from('characters').delete().eq('id', characterId);
-        });
+      final classRows = await client
+          .from('character_classes')
+          .select()
+          .eq('character_id', characterId);
+      expect(classRows, isEmpty);
 
-        final classRows = await client
-            .from('character_classes')
-            .select()
-            .eq('character_id', characterId);
-        expect(classRows, isEmpty);
-
-        final spellSlotRows = await client
-            .from('character_spell_slots')
-            .select()
-            .eq('character_id', characterId);
-        expect(spellSlotRows, isEmpty);
-      },
-    );
+      final spellSlotRows = await client
+          .from('character_spell_slots')
+          .select()
+          .eq('character_id', characterId);
+      expect(spellSlotRows, isEmpty);
+    });
   });
 }
 

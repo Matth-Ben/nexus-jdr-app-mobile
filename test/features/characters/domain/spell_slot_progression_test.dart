@@ -624,50 +624,47 @@ void main() {
     });
   });
 
-  group(
-    'SpellSlotProgression.nonZeroSlotTotals (D14 : initialisation à la '
-    'création/import)',
-    () {
-      test('lanceur complet niveau 1 (Magicien) : un seul palier non nul', () {
-        final rows = SpellSlotProgression.nonZeroSlotTotals([
-          (className: 'Magicien', level: 1),
-        ]);
-        expect(rows, [(slotLevel: 1, total: 2)]);
-      });
+  group('SpellSlotProgression.nonZeroSlotTotals (D14 : initialisation à la '
+      'création/import)', () {
+    test('lanceur complet niveau 1 (Magicien) : un seul palier non nul', () {
+      final rows = SpellSlotProgression.nonZeroSlotTotals([
+        (className: 'Magicien', level: 1),
+      ]);
+      expect(rows, [(slotLevel: 1, total: 2)]);
+    });
 
-      test('demi-lanceur niveau 5 (Paladin) : deux paliers non nuls', () {
-        final rows = SpellSlotProgression.nonZeroSlotTotals([
-          (className: 'Paladin', level: 5),
-        ]);
-        expect(rows, [(slotLevel: 1, total: 4), (slotLevel: 2, total: 2)]);
-      });
+    test('demi-lanceur niveau 5 (Paladin) : deux paliers non nuls', () {
+      final rows = SpellSlotProgression.nonZeroSlotTotals([
+        (className: 'Paladin', level: 5),
+      ]);
+      expect(rows, [(slotLevel: 1, total: 4), (slotLevel: 2, total: 2)]);
+    });
 
-      test('classe non lanceuse (Guerrier) : aucune ligne', () {
-        final rows = SpellSlotProgression.nonZeroSlotTotals([
-          (className: 'Guerrier', level: 5),
-        ]);
-        expect(rows, isEmpty);
-      });
+    test('classe non lanceuse (Guerrier) : aucune ligne', () {
+      final rows = SpellSlotProgression.nonZeroSlotTotals([
+        (className: 'Guerrier', level: 5),
+      ]);
+      expect(rows, isEmpty);
+    });
 
-      test('Occultiste seul (magie de pacte, hors de ce total) : aucune '
-          'ligne', () {
-        final rows = SpellSlotProgression.nonZeroSlotTotals([
-          (className: 'Occultiste', level: 5),
-        ]);
-        expect(rows, isEmpty);
-      });
+    test('Occultiste seul (magie de pacte, hors de ce total) : aucune '
+        'ligne', () {
+      final rows = SpellSlotProgression.nonZeroSlotTotals([
+        (className: 'Occultiste', level: 5),
+      ]);
+      expect(rows, isEmpty);
+    });
 
-      test('multiclassé (Paladin 4 + Clerc 1 -> niveau combiné 3) : calcul '
-          'combiné, pas la simple somme des deux calculs isolés', () {
-        final rows = SpellSlotProgression.nonZeroSlotTotals([
-          (className: 'Paladin', level: 4),
-          (className: 'Clerc', level: 1),
-        ]);
-        // Niveau combiné 3 (4 ~/ 2 + 1 = 3) -> table lanceur complet niveau 3
-        // : [4,2,0,...] — voir aussi le test équivalent de
-        // resolveChangesForLevelUp ci-dessus (même calcul, même attendu).
-        expect(rows, [(slotLevel: 1, total: 4), (slotLevel: 2, total: 2)]);
-      });
-    },
-  );
+    test('multiclassé (Paladin 4 + Clerc 1 -> niveau combiné 3) : calcul '
+        'combiné, pas la simple somme des deux calculs isolés', () {
+      final rows = SpellSlotProgression.nonZeroSlotTotals([
+        (className: 'Paladin', level: 4),
+        (className: 'Clerc', level: 1),
+      ]);
+      // Niveau combiné 3 (4 ~/ 2 + 1 = 3) -> table lanceur complet niveau 3
+      // : [4,2,0,...] — voir aussi le test équivalent de
+      // resolveChangesForLevelUp ci-dessus (même calcul, même attendu).
+      expect(rows, [(slotLevel: 1, total: 4), (slotLevel: 2, total: 2)]);
+    });
+  });
 }
