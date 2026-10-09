@@ -29,6 +29,7 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 |---|---|---|
 | D06 | Les trois environnements pointent sur le même projet Supabase | Matthias, puis `dev-backend-supabase` |
 | D07 | Clé de signature Android déclarée compromise, rotation non faite | Matthias |
+| D72 | Colonne `character_inventory.weapon_slot` utilisée côté mobile depuis le 22/09 mais absente de toutes les migrations du dépôt web | `dev-backend-supabase` |
 
 ### B. Fait perdre des données ou donne une règle fausse au joueur
 
@@ -48,10 +49,11 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 | D14 | Emplacements jamais écrits à la création ni à l'import | Ouvert, confirmé en base le 08/10 : aucun déclencheur |
 | D12 | Aucun délai d'attente réseau | Ouvert |
 | D31 | Cache local jamais purgé à la déconnexion | Ouvert |
+| D71 | `character_pact_slots` (magie de pacte Occultiste) jamais initialisée à la création ni à l'import, même trou que D14 | Ouvert |
 
 ### C. Peut attendre
 
-D04, D11, D13 (reste), D15, D16, D17, D20 à D30, D32, D61, D62, D63, et les constats de
+D04, D11, D13 (reste), D15, D16, D17, D20 à D30, D32, D61, D62, D63, D73, et les constats de
 session listés plus bas.
 D04 (règles indexées sur le nom français des classes) change de catégorie le jour où
 la version anglaise démarre : elle devient alors bloquante.
@@ -81,6 +83,7 @@ la version anglaise démarre : elle devient alors bloquante.
 | D16 | Fichiers trop gros pour être modifiés sans risque | `character_repository.dart` (3933 lignes), `level_up_screen.dart` (3208), `character_detail_screen.dart` (2353), `xml_import_review_screen.dart` (2163), `character_creation_repository.dart` (1539) | haute | Toute évolution du hors ligne ou du multiclassage | gros | Scinder le dépôt par domaine ; factoriser le patron optimiste, recopié dans environ 21 méthodes | dev-flutter | C + L | Ouvert |
 | D27 | Copie locale du cahier des charges périmée | `docs/cahier-des-charges/` (fichiers datés du 25/08) ; `CLAUDE.md` | haute (processus) | À chaque tâche qui « relit la spec » | petit | Resynchroniser depuis claude.ai, ajouter les documents 15 et 16 à `CLAUDE.md` | chef de projet | C + L | Ouvert |
 | D14 | Emplacements de sorts jamais écrits à la création ni à l'import | `character_repository.dart` ; aucune écriture dans `character_creation_repository.dart` | non estimée | Si aucun déclencheur en base ne compense : un lanceur neuf reste à 0 emplacement jusqu'au premier repos long | petit | Initialiser à la création et à l'import | dev-flutter | L partiel | Ouvert, à confirmer en base |
+| D71 | `character_pact_slots` (magie de pacte Occultiste) jamais initialisée à la création ni à l'import — même trou que D14, mais plus grave : la première charge de pacte est disponible dès le niveau 1, donc un Occultiste neuf ne peut lancer aucun sort avant son premier repos court | `character_repository.dart` (`_upsertPactSlot`/`_resetPactSlot`) ; aucune écriture équivalente dans `character_creation_repository.dart`/`xml_import_repository.dart` | moyenne | Tout Occultiste créé ou importé | petit | Même patron que D14 (`SpellSlotProgression`/table de magie de pacte) à l'initialisation | dev-flutter | L (relevé par qa-testeur en validant D14) | Ouvert |
 | D11 | `WriteOutcome.queued` renvoyé par environ 25 méthodes qui ne mettent rien en file | `character_repository.dart` ; `character_detail_screen.dart` | moyenne | Chaque nouvel appelant | moyen | Troisième valeur `offlineRejected` | dev-flutter, décision produit | L | Ouvert |
 | D32 | Synchronisation : déclencheurs incomplets, un type inconnu bloque toute la file | `character_write_sync_coordinator.dart` ; `pending_character_write_queue.dart` ; `pending_character_write_syncer.dart` | moyenne | Connexion après le démarrage ; ajout futur d'un type d'écriture | petit | Déclencher aussi à la connexion ; ignorer les lignes de type inconnu | dev-flutter | L | Ouvert |
 | D15 | Chargement de la fiche : 26 requêtes en série, relancées après chaque écriture | `character_repository.dart` ; `character_detail_screen.dart` | moyenne | Réseau mobile lent ; latence non mesurée | moyen | Paralléliser, ou une vue ou fonction serveur | dev-flutter, dev-backend-supabase | C | Ouvert |
@@ -412,6 +415,18 @@ non traités.
 |---|---|---|---|---|
 | D68 | Le plafond ASI à 20 (`character_ability_scores`) n'est testé dans aucun des deux dépôts (ni `test/` mobile, ni la nouvelle suite pgTAP) — le code est correct (vérifié par lecture indépendante deux fois), mais sans filet de régression. | basse | Ajouter un cas de test (Dart et/ou pgTAP) qui dépasse volontairement le plafond de 20 lors d'un ASI | Ouvert |
 | D69 | `apply_level_up` attend un paramètre `p_choice` en jsonb (`{"kind": "ability_score_improvement"\|"subclass"\|"fighting_style"\|"favored_enemy"\|"pact", ...}`) — convention de wire nouvelle, le client mobile actuel ne sérialise jamais `LevelUpChoiceSelection`/`LevelUpChoiceKind`. Même risque que D67 : un futur branchement pourrait sérialiser l'enum Dart brut au lieu du vocabulaire attendu. | basse | Lors du branchement Flutter : mapper explicitement chaque `LevelUpChoiceKind` vers la valeur `kind` attendue, ne jamais sérialiser l'enum Dart directement | Ouvert |
+
+## Ajouts liés à l'initialisation des emplacements de sorts (D14)
+
+Constats relevés par `dev-flutter`/`qa-testeur` le 09/10/2026 en validant D14, en lançant
+pour la première fois la suite `test_integration/` complète (98 tests, 16 en échec —
+confirmés tous préexistants et indépendants de D14, reproduits à l'identique sur le
+commit parent).
+
+| ID | Sujet | Gravité | Correction proposée | État |
+|---|---|---|---|---|
+| D72 | Colonne `character_inventory.weapon_slot` utilisée côté mobile depuis le 22/09 (`lib/features/characters/domain/weapon_slot.dart`) mais absente de toutes les migrations du dépôt web — même défaut que D58 (`is_incomplete`). `supabase db reset` échoue dès qu'une requête touche cette colonne ; 7 des 16 échecs de `test_integration/` lui sont directement imputables. Si le job CI quotidien de D18 (PR #89) part bien d'un `db reset` propre, il doit échouer pour la même raison tous les jours. | haute | Migration `alter table character_inventory add column if not exists weapon_slot text check (weapon_slot in ('principal', 'secondaire'))`, placée chronologiquement avant le 22/09 | dev-backend-supabase |
+| D73 | 6 des 16 échecs de `test_integration/` viennent d'un `Worker failed to boot` sur l'edge function `create-group` (`SupabaseGroupRepository.createGroup`) — logs Docker : « failed to bootstrap runtime : failed to determine entrypoint ». Semble être un conteneur `supabase_edge_runtime` local resté actif trop longtemps (infra, pas un bug de code), mais pas vérifié davantage. | basse | Vérifier après un `supabase stop`/`supabase start` propre si l'edge function boote correctement ; si le problème persiste, creuser plus avant de se fier à un futur run de test touchant les groupes | Ouvert |
 
 ## Décisions en attente
 
