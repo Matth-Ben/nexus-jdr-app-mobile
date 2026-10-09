@@ -424,7 +424,7 @@ abstract final class SpellSlotProgression {
   ) {
     ({String className, int level})? occultisteEntry;
     for (final entry in classes) {
-      if (entry.className == 'Occultiste') {
+      if (pactCasterClassNames.contains(entry.className)) {
         occultisteEntry = entry;
         break;
       }
