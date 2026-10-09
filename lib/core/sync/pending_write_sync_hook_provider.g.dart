@@ -20,9 +20,10 @@ part of 'pending_write_sync_hook_provider.dart';
 /// importer le code d'une autre `feature` (seule exception historique du
 /// dépôt avant ce provider, voir `docs/dette-technique.md` D31).
 ///
-/// Ce provider casse cette dépendance : il expose un `Future<void>
-/// Function()` neutre, par défaut un no-op (`() async {}`) — `core/` ne
-/// connaît ni ne dépend de `PendingCharacterWriteSyncer`. Le câblage réel
+/// Ce provider casse cette dépendance : il expose un
+/// `Future<void> Function()` neutre, par défaut un no-op (`() async {}`) —
+/// `core/` ne connaît ni ne dépend de `PendingCharacterWriteSyncer`. Le
+/// câblage réel
 /// (`() => ref.read(pendingCharacterWriteSyncerProvider).sync()`) est posé en
 /// `override` dans `lib/main.dart` (`AppBootstrap._wrapChild`), seul point de
 /// composition du dépôt qui connaît déjà toutes les `features` — voir la doc
@@ -52,9 +53,10 @@ final pendingWriteSyncHookProvider = PendingWriteSyncHookProvider._();
 /// importer le code d'une autre `feature` (seule exception historique du
 /// dépôt avant ce provider, voir `docs/dette-technique.md` D31).
 ///
-/// Ce provider casse cette dépendance : il expose un `Future<void>
-/// Function()` neutre, par défaut un no-op (`() async {}`) — `core/` ne
-/// connaît ni ne dépend de `PendingCharacterWriteSyncer`. Le câblage réel
+/// Ce provider casse cette dépendance : il expose un
+/// `Future<void> Function()` neutre, par défaut un no-op (`() async {}`) —
+/// `core/` ne connaît ni ne dépend de `PendingCharacterWriteSyncer`. Le
+/// câblage réel
 /// (`() => ref.read(pendingCharacterWriteSyncerProvider).sync()`) est posé en
 /// `override` dans `lib/main.dart` (`AppBootstrap._wrapChild`), seul point de
 /// composition du dépôt qui connaît déjà toutes les `features` — voir la doc
@@ -89,9 +91,10 @@ final class PendingWriteSyncHookProvider
   /// importer le code d'une autre `feature` (seule exception historique du
   /// dépôt avant ce provider, voir `docs/dette-technique.md` D31).
   ///
-  /// Ce provider casse cette dépendance : il expose un `Future<void>
-  /// Function()` neutre, par défaut un no-op (`() async {}`) — `core/` ne
-  /// connaît ni ne dépend de `PendingCharacterWriteSyncer`. Le câblage réel
+  /// Ce provider casse cette dépendance : il expose un
+  /// `Future<void> Function()` neutre, par défaut un no-op (`() async {}`) —
+  /// `core/` ne connaît ni ne dépend de `PendingCharacterWriteSyncer`. Le
+  /// câblage réel
   /// (`() => ref.read(pendingCharacterWriteSyncerProvider).sync()`) est posé en
   /// `override` dans `lib/main.dart` (`AppBootstrap._wrapChild`), seul point de
   /// composition du dépôt qui connaît déjà toutes les `features` — voir la doc
