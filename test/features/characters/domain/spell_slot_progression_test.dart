@@ -667,4 +667,51 @@ void main() {
       expect(rows, [(slotLevel: 1, total: 4), (slotLevel: 2, total: 2)]);
     });
   });
+
+  group('SpellSlotProgression.initialPactSlotFor (D71 : initialisation à la '
+      'création/import, équivalent nonZeroSlotTotals pour la magie de '
+      'pacte)', () {
+    test('Occultiste niveau 1 : 1 charge de niveau 1 (disponible dès la '
+        'création, contrairement aux emplacements classiques)', () {
+      final pact = SpellSlotProgression.initialPactSlotFor([
+        (className: 'Occultiste', level: 1),
+      ]);
+      expect(pact, (slotLevel: 1, total: 1));
+    });
+
+    test('Occultiste niveau 11 : palier de charges qui change (2 -> 3)', () {
+      final pact = SpellSlotProgression.initialPactSlotFor([
+        (className: 'Occultiste', level: 11),
+      ]);
+      expect(pact, (slotLevel: 5, total: 3));
+    });
+
+    test('classe non-Occultiste seule (Magicien) : aucune charge de pacte', () {
+      final pact = SpellSlotProgression.initialPactSlotFor([
+        (className: 'Magicien', level: 5),
+      ]);
+      expect(pact, isNull);
+    });
+
+    test('classe non lanceuse (Guerrier) : aucune charge de pacte', () {
+      final pact = SpellSlotProgression.initialPactSlotFor([
+        (className: 'Guerrier', level: 5),
+      ]);
+      expect(pact, isNull);
+    });
+
+    test('liste de classes vide : aucune charge de pacte (défensif)', () {
+      final pact = SpellSlotProgression.initialPactSlotFor([]);
+      expect(pact, isNull);
+    });
+
+    test('multiclassé Occultiste 3 + Magicien 2 : trouve l\'Occultiste '
+        'parmi les autres classes, ignore les classes "non-pacte"', () {
+      final pact = SpellSlotProgression.initialPactSlotFor([
+        (className: 'Magicien', level: 2),
+        (className: 'Occultiste', level: 3),
+      ]);
+      expect(pact, (slotLevel: 2, total: 2));
+    });
+  });
 }

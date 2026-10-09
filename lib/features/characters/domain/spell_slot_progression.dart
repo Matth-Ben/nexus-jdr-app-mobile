@@ -391,4 +391,49 @@ abstract final class SpellSlotProgression {
         if (totals[i] > 0) (slotLevel: i + 1, total: totals[i]),
     ];
   }
+
+  /// Équivalent [nonZeroSlotTotals] pour la magie de pacte de l'Occultiste —
+  /// dette D71 (`docs/dette-technique.md`), même trou que D14 mais pour
+  /// `character_pact_slots` : cette table n'était écrite nulle part à la
+  /// création d'un personnage ni à l'import XML, seulement recalculée en
+  /// place à la montée de niveau
+  /// (`characters/data/character_repository.dart::_upsertPactSlot`). Plus
+  /// grave que D14 : la première charge de pacte est disponible dès le
+  /// niveau 1 (voir [_pactMagicSlots]), donc un Occultiste tout juste créé ou
+  /// importé ne pouvait auparavant lancer aucun sort avant son premier repos
+  /// court.
+  ///
+  /// `null` si [classes] ne contient aucune classe nommée exactement
+  /// `'Occultiste'` (voir [pactCasterClassNames]), ou si [pactMagicFor]
+  /// retourne `null` pour son niveau (défensif, ne devrait pas arriver pour
+  /// un niveau 1-20 valide) — jamais plusieurs classes Occultiste à la fois
+  /// (un personnage n'a jamais deux fois la même classe), donc la première
+  /// trouvée suffit.
+  ///
+  /// Même limite de factorisation que [nonZeroSlotTotals] : seul le calcul
+  /// est partagé, pas la construction de la ligne d'insert
+  /// (`character_id`/`slots_used: 0` appartiennent à l'appelant,
+  /// `character_creation/data/character_creation_repository.dart
+  /// ::createCharacter` et `xml_import/data/xml_import_repository.dart
+  /// ::saveImportedCharacter`) — ni le besoin de préserver `slots_used`
+  /// d'une ligne existante, qui ne se présente jamais ici (personnage tout
+  /// juste créé ou importé, jamais de ligne `character_pact_slots`
+  /// préexistante).
+  static ({int slotLevel, int total})? initialPactSlotFor(
+    List<({String className, int level})> classes,
+  ) {
+    ({String className, int level})? occultisteEntry;
+    for (final entry in classes) {
+      if (pactCasterClassNames.contains(entry.className)) {
+        occultisteEntry = entry;
+        break;
+      }
+    }
+    if (occultisteEntry == null) return null;
+
+    final pact = pactMagicFor(occultisteEntry.level);
+    if (pact == null) return null;
+
+    return (slotLevel: pact.slotLevel, total: pact.charges);
+  }
 }

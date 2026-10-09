@@ -1205,9 +1205,8 @@ class SupabaseCharacterCreationRepository
       // reste entièrement délégué à
       // [SpellSlotProgression.nonZeroSlotTotals], qui retourne une liste
       // vide pour une classe non lanceuse ou l'Occultiste seul (magie de
-      // pacte, mécanisme séparé — `character_pact_slots`, hors périmètre de
-      // ce correctif : voir la note du registre de dette technique, D14 ne
-      // couvre que `character_spell_slots`).
+      // pacte, mécanisme séparé — `character_pact_slots`, initialisée
+      // séparément juste en dessous, voir la dette D71).
       final initialSpellSlots = SpellSlotProgression.nonZeroSlotTotals([
         (className: classOption.name, level: 1),
       ]);
@@ -1221,6 +1220,26 @@ class SupabaseCharacterCreationRepository
               'slots_used': 0,
             },
         ]);
+      }
+
+      // `character_pact_slots` au niveau 1 (dette D71,
+      // `docs/dette-technique.md`) : même trou que D14 ci-dessus, mais pour
+      // la magie de pacte de l'Occultiste (table séparée, une seule ligne
+      // par personnage — voir [SpellSlotProgression.initialPactSlotFor]).
+      // `null` pour toute classe autre que l'Occultiste, donc aucune ligne
+      // écrite dans ce cas. Même rationale d'`insert` plutôt qu'`upsert` :
+      // `characterId` vient d'être créé, aucune ligne `character_pact_slots`
+      // préexistante à préserver.
+      final initialPactSlot = SpellSlotProgression.initialPactSlotFor([
+        (className: classOption.name, level: 1),
+      ]);
+      if (initialPactSlot != null) {
+        await _client.from('character_pact_slots').insert({
+          'character_id': characterId,
+          'slot_level': initialPactSlot.slotLevel,
+          'slots_total': initialPactSlot.total,
+          'slots_used': 0,
+        });
       }
 
       await _client.from('character_level_hp').insert({

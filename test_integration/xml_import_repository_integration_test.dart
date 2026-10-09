@@ -14,9 +14,11 @@ import 'support/test_environment.dart';
 /// Premier fichier de test pour ce repository (aucun test_integration ne le
 /// couvrait avant la tâche D14, `docs/dette-technique.md`) : volontairement
 /// resserré sur le correctif D14 (initialisation de `character_spell_slots`
-/// à l'import, au niveau RÉELLEMENT importé plutôt qu'au niveau 1) plutôt
-/// qu'une couverture exhaustive de toutes les tables enfants déjà exercées
-/// côté `character_creation_repository_integration_test.dart` pour
+/// à l'import, au niveau RÉELLEMENT importé plutôt qu'au niveau 1), étendu
+/// par D71 au même correctif pour `character_pact_slots` (magie de pacte de
+/// l'Occultiste) — plutôt qu'une couverture exhaustive de toutes les tables
+/// enfants déjà exercées côté
+/// `character_creation_repository_integration_test.dart` pour
 /// `createCharacter` (le même compromis d'écriture, voir la documentation de
 /// classe de `XmlImportRepository`).
 ///
@@ -50,12 +52,14 @@ void main() {
     // [SpellSlotProgression.fullCasterClassNames] ('Magicien'), par son nom
     // français exact plutôt que par position.
     late int magicienClassId;
+    late int occultisteClassId;
 
     setUpAll(() async {
       client = createTestSupabaseClient();
       await signUpTestUser(client);
       reference = await fetchReferenceContent(client);
       magicienClassId = await _fetchClassIdByName(client, 'Magicien');
+      occultisteClassId = await _fetchClassIdByName(client, 'Occultiste');
     });
 
     test('saveImportedCharacter peuple character_spell_slots au niveau '
@@ -108,8 +112,8 @@ void main() {
     });
 
     test('saveImportedCharacter n\'écrit aucune ligne character_spell_slots '
-        'pour une classe non lanceuse de sorts (même garde-fou que '
-        'createCharacter)', () async {
+        'ni character_pact_slots pour une classe non lanceuse de sorts '
+        '(même garde-fou que createCharacter, D14/D71)', () async {
       final repository = SupabaseXmlImportRepository(client);
 
       // `reference.classId` n'est pas garanti lanceur de sorts (contenu
@@ -134,11 +138,66 @@ void main() {
           .select()
           .eq('character_id', characterId);
       expect(spellSlotRows, isEmpty);
+
+      final pactSlotRows = await client
+          .from('character_pact_slots')
+          .select()
+          .eq('character_id', characterId);
+      expect(pactSlotRows, isEmpty);
+    });
+
+    test('saveImportedCharacter peuple character_pact_slots au niveau '
+        'RÉELLEMENT importé pour un Occultiste (D71 : avant ce correctif, '
+        'cette table n\'était jamais écrite à l\'import)', () async {
+      final repository = SupabaseXmlImportRepository(client);
+
+      // Occultiste importé déjà au niveau 11 (pas 1) : vérifie que
+      // l'initialisation D71 utilise bien le niveau réellement importé —
+      // au niveau 11, les charges passent de 2 à 3 (voir
+      // `SpellSlotProgression._pactMagicSlots`), donc ce choix de niveau
+      // distingue bien ce correctif d'une simple initialisation au niveau
+      // 1 implicite.
+      final data = _minimalSaveData(
+        classId: occultisteClassId,
+        className: 'Occultiste',
+        level: 11,
+      );
+
+      final characterId = await repository.saveImportedCharacter(
+        data: data,
+        characterName: 'Test Intégration Import Pacte',
+      );
+      addTearDown(() async {
+        await client.from('characters').delete().eq('id', characterId);
+      });
+
+      final expectedPact = SpellSlotProgression.pactMagicFor(11);
+      expect(expectedPact, isNotNull);
+
+      final pactSlotRows = await client
+          .from('character_pact_slots')
+          .select()
+          .eq('character_id', characterId);
+      expect(pactSlotRows, hasLength(1));
+      expect(pactSlotRows.single['slot_level'], expectedPact!.slotLevel);
+      expect(
+        (pactSlotRows.single['slots_total'] as num).toInt(),
+        expectedPact.charges,
+      );
+      expect((pactSlotRows.single['slots_used'] as num).toInt(), 0);
+
+      // Aucune ligne `character_spell_slots` : l'Occultiste n'est jamais
+      // un lanceur "non-pacte".
+      final spellSlotRows = await client
+          .from('character_spell_slots')
+          .select()
+          .eq('character_id', characterId);
+      expect(spellSlotRows, isEmpty);
     });
 
     test('saveImportedCharacter n\'écrit aucune ligne character_spell_slots '
-        'quand la classe importée est restée non reconnue (classId/className '
-        'nuls)', () async {
+        'ni character_pact_slots quand la classe importée est restée non '
+        'reconnue (classId/className nuls)', () async {
       final repository = SupabaseXmlImportRepository(client);
 
       final data = _minimalSaveData(classId: null, className: null, level: 1);
@@ -162,6 +221,12 @@ void main() {
           .select()
           .eq('character_id', characterId);
       expect(spellSlotRows, isEmpty);
+
+      final pactSlotRows = await client
+          .from('character_pact_slots')
+          .select()
+          .eq('character_id', characterId);
+      expect(pactSlotRows, isEmpty);
     });
   });
 }
