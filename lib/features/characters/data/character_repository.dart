@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -110,6 +111,14 @@ abstract class CharacterRepository {
   ///   même type restée en attente pour ce personnage : désormais périmée
   ///   (valeurs absolues), elle écraserait sinon cette écriture plus
   ///   récente à la synchronisation suivante.
+  ///   Exception à cette dernière règle (dette D12) : une requête réseau qui
+  ///   expire (`TimeoutException`, levée par le délai global de
+  ///   `core/network/timeout_http_client.dart` — voir sa documentation) est,
+  ///   elle, mise en file exactement comme une connectivité absente — une
+  ///   interface réseau déclarée "active" par [ConnectivityChecker] ne
+  ///   garantit jamais un accès effectif de bout en bout (Wi-Fi sans débit,
+  ///   signal faible...), ce cas est donc traité comme tel plutôt que comme
+  ///   un vrai problème serveur.
   Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,
@@ -254,8 +263,9 @@ abstract class CharacterRepository {
   /// [updateHp], aucun calcul métier fait ici.
   ///
   /// Mode hors-ligne : mêmes règles exactement que [updateHp] (voir sa
-  /// documentation) — payload mis en file `{newXp: ...}` si la connectivité
-  /// est absente. Note pour l'appelant
+  /// documentation, y compris l'exception D12 pour une requête réseau qui
+  /// expire) — payload mis en file `{newXp: ...}` si la connectivité est
+  /// absente. Note pour l'appelant
   /// (`presentation/character_detail_screen.dart::_addXp`) : ne jamais
   /// déclencher l'ouverture automatique de l'écran de montée de niveau sur
   /// un [WriteOutcome.queued], l'XP n'étant alors pas encore confirmée côté
@@ -1341,6 +1351,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
         },
       );
       return WriteOutcome.synced;
+    } on TimeoutException {
+      // Dette D12 : `ConnectivityChecker.hasConnection()` a déclaré une
+      // interface active (sinon on ne serait jamais arrivé ici, voir la
+      // branche ci-dessus), mais la requête réseau elle-même n'a jamais
+      // abouti dans le délai global (`TimeoutHttpClient`,
+      // `core/network/timeout_http_client.dart`) — un Wi-Fi sans débit réel
+      // ou un signal faible, typiquement. Traité comme une absence de
+      // connectivité (même mise en file que `!hasConnection()` ci-dessus)
+      // plutôt que comme une [CharacterFailure] dure : contrairement à un
+      // vrai échec serveur (`PostgrestException`/`catch` ci-dessous, jamais
+      // mis en file, voir leur documentation), rien n'indique ici qu'un
+      // nouvel essai échouerait de la même façon.
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': currentHp, 'temporaryHp': temporaryHp},
+      );
+      return WriteOutcome.queued;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (error, stackTrace) {
@@ -1719,6 +1748,19 @@ class SupabaseCharacterRepository implements CharacterRepository {
         },
       );
       return WriteOutcome.synced;
+    } on TimeoutException {
+      // Dette D12 : même rationale que [updateHp] ci-dessus (voir sa
+      // documentation) — la connectivité était déclarée active, mais la
+      // requête réseau n'a jamais abouti dans le délai global
+      // (`TimeoutHttpClient`). Traité comme une absence de connectivité,
+      // jamais comme une [CharacterFailure] dure.
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.xp,
+        payload: {'newXp': newXp},
+      );
+      return WriteOutcome.queued;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (error, stackTrace) {
