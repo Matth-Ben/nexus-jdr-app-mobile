@@ -2711,16 +2711,33 @@ class SupabaseCharacterRepository implements CharacterRepository {
         // statut (`SpellcastingRules.statusFor`), sans dupliquer de logique
         // de quotas ici (déjà appliquée côté écran avant d'arriver jusqu'à
         // cette méthode).
-        final status = SpellcastingRules.statusFor(className);
-        await _client.from('character_spells').insert([
+        //
+        // Revérifiés contre les sorts déjà connus (toute nature confondue :
+        // classe actuelle, autre classe multiclassée, sort inné racial...)
+        // juste avant l'écriture — même discipline que le bloc
+        // [racialInnateSpellIds] juste en dessous : un multiclassage vers une
+        // classe dont la liste de sorts initiaux recoupe un sort déjà connu
+        // (ex. "Soins", présent sur plusieurs listes) ne doit jamais tenter
+        // de réécrire ce sort (ce qui violerait l'index unique partiel sur
+        // `character_spells`, voir dette D10) ; il est ignoré silencieusement
+        // et garde son statut/sa classe source d'origine.
+        final knownSpellIds = await _fetchKnownSpellIds(characterId);
+        final newInitialSpellIds = {
           for (final spellId in initialSpellIds)
-            {
-              'character_id': characterId,
-              'spell_id': spellId,
-              'status': status,
-              'source_class_id': classId,
-            },
-        ]);
+            if (!knownSpellIds.contains(spellId)) spellId,
+        };
+        if (newInitialSpellIds.isNotEmpty) {
+          final status = SpellcastingRules.statusFor(className);
+          await _client.from('character_spells').insert([
+            for (final spellId in newInitialSpellIds)
+              {
+                'character_id': characterId,
+                'spell_id': spellId,
+                'status': status,
+                'source_class_id': classId,
+              },
+          ]);
+        }
       }
 
       if (invocationIds.isNotEmpty) {
@@ -2742,14 +2759,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         // (jamais de confiance aveugle dans la lecture de l'appelant, même
         // discipline que [_applyAbilityScoreImprovement]) : un sort déjà
         // connu (par ce biais ou un autre) n'est jamais réécrit.
-        final knownRows = await _client
-            .from('character_spells')
-            .select('spell_id')
-            .eq('character_id', characterId);
-        final knownSpellIds = {
-          for (final row in knownRows)
-            if (row['spell_id'] is num) (row['spell_id'] as num).toInt(),
-        };
+        final knownSpellIds = await _fetchKnownSpellIds(characterId);
         final newRacialSpellIds = {
           for (final spellId in racialInnateSpellIds)
             if (!knownSpellIds.contains(spellId)) spellId,
@@ -3739,6 +3749,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// comparer deux identifiants de classe indépendamment de leur type Dart
   /// exact (`int` vs `num`) — voir [applyLevelUp].
   int _classIdAsInt(Object classId) => (classId as num).toInt();
+
+  /// Tous les `spell_id` déjà connus de [characterId] dans
+  /// `character_spells`, toute nature confondue (sort de classe, sort inné
+  /// racial, invocation...) — lecture fraîche utilisée par [applyLevelUp]
+  /// juste avant chaque écriture de nouveaux sorts (sorts initiaux d'une
+  /// classe à sorts connus, sorts innés raciaux) pour ne jamais tenter de
+  /// réécrire un sort déjà connu (violerait l'index unique partiel sur
+  /// `character_spells`, voir dette D10) : un sort déjà connu est toujours
+  /// ignoré silencieusement plutôt que réécrit.
+  Future<Set<int>> _fetchKnownSpellIds(String characterId) async {
+    final knownRows = await _client
+        .from('character_spells')
+        .select('spell_id')
+        .eq('character_id', characterId);
+    return {
+      for (final row in knownRows)
+        if (row['spell_id'] is num) (row['spell_id'] as num).toInt(),
+    };
+  }
 
   /// Identifiant du joueur connecté, ou lève une [CharacterFailure] "session
   /// expirée" — factorisé depuis [fetchCharacters] pour être réutilisé par
