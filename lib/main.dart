@@ -11,6 +11,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/analytics/analytics_preferences_provider.dart';
 import 'core/analytics/analytics_service.dart';
 import 'core/network/env_config.dart';
+import 'core/network/timeout_http_client.dart';
 import 'core/notifications/notification_providers.dart';
 import 'core/notifications/push_token_registrar.dart';
 import 'core/router/app_router.dart';
@@ -117,6 +118,11 @@ Future<BootstrapResult> _initializeSupabaseAndFirebase() async {
       // désormais ce paramètre sous le nom `publishableKey` (anonKey est
       // dépréciée).
       publishableKey: EnvConfig.supabaseAnonKey,
+      // Dette D12 : délai global de 15s sur toute requête HTTP sortante
+      // (Postgrest, GoTrue, Storage...) — voir la doc de classe de
+      // `TimeoutHttpClient` pour le rationale complet (pourquoi global
+      // plutôt que `.timeout(...)` dispersé sur chaque appel `.from(...)`).
+      httpClient: TimeoutHttpClient(),
     );
     supabaseReady = true;
   } catch (error, stackTrace) {

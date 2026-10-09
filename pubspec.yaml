@@ -122,6 +122,13 @@ dependencies:
   # par un service distant du fabricant (Google/Apple), hors de notre
   # contrôle.
   speech_to_text: ^7.5.0
+  # `TimeoutHttpClient` (`core/network/timeout_http_client.dart`, dette D12) —
+  # délai global de 15s injecté dans `Supabase.initialize(httpClient: ...)`.
+  # Déjà résolu transitivement par `supabase`/`postgrest`/`gotrue`, déplacé
+  # ici depuis `dev_dependencies` (où il ne servait jusqu'ici qu'à
+  # `package:http/testing.dart` dans les tests) puisqu'il est désormais
+  # importé directement par du code de `lib/`.
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
@@ -152,15 +159,6 @@ dev_dependencies:
   # produit une fois via `dart run flutter_launcher_icons`, ce package n'est
   # pas utilisé au runtime de l'app.
   flutter_launcher_icons: ^0.14.4
-  # `package:http/testing.dart` (`MockClient`) — utilisé uniquement par
-  # `test/features/character_creation/data/character_creation_repository_test.dart`
-  # pour fabriquer un `SupabaseClient` de test qui n'ouvre aucune vraie
-  # connexion réseau (voir la doc de ce fichier de test pour le rationale :
-  # aucun double factice de `SupabaseClient` lui-même n'existait déjà dans ce
-  # dépôt avant cette tâche). Déjà résolu transitivement par
-  # `supabase`/`postgrest`/`gotrue`, déclaré explicitement puisqu'importé
-  # directement par du code de test de ce dépôt.
-  http: ^1.6.0
   # `PathProviderPlatform.instance` — utilisé uniquement par
   # `test/features/profile/data/data_export_repository_test.dart` pour
   # fabriquer un répertoire temporaire de test sans jamais passer par le

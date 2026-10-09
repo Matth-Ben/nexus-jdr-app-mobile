@@ -726,6 +726,65 @@ void main() {
       );
       expect(await pendingWrites.allForOwner(ownerId), isEmpty);
     });
+
+    test(
+      'updateHp : connectivité présente mais requête réseau qui expire '
+      '(dette D12) -> met en file comme une absence de connectivité, '
+      'retourne queued sans lever d\'exception',
+      () async {
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          throwTimeoutOnRequest: true,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.updateHp(
+          characterId: characterId,
+          currentHp: 5,
+          temporaryHp: 0,
+        );
+
+        expect(outcome, WriteOutcome.queued);
+        final pending = await pendingWrites.allForOwner(ownerId);
+        expect(pending, hasLength(1));
+        expect(pending.single.kind, PendingCharacterWriteKind.hp);
+        expect(pending.single.payload, {'currentHp': 5, 'temporaryHp': 0});
+      },
+    );
+
+    test(
+      'addXp : connectivité présente mais requête réseau qui expire '
+      '(dette D12) -> met en file comme une absence de connectivité, '
+      'retourne queued sans lever d\'exception',
+      () async {
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          throwTimeoutOnRequest: true,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.addXp(
+          characterId: characterId,
+          newXp: 450,
+        );
+
+        expect(outcome, WriteOutcome.queued);
+        final pending = await pendingWrites.allForOwner(ownerId);
+        expect(pending, hasLength(1));
+        expect(pending.single.kind, PendingCharacterWriteKind.xp);
+        expect(pending.single.payload, {'newXp': 450});
+      },
+    );
   });
 
   group(
@@ -2623,6 +2682,15 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
   required String ownerId,
   Map<String, List<Map<String, dynamic>>> tableRows = const {},
   bool throwOnRequest = false,
+  // Simule le scénario D12 (`TimeoutHttpClient`,
+  // `core/network/timeout_http_client.dart`) : une requête qui expire lève
+  // une `TimeoutException`, contrairement à [throwOnRequest]
+  // (`SocketException`, absence de réseau "franche"). Ce double ne passe
+  // jamais réellement par `TimeoutHttpClient` (le transport est entièrement
+  // fabriqué, voir [MockClient] ci-dessous) — il simule directement
+  // l'exception que ce client lèverait, déjà vérifiée bout en bout par
+  // `test/core/network/timeout_http_client_test.dart`.
+  bool throwTimeoutOnRequest = false,
   int? failureStatusCode,
   // Observateur best-effort de chaque requête sortante — sert par ex. à
   // capturer la query string `select` réellement envoyée pour une table
@@ -2642,6 +2710,9 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
     onRequest?.call(request);
     if (throwOnRequest) {
       throw const SocketException('Pas de réseau (double de test).');
+    }
+    if (throwTimeoutOnRequest) {
+      throw TimeoutException('Requête expirée (double de test).');
     }
     if (failureStatusCode != null) {
       return http.Response(
