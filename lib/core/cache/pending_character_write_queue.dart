@@ -371,6 +371,27 @@ class PendingCharacterWriteQueue {
     });
   }
 
+  /// Purge **toutes** les entrées de [ownerId] (D31 du registre de dette
+  /// technique : cache local jamais purgé à la déconnexion/suppression de
+  /// compte), y compris celles déjà abandonnées (D34) qu'[allForOwner] ne
+  /// renvoie jamais — un message d'abandon pas encore consommé n'a plus de
+  /// joueur à qui s'afficher une fois le compte déconnecté/supprimé,
+  /// contrairement à [consumeAbandonedMessages] qui les traite comme
+  /// consommables.
+  ///
+  /// Appelante prévue : [SupabaseAuthRepository.signOut]/[deleteAccount]
+  /// (`features/auth/data/auth_repository.dart`), **seulement** après avoir
+  /// vérifié via [allForOwner] (suivant une tentative de synchronisation)
+  /// qu'aucune écriture active n'est plus en attente pour [ownerId] — cette
+  /// méthode elle-même ne fait aucune vérification de ce genre, elle
+  /// supprime sans condition, y compris une écriture non encore synchronisée
+  /// si l'appelant ne l'a pas garanti en amont.
+  Future<void> removeAllForOwner(String ownerId) async {
+    await (_db.delete(
+      _db.pendingCharacterWrites,
+    )..where((row) => row.ownerId.equals(ownerId))).go();
+  }
+
   /// Messages des entrées abandonnées de [ownerId] (toutes, tous personnages
   /// confondus) — à afficher **une seule fois** : chaque appel supprime
   /// définitivement les lignes renvoyées, elles ne sont donc jamais signalées

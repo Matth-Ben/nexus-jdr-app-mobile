@@ -26,6 +26,7 @@ import 'package:personnages/core/network/connectivity_providers.dart';
 import 'package:personnages/core/widgets/profile_avatar.dart';
 import 'package:personnages/core/widgets/settings_list_card.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
+import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/data/notification_preferences_repository.dart';
 import 'package:personnages/features/profile/domain/notification_preferences.dart';
@@ -58,6 +59,7 @@ class _FakeNotificationPreferencesRepository
 
 class _FakeAuthRepository implements AuthRepository {
   int signOutCallCount = 0;
+  Object? signOutErrorToThrow;
 
   @override
   Future<void> deleteAccount() async {}
@@ -77,6 +79,8 @@ class _FakeAuthRepository implements AuthRepository {
   @override
   Future<void> signOut() async {
     signOutCallCount++;
+    final error = signOutErrorToThrow;
+    if (error != null) throw error;
   }
 
   @override
@@ -404,6 +408,30 @@ void main() {
 
     expect(fakeAuthRepository.signOutCallCount, 1);
   });
+
+  testWidgets(
+    'D31 : si `AuthRepository.signOut` est bloqué par des écritures PV/XP '
+    'encore en attente (AuthFailure), affiche son message dans un SnackBar '
+    'au lieu de le laisser silencieux — l\'écran reste affiché (pas de '
+    'déconnexion)',
+    (tester) async {
+      fakeAuthRepository.signOutErrorToThrow = const AuthFailure(
+        pendingHpXpWritesBlockedMessage,
+      );
+      await pumpProfile(tester, user: _fakeUser());
+
+      await tester.ensureVisible(find.text('Se déconnecter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Se déconnecter'));
+      await tester.pumpAndSettle();
+
+      expect(fakeAuthRepository.signOutCallCount, 1);
+      expect(find.text(pendingHpXpWritesBlockedMessage), findsOneWidget);
+      // L'écran de profil reste affiché : la déconnexion a bien été
+      // bloquée, jamais effectuée silencieusement.
+      expect(find.text('PROFIL'), findsOneWidget);
+    },
+  );
 
   testWidgets('le bandeau bois "PROFIL" propose un retour fonctionnel', (
     tester,

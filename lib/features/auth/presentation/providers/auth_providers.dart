@@ -1,7 +1,9 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
+import '../../../../core/sync/pending_write_sync_hook_provider.dart';
 import '../../data/auth_repository.dart';
 import '../../data/auth_state_stream.dart';
 
@@ -9,7 +11,19 @@ part 'auth_providers.g.dart';
 
 @Riverpod(keepAlive: true)
 AuthRepository authRepository(Ref ref) {
-  return SupabaseAuthRepository(ref.watch(supabaseClientProvider));
+  return SupabaseAuthRepository(
+    ref.watch(supabaseClientProvider),
+    pendingWriteQueue: ref.watch(pendingCharacterWriteQueueProvider),
+    referenceDataCache: ref.watch(referenceDataCacheProvider),
+    // Indirection neutre (`core/sync/pending_write_sync_hook_provider.dart`,
+    // D31 du registre de dette technique) : jamais un import direct de
+    // `features/characters/presentation/providers/character_providers.dart`
+    // depuis `features/auth/` — le vrai câblage
+    // (`PendingCharacterWriteSyncer.sync`) est posé en `override` dans
+    // `lib/main.dart`, seul point de composition du dépôt qui connaît déjà
+    // toutes les `features`.
+    syncPendingWrites: () => ref.read(pendingWriteSyncHookProvider)(),
+  );
 }
 
 /// [AuthStateStream] partagé par toute l'app — voir sa doc de classe pour le

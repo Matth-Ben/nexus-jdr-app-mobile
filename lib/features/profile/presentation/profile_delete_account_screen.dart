@@ -10,6 +10,8 @@ import '../../../core/widgets/destructive_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/settings_list_card.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../auth/data/auth_repository.dart'
+    show pendingHpXpWritesBlockedMessage;
 import '../../auth/domain/auth_failure.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 
@@ -213,6 +215,22 @@ class _ProfileDeleteAccountScreenState
 
     try {
       await ref.read(authRepositoryProvider).deleteAccount();
+    } on AuthFailure catch (failure) {
+      // D31 du registre de dette technique : seul cas où le message réel
+      // d'une [AuthFailure] est affiché ici plutôt que [_genericErrorMessage]
+      // (spec de la tâche d'origine de cet écran, voir sa doc de classe) —
+      // `pendingHpXpWritesBlockedMessage` est un texte applicatif de ce
+      // dépôt (pas une erreur serveur brute), le joueur doit savoir que la
+      // suppression est bloquée par une synchro PV/XP en attente, pas par un
+      // échec générique, pour pouvoir réessayer en connaissance de cause.
+      if (!mounted) return;
+      setState(() {
+        _isDeleting = false;
+        _errorMessage = failure.message == pendingHpXpWritesBlockedMessage
+            ? failure.message
+            : _genericErrorMessage;
+      });
+      return;
     } catch (error) {
       debugPrint(
         'ProfileDeleteAccountScreen._confirmDelete: erreur inattendue '

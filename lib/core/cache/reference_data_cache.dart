@@ -96,6 +96,25 @@ class ReferenceDataCache {
     });
   }
 
+  /// Vide entièrement le cache (D31 du registre de dette technique : cache
+  /// local jamais purgé à la déconnexion/suppression de compte) — purge
+  /// totale, jamais scopée par compte : [CachedReferenceEntries] ne contient
+  /// que des données de référence publiques (races, classes, sorts...),
+  /// jamais de donnée spécifique à un joueur (voir sa doc de classe), donc
+  /// rien à cloisonner par `ownerId` ici, contrairement à
+  /// [PendingCharacterWriteQueue.removeAllForOwner]
+  /// (`core/cache/pending_character_write_queue.dart`).
+  ///
+  /// Appelante prévue : [SupabaseAuthRepository.signOut]/[deleteAccount]
+  /// (`features/auth/data/auth_repository.dart`), pour qu'un appareil
+  /// partagé ne retrouve jamais, après un changement de compte, un cache de
+  /// catalogue laissé par le compte précédent — sans conséquence pratique
+  /// au-delà d'un re-fetch réseau au prochain accès, ce cache n'ayant pas de
+  /// notion d'historique ni d'expiration (voir [put]).
+  Future<void> clear() async {
+    await _db.delete(_db.cachedReferenceEntries).go();
+  }
+
   Future<CachedReferenceEntry?> _selectRow(String key) {
     return (_db.select(
       _db.cachedReferenceEntries,

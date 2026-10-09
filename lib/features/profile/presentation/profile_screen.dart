@@ -11,6 +11,7 @@ import '../../../core/widgets/menu_tile.dart';
 import '../../../core/widgets/profile_avatar.dart';
 import '../../../core/widgets/settings_list_card.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../auth/domain/auth_failure.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import 'providers/package_info_provider.dart';
 
@@ -128,7 +129,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.lg),
                   DestructiveButton(
                     label: 'Se déconnecter',
-                    onPressed: () => ref.read(authRepositoryProvider).signOut(),
+                    onPressed: () => _signOut(context, ref),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   const _FooterVersion(),
@@ -150,6 +151,31 @@ class ProfileScreen extends ConsumerWidget {
       context.pop();
     } else {
       context.go('/');
+    }
+  }
+
+  /// D31 du registre de dette technique : `AuthRepository.signOut` peut
+  /// désormais lever une [AuthFailure] (écritures PV/XP encore en attente de
+  /// synchro après une tentative) — contrairement au reste de cet écran, qui
+  /// n'a pas d'état de chargement/erreur dédié (voir sa doc de classe), ce
+  /// bouton reste fire-and-forget pour le cas nominal mais affiche désormais
+  /// un `SnackBar` explicite plutôt que de laisser l'erreur silencieusement
+  /// non gérée (le widget reste monté : une déconnexion bloquée ne redirige
+  /// jamais vers `/login`).
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(authRepositoryProvider).signOut();
+    } on AuthFailure catch (failure) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(failure.message)));
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Une erreur inattendue est survenue. Réessayez.'),
+        ),
+      );
     }
   }
 }
