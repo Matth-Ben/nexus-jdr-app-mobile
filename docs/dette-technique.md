@@ -47,7 +47,7 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 | D08 | Sorts innés raciaux : emplacement exigé, pas de compteur | Corrigé (PR #82, migration web PR #19) |
 | D14 | Emplacements jamais écrits à la création ni à l'import | Ouvert, confirmé en base le 08/10 : aucun déclencheur |
 | D12 | Aucun délai d'attente réseau | Ouvert |
-| D31 | Cache local jamais purgé à la déconnexion | Ouvert |
+| D31 | Cache local jamais purgé à la déconnexion | Corrigé (PR #103) |
 
 ### C. Peut attendre
 
@@ -91,7 +91,7 @@ la version anglaise démarre : elle devient alors bloquante.
 | D23 | Accessibilité : libellés et rôles manquants | `lib/core/widgets/sheet_header_bar.dart` ; `lib/features/characters/presentation/character_list_screen.dart` | moyenne | Lecteur d'écran ; non testé avec TalkBack ni VoiceOver | moyen | `Semantics(button, label)` dans les widgets partagés, test de garde | dev-flutter, qa-testeur | C + L | Partiel (PR #75) : bouton de filtre corrigé. Restent la croix des sheets, les boutons Groupes et Profil, et 13 widgets partagés sur 15. |
 | D24 | Texte agrandi : aucune règle, débordements signalés | Sheets et en-tête de liste | moyenne | Utilisateurs en grande police | moyen | Règle dans le design system, plafond partagé, matrice de test 320×568 | direction-artistique, dev-flutter, qa-testeur | R, puis mesuré par QA | Partiel (PR #73, #74) : deux plafonds à 2.0, en-tête des sheets. Reste : la règle du design system, cinq sheets qui débordent à 200 %. |
 | D26 | Suite de tests : surface en paysage par défaut, attentes peu fiables | `test/flutter_test_config.dart` | moyenne | Tout test de mise en page | moyen | Surface portrait et polices réelles dans `flutter_test_config.dart` ; revue des `warnIfMissed: false` | qa-testeur | C | Partiel (PR #72) : trois tests à attente fixe rendus déterministes, trois masquages retirés. |
-| D31 | Cache local jamais purgé | `lib/core/cache/reference_data_cache.dart` ; `lib/core/cache/app_database.dart` | moyenne | Appareil partagé, suppression de compte | petit | Purger à la déconnexion et à la suppression de compte | dev-flutter, décision produit | L | Ouvert |
+| D31 | Cache local jamais purgé | `lib/core/cache/reference_data_cache.dart` ; `lib/core/cache/app_database.dart` | moyenne | Appareil partagé, suppression de compte | petit | Purger à la déconnexion et à la suppression de compte | dev-flutter, décision produit | L, puis confirmé par tests avec un vrai scénario à 2 comptes | Corrigé (PR #103). `signOut`/`deleteAccount` synchronisent d'abord les écritures PV/XP en attente ; bloquent avec un message explicite si des écritures restent en attente après la tentative, plutôt que de purger en silence. Purge seulement après succès réseau confirmé. En route : correction d'une dérive d'architecture (import inter-feature `auth` → `characters`, corrigée via un provider neutre dans `core/sync/`). |
 | D25 | Sheets en `isScrollControlled` sans `useSafeArea` | 44 occurrences, 0 `useSafeArea`, 52 `showModalBottomSheet` | basse à moyenne | Effet visuel non vérifié | petit à moyen | Un helper `showAppSheet` dans `core/widgets` | dev-flutter | C | Ouvert |
 | D21 | Dépendances | `pubspec.yaml` | basse | Prochaine montée de version | petit | Voir « Détails » | dev-flutter | C | Ouvert |
 | D28 | Commentaires périmés | Voir « Détails » | basse | Induit en erreur le prochain agent | petit | Corriger ou supprimer | dev-flutter | L | Partiel (PR #78) : le commentaire faux d'`applyRest` et la doc de `rest_type.dart` sont corrigés. |
