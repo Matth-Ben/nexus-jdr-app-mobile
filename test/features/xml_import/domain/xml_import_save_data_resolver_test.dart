@@ -169,6 +169,7 @@ void main() {
 
       expect(data.raceId, _race.id);
       expect(data.classId, _classOption.id);
+      expect(data.className, _classOption.name);
       expect(data.backgroundId, _background.id);
     });
 
@@ -205,6 +206,7 @@ void main() {
 
       expect(data.raceId, isNull);
       expect(data.classId, isNull);
+      expect(data.className, isNull);
     });
 
     test('alignement : libellé aidedd résolu par nom vers alignments.id', () {

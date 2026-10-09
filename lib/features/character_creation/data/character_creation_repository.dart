@@ -4,6 +4,7 @@ import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../../core/utils/french_text_normalizer.dart';
 import '../../characters/data/racial_innate_spell_repository.dart';
+import '../../characters/domain/spell_slot_progression.dart';
 import '../domain/ability_score_rules.dart';
 import '../domain/alignment_catalog.dart';
 import '../domain/alignment_option.dart';
@@ -1188,6 +1189,39 @@ class SupabaseCharacterCreationRepository
         'level': 1,
         'is_primary': true,
       });
+
+      // `character_spell_slots` au niveau 1 (dette D14,
+      // `docs/dette-technique.md`) : avant ce correctif, cette table n'était
+      // jamais écrite à la création, laissant un lanceur de sorts neuf à 0
+      // emplacement jusqu'à son premier repos long — une règle fausse pour
+      // le joueur (il devrait pouvoir lancer un sort dès sa création s'il en
+      // a le niveau/la classe). Un simple `insert` (jamais un `upsert`)
+      // suffit : `characterId` vient d'être créé juste au-dessus, il ne peut
+      // donc exister aucune ligne `character_spell_slots` préexistante à
+      // préserver (contrairement au recalcul en place de
+      // `CharacterRepository._upsertSpellSlots`, qui lit l'existant pour ne
+      // jamais faire reculer `slots_used` — voir sa documentation). Le
+      // calcul lui-même (seule partie qui ne doit jamais être dupliquée)
+      // reste entièrement délégué à
+      // [SpellSlotProgression.nonZeroSlotTotals], qui retourne une liste
+      // vide pour une classe non lanceuse ou l'Occultiste seul (magie de
+      // pacte, mécanisme séparé — `character_pact_slots`, hors périmètre de
+      // ce correctif : voir la note du registre de dette technique, D14 ne
+      // couvre que `character_spell_slots`).
+      final initialSpellSlots = SpellSlotProgression.nonZeroSlotTotals([
+        (className: classOption.name, level: 1),
+      ]);
+      if (initialSpellSlots.isNotEmpty) {
+        await _client.from('character_spell_slots').insert([
+          for (final slot in initialSpellSlots)
+            {
+              'character_id': characterId,
+              'slot_level': slot.slotLevel,
+              'slots_total': slot.total,
+              'slots_used': 0,
+            },
+        ]);
+      }
 
       await _client.from('character_level_hp').insert({
         'character_id': characterId,
