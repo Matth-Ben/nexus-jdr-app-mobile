@@ -1,7 +1,19 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
+// Seul point de câblage de ce dépôt entre `features/auth/` et
+// `features/characters/` (D31 du registre de dette technique) : voir la doc
+// de classe de `SupabaseAuthRepository` (`../../data/auth_repository.dart`)
+// pour le rationale complet. `SupabaseAuthRepository` lui-même ne connaît
+// que `Future<void> Function()` (type générique), jamais
+// `PendingCharacterWriteSyncer` — seul ce fichier de câblage sait d'où vient
+// la fonction injectée. Signalé explicitement ici plutôt que laissé
+// implicite : à date, aucune autre `feature` de ce dépôt n'importe le code
+// d'une autre (voir l'historique git), ce fichier est donc la première
+// exception à cette organisation stricte.
+import '../../../characters/presentation/providers/character_providers.dart';
 import '../../data/auth_repository.dart';
 import '../../data/auth_state_stream.dart';
 
@@ -9,7 +21,13 @@ part 'auth_providers.g.dart';
 
 @Riverpod(keepAlive: true)
 AuthRepository authRepository(Ref ref) {
-  return SupabaseAuthRepository(ref.watch(supabaseClientProvider));
+  return SupabaseAuthRepository(
+    ref.watch(supabaseClientProvider),
+    pendingWriteQueue: ref.watch(pendingCharacterWriteQueueProvider),
+    referenceDataCache: ref.watch(referenceDataCacheProvider),
+    syncPendingWrites: () =>
+        ref.read(pendingCharacterWriteSyncerProvider).sync(),
+  );
 }
 
 /// [AuthStateStream] partagé par toute l'app — voir sa doc de classe pour le

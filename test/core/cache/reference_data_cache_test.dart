@@ -162,6 +162,22 @@ void main() {
       });
     });
 
+    group('clear (D31)', () {
+      test('vide toutes les clés sans condition', () async {
+        await cache.put('race_catalog', {'races': []});
+        await cache.put('spell_catalog:1', {'spells': []});
+
+        await cache.clear();
+
+        expect(await cache.get('race_catalog'), isNull);
+        expect(await cache.get('spell_catalog:1'), isNull);
+      });
+
+      test('ne lève jamais quand le cache est déjà vide', () async {
+        await expectLater(cache.clear(), completes);
+      });
+    });
+
     group('updateIfPresent', () {
       test('remplace le payload par le résultat de la transformation, sans '
           'toucher à cachedAt', () async {
