@@ -11,47 +11,39 @@ import 'package:personnages/core/network/timeout_http_client.dart';
 /// rationale du choix (délai global plutôt que `.timeout(...)` dispersé).
 void main() {
   group('TimeoutHttpClient', () {
-    test(
-      "délègue normalement à l'inner client une requête qui répond avant "
-      'le délai',
-      () async {
-        final inner = MockClient(
-          (request) async => http.Response('ok', 200),
-        );
-        final client = TimeoutHttpClient(
-          inner: inner,
-          timeout: const Duration(milliseconds: 100),
-        );
+    test("délègue normalement à l'inner client une requête qui répond avant "
+        'le délai', () async {
+      final inner = MockClient((request) async => http.Response('ok', 200));
+      final client = TimeoutHttpClient(
+        inner: inner,
+        timeout: const Duration(milliseconds: 100),
+      );
 
-        final response = await client.get(Uri.parse('https://exemple.test'));
+      final response = await client.get(Uri.parse('https://exemple.test'));
 
-        expect(response.statusCode, 200);
-        expect(response.body, 'ok');
-      },
-    );
+      expect(response.statusCode, 200);
+      expect(response.body, 'ok');
+    });
 
-    test(
-      'lève une TimeoutException quand la requête dépasse le délai '
-      '(scénario D12 : interface réseau active mais requête qui ne '
-      "n'aboutit jamais)",
-      () async {
-        final inner = MockClient((request) async {
-          // Simule un Wi-Fi sans débit réel : la requête ne répond jamais
-          // avant que le test ne l'abandonne lui-même.
-          await Future<void>.delayed(const Duration(seconds: 5));
-          return http.Response('trop tard', 200);
-        });
-        final client = TimeoutHttpClient(
-          inner: inner,
-          timeout: const Duration(milliseconds: 20),
-        );
+    test('lève une TimeoutException quand la requête dépasse le délai '
+        '(scénario D12 : interface réseau active mais requête qui ne '
+        "n'aboutit jamais)", () async {
+      final inner = MockClient((request) async {
+        // Simule un Wi-Fi sans débit réel : la requête ne répond jamais
+        // avant que le test ne l'abandonne lui-même.
+        await Future<void>.delayed(const Duration(seconds: 5));
+        return http.Response('trop tard', 200);
+      });
+      final client = TimeoutHttpClient(
+        inner: inner,
+        timeout: const Duration(milliseconds: 20),
+      );
 
-        await expectLater(
-          client.get(Uri.parse('https://exemple.test')),
-          throwsA(isA<TimeoutException>()),
-        );
-      },
-    );
+      await expectLater(
+        client.get(Uri.parse('https://exemple.test')),
+        throwsA(isA<TimeoutException>()),
+      );
+    });
 
     test('timeout vaut 15 secondes par défaut (valeur imposée, dette D12)', () {
       final client = TimeoutHttpClient();
@@ -69,61 +61,58 @@ void main() {
       expect(closed, isTrue);
     });
 
-    test(
-      'annule réellement la connexion sous-jacente au lieu de se contenter '
-      "de lever une exception côté appelant (régression : Future.timeout() "
-      "seul ne fait jamais ça — voir la doc de TimeoutHttpClient)",
-      () async {
-        final inner = _AbortAwareFakeClient();
-        final client = TimeoutHttpClient(
-          inner: inner,
-          timeout: const Duration(milliseconds: 20),
-        );
+    test('annule réellement la connexion sous-jacente au lieu de se contenter '
+        "de lever une exception côté appelant (régression : Future.timeout() "
+        "seul ne fait jamais ça — voir la doc de TimeoutHttpClient)", () async {
+      final inner = _AbortAwareFakeClient();
+      final client = TimeoutHttpClient(
+        inner: inner,
+        timeout: const Duration(milliseconds: 20),
+      );
 
-        await expectLater(
-          client.get(Uri.parse('https://exemple.test')),
-          throwsA(isA<TimeoutException>()),
-        );
+      await expectLater(
+        client.get(Uri.parse('https://exemple.test')),
+        throwsA(isA<TimeoutException>()),
+      );
 
-        // La preuve de la "vraie" annulation : ce n'est pas seulement
-        // l'appelant qui a vu une TimeoutException (ce que `Future.timeout`
-        // seul suffirait déjà à produire), c'est le client interne — qui
-        // joue ici le rôle que jouerait `IOClient` avec une connexion
-        // `dart:io` réelle — qui a observé un `abortTrigger` non nul *avant*
-        // même l'expiration du délai, puis a vu ce déclencheur se compléter
-        // et a lui-même agi en conséquence (ici : lever
-        // `RequestAbortedException`, comme le fait `IOClient.send` en
-        // appelant `HttpClientRequest.abort(...)`).
-        expect(
-          inner.sawNonNullAbortTriggerBeforeCompletion,
-          isTrue,
-          reason:
-              'la requête transmise au client interne doit déjà porter un '
-              "abortTrigger non nul au moment de l'appel, preuve que "
-              'TimeoutHttpClient a bien armé un mécanisme de la dette '
-              "http.Abortable plutôt que de compter sur Future.timeout()",
-        );
+      // La preuve de la "vraie" annulation : ce n'est pas seulement
+      // l'appelant qui a vu une TimeoutException (ce que `Future.timeout`
+      // seul suffirait déjà à produire), c'est le client interne — qui
+      // joue ici le rôle que jouerait `IOClient` avec une connexion
+      // `dart:io` réelle — qui a observé un `abortTrigger` non nul *avant*
+      // même l'expiration du délai, puis a vu ce déclencheur se compléter
+      // et a lui-même agi en conséquence (ici : lever
+      // `RequestAbortedException`, comme le fait `IOClient.send` en
+      // appelant `HttpClientRequest.abort(...)`).
+      expect(
+        inner.sawNonNullAbortTriggerBeforeCompletion,
+        isTrue,
+        reason:
+            'la requête transmise au client interne doit déjà porter un '
+            "abortTrigger non nul au moment de l'appel, preuve que "
+            'TimeoutHttpClient a bien armé un mécanisme de la dette '
+            "http.Abortable plutôt que de compter sur Future.timeout()",
+      );
 
-        // `client.get(...)` peut déjà avoir levé sa `TimeoutException` via le
-        // filet de sécurité `.timeout()` avant même que le déclencheur
-        // d'annulation (piloté par le même délai, mais dans une opération
-        // asynchrone distincte côté client interne) n'ait fini d'être
-        // observé — c'est précisément pour ça que l'annulation réelle ne
-        // doit pas dépendre de l'ordre d'arrivée face à `.timeout()` (voir
-        // la doc de classe). On attend donc explicitement ce signal plutôt
-        // que de supposer un ordre strict entre les deux.
-        await inner.aborted;
-        expect(
-          inner.observedAbortSignal,
-          isTrue,
-          reason:
-              "le déclencheur doit s'être réellement complété et avoir été "
-              "observé par le client interne — c'est ce signal qui, avec un "
-              '`IOClient` réel, fermerait la connexion `dart:io` sous-jacente '
-              'via `HttpClientRequest.abort(...)`',
-        );
-      },
-    );
+      // `client.get(...)` peut déjà avoir levé sa `TimeoutException` via le
+      // filet de sécurité `.timeout()` avant même que le déclencheur
+      // d'annulation (piloté par le même délai, mais dans une opération
+      // asynchrone distincte côté client interne) n'ait fini d'être
+      // observé — c'est précisément pour ça que l'annulation réelle ne
+      // doit pas dépendre de l'ordre d'arrivée face à `.timeout()` (voir
+      // la doc de classe). On attend donc explicitement ce signal plutôt
+      // que de supposer un ordre strict entre les deux.
+      await inner.aborted;
+      expect(
+        inner.observedAbortSignal,
+        isTrue,
+        reason:
+            "le déclencheur doit s'être réellement complété et avoir été "
+            "observé par le client interne — c'est ce signal qui, avec un "
+            '`IOClient` réel, fermerait la connexion `dart:io` sous-jacente '
+            'via `HttpClientRequest.abort(...)`',
+      );
+    });
 
     test(
       "compose avec un abortTrigger déjà présent sur la requête entrante "

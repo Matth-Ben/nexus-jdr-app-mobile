@@ -155,6 +155,20 @@ class TimeoutHttpClient extends http.BaseClient {
         // spécifiquement `TimeoutException` comme une absence de
         // connectivité, pas `RequestAbortedException` — on préserve ce
         // contrat.
+        //
+        // Limite connue (heuristique temporelle, pas un lien causal direct
+        // avec l'exception attrapée) : `ownAbort.isCompleted` constate
+        // seulement que notre propre [Timer] a fini par se compléter, pas
+        // que c'est lui qui a causé cette `RequestAbortedException`
+        // précise. Comme ci-dessus (cas des requêtes ni `Request` ni
+        // `MultipartRequest`), ce n'est pas atteignable avec les
+        // dépendances actuelles : `abortTrigger` externe (`existingTrigger`)
+        // vaut toujours `null` en pratique, aucun appelant de ce dépôt ne
+        // configurant `requestTimeout`/`abortSignal` sur le client
+        // Postgrest. Si cela changeait un jour avec un délai externe proche
+        // de [timeout], une course étroite entre les deux déclencheurs
+        // pourrait requalifier à tort une annulation externe en
+        // `TimeoutException` ici.
         throw TimeoutException(
           'Requête HTTP abandonnée après $timeout sans réponse (dette D12)',
           timeout,
@@ -180,10 +194,10 @@ class TimeoutHttpClient extends http.BaseClient {
   ) {
     if (request is http.MultipartRequest) {
       return http.AbortableMultipartRequest(
-        request.method,
-        request.url,
-        abortTrigger: trigger,
-      )
+          request.method,
+          request.url,
+          abortTrigger: trigger,
+        )
         ..headers.addAll(request.headers)
         ..fields.addAll(request.fields)
         ..files.addAll(request.files)
@@ -194,10 +208,10 @@ class TimeoutHttpClient extends http.BaseClient {
 
     if (request is http.Request) {
       return http.AbortableRequest(
-        request.method,
-        request.url,
-        abortTrigger: trigger,
-      )
+          request.method,
+          request.url,
+          abortTrigger: trigger,
+        )
         ..headers.addAll(request.headers)
         ..bodyBytes = request.bodyBytes
         ..followRedirects = request.followRedirects

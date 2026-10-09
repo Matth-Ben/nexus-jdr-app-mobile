@@ -727,64 +727,58 @@ void main() {
       expect(await pendingWrites.allForOwner(ownerId), isEmpty);
     });
 
-    test(
-      'updateHp : connectivité présente mais requête réseau qui expire '
-      '(dette D12) -> met en file comme une absence de connectivité, '
-      'retourne queued sans lever d\'exception',
-      () async {
-        final client = await _buildSignedInFakeSupabaseClient(
-          ownerId: ownerId,
-          throwTimeoutOnRequest: true,
-        );
-        final repository = SupabaseCharacterRepository(
-          client,
-          cache,
-          pendingWrites,
-          _FakeConnectivityChecker(connected: true),
-        );
+    test('updateHp : connectivité présente mais requête réseau qui expire '
+        '(dette D12) -> met en file comme une absence de connectivité, '
+        'retourne queued sans lever d\'exception', () async {
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        throwTimeoutOnRequest: true,
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: true),
+      );
 
-        final outcome = await repository.updateHp(
-          characterId: characterId,
-          currentHp: 5,
-          temporaryHp: 0,
-        );
+      final outcome = await repository.updateHp(
+        characterId: characterId,
+        currentHp: 5,
+        temporaryHp: 0,
+      );
 
-        expect(outcome, WriteOutcome.queued);
-        final pending = await pendingWrites.allForOwner(ownerId);
-        expect(pending, hasLength(1));
-        expect(pending.single.kind, PendingCharacterWriteKind.hp);
-        expect(pending.single.payload, {'currentHp': 5, 'temporaryHp': 0});
-      },
-    );
+      expect(outcome, WriteOutcome.queued);
+      final pending = await pendingWrites.allForOwner(ownerId);
+      expect(pending, hasLength(1));
+      expect(pending.single.kind, PendingCharacterWriteKind.hp);
+      expect(pending.single.payload, {'currentHp': 5, 'temporaryHp': 0});
+    });
 
-    test(
-      'addXp : connectivité présente mais requête réseau qui expire '
-      '(dette D12) -> met en file comme une absence de connectivité, '
-      'retourne queued sans lever d\'exception',
-      () async {
-        final client = await _buildSignedInFakeSupabaseClient(
-          ownerId: ownerId,
-          throwTimeoutOnRequest: true,
-        );
-        final repository = SupabaseCharacterRepository(
-          client,
-          cache,
-          pendingWrites,
-          _FakeConnectivityChecker(connected: true),
-        );
+    test('addXp : connectivité présente mais requête réseau qui expire '
+        '(dette D12) -> met en file comme une absence de connectivité, '
+        'retourne queued sans lever d\'exception', () async {
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        throwTimeoutOnRequest: true,
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: true),
+      );
 
-        final outcome = await repository.addXp(
-          characterId: characterId,
-          newXp: 450,
-        );
+      final outcome = await repository.addXp(
+        characterId: characterId,
+        newXp: 450,
+      );
 
-        expect(outcome, WriteOutcome.queued);
-        final pending = await pendingWrites.allForOwner(ownerId);
-        expect(pending, hasLength(1));
-        expect(pending.single.kind, PendingCharacterWriteKind.xp);
-        expect(pending.single.payload, {'newXp': 450});
-      },
-    );
+      expect(outcome, WriteOutcome.queued);
+      final pending = await pendingWrites.allForOwner(ownerId);
+      expect(pending, hasLength(1));
+      expect(pending.single.kind, PendingCharacterWriteKind.xp);
+      expect(pending.single.payload, {'newXp': 450});
+    });
   });
 
   group(
