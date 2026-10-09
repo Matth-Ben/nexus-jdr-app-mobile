@@ -158,6 +158,25 @@ class SupabaseXmlImportRepository implements XmlImportRepository {
                 },
             ]);
           }
+
+          // `character_pact_slots` au niveau RÉELLEMENT importé (dette D71,
+          // `docs/dette-technique.md`) : même trou que D14 ci-dessus, mais
+          // pour la magie de pacte de l'Occultiste — voir
+          // [SpellSlotProgression.initialPactSlotFor]. Multiclassage non
+          // couvert ici, même limite que D14 juste au-dessus : le format
+          // d'import ne porte actuellement qu'une seule classe
+          // (`data.classId`/`data.level`).
+          final initialPactSlot = SpellSlotProgression.initialPactSlotFor([
+            (className: resolvedClassName, level: data.level),
+          ]);
+          if (initialPactSlot != null) {
+            await _client.from('character_pact_slots').insert({
+              'character_id': characterId,
+              'slot_level': initialPactSlot.slotLevel,
+              'slots_total': initialPactSlot.total,
+              'slots_used': 0,
+            });
+          }
         }
       }
 
