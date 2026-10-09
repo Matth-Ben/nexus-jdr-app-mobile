@@ -93,6 +93,18 @@ typedef XmlImportSaveData = ({
   int currencySp,
   int currencyCp,
   int? classId,
+
+  /// Nom de classe en français (ex. `'Magicien'`) de la classe résolue par
+  /// [classId], `null` ssi [classId] l'est aussi — même `ClassOption` source
+  /// pour les deux (`resolved.characterClass` dans
+  /// `xml_import_save_data_resolver.dart`), jamais une seconde résolution
+  /// indépendante. Ajouté pour D14 (`docs/dette-technique.md`) :
+  /// `character_spell_slots` a besoin du nom de classe (même convention de
+  /// clé que `SpellSlotProgression`/`SpellcastingRules` — le nom, pas
+  /// `classes.id`), que `data/xml_import_repository.dart::
+  /// saveImportedCharacter` n'avait sinon aucun moyen d'obtenir sans
+  /// relire la table `classes` une seconde fois.
+  String? className,
   int level,
   Map<String, int> abilityScores,
   List<XmlImportLevelHpLine> levelHp,

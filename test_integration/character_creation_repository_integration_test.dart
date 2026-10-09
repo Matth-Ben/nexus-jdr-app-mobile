@@ -13,6 +13,7 @@ import 'package:personnages/features/character_creation/domain/skill_catalog.dar
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spellcasting_rules.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
+import 'package:personnages/features/characters/domain/spell_slot_progression.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'support/test_environment.dart';
@@ -409,7 +410,95 @@ void main() {
           isTrue,
         );
       }
+
+      // D14 (`docs/dette-technique.md`) : `character_spell_slots` doit être
+      // peuplé dès la création, au niveau 1, pour cette classe lanceuse de
+      // sorts (`reference.spellcastingClassId`) — comparé au calcul
+      // autoritaire `SpellSlotProgression.nonZeroSlotTotals`, jamais à des
+      // valeurs recopiées à la main ici.
+      final expectedSlots = SpellSlotProgression.nonZeroSlotTotals([
+        (className: classOption.name, level: 1),
+      ]);
+      final spellSlotRows = await client
+          .from('character_spell_slots')
+          .select()
+          .eq('character_id', characterId)
+          .order('slot_level', ascending: true);
+      expect(spellSlotRows, hasLength(expectedSlots.length));
+      for (var i = 0; i < expectedSlots.length; i++) {
+        expect(spellSlotRows[i]['slot_level'], expectedSlots[i].slotLevel);
+        expect(
+          (spellSlotRows[i]['slots_total'] as num).toInt(),
+          expectedSlots[i].total,
+        );
+        expect((spellSlotRows[i]['slots_used'] as num).toInt(), 0);
+      }
     });
+
+    test(
+      'createCharacter n\'écrit aucune ligne character_spell_slots pour une '
+      'classe non lanceuse de sorts (D14 : ne pas créer de ligne à 0, même '
+      'convention que la lecture existante — absence de ligne == 0)',
+      () async {
+        final repository = SupabaseCharacterCreationRepository(client, cache);
+
+        final raceCatalog = await repository.fetchRaceCatalog();
+        final classCatalog = await repository.fetchClassCatalog();
+        final backgroundCatalog = await repository.fetchBackgroundCatalog();
+        final skillCatalog = await repository.fetchSkillCatalog();
+        final toolCatalog = await repository.fetchToolCatalog();
+        final languageCatalog = await repository.fetchLanguageCatalog();
+        final itemCatalog = await repository.fetchItemCatalog();
+
+        // `reference.classId` est explicitement documenté comme "pas
+        // nécessairement lanceuse de sorts" (voir
+        // `ReferenceContent.spellcastingClassId`, contenu peuplé actuel :
+        // `classes.id = 1` est Barbare) — utilisé ici précisément pour ça.
+        final classOption = classCatalog.classes.singleWhere(
+          (c) => c.id == reference.classId,
+        );
+        final backgroundOption = backgroundCatalog.backgrounds.singleWhere(
+          (b) => b.id == reference.backgroundId,
+        );
+
+        final draft = CharacterCreationDraft(
+          raceId: reference.raceId as int,
+          classId: classOption.id,
+          backgroundId: backgroundOption.id,
+          abilityScores: const {
+            'str': 10,
+            'dex': 10,
+            'con': 10,
+            'int': 10,
+            'wis': 10,
+            'cha': 10,
+          },
+          equipmentChoiceTab: EquipmentChoiceTab.background,
+        );
+
+        final characterId = await repository.createCharacter(
+          draft: draft,
+          characterName: 'Test Intégration Sans Sorts',
+          raceCatalog: raceCatalog,
+          classOption: classOption,
+          backgroundOption: backgroundOption,
+          skillCatalog: skillCatalog,
+          toolCatalog: toolCatalog,
+          languageCatalog: languageCatalog,
+          spellCatalog: const SpellCatalog(spells: []),
+          itemCatalog: itemCatalog,
+        );
+        addTearDown(() async {
+          await client.from('characters').delete().eq('id', characterId);
+        });
+
+        final spellSlotRows = await client
+            .from('character_spell_slots')
+            .select()
+            .eq('character_id', characterId);
+        expect(spellSlotRows, isEmpty);
+      },
+    );
 
     test('createCharacter peuple aussi character_tool_proficiencies pour un '
         'choix interactif d\'outil de classe (gap de couverture identifié en '

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -110,6 +111,14 @@ abstract class CharacterRepository {
   ///   même type restée en attente pour ce personnage : désormais périmée
   ///   (valeurs absolues), elle écraserait sinon cette écriture plus
   ///   récente à la synchronisation suivante.
+  ///   Exception à cette dernière règle (dette D12) : une requête réseau qui
+  ///   expire (`TimeoutException`, levée par le délai global de
+  ///   `core/network/timeout_http_client.dart` — voir sa documentation) est,
+  ///   elle, mise en file exactement comme une connectivité absente — une
+  ///   interface réseau déclarée "active" par [ConnectivityChecker] ne
+  ///   garantit jamais un accès effectif de bout en bout (Wi-Fi sans débit,
+  ///   signal faible...), ce cas est donc traité comme tel plutôt que comme
+  ///   un vrai problème serveur.
   Future<WriteOutcome> updateHp({
     required String characterId,
     required int currentHp,
@@ -254,8 +263,9 @@ abstract class CharacterRepository {
   /// [updateHp], aucun calcul métier fait ici.
   ///
   /// Mode hors-ligne : mêmes règles exactement que [updateHp] (voir sa
-  /// documentation) — payload mis en file `{newXp: ...}` si la connectivité
-  /// est absente. Note pour l'appelant
+  /// documentation, y compris l'exception D12 pour une requête réseau qui
+  /// expire) — payload mis en file `{newXp: ...}` si la connectivité est
+  /// absente. Note pour l'appelant
   /// (`presentation/character_detail_screen.dart::_addXp`) : ne jamais
   /// déclencher l'ouverture automatique de l'écran de montée de niveau sur
   /// un [WriteOutcome.queued], l'XP n'étant alors pas encore confirmée côté
@@ -1341,6 +1351,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
         },
       );
       return WriteOutcome.synced;
+    } on TimeoutException {
+      // Dette D12 : `ConnectivityChecker.hasConnection()` a déclaré une
+      // interface active (sinon on ne serait jamais arrivé ici, voir la
+      // branche ci-dessus), mais la requête réseau elle-même n'a jamais
+      // abouti dans le délai global (`TimeoutHttpClient`,
+      // `core/network/timeout_http_client.dart`) — un Wi-Fi sans débit réel
+      // ou un signal faible, typiquement. Traité comme une absence de
+      // connectivité (même mise en file que `!hasConnection()` ci-dessus)
+      // plutôt que comme une [CharacterFailure] dure : contrairement à un
+      // vrai échec serveur (`PostgrestException`/`catch` ci-dessous, jamais
+      // mis en file, voir leur documentation), rien n'indique ici qu'un
+      // nouvel essai échouerait de la même façon.
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.hp,
+        payload: {'currentHp': currentHp, 'temporaryHp': temporaryHp},
+      );
+      return WriteOutcome.queued;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (error, stackTrace) {
@@ -1719,6 +1748,19 @@ class SupabaseCharacterRepository implements CharacterRepository {
         },
       );
       return WriteOutcome.synced;
+    } on TimeoutException {
+      // Dette D12 : même rationale que [updateHp] ci-dessus (voir sa
+      // documentation) — la connectivité était déclarée active, mais la
+      // requête réseau n'a jamais abouti dans le délai global
+      // (`TimeoutHttpClient`). Traité comme une absence de connectivité,
+      // jamais comme une [CharacterFailure] dure.
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.xp,
+        payload: {'newXp': newXp},
+      );
+      return WriteOutcome.queued;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (error, stackTrace) {
@@ -3170,13 +3212,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// baisse les totaux d'un personnage à deux classes lanceuses.
   ///
   /// Recalcul plutôt que simple remise à 0 des lignes existantes (décision
-  /// chef de projet, revue QA) : `character_spell_slots` n'est écrite nulle
-  /// part à la création de personnage — seulement par [_upsertSpellSlots]
-  /// lors d'une montée de niveau passée par l'app. Un personnage lanceur de
-  /// sorts qui n'a jamais monté de niveau via l'app (cas réel, y compris
-  /// après un futur import XML, Phase 3) a donc zéro ligne
-  /// `character_spell_slots` : un simple `UPDATE` ne ferait alors rien, et
-  /// un repos long resterait sans effet visible sur ses emplacements.
+  /// chef de projet, revue QA) : `character_spell_slots` est désormais
+  /// initialisée à la création de personnage et à l'import XML
+  /// (`CharacterCreationRepository.createCharacter`/
+  /// `XmlImportRepository.saveImportedCharacter`, via
+  /// [SpellSlotProgression.nonZeroSlotTotals] — voir D14 du registre de
+  /// dette), mais ce correctif est seulement partiel : un personnage lanceur
+  /// de sorts créé avant ce chantier, ou créé par un autre chemin que ces
+  /// deux-là, peut toujours avoir zéro ligne `character_spell_slots`. Un
+  /// simple `UPDATE` ne ferait alors rien, et un repos long resterait sans
+  /// effet visible sur ses emplacements.
   ///
   /// Pour chaque niveau de sort dont le total calculé est `> 0` : upsert de
   /// `slots_total` (valeur calculée, qui remplace la valeur stockée même si
@@ -3331,10 +3376,15 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// classes du personnage après ce niveau, multiclassage inclus — voir
   /// [SpellSlotProgression.totalsForClasses]). **Recalcul complet depuis
   /// zéro** (upsert de tous les paliers dont le total théorique est `> 0`),
-  /// jamais un delta incrémental : contrairement au reste de cette méthode,
-  /// `character_spell_slots` n'est écrit nulle part ailleurs dans ce dépôt
-  /// (ni à la création de personnage), donc l'état antérieur en base n'est
-  /// pas fiable comme point de départ (voir le point critique de la spec
+  /// jamais un delta incrémental : `character_spell_slots` est aussi écrite
+  /// à la création de personnage et à l'import XML
+  /// (`CharacterCreationRepository.createCharacter`/
+  /// `XmlImportRepository.saveImportedCharacter`, via
+  /// [SpellSlotProgression.nonZeroSlotTotals] — voir D14 du registre de
+  /// dette, correctif partiel), mais pas ailleurs dans ce dépôt ; pour un
+  /// personnage créé avant ce chantier ou par un autre chemin, l'état
+  /// antérieur en base n'est donc pas fiable comme point de départ (voir le
+  /// point critique de la spec
   /// visuelle direction-artistique de l'étape "Sorts",
   /// `presentation/level_up_screen.dart`).
   ///

@@ -18,9 +18,13 @@ abstract class ConnectivityChecker {
   /// connectée (Wi-Fi, données mobiles, ethernet...). Ne garantit pas un
   /// accès Internet effectif de bout en bout (un portail captif, par
   /// exemple, resterait "connecté" ici) — suffisant pour ce dépôt : voir la
-  /// documentation d'[updateHp]/[addXp] sur les deux cas distingués
-  /// (connectivité absente vs. connectivité présente mais écriture réseau en
-  /// échec, ce second cas n'étant volontairement jamais mis en file).
+  /// documentation d'[updateHp]/[addXp] sur les cas distingués
+  /// (connectivité absente, connectivité présente mais écriture réseau en
+  /// échec "dur", connectivité présente mais requête qui expire). Seul le
+  /// premier cas et le dernier (dette D12 — une requête qui n'aboutit jamais
+  /// dans le délai global de `core/network/timeout_http_client.dart`, voir
+  /// sa documentation) sont mis en file ; un échec "dur" (ex. erreur serveur
+  /// confirmée) ne l'est volontairement jamais.
   Future<bool> hasConnection();
 
   /// Émet `true` à chaque fois que la connectivité passe d'un état déconnecté
