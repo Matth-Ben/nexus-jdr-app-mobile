@@ -456,7 +456,8 @@ class _AppBootstrapState extends ConsumerState<AppBootstrap> {
           ),
         ),
         pendingWriteSyncHookProvider.overrideWith(
-          (ref) => () => ref.read(pendingCharacterWriteSyncerProvider).sync(),
+          (ref) =>
+              () => ref.read(pendingCharacterWriteSyncerProvider).sync(),
         ),
       ],
       child: widget.child,
