@@ -138,52 +138,49 @@ void main() {
       },
     );
 
-    test(
-      'aucun recoupement : les deux sorts initiaux sont insérés normalement '
-      '(non-régression)',
-      () async {
-        final recorded = <_Recorded>[];
-        final repo = await repository(
-          recorded: recorded,
-          rows: {
-            'character_classes': [
-              {'id': 'cc-barde', 'class_id': bardeClassId, 'level': 1},
-            ],
-            'characters': [
-              {'max_hp': 10, 'current_hp': 10},
-            ],
-            'character_ability_scores': [
-              {'ability_id': 'cha', 'score': 14},
-            ],
-            'translations': [
-              {'entity_id': '$bardeClassId', 'value': 'Barde'},
-            ],
-            'character_spells': <Map<String, dynamic>>[],
-          },
-        );
+    test('aucun recoupement : les deux sorts initiaux sont insérés normalement '
+        '(non-régression)', () async {
+      final recorded = <_Recorded>[];
+      final repo = await repository(
+        recorded: recorded,
+        rows: {
+          'character_classes': [
+            {'id': 'cc-barde', 'class_id': bardeClassId, 'level': 1},
+          ],
+          'characters': [
+            {'max_hp': 10, 'current_hp': 10},
+          ],
+          'character_ability_scores': [
+            {'ability_id': 'cha', 'score': 14},
+          ],
+          'translations': [
+            {'entity_id': '$bardeClassId', 'value': 'Barde'},
+          ],
+          'character_spells': <Map<String, dynamic>>[],
+        },
+      );
 
-        await repo.applyLevelUp(
-          characterId: characterId,
-          classId: occultisteClassId,
-          className: 'Occultiste',
-          isMulticlassing: true,
-          hpRolled: 4,
-          hpMethod: 'roll',
-          hpGain: 4,
-          initialSpellIds: const [knownSpellId, newSpellId],
-        );
+      await repo.applyLevelUp(
+        characterId: characterId,
+        classId: occultisteClassId,
+        className: 'Occultiste',
+        isMulticlassing: true,
+        hpRolled: 4,
+        hpMethod: 'roll',
+        hpGain: 4,
+        initialSpellIds: const [knownSpellId, newSpellId],
+      );
 
-        final spellWrites = recorded
-            .where((r) => r.table == 'character_spells' && r.method != 'GET')
-            .toList();
-        expect(spellWrites, hasLength(1));
-        final insertedIds = (spellWrites.single.body! as List)
-            .cast<Map<String, dynamic>>()
-            .map((row) => row['spell_id'])
-            .toSet();
-        expect(insertedIds, {knownSpellId, newSpellId});
-      },
-    );
+      final spellWrites = recorded
+          .where((r) => r.table == 'character_spells' && r.method != 'GET')
+          .toList();
+      expect(spellWrites, hasLength(1));
+      final insertedIds = (spellWrites.single.body! as List)
+          .cast<Map<String, dynamic>>()
+          .map((row) => row['spell_id'])
+          .toSet();
+      expect(insertedIds, {knownSpellId, newSpellId});
+    });
   });
 }
 
