@@ -1,7 +1,7 @@
+import '../../../core/rules/spell_status.dart';
 import 'character_spell_entry.dart';
 
-/// Règles dérivées de `CharacterSpellEntry.status`
-/// ('connu'/'préparé'/'inné') — voir
+/// Règles dérivées de `CharacterSpellEntry.status` ([SpellStatus]) — voir
 /// `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`, section
 /// "Onglet Sorts" : "Distinction claire entre sorts connus et sorts
 /// préparés (pour les classes à préparation quotidienne, ex.
@@ -27,14 +27,12 @@ abstract final class SpellStatusFormatter {
     if (grant != null) return 'toujours préparé · ${grant.label}';
     if (!spell.requiresPreparation) return null;
     switch (spell.status) {
-      case 'connu':
+      case SpellStatus.known:
         return 'connu, non préparé';
-      case 'préparé':
+      case SpellStatus.prepared:
         return 'préparé';
-      default:
-        // 'inné', ou une valeur inattendue (contrainte check côté base,
-        // ne devrait pas arriver) : traité comme "toujours disponible",
-        // aucun sous-titre.
+      case SpellStatus.innate:
+        // Sort inné : traité comme "toujours disponible", aucun sous-titre.
         return null;
     }
   }
@@ -47,7 +45,7 @@ abstract final class SpellStatusFormatter {
   static bool canCast(CharacterSpellEntry spell) {
     if (spell.level == 0) return true;
     if (!spell.requiresPreparation) return true;
-    return spell.status != 'connu';
+    return spell.status != SpellStatus.known;
   }
 
   /// `true` si la bascule "Préparer ce sort"/"Ne plus préparer" a un sens
@@ -61,7 +59,8 @@ abstract final class SpellStatusFormatter {
     // Sort accordé par une sous-classe : toujours préparé, jamais retirable.
     if (spell.isAlwaysPrepared) return false;
     if (!spell.requiresPreparation) return false;
-    return spell.status == 'connu' || spell.status == 'préparé';
+    return spell.status == SpellStatus.known ||
+        spell.status == SpellStatus.prepared;
   }
 
   /// `true` si ce sort attend d'être préparé pour pouvoir être lancé : un
@@ -71,7 +70,7 @@ abstract final class SpellStatusFormatter {
   /// `presentation/widgets/character_spells_section.dart::_SpellRow`,
   /// `SpellsByLevelGrouper.group`).
   static bool isUnprepared(CharacterSpellEntry spell) =>
-      canTogglePrepared(spell) && spell.status == 'connu';
+      canTogglePrepared(spell) && spell.status == SpellStatus.known;
 
   /// Libellé d'état de préparation affiché en face du nom du sort dans
   /// l'onglet "Sorts" ("préparé"/"non préparé"), `null` pour un sort sans
@@ -80,6 +79,6 @@ abstract final class SpellStatusFormatter {
   /// déjà sa pastille "DOMAINE"/"SERMENT").
   static String? preparationLabel(CharacterSpellEntry spell) {
     if (!canTogglePrepared(spell)) return null;
-    return spell.status == 'préparé' ? 'préparé' : 'non préparé';
+    return spell.status == SpellStatus.prepared ? 'préparé' : 'non préparé';
   }
 }

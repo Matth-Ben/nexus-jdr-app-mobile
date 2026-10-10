@@ -1,3 +1,4 @@
+import '../../../core/rules/spell_status.dart';
 import '../../../core/utils/french_text_normalizer.dart';
 import '../../characters/domain/character_class_feature.dart';
 import '../../characters/domain/character_detail.dart';
@@ -352,7 +353,7 @@ List<CharacterSpellEntry> _mapSpellsWithGrants(Map<String, dynamic> json) {
           : _mapSpell(
               row,
               grantSource: grant,
-              status: 'préparé',
+              status: SpellStatus.prepared,
               requiresPreparation: requiresPreparation(row),
             ),
     );
@@ -363,7 +364,7 @@ List<CharacterSpellEntry> _mapSpellsWithGrants(Map<String, dynamic> json) {
       _mapSpell(
         entry.value,
         grantSource: grants[entry.key],
-        status: 'préparé',
+        status: SpellStatus.prepared,
         isPersisted: false,
         requiresPreparation: requiresPreparation(entry.value),
       ),
@@ -375,7 +376,7 @@ List<CharacterSpellEntry> _mapSpellsWithGrants(Map<String, dynamic> json) {
 CharacterSpellEntry _mapSpell(
   Map<String, dynamic> row, {
   SpellGrantSource? grantSource,
-  String? status,
+  SpellStatus? status,
   bool isPersisted = true,
   bool requiresPreparation = true,
 }) {
@@ -384,7 +385,7 @@ CharacterSpellEntry _mapSpell(
     name: row['spell_name'] as String? ?? 'Sort',
     level: _asInt(row['level']),
     school: row['school'] as String? ?? '',
-    status: status ?? row['status'] as String? ?? 'connu',
+    status: status ?? SpellStatus.fromValue(row['status'] as String?),
     castingTime: row['casting_time'] as String? ?? '',
     range: row['range'] as String? ?? '',
     components: _mapOf(row['components']) ?? const {},

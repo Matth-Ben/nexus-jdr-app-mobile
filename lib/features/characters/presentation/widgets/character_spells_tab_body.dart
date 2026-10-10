@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/rules/class_spellcasting_rule.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -7,7 +8,6 @@ import '../../domain/character_detail.dart';
 import '../../domain/spell_name_filter.dart';
 import '../../domain/spell_preparation_filter.dart';
 import '../../domain/spell_status_formatter.dart';
-import '../../domain/spellcasting_class_names.dart';
 import '../../domain/spells_by_level_grouper.dart';
 import 'character_class_features_card.dart';
 import 'character_spells_section.dart';
@@ -112,7 +112,9 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
 
     if (detail.spells.isEmpty) {
       final isSpellcaster = detail.classes.any(
-        (classRow) => spellcastingClassNames.contains(classRow.className),
+        (classRow) =>
+            ClassSpellcastingRegistry.ruleForFrenchName(classRow.className)
+                .isCaster,
       );
       return ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),

@@ -1,3 +1,4 @@
+import '../../../core/rules/class_spellcasting_rule.dart';
 import 'spell_slot_change.dart';
 
 /// Tables de progression 5e standard des emplacements de sorts par niveau de
@@ -15,23 +16,34 @@ import 'spell_slot_change.dart';
 /// nombre d'*emplacements* disponibles, recalculé à chaque montée de
 /// niveau).
 ///
-/// Même convention de clé que [SpellcastingRules] : le **nom de classe en
-/// français**, pas `classes.id` — voir le rationale détaillé de
-/// `SpellcastingRules` (classe sœur).
+/// Classification lanceur/demi-lanceur/pacte déléguée au registre unique
+/// `core/rules/class_spellcasting_rule.dart::ClassSpellcastingRegistry`
+/// (dette D04, `docs/dette-technique.md`) : les trois listes historiques
+/// ci-dessous ([fullCasterClassNames]/[halfCasterClassNames]/
+/// [pactCasterClassNames]) sont désormais calculées depuis ce registre
+/// plutôt que dupliquées en dur, mais gardent leur forme `Set<String>` (nom
+/// de classe en français) pour ne pas changer la signature publique de
+/// cette classe. Les tables de nombres d'emplacements elles-mêmes
+/// ([_fullCasterSlots]/[_halfCasterSlots]/[_pactMagicSlots]) restent propres
+/// à ce fichier : seule la classification « qui est dans quelle table »
+/// était dupliquée ailleurs, pas les tables de valeurs.
 abstract final class SpellSlotProgression {
   /// Lanceurs complets — emplacements de niveau de sort 1 à 9, un tableau de
   /// 9 entiers par niveau de personnage (index 0 = niveau de sort 1).
-  static const Set<String> fullCasterClassNames = {
-    'Barde',
-    'Clerc',
-    'Druide',
-    'Magicien',
-    'Ensorceleur',
+  static Set<String> get fullCasterClassNames => {
+    for (final c in ClassSpellcastingRegistry.fullCasterClasses) c.frenchName,
   };
 
   /// Demi-lanceurs — emplacements de niveau de sort 1 à 5 uniquement (index
-  /// 5-8 toujours à 0, voir [slotsForLevel]).
-  static const Set<String> halfCasterClassNames = {'Paladin', 'Rôdeur'};
+  /// 5-8 toujours à 0, voir [slotsForLevel]). Inclut l'Artificier depuis
+  /// D41 (`docs/dette-technique.md`) : Matthias a demandé le 10/10/2026 de
+  /// réutiliser directement cette même table de progression pour
+  /// l'Artificier plutôt que sa table RAW exacte (qui diverge : 2
+  /// emplacements de niveau de sort 1 dès le niveau 1, contre 0 pour
+  /// Paladin/Rôdeur) — simplification assumée, pas une table manquante.
+  static Set<String> get halfCasterClassNames => {
+    for (final c in ClassSpellcastingRegistry.halfCasterClasses) c.frenchName,
+  };
 
   /// Magie de pacte — mécanisme différent (charges rechargées au repos
   /// court), voir [pactMagicFor]. Non exposée via [slotsForLevel] (qui
@@ -45,7 +57,9 @@ abstract final class SpellSlotProgression {
   /// [slotsForLevel] retournant toujours 9 zéros (donc [changesFor] retourne
   /// toujours une liste vide) — pas un blocage systématique en amont. Cette
   /// table est encodée par complétude, pas exercée via l'UI à cet incrément.
-  static const Set<String> pactCasterClassNames = {'Occultiste'};
+  static Set<String> get pactCasterClassNames => {
+    for (final c in ClassSpellcastingRegistry.pactCasterClasses) c.frenchName,
+  };
 
   /// `characterLevel` (1 à 20) -> 9 entiers, index 0 = niveau de sort 1.
   static const Map<int, List<int>> _fullCasterSlots = {

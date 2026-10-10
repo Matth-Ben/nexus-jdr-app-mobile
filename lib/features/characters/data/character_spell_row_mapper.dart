@@ -1,3 +1,4 @@
+import '../../../core/rules/spell_status.dart';
 import '../domain/character_detail_class_row.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/prepared_spells_limit.dart';
@@ -49,12 +50,13 @@ abstract final class CharacterSpellRowMapper {
   ///   préparé serait une règle fausse plus gênante qu'un ordre de lecture
   ///   qui déciderait au hasard (avant ce correctif : « la dernière ligne lue
   ///   l'emporte »).
-  static Map<int, String> parseStatuses(List<Map<String, dynamic>> rows) {
-    final statuses = <int, String>{};
+  static Map<int, SpellStatus> parseStatuses(List<Map<String, dynamic>> rows) {
+    final statuses = <int, SpellStatus>{};
     for (final row in rows) {
       final spellId = row['spell_id'];
-      final status = row['status'] as String?;
-      if (spellId is! num || status == null) continue;
+      final rawStatus = row['status'] as String?;
+      if (spellId is! num || rawStatus == null) continue;
+      final status = SpellStatus.fromValue(rawStatus);
       final id = spellId.toInt();
       final known = statuses[id];
       if (known == null || _statusRank(status) >= _statusRank(known)) {
@@ -66,13 +68,13 @@ abstract final class CharacterSpellRowMapper {
 
   /// Rang de priorité d'un statut `character_spells.status` pour départager
   /// deux lignes en double du même sort dans [parseStatuses]. Toute valeur
-  /// inattendue (ne devrait pas arriver, contrainte `CHECK` côté base) a le
-  /// même rang que 'connu' : ni favorisée ni pénalisée face aux deux statuts
-  /// valides.
-  static int _statusRank(String status) => switch (status) {
-    'préparé' => 2,
-    'inné' => 0,
-    _ => 1,
+  /// inattendue (ne devrait pas arriver, contrainte `CHECK` côté base, voir
+  /// [SpellStatus.fromValue]) a le même rang que [SpellStatus.known] : ni
+  /// favorisée ni pénalisée face aux deux statuts valides.
+  static int _statusRank(SpellStatus status) => switch (status) {
+    SpellStatus.prepared => 2,
+    SpellStatus.innate => 0,
+    SpellStatus.known => 1,
   };
 
   /// `{spell_id: is_favorite}` — même principe que [parseStatuses]. Une
@@ -138,7 +140,9 @@ abstract final class CharacterSpellRowMapper {
     for (final row in rows) {
       final spellId = row['spell_id'];
       final value = row['innate_uses_spent'];
-      if (spellId is! num || value is! num || row['status'] != 'inné') {
+      if (spellId is! num ||
+          value is! num ||
+          row['status'] != SpellStatus.innate.value) {
         continue;
       }
       final id = spellId.toInt();
@@ -175,7 +179,7 @@ abstract final class CharacterSpellRowMapper {
     List<Map<String, dynamic>> spellRows, {
     required Map<String, String> names,
     required Map<String, String> descriptions,
-    required Map<int, String> statuses,
+    required Map<int, SpellStatus> statuses,
     required List<CharacterDetailClassRow> classes,
     Map<int, Set<int>> sourceClassIds = const {},
     Map<int, bool> favorites = const {},
@@ -197,7 +201,9 @@ abstract final class CharacterSpellRowMapper {
           name: names[id.toString()] ?? 'Sort #$id',
           level: (row['level'] as num?)?.toInt() ?? 0,
           school: row['school'] as String? ?? '',
-          status: grant != null ? 'préparé' : statuses[id] ?? 'connu',
+          status: grant != null
+              ? SpellStatus.prepared
+              : statuses[id] ?? SpellStatus.known,
           storedStatus: grant != null ? statuses[id] : null,
           castingTime: row['casting_time'] as String? ?? '',
           range: row['range'] as String? ?? '',

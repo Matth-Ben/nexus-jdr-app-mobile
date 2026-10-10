@@ -1,3 +1,4 @@
+import '../../../core/rules/spell_status.dart';
 import 'spell_catalog.dart';
 import 'spellcasting_rules.dart';
 
@@ -6,7 +7,7 @@ import 'spellcasting_rules.dart';
 /// lignes prêtes pour `character_spells`, à l'étape 9/9 "Récapitulatif" de
 /// l'assistant de création.
 ///
-/// Les deux quotas partagent le même `status` (dérivé de [className] via
+/// Les deux quotas partagent le même [SpellStatus] (dérivé de [className] via
 /// [SpellcastingRules.statusFor], voir sa documentation pour la règle 5e) :
 /// pas de distinction cantrips/niveau 1 sur ce point, une classe "préparée"
 /// prépare autant ses cantrips que ses sorts de niveau 1 (les cantrips ne
@@ -19,7 +20,7 @@ import 'spellcasting_rules.dart';
 /// qu'ici aucun repli `custom_name` n'est possible : `character_spells
 /// .spell_id` est `not null` (contrairement à `character_inventory.item_id`).
 abstract final class SpellSelectionResolver {
-  static List<({int spellId, String status})> resolve({
+  static List<({int spellId, SpellStatus status})> resolve({
     required List<String> cantripNames,
     required List<String> levelOneSpellNames,
     required SpellCatalog catalog,

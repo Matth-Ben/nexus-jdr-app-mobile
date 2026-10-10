@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/crash_reporting/crash_reporter.dart';
+import '../../../core/rules/spell_status.dart';
 import '../../../core/utils/french_text_normalizer.dart';
 import '../../characters/data/racial_innate_spell_repository.dart';
 import '../../characters/domain/spell_slot_progression.dart';
@@ -1389,7 +1390,7 @@ class SupabaseCharacterCreationRepository
             {
               'character_id': characterId,
               'spell_id': row.spellId,
-              'status': row.status,
+              'status': row.status.value,
               'source_class_id': draft.classId,
             },
         ]);
@@ -1431,7 +1432,7 @@ class SupabaseCharacterCreationRepository
                 {
                   'character_id': characterId,
                   'spell_id': spellId,
-                  'status': 'inné',
+                  'status': SpellStatus.innate.value,
                   'source_class_id': null,
                 },
             ]);

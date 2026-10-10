@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/rules/spell_status.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -93,7 +94,7 @@ class _PrepareSpellsSheetContentState
   /// que son affichage reste figé sur l'état d'ouverture.
   late final Set<int> _preparedIds = {
     for (final spell in widget.spells)
-      if (spell.status == 'préparé') spell.id,
+      if (spell.status == SpellStatus.prepared) spell.id,
   };
 
   @override
@@ -151,7 +152,9 @@ class _PrepareSpellsSheetContentState
     // Jamais de réécriture du statut d'un sort sans préparation à faire
     // varier (sort inné notamment) : il ne doit pas ressortir 'connu'.
     if (!SpellStatusFormatter.canTogglePrepared(spell)) return spell;
-    final status = _isPrepared(spell) ? 'préparé' : 'connu';
+    final status = _isPrepared(spell)
+        ? SpellStatus.prepared
+        : SpellStatus.known;
     if (spell.status == status) return spell;
     return CharacterSpellEntry(
       id: spell.id,

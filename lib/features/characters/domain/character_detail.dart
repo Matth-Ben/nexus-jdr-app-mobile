@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/rules/spell_status.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
 import 'armor_class_calculator.dart';
 import 'carrying_capacity_calculator.dart';
@@ -355,7 +356,7 @@ abstract class CharacterDetail with _$CharacterDetail {
       .where(
         (spell) =>
             spell.level > 0 &&
-            spell.status == 'préparé' &&
+            spell.status == SpellStatus.prepared &&
             !spell.isAlwaysPrepared &&
             spell.requiresPreparation,
       )

@@ -244,7 +244,7 @@ class SupabaseXmlImportRepository implements XmlImportRepository {
             {
               'character_id': characterId,
               'spell_id': line.spellId,
-              'status': line.status,
+              'status': line.status.value,
               'source_class_id': line.sourceClassId,
             },
         ]);
