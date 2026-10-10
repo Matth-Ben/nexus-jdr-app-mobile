@@ -28,7 +28,8 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 | ID | Sujet | Qui |
 |---|---|---|
 | D06 | Les trois environnements pointent sur le même projet Supabase | Matthias, puis `dev-backend-supabase` |
-| D07 | Clé de signature Android déclarée compromise, rotation non faite | Matthias |
+| D07 | Clé de signature Android déclarée compromise, rotation non faite | Matthias — **Corrigé, confirmé par Matthias le 09/10 : rotation déjà faite.** |
+| D11 | File hors ligne non étendue au lancer de sort, aux aptitudes et au repos | dev-flutter — **ajouté le 09/10, Matthias a demandé de l'étendre avant la production** |
 
 ### B. Fait perdre des données ou donne une règle fausse au joueur
 
@@ -52,10 +53,13 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 
 ### C. Peut attendre
 
-D04, D11, D13 (reste), D15, D16, D17, D20 à D30, D32, D61, D62, D63, D73, et les constats de
+D04, D13 (reste), D15, D16, D17, D20 à D30, D32, D61, D62, D63, D73, et les constats de
 session listés plus bas.
-D04 (règles indexées sur le nom français des classes) change de catégorie le jour où
-la version anglaise démarre : elle devient alors bloquante.
+D04 (règles indexées sur le nom français des classes) reste ici par gravité d'impact,
+mais Matthias a demandé le 09/10 de la traiter maintenant plutôt que d'attendre
+l'arrivée de l'anglais (qui l'aurait sinon rendue bloquante).
+D11 est sortie de cette catégorie : Matthias a demandé le 09/10 d'étendre la file hors
+ligne avant la production, ce qui la rend bloquante (catégorie A).
 
 ## Registre complet
 
@@ -69,7 +73,7 @@ la version anglaise démarre : elle devient alors bloquante.
 | D36 | `queuedAt` sert de numéro de version de l'entrée de file ; clé primaire de la file sans `ownerId` | `lib/core/cache/app_database.dart` ; `lib/core/cache/pending_character_write_queue.dart` | basse | Le jour où une migration du schéma local est de toute façon nécessaire | moyen | Colonne `version` dédiée et `ownerId` dans la clé primaire, avec migration drift testée | dev-flutter | L (revue) | Ouvert, astuce documentée sur la colonne |
 | D37 | Le cache de la fiche n'est mis à jour après confirmation que pour les PV et l'XP | `lib/features/characters/data/character_detail_cache.dart` | moyenne | Repos, montée de niveau ou inventaire en ligne suivis d'une relecture en échec, puis fiche rouverte hors ligne | moyen | Étendre le report aux autres écritures, ou relire après écriture avec repli | dev-flutter | L (dev-flutter) | Ouvert |
 | D06 | dev, staging et prod sur le même projet Supabase ; un seul projet Firebase | `config/*.json` (ignorés par Git) ; `config/README.md` ; `README.md` « Reste à faire » | haute | Déjà actif (test fermé Play) ; bloquant avant la production | moyen | Projets distincts ; Firebase et PostHog séparés par flavor | dev-backend-supabase | C + L | Ouvert |
-| D07 | Keystore Android de production déclaré compromis, rotation non cochée | `README.md` « Reste à faire » ; `.github/workflows/release-android.yml` | haute | Avant la mise en production | petit | Réinitialiser la clé d'import dans la Play Console, mettre à jour les secrets | Matthias | L (état Play non vérifiable) | Ouvert |
+| D07 | Keystore Android de production déclaré compromis, rotation non cochée | `README.md` « Reste à faire » ; `.github/workflows/release-android.yml` | haute | Avant la mise en production | petit | Réinitialiser la clé d'import dans la Play Console, mettre à jour les secrets | Matthias | L (état Play non vérifiable) | Corrigé, confirmé par Matthias le 09/10 : rotation déjà faite. |
 | D03 | Les classes à sorts connus doivent « préparer » pour lancer | `lib/features/character_creation/domain/spellcasting_rules.dart` ; `lib/features/characters/domain/spell_status_formatter.dart` ; `character_repository.dart` (select de la fiche) | haute | Tout Barde, Ensorceleur, Occultiste ou Rôdeur | moyen | Dériver « ce sort se prépare-t-il ? » à la lecture, à partir des classes et de `source_class_id` (déjà écrit, jamais relu) ; pas de migration | dev-flutter | L | Ouvert. Analyse faite le 07/10 : faisable sans migration. |
 | D04 | Règles de classe indexées sur le libellé français, dispersées dans 19 fichiers | Voir « Détails » | haute | À l'arrivée de l'anglais, ou à toute correction d'un nom de classe en base | gros | Clé stable de classe, registre unique des règles, `enum` pour le statut de sort | dev-flutter, dev-backend-supabase | L + C | Ouvert |
 | D05 | Écritures multi-étapes non atomiques | `character_repository.dart` (`applyLevelUp`, `applyRest`) ; `lib/features/character_creation/data/character_creation_repository.dart` ; `lib/features/character_creation/data/character_edit_repository.dart` | haute | Réseau instable pendant une montée de niveau ou une création | gros | Fonctions Postgres transactionnelles (`apply_level_up`, `create_character`, `apply_rest`) | dev-backend-supabase, dev-flutter | L | Corrigé (PR #20, #22, #23, dépôt web). Les 3 fonctions `SECURITY DEFINER` transactionnelles livrées et relues, chacune validée par sa propre suite pgTAP exécutée en réel (privilèges, atomicité sur échec forcé après écriture réelle, entrée malformée — 9, 16 puis 50 tests). `apply_level_up`, jugée au départ trop risquée pour la même PR qu'`apply_rest`, a finalement été livrée en entier sans scission : le risque redouté (comparaison de nom de sous-classe pour les PV) était déjà résolu côté client (`p_hp_gain` déjà sommé avant l'appel). Les 3 fonctions restent non idempotentes (documenté dans leur commentaire SQL, pas résolu) : un retry après succès serveur perdu rejouerait l'écriture. **Reste à faire, hors périmètre de D05** : brancher le client Flutter sur ces 3 RPC (actuellement aucune des trois n'est appelée depuis le mobile — tâche `dev-flutter` séparée). |
@@ -83,7 +87,7 @@ la version anglaise démarre : elle devient alors bloquante.
 | D27 | Copie locale du cahier des charges périmée | `docs/cahier-des-charges/` (fichiers datés du 25/08) ; `CLAUDE.md` | haute (processus) | À chaque tâche qui « relit la spec » | petit | Resynchroniser depuis claude.ai, ajouter les documents 15 et 16 à `CLAUDE.md` | chef de projet | C + L | Ouvert |
 | D14 | Emplacements de sorts jamais écrits à la création ni à l'import | `character_repository.dart` ; aucune écriture dans `character_creation_repository.dart` | non estimée | Si aucun déclencheur en base ne compense : un lanceur neuf reste à 0 emplacement jusqu'au premier repos long | petit | Initialiser à la création et à l'import | dev-flutter | L partiel, puis confirmé par tests d'intégration réels | Partiel (PR #99). `SpellSlotProgression.nonZeroSlotTotals` appelée à la création (niveau 1) et à l'import XML (niveau réellement importé). Personnages créés avant cette PR non rétroactivement corrigés. Suites : D71 (`character_pact_slots`, même trou, pas traité), D72 (corrigé séparément, PR #25 web), D73 (infra, non confirmé). |
 | D71 | `character_pact_slots` (magie de pacte Occultiste) jamais initialisée à la création ni à l'import — même trou que D14, mais plus grave : la première charge de pacte est disponible dès le niveau 1, donc un Occultiste neuf ne peut lancer aucun sort avant son premier repos court | `character_repository.dart` (`_upsertPactSlot`/`_resetPactSlot`) ; aucune écriture équivalente dans `character_creation_repository.dart`/`xml_import_repository.dart` | moyenne | Tout Occultiste créé ou importé | petit | Même patron que D14 (`SpellSlotProgression`/table de magie de pacte) à l'initialisation | dev-flutter | L (relevé par qa-testeur en validant D14), puis confirmé par tests d'intégration réels contre le calcul autoritaire | Corrigé (PR #105). `SpellSlotProgression.initialPactSlotFor` appelée à la création (niveau 1) et à l'import XML (niveau réellement importé), même patron que D14. Ni la création ni l'import ne gèrent le multiclassage (une seule classe chacun) — même limite que D14, documentée. Schéma `character_pact_slots` vérifié directement en base par qa-testeur : clé primaire `character_id` seul, RLS owner + MJ lecture seule. |
-| D11 | `WriteOutcome.queued` renvoyé par environ 25 méthodes qui ne mettent rien en file | `character_repository.dart` ; `character_detail_screen.dart` | moyenne | Chaque nouvel appelant | moyen | Troisième valeur `offlineRejected` | dev-flutter, décision produit | L | Ouvert |
+| D11 | `WriteOutcome.queued` renvoyé par environ 25 méthodes qui ne mettent rien en file | `character_repository.dart` ; `character_detail_screen.dart` | moyenne | Chaque nouvel appelant | moyen | Troisième valeur `offlineRejected` | dev-flutter, décision produit | L | Ouvert. **Rendu bloquant avant la production, demandé par Matthias le 09/10** (voir catégorie A) : étendre la file hors ligne au lancer de sort, aux aptitudes et au repos. |
 | D32 | Synchronisation : déclencheurs incomplets, un type inconnu bloque toute la file | `character_write_sync_coordinator.dart` ; `pending_character_write_queue.dart` ; `pending_character_write_syncer.dart` | moyenne | Connexion après le démarrage ; ajout futur d'un type d'écriture | petit | Déclencher aussi à la connexion ; ignorer les lignes de type inconnu | dev-flutter | L | Ouvert |
 | D15 | Chargement de la fiche : 26 requêtes en série, relancées après chaque écriture | `character_repository.dart` ; `character_detail_screen.dart` | moyenne | Réseau mobile lent ; latence non mesurée | moyen | Paralléliser, ou une vue ou fonction serveur | dev-flutter, dev-backend-supabase | C | Ouvert |
 | D17 | 26 doubles de `CharacterRepository` dans les tests | 26 fichiers de `test/`, dont 5 avec `noSuchMethod` | moyenne | Chaque nouvelle méthode d'interface | moyen | Un double partagé dans `test/support/` | qa-testeur | C | Ouvert |
@@ -442,30 +446,43 @@ commit parent).
    préparation ? **Oui, demandé par Matthias le 06/10.** (D03)
 2. Les sorts innés raciaux se lancent-ils sans emplacement, avec un compteur par repos
    long ? **Oui, demandé par Matthias le 06/10 ; fait (PR #82).** (D08)
-3. Un multiclassé suit-il ses dés de vie par classe ?
+3. Un multiclassé suit-il ses dés de vie par classe ? **Un compteur global, demandé
+   par Matthias le 09/10.**
 4. La limite de sorts préparés doit-elle être bloquante, et non simplement affichée ?
-   Aujourd'hui `setSpellPrepared` ne vérifie rien. (D03)
+   Aujourd'hui `setSpellPrepared` ne vérifie rien. **Oui, bloquante, demandé par
+   Matthias le 09/10.** (D03)
 5. Étend-on la file hors ligne au lancer de sort, aux aptitudes et au repos avant la
-   production ? (D11)
+   production ? **Oui, avant la production, demandé par Matthias le 09/10.** (D11)
 6. Crée-t-on des projets Supabase distincts pour staging et prod avant la production ?
-   (D06)
-7. La rotation de la clé d'import Play a-t-elle été faite ? (D07)
+   **Oui, avant la production, demandé par Matthias le 09/10 ; création des projets à
+   faire par Matthias lui-même.** (D06)
+7. La rotation de la clé d'import Play a-t-elle été faite ? **Oui, déjà faite, confirmé
+   par Matthias le 09/10.** (D07)
 8. Accepte-t-on un outil de remontée de plantages, avec mise à jour de la politique de
-   confidentialité ? (D13)
-9. Fixe-t-on un plafond global d'agrandissement du texte dans le design system ? (D24)
-10. Embarque-t-on les deux polices dans l'application ? (D22)
+   confidentialité ? **Oui, Firebase Crashlytics, demandé par Matthias ; fait
+   (PR #91).** (D13)
+9. Fixe-t-on un plafond global d'agrandissement du texte dans le design system ?
+   **Oui, règle globale, demandé par Matthias le 09/10.** (D24)
+10. Embarque-t-on les deux polices dans l'application ? **Oui, les embarquer, demandé
+    par Matthias le 09/10.** (D22)
 11. Purge-t-on les fiches en cache à la déconnexion et à la suppression de compte ?
-    (D31)
-12. Passe-t-on les règles de classe sur une clé stable avant la version anglaise ? (D04)
+    **Oui, en bloquant plutôt qu'en purgeant silencieusement s'il reste des écritures
+    en attente, demandé par Matthias ; fait (PR #103).** (D31)
+12. Passe-t-on les règles de classe sur une clé stable avant la version anglaise ?
+    **Oui, maintenant, demandé par Matthias le 09/10.** (D04)
 13. Deux demi-lanceurs cumulés : addition puis division, ou moitié par classe ?
+    **Addition puis division (RAW stricte), demandé par Matthias le 09/10.**
 14. Un sort à la fois inné et connu : applique-t-on la règle complète (un lancer gratuit
     par repos long, plus les emplacements) ? Aujourd'hui la ligne ordinaire l'emporte.
     Depuis la PR #83, l'assistant de modification peut créer ce cas pour de vrai (pas
-    seulement en théorie) : un joueur qui coche côté classe un sort déjà inné. (D43)
+    seulement en théorie) : un joueur qui coche côté classe un sort déjà inné.
+    **Règle complète RAW (lancer gratuit + emplacements), demandé par Matthias le
+    09/10.** (D43)
 16. Verrouille-t-on la race en édition, ou gère-t-on l'échange des sorts innés et de
-    `lineage_id` quand un joueur change de race via l'assistant de modification ? (D53)
+    `lineage_id` quand un joueur change de race via l'assistant de modification ?
+    **Verrouiller la race en édition, demandé par Matthias le 09/10.** (D53)
 15. Faut-il une confirmation avant de lancer un sort inné, puisqu'aucune sheet de choix
-    ne s'ouvre ?
+    ne s'ouvre ? **Oui, une confirmation, demandé par Matthias le 09/10.**
 
 ## Ce que l'audit n'a pas couvert
 
