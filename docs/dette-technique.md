@@ -240,7 +240,7 @@ travaillant sur autre chose. Aucun n'a été traité.
 | Croix de fermeture des sheets sans libellé | 31 usages de `SheetHeaderBar`. | Mesuré par QA |
 | Boutons Groupes et Profil sans libellé | Même défaut que le bouton de filtre, corrigé lui. | Mesuré par QA |
 | En-tête de la liste des personnages | Déborde de 25 px à l'échelle de texte 3, avec la police de test. | Mesuré par QA, à confirmer avec la vraie police |
-| Deux demi-lanceurs cumulés | `combinedCasterLevel` additionne puis divise par 2 : Paladin 3 / Rôdeur 3 donne 3, une lecture par classe donnerait 2. Touche aussi la montée de niveau. Règle ambiguë : décision produit. | Lu par QA |
+| Deux demi-lanceurs cumulés | `combinedCasterLevel` additionne puis divise par 2 : Paladin 3 / Rôdeur 3 donne 3, une lecture par classe donnerait 2. Touche aussi la montée de niveau. **Confirmé par Matthias le 09/10 : addition puis division est la règle RAW stricte voulue — comportement actuel déjà conforme, aucune correction nécessaire.** | Lu par QA |
 | Tiers-lanceurs non gérés | Chevalier occulte, Escroc arcanique. | Lu par QA |
 | Dés de vie sur la seule classe primaire | Repos et export d'un multiclassé. Décision produit. | Lu par l'audit et par dev-flutter |
 | Traduction de classe manquante | Classe traitée comme non lanceuse : un total d'emplacements peut baisser sans message au repos long. Rare. Un test « LIMITE CONNUE » épingle le cas. | Testé par QA |
