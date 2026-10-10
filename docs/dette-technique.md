@@ -267,7 +267,7 @@ d'usage ; treize classes, toutes nommées en français comme l'app l'attend.
 | D38 | Sort inné transformable en sort « préparé » puis « connu » depuis la sheet de préparation | moyenne | — | Corrigé (PR #81). Les lignes déjà abîmées ne sont pas réparables : rien ne permet de les reconnaître. |
 | D39 | Vue partagée : `get_shared_character` ne renvoie pas `source_class_id` sur les sorts ; un multiclassé mixte partagé affiche tous ses sorts « à préparer » | basse | Ajouter la colonne à la RPC (dépôt web) ; le mapper mobile la lit déjà | Corrigé côté base (dépôt web, PR #19), voir plus bas |
 | D40 | L'édition d'un personnage écrit `source_class_id` nul sans changement de classe ; `setSpellPrepared` n'écrit pas l'origine à l'insertion | basse | Écrire la classe d'origine sur ces deux chemins | Ouvert |
-| D41 | Artificier présent en base et proposé à la création, mais non modélisé : ni lanceur, ni emplacements, ni préparation | moyenne | Décision produit : le modéliser (demi-lanceur qui prépare) ou le retirer du catalogue | Ouvert |
+| D41 | Artificier présent en base et proposé à la création, mais non modélisé : ni lanceur, ni emplacements, ni préparation | moyenne | Décision produit : le modéliser (demi-lanceur qui prépare) ou le retirer du catalogue | **Tranché par Matthias le 10/10 : le modéliser comme demi-lanceur qui prépare.** À faire dans le même chantier que D04 (`dev-backend-supabase` a confirmé le 10/10 que `spell_classes` contient déjà 100 sorts liés à l'Artificier, id 13). |
 | D42 | `setSpellPrepared` : course entre lecture de contrôle et insertion, faute de contrainte unique | basse | Contrainte unique `(character_id, spell_id)` après nettoyage des doublons (voir D10) | Ouvert |
 
 ## Ajouts liés aux sorts innés sans emplacement (PR #82)
