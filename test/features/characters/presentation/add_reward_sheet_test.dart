@@ -230,7 +230,7 @@ class _FakeInventoryCatalogRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
-  Future<void> applyRest({
+  Future<WriteOutcome> applyRest({
     required String characterId,
     required RestType type,
     required String className,

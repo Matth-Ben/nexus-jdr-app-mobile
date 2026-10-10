@@ -1087,6 +1087,7 @@ void main() {
           characterId: 'char-1',
           ownerId: 'fake-user-id',
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           payload: {'currentHp': 5, 'temporaryHp': 0},
         );
         final client = await buildSignedInClient();
@@ -1132,6 +1133,7 @@ void main() {
           characterId: 'char-1',
           ownerId: 'fake-user-id',
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           payload: {'currentHp': 5, 'temporaryHp': 0},
         );
         final client = await buildSignedInClient();
@@ -1228,6 +1230,7 @@ void main() {
           characterId: 'char-1',
           ownerId: 'fake-user-id',
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           payload: {'currentHp': 5, 'temporaryHp': 0},
         );
         var deleteAccountCalled = false;
@@ -1289,6 +1292,7 @@ void main() {
           characterId: 'char-1',
           ownerId: 'fake-user-id',
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           payload: {'currentHp': 5, 'temporaryHp': 0},
         );
         final client = await buildSignedInClient();

@@ -263,7 +263,7 @@ class FakeRepository implements CharacterRepository {
   Future<List<InventoryCatalogItem>> fetchInventoryCatalog() async => const [];
 
   @override
-  Future<void> applyRest({
+  Future<WriteOutcome> applyRest({
     required String characterId,
     required RestType type,
     required String className,

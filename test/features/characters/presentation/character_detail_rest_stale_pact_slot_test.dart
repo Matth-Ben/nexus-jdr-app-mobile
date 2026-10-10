@@ -76,7 +76,7 @@ class FakeRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> applyRest({
+  Future<WriteOutcome> applyRest({
     required String characterId,
     required RestType type,
     required String className,
@@ -94,6 +94,7 @@ class FakeRepository implements CharacterRepository {
         isPact: true,
       ),
     );
+    return WriteOutcome.synced;
   }
 
   @override

@@ -10,9 +10,11 @@ import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../../core/utils/french_text_normalizer.dart';
 import '../../../core/network/connectivity_checker.dart';
 import '../../character_creation/domain/spellcasting_rules.dart';
+import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_failure.dart';
 import '../domain/character_list_sorter.dart';
+import '../domain/character_spell_slot.dart';
 import '../domain/character_summary.dart';
 import '../domain/hit_point_bonus_rules.dart';
 import '../domain/currency_kind.dart';
@@ -282,17 +284,20 @@ abstract class CharacterRepository {
   /// passe jamais par cette méthode (rien à persister, voir la spec de la
   /// tâche qui l'a introduite).
   ///
-  /// Mode hors-ligne (décision chef de projet) : contrairement à
-  /// [updateHp]/[addXp], cette écriture n'est **jamais** mise dans
-  /// [PendingCharacterWriteQueue] (scopée explicitement à `hp`/`xp`, voir sa
-  /// documentation de classe) — absence de connectivité détectée via
-  /// [ConnectivityChecker] retourne directement [WriteOutcome.queued] sans
-  /// tenter le réseau, mais **sans persister** l'intention nulle part : elle
-  /// n'est donc jamais synchronisée automatiquement au retour du réseau
-  /// (contrairement à ce que son nom pourrait suggérer). L'appelant affiche
-  /// tout de même le même message "hors ligne" que [updateHp]/[addXp] (même
-  /// [WriteOutcome], voir la spec de la tâche), par cohérence d'affichage —
-  /// **pas** parce que la donnée sera un jour synchronisée.
+  /// Mode hors-ligne (D11 du registre de dette technique, décision chef de
+  /// projet du 09/10/2026 — **étend** un comportement antérieur plus strict,
+  /// voir ci-dessous) : mêmes règles exactement que [updateHp]/[addXp]
+  /// (connectivité absente -> mise en file réelle dans
+  /// [PendingCharacterWriteQueue], kind [PendingCharacterWriteKind.spellSlot],
+  /// `targetId` discriminant par niveau d'emplacement/pacte — voir la doc de
+  /// classe de [PendingCharacterWriteKind] — et [WriteOutcome.queued] ;
+  /// connectivité présente -> écriture réseau normale, [WriteOutcome.synced],
+  /// y compris l'exception D12 pour une requête qui expire). **Avant cette
+  /// extension**, cette écriture n'était jamais mise en file : absence de
+  /// connectivité retournait directement [WriteOutcome.queued] sans jamais
+  /// rien persister, perdant silencieusement l'intention du joueur malgré un
+  /// message laissant croire à une synchronisation future (voir D11 dans
+  /// `docs/dette-technique.md`).
   ///
   /// [isPactSlot] : `true` si [slotLevel]/[slotsUsed] concernent la magie de
   /// pacte de l'Occultiste (`character_pact_slots`) plutôt qu'un emplacement
@@ -353,8 +358,8 @@ abstract class CharacterRepository {
   /// [applyRest] au repos long.
   ///
   /// Mode hors-ligne : mêmes règles exactement que [castSpell] (voir sa
-  /// documentation) — [WriteOutcome.queued] sans rien persister ni mettre en
-  /// file.
+  /// documentation, y compris D11) — mise en file réelle, kind
+  /// [PendingCharacterWriteKind.innateSpell], `targetId` = [spellId].
   Future<WriteOutcome> setInnateSpellUsesSpent({
     required String characterId,
     required int spellId,
@@ -374,8 +379,8 @@ abstract class CharacterRepository {
   /// encore utilisée n'a pas de ligne `character_feature_uses` existante.
   ///
   /// Mode hors-ligne : mêmes règles exactement que [castSpell] (voir sa
-  /// documentation), y compris la limite assumée (pas de persistance/synchro
-  /// différée).
+  /// documentation, y compris D11) — mise en file réelle, kind
+  /// [PendingCharacterWriteKind.classFeature], `targetId` = [classFeatureId].
   Future<WriteOutcome> useClassFeature({
     required String characterId,
     required int classFeatureId,
@@ -776,7 +781,37 @@ abstract class CharacterRepository {
   /// n'a donc aucune raison d'être bloqué par un ajustement PV/XP hors ligne
   /// encore en attente pour ce personnage — bloquer ce cas dégraderait
   /// l'UX sans jamais lire de valeur périmée.
-  Future<void> applyRest({
+  ///
+  /// Mode hors-ligne (D11 du registre de dette technique, décision chef de
+  /// projet du 09/10/2026) : contrairement à [applyLevelUp] (hors périmètre
+  /// de cette décision, voir D05), cette méthode rejoint [updateHp]/[addXp]/
+  /// [castSpell]/[setInnateSpellUsesSpent]/[useClassFeature] dans une vraie
+  /// mise en file. Connectivité absente -> mise en file
+  /// ([PendingCharacterWriteQueue], kind [PendingCharacterWriteKind.rest],
+  /// `targetId` vide — au plus un repos en attente par personnage, voir sa
+  /// documentation de classe) des paramètres [type]/[className]/[diceSpent]/
+  /// [appliedGain] tels quels, [WriteOutcome.queued] **sans tenter aucune
+  /// lecture/écriture serveur** (donc sans déclencher le D35 ci-dessus, qui
+  /// ferait un aller-retour réseau best-effort pour rien) ; connectivité
+  /// présente -> exécution normale (D35 inclus) et [WriteOutcome.synced].
+  /// Au retour du réseau, `PendingCharacterWriteSyncer` rejoue l'entrée en
+  /// appelant exactement la même logique que le chemin en ligne
+  /// (`SupabaseCharacterRepository.applyRestOnline`, voir sa documentation)
+  /// — y compris le garde-fou D35, puisqu'à ce moment-là d'éventuelles
+  /// écritures PV/XP peuvent encore traîner pour le même personnage.
+  ///
+  /// **Limite assumée** : contrairement à [updateHp]/[addXp]/[castSpell]/...,
+  /// un repos mis en file n'est **jamais** superposé par
+  /// `fetchCharacterDetail` tant qu'il n'est pas synchronisé (voir
+  /// `SupabaseCharacterRepository._withPendingWrites`) — un repos recalcule
+  /// de nombreuses valeurs dérivées (emplacements de sorts, dés de vie...)
+  /// qu'il faudrait sinon réimplémenter côté client pour un seul affichage
+  /// hors ligne. Sans effet pratique tant que l'écran reste ouvert (son état
+  /// optimiste local, `character_detail_screen.dart`, continue d'afficher le
+  /// résultat attendu) ; seule une fiche fermée puis rouverte hors ligne
+  /// après un repos mis en file réaffiche l'état *avant* ce repos jusqu'à sa
+  /// synchronisation.
+  Future<WriteOutcome> applyRest({
     required String characterId,
     required RestType type,
     required String className,
@@ -923,10 +958,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// Construit à partir des dépendances déjà injectées ci-dessus (même
   /// principe que [_detailCache]) plutôt qu'un paramètre de constructeur
   /// supplémentaire : [PendingCharacterWriteSyncer] ne prend en entrée que
-  /// [_client]/[_pendingWrites]/[_cache], tous trois déjà présents ici — pas
-  /// de nouvelle dépendance réelle à faire exiger explicitement par les ~60
-  /// sites de construction de test de cette classe pour un simple
-  /// réassemblage d'objets déjà disponibles.
+  /// [_client]/[_pendingWrites]/[_cache]/`this` (voir ci-dessous, D11), tous
+  /// déjà présents ici — pas de nouvelle dépendance réelle à faire exiger
+  /// explicitement par les ~60 sites de construction de test de cette classe
+  /// pour un simple réassemblage d'objets déjà disponibles. `this` est
+  /// passable sans risque dans un initialiseur `late final` : il n'est
+  /// utilisé par [PendingCharacterWriteSyncer] qu'au moment où [sync] est
+  /// effectivement appelée (pour rejouer un repos mis en file, voir
+  /// [applyRestOnline]), bien après la fin de ce constructeur.
   ///
   /// Instance distincte de celle construite par
   /// `character_providers.dart::pendingCharacterWriteSyncerProvider`, mais
@@ -936,9 +975,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// `SupabaseCharacterRepository` et le coordinateur de synchro — voir les
   /// providers `keepAlive` de `cache_providers.dart`) ; les deux instances se
   /// comportent donc de façon strictement identique vis-à-vis de la même
-  /// file.
+  /// file, y compris la nouvelle instance de `SupabaseCharacterRepository`
+  /// que `pendingCharacterWriteSyncerProvider` construit pour son propre
+  /// `this` (voir la doc de classe de [PendingCharacterWriteSyncer]).
   late final PendingCharacterWriteSyncer _pendingWriteSyncer =
-      PendingCharacterWriteSyncer(_client, _pendingWrites, _cache);
+      PendingCharacterWriteSyncer(_client, _pendingWrites, _cache, this);
 
   /// D35 du registre de dette technique : avant [applyRest]/[applyLevelUp],
   /// qui relisent toutes deux `characters.current_hp`/`max_hp` depuis le
@@ -1159,10 +1200,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   /// Superpose à [detail] (fiche relue du serveur ou du cache) les écritures
-  /// PV/XP encore en attente de synchronisation pour ce personnage et ce
-  /// compte (`PendingCharacterWriteQueue.forCharacter`) : tant qu'une
-  /// écriture mise en file n'est pas partie, la fiche renvoyée doit refléter
-  /// cette écriture, pas la valeur serveur/cache qu'elle va remplacer.
+  /// encore en attente de synchronisation pour ce personnage et ce compte
+  /// (`PendingCharacterWriteQueue.forCharacter`) : tant qu'une écriture mise
+  /// en file n'est pas partie, la fiche renvoyée doit refléter cette
+  /// écriture, pas la valeur serveur/cache qu'elle va remplacer.
   ///
   /// Sans cette superposition, une fiche fermée puis rouverte hors ligne
   /// réaffichait les PV/l'XP d'avant l'ajustement ; l'ajustement suivant,
@@ -1171,6 +1212,27 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// message (voir `character_repository_pending_writes_test.dart`). Même
   /// perte en ligne, si la fiche était relue après le retour du réseau mais
   /// avant que la synchronisation n'ait abouti.
+  ///
+  /// Depuis D11 (09/10/2026), couvre aussi [PendingCharacterWriteKind
+  /// .spellSlot]/[PendingCharacterWriteKind.innateSpell]/
+  /// [PendingCharacterWriteKind.classFeature] — même rationale, appliquée à
+  /// l'entrée du tableau/de la liste correspondante plutôt qu'à un champ
+  /// scalaire de [detail] directement. Une entrée dont la cible
+  /// (niveau d'emplacement, sort, aptitude) n'existe plus dans [detail] est
+  /// silencieusement ignorée (ex. sort retiré depuis un autre appareil) :
+  /// rien à superposer, jamais une erreur.
+  ///
+  /// **Exception** : [PendingCharacterWriteKind.rest] n'est volontairement
+  /// JAMAIS superposée ici (voir la doc de classe de
+  /// [PendingCharacterWriteKind]) — reproduire côté client tout ce qu'un
+  /// repos recalcule sur le serveur (emplacements de sorts, dés de vie,
+  /// aptitudes...) dupliquerait une grande partie de
+  /// [SupabaseCharacterRepository.applyRestOnline] pour un gain cantonné au
+  /// cas déjà couvert par l'état optimiste local de l'écran
+  /// (`character_detail_screen.dart`, tant qu'il reste monté) : une fiche
+  /// fermée puis rouverte hors ligne après un repos mis en file continue
+  /// d'afficher l'état *avant* ce repos jusqu'à sa synchronisation — limite
+  /// assumée, documentée sur `CharacterRepository.applyRest`.
   ///
   /// La file reste la seule source des écritures en attente : le cache de
   /// la fiche n'est jamais modifié ici. Une fois la synchronisation réussie,
@@ -1214,6 +1276,74 @@ class SupabaseCharacterRepository implements CharacterRepository {
             if (newXp is num) {
               result = result.copyWith(xp: newXp.toInt());
             }
+          case PendingCharacterWriteKind.spellSlot:
+            final slotLevel = write.payload['slotLevel'];
+            final slotsUsed = write.payload['slotsUsed'];
+            final isPactSlot = write.payload['isPactSlot'] == true;
+            if (slotLevel is! num || slotsUsed is! num) break;
+            if (isPactSlot) {
+              final pact = result.pactSpellSlot;
+              if (pact != null && pact.level == slotLevel.toInt()) {
+                result = result.copyWith(
+                  pactSpellSlot: CharacterSpellSlot(
+                    level: pact.level,
+                    total: pact.total,
+                    used: slotsUsed.toInt(),
+                    isPact: true,
+                  ),
+                );
+              }
+            } else {
+              result = result.copyWith(
+                spellSlots: [
+                  for (final slot in result.spellSlots)
+                    if (slot.level == slotLevel.toInt())
+                      CharacterSpellSlot(
+                        level: slot.level,
+                        total: slot.total,
+                        used: slotsUsed.toInt(),
+                      )
+                    else
+                      slot,
+                ],
+              );
+            }
+          case PendingCharacterWriteKind.innateSpell:
+            final spellId = write.payload['spellId'];
+            final usesSpent = write.payload['usesSpent'];
+            if (spellId is! num || usesSpent is! num) break;
+            result = result.copyWith(
+              spells: [
+                for (final spell in result.spells)
+                  if (spell.id == spellId.toInt())
+                    spell.copyWithInnateUsesSpent(usesSpent.toInt())
+                  else
+                    spell,
+              ],
+            );
+          case PendingCharacterWriteKind.classFeature:
+            final classFeatureId = write.payload['classFeatureId'];
+            final usesRemaining = write.payload['usesRemaining'];
+            if (classFeatureId is! num || usesRemaining is! num) break;
+            result = result.copyWith(
+              classFeatures: [
+                for (final feature in result.classFeatures)
+                  if (feature.id == classFeatureId.toInt())
+                    CharacterClassFeature(
+                      id: feature.id,
+                      name: feature.name,
+                      level: feature.level,
+                      usesMax: feature.usesMax,
+                      usesRemaining: usesRemaining.toInt(),
+                      restType: feature.restType,
+                      description: feature.description,
+                    )
+                  else
+                    feature,
+              ],
+            );
+          case PendingCharacterWriteKind.rest:
+          // Jamais superposée — voir la documentation de cette méthode.
         }
       }
       return result;
@@ -1229,11 +1359,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// pas. À passer à [_recordConfirmedWrite] une fois l'écriture réussie.
   ///
   /// Appelée uniquement depuis l'intérieur de
-  /// `PendingCharacterWriteQueue.runExclusive` (voir `updateHp`/`addXp`) :
-  /// aucune synchronisation de la file ne peut donc être en vol pour la même
-  /// clé `(characterId, kind)` entre cette lecture et la fin de l'écriture en
-  /// ligne qui suit (D33 du registre de dette technique) — sans ce verrou,
-  /// cette lecture pouvait être périmée dès la ligne suivante.
+  /// `PendingCharacterWriteQueue.runExclusive` (voir `updateHp`/`addXp` et,
+  /// depuis D11, `castSpell`/`setInnateSpellUsesSpent`/`useClassFeature`/
+  /// `applyRest`) : aucune synchronisation de la file ne peut donc être en
+  /// vol pour la même clé `(characterId, kind, targetId)` entre cette lecture
+  /// et la fin de l'écriture en ligne qui suit (D33 du registre de dette
+  /// technique) — sans ce verrou, cette lecture pouvait être périmée dès la
+  /// ligne suivante.
+  ///
+  /// [targetId] : `''` pour `hp`/`xp`/`rest`, voir
+  /// [PendingCharacterWrite.targetId] pour sa forme exacte selon [kind].
   ///
   /// Lecture locale uniquement, best-effort : en cas d'échec, rien ne sera
   /// retiré de la file après l'écriture.
@@ -1241,6 +1376,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String characterId,
     required String ownerId,
     required PendingCharacterWriteKind kind,
+    required String targetId,
   }) async {
     try {
       final pending = await _pendingWrites.forCharacter(
@@ -1248,7 +1384,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         characterId: characterId,
       );
       for (final write in pending) {
-        if (write.kind == kind) return write;
+        if (write.kind == kind && write.targetId == targetId) return write;
       }
     } catch (_) {
       // Best-effort : voir la documentation de cette méthode.
@@ -1256,29 +1392,50 @@ class SupabaseCharacterRepository implements CharacterRepository {
     return null;
   }
 
-  /// Suites locales d'une écriture PV/XP **en ligne** réussie ([columns] est
-  /// le corps de l'`UPDATE` que le serveur vient d'accepter) :
+  /// `targetId` (voir [PendingCharacterWrite.targetId]) d'un emplacement de
+  /// sort mis en file par [castSpell] : distingue [slotLevel] ET la table
+  /// visée ([isPactSlot]) — un même niveau d'emplacement classique
+  /// (`character_spell_slots`) et de pacte (`character_pact_slots`) ne doit
+  /// jamais partager une entrée, ce sont deux pools indépendants (voir
+  /// `domain/spell_slot_progression.dart`).
+  String _spellSlotTargetId({
+    required int slotLevel,
+    required bool isPactSlot,
+  }) => '${isPactSlot ? 'pact' : 'std'}_$slotLevel';
+
+  /// Suites locales d'une écriture **en ligne** réussie ([columns], quand
+  /// fourni, est le corps de l'`UPDATE` `characters` que le serveur vient
+  /// d'accepter) :
   ///
-  /// 1. retire de la file [supersededWrite], l'entrée du même type relevée
-  ///    **avant** l'écriture ([_pendingWriteBeforeOnlineWrite]) : `updateHp`/
-  ///    `addXp` écrivent des valeurs absolues, cette entrée est donc
-  ///    périmée — la laisser ferait réécrire l'ancienne valeur par-dessus la
-  ///    nouvelle à la synchronisation suivante, et la ferait réapparaître
-  ///    d'ici là dans la fiche relue ([_withPendingWrites]). Le retrait est
-  ///    conditionnel (`PendingCharacterWriteQueue.removeIfUnchanged`) : une
-  ///    entrée mise en file **pendant** l'écriture réseau (connectivité
-  ///    retombée, nouveau tap) est plus récente que celle-ci et doit rester ;
-  /// 2. reporte [columns] dans le cache de la fiche
+  /// 1. retire de la file [supersededWrite], l'entrée du même type/cible
+  ///    relevée **avant** l'écriture ([_pendingWriteBeforeOnlineWrite]) :
+  ///    toutes les méthodes qui appellent cette méthode écrivent des valeurs
+  ///    absolues, cette entrée est donc périmée — la laisser ferait réécrire
+  ///    l'ancienne valeur par-dessus la nouvelle à la synchronisation
+  ///    suivante, et la ferait réapparaître d'ici là dans la fiche relue
+  ///    ([_withPendingWrites]). Le retrait est conditionnel
+  ///    (`PendingCharacterWriteQueue.removeIfUnchanged`) : une entrée mise en
+  ///    file **pendant** l'écriture réseau (connectivité retombée, nouveau
+  ///    tap) est plus récente que celle-ci et doit rester ;
+  /// 2. si [columns] est fourni, le reporte dans le cache de la fiche
   ///    (`CharacterDetailCache.applyConfirmedColumns`) — si la relecture qui
   ///    suit échoue (réseau retombé), la fiche relue depuis le cache porte
-  ///    quand même la valeur écrite, pas celle d'avant.
+  ///    quand même la valeur écrite, pas celle d'avant. `null` pour
+  ///    `castSpell`/`setInnateSpellUsesSpent`/`useClassFeature`/`applyRest`
+  ///    (D11) : ces écritures ne touchent jamais `characters` directement
+  ///    (`character_spell_slots`/`character_spells`/`character_feature_uses`/
+  ///    multi-tables), et [CharacterDetailCache] ne sait patcher que la ligne
+  ///    `characters` brute — voir la doc de classe de
+  ///    [PendingCharacterWriteKind] pour la limite assumée que ça implique
+  ///    (pas de correction du cache fiche fermée, seule la file superposée
+  ///    par [_withPendingWrites] reste la source de vérité hors ligne).
   ///
   /// Opérations locales uniquement, best-effort : l'écriture serveur a déjà
   /// réussi, un échec ici ne doit pas la faire passer pour un échec.
   Future<void> _recordConfirmedWrite({
     required String characterId,
     required String ownerId,
-    required Map<String, dynamic> columns,
+    required Map<String, dynamic>? columns,
     required PendingCharacterWrite? supersededWrite,
   }) async {
     // Retrait d'abord, cache ensuite (ordre inverse de celui de
@@ -1295,11 +1452,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
         // Best-effort : voir la documentation de cette méthode.
       }
     }
-    await _detailCache.applyConfirmedColumns(
-      ownerId: ownerId,
-      characterId: characterId,
-      columns: columns,
-    );
+    if (columns != null) {
+      await _detailCache.applyConfirmedColumns(
+        ownerId: ownerId,
+        characterId: characterId,
+        columns: columns,
+      );
+    }
   }
 
   @override
@@ -1315,6 +1474,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': currentHp, 'temporaryHp': temporaryHp},
       );
       return WriteOutcome.queued;
@@ -1327,11 +1487,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
       await _pendingWrites.runExclusive(
         characterId: characterId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         action: () async {
           final supersededWrite = await _pendingWriteBeforeOnlineWrite(
             characterId: characterId,
             ownerId: ownerId,
             kind: PendingCharacterWriteKind.hp,
+            targetId: '',
           );
           final columns = <String, dynamic>{
             'current_hp': currentHp,
@@ -1367,6 +1529,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': currentHp, 'temporaryHp': temporaryHp},
       );
       return WriteOutcome.queued;
@@ -1717,6 +1880,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': newXp},
       );
       return WriteOutcome.queued;
@@ -1727,11 +1891,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
       await _pendingWrites.runExclusive(
         characterId: characterId,
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         action: () async {
           final supersededWrite = await _pendingWriteBeforeOnlineWrite(
             characterId: characterId,
             ownerId: ownerId,
             kind: PendingCharacterWriteKind.xp,
+            targetId: '',
           );
           final columns = <String, dynamic>{'xp': newXp};
           await _client
@@ -1758,6 +1924,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': newXp},
       );
       return WriteOutcome.queued;
@@ -1780,36 +1947,95 @@ class SupabaseCharacterRepository implements CharacterRepository {
     bool isPactSlot = false,
   }) async {
     final ownerId = _requireOwnerId();
+    final targetId = _spellSlotTargetId(
+      slotLevel: slotLevel,
+      isPactSlot: isPactSlot,
+    );
 
-    // Voir la documentation de [CharacterRepository.castSpell] : jamais mis
-    // en file, ce cas retourne directement [WriteOutcome.queued] sans écrire
-    // nulle part.
+    // D11 du registre de dette technique (09/10/2026) : mise en file réelle,
+    // même principe que [updateHp]/[addXp] — voir la documentation de
+    // [CharacterRepository.castSpell].
     if (!await _connectivityChecker.hasConnection()) {
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.spellSlot,
+        targetId: targetId,
+        payload: {
+          'slotLevel': slotLevel,
+          'slotsUsed': slotsUsed,
+          'isPactSlot': isPactSlot,
+        },
+      );
       return WriteOutcome.queued;
     }
 
+    // Verrouillé (D33) : même rationale que `updateHp`, clé élargie à
+    // `targetId` (deux sorts différents du même personnage ne s'attendent
+    // jamais entre eux, voir la doc de classe de `PendingCharacterWriteQueue
+    // .runExclusive`).
     try {
-      final characterRow = await _client
-          .from('characters')
-          .select('id')
-          .eq('id', characterId)
-          .eq('owner_id', ownerId)
-          .maybeSingle();
-      if (characterRow == null) {
-        throw const CharacterFailure('Personnage introuvable.');
-      }
+      await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: PendingCharacterWriteKind.spellSlot,
+        targetId: targetId,
+        action: () async {
+          final characterRow = await _client
+              .from('characters')
+              .select('id')
+              .eq('id', characterId)
+              .eq('owner_id', ownerId)
+              .maybeSingle();
+          if (characterRow == null) {
+            throw const CharacterFailure('Personnage introuvable.');
+          }
 
-      await _client
-          .from(isPactSlot ? 'character_pact_slots' : 'character_spell_slots')
-          .update({'slots_used': slotsUsed})
-          .eq('character_id', characterId)
-          .eq('slot_level', slotLevel);
+          final supersededWrite = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.spellSlot,
+            targetId: targetId,
+          );
+          await _client
+              .from(
+                isPactSlot ? 'character_pact_slots' : 'character_spell_slots',
+              )
+              .update({'slots_used': slotsUsed})
+              .eq('character_id', characterId)
+              .eq('slot_level', slotLevel);
+          // `columns: null` : voir la documentation de
+          // [_recordConfirmedWrite] (aucune colonne `characters` à patcher
+          // dans le cache de la fiche pour ce kind).
+          await _recordConfirmedWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            columns: null,
+            supersededWrite: supersededWrite,
+          );
+        },
+      );
       return WriteOutcome.synced;
+    } on TimeoutException {
+      // Dette D12 : même rationale que [updateHp] (voir sa documentation).
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.spellSlot,
+        targetId: targetId,
+        payload: {
+          'slotLevel': slotLevel,
+          'slotsUsed': slotsUsed,
+          'isPactSlot': isPactSlot,
+        },
+      );
+      return WriteOutcome.queued;
     } on CharacterFailure {
       rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : même rationale que [updateHp].
+      reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
     }
   }
@@ -1903,38 +2129,76 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required int usesSpent,
   }) async {
     final ownerId = _requireOwnerId();
+    final targetId = spellId.toString();
 
-    // Voir la documentation de [CharacterRepository.setInnateSpellUsesSpent]/
-    // [CharacterRepository.castSpell] : jamais mis en file.
+    // D11 : mise en file réelle, même principe que [castSpell].
     if (!await _connectivityChecker.hasConnection()) {
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.innateSpell,
+        targetId: targetId,
+        payload: {'spellId': spellId, 'usesSpent': usesSpent},
+      );
       return WriteOutcome.queued;
     }
 
     try {
-      final characterRow = await _client
-          .from('characters')
-          .select('id')
-          .eq('id', characterId)
-          .eq('owner_id', ownerId)
-          .maybeSingle();
-      if (characterRow == null) {
-        throw const CharacterFailure('Personnage introuvable.');
-      }
+      await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: PendingCharacterWriteKind.innateSpell,
+        targetId: targetId,
+        action: () async {
+          final characterRow = await _client
+              .from('characters')
+              .select('id')
+              .eq('id', characterId)
+              .eq('owner_id', ownerId)
+              .maybeSingle();
+          if (characterRow == null) {
+            throw const CharacterFailure('Personnage introuvable.');
+          }
 
-      await _client
-          .from('character_spells')
-          .update({'innate_uses_spent': usesSpent})
-          .eq('character_id', characterId)
-          .eq('spell_id', spellId)
-          // Jamais une ligne ordinaire du même sort (lignes en double
-          // possibles) : seul un sort inné porte un compteur d'usage.
-          .eq('status', 'inné');
+          final supersededWrite = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.innateSpell,
+            targetId: targetId,
+          );
+          await _client
+              .from('character_spells')
+              .update({'innate_uses_spent': usesSpent})
+              .eq('character_id', characterId)
+              .eq('spell_id', spellId)
+              // Jamais une ligne ordinaire du même sort (lignes en double
+              // possibles) : seul un sort inné porte un compteur d'usage.
+              .eq('status', 'inné');
+          await _recordConfirmedWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            columns: null,
+            supersededWrite: supersededWrite,
+          );
+        },
+      );
       return WriteOutcome.synced;
+    } on TimeoutException {
+      // Dette D12 : même rationale que [updateHp].
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.innateSpell,
+        targetId: targetId,
+        payload: {'spellId': spellId, 'usesSpent': usesSpent},
+      );
+      return WriteOutcome.queued;
     } on CharacterFailure {
       rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : même rationale que [updateHp].
+      reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
     }
   }
@@ -1946,35 +2210,79 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required int usesRemaining,
   }) async {
     final ownerId = _requireOwnerId();
+    final targetId = classFeatureId.toString();
 
-    // Voir la documentation de [CharacterRepository.useClassFeature]/
-    // [CharacterRepository.castSpell] : jamais mis en file.
+    // D11 : mise en file réelle, même principe que [castSpell].
     if (!await _connectivityChecker.hasConnection()) {
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.classFeature,
+        targetId: targetId,
+        payload: {
+          'classFeatureId': classFeatureId,
+          'usesRemaining': usesRemaining,
+        },
+      );
       return WriteOutcome.queued;
     }
 
     try {
-      final characterRow = await _client
-          .from('characters')
-          .select('id')
-          .eq('id', characterId)
-          .eq('owner_id', ownerId)
-          .maybeSingle();
-      if (characterRow == null) {
-        throw const CharacterFailure('Personnage introuvable.');
-      }
+      await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: PendingCharacterWriteKind.classFeature,
+        targetId: targetId,
+        action: () async {
+          final characterRow = await _client
+              .from('characters')
+              .select('id')
+              .eq('id', characterId)
+              .eq('owner_id', ownerId)
+              .maybeSingle();
+          if (characterRow == null) {
+            throw const CharacterFailure('Personnage introuvable.');
+          }
 
-      await _client.from('character_feature_uses').upsert({
-        'character_id': characterId,
-        'class_feature_id': classFeatureId,
-        'uses_remaining': usesRemaining,
-      }, onConflict: 'character_id,class_feature_id');
+          final supersededWrite = await _pendingWriteBeforeOnlineWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.classFeature,
+            targetId: targetId,
+          );
+          await _client.from('character_feature_uses').upsert({
+            'character_id': characterId,
+            'class_feature_id': classFeatureId,
+            'uses_remaining': usesRemaining,
+          }, onConflict: 'character_id,class_feature_id');
+          await _recordConfirmedWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            columns: null,
+            supersededWrite: supersededWrite,
+          );
+        },
+      );
       return WriteOutcome.synced;
+    } on TimeoutException {
+      // Dette D12 : même rationale que [updateHp].
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.classFeature,
+        targetId: targetId,
+        payload: {
+          'classFeatureId': classFeatureId,
+          'usesRemaining': usesRemaining,
+        },
+      );
+      return WriteOutcome.queued;
     } on CharacterFailure {
       rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      // Remonté à Crashlytics (dette D13) : même rationale que [updateHp].
+      reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
     }
   }
@@ -2846,7 +3154,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> applyRest({
+  Future<WriteOutcome> applyRest({
     required String characterId,
     required RestType type,
     required String className,
@@ -2854,284 +3162,402 @@ class SupabaseCharacterRepository implements CharacterRepository {
     int appliedGain = 0,
   }) async {
     final ownerId = _requireOwnerId();
-    try {
-      // D35 du registre de dette technique — voir la documentation de
-      // [_blockIfPendingHpOrXpWrites], appelée en tout premier (avant même
-      // la vérification d'appartenance ci-dessous) UNIQUEMENT quand cette
-      // méthode va effectivement relire/réécrire `current_hp` plus bas : un
-      // repos long (toujours), ou un repos court avec [appliedGain] > 0
-      // (seule condition qui déclenche la relecture/écriture de
-      // `current_hp`/`max_hp` plus bas, voir le bloc `if (appliedGain > 0)`
-      // ci-dessous — un repos court avec seulement `diceSpent > 0` écrit
-      // `hit_dice_spent` mais jamais `current_hp`, par exemple quand les PV
-      // sont déjà au maximum). Le RAW 5e interdit `appliedGain > 0` sans
-      // `diceSpent > 0`, donc cette condition ne risque jamais de sous-
-      // bloquer un repos court qui touche réellement `current_hp`. Un repos
-      // court sans dé de vie dépensé (ou sans PV restauré) ne lit ni n'écrit
-      // jamais ces colonnes et n'a donc aucune raison d'être bloqué par un
-      // ajustement PV/XP hors ligne encore en attente pour ce personnage.
-      if (type == RestType.long || appliedGain > 0) {
-        await _blockIfPendingHpOrXpWrites(
-          ownerId: ownerId,
-          characterId: characterId,
-        );
-      }
 
-      // Vérification d'appartenance explicite — avant toute écriture, y
-      // compris pour un repos court qui ne touche jamais `characters` : sans
-      // ce garde-fou, un repos court n'aurait aucune requête filtrée sur
-      // `owner_id`, ne reposant que sur la RLS de
-      // `character_classes`/`class_features` (lecture seule) pour
-      // l'isolation — insuffisant pour l'écriture `character_feature_uses`
-      // qui suit. Existence/`owner_id` uniquement à ce stade : `current_hp`/
-      // `max_hp` sont relus juste avant chaque écriture de `current_hp` (plus
-      // bas), pas ici — voir la note sur la fenêtre de course dans la
-      // documentation de [applyRest], pour que les étapes qui n'en dépendent
-      // pas (`character_classes`, dés de vie) soient faites en premier.
-      final ownerCheck = await _client
-          .from('characters')
-          .select('id')
-          .eq('id', characterId)
-          .eq('owner_id', ownerId)
-          .maybeSingle();
-      if (ownerCheck == null) {
-        throw const CharacterFailure('Personnage introuvable.');
-      }
-
-      // Toutes les classes du personnage (multiclassage inclus) — utilisées
-      // pour retrouver la classe primaire (suivi des dés de vie), pour
-      // recalculer les emplacements de sorts (niveau de lanceur combiné de
-      // *toutes* les classes, voir [_resetSpellSlots]), pour retrouver un
-      // éventuel Occultiste (magie de pacte) et pour réinitialiser les
-      // aptitudes de *toutes* les classes (voir [_resetFeatureUses] : la
-      // lecture de la fiche, `_buildCharacterDetailPayload`/
-      // `_mapCharacterDetailPayload`, gère déjà explicitement ce cas, un
-      // repos doit suivre la même règle plutôt qu'ignorer silencieusement
-      // les classes secondaires).
-      final classRows = await _client
-          .from('character_classes')
-          .select('id, class_id, level, is_primary, hit_dice_spent')
-          .eq('character_id', characterId);
-
-      // Classe primaire : ne sert plus qu'au suivi des dés de vie ci-dessous
-      // (décision produit en attente pour un personnage multiclassé) et à
-      // savoir à quelle ligne s'applique [className]. Reste une map vide
-      // (jamais `null`) si aucune classe n'est marquée primaire : chaque
-      // site d'utilisation ci-dessous garde déjà cette garde (`isNotEmpty`).
-      final primaryClassRow = classRows.firstWhere(
-        (row) => row['is_primary'] == true,
-        orElse: () => const <String, dynamic>{},
-      );
-
-      // Noms (français) de toutes les classes du personnage, résolus une
-      // seule fois pour les deux usages ci-dessous : emplacements de sorts
-      // multiclasses (repos long) et recherche de l'Occultiste (magie de
-      // pacte, repos court ET long). Lecture seule, placée avant toute
-      // écriture : si elle échoue, le repos échoue sans avoir rien écrit.
-      // Aucune requête si le personnage n'a aucune classe.
-      final restClassNames = await _fetchTranslatedNames(
-        entityType: 'class',
-        entityIds: {
-          for (final row in classRows) (row['class_id'] as Object).toString(),
+    // D11 du registre de dette technique (09/10/2026) : mise en file réelle
+    // si hors ligne — voir la documentation de
+    // [CharacterRepository.applyRest]. Contrairement à [castSpell]/
+    // [setInnateSpellUsesSpent]/[useClassFeature] (qui vérifient toujours
+    // l'appartenance du personnage même hors ligne avant... non, en fait eux
+    // non plus : ce cas retourne directement [WriteOutcome.queued] sans
+    // tenter aucune lecture/écriture serveur, y compris le garde-fou D35 de
+    // [applyRestOnline] (qui ferait un aller-retour réseau best-effort pour
+    // rien tant qu'il n'y a aucune connectivité).
+    if (!await _connectivityChecker.hasConnection()) {
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.rest,
+        targetId: '',
+        payload: {
+          'type': type.name,
+          'className': className,
+          'diceSpent': diceSpent,
+          'appliedGain': appliedGain,
         },
       );
+      return WriteOutcome.queued;
+    }
 
-      if (type == RestType.long) {
-        if (classRows.isNotEmpty) {
-          // Même convention que [applyLevelUp] pour construire la liste des
-          // classes : [className] (résolu par l'appelant) nomme la classe
-          // primaire, les autres classes sont nommées depuis `translations`
-          // (chaîne vide si la traduction manque : classe alors traitée
-          // comme non lanceuse, jamais une erreur).
-          await _resetSpellSlots(
+    // Verrouillé (D33) : même rationale que `updateHp`, cette fois contre une
+    // synchronisation différée du MÊME repos mis en file (voir
+    // `PendingCharacterWriteSyncer.sync`, qui appelle [applyRestOnline] sous
+    // le même verrou `(characterId, rest, '')`).
+    try {
+      await _pendingWrites.runExclusive(
+        characterId: characterId,
+        kind: PendingCharacterWriteKind.rest,
+        targetId: '',
+        action: () async {
+          // Relevé AVANT l'écriture en ligne (même principe que `updateHp`) :
+          // un repos resté en file depuis une tentative hors ligne
+          // précédente, pas encore synchronisée, est désormais périmé par ce
+          // nouveau repos EN LIGNE qui vient de (re)calculer l'état correct
+          // depuis des lectures serveur fraîches — le laisser serait rejoué
+          // par erreur à la prochaine synchro et appliquerait un second
+          // repos non désiré par-dessus celui-ci.
+          final supersededWrite = await _pendingWriteBeforeOnlineWrite(
             characterId: characterId,
-            classes: [
-              for (final row in classRows)
-                (
-                  className: identical(row, primaryClassRow)
-                      ? className
-                      : (restClassNames[(row['class_id'] as Object)
-                                .toString()] ??
-                            ''),
-                  level: (row['level'] as num).toInt(),
-                ),
-            ],
+            ownerId: ownerId,
+            kind: PendingCharacterWriteKind.rest,
+            targetId: '',
           );
-        }
-
-        // Sorts innés de niveau >= 1 (lancés sans emplacement, une fois par
-        // repos long — `domain/innate_spell_usage.dart`) : compteur d'usages
-        // dépensés remis à 0 au repos LONG uniquement, jamais au repos court.
-        // Hors du bloc `classRows.isNotEmpty` : un sort inné vient de la
-        // race, pas d'une classe. Filtré sur les seules lignes réellement
-        // dépensées.
-        //
-        // Placé ICI, avant la récupération des dés de vie ci-dessous : cette
-        // dernière est RELATIVE (`hit_dice_spent - max(1, level ~/ 2)`), donc
-        // non rejouable. Tout ce qui précède cette remise à zéro (emplacements
-        // de sorts) et elle-même sont idempotents : si elle échoue, le repos
-        // peut être rejoué sans que le joueur récupère deux fois ses dés de
-        // vie.
-        await _client
-            .from('character_spells')
-            .update({'innate_uses_spent': 0})
-            .eq('character_id', characterId)
-            .gt('innate_uses_spent', 0);
-
-        if (primaryClassRow.isNotEmpty) {
-          // Récupération RAW 5e des dés de vie : la moitié du niveau de la
-          // classe primaire (arrondie à l'inférieur), au moins 1 — jamais en
-          // dessous de 0 dé dépensé restant. Silencieux côté UI (voir la
-          // documentation de [applyRest]) : aucune écriture si le personnage
-          // n'a déjà aucun dé dépensé, pour ne pas générer un `UPDATE`
-          // inutile. Faite avant la relecture de `max_hp` ci-dessous
-          // (indépendante de `characters`) — même discipline que le repos
-          // court : les étapes qui ne dépendent pas de `current_hp`/`max_hp`
-          // sont faites en premier, pour minimiser la fenêtre entre la
-          // lecture et l'écriture finale de `current_hp`.
-          final level = (primaryClassRow['level'] as num).toInt();
-          final hitDiceSpent =
-              (primaryClassRow['hit_dice_spent'] as num?)?.toInt() ?? 0;
-          final restored = math.max(1, level ~/ 2);
-          final newHitDiceSpent = math.max(0, hitDiceSpent - restored);
-          if (newHitDiceSpent != hitDiceSpent) {
-            await _client
-                .from('character_classes')
-                .update({'hit_dice_spent': newHitDiceSpent})
-                .eq('id', primaryClassRow['id']);
-          }
-        }
-
-        // Relecture de `max_hp` juste avant l'écriture de `current_hp` —
-        // dernière chose lue avant cette écriture, voir la documentation de
-        // [applyRest]. Moins critique que le delta du repos court
-        // (`current_hp = max_hp` reste idempotent quel que soit l'ordre
-        // d'arrivée d'écritures concurrentes), mais même discipline
-        // appliquée par cohérence.
-        final characterRow = await _client
-            .from('characters')
-            .select('max_hp')
-            .eq('id', characterId)
-            .eq('owner_id', ownerId)
-            .maybeSingle();
-        if (characterRow == null) {
-          throw const CharacterFailure('Personnage introuvable.');
-        }
-        final maxHp = (characterRow['max_hp'] as num).toInt();
-
-        await _client
-            .from('characters')
-            .update({
-              'current_hp': maxHp,
-              'temporary_hp': 0,
-              // `characters.last_long_rest_at` (chantier "Notifications" —
-              // `docs/cahier-des-charges/15-profil-parametres.md` section 3) :
-              // alimente le rappel de repos long côté backend
-              // (edge function/table `notification_preferences`, dépôt web).
-              // Même requête que `current_hp`/`temporary_hp` ci-dessus, jamais
-              // un aller-retour réseau séparé.
-              'last_long_rest_at': DateTime.now().toUtc().toIso8601String(),
-            })
-            .eq('id', characterId)
-            .eq('owner_id', ownerId);
-      } else if (diceSpent > 0) {
-        // Repos court avec dépense de dés de vie (règle RAW 5e) : les dés
-        // sont dépensés que le jet restaure ou non des PV (ex. PV déjà au
-        // maximum, voir `rest_sheet.dart`) — ces deux écritures sont donc
-        // indépendantes l'une de l'autre.
-        if (primaryClassRow.isNotEmpty) {
-          final level = (primaryClassRow['level'] as num).toInt();
-          final hitDiceSpent =
-              (primaryClassRow['hit_dice_spent'] as num?)?.toInt() ?? 0;
-          final newHitDiceSpent = math.min(level, hitDiceSpent + diceSpent);
-          await _client
-              .from('character_classes')
-              .update({'hit_dice_spent': newHitDiceSpent})
-              .eq('id', primaryClassRow['id']);
-        }
-
-        if (appliedGain > 0) {
-          // Relit `current_hp`/`max_hp` ici, juste avant le calcul et
-          // l'écriture du delta — dernière chose lue avant cette écriture,
-          // après l'étape ci-dessus (dés de vie) qui n'en dépend pas. Ajoute
-          // ensuite [appliedGain] à cette valeur *serveur* fraîchement lue
-          // (jamais un `UPDATE` en valeur absolue) puis reclampe à `max_hp`
-          // par sécurité — voir la documentation de [applyRest] pour la
-          // rationale (même principe que [applyLevelUp]).
-          final characterRow = await _client
-              .from('characters')
-              .select('current_hp, max_hp')
-              .eq('id', characterId)
-              .eq('owner_id', ownerId)
-              .maybeSingle();
-          if (characterRow == null) {
-            throw const CharacterFailure('Personnage introuvable.');
-          }
-          final currentHp = (characterRow['current_hp'] as num).toInt();
-          final maxHp = (characterRow['max_hp'] as num).toInt();
-          final newCurrentHp = math.min(currentHp + appliedGain, maxHp);
-          await _client
-              .from('characters')
-              .update({'current_hp': newCurrentHp})
-              .eq('id', characterId)
-              .eq('owner_id', ownerId);
-        }
-      }
-
-      // Magie de pacte de l'Occultiste (RAW 5e) : recharge au repos COURT ET
-      // long, contrairement aux emplacements classiques ci-dessus (repos long
-      // uniquement) — placé ici, en dehors du `if/else` ci-dessus, pour
-      // s'exécuter dans les deux cas. L'Occultiste peut être une classe
-      // SECONDAIRE (contrairement à [primaryClassRow], qui ne couvre que la
-      // classe primaire pour les dés de vie ci-dessus) : résolue depuis
-      // [classRows] (TOUTES les classes) et [restClassNames] (noms déjà
-      // résolus plus haut). Circuit indépendant des emplacements classiques :
-      // l'Occultiste n'entre jamais dans le niveau de lanceur combiné
-      // ([SpellSlotProgression.totalsForClasses] l'ignore), donc ses charges
-      // ne sont jamais comptées deux fois.
-      if (classRows.isNotEmpty) {
-        Map<String, dynamic>? occultisteRow;
-        for (final row in classRows) {
-          if (restClassNames[(row['class_id'] as Object).toString()] ==
-              'Occultiste') {
-            occultisteRow = row;
-            break;
-          }
-        }
-        if (occultisteRow != null) {
-          await _resetPactSlot(
+          await applyRestOnline(
+            ownerId: ownerId,
             characterId: characterId,
-            occultisteLevel: (occultisteRow['level'] as num).toInt(),
+            type: type,
+            className: className,
+            diceSpent: diceSpent,
+            appliedGain: appliedGain,
           );
-        }
-      }
-
-      if (classRows.isNotEmpty) {
-        final classIds = <Object>{
-          for (final row in classRows) row['class_id'] as Object,
-        };
-        final classLevels = <String, int>{
-          for (final row in classRows)
-            (row['class_id'] as Object).toString(): (row['level'] as num)
-                .toInt(),
-        };
-        await _resetFeatureUses(
-          characterId: characterId,
-          classIds: classIds,
-          classLevels: classLevels,
-          onlyShortRest: type == RestType.short,
-        );
-      }
+          // `columns: null` : un repos touche de nombreuses tables, jamais
+          // réductible aux colonnes `characters` que
+          // [CharacterDetailCache.applyConfirmedColumns] sait patcher — voir
+          // la documentation de [_recordConfirmedWrite].
+          await _recordConfirmedWrite(
+            characterId: characterId,
+            ownerId: ownerId,
+            columns: null,
+            supersededWrite: supersededWrite,
+          );
+        },
+      );
+      return WriteOutcome.synced;
+    } on TimeoutException {
+      // Dette D12 : même rationale que [updateHp] — connectivité déclarée
+      // active, mais la requête n'a jamais abouti dans le délai global.
+      await _pendingWrites.enqueue(
+        characterId: characterId,
+        ownerId: ownerId,
+        kind: PendingCharacterWriteKind.rest,
+        targetId: '',
+        payload: {
+          'type': type.name,
+          'className': className,
+          'diceSpent': diceSpent,
+          'appliedGain': appliedGain,
+        },
+      );
+      return WriteOutcome.queued;
     } on CharacterFailure {
       rethrow;
     } on PostgrestException catch (error) {
       throw mapCharacterError(error);
     } catch (error, stackTrace) {
       // Remonté à Crashlytics (dette D13) : repos, écriture multi-étapes
-      // (PV, dés de vie, emplacements de sorts, aptitudes) sans vraie
-      // transaction — même rationale que [applyLevelUp] ci-dessus.
+      // sans vraie transaction — même rationale que [applyLevelUp].
       reportNonFatal(error, stackTrace);
       throw mapUnknownCharacterError();
+    }
+  }
+
+  /// Exécute la logique complète d'un repos **déjà en ligne** — ancien corps
+  /// intégral d'[applyRest] avant D11, extrait dans sa propre méthode pour
+  /// être rejouable à l'identique par [PendingCharacterWriteSyncer] quand un
+  /// repos mis en file (hors ligne) est enfin synchronisé, sans dupliquer
+  /// cette logique à deux endroits (un repos touche trop de tables pour que
+  /// la dupliquer soit raisonnable, contrairement aux quelques lignes de
+  /// `castSpell`/`setInnateSpellUsesSpent`/`useClassFeature` que
+  /// `PendingCharacterWriteSyncer` réimplémente directement).
+  ///
+  /// Méthode volontairement PUBLIQUE (pas de préfixe `_`) bien que jamais
+  /// destinée à un écran : `PendingCharacterWriteSyncer` vit dans un autre
+  /// fichier (`pending_character_write_syncer.dart`) et ne peut pas appeler
+  /// une méthode privée de cette classe. **Un écran ne doit jamais l'appeler
+  /// directement** — toujours via [applyRest] (interface
+  /// [CharacterRepository]), seule à gérer la vérification de connectivité
+  /// et la mise en file (voir sa documentation).
+  ///
+  /// Ne catch/mappe plus aucune exception elle-même (contrairement à l'ancien
+  /// [applyRest] avant son extraction) : [CharacterFailure]/
+  /// [PostgrestException]/toute autre erreur remontent telles quelles — ses
+  /// deux appelants ([applyRest] ci-dessus, et
+  /// `PendingCharacterWriteSyncer.sync`) ont besoin d'inspecter des choses
+  /// différentes sur l'erreur brute ([applyRest] la mappe en
+  /// [CharacterFailure] pour l'écran ; le synchroniseur inspecte le `code`
+  /// brut d'une [PostgrestException] pour la classification D34) — un seul
+  /// mapping ici aurait cassé l'un des deux usages.
+  Future<void> applyRestOnline({
+    required String ownerId,
+    required String characterId,
+    required RestType type,
+    required String className,
+    int diceSpent = 0,
+    int appliedGain = 0,
+  }) async {
+    // D35 du registre de dette technique — voir la documentation de
+    // [_blockIfPendingHpOrXpWrites], appelée en tout premier (avant même
+    // la vérification d'appartenance ci-dessous) UNIQUEMENT quand cette
+    // méthode va effectivement relire/réécrire `current_hp` plus bas : un
+    // repos long (toujours), ou un repos court avec [appliedGain] > 0
+    // (seule condition qui déclenche la relecture/écriture de
+    // `current_hp`/`max_hp` plus bas, voir le bloc `if (appliedGain > 0)`
+    // ci-dessous — un repos court avec seulement `diceSpent > 0` écrit
+    // `hit_dice_spent` mais jamais `current_hp`, par exemple quand les PV
+    // sont déjà au maximum). Le RAW 5e interdit `appliedGain > 0` sans
+    // `diceSpent > 0`, donc cette condition ne risque jamais de sous-
+    // bloquer un repos court qui touche réellement `current_hp`. Un repos
+    // court sans dé de vie dépensé (ou sans PV restauré) ne lit ni n'écrit
+    // jamais ces colonnes et n'a donc aucune raison d'être bloqué par un
+    // ajustement PV/XP hors ligne encore en attente pour ce personnage.
+    if (type == RestType.long || appliedGain > 0) {
+      await _blockIfPendingHpOrXpWrites(
+        ownerId: ownerId,
+        characterId: characterId,
+      );
+    }
+
+    // Vérification d'appartenance explicite — avant toute écriture, y
+    // compris pour un repos court qui ne touche jamais `characters` : sans
+    // ce garde-fou, un repos court n'aurait aucune requête filtrée sur
+    // `owner_id`, ne reposant que sur la RLS de
+    // `character_classes`/`class_features` (lecture seule) pour
+    // l'isolation — insuffisant pour l'écriture `character_feature_uses`
+    // qui suit. Existence/`owner_id` uniquement à ce stade : `current_hp`/
+    // `max_hp` sont relus juste avant chaque écriture de `current_hp` (plus
+    // bas), pas ici — voir la note sur la fenêtre de course dans la
+    // documentation de [applyRest], pour que les étapes qui n'en dépendent
+    // pas (`character_classes`, dés de vie) soient faites en premier.
+    final ownerCheck = await _client
+        .from('characters')
+        .select('id')
+        .eq('id', characterId)
+        .eq('owner_id', ownerId)
+        .maybeSingle();
+    if (ownerCheck == null) {
+      throw const CharacterFailure('Personnage introuvable.');
+    }
+
+    // Toutes les classes du personnage (multiclassage inclus) — utilisées
+    // pour retrouver la classe primaire (suivi des dés de vie), pour
+    // recalculer les emplacements de sorts (niveau de lanceur combiné de
+    // *toutes* les classes, voir [_resetSpellSlots]), pour retrouver un
+    // éventuel Occultiste (magie de pacte) et pour réinitialiser les
+    // aptitudes de *toutes* les classes (voir [_resetFeatureUses] : la
+    // lecture de la fiche, `_buildCharacterDetailPayload`/
+    // `_mapCharacterDetailPayload`, gère déjà explicitement ce cas, un
+    // repos doit suivre la même règle plutôt qu'ignorer silencieusement
+    // les classes secondaires).
+    final classRows = await _client
+        .from('character_classes')
+        .select('id, class_id, level, is_primary, hit_dice_spent')
+        .eq('character_id', characterId);
+
+    // Classe primaire : ne sert plus qu'au suivi des dés de vie ci-dessous
+    // (décision produit en attente pour un personnage multiclassé) et à
+    // savoir à quelle ligne s'applique [className]. Reste une map vide
+    // (jamais `null`) si aucune classe n'est marquée primaire : chaque
+    // site d'utilisation ci-dessous garde déjà cette garde (`isNotEmpty`).
+    final primaryClassRow = classRows.firstWhere(
+      (row) => row['is_primary'] == true,
+      orElse: () => const <String, dynamic>{},
+    );
+
+    // Noms (français) de toutes les classes du personnage, résolus une
+    // seule fois pour les deux usages ci-dessous : emplacements de sorts
+    // multiclasses (repos long) et recherche de l'Occultiste (magie de
+    // pacte, repos court ET long). Lecture seule, placée avant toute
+    // écriture : si elle échoue, le repos échoue sans avoir rien écrit.
+    // Aucune requête si le personnage n'a aucune classe.
+    final restClassNames = await _fetchTranslatedNames(
+      entityType: 'class',
+      entityIds: {
+        for (final row in classRows) (row['class_id'] as Object).toString(),
+      },
+    );
+
+    if (type == RestType.long) {
+      if (classRows.isNotEmpty) {
+        // Même convention que [applyLevelUp] pour construire la liste des
+        // classes : [className] (résolu par l'appelant) nomme la classe
+        // primaire, les autres classes sont nommées depuis `translations`
+        // (chaîne vide si la traduction manque : classe alors traitée
+        // comme non lanceuse, jamais une erreur).
+        await _resetSpellSlots(
+          characterId: characterId,
+          classes: [
+            for (final row in classRows)
+              (
+                className: identical(row, primaryClassRow)
+                    ? className
+                    : (restClassNames[(row['class_id'] as Object).toString()] ??
+                          ''),
+                level: (row['level'] as num).toInt(),
+              ),
+          ],
+        );
+      }
+
+      // Sorts innés de niveau >= 1 (lancés sans emplacement, une fois par
+      // repos long — `domain/innate_spell_usage.dart`) : compteur d'usages
+      // dépensés remis à 0 au repos LONG uniquement, jamais au repos court.
+      // Hors du bloc `classRows.isNotEmpty` : un sort inné vient de la
+      // race, pas d'une classe. Filtré sur les seules lignes réellement
+      // dépensées.
+      //
+      // Placé ICI, avant la récupération des dés de vie ci-dessous : cette
+      // dernière est RELATIVE (`hit_dice_spent - max(1, level ~/ 2)`), donc
+      // non rejouable. Tout ce qui précède cette remise à zéro (emplacements
+      // de sorts) et elle-même sont idempotents : si elle échoue, le repos
+      // peut être rejoué sans que le joueur récupère deux fois ses dés de
+      // vie.
+      await _client
+          .from('character_spells')
+          .update({'innate_uses_spent': 0})
+          .eq('character_id', characterId)
+          .gt('innate_uses_spent', 0);
+
+      if (primaryClassRow.isNotEmpty) {
+        // Récupération RAW 5e des dés de vie : la moitié du niveau de la
+        // classe primaire (arrondie à l'inférieur), au moins 1 — jamais en
+        // dessous de 0 dé dépensé restant. Silencieux côté UI (voir la
+        // documentation de [applyRest]) : aucune écriture si le personnage
+        // n'a déjà aucun dé dépensé, pour ne pas générer un `UPDATE`
+        // inutile. Faite avant la relecture de `max_hp` ci-dessous
+        // (indépendante de `characters`) — même discipline que le repos
+        // court : les étapes qui ne dépendent pas de `current_hp`/`max_hp`
+        // sont faites en premier, pour minimiser la fenêtre entre la
+        // lecture et l'écriture finale de `current_hp`.
+        final level = (primaryClassRow['level'] as num).toInt();
+        final hitDiceSpent =
+            (primaryClassRow['hit_dice_spent'] as num?)?.toInt() ?? 0;
+        final restored = math.max(1, level ~/ 2);
+        final newHitDiceSpent = math.max(0, hitDiceSpent - restored);
+        if (newHitDiceSpent != hitDiceSpent) {
+          await _client
+              .from('character_classes')
+              .update({'hit_dice_spent': newHitDiceSpent})
+              .eq('id', primaryClassRow['id']);
+        }
+      }
+
+      // Relecture de `max_hp` juste avant l'écriture de `current_hp` —
+      // dernière chose lue avant cette écriture, voir la documentation de
+      // [applyRest]. Moins critique que le delta du repos court
+      // (`current_hp = max_hp` reste idempotent quel que soit l'ordre
+      // d'arrivée d'écritures concurrentes), mais même discipline
+      // appliquée par cohérence.
+      final characterRow = await _client
+          .from('characters')
+          .select('max_hp')
+          .eq('id', characterId)
+          .eq('owner_id', ownerId)
+          .maybeSingle();
+      if (characterRow == null) {
+        throw const CharacterFailure('Personnage introuvable.');
+      }
+      final maxHp = (characterRow['max_hp'] as num).toInt();
+
+      await _client
+          .from('characters')
+          .update({
+            'current_hp': maxHp,
+            'temporary_hp': 0,
+            // `characters.last_long_rest_at` (chantier "Notifications" —
+            // `docs/cahier-des-charges/15-profil-parametres.md` section 3) :
+            // alimente le rappel de repos long côté backend
+            // (edge function/table `notification_preferences`, dépôt web).
+            // Même requête que `current_hp`/`temporary_hp` ci-dessus, jamais
+            // un aller-retour réseau séparé.
+            'last_long_rest_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', characterId)
+          .eq('owner_id', ownerId);
+    } else if (diceSpent > 0) {
+      // Repos court avec dépense de dés de vie (règle RAW 5e) : les dés
+      // sont dépensés que le jet restaure ou non des PV (ex. PV déjà au
+      // maximum, voir `rest_sheet.dart`) — ces deux écritures sont donc
+      // indépendantes l'une de l'autre.
+      if (primaryClassRow.isNotEmpty) {
+        final level = (primaryClassRow['level'] as num).toInt();
+        final hitDiceSpent =
+            (primaryClassRow['hit_dice_spent'] as num?)?.toInt() ?? 0;
+        final newHitDiceSpent = math.min(level, hitDiceSpent + diceSpent);
+        await _client
+            .from('character_classes')
+            .update({'hit_dice_spent': newHitDiceSpent})
+            .eq('id', primaryClassRow['id']);
+      }
+
+      if (appliedGain > 0) {
+        // Relit `current_hp`/`max_hp` ici, juste avant le calcul et
+        // l'écriture du delta — dernière chose lue avant cette écriture,
+        // après l'étape ci-dessus (dés de vie) qui n'en dépend pas. Ajoute
+        // ensuite [appliedGain] à cette valeur *serveur* fraîchement lue
+        // (jamais un `UPDATE` en valeur absolue) puis reclampe à `max_hp`
+        // par sécurité — voir la documentation de [applyRest] pour la
+        // rationale (même principe que [applyLevelUp]).
+        final characterRow = await _client
+            .from('characters')
+            .select('current_hp, max_hp')
+            .eq('id', characterId)
+            .eq('owner_id', ownerId)
+            .maybeSingle();
+        if (characterRow == null) {
+          throw const CharacterFailure('Personnage introuvable.');
+        }
+        final currentHp = (characterRow['current_hp'] as num).toInt();
+        final maxHp = (characterRow['max_hp'] as num).toInt();
+        final newCurrentHp = math.min(currentHp + appliedGain, maxHp);
+        await _client
+            .from('characters')
+            .update({'current_hp': newCurrentHp})
+            .eq('id', characterId)
+            .eq('owner_id', ownerId);
+      }
+    }
+
+    // Magie de pacte de l'Occultiste (RAW 5e) : recharge au repos COURT ET
+    // long, contrairement aux emplacements classiques ci-dessus (repos long
+    // uniquement) — placé ici, en dehors du `if/else` ci-dessus, pour
+    // s'exécuter dans les deux cas. L'Occultiste peut être une classe
+    // SECONDAIRE (contrairement à [primaryClassRow], qui ne couvre que la
+    // classe primaire pour les dés de vie ci-dessus) : résolue depuis
+    // [classRows] (TOUTES les classes) et [restClassNames] (noms déjà
+    // résolus plus haut). Circuit indépendant des emplacements classiques :
+    // l'Occultiste n'entre jamais dans le niveau de lanceur combiné
+    // ([SpellSlotProgression.totalsForClasses] l'ignore), donc ses charges
+    // ne sont jamais comptées deux fois.
+    if (classRows.isNotEmpty) {
+      Map<String, dynamic>? occultisteRow;
+      for (final row in classRows) {
+        if (restClassNames[(row['class_id'] as Object).toString()] ==
+            'Occultiste') {
+          occultisteRow = row;
+          break;
+        }
+      }
+      if (occultisteRow != null) {
+        await _resetPactSlot(
+          characterId: characterId,
+          occultisteLevel: (occultisteRow['level'] as num).toInt(),
+        );
+      }
+    }
+
+    if (classRows.isNotEmpty) {
+      final classIds = <Object>{
+        for (final row in classRows) row['class_id'] as Object,
+      };
+      final classLevels = <String, int>{
+        for (final row in classRows)
+          (row['class_id'] as Object).toString(): (row['level'] as num).toInt(),
+      };
+      await _resetFeatureUses(
+        characterId: characterId,
+        classIds: classIds,
+        classLevels: classLevels,
+        onlyShortRest: type == RestType.short,
+      );
     }
   }
 

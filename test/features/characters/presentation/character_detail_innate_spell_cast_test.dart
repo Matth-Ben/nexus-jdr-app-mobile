@@ -25,9 +25,12 @@ import 'package:personnages/features/characters/presentation/providers/character
 import 'package:personnages/features/characters/presentation/widgets/character_spells_tab_body.dart';
 
 const _innateSpellId = 10;
-const _offlineMessage =
-    "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-    'fois reconnecté.';
+// D11 : message désormais affiché pour `setInnateSpellUsesSpent` hors ligne
+// (mise en file réelle) — même texte que `_offlineQueuedMessage` de
+// `character_detail_screen.dart`. L'ancien message « non enregistrée »
+// (jamais mis en file) ne s'affiche plus pour cette méthode.
+const _offlineQueuedMessage =
+    'Hors ligne : sera synchronisé dès que la connexion revient.';
 const _slotsLabel = 'Emplacements de sorts : 2 restants sur 2';
 
 CharacterSpellEntry _innate({int spent = 0}) => CharacterSpellEntry(
@@ -138,7 +141,7 @@ class _FakeRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> applyRest({
+  Future<WriteOutcome> applyRest({
     required String characterId,
     required RestType type,
     required String className,
@@ -150,6 +153,7 @@ class _FakeRepository implements CharacterRepository {
     if (restError != null) throw restError!;
     // Dépôt réel : le compteur n'est remis à 0 qu'au repos long.
     if (type == RestType.long) _setSpent(0);
+    return WriteOutcome.synced;
   }
 
   @override
@@ -364,28 +368,33 @@ void main() {
     expect(repository.castSpellCallCount, 0);
   });
 
-  testWidgets('hors ligne : message « non enregistrée », la ligne revient à '
-      '« disponible » et le sort reste lançable', (tester) async {
-    final repository = await _pumpDetail(tester, _detail());
-    repository.innateOutcome = WriteOutcome.queued;
-    await _openSpellsTab(tester);
+  // D11 du registre de dette technique (09/10/2026) : `setInnateSpellUsesSpent`
+  // est désormais réellement mise en file hors ligne (contrairement au
+  // comportement antérieur, jamais mis en file) — l'état optimiste local
+  // (« Épuisé ») reste donc affiché tel quel, jamais revert, avec le même
+  // message honnête que PV/XP (`_offlineQueuedMessage`).
+  testWidgets(
+    'hors ligne : message de mise en file, la ligne passe à « Épuisé » et '
+    'le sort reste affiché comme tel (rien à annuler)',
+    (tester) async {
+      final repository = await _pumpDetail(tester, _detail());
+      repository.innateOutcome = WriteOutcome.queued;
+      await _openSpellsTab(tester);
 
-    await _cast(tester, 'Ténèbres');
+      await _cast(tester, 'Ténèbres');
 
-    expect(find.text(_offlineMessage), findsOneWidget);
-    expect(find.text('Ténèbres lancé (sort inné).'), findsNothing);
-    expect(find.text('Épuisé'), findsNothing);
-    expect(find.text('INNÉ'), findsOneWidget);
-
-    // De retour en ligne : le lancer suivant repart bien de 0 dépensé.
-    repository.innateOutcome = WriteOutcome.synced;
-    await _cast(tester, 'Ténèbres');
-    expect(repository.innateCalls.last, (
-      spellId: _innateSpellId,
-      usesSpent: 1,
-    ));
-    expect(find.text('Épuisé'), findsOneWidget);
-  });
+      expect(find.text(_offlineQueuedMessage), findsOneWidget);
+      expect(find.text('Ténèbres lancé (sort inné).'), findsNothing);
+      expect(
+        find.text('Épuisé'),
+        findsOneWidget,
+        reason:
+            'mis en file : contrairement à l\'ancien comportement (jamais '
+            'mis en file, revert), l\'usage reste affiché comme dépensé — il '
+            'sera rejoué au retour du réseau',
+      );
+    },
+  );
 
   testWidgets('échec (CharacterFailure) : message du dépôt, retour à '
       '« disponible »', (tester) async {
@@ -591,6 +600,31 @@ void main() {
         expect(find.text('INNÉ'), findsOneWidget);
       }
 
+      // D11 : un lancer mis en file (hors ligne) n'est plus jamais annulé —
+      // contrairement à [expectAvailableAgain] (erreur dure ou inattendue),
+      // rien n'est rejoué tant que le réseau n'est pas revenu. [expectSpent]
+      // est `false` dans le seul cas où un repos LONG (sans gate) a déjà eu
+      // le temps de réinitialiser le compteur AVANT que cette résolution
+      // tardive n'arrive (voir le test "repos long puis lancer mis en
+      // file") : la réussite déjà confirmée du repos n'est alors jamais
+      // écrasée par une intention hors ligne arrivée après coup — même
+      // principe défensif que [_restGeneration] pour les écritures qui
+      // RÉUSSISSENT, étendu ici à une mise en file tardive.
+      Future<void> expectQueuedAndKept(
+        WidgetTester tester,
+        _FakeRepository repository, {
+        required bool expectSpent,
+      }) async {
+        await showNextSnackBar(tester);
+        expect(find.text(_offlineQueuedMessage), findsOneWidget);
+        expect(repository.innateCalls, hasLength(1));
+        await _openSpellsTab(tester);
+        expect(
+          find.text('Épuisé'),
+          expectSpent ? findsOneWidget : findsNothing,
+        );
+      }
+
       testWidgets('repos court puis échec du lancer : message du dépôt, la '
           'ligne revient à « disponible »', (tester) async {
         final repository = await castThenRest(
@@ -617,18 +651,19 @@ void main() {
         );
       });
 
-      testWidgets('repos court puis lancer non envoyé (hors ligne) : message '
-          '« non enregistrée », la ligne revient à « disponible »', (
-        tester,
-      ) async {
-        final repository = await castThenRest(
-          tester,
-          long: false,
-          innateOutcome: WriteOutcome.queued,
-        );
+      testWidgets(
+        'repos court puis lancer mis en file (hors ligne, D11) : message '
+        'de mise en file, la ligne reste « Épuisé »',
+        (tester) async {
+          final repository = await castThenRest(
+            tester,
+            long: false,
+            innateOutcome: WriteOutcome.queued,
+          );
 
-        await expectAvailableAgain(tester, repository, _offlineMessage);
-      });
+          await expectQueuedAndKept(tester, repository, expectSpent: true);
+        },
+      );
 
       testWidgets('repos long puis échec du lancer : message du dépôt, la '
           'ligne reste « disponible »', (tester) async {
@@ -641,37 +676,42 @@ void main() {
         await expectAvailableAgain(tester, repository, 'Accès refusé.');
       });
 
-      testWidgets('repos long puis lancer non envoyé (hors ligne) : message '
-          '« non enregistrée », la ligne reste « disponible »', (tester) async {
-        final repository = await castThenRest(
-          tester,
-          long: true,
-          innateOutcome: WriteOutcome.queued,
-        );
+      // D11, cas particulier : `castThenRest` ne pose jamais de `restGate`
+      // (seul `innateGate` retarde l'écriture du sort) — le repos LONG a
+      // donc déjà fini (avec succès) et réinitialisé le compteur AVANT que
+      // cette résolution tardive « queued » n'arrive. Contrairement au cas
+      // "repos court" ci-dessus (qui ne touche jamais ce compteur), la
+      // réussite déjà confirmée du repos long l'emporte : la ligne ne doit
+      // pas redevenir « Épuisé » à cause d'une intention hors ligne
+      // dépassée par un événement entre-temps déjà réglé côté serveur.
+      testWidgets(
+        'repos long puis lancer mis en file (hors ligne, D11) : message de '
+        'mise en file, mais le repos long (déjà réussi) a priorité — la '
+        'ligne reste « disponible »',
+        (tester) async {
+          final repository = await castThenRest(
+            tester,
+            long: true,
+            innateOutcome: WriteOutcome.queued,
+          );
 
-        await expectAvailableAgain(tester, repository, _offlineMessage);
-      });
+          await expectQueuedAndKept(tester, repository, expectSpent: false);
+        },
+      );
 
       // Retour de revue : ordre inverse du test suivant. Le lancer échoue
       // PENDANT que le repos long est encore en vol (surcouche purgée,
       // instantané pré-repos encore détenu par le repos), puis le repos
       // échoue : il ne doit pas rétablir l'entrée d'un lancer jamais
       // enregistré.
-      for (final offline in [false, true]) {
-        testWidgets('repos long EN VOL, le lancer '
-            '${offline ? "n'est pas envoyé (hors ligne)" : 'échoue'}, PUIS '
-            'le repos échoue : la ligne revient à « disponible », base à 0', (
-          tester,
-        ) async {
+      testWidgets(
+        'repos long EN VOL, le lancer échoue, PUIS le repos échoue : la '
+        'ligne revient à « disponible », base à 0',
+        (tester) async {
           final repository = await _pumpDetail(tester, _detail());
           repository
             ..innateGate = Completer<void>()
-            ..innateError = offline
-                ? null
-                : const CharacterFailure('Accès refusé.')
-            ..innateOutcome = offline
-                ? WriteOutcome.queued
-                : WriteOutcome.synced
+            ..innateError = const CharacterFailure('Accès refusé.')
             ..restGate = Completer<void>()
             ..restError = const CharacterFailure('Repos impossible.');
           await _openSpellsTab(tester);
@@ -685,10 +725,7 @@ void main() {
           // Le lancer échoue pendant le repos.
           repository.innateGate!.complete();
           await tester.pumpAndSettle();
-          expect(
-            find.text(offline ? _offlineMessage : 'Accès refusé.'),
-            findsOneWidget,
-          );
+          expect(find.text('Accès refusé.'), findsOneWidget);
 
           // Puis le repos échoue à son tour.
           repository.restGate!.complete();
@@ -712,8 +749,58 @@ void main() {
             spellId: _innateSpellId,
             usesSpent: 1,
           ));
-        });
-      }
+        },
+      );
+
+      // D11 : contrairement au cas d'erreur ci-dessus, un lancer mis en file
+      // pendant un repos long en vol n'est PLUS jamais annulé — y compris si
+      // ce repos échoue à son tour. L'instantané pré-repos
+      // (`_innateOverrideBeforeRest`) que le repos restaure en cas d'échec
+      // contient donc toujours l'entrée « dépensé » (jamais retirée, voir
+      // `revertOverride` dans `_castInnateSpell`) : la ligne reste
+      // « Épuisé », pas « disponible » — le lancer reste promis à une
+      // synchronisation future.
+      testWidgets(
+        'repos long EN VOL, le lancer est mis en file (hors ligne, D11), '
+        'PUIS le repos échoue : la ligne reste « Épuisé »',
+        (tester) async {
+          final repository = await _pumpDetail(tester, _detail());
+          repository
+            ..innateGate = Completer<void>()
+            ..innateOutcome = WriteOutcome.queued
+            ..restGate = Completer<void>()
+            ..restError = const CharacterFailure('Repos impossible.');
+          await _openSpellsTab(tester);
+          await _cast(tester, 'Ténèbres');
+          expect(find.text('Épuisé'), findsOneWidget);
+
+          // Le repos long démarre et reste en vol.
+          await _rest(tester, long: true);
+          expect(repository.restTypes, [RestType.long]);
+
+          // Le lancer est mis en file pendant le repos.
+          repository.innateGate!.complete();
+          await tester.pumpAndSettle();
+          expect(find.text(_offlineQueuedMessage), findsOneWidget);
+
+          // Puis le repos échoue à son tour.
+          repository.restGate!.complete();
+          await tester.pumpAndSettle();
+          await showNextSnackBar(tester);
+          expect(find.text('Repos impossible.'), findsOneWidget);
+
+          expect(repository.innateCalls, hasLength(1));
+          await _openSpellsTab(tester);
+          expect(
+            find.text('Épuisé'),
+            findsOneWidget,
+            reason:
+                'le lancer mis en file n\'a jamais été annulé : '
+                'l\'instantané restauré par l\'échec du repos le porte '
+                'encore',
+          );
+        },
+      );
 
       testWidgets('repos long SUCCÈS encore en vol, le lancer échoue, puis '
           'le repos réussit : la ligne reste « disponible »', (tester) async {
