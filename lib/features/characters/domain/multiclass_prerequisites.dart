@@ -86,7 +86,7 @@ abstract final class MulticlassPrerequisites {
   /// `true` ssi au moins une clause de [className] est entièrement remplie
   /// par [scoresByAbilityId] (`ability_id` -> score final). `false` pour une
   /// classe absente de [_requirementsByClassName] (ne devrait pas arriver
-  /// pour les 12 classes RAW couvertes ci-dessus — traité comme "prérequis
+  /// pour les 13 classes RAW couvertes ci-dessus — traité comme "prérequis
   /// non rempli" plutôt que de deviner une éligibilité, même philosophie que
   /// le reste de ce dépôt).
   static bool meetsRequirement(
