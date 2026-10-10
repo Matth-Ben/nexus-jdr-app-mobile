@@ -396,7 +396,11 @@ void main() {
       expect(ownerCheck.query['owner_id'], 'eq.$ownerId');
     });
 
-    test('hors ligne : queued, aucune requête, rien en file', () async {
+    // D11 du registre de dette technique (09/10/2026) : contrairement au
+    // comportement antérieur (jamais mis en file, intention perdue), une
+    // absence de connectivité met désormais réellement l'écriture en file.
+    test('hors ligne : queued, aucune requête, mise en file réelle '
+        '(targetId = spellId)', () async {
       final recorded = <_Recorded>[];
       final repo = await repository(
         rows: ownedCharacter,
@@ -412,7 +416,11 @@ void main() {
 
       expect(outcome, WriteOutcome.queued);
       expect(recorded, isEmpty);
-      expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+      final pending = await pendingWrites.allForOwner(ownerId);
+      expect(pending, hasLength(1));
+      expect(pending.single.kind, PendingCharacterWriteKind.innateSpell);
+      expect(pending.single.targetId, '30');
+      expect(pending.single.payload, {'spellId': 30, 'usesSpent': 1});
     });
 
     test('échec de l\'écriture : CharacterFailure', () async {

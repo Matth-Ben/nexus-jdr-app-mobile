@@ -43,16 +43,30 @@ RacialInnateSpellRepository racialInnateSpellRepository(Ref ref) {
   );
 }
 
-/// Vide, best-effort, la file d'attente PV/XP hors-ligne — voir
-/// `PendingCharacterWriteSyncer`. Seul consommateur :
+/// Vide, best-effort, la file d'attente hors-ligne (PV/XP/sorts/aptitudes/
+/// repos, D11) — voir `PendingCharacterWriteSyncer`. Seul consommateur :
 /// `character_write_sync_coordinator.dart` (déclenche [sync] au démarrage et
 /// à chaque retour de connectivité).
+///
+/// Construit sa propre instance de `SupabaseCharacterRepository` (plutôt que
+/// `ref.watch(characterRepositoryProvider)`, typé `CharacterRepository`
+/// abstrait) : `PendingCharacterWriteSyncer` a besoin du type CONCRET pour
+/// `applyRestOnline` (voir sa doc de classe), jamais exposé par
+/// l'abstraction. Instance distincte de celle de [characterRepository],
+/// sans conséquence — voir la doc de classe de `SupabaseCharacterRepository
+/// ._pendingWriteSyncer`.
 @Riverpod(keepAlive: true)
 PendingCharacterWriteSyncer pendingCharacterWriteSyncer(Ref ref) {
   return PendingCharacterWriteSyncer(
     ref.watch(supabaseClientProvider),
     ref.watch(pendingCharacterWriteQueueProvider),
     ref.watch(referenceDataCacheProvider),
+    SupabaseCharacterRepository(
+      ref.watch(supabaseClientProvider),
+      ref.watch(referenceDataCacheProvider),
+      ref.watch(pendingCharacterWriteQueueProvider),
+      ref.watch(connectivityCheckerProvider),
+    ),
   );
 }
 

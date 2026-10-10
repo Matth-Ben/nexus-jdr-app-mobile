@@ -315,7 +315,7 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> applyRest({
+  Future<WriteOutcome> applyRest({
     required String characterId,
     required RestType type,
     required String className,
@@ -327,6 +327,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     lastAppliedRestType = type;
     lastAppliedRestClassName = className;
     if (detailAfterRest != null) detailToReturn = detailAfterRest;
+    return WriteOutcome.synced;
   }
 
   @override
@@ -2526,9 +2527,13 @@ void main() {
       },
     );
 
+    // D11 du registre de dette technique (09/10/2026) : `castSpell` est
+    // désormais réellement mise en file hors ligne — contrairement au
+    // comportement antérieur (jamais mis en file, revert), l'état optimiste
+    // reste affiché tel quel, avec le même message honnête que PV/XP.
     testWidgets(
-      'hors ligne (queued) : message dédié (pas de promesse de synchro) et '
-      "revert de l'état optimiste, castSpell n'étant jamais mis en file",
+      'hors ligne (queued, D11) : message de mise en file, état optimiste '
+      'conservé (castSpell est désormais réellement mise en file)',
       (tester) async {
         fakeRepository.castSpellOutcomeToReturn = WriteOutcome.queued;
 
@@ -2536,21 +2541,21 @@ void main() {
 
         expect(
           find.text(
-            "Hors ligne : cette action n'a pas pu être enregistrée. "
-            'Réessayez une fois reconnecté.',
+            'Hors ligne : sera synchronisé dès que la connexion revient.',
           ),
           findsOneWidget,
         );
         expect(
           find.text(
-            'Hors ligne : sera synchronisé dès que la connexion revient.',
+            "Hors ligne : cette action n'a pas pu être enregistrée. "
+            'Réessayez une fois reconnecté.',
           ),
           findsNothing,
         );
-        // Revert : l'état optimiste (1 restant) ne doit pas rester affiché
-        // puisque rien ne sera synchronisé plus tard.
+        // Conservé : l'état optimiste (1 restant) reste affiché puisqu'il
+        // sera rejoué au retour du réseau.
         expect(
-          find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 3'),
+          find.bySemanticsLabel('Emplacements de sorts : 1 restants sur 3'),
           findsOneWidget,
         );
       },
@@ -2735,10 +2740,13 @@ void main() {
       },
     );
 
+    // D11 du registre de dette technique (09/10/2026) : `useClassFeature`
+    // est désormais réellement mise en file hors ligne — contrairement au
+    // comportement antérieur (jamais mis en file, revert), l'état optimiste
+    // reste affiché tel quel, avec le même message honnête que PV/XP.
     testWidgets(
-      'hors ligne (queued) : message dédié (pas de promesse de synchro) et '
-      "revert de l'état optimiste, useClassFeature n'étant jamais mis en "
-      'file',
+      'hors ligne (queued, D11) : message de mise en file, état optimiste '
+      'conservé (useClassFeature est désormais réellement mise en file)',
       (tester) async {
         fakeRepository.useClassFeatureOutcomeToReturn = WriteOutcome.queued;
 
@@ -2746,19 +2754,20 @@ void main() {
 
         expect(
           find.text(
-            "Hors ligne : cette action n'a pas pu être enregistrée. "
-            'Réessayez une fois reconnecté.',
+            'Hors ligne : sera synchronisé dès que la connexion revient.',
           ),
           findsOneWidget,
         );
         expect(
           find.text(
-            'Hors ligne : sera synchronisé dès que la connexion revient.',
+            "Hors ligne : cette action n'a pas pu être enregistrée. "
+            'Réessayez une fois reconnecté.',
           ),
           findsNothing,
         );
-        // Revert : l'état optimiste (0 restant) ne doit pas rester affiché.
-        expect(find.text('1 / 2 · repos long'), findsOneWidget);
+        // Conservé : l'état optimiste (0 restant) reste affiché puisqu'il
+        // sera rejoué au retour du réseau.
+        expect(find.text('0 / 2 · repos long'), findsOneWidget);
       },
     );
 

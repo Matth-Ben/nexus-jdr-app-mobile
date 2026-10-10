@@ -39,12 +39,14 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       await queue.enqueue(
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 8, 'temporaryHp': 2},
       );
 
@@ -60,12 +62,14 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       await queue.enqueue(
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 200},
       );
 
@@ -87,12 +91,14 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       await queue.enqueue(
         characterId: 'char-2',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 12, 'temporaryHp': 0},
       );
 
@@ -101,18 +107,98 @@ void main() {
       expect(pending, hasLength(2));
     });
 
+    // D11 du registre de dette technique (09/10/2026) : extension de la clé
+    // primaire à `targetId`, pour que plusieurs sorts/aptitudes différents du
+    // même personnage puissent rester en file simultanément.
+    test('un targetId distinct ne coalesce jamais avec un autre, même kind '
+        'et même personnage : deux sorts différents (castSpell)', () async {
+      await queue.enqueue(
+        characterId: 'char-1',
+        ownerId: 'owner-1',
+        kind: PendingCharacterWriteKind.spellSlot,
+        targetId: 'std_1',
+        payload: {'slotLevel': 1, 'slotsUsed': 1, 'isPactSlot': false},
+      );
+      await queue.enqueue(
+        characterId: 'char-1',
+        ownerId: 'owner-1',
+        kind: PendingCharacterWriteKind.spellSlot,
+        targetId: 'std_2',
+        payload: {'slotLevel': 2, 'slotsUsed': 1, 'isPactSlot': false},
+      );
+
+      final pending = await queue.allForOwner('owner-1');
+
+      expect(pending, hasLength(2));
+      expect(pending.map((write) => write.targetId).toSet(), {
+        'std_1',
+        'std_2',
+      });
+    });
+
+    test('un même targetId (même kind, même personnage) coalesce bien, comme '
+        'hp/xp', () async {
+      await queue.enqueue(
+        characterId: 'char-1',
+        ownerId: 'owner-1',
+        kind: PendingCharacterWriteKind.spellSlot,
+        targetId: 'std_1',
+        payload: {'slotLevel': 1, 'slotsUsed': 1, 'isPactSlot': false},
+      );
+      await queue.enqueue(
+        characterId: 'char-1',
+        ownerId: 'owner-1',
+        kind: PendingCharacterWriteKind.spellSlot,
+        targetId: 'std_1',
+        payload: {'slotLevel': 1, 'slotsUsed': 2, 'isPactSlot': false},
+      );
+
+      final pending = await queue.allForOwner('owner-1');
+
+      expect(pending, hasLength(1));
+      expect(pending.single.payload['slotsUsed'], 2);
+    });
+
+    test('removeIfUnchanged ne retire que le targetId exact, jamais une '
+        'autre entrée du même kind pour le même personnage', () async {
+      await queue.enqueue(
+        characterId: 'char-1',
+        ownerId: 'owner-1',
+        kind: PendingCharacterWriteKind.classFeature,
+        targetId: '7',
+        payload: {'classFeatureId': 7, 'usesRemaining': 1},
+      );
+      await queue.enqueue(
+        characterId: 'char-1',
+        ownerId: 'owner-1',
+        kind: PendingCharacterWriteKind.classFeature,
+        targetId: '9',
+        payload: {'classFeatureId': 9, 'usesRemaining': 0},
+      );
+      final feature7 = (await queue.allForOwner('owner-1'))
+          .singleWhere((write) => write.targetId == '7');
+
+      expect(await queue.removeIfUnchanged(feature7), isTrue);
+
+      final pending = await queue.allForOwner('owner-1');
+      expect(pending, hasLength(1));
+      expect(pending.single.targetId, '9');
+    });
+
     test('removeIfUnchanged supprime uniquement l\'entrée lue (characterId, '
         'kind) et retourne true', () async {
       await queue.enqueue(
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       await queue.enqueue(
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 200},
       );
       final hp = (await queue.allForOwner('owner-1'))
@@ -131,6 +217,7 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       final read = (await queue.allForOwner('owner-1')).single;
@@ -146,6 +233,7 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 7, 'temporaryHp': 0},
       );
       final read = (await queue.allForOwner('owner-1')).single;
@@ -153,6 +241,7 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
 
@@ -171,6 +260,7 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 7, 'temporaryHp': 0},
       );
       final read = (await queue.allForOwner('owner-1')).single;
@@ -180,6 +270,7 @@ void main() {
           characterId: 'char-1',
           ownerId: 'owner-1',
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           payload: {'currentHp': 7, 'temporaryHp': 0},
         );
       }
@@ -204,12 +295,14 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       await queue.enqueue(
         characterId: 'char-2',
         ownerId: 'owner-2',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 30, 'temporaryHp': 0},
       );
 
@@ -238,6 +331,7 @@ void main() {
           characterId: 'char-1',
           ownerId: 'owner-2',
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           payload: {'currentHp': 30, 'temporaryHp': 0},
         );
         final read = (await queue.allForOwner('owner-2')).single;
@@ -247,6 +341,7 @@ void main() {
             characterId: read.characterId,
             ownerId: 'owner-1',
             kind: read.kind,
+            targetId: read.targetId,
             payload: read.payload,
             rawPayload: read.rawPayload,
             queuedAt: read.queuedAt,
@@ -266,6 +361,7 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       final read = (await queue.allForOwner('owner-1')).single;
@@ -275,6 +371,7 @@ void main() {
           characterId: read.characterId,
           ownerId: read.ownerId,
           kind: read.kind,
+          targetId: read.targetId,
           payload: const {'currentHp': 9, 'temporaryHp': 0},
           rawPayload: '{"currentHp":9,"temporaryHp":0}',
           queuedAt: read.queuedAt,
@@ -291,24 +388,28 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       await queue.enqueue(
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 200},
       );
       await queue.enqueue(
         characterId: 'char-2',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 1, 'temporaryHp': 0},
       );
       await queue.enqueue(
         characterId: 'char-3',
         ownerId: 'owner-2',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 30, 'temporaryHp': 0},
       );
 
@@ -339,6 +440,7 @@ void main() {
           characterId: 'char-1',
           ownerId: 'owner-1',
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           payload: {'currentHp': 5, 'temporaryHp': 0},
         );
         final write = (await queue.allForOwner('owner-1')).single;
@@ -367,18 +469,21 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       await queue.enqueue(
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 200},
       );
       await queue.enqueue(
         characterId: 'char-2',
         ownerId: 'owner-2',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 30, 'temporaryHp': 0},
       );
 
@@ -396,6 +501,7 @@ void main() {
           characterId: 'char-1',
           ownerId: 'owner-1',
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           payload: {'currentHp': 5, 'temporaryHp': 0},
         );
         final write = (await queue.allForOwner('owner-1')).single;
@@ -448,6 +554,7 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 200},
       );
 
@@ -483,6 +590,7 @@ void main() {
       final first = queue.runExclusive(
         characterId: 'char-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         action: () async {
           events.add('premier: debut');
           await gate.future;
@@ -495,6 +603,7 @@ void main() {
       final second = queue.runExclusive(
         characterId: 'char-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         action: () async {
           events.add('second: debut');
         },
@@ -523,6 +632,7 @@ void main() {
       final first = queue.runExclusive(
         characterId: 'char-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         action: () async {
           events.add('char-1: debut');
           await gate.future;
@@ -533,6 +643,7 @@ void main() {
       await queue.runExclusive(
         characterId: 'char-2',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         action: () async => events.add('char-2'),
       );
 
@@ -553,6 +664,7 @@ void main() {
       final first = queue.runExclusive(
         characterId: 'char-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         action: () async {
           events.add('hp: debut');
           await gate.future;
@@ -563,10 +675,42 @@ void main() {
       await queue.runExclusive(
         characterId: 'char-1',
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         action: () async => events.add('xp'),
       );
 
       expect(events, ['hp: debut', 'xp']);
+
+      gate.complete();
+      await first;
+    });
+
+    // D11 : targetId fait désormais partie de la clé du verrou.
+    test('deux appels concurrents pour des clés DIFFÉRENTES ne s\'attendent '
+        'jamais entre eux (même kind/personnage, targetId différent — deux '
+        'sorts différents)', () async {
+      final events = <String>[];
+      final gate = Completer<void>();
+
+      final first = queue.runExclusive(
+        characterId: 'char-1',
+        kind: PendingCharacterWriteKind.spellSlot,
+        targetId: 'std_1',
+        action: () async {
+          events.add('std_1: debut');
+          await gate.future;
+        },
+      );
+      await pumpEventQueue();
+
+      await queue.runExclusive(
+        characterId: 'char-1',
+        kind: PendingCharacterWriteKind.spellSlot,
+        targetId: 'std_2',
+        action: () async => events.add('std_2'),
+      );
+
+      expect(events, ['std_1: debut', 'std_2']);
 
       gate.complete();
       await first;
@@ -578,6 +722,7 @@ void main() {
         queue.runExclusive(
           characterId: 'char-1',
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           action: () async => throw Exception('échec de test'),
         ),
         throwsA(isA<Exception>()),
@@ -587,6 +732,7 @@ void main() {
       await queue.runExclusive(
         characterId: 'char-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         action: () async => events.add('suivant'),
       );
 
@@ -601,6 +747,7 @@ void main() {
       final first = queue.runExclusive(
         characterId: 'char-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         action: () async {
           await gate.future;
           order.add(1);
@@ -610,11 +757,13 @@ void main() {
       final second = queue.runExclusive(
         characterId: 'char-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         action: () async => order.add(2),
       );
       final third = queue.runExclusive(
         characterId: 'char-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         action: () async => order.add(3),
       );
 
@@ -646,6 +795,7 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       final write = (await queue.allForOwner('owner-1')).single;
@@ -667,6 +817,7 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       final write = (await queue.allForOwner('owner-1')).single;
@@ -703,6 +854,7 @@ void main() {
           characterId: 'char-1',
           ownerId: 'owner-1',
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           payload: {'currentHp': 5, 'temporaryHp': 0},
         );
         final staleWrite = (await queue.allForOwner('owner-1')).single;
@@ -710,6 +862,7 @@ void main() {
           characterId: 'char-1',
           ownerId: 'owner-1',
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           payload: {'currentHp': 9, 'temporaryHp': 0},
         );
 
@@ -730,12 +883,14 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       await queue.enqueue(
         characterId: 'char-2',
         ownerId: 'owner-2',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 1, 'temporaryHp': 0},
       );
       final writeOwner1 = (await queue.forCharacter(
@@ -780,6 +935,7 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 5, 'temporaryHp': 0},
       );
       final write = (await queue.allForOwner('owner-1')).single;
@@ -801,6 +957,7 @@ void main() {
         characterId: 'char-1',
         ownerId: 'owner-1',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 11, 'temporaryHp': 0},
       );
 

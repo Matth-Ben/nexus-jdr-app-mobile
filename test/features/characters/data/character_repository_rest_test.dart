@@ -203,6 +203,7 @@ void main() {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 9, 'temporaryHp': 0},
       );
 
@@ -247,6 +248,7 @@ void main() {
           characterId: characterId,
           ownerId: ownerId,
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           payload: {'currentHp': 9, 'temporaryHp': 0},
         );
         final journal = <_Recorded>[];
@@ -300,6 +302,7 @@ void main() {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 9, 'temporaryHp': 0},
       );
       final journal = <_Recorded>[];
@@ -342,6 +345,7 @@ void main() {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 9, 'temporaryHp': 0},
       );
 
@@ -373,6 +377,7 @@ void main() {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 9, 'temporaryHp': 0},
       );
       final journal = <_Recorded>[];
@@ -418,6 +423,7 @@ void main() {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 9, 'temporaryHp': 0},
       );
       final write = (await pendingWrites.forCharacter(

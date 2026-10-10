@@ -1565,6 +1565,7 @@ void main() {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 12, 'temporaryHp': 0},
       );
       final client = await _buildSignedInFakeSupabaseClient(ownerId: ownerId);
@@ -1572,6 +1573,12 @@ void main() {
         client,
         pendingWrites,
         ReferenceDataCache(db),
+        SupabaseCharacterRepository(
+          client,
+          ReferenceDataCache(db),
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        ),
       );
 
       final synced = await syncer.sync();
@@ -1586,6 +1593,7 @@ void main() {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 900},
       );
       final client = await _buildSignedInFakeSupabaseClient(
@@ -1596,6 +1604,12 @@ void main() {
         client,
         pendingWrites,
         ReferenceDataCache(db),
+        SupabaseCharacterRepository(
+          client,
+          ReferenceDataCache(db),
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        ),
       );
 
       final synced = await syncer.sync();
@@ -1612,6 +1626,7 @@ void main() {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 12, 'temporaryHp': 0},
       );
       final anonymousClient = SupabaseClient(
@@ -1622,6 +1637,12 @@ void main() {
         anonymousClient,
         pendingWrites,
         ReferenceDataCache(db),
+        SupabaseCharacterRepository(
+          anonymousClient,
+          ReferenceDataCache(db),
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        ),
       );
 
       final synced = await syncer.sync();
@@ -1638,12 +1659,14 @@ void main() {
         characterId: characterId,
         ownerId: ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 12, 'temporaryHp': 0},
       );
       await pendingWrites.enqueue(
         characterId: otherCharacterId,
         ownerId: otherOwnerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 30, 'temporaryHp': 0},
       );
       // Connecté en tant qu'owner-1 uniquement.
@@ -1652,6 +1675,12 @@ void main() {
         client,
         pendingWrites,
         ReferenceDataCache(db),
+        SupabaseCharacterRepository(
+          client,
+          ReferenceDataCache(db),
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        ),
       );
 
       final synced = await syncer.sync();

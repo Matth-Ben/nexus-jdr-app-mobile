@@ -5,13 +5,46 @@ import 'package:drift/drift.dart';
 
 import 'app_database.dart';
 
-/// Les deux types d'écriture rendus hors-ligne-capables — voir la doc de
-/// classe de [PendingCharacterWrites]. Périmètre volontairement restreint
-/// (décision chef de projet) : `applyRest`/`applyLevelUp`/`uploadPortrait`/
-/// `removePortrait` restent des appels réseau directs, jamais mis en file.
+/// Les six types d'écriture rendus hors-ligne-capables — voir la doc de
+/// classe de [PendingCharacterWrites]. Périmètre étendu le 09/10/2026 (D11 du
+/// registre de dette technique, catégorie A « bloque la mise en production ») :
+/// `castSpell`/`setInnateSpellUsesSpent`/`useClassFeature`/`applyRest`
+/// rejoignent `hp`/`xp` dans une vraie file persistée — avant cette
+/// extension, ces quatre méthodes retournaient `WriteOutcome.queued` sans
+/// jamais rien persister ni mettre en file (voir `data/character_repository
+/// .dart` pour le détail) : l'intention du joueur était perdue, malgré un
+/// message laissant croire le contraire. `applyLevelUp` reste volontairement
+/// hors périmètre (branchement séparé sur ses propres fonctions
+/// transactionnelles Postgres, voir D05 du registre) ;
+/// `uploadPortrait`/`removePortrait` aussi (upload de fichier binaire, jamais
+/// discuté par cette décision).
 enum PendingCharacterWriteKind {
   hp('hp'),
-  xp('xp');
+  xp('xp'),
+
+  /// `SupabaseCharacterRepository.castSpell` — un emplacement de sort
+  /// (classique ou de pacte). Plusieurs entrées possibles simultanément pour
+  /// un même personnage (niveaux d'emplacement différents) : distinguées par
+  /// [PendingCharacterWrite.targetId], voir sa documentation.
+  spellSlot('spell_slot'),
+
+  /// `SupabaseCharacterRepository.setInnateSpellUsesSpent` — un sort inné de
+  /// niveau >= 1. Plusieurs entrées possibles (sorts innés différents),
+  /// distinguées par `targetId` (`spellId`).
+  innateSpell('innate_spell'),
+
+  /// `SupabaseCharacterRepository.useClassFeature` — une aptitude de classe à
+  /// usage limité. Plusieurs entrées possibles (aptitudes différentes),
+  /// distinguées par `targetId` (`classFeatureId`).
+  classFeature('class_feature'),
+
+  /// `SupabaseCharacterRepository.applyRest` — un repos court ou long. Au
+  /// plus une entrée par personnage (`targetId` toujours vide, même principe
+  /// que `hp`/`xp` : un second repos mis en file avant la synchronisation du
+  /// premier remplace son intention plutôt que de s'y ajouter — rejouer deux
+  /// repos l'un après l'autre à partir d'un état serveur déjà périmé n'aurait
+  /// aucun sens RAW).
+  rest('rest');
 
   const PendingCharacterWriteKind(this.storageKey);
 
@@ -36,6 +69,7 @@ class PendingCharacterWrite {
     required this.characterId,
     required this.ownerId,
     required this.kind,
+    required this.targetId,
     required this.payload,
     required this.rawPayload,
     required this.queuedAt,
@@ -45,9 +79,41 @@ class PendingCharacterWrite {
   final String ownerId;
   final PendingCharacterWriteKind kind;
 
+  /// Discriminant qui distingue plusieurs entrées [kind] en attente pour le
+  /// **même** personnage — nécessaire depuis que ce `kind` peut couvrir
+  /// plusieurs ressources indépendantes (ex. deux sorts différents lancés
+  /// hors ligne), contrairement à `hp`/`xp`/`rest` qui restent à une seule
+  /// valeur par personnage (voir leur documentation sur
+  /// [PendingCharacterWriteKind]). Fait partie de la clé primaire de
+  /// [PendingCharacterWrites] au même titre que `characterId`/`kind` — voir
+  /// sa documentation de classe.
+  ///
+  /// Chaîne vide (jamais `null` : colonne de clé primaire) pour `hp`/`xp`/
+  /// `rest`, qui n'en ont pas besoin. Sinon :
+  /// - [PendingCharacterWriteKind.spellSlot] : `'<std|pact>_<slotLevel>'`
+  ///   (ex. `'std_3'`, `'pact_2'`) — voir `SupabaseCharacterRepository
+  ///   ._spellSlotTargetId`. Un même niveau d'emplacement classique et de
+  ///   pacte ne doit jamais partager une entrée : ce sont deux tables
+  ///   distinctes (`character_spell_slots`/`character_pact_slots`).
+  /// - [PendingCharacterWriteKind.innateSpell] : `spellId` (`character_spells
+  ///   .spell_id`), tel quel converti en chaîne.
+  /// - [PendingCharacterWriteKind.classFeature] : `classFeatureId`
+  ///   (`character_feature_uses.class_feature_id`), tel quel converti en
+  ///   chaîne.
+  final String targetId;
+
   /// `{"currentHp": ..., "temporaryHp": ...}` pour [PendingCharacterWriteKind.hp],
-  /// `{"newXp": ...}` pour [PendingCharacterWriteKind.xp] — voir
-  /// `SupabaseCharacterRepository.updateHp`/`addXp`.
+  /// `{"newXp": ...}` pour [PendingCharacterWriteKind.xp],
+  /// `{"slotLevel": ..., "slotsUsed": ..., "isPactSlot": ...}` pour
+  /// [PendingCharacterWriteKind.spellSlot],
+  /// `{"spellId": ..., "usesSpent": ...}` pour
+  /// [PendingCharacterWriteKind.innateSpell],
+  /// `{"classFeatureId": ..., "usesRemaining": ...}` pour
+  /// [PendingCharacterWriteKind.classFeature],
+  /// `{"type": "short"|"long", "className": ..., "diceSpent": ...,
+  /// "appliedGain": ...}` pour [PendingCharacterWriteKind.rest] — voir
+  /// `SupabaseCharacterRepository.updateHp`/`addXp`/`castSpell`/
+  /// `setInnateSpellUsesSpent`/`useClassFeature`/`applyRest`.
   final Map<String, dynamic> payload;
 
   /// [payload] tel que stocké (texte JSON exact de la colonne `payload`) et
@@ -85,7 +151,7 @@ class PendingCharacterWriteQueue {
   /// `SupabaseCharacterRepository._withPendingWrites`).
   static const int abandonAfterConsecutiveFailures = 5;
 
-  /// Verrou en mémoire par `(characterId, kind)`, partagé entre
+  /// Verrou en mémoire par `(characterId, kind, targetId)`, partagé entre
   /// `SupabaseCharacterRepository.updateHp`/`addXp` (écriture en ligne) et
   /// `PendingCharacterWriteSyncer.sync` (écriture de la file) — D33 du
   /// registre de dette technique.
@@ -98,7 +164,7 @@ class PendingCharacterWriteQueue {
   /// est plus ancien, et la valeur affichée peut régresser silencieusement.
   ///
   /// [runExclusive] sérialise les appels concurrents pour une même clé :
-  /// pendant qu'un appel est en cours pour `(characterId, kind)`, tout
+  /// pendant qu'un appel est en cours pour `(characterId, kind, targetId)`, tout
   /// nouvel appel pour la même clé attend qu'il se termine (succès ou échec)
   /// avant de démarrer à son tour — jamais deux écritures du même type en vol
   /// en même temps pour le même personnage. Deux clés différentes
@@ -112,17 +178,25 @@ class PendingCharacterWriteQueue {
   /// isolat principal de l'app.
   final Map<String, Future<void>> _writeLocks = {};
 
-  /// Exécute [action] en exclusivité pour la clé `(characterId, kind)` — voir
-  /// la documentation de [_writeLocks]. Les appels concurrents pour la même
-  /// clé sont mis en file (ordre d'appel, FIFO) ; un appel qui échoue libère
-  /// quand même le verrou pour le suivant (ni blocage, ni perte de l'erreur :
-  /// elle continue de remonter normalement à l'appelant de [runExclusive]).
+  /// Exécute [action] en exclusivité pour la clé `(characterId, kind,
+  /// targetId)` — voir la documentation de [_writeLocks]. [targetId] fait
+  /// partie de la clé depuis l'extension du 09/10/2026 (D11) : deux sorts
+  /// différents du même personnage (même `kind` `spellSlot`, `targetId`
+  /// différent) ne doivent jamais s'attendre l'un l'autre, contrairement à
+  /// deux écritures visant la MÊME entrée (même trio). Toujours chaîne vide
+  /// pour `hp`/`xp`/`rest` (voir [PendingCharacterWrite.targetId]), donc
+  /// comportement inchangé pour ces trois types. Les appels concurrents pour
+  /// la même clé sont mis en file (ordre d'appel, FIFO) ; un appel qui échoue
+  /// libère quand même le verrou pour le suivant (ni blocage, ni perte de
+  /// l'erreur : elle continue de remonter normalement à l'appelant de
+  /// [runExclusive]).
   Future<T> runExclusive<T>({
     required String characterId,
     required PendingCharacterWriteKind kind,
+    required String targetId,
     required Future<T> Function() action,
   }) async {
-    final key = '$characterId|${kind.storageKey}';
+    final key = '$characterId|${kind.storageKey}|$targetId';
     final previous = _writeLocks[key];
     final gate = Completer<void>();
     _writeLocks[key] = gate.future;
@@ -141,11 +215,15 @@ class PendingCharacterWriteQueue {
     }
   }
 
-  /// Upsert sur `(characterId, kind)` : le mécanisme de coalescing —
-  /// [payload] déjà mis en attente pour ce personnage/type est remplacé,
-  /// jamais accumulé. `updateHp`/`addXp` écrivent déjà des valeurs absolues
-  /// (pas des deltas), donc seule la toute dernière valeur en attente a
-  /// besoin d'être un jour synchronisée.
+  /// Upsert sur `(characterId, kind, targetId)` : le mécanisme de
+  /// coalescing — [payload] déjà mis en attente pour ce
+  /// personnage/type/cible est remplacé, jamais accumulé. Toutes les méthodes
+  /// qui appellent [enqueue] écrivent des valeurs absolues (pas des deltas),
+  /// donc seule la toute dernière valeur en attente pour une même cible a
+  /// besoin d'être un jour synchronisée — [targetId] (voir sa documentation
+  /// sur [PendingCharacterWrite]) garantit que seule la bonne cible (le bon
+  /// sort, la bonne aptitude...) est remplacée, jamais une autre entrée du
+  /// même [kind] pour le même personnage.
   ///
   /// `queuedAt` sert aussi de numéro de version de l'entrée (voir
   /// [removeIfUnchanged]) : il est stocké à la seconde, donc un remplacement
@@ -158,6 +236,7 @@ class PendingCharacterWriteQueue {
     required String characterId,
     required String ownerId,
     required PendingCharacterWriteKind kind,
+    required String targetId,
     required Map<String, dynamic> payload,
   }) async {
     await _db.transaction(() async {
@@ -165,7 +244,8 @@ class PendingCharacterWriteQueue {
           await (_db.select(_db.pendingCharacterWrites)..where(
                 (row) =>
                     row.characterId.equals(characterId) &
-                    row.kind.equals(kind.storageKey),
+                    row.kind.equals(kind.storageKey) &
+                    row.targetId.equals(targetId),
               ))
               .getSingleOrNull();
 
@@ -184,6 +264,7 @@ class PendingCharacterWriteQueue {
               characterId: characterId,
               ownerId: ownerId,
               kind: kind.storageKey,
+              targetId: Value(targetId),
               payload: jsonEncode(payload),
               queuedAt: queuedAt,
               // Remet à zéro le compteur d'échecs (D34) : une entrée mise en
@@ -217,7 +298,7 @@ class PendingCharacterWriteQueue {
   /// `SupabaseCharacterRepository.updateHp`/`addXp` écrivent en ligne une
   /// valeur qui la rend périmée), pendant laquelle le joueur peut mettre en
   /// file une nouvelle valeur pour la même clé. Un retrait sur la seule clé
-  /// `(characterId, kind)` supprimerait alors cette valeur plus récente,
+  /// `(characterId, kind, targetId)` supprimerait alors cette valeur plus récente,
   /// jamais envoyée : ajustement perdu sans message.
   ///
   /// [ownerId] fait partie du filtre bien qu'il ne fasse pas partie de la
@@ -230,6 +311,7 @@ class PendingCharacterWriteQueue {
                   row.characterId.equals(write.characterId) &
                   row.ownerId.equals(write.ownerId) &
                   row.kind.equals(write.kind.storageKey) &
+                  row.targetId.equals(write.targetId) &
                   row.queuedAt.equals(write.queuedAt) &
                   row.payload.equals(write.rawPayload),
             ))
@@ -238,12 +320,18 @@ class PendingCharacterWriteQueue {
   }
 
   /// Écritures en attente de [ownerId] pour le seul personnage [characterId]
-  /// — au plus une par [PendingCharacterWriteKind] (clé primaire
-  /// `(characterId, kind)`). Lu par
+  /// — au plus une par `(kind, targetId)` (clé primaire `(characterId, kind,
+  /// targetId)`, voir la doc de classe de [PendingCharacterWrites]). Lu par
   /// `SupabaseCharacterRepository.fetchCharacterDetail`, qui les superpose à
   /// la fiche relue (serveur ou cache) : tant qu'une écriture n'est pas
   /// synchronisée, c'est elle, pas la valeur serveur, que le joueur doit
-  /// voir et dont tout nouvel ajustement doit repartir.
+  /// voir et dont tout nouvel ajustement doit repartir. Exception assumée :
+  /// [PendingCharacterWriteKind.rest] n'est jamais superposée ainsi (voir
+  /// `SupabaseCharacterRepository._withPendingWrites`) — rejouer côté client
+  /// tout ce qu'un repos recalcule (emplacements de sorts, dés de vie...)
+  /// dupliquerait une grande partie de la logique serveur pour un gain
+  /// cantonné au cas déjà couvert par l'état optimiste local de l'écran
+  /// (`character_detail_screen.dart`, tant qu'il reste monté).
   ///
   /// Même cloisonnement par compte que [allForOwner]. Contrairement à
   /// [allForOwner], une ligne dont le `kind` est inconnu de cette version de
@@ -281,6 +369,7 @@ class PendingCharacterWriteQueue {
           characterId: row.characterId,
           ownerId: row.ownerId,
           kind: kind,
+          targetId: row.targetId,
           payload: Map<String, dynamic>.from(jsonDecode(row.payload) as Map),
           rawPayload: row.payload,
           queuedAt: row.queuedAt,
@@ -309,6 +398,7 @@ class PendingCharacterWriteQueue {
           characterId: row.characterId,
           ownerId: row.ownerId,
           kind: PendingCharacterWriteKind.fromStorageKey(row.kind),
+          targetId: row.targetId,
           payload: Map<String, dynamic>.from(jsonDecode(row.payload) as Map),
           rawPayload: row.payload,
           queuedAt: row.queuedAt,
@@ -342,6 +432,7 @@ class PendingCharacterWriteQueue {
                     row.characterId.equals(write.characterId) &
                     row.ownerId.equals(write.ownerId) &
                     row.kind.equals(write.kind.storageKey) &
+                    row.targetId.equals(write.targetId) &
                     row.queuedAt.equals(write.queuedAt) &
                     row.payload.equals(write.rawPayload),
               ))
@@ -355,6 +446,7 @@ class PendingCharacterWriteQueue {
                 row.characterId.equals(write.characterId) &
                 row.ownerId.equals(write.ownerId) &
                 row.kind.equals(write.kind.storageKey) &
+                row.targetId.equals(write.targetId) &
                 row.queuedAt.equals(write.queuedAt) &
                 row.payload.equals(write.rawPayload),
           ))

@@ -76,6 +76,14 @@ class PendingCharacterWrites extends Table {
   TextColumn get characterId => text()();
   TextColumn get ownerId => text()();
   TextColumn get kind => text()();
+  // Discriminant ajouté au schéma v4 (D11 du registre de dette technique) :
+  // distingue plusieurs entrées `kind` en attente pour le même personnage
+  // (ex. deux sorts différents lancés hors ligne) — voir
+  // `PendingCharacterWrite.targetId` pour sa forme exacte selon le `kind`.
+  // Chaîne vide (jamais nulle, colonne de clé primaire) pour `hp`/`xp`/
+  // `rest`, qui n'en ont pas besoin — comportement inchangé pour ces trois
+  // types par rapport au schéma v3.
+  TextColumn get targetId => text().withDefault(const Constant(''))();
   TextColumn get payload => text()();
   // Sert de numéro de version de l'entrée, pas de date fiable : stocké à la
   // seconde, il avance d'au moins une seconde à chaque remplacement (voir
@@ -91,8 +99,14 @@ class PendingCharacterWrites extends Table {
   BoolColumn get abandoned => boolean().withDefault(const Constant(false))();
   TextColumn get lastFailureMessage => text().nullable()();
 
+  // Clé primaire élargie à `targetId` au schéma v4 (D11) : `(characterId,
+  // kind)` seul ne suffisait plus à distinguer deux sorts/aptitudes
+  // différents en attente pour le même personnage — voir
+  // `AppDatabase.migration` pour la migration qui recrée cette table avec
+  // cette nouvelle clé (SQLite ne permet pas de modifier une contrainte
+  // PRIMARY KEY par un simple `ALTER TABLE`).
   @override
-  Set<Column> get primaryKey => {characterId, kind};
+  Set<Column> get primaryKey => {characterId, kind, targetId};
 }
 
 /// Base SQLite locale de l'app (drift), pour l'instant dédiée au cache des
@@ -112,7 +126,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   // [PendingCharacterWrites] (schéma v2) a été ajoutée après la première
   // version livrée de ce cache (v1, [CachedReferenceEntries] seule) : une
@@ -123,6 +137,19 @@ class AppDatabase extends _$AppDatabase {
   // `onCreate`). [failureCount]/[abandoned]/[lastFailureMessage] (schéma v3,
   // D34) suivent le même principe : trois colonnes ajoutées à une table
   // existante plutôt qu'une nouvelle table, migration de v2 par `addColumn`.
+  //
+  // [targetId] (schéma v4, D11) est différent : il élargit la clé primaire
+  // de `(characterId, kind)` à `(characterId, kind, targetId)`, pas une
+  // simple colonne ajoutée à une contrainte inchangée. SQLite ne permet pas
+  // de modifier une contrainte `PRIMARY KEY` par `ALTER TABLE` — la migration
+  // v3 -> v4 recrée donc la table entière sous un nom temporaire, la
+  // reconstruit avec le nouveau schéma (`m.createTable`, qui lit la
+  // définition Dart courante — donc déjà la nouvelle clé primaire), recopie
+  // les lignes existantes (`targetId` vide : `hp`/`xp` n'en ont jamais eu
+  // besoin, voir [PendingCharacterWrites.targetId]) puis supprime la table
+  // temporaire. Généré via `dart run build_runner build
+  // --delete-conflicting-outputs` après ce changement, comme pour toute
+  // modification de ce fichier.
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
@@ -143,6 +170,41 @@ class AppDatabase extends _$AppDatabase {
           pendingCharacterWrites,
           pendingCharacterWrites.lastFailureMessage,
         );
+      }
+      if (from < 4) {
+        // Transaction explicite (revue de code) : `onUpgrade` n'est jamais
+        // enveloppée dans une transaction par `drift` lui-même — à la charge
+        // du code de migration. Pour `NativeDatabase` (sqlite3),
+        // `PRAGMA user_version` est fixé à la version cible AVANT que cette
+        // fonction `onUpgrade` ne s'exécute, pas après son succès : si l'app
+        // est tuée entre deux des quatre opérations ci-dessous (ex. juste
+        // après le `RENAME`, avant que `createTable` ne recrée la table),
+        // le fichier reste dans un état intermédiaire alors que
+        // `user_version` est déjà à 4 — au redémarrage, `from == to == 4`,
+        // cette migration ne serait donc plus jamais rejouée, perdant la
+        // table pour toujours sur cet appareil (y compris les entrées
+        // `hp`/`xp` qui fonctionnaient déjà avant ce changement). Une seule
+        // transaction autour des quatre opérations garantit qu'elles
+        // réussissent ou échouent ensemble (rollback complet sur tout échec,
+        // y compris un arrêt brutal du processus).
+        await m.database.transaction(() async {
+          await m.database.customStatement(
+            'ALTER TABLE pending_character_writes '
+            'RENAME TO pending_character_writes_v3',
+          );
+          await m.createTable(pendingCharacterWrites);
+          await m.database.customStatement(
+            'INSERT INTO pending_character_writes '
+            '(character_id, owner_id, kind, target_id, payload, queued_at, '
+            'failure_count, abandoned, last_failure_message) '
+            "SELECT character_id, owner_id, kind, '', payload, queued_at, "
+            'failure_count, abandoned, last_failure_message '
+            'FROM pending_character_writes_v3',
+          );
+          await m.database.customStatement(
+            'DROP TABLE pending_character_writes_v3',
+          );
+        });
       }
     },
   );

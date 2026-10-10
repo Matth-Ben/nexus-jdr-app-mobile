@@ -174,19 +174,35 @@ final class RacialInnateSpellRepositoryProvider
 String _$racialInnateSpellRepositoryHash() =>
     r'da3f71fc3d04010abac8ef70b84cf898c8c7f749';
 
-/// Vide, best-effort, la file d'attente PV/XP hors-ligne — voir
-/// `PendingCharacterWriteSyncer`. Seul consommateur :
+/// Vide, best-effort, la file d'attente hors-ligne (PV/XP/sorts/aptitudes/
+/// repos, D11) — voir `PendingCharacterWriteSyncer`. Seul consommateur :
 /// `character_write_sync_coordinator.dart` (déclenche [sync] au démarrage et
 /// à chaque retour de connectivité).
+///
+/// Construit sa propre instance de `SupabaseCharacterRepository` (plutôt que
+/// `ref.watch(characterRepositoryProvider)`, typé `CharacterRepository`
+/// abstrait) : `PendingCharacterWriteSyncer` a besoin du type CONCRET pour
+/// `applyRestOnline` (voir sa doc de classe), jamais exposé par
+/// l'abstraction. Instance distincte de celle de [characterRepository],
+/// sans conséquence — voir la doc de classe de `SupabaseCharacterRepository
+/// ._pendingWriteSyncer`.
 
 @ProviderFor(pendingCharacterWriteSyncer)
 final pendingCharacterWriteSyncerProvider =
     PendingCharacterWriteSyncerProvider._();
 
-/// Vide, best-effort, la file d'attente PV/XP hors-ligne — voir
-/// `PendingCharacterWriteSyncer`. Seul consommateur :
+/// Vide, best-effort, la file d'attente hors-ligne (PV/XP/sorts/aptitudes/
+/// repos, D11) — voir `PendingCharacterWriteSyncer`. Seul consommateur :
 /// `character_write_sync_coordinator.dart` (déclenche [sync] au démarrage et
 /// à chaque retour de connectivité).
+///
+/// Construit sa propre instance de `SupabaseCharacterRepository` (plutôt que
+/// `ref.watch(characterRepositoryProvider)`, typé `CharacterRepository`
+/// abstrait) : `PendingCharacterWriteSyncer` a besoin du type CONCRET pour
+/// `applyRestOnline` (voir sa doc de classe), jamais exposé par
+/// l'abstraction. Instance distincte de celle de [characterRepository],
+/// sans conséquence — voir la doc de classe de `SupabaseCharacterRepository
+/// ._pendingWriteSyncer`.
 
 final class PendingCharacterWriteSyncerProvider
     extends
@@ -196,10 +212,18 @@ final class PendingCharacterWriteSyncerProvider
           PendingCharacterWriteSyncer
         >
     with $Provider<PendingCharacterWriteSyncer> {
-  /// Vide, best-effort, la file d'attente PV/XP hors-ligne — voir
-  /// `PendingCharacterWriteSyncer`. Seul consommateur :
+  /// Vide, best-effort, la file d'attente hors-ligne (PV/XP/sorts/aptitudes/
+  /// repos, D11) — voir `PendingCharacterWriteSyncer`. Seul consommateur :
   /// `character_write_sync_coordinator.dart` (déclenche [sync] au démarrage et
   /// à chaque retour de connectivité).
+  ///
+  /// Construit sa propre instance de `SupabaseCharacterRepository` (plutôt que
+  /// `ref.watch(characterRepositoryProvider)`, typé `CharacterRepository`
+  /// abstrait) : `PendingCharacterWriteSyncer` a besoin du type CONCRET pour
+  /// `applyRestOnline` (voir sa doc de classe), jamais exposé par
+  /// l'abstraction. Instance distincte de celle de [characterRepository],
+  /// sans conséquence — voir la doc de classe de `SupabaseCharacterRepository
+  /// ._pendingWriteSyncer`.
   PendingCharacterWriteSyncerProvider._()
     : super(
         from: null,
@@ -235,7 +259,7 @@ final class PendingCharacterWriteSyncerProvider
 }
 
 String _$pendingCharacterWriteSyncerHash() =>
-    r'e9bee78591aeff14d1a0f6c77d97b938aced4c3e';
+    r'04a029c78ebd571f241a2de4f6f28536c7025c82';
 
 /// Liste des personnages du joueur connecté, exposée à
 /// `CharacterListScreen`.

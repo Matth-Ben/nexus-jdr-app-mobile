@@ -315,6 +315,18 @@ class $PendingCharacterWritesTable extends PendingCharacterWrites
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _targetIdMeta = const VerificationMeta(
+    'targetId',
+  );
+  @override
+  late final GeneratedColumn<String> targetId = GeneratedColumn<String>(
+    'target_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _payloadMeta = const VerificationMeta(
     'payload',
   );
@@ -380,6 +392,7 @@ class $PendingCharacterWritesTable extends PendingCharacterWrites
     characterId,
     ownerId,
     kind,
+    targetId,
     payload,
     queuedAt,
     failureCount,
@@ -425,6 +438,12 @@ class $PendingCharacterWritesTable extends PendingCharacterWrites
     } else if (isInserting) {
       context.missing(_kindMeta);
     }
+    if (data.containsKey('target_id')) {
+      context.handle(
+        _targetIdMeta,
+        targetId.isAcceptableOrUnknown(data['target_id']!, _targetIdMeta),
+      );
+    }
     if (data.containsKey('payload')) {
       context.handle(
         _payloadMeta,
@@ -469,7 +488,7 @@ class $PendingCharacterWritesTable extends PendingCharacterWrites
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {characterId, kind};
+  Set<GeneratedColumn> get $primaryKey => {characterId, kind, targetId};
   @override
   PendingCharacterWrite map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -485,6 +504,10 @@ class $PendingCharacterWritesTable extends PendingCharacterWrites
       kind: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}kind'],
+      )!,
+      targetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target_id'],
       )!,
       payload: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -520,6 +543,7 @@ class PendingCharacterWrite extends DataClass
   final String characterId;
   final String ownerId;
   final String kind;
+  final String targetId;
   final String payload;
   final DateTime queuedAt;
   final int failureCount;
@@ -529,6 +553,7 @@ class PendingCharacterWrite extends DataClass
     required this.characterId,
     required this.ownerId,
     required this.kind,
+    required this.targetId,
     required this.payload,
     required this.queuedAt,
     required this.failureCount,
@@ -541,6 +566,7 @@ class PendingCharacterWrite extends DataClass
     map['character_id'] = Variable<String>(characterId);
     map['owner_id'] = Variable<String>(ownerId);
     map['kind'] = Variable<String>(kind);
+    map['target_id'] = Variable<String>(targetId);
     map['payload'] = Variable<String>(payload);
     map['queued_at'] = Variable<DateTime>(queuedAt);
     map['failure_count'] = Variable<int>(failureCount);
@@ -556,6 +582,7 @@ class PendingCharacterWrite extends DataClass
       characterId: Value(characterId),
       ownerId: Value(ownerId),
       kind: Value(kind),
+      targetId: Value(targetId),
       payload: Value(payload),
       queuedAt: Value(queuedAt),
       failureCount: Value(failureCount),
@@ -575,6 +602,7 @@ class PendingCharacterWrite extends DataClass
       characterId: serializer.fromJson<String>(json['characterId']),
       ownerId: serializer.fromJson<String>(json['ownerId']),
       kind: serializer.fromJson<String>(json['kind']),
+      targetId: serializer.fromJson<String>(json['targetId']),
       payload: serializer.fromJson<String>(json['payload']),
       queuedAt: serializer.fromJson<DateTime>(json['queuedAt']),
       failureCount: serializer.fromJson<int>(json['failureCount']),
@@ -591,6 +619,7 @@ class PendingCharacterWrite extends DataClass
       'characterId': serializer.toJson<String>(characterId),
       'ownerId': serializer.toJson<String>(ownerId),
       'kind': serializer.toJson<String>(kind),
+      'targetId': serializer.toJson<String>(targetId),
       'payload': serializer.toJson<String>(payload),
       'queuedAt': serializer.toJson<DateTime>(queuedAt),
       'failureCount': serializer.toJson<int>(failureCount),
@@ -603,6 +632,7 @@ class PendingCharacterWrite extends DataClass
     String? characterId,
     String? ownerId,
     String? kind,
+    String? targetId,
     String? payload,
     DateTime? queuedAt,
     int? failureCount,
@@ -612,6 +642,7 @@ class PendingCharacterWrite extends DataClass
     characterId: characterId ?? this.characterId,
     ownerId: ownerId ?? this.ownerId,
     kind: kind ?? this.kind,
+    targetId: targetId ?? this.targetId,
     payload: payload ?? this.payload,
     queuedAt: queuedAt ?? this.queuedAt,
     failureCount: failureCount ?? this.failureCount,
@@ -629,6 +660,7 @@ class PendingCharacterWrite extends DataClass
           : this.characterId,
       ownerId: data.ownerId.present ? data.ownerId.value : this.ownerId,
       kind: data.kind.present ? data.kind.value : this.kind,
+      targetId: data.targetId.present ? data.targetId.value : this.targetId,
       payload: data.payload.present ? data.payload.value : this.payload,
       queuedAt: data.queuedAt.present ? data.queuedAt.value : this.queuedAt,
       failureCount: data.failureCount.present
@@ -647,6 +679,7 @@ class PendingCharacterWrite extends DataClass
           ..write('characterId: $characterId, ')
           ..write('ownerId: $ownerId, ')
           ..write('kind: $kind, ')
+          ..write('targetId: $targetId, ')
           ..write('payload: $payload, ')
           ..write('queuedAt: $queuedAt, ')
           ..write('failureCount: $failureCount, ')
@@ -661,6 +694,7 @@ class PendingCharacterWrite extends DataClass
     characterId,
     ownerId,
     kind,
+    targetId,
     payload,
     queuedAt,
     failureCount,
@@ -674,6 +708,7 @@ class PendingCharacterWrite extends DataClass
           other.characterId == this.characterId &&
           other.ownerId == this.ownerId &&
           other.kind == this.kind &&
+          other.targetId == this.targetId &&
           other.payload == this.payload &&
           other.queuedAt == this.queuedAt &&
           other.failureCount == this.failureCount &&
@@ -686,6 +721,7 @@ class PendingCharacterWritesCompanion
   final Value<String> characterId;
   final Value<String> ownerId;
   final Value<String> kind;
+  final Value<String> targetId;
   final Value<String> payload;
   final Value<DateTime> queuedAt;
   final Value<int> failureCount;
@@ -696,6 +732,7 @@ class PendingCharacterWritesCompanion
     this.characterId = const Value.absent(),
     this.ownerId = const Value.absent(),
     this.kind = const Value.absent(),
+    this.targetId = const Value.absent(),
     this.payload = const Value.absent(),
     this.queuedAt = const Value.absent(),
     this.failureCount = const Value.absent(),
@@ -707,6 +744,7 @@ class PendingCharacterWritesCompanion
     required String characterId,
     required String ownerId,
     required String kind,
+    this.targetId = const Value.absent(),
     required String payload,
     required DateTime queuedAt,
     this.failureCount = const Value.absent(),
@@ -722,6 +760,7 @@ class PendingCharacterWritesCompanion
     Expression<String>? characterId,
     Expression<String>? ownerId,
     Expression<String>? kind,
+    Expression<String>? targetId,
     Expression<String>? payload,
     Expression<DateTime>? queuedAt,
     Expression<int>? failureCount,
@@ -733,6 +772,7 @@ class PendingCharacterWritesCompanion
       if (characterId != null) 'character_id': characterId,
       if (ownerId != null) 'owner_id': ownerId,
       if (kind != null) 'kind': kind,
+      if (targetId != null) 'target_id': targetId,
       if (payload != null) 'payload': payload,
       if (queuedAt != null) 'queued_at': queuedAt,
       if (failureCount != null) 'failure_count': failureCount,
@@ -747,6 +787,7 @@ class PendingCharacterWritesCompanion
     Value<String>? characterId,
     Value<String>? ownerId,
     Value<String>? kind,
+    Value<String>? targetId,
     Value<String>? payload,
     Value<DateTime>? queuedAt,
     Value<int>? failureCount,
@@ -758,6 +799,7 @@ class PendingCharacterWritesCompanion
       characterId: characterId ?? this.characterId,
       ownerId: ownerId ?? this.ownerId,
       kind: kind ?? this.kind,
+      targetId: targetId ?? this.targetId,
       payload: payload ?? this.payload,
       queuedAt: queuedAt ?? this.queuedAt,
       failureCount: failureCount ?? this.failureCount,
@@ -778,6 +820,9 @@ class PendingCharacterWritesCompanion
     }
     if (kind.present) {
       map['kind'] = Variable<String>(kind.value);
+    }
+    if (targetId.present) {
+      map['target_id'] = Variable<String>(targetId.value);
     }
     if (payload.present) {
       map['payload'] = Variable<String>(payload.value);
@@ -806,6 +851,7 @@ class PendingCharacterWritesCompanion
           ..write('characterId: $characterId, ')
           ..write('ownerId: $ownerId, ')
           ..write('kind: $kind, ')
+          ..write('targetId: $targetId, ')
           ..write('payload: $payload, ')
           ..write('queuedAt: $queuedAt, ')
           ..write('failureCount: $failureCount, ')
@@ -1020,6 +1066,7 @@ typedef $$PendingCharacterWritesTableCreateCompanionBuilder =
       required String characterId,
       required String ownerId,
       required String kind,
+      Value<String> targetId,
       required String payload,
       required DateTime queuedAt,
       Value<int> failureCount,
@@ -1032,6 +1079,7 @@ typedef $$PendingCharacterWritesTableUpdateCompanionBuilder =
       Value<String> characterId,
       Value<String> ownerId,
       Value<String> kind,
+      Value<String> targetId,
       Value<String> payload,
       Value<DateTime> queuedAt,
       Value<int> failureCount,
@@ -1061,6 +1109,11 @@ class $$PendingCharacterWritesTableFilterComposer
 
   ColumnFilters<String> get kind => $composableBuilder(
     column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get targetId => $composableBuilder(
+    column: $table.targetId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1114,6 +1167,11 @@ class $$PendingCharacterWritesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get targetId => $composableBuilder(
+    column: $table.targetId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get payload => $composableBuilder(
     column: $table.payload,
     builder: (column) => ColumnOrderings(column),
@@ -1159,6 +1217,9 @@ class $$PendingCharacterWritesTableAnnotationComposer
 
   GeneratedColumn<String> get kind =>
       $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get targetId =>
+      $composableBuilder(column: $table.targetId, builder: (column) => column);
 
   GeneratedColumn<String> get payload =>
       $composableBuilder(column: $table.payload, builder: (column) => column);
@@ -1229,6 +1290,7 @@ class $$PendingCharacterWritesTableTableManager
                 Value<String> characterId = const Value.absent(),
                 Value<String> ownerId = const Value.absent(),
                 Value<String> kind = const Value.absent(),
+                Value<String> targetId = const Value.absent(),
                 Value<String> payload = const Value.absent(),
                 Value<DateTime> queuedAt = const Value.absent(),
                 Value<int> failureCount = const Value.absent(),
@@ -1239,6 +1301,7 @@ class $$PendingCharacterWritesTableTableManager
                 characterId: characterId,
                 ownerId: ownerId,
                 kind: kind,
+                targetId: targetId,
                 payload: payload,
                 queuedAt: queuedAt,
                 failureCount: failureCount,
@@ -1251,6 +1314,7 @@ class $$PendingCharacterWritesTableTableManager
                 required String characterId,
                 required String ownerId,
                 required String kind,
+                Value<String> targetId = const Value.absent(),
                 required String payload,
                 required DateTime queuedAt,
                 Value<int> failureCount = const Value.absent(),
@@ -1261,6 +1325,7 @@ class $$PendingCharacterWritesTableTableManager
                 characterId: characterId,
                 ownerId: ownerId,
                 kind: kind,
+                targetId: targetId,
                 payload: payload,
                 queuedAt: queuedAt,
                 failureCount: failureCount,

@@ -127,7 +127,7 @@ class FakeRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> applyRest({
+  Future<WriteOutcome> applyRest({
     required String characterId,
     required RestType type,
     required String className,
@@ -149,6 +149,7 @@ class FakeRepository implements CharacterRepository {
       );
       current = current.copyWith(currentHp: newCurrentHp);
     }
+    return WriteOutcome.synced;
   }
 
   @override

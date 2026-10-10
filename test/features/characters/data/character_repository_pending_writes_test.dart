@@ -65,7 +65,12 @@ void main() {
       pendingWrites,
       connectivity,
     );
-    syncer = PendingCharacterWriteSyncer(client, pendingWrites, cache);
+    syncer = PendingCharacterWriteSyncer(
+      client,
+      pendingWrites,
+      cache,
+      repository,
+    );
   });
 
   tearDown(() async {
@@ -375,6 +380,7 @@ void main() {
         characterId: _characterId,
         ownerId: _ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 7, 'temporaryHp': 0},
       );
 
@@ -457,6 +463,7 @@ void main() {
         characterId: _characterId,
         ownerId: _ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 7, 'temporaryHp': 0},
       );
       server.network = _Network.writesRejected;
@@ -484,12 +491,14 @@ void main() {
         characterId: _characterId,
         ownerId: 'owner-2',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 1, 'temporaryHp': 9},
       );
       await pendingWrites.enqueue(
         characterId: _characterId,
         ownerId: 'owner-2',
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 99999},
       );
 
@@ -510,6 +519,7 @@ void main() {
         characterId: _characterId,
         ownerId: 'owner-2',
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 1, 'temporaryHp': 9},
       );
 
@@ -528,6 +538,7 @@ void main() {
         characterId: 'char-2',
         ownerId: _ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 1, 'temporaryHp': 9},
       );
 
@@ -553,6 +564,7 @@ void main() {
         characterId: _characterId,
         ownerId: _ownerId,
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 150},
       );
 
@@ -607,12 +619,14 @@ void main() {
         characterId: _characterId,
         ownerId: _ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 7, 'temporaryHp': 2},
       );
       await pendingWrites.enqueue(
         characterId: _characterId,
         ownerId: _ownerId,
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 150},
       );
 
@@ -630,6 +644,7 @@ void main() {
         characterId: _characterId,
         ownerId: _ownerId,
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 150},
       );
       server.network = _Network.writesRejected;
@@ -650,12 +665,14 @@ void main() {
         characterId: _characterId,
         ownerId: _ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 7, 'temporaryHp': 2},
       );
       await pendingWrites.enqueue(
         characterId: _characterId,
         ownerId: _ownerId,
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 150},
       );
 
@@ -968,6 +985,7 @@ void main() {
         characterId: _characterId,
         ownerId: _ownerId,
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 150},
       );
       await syncer.sync();
@@ -982,6 +1000,7 @@ void main() {
         characterId: _characterId,
         ownerId: _ownerId,
         kind: PendingCharacterWriteKind.xp,
+        targetId: '',
         payload: {'newXp': 150},
       );
       server.network = _Network.writesRejected;
@@ -1089,6 +1108,7 @@ void main() {
         characterId: _characterId,
         ownerId: _ownerId,
         kind: PendingCharacterWriteKind.hp,
+        targetId: '',
         payload: {'currentHp': 7, 'temporaryHp': 0},
       );
       final spyCache = _SpyCache(db, pendingWrites);
@@ -1117,6 +1137,7 @@ void main() {
           characterId: _characterId,
           ownerId: _ownerId,
           kind: PendingCharacterWriteKind.hp,
+          targetId: '',
           payload: {'currentHp': 7, 'temporaryHp': 0},
         );
         final spyCache = _SpyCache(db, pendingWrites);
@@ -1125,6 +1146,7 @@ void main() {
           client,
           pendingWrites,
           spyCache,
+          repository,
         ).sync();
 
         expect(spyCache.pendingKindsAtUpdate, [

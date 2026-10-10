@@ -442,13 +442,19 @@ class _ScriptedSyncer extends PendingCharacterWriteSyncer {
         SupabaseClient('https://fake.supabase.test', 'fake-anon-key'),
         PendingCharacterWriteQueue(db),
         ReferenceDataCache(db),
+        SupabaseCharacterRepository(
+          SupabaseClient('https://fake.supabase.test', 'fake-anon-key'),
+          ReferenceDataCache(db),
+          PendingCharacterWriteQueue(db),
+          _FakeConnectivityChecker(),
+        ),
       );
 
   Set<String> resultToReturn = const {};
   int callCount = 0;
 
   @override
-  Future<Set<String>> sync() async {
+  Future<Set<String>> sync({Set<PendingCharacterWriteKind>? onlyKinds}) async {
     callCount++;
     return resultToReturn;
   }
@@ -620,13 +626,15 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> applyRest({
+  Future<WriteOutcome> applyRest({
     required String characterId,
     required RestType type,
     required String className,
     int diceSpent = 0,
     int appliedGain = 0,
-  }) async {}
+  }) async {
+    return WriteOutcome.synced;
+  }
 
   @override
   Future<void> leaveStory({required String characterCampaignId}) async {}

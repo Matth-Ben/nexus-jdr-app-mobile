@@ -635,22 +635,16 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         return;
       }
       if (outcome == WriteOutcome.queued) {
-        // Voir la documentation de `CharacterRepository.castSpell` : cette
-        // écriture n'est jamais mise en file, contrairement à `updateHp`/
-        // `addXp` — rien ne sera synchronisé plus tard, donc traité comme un
-        // échec du point de vue de l'état local (revert) avec un message
-        // honnête distinct de [_offlineQueuedMessage] (décision chef de
-        // projet, revue QA/code).
-        if (mounted && _restGeneration == myRestGeneration) {
-          setState(
-            () => _localSpellSlotsUsed = _withRevertedOverride(
-              _localSpellSlotsUsed,
-              slotLevel,
-              previousOverride,
-            ),
-          );
-        }
-        _showSnackBar(_offlineNotPersistedMessage);
+        // D11 du registre de dette technique (09/10/2026) : `castSpell` est
+        // désormais réellement mise en file (`PendingCharacterWriteQueue`,
+        // voir sa documentation) — contrairement au comportement antérieur
+        // (jamais mis en file, traité comme un échec local avec revert),
+        // l'état optimiste local posé ci-dessus reste affiché tel quel
+        // (rien à annuler : il sera rejoué au retour du réseau), même
+        // message honnête que [_applyHpState]/[_addXp]
+        // ([_offlineQueuedMessage]). Aucune fiche à relire côté serveur pour
+        // l'instant.
+        _showSnackBar(_offlineQueuedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -719,12 +713,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         return;
       }
       if (outcome == WriteOutcome.queued) {
-        // Voir la documentation de `CharacterRepository.castSpell` : même
-        // règle que la branche classique ci-dessus, jamais mise en file.
-        if (mounted && _restGeneration == myRestGeneration) {
-          setState(() => _localPactSlotUsed = previousOverride);
-        }
-        _showSnackBar(_offlineNotPersistedMessage);
+        // D11 : même règle que la branche classique ci-dessus (voir son
+        // commentaire) — mise en file réelle désormais, état optimiste
+        // conservé tel quel.
+        _showSnackBar(_offlineQueuedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -836,13 +828,17 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             usesSpent: newSpent,
           );
       if (outcome == WriteOutcome.queued) {
-        // Jamais mise en file (voir `CharacterRepository
-        // .setInnateSpellUsesSpent`) : le lancer n'est pas enregistré, la
-        // ligne revient à « disponible ». Testé AVANT la garde de course :
-        // rien n'a été écrit, il n'y a donc rien à réaffirmer en base, même
-        // si un repos a démarré entre-temps.
-        revertOverride();
-        _showSnackBar(_offlineNotPersistedMessage);
+        // D11 : mise en file réelle désormais (voir `CharacterRepository
+        // .setInnateSpellUsesSpent`) — l'état optimiste local reste affiché
+        // tel quel, rien à annuler. Testé AVANT la garde de course, comme
+        // avant cette extension : un lancer mis en file pendant qu'un repos
+        // est en vol n'a aucune valeur serveur fraîche à réaffirmer tant
+        // qu'il reste hors ligne (la mise en file elle-même ne fait aucune
+        // lecture serveur) — au pire, la prochaine synchronisation rejoue une
+        // valeur légèrement périmée vis-à-vis d'un repos entre-temps réussi,
+        // limite jugée acceptable (cas rare : repos et lancer hors ligne
+        // quasi simultanés).
+        _showSnackBar(_offlineQueuedMessage);
         return;
       }
       if (_restGeneration != myRestGeneration) {
@@ -1044,20 +1040,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         return;
       }
       if (outcome == WriteOutcome.queued) {
-        // Voir la documentation de `CharacterRepository.useClassFeature` et
-        // le commentaire équivalent de [_castSpell] : jamais mise en file,
-        // traité comme un échec côté état local, message distinct de
-        // [_offlineQueuedMessage].
-        if (mounted && _restGeneration == myRestGeneration) {
-          setState(
-            () => _localFeatureUsesRemaining = _withRevertedOverride(
-              _localFeatureUsesRemaining,
-              feature.id,
-              previousOverride,
-            ),
-          );
-        }
-        _showSnackBar(_offlineNotPersistedMessage);
+        // D11 : voir le commentaire équivalent de [_castSpell] — mise en
+        // file réelle désormais, état optimiste conservé tel quel.
+        _showSnackBar(_offlineQueuedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -1863,7 +1848,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     setState(() => _isApplyingRest = true);
 
     try {
-      await ref
+      final outcome = await ref
           .read(characterRepositoryProvider)
           .applyRest(
             characterId: widget.characterId,
@@ -1872,6 +1857,19 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             diceSpent: diceSpent,
             appliedGain: appliedGain,
           );
+      if (outcome == WriteOutcome.queued) {
+        // D11 du registre de dette technique (09/10/2026) : ce repos est
+        // réellement mis en file (`PendingCharacterWriteQueue`, kind `rest`)
+        // et sera rejoué tel quel au retour du réseau — voir la
+        // documentation de `CharacterRepository.applyRest`. Tout l'état
+        // optimiste local déjà posé ci-dessus (PV, emplacements de sorts,
+        // aptitudes, pacte, sorts innés selon le type de repos) reste
+        // affiché tel quel, rien à annuler ; aucune fiche à relire côté
+        // serveur pour l'instant (même principe que [_applyHpState]).
+        if (!mounted) return true;
+        _showSnackBar(_offlineQueuedMessage);
+        return true;
+      }
       ref.invalidate(characterDetailProvider(widget.characterId));
       if (!mounted) return false;
       _showSnackBar(
@@ -1979,25 +1977,35 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     );
   }
 
-  /// Message affiché quand `updateHp`/`addXp` retourne [WriteOutcome.queued]
-  /// (mode hors-ligne) — voir `_applyHpState`/`_addXp`. Même registre que le
-  /// reste des messages de cet écran (ex. "Impossible d'ajouter l'XP.
-  /// Réessayez."), honnête sur le fait que le changement n'est pas encore
-  /// confirmé côté serveur.
+  /// Message affiché quand une écriture réellement mise en file
+  /// (`PendingCharacterWriteQueue`) retourne [WriteOutcome.queued] (mode
+  /// hors-ligne) — `updateHp`/`addXp` (voir `_applyHpState`/`_addXp`) et,
+  /// depuis D11 du registre de dette technique (09/10/2026),
+  /// `castSpell`/`setInnateSpellUsesSpent`/`useClassFeature`/`applyRest`
+  /// (voir `_castSpell`/`_castPactSpell`/`_castInnateSpell`/
+  /// `_useClassFeature`/`_applyRest`). Même registre que le reste des
+  /// messages de cet écran (ex. "Impossible d'ajouter l'XP. Réessayez."),
+  /// honnête sur le fait que le changement n'est pas encore confirmé côté
+  /// serveur — mais, contrairement à [_offlineNotPersistedMessage], promet
+  /// une synchronisation future réelle : l'état optimiste local déjà posé
+  /// par l'appelant n'est jamais annulé dans ce cas (voir chaque appelant).
   static const _offlineQueuedMessage =
       'Hors ligne : sera synchronisé dès que la connexion revient.';
 
-  /// Message affiché quand `castSpell`/`useClassFeature` retourne
-  /// [WriteOutcome.queued] (mode hors-ligne) — voir `_castSpell`/
-  /// `_useClassFeature`. Distinct de [_offlineQueuedMessage] à dessein
-  /// (décision chef de projet, revue QA) : contrairement à `updateHp`/
-  /// `addXp`, ces deux écritures ne sont **jamais** mises en file
-  /// (`PendingCharacterWriteQueue` reste scopée à `hp`/`xp`) — rien ne sera
-  /// synchronisé automatiquement au retour du réseau, donc pas de promesse
-  /// de synchronisation ici. L'état optimiste local est aussi annulé dans ce
-  /// cas (revert), contrairement à [_offlineQueuedMessage] : laisser
-  /// affichée une pastille/un compteur décrémenté serait trompeur puisque
-  /// rien ne sera jamais synchronisé.
+  /// Message affiché quand une écriture qui n'est **toujours pas** mise en
+  /// file (`useInventoryItem`/`setInventoryItemEquipped`/`equipWeaponToSlot`/
+  /// `setInventoryItemAttuned`/`removeInventoryItem`/`adjustCurrency`/
+  /// `addInventoryItem`/`addCustomInventoryItem`/`addReward`/
+  /// `updateStoryFields` — décision chef de projet du 09/10/2026, D11 : seuls
+  /// le lancer de sort, les aptitudes et le repos ont été étendus, ces
+  /// écritures de l'onglet "Inventaire"/"Histoire" restent hors périmètre)
+  /// retourne [WriteOutcome.queued] (mode hors-ligne). Distinct de
+  /// [_offlineQueuedMessage] à dessein : rien ne sera synchronisé
+  /// automatiquement au retour du réseau pour ces écritures, donc pas de
+  /// promesse de synchronisation ici. L'état optimiste local (quand il y en
+  /// a un) est aussi annulé dans ce cas (revert) : laisser affichée une
+  /// valeur modifiée serait trompeur puisque rien ne sera jamais
+  /// synchronisé.
   static const _offlineNotPersistedMessage =
       "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
       'fois reconnecté.';

@@ -70,7 +70,7 @@ class FakeRepository implements CharacterRepository {
   }
 
   @override
-  Future<void> applyRest({
+  Future<WriteOutcome> applyRest({
     required String characterId,
     required RestType type,
     required String className,
@@ -84,6 +84,7 @@ class FakeRepository implements CharacterRepository {
         spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 0)],
       );
     }
+    return WriteOutcome.synced;
   }
 
   @override
