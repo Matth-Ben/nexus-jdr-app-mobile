@@ -7,6 +7,14 @@
 /// convention de clé que `SpellSlotProgression`/`SpellcastingRules` : le
 /// **nom de classe en français**, pas `classes.id`.
 ///
+/// L'Artificier (D41, `docs/dette-technique.md`) a sa propre progression de
+/// cantrips connus dans [cantripsKnownByLevel] (2 aux niveaux 1-9, 3 aux
+/// niveaux 10-13, 4 aux niveaux 14-20 — RAW, *Tasha's Cauldron of
+/// Everything*) : sans cette entrée, [newCantripsAt] retombait toujours sur
+/// 0 pour lui et `presentation/providers/level_up_provider.dart` ne
+/// déclenchait jamais l'étape "Sorts" à ses niveaux 10/14, privant le joueur
+/// de son 3ᵉ/4ᵉ cantrip — trouvé par `qa-testeur` en relisant D41.
+///
 /// Étape "Sorts" généralisée de la montée de niveau
 /// (`presentation/level_up_screen.dart`) — jusqu'ici cette étape ne couvrait
 /// que les sorts de départ d'une nouvelle classe "à sorts connus" démarrée au
@@ -22,15 +30,47 @@
 /// `SpellcastingRules.cantripQuotaFor`/`levelOneSpellQuotaFor` pour Barde
 /// (2/4), Ensorceleur (4/2) et Occultiste (2/2) — les deux tables ont donc pu
 /// être unifiées dans `presentation/providers/level_up_provider.dart` sans
-/// jamais changer le comportement déjà testé du multiclassage niveau 1. Le
-/// Rôdeur diverge (`SpellcastingRules.levelOneSpellQuotaFor('Rôdeur')` vaut 2
-/// par simplification documentée comme propre à la CRÉATION, alors que RAW il
+/// jamais changer le comportement déjà testé du multiclassage niveau 1.
+/// Même coïncidence pour l'Artificier côté cantrips (2, voir D41) : à la
+/// différence de Barde/Ensorceleur/Occultiste, ce n'est pas une
+/// simplification choisie par analogie, c'est la vraie valeur RAW de
+/// niveau 1 (voir le commentaire de classe). Le Rôdeur diverge
+/// (`SpellcastingRules.levelOneSpellQuotaFor('Rôdeur')` vaut 2 par
+/// simplification documentée comme propre à la CRÉATION, alors que RAW il
 /// n'a aucun sort au niveau 1) : cette table encode la valeur RAW correcte
 /// (0), volontairement différente de `SpellcastingRules` pour ce cas précis.
 abstract final class SpellsKnownProgression {
   /// Cantrips connus par niveau de classe. Rôdeur absent (n'a RAW jamais de
   /// cantrip, à aucun niveau) — [newCantripsAt] retombe alors sur 0.
   static const Map<String, Map<int, int>> cantripsKnownByLevel = {
+    // D41 : Artificier, demi-lanceur qui prépare — mais sa progression de
+    // cantrips CONNUS suit sa propre table RAW (2/3/4), indépendante de la
+    // table d'emplacements de sorts simplifiée (voir
+    // `spell_slot_progression.dart`, qui réutilise celle de Paladin/Rôdeur
+    // par décision produit) : ces deux progressions ne sont pas liées en
+    // 5e, pas une incohérence.
+    'Artificier': {
+      1: 2,
+      2: 2,
+      3: 2,
+      4: 2,
+      5: 2,
+      6: 2,
+      7: 2,
+      8: 2,
+      9: 2,
+      10: 3,
+      11: 3,
+      12: 3,
+      13: 3,
+      14: 4,
+      15: 4,
+      16: 4,
+      17: 4,
+      18: 4,
+      19: 4,
+      20: 4,
+    },
     'Barde': {
       1: 2,
       2: 2,

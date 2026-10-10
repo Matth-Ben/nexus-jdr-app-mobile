@@ -47,17 +47,20 @@ import '../../../core/rules/spell_status.dart';
 ///    disposant de sorts), pas une valeur inventée sans ancrage aux règles.
 /// 3. Artificier (D41, `docs/dette-technique.md`, décision produit du
 ///    10/10/2026 : demi-lanceur qui prépare, voir
-///    [ClassSpellcastingRegistry]) — même méthode que le point 2 pour les
-///    cantrips : RAW il n'en a aucun au niveau 1 (les 2 premiers arrivent au
-///    niveau 2), quota retenu par cohérence avec cette valeur de niveau 2
-///    plutôt que 0 (qui masquerait l'onglet "Mineurs", incohérent avec le
-///    reste de l'étape une fois l'Artificier reconnu comme lanceur). Pour
-///    les sorts de niveau 1 : RAW il prépare (modificateur d'Intelligence +
-///    moitié du niveau d'Artificier arrondie à l'inférieur, minimum 1),
-///    soit 0 + modificateur au niveau 1 — valeur retenue (3) par cohérence
-///    avec le modificateur le plus courant (+3), même méthode que Clerc/
-///    Druide ci-dessus, mais sans le "+ niveau" (l'Artificier n'a droit à
-///    aucun bonus de niveau à ce stade, contrairement à Clerc/Druide).
+///    [ClassSpellcastingRegistry]) — **contrairement à Paladin/Rôdeur (point
+///    2), ce n'est PAS une valeur de secours par analogie avec un niveau
+///    supérieur** : RAW, l'Artificier a bien 2 cantrips dès le niveau 1
+///    (`domain/spells_known_progression.dart::cantripsKnownByLevel`,
+///    confirmé par `qa-testeur` en relisant D41 — c'est justement ce qui le
+///    distingue de Paladin/Rôdeur, qui eux n'ont RAW aucun sort avant le
+///    niveau 2). Le chiffre retenu (2) est donc la vraie valeur RAW de
+///    niveau 1, pas une simplification. Pour les sorts de niveau 1 : RAW il
+///    prépare (modificateur d'Intelligence + moitié du niveau d'Artificier
+///    arrondie à l'inférieur, minimum 1), soit 0 + modificateur au niveau 1
+///    — valeur retenue (3) par cohérence avec le modificateur le plus
+///    courant (+3), même méthode que Clerc/Druide ci-dessus, mais sans le
+///    "+ niveau" (l'Artificier n'a droit à aucun bonus de niveau à ce
+///    stade, contrairement à Clerc/Druide).
 abstract final class SpellcastingRules {
   /// Cantrips connus au niveau 1 (`Manuel des Joueurs`, valeur exacte,
   /// indépendante du modificateur de caractéristique — contrairement aux
