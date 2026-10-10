@@ -2189,6 +2189,91 @@ void main() {
     );
   });
 
+  group('étape "Sorts" — Artificier niveau 10 (3e cantrip RAW, D41 : '
+      'régression du manque fonctionnel comblé par eb3ed8a)', () {
+    CharacterDetailClassRow artificierClass({required int level}) =>
+        CharacterDetailClassRow(
+          classId: 13,
+          hitDie: 8,
+          className: 'Artificier',
+          level: level,
+          isPrimary: true,
+          savingThrowProficiencies: const [],
+        );
+
+    const newArtificerCantrip = SpellOption(
+      id: 900,
+      name: 'Réparation',
+      level: 0,
+      school: 'Transmutation',
+      castingTime: '1 action',
+    );
+
+    testWidgets("l'étape \"Sorts\" se déclenche (requiresSpellSelection) : avant "
+        'eb3ed8a, SpellsKnownProgression.newCantripsAt(\'Artificier\', 10) '
+        'retombait toujours sur 0 et cette étape était invisible — ce test '
+        "aurait échoué sur l'ancien code (totalSteps 3, saut direct au "
+        'récapitulatif)', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [artificierClass(level: 9)],
+        xp: 0,
+      );
+      fakeRepository.levelDataByLevel = {
+        10: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+      fakeRepository.applyResultToReturn = const LevelUpApplyResult(
+        newLevel: 10,
+        newMaxHp: 50,
+        newCurrentHp: 46,
+      );
+      fakeCreationRepository.spellCatalogByClassId = {
+        13: const SpellCatalog(spells: [newArtificerCantrip]),
+      };
+
+      await pushPastAnnouncement(tester, 10);
+      expect(find.text('Étape 1 sur 4 · Points de vie'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      expect(find.text('Étape 2 sur 4 · Aptitudes de classe'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      // Niveau 9 -> 10 : table d'emplacements de sorts identique (voir
+      // `SpellSlotProgression._halfCasterSlots`), donc seul le 3e cantrip
+      // RAW (`SpellsKnownProgression.cantripsKnownByLevel['Artificier']`)
+      // déclenche cette étape — preuve que `requiresSpellSelection` ne
+      // dépend pas des emplacements de sorts.
+      expect(find.text('Étape 3 sur 4 · Sorts'), findsOneWidget);
+      expect(find.text('SORTS MINEURS CONNUS'), findsOneWidget);
+      // Un seul onglet visible (quota de sorts de niveau 1 nul : l'Artificier
+      // prépare depuis toute sa liste, il ne "connaît" pas de sorts de
+      // niveau 1 — voir `SpellsKnownProgression`) : pas de sélecteur d'onglet.
+      expect(find.text('Mineurs'), findsNothing);
+
+      // "Continuer" désactivé tant que le cantrip n'est pas choisi (quota 1).
+      await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(find.text('Étape 3 sur 4 · Sorts'), findsOneWidget);
+
+      await tester.tap(find.text('Réparation'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      // Récapitulatif : bloc "Nouveaux sorts mineurs" présent.
+      expect(find.text('Nouveaux sorts mineurs'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      final applied = fakeRepository.applyLevelUpCalls.single;
+      expect(applied.className, 'Artificier');
+      expect(applied.initialSpellIds, [900]);
+    });
+  });
+
   group('étape classDecision (multiclassage)', () {
     testWidgets(
       'invisible (saut direct à l\'annonce) quand aucune classe n\'est '
