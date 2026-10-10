@@ -63,10 +63,14 @@ void main() {
   /// d'appartenance de `castSpell`/`useClassFeature`/`applyRestOnline` —
   /// sans aucune classe (chemin le plus simple d'`applyRest`, déjà couvert
   /// par `character_repository_rest_test.dart` : « personnage sans aucune
-  /// classe : repos appliqué sans erreur »).
+  /// classe : repos appliqué sans erreur »). `max_hp`/`current_hp`/
+  /// `temporary_hp` : nécessaires au chemin repos LONG (relecture de
+  /// `max_hp` avant `current_hp = max_hp`, voir le scénario de
+  /// non-régression du deadlock D35/D11 ci-dessous) — sans effet sur les
+  /// autres tests de ce fichier, qui ne les lisent jamais.
   Map<String, List<Map<String, dynamic>>> baseRows() => {
     'characters': [
-      {'id': _characterId},
+      {'id': _characterId, 'max_hp': 10, 'current_hp': 7, 'temporary_hp': 0},
     ],
     'character_classes': [],
   };
@@ -461,6 +465,56 @@ void main() {
         );
       },
     );
+
+    // Non-régression (défaut trouvé en revue QA, même cause racine que le
+    // deadlock ci-dessus) : avant la correction, `_blockIfPendingHpOrXpWrites`
+    // ne filtrait pas par kind — une entrée `classFeature` (ou tout autre
+    // kind non hp/xp) encore en file pour ce personnage faisait échouer un
+    // repos LONG (qui déclenche D35) avec le message « Des ajustements de
+    // PV/XP sont encore en attente... », même si aucun PV/XP n'était en
+    // cause. Le repos doit réussir normalement, et l'entrée `classFeature`
+    // (hors du périmètre de D35) doit rester intacte, jamais touchée par ce
+    // garde-fou.
+    test("une entrée classFeature encore en file n'est jamais confondue avec "
+        'un ajustement PV/XP par le garde-fou D35 (repos long réussit '
+        'normalement)', () async {
+      await pendingWrites.enqueue(
+        characterId: _characterId,
+        ownerId: _ownerId,
+        kind: PendingCharacterWriteKind.classFeature,
+        targetId: '50',
+        payload: {'classFeatureId': 50, 'usesRemaining': 1},
+      );
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: _ownerId,
+        recorded: [],
+        tableRows: baseRows(),
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: true),
+      );
+
+      final outcome = await repository.applyRest(
+        characterId: _characterId,
+        type: RestType.long,
+        className: '',
+      );
+
+      expect(outcome, WriteOutcome.synced);
+      final pending = await pendingWrites.allForOwner(_ownerId);
+      expect(
+        pending,
+        hasLength(1),
+        reason:
+            "l'entrée classFeature n'a aucun rapport avec D35 : ni "
+            'synchronisée (filtrée hors de `sync(onlyKinds: {hp, xp})`), '
+            'ni la cause d\'un blocage',
+      );
+      expect(pending.single.kind, PendingCharacterWriteKind.classFeature);
+    });
   });
 
   group('fetchCharacterDetail : superposition des écritures en attente '
@@ -754,6 +808,82 @@ void main() {
 
       expect(synced, {_characterId});
       expect(await pendingWrites.allForOwner(_ownerId), isEmpty);
+    });
+
+    // Non-régression (bug bloquant trouvé en revue QA) : un repos LONG mis
+    // en file (ou un repos court avec `appliedGain > 0`) déclenche, une fois
+    // synchronisé, le garde-fou D35 (`_blockIfPendingHpOrXpWrites`) à
+    // l'intérieur même d'`applyRestOnline` — qui appelait auparavant un
+    // `PendingCharacterWriteSyncer.sync()` NON filtré. Puisque l'entrée
+    // `rest` en cours de rejeu est toujours en file à ce stade (retirée
+    // seulement après le succès d'`applyRestOnline`), ce `sync()` imbriqué
+    // retentait `PendingCharacterWriteQueue.runExclusive` pour la MÊME clé
+    // `(characterId, rest, '')` déjà tenue par l'appel englobant —
+    // attente circulaire sur le verrou en mémoire, jamais résolue
+    // (`sync()` ne se serait jamais terminé). `.timeout(...)` ci-dessous
+    // transforme un deadlock en échec de test explicite et rapide plutôt
+    // qu'un test qui pendrait silencieusement.
+    test('rest LONG mis en file -> synchronisé avec succès sans jamais '
+        'bloquer (deadlock D35/D11 corrigé)', () async {
+      await pendingWrites.enqueue(
+        characterId: _characterId,
+        ownerId: _ownerId,
+        kind: PendingCharacterWriteKind.rest,
+        targetId: '',
+        payload: {
+          'type': 'long',
+          'className': '',
+          'diceSpent': 0,
+          'appliedGain': 0,
+        },
+      );
+      final recorded = <_Recorded>[];
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: _ownerId,
+        recorded: recorded,
+        tableRows: baseRows(),
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: true),
+      );
+      final syncer = PendingCharacterWriteSyncer(
+        client,
+        pendingWrites,
+        cache,
+        repository,
+      );
+
+      final synced = await syncer.sync().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => fail(
+          'sync() ne doit jamais bloquer indéfiniment sur un repos long '
+          'mis en file — deadlock D35/D11',
+        ),
+      );
+
+      expect(synced, {_characterId});
+      expect(await pendingWrites.allForOwner(_ownerId), isEmpty);
+      // Le verrou `(characterId, rest, '')` doit être réellement libéré :
+      // un nouveau repos EN LIGNE pour ce même personnage ne doit pas non
+      // plus se bloquer derrière lui (c'est précisément l'autre symptôme
+      // observé du deadlock).
+      final secondAttempt = await repository
+          .applyRest(
+            characterId: _characterId,
+            type: RestType.short,
+            className: '',
+          )
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => fail(
+              'le verrou (characterId, rest, \'\') est resté tenu après '
+              'la synchro : un nouveau repos en ligne se bloque aussi',
+            ),
+          );
+      expect(secondAttempt, WriteOutcome.synced);
     });
 
     test('rest : refus non rejouable (RLS) -> compte comme un échec D34 sur '

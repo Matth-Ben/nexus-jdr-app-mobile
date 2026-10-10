@@ -129,7 +129,24 @@ class PendingCharacterWriteSyncer {
   /// `characterDetailProvider(characterId)` pour chacun d'eux (voir
   /// `character_write_sync_coordinator.dart`) — [PendingCharacterWriteSyncer]
   /// lui-même ne connaît rien de Riverpod.
-  Future<Set<String>> sync() async {
+  ///
+  /// [onlyKinds] (`null` par défaut, voie normale : tout synchroniser —
+  /// seul appelant réel, `CharacterWriteSyncCoordinator`) restreint cette
+  /// passe aux seuls kinds listés. Introduit pour corriger un deadlock
+  /// (trouvé en revue QA) : `SupabaseCharacterRepository
+  /// ._blockIfPendingHpOrXpWrites` (D35) appelle [sync] DEPUIS L'INTÉRIEUR
+  /// d'une entrée `rest` (ou `hp`/`xp`) déjà en cours de rejeu par CET APPEL
+  /// [sync] lui-même (`applyRestOnline`, appelé pour un repos long/avec
+  /// `appliedGain > 0`, applique ce garde-fou en tout premier). Sans ce
+  /// filtre, l'appel imbriqué retente `PendingCharacterWriteQueue
+  /// .runExclusive` pour la MÊME clé `(characterId, rest, '')` déjà tenue
+  /// par l'appel englobant — attente circulaire, deadlock permanent (la
+  /// clé ne se libère jamais, bloquant aussi tout nouveau repos EN LIGNE
+  /// pour ce personnage jusqu'au redémarrage de l'app). En restreignant
+  /// l'appel imbriqué à `{hp, xp}` (seul besoin réel de D35, voir sa
+  /// documentation), il ne retente jamais la clé `rest`/`spellSlot`/
+  /// `innateSpell`/`classFeature` déjà tenue par l'appelant.
+  Future<Set<String>> sync({Set<PendingCharacterWriteKind>? onlyKinds}) async {
     final ownerId = _client.auth.currentUser?.id;
     if (ownerId == null) {
       return const {};
@@ -139,6 +156,7 @@ class PendingCharacterWriteSyncer {
     final synced = <String>{};
 
     for (final listed in pending) {
+      if (onlyKinds != null && !onlyKinds.contains(listed.kind)) continue;
       try {
         await _pendingWrites.runExclusive(
           characterId: listed.characterId,

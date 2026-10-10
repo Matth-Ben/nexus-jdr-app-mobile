@@ -981,6 +981,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
   late final PendingCharacterWriteSyncer _pendingWriteSyncer =
       PendingCharacterWriteSyncer(_client, _pendingWrites, _cache, this);
 
+  /// Kinds couverts par le garde-fou D35 ci-dessous — volontairement
+  /// restreint à `hp`/`xp`, voir [_blockIfPendingHpOrXpWrites] pour le
+  /// rationale complet (deadlock corrigé en revue QA, D11).
+  static const _hpOrXpKinds = {
+    PendingCharacterWriteKind.hp,
+    PendingCharacterWriteKind.xp,
+  };
+
   /// D35 du registre de dette technique : avant [applyRest]/[applyLevelUp],
   /// qui relisent toutes deux `characters.current_hp`/`max_hp` depuis le
   /// serveur pour y appliquer un delta, force d'abord la synchronisation
@@ -990,17 +998,43 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// synchronisation différée réécrirait ensuite par-dessus avec une valeur
   /// elle-même périmée après coup.
   ///
+  /// **Restreint explicitement à `hp`/`xp`** (`onlyKinds: _hpOrXpKinds`, et
+  /// même filtre appliqué à la relecture [stillPending] ci-dessous) —
+  /// jusqu'à D11 (09/10/2026), `PendingCharacterWriteKind` ne contenait que
+  /// `hp`/`xp`, donc cette restriction était vraie par construction sans
+  /// avoir besoin d'être explicite. Depuis que `spellSlot`/`innateSpell`/
+  /// `classFeature`/`rest` existent, l'absence de ce filtre causait deux
+  /// défauts trouvés en revue QA :
+  /// 1. **Deadlock** : [applyRestOnline] (appelée par [applyRest] en ligne
+  ///    ET par `PendingCharacterWriteSyncer.sync` pour rejouer un repos mis
+  ///    en file) applique ce garde-fou en tout premier pour un repos long
+  ///    (ou `appliedGain > 0`). Un `sync()` NON filtré, appelé DEPUIS
+  ///    L'INTÉRIEUR du rejeu d'une entrée `rest` déjà tenue par
+  ///    `PendingCharacterWriteQueue.runExclusive(characterId, rest, '')`,
+  ///    retenterait cette même clé (l'entrée `rest` est toujours en file à
+  ///    ce stade, retirée seulement après le succès d'[applyRestOnline]) —
+  ///    attente circulaire sur le verrou en mémoire, jamais résolue. Le
+  ///    filtrer sur `hp`/`xp` élimine cette ré-entrée : la synchronisation
+  ///    imbriquée ne retente plus jamais la clé `rest`/`spellSlot`/
+  ///    `innateSpell`/`classFeature` déjà tenue par l'appelant englobant.
+  /// 2. **Message trompeur** : sans ce filtre, une entrée `classFeature` (ou
+  ///    toute autre) encore en file pour CE personnage (ex. resynchro en
+  ///    échec transitoire) faisait échouer [applyRest]/[applyLevelUp] avec
+  ///    le message « Des ajustements de PV/XP sont encore en attente... »
+  ///    même quand aucun PV/XP n'était en cause.
+  ///
   /// [PendingCharacterWriteSyncer.sync] est best-effort sur TOUT le compte,
   /// jamais garanti d'avoir vidé les entrées de [characterId] précisément
   /// (vraiment hors ligne, ou refus non rejouable pas encore abandonné D34) :
   /// une fois la synchronisation tentée, revérifie donc explicitement
   /// [PendingCharacterWriteQueue.forCharacter] pour CE personnage — s'il y
-  /// reste une entrée (forcément `hp` ou `xp`, les deux seuls
-  /// [PendingCharacterWriteKind] existants), bloque l'opération avec une
+  /// reste une entrée `hp`/`xp`, bloque l'opération avec une
   /// [CharacterFailure] explicite plutôt que de continuer sur une valeur
   /// potentiellement périmée. [applyRest]/[applyLevelUp] sont déjà des
-  /// opérations en ligne uniquement (aucun repli hors ligne existant) : ce
-  /// garde-fou rend simplement leur contrat plus strict, il ne le change pas.
+  /// opérations en ligne uniquement (aucun repli hors ligne existant avant
+  /// D11, et [applyLevelUp] reste hors périmètre de cette extension, voir
+  /// D05) : ce garde-fou rend simplement leur contrat plus strict pour
+  /// `hp`/`xp`, il ne le change pas.
   ///
   /// Appelée en tout début de chaque méthode, avant toute lecture/écriture —
   /// y compris avant la vérification d'appartenance du personnage, qui suit
@@ -1009,13 +1043,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String ownerId,
     required String characterId,
   }) async {
-    await _pendingWriteSyncer.sync();
+    await _pendingWriteSyncer.sync(onlyKinds: _hpOrXpKinds);
 
     final stillPending = await _pendingWrites.forCharacter(
       ownerId: ownerId,
       characterId: characterId,
     );
-    if (stillPending.isNotEmpty) {
+    if (stillPending.any((write) => _hpOrXpKinds.contains(write.kind))) {
       throw const CharacterFailure(
         'Des ajustements de PV/XP sont encore en attente de '
         'synchronisation — réessayez une fois la connexion rétablie.',
