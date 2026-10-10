@@ -172,22 +172,39 @@ class AppDatabase extends _$AppDatabase {
         );
       }
       if (from < 4) {
-        await m.database.customStatement(
-          'ALTER TABLE pending_character_writes '
-          'RENAME TO pending_character_writes_v3',
-        );
-        await m.createTable(pendingCharacterWrites);
-        await m.database.customStatement(
-          'INSERT INTO pending_character_writes '
-          '(character_id, owner_id, kind, target_id, payload, queued_at, '
-          'failure_count, abandoned, last_failure_message) '
-          "SELECT character_id, owner_id, kind, '', payload, queued_at, "
-          'failure_count, abandoned, last_failure_message '
-          'FROM pending_character_writes_v3',
-        );
-        await m.database.customStatement(
-          'DROP TABLE pending_character_writes_v3',
-        );
+        // Transaction explicite (revue de code) : `onUpgrade` n'est jamais
+        // enveloppée dans une transaction par `drift` lui-même — à la charge
+        // du code de migration. Pour `NativeDatabase` (sqlite3),
+        // `PRAGMA user_version` est fixé à la version cible AVANT que cette
+        // fonction `onUpgrade` ne s'exécute, pas après son succès : si l'app
+        // est tuée entre deux des quatre opérations ci-dessous (ex. juste
+        // après le `RENAME`, avant que `createTable` ne recrée la table),
+        // le fichier reste dans un état intermédiaire alors que
+        // `user_version` est déjà à 4 — au redémarrage, `from == to == 4`,
+        // cette migration ne serait donc plus jamais rejouée, perdant la
+        // table pour toujours sur cet appareil (y compris les entrées
+        // `hp`/`xp` qui fonctionnaient déjà avant ce changement). Une seule
+        // transaction autour des quatre opérations garantit qu'elles
+        // réussissent ou échouent ensemble (rollback complet sur tout échec,
+        // y compris un arrêt brutal du processus).
+        await m.database.transaction(() async {
+          await m.database.customStatement(
+            'ALTER TABLE pending_character_writes '
+            'RENAME TO pending_character_writes_v3',
+          );
+          await m.createTable(pendingCharacterWrites);
+          await m.database.customStatement(
+            'INSERT INTO pending_character_writes '
+            '(character_id, owner_id, kind, target_id, payload, queued_at, '
+            'failure_count, abandoned, last_failure_message) '
+            "SELECT character_id, owner_id, kind, '', payload, queued_at, "
+            'failure_count, abandoned, last_failure_message '
+            'FROM pending_character_writes_v3',
+          );
+          await m.database.customStatement(
+            'DROP TABLE pending_character_writes_v3',
+          );
+        });
       }
     },
   );
