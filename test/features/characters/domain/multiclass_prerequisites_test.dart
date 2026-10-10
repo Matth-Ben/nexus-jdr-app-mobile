@@ -65,6 +65,17 @@ void main() {
         isTrue,
       );
     });
+
+    test('Artificier (D41) : Intelligence 13', () {
+      expect(
+        MulticlassPrerequisites.meetsRequirement('Artificier', {'int': 13}),
+        isTrue,
+      );
+      expect(
+        MulticlassPrerequisites.meetsRequirement('Artificier', {'int': 12}),
+        isFalse,
+      );
+    });
   });
 
   group('MulticlassPrerequisites.meetsRequirement — Guerrier (OU réel)', () {

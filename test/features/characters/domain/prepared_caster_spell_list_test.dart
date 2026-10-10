@@ -24,5 +24,23 @@ void main() {
       expect(PreparedCasterSpellList.maxSpellLevelFor('Barde', 5), 0);
       expect(PreparedCasterSpellList.maxSpellLevelFor('Guerrier', 5), 0);
     });
+
+    test("Artificier (D41, demi-lanceur qui prépare) : mêmes valeurs que "
+        "Paladin, même table d'emplacements (simplification assumée, voir "
+        'docs/dette-technique.md)', () {
+      expect(PreparedCasterSpellList.maxSpellLevelFor('Artificier', 1), 0);
+      expect(PreparedCasterSpellList.maxSpellLevelFor('Artificier', 2), 1);
+      expect(PreparedCasterSpellList.maxSpellLevelFor('Artificier', 5), 2);
+    });
+  });
+
+  test('classNames : les 4 classes à liste de sorts complète '
+      '(Clerc/Druide/Paladin/Artificier), jamais le Magicien (grimoire)', () {
+    expect(PreparedCasterSpellList.classNames, {
+      'Clerc',
+      'Druide',
+      'Paladin',
+      'Artificier',
+    });
   });
 }

@@ -18,6 +18,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
@@ -365,7 +366,7 @@ const detail = CharacterDetail(
       school: 'Evocation',
       // 'préparé' : ce test porte sur le flux de lancer (repos vs. lancer en
       // vol), qui exige désormais `SpellStatusFormatter.canCast`.
-      status: 'préparé',
+      status: SpellStatus.prepared,
     ),
   ],
   // Occultiste "pur" : aucun emplacement classique, seulement le pool de

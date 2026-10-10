@@ -2,6 +2,7 @@
 // afficher sous le bouton "Lancer" désactivé du panneau "Infos" d'un sort.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/domain/innate_spell_usage.dart';
@@ -12,7 +13,7 @@ import 'package:personnages/features/characters/domain/spell_status_formatter.da
 
 CharacterSpellEntry _spell({
   required int level,
-  required String status,
+  required SpellStatus status,
   int innateUsesSpent = 0,
 }) {
   return CharacterSpellEntry(
@@ -33,7 +34,7 @@ void main() {
     test('sort préparé avec un emplacement disponible -> null', () {
       expect(
         SpellCastBlockReason.of(
-          spell: _spell(level: 3, status: 'préparé'),
+          spell: _spell(level: 3, status: SpellStatus.prepared),
           spellSlots: available,
         ),
         isNull,
@@ -43,7 +44,7 @@ void main() {
     test("sort 'connu' (non préparé) avec un emplacement -> unprepared", () {
       expect(
         SpellCastBlockReason.of(
-          spell: _spell(level: 3, status: 'connu'),
+          spell: _spell(level: 3, status: SpellStatus.known),
           spellSlots: available,
         ),
         SpellCastBlockReason.unprepared,
@@ -53,7 +54,7 @@ void main() {
     test('sort préparé, emplacements épuisés -> noSlotAvailable', () {
       expect(
         SpellCastBlockReason.of(
-          spell: _spell(level: 3, status: 'préparé'),
+          spell: _spell(level: 3, status: SpellStatus.prepared),
           spellSlots: exhausted,
         ),
         SpellCastBlockReason.noSlotAvailable,
@@ -63,7 +64,7 @@ void main() {
     test('non préparé ET plus d\'emplacement -> unprepared en priorité', () {
       expect(
         SpellCastBlockReason.of(
-          spell: _spell(level: 3, status: 'connu'),
+          spell: _spell(level: 3, status: SpellStatus.known),
           spellSlots: exhausted,
         ),
         SpellCastBlockReason.unprepared,
@@ -81,7 +82,7 @@ void main() {
       ]) {
         expect(
           SpellCastBlockReason.of(
-            spell: _spell(level: 3, status: 'inné'),
+            spell: _spell(level: 3, status: SpellStatus.innate),
             spellSlots: slots,
           ),
           isNull,
@@ -100,7 +101,11 @@ void main() {
       ]) {
         expect(
           SpellCastBlockReason.of(
-            spell: _spell(level: 3, status: 'inné', innateUsesSpent: 1),
+            spell: _spell(
+              level: 3,
+              status: SpellStatus.innate,
+              innateUsesSpent: 1,
+            ),
             spellSlots: slots,
           ),
           SpellCastBlockReason.innateUseSpent,
@@ -117,7 +122,7 @@ void main() {
             SpellCastBlockReason.of(
               spell: _spell(
                 level: level,
-                status: 'inné',
+                status: SpellStatus.innate,
                 innateUsesSpent: spent,
               ),
               spellSlots: const [],
@@ -133,7 +138,11 @@ void main() {
         'compteur dépensé aberrant', () {
       expect(
         SpellCastBlockReason.of(
-          spell: _spell(level: 0, status: 'inné', innateUsesSpent: 1),
+          spell: _spell(
+            level: 0,
+            status: SpellStatus.innate,
+            innateUsesSpent: 1,
+          ),
           spellSlots: const [],
         ),
         isNull,
@@ -143,14 +152,22 @@ void main() {
     test("le compteur n'a aucun effet sur un sort qui n'est pas inné", () {
       expect(
         SpellCastBlockReason.of(
-          spell: _spell(level: 3, status: 'préparé', innateUsesSpent: 1),
+          spell: _spell(
+            level: 3,
+            status: SpellStatus.prepared,
+            innateUsesSpent: 1,
+          ),
           spellSlots: available,
         ),
         isNull,
       );
       expect(
         SpellCastBlockReason.of(
-          spell: _spell(level: 3, status: 'connu', innateUsesSpent: 1),
+          spell: _spell(
+            level: 3,
+            status: SpellStatus.known,
+            innateUsesSpent: 1,
+          ),
           spellSlots: available,
         ),
         SpellCastBlockReason.unprepared,
@@ -159,14 +176,14 @@ void main() {
 
     test('sort mineur (niveau 0) -> toujours null, quel que soit le statut '
         'et sans aucun emplacement', () {
-      for (final status in ['connu', 'préparé', 'inné']) {
+      for (final status in SpellStatus.values) {
         expect(
           SpellCastBlockReason.of(
             spell: _spell(level: 0, status: status),
             spellSlots: const [],
           ),
           isNull,
-          reason: status,
+          reason: status.value,
         );
       }
     });
@@ -205,8 +222,12 @@ void main() {
         ],
         'niv.9 disponible': [CharacterSpellSlot(level: 9, total: 1, used: 0)],
       };
-      // '' / 'autre' : valeur inattendue (contrainte check côté base).
-      const statuses = ['connu', 'préparé', 'inné', '', 'autre'];
+      // Les valeurs inattendues ('' / 'autre', contrainte check côté base)
+      // ne sont plus représentables depuis le passage de [CharacterSpellEntry
+      // .status] à [SpellStatus] (dette D04) : le défaut sûr pour ces
+      // valeurs est désormais garanti structurellement à la frontière
+      // (voir [SpellStatus.fromValue]), plus la peine de le vérifier ici.
+      const statuses = SpellStatus.values;
       const grants = <SpellGrantSource?>[null, ...SpellGrantSource.values];
 
       var checked = 0;
@@ -233,7 +254,7 @@ void main() {
                 spellSlots: config.value,
               );
               final context =
-                  'niveau $level, statut "$status", origine $grant, '
+                  'niveau $level, statut "${status.value}", origine $grant, '
                   '${config.key}';
 
               // Seule exception à l'ancienne règle (D08) : un sort inné de
@@ -277,12 +298,12 @@ void main() {
           name: 'Test',
           level: 3,
           school: '',
-          status: 'préparé',
+          status: SpellStatus.prepared,
           grantSource: grant,
           isPersisted: false,
           // Ligne en base 'connu' : seul [status] (toujours 'préparé' pour
           // un sort accordé) doit compter, jamais [storedStatus].
-          storedStatus: 'connu',
+          storedStatus: SpellStatus.known,
         );
         expect(
           SpellCastBlockReason.of(spell: granted(), spellSlots: available),
@@ -307,14 +328,14 @@ void main() {
       ];
       expect(
         SpellCastBlockReason.of(
-          spell: _spell(level: 1, status: 'préparé'),
+          spell: _spell(level: 1, status: SpellStatus.prepared),
           spellSlots: pactAvailable,
         ),
         isNull,
       );
       expect(
         SpellCastBlockReason.of(
-          spell: _spell(level: 1, status: 'préparé'),
+          spell: _spell(level: 1, status: SpellStatus.prepared),
           spellSlots: pactExhausted,
         ),
         SpellCastBlockReason.noSlotAvailable,
@@ -322,7 +343,7 @@ void main() {
       // Sort de niveau supérieur au niveau de l'emplacement de pacte.
       expect(
         SpellCastBlockReason.of(
-          spell: _spell(level: 3, status: 'préparé'),
+          spell: _spell(level: 3, status: SpellStatus.prepared),
           spellSlots: pactAvailable,
         ),
         SpellCastBlockReason.noSlotAvailable,
@@ -354,7 +375,7 @@ void main() {
       name: 'Test',
       level: 3,
       school: '',
-      status: 'connu',
+      status: SpellStatus.known,
       requiresPreparation: false,
     );
 

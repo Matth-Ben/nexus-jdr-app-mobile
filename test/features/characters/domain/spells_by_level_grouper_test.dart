@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/spells_by_level_grouper.dart';
 
@@ -13,7 +14,7 @@ CharacterSpellEntry _spell({
     name: name,
     level: level,
     school: school,
-    status: 'connu',
+    status: SpellStatus.known,
   );
 }
 
@@ -66,21 +67,21 @@ void main() {
         name: 'Armure de mage',
         level: 1,
         school: '',
-        status: 'connu',
+        status: SpellStatus.known,
       );
       const preparedZ = CharacterSpellEntry(
         id: 2,
         name: 'Zone de vérité',
         level: 1,
         school: '',
-        status: 'préparé',
+        status: SpellStatus.prepared,
       );
       const preparedB = CharacterSpellEntry(
         id: 3,
         name: 'Bouclier',
         level: 1,
         school: '',
-        status: 'préparé',
+        status: SpellStatus.prepared,
       );
 
       final groups = SpellsByLevelGrouper.group(const [
@@ -104,7 +105,7 @@ void main() {
       name: 'Charme-personne',
       level: 1,
       school: '',
-      status: 'connu',
+      status: SpellStatus.known,
       requiresPreparation: false,
     );
     const unpreparedA = CharacterSpellEntry(
@@ -112,14 +113,14 @@ void main() {
       name: 'Armure de mage',
       level: 1,
       school: '',
-      status: 'connu',
+      status: SpellStatus.known,
     );
     const preparedZ = CharacterSpellEntry(
       id: 3,
       name: 'Zone de vérité',
       level: 1,
       school: '',
-      status: 'préparé',
+      status: SpellStatus.prepared,
     );
 
     final groups = SpellsByLevelGrouper.group(const [

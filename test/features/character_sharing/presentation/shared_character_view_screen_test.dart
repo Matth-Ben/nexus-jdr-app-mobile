@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/character_sharing/data/character_sharing_repository.dart';
 import 'package:personnages/features/character_sharing/presentation/providers/character_sharing_providers.dart';
 import 'package:personnages/features/character_sharing/presentation/shared_character_view_screen.dart';
@@ -246,7 +247,7 @@ void main() {
           name: 'Ténèbres',
           level: 2,
           school: 'Évocation',
-          status: 'inné',
+          status: SpellStatus.innate,
           innateUsesSpent: 1,
         ),
         CharacterSpellEntry(
@@ -254,7 +255,7 @@ void main() {
           name: 'Lueurs féeriques',
           level: 1,
           school: 'Évocation',
-          status: 'inné',
+          status: SpellStatus.innate,
         ),
       ],
     );

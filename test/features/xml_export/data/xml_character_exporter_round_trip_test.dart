@@ -17,6 +17,7 @@
 // exotique non reconnus par les tables aidedd.org).
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/character_creation/domain/alignment_catalog.dart';
 import 'package:personnages/features/character_creation/domain/alignment_option.dart';
 import 'package:personnages/features/character_creation/domain/background_catalog.dart';
@@ -502,21 +503,21 @@ void main() {
             name: 'Lumière',
             level: 0,
             school: '',
-            status: 'inné',
+            status: SpellStatus.innate,
           ),
           CharacterSpellEntry(
             id: 81,
             name: 'Projectile magique',
             level: 1,
             school: '',
-            status: 'connu',
+            status: SpellStatus.known,
           ),
           CharacterSpellEntry(
             id: 82,
             name: 'Détection de la magie',
             level: 1,
             school: '',
-            status: 'préparé',
+            status: SpellStatus.prepared,
           ),
         ],
       );
@@ -542,11 +543,11 @@ void main() {
       expect(data.spellLines, hasLength(3));
       expect(
         data.spellLines.firstWhere((line) => line.spellId == 80).status,
-        'inné',
+        SpellStatus.innate,
       );
       expect(
         data.spellLines.firstWhere((line) => line.spellId == 81).status,
-        'connu',
+        SpellStatus.known,
       );
       // Le sort "préparé" d'origine ressort bien en base, mais avec le
       // statut "connu" (le format aidedd.org ne distingue pas "connu" de
@@ -554,7 +555,7 @@ void main() {
       // `XmlCharacterExporter`).
       expect(
         data.spellLines.firstWhere((line) => line.spellId == 82).status,
-        'connu',
+        SpellStatus.known,
       );
     });
 

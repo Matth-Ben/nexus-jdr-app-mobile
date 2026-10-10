@@ -12,6 +12,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
@@ -1665,7 +1666,7 @@ void main() {
             name: 'Bouclier',
             level: 1,
             school: 'Abjuration',
-            status: 'connu',
+            status: SpellStatus.known,
           ),
         ],
       );
@@ -2212,14 +2213,14 @@ void main() {
             name: 'Bouclier',
             level: 1,
             school: 'Abjuration',
-            status: 'préparé',
+            status: SpellStatus.prepared,
           ),
           CharacterSpellEntry(
             id: 2,
             name: 'Image miroir',
             level: 2,
             school: 'Illusion',
-            status: 'préparé',
+            status: SpellStatus.prepared,
           ),
         ],
         spellSlots: const [
@@ -2290,7 +2291,7 @@ void main() {
             name: 'Bouclier',
             level: 1,
             school: 'Abjuration',
-            status: 'connu',
+            status: SpellStatus.known,
           ),
         ],
       );
@@ -2331,7 +2332,7 @@ void main() {
             name: 'Charme-personne',
             level: 1,
             school: 'Enchantement',
-            status: 'connu',
+            status: SpellStatus.known,
             requiresPreparation: false,
           ),
           CharacterSpellEntry(
@@ -2339,7 +2340,7 @@ void main() {
             name: 'Héroïsme',
             level: 1,
             school: 'Enchantement',
-            status: 'préparé',
+            status: SpellStatus.prepared,
             requiresPreparation: false,
           ),
         ],
@@ -2368,7 +2369,7 @@ void main() {
             name: 'Charme-personne',
             level: 1,
             school: 'Enchantement',
-            status: 'connu',
+            status: SpellStatus.known,
             requiresPreparation: false,
           ),
           CharacterSpellEntry(
@@ -2376,7 +2377,7 @@ void main() {
             name: 'Soins',
             level: 1,
             school: 'Évocation',
-            status: 'connu',
+            status: SpellStatus.known,
           ),
         ],
       );
@@ -2417,7 +2418,7 @@ void main() {
             name: 'Bouclier',
             level: 1,
             school: 'Abjuration',
-            status: 'connu',
+            status: SpellStatus.known,
           ),
         ],
       );
@@ -2491,7 +2492,7 @@ void main() {
             school: 'Abjuration',
             // 'préparé' : ce groupe de tests porte sur le flux de lancer, qui
             // exige désormais `SpellStatusFormatter.canCast`.
-            status: 'préparé',
+            status: SpellStatus.prepared,
           ),
         ],
         spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],
@@ -2612,7 +2613,7 @@ void main() {
             name: 'Lumière',
             level: 0,
             school: 'Évocation',
-            status: 'connu',
+            status: SpellStatus.known,
           ),
         ],
       );
@@ -2643,7 +2644,7 @@ void main() {
             name: 'Bouclier',
             level: 1,
             school: 'Abjuration',
-            status: 'connu',
+            status: SpellStatus.known,
           ),
         ],
         spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],
@@ -2680,7 +2681,7 @@ void main() {
             name: 'Bouclier',
             level: 1,
             school: 'Abjuration',
-            status: 'préparé',
+            status: SpellStatus.prepared,
           ),
         ],
         spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],

@@ -3,6 +3,7 @@
 // (`lib/features/character_creation/domain/spell_selection_resolver.dart`).
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_option.dart';
 import 'package:personnages/features/character_creation/domain/spell_selection_resolver.dart';
@@ -35,7 +36,7 @@ void main() {
 
     expect(rows, hasLength(2));
     expect(rows.map((r) => r.spellId).toSet(), {lumiere.id, bouclier.id});
-    expect(rows.every((r) => r.status == 'préparé'), isTrue);
+    expect(rows.every((r) => r.status == SpellStatus.prepared), isTrue);
   });
 
   test('utilise le statut "connu" pour une classe lanceuse "connue"', () {
@@ -46,7 +47,7 @@ void main() {
       className: 'Barde',
     );
 
-    expect(rows.single.status, 'connu');
+    expect(rows.single.status, SpellStatus.known);
   });
 
   test('ignore silencieusement un nom sans correspondance dans le '

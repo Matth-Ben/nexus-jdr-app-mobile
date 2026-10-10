@@ -1,8 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/character_class.dart';
+import 'package:personnages/core/rules/class_spellcasting_rule.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/multiclass_prerequisites.dart';
 import 'package:personnages/features/characters/domain/prepared_spells_limit.dart';
-import 'package:personnages/features/characters/domain/spellcasting_class_names.dart';
 
 CharacterDetailClassRow _row(String name, int level) => CharacterDetailClassRow(
   classId: name.hashCode,
@@ -35,6 +36,12 @@ void main() {
         expect(_limit('Paladin', 4, 1), 3);
       },
     );
+
+    test('Artificier (D41, demi-lanceur qui prépare) : même formule que '
+        'Paladin — modificateur + moitié du niveau arrondie à l inférieur', () {
+      expect(_limit('Artificier', 5, 3), 5);
+      expect(_limit('Artificier', 4, 1), 3);
+    });
 
     test('minimum 1 : Paladin niveau 1 (moitié = 0), modificateur négatif', () {
       expect(_limit('Paladin', 1, 0), 1);
@@ -199,9 +206,14 @@ void main() {
     // si son origine, ou à défaut toutes les classes lanceuses du personnage,
     // figurent dans la liste explicite des classes à sorts connus. Tout nom
     // non reconnu retombe sur le comportement historique (« à préparer »).
+    //
+    // L'Artificier n'est PLUS un exemple de nom non reconnu depuis D41 (il
+    // est désormais un demi-lanceur qui prépare, voir
+    // `core/rules/class_spellcasting_rule.dart`) — voir le groupe de tests
+    // dédié plus bas.
     test('nom de classe non reconnu ou aucune classe : à préparer '
         '(comportement d\'avant le correctif)', () {
-      for (final name in ['Artificier', 'Classe #3', 'Classe', '']) {
+      for (final name in ['Classe #3', 'Classe', '']) {
         expect(requires([cls(3, name)]), isTrue, reason: name);
         expect(requires([cls(3, name)], [3]), isTrue, reason: name);
       }
@@ -209,6 +221,13 @@ void main() {
       expect(requires([]), isTrue);
       expect(requires([], [1]), isTrue);
       expect(requires([cls(3, 'Classe #3'), clerc]), isTrue);
+    });
+
+    test('Artificier (D41) : classe reconnue qui prépare, comme Clerc — '
+        'toujours à préparer', () {
+      final artificier = cls(3, 'Artificier');
+      expect(requires([artificier], [3]), isTrue);
+      expect(requires([artificier]), isTrue);
     });
 
     test('Barde + classe non lanceuse connue : les sorts du Barde restent '
@@ -236,15 +255,26 @@ void main() {
       }
     });
 
-    test('Barde + classe inconnue (Artificier, "Classe #id") : origine Barde '
+    test('Barde + classe inconnue ("Classe #id") : origine Barde '
         'lançable, origine inconnue ou de la classe inconnue à préparer', () {
-      for (final name in ['Artificier', 'Classe #3', 'Classe', '']) {
+      for (final name in ['Classe #3', 'Classe', '']) {
         final classes = [barde, cls(3, name)];
         expect(requires(classes, [1]), isFalse, reason: '$name, origine Barde');
         expect(requires(classes), isTrue, reason: '$name, sans origine');
         expect(requires(classes, [3]), isTrue, reason: '$name, origine $name');
         expect(requires(classes, [3, 1]), isFalse, reason: '$name, doublon');
       }
+    });
+
+    test('Barde + Artificier (D41, classe reconnue qui prépare) : origine '
+        "Barde lançable, origine Artificier ou inconnue à préparer — même "
+        'comportement que Barde + Clerc', () {
+      final artificier = cls(3, 'Artificier');
+      final classes = [barde, artificier];
+      expect(requires(classes, [1]), isFalse);
+      expect(requires(classes), isTrue);
+      expect(requires(classes, [3]), isTrue);
+      expect(requires(classes, [3, 1]), isFalse);
     });
 
     test('knowsSpellsWithoutPreparing : uniquement Barde, Ensorceleur, '
@@ -280,10 +310,16 @@ void main() {
       }
     });
 
-    test('invariant : toute classe lanceuse (spellcastingClassNames) est soit '
-        '« prépare », soit « sorts connus », jamais les deux ni aucun', () {
-      expect(spellcastingClassNames, hasLength(8));
-      for (final name in spellcastingClassNames) {
+    test('invariant : toute classe lanceuse (registre unique, dette D04) est '
+        'soit « prépare », soit « sorts connus », jamais les deux ni aucun — '
+        '9 classes depuis D41 (Artificier ajouté)', () {
+      final casterNames = [
+        for (final characterClass in CharacterClass.values)
+          if (ClassSpellcastingRegistry.ruleFor(characterClass).isCaster)
+            characterClass.frenchName,
+      ];
+      expect(casterNames, hasLength(9));
+      for (final name in casterNames) {
         expect(
           PreparedSpellsLimit.preparesSpells(name) !=
               PreparedSpellsLimit.knowsSpellsWithoutPreparing(name),
@@ -298,14 +334,18 @@ void main() {
       }
     });
 
-    test('invariant : une classe connue de MulticlassPrerequisites absente '
-        'de spellcastingClassNames n\'est ni « prépare » ni « sorts '
-        'connus »', () {
+    test('invariant : une classe connue de MulticlassPrerequisites non '
+        'lanceuse n\'est ni « prépare » ni « sorts connus »', () {
+      final casterNames = {
+        for (final characterClass in CharacterClass.values)
+          if (ClassSpellcastingRegistry.ruleFor(characterClass).isCaster)
+            characterClass.frenchName,
+      };
       final nonCasters = [
-        for (final name in _databaseClassNames)
-          if (MulticlassPrerequisites.isKnownClass(name) &&
-              !spellcastingClassNames.contains(name))
-            name,
+        for (final characterClass in CharacterClass.values)
+          if (MulticlassPrerequisites.isKnownClass(characterClass.frenchName) &&
+              !casterNames.contains(characterClass.frenchName))
+            characterClass.frenchName,
       ];
       expect(nonCasters, ['Barbare', 'Guerrier', 'Moine', 'Roublard']);
       for (final name in nonCasters) {
@@ -319,20 +359,3 @@ void main() {
     });
   });
 }
-
-/// Les treize classes présentes en base (relevé du chef de projet).
-const _databaseClassNames = [
-  'Barbare',
-  'Barde',
-  'Clerc',
-  'Druide',
-  'Guerrier',
-  'Moine',
-  'Paladin',
-  'Rôdeur',
-  'Roublard',
-  'Occultiste',
-  'Magicien',
-  'Ensorceleur',
-  'Artificier',
-];

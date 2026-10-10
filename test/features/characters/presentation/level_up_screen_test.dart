@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
 import 'package:personnages/features/character_creation/domain/alignment_catalog.dart';
@@ -3525,7 +3526,7 @@ void main() {
       name: 'Lumiere',
       level: 0,
       school: 'Evocation',
-      status: 'connu',
+      status: SpellStatus.known,
     );
 
     /// Franchit Points de vie/Aptitudes puis choisit [pactLabel] et arrive a
@@ -3630,7 +3631,7 @@ void main() {
             name: 'Appel de familier',
             level: 1,
             school: 'Invocation',
-            status: 'connu',
+            status: SpellStatus.known,
           ),
         ],
       );
@@ -3760,7 +3761,7 @@ void main() {
               name: 'Decharge occulte',
               level: 0,
               school: 'Evocation',
-              status: 'connu',
+              status: SpellStatus.known,
             ),
           ],
         );
@@ -4066,7 +4067,7 @@ void main() {
               name: 'Représailles infernales',
               level: 1,
               school: 'Évocation',
-              status: 'inné',
+              status: SpellStatus.innate,
             ),
           ],
         );

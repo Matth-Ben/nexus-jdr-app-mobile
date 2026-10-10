@@ -167,6 +167,46 @@ void main() {
     });
   });
 
+  group('SpellSlotProgression.slotsForLevel — Artificier (D41)', () {
+    test("même table que Paladin/Rôdeur (simplification assumée, pas la table "
+        'RAW exacte — voir docs/dette-technique.md)', () {
+      for (final level in [1, 2, 5, 13, 17, 20]) {
+        expect(
+          SpellSlotProgression.slotsForLevel('Artificier', level),
+          SpellSlotProgression.slotsForLevel('Paladin', level),
+          reason: 'niveau $level',
+        );
+      }
+    });
+  });
+
+  group('SpellSlotProgression — classification (D04/D41)', () {
+    test('fullCasterClassNames : les 5 lanceurs complets', () {
+      expect(SpellSlotProgression.fullCasterClassNames, {
+        'Barde',
+        'Clerc',
+        'Druide',
+        'Magicien',
+        'Ensorceleur',
+      });
+    });
+
+    test(
+      'halfCasterClassNames : Paladin, Rôdeur, et Artificier depuis D41',
+      () {
+        expect(SpellSlotProgression.halfCasterClassNames, {
+          'Paladin',
+          'Rôdeur',
+          'Artificier',
+        });
+      },
+    );
+
+    test('pactCasterClassNames : seul Occultiste', () {
+      expect(SpellSlotProgression.pactCasterClassNames, {'Occultiste'});
+    });
+  });
+
   group('SpellSlotProgression.slotsForLevel — hors périmètre visuel', () {
     test('classe non lanceuse -> 9 zéros à tout niveau', () {
       for (final level in [1, 5, 20]) {
@@ -335,6 +375,10 @@ void main() {
 
     test('demi-lanceur -> true', () {
       expect(SpellSlotProgression.isNonPactCasterClass('Paladin'), isTrue);
+    });
+
+    test('Artificier (demi-lanceur depuis D41) -> true', () {
+      expect(SpellSlotProgression.isNonPactCasterClass('Artificier'), isTrue);
     });
 
     test('Occultiste (magie de pacte) -> false', () {
