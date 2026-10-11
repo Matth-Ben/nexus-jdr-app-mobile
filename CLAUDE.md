@@ -81,6 +81,7 @@ dehors du cahier des charges.
 | `qa-testeur` | Testeur/QA | Écrire les tests, valider une fonctionnalité contre ses critères d'acceptation, chasser les régressions |
 | `code-reviewer` | Revue de code | Relire un diff avant merge (conventions, sécurité, architecture) |
 | `dette-technique` | Audit de dette technique | Analyser le code en place (périssable, fragile, mort) et produire un registre de dette priorisé — ne corrige rien lui-même |
+| `regles-dnd` | Expert des règles D&D 5e (RAW) | Valider la règle exacte **avant** d'implémenter une mécanique de jeu (sorts, emplacements, multiclassage, dés de vie, préparation), puis vérifier la fidélité RAW du code **après** — ne code pas, ne tranche jamais seul une ambiguïté RAW (remonte à la conversation principale) |
 
 **Tout développement passe par ces sous-agents** (décision du 06/10/2026) :
 la conversation principale n'écrit pas elle-même le code ni les tests d'une
@@ -102,6 +103,23 @@ fichiers de configuration et de documentation (ce fichier, `.claude/`,
 Pour une fonctionnalité backend/données (nouvelle table, RLS, edge function),
 remplacer l'étape 1 par `dev-backend-supabase`, et prévenir que la migration
 doit être ouverte en PR sur le dépôt **web**, pas ici.
+
+### Séquence type pour une mécanique de jeu (règles D&D)
+
+1. `regles-dnd` produit la règle RAW exacte et ses cas limites (voir
+   `.claude/agents/regles-dnd.md`) ; toute ambiguïté RAW remonte à la
+   conversation principale avant de continuer.
+2. `dev-flutter` implémente.
+3. `regles-dnd` vérifie la fidélité RAW du résultat (tables/formules valeur
+   par valeur, pas par échantillonnage).
+4. `qa-testeur` écrit/complète les tests et vérifie les critères
+   d'acceptation habituels (hors-ligne, régressions).
+5. `code-reviewer` relit le diff avant merge.
+
+Les étapes 1 et 3 peuvent se combiner avec la séquence UI habituelle quand
+la mécanique a aussi un volet visuel (ex. un nouvel écran de choix de
+sorts) : `regles-dnd` valide la règle, `direction-artistique` valide
+l'habillage, chacun dans son périmètre.
 
 ### Audit de dette technique
 
