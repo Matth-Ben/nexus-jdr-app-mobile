@@ -2396,6 +2396,102 @@ void main() {
     });
   });
 
+  // D42 : course entre la vérification `existing` (ligne 2142 environ de
+  // `character_repository.dart`) et l'insert qui suit — un appel concurrent
+  // (double appui rapide, ou synchro hors ligne simultanée) peut passer
+  // cette même vérification avant que l'insert d'origine ne soit confirmé.
+  // Depuis la contrainte unique posée par D10
+  // (`character_spells_unique_ordinary_per_spell`), c'est cet insert qui
+  // échoue désormais avec '23505' plutôt que de créer un doublon silencieux
+  // — ces tests simulent directement cette `PostgrestException` sur
+  // l'insert (plutôt qu'une vraie concurrence, hors de portée d'un double
+  // HTTP synchrone) et vérifient le traitement de ce code d'erreur précis.
+  group('SupabaseCharacterRepository.setSpellPrepared (course D42)', () {
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const characterId = 'char-1';
+    const ownerId = 'owner-1';
+    const spellId = 20;
+
+    http.Response conflictResponse(http.Request request, String constraint) =>
+        http.Response(
+          jsonEncode({
+            'code': '23505',
+            'message':
+                'duplicate key value violates unique constraint '
+                '"$constraint"',
+            'details':
+                'Key (character_id, spell_id)=($characterId, $spellId) '
+                'already exists.',
+            'hint': null,
+          }),
+          409,
+          request: request,
+          headers: {'content-type': 'application/json'},
+        );
+
+    Future<SupabaseCharacterRepository> repositoryWithInsertConflict(
+      String constraint,
+    ) async => SupabaseCharacterRepository(
+      await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        responseOverride: (request) {
+          if (request.url.pathSegments.last != 'character_spells' ||
+              request.method != 'POST') {
+            return null;
+          }
+          return conflictResponse(request, constraint);
+        },
+      ),
+      cache,
+      pendingWrites,
+      _AlwaysOnlineConnectivityChecker(),
+    );
+
+    test('insert concurrent qui a gagné la course (23505 sur la bonne '
+        'contrainte) : traité comme un succès, pas comme une erreur', () async {
+      final repository = await repositoryWithInsertConflict(
+        'character_spells_unique_ordinary_per_spell',
+      );
+
+      final outcome = await repository.setSpellPrepared(
+        characterId: characterId,
+        spellId: spellId,
+        prepared: true,
+      );
+
+      expect(outcome, WriteOutcome.synced);
+    });
+
+    test('violation d\'une autre contrainte unique (même code 23505) : jamais '
+        'masquée, toujours remontée comme une erreur', () async {
+      final repository = await repositoryWithInsertConflict(
+        'une_autre_contrainte_improbable',
+      );
+
+      await expectLater(
+        repository.setSpellPrepared(
+          characterId: characterId,
+          spellId: spellId,
+          prepared: true,
+        ),
+        throwsA(isA<CharacterFailure>()),
+      );
+    });
+  });
+
   group('SupabaseCharacterRepository.fetchCharacterDetail (arme de pacte)', () {
     late AppDatabase db;
     late ReferenceDataCache cache;
@@ -2729,6 +2825,13 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
   // retomber sur [tableRows] sans rien changer au comportement des tests
   // existants qui ne fournissent pas ce paramètre.
   List<Map<String, dynamic>>? Function(http.Request request)? rowsOverride,
+  // Permet à un test de simuler une réponse d'erreur Postgrest précise
+  // (code Postgres, message, statut HTTP) sur une requête ciblée — ex. D42
+  // (`setSpellPrepared`), où seul l'insert concurrent doit échouer avec
+  // '23505', pas la requête de lecture qui le précède. Retourne `null` pour
+  // retomber sur [rowsOverride]/[tableRows] sans rien changer au
+  // comportement des tests existants qui ne fournissent pas ce paramètre.
+  http.Response? Function(http.Request request)? responseOverride,
 }) async {
   Future<http.Response> handler(http.Request request) async {
     onRequest?.call(request);
@@ -2738,6 +2841,8 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
     if (throwTimeoutOnRequest) {
       throw TimeoutException('Requête expirée (double de test).');
     }
+    final override = responseOverride?.call(request);
+    if (override != null) return override;
     if (failureStatusCode != null) {
       return http.Response(
         jsonEncode({

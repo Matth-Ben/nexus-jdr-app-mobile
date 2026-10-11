@@ -2133,8 +2133,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // Sort de la liste de classe d'un lanceur à préparation, sans ligne
       // `character_spells` tant qu'il n'a jamais été préparé (voir
       // `_fetchPreparedCasterClassListSpellIds`) : la créer. Pas d'upsert
-      // possible, la table n'a pas de contrainte unique (character_id,
-      // spell_id).
+      // possible : la contrainte unique posée par D10
+      // (`character_spells_unique_ordinary_per_spell`) est partielle (ne
+      // porte que sur les lignes non-innées) et PostgREST n'expose pas de
+      // moyen de cibler un upsert sur une contrainte partielle plutôt que
+      // sur la clé primaire.
       if (updated.isEmpty && prepared) {
         // Aucune ligne modifiée : soit le sort n'a aucune ligne, soit il
         // n'a que des lignes 'inné' (exclues ci-dessus). Dans ce second
@@ -2146,11 +2149,36 @@ class SupabaseCharacterRepository implements CharacterRepository {
             .eq('spell_id', spellId)
             .limit(1);
         if (existing.isNotEmpty) return WriteOutcome.synced;
-        await _client.from('character_spells').insert({
-          'character_id': characterId,
-          'spell_id': spellId,
-          'status': SpellStatus.prepared.value,
-        });
+        try {
+          await _client.from('character_spells').insert({
+            'character_id': characterId,
+            'spell_id': spellId,
+            'status': SpellStatus.prepared.value,
+          });
+        } on PostgrestException catch (error) {
+          // D42 : course entre la vérification `existing` ci-dessus et cet
+          // insert — un appel concurrent (double appui rapide, ou synchro
+          // hors ligne qui se déclenche en même temps qu'une action en
+          // ligne) peut passer la même vérification avant que cet insert ne
+          // soit confirmé. Depuis la contrainte unique posée par D10
+          // (`character_spells_unique_ordinary_per_spell`, au plus une
+          // ligne non-innée par (character_id, spell_id)), c'est désormais
+          // cet insert qui échoue avec '23505' plutôt que de créer un
+          // doublon silencieux. L'état voulu par le joueur (ce sort est
+          // préparé) est de toute façon atteint — par cet appel ou par celui
+          // qui a gagné la course — donc un succès, pas une erreur à
+          // afficher. On vérifie le nom de la contrainte (pas seulement le
+          // code '23505') pour ne jamais masquer une vraie violation
+          // d'unicité sur une autre contrainte si cette table en gagnait une
+          // un jour ; à ce jour c'est la seule contrainte unique sur les
+          // lignes non-innées de `character_spells`.
+          final isExpectedRaceCondition =
+              error.code == '23505' &&
+              error.message.contains(
+                'character_spells_unique_ordinary_per_spell',
+              );
+          if (!isExpectedRaceCondition) rethrow;
+        }
       }
       return WriteOutcome.synced;
     } on PostgrestException catch (error) {
