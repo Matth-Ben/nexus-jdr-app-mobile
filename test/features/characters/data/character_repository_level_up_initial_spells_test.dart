@@ -24,6 +24,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// listes) ferait planter la montée de niveau sur une violation de
 /// contrainte unique, au lieu d'ignorer silencieusement le sort déjà connu.
 ///
+/// Couvre aussi D43 (décision de Matthias du 12/10/2026, symétrique de celle
+/// du 10/10/2026 sur `racialInnateSpellIds`) : ce filtre ne doit PLUS exclure
+/// un sort déjà connu UNIQUEMENT via sa route INNÉE (trait racial) — seule
+/// une ligne ORDINAIRE déjà existante doit bloquer la réécriture (voir le
+/// groupe de tests dédié plus bas).
+///
 /// Même double `SupabaseClient`/`MockClient` que
 /// `character_repository_innate_spells_test.dart`/
 /// `character_repository_rest_test.dart` : ces tests vérifient ce qui est
@@ -182,6 +188,72 @@ void main() {
       expect(insertedIds, {knownSpellId, newSpellId});
     });
   });
+
+  // D43 du registre de dette technique (`docs/dette-technique.md`), décision
+  // de Matthias du 12/10/2026 : symétrique de celle du 10/10/2026 sur
+  // `racialInnateSpellIds` (voir `character_repository_level_up_racial_spells_test.dart`)
+  // — un sort déjà connu UNIQUEMENT via sa route INNÉE (trait racial) garde
+  // malgré tout le droit à sa ligne ORDINAIRE séparée.
+  group('SupabaseCharacterRepository.applyLevelUp — initialSpellIds (D43)', () {
+    const alreadyInnateSpellId = 200; // déjà inné, AUCUNE ligne ordinaire.
+
+    test('un sort initial qui coïncide avec un sort déjà connu UNIQUEMENT via '
+        'sa route INNÉE (aucune ligne ordinaire) : la ligne ORDINAIRE est '
+        'malgré tout écrite (les deux routes sont indépendantes)', () async {
+      final recorded = <_Recorded>[];
+      final repo = await repository(
+        recorded: recorded,
+        rows: {
+          'character_classes': [
+            {'id': 'cc-barde', 'class_id': bardeClassId, 'level': 1},
+          ],
+          'characters': [
+            {'max_hp': 10, 'current_hp': 10},
+          ],
+          'character_ability_scores': [
+            {'ability_id': 'cha', 'score': 14},
+          ],
+          'translations': [
+            {'entity_id': '$bardeClassId', 'value': 'Barde'},
+          ],
+          // Ligne 'inné' existante pour ce sort — AUCUNE ligne ordinaire.
+          'character_spells': [
+            {
+              'spell_id': alreadyInnateSpellId,
+              'status': 'inné',
+              'source_class_id': null,
+            },
+          ],
+        },
+      );
+
+      final result = await repo.applyLevelUp(
+        characterId: characterId,
+        classId: occultisteClassId,
+        className: 'Occultiste',
+        isMulticlassing: true,
+        hpRolled: 4,
+        hpMethod: 'roll',
+        hpGain: 4,
+        initialSpellIds: const [alreadyInnateSpellId],
+      );
+
+      expect(result.newLevel, 2);
+
+      final spellWrites = recorded
+          .where((r) => r.table == 'character_spells' && r.method != 'GET')
+          .toList();
+      expect(spellWrites, hasLength(1));
+      final insertedRows = (spellWrites.single.body! as List)
+          .cast<Map<String, dynamic>>();
+      expect(insertedRows.single, {
+        'character_id': characterId,
+        'spell_id': alreadyInnateSpellId,
+        'status': 'connu',
+        'source_class_id': occultisteClassId,
+      });
+    });
+  });
 }
 
 /// Une requête PostgREST observée par le double de test.
@@ -220,9 +292,12 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
 /// `character_repository_rest_test.dart` : routage par nom de table, session
 /// factice sans réseau, journal [recorded] des requêtes. Les lignes
 /// configurées via [tableRows] sont retournées pour TOUTE requête `GET` sur
-/// la table correspondante, indépendamment des filtres de la requête (les
-/// filtres ne sont pas réinterprétés côté double) — suffisant ici, chaque
-/// table n'étant lue qu'une seule fois par scénario.
+/// la table correspondante, SAUF `character_spells`, dont le filtre
+/// `status=eq.<v>`/`status=neq.<v>` EST appliqué (voir
+/// `character_repository_level_up_racial_spells_test.dart`, même besoin :
+/// distinguer une ligne 'inné' d'une ligne ordinaire du même sort, dette D43)
+/// — les autres tables ignorent les filtres de la requête, suffisant ici,
+/// chaque autre table n'étant lue qu'une seule fois par scénario.
 Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
   required String ownerId,
   required List<_Recorded> recorded,
@@ -238,7 +313,25 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
         body: request.body.isEmpty ? null : jsonDecode(request.body),
       ),
     );
-    final rows = tableRows[table] ?? const <Map<String, dynamic>>[];
+    var rows = tableRows[table] ?? const <Map<String, dynamic>>[];
+    final statusFilter = request.url.queryParameters['status'];
+    if (request.method == 'GET' &&
+        table == 'character_spells' &&
+        statusFilter != null) {
+      if (statusFilter.startsWith('eq.')) {
+        final expected = statusFilter.substring('eq.'.length);
+        rows = [
+          for (final row in rows)
+            if (row['status'] == expected) row,
+        ];
+      } else if (statusFilter.startsWith('neq.')) {
+        final excluded = statusFilter.substring('neq.'.length);
+        rows = [
+          for (final row in rows)
+            if (row['status'] != excluded) row,
+        ];
+      }
+    }
     return http.Response(
       jsonEncode(request.method == 'GET' ? rows : const <Object>[]),
       200,

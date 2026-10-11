@@ -633,6 +633,18 @@ abstract class CharacterRepository {
   /// fait, décision à valider par le chef de projet si le nom prête à
   /// confusion. Toujours vide hors de ces deux cas.
   ///
+  /// Revérifiés contre les lignes ORDINAIRES ('connu'/'préparé') DÉJÀ
+  /// EXISTANTES juste avant l'écriture (voir [_fetchAlreadyOrdinarySpellIds])
+  /// — jamais contre une ligne 'inné' existante : décision de Matthias du
+  /// 12/10/2026, symétrique de celle du 10/10/2026 sur [racialInnateSpellIds]
+  /// (D43 du registre de dette technique, `docs/dette-technique.md`) — un
+  /// sort déjà connu UNIQUEMENT via sa route innée (trait racial) garde
+  /// malgré tout le droit à sa ligne ORDINAIRE séparée, les deux routes RAW
+  /// étant indépendantes. Avant cette décision, filtrer ici contre TOUT sort
+  /// déjà connu (`_fetchKnownSpellIds`, toute route confondue, retirée)
+  /// produisait le même résultat que le bug D43 par un chemin différent (la
+  /// ligne ordinaire n'était simplement jamais écrite).
+  ///
   /// [invocationIds] : invocations occultistes nouvellement choisies à
   /// écrire dans `character_invocations` (`character_id`, `invocation_id`)
   /// — étape "Invocations" (Occultiste, voir
@@ -3139,19 +3151,27 @@ class SupabaseCharacterRepository implements CharacterRepository {
         // de quotas ici (déjà appliquée côté écran avant d'arriver jusqu'à
         // cette méthode).
         //
-        // Revérifiés contre les sorts déjà connus (toute nature confondue :
-        // classe actuelle, autre classe multiclassée, sort inné racial...)
-        // juste avant l'écriture — même discipline que le bloc
-        // [racialInnateSpellIds] juste en dessous : un multiclassage vers une
-        // classe dont la liste de sorts initiaux recoupe un sort déjà connu
-        // (ex. "Soins", présent sur plusieurs listes) ne doit jamais tenter
-        // de réécrire ce sort (ce qui violerait l'index unique partiel sur
+        // Revérifiés contre les lignes ORDINAIRES déjà existantes (classe
+        // actuelle, autre classe multiclassée...) juste avant l'écriture —
+        // même discipline que le bloc [racialInnateSpellIds] plus bas : un
+        // multiclassage vers une classe dont la liste de sorts initiaux
+        // recoupe un sort déjà connu via sa route ORDINAIRE (ex. "Soins",
+        // présent sur plusieurs listes) ne doit jamais tenter de réécrire ce
+        // sort (ce qui violerait l'index unique partiel sur
         // `character_spells`, voir dette D10) ; il est ignoré silencieusement
         // et garde son statut/sa classe source d'origine.
-        final knownSpellIds = await _fetchKnownSpellIds(characterId);
+        //
+        // Jamais filtré contre une ligne 'inné' existante (voir la doc de
+        // [initialSpellIds] ci-dessus, D43) : un sort déjà connu UNIQUEMENT
+        // via sa route innée garde malgré tout le droit à sa ligne ORDINAIRE
+        // séparée — sans conflit avec l'index unique partiel, les deux
+        // lignes étant de statuts différents.
+        final alreadyOrdinarySpellIds = await _fetchAlreadyOrdinarySpellIds(
+          characterId,
+        );
         final newInitialSpellIds = {
           for (final spellId in initialSpellIds)
-            if (!knownSpellIds.contains(spellId)) spellId,
+            if (!alreadyOrdinarySpellIds.contains(spellId)) spellId,
         };
         if (newInitialSpellIds.isNotEmpty) {
           final status = SpellcastingRules.statusFor(className).value;
@@ -4316,25 +4336,28 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// exact (`int` vs `num`) — voir [applyLevelUp].
   int _classIdAsInt(Object classId) => (classId as num).toInt();
 
-  /// Tous les `spell_id` déjà connus de [characterId] dans
-  /// `character_spells`, toute nature confondue (sort de classe, sort inné
-  /// racial, invocation...) — lecture fraîche utilisée par [applyLevelUp]
-  /// juste avant l'écriture des sorts initiaux d'une nouvelle classe à sorts
-  /// connus ([initialSpellIds]) pour ne jamais tenter de réécrire une ligne
-  /// ORDINAIRE déjà existante (violerait l'index unique partiel sur
-  /// `character_spells`, voir dette D10) : un sort déjà connu (peu importe
-  /// sa route) n'obtient alors jamais de seconde ligne ordinaire.
+  /// `spell_id` de [characterId] ayant DÉJÀ une ligne `character_spells`
+  /// ORDINAIRE ('connu' ou 'préparé', jamais 'inné') — lecture fraîche
+  /// utilisée par [applyLevelUp] juste avant l'écriture des sorts initiaux
+  /// d'une nouvelle classe à sorts connus ([initialSpellIds]) pour ne jamais
+  /// tenter de réécrire une ligne ORDINAIRE déjà existante (violerait
+  /// l'index unique partiel sur `character_spells`, voir dette D10).
   ///
-  /// PAS utilisé pour les sorts innés raciaux ([racialInnateSpellIds]) :
-  /// voir [_fetchAlreadyInnateSpellIds], qui ne filtre que sur la route
-  /// innée déjà existante, pas sur une route ordinaire préexistante (D43).
-  Future<Set<int>> _fetchKnownSpellIds(String characterId) async {
-    final knownRows = await _client
+  /// Contrairement à [_fetchAlreadyInnateSpellIds] : ignore délibérément
+  /// toute ligne 'inné' existante du même sort — décision de Matthias du
+  /// 12/10/2026, symétrique de celle du 10/10/2026 sur
+  /// [_fetchAlreadyInnateSpellIds] (cohérente avec D43 du registre de dette
+  /// technique, `docs/dette-technique.md`) : un sort déjà connu uniquement
+  /// via sa route innée (trait racial) garde malgré tout le droit à sa
+  /// ligne ORDINAIRE séparée, les deux routes RAW étant indépendantes.
+  Future<Set<int>> _fetchAlreadyOrdinarySpellIds(String characterId) async {
+    final ordinaryRows = await _client
         .from('character_spells')
         .select('spell_id')
-        .eq('character_id', characterId);
+        .eq('character_id', characterId)
+        .neq('status', SpellStatus.innate.value);
     return {
-      for (final row in knownRows)
+      for (final row in ordinaryRows)
         if (row['spell_id'] is num) (row['spell_id'] as num).toInt(),
     };
   }
@@ -4346,9 +4369,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// unique partiel dédié, D10, dont [fetchApplicableGrants] cumulatif
   /// réexpose les grants déjà accordés à un niveau antérieur).
   ///
-  /// Contrairement à [_fetchKnownSpellIds] : ignore délibérément toute ligne
-  /// ORDINAIRE existante du même sort — décision de Matthias du 10/10/2026,
-  /// cohérente avec D43 du registre de dette technique
+  /// Contrairement à [_fetchAlreadyOrdinarySpellIds] : ignore délibérément
+  /// toute ligne ORDINAIRE existante du même sort — décision de Matthias du
+  /// 10/10/2026, cohérente avec D43 du registre de dette technique
   /// (`docs/dette-technique.md`) : un sort déjà connu uniquement via sa
   /// route de classe garde malgré tout le droit à sa ligne 'inné' séparée,
   /// les deux routes RAW étant indépendantes.
