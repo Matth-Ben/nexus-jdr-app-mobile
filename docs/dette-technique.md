@@ -297,7 +297,7 @@ ferme D39 côté base.
 |---|---|---|---|---|
 | D08 | Sorts innés raciaux : emplacement exigé, pas de compteur | haute | — | Corrigé (PR #82). Lancer sans emplacement, une fois par repos long, compteur `character_spells.innate_uses_spent`. |
 | D39 | Vue partagée sans `source_class_id` | basse | — | Corrigé côté base (dépôt web, PR #19) ; jamais contrôlé sur un lien de partage réel |
-| D43 | Sort à la fois inné et connu : la ligne ordinaire l'emporte, le lancer gratuit est perdu | moyenne | Règle complète : un lancer gratuit par repos long, plus les emplacements. Décision produit. Depuis la PR #83, un chemin légitime (l'assistant de modification) peut créer ce cas ; aucun cas constaté en base à ce jour, mais ce n'est plus seulement théorique. | Ouvert |
+| D43 | Sort à la fois inné et connu : la ligne ordinaire l'emporte, le lancer gratuit est perdu | moyenne | Règle complète : un lancer gratuit par repos long, plus les emplacements. Décision produit. Depuis la PR #83, un chemin légitime (l'assistant de modification) peut créer ce cas ; aucun cas constaté en base à ce jour, mais ce n'est plus seulement théorique. | Corrigé (PR #122). Confirmé RAW-conforme par l'agent `regles-dnd` (deux octrois indépendants, pas une maison-règle) sur les 3 commits de la PR : bug de fusion à la lecture corrigé (`CharacterSpellEntry.hasInnateRoute`, `SpellCastBlockReason.ofInnateRoute`, second bouton "Lancer (sort inné)" dans la fiche quand double route) ; symétrie à l'écriture sur les 4 chemins (modification, création, montée de niveau dans les deux sens) — garde-fous préventifs retirés, dont un filtre redondant côté serveur (`applyLevelUp`) qui aurait sinon annulé le correctif en silence. Filtres conservés calibrés exactement sur la granularité des deux index uniques D10 (inné vs ordinaire). D44 non cassé (exclusion `grantSource` vérifiée). Suite complète 3865 tests, 0 échec. Incohérence connexe trouvée en cours de route (picker Pacte du Grimoire/Appel de familier) consignée séparément, voir D74. |
 | D44 | Sort inné aussi accordé par une sous-classe : traité comme préparé, donc avec emplacement | basse | À traiter avec D43 | Ouvert |
 | D45 | Réaffirmation pendant un repos encore en vol : si un lancer réussit pendant un repos long qui échoue ensuite, l'écran affiche « Épuisé » alors que la base vaut 0. Patron commun aux quatre `_reassert…State` (PV, emplacements, pacte, sorts innés) ; leur `finally` rouvre aussi le verrou de repos trop tôt. | moyenne | Ne réaffirmer qu'une fois le repos en vol terminé | Ouvert, reproduit en revue |
 | D46 | La réaffirmation relit une fiche qui peut déjà contenir l'écriture obsolète : un repos long peut être écrasé | basse | Réaffirmer depuis l'état local, pas depuis la fiche relue | Ouvert, lu, non reproduit |
@@ -512,8 +512,10 @@ commit parent).
     code, côté catalogue de référence) : confirmer que tous les sorts raciaux innés
     actuellement en base (`racial_innate_spells`) sont bien "1×/repos long" pour un
     sort de niveau ≥ 1, pas "à volonté" pour certains — le modèle actuel suppose
-    uniformément le premier cas. (D43, voir aussi D44, même raisonnement pour un
-    sort accordé par une sous-classe.)
+    uniformément le premier cas. **Vérifié le 11/10 (lecture agrégée, catalogue de
+    référence) : aucune exception, tous cantrips ou niveau 1-2 standard. Fait
+    (PR #122).** (D43, voir aussi D44, même raisonnement pour un sort accordé par
+    une sous-classe.)
 16. Verrouille-t-on la race en édition, ou gère-t-on l'échange des sorts innés et de
     `lineage_id` quand un joueur change de race via l'assistant de modification ?
     **Verrouiller la race en édition, demandé par Matthias le 09/10.** (D53)
