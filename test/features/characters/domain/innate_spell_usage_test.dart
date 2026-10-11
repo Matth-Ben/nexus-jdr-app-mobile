@@ -2,13 +2,14 @@
 // sort inné de niveau >= 1 (sans emplacement, une fois par repos long).
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/innate_spell_usage.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 
 CharacterSpellEntry _spell({
   int level = 2,
-  String status = 'inné',
+  SpellStatus status = SpellStatus.innate,
   int innateUsesSpent = 0,
 }) => CharacterSpellEntry(
   id: 1,
@@ -36,13 +37,13 @@ void main() {
     });
 
     test('tout autre statut : non, même avec un compteur renseigné', () {
-      for (final status in ['connu', 'préparé', '', 'autre']) {
+      for (final status in [SpellStatus.known, SpellStatus.prepared]) {
         expect(
           InnateSpellUsage.isLimited(
             _spell(status: status, innateUsesSpent: 1),
           ),
           isFalse,
-          reason: status,
+          reason: status.value,
         );
       }
     });
@@ -54,8 +55,8 @@ void main() {
         name: 'Test',
         level: 2,
         school: '',
-        status: 'préparé',
-        storedStatus: 'inné',
+        status: SpellStatus.prepared,
+        storedStatus: SpellStatus.innate,
         grantSource: SpellGrantSource.domain,
       );
       expect(InnateSpellUsage.isLimited(granted), isFalse);
@@ -104,7 +105,7 @@ void main() {
       name: 'Ténèbres',
       level: 2,
       school: 'Évocation',
-      status: 'inné',
+      status: SpellStatus.innate,
       castingTime: '1 action',
       range: '18 m',
       components: {'verbal': true},
@@ -113,7 +114,7 @@ void main() {
       description: 'd',
       isFavorite: true,
       isPersisted: false,
-      storedStatus: 'inné',
+      storedStatus: SpellStatus.innate,
       requiresPreparation: false,
     );
     final copy = original.copyWithInnateUsesSpent(1);
@@ -122,7 +123,7 @@ void main() {
     expect(copy.name, 'Ténèbres');
     expect(copy.level, 2);
     expect(copy.school, 'Évocation');
-    expect(copy.status, 'inné');
+    expect(copy.status, SpellStatus.innate);
     expect(copy.castingTime, '1 action');
     expect(copy.range, '18 m');
     expect(copy.components, {'verbal': true});
@@ -132,7 +133,7 @@ void main() {
     expect(copy.isFavorite, isTrue);
     expect(copy.grantSource, isNull);
     expect(copy.isPersisted, isFalse);
-    expect(copy.storedStatus, 'inné');
+    expect(copy.storedStatus, SpellStatus.innate);
     expect(copy.requiresPreparation, isFalse);
   });
 }

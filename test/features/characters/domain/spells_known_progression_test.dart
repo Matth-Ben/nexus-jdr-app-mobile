@@ -150,11 +150,49 @@ void main() {
       }
     });
 
-    test('Clerc/Druide/Paladin ne choisissent aucun sort à la montée : ils '
-        'préparent depuis toute leur liste de classe', () {
-      for (final className in ['Clerc', 'Druide', 'Paladin']) {
+    test('Clerc/Druide/Paladin/Artificier ne choisissent aucun sort à la '
+        'montée : ils préparent depuis toute leur liste de classe', () {
+      for (final className in ['Clerc', 'Druide', 'Paladin', 'Artificier']) {
         expect(SpellsKnownProgression.newSpellsKnownAt(className, 5), 0);
       }
+    });
+  });
+
+  group('Artificier (D41, docs/dette-technique.md) : cantrips connus — '
+      'progression RAW propre, indépendante de la table d\'emplacements '
+      'simplifiée (voir spell_slot_progression.dart)', () {
+    test('2 cantrips dès le niveau 1 (valeur RAW réelle, pas une valeur de '
+        'secours comme pour Paladin/Rôdeur)', () {
+      expect(SpellsKnownProgression.newCantripsAt('Artificier', 1), 2);
+    });
+
+    test('+1 au niveau 10 (2 -> 3) et au niveau 14 (3 -> 4)', () {
+      expect(SpellsKnownProgression.newCantripsAt('Artificier', 10), 1);
+      expect(SpellsKnownProgression.newCantripsAt('Artificier', 14), 1);
+    });
+
+    test('aucun autre delta entre les niveaux 2 et 20, hors paliers 10 et '
+        '14', () {
+      for (var level = 2; level <= 20; level++) {
+        if (level == 10 || level == 14) continue;
+        expect(
+          SpellsKnownProgression.newCantripsAt('Artificier', level),
+          0,
+          reason: 'niveau $level',
+        );
+      }
+    });
+
+    test('somme des deltas 1 à 20 == 4 (valeur finale de niveau 20)', () {
+      var sum = 0;
+      for (var level = 1; level <= 20; level++) {
+        sum += SpellsKnownProgression.newCantripsAt('Artificier', level);
+      }
+      expect(
+        sum,
+        SpellsKnownProgression.cantripsKnownByLevel['Artificier']![20],
+      );
+      expect(sum, 4);
     });
   });
 }

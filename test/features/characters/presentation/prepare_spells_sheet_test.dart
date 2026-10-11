@@ -8,6 +8,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
@@ -22,21 +23,21 @@ const _cantrip = CharacterSpellEntry(
   name: 'Lumière',
   level: 0,
   school: 'Évocation',
-  status: 'connu',
+  status: SpellStatus.known,
 );
 const _prepared = CharacterSpellEntry(
   id: 2,
   name: 'Bénédiction',
   level: 1,
   school: 'Enchantement',
-  status: 'préparé',
+  status: SpellStatus.prepared,
 );
 const _unprepared = CharacterSpellEntry(
   id: 3,
   name: 'Soins',
   level: 1,
   school: 'Évocation',
-  status: 'connu',
+  status: SpellStatus.known,
   description: 'Vous infligez 1d8 dégâts de force à la cible.',
 );
 const _granted = CharacterSpellEntry(
@@ -44,7 +45,7 @@ const _granted = CharacterSpellEntry(
   name: 'Garde divine',
   level: 1,
   school: 'Abjuration',
-  status: 'préparé',
+  status: SpellStatus.prepared,
   grantSource: SpellGrantSource.domain,
   isPersisted: false,
 );
@@ -174,11 +175,11 @@ void main() {
       expect(toggled, hasLength(2));
       // 1er appel : avant préparation, status 'connu' -> l'appelant dérive
       // prepared: true.
-      expect(toggled[0].status, 'connu');
+      expect(toggled[0].status, SpellStatus.known);
       // 2e appel : avant dé-préparation, status doit refléter 'préparé' (pas
       // à nouveau 'connu') -> l'appelant dérive prepared: false. Sans le
       // correctif, les deux appels auraient porté 'connu'.
-      expect(toggled[1].status, 'préparé');
+      expect(toggled[1].status, SpellStatus.prepared);
       final tile = tester.widget<CheckableOptionTile>(
         find.byType(CheckableOptionTile),
       );
@@ -355,7 +356,7 @@ void main() {
       name: 'Charme-personne',
       level: 1,
       school: 'Enchantement',
-      status: 'connu',
+      status: SpellStatus.known,
       requiresPreparation: false,
     );
     const bardStoredPrepared = CharacterSpellEntry(
@@ -363,7 +364,7 @@ void main() {
       name: 'Héroïsme',
       level: 1,
       school: 'Enchantement',
-      status: 'préparé',
+      status: SpellStatus.prepared,
       requiresPreparation: false,
     );
     const all = [
@@ -423,7 +424,7 @@ void main() {
       name: 'Représailles infernales',
       level: 2,
       school: 'Évocation',
-      status: 'inné',
+      status: SpellStatus.innate,
     );
 
     testWidgets('personnage qui prépare : non listé, donc ni case à cocher '
@@ -462,7 +463,7 @@ void main() {
         name: 'Représailles infernales',
         level: 2,
         school: 'Évocation',
-        status: 'inné',
+        status: SpellStatus.innate,
         requiresPreparation: false,
       );
       await pumpSheet(tester, spells: const [_prepared, bardInnate]);

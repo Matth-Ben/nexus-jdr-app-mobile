@@ -1,3 +1,4 @@
+import '../../../core/rules/spell_status.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
 import '../../character_creation/domain/alignment_catalog.dart';
 import '../../character_creation/domain/alignment_option.dart';
@@ -333,14 +334,14 @@ abstract final class XmlImportSaveDataResolver {
         if (_recognizedValue(entry.resolution) != null)
           (
             spellId: _recognizedValue(entry.resolution)!.id,
-            status: 'inné',
+            status: SpellStatus.innate,
             sourceClassId: sourceClassId,
           ),
       for (final entry in knownSpells)
         if (_recognizedValue(entry.resolution) != null)
           (
             spellId: _recognizedValue(entry.resolution)!.id,
-            status: 'connu',
+            status: SpellStatus.known,
             sourceClassId: sourceClassId,
           ),
     ];

@@ -1,15 +1,18 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/character_creation/domain/spellcasting_rules.dart';
 
 void main() {
   group('cantripQuotaFor', () {
-    test('retourne le quota de cantrips exact des 6 classes qui en ont', () {
+    test('retourne le quota de cantrips exact des 7 classes qui en ont', () {
       expect(SpellcastingRules.cantripQuotaFor('Barde'), 2);
       expect(SpellcastingRules.cantripQuotaFor('Clerc'), 3);
       expect(SpellcastingRules.cantripQuotaFor('Druide'), 2);
       expect(SpellcastingRules.cantripQuotaFor('Occultiste'), 2);
       expect(SpellcastingRules.cantripQuotaFor('Magicien'), 3);
       expect(SpellcastingRules.cantripQuotaFor('Ensorceleur'), 4);
+      // D41 : demi-lanceur qui prépare, voir docs/dette-technique.md.
+      expect(SpellcastingRules.cantripQuotaFor('Artificier'), 2);
     });
 
     test('retourne 0 pour Paladin/Rôdeur (aucun cantrip en 5e)', () {
@@ -26,7 +29,7 @@ void main() {
   });
 
   group('levelOneSpellQuotaFor', () {
-    test('retourne un quota strictement positif pour les 8 classes '
+    test('retourne un quota strictement positif pour les 9 classes '
         'lanceuses', () {
       const casterClassNames = [
         'Barde',
@@ -37,6 +40,8 @@ void main() {
         'Occultiste',
         'Magicien',
         'Ensorceleur',
+        // D41 : demi-lanceur qui prépare, voir docs/dette-technique.md.
+        'Artificier',
       ];
       for (final className in casterClassNames) {
         expect(
@@ -58,7 +63,7 @@ void main() {
   });
 
   group('isSpellcastingClass', () {
-    test('true pour les 8 classes lanceuses de sorts', () {
+    test('true pour les 9 classes lanceuses de sorts', () {
       const casterClassNames = [
         'Barde',
         'Clerc',
@@ -68,6 +73,8 @@ void main() {
         'Occultiste',
         'Magicien',
         'Ensorceleur',
+        // D41 : demi-lanceur qui prépare, voir docs/dette-technique.md.
+        'Artificier',
       ];
       for (final className in casterClassNames) {
         expect(
@@ -95,17 +102,24 @@ void main() {
   });
 
   group('statusFor', () {
-    test("'préparé' pour les 4 classes lanceuses \"préparées\"", () {
-      for (final className in ['Clerc', 'Druide', 'Magicien', 'Paladin']) {
+    test("SpellStatus.prepared pour les 5 classes lanceuses \"préparées\" "
+        "(Clerc/Druide/Magicien/Paladin, et l'Artificier depuis D41)", () {
+      for (final className in [
+        'Clerc',
+        'Druide',
+        'Magicien',
+        'Paladin',
+        'Artificier',
+      ]) {
         expect(
           SpellcastingRules.statusFor(className),
-          'préparé',
+          SpellStatus.prepared,
           reason: className,
         );
       }
     });
 
-    test("'connu' pour les 4 classes lanceuses \"connues\"", () {
+    test("SpellStatus.known pour les 4 classes lanceuses \"connues\"", () {
       for (final className in [
         'Barde',
         'Ensorceleur',
@@ -114,14 +128,15 @@ void main() {
       ]) {
         expect(
           SpellcastingRules.statusFor(className),
-          'connu',
+          SpellStatus.known,
           reason: className,
         );
       }
     });
 
-    test("retombe sur 'connu' pour un nom de classe imprévu (défensif)", () {
-      expect(SpellcastingRules.statusFor('Inventeur'), 'connu');
+    test('retombe sur SpellStatus.known pour un nom de classe imprévu '
+        '(défensif)', () {
+      expect(SpellcastingRules.statusFor('Inventeur'), SpellStatus.known);
     });
   });
 }

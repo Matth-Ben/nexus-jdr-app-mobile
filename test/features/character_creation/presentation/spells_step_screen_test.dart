@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:personnages/features/character_creation/data/character_creation_repository.dart';
 import 'package:personnages/features/character_creation/domain/alignment_catalog.dart';
@@ -883,7 +884,10 @@ void main() {
       maxHp: 8,
       currentHp: 8,
       backgroundId: 1,
-      spells: [(spellId: 2, status: 'inné'), (spellId: 1, status: 'connu')],
+      spells: [
+        (spellId: 2, status: SpellStatus.innate),
+        (spellId: 1, status: SpellStatus.known),
+      ],
     );
     const background = BackgroundOption(
       id: 1,

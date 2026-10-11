@@ -9,6 +9,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/theme/app_spacing.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
@@ -38,14 +39,14 @@ const _innate = CharacterSpellEntry(
   name: 'Ténèbres',
   level: 2,
   school: 'Évocation',
-  status: 'inné',
+  status: SpellStatus.innate,
 );
 const _innateSpent = CharacterSpellEntry(
   id: 10,
   name: 'Ténèbres',
   level: 2,
   school: 'Évocation',
-  status: 'inné',
+  status: SpellStatus.innate,
   innateUsesSpent: 1,
 );
 const _innateCantrip = CharacterSpellEntry(
@@ -53,7 +54,7 @@ const _innateCantrip = CharacterSpellEntry(
   name: 'Lumières dansantes',
   level: 0,
   school: 'Évocation',
-  status: 'inné',
+  status: SpellStatus.innate,
 );
 // Encadrent « Ténèbres » dans l'ordre alphabétique du niveau 2.
 const _preparedBefore = CharacterSpellEntry(
@@ -61,21 +62,21 @@ const _preparedBefore = CharacterSpellEntry(
   name: 'Aide',
   level: 2,
   school: 'Abjuration',
-  status: 'préparé',
+  status: SpellStatus.prepared,
 );
 const _preparedAfter = CharacterSpellEntry(
   id: 13,
   name: 'Zone de vérité',
   level: 2,
   school: 'Enchantement',
-  status: 'préparé',
+  status: SpellStatus.prepared,
 );
 const _unprepared = CharacterSpellEntry(
   id: 14,
   name: 'Silence',
   level: 2,
   school: 'Illusion',
-  status: 'connu',
+  status: SpellStatus.known,
 );
 
 CharacterDetail _detail(
@@ -339,7 +340,7 @@ void main() {
       name: 'Protection contre le mal et le bien et toutes les autres choses',
       level: 2,
       school: 'Abjuration',
-      status: 'inné',
+      status: SpellStatus.innate,
       description: 'Inflige 8d6 dégâts de feu.',
     );
     const longNamedSpent = CharacterSpellEntry(
@@ -347,7 +348,7 @@ void main() {
       name: 'Protection contre le mal et le bien et toutes les autres choses',
       level: 2,
       school: 'Abjuration',
-      status: 'inné',
+      status: SpellStatus.innate,
       description: 'Inflige 8d6 dégâts de feu.',
       innateUsesSpent: 1,
     );

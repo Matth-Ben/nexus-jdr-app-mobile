@@ -64,9 +64,18 @@ abstract final class MulticlassPrerequisites {
     'Magicien': [
       [('int', 13)],
     ],
+    // D41 (`docs/dette-technique.md`) : l'Artificier est désormais modélisé
+    // comme un demi-lanceur qui prépare (voir
+    // `core/rules/class_spellcasting_rule.dart`) — sans entrée ici, il serait
+    // injouable en multiclassage (jamais éligible comme nouvelle classe à
+    // l'étape `classDecision` de la montée de niveau). Intelligence 13,
+    // RAW (Tasha's Cauldron of Everything).
+    'Artificier': [
+      [('int', 13)],
+    ],
   };
 
-  /// `true` si [className] est l'une des 12 classes RAW couvertes par
+  /// `true` si [className] est l'une des 13 classes RAW couvertes par
   /// [_requirementsByClassName] — seule énumération des classes connues du
   /// domaine `characters`. Sert à distinguer une classe connue d'un nom non
   /// reconnu (classe non modélisée, repli « Classe #id »), voir
@@ -77,7 +86,7 @@ abstract final class MulticlassPrerequisites {
   /// `true` ssi au moins une clause de [className] est entièrement remplie
   /// par [scoresByAbilityId] (`ability_id` -> score final). `false` pour une
   /// classe absente de [_requirementsByClassName] (ne devrait pas arriver
-  /// pour les 12 classes RAW couvertes ci-dessus — traité comme "prérequis
+  /// pour les 13 classes RAW couvertes ci-dessus — traité comme "prérequis
   /// non rempli" plutôt que de deviner une éligibilité, même philosophie que
   /// le reste de ce dépôt).
   static bool meetsRequirement(

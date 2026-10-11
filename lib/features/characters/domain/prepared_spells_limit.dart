@@ -1,51 +1,54 @@
+import '../../../core/rules/character_class.dart';
+import '../../../core/rules/class_spellcasting_rule.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
 import 'character_detail_class_row.dart';
-import 'multiclass_prerequisites.dart';
-import 'spellcasting_class_names.dart';
 
 /// Limite de sorts préparés (5e RAW) des classes qui PRÉPARENT leurs sorts :
-/// Clerc/Druide (Sagesse + niveau), Magicien (Intelligence + niveau) et
-/// Paladin (Charisme + moitié du niveau arrondie à l'inférieur). Minimum 1
+/// Clerc/Druide (Sagesse + niveau), Magicien (Intelligence + niveau),
+/// Paladin et Artificier (moitié du niveau arrondie à l'inférieur). Minimum 1
 /// dans tous les cas.
 ///
 /// Les classes à sorts connus (Barde, Ensorceleur, Occultiste, Rôdeur) et les
 /// classes non lanceuses (les sous-classes lanceuses du Guerrier/Roublard ne
 /// sont pas modélisées) n'ont pas de limite de préparation : [limitFor]
 /// renvoie `null`.
+///
+/// Classification déléguée au registre unique
+/// `core/rules/class_spellcasting_rule.dart::ClassSpellcastingRegistry`
+/// (dette D04, `docs/dette-technique.md`) — y compris l'Artificier, demi-
+/// lanceur qui prépare depuis D41.
 abstract final class PreparedSpellsLimit {
   /// Clé de caractéristique d'incantation ('wis'/'int'/'cha') des classes qui
   /// préparent leurs sorts, `null` pour toute autre classe.
-  static String? abilityKeyFor(String className) => switch (className) {
-    'Clerc' || 'Druide' => 'wis',
-    'Magicien' => 'int',
-    'Paladin' => 'cha',
-    _ => null,
-  };
+  static String? abilityKeyFor(String className) {
+    final rule = ClassSpellcastingRegistry.ruleForFrenchName(className);
+    return rule.preparesSpells ? rule.spellcastingAbilityKey : null;
+  }
 
   /// Vrai si [className] prépare ses sorts.
   static bool preparesSpells(String className) =>
-      abilityKeyFor(className) != null;
+      ClassSpellcastingRegistry.ruleForFrenchName(className).preparesSpells;
 
   /// Vrai si [className] est une classe à sorts connus : elle lance ses
-  /// sorts sans les préparer (Barde, Ensorceleur, Occultiste, Rôdeur). Liste
-  /// explicite, et non « tout ce qui ne prépare pas » : un nom inconnu
-  /// (classe non modélisée comme l'Artificier, repli « Classe #id ») ne doit
-  /// jamais rendre un sort lançable sans préparation.
+  /// sorts sans les préparer (Barde, Ensorceleur, Occultiste, Rôdeur). Un nom
+  /// inconnu (repli « Classe #id ») ne doit jamais rendre un sort lançable
+  /// sans préparation — [ClassSpellcastingRegistry.ruleForFrenchName] est
+  /// déjà sûr par défaut sur ce point (repli [ClassSpellcastingRule.none],
+  /// qui ne connaît jamais sans préparer).
   static bool knowsSpellsWithoutPreparing(String className) =>
-      switch (className) {
-        'Barde' || 'Ensorceleur' || 'Occultiste' || 'Rôdeur' => true,
-        _ => false,
-      };
+      ClassSpellcastingRegistry.ruleForFrenchName(className)
+          .knowsSpellsWithoutPreparing;
 
   /// Vrai si [className] est une classe CONNUE qui ne lance aucun sort
-  /// (Barbare, Guerrier, Moine, Roublard) : connue de
-  /// [MulticlassPrerequisites] (les 12 classes RAW) et absente de
-  /// [spellcastingClassNames]. Dérivé de ces deux sources plutôt que d'une
-  /// liste de plus. Un nom non reconnu n'est PAS « non lanceur » : on ne sait
-  /// rien de lui.
-  static bool _castsNoSpells(String className) =>
-      MulticlassPrerequisites.isKnownClass(className) &&
-      !spellcastingClassNames.contains(className);
+  /// (Barbare, Guerrier, Moine, Roublard) : reconnue par [CharacterClass]
+  /// (les 13 classes RAW) et non lanceuse selon
+  /// [ClassSpellcastingRegistry]. Un nom non reconnu n'est PAS « non
+  /// lanceur » : on ne sait rien de lui.
+  static bool _castsNoSpells(String className) {
+    final characterClass = CharacterClass.fromFrenchName(className);
+    if (characterClass == null) return false;
+    return !ClassSpellcastingRegistry.ruleFor(characterClass).isCaster;
+  }
 
   /// Vrai si un sort du personnage doit être préparé pour être lancé — la
   /// valeur de `CharacterSpellEntry.requiresPreparation`.
@@ -101,15 +104,23 @@ abstract final class PreparedSpellsLimit {
   /// Limite de sorts préparés d'une classe, `null` si [className] ne prépare
   /// pas ses sorts. [abilityModifier] est le modificateur de la
   /// caractéristique d'incantation de la classe (voir [abilityKeyFor]).
+  ///
+  /// `base` dépend du type de lanceur ([CasterType], voir
+  /// [ClassSpellcastingRegistry]) : niveau de classe entier pour un lanceur
+  /// complet qui prépare (Clerc, Druide, Magicien), moitié du niveau de
+  /// classe arrondie à l'inférieur pour un demi-lanceur qui prépare (Paladin,
+  /// Artificier depuis D41).
   static int? limitFor({
     required String className,
     required int classLevel,
     required int abilityModifier,
   }) {
-    final base = switch (className) {
-      'Clerc' || 'Druide' || 'Magicien' => classLevel,
-      'Paladin' => classLevel ~/ 2,
-      _ => null,
+    final rule = ClassSpellcastingRegistry.ruleForFrenchName(className);
+    if (!rule.preparesSpells) return null;
+    final base = switch (rule.casterType) {
+      CasterType.full => classLevel,
+      CasterType.half => classLevel ~/ 2,
+      CasterType.none || CasterType.pact => null,
     };
     if (base == null) return null;
     final limit = base + abilityModifier;

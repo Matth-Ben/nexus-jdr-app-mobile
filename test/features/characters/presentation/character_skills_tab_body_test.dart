@@ -9,6 +9,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
@@ -559,7 +560,7 @@ void main() {
               name: 'Lumière',
               level: 0,
               school: 'Évocation',
-              status: 'connu',
+              status: SpellStatus.known,
             ),
           ],
           spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],

@@ -12,6 +12,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
@@ -157,16 +158,16 @@ void main() {
             name: 'Bénédiction',
             level: 1,
             school: 'Enchantement',
-            status: 'préparé',
+            status: SpellStatus.prepared,
             grantSource: SpellGrantSource.domain,
-            storedStatus: 'connu',
+            storedStatus: SpellStatus.known,
           ),
           CharacterSpellEntry(
             id: 2,
             name: 'Soins',
             level: 1,
             school: 'Invocation',
-            status: 'préparé',
+            status: SpellStatus.prepared,
             grantSource: SpellGrantSource.domain,
             isPersisted: false,
           ),

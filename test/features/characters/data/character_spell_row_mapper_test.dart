@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/spell_status_formatter.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
@@ -31,8 +32,8 @@ void main() {
         {'spell_id': 2, 'status': 'inné'},
       ];
       expect(CharacterSpellRowMapper.parseStatuses(rows), {
-        1: 'préparé',
-        2: 'inné',
+        1: SpellStatus.prepared,
+        2: SpellStatus.innate,
       });
     });
   });
@@ -45,10 +46,12 @@ void main() {
           {'spell_id': 1, 'status': 'inné'},
           {'spell_id': 1, 'status': ordinary},
         ];
-        expect(CharacterSpellRowMapper.parseStatuses(rows), {1: ordinary});
-        expect(CharacterSpellRowMapper.parseStatuses(rows.reversed.toList()), {
-          1: ordinary,
-        });
+        final expected = {1: SpellStatus.fromValue(ordinary)};
+        expect(CharacterSpellRowMapper.parseStatuses(rows), expected);
+        expect(
+          CharacterSpellRowMapper.parseStatuses(rows.reversed.toList()),
+          expected,
+        );
       }
     });
 
@@ -57,7 +60,9 @@ void main() {
         {'spell_id': 1, 'status': 'inné'},
         {'spell_id': 1, 'status': 'inné'},
       ];
-      expect(CharacterSpellRowMapper.parseStatuses(rows), {1: 'inné'});
+      expect(CharacterSpellRowMapper.parseStatuses(rows), {
+        1: SpellStatus.innate,
+      });
     });
 
     test("lignes ordinaires de statuts différents ('connu'/'préparé') : "
@@ -68,9 +73,11 @@ void main() {
         {'spell_id': 1, 'status': 'connu'},
         {'spell_id': 1, 'status': 'préparé'},
       ];
-      expect(CharacterSpellRowMapper.parseStatuses(rows), {1: 'préparé'});
+      expect(CharacterSpellRowMapper.parseStatuses(rows), {
+        1: SpellStatus.prepared,
+      });
       expect(CharacterSpellRowMapper.parseStatuses(rows.reversed.toList()), {
-        1: 'préparé',
+        1: SpellStatus.prepared,
       });
     });
 
@@ -80,8 +87,8 @@ void main() {
         {'spell_id': 2, 'status': 'inné'},
       ];
       expect(CharacterSpellRowMapper.parseStatuses(rows), {
-        1: 'connu',
-        2: 'inné',
+        1: SpellStatus.known,
+        2: SpellStatus.innate,
       });
     });
   });
@@ -96,7 +103,7 @@ void main() {
         spellRows,
         names: const {'1': 'Boule de feu'},
         descriptions: const {},
-        statuses: const {1: 'connu'},
+        statuses: const {1: SpellStatus.known},
         classes: const [],
       );
 
@@ -104,7 +111,7 @@ void main() {
       expect(result.single.name, 'Boule de feu');
       expect(result.single.level, 3);
       expect(result.single.school, 'Évocation');
-      expect(result.single.status, 'connu');
+      expect(result.single.status, SpellStatus.known);
     });
 
     test('un id sans nom résolu retombe sur un libellé générique', () {
@@ -123,7 +130,7 @@ void main() {
       expect(result.single.name, 'Sort #42');
       expect(result.single.school, '');
       // Aucun statut résolu : retombe sur 'connu'.
-      expect(result.single.status, 'connu');
+      expect(result.single.status, SpellStatus.known);
     });
 
     test('résout castingTime/range/components/duration/concentration/'
@@ -145,7 +152,7 @@ void main() {
         spellRows,
         names: const {'1': 'Bouclier'},
         descriptions: const {'1': 'Une description complète.'},
-        statuses: const {1: 'connu'},
+        statuses: const {1: SpellStatus.known},
         classes: const [],
       );
 
@@ -195,15 +202,15 @@ void main() {
       ],
       names: const {},
       descriptions: const {},
-      statuses: const {8: 'préparé'},
+      statuses: const {8: SpellStatus.prepared},
       classes: const [],
     );
 
     final classListSpell = result.firstWhere((spell) => spell.id == 7);
-    expect(classListSpell.status, 'connu');
+    expect(classListSpell.status, SpellStatus.known);
     expect(classListSpell.isPersisted, isFalse);
     final chosenSpell = result.firstWhere((spell) => spell.id == 8);
-    expect(chosenSpell.status, 'préparé');
+    expect(chosenSpell.status, SpellStatus.prepared);
     expect(chosenSpell.isPersisted, isTrue);
   });
 
@@ -243,12 +250,12 @@ void main() {
       {'id': 7, 'level': 1, 'school': ''},
     ];
     const statuses = {
-      1: 'connu',
-      2: 'connu',
-      3: 'connu',
-      4: 'connu',
-      5: 'inné',
-      6: 'connu',
+      1: SpellStatus.known,
+      2: SpellStatus.known,
+      3: SpellStatus.known,
+      4: SpellStatus.known,
+      5: SpellStatus.innate,
+      6: SpellStatus.known,
     };
 
     Map<int, CharacterSpellEntry> map(
@@ -324,14 +331,14 @@ void main() {
         expect(SpellStatusFormatter.subtitle(cantrip), isNull);
 
         final innate = spells[5]!;
-        expect(innate.status, 'inné');
+        expect(innate.status, SpellStatus.innate);
         expect(SpellStatusFormatter.canCast(innate), isTrue);
         expect(SpellStatusFormatter.canTogglePrepared(innate), isFalse);
         expect(SpellStatusFormatter.subtitle(innate), isNull);
 
         final granted = spells[6]!;
-        expect(granted.status, 'préparé');
-        expect(granted.storedStatus, 'connu');
+        expect(granted.status, SpellStatus.prepared);
+        expect(granted.storedStatus, SpellStatus.known);
         expect(SpellStatusFormatter.canCast(granted), isTrue);
         expect(SpellStatusFormatter.canTogglePrepared(granted), isFalse);
         expect(
@@ -418,7 +425,7 @@ void main() {
         ],
         names: const {},
         descriptions: const {},
-        statuses: const {1: 'inné', 2: 'inné'},
+        statuses: const {1: SpellStatus.innate, 2: SpellStatus.innate},
         classes: const [],
         innateUsesSpent: const {1: 1},
       );

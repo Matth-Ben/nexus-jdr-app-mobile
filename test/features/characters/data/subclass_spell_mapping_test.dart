@@ -4,6 +4,7 @@
 // `SpellStatusFormatter` et `CharacterDetail.preparedSpellCount`.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/data/character_detail_row_mapper.dart';
 import 'package:personnages/features/characters/data/character_spell_row_mapper.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
@@ -31,7 +32,7 @@ void main() {
       );
 
       final granted = result.singleWhere((s) => s.id == 2);
-      expect(granted.status, 'préparé');
+      expect(granted.status, SpellStatus.prepared);
       expect(granted.grantSource, SpellGrantSource.oath);
       expect(granted.isAlwaysPrepared, isTrue);
       expect(granted.isPersisted, isFalse);
@@ -43,7 +44,7 @@ void main() {
         spellRows,
         names: const {},
         descriptions: const {},
-        statuses: const {1: 'connu', 2: 'connu'},
+        statuses: const {1: SpellStatus.known, 2: SpellStatus.known},
         classes: const [],
         favorites: const {2: true},
         grants: const {2: SpellGrantSource.domain},
@@ -51,12 +52,12 @@ void main() {
 
       expect(result.where((s) => s.id == 2), hasLength(1));
       final granted = result.singleWhere((s) => s.id == 2);
-      expect(granted.status, 'préparé');
+      expect(granted.status, SpellStatus.prepared);
       expect(granted.isPersisted, isTrue);
       expect(granted.isFavorite, isTrue);
       final ordinary = result.singleWhere((s) => s.id == 1);
       expect(ordinary.grantSource, isNull);
-      expect(ordinary.status, 'connu');
+      expect(ordinary.status, SpellStatus.known);
       expect(ordinary.isPersisted, isTrue);
     });
   });
@@ -103,7 +104,7 @@ void main() {
       name: 'Bénédiction',
       level: 1,
       school: '',
-      status: 'préparé',
+      status: SpellStatus.prepared,
       grantSource: SpellGrantSource.domain,
     );
 
@@ -123,7 +124,7 @@ void main() {
   group('CharacterDetail.preparedSpellCount / grantedSpells', () {
     CharacterSpellEntry spell(
       int id, {
-      required String status,
+      required SpellStatus status,
       int level = 1,
       SpellGrantSource? grant,
     }) => CharacterSpellEntry(
@@ -148,12 +149,20 @@ void main() {
           temporaryHp: 0,
           abilityScores: const {},
           spells: [
-            spell(1, status: 'préparé'),
-            spell(2, status: 'préparé'),
-            spell(3, status: 'connu'),
-            spell(4, status: 'préparé', level: 0),
-            spell(5, status: 'préparé', grant: SpellGrantSource.domain),
-            spell(6, status: 'préparé', grant: SpellGrantSource.domain),
+            spell(1, status: SpellStatus.prepared),
+            spell(2, status: SpellStatus.prepared),
+            spell(3, status: SpellStatus.known),
+            spell(4, status: SpellStatus.prepared, level: 0),
+            spell(
+              5,
+              status: SpellStatus.prepared,
+              grant: SpellGrantSource.domain,
+            ),
+            spell(
+              6,
+              status: SpellStatus.prepared,
+              grant: SpellGrantSource.domain,
+            ),
           ],
         );
 
@@ -174,14 +183,14 @@ void main() {
         temporaryHp: 0,
         abilityScores: const {},
         spells: [
-          spell(1, status: 'préparé'),
-          spell(2, status: 'connu'),
+          spell(1, status: SpellStatus.prepared),
+          spell(2, status: SpellStatus.known),
           const CharacterSpellEntry(
             id: 3,
             name: 'S3',
             level: 1,
             school: '',
-            status: 'préparé',
+            status: SpellStatus.prepared,
             requiresPreparation: false,
           ),
           const CharacterSpellEntry(
@@ -189,7 +198,7 @@ void main() {
             name: 'S4',
             level: 2,
             school: '',
-            status: 'connu',
+            status: SpellStatus.known,
             requiresPreparation: false,
           ),
         ],

@@ -8,6 +8,7 @@ import 'package:personnages/core/cache/app_database.dart';
 import 'package:personnages/core/cache/pending_character_write_queue.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
@@ -213,7 +214,7 @@ void main() {
           .fetchCharacterDetail(characterId);
 
       final spell = spellOf(detail, 30);
-      expect(spell.status, 'inné');
+      expect(spell.status, SpellStatus.innate);
       expect(spell.innateUsesSpent, 0);
       expect(
         SpellCastBlockReason.of(spell: spell, spellSlots: const []),
@@ -295,7 +296,7 @@ void main() {
           );
 
           final reason = 'reversed=$reversed';
-          expect(spell.status, ordinary, reason: reason);
+          expect(spell.status, SpellStatus.fromValue(ordinary), reason: reason);
           expect(InnateSpellUsage.isLimited(spell), isFalse, reason: reason);
           // Circuit ordinaire : jamais la raison « déjà utilisé », et un
           // emplacement est exigé.
@@ -332,7 +333,7 @@ void main() {
 
       expect(
         spellOf(await repo.fetchCharacterDetail(characterId), 30).status,
-        'connu',
+        SpellStatus.known,
       );
     });
 
@@ -349,7 +350,7 @@ void main() {
             await preparedLast.fetchCharacterDetail(characterId),
             30,
           ).status,
-          'préparé',
+          SpellStatus.prepared,
         );
 
         final knownLast = await repository(
@@ -357,7 +358,7 @@ void main() {
         );
         expect(
           spellOf(await knownLast.fetchCharacterDetail(characterId), 30).status,
-          'préparé',
+          SpellStatus.prepared,
         );
       },
     );

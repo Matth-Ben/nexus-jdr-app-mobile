@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/crash_reporting/crash_reporter.dart';
+import '../../../core/rules/spell_status.dart';
 import '../domain/rest_type.dart';
 import 'character_detail_cache.dart';
 import 'character_repository.dart';
@@ -260,7 +261,7 @@ class PendingCharacterWriteSyncer {
             .update({'innate_uses_spent': usesSpent})
             .eq('character_id', write.characterId)
             .eq('spell_id', spellId)
-            .eq('status', 'inné');
+            .eq('status', SpellStatus.innate.value);
       case PendingCharacterWriteKind.classFeature:
         final classFeatureId = (write.payload['classFeatureId'] as num).toInt();
         final usesRemaining = (write.payload['usesRemaining'] as num).toInt();

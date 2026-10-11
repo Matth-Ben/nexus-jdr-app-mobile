@@ -1,3 +1,4 @@
+import '../../../core/rules/spell_status.dart';
 import 'spell_grant_source.dart';
 
 /// Un sort connu/préparé du personnage (onglet "Sorts", section "SORTS" —
@@ -37,11 +38,10 @@ class CharacterSpellEntry {
   /// `spells.school`, chaîne vide si non renseignée côté base.
   final String school;
 
-  /// `character_spells.status` : 'connu'/'préparé'/'inné' — voir
-  /// `domain/spell_status_formatter.dart` pour sa mise en forme à
-  /// l'affichage et les règles dérivées (éligibilité de "Lancer",
-  /// bascule "Préparer").
-  final String status;
+  /// `character_spells.status` — voir `domain/spell_status_formatter.dart`
+  /// pour sa mise en forme à l'affichage et les règles dérivées
+  /// (éligibilité de "Lancer", bascule "Préparer").
+  final SpellStatus status;
 
   /// `spells.casting_time`, chaîne vide si non renseigné — panneau "Infos"
   /// (`presentation/widgets/spell_info_panel.dart`).
@@ -91,10 +91,10 @@ class CharacterSpellEntry {
   final bool isPersisted;
 
   /// Statut réellement stocké dans `character_spells.status`, quand il diffère
-  /// de [status] (sort accordé : [status] vaut toujours 'préparé' alors que la
-  /// ligne en base peut valoir 'connu'). `null` = identique à [status]. Sert
-  /// aux exports, fidèles aux données stockées.
-  final String? storedStatus;
+  /// de [status] (sort accordé : [status] vaut toujours [SpellStatus.prepared]
+  /// alors que la ligne en base peut valoir [SpellStatus.known]). `null` =
+  /// identique à [status]. Sert aux exports, fidèles aux données stockées.
+  final SpellStatus? storedStatus;
 
   /// `false` si ce sort vient d'une classe à sorts connus (Barde,
   /// Ensorceleur, Occultiste, Rôdeur) : il se lance sans être préparé et n'a

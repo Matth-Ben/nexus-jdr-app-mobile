@@ -3,11 +3,12 @@
 // Sorts" : "Distinction claire entre sorts connus et sorts préparés".
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/characters/domain/spell_status_formatter.dart';
 
-CharacterSpellEntry _spell({required int level, required String status}) {
+CharacterSpellEntry _spell({required int level, required SpellStatus status}) {
   return CharacterSpellEntry(
     id: 1,
     name: 'Test',
@@ -21,25 +22,33 @@ void main() {
   group('SpellStatusFormatter.subtitle', () {
     test('sort mineur (niveau 0) -> jamais de sous-titre', () {
       expect(
-        SpellStatusFormatter.subtitle(_spell(level: 0, status: 'connu')),
+        SpellStatusFormatter.subtitle(
+          _spell(level: 0, status: SpellStatus.known),
+        ),
         isNull,
       );
       expect(
-        SpellStatusFormatter.subtitle(_spell(level: 0, status: 'inné')),
+        SpellStatusFormatter.subtitle(
+          _spell(level: 0, status: SpellStatus.innate),
+        ),
         isNull,
       );
     });
 
     test("sort niveau >= 1 'connu' -> \"connu, non préparé\"", () {
       expect(
-        SpellStatusFormatter.subtitle(_spell(level: 1, status: 'connu')),
+        SpellStatusFormatter.subtitle(
+          _spell(level: 1, status: SpellStatus.known),
+        ),
         'connu, non préparé',
       );
     });
 
     test("sort niveau >= 1 'préparé' -> \"préparé\"", () {
       expect(
-        SpellStatusFormatter.subtitle(_spell(level: 3, status: 'préparé')),
+        SpellStatusFormatter.subtitle(
+          _spell(level: 3, status: SpellStatus.prepared),
+        ),
         'préparé',
       );
     });
@@ -48,7 +57,9 @@ void main() {
       "sort niveau >= 1 'inné' (toujours disponible) -> aucun sous-titre",
       () {
         expect(
-          SpellStatusFormatter.subtitle(_spell(level: 2, status: 'inné')),
+          SpellStatusFormatter.subtitle(
+            _spell(level: 2, status: SpellStatus.innate),
+          ),
           isNull,
         );
       },
@@ -58,32 +69,42 @@ void main() {
   group('SpellStatusFormatter.canCast', () {
     test('sort mineur -> toujours lançable, quel que soit le statut', () {
       expect(
-        SpellStatusFormatter.canCast(_spell(level: 0, status: 'connu')),
+        SpellStatusFormatter.canCast(
+          _spell(level: 0, status: SpellStatus.known),
+        ),
         isTrue,
       );
       expect(
-        SpellStatusFormatter.canCast(_spell(level: 0, status: 'préparé')),
+        SpellStatusFormatter.canCast(
+          _spell(level: 0, status: SpellStatus.prepared),
+        ),
         isTrue,
       );
     });
 
     test("sort niveau >= 1 'connu' (non préparé) -> pas lançable", () {
       expect(
-        SpellStatusFormatter.canCast(_spell(level: 1, status: 'connu')),
+        SpellStatusFormatter.canCast(
+          _spell(level: 1, status: SpellStatus.known),
+        ),
         isFalse,
       );
     });
 
     test("sort niveau >= 1 'préparé' -> lançable", () {
       expect(
-        SpellStatusFormatter.canCast(_spell(level: 1, status: 'préparé')),
+        SpellStatusFormatter.canCast(
+          _spell(level: 1, status: SpellStatus.prepared),
+        ),
         isTrue,
       );
     });
 
     test("sort niveau >= 1 'inné' -> toujours lançable", () {
       expect(
-        SpellStatusFormatter.canCast(_spell(level: 5, status: 'inné')),
+        SpellStatusFormatter.canCast(
+          _spell(level: 5, status: SpellStatus.innate),
+        ),
         isTrue,
       );
     });
@@ -93,7 +114,7 @@ void main() {
     test('sort mineur -> jamais de bascule de préparation', () {
       expect(
         SpellStatusFormatter.canTogglePrepared(
-          _spell(level: 0, status: 'connu'),
+          _spell(level: 0, status: SpellStatus.known),
         ),
         isFalse,
       );
@@ -102,7 +123,7 @@ void main() {
     test("sort inné -> jamais de bascule de préparation", () {
       expect(
         SpellStatusFormatter.canTogglePrepared(
-          _spell(level: 2, status: 'inné'),
+          _spell(level: 2, status: SpellStatus.innate),
         ),
         isFalse,
       );
@@ -111,7 +132,7 @@ void main() {
     test("sort 'connu' niveau >= 1 -> bascule possible", () {
       expect(
         SpellStatusFormatter.canTogglePrepared(
-          _spell(level: 1, status: 'connu'),
+          _spell(level: 1, status: SpellStatus.known),
         ),
         isTrue,
       );
@@ -120,7 +141,7 @@ void main() {
     test("sort 'préparé' niveau >= 1 -> bascule possible", () {
       expect(
         SpellStatusFormatter.canTogglePrepared(
-          _spell(level: 1, status: 'préparé'),
+          _spell(level: 1, status: SpellStatus.prepared),
         ),
         isTrue,
       );
@@ -129,13 +150,13 @@ void main() {
 
   group('SpellStatusFormatter.isUnprepared / preparationLabel', () {
     test('sort mineur -> jamais "non préparé", aucun libellé', () {
-      final spell = _spell(level: 0, status: 'connu');
+      final spell = _spell(level: 0, status: SpellStatus.known);
       expect(SpellStatusFormatter.isUnprepared(spell), isFalse);
       expect(SpellStatusFormatter.preparationLabel(spell), isNull);
     });
 
     test('sort inné -> jamais "non préparé", aucun libellé', () {
-      final spell = _spell(level: 3, status: 'inné');
+      final spell = _spell(level: 3, status: SpellStatus.innate);
       expect(SpellStatusFormatter.isUnprepared(spell), isFalse);
       expect(SpellStatusFormatter.preparationLabel(spell), isNull);
     });
@@ -147,7 +168,7 @@ void main() {
         name: 'Bénédiction',
         level: 1,
         school: '',
-        status: 'préparé',
+        status: SpellStatus.prepared,
         grantSource: SpellGrantSource.domain,
         isPersisted: false,
       );
@@ -156,13 +177,13 @@ void main() {
     });
 
     test("sort niveau >= 1 'préparé' -> libellé \"préparé\"", () {
-      final spell = _spell(level: 1, status: 'préparé');
+      final spell = _spell(level: 1, status: SpellStatus.prepared);
       expect(SpellStatusFormatter.isUnprepared(spell), isFalse);
       expect(SpellStatusFormatter.preparationLabel(spell), 'préparé');
     });
 
     test("sort niveau >= 1 'connu' -> non préparé", () {
-      final spell = _spell(level: 1, status: 'connu');
+      final spell = _spell(level: 1, status: SpellStatus.known);
       expect(SpellStatusFormatter.isUnprepared(spell), isTrue);
       expect(SpellStatusFormatter.preparationLabel(spell), 'non préparé');
     });
@@ -172,7 +193,7 @@ void main() {
   // (`CharacterSpellEntry.requiresPreparation` faux, dérivé à la lecture).
   group('sort qui ne se prépare pas (classe à sorts connus)', () {
     CharacterSpellEntry known({
-      required String status,
+      required SpellStatus status,
       int level = 1,
       SpellGrantSource? grant,
     }) => CharacterSpellEntry(
@@ -187,7 +208,7 @@ void main() {
 
     test("'connu' niveau >= 1 : lançable, sans bascule, libellé ni "
         'sous-titre', () {
-      final spell = known(status: 'connu', level: 3);
+      final spell = known(status: SpellStatus.known, level: 3);
       expect(SpellStatusFormatter.canCast(spell), isTrue);
       expect(SpellStatusFormatter.canTogglePrepared(spell), isFalse);
       expect(SpellStatusFormatter.isUnprepared(spell), isFalse);
@@ -197,7 +218,7 @@ void main() {
 
     test("déjà passé à 'préparé' en base : lançable, ni \"préparé\" ni "
         'bascule', () {
-      final spell = known(status: 'préparé');
+      final spell = known(status: SpellStatus.prepared);
       expect(SpellStatusFormatter.canCast(spell), isTrue);
       expect(SpellStatusFormatter.canTogglePrepared(spell), isFalse);
       expect(SpellStatusFormatter.isUnprepared(spell), isFalse);
@@ -206,7 +227,7 @@ void main() {
     });
 
     test('sort mineur : inchangé', () {
-      final spell = known(status: 'connu', level: 0);
+      final spell = known(status: SpellStatus.known, level: 0);
       expect(SpellStatusFormatter.canCast(spell), isTrue);
       expect(SpellStatusFormatter.canTogglePrepared(spell), isFalse);
       expect(SpellStatusFormatter.preparationLabel(spell), isNull);
@@ -214,7 +235,7 @@ void main() {
     });
 
     test('sort inné : inchangé', () {
-      final spell = known(status: 'inné', level: 2);
+      final spell = known(status: SpellStatus.innate, level: 2);
       expect(SpellStatusFormatter.canCast(spell), isTrue);
       expect(SpellStatusFormatter.canTogglePrepared(spell), isFalse);
       expect(SpellStatusFormatter.preparationLabel(spell), isNull);
@@ -223,7 +244,10 @@ void main() {
 
     test('sort accordé par une sous-classe : inchangé (sous-titre "toujours '
         'préparé" conservé)', () {
-      final spell = known(status: 'préparé', grant: SpellGrantSource.domain);
+      final spell = known(
+        status: SpellStatus.prepared,
+        grant: SpellGrantSource.domain,
+      );
       expect(SpellStatusFormatter.canCast(spell), isTrue);
       expect(SpellStatusFormatter.canTogglePrepared(spell), isFalse);
       expect(SpellStatusFormatter.preparationLabel(spell), isNull);
@@ -234,7 +258,10 @@ void main() {
     });
 
     test('requiresPreparation vaut true par défaut (règle historique)', () {
-      expect(_spell(level: 1, status: 'connu').requiresPreparation, isTrue);
+      expect(
+        _spell(level: 1, status: SpellStatus.known).requiresPreparation,
+        isTrue,
+      );
     });
   });
 }
