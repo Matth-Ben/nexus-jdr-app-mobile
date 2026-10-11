@@ -458,10 +458,24 @@ commit parent).
 2. Les sorts innés raciaux se lancent-ils sans emplacement, avec un compteur par repos
    long ? **Oui, demandé par Matthias le 06/10 ; fait (PR #82).** (D08)
 3. Un multiclassé suit-il ses dés de vie par classe ? **Un compteur global, demandé
-   par Matthias le 09/10.**
+   par Matthias le 09/10 ; précisé le 10/10 après analyse RAW par l'agent
+   `regles-dnd` : « global » porte sur le CALCUL du nombre de dés récupérés au
+   repos long (niveau total du personnage, pas la seule classe primaire), mais le
+   suivi reste par type de dé (d6/d8/d10/d12, un par classe) — fusionner en un
+   seul entier serait RAW-incorrect (casserait le plafond par classe et le choix
+   du type de dé à dépenser). Quand la moitié du total ne suffit pas à tout
+   récupérer (RAW silencieux sur ce cas) : le joueur choisit quels dés sont
+   récupérés en priorité, cohérent avec le choix déjà explicite pour la dépense.**
 4. La limite de sorts préparés doit-elle être bloquante, et non simplement affichée ?
    Aujourd'hui `setSpellPrepared` ne vérifie rien. **Oui, bloquante, demandé par
-   Matthias le 09/10.** (D03)
+   Matthias le 09/10 ; précisé le 10/10 après analyse RAW par l'agent
+   `regles-dnd` : couvre aussi le multiclassé à deux classes qui préparent (ex.
+   Clerc/Paladin), aujourd'hui sans aucune limite calculable
+   (`PreparedSpellsLimit.limitForCharacter` renvoie `null` dès que
+   `preparing.length != 1`) — RAW, chaque classe calcule sa propre limite
+   séparément (son niveau, sa caractéristique, sa liste), jamais un total
+   fusionné ; demande de compter les sorts préparés par classe d'origine
+   (`source_class_id`), pas seulement globalement.** (D03)
 5. Étend-on la file hors ligne au lancer de sort, aux aptitudes et au repos avant la
    production ? **Oui, avant la production, demandé par Matthias le 09/10 ; fait
    (PR #110).** (D11)
@@ -489,7 +503,17 @@ commit parent).
     Depuis la PR #83, l'assistant de modification peut créer ce cas pour de vrai (pas
     seulement en théorie) : un joueur qui coche côté classe un sort déjà inné.
     **Règle complète RAW (lancer gratuit + emplacements), demandé par Matthias le
-    09/10.** (D43)
+    09/10 ; confirmé RAW-défendable le 10/10 par l'agent `regles-dnd` (deux octrois
+    indépendants du même sort, rien en RAW ne les fait fusionner — pas une
+    maison-règle).** Le bug exact est dans `CharacterSpellRowMapper.parseStatuses`
+    (`character_spell_row_mapper.dart`), qui fusionne les deux lignes par rang de
+    priorité en un seul statut au lieu d'exposer deux routes de lancement
+    indépendantes. **Vérification de contenu restant à faire avant de coder** (hors
+    code, côté catalogue de référence) : confirmer que tous les sorts raciaux innés
+    actuellement en base (`racial_innate_spells`) sont bien "1×/repos long" pour un
+    sort de niveau ≥ 1, pas "à volonté" pour certains — le modèle actuel suppose
+    uniformément le premier cas. (D43, voir aussi D44, même raisonnement pour un
+    sort accordé par une sous-classe.)
 16. Verrouille-t-on la race en édition, ou gère-t-on l'échange des sorts innés et de
     `lineage_id` quand un joueur change de race via l'assistant de modification ?
     **Verrouiller la race en édition, demandé par Matthias le 09/10.** (D53)
