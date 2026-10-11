@@ -351,6 +351,146 @@ void main() {
     });
   });
 
+  group('SpellCastBlockReason.of — sort à double route (D43, '
+      'docs/dette-technique.md : inné ET connu/préparé)', () {
+    CharacterSpellEntry dualSpell({
+      required SpellStatus status,
+      int innateUsesSpent = 0,
+      bool requiresPreparation = true,
+    }) => CharacterSpellEntry(
+      id: 1,
+      name: 'Test',
+      level: 2,
+      school: '',
+      status: status,
+      hasInnateRoute: true,
+      innateUsesSpent: innateUsesSpent,
+      requiresPreparation: requiresPreparation,
+    );
+
+    test('of() raisonne UNIQUEMENT sur la route ordinaire (status != inné) '
+        ': préparé + emplacement -> null, quel que soit l\'état de la route '
+        'innée', () {
+      for (final innateUsesSpent in [0, 1]) {
+        expect(
+          SpellCastBlockReason.of(
+            spell: dualSpell(
+              status: SpellStatus.prepared,
+              innateUsesSpent: innateUsesSpent,
+            ),
+            spellSlots: available,
+          ),
+          isNull,
+          reason: 'innateUsesSpent=$innateUsesSpent',
+        );
+      }
+    });
+
+    test(
+      'of() : préparé mais plus d\'emplacement -> noSlotAvailable, même '
+      'si la route innée a encore un usage disponible (jamais fusionnées)',
+      () {
+        expect(
+          SpellCastBlockReason.of(
+            spell: dualSpell(status: SpellStatus.prepared),
+            spellSlots: exhausted,
+          ),
+          SpellCastBlockReason.noSlotAvailable,
+        );
+      },
+    );
+
+    test('of() : connu non préparé -> unprepared, même si la route innée '
+        'est disponible', () {
+      expect(
+        SpellCastBlockReason.of(
+          spell: dualSpell(status: SpellStatus.known),
+          spellSlots: available,
+        ),
+        SpellCastBlockReason.unprepared,
+      );
+    });
+
+    test("ofInnateRoute() raisonne UNIQUEMENT sur la route innée, ignore "
+        "totalement spellSlots et le statut ordinaire", () {
+      expect(
+        SpellCastBlockReason.ofInnateRoute(
+          dualSpell(status: SpellStatus.prepared),
+        ),
+        isNull,
+      );
+      expect(
+        SpellCastBlockReason.ofInnateRoute(
+          dualSpell(status: SpellStatus.known, innateUsesSpent: 1),
+        ),
+        SpellCastBlockReason.innateUseSpent,
+      );
+      // Même conclusion indépendamment de of() : les deux routes ne se
+      // consomment jamais l'une l'autre.
+      expect(
+        SpellCastBlockReason.of(
+          spell: dualSpell(status: SpellStatus.known, innateUsesSpent: 1),
+          spellSlots: available,
+        ),
+        SpellCastBlockReason.unprepared,
+      );
+    });
+
+    test('ofInnateRoute() : aucune route innée (hasInnateRoute faux) -> '
+        'null', () {
+      const noInnateRoute = CharacterSpellEntry(
+        id: 1,
+        name: 'Test',
+        level: 2,
+        school: '',
+        status: SpellStatus.known,
+      );
+      expect(SpellCastBlockReason.ofInnateRoute(noInnateRoute), isNull);
+    });
+
+    test('ofInnateRoute() : cantrip à double route (niveau 0) -> null, à '
+        'volonté', () {
+      const dualCantrip = CharacterSpellEntry(
+        id: 1,
+        name: 'Test',
+        level: 0,
+        school: '',
+        status: SpellStatus.known,
+        hasInnateRoute: true,
+      );
+      expect(SpellCastBlockReason.ofInnateRoute(dualCantrip), isNull);
+    });
+  });
+
+  group('SpellCastBlockReason.of — sort SEULEMENT inné avec un grantSource '
+      '(combinaison synthétique, ne devrait jamais arriver en pratique) : '
+      'le circuit ordinaire reprend la main dès que grantSource exclut la '
+      'route innée', () {
+    test(
+      'status inné + grantSource non nul : la route innée est exclue '
+      '(isLimited faux), donc of() retombe sur le raisonnement ordinaire',
+      () {
+        const spell = CharacterSpellEntry(
+          id: 1,
+          name: 'Test',
+          level: 3,
+          school: '',
+          status: SpellStatus.innate,
+          grantSource: SpellGrantSource.domain,
+        );
+        expect(InnateSpellUsage.isLimited(spell), isFalse);
+        expect(
+          SpellCastBlockReason.of(spell: spell, spellSlots: available),
+          isNull,
+        );
+        expect(
+          SpellCastBlockReason.of(spell: spell, spellSlots: exhausted),
+          SpellCastBlockReason.noSlotAvailable,
+        );
+      },
+    );
+  });
+
   group('SpellCastBlockReason.message', () {
     test('formulations affichées au joueur', () {
       expect(

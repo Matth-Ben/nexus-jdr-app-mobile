@@ -4938,6 +4938,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
       innateUsesSpent: CharacterSpellRowMapper.parseInnateUsesSpent(
         CharacterDetailRowMapper.characterSpellRowsOf(row),
       ),
+      // D43 du registre de dette technique (`docs/dette-technique.md`) :
+      // un sort à la fois inné et connu/préparé garde sa route innée,
+      // indépendamment du statut que [parseStatuses] retient ci-dessus —
+      // voir `CharacterSpellRowMapper.parseInnateSpellIds`.
+      innateSpellIds: CharacterSpellRowMapper.parseInnateSpellIds(
+        CharacterDetailRowMapper.characterSpellRowsOf(row),
+      ),
     );
 
     final itemNames = CharacterRowMapper.parseTranslatedNames(

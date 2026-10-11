@@ -173,6 +173,16 @@ class _PrepareSpellsSheetContentState
       isPersisted: spell.isPersisted,
       storedStatus: spell.storedStatus,
       requiresPreparation: spell.requiresPreparation,
+      innateUsesSpent: spell.innateUsesSpent,
+      // Transmis explicitement (jamais ré-déduit de [status] ci-dessus,
+      // toujours ordinaire ici) : un sort à double route (D43,
+      // `docs/dette-technique.md`) listé dans cette sheet (préparable via sa
+      // route de classe) garde sa route innée gratuite, indépendante — sans
+      // ce champ explicite, le repli par défaut du constructeur de
+      // [CharacterSpellEntry] l'aurait effacée de cette copie, affectant au
+      // minimum le panneau "Infos" rouvert depuis cette sheet (voir
+      // `_SpellCheckRow`).
+      hasInnateRoute: spell.hasInnateRoute,
     );
   }
 

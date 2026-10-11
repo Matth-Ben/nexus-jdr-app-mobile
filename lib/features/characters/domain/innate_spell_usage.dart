@@ -1,4 +1,3 @@
-import '../../../core/rules/spell_status.dart';
 import 'character_spell_entry.dart';
 import 'class_feature_usage_formatter.dart';
 
@@ -15,14 +14,28 @@ abstract final class InnateSpellUsage {
   /// Nombre de lancers sans emplacement par repos long.
   static const int usesPerLongRest = 1;
 
-  /// `true` pour un sort inné à charge : statut 'inné' ET niveau >= 1.
+  /// `true` pour un sort inné à charge : [CharacterSpellEntry.hasInnateRoute]
+  /// ET niveau >= 1.
+  ///
+  /// Testé sur [CharacterSpellEntry.hasInnateRoute], PAS sur
+  /// [CharacterSpellEntry.status] (D43 du registre de dette technique,
+  /// `docs/dette-technique.md`) : un sort à la fois inné (trait racial) et
+  /// connu/préparé (classe) a `status` égal au statut ordinaire (voir
+  /// `data/character_spell_row_mapper.dart::parseStatuses`, qui fait
+  /// toujours gagner la ligne ordinaire pour cette facette-là), mais garde
+  /// malgré tout sa route innée gratuite, indépendante — `hasInnateRoute`
+  /// reste vrai dans ce cas, contrairement à `status == SpellStatus.innate`
+  /// avant ce correctif, qui aurait fait disparaître cette route dès qu'une
+  /// ligne ordinaire du même sort existait.
   ///
   /// Un sort accordé par une sous-classe est toujours présenté 'préparé'
   /// (voir [CharacterSpellEntry.grantSource]) : même s'il a aussi une ligne
   /// 'inné' en base, il suit le circuit ordinaire (emplacement), jamais
-  /// celui-ci.
+  /// celui-ci — exclu explicitement ici (D44, hors périmètre de D43, pas
+  /// implémenté : seule cette exclusion est nécessaire pour ne pas le
+  /// casser).
   static bool isLimited(CharacterSpellEntry spell) =>
-      spell.status == SpellStatus.innate && spell.level >= 1;
+      spell.grantSource == null && spell.hasInnateRoute && spell.level >= 1;
 
   /// Usages restants avant le prochain repos long, jamais négatif (ni
   /// supérieur à [usesPerLongRest] : une valeur stockée aberrante est

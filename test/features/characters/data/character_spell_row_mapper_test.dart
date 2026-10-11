@@ -433,4 +433,114 @@ void main() {
       expect(result[1].innateUsesSpent, 0);
     });
   });
+
+  group('CharacterSpellRowMapper.parseInnateSpellIds (D43)', () {
+    test("collecte les spell_id portant au moins une ligne 'inné'", () {
+      final rows = [
+        {'spell_id': 1, 'status': 'inné'},
+        {'spell_id': 2, 'status': 'connu'},
+        {'spell_id': 3, 'status': 'préparé'},
+      ];
+      expect(CharacterSpellRowMapper.parseInnateSpellIds(rows), {1});
+    });
+
+    test('un sort à double route (une ligne \'inné\', une ligne ordinaire) '
+        'est bien collecté', () {
+      final rows = [
+        {'spell_id': 1, 'status': 'inné'},
+        {'spell_id': 1, 'status': 'préparé'},
+      ];
+      expect(CharacterSpellRowMapper.parseInnateSpellIds(rows), {1});
+      expect(
+        CharacterSpellRowMapper.parseInnateSpellIds(rows.reversed.toList()),
+        {1},
+      );
+    });
+
+    test('ignore une ligne sans spell_id exploitable', () {
+      final rows = [
+        {'spell_id': null, 'status': 'inné'},
+      ];
+      expect(CharacterSpellRowMapper.parseInnateSpellIds(rows), isEmpty);
+    });
+
+    test('aucune ligne inné : ensemble vide', () {
+      final rows = [
+        {'spell_id': 1, 'status': 'connu'},
+        {'spell_id': 2, 'status': 'préparé'},
+      ];
+      expect(CharacterSpellRowMapper.parseInnateSpellIds(rows), isEmpty);
+    });
+  });
+
+  group('toCharacterSpellEntries : hasInnateRoute (D43, sort à double '
+      'route)', () {
+    test('innateSpellIds non renseigné (défaut) : hasInnateRoute suit le '
+        'repli historique (status == inné)', () {
+      final result = CharacterSpellRowMapper.toCharacterSpellEntries(
+        [
+          {'id': 1, 'level': 2, 'school': ''},
+          {'id': 2, 'level': 2, 'school': ''},
+        ],
+        names: const {},
+        descriptions: const {},
+        statuses: const {1: SpellStatus.innate, 2: SpellStatus.known},
+        classes: const [],
+      );
+      expect(result[0].hasInnateRoute, isTrue);
+      expect(result[1].hasInnateRoute, isFalse);
+    });
+
+    test('sort à double route : status reste la ligne ordinaire (déjà le '
+        "cas avant D43), mais hasInnateRoute reste vrai — c'est tout "
+        'l\'objet de D43 (docs/dette-technique.md) : la route innée ne '
+        'disparaît plus derrière la ligne ordinaire', () {
+      final result = CharacterSpellRowMapper.toCharacterSpellEntries(
+        [
+          {'id': 1, 'level': 2, 'school': ''},
+        ],
+        names: const {},
+        descriptions: const {},
+        statuses: const {1: SpellStatus.prepared},
+        classes: const [],
+        innateSpellIds: const {1},
+        innateUsesSpent: const {1: 1},
+      );
+      expect(result.single.status, SpellStatus.prepared);
+      expect(result.single.hasInnateRoute, isTrue);
+      // Le compteur de la route innée reste disponible aussi, même si la
+      // route ordinaire a gagné le statut affiché.
+      expect(result.single.innateUsesSpent, 1);
+    });
+
+    test('un sort SEULEMENT inné (présent dans innateSpellIds, pas de ligne '
+        'ordinaire) : status et hasInnateRoute cohérents', () {
+      final result = CharacterSpellRowMapper.toCharacterSpellEntries(
+        [
+          {'id': 1, 'level': 2, 'school': ''},
+        ],
+        names: const {},
+        descriptions: const {},
+        statuses: const {1: SpellStatus.innate},
+        classes: const [],
+        innateSpellIds: const {1},
+      );
+      expect(result.single.status, SpellStatus.innate);
+      expect(result.single.hasInnateRoute, isTrue);
+    });
+
+    test('un sort ordinaire sans aucune ligne inné : hasInnateRoute faux', () {
+      final result = CharacterSpellRowMapper.toCharacterSpellEntries(
+        [
+          {'id': 1, 'level': 2, 'school': ''},
+        ],
+        names: const {},
+        descriptions: const {},
+        statuses: const {1: SpellStatus.known},
+        classes: const [],
+        innateSpellIds: const {},
+      );
+      expect(result.single.hasInnateRoute, isFalse);
+    });
+  });
 }

@@ -19,6 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
+import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/domain/spell_cast_block_reason.dart';
@@ -1115,6 +1116,207 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(castCalls, [innate]);
+    });
+  });
+
+  // Sort à la fois inné (trait racial) et connu/préparé (classe) : D43 du
+  // registre de dette technique (`docs/dette-technique.md`, décision du
+  // 09/10/2026) — les deux routes de lancement RAW sont accordées
+  // indépendamment, aucune ne doit pouvoir masquer ni consommer l'autre.
+  group('sort à double route (D43 : inné ET connu/préparé)', () {
+    Finder innateCastButton() =>
+        // `SecondaryButton` affiche son libellé en majuscules.
+        find.widgetWithText(SecondaryButton, 'LANCER (SORT INNÉ)');
+
+    const dualRoute = CharacterSpellEntry(
+      id: 40,
+      name: 'Thaumaturgie',
+      level: 2,
+      school: 'Évocation',
+      status: SpellStatus.prepared,
+      hasInnateRoute: true,
+      castingTime: '1 action',
+    );
+    const dualRouteUnprepared = CharacterSpellEntry(
+      id: 41,
+      name: 'Protection contre le mal',
+      level: 2,
+      school: 'Abjuration',
+      status: SpellStatus.known,
+      hasInnateRoute: true,
+    );
+    const dualRouteInnateSpent = CharacterSpellEntry(
+      id: 40,
+      name: 'Thaumaturgie',
+      level: 2,
+      school: 'Évocation',
+      status: SpellStatus.prepared,
+      hasInnateRoute: true,
+      innateUsesSpent: 1,
+    );
+
+    testWidgets('deux boutons "Lancer" distincts : le principal (route '
+        'ordinaire) et "Lancer (sort inné)" (route innée), tous deux '
+        'actifs quand les deux routes sont disponibles', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: dualRoute,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+      );
+
+      expect(castButton(), findsOneWidget);
+      expect(innateCastButton(), findsOneWidget);
+      expect(tester.widget<PrimaryButton>(castButton()).onPressed, isNotNull);
+      expect(
+        tester.widget<SecondaryButton>(innateCastButton()).onPressed,
+        isNotNull,
+      );
+      // Toujours affiché pour un sort à route innée, dual ou pas.
+      expect(find.text('Utilisations'), findsOneWidget);
+    });
+
+    testWidgets('taper le bouton principal : lance par la route ordinaire '
+        '(emplacement consommé), pas via la route innée', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: dualRoute,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+      );
+
+      await tester.tap(castButton());
+      await tester.pumpAndSettle();
+
+      expect(castCalls, [dualRoute]);
+      expect(castLevels, [2]);
+      expect(castSlots.single, isNotNull);
+    });
+
+    testWidgets('taper "Lancer (sort inné)" : lance sans emplacement (slot '
+        'null), referme le panneau, sans passer par la sheet de choix '
+        'd\'emplacement', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: dualRoute,
+        spellSlots: const [
+          CharacterSpellSlot(level: 2, total: 1, used: 0),
+          CharacterSpellSlot(level: 3, total: 1, used: 0),
+        ],
+      );
+
+      await tester.tap(innateCastButton());
+      await tester.pumpAndSettle();
+
+      expect(castCalls, [dualRoute]);
+      expect(castLevels, [null]);
+      expect(castSlots, [null]);
+      expect(
+        find.text("Choisissez le niveau d'emplacement à utiliser."),
+        findsNothing,
+      );
+      // Le panneau est refermé.
+      expect(find.text('THAUMATURGIE'), findsNothing);
+    });
+
+    testWidgets('route ordinaire bloquée (plus d\'emplacement) : bouton '
+        'principal désactivé avec sa raison, bouton inné resté actif, '
+        'indépendamment', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: dualRoute,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 2)],
+      );
+
+      expect(tester.widget<PrimaryButton>(castButton()).onPressed, isNull);
+      expect(
+        find.text(SpellCastBlockReason.noSlotAvailable.message),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<SecondaryButton>(innateCastButton()).onPressed,
+        isNotNull,
+      );
+
+      await tester.tap(innateCastButton());
+      await tester.pumpAndSettle();
+      expect(castCalls, [dualRoute]);
+      expect(castLevels, [null]);
+    });
+
+    testWidgets('route ordinaire "connu" non préparé : bouton principal '
+        'désactivé, raison "non préparé", lien "Préparer ce sort" '
+        'présent, bouton inné resté actif', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: dualRouteUnprepared,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+      );
+
+      expect(tester.widget<PrimaryButton>(castButton()).onPressed, isNull);
+      expect(
+        find.text(SpellCastBlockReason.unprepared.message),
+        findsOneWidget,
+      );
+      expect(find.text('Préparer ce sort'), findsOneWidget);
+      expect(
+        tester.widget<SecondaryButton>(innateCastButton()).onPressed,
+        isNotNull,
+      );
+    });
+
+    testWidgets('route innée épuisée : bouton inné désactivé avec sa '
+        'raison, bouton principal resté actif, indépendamment', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: dualRouteInnateSpent,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+      );
+
+      expect(
+        tester.widget<SecondaryButton>(innateCastButton()).onPressed,
+        isNull,
+      );
+      expect(
+        find.text(SpellCastBlockReason.innateUseSpent.message),
+        findsOneWidget,
+      );
+      expect(tester.widget<PrimaryButton>(castButton()).onPressed, isNotNull);
+
+      await tester.tap(castButton());
+      await tester.pumpAndSettle();
+      expect(castCalls, [dualRouteInnateSpent]);
+      expect(castLevels, [2]);
+    });
+
+    testWidgets('sort SEULEMENT inné (pas de double route) : aucun second '
+        'bouton, un seul "Lancer" fait déjà le lancer sans emplacement', (
+      tester,
+    ) async {
+      const soleInnate = CharacterSpellEntry(
+        id: 42,
+        name: 'Ténèbres',
+        level: 2,
+        school: 'Évocation',
+        status: SpellStatus.innate,
+      );
+      await pumpPanel(
+        tester,
+        spell: soleInnate,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 1, used: 0)],
+      );
+
+      expect(innateCastButton(), findsNothing);
+      expect(castButton(), findsOneWidget);
+    });
+
+    testWidgets('sort ordinaire seul (pas de route innée) : aucun second '
+        'bouton', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: _fireball,
+        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 0)],
+      );
+
+      expect(innateCastButton(), findsNothing);
     });
   });
 }

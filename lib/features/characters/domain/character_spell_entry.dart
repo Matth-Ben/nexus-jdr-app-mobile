@@ -27,7 +27,8 @@ class CharacterSpellEntry {
     this.storedStatus,
     this.requiresPreparation = true,
     this.innateUsesSpent = 0,
-  });
+    bool? hasInnateRoute,
+  }) : hasInnateRoute = hasInnateRoute ?? (status == SpellStatus.innate);
 
   final int id;
   final String name;
@@ -118,6 +119,33 @@ class CharacterSpellEntry {
   /// volonté).
   final int innateUsesSpent;
 
+  /// `true` si ce sort porte, EN PLUS de [status], une ligne
+  /// `character_spells` distincte au statut 'inné' (D43 du registre de dette
+  /// technique, `docs/dette-technique.md` : un sort à la fois inné — trait
+  /// racial — et connu/préparé — classe — accorde RAW les deux routes de
+  /// lancement indépendamment, aucune ne consommant l'autre). Détecté à la
+  /// lecture par `data/character_spell_row_mapper.dart::parseInnateSpellIds`,
+  /// indépendamment de [status] (qui retient toujours la ligne ordinaire
+  /// quand les deux coexistent — voir `parseStatuses`, inchangé par ce
+  /// champ).
+  ///
+  /// Par défaut (constructeur sans valeur explicite) : `status ==
+  /// SpellStatus.innate`, le repli historique d'avant ce champ — exact pour
+  /// tout mappeur qui ne connaît pas encore cette distinction (sort inné
+  /// SEUL, sans ligne ordinaire concurrente — la quasi-totalité des cas) ou
+  /// qui produit une entrée par ligne brute plutôt qu'une entrée fusionnée
+  /// par sort (`character_sharing/domain/shared_character_mapper.dart`, qui
+  /// n'a jamais ce bug de fusion : une ligne 'inné' y est déjà sa propre
+  /// entrée). Seul `CharacterSpellRowMapper.toCharacterSpellEntries` a besoin
+  /// de le surcharger explicitement à `true` pour un sort qui a perdu son
+  /// statut 'inné' affiché au profit de la ligne ordinaire.
+  ///
+  /// Gouverne [InnateSpellUsage.isLimited] (badge « INNÉ », compteur
+  /// d'usages, action de lancer gratuite) — jamais [status] seul, qui ne
+  /// suffit plus à détecter la route innée une fois les deux lignes
+  /// fusionnées en une seule entrée.
+  final bool hasInnateRoute;
+
   /// Copie avec un autre compteur d'usages innés dépensés — surcouche
   /// optimiste de `character_detail_screen.dart::_effectiveDetail`.
   CharacterSpellEntry copyWithInnateUsesSpent(int innateUsesSpent) =>
@@ -139,6 +167,12 @@ class CharacterSpellEntry {
         storedStatus: storedStatus,
         requiresPreparation: requiresPreparation,
         innateUsesSpent: innateUsesSpent,
+        // Toujours transmis explicitement (jamais ré-déduit de [status]) :
+        // pour un sort à double route (D43), [status] vaut la ligne
+        // ordinaire, le repli par défaut du constructeur serait donc
+        // toujours `false` et effacerait silencieusement la route innée de
+        // cette copie.
+        hasInnateRoute: hasInnateRoute,
       );
 
   /// `true` si le sort est accordé par une sous-classe ([grantSource] non

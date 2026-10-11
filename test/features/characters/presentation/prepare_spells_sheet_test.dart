@@ -12,6 +12,7 @@ import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
+import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/domain/spell_cast_block_reason.dart';
@@ -469,6 +470,73 @@ void main() {
       await pumpSheet(tester, spells: const [_prepared, bardInnate]);
 
       expect(find.text('Représailles infernales'), findsNothing);
+    });
+  });
+
+  // D43 du registre de dette technique (`docs/dette-technique.md`) : un sort
+  // à la fois inné (trait racial) et connu/préparé (classe), listé ici
+  // puisque sa route ordinaire se prépare. `hasInnateRoute` doit survivre à
+  // la reconstruction de `_withCurrentStatus` (bascule de préparation) pour
+  // que le panneau "Infos" rouvert depuis cette sheet garde son bouton
+  // "Lancer (sort inné)".
+  group('sort à double route (D43 : inné ET connu/préparé)', () {
+    const dualRouteUnprepared = CharacterSpellEntry(
+      id: 30,
+      name: 'Protection contre le mal',
+      level: 2,
+      school: 'Abjuration',
+      status: SpellStatus.known,
+      hasInnateRoute: true,
+      innateUsesSpent: 1,
+    );
+
+    testWidgets('listé (préparable via sa route ordinaire), le ⓘ ouvre un '
+        'panneau avec le second bouton "Lancer (sort inné)"', (tester) async {
+      await pumpSheet(tester, spells: const [dualRouteUnprepared]);
+
+      expect(find.text('Protection contre le mal'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.info_outline_rounded));
+      await tester.pumpAndSettle();
+
+      expect(
+        // `SecondaryButton` affiche son libellé en majuscules.
+        find.widgetWithText(SecondaryButton, 'LANCER (SORT INNÉ)'),
+        findsOneWidget,
+      );
+      // L'usage inné dépensé (1) est bien reporté lui aussi.
+      expect(
+        find.text(SpellCastBlockReason.innateUseSpent.message),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('après une bascule de préparation (reconstruction de '
+        'status par _withCurrentStatus) : hasInnateRoute survit, le second '
+        'bouton reste présent sur le panneau "Infos" rouvert', (tester) async {
+      await pumpSheet(tester, spells: const [dualRouteUnprepared]);
+
+      // Coche le sort (status local reconstruit à 'préparé', différent du
+      // status original 'connu' transmis à pumpSheet).
+      await tester.tap(find.text('Protection contre le mal'));
+      await tester.pumpAndSettle();
+      expect(toggled, [dualRouteUnprepared]);
+
+      await tester.tap(find.byIcon(Icons.info_outline_rounded));
+      await tester.pumpAndSettle();
+
+      // Toujours présent : hasInnateRoute n'a pas été effacé par la
+      // reconstruction (sans le correctif, le repli par défaut du
+      // constructeur de `CharacterSpellEntry`, basé sur `status ==
+      // SpellStatus.innate`, l'aurait mis à `false`).
+      expect(
+        find.widgetWithText(SecondaryButton, 'LANCER (SORT INNÉ)'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(SpellCastBlockReason.innateUseSpent.message),
+        findsOneWidget,
+      );
     });
   });
 }
