@@ -2490,6 +2490,74 @@ void main() {
         throwsA(isA<CharacterFailure>()),
       );
     });
+
+    // Les deux tests ci-dessus simulent la violation 23505 sur un seul
+    // appel isole ; celui-ci fait reellement courir deux appels
+    // `setSpellPrepared` concurrents via `Future.wait` (le double appui
+    // rapide ou la synchro hors ligne qui se declenche en meme temps
+    // qu'une action en ligne, voir D42) pour verifier que l'interaction
+    // bout en bout (premier insert qui reussit, second qui recoit le vrai
+    // conflit) donne bien deux `WriteOutcome.synced`, pas seulement un
+    // appel isole deja pre-cuit en echec.
+    test('deux appels concurrents reels (Future.wait) sur le meme sort : le '
+        'premier insert reussit, le second recoit 23505 et devient synced '
+        'sans erreur, aucun des deux ne la remonte au joueur', () async {
+      var insertCount = 0;
+      final repository = SupabaseCharacterRepository(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          responseOverride: (request) {
+            if (request.url.pathSegments.last != 'character_spells' ||
+                request.method != 'POST') {
+              return null;
+            }
+            insertCount++;
+            if (insertCount == 1) {
+              return http.Response(
+                '[]',
+                201,
+                request: request,
+                headers: {'content-type': 'application/json'},
+              );
+            }
+            return http.Response(
+              jsonEncode({
+                'code': '23505',
+                'message':
+                    'duplicate key value violates unique constraint '
+                    '"character_spells_unique_ordinary_per_spell"',
+                'details':
+                    'Key (character_id, spell_id)=($characterId, $spellId) '
+                    'already exists.',
+                'hint': null,
+              }),
+              409,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          },
+        ),
+        cache,
+        pendingWrites,
+        _AlwaysOnlineConnectivityChecker(),
+      );
+
+      final results = await Future.wait([
+        repository.setSpellPrepared(
+          characterId: characterId,
+          spellId: spellId,
+          prepared: true,
+        ),
+        repository.setSpellPrepared(
+          characterId: characterId,
+          spellId: spellId,
+          prepared: true,
+        ),
+      ]);
+
+      expect(results, [WriteOutcome.synced, WriteOutcome.synced]);
+      expect(insertCount, 2);
+    });
   });
 
   group('SupabaseCharacterRepository.fetchCharacterDetail (arme de pacte)', () {
