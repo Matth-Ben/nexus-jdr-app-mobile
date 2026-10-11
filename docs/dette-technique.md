@@ -53,13 +53,13 @@ La dette n'est pas traitée au fil de l'eau : elle est classée, et Matthias cho
 
 ### C. Peut attendre
 
-D04, D13 (reste), D15, D16, D17, D20 à D30, D32, D61, D62, D63, D73, et les constats de
+D13 (reste), D15, D16, D17, D20 à D30, D32, D61, D62, D63, D73, et les constats de
 session listés plus bas.
-D04 (règles indexées sur le nom français des classes) reste ici par gravité d'impact,
-mais Matthias a demandé le 09/10 de la traiter maintenant plutôt que d'attendre
-l'arrivée de l'anglais (qui l'aurait sinon rendue bloquante).
+D04 (règles indexées sur le nom français des classes) est sortie de cette catégorie :
+corrigée (PR #113), voir le registre complet.
 D11 est sortie de cette catégorie : Matthias a demandé le 09/10 d'étendre la file hors
-ligne avant la production, ce qui la rend bloquante (catégorie A).
+ligne avant la production, ce qui la rend bloquante (catégorie A), et elle est corrigée
+depuis (PR #110).
 
 ## Registre complet
 
@@ -75,7 +75,7 @@ ligne avant la production, ce qui la rend bloquante (catégorie A).
 | D06 | dev, staging et prod sur le même projet Supabase ; un seul projet Firebase | `config/*.json` (ignorés par Git) ; `config/README.md` ; `README.md` « Reste à faire » | haute | Déjà actif (test fermé Play) ; bloquant avant la production | moyen | Projets distincts ; Firebase et PostHog séparés par flavor | dev-backend-supabase | C + L | Ouvert |
 | D07 | Keystore Android de production déclaré compromis, rotation non cochée | `README.md` « Reste à faire » ; `.github/workflows/release-android.yml` | haute | Avant la mise en production | petit | Réinitialiser la clé d'import dans la Play Console, mettre à jour les secrets | Matthias | L (état Play non vérifiable) | Corrigé, confirmé par Matthias le 09/10 : rotation déjà faite. |
 | D03 | Les classes à sorts connus doivent « préparer » pour lancer | `lib/features/character_creation/domain/spellcasting_rules.dart` ; `lib/features/characters/domain/spell_status_formatter.dart` ; `character_repository.dart` (select de la fiche) | haute | Tout Barde, Ensorceleur, Occultiste ou Rôdeur | moyen | Dériver « ce sort se prépare-t-il ? » à la lecture, à partir des classes et de `source_class_id` (déjà écrit, jamais relu) ; pas de migration | dev-flutter | L | Ouvert. Analyse faite le 07/10 : faisable sans migration. |
-| D04 | Règles de classe indexées sur le libellé français, dispersées dans 19 fichiers | Voir « Détails » | haute | À l'arrivée de l'anglais, ou à toute correction d'un nom de classe en base | gros | Clé stable de classe, registre unique des règles, `enum` pour le statut de sort | dev-flutter, dev-backend-supabase | L + C | Ouvert |
+| D04 | Règles de classe indexées sur le libellé français, dispersées dans 19 fichiers | Voir « Détails » | haute | À l'arrivée de l'anglais, ou à toute correction d'un nom de classe en base | gros | Clé stable de classe, registre unique des règles, `enum` pour le statut de sort | dev-flutter, dev-backend-supabase | L + C | Corrigé (PR #113). `dev-backend-supabase` a confirmé que `classes.id` est déjà une clé stable (colonne `identity`, jamais réassignée/réordonnée) — aucune migration nécessaire. `enum CharacterClass`/`ClassSpellcastingRegistry`/`enum SpellStatus` (`lib/core/rules/`) remplacent les 3+3 listes dupliquées et les chaînes de statut en dur. Inclut D41. |
 | D05 | Écritures multi-étapes non atomiques | `character_repository.dart` (`applyLevelUp`, `applyRest`) ; `lib/features/character_creation/data/character_creation_repository.dart` ; `lib/features/character_creation/data/character_edit_repository.dart` | haute | Réseau instable pendant une montée de niveau ou une création | gros | Fonctions Postgres transactionnelles (`apply_level_up`, `create_character`, `apply_rest`) | dev-backend-supabase, dev-flutter | L | Corrigé (PR #20, #22, #23, dépôt web). Les 3 fonctions `SECURITY DEFINER` transactionnelles livrées et relues, chacune validée par sa propre suite pgTAP exécutée en réel (privilèges, atomicité sur échec forcé après écriture réelle, entrée malformée — 9, 16 puis 50 tests). `apply_level_up`, jugée au départ trop risquée pour la même PR qu'`apply_rest`, a finalement été livrée en entier sans scission : le risque redouté (comparaison de nom de sous-classe pour les PV) était déjà résolu côté client (`p_hp_gain` déjà sommé avant l'appel). Les 3 fonctions restent non idempotentes (documenté dans leur commentaire SQL, pas résolu) : un retry après succès serveur perdu rejouerait l'écriture. **Reste à faire, hors périmètre de D05** : brancher le client Flutter sur ces 3 RPC (actuellement aucune des trois n'est appelée depuis le mobile — tâche `dev-flutter` séparée). |
 | D10 | Import XML : `connu` pour toutes les classes, doublons `inné`/`connu` | `lib/features/xml_import/domain/xml_import_save_data_resolver.dart` ; `lib/features/characters/data/character_spell_row_mapper.dart` ; `character_repository.dart` (`setSpellPrepared`) | haute | Tout import d'un Clerc, Druide, Magicien ou Paladin ; tout sort présent deux fois | moyen | Statut dérivé de la classe à l'import, dédoublonnage, contrainte unique `(character_id, spell_id)` avec migration de nettoyage | dev-flutter, dev-backend-supabase | L, puis vérifié contre les fixtures XML réelles et confirmé par tests | Partiel (PR #84, #24 dépôt web, #96). Deux index uniques partiels posés sur `character_spells` (au plus une ligne `'inné'`, au plus une ligne ordinaire par sort — autorise la coexistence légitime D43), avec détection/échec bruyant des doublons existants plutôt que suppression automatique (vraie donnée de testeurs). Correctif urgent appliqué en parallèle côté client (PR #96) : `applyLevelUp` insérait les sorts initiaux sans vérifier qu'ils n'étaient pas déjà connus (même trou que celui qui existait côté SQL dans `apply_level_up`, corrigé dans la même série) — sans ce correctif, un multiclassage avec recoupement de sorts aurait cassé dès que la contrainte serait posée en base de production. **Vérifié en production le 09/10/2026** (comptage agrégé en lecture seule uniquement, jamais les lignes elles-mêmes) : 0 groupe en doublon côté `'inné'`, **6 groupes réels en doublon côté ordinaire** (`'connu'`/`'préparé'`) — très probablement des lignes résiduelles d'avant le correctif de fusion déterministe (PR #84), jamais visibles par les joueurs (la lecture les fusionne déjà correctement), mais qui bloqueraient la migration si elle était appliquée en l'état. **Reste ouvert** : Matthias examine les 6 groupes (requête de listage déjà fournie dans le message d'erreur de la migration) et supprime manuellement les lignes en trop avant de pouvoir appliquer la contrainte — aucune suppression automatique prévue. |
 | D09 | Sorts innés supprimés lors d'un changement de classe en édition | `lib/features/character_creation/domain/character_edit_planner.dart` ; `lib/features/character_creation/domain/character_edit_snapshot.dart` | haute | Personnage doté d'un sort inné qui change de classe | petit | Exclure `inné` de `storedSpells`, ajouter un test | dev-flutter, qa-testeur | L, puis confirmé par tests (mutation manuelle : retirer le filtre fait échouer 4 tests) | Corrigé (PR #83). Suites : D53 à D56. |
@@ -128,6 +128,17 @@ friction et une règle fausse, pas un blocage.
 - La raison donnée pour la duplication (« ne pas coupler `characters` à
   `character_creation` ») ne tient plus : `characters` importe déjà
   `character_creation` 33 fois.
+
+**Mise à jour du 10/10/2026 (PR #113)** : corrigé. `classes.id` confirmé stable par
+`dev-backend-supabase` (colonne `identity`, jamais réassignée/réordonnée) — aucune
+migration nécessaire, la clé stable est cet `id` existant. `lib/core/rules/` (nouveau)
+porte `enum CharacterClass`, `ClassSpellcastingRegistry` et `enum SpellStatus`, qui
+remplacent les 3+3 listes dupliquées et les chaînes de statut en dur ; les fichiers
+listés ci-dessus délèguent désormais au registre (API publique inchangée). `const
+_locale = 'fr'` volontairement non touché : seule la classe Artificier a une
+traduction anglaise en base à ce jour, le reste du contenu anglais n'existe pas
+encore — corriger la locale en dur sans contenu à afficher n'aurait aucun effet
+observable.
 
 **D05.** `applyLevelUp` enchaîne une dizaine d'écritures côté client ; une nouvelle
 tentative après une coupure peut ajouter les PV une seconde fois. `createCharacter`
@@ -267,7 +278,7 @@ d'usage ; treize classes, toutes nommées en français comme l'app l'attend.
 | D38 | Sort inné transformable en sort « préparé » puis « connu » depuis la sheet de préparation | moyenne | — | Corrigé (PR #81). Les lignes déjà abîmées ne sont pas réparables : rien ne permet de les reconnaître. |
 | D39 | Vue partagée : `get_shared_character` ne renvoie pas `source_class_id` sur les sorts ; un multiclassé mixte partagé affiche tous ses sorts « à préparer » | basse | Ajouter la colonne à la RPC (dépôt web) ; le mapper mobile la lit déjà | Corrigé côté base (dépôt web, PR #19), voir plus bas |
 | D40 | L'édition d'un personnage écrit `source_class_id` nul sans changement de classe ; `setSpellPrepared` n'écrit pas l'origine à l'insertion | basse | Écrire la classe d'origine sur ces deux chemins | Ouvert |
-| D41 | Artificier présent en base et proposé à la création, mais non modélisé : ni lanceur, ni emplacements, ni préparation | moyenne | Décision produit : le modéliser (demi-lanceur qui prépare) ou le retirer du catalogue | **Tranché par Matthias le 10/10 : le modéliser comme demi-lanceur qui prépare.** À faire dans le même chantier que D04 (`dev-backend-supabase` a confirmé le 10/10 que `spell_classes` contient déjà 100 sorts liés à l'Artificier, id 13). |
+| D41 | Artificier présent en base et proposé à la création, mais non modélisé : ni lanceur, ni emplacements, ni préparation | moyenne | Décision produit : le modéliser (demi-lanceur qui prépare) ou le retirer du catalogue | **Corrigé (PR #113).** Tranché par Matthias le 10/10 : modélisé comme demi-lanceur qui prépare, caractéristique Intelligence, accès à la liste complète. Simplification assumée : réutilise la table d'emplacements de Paladin/Rôdeur (RAW démarre à 2 emplacements niveau 1, pas 0). Un vrai trou RAW trouvé en relecture (progression de cantrips connus manquante, l'étape "Sorts" ne se déclenchait jamais aux niveaux 10/14) a été corrigé dans la même PR. |
 | D42 | `setSpellPrepared` : course entre lecture de contrôle et insertion, faute de contrainte unique | basse | Contrainte unique `(character_id, spell_id)` après nettoyage des doublons (voir D10) | Ouvert |
 
 ## Ajouts liés aux sorts innés sans emplacement (PR #82)
