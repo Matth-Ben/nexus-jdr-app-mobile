@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/spell_name_filter.dart';
 
@@ -8,7 +9,7 @@ CharacterSpellEntry _spell(int id, String name, {int level = 1}) =>
       name: name,
       level: level,
       school: 'évocation',
-      status: 'connu',
+      status: SpellStatus.known,
     );
 
 void main() {

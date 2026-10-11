@@ -4,6 +4,7 @@
 // de l'app (`items.id`/`skills.id`/`alignments.id`).
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/character_creation/domain/alignment_catalog.dart';
 import 'package:personnages/features/character_creation/domain/alignment_option.dart';
 import 'package:personnages/features/character_creation/domain/background_option.dart';
@@ -422,7 +423,7 @@ void main() {
 
       expect(data.spellLines, hasLength(1));
       expect(data.spellLines.single.spellId, _spellA.id);
-      expect(data.spellLines.single.status, 'connu');
+      expect(data.spellLines.single.status, SpellStatus.known);
       expect(data.spellLines.single.sourceClassId, _paladinClass.id);
     });
 
@@ -446,7 +447,7 @@ void main() {
 
       expect(data.spellLines, hasLength(1));
       expect(data.spellLines.single.spellId, _spellA.id);
-      expect(data.spellLines.single.status, 'connu');
+      expect(data.spellLines.single.status, SpellStatus.known);
       expect(data.spellLines.single.sourceClassId, _classOption.id);
     });
 
@@ -464,7 +465,7 @@ void main() {
 
       expect(data.spellLines, hasLength(1));
       expect(data.spellLines.single.spellId, _spellB.id);
-      expect(data.spellLines.single.status, 'inné');
+      expect(data.spellLines.single.status, SpellStatus.innate);
       expect(data.spellLines.single.sourceClassId, _classOption.id);
     });
 
@@ -491,8 +492,8 @@ void main() {
         isTrue,
       );
       expect(data.spellLines.map((line) => line.status).toSet(), {
-        'inné',
-        'connu',
+        SpellStatus.innate,
+        SpellStatus.known,
       });
     });
 

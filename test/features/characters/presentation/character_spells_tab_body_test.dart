@@ -9,6 +9,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/spell_cast_block_reason.dart';
 import 'package:personnages/features/characters/data/character_spell_row_mapper.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
@@ -102,14 +103,14 @@ void main() {
             name: 'Lumière',
             level: 0,
             school: 'Évocation',
-            status: 'connu',
+            status: SpellStatus.known,
           ),
           CharacterSpellEntry(
             id: 2,
             name: 'Bouclier',
             level: 1,
             school: 'Abjuration',
-            status: 'connu',
+            status: SpellStatus.known,
           ),
         ],
         spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],
@@ -192,7 +193,7 @@ void main() {
               name: 'Lumière',
               level: 0,
               school: 'Évocation',
-              status: 'connu',
+              status: SpellStatus.known,
             ),
           ],
         ),
@@ -221,7 +222,7 @@ void main() {
               name: 'Bouclier',
               level: 1,
               school: 'Abjuration',
-              status: 'préparé',
+              status: SpellStatus.prepared,
               isFavorite: true,
             ),
           ],
@@ -245,21 +246,21 @@ void main() {
               name: 'Armure de mage',
               level: 1,
               school: 'Abjuration',
-              status: 'connu',
+              status: SpellStatus.known,
             ),
             CharacterSpellEntry(
               id: 2,
               name: 'Bouclier',
               level: 1,
               school: 'Abjuration',
-              status: 'préparé',
+              status: SpellStatus.prepared,
             ),
             CharacterSpellEntry(
               id: 3,
               name: 'Lumière',
               level: 0,
               school: 'Évocation',
-              status: 'connu',
+              status: SpellStatus.known,
             ),
           ],
         ),
@@ -297,7 +298,7 @@ void main() {
               name: 'Éclair traçant',
               level: 1,
               school: 'Évocation',
-              status: 'préparé',
+              status: SpellStatus.prepared,
               description: 'La cible subit 4d6 dégâts radiants.',
               grantSource: SpellGrantSource.domain,
               isPersisted: false,
@@ -332,7 +333,7 @@ void main() {
               name: 'Malédiction',
               level: 1,
               school: 'Enchantement',
-              status: 'connu',
+              status: SpellStatus.known,
             ),
           ],
           pactSpellSlot: const CharacterSpellSlot(
@@ -369,7 +370,7 @@ void main() {
             name: 'Lumière',
             level: 0,
             school: 'Évocation',
-            status: 'connu',
+            status: SpellStatus.known,
           ),
         ],
       ),
@@ -392,7 +393,7 @@ void main() {
               name: 'Lumière',
               level: 0,
               school: 'Évocation',
-              status: 'connu',
+              status: SpellStatus.known,
             ),
           ],
           pactSpellSlot: const CharacterSpellSlot(
@@ -423,7 +424,7 @@ void main() {
                 name: 'Bouclier',
                 level: 1,
                 school: 'Abjuration',
-                status: 'connu',
+                status: SpellStatus.known,
               ),
             ],
             classFeatures: const [
@@ -541,7 +542,7 @@ void main() {
                     name: 'Lumière',
                     level: 0,
                     school: 'Évocation',
-                    status: 'connu',
+                    status: SpellStatus.known,
                   ),
                 ],
               ),
@@ -568,14 +569,14 @@ void main() {
         name: 'Boule de feu',
         level: 3,
         school: 'Évocation',
-        status: 'connu',
+        status: SpellStatus.known,
       ),
       CharacterSpellEntry(
         id: 2,
         name: 'Bouclier',
         level: 1,
         school: 'Abjuration',
-        status: 'connu',
+        status: SpellStatus.known,
       ),
     ];
 
@@ -655,14 +656,14 @@ void main() {
       name: 'Bouclier',
       level: 1,
       school: 'Abjuration',
-      status: 'connu',
+      status: SpellStatus.known,
     );
     const granted = CharacterSpellEntry(
       id: 2,
       name: 'Bénédiction',
       level: 1,
       school: 'Enchantement',
-      status: 'préparé',
+      status: SpellStatus.prepared,
       grantSource: SpellGrantSource.domain,
       isPersisted: false,
     );
@@ -671,7 +672,7 @@ void main() {
       name: 'Faveur divine',
       level: 1,
       school: 'Évocation',
-      status: 'préparé',
+      status: SpellStatus.prepared,
       grantSource: SpellGrantSource.oath,
       isPersisted: false,
     );
@@ -753,21 +754,21 @@ void main() {
       name: 'Bouclier',
       level: 1,
       school: 'Abjuration',
-      status: 'préparé',
+      status: SpellStatus.prepared,
     );
     const cantrip = CharacterSpellEntry(
       id: 11,
       name: 'Lumière',
       level: 0,
       school: 'Évocation',
-      status: 'préparé',
+      status: SpellStatus.prepared,
     );
     const known = CharacterSpellEntry(
       id: 12,
       name: 'Projectile magique',
       level: 1,
       school: 'Évocation',
-      status: 'connu',
+      status: SpellStatus.known,
     );
 
     CharacterDetailClassRow classRow(
@@ -832,7 +833,7 @@ void main() {
         ],
         names: const {'12': 'Projectile magique'},
         descriptions: const {},
-        statuses: const {12: 'connu'},
+        statuses: const {12: SpellStatus.known},
         classes: classes,
       );
       expect(spells.single.requiresPreparation, isFalse);
@@ -854,7 +855,7 @@ void main() {
         name: 'Sommeil',
         level: 1,
         school: 'Enchantement',
-        status: 'préparé',
+        status: SpellStatus.prepared,
       );
       await _pump(
         tester,
@@ -916,28 +917,28 @@ void main() {
       name: 'Lumière',
       level: 0,
       school: 'Évocation',
-      status: 'connu',
+      status: SpellStatus.known,
     );
     const preparedSpell = CharacterSpellEntry(
       id: 2,
       name: 'Bénédiction',
       level: 1,
       school: 'Enchantement',
-      status: 'préparé',
+      status: SpellStatus.prepared,
     );
     const unpreparedSpell = CharacterSpellEntry(
       id: 3,
       name: 'Soins',
       level: 1,
       school: 'Évocation',
-      status: 'connu',
+      status: SpellStatus.known,
     );
     const grantedSpell = CharacterSpellEntry(
       id: 4,
       name: 'Garde divine',
       level: 1,
       school: 'Abjuration',
-      status: 'préparé',
+      status: SpellStatus.prepared,
       grantSource: SpellGrantSource.domain,
       isPersisted: false,
     );
@@ -1067,11 +1068,11 @@ void main() {
     // 11 : sort de Barde 'connu'. 12 : sort de Barde passé à 'préparé' par le
     // joueur (contournement de l'ancien défaut). 13/14 : sorts de Clerc.
     const statuses = {
-      10: 'connu',
-      11: 'connu',
-      12: 'préparé',
-      13: 'connu',
-      14: 'préparé',
+      10: SpellStatus.known,
+      11: SpellStatus.known,
+      12: SpellStatus.prepared,
+      13: SpellStatus.known,
+      14: SpellStatus.prepared,
     };
     const slots = [CharacterSpellSlot(level: 1, total: 4, used: 0)];
 

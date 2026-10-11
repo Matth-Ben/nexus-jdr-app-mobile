@@ -211,7 +211,7 @@ class SupabaseCharacterEditRepository implements CharacterEditRepository {
             // (une innée, une ordinaire — aucune contrainte d'unicité en
             // base) : seule la ligne ordinaire part, la ligne innée garde
             // son compteur `innate_uses_spent`.
-            .neq('status', CharacterEditSnapshot.innateStatus);
+            .neq('status', CharacterEditSnapshot.innateStatus.value);
       }
       if (plan.spellInserts.isNotEmpty) {
         await _client.from('character_spells').insert([
@@ -219,7 +219,7 @@ class SupabaseCharacterEditRepository implements CharacterEditRepository {
             {
               'character_id': characterId,
               'spell_id': spell.spellId,
-              'status': spell.status,
+              'status': spell.status.value,
               'source_class_id': plan.classChange?.classId,
             },
         ]);

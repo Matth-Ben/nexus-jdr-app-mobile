@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/character_creation/domain/background_option.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_edit_hydrator.dart';
@@ -133,8 +134,9 @@ CharacterEditSnapshot _snapshot({
     ],
     languageIds: languageIds,
     spells: [
-      for (final id in innateSpellIds) (spellId: id, status: 'inné'),
-      for (final id in spellIds) (spellId: id, status: 'préparé'),
+      for (final id in innateSpellIds)
+        (spellId: id, status: SpellStatus.innate),
+      for (final id in spellIds) (spellId: id, status: SpellStatus.prepared),
     ],
   );
 }
@@ -241,8 +243,8 @@ void main() {
 
       expect(snapshot.spells, hasLength(4));
       expect(snapshot.classSpells, [
-        (spellId: 100, status: 'préparé'),
-        (spellId: 101, status: 'connu'),
+        (spellId: 100, status: SpellStatus.prepared),
+        (spellId: 101, status: SpellStatus.known),
       ]);
     });
   });
@@ -634,7 +636,9 @@ void main() {
         );
 
         expect(plan.spellDeletes, isEmpty);
-        expect(plan.spellInserts, [(spellId: 103, status: 'préparé')]);
+        expect(plan.spellInserts, [
+          (spellId: 103, status: SpellStatus.prepared),
+        ]);
       });
 
       test('au-delà du niveau 1, aucun sort planifié', () {

@@ -1,3 +1,4 @@
+import '../../../core/rules/spell_status.dart';
 import 'character_spell_entry.dart';
 import 'class_feature_usage_formatter.dart';
 
@@ -21,7 +22,7 @@ abstract final class InnateSpellUsage {
   /// 'inné' en base, il suit le circuit ordinaire (emplacement), jamais
   /// celui-ci.
   static bool isLimited(CharacterSpellEntry spell) =>
-      spell.status == 'inné' && spell.level >= 1;
+      spell.status == SpellStatus.innate && spell.level >= 1;
 
   /// Usages restants avant le prochain repos long, jamais négatif (ni
   /// supérieur à [usesPerLongRest] : une valeur stockée aberrante est

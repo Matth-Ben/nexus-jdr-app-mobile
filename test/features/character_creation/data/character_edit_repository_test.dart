@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/character_creation/data/character_edit_repository.dart';
 import 'package:personnages/features/character_creation/domain/background_option.dart';
 import 'package:personnages/features/character_creation/domain/character_edit_hydrator.dart';
@@ -130,8 +131,8 @@ void main() {
           ),
           spellDeletes: {150},
           spellInserts: [
-            (spellId: 100, status: 'préparé'),
-            (spellId: 101, status: 'préparé'),
+            (spellId: 100, status: SpellStatus.prepared),
+            (spellId: 101, status: SpellStatus.prepared),
           ],
         ),
       );

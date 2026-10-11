@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../../../core/rules/spell_status.dart';
 import 'ability_score_rules.dart';
 import 'background_option.dart';
 import 'character_creation_draft.dart';
@@ -62,7 +63,7 @@ class CharacterEditPlan {
   /// `CharacterEditRepository.save` exclut les lignes innées de la
   /// suppression.
   final Set<int> spellDeletes;
-  final List<({int spellId, String status})> spellInserts;
+  final List<({int spellId, SpellStatus status})> spellInserts;
 }
 
 /// Calcule un [CharacterEditPlan] en comparant le brouillon d'origine
@@ -203,7 +204,7 @@ abstract final class CharacterEditPlanner {
 
     // ── Sorts (niveau 1 uniquement) ──────────────────────────────────────
     var spellDeletes = const <int>{};
-    var spellInserts = const <({int spellId, String status})>[];
+    var spellInserts = const <({int spellId, SpellStatus status})>[];
     if (canChangeClass && editedClass != null && editedSpellCatalog != null) {
       // Lignes innées exclues (`CharacterEditSnapshot.classSpells`) : un
       // sort inné vient de la race, aucune modification de classe ne le

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/rules/spell_status.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -1719,7 +1720,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           .setSpellPrepared(
             characterId: widget.characterId,
             spellId: spell.id,
-            prepared: spell.status != 'préparé',
+            prepared: spell.status != SpellStatus.prepared,
           );
       if (!mounted) return;
       if (outcome == WriteOutcome.queued) {

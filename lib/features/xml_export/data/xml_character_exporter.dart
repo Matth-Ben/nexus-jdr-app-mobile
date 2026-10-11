@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:xml/xml.dart';
 
+import '../../../core/rules/spell_status.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
 import '../../characters/domain/character_detail.dart';
 import '../domain/aidedd_reverse_tables.dart';
@@ -338,7 +339,9 @@ abstract final class XmlCharacterExporter {
       // dérivés à la lecture, jamais exportés (re-dérivés à l'ouverture de la
       // fiche réimportée).
       if (!spell.isPersisted) continue;
-      final tagName = spell.status == 'inné' ? 'innateSpell' : 'knownSpell';
+      final tagName = spell.status == SpellStatus.innate
+          ? 'innateSpell'
+          : 'knownSpell';
       builder.element(
         tagName,
         attributes: {'lvl': spell.level.toString()},

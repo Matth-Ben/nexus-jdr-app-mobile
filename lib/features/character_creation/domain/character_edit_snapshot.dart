@@ -1,3 +1,5 @@
+import '../../../core/rules/spell_status.dart';
+
 /// État brut d'un personnage existant au moment où le joueur lance
 /// « Modifier » depuis la fiche (demande utilisateur du 2026-09-25 : réutiliser
 /// l'assistant de création pour tout modifier). Identifiants bruts, pas de
@@ -70,10 +72,10 @@ class CharacterEditSnapshot {
   /// Toutes les lignes `character_spells`, sorts innés compris. Une même
   /// valeur de `spellId` peut y figurer deux fois (aucune contrainte
   /// d'unicité en base) : une fois [innateStatus], une fois ordinaire.
-  final List<({int spellId, String status})> spells;
+  final List<({int spellId, SpellStatus status})> spells;
 
   /// `character_spells.status` d'un sort inné racial.
-  static const String innateStatus = 'inné';
+  static const SpellStatus innateStatus = SpellStatus.innate;
 
   /// Les sorts que l'assistant a le droit de lire comme des choix de classe
   /// et de réécrire : toutes les lignes sauf celles au statut
@@ -81,7 +83,7 @@ class CharacterEditSnapshot {
   /// (`racial_innate_spells`), jamais d'un choix de classe : il ne doit ni
   /// pré-remplir l'étape Sorts ([CharacterEditHydrator]), ni entrer dans le
   /// calcul des suppressions ([CharacterEditPlanner]).
-  List<({int spellId, String status})> get classSpells => [
+  List<({int spellId, SpellStatus status})> get classSpells => [
     for (final spell in spells)
       if (spell.status != innateStatus) spell,
   ];
@@ -175,7 +177,7 @@ class CharacterEditSnapshot {
           if (intOf(spellRow['spell_id']) != null)
             (
               spellId: intOf(spellRow['spell_id'])!,
-              status: spellRow['status'] as String? ?? 'connu',
+              status: SpellStatus.fromValue(spellRow['status'] as String?),
             ),
       ],
     );

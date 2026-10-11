@@ -2,6 +2,7 @@
 // "Tous"/"Préparés"/"Non préparés" de l'onglet "Sorts".
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/characters/domain/spell_preparation_filter.dart';
@@ -11,28 +12,28 @@ const _cantrip = CharacterSpellEntry(
   name: 'Lumière',
   level: 0,
   school: '',
-  status: 'connu',
+  status: SpellStatus.known,
 );
 const _prepared = CharacterSpellEntry(
   id: 2,
   name: 'Bénédiction',
   level: 1,
   school: '',
-  status: 'préparé',
+  status: SpellStatus.prepared,
 );
 const _unprepared = CharacterSpellEntry(
   id: 3,
   name: 'Soins',
   level: 1,
   school: '',
-  status: 'connu',
+  status: SpellStatus.known,
 );
 const _granted = CharacterSpellEntry(
   id: 4,
   name: 'Garde divine',
   level: 1,
   school: '',
-  status: 'préparé',
+  status: SpellStatus.prepared,
   grantSource: SpellGrantSource.domain,
   isPersisted: false,
 );
@@ -41,7 +42,7 @@ const _innate = CharacterSpellEntry(
   name: 'Ténèbres',
   level: 2,
   school: '',
-  status: 'inné',
+  status: SpellStatus.innate,
 );
 
 const _all = [_cantrip, _prepared, _unprepared, _granted, _innate];
@@ -71,7 +72,7 @@ void main() {
       name: 'Mot de guérison',
       level: 1,
       school: '',
-      status: 'connu',
+      status: SpellStatus.known,
       requiresPreparation: false,
     );
     const withKnown = [..._all, knownSpell];

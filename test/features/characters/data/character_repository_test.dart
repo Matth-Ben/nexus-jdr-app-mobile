@@ -10,6 +10,7 @@ import 'package:personnages/core/cache/app_database.dart';
 import 'package:personnages/core/cache/pending_character_write_queue.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/data/pending_character_write_syncer.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
@@ -1806,7 +1807,7 @@ void main() {
       });
       // Sort de domaine sans ligne character_spells : dérivé pur.
       expect(byName['Bénédiction'].grantSource, SpellGrantSource.domain);
-      expect(byName['Bénédiction'].status, 'préparé');
+      expect(byName['Bénédiction'].status, SpellStatus.prepared);
       expect(byName['Bénédiction'].isPersisted, isFalse);
       // Sort choisi ET accordé : une seule entrée, favori conservé.
       expect(byName['Soins'].grantSource, SpellGrantSource.domain);
@@ -1815,7 +1816,7 @@ void main() {
       expect(byName['Revigorer'].grantSource, SpellGrantSource.domain);
       // Sort ordinaire inchangé, jamais compté comme préparé.
       expect(byName['Bouclier'].grantSource, isNull);
-      expect(byName['Bouclier'].status, 'connu');
+      expect(byName['Bouclier'].status, SpellStatus.known);
       expect(detail.preparedSpellCount, 0);
     }
 

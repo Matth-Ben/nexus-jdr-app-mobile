@@ -1,31 +1,32 @@
-/// Règles de lancer de sorts encodées en constantes Dart applicatives,
-/// exactement comme `SkillAbilityMapping` (mapping compétence -> caractéristique)
-/// : aucune colonne de `classes`/`spell_classes` ne porte le nombre de
-/// sorts/cantrips accessibles à la création (ni la distinction "sorts
-/// connus" vs "sorts préparés"), voir le commentaire de tâche d'origine —
-/// donc ces quotas doivent être encodés côté app plutôt que lus en base.
+import '../../../core/rules/class_spellcasting_rule.dart';
+import '../../../core/rules/spell_status.dart';
+
+/// Quotas de sorts à la création, encodés en constantes Dart applicatives,
+/// exactement comme `SkillAbilityMapping` (mapping compétence ->
+/// caractéristique) : aucune colonne de `classes`/`spell_classes` ne porte
+/// le nombre de sorts/cantrips accessibles à la création — donc ces quotas
+/// doivent être encodés côté app plutôt que lus en base.
 ///
 /// Clé de mapping : le **nom de classe en français** (`ClassOption.name`,
-/// déjà résolu via `translations`) — même convention que
-/// `SkillAbilityMapping.abilityAbbreviationBySkill` (clé = nom de compétence
-/// en français), pas `classes.id` : ces id ne sont pas des constantes stables
-/// documentées ailleurs dans ce dépôt (contrairement aux noms, cf.
-/// `supabase/migrations/20260825090700_seed_classes_subclasses_features.sql`
-/// du dépôt web), et garder la même convention de clé que
-/// `SkillAbilityMapping` limite le nombre de façons différentes de référencer
-/// une classe dans ce module.
+/// déjà résolu via `translations`), même convention que
+/// `SkillAbilityMapping.abilityAbbreviationBySkill`. La classification
+/// « lanceur ou pas »/« connaît ou prépare » est, elle, déléguée au registre
+/// unique `core/rules/class_spellcasting_rule.dart::ClassSpellcastingRegistry`
+/// (dette D04, `docs/dette-technique.md`, ex-`_preparedCasterClassNames` de
+/// ce fichier) : seuls les quotas numériques, propres à l'étape de création,
+/// restent ici.
 ///
 /// [isSpellcastingClass] sert aussi de seule source de vérité pour la
 /// visibilité de l'étape 6/9 entière, y compris depuis l'étape 5/9
 /// (`presentation/skills_and_tools_step_screen.dart`, qui doit sauter
 /// directement à l'étape 7/9 pour une classe non lanceuse) — pas de requête
 /// réseau dédiée (`spell_classes` non vide) : les deux sources
-/// (contenu peuplé en base et ce mapping) doivent rester synchronisées
+/// (contenu peuplé en base et le registre) doivent rester synchronisées
 /// manuellement, seule alternative pour trancher ce point à l'étape 5/9 sans
 /// y faire porter un appel réseau supplémentaire.
 ///
 /// Quotas ci-dessous choisis au plus proche du *Manuel des Joueurs* (5e) pour
-/// un personnage de niveau 1, avec deux simplifications assumées documentées
+/// un personnage de niveau 1, avec des simplifications assumées documentées
 /// caractéristique par caractéristique ci-dessous plutôt que silencieusement
 /// — à valider par le chef de projet :
 /// 1. Clerc/Druide sont des lanceurs "préparés" en 5e (nombre de sorts
@@ -40,10 +41,26 @@
 ///    lancer de sorts démarre au niveau 2) : leur donner un quota nul viderait
 ///    entièrement cette étape pour ces deux classes (aucun onglet visible,
 ///    voir la règle de masquage sur `SpellLevelTabSelector`), alors que la
-///    consigne d'origine les liste explicitement parmi les 8 classes
+///    consigne d'origine les liste explicitement parmi les classes
 ///    lanceuses concernées par cette étape. Quota de 2 retenu par
 ///    cohérence avec leur valeur RAW au niveau 2 (leur premier niveau
 ///    disposant de sorts), pas une valeur inventée sans ancrage aux règles.
+/// 3. Artificier (D41, `docs/dette-technique.md`, décision produit du
+///    10/10/2026 : demi-lanceur qui prépare, voir
+///    [ClassSpellcastingRegistry]) — **contrairement à Paladin/Rôdeur (point
+///    2), ce n'est PAS une valeur de secours par analogie avec un niveau
+///    supérieur** : RAW, l'Artificier a bien 2 cantrips dès le niveau 1
+///    (`domain/spells_known_progression.dart::cantripsKnownByLevel`,
+///    confirmé par `qa-testeur` en relisant D41 — c'est justement ce qui le
+///    distingue de Paladin/Rôdeur, qui eux n'ont RAW aucun sort avant le
+///    niveau 2). Le chiffre retenu (2) est donc la vraie valeur RAW de
+///    niveau 1, pas une simplification. Pour les sorts de niveau 1 : RAW il
+///    prépare (modificateur d'Intelligence + moitié du niveau d'Artificier
+///    arrondie à l'inférieur, minimum 1), soit 0 + modificateur au niveau 1
+///    — valeur retenue (3) par cohérence avec le modificateur le plus
+///    courant (+3), même méthode que Clerc/Druide ci-dessus, mais sans le
+///    "+ niveau" (l'Artificier n'a droit à aucun bonus de niveau à ce
+///    stade, contrairement à Clerc/Druide).
 abstract final class SpellcastingRules {
   /// Cantrips connus au niveau 1 (`Manuel des Joueurs`, valeur exacte,
   /// indépendante du modificateur de caractéristique — contrairement aux
@@ -59,15 +76,17 @@ abstract final class SpellcastingRules {
     'Occultiste': 2,
     'Magicien': 3,
     'Ensorceleur': 4,
+    // D41 : voir le point 3 du commentaire de classe.
+    'Artificier': 2,
   };
 
   /// Sorts de niveau 1 accessibles à la création — voir le commentaire de
-  /// classe pour le rationale des valeurs Clerc/Druide/Paladin/Rôdeur.
-  /// Magicien (6) est la seule valeur non liée à un modificateur de
-  /// caractéristique parmi les lanceurs "préparés" : au niveau 1, un
-  /// Magicien a RAW un grimoire contenant exactement 6 sorts de niveau 1 de
-  /// son choix, indépendamment de son Intelligence — valeur fixe exacte,
-  /// pas une simplification.
+  /// classe pour le rationale des valeurs Clerc/Druide/Paladin/Rôdeur/
+  /// Artificier. Magicien (6) est la seule valeur non liée à un
+  /// modificateur de caractéristique parmi les lanceurs "préparés" : au
+  /// niveau 1, un Magicien a RAW un grimoire contenant exactement 6 sorts de
+  /// niveau 1 de son choix, indépendamment de son Intelligence — valeur
+  /// fixe exacte, pas une simplification.
   static const Map<String, int> _levelOneSpellQuotaByClassName = {
     'Barde': 4,
     'Clerc': 4,
@@ -77,6 +96,8 @@ abstract final class SpellcastingRules {
     'Occultiste': 2,
     'Magicien': 6,
     'Ensorceleur': 2,
+    // D41 : voir le point 3 du commentaire de classe.
+    'Artificier': 3,
   };
 
   /// Quota de sorts mineurs (onglet "Mineurs") pour [className], 0 si cette
@@ -91,41 +112,28 @@ abstract final class SpellcastingRules {
   static int levelOneSpellQuotaFor(String className) =>
       _levelOneSpellQuotaByClassName[className] ?? 0;
 
-  /// `true` ssi [className] est l'une des 8 classes lanceuses de sorts
-  /// (contenu peuplé, voir le commentaire de classe) — voir la documentation
-  /// de classe pour le rationale de cette source de vérité par nom plutôt
-  /// que par requête réseau.
+  /// `true` ssi [className] est une classe lanceuse de sorts (contenu
+  /// peuplé, voir le commentaire de classe) — déléguée au registre unique
+  /// [ClassSpellcastingRegistry] (dette D04) plutôt qu'aux clés des deux maps
+  /// de quotas ci-dessus : les deux sources restent synchronisées par
+  /// construction (ajouter une classe lanceuse au registre sans lui donner
+  /// de quota ici afficherait une étape 6/9 vide, repéré par
+  /// `spellcasting_rules_test.dart`).
   static bool isSpellcastingClass(String className) =>
-      _cantripQuotaByClassName.containsKey(className) ||
-      _levelOneSpellQuotaByClassName.containsKey(className);
+      ClassSpellcastingRegistry.ruleForFrenchName(className).isCaster;
 
-  /// Classes "préparées" en 5e (le joueur choisit chaque jour, parmi tous les
-  /// sorts de sa liste de classe, lesquels préparer — modificateur de
-  /// caractéristique + niveau) : `character_spells.status = 'préparé'` pour
-  /// leurs sorts, `'connu'` pour les 4 autres classes lanceuses (Barde,
-  /// Ensorceleur, Occultiste, Rôdeur, qui apprennent un nombre fixe de sorts
-  /// définitivement connus) — voir la consigne originale de l'étape 9/9
-  /// "Récapitulatif" pour cette règle 5e standard, encodée ici en dur plutôt
-  /// que sur une colonne de `classes` (même rationale que les quotas
-  /// ci-dessus : cette distinction n'existe nulle part en base).
-  static const Set<String> _preparedCasterClassNames = {
-    'Clerc',
-    'Druide',
-    'Magicien',
-    'Paladin',
-  };
-
-  /// `character_spells.status` pour un sort de [className] — voir le
-  /// commentaire de classe ci-dessus. Retombe sur `'connu'` par défaut (les 4
-  /// classes "connues" explicitement listées, ET tout nom de classe imprévu)
-  /// : cette méthode n'est normalement appelée que pour l'une des 8 classes
-  /// lanceuses de sorts (voir [isSpellcastingClass]), jamais vérifié en
-  /// amont par un `assert` pour rester une pure fonction de mapping, sans
-  /// jamais crasher sur une donnée inattendue.
-  static String statusFor(String className) {
-    if (_preparedCasterClassNames.contains(className)) {
-      return 'préparé';
-    }
-    return 'connu';
+  /// `character_spells.status` pour un sort de [className] — `préparé` pour
+  /// les lanceurs "à préparation" (Clerc, Druide, Magicien, Paladin,
+  /// Artificier), `connu` par défaut (les lanceurs "à sorts connus"
+  /// explicitement, ET tout nom de classe imprévu). Cette méthode n'est
+  /// normalement appelée que pour une classe lanceuse de sorts (voir
+  /// [isSpellcastingClass]), jamais vérifié en amont par un `assert` pour
+  /// rester une pure fonction de mapping, sans jamais crasher sur une donnée
+  /// inattendue — voir [ClassSpellcastingRegistry.ruleForFrenchName], sûr
+  /// par défaut (repli non-lanceur -> [SpellPreparationMode.none] ->
+  /// [SpellStatus.known] ci-dessous).
+  static SpellStatus statusFor(String className) {
+    final rule = ClassSpellcastingRegistry.ruleForFrenchName(className);
+    return rule.preparesSpells ? SpellStatus.prepared : SpellStatus.known;
   }
 }

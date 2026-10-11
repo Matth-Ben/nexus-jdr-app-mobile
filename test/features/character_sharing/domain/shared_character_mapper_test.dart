@@ -4,6 +4,7 @@
 // toujours vide, skills reconstruites depuis les 18 compétences D&D 5e).
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/character_sharing/domain/shared_character_mapper.dart';
 
 void main() {
@@ -177,7 +178,7 @@ void main() {
       expect(spell.name, 'Boule de feu');
       expect(spell.level, 3);
       expect(spell.school, 'évocation');
-      expect(spell.status, 'préparé');
+      expect(spell.status, SpellStatus.prepared);
       expect(spell.description, 'Une explosion de flammes.');
     });
 
@@ -293,7 +294,7 @@ void main() {
 
         final spell = detail.spells.single;
         expect(spell.name, 'Bénédiction');
-        expect(spell.status, 'préparé');
+        expect(spell.status, SpellStatus.prepared);
         expect(spell.grantSource?.label, 'Domaine');
         expect(spell.isPersisted, isFalse);
       });
@@ -311,7 +312,7 @@ void main() {
         });
 
         final spell = detail.spells.single;
-        expect(spell.status, 'préparé');
+        expect(spell.status, SpellStatus.prepared);
         expect(spell.grantSource?.label, 'Serment');
         expect(spell.isPersisted, isTrue);
       });
@@ -323,7 +324,7 @@ void main() {
         });
 
         expect(detail.spells.single.grantSource, isNull);
-        expect(detail.spells.single.status, 'connu');
+        expect(detail.spells.single.status, SpellStatus.known);
       });
     });
   });
@@ -463,7 +464,7 @@ void main() {
       final entry = mapSharedCharacterJson({
         'spells': [spell(1, spent: 1)],
       }).spells.single;
-      expect(entry.status, 'inné');
+      expect(entry.status, SpellStatus.innate);
       expect(entry.level, 2);
       expect(entry.innateUsesSpent, 1);
     });

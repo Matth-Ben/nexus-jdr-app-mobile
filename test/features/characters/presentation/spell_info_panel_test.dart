@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
@@ -29,7 +30,7 @@ const _cantrip = CharacterSpellEntry(
   name: 'Lumière',
   level: 0,
   school: 'Évocation',
-  status: 'connu',
+  status: SpellStatus.known,
 );
 
 const _fireball = CharacterSpellEntry(
@@ -40,7 +41,7 @@ const _fireball = CharacterSpellEntry(
   // 'préparé' (et non 'connu') : ces tests portent sur le flux de lancer, qui
   // exige désormais `SpellStatusFormatter.canCast` — voir
   // `spell_status_formatter_test.dart` pour les tests dédiés au statut lui-même.
-  status: 'préparé',
+  status: SpellStatus.prepared,
   castingTime: '1 action',
   range: '45 mètres',
   components: {
@@ -275,7 +276,7 @@ void main() {
       name: 'Toile d\'araignée',
       level: 2,
       school: 'Conjuration',
-      status: 'connu',
+      status: SpellStatus.known,
     );
 
     const preparedSpell = CharacterSpellEntry(
@@ -283,7 +284,7 @@ void main() {
       name: 'Immobilisation de personne',
       level: 2,
       school: 'Enchantement',
-      status: 'préparé',
+      status: SpellStatus.prepared,
     );
 
     testWidgets(
@@ -402,7 +403,7 @@ void main() {
       name: 'Maléfice',
       level: 1,
       school: 'Enchantement',
-      status: 'connu',
+      status: SpellStatus.known,
     );
 
     const innateSpell = CharacterSpellEntry(
@@ -410,7 +411,7 @@ void main() {
       name: 'Ténèbres',
       level: 2,
       school: 'Évocation',
-      status: 'inné',
+      status: SpellStatus.innate,
     );
 
     // Usage déjà dépensé depuis le dernier repos long.
@@ -419,7 +420,7 @@ void main() {
       name: 'Ténèbres',
       level: 2,
       school: 'Évocation',
-      status: 'inné',
+      status: SpellStatus.innate,
       innateUsesSpent: 1,
     );
 
@@ -428,10 +429,10 @@ void main() {
       name: 'Arme spirituelle',
       level: 2,
       school: 'Évocation',
-      status: 'préparé',
+      status: SpellStatus.prepared,
       grantSource: SpellGrantSource.domain,
       isPersisted: false,
-      storedStatus: 'connu',
+      storedStatus: SpellStatus.known,
     );
 
     testWidgets('sort lançable : bouton actif et aucune ligne', (tester) async {
@@ -774,7 +775,7 @@ void main() {
         name: 'Souhait',
         level: 9,
         school: 'Invocation',
-        status: 'connu',
+        status: SpellStatus.known,
         description:
             '${List.filled(60, 'Texte de description.').join(' ')} FIN.',
       );
@@ -811,19 +812,21 @@ void main() {
       name: 'Maléfice',
       level: 1,
       school: 'Enchantement',
-      status: 'connu',
+      status: SpellStatus.known,
     );
     const preparedSpell = CharacterSpellEntry(
       id: 21,
       name: 'Bénédiction',
       level: 1,
       school: 'Enchantement',
-      status: 'préparé',
+      status: SpellStatus.prepared,
     );
     const slots = [CharacterSpellSlot(level: 1, total: 2, used: 0)];
 
     String labelOf(CharacterSpellEntry spell) =>
-        spell.status == 'connu' ? 'Préparer ce sort' : 'Ne plus préparer';
+        spell.status == SpellStatus.known
+        ? 'Préparer ce sort'
+        : 'Ne plus préparer';
 
     Finder linkOf(String label) =>
         find.ancestor(of: find.text(label), matching: find.byType(InkWell));
@@ -884,7 +887,7 @@ void main() {
       name: 'Charme-personne',
       level: 1,
       school: 'Enchantement',
-      status: 'connu',
+      status: SpellStatus.known,
       requiresPreparation: false,
     );
     const storedPrepared = CharacterSpellEntry(
@@ -892,7 +895,7 @@ void main() {
       name: 'Héroïsme',
       level: 1,
       school: 'Enchantement',
-      status: 'préparé',
+      status: SpellStatus.prepared,
       requiresPreparation: false,
     );
 
@@ -975,7 +978,7 @@ void main() {
       name: 'Ténèbres',
       level: 2,
       school: 'Évocation',
-      status: 'inné',
+      status: SpellStatus.innate,
       castingTime: '1 action',
     );
     const innateSpent = CharacterSpellEntry(
@@ -983,7 +986,7 @@ void main() {
       name: 'Ténèbres',
       level: 2,
       school: 'Évocation',
-      status: 'inné',
+      status: SpellStatus.innate,
       castingTime: '1 action',
       innateUsesSpent: 1,
     );
@@ -992,7 +995,7 @@ void main() {
       name: 'Lumières dansantes',
       level: 0,
       school: 'Évocation',
-      status: 'inné',
+      status: SpellStatus.innate,
     );
 
     testWidgets('disponible : phrase sous le sous-titre, ligne '

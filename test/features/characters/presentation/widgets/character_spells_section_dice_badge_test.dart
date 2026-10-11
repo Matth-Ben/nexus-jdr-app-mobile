@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_spells_section.dart';
@@ -36,7 +37,7 @@ void main() {
           name: 'Boule de feu',
           level: 3,
           school: 'évocation',
-          status: 'connu',
+          status: SpellStatus.known,
           description: 'La cible subit 8d6 dégâts de feu.',
         ),
       ]);
@@ -54,7 +55,7 @@ void main() {
         name: 'Lumière',
         level: 0,
         school: 'évocation',
-        status: 'connu',
+        status: SpellStatus.known,
         description: 'Vous créez une lumière vive.',
       ),
     ]);

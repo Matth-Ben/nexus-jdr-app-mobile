@@ -170,8 +170,9 @@ class CharacterCard extends StatelessWidget {
   /// (`character_repository.dart` via `_fetchTranslatedNames`), jamais
   /// genré : la consigne d'origine (recettage) mentionnait "Magicienne", qui
   /// ne correspond à aucune valeur réellement stockée par ce dépôt (voir par
-  /// ex. `lib/features/characters/domain/spellcasting_class_names.dart`, clé
-  /// `'Magicien'`) — adapté ici vers `'Magicien'` pour que le mapping soit
+  /// ex. `CharacterClass.wizard.frenchName` dans
+  /// `core/rules/character_class.dart`, `'Magicien'`) — adapté ici vers
+  /// `'Magicien'` pour que le mapping soit
   /// effectif ; validé avec le chef de projet.
   Color? _classThemeColor(String? className) {
     return switch (className) {

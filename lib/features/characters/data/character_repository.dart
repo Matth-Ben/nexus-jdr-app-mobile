@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/crash_reporting/crash_reporter.dart';
+import '../../../core/rules/spell_status.dart';
 import '../../../core/utils/french_text_normalizer.dart';
 import '../../../core/network/connectivity_checker.dart';
 import '../../character_creation/domain/spellcasting_rules.dart';
@@ -2117,14 +2118,17 @@ class SupabaseCharacterRepository implements CharacterRepository {
     try {
       final updated = await _client
           .from('character_spells')
-          .update({'status': prepared ? 'préparé' : 'connu'})
+          .update({
+            'status':
+                (prepared ? SpellStatus.prepared : SpellStatus.known).value,
+          })
           .eq('character_id', characterId)
           .eq('spell_id', spellId)
           // Jamais une ligne 'inné' : un sort inné n'a pas de préparation,
           // et la passer à 'préparé' puis 'connu' serait sans retour. Si le
           // sort a des lignes en double (une innée, une ordinaire), seule la
           // ligne ordinaire bouge.
-          .neq('status', 'inné')
+          .neq('status', SpellStatus.innate.value)
           .select('id');
       // Sort de la liste de classe d'un lanceur à préparation, sans ligne
       // `character_spells` tant qu'il n'a jamais été préparé (voir
@@ -2145,7 +2149,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         await _client.from('character_spells').insert({
           'character_id': characterId,
           'spell_id': spellId,
-          'status': 'préparé',
+          'status': SpellStatus.prepared.value,
         });
       }
       return WriteOutcome.synced;
@@ -2206,7 +2210,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
               .eq('spell_id', spellId)
               // Jamais une ligne ordinaire du même sort (lignes en double
               // possibles) : seul un sort inné porte un compteur d'usage.
-              .eq('status', 'inné');
+              .eq('status', SpellStatus.innate.value);
           await _recordConfirmedWrite(
             characterId: characterId,
             ownerId: ownerId,
@@ -3111,7 +3115,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             if (!knownSpellIds.contains(spellId)) spellId,
         };
         if (newInitialSpellIds.isNotEmpty) {
-          final status = SpellcastingRules.statusFor(className);
+          final status = SpellcastingRules.statusFor(className).value;
           await _client.from('character_spells').insert([
             for (final spellId in newInitialSpellIds)
               {
@@ -3154,7 +3158,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
               {
                 'character_id': characterId,
                 'spell_id': spellId,
-                'status': 'inné',
+                'status': SpellStatus.innate.value,
                 'source_class_id': null,
               },
           ]);

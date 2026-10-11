@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/rules/spell_status.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -180,7 +181,7 @@ class _SpellInfoPanelContent extends StatelessWidget {
                       if (SpellStatusFormatter.canTogglePrepared(spell)) ...[
                         const SizedBox(height: AppSpacing.sm),
                         _TogglePreparedLink(
-                          prepared: spell.status == 'préparé',
+                          prepared: spell.status == SpellStatus.prepared,
                           onTap: onTogglePrepared,
                         ),
                       ],

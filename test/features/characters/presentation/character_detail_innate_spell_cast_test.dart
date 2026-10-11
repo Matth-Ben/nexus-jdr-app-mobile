@@ -10,6 +10,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
@@ -38,7 +39,7 @@ CharacterSpellEntry _innate({int spent = 0}) => CharacterSpellEntry(
   name: 'Ténèbres',
   level: 2,
   school: 'Évocation',
-  status: 'inné',
+  status: SpellStatus.innate,
   innateUsesSpent: spent,
 );
 
@@ -47,7 +48,7 @@ const _innateCantrip = CharacterSpellEntry(
   name: 'Lumières dansantes',
   level: 0,
   school: 'Évocation',
-  status: 'inné',
+  status: SpellStatus.innate,
 );
 
 CharacterDetail _detail({

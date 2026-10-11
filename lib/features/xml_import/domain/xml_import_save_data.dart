@@ -1,3 +1,5 @@
+import '../../../core/rules/spell_status.dart';
+
 /// Une ligne prête pour `character_level_hp` (`level`/`hp_rolled`, `method`
 /// toujours `'lance'` à l'écriture — voir `data/xml_import_repository.dart`) :
 /// un personnage importé a une valeur de PV **réellement gagnée** par niveau
@@ -21,7 +23,11 @@ typedef XmlImportToolProficiencyLine = ({int? toolId, String? customText});
 /// Une ligne prête pour `character_spells` — `sourceClassId` reprend l'`id`
 /// de la classe déjà résolue (`null` si la classe elle-même n'a pas été
 /// reconnue).
-typedef XmlImportSpellLine = ({int spellId, String status, int? sourceClassId});
+typedef XmlImportSpellLine = ({
+  int spellId,
+  SpellStatus status,
+  int? sourceClassId,
+});
 
 /// Une ligne prête pour `character_inventory` (`item_id` nullable +
 /// `custom_name`, même forme que `CharacterCreationEquipmentResolver
