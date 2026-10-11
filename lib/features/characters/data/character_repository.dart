@@ -641,16 +641,27 @@ abstract class CharacterRepository {
   ///
   /// [racialInnateSpellIds] : sorts innés raciaux (`racial_innate_spells`,
   /// lignes sans choix de lignée) devenus accessibles à ce nouveau niveau
-  /// TOTAL, déjà résolus et déjà filtrés contre les sorts connus par
+  /// TOTAL, déjà résolus par
   /// `presentation/providers/level_up_provider.dart`
-  /// (`LevelUpStepData.newRacialInnateSpells`) — contrairement à
+  /// (`LevelUpStepData.newRacialInnateSpells`, qui les filtre déjà contre les
+  /// sorts DÉJÀ INNÉS de [characterId] — jamais contre tout sort connu,
+  /// toute route confondue, depuis la décision de Matthias du 10/10/2026,
+  /// cohérente avec D43 du registre de dette technique,
+  /// `docs/dette-technique.md` : un sort à la fois inné et connu/préparé
+  /// garde ses deux routes, voir plus bas) — contrairement à
   /// [initialSpellIds]/[invocationIds], jamais un choix du joueur : écrits
   /// avec `status: 'inné'` et `source_class_id: null` (jamais celui de
   /// [classId], qui n'a aucun rapport avec une race). Revérifiés contre
   /// `character_spells` juste avant l'écriture (même discipline défensive
-  /// que [_applyAbilityScoreImprovement] pour le plafond ASI à 20) : ne
-  /// jamais écrire un sort déjà connu, même si l'appelant s'est basé sur une
-  /// lecture périmée. Toujours vide hors de ce cas.
+  /// que [_applyAbilityScoreImprovement] pour le plafond ASI à 20), mais
+  /// UNIQUEMENT contre les lignes déjà 'inné' (jamais contre une ligne
+  /// ordinaire du même sort, voir [_fetchAlreadyInnateSpellIds]) : ne
+  /// jamais réécrire une ligne 'inné' déjà existante (ça violerait l'index
+  /// unique partiel dédié, D10), même si l'appelant s'est basé sur une
+  /// lecture périmée — mais toujours écrire la ligne 'inné' même si une
+  /// ligne ORDINAIRE du même sort existe déjà (D43 : les deux routes
+  /// coexistent, chacune sous son propre index unique partiel, jamais en
+  /// conflit l'une avec l'autre). Toujours vide hors de ce cas.
   ///
   /// [hpRolled] et [hpGain] sont déjà calculés par l'appelant (voir
   /// `domain/level_up_hit_points_calculator.dart`), cette méthode ne fait
@@ -3171,14 +3182,27 @@ class SupabaseCharacterRepository implements CharacterRepository {
       if (racialInnateSpellIds.isNotEmpty) {
         // Sorts innés raciaux devenus accessibles à ce nouveau niveau TOTAL
         // (voir la documentation de [CharacterRepository.applyLevelUp]) —
-        // revérifiés contre les sorts déjà connus juste avant l'écriture
-        // (jamais de confiance aveugle dans la lecture de l'appelant, même
-        // discipline que [_applyAbilityScoreImprovement]) : un sort déjà
-        // connu (par ce biais ou un autre) n'est jamais réécrit.
-        final knownSpellIds = await _fetchKnownSpellIds(characterId);
+        // revérifiés contre les lignes 'inné' DÉJÀ EXISTANTES juste avant
+        // l'écriture (jamais de confiance aveugle dans la lecture de
+        // l'appelant, même discipline que [_applyAbilityScoreImprovement]) :
+        // une ligne 'inné' déjà écrite à un niveau antérieur n'est jamais
+        // réécrite (violerait l'index unique partiel dédié, D10).
+        //
+        // Jamais filtré contre `_fetchKnownSpellIds` (toute route confondue)
+        // : décision de Matthias du 10/10/2026, cohérente avec D43 — un sort
+        // déjà connu par sa seule route ORDINAIRE (classe) garde malgré tout
+        // le droit à sa ligne 'inné' séparée, les deux routes RAW étant
+        // indépendantes (voir la doc de [racialInnateSpellIds] ci-dessus).
+        // Avant cette décision, filtrer ici aussi (en plus du filtre déjà
+        // retiré côté `level_up_provider.dart`) aurait rendu ce correctif
+        // sans effet : la ligne 'inné' aurait quand même été silencieusement
+        // abandonnée à l'écriture.
+        final alreadyInnateSpellIds = await _fetchAlreadyInnateSpellIds(
+          characterId,
+        );
         final newRacialSpellIds = {
           for (final spellId in racialInnateSpellIds)
-            if (!knownSpellIds.contains(spellId)) spellId,
+            if (!alreadyInnateSpellIds.contains(spellId)) spellId,
         };
         if (newRacialSpellIds.isNotEmpty) {
           await _client.from('character_spells').insert([
@@ -4295,11 +4319,15 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// Tous les `spell_id` déjà connus de [characterId] dans
   /// `character_spells`, toute nature confondue (sort de classe, sort inné
   /// racial, invocation...) — lecture fraîche utilisée par [applyLevelUp]
-  /// juste avant chaque écriture de nouveaux sorts (sorts initiaux d'une
-  /// classe à sorts connus, sorts innés raciaux) pour ne jamais tenter de
-  /// réécrire un sort déjà connu (violerait l'index unique partiel sur
-  /// `character_spells`, voir dette D10) : un sort déjà connu est toujours
-  /// ignoré silencieusement plutôt que réécrit.
+  /// juste avant l'écriture des sorts initiaux d'une nouvelle classe à sorts
+  /// connus ([initialSpellIds]) pour ne jamais tenter de réécrire une ligne
+  /// ORDINAIRE déjà existante (violerait l'index unique partiel sur
+  /// `character_spells`, voir dette D10) : un sort déjà connu (peu importe
+  /// sa route) n'obtient alors jamais de seconde ligne ordinaire.
+  ///
+  /// PAS utilisé pour les sorts innés raciaux ([racialInnateSpellIds]) :
+  /// voir [_fetchAlreadyInnateSpellIds], qui ne filtre que sur la route
+  /// innée déjà existante, pas sur une route ordinaire préexistante (D43).
   Future<Set<int>> _fetchKnownSpellIds(String characterId) async {
     final knownRows = await _client
         .from('character_spells')
@@ -4307,6 +4335,31 @@ class SupabaseCharacterRepository implements CharacterRepository {
         .eq('character_id', characterId);
     return {
       for (final row in knownRows)
+        if (row['spell_id'] is num) (row['spell_id'] as num).toInt(),
+    };
+  }
+
+  /// `spell_id` de [characterId] ayant DÉJÀ une ligne `character_spells` au
+  /// statut 'inné' — lecture fraîche utilisée par [applyLevelUp] juste avant
+  /// l'écriture des sorts innés raciaux ([racialInnateSpellIds]) pour ne
+  /// jamais réécrire une ligne 'inné' déjà existante (violerait l'index
+  /// unique partiel dédié, D10, dont [fetchApplicableGrants] cumulatif
+  /// réexpose les grants déjà accordés à un niveau antérieur).
+  ///
+  /// Contrairement à [_fetchKnownSpellIds] : ignore délibérément toute ligne
+  /// ORDINAIRE existante du même sort — décision de Matthias du 10/10/2026,
+  /// cohérente avec D43 du registre de dette technique
+  /// (`docs/dette-technique.md`) : un sort déjà connu uniquement via sa
+  /// route de classe garde malgré tout le droit à sa ligne 'inné' séparée,
+  /// les deux routes RAW étant indépendantes.
+  Future<Set<int>> _fetchAlreadyInnateSpellIds(String characterId) async {
+    final innateRows = await _client
+        .from('character_spells')
+        .select('spell_id')
+        .eq('character_id', characterId)
+        .eq('status', SpellStatus.innate.value);
+    return {
+      for (final row in innateRows)
         if (row['spell_id'] is num) (row['spell_id'] as num).toInt(),
     };
   }

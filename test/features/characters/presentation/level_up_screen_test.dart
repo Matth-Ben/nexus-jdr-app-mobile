@@ -4182,6 +4182,56 @@ void main() {
       },
     );
 
+    // D43 du registre de dette technique (`docs/dette-technique.md`),
+    // décision de Matthias du 10/10/2026 : contrairement au test précédent
+    // (sort déjà INNÉ, un vrai doublon de ligne 'inné' à éviter), un sort
+    // racial devenu accessible qui coïncide avec un sort déjà connu
+    // UNIQUEMENT via sa route ORDINAIRE (classe) doit malgré tout être
+    // accordé — les deux routes RAW sont indépendantes, aucune des deux
+    // n'empêche l'autre.
+    testWidgets(
+      'sort inné racial coïncidant avec un sort déjà connu via la route '
+      'ORDINAIRE (classe) seulement : accordé malgré tout (D43), pas '
+      'considéré comme un doublon',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetailAtLevel(2).copyWith(
+          raceId: 9,
+          spells: const [
+            CharacterSpellEntry(
+              id: 403,
+              name: 'Représailles infernales',
+              level: 1,
+              school: 'Évocation',
+              status: SpellStatus.prepared,
+            ),
+          ],
+        );
+        fakeRacialInnateSpellRepository.grantsToReturn = const [
+          RacialInnateSpellGrant(
+            spellId: 403,
+            spellName: 'Représailles infernales',
+            characterLevel: 3,
+          ),
+        ];
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Sort inné racial'), findsOneWidget);
+        expect(find.text('Représailles infernales'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER')); // applique
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.racialInnateSpellIds, [
+          403,
+        ]);
+      },
+    );
+
     testWidgets(
       'race personnalisée (raceId nul) : aucune lecture, aucune ligne de '
       'récapitulatif',

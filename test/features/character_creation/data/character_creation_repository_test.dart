@@ -24,6 +24,7 @@ import 'package:personnages/features/character_creation/domain/race_tool_choice.
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/skill_option.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
+import 'package:personnages/features/character_creation/domain/spell_option.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/domain/tool_option.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -1467,6 +1468,7 @@ void _testCatalogTtl({
     Future<List<Map<String, dynamic>>> createAndCaptureSpellInserts({
       required CharacterCreationDraft draft,
       required Map<String, List<Map<String, dynamic>>> tableRows,
+      SpellCatalog spellCatalog = const SpellCatalog(spells: []),
     }) async {
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
@@ -1498,7 +1500,7 @@ void _testCatalogTtl({
         skillCatalog: const SkillCatalog(skills: []),
         toolCatalog: const ToolCatalog(tools: []),
         languageCatalog: const LanguageCatalog(languages: []),
-        spellCatalog: const SpellCatalog(spells: []),
+        spellCatalog: spellCatalog,
         itemCatalog: const ItemCatalog(items: []),
       );
 
@@ -1580,6 +1582,58 @@ void _testCatalogTtl({
       );
 
       expect(spellInserts, isEmpty);
+    });
+
+    // D43 du registre de dette technique (`docs/dette-technique.md`),
+    // décision de Matthias du 10/10/2026 : un sort à la fois accordé comme
+    // inné racial ET choisi comme sort de classe à la création doit obtenir
+    // ses DEUX lignes `character_spells` (une 'inné', une ordinaire), jamais
+    // une seule — avant cette décision, un filtre ici (`alreadyPlannedSpellIds`)
+    // empêchait silencieusement d'écrire la ligne 'inné' dans ce cas
+    // précis, privant le joueur de son lancer gratuit racial.
+    test('sort à la fois racial inné ET choisi comme cantrip de classe : les '
+        'DEUX lignes sont écrites (D43), sans conflit avec l\'index unique '
+        'partiel (statuts différents)', () async {
+      final spellInserts = await createAndCaptureSpellInserts(
+        draft: const CharacterCreationDraft(
+          classId: 3,
+          raceId: 9,
+          classCantripChoices: ['Thaumaturgie'],
+        ),
+        tableRows: {
+          'racial_innate_spells': const [
+            {'spell_id': 24, 'subrace_id': null, 'character_level': 1},
+          ],
+          'translations': const [
+            {'entity_id': '24', 'value': 'Thaumaturgie'},
+          ],
+        },
+        spellCatalog: const SpellCatalog(
+          spells: [
+            SpellOption(
+              id: 24,
+              name: 'Thaumaturgie',
+              level: 0,
+              school: 'Transmutation',
+              castingTime: '1 action',
+            ),
+          ],
+        ),
+      );
+
+      expect(spellInserts, hasLength(2));
+      final innateInsert = spellInserts.singleWhere(
+        (row) => row['status'] == 'inné',
+      );
+      expect(innateInsert['spell_id'], 24);
+      expect(innateInsert['source_class_id'], isNull);
+      final ordinaryInsert = spellInserts.singleWhere(
+        (row) => row['status'] != 'inné',
+      );
+      expect(ordinaryInsert['spell_id'], 24);
+      // Clerc prépare ses sorts : `SpellcastingRules.statusFor('Clerc')`.
+      expect(ordinaryInsert['status'], 'préparé');
+      expect(ordinaryInsert['source_class_id'], 3);
     });
   });
 
