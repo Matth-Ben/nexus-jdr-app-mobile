@@ -39,9 +39,14 @@ class CharacterDetailClassRow {
   /// étrangère que [savingThrowProficiencies] — ajouté pour l'étape "Points
   /// de vie" de la montée de niveau (`domain/level_up_hit_points_calculator.dart`),
   /// qui a besoin du dé de vie de la classe pour proposer un lancer/une
-  /// valeur moyenne. Comme [savingThrowProficiencies], seule pertinente pour
-  /// la classe [isPrimary] à cette itération (pas de montée de niveau
-  /// multiclassée gérée, voir `data/character_repository.dart::applyLevelUp`).
+  /// valeur moyenne (classe CIBLE de la montée de niveau, pas forcément
+  /// [isPrimary] : `applyLevelUp` gère déjà le multiclassage pour le gain
+  /// de PV). Lu pour TOUTES les lignes (pas seulement [isPrimary]) depuis la
+  /// correction du suivi des dés de vie multiclassés (décision chef de
+  /// projet du 10/10/2026) : voir `domain/hit_dice_pool.dart`
+  /// (`HitDicePools.fromClasses`), qui construit un pool par classe à partir
+  /// de ce champ, consommé par `data/character_repository.dart::applyRest`/
+  /// `presentation/widgets/rest_sheet.dart`.
   ///
   /// Volontairement `null` (plutôt qu'un repli silencieux sur une valeur par
   /// défaut) si `hit_die` est absent en base : contrairement aux autres

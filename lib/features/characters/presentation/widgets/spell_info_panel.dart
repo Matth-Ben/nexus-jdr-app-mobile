@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../domain/character_spell_entry.dart';
@@ -45,6 +46,18 @@ const double _blockReasonMaxTextScale = 2;
 /// la ligne de sort rouvrira ce panneau avec l'état déjà à jour, une fois le
 /// tableau de sorts rafraîchi par l'appelant (voir
 /// `character_detail_screen.dart::_toggleSpellPrepared`).
+///
+/// Sort à double route (D43 du registre de dette technique,
+/// `docs/dette-technique.md` : à la fois inné — trait racial — et
+/// connu/préparé — classe) : le pied porte alors DEUX actions "Lancer"
+/// indépendantes (voir [_SpellInfoPanelContent]) — le bouton principal pour
+/// la route ordinaire (délègue à [castSpellFlow] comme pour tout sort),
+/// et un second bouton "Lancer (sort inné)" qui appelle directement
+/// [onCastSpell] avec `slot: null`, SANS passer par [castSpellFlow] (qui ne
+/// sait raisonner que sur la route ordinaire de ce sort une fois les deux
+/// lignes fusionnées en une entrée, voir sa doc) — exactement le même patron
+/// que [onTogglePrepared] ci-dessous : ferme directement la sheet, l'appelant
+/// gère écriture optimiste + réseau.
 Future<void> showSpellInfoPanel(
   BuildContext context, {
   required CharacterSpellEntry spell,
@@ -63,6 +76,10 @@ Future<void> showSpellInfoPanel(
       pactSlot: pactSlot,
       onTogglePrepared: () {
         onTogglePrepared(spell);
+        Navigator.of(sheetContext).pop(false);
+      },
+      onCastInnate: () {
+        onCastSpell(spell, null);
         Navigator.of(sheetContext).pop(false);
       },
     ),
@@ -84,6 +101,7 @@ class _SpellInfoPanelContent extends StatelessWidget {
     required this.spellSlots,
     this.pactSlot,
     required this.onTogglePrepared,
+    required this.onCastInnate,
   });
 
   final CharacterSpellEntry spell;
@@ -91,10 +109,18 @@ class _SpellInfoPanelContent extends StatelessWidget {
   final CharacterSpellSlot? pactSlot;
   final VoidCallback onTogglePrepared;
 
+  /// Lancer de la route innée séparée d'un sort à double route (D43) — voir
+  /// la doc de [showSpellInfoPanel]. Jamais appelée tant que [innateDualRoute]
+  /// est faux (le bouton qui l'utilise n'est alors pas construit).
+  final VoidCallback onCastInnate;
+
   @override
   Widget build(BuildContext context) {
-    // `null` : sort lançable. Sinon la raison est affichée sous le bouton
-    // "Lancer" désactivé (priorité "non préparé", voir le domaine).
+    // `null` : sort lançable par sa route ORDINAIRE. Sinon la raison est
+    // affichée sous le bouton "Lancer" désactivé (priorité "non préparé",
+    // voir le domaine). Pour un sort SEULEMENT inné (pas de route ordinaire
+    // du tout), [SpellCastBlockReason.of] retombe entièrement sur la route
+    // innée — voir sa doc.
     final blockReason = SpellCastBlockReason.of(
       spell: spell,
       spellSlots: [...spellSlots, ?pactSlot],
@@ -103,10 +129,24 @@ class _SpellInfoPanelContent extends StatelessWidget {
     final components = SpellComponentsFormatter.format(spell.components);
 
     // Sort inné de niveau >= 1 : lancé sans emplacement, une fois par repos
-    // long (sort mineur inné : à volonté, rien de plus à afficher).
+    // long (sort mineur inné : à volonté, rien de plus à afficher). Vrai
+    // aussi bien pour un sort SEULEMENT inné que pour un sort à double route
+    // (D43) : voir `domain/innate_spell_usage.dart::InnateSpellUsage
+    // .isLimited`.
     final innateLimited = InnateSpellUsage.isLimited(spell);
     final innateSpent =
         innateLimited && !InnateSpellUsage.hasUseAvailable(spell);
+
+    // Sort à double route (D43) : en plus de sa route ordinaire déjà traitée
+    // par [blockReason] ci-dessus, ce sort garde une route innée gratuite
+    // SÉPARÉE, affichée comme un second bouton "Lancer (sort inné)" en pied
+    // (voir plus bas) — jamais pour un sort SEULEMENT inné (`status ==
+    // SpellStatus.innate`), dont l'UNIQUE bouton "Lancer" ci-dessus est déjà
+    // celui de cette route (voir [SpellCastBlockReason.of]).
+    final innateDualRoute = innateLimited && spell.status != SpellStatus.innate;
+    final innateBlockReason = innateDualRoute
+        ? SpellCastBlockReason.ofInnateRoute(spell)
+        : null;
 
     final infoRows = <Widget>[
       if (innateLimited)
@@ -237,6 +277,34 @@ class _SpellInfoPanelContent extends StatelessWidget {
                           ),
                         ),
                       ),
+                    ],
+                    // Second bouton, route innée indépendante d'un sort à
+                    // double route (D43) — voir [innateDualRoute]. Jamais
+                    // affiché pour un sort SEULEMENT inné : son unique
+                    // bouton "Lancer" ci-dessus est déjà celui-ci.
+                    if (innateDualRoute) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      SecondaryButton(
+                        label: 'Lancer (sort inné)',
+                        surface: SecondaryButtonSurface.parchment,
+                        onPressed: innateBlockReason == null
+                            ? onCastInnate
+                            : null,
+                      ),
+                      if (innateBlockReason != null) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        MediaQuery.withClampedTextScaling(
+                          maxScaleFactor: _blockReasonMaxTextScale,
+                          child: Text(
+                            innateBlockReason.message,
+                            textAlign: TextAlign.center,
+                            style: AppTypography.body(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),

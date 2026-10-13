@@ -61,6 +61,93 @@ void main() {
       );
       expect(InnateSpellUsage.isLimited(granted), isFalse);
     });
+
+    group('D43 (docs/dette-technique.md) — sort à double route (inné ET '
+        'connu/préparé)', () {
+      test('hasInnateRoute vrai explicitement, status ordinaire, niveau >= '
+          '1 : oui, la route innée reste indépendante du statut affiché', () {
+        for (final status in [SpellStatus.known, SpellStatus.prepared]) {
+          final dualRoute = CharacterSpellEntry(
+            id: 1,
+            name: 'Test',
+            level: 2,
+            school: '',
+            status: status,
+            hasInnateRoute: true,
+          );
+          expect(
+            InnateSpellUsage.isLimited(dualRoute),
+            isTrue,
+            reason: status.value,
+          );
+        }
+      });
+
+      test('hasInnateRoute vrai mais niveau 0 (cantrip double route) : non, '
+          'à volonté sur les deux routes', () {
+        const dualCantrip = CharacterSpellEntry(
+          id: 1,
+          name: 'Test',
+          level: 0,
+          school: '',
+          status: SpellStatus.known,
+          hasInnateRoute: true,
+        );
+        expect(InnateSpellUsage.isLimited(dualCantrip), isFalse);
+      });
+
+      test('hasInnateRoute vrai mais sort accordé par une sous-classe '
+          '(grantSource non nul, D44 hors périmètre) : non, le circuit '
+          'ordinaire prime toujours', () {
+        const grantedDualRoute = CharacterSpellEntry(
+          id: 1,
+          name: 'Test',
+          level: 2,
+          school: '',
+          status: SpellStatus.prepared,
+          hasInnateRoute: true,
+          grantSource: SpellGrantSource.domain,
+        );
+        expect(InnateSpellUsage.isLimited(grantedDualRoute), isFalse);
+      });
+
+      test('hasInnateRoute explicitement faux pour un sort ordinaire : non, '
+          'comportement par défaut inchangé', () {
+        const ordinaryOnly = CharacterSpellEntry(
+          id: 1,
+          name: 'Test',
+          level: 2,
+          school: '',
+          status: SpellStatus.known,
+          hasInnateRoute: false,
+        );
+        expect(InnateSpellUsage.isLimited(ordinaryOnly), isFalse);
+      });
+
+      test('non renseigné (défaut du constructeur) : retombe sur status == '
+          "inné, exactement l'ancien comportement (mappeurs qui ne "
+          'connaissent pas encore ce champ, ex. shared_character_mapper)', () {
+        final innateOnly = CharacterSpellEntry(
+          id: 1,
+          name: 'Test',
+          level: 2,
+          school: '',
+          status: SpellStatus.innate,
+        );
+        expect(innateOnly.hasInnateRoute, isTrue);
+        expect(InnateSpellUsage.isLimited(innateOnly), isTrue);
+
+        final ordinary = CharacterSpellEntry(
+          id: 1,
+          name: 'Test',
+          level: 2,
+          school: '',
+          status: SpellStatus.known,
+        );
+        expect(ordinary.hasInnateRoute, isFalse);
+        expect(InnateSpellUsage.isLimited(ordinary), isFalse);
+      });
+    });
   });
 
   group('usesRemaining / hasUseAvailable', () {
@@ -135,5 +222,22 @@ void main() {
     expect(copy.isPersisted, isFalse);
     expect(copy.storedStatus, SpellStatus.innate);
     expect(copy.requiresPreparation, isFalse);
+  });
+
+  test('copyWithInnateUsesSpent préserve hasInnateRoute explicite (D43), '
+      'même quand status est ordinaire — sans quoi le repli par défaut du '
+      'constructeur (status == inné) l\'aurait effacé', () {
+    const dualRoute = CharacterSpellEntry(
+      id: 9,
+      name: 'Thaumaturgie',
+      level: 0,
+      school: 'Évocation',
+      status: SpellStatus.known,
+      hasInnateRoute: true,
+    );
+    final copy = dualRoute.copyWithInnateUsesSpent(1);
+    expect(copy.hasInnateRoute, isTrue);
+    expect(copy.status, SpellStatus.known);
+    expect(copy.innateUsesSpent, 1);
   });
 }

@@ -299,6 +299,7 @@ ferme D39 côté base.
 | D39 | Vue partagée sans `source_class_id` | basse | — | Corrigé côté base (dépôt web, PR #19) ; jamais contrôlé sur un lien de partage réel |
 | D43 | Sort à la fois inné et connu : la ligne ordinaire l'emporte, le lancer gratuit est perdu | moyenne | Règle complète : un lancer gratuit par repos long, plus les emplacements. Décision produit. Depuis la PR #83, un chemin légitime (l'assistant de modification) peut créer ce cas ; aucun cas constaté en base à ce jour, mais ce n'est plus seulement théorique. | Corrigé (PR #122). Confirmé RAW-conforme par l'agent `regles-dnd` (deux octrois indépendants, pas une maison-règle) sur les 3 commits de la PR : bug de fusion à la lecture corrigé (`CharacterSpellEntry.hasInnateRoute`, `SpellCastBlockReason.ofInnateRoute`, second bouton "Lancer (sort inné)" dans la fiche quand double route) ; symétrie à l'écriture sur les 4 chemins (modification, création, montée de niveau dans les deux sens) — garde-fous préventifs retirés, dont un filtre redondant côté serveur (`applyLevelUp`) qui aurait sinon annulé le correctif en silence. Filtres conservés calibrés exactement sur la granularité des deux index uniques D10 (inné vs ordinaire). D44 non cassé (exclusion `grantSource` vérifiée). Suite complète 3865 tests, 0 échec. Incohérence connexe trouvée en cours de route (picker Pacte du Grimoire/Appel de familier) consignée séparément, voir D74. |
 | D44 | Sort inné aussi accordé par une sous-classe : traité comme préparé, donc avec emplacement | basse | À traiter avec D43 | Ouvert |
+| D74 | Même famille que D43/D44 : à la montée de niveau, le picker de sorts du Pacte du Grimoire/Appel de familier (`warlock_pact_rewards.dart`, `level_up_screen.dart`) exclut encore un sort déjà inné racial de ses candidats (filtré via `knownSpellIds`, toute route confondue) — alors que depuis D43 (PR en cours), l'écriture via `initialSpellIds` l'accepterait (`_fetchAlreadyOrdinarySpellIds`, filtre restreint à « déjà ordinaire »). Trouvé par l'agent `regles-dnd` en vérifiant D43, pas corrigé (hors périmètre de ce chantier). | basse | Aligner le filtrage du picker Pacte du Grimoire/Appel de familier sur `hasInnateRoute` plutôt que toute route confondue, même principe que le correctif D43 côté montée de niveau | Ouvert |
 | D45 | Réaffirmation pendant un repos encore en vol : si un lancer réussit pendant un repos long qui échoue ensuite, l'écran affiche « Épuisé » alors que la base vaut 0. Patron commun aux quatre `_reassert…State` (PV, emplacements, pacte, sorts innés) ; leur `finally` rouvre aussi le verrou de repos trop tôt. | moyenne | Ne réaffirmer qu'une fois le repos en vol terminé | Ouvert, reproduit en revue |
 | D46 | La réaffirmation relit une fiche qui peut déjà contenir l'écriture obsolète : un repos long peut être écrasé | basse | Réaffirmer depuis l'état local, pas depuis la fiche relue | Ouvert, lu, non reproduit |
 | D47 | Les réaffirmations ignorent une écriture non envoyée (hors ligne), sans message | basse | Traiter `queued` comme un échec affiché | Ouvert |
@@ -450,6 +451,7 @@ commit parent).
 |---|---|---|---|---|
 | D72 | Colonne `character_inventory.weapon_slot` utilisée côté mobile depuis le 22/09 (`lib/features/characters/domain/weapon_slot.dart`) mais absente de toutes les migrations du dépôt web — même défaut que D58 (`is_incomplete`). `supabase db reset` échoue dès qu'une requête touche cette colonne ; 7 des 16 échecs de `test_integration/` lui sont directement imputables. | haute | Migration `alter table character_inventory add column if not exists weapon_slot text check (weapon_slot in ('principal', 'secondaire'))`, placée chronologiquement avant le 22/09 | Corrigé (PR #25, dépôt web). Colonne/contrainte reproduites fidèlement (vérifié par dump en lecture seule du projet distant, deux fois indépendamment) : `text` nullable, `CHECK` sur `'principal'`/`'secondaire'`. Aucune autre colonne orpheline trouvée sur `character_inventory`. |
 | D73 | 6 des 16 échecs de `test_integration/` viennent d'un `Worker failed to boot` sur l'edge function `create-group` (`SupabaseGroupRepository.createGroup`) — logs Docker : « failed to bootstrap runtime : failed to determine entrypoint ». Semble être un conteneur `supabase_edge_runtime` local resté actif trop longtemps (infra, pas un bug de code), mais pas vérifié davantage. | basse | Vérifier après un `supabase stop`/`supabase start` propre si l'edge function boote correctement ; si le problème persiste, creuser plus avant de se fier à un futur run de test touchant les groupes | Ouvert |
+| D75 | 6 échecs dans `test_integration/character_creation_repository_integration_test.dart` (tri `ascending: true` qui ne trie pas ; `No element` sur un item catalogue) — trouvé par `qa-testeur` en validant les dés de vie multiclassé (12/10), confirmé indépendant de ce chantier en rejouant à l'identique sur `main`. Suspecté : staleness du stack Supabase local (partagé entre plusieurs worktrees/branches, actif depuis plusieurs jours), pas forcément un vrai bug produit. | basse | Reproduire après un `supabase stop`/`supabase start`/`db reset` propre, isolé de tout worktree concurrent ; si le problème persiste, creuser le tri et l'item catalogue manquant comme un vrai défaut | Ouvert |
 
 ## Décisions en attente
 
@@ -457,15 +459,18 @@ commit parent).
    préparation ? **Oui, demandé par Matthias le 06/10.** (D03)
 2. Les sorts innés raciaux se lancent-ils sans emplacement, avec un compteur par repos
    long ? **Oui, demandé par Matthias le 06/10 ; fait (PR #82).** (D08)
-3. Un multiclassé suit-il ses dés de vie par classe ? **Un compteur global, demandé
-   par Matthias le 09/10 ; précisé le 10/10 après analyse RAW par l'agent
-   `regles-dnd` : « global » porte sur le CALCUL du nombre de dés récupérés au
-   repos long (niveau total du personnage, pas la seule classe primaire), mais le
-   suivi reste par type de dé (d6/d8/d10/d12, un par classe) — fusionner en un
-   seul entier serait RAW-incorrect (casserait le plafond par classe et le choix
-   du type de dé à dépenser). Quand la moitié du total ne suffit pas à tout
-   récupérer (RAW silencieux sur ce cas) : le joueur choisit quels dés sont
-   récupérés en priorité, cohérent avec le choix déjà explicite pour la dépense.**
+3. Un multiclassé suit-il ses dés de vie par classe ? **Fait (PR #126).** Un
+   compteur global, demandé par Matthias le 09/10 ; précisé le 10/10 après
+   analyse RAW par l'agent `regles-dnd` : « global » porte sur le CALCUL du
+   nombre de dés récupérés au repos long (niveau total du personnage, pas la
+   seule classe primaire), mais le suivi reste par type de dé (d6/d8/d10/d12,
+   un par classe) — fusionner en un seul entier aurait été RAW-incorrect
+   (aurait cassé le plafond par classe et le choix du type de dé à dépenser).
+   Quand la moitié du total ne suffit pas à tout récupérer (RAW silencieux sur
+   ce cas) : le joueur choisit quels dés sont récupérés en priorité, cohérent
+   avec le choix déjà explicite pour la dépense. Un bug trouvé en revue (perte
+   silencieuse de PV sur un repos déjà en file hors ligne à l'ancien format de
+   payload au moment du déploiement) a été corrigé avant merge.
 4. La limite de sorts préparés doit-elle être bloquante, et non simplement affichée ?
    Aujourd'hui `setSpellPrepared` ne vérifie rien. **Oui, bloquante, demandé par
    Matthias le 09/10 ; précisé le 10/10 après analyse RAW par l'agent

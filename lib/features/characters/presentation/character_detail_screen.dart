@@ -21,6 +21,7 @@ import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
 import '../domain/spell_status_formatter.dart';
 import '../domain/currency_kind.dart';
+import '../domain/hit_dice_pool.dart';
 import '../domain/hp_adjustment.dart';
 import '../domain/innate_spell_usage.dart';
 import '../domain/inventory_catalog_item.dart';
@@ -1756,17 +1757,20 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// [_restGeneration] : marque comme obsolète tout ajustement PV encore en
   /// vol (voir la documentation de [_restGeneration]).
   ///
-  /// [diceSpent]/[appliedGain] (`RestSheetResult`, voir `rest_sheet.dart`)
-  /// portent l'effet de la dépense de dés de vie au repos court (règle RAW
-  /// 5e), déjà entièrement calculé côté sheet — cette méthode ne fait
-  /// qu'écrire le résultat déjà calculé, même principe que [_applyHpState]/
-  /// `CharacterRepository.applyLevelUp`. Toujours 0 pour un repos long (voir
-  /// `RestSheetResult`). Quand [appliedGain] est strictement positif, bascule
-  /// optimiste immédiate de [_localHpState] pour ce repos court aussi — même
-  /// rationale que pour le repos long ci-dessus, mais calculée à partir de
-  /// [_hpStateOf] (qui fusionne déjà tout état optimiste PV encore en vol)
-  /// plutôt que directement `detail.maxHp`, puisque le résultat dépend ici
-  /// de la valeur courante des PV, pas seulement du maximum.
+  /// [hitDiceSpentByClassId]/[appliedGain]/[hitDiceRecoveredByClassId]
+  /// (`RestSheetResult`, voir `rest_sheet.dart`) portent l'effet de la
+  /// dépense/récupération de dés de vie (règle RAW 5e), déjà entièrement
+  /// calculé côté sheet — cette méthode ne fait qu'écrire le résultat déjà
+  /// calculé, même principe que [_applyHpState]/`CharacterRepository
+  /// .applyLevelUp`. [hitDiceSpentByClassId]/[appliedGain] toujours vide/0
+  /// pour un repos long, [hitDiceRecoveredByClassId] toujours vide pour un
+  /// repos court (voir `RestSheetResult`). Quand [appliedGain] est
+  /// strictement positif, bascule optimiste immédiate de [_localHpState]
+  /// pour ce repos court aussi — même rationale que pour le repos long
+  /// ci-dessus, mais calculée à partir de [_hpStateOf] (qui fusionne déjà
+  /// tout état optimiste PV encore en vol) plutôt que directement
+  /// `detail.maxHp`, puisque le résultat dépend ici de la valeur courante
+  /// des PV, pas seulement du maximum.
   ///
   /// Fait aussi passer [_isApplyingRest] à `true` le temps de l'appel réseau
   /// (`finally`, succès ou échec) : verrouille les actions PV de
@@ -1776,9 +1780,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   Future<bool> _applyRest(
     CharacterDetail detail,
     RestType type, {
-    int diceSpent = 0,
+    Map<String, int> hitDiceSpentByClassId = const {},
     int appliedGain = 0,
+    Map<String, int> hitDiceRecoveredByClassId = const {},
   }) async {
+    final diceSpent = hitDiceSpentByClassId.values.fold(
+      0,
+      (sum, count) => sum + count,
+    );
     final previousLocal = _localHpState;
     // Un repos (court ou long) recharge des aptitudes rechargeables, et un
     // repos long réinitialise en plus les emplacements de sorts : purge
@@ -1855,8 +1864,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             characterId: widget.characterId,
             type: type,
             className: detail.primaryClass?.className ?? '',
-            diceSpent: diceSpent,
+            hitDiceSpentByClassId: hitDiceSpentByClassId,
             appliedGain: appliedGain,
+            hitDiceRecoveredByClassId: hitDiceRecoveredByClassId,
           );
       if (outcome == WriteOutcome.queued) {
         // D11 du registre de dette technique (09/10/2026) : ce repos est
@@ -1942,8 +1952,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     final applied = await _applyRest(
       detail,
       result.type,
-      diceSpent: result.diceSpent,
+      hitDiceSpentByClassId: result.hitDiceSpentByClassId,
       appliedGain: result.appliedGain,
+      hitDiceRecoveredByClassId: result.hitDiceRecoveredByClassId,
     );
     if (!applied || !result.changePreparedSpells || !mounted) return;
 
@@ -2386,9 +2397,8 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             context,
             currentHp: effective.currentHp,
             maxHp: effective.maxHp,
-            hitDie: detail.primaryClass?.hitDie,
-            hitDiceTotal: detail.primaryClass?.level ?? 0,
-            hitDiceSpent: detail.primaryClass?.hitDiceSpent ?? 0,
+            hitDicePools: HitDicePools.fromClasses(detail.classes),
+            totalLevel: detail.totalLevel,
             constitutionModifier: AbilityScoreRules.abilityModifier(
               effective.abilityScores['con'] ?? 10,
             ),

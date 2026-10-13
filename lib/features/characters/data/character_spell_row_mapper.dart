@@ -37,12 +37,16 @@ abstract final class CharacterSpellRowMapper {
   /// retient donc toujours le rang le plus haut, quel que soit l'ordre des
   /// lignes :
   /// - une ligne ordinaire ('connu', 'préparé'...) l'emporte TOUJOURS sur une
-  ///   ligne 'inné'. Le sort suit alors le circuit ordinaire (emplacement),
-  ///   comme avant le compteur des sorts innés : il n'est pas présenté comme
-  ///   inné et son compteur n'est jamais écrit — sans cette règle, l'ordre
-  ///   des lignes déciderait si le lancer est gratuit ou non (voir D43 dans
-  ///   `docs/dette-technique.md` : la question de départager différemment
-  ///   reste un choix produit ouvert, pas tranché ici).
+  ///   ligne 'inné' pour LE STATUT AFFICHÉ (status) de l'entrée : le sort
+  ///   suit son circuit ordinaire (emplacement/préparation) pour cette
+  ///   facette-là — sans cette règle, l'ordre des lignes déciderait quel
+  ///   statut gagne. Ça ne fait PAS disparaître la route innée : D43 du
+  ///   registre de dette technique (`docs/dette-technique.md`, décision du
+  ///   09/10/2026) tranche que les deux routes RAW (gratuite par repos long
+  ///   ET emplacement/préparation) restent accordées indépendamment — voir
+  ///   [parseInnateSpellIds]/[CharacterSpellEntry.hasInnateRoute], qui
+  ///   portent cette seconde facette séparément de ce que cette fonction
+  ///   retourne ici.
   /// - entre deux lignes ordinaires de statuts différents ('connu' et
   ///   'préparé' — ex. doublon créé par la course de `setSpellPrepared` sans
   ///   contrainte unique, voir D42/D10), 'préparé' l'emporte toujours :
@@ -76,6 +80,32 @@ abstract final class CharacterSpellRowMapper {
     SpellStatus.innate => 0,
     SpellStatus.known => 1,
   };
+
+  /// Identifiants de sorts portant AU MOINS une ligne `character_spells` au
+  /// statut 'inné', indépendamment de ce que [parseStatuses] retient comme
+  /// statut affiché pour ce même sort (D43 du registre de dette technique,
+  /// `docs/dette-technique.md`) : un sort à la fois inné (trait racial) et
+  /// connu/préparé (classe) a deux lignes distinctes en base (coexistence
+  /// permise depuis D10, deux index uniques partiels distincts) ; une fois
+  /// que [parseStatuses] a fait gagner la ligne ordinaire (toujours
+  /// prioritaire, voir sa doc), le statut affiché ne permet plus à lui seul
+  /// de savoir que la route innée existe ENCORE, en plus, séparément.
+  ///
+  /// Sert à alimenter [CharacterSpellEntry.hasInnateRoute], qui gouverne
+  /// l'action de lancer gratuite et son compteur
+  /// (`domain/innate_spell_usage.dart::InnateSpellUsage.isLimited`) —
+  /// indépendamment de [parseStatuses] : les deux routes ne se consomment
+  /// jamais l'une l'autre.
+  static Set<int> parseInnateSpellIds(List<Map<String, dynamic>> rows) {
+    final ids = <int>{};
+    for (final row in rows) {
+      final spellId = row['spell_id'];
+      if (spellId is num && row['status'] == SpellStatus.innate.value) {
+        ids.add(spellId.toInt());
+      }
+    }
+    return ids;
+  }
 
   /// `{spell_id: is_favorite}` — même principe que [parseStatuses]. Une
   /// ligne sans `spell_id`/`is_favorite` exploitable est ignorée (repli sur
@@ -129,8 +159,10 @@ abstract final class CharacterSpellRowMapper {
   /// n'est jamais écrit et vaut toujours 0, il masquerait l'usage dépensé.
   ///
   /// Si le sort a aussi une ligne ordinaire, [parseStatuses] le présente
-  /// avec le statut ordinaire : la valeur retournée ici est alors reportée
-  /// sur l'entrée mais jamais utilisée (`InnateSpellUsage.isLimited` faux).
+  /// avec le statut ordinaire : la valeur retournée ici est tout de même
+  /// exploitée (D43) via [CharacterSpellEntry.hasInnateRoute]/
+  /// [parseInnateSpellIds], qui portent l'existence de la route innée
+  /// séparément de `status`.
   ///
   /// Clé absente (payload mis en cache avant la lecture de cette colonne)
   /// ou valeur inexploitable : rien n'est ajouté, le sort retombe sur 0
@@ -170,6 +202,13 @@ abstract final class CharacterSpellRowMapper {
   ///
   /// [innateUsesSpent] : voir [parseInnateUsesSpent].
   ///
+  /// [innateSpellIds] : voir [parseInnateSpellIds] — [CharacterSpellEntry
+  /// .hasInnateRoute] de chaque sort. Par défaut vide : un appelant qui ne le
+  /// renseigne pas retombe sur le repli par défaut du constructeur de
+  /// [CharacterSpellEntry] (`status == SpellStatus.innate`), PAS sur
+  /// « jamais de route innée » — seul ce mappeur a besoin de le renseigner
+  /// explicitement (voir la doc de [CharacterSpellEntry.hasInnateRoute]).
+  ///
   /// [classes] (les classes du personnage) et [sourceClassIds] (voir
   /// [parseSourceClassIds]) servent à dériver
   /// [CharacterSpellEntry.requiresPreparation]. [classes] est obligatoire :
@@ -185,6 +224,7 @@ abstract final class CharacterSpellRowMapper {
     Map<int, bool> favorites = const {},
     Map<int, SpellGrantSource> grants = const {},
     Map<int, int> innateUsesSpent = const {},
+    Set<int> innateSpellIds = const {},
   }) {
     final result = <CharacterSpellEntry>[];
     for (final row in spellRows) {
@@ -221,6 +261,20 @@ abstract final class CharacterSpellRowMapper {
             sourceClassIds: sourceClassIds[id] ?? const {},
           ),
           innateUsesSpent: innateUsesSpent[id] ?? 0,
+          // Détection explicite (D43), indépendante de `status` ci-dessus :
+          // voir la doc de [parseInnateSpellIds] et de
+          // [CharacterSpellEntry.hasInnateRoute]. `InnateSpellUsage.isLimited`
+          // exclut lui-même le cas `grant != null` (D44, hors périmètre ici) :
+          // pas besoin de le refaire ici.
+          //
+          // `null` (jamais `false`) quand [id] n'est pas dans [innateSpellIds]
+          // : laisse le constructeur de [CharacterSpellEntry] appliquer son
+          // propre repli (`status == SpellStatus.innate`) plutôt que
+          // d'écraser ce repli par une valeur figée — sans ce détour, un
+          // appelant qui omettrait [innateSpellIds] (paramètre optionnel,
+          // défaut `const {}`) verrait `hasInnateRoute` toujours à `false`,
+          // y compris pour un sort réellement 'inné' (repli par défaut cassé).
+          hasInnateRoute: innateSpellIds.contains(id) ? true : null,
         ),
       );
     }

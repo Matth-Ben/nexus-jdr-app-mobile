@@ -350,7 +350,6 @@ void main() {
           characterId: _characterId,
           type: RestType.long,
           className: 'Guerrier',
-          diceSpent: 0,
           appliedGain: 0,
         );
 
@@ -369,14 +368,15 @@ void main() {
         expect(pending.single.payload, {
           'type': 'long',
           'className': 'Guerrier',
-          'diceSpent': 0,
+          'hitDiceSpentByClassId': <String, dynamic>{},
           'appliedGain': 0,
+          'hitDiceRecoveredByClassId': <String, dynamic>{},
         });
       },
     );
 
-    test('repos court avec diceSpent/appliedGain nuls : payload fidèle, type '
-        "'short'", () async {
+    test('repos court avec hitDiceSpentByClassId/appliedGain vides/nuls : '
+        "payload fidèle, type 'short'", () async {
       final client = await _buildSignedInFakeSupabaseClient(
         ownerId: _ownerId,
         recorded: [],
@@ -398,8 +398,9 @@ void main() {
       expect(pending.payload, {
         'type': 'short',
         'className': '',
-        'diceSpent': 0,
+        'hitDiceSpentByClassId': <String, dynamic>{},
         'appliedGain': 0,
+        'hitDiceRecoveredByClassId': <String, dynamic>{},
       });
     });
 
@@ -947,6 +948,191 @@ void main() {
         hasLength(1),
       );
     });
+
+    // Round-trip complet (QA, voir docs/dette-technique.md pour le contexte
+    // du chantier dés de vie multiclassés) : les trois tests `rest`
+    // ci-dessus n'exercent jamais `hitDiceSpentByClassId`/
+    // `hitDiceRecoveredByClassId` avec une VRAIE entrée de classe (toujours
+    // `{}` ou l'ancienne clé `diceSpent` périmée, sur un personnage sans
+    // aucune classe) : ni `PendingCharacterWriteQueue.enqueue`
+    // (`jsonEncode`) -> `allForOwner`/`forCharacter` (`jsonDecode`) ->
+    // `PendingCharacterWriteSyncer._decodeClassIdCountMap` ->
+    // `SupabaseCharacterRepository._applyHitDiceDeltas` n'étaient donc
+    // jamais vérifiés de bout en bout pour un personnage multiclassé.
+    test(
+      'rest COURT multiclassé mis en file (hitDiceSpentByClassId à deux '
+      'entrées) -> synchronisé : les DEUX PATCH character_classes '
+      'portent le bon delta, décodé fidèlement depuis le JSON persisté',
+      (() async {
+        await pendingWrites.enqueue(
+          characterId: _characterId,
+          ownerId: _ownerId,
+          kind: PendingCharacterWriteKind.rest,
+          targetId: '',
+          payload: {
+            'type': 'short',
+            'className': '',
+            'hitDiceSpentByClassId': {'10': 2, '20': 1},
+            'appliedGain': 0,
+            'hitDiceRecoveredByClassId': <String, dynamic>{},
+          },
+        );
+        final recorded = <_Recorded>[];
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: _ownerId,
+          recorded: recorded,
+          tableRows: {
+            ...baseRows(),
+            'character_classes': [
+              {'id': 'cc-a', 'class_id': 10, 'level': 5, 'hit_dice_spent': 1},
+              {'id': 'cc-b', 'class_id': 20, 'level': 3, 'hit_dice_spent': 0},
+            ],
+          },
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+        final syncer = PendingCharacterWriteSyncer(
+          client,
+          pendingWrites,
+          cache,
+          repository,
+        );
+
+        final synced = await syncer.sync();
+
+        expect(synced, {_characterId});
+        final writes = recorded.where(
+          (r) => r.method == 'PATCH' && r.table == 'character_classes',
+        );
+        expect(writes, hasLength(2));
+        expect(writes.singleWhere((w) => w.query['id'] == 'eq.cc-a').body, {
+          'hit_dice_spent': 3,
+        }, reason: '1 déjà dépensé + 2 transmis pour class_id 10');
+        expect(writes.singleWhere((w) => w.query['id'] == 'eq.cc-b').body, {
+          'hit_dice_spent': 1,
+        }, reason: '0 déjà dépensé + 1 transmis pour class_id 20');
+        expect(await pendingWrites.allForOwner(_ownerId), isEmpty);
+      }),
+    );
+
+    test(
+      'rest LONG multiclassé mis en file (hitDiceRecoveredByClassId à '
+      'deux entrées) -> synchronisé : les DEUX PATCH character_classes '
+      'portent le bon delta, décodé fidèlement depuis le JSON persisté',
+      (() async {
+        await pendingWrites.enqueue(
+          characterId: _characterId,
+          ownerId: _ownerId,
+          kind: PendingCharacterWriteKind.rest,
+          targetId: '',
+          payload: {
+            'type': 'long',
+            'className': '',
+            'hitDiceSpentByClassId': <String, dynamic>{},
+            'appliedGain': 0,
+            'hitDiceRecoveredByClassId': {'10': 2, '20': 1},
+          },
+        );
+        final recorded = <_Recorded>[];
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: _ownerId,
+          recorded: recorded,
+          tableRows: {
+            ...baseRows(),
+            'character_classes': [
+              {'id': 'cc-a', 'class_id': 10, 'level': 5, 'hit_dice_spent': 3},
+              {'id': 'cc-b', 'class_id': 20, 'level': 3, 'hit_dice_spent': 2},
+            ],
+          },
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+        final syncer = PendingCharacterWriteSyncer(
+          client,
+          pendingWrites,
+          cache,
+          repository,
+        );
+
+        final synced = await syncer.sync();
+
+        expect(synced, {_characterId});
+        final writes = recorded.where(
+          (r) => r.method == 'PATCH' && r.table == 'character_classes',
+        );
+        expect(writes, hasLength(2));
+        expect(writes.singleWhere((w) => w.query['id'] == 'eq.cc-a').body, {
+          'hit_dice_spent': 1,
+        }, reason: '3 dépensés - 2 récupérés transmis pour class_id 10');
+        expect(writes.singleWhere((w) => w.query['id'] == 'eq.cc-b').body, {
+          'hit_dice_spent': 1,
+        }, reason: '2 dépensés - 1 récupéré transmis pour class_id 20');
+        expect(await pendingWrites.allForOwner(_ownerId), isEmpty);
+      }),
+    );
+
+    // Non-régression (bug bloquant trouvé en revue code-reviewer) : un
+    // repos court mis en file par une version ANTÉRIEURE de l'app (avant
+    // le correctif multiclassé du 10/10/2026) porte l'ANCIEN payload
+    // scalaire (`diceSpent`/`appliedGain`), sans les clés
+    // `hitDiceSpentByClassId`/`hitDiceRecoveredByClassId`. Avant ce
+    // correctif, `applyRestOnline` subordonnait l'écriture de `current_hp`
+    // à `hitDiceSpentByClassId.isNotEmpty` — un payload sans cette clé
+    // décodait silencieusement une map vide (`_decodeClassIdCountMap`,
+    // jamais une erreur) et sautait TOUT le bloc, y compris l'écriture de
+    // `current_hp`, perdant silencieusement les PV restaurés par un dé de
+    // vie déjà dépensé par le joueur (l'entrée était quand même retirée de
+    // la file, aucune exception pour la rendre rejouable).
+    test(
+      'rest COURT mis en file au format ANTÉRIEUR au correctif multiclassé '
+      '(sans hitDiceSpentByClassId/hitDiceRecoveredByClassId) -> '
+      'synchronisé : le PATCH current_hp part tout de même, jamais perdu',
+      () async {
+        await pendingWrites.enqueue(
+          characterId: _characterId,
+          ownerId: _ownerId,
+          kind: PendingCharacterWriteKind.rest,
+          targetId: '',
+          payload: {'type': 'short', 'className': '', 'appliedGain': 4},
+        );
+        final recorded = <_Recorded>[];
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: _ownerId,
+          recorded: recorded,
+          tableRows: baseRows(),
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+        final syncer = PendingCharacterWriteSyncer(
+          client,
+          pendingWrites,
+          cache,
+          repository,
+        );
+
+        final synced = await syncer.sync();
+
+        expect(synced, {_characterId});
+        final hpWrite = recorded.singleWhere(
+          (r) => r.method == 'PATCH' && r.table == 'characters',
+        );
+        // baseRows() : current_hp 7, max_hp 10 -> 7 + 4 = 11, plafonné à 10.
+        expect(hpWrite.body, {'current_hp': 10});
+        expect(await pendingWrites.allForOwner(_ownerId), isEmpty);
+      },
+    );
   });
 
   group('Concurrence réelle D33 (targetId dans la clé du verrou)', () {

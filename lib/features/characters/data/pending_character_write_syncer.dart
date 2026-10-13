@@ -273,18 +273,38 @@ class PendingCharacterWriteSyncer {
       case PendingCharacterWriteKind.rest:
         final type = RestType.values.byName(write.payload['type'] as String);
         final className = write.payload['className'] as String? ?? '';
-        final diceSpent = (write.payload['diceSpent'] as num?)?.toInt() ?? 0;
+        final hitDiceSpentByClassId = _decodeClassIdCountMap(
+          write.payload['hitDiceSpentByClassId'],
+        );
         final appliedGain =
             (write.payload['appliedGain'] as num?)?.toInt() ?? 0;
+        final hitDiceRecoveredByClassId = _decodeClassIdCountMap(
+          write.payload['hitDiceRecoveredByClassId'],
+        );
         await _restWriter.applyRestOnline(
           ownerId: ownerId,
           characterId: write.characterId,
           type: type,
           className: className,
-          diceSpent: diceSpent,
+          hitDiceSpentByClassId: hitDiceSpentByClassId,
           appliedGain: appliedGain,
+          hitDiceRecoveredByClassId: hitDiceRecoveredByClassId,
         );
     }
+  }
+
+  /// Décode une entrée `hitDiceSpentByClassId`/`hitDiceRecoveredByClassId`
+  /// du payload JSON d'un repos en file (`Map<String, dynamic>` décodé par
+  /// `jsonDecode`, voir `PendingCharacterWriteQueue.payload`) vers le
+  /// `Map<String, int>` attendu par [SupabaseCharacterRepository.applyRestOnline] —
+  /// `{}` si [raw] est `null` (repos mis en file avant l'ajout de ces deux
+  /// clés, ou simplement vide).
+  Map<String, int> _decodeClassIdCountMap(Object? raw) {
+    if (raw is! Map) return const {};
+    return {
+      for (final entry in raw.entries)
+        entry.key as String: (entry.value as num).toInt(),
+    };
   }
 
   /// Codes d'erreur Postgres/PostgREST qui ne seront jamais résolus en

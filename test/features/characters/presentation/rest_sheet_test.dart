@@ -13,10 +13,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/stepper_counter.dart';
+import 'package:personnages/features/characters/domain/hit_dice_pool.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/presentation/widgets/rest_sheet.dart';
 
 void main() {
+  // Pool mono-classe, construit depuis les mêmes paramètres plats
+  // (`hitDie`/`hitDiceTotal`/`hitDiceSpent`) que l'API de [showRestSheet]
+  // avant la prise en charge du multiclassage — garde tous les scénarios
+  // mono-classe de ce fichier inchangés. `classId`/`className` arbitraires
+  // (jamais affichés tant qu'un seul pool existe, voir `rest_sheet.dart`).
+  List<HitDicePool> singlePool({
+    int? hitDie,
+    int hitDiceTotal = 0,
+    int hitDiceSpent = 0,
+  }) => hitDie == null
+      ? const []
+      : [
+          HitDicePool(
+            classId: 1,
+            className: 'Classe de test',
+            hitDie: hitDie,
+            total: hitDiceTotal,
+            spent: hitDiceSpent,
+          ),
+        ];
+
   Future<void> pumpSheet(
     WidgetTester tester, {
     required int currentHp,
@@ -24,11 +46,20 @@ void main() {
     int? hitDie,
     int hitDiceTotal = 0,
     int hitDiceSpent = 0,
+    List<HitDicePool>? hitDicePools,
+    int totalLevel = 0,
     int constitutionModifier = 0,
     RestType initialType = RestType.long,
     bool canChangePreparedSpells = false,
     required ValueChanged<RestSheetResult> onApply,
   }) async {
+    final pools =
+        hitDicePools ??
+        singlePool(
+          hitDie: hitDie,
+          hitDiceTotal: hitDiceTotal,
+          hitDiceSpent: hitDiceSpent,
+        );
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
@@ -39,9 +70,8 @@ void main() {
                   context,
                   currentHp: currentHp,
                   maxHp: maxHp,
-                  hitDie: hitDie,
-                  hitDiceTotal: hitDiceTotal,
-                  hitDiceSpent: hitDiceSpent,
+                  hitDicePools: pools,
+                  totalLevel: totalLevel == 0 ? hitDiceTotal : totalLevel,
                   constitutionModifier: constitutionModifier,
                   initialType: initialType,
                   canChangePreparedSpells: canChangePreparedSpells,
@@ -65,6 +95,7 @@ void main() {
     int? hitDie,
     int hitDiceTotal = 0,
     int hitDiceSpent = 0,
+    List<HitDicePool>? hitDicePools,
     int constitutionModifier = 0,
     required ValueChanged<RestSheetResult> onApply,
   }) async {
@@ -75,6 +106,7 @@ void main() {
       hitDie: hitDie,
       hitDiceTotal: hitDiceTotal,
       hitDiceSpent: hitDiceSpent,
+      hitDicePools: hitDicePools,
       constitutionModifier: constitutionModifier,
       onApply: onApply,
     );
@@ -612,6 +644,300 @@ void main() {
 
       expect(applied!.type, RestType.short);
       expect(applied!.changePreparedSpells, isFalse);
+    });
+  });
+
+  // Décision chef de projet du 10/10/2026 (dette des dés de vie
+  // multiclassés) : un personnage avec plusieurs pools de dés de vie
+  // (plusieurs classes dont le dé a pu être résolu) peut choisir, pool par
+  // pool, combien de dés de CHAQUE classe il dépense/récupère — contenu
+  // additif par rapport aux groupes ci-dessus (mono-classe, inchangés).
+  group('repos court — plusieurs pools de dés de vie (multiclassé)', () {
+    final guerrier = HitDicePool(
+      classId: 10,
+      className: 'Guerrier',
+      hitDie: 10,
+      total: 5,
+      spent: 1,
+    );
+    final magicien = HitDicePool(
+      classId: 20,
+      className: 'Magicien',
+      hitDie: 6,
+      total: 3,
+      spent: 0,
+    );
+
+    testWidgets('affiche une ligne d\'état + un stepper indépendant par '
+        'classe, nommée', (tester) async {
+      await openShortRest(
+        tester,
+        currentHp: 12,
+        maxHp: 30,
+        hitDicePools: [guerrier, magicien],
+        onApply: (_) {},
+      );
+
+      expect(
+        find.text('Guerrier — dés de vie disponibles : 4/5 (d10)'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Magicien — dés de vie disponibles : 3/3 (d6)'),
+        findsOneWidget,
+      );
+      expect(find.text('Dés à dépenser'), findsNWidgets(2));
+      expect(find.byType(StepperCounter), findsNWidgets(2));
+      // Aucun dé sélectionné : pas de méthode de jet ni de gain affichés.
+      expect(find.text('PV restaurés'), findsNothing);
+    });
+
+    testWidgets('dépenser un dé de chaque classe transmet les deux entrées '
+        'de hitDiceSpentByClassId, indépendamment', (tester) async {
+      RestSheetResult? applied;
+      await openShortRest(
+        tester,
+        currentHp: 10,
+        maxHp: 30,
+        hitDicePools: [guerrier, magicien],
+        constitutionModifier: 0,
+        onApply: (result) => applied = result,
+      );
+
+      // Guerrier : 1 dé (premier stepper).
+      await tester.tap(find.bySemanticsLabel('Augmenter').at(0));
+      await tester.pumpAndSettle();
+      // Magicien : 2 dés (second stepper).
+      await tester.tap(find.bySemanticsLabel('Augmenter').at(1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Augmenter').at(1));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('VALEUR MOYENNE'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(applied?.type, RestType.short);
+      expect(applied?.hitDiceSpentByClassId, {'10': 1, '20': 2});
+      expect(applied?.diceSpent, 3);
+    });
+
+    testWidgets('ne dépenser que la classe secondaire : seule son entrée '
+        'apparaît dans hitDiceSpentByClassId', (tester) async {
+      RestSheetResult? applied;
+      await openShortRest(
+        tester,
+        currentHp: 10,
+        maxHp: 30,
+        hitDicePools: [guerrier, magicien],
+        onApply: (result) => applied = result,
+      );
+
+      await tester.tap(find.bySemanticsLabel('Augmenter').at(1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(applied?.hitDiceSpentByClassId, {'20': 1});
+    });
+
+    testWidgets('chaque stepper reste plafonné à SA PROPRE disponibilité, '
+        'indépendamment de l\'autre classe', (tester) async {
+      await openShortRest(
+        tester,
+        currentHp: 10,
+        maxHp: 30,
+        hitDicePools: [guerrier, magicien],
+        onApply: (_) {},
+      );
+
+      // Guerrier n'a que 4 disponibles (5 total, 1 déjà dépensé).
+      for (var i = 0; i < 4; i++) {
+        await tester.tap(find.bySemanticsLabel('Augmenter').at(0));
+        await tester.pumpAndSettle();
+      }
+      final guerrierIncrement = tester.widget<InkWell>(
+        find.ancestor(
+          of: find.bySemanticsLabel('Augmenter').at(0),
+          matching: find.byType(InkWell),
+        ),
+      );
+      expect(guerrierIncrement.onTap, isNull);
+      // Magicien (3 disponibles) reste libre d'incrémenter.
+      final magicienIncrement = tester.widget<InkWell>(
+        find.ancestor(
+          of: find.bySemanticsLabel('Augmenter').at(1),
+          matching: find.byType(InkWell),
+        ),
+      );
+      expect(magicienIncrement.onTap, isNotNull);
+    });
+  });
+
+  group('repos long — récupération des dés de vie multiclassés', () {
+    testWidgets('récupération suffisante pour tout restaurer (plusieurs '
+        'pools) : aucun choix affiché, répartition automatique transmise '
+        'telle quelle', (tester) async {
+      final guerrier = HitDicePool(
+        classId: 10,
+        className: 'Guerrier',
+        hitDie: 10,
+        total: 5,
+        spent: 3,
+      );
+      final magicien = HitDicePool(
+        classId: 20,
+        className: 'Magicien',
+        hitDie: 6,
+        total: 5,
+        spent: 2,
+      );
+      RestSheetResult? applied;
+      // Niveau total 10 -> récupéré = 5, exactement le total dépensé (5).
+      await pumpSheet(
+        tester,
+        currentHp: 12,
+        maxHp: 30,
+        hitDicePools: [guerrier, magicien],
+        totalLevel: 10,
+        onApply: (result) => applied = result,
+      );
+
+      expect(find.textContaining('répartissez-les'), findsNothing);
+
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(applied?.type, RestType.long);
+      expect(applied?.hitDiceRecoveredByClassId, {'10': 3, '20': 2});
+    });
+
+    testWidgets('récupération insuffisante avec plusieurs pools dépensés : '
+        'affiche le choix, pré-rempli par défaut, répartition ajustable', (
+      tester,
+    ) async {
+      final guerrier = HitDicePool(
+        classId: 10,
+        className: 'Guerrier',
+        hitDie: 10,
+        total: 5,
+        spent: 3,
+      );
+      final magicien = HitDicePool(
+        classId: 20,
+        className: 'Magicien',
+        hitDie: 6,
+        total: 3,
+        spent: 2,
+      );
+      RestSheetResult? applied;
+      // Niveau total 8 -> récupéré = 4, insuffisant face aux 5 dépensés.
+      await pumpSheet(
+        tester,
+        currentHp: 12,
+        maxHp: 30,
+        hitDicePools: [guerrier, magicien],
+        totalLevel: 8,
+        onApply: (result) => applied = result,
+      );
+
+      expect(
+        find.text(
+          'Dés de vie récupérés : 4 — répartissez-les entre vos classes',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Guerrier (d10) — 3 dépensé(s)'), findsOneWidget);
+      expect(find.text('Magicien (d6) — 2 dépensé(s)'), findsOneWidget);
+      // Répartition par défaut (ordre des pools) : Guerrier plafonné à son
+      // propre dépensé (3), le reste du budget (1) va au Magicien.
+      expect(find.text('Reste à répartir : 0'), findsOneWidget);
+
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(applied?.type, RestType.long);
+      expect(applied?.hitDiceRecoveredByClassId, {'10': 3, '20': 1});
+    });
+
+    testWidgets('le joueur peut réaffecter le budget d\'un pool à l\'autre '
+        '(décrémenter l\'un libère de la place pour l\'autre)', (tester) async {
+      final guerrier = HitDicePool(
+        classId: 10,
+        className: 'Guerrier',
+        hitDie: 10,
+        total: 5,
+        spent: 3,
+      );
+      final magicien = HitDicePool(
+        classId: 20,
+        className: 'Magicien',
+        hitDie: 6,
+        total: 3,
+        spent: 2,
+      );
+      RestSheetResult? applied;
+      await pumpSheet(
+        tester,
+        currentHp: 12,
+        maxHp: 30,
+        hitDicePools: [guerrier, magicien],
+        totalLevel: 8,
+        onApply: (result) => applied = result,
+      );
+
+      // Répartition par défaut : Guerrier 3, Magicien 1 (voir le test
+      // précédent). Diminue Guerrier d'un dé (libère 1 de budget), puis
+      // l'affecte au Magicien.
+      await tester.tap(find.bySemanticsLabel('Diminuer').at(0));
+      await tester.pumpAndSettle();
+      expect(find.text('Reste à répartir : 1'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Augmenter').at(1));
+      await tester.pumpAndSettle();
+      expect(find.text('Reste à répartir : 0'), findsOneWidget);
+
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(applied?.hitDiceRecoveredByClassId, {'10': 2, '20': 2});
+    });
+
+    testWidgets('un seul des deux pools a des dés dépensés : aucun choix '
+        'affiché, rien à départager entre deux dés identiques', (tester) async {
+      final guerrier = HitDicePool(
+        classId: 10,
+        className: 'Guerrier',
+        hitDie: 10,
+        total: 5,
+        spent: 4,
+      );
+      final magicien = HitDicePool(
+        classId: 20,
+        className: 'Magicien',
+        hitDie: 6,
+        total: 3,
+        spent: 0,
+      );
+      RestSheetResult? applied;
+      // Niveau total 8 -> récupéré = 4, insuffisant face aux 4 dépensés du
+      // Guerrier seul, mais un seul pool est concerné : pas de choix.
+      await pumpSheet(
+        tester,
+        currentHp: 12,
+        maxHp: 30,
+        hitDicePools: [guerrier, magicien],
+        totalLevel: 8,
+        onApply: (result) => applied = result,
+      );
+
+      expect(find.textContaining('répartissez-les'), findsNothing);
+
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(applied?.hitDiceRecoveredByClassId, {'10': 4});
     });
   });
 }
