@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/rules/spell_status.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -71,11 +72,21 @@ Future<void> castSpellFlow(
     return;
   }
 
-  // Sort inné à charge : se lance sans emplacement, donc jamais de sheet de
-  // choix, même si le personnage a des emplacements (pas de relance avec un
-  // emplacement dans cette version) — `slot: null`, c'est l'appelant qui
-  // dépense l'usage (`character_detail_screen.dart::_castSpell`).
-  if (InnateSpellUsage.isLimited(spell)) {
+  // Sort SEULEMENT inné (aucune ligne ordinaire concurrente, voir la doc de
+  // `SpellCastBlockReason.of`) : se lance sans emplacement, donc jamais de
+  // sheet de choix, même si le personnage a des emplacements (pas de
+  // relance avec un emplacement dans cette version) — `slot: null`,
+  // c'est l'appelant qui dépense l'usage
+  // (`character_detail_screen.dart::_castSpell`).
+  //
+  // Un sort à double route (D43, `docs/dette-technique.md`) ne prend PAS
+  // cette branche : `spell.status` y vaut déjà le statut ordinaire (voir
+  // [InnateSpellUsage.isLimited], vrai pour les deux cas via
+  // `CharacterSpellEntry.hasInnateRoute`) — ce flux reste donc celui de SA
+  // route ordinaire ; sa route innée, indépendante, est lancée par un appel
+  // direct à [onCastSpell] (`spell`, `null`) depuis le panneau "Infos"
+  // (`spell_info_panel.dart`), jamais via cette fonction.
+  if (spell.status == SpellStatus.innate && InnateSpellUsage.isLimited(spell)) {
     onCastSpell(spell, null);
     return;
   }

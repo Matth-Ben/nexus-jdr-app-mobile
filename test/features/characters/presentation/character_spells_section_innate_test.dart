@@ -13,6 +13,7 @@ import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/theme/app_spacing.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
+import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
@@ -511,6 +512,87 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('TÉNÈBRES'), findsNothing);
       expect(casts, isEmpty);
+    });
+  });
+
+  group('sort à double route (D43, docs/dette-technique.md : inné ET '
+      'connu/préparé)', () {
+    const dualRoute = CharacterSpellEntry(
+      id: 15,
+      name: 'Thaumaturgie',
+      level: 2,
+      school: 'Évocation',
+      status: SpellStatus.prepared,
+      hasInnateRoute: true,
+    );
+    const dualRouteUnprepared = CharacterSpellEntry(
+      id: 15,
+      name: 'Thaumaturgie',
+      level: 2,
+      school: 'Évocation',
+      status: SpellStatus.known,
+      hasInnateRoute: true,
+    );
+
+    testWidgets('échelle 1.0 : pastille « INNÉ » ET libellé de préparation '
+        'coexistent sur la ligne (aucune ne masque l\'autre)', (tester) async {
+      await _pump(tester, _detail(const [dualRoute]));
+
+      expect(find.text('INNÉ'), findsOneWidget);
+      expect(find.text('PRÉPARÉ'), findsOneWidget);
+    });
+
+    testWidgets('statut "connu" (non préparé) : pastille « INNÉ » toujours '
+        'présente, libellé "NON PRÉPARÉ" aussi — la route innée ne dépend '
+        'pas de l\'état de préparation de la route ordinaire', (tester) async {
+      await _pump(tester, _detail(const [dualRouteUnprepared]));
+
+      expect(find.text('INNÉ'), findsOneWidget);
+      expect(find.text('NON PRÉPARÉ'), findsOneWidget);
+    });
+
+    testWidgets('grandes polices (deux lignes) : pastille « INNÉ » ET '
+        'libellé de préparation passent ensemble sous le nom, aucun n\'est '
+        'perdu', (tester) async {
+      _useScreen(tester, const Size(320, 568), 1.3);
+      await _pump(tester, _detail(const [dualRoute]));
+      expect(tester.takeException(), isNull);
+
+      expect(find.text('INNÉ'), findsOneWidget);
+      expect(find.text('PRÉPARÉ'), findsOneWidget);
+      final badge = tester.getRect(
+        find
+            .ancestor(of: find.text('INNÉ'), matching: find.byType(Container))
+            .first,
+      );
+      final prepared = tester.getRect(find.text('PRÉPARÉ'));
+      // Les deux badges sont bien sur la même (seconde) ligne, sous le nom.
+      final name = tester.getRect(find.text('Thaumaturgie'));
+      expect(badge.top, greaterThanOrEqualTo(name.bottom));
+      expect(prepared.left, greaterThan(badge.right));
+    });
+
+    testWidgets('tap puis « Lancer (sort inné) » : lance sans emplacement, '
+        'sans toucher à la route ordinaire', (tester) async {
+      final casts = <(CharacterSpellEntry, CharacterSpellSlot?)>[];
+      await _pump(
+        tester,
+        _detail(
+          const [dualRoute],
+          spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+        ),
+        onCastSpell: (spell, slot) => casts.add((spell, slot)),
+      );
+
+      await tester.tap(find.text('Thaumaturgie'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        // `SecondaryButton` affiche son libellé en majuscules.
+        find.widgetWithText(SecondaryButton, 'LANCER (SORT INNÉ)'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(casts, [(dualRoute, null)]);
     });
   });
 

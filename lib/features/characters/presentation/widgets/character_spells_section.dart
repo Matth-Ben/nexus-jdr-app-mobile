@@ -369,10 +369,15 @@ class _SpellRow extends StatelessWidget {
     final preparationLabel = SpellStatusFormatter.preparationLabel(spell);
     final unprepared = SpellStatusFormatter.isUnprepared(spell);
     // Sort inné de niveau >= 1 : pastille « INNÉ » + marqueur d'usage. Un
-    // sort mineur inné (à volonté) n'en porte pas.
-    // Jamais cumulé avec la pastille d'octroi ni le libellé de préparation
-    // (un sort accordé est présenté 'préparé', un sort inné ne se prépare
-    // pas) : la mise en page sur deux lignes n'a donc qu'eux à placer.
+    // sort mineur inné (à volonté) n'en porte pas. Jamais cumulé avec la
+    // pastille d'octroi (un sort accordé est présenté 'préparé', jamais
+    // inné — `InnateSpellUsage.isLimited` l'exclut, voir sa doc).
+    //
+    // PEUT en revanche se cumuler avec le libellé de préparation pour un
+    // sort à double route (D43 du registre de dette technique,
+    // `docs/dette-technique.md` : à la fois inné — trait racial — et
+    // connu/préparé — classe) : les deux badges doivent alors coexister sur
+    // la ligne, voir la mise en page `twoLines` ci-dessous.
     final innateLimited = InnateSpellUsage.isLimited(spell);
     final twoLines =
         innateLimited &&
@@ -427,6 +432,11 @@ class _SpellRow extends StatelessWidget {
               // Grandes polices (échelle >= 1.3), sort inné à charge
               // uniquement : pastille et marqueur passent sous le nom,
               // alignés à gauche, pour ne pas écraser le nom sur petit écran.
+              // Le libellé de préparation (sort à double route, D43) rejoint
+              // la pastille inné sur cette même seconde ligne plutôt que
+              // d'être perdu — jamais cumulé avec la pastille d'octroi (voir
+              // la doc de [innateLimited] ci-dessus), donc au plus deux
+              // éléments à y placer.
               child: twoLines
                   ? Column(
                       mainAxisSize: MainAxisSize.min,
@@ -434,7 +444,19 @@ class _SpellRow extends StatelessWidget {
                       children: [
                         nameAndDice,
                         const SizedBox(height: AppSpacing.xs),
-                        _InnateUsage(spell: spell),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _InnateUsage(spell: spell),
+                            if (preparationLabel != null) ...[
+                              const SizedBox(width: AppSpacing.xs),
+                              _PreparationStatus(
+                                label: preparationLabel,
+                                prepared: !unprepared,
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     )
                   : Row(

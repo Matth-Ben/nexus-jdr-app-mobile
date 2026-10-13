@@ -1402,9 +1402,32 @@ class SupabaseCharacterCreationRepository
       // Tieffelin. Aucune lecture si le personnage a une race personnalisée
       // (`draft.raceId` nul). Écrits avec `status: 'inné'` et
       // `source_class_id: null` (jamais `draft.classId`, qui n'a aucun
-      // rapport avec une race) — jamais en double avec un sort déjà prévu par
-      // [spellRows] (cas improbable à la création, un sort de classe et un
-      // sort inné racial étant rarement le même, mais vérifié par prudence).
+      // rapport avec une race).
+      //
+      // TOUJOURS écrits, même si [spellRows] ci-dessus choisit DÉJÀ le même
+      // sort côté classe (ex. un Haut-Elfe Magicien qui choisit Lumières
+      // dansantes, déjà innée via sa race) : décision de Matthias du
+      // 10/10/2026, pour la cohérence complète avec D43 du registre de
+      // dette technique (`docs/dette-technique.md`) — un sort à la fois
+      // inné (trait racial) et connu/préparé (classe) accorde RAW les deux
+      // routes de lancement indépendamment (un lancer gratuit par repos
+      // long EN PLUS de l'emplacement/la préparation), jamais une seule des
+      // deux. Avant cette décision, un filtre ici empêchait d'écrire la
+      // ligne 'inné' dans ce cas précis : même résultat que le bug D43
+      // (le joueur ne reçoit jamais son lancer gratuit racial), par un
+      // chemin différent (la ligne n'était simplement jamais créée, plutôt
+      // que masquée à la lecture). Sans risque de conflit avec la ligne
+      // ordinaire déjà insérée ci-dessus : deux lignes de statuts
+      // différents pour le même sort, chacune sous son propre index unique
+      // partiel (D10) — jamais la MÊME ligne insérée deux fois.
+      //
+      // [racialSpellIds] dédoublonne seulement entre elles les lignes
+      // `racialGrants` (jamais contre [spellRows]) : un même sort ne doit
+      // pas être inséré deux fois comme 'inné' si plusieurs grants raciaux
+      // (race + sous-race, ex.) le désignaient tous les deux — l'index
+      // unique partiel sur les lignes 'inné' ne tolérerait pas un doublon
+      // de ce type.
+      //
       // Un échec de cette lecture ne doit jamais empêcher la création du
       // personnage : avalé silencieusement, le joueur n'obtient simplement
       // pas le sort, comme s'il était introuvable.
@@ -1418,17 +1441,12 @@ class SupabaseCharacterCreationRepository
                 lineageId: lineageId,
                 maxCharacterLevel: 1,
               );
-          final alreadyPlannedSpellIds = {
-            for (final row in spellRows) row.spellId,
+          final racialSpellIds = {
+            for (final grant in racialGrants) grant.spellId,
           };
-          final newRacialSpellIds = {
-            for (final grant in racialGrants)
-              if (!alreadyPlannedSpellIds.contains(grant.spellId))
-                grant.spellId,
-          };
-          if (newRacialSpellIds.isNotEmpty) {
+          if (racialSpellIds.isNotEmpty) {
             await _client.from('character_spells').insert([
-              for (final spellId in newRacialSpellIds)
+              for (final spellId in racialSpellIds)
                 {
                   'character_id': characterId,
                   'spell_id': spellId,

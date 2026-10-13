@@ -272,15 +272,26 @@ void main() {
       }
     });
 
-    // Retour QA : le statut ne dépend plus de l'ordre de lecture (le
-    // `select` n'a pas d'`ORDER BY`). Une ligne ordinaire l'emporte toujours
-    // sur une ligne 'inné' : le sort suit le circuit ordinaire (emplacement),
-    // comme avant D08. Ce test remplace une « CARACTÉRISATION » où le statut
-    // suivait la dernière ligne lue.
+    // Le statut ne dépend plus de l'ordre de lecture (le `select` n'a pas
+    // d'`ORDER BY`). Une ligne ordinaire l'emporte toujours sur une ligne
+    // 'inné' POUR LE STATUT AFFICHÉ (status) : le sort suit son circuit
+    // ordinaire (emplacement/préparation) pour cette facette-là.
+    //
+    // Ça ne fait PAS disparaître la route innée pour autant : D43 du
+    // registre de dette technique (`docs/dette-technique.md`, décision du
+    // 09/10/2026) tranche qu'un sort à la fois inné (trait racial) et
+    // connu/préparé (classe) accorde RAW les DEUX routes de lancement
+    // indépendamment (un lancer gratuit par repos long ET
+    // l'emplacement/la préparation), aucune ne consommant l'autre — avant ce
+    // correctif, `InnateSpellUsage.isLimited` (basé sur `status ==
+    // SpellStatus.innate`) retournait faux dès qu'une ligne ordinaire du
+    // même sort existait, effaçant complètement la route innée côté lecture
+    // (voir `CharacterSpellEntry.hasInnateRoute`, qui porte maintenant cette
+    // information indépendamment du statut affiché).
     for (final ordinary in ['connu', 'préparé']) {
       test('lignes en double "inné" + "$ordinary" : la ligne ordinaire '
-          'l\'emporte quel que soit l\'ordre — sort non présenté comme inné, '
-          'emplacement exigé', () async {
+          'l\'emporte sur le statut affiché quel que soit l\'ordre, mais la '
+          'route innée reste accordée séparément (D43)', () async {
         for (final reversed in [false, true]) {
           final lines = [
             spellLine(30, 'inné', innateUsesSpent: 1),
@@ -297,9 +308,12 @@ void main() {
 
           final reason = 'reversed=$reversed';
           expect(spell.status, SpellStatus.fromValue(ordinary), reason: reason);
-          expect(InnateSpellUsage.isLimited(spell), isFalse, reason: reason);
-          // Circuit ordinaire : jamais la raison « déjà utilisé », et un
-          // emplacement est exigé.
+          // D43 : la route innée reste détectée, indépendamment du statut
+          // affiché ci-dessus.
+          expect(InnateSpellUsage.isLimited(spell), isTrue, reason: reason);
+          // Circuit ORDINAIRE (route de classe) : jamais la raison « déjà
+          // utilisé », et un emplacement est exigé — of() ne raisonne que
+          // sur cette route une fois le statut ordinaire gagnant.
           expect(
             SpellCastBlockReason.of(spell: spell, spellSlots: const []),
             ordinary == 'connu'
@@ -317,12 +331,21 @@ void main() {
             ordinary == 'connu' ? SpellCastBlockReason.unprepared : isNull,
             reason: reason,
           );
+          // Circuit INNÉ (D43), indépendant du circuit ordinaire ci-dessus :
+          // usage déjà dépensé (innateUsesSpent: 1) -> épuisé, quel que soit
+          // l'état de la route ordinaire ou la présence d'un emplacement.
+          expect(
+            SpellCastBlockReason.ofInnateRoute(spell),
+            SpellCastBlockReason.innateUseSpent,
+            reason: reason,
+          );
         }
       });
     }
 
     test('trois lignes "inné" + "connu" + "inné" : la ligne ordinaire '
-        'l\'emporte encore', () async {
+        "l'emporte encore sur le statut affiché, la route innée reste "
+        'détectée (D43)', () async {
       final repo = await repository(
         rows: rowsWith([
           spellLine(30, 'inné'),
@@ -331,9 +354,12 @@ void main() {
         ]),
       );
 
+      final spell = spellOf(await repo.fetchCharacterDetail(characterId), 30);
+      expect(spell.status, SpellStatus.known);
+      expect(InnateSpellUsage.isLimited(spell), isTrue);
       expect(
-        spellOf(await repo.fetchCharacterDetail(characterId), 30).status,
-        SpellStatus.known,
+        SpellCastBlockReason.ofInnateRoute(spell),
+        SpellCastBlockReason.innateUseSpent,
       );
     });
 

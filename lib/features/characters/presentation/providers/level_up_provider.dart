@@ -633,6 +633,26 @@ Future<LevelUpStepData> levelUpStepData(
   // pas faire échouer toute la montée de niveau (même discipline que les
   // sorts étendus de patron ci-dessus) : le personnage n'obtient simplement
   // pas le sort, comme s'il était introuvable.
+  //
+  // [fetchApplicableGrants] est CUMULATIF (`character_level <=
+  // newTotalLevel`, pas seulement les grants du palier atteint par CETTE
+  // montée de niveau) : [grants] contient donc aussi les grants déjà
+  // accordés à un niveau antérieur. [alreadyInnateSpellIds] filtre
+  // UNIQUEMENT ceux-là (un sort déjà DOTÉ D'UNE LIGNE 'inné',
+  // [CharacterSpellEntry.hasInnateRoute]) — sans ce filtre, une ligne 'inné'
+  // déjà existante serait réinsérée en double à chaque montée de niveau
+  // suivante, en violation de l'index unique partiel dédié (D10).
+  //
+  // Ne filtre PLUS sur [knownSpellIds] (TOUS les sorts connus, route
+  // ordinaire comprise) : décision de Matthias du 10/10/2026, pour la
+  // cohérence complète avec D43 du registre de dette technique
+  // (`docs/dette-technique.md`) — un sort à la fois inné (trait racial) et
+  // connu/préparé (classe) accorde RAW les deux routes de lancement
+  // indépendamment, jamais une seule des deux. L'ancien filtre sur
+  // [knownSpellIds] empêchait d'accorder la route innée dans ce cas précis
+  // (le joueur ne recevait jamais son lancer gratuit racial) — même
+  // résultat que le bug D43, mais par un chemin différent (la ligne
+  // n'était simplement jamais créée, plutôt que masquée à la lecture).
   var newRacialInnateSpells = const <RacialInnateSpellGrant>[];
   final raceId = detail.raceId;
   if (raceId != null) {
@@ -645,9 +665,13 @@ Future<LevelUpStepData> levelUpStepData(
             lineageId: detail.lineageId,
             maxCharacterLevel: newTotalLevel,
           );
+      final alreadyInnateSpellIds = {
+        for (final spell in detail.spells)
+          if (spell.hasInnateRoute) spell.id,
+      };
       newRacialInnateSpells = [
         for (final grant in grants)
-          if (!knownSpellIds.contains(grant.spellId)) grant,
+          if (!alreadyInnateSpellIds.contains(grant.spellId)) grant,
       ];
     } catch (_) {
       newRacialInnateSpells = const [];
