@@ -26,6 +26,7 @@ class CharacterSpellEntry {
     this.isPersisted = true,
     this.storedStatus,
     this.requiresPreparation = true,
+    this.sourceClassIds = const {},
     this.innateUsesSpent = 0,
     bool? hasInnateRoute,
   }) : hasInnateRoute = hasInnateRoute ?? (status == SpellStatus.innate);
@@ -111,6 +112,33 @@ class CharacterSpellEntry {
   /// `domain/spell_status_formatter.dart`.
   final bool requiresPreparation;
 
+  /// `character_spells.source_class_id` des lignes de ce sort (voir
+  /// `PreparedSpellsLimit.spellRequiresPreparation`, dont c'est déjà un
+  /// paramètre), désormais aussi PORTÉ par l'entrée elle-même plutôt que
+  /// seulement consommé transitoirement par le mapper — ajouté pour ventiler
+  /// `preparedSpellCount`/la limite de préparation PAR CLASSE sur un
+  /// personnage multiclassé avec plusieurs classes qui préparent (ex.
+  /// Clerc/Paladin), voir `PreparedSpellsLimit.limitsByClass`. RAW, chaque
+  /// classe calcule sa propre limite séparément (PHB, « Multiclassing —
+  /// Spells Known and Prepared »), jamais un total fusionné — il faut donc
+  /// savoir, par sort PRÉPARÉ, de quelle classe il relève.
+  ///
+  /// Ensemble, pas une valeur unique : un même sort peut avoir plusieurs
+  /// lignes `character_spells` d'origines différentes (aucune contrainte
+  /// d'unicité globale en base, voir la doc de
+  /// `data/character_spell_row_mapper.dart::parseSourceClassIds`). Pour un
+  /// sort de la liste complète d'un lanceur à préparation (Clerc/Druide/
+  /// Paladin/Artificier) jamais encore préparé (aucune ligne
+  /// `character_spells` réelle), contient malgré tout la ou les classes du
+  /// personnage dont la liste complète inclut ce sort — voir
+  /// `data/character_repository.dart::_fetchPreparedCasterClassListSpellRows`
+  /// — pour qu'un sort jamais préparé reste attribuable avant même sa
+  /// première préparation. Vide si l'origine est inconnue (donnée
+  /// antérieure à ce chantier, ou sort d'une classe qui ne prépare pas) :
+  /// un sort vide n'est alors compté dans AUCUNE classe par
+  /// [PreparedSpellsLimit.limitsByClass] plutôt que doublé ou deviné.
+  final Set<int> sourceClassIds;
+
   /// `character_spells.innate_uses_spent` : usages DÉPENSÉS depuis le dernier
   /// repos long, pour un sort inné de niveau >= 1 (lancé sans emplacement —
   /// voir `domain/innate_spell_usage.dart` pour la fréquence et les
@@ -166,6 +194,7 @@ class CharacterSpellEntry {
         isPersisted: isPersisted,
         storedStatus: storedStatus,
         requiresPreparation: requiresPreparation,
+        sourceClassIds: sourceClassIds,
         innateUsesSpent: innateUsesSpent,
         // Toujours transmis explicitement (jamais ré-déduit de [status]) :
         // pour un sort à double route (D43), [status] vaut la ligne

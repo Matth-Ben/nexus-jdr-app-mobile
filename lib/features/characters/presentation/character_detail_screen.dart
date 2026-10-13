@@ -1973,7 +1973,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       spells: effective.spells,
       spellSlots: effective.spellSlots,
       pactSlot: effective.pactSpellSlot,
-      preparedLimit: effective.preparedSpellLimit,
+      classLimits: effective.preparedSpellsByClass,
       onTogglePrepared: _toggleSpellPrepared,
       onCastSpell: (spell, slot) =>
           _castSpell(_effectiveDetail(fresh), spell, slot),

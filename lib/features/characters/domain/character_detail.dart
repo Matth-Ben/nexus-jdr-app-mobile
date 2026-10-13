@@ -362,13 +362,27 @@ abstract class CharacterDetail with _$CharacterDetail {
       )
       .length;
 
-  /// Limite de sorts préparés (le "Y" de "Préparés X / Y"), `null` si aucun
-  /// compteur ne doit s'afficher (aucune classe qui prépare, ou plusieurs —
-  /// voir [PreparedSpellsLimit.limitForCharacter]).
-  int? get preparedSpellLimit => PreparedSpellsLimit.limitForCharacter(
-    classes: classes,
-    abilityScores: abilityScores,
-  );
+  /// Décompte et limite PAR CLASSE qui prépare ses sorts — voir
+  /// [PreparedSpellsLimit.limitsByClass]. Liste vide si aucune classe ne
+  /// prépare ; un seul élément pour l'immense majorité des personnages (une
+  /// seule classe qui prépare) ; plusieurs pour un multiclassé avec deux
+  /// classes ou plus qui préparent (ex. Clerc/Paladin).
+  List<ClassPreparedSpells> get preparedSpellsByClass =>
+      PreparedSpellsLimit.limitsByClass(
+        classes: classes,
+        abilityScores: abilityScores,
+        spells: spells,
+      );
+
+  /// Limite de sorts préparés (le "Y" de "Préparés X / Y") pour l'affichage
+  /// MONO-classe historique, `null` si aucun compteur de ce type ne doit
+  /// s'afficher (aucune classe qui prépare, ou PLUSIEURS — voir
+  /// [preparedSpellsByClass] pour l'affichage par classe dans ce second
+  /// cas, voir `presentation/widgets/spell_preparation_card.dart`/
+  /// `prepare_spells_sheet.dart`).
+  int? get preparedSpellLimit => preparedSpellsByClass.length == 1
+      ? preparedSpellsByClass.single.limit
+      : null;
 
   /// Classe "principale" : celle marquée `is_primary`, ou la première de la
   /// liste à défaut (donnée incohérente, ne devrait normalement pas

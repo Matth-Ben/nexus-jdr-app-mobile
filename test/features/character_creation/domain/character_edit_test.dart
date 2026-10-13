@@ -452,6 +452,12 @@ void main() {
       expect(plan.classChange, isNull);
       expect(plan.spellDeletes, {101});
       expect(plan.spellInserts.map((spell) => spell.spellId), [102]);
+      // D40 (`docs/dette-technique.md`) : avant ce correctif,
+      // `CharacterEditRepository.save` écrivait `source_class_id:
+      // plan.classChange?.classId`, toujours `null` ici puisque NI la
+      // classe NI la sous-classe ne changent — alors que la classe
+      // d'origine (Clerc, id 2) est connue et inchangée.
+      expect(plan.spellSourceClassId, 2);
     });
 
     // D09 : les sorts innés viennent de la race (`racial_innate_spells`),
@@ -487,6 +493,8 @@ void main() {
         expect(plan.classChange?.classChanged, isTrue);
         expect(plan.spellDeletes, {100, 101});
         expect(plan.spellInserts, isEmpty);
+        // Aucun sort à insérer : jamais de classe d'origine à calculer.
+        expect(plan.spellSourceClassId, isNull);
       });
 
       test('niveau 1 : passer à une classe de lanceur ne supprime pas un '

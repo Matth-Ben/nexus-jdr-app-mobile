@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
+import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 
 CharacterDetail _detail({
   List<CharacterDetailClassRow> classes = const [],
@@ -11,6 +13,7 @@ CharacterDetail _detail({
   int temporaryHp = 0,
   Map<String, int> abilityScores = const {},
   List<CharacterInventoryItem> inventory = const [],
+  List<CharacterSpellEntry> spells = const [],
 }) {
   return CharacterDetail(
     id: '1',
@@ -22,8 +25,19 @@ CharacterDetail _detail({
     temporaryHp: temporaryHp,
     abilityScores: abilityScores,
     inventory: inventory,
+    spells: spells,
   );
 }
+
+CharacterDetailClassRow _classRow(String name, int level, {Object? classId}) =>
+    CharacterDetailClassRow(
+      classId: classId ?? name.hashCode,
+      className: name,
+      level: level,
+      isPrimary: true,
+      savingThrowProficiencies: const [],
+      hitDie: 8,
+    );
 
 void main() {
   group('CharacterDetail.totalLevel', () {
@@ -263,6 +277,67 @@ void main() {
 
     test('vaut 0 sur un inventaire vide', () {
       expect(_detail().attunedItemCount, 0);
+    });
+  });
+
+  group('CharacterDetail.preparedSpellsByClass / preparedSpellLimit '
+      '(ventilation par classe, chantier du 13/10/2026)', () {
+    test('aucune classe qui prépare : liste vide, preparedSpellLimit null', () {
+      final detail = _detail(classes: [_classRow('Barde', 3)]);
+      expect(detail.preparedSpellsByClass, isEmpty);
+      expect(detail.preparedSpellLimit, isNull);
+    });
+
+    test('une seule classe qui prépare : un élément, preparedSpellLimit '
+        'reflète son unique limite (rendu mono-classe historique)', () {
+      final detail = _detail(
+        classes: [_classRow('Clerc', 3)],
+        abilityScores: const {'wis': 14},
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Soins',
+            level: 1,
+            school: '',
+            status: SpellStatus.prepared,
+          ),
+        ],
+      );
+      expect(detail.preparedSpellsByClass, hasLength(1));
+      expect(detail.preparedSpellsByClass.single.className, 'Clerc');
+      expect(detail.preparedSpellsByClass.single.limit, 5);
+      expect(detail.preparedSpellsByClass.single.preparedCount, 1);
+      expect(detail.preparedSpellLimit, 5);
+    });
+
+    test('plusieurs classes qui préparent : un élément par classe, '
+        'preparedSpellLimit redevient null (RAW : pas de total fusionné)', () {
+      final clerc = _classRow('Clerc', 3, classId: 10);
+      final paladin = _classRow('Paladin', 2, classId: 20);
+      final detail = _detail(
+        classes: [clerc, paladin],
+        abilityScores: const {'wis': 14, 'cha': 14},
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Soins',
+            level: 1,
+            school: '',
+            status: SpellStatus.prepared,
+            sourceClassIds: {10},
+          ),
+        ],
+      );
+      expect(detail.preparedSpellsByClass, hasLength(2));
+      expect(detail.preparedSpellLimit, isNull);
+      final clercLimit = detail.preparedSpellsByClass.firstWhere(
+        (c) => c.className == 'Clerc',
+      );
+      expect(clercLimit.preparedCount, 1);
+      final paladinLimit = detail.preparedSpellsByClass.firstWhere(
+        (c) => c.className == 'Paladin',
+      );
+      expect(paladinLimit.preparedCount, 0);
     });
   });
 }

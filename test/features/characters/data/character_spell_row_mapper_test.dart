@@ -193,6 +193,28 @@ void main() {
     );
   });
 
+  test('toCharacterSpellEntries reporte sourceClassIds tel quel sur l\'entrée '
+      '(exposé pour ventiler la limite de préparation par classe, voir '
+      'PreparedSpellsLimit.limitsByClass)', () {
+    final result = CharacterSpellRowMapper.toCharacterSpellEntries(
+      const [
+        {'id': 1, 'level': 1, 'school': ''},
+        {'id': 2, 'level': 1, 'school': ''},
+      ],
+      names: const {},
+      descriptions: const {},
+      statuses: const {1: SpellStatus.prepared, 2: SpellStatus.prepared},
+      classes: const [],
+      sourceClassIds: const {
+        1: {10, 20},
+      },
+    );
+    final withSource = result.firstWhere((spell) => spell.id == 1);
+    final withoutSource = result.firstWhere((spell) => spell.id == 2);
+    expect(withSource.sourceClassIds, {10, 20});
+    expect(withoutSource.sourceClassIds, isEmpty);
+  });
+
   test('un sort sans ligne character_spells (liste de classe jamais '
       'préparée) est "connu" et non persisté', () {
     final result = CharacterSpellRowMapper.toCharacterSpellEntries(
@@ -228,6 +250,30 @@ void main() {
         1: {10},
         4: {10, 11},
       });
+    });
+  });
+
+  group('CharacterSpellRowMapper.parseClassListClassIds', () {
+    test('regroupe les {spell_id, class_id} de '
+        '_fetchPreparedCasterClassListSpellRows par sort, un sort peut '
+        'apparaître sur la liste de plusieurs classes', () {
+      final rows = [
+        {'spell_id': 1, 'class_id': 10},
+        {'spell_id': 1, 'class_id': 20},
+        {'spell_id': 2, 'class_id': 20},
+      ];
+      expect(CharacterSpellRowMapper.parseClassListClassIds(rows), {
+        1: {10, 20},
+        2: {20},
+      });
+    });
+
+    test('ignore une ligne sans spell_id/class_id exploitable', () {
+      final rows = [
+        {'spell_id': null, 'class_id': 10},
+        {'spell_id': 1, 'class_id': null},
+      ];
+      expect(CharacterSpellRowMapper.parseClassListClassIds(rows), isEmpty);
     });
   });
 

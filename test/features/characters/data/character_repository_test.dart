@@ -2396,6 +2396,397 @@ void main() {
     });
   });
 
+  // Chantier du 13/10/2026 (`docs/dette-technique.md`, D40 et « Décisions en
+  // attente » point 4) : la limite RAW de sorts préparés devient bloquante.
+  // `CharacterClass` : Clerc = id 3 (niveau de classe lanceur « préparé »,
+  // modificateur de Sagesse), Paladin = id 7 (demi-lanceur, modificateur de
+  // Charisme) — voir `core/rules/character_class.dart`.
+  group('SupabaseCharacterRepository.setSpellPrepared (limite bloquante, '
+      'chantier du 13/10/2026)', () {
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const characterId = 'char-1';
+    const ownerId = 'owner-1';
+    const spellId = 50;
+
+    /// [classRows] : `character_classes` (`class_id`, `level`).
+    /// [abilityScoreRows] : `character_ability_scores` (`ability_id`,
+    /// `score`).
+    /// [preparedSpellRows] : `character_spells` déjà 'préparé', niveau
+    /// embarqué (`spells: {'level': N}`) — alimente le décompte
+    /// (`_preparedSpellCountsByClass`). Le mock ignore les filtres
+    /// PostgREST (`.eq('status', ...)`), donc cette liste doit déjà ne
+    /// contenir QUE des lignes 'préparé' pertinentes.
+    /// [spellClassRows] : `spell_classes` (`class_id`) — liste de classe
+    /// du sort visé, seulement lue en multiclassage quand l'origine
+    /// n'est pas déjà connue.
+    /// [existingOrdinaryRow] : ligne `character_spells` déjà existante
+    /// pour LE sort visé (n'importe quel statut) — non nulle, l'UPDATE
+    /// la trouve (l'INSERT n'est jamais tenté) et, en multiclassage,
+    /// résout l'origine déjà connue (`source_class_id`) sans requête
+    /// `spell_classes`.
+    Future<SupabaseCharacterRepository> repository({
+      List<Map<String, dynamic>> classRows = const [],
+      List<Map<String, dynamic>> abilityScoreRows = const [],
+      List<Map<String, dynamic>> preparedSpellRows = const [],
+      List<Map<String, dynamic>> spellClassRows = const [],
+      Map<String, dynamic>? existingOrdinaryRow,
+      List<Map<String, dynamic>>? capturedInserts,
+    }) async {
+      return SupabaseCharacterRepository(
+        await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: {
+            'character_classes': classRows,
+            'character_ability_scores': abilityScoreRows,
+            'spell_classes': spellClassRows,
+          },
+          rowsOverride: (request) {
+            if (request.url.pathSegments.last != 'character_spells') {
+              return null;
+            }
+            final select = request.url.queryParameters['select'];
+            switch (request.method) {
+              case 'PATCH':
+                return existingOrdinaryRow == null
+                    ? const []
+                    : [
+                        {'id': existingOrdinaryRow['id'] ?? 'existing-1'},
+                      ];
+              case 'POST':
+                final inserted = jsonDecode(request.body) as Map;
+                capturedInserts?.add(Map<String, dynamic>.from(inserted));
+                return const [];
+              case 'GET':
+                // PostgREST normalise `.select('source_class_id,
+                // spells(level)')` sans l'espace après la virgule.
+                if (select == 'source_class_id,spells(level)') {
+                  return preparedSpellRows;
+                }
+                // `select('source_class_id')` (résolution en
+                // multiclassage) ou `select('id')` (vérification avant
+                // insert) : les deux se répondent depuis la même donnée
+                // de fixture, jamais utilisées dans le même test.
+                return existingOrdinaryRow == null
+                    ? const []
+                    : [existingOrdinaryRow];
+              default:
+                return const [];
+            }
+          },
+        ),
+        cache,
+        pendingWrites,
+        _AlwaysOnlineConnectivityChecker(),
+      );
+    }
+
+    group('mono-classe', () {
+      test(
+        'limite déjà atteinte : rejette explicitement, aucune écriture',
+        () async {
+          final capturedInserts = <Map<String, dynamic>>[];
+          final repo = await repository(
+            classRows: const [
+              {'class_id': 3, 'level': 3},
+            ],
+            abilityScoreRows: const [
+              {'ability_id': 'wis', 'score': 14}, // mod +2
+            ],
+            // Limite Clerc = niveau (3) + mod (2) = 5, déjà atteinte.
+            preparedSpellRows: [
+              for (var i = 0; i < 5; i++)
+                {
+                  'source_class_id': 3,
+                  'spells': {'level': 1},
+                },
+            ],
+            capturedInserts: capturedInserts,
+          );
+
+          await expectLater(
+            repo.setSpellPrepared(
+              characterId: characterId,
+              spellId: spellId,
+              prepared: true,
+            ),
+            throwsA(isA<CharacterFailure>()),
+          );
+          expect(capturedInserts, isEmpty);
+        },
+      );
+
+      test('sous la limite : autorise et écrit source_class_id sur la '
+          'nouvelle ligne (D40)', () async {
+        final capturedInserts = <Map<String, dynamic>>[];
+        final repo = await repository(
+          classRows: const [
+            {'class_id': 3, 'level': 3},
+          ],
+          abilityScoreRows: const [
+            {'ability_id': 'wis', 'score': 14}, // mod +2, limite 5
+          ],
+          preparedSpellRows: [
+            for (var i = 0; i < 3; i++)
+              {
+                'source_class_id': 3,
+                'spells': {'level': 1},
+              },
+          ],
+          capturedInserts: capturedInserts,
+        );
+
+        final outcome = await repo.setSpellPrepared(
+          characterId: characterId,
+          spellId: spellId,
+          prepared: true,
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(capturedInserts, hasLength(1));
+        expect(capturedInserts.single['source_class_id'], 3);
+        expect(capturedInserts.single['status'], 'préparé');
+      });
+
+      test(
+        'les sorts mineurs déjà préparés ne comptent pas dans la limite',
+        () async {
+          final capturedInserts = <Map<String, dynamic>>[];
+          final repo = await repository(
+            classRows: const [
+              {'class_id': 3, 'level': 1},
+            ],
+            abilityScoreRows: const [
+              {'ability_id': 'wis', 'score': 10}, // mod 0, limite 1
+            ],
+            // 4 cantrips 'préparé' (niveau 0) : jamais comptés, la
+            // limite (1) n'est donc pas atteinte.
+            preparedSpellRows: [
+              for (var i = 0; i < 4; i++)
+                {
+                  'source_class_id': 3,
+                  'spells': {'level': 0},
+                },
+            ],
+            capturedInserts: capturedInserts,
+          );
+
+          final outcome = await repo.setSpellPrepared(
+            characterId: characterId,
+            spellId: spellId,
+            prepared: true,
+          );
+
+          expect(outcome, WriteOutcome.synced);
+          expect(capturedInserts, hasLength(1));
+        },
+      );
+
+      test(
+        'dé-préparer ne vérifie jamais la limite, même déjà dépassée',
+        () async {
+          final repo = await repository(
+            classRows: const [
+              {'class_id': 3, 'level': 1},
+            ],
+            abilityScoreRows: const [
+              {'ability_id': 'wis', 'score': 10},
+            ],
+            preparedSpellRows: [
+              {
+                'source_class_id': 3,
+                'spells': {'level': 1},
+              },
+              {
+                'source_class_id': 3,
+                'spells': {'level': 1},
+              },
+            ],
+            existingOrdinaryRow: const {'id': 'row-1'},
+          );
+
+          final outcome = await repo.setSpellPrepared(
+            characterId: characterId,
+            spellId: spellId,
+            prepared: false,
+          );
+
+          expect(outcome, WriteOutcome.synced);
+        },
+      );
+
+      test(
+        'aucune classe qui prépare : fail-open, jamais de blocage',
+        () async {
+          final capturedInserts = <Map<String, dynamic>>[];
+          final repo = await repository(capturedInserts: capturedInserts);
+
+          final outcome = await repo.setSpellPrepared(
+            characterId: characterId,
+            spellId: spellId,
+            prepared: true,
+          );
+
+          expect(outcome, WriteOutcome.synced);
+          expect(capturedInserts, hasLength(1));
+          expect(capturedInserts.single['source_class_id'], isNull);
+        },
+      );
+    });
+
+    group('multiclassé (RAW : chaque classe calcule sa propre limite)', () {
+      test('Paladin déjà à sa limite, origine déjà connue (source_class_id '
+          'existant) : rejette, nomme Paladin, sans toucher à la limite de '
+          'Clerc', () async {
+        final repo = await repository(
+          classRows: const [
+            {'class_id': 3, 'level': 3}, // Clerc, limite 5
+            {'class_id': 7, 'level': 2}, // Paladin, limite 3
+          ],
+          abilityScoreRows: const [
+            {'ability_id': 'wis', 'score': 14}, // Clerc mod +2
+            {'ability_id': 'cha', 'score': 14}, // Paladin mod +2
+          ],
+          preparedSpellRows: [
+            // Clerc : 1 seul, loin de sa limite (5).
+            {
+              'source_class_id': 3,
+              'spells': {'level': 1},
+            },
+            // Paladin : 3, déjà à sa limite (3).
+            for (var i = 0; i < 3; i++)
+              {
+                'source_class_id': 7,
+                'spells': {'level': 1},
+              },
+          ],
+          // Ce sort précis est déjà connu comme venant de Paladin.
+          existingOrdinaryRow: const {'id': 'row-x', 'source_class_id': 7},
+        );
+
+        await expectLater(
+          repo.setSpellPrepared(
+            characterId: characterId,
+            spellId: spellId,
+            prepared: true,
+          ),
+          throwsA(
+            isA<CharacterFailure>().having(
+              (failure) => failure.message,
+              'message',
+              contains('Paladin'),
+            ),
+          ),
+        );
+      });
+
+      test('jamais préparé par aucune classe : résout via spell_classes, '
+          'écrit la bonne origine sur la nouvelle ligne', () async {
+        final capturedInserts = <Map<String, dynamic>>[];
+        final repo = await repository(
+          classRows: const [
+            {'class_id': 3, 'level': 3}, // Clerc, limite 5
+            {'class_id': 7, 'level': 2}, // Paladin, limite 3
+          ],
+          abilityScoreRows: const [
+            {'ability_id': 'wis', 'score': 14},
+            {'ability_id': 'cha', 'score': 14},
+          ],
+          // Le sort n'est QUE sur la liste du Paladin.
+          spellClassRows: const [
+            {'class_id': 7},
+          ],
+          capturedInserts: capturedInserts,
+        );
+
+        final outcome = await repo.setSpellPrepared(
+          characterId: characterId,
+          spellId: spellId,
+          prepared: true,
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(capturedInserts.single['source_class_id'], 7);
+      });
+
+      test('sur la liste des DEUX classes, aucune à sa limite : attribué à '
+          'la première candidate (Clerc), qui a de la place', () async {
+        final capturedInserts = <Map<String, dynamic>>[];
+        final repo = await repository(
+          classRows: const [
+            {'class_id': 3, 'level': 3},
+            {'class_id': 7, 'level': 2},
+          ],
+          abilityScoreRows: const [
+            {'ability_id': 'wis', 'score': 14},
+            {'ability_id': 'cha', 'score': 14},
+          ],
+          spellClassRows: const [
+            {'class_id': 3},
+            {'class_id': 7},
+          ],
+          capturedInserts: capturedInserts,
+        );
+
+        final outcome = await repo.setSpellPrepared(
+          characterId: characterId,
+          spellId: spellId,
+          prepared: true,
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(capturedInserts.single['source_class_id'], 3);
+      });
+
+      test('sur la liste des DEUX classes, Clerc déjà à sa limite : attribué '
+          'à Paladin, qui a encore de la place', () async {
+        final capturedInserts = <Map<String, dynamic>>[];
+        final repo = await repository(
+          classRows: const [
+            {'class_id': 3, 'level': 1}, // limite 1 (mod 0)
+            {'class_id': 7, 'level': 2}, // limite 3 (mod 2)
+          ],
+          abilityScoreRows: const [
+            {'ability_id': 'wis', 'score': 10},
+            {'ability_id': 'cha', 'score': 14},
+          ],
+          preparedSpellRows: [
+            {
+              'source_class_id': 3,
+              'spells': {'level': 1},
+            },
+          ],
+          spellClassRows: const [
+            {'class_id': 3},
+            {'class_id': 7},
+          ],
+          capturedInserts: capturedInserts,
+        );
+
+        final outcome = await repo.setSpellPrepared(
+          characterId: characterId,
+          spellId: spellId,
+          prepared: true,
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(capturedInserts.single['source_class_id'], 7);
+      });
+    });
+  });
+
   // D42 : course entre la vérification `existing` (ligne 2142 environ de
   // `character_repository.dart`) et l'insert qui suit — un appel concurrent
   // (double appui rapide, ou synchro hors ligne simultanée) peut passer

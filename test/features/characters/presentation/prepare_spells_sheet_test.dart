@@ -15,9 +15,26 @@ import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
+import 'package:personnages/features/characters/domain/prepared_spells_limit.dart';
 import 'package:personnages/features/characters/domain/spell_cast_block_reason.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/characters/presentation/widgets/prepare_spells_sheet.dart';
+
+/// Construit un [ClassPreparedSpells] de test — [preparedCount] est
+/// toujours ignoré par la sheet (elle recalcule le décompte localement,
+/// voir `_PrepareSpellsSheetContentState._preparedCount`/
+/// `_preparedCountForClass`), gardé à 0 par défaut pour ne pas laisser
+/// croire qu'il pilote le rendu.
+ClassPreparedSpells _classLimit(
+  String className,
+  int limit, {
+  Object classId = 1,
+}) => ClassPreparedSpells(
+  classId: classId,
+  className: className,
+  limit: limit,
+  preparedCount: 0,
+);
 
 const _cantrip = CharacterSpellEntry(
   id: 1,
@@ -60,7 +77,7 @@ void main() {
     required List<CharacterSpellEntry> spells,
     List<CharacterSpellSlot> spellSlots = const [],
     CharacterSpellSlot? pactSlot,
-    int? preparedLimit,
+    List<ClassPreparedSpells> classLimits = const [],
   }) async {
     toggled = [];
     cast = [];
@@ -75,7 +92,7 @@ void main() {
                   spells: spells,
                   spellSlots: spellSlots,
                   pactSlot: pactSlot,
-                  preparedLimit: preparedLimit,
+                  classLimits: classLimits,
                   onTogglePrepared: toggled.add,
                   onCastSpell: (spell, _) => cast.add(spell),
                 ),
@@ -239,7 +256,7 @@ void main() {
       await pumpSheet(
         tester,
         spells: const [_prepared, _unprepared, _granted],
-        preparedLimit: 2,
+        classLimits: [_classLimit('Clerc', 2)],
       );
 
       expect(find.text('SORTS PRÉPARÉS'), findsOneWidget);
@@ -253,13 +270,152 @@ void main() {
     },
   );
 
-  testWidgets('sans limite (preparedLimit null) : aucun compteur', (
+  testWidgets('sans classe qui prépare (classLimits vide) : aucun compteur', (
     tester,
   ) async {
     await pumpSheet(tester, spells: const [_prepared, _unprepared]);
 
     expect(find.text('SORTS PRÉPARÉS'), findsNothing);
   });
+
+  group(
+    'multiclassé : deux classes qui préparent (plus de masquage total)',
+    () {
+      const clercSpell = CharacterSpellEntry(
+        id: 40,
+        name: 'Bénédiction',
+        level: 1,
+        school: 'Enchantement',
+        status: SpellStatus.known,
+        sourceClassIds: {10},
+      );
+      const paladinSpell = CharacterSpellEntry(
+        id: 41,
+        name: 'Protection contre le mal',
+        level: 1,
+        school: 'Abjuration',
+        status: SpellStatus.known,
+        sourceClassIds: {20},
+      );
+      final classLimits = [
+        _classLimit('Clerc', 2, classId: 10),
+        _classLimit('Paladin', 1, classId: 20),
+      ];
+
+      testWidgets('affiche un compteur par classe, avec son nom en libellé', (
+        tester,
+      ) async {
+        await pumpSheet(
+          tester,
+          spells: [clercSpell, paladinSpell],
+          classLimits: classLimits,
+        );
+
+        expect(find.text('SORTS PRÉPARÉS — CLERC'), findsOneWidget);
+        expect(find.text('0 / 2'), findsOneWidget);
+        expect(find.text('SORTS PRÉPARÉS — PALADIN'), findsOneWidget);
+        expect(find.text('0 / 1'), findsOneWidget);
+      });
+
+      testWidgets(
+        'cocher un sort de Clerc ne met à jour que le compteur de Clerc',
+        (tester) async {
+          await pumpSheet(
+            tester,
+            spells: [clercSpell, paladinSpell],
+            classLimits: classLimits,
+          );
+
+          await tester.tap(find.text('Bénédiction'));
+          await tester.pumpAndSettle();
+
+          expect(find.text('1 / 2'), findsOneWidget);
+          expect(find.text('0 / 1'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'limite de Paladin atteinte : son sort non cochable, celui de Clerc '
+        'reste cochable',
+        (tester) async {
+          await pumpSheet(
+            tester,
+            spells: [clercSpell, paladinSpell],
+            classLimits: [
+              _classLimit('Clerc', 2, classId: 10),
+              _classLimit('Paladin', 0, classId: 20),
+            ],
+          );
+
+          final clercTile = tester.widget<CheckableOptionTile>(
+            find.ancestor(
+              of: find.text('Bénédiction'),
+              matching: find.byType(CheckableOptionTile),
+            ),
+          );
+          final paladinTile = tester.widget<CheckableOptionTile>(
+            find.ancestor(
+              of: find.text('Protection contre le mal'),
+              matching: find.byType(CheckableOptionTile),
+            ),
+          );
+          expect(clercTile.enabled, isTrue);
+          expect(paladinTile.enabled, isFalse);
+
+          await tester.tap(find.text('Protection contre le mal'));
+          await tester.pumpAndSettle();
+          expect(toggled, isEmpty);
+
+          await tester.tap(find.text('Bénédiction'));
+          await tester.pumpAndSettle();
+          expect(toggled, [clercSpell]);
+        },
+      );
+    },
+  );
+
+  group(
+    'limite mono-classe atteinte : les cases non cochées se désactivent',
+    () {
+      testWidgets('un sort non préparé devient non cochable une fois la limite '
+          'atteinte, un sort déjà préparé reste toujours décochable', (
+        tester,
+      ) async {
+        await pumpSheet(
+          tester,
+          spells: const [_prepared, _unprepared],
+          // Limite déjà atteinte par `_prepared` seul (1 sort préparé déjà
+          // compté par `_preparedCount`, voir sa doc).
+          classLimits: [_classLimit('Clerc', 1)],
+        );
+
+        final preparedTile = tester.widget<CheckableOptionTile>(
+          find.ancestor(
+            of: find.text('Bénédiction'),
+            matching: find.byType(CheckableOptionTile),
+          ),
+        );
+        final unpreparedTile = tester.widget<CheckableOptionTile>(
+          find.ancestor(
+            of: find.text('Soins'),
+            matching: find.byType(CheckableOptionTile),
+          ),
+        );
+        expect(preparedTile.enabled, isTrue, reason: 'toujours décochable');
+        expect(unpreparedTile.enabled, isFalse, reason: 'limite atteinte');
+
+        await tester.tap(find.text('Soins'));
+        await tester.pumpAndSettle();
+        expect(toggled, isEmpty);
+
+        // Dé-cocher le sort déjà préparé reste permis, aucune limite ne
+        // s'applique à la baisse.
+        await tester.tap(find.text('Bénédiction'));
+        await tester.pumpAndSettle();
+        expect(toggled, [_prepared]);
+      });
+    },
+  );
 
   // La raison sous "Lancer" elle-même est testée dans
   // `spell_info_panel_test.dart` : ici, seulement la propagation de l'état
@@ -392,7 +548,11 @@ void main() {
     testWidgets('ne sont pas comptés, même au statut "préparé" en base', (
       tester,
     ) async {
-      await pumpSheet(tester, spells: all, preparedLimit: 4);
+      await pumpSheet(
+        tester,
+        spells: all,
+        classLimits: [_classLimit('Clerc', 4)],
+      );
 
       expect(find.text('1 / 4'), findsOneWidget);
 
@@ -442,7 +602,7 @@ void main() {
       await pumpSheet(
         tester,
         spells: const [_prepared, innate],
-        preparedLimit: 4,
+        classLimits: [_classLimit('Clerc', 4)],
       );
 
       expect(find.text('1 / 4'), findsOneWidget);

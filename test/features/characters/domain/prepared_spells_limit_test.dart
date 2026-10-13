@@ -1,17 +1,39 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/rules/character_class.dart';
 import 'package:personnages/core/rules/class_spellcasting_rule.dart';
+import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
+import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/multiclass_prerequisites.dart';
 import 'package:personnages/features/characters/domain/prepared_spells_limit.dart';
+import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 
-CharacterDetailClassRow _row(String name, int level) => CharacterDetailClassRow(
-  classId: name.hashCode,
-  className: name,
+CharacterDetailClassRow _row(String name, int level, {Object? classId}) =>
+    CharacterDetailClassRow(
+      classId: classId ?? name.hashCode,
+      className: name,
+      level: level,
+      isPrimary: true,
+      savingThrowProficiencies: const [],
+      hitDie: 8,
+    );
+
+CharacterSpellEntry _spell({
+  int id = 1,
+  int level = 1,
+  SpellStatus status = SpellStatus.prepared,
+  Set<int> sourceClassIds = const {},
+  bool requiresPreparation = true,
+  SpellGrantSource? grantSource,
+}) => CharacterSpellEntry(
+  id: id,
+  name: 'Sort $id',
   level: level,
-  isPrimary: true,
-  savingThrowProficiencies: const [],
-  hitDie: 8,
+  school: '',
+  status: status,
+  sourceClassIds: sourceClassIds,
+  requiresPreparation: requiresPreparation,
+  grantSource: grantSource,
 );
 
 int? _limit(String className, int level, int modifier) =>
@@ -63,72 +85,184 @@ void main() {
     });
   });
 
-  group('PreparedSpellsLimit.limitForCharacter', () {
+  group('PreparedSpellsLimit.limitsByClass (mono-classe)', () {
     test('utilise la bonne caractéristique par classe', () {
       expect(
-        PreparedSpellsLimit.limitForCharacter(
+        PreparedSpellsLimit.limitsByClass(
           classes: [_row('Clerc', 3)],
           abilityScores: const {'wis': 16, 'int': 8, 'cha': 8},
-        ),
+          spells: const [],
+        ).single.limit,
         6,
       );
       expect(
-        PreparedSpellsLimit.limitForCharacter(
+        PreparedSpellsLimit.limitsByClass(
           classes: [_row('Magicien', 3)],
           abilityScores: const {'wis': 8, 'int': 16},
-        ),
+          spells: const [],
+        ).single.limit,
         6,
       );
       expect(
-        PreparedSpellsLimit.limitForCharacter(
+        PreparedSpellsLimit.limitsByClass(
           classes: [_row('Paladin', 6)],
           abilityScores: const {'cha': 14, 'wis': 8},
-        ),
+          spells: const [],
+        ).single.limit,
         5,
       );
     });
 
     test('caractéristique absente : score 10 (modificateur nul)', () {
       expect(
-        PreparedSpellsLimit.limitForCharacter(
+        PreparedSpellsLimit.limitsByClass(
           classes: [_row('Druide', 4)],
           abilityScores: const {},
-        ),
+          spells: const [],
+        ).single.limit,
         4,
       );
     });
 
-    test(
-      'une seule classe qui prépare parmi d autres : limite de celle-là',
-      () {
-        expect(
-          PreparedSpellsLimit.limitForCharacter(
-            classes: [_row('Guerrier', 2), _row('Clerc', 2)],
-            abilityScores: const {'wis': 14},
-          ),
-          4,
-        );
-      },
-    );
+    test('une seule classe qui prépare parmi d autres : limite de celle-là, '
+        'un seul élément', () {
+      final result = PreparedSpellsLimit.limitsByClass(
+        classes: [_row('Guerrier', 2), _row('Clerc', 2)],
+        abilityScores: const {'wis': 14},
+        spells: const [],
+      );
+      expect(result, hasLength(1));
+      expect(result.single.className, 'Clerc');
+      expect(result.single.limit, 4);
+    });
 
-    test('aucune classe qui prépare : null', () {
+    test('aucune classe qui prépare : liste vide', () {
       expect(
-        PreparedSpellsLimit.limitForCharacter(
+        PreparedSpellsLimit.limitsByClass(
           classes: [_row('Barde', 3)],
           abilityScores: const {'cha': 16},
+          spells: const [],
         ),
-        isNull,
+        isEmpty,
       );
     });
 
-    test('plusieurs classes qui préparent : null (pas de chiffre faux)', () {
-      expect(
-        PreparedSpellsLimit.limitForCharacter(
-          classes: [_row('Clerc', 3), _row('Paladin', 2)],
-          abilityScores: const {'wis': 14, 'cha': 14},
-        ),
-        isNull,
+    test('décompte mono-classe : compte TOUS les sorts qualifiants, sans '
+        'filtrer par sourceClassIds (comportement historique inchangé)', () {
+      final result = PreparedSpellsLimit.limitsByClass(
+        classes: [_row('Clerc', 3)],
+        abilityScores: const {'wis': 14},
+        spells: [
+          _spell(id: 1, sourceClassIds: const {}), // origine inconnue
+          _spell(id: 2, sourceClassIds: const {999}), // origine étrangère
+          _spell(id: 3, level: 0), // sort mineur exclu
+          _spell(id: 4, status: SpellStatus.known), // non préparé
+          _spell(id: 5, grantSource: SpellGrantSource.domain), // accordé
+          _spell(id: 6, requiresPreparation: false), // sorts connus
+        ],
       );
+      expect(result.single.preparedCount, 2);
+      expect(result.single.isAtLimit, isFalse);
+    });
+  });
+
+  group('PreparedSpellsLimit.limitsByClass (multiclassé)', () {
+    test('plusieurs classes qui préparent : un élément par classe, jamais '
+        'null (RAW : chaque classe calcule sa propre limite séparément)', () {
+      final result = PreparedSpellsLimit.limitsByClass(
+        classes: [_row('Clerc', 3), _row('Paladin', 2)],
+        abilityScores: const {'wis': 14, 'cha': 14},
+        spells: const [],
+      );
+      expect(result, hasLength(2));
+      expect(result[0].className, 'Clerc');
+      expect(result[0].limit, 5);
+      expect(result[1].className, 'Paladin');
+      expect(result[1].limit, 3);
+    });
+
+    test('ventile le décompte par classe via sourceClassIds', () {
+      final clerc = _row('Clerc', 3, classId: 10);
+      final paladin = _row('Paladin', 2, classId: 20);
+      final result = PreparedSpellsLimit.limitsByClass(
+        classes: [clerc, paladin],
+        abilityScores: const {'wis': 14, 'cha': 14},
+        spells: [
+          _spell(id: 1, sourceClassIds: const {10}),
+          _spell(id: 2, sourceClassIds: const {10}),
+          _spell(id: 3, sourceClassIds: const {20}),
+        ],
+      );
+      final clercLimit = result.firstWhere((c) => c.className == 'Clerc');
+      final paladinLimit = result.firstWhere((c) => c.className == 'Paladin');
+      expect(clercLimit.preparedCount, 2);
+      expect(paladinLimit.preparedCount, 1);
+    });
+
+    test('sort sans origine connue : compté dans AUCUNE classe (sous-compte '
+        'assumé, jamais deviné)', () {
+      final clerc = _row('Clerc', 3, classId: 10);
+      final paladin = _row('Paladin', 2, classId: 20);
+      final result = PreparedSpellsLimit.limitsByClass(
+        classes: [clerc, paladin],
+        abilityScores: const {'wis': 14, 'cha': 14},
+        spells: [_spell(id: 1, sourceClassIds: const {})],
+      );
+      expect(result.every((c) => c.preparedCount == 0), isTrue);
+    });
+
+    test(
+      'sort présent sur la liste de deux classes préparantes : compté dans '
+      'les deux (signal d\'affichage, l\'écriture tranche une seule classe)',
+      () {
+        final clerc = _row('Clerc', 3, classId: 10);
+        final paladin = _row('Paladin', 2, classId: 20);
+        final result = PreparedSpellsLimit.limitsByClass(
+          classes: [clerc, paladin],
+          abilityScores: const {'wis': 14, 'cha': 14},
+          spells: [
+            _spell(id: 1, sourceClassIds: const {10, 20}),
+          ],
+        );
+        expect(result.every((c) => c.preparedCount == 1), isTrue);
+      },
+    );
+
+    test('sorts mineurs/non préparés/accordés/sans préparation exclus, comme '
+        'en mono-classe', () {
+      final clerc = _row('Clerc', 3, classId: 10);
+      final paladin = _row('Paladin', 2, classId: 20);
+      final result = PreparedSpellsLimit.limitsByClass(
+        classes: [clerc, paladin],
+        abilityScores: const {'wis': 14, 'cha': 14},
+        spells: [
+          _spell(id: 1, level: 0, sourceClassIds: const {10}),
+          _spell(id: 2, status: SpellStatus.known, sourceClassIds: const {10}),
+          _spell(
+            id: 3,
+            grantSource: SpellGrantSource.domain,
+            sourceClassIds: const {10},
+          ),
+          _spell(id: 4, requiresPreparation: false, sourceClassIds: const {10}),
+        ],
+      );
+      expect(result.every((c) => c.preparedCount == 0), isTrue);
+    });
+
+    test('isAtLimit vrai dès que le décompte atteint ou dépasse la limite', () {
+      final clerc = _row('Clerc', 1, classId: 10);
+      final result = PreparedSpellsLimit.limitsByClass(
+        classes: [clerc, _row('Paladin', 1, classId: 20)],
+        abilityScores: const {'wis': 10, 'cha': 10},
+        spells: [
+          _spell(id: 1, sourceClassIds: const {10}),
+        ],
+      );
+      final clercLimit = result.firstWhere((c) => c.className == 'Clerc');
+      // Niveau 1 + modificateur nul (score 10) = 1, minimum RAW.
+      expect(clercLimit.limit, 1);
+      expect(clercLimit.preparedCount, 1);
+      expect(clercLimit.isAtLimit, isTrue);
     });
   });
 

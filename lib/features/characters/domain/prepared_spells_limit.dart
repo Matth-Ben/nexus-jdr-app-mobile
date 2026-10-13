@@ -1,7 +1,9 @@
 import '../../../core/rules/character_class.dart';
 import '../../../core/rules/class_spellcasting_rule.dart';
+import '../../../core/rules/spell_status.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
 import 'character_detail_class_row.dart';
+import 'character_spell_entry.dart';
 
 /// Limite de sorts préparés (5e RAW) des classes qui PRÉPARENT leurs sorts :
 /// Clerc/Druide (Sagesse + niveau), Magicien (Intelligence + niveau),
@@ -127,25 +129,132 @@ abstract final class PreparedSpellsLimit {
     return limit < 1 ? 1 : limit;
   }
 
-  /// Limite à afficher pour un personnage, `null` (rien à afficher) si aucune
-  /// classe ne prépare, ou si PLUSIEURS classes préparent : le nombre de sorts
-  /// préparés n'est pas ventilé par classe (le décompte porte sur tous les
-  /// sorts du personnage), une limite par classe donnerait un chiffre faux.
-  static int? limitForCharacter({
+  /// `true` si [spell] compte dans le décompte de sorts préparés d'une
+  /// classe (le numérateur de "Préparés X / Y") — sort de niveau >= 1,
+  /// effectivement 'préparé', ni accordé par une sous-classe ni exempté de
+  /// préparation. Même règle que `CharacterDetail.preparedSpellCount`
+  /// (dupliquée ici à l'identique plutôt que l'inverse : ce fichier ne
+  /// dépend jamais de `CharacterDetail`, qui dépend déjà de lui).
+  static bool _countsTowardPreparedLimit(CharacterSpellEntry spell) =>
+      spell.level > 0 &&
+      spell.status == SpellStatus.prepared &&
+      !spell.isAlwaysPrepared &&
+      spell.requiresPreparation;
+
+  /// Décompte et limite PAR CLASSE qui prépare ses sorts — un élément par
+  /// classe du personnage qui prépare ([preparesSpells]), liste vide si
+  /// aucune classe ne prépare. Remplace l'ancien couple global unique
+  /// `(preparedSpellCount, preparedSpellLimit)` de `CharacterDetail`, devenu
+  /// RAW-incorrect dès que le personnage a PLUSIEURS classes qui préparent
+  /// (ex. Clerc/Paladin) : RAW, chaque classe calcule sa propre limite
+  /// séparément — son niveau, sa caractéristique, sa liste — jamais un total
+  /// fusionné (PHB, « Multiclassing — Spells Known and Prepared »).
+  ///
+  /// Deux branches, pour ne jamais régresser le cas mono-classe (l'immense
+  /// majorité des personnages) :
+  /// - **Une seule classe qui prépare** : le décompte porte sur TOUS les
+  ///   sorts qualifiants du personnage ([_countsTowardPreparedLimit]), SANS
+  ///   filtrer par [CharacterSpellEntry.sourceClassIds] — comportement
+  ///   historique à l'identique (y compris pour une ligne dont l'origine
+  ///   n'est pas renseignée, cas déjà possible avant ce chantier pour un
+  ///   sort de la liste complète jamais encore préparé) : aucune ambiguïté
+  ///   possible avec une seule classe candidate.
+  /// - **Plusieurs classes qui préparent** : chaque sort qualifiant est
+  ///   ventilé vers la ou les classes dont [CharacterSpellEntry
+  ///   .sourceClassIds] contient l'identifiant — un sort SANS origine connue
+  ///   (donnée antérieure à ce chantier, voir la doc de ce champ) n'est
+  ///   compté dans AUCUNE classe plutôt que deviné : sous-compte assumé,
+  ///   jamais un sur-compte qui bloquerait la préparation à tort. Un sort
+  ///   dont l'origine désigne PLUSIEURS classes du personnage qui préparent
+  ///   (sort présent sur la liste complète de deux d'entre elles, ex.
+  ///   Clerc/Druide partageant un sort, jamais encore préparé d'aucune des
+  ///   deux) compte dans chacune : accepté comme signal d'affichage (chaque
+  ///   compteur reste correct indépendamment), l'écriture bloquante
+  ///   (`CharacterRepository.setSpellPrepared`) tranche, elle, une seule
+  ///   classe précise à l'écriture (voir sa documentation).
+  static List<ClassPreparedSpells> limitsByClass({
     required List<CharacterDetailClassRow> classes,
     required Map<String, int> abilityScores,
+    required List<CharacterSpellEntry> spells,
   }) {
     final preparing = [
       for (final row in classes)
         if (preparesSpells(row.className)) row,
     ];
-    if (preparing.length != 1) return null;
-    final row = preparing.single;
-    final score = abilityScores[abilityKeyFor(row.className)] ?? 10;
-    return limitFor(
-      className: row.className,
-      classLevel: row.level,
-      abilityModifier: AbilityScoreRules.abilityModifier(score),
-    );
+    if (preparing.isEmpty) return const [];
+
+    int limitOf(CharacterDetailClassRow row) {
+      final score = abilityScores[abilityKeyFor(row.className)] ?? 10;
+      return limitFor(
+            className: row.className,
+            classLevel: row.level,
+            abilityModifier: AbilityScoreRules.abilityModifier(score),
+          ) ??
+          1;
+    }
+
+    if (preparing.length == 1) {
+      final row = preparing.single;
+      final count = spells.where(_countsTowardPreparedLimit).length;
+      return [
+        ClassPreparedSpells(
+          classId: row.classId,
+          className: row.className,
+          limit: limitOf(row),
+          preparedCount: count,
+        ),
+      ];
+    }
+
+    return [
+      for (final row in preparing)
+        ClassPreparedSpells(
+          classId: row.classId,
+          className: row.className,
+          limit: limitOf(row),
+          preparedCount: spells
+              .where(_countsTowardPreparedLimit)
+              .where(
+                (spell) => spell.sourceClassIds
+                    .map((id) => id.toString())
+                    .contains(row.classId.toString()),
+              )
+              .length,
+        ),
+    ];
   }
+}
+
+/// Décompte et limite de sorts préparés d'UNE classe qui prépare ses sorts
+/// — un élément de la liste renvoyée par
+/// [PreparedSpellsLimit.limitsByClass], voir sa documentation.
+class ClassPreparedSpells {
+  const ClassPreparedSpells({
+    required this.classId,
+    required this.className,
+    required this.limit,
+    required this.preparedCount,
+  });
+
+  /// `character_classes.class_id` de cette classe — type `Object`, même
+  /// convention que [CharacterDetailClassRow.classId] (comparaisons
+  /// toujours via `.toString()`, jamais un cast direct : voir
+  /// `PreparedSpellsLimit.spellRequiresPreparation` pour le précédent).
+  final Object classId;
+
+  /// Nom de classe déjà traduit (`CharacterDetailClassRow.className`).
+  final String className;
+
+  /// Limite RAW de sorts préparés de cette classe (voir
+  /// [PreparedSpellsLimit.limitFor]), toujours >= 1.
+  final int limit;
+
+  /// Nombre de sorts actuellement préparés attribués à cette classe (voir
+  /// [PreparedSpellsLimit.limitsByClass] pour la règle de ventilation).
+  final int preparedCount;
+
+  /// `true` si [preparedCount] a atteint ou dépassé [limit] : plus aucun
+  /// NOUVEAU sort ne peut être préparé pour cette classe tant qu'un autre
+  /// n'a pas été dé-préparé (voir `CharacterRepository.setSpellPrepared`).
+  bool get isAtLimit => preparedCount >= limit;
 }
