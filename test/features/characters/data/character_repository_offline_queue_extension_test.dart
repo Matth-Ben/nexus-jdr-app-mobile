@@ -350,7 +350,6 @@ void main() {
           characterId: _characterId,
           type: RestType.long,
           className: 'Guerrier',
-          diceSpent: 0,
           appliedGain: 0,
         );
 
@@ -369,14 +368,15 @@ void main() {
         expect(pending.single.payload, {
           'type': 'long',
           'className': 'Guerrier',
-          'diceSpent': 0,
+          'hitDiceSpentByClassId': <String, dynamic>{},
           'appliedGain': 0,
+          'hitDiceRecoveredByClassId': <String, dynamic>{},
         });
       },
     );
 
-    test('repos court avec diceSpent/appliedGain nuls : payload fidèle, type '
-        "'short'", () async {
+    test('repos court avec hitDiceSpentByClassId/appliedGain vides/nuls : '
+        "payload fidèle, type 'short'", () async {
       final client = await _buildSignedInFakeSupabaseClient(
         ownerId: _ownerId,
         recorded: [],
@@ -398,8 +398,9 @@ void main() {
       expect(pending.payload, {
         'type': 'short',
         'className': '',
-        'diceSpent': 0,
+        'hitDiceSpentByClassId': <String, dynamic>{},
         'appliedGain': 0,
+        'hitDiceRecoveredByClassId': <String, dynamic>{},
       });
     });
 

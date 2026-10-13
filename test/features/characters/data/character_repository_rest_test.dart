@@ -83,8 +83,13 @@ void main() {
     bool hasPrimary = true,
     bool Function(String method, String table)? failOn,
     List<_Recorded>? journal,
-    int diceSpent = 0,
+    // `hit_dice_spent` initial de chaque ligne `character_classes`, par
+    // NOM de classe (converti en `class_id` ci-dessous) — `0` par défaut,
+    // comme avant l'ajout de ce paramètre.
+    Map<String, int> initialHitDiceSpentByClassName = const {},
+    Map<String, int> hitDiceSpentByClassId = const {},
     int appliedGain = 0,
+    Map<String, int> hitDiceRecoveredByClassId = const {},
   }) async {
     final recorded = journal ?? <_Recorded>[];
     final client = await _buildSignedInFakeSupabaseClient(
@@ -102,7 +107,8 @@ void main() {
               'class_id': idOf(classes[i].className),
               'level': classes[i].level,
               'is_primary': hasPrimary && i == 0,
-              'hit_dice_spent': 0,
+              'hit_dice_spent':
+                  initialHitDiceSpentByClassName[classes[i].className] ?? 0,
             },
         ],
         'translations': [
@@ -127,11 +133,21 @@ void main() {
       // (`character_detail_screen.dart::_applyRest`) : le nom de la classe
       // primaire.
       className: classNameArgument ?? classes.first.className,
-      diceSpent: diceSpent,
+      hitDiceSpentByClassId: hitDiceSpentByClassId,
       appliedGain: appliedGain,
+      hitDiceRecoveredByClassId: hitDiceRecoveredByClassId,
     );
     return recorded;
   }
+
+  /// `hitDiceSpentByClassId`/`hitDiceRecoveredByClassId` à une seule entrée,
+  /// clé = `idOf(className)` (même convention que `HitDicePool.classId` —
+  /// `character_classes.class_id`, converti en chaîne) — pratique pour les
+  /// scénarios mono-classe de ce fichier (non-régression), qui n'ont besoin
+  /// de viser qu'une seule classe.
+  Map<String, int> hitDiceByClassName(String className, int count) => {
+    idOf(className).toString(): count,
+  };
 
   /// `{niveau d'emplacement: (total, utilisés)}` réellement upserté dans
   /// `character_spell_slots`, `null` si aucun upsert n'a été émis.
@@ -309,7 +325,6 @@ void main() {
 
       final recorded = await applyRest(
         type: RestType.short,
-        diceSpent: 0,
         classes: [(className: 'Magicien', level: 5)],
         journal: journal,
         // La synchronisation de la file, si elle était tentée, échouerait
@@ -352,7 +367,7 @@ void main() {
       await expectLater(
         applyRest(
           type: RestType.short,
-          diceSpent: 1,
+          hitDiceSpentByClassId: hitDiceByClassName('Magicien', 1),
           appliedGain: 4,
           classes: [(className: 'Magicien', level: 5)],
           failOn: (method, table) => method == 'PATCH' && table == 'characters',
@@ -384,7 +399,7 @@ void main() {
 
       final recorded = await applyRest(
         type: RestType.short,
-        diceSpent: 1,
+        hitDiceSpentByClassId: hitDiceByClassName('Magicien', 1),
         appliedGain: 0,
         classes: [(className: 'Magicien', level: 5)],
         journal: journal,
@@ -986,11 +1001,19 @@ void main() {
     ];
 
     /// Même scénario que `applyRest`, mais avec des dés de vie déjà
-    /// dépensés : la récupération des dés de vie (écriture RELATIVE) a donc
-    /// lieu.
+    /// dépensés : la récupération des dés de vie a donc lieu. [recovered]
+    /// (2 par défaut — Magicien niveau 5, 3 dés dépensés : `max(1, 5 ~/ 2) =
+    /// 2`, même calcul que `HitDiceRecoveryCalculator.recoveredCount`) est
+    /// déjà entièrement calculé côté appelant depuis le correctif
+    /// multiclassé du 10/10/2026 (voir `hitDiceRecoveredByClassId` sur
+    /// `CharacterRepository.applyRest`) : cette méthode ne fait plus le
+    /// calcul elle-même, contrairement à l'ancienne écriture RELATIVE
+    /// qu'elle remplace — ce test vérifie donc qu'elle écrit fidèlement le
+    /// nombre transmis, pas qu'elle le recalcule.
     Future<List<_Recorded>> longRestWithSpentHitDice({
       bool Function(String method, String table)? failOn,
       List<_Recorded>? journal,
+      int recovered = 2,
     }) async {
       final recorded = journal ?? <_Recorded>[];
       final client = await _buildSignedInFakeSupabaseClient(
@@ -1024,6 +1047,7 @@ void main() {
         characterId: characterId,
         type: RestType.long,
         className: 'Magicien',
+        hitDiceRecoveredByClassId: {idOf('Magicien').toString(): recovered},
       );
       return recorded;
     }
@@ -1165,6 +1189,184 @@ void main() {
         'slots_total': 2,
         'slots_used': 0,
       });
+    });
+  });
+
+  // Correctif D (dette technique) du 10/10/2026 : avant lui, `applyRest`
+  // ne lisait/écrivait QUE `character_classes.hit_dice_spent` de la classe
+  // PRIMAIRE — un personnage multiclassé ne pouvait ni dépenser ni
+  // récupérer les dés de vie de ses classes secondaires, et la formule de
+  // récupération au repos long portait sur le niveau de la seule classe
+  // primaire plutôt que le niveau total (RAW 5e). Ce groupe couvre le
+  // suivi par classe désormais utilisé par `hitDiceSpentByClassId`/
+  // `hitDiceRecoveredByClassId` (déjà entièrement calculés côté appelant,
+  // voir `domain/hit_dice_recovery_calculator.dart` — ces tests vérifient
+  // seulement que le dépôt écrit fidèlement ce qu'on lui transmet, pas le
+  // calcul RAW lui-même, couvert par les tests `domain/`).
+  group('applyRest — dés de vie multiclassés', () {
+    // La ligne `id` de chaque classe dans la fixture de [applyRest] est
+    // `'cc-<index>'` (voir sa construction plus haut) : 'cc-0' est toujours
+    // la première classe de la liste passée à [applyRest], 'cc-1' la
+    // deuxième, etc. — utilisé ci-dessous pour attribuer chaque PATCH
+    // `character_classes` à la bonne classe.
+    List<_Recorded> hitDiceWrites(List<_Recorded> recorded) => recorded
+        .where((r) => r.table == 'character_classes' && r.method == 'PATCH')
+        .toList();
+
+    test('repos court, multiclassé (Guerrier 5 / Magicien 3) : le joueur '
+        'dépense un dé de CHAQUE classe, les deux lignes sont écrites '
+        'indépendamment', () async {
+      final recorded = await applyRest(
+        type: RestType.short,
+        classes: [
+          (className: 'Guerrier', level: 5),
+          (className: 'Magicien', level: 3),
+        ],
+        hitDiceSpentByClassId: {
+          idOf('Guerrier').toString(): 1,
+          idOf('Magicien').toString(): 2,
+        },
+      );
+
+      final writes = hitDiceWrites(recorded);
+      expect(writes, hasLength(2));
+      // 'cc-0' = Guerrier (premier de la liste), 'cc-1' = Magicien.
+      final guerrierWrite = writes.singleWhere(
+        (w) => w.query['id'] == 'eq.cc-0',
+      );
+      final magicienWrite = writes.singleWhere(
+        (w) => w.query['id'] == 'eq.cc-1',
+      );
+      expect(guerrierWrite.body, {'hit_dice_spent': 1});
+      expect(magicienWrite.body, {'hit_dice_spent': 2});
+    });
+
+    test('repos court, multiclassé : ne dépenser que la classe secondaire '
+        '(la primaire n\'est jamais touchée si le joueur ne la choisit '
+        'pas)', () async {
+      final recorded = await applyRest(
+        type: RestType.short,
+        classes: [
+          (className: 'Guerrier', level: 5),
+          (className: 'Magicien', level: 3),
+        ],
+        hitDiceSpentByClassId: {idOf('Magicien').toString(): 1},
+      );
+
+      final writes = hitDiceWrites(recorded);
+      expect(writes, hasLength(1));
+      expect(writes.single.query['id'], 'eq.cc-1');
+      expect(writes.single.body, {'hit_dice_spent': 1});
+    });
+
+    test('repos court, multiclassé : la dépense d\'une classe est plafonnée '
+        'à SON PROPRE niveau, indépendamment de l\'autre classe', () async {
+      final recorded = await applyRest(
+        type: RestType.short,
+        classes: [
+          (className: 'Guerrier', level: 2),
+          (className: 'Magicien', level: 5),
+        ],
+        initialHitDiceSpentByClassName: {'Guerrier': 1},
+        // Tente de dépenser 5 dés de Guerrier (il n'a que 2 au total, déjà
+        // 1 dépensé) : plafonné à 2, jamais 6.
+        hitDiceSpentByClassId: {idOf('Guerrier').toString(): 5},
+      );
+
+      final writes = hitDiceWrites(recorded);
+      expect(writes, hasLength(1));
+      expect(writes.single.body, {'hit_dice_spent': 2});
+    });
+
+    test('repos long, multiclassé (Guerrier 5 / Magicien 3, niveau total 8) '
+        ': récupère les dés des DEUX classes quand le joueur les a '
+        'choisis', () async {
+      final recorded = await applyRest(
+        classes: [
+          (className: 'Guerrier', level: 5),
+          (className: 'Magicien', level: 3),
+        ],
+        initialHitDiceSpentByClassName: {'Guerrier': 2, 'Magicien': 1},
+        hitDiceRecoveredByClassId: {
+          idOf('Guerrier').toString(): 2,
+          idOf('Magicien').toString(): 1,
+        },
+      );
+
+      final writes = hitDiceWrites(recorded);
+      expect(writes, hasLength(2));
+      final guerrierWrite = writes.singleWhere(
+        (w) => w.query['id'] == 'eq.cc-0',
+      );
+      final magicienWrite = writes.singleWhere(
+        (w) => w.query['id'] == 'eq.cc-1',
+      );
+      expect(guerrierWrite.body, {'hit_dice_spent': 0});
+      expect(magicienWrite.body, {'hit_dice_spent': 0});
+    });
+
+    test('repos long, multiclassé : récupération partielle choisie par le '
+        'joueur sur une seule des deux classes (l\'autre reste inchangée, '
+        'aucune écriture émise pour elle)', () async {
+      final recorded = await applyRest(
+        classes: [
+          (className: 'Guerrier', level: 5),
+          (className: 'Magicien', level: 3),
+        ],
+        initialHitDiceSpentByClassName: {'Guerrier': 2, 'Magicien': 1},
+        hitDiceRecoveredByClassId: {idOf('Guerrier').toString(): 1},
+      );
+
+      final writes = hitDiceWrites(recorded);
+      expect(writes, hasLength(1));
+      expect(writes.single.query['id'], 'eq.cc-0');
+      expect(writes.single.body, {'hit_dice_spent': 1});
+    });
+
+    test('repos long, multiclassé : la récupération d\'une classe ne '
+        'descend jamais sous 0, même si le nombre transmis dépasse son '
+        'propre dépensé', () async {
+      final recorded = await applyRest(
+        classes: [
+          (className: 'Guerrier', level: 5),
+          (className: 'Magicien', level: 3),
+        ],
+        initialHitDiceSpentByClassName: {'Guerrier': 1},
+        hitDiceRecoveredByClassId: {idOf('Guerrier').toString(): 4},
+      );
+
+      final writes = hitDiceWrites(recorded);
+      expect(writes, hasLength(1));
+      expect(writes.single.body, {'hit_dice_spent': 0});
+    });
+
+    test('repos long, multiclassé, aucune entrée dans '
+        'hitDiceRecoveredByClassId : aucune écriture sur character_classes '
+        '(même si des dés sont dépensés) — la répartition reste entièrement '
+        'au choix de l\'appelant', () async {
+      final recorded = await applyRest(
+        classes: [
+          (className: 'Guerrier', level: 5),
+          (className: 'Magicien', level: 3),
+        ],
+        initialHitDiceSpentByClassName: {'Guerrier': 2, 'Magicien': 1},
+      );
+
+      expect(hitDiceWrites(recorded), isEmpty);
+    });
+
+    test('une clé de hitDiceSpentByClassId qui ne correspond à aucune '
+        'classe du personnage est ignorée (défensif), les classes '
+        'existantes restent correctement écrites', () async {
+      final recorded = await applyRest(
+        type: RestType.short,
+        classes: [(className: 'Magicien', level: 5)],
+        hitDiceSpentByClassId: {idOf('Magicien').toString(): 1, '999999': 3},
+      );
+
+      final writes = hitDiceWrites(recorded);
+      expect(writes, hasLength(1));
+      expect(writes.single.body, {'hit_dice_spent': 1});
     });
   });
 }
