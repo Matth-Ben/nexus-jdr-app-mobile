@@ -459,15 +459,18 @@ commit parent).
    préparation ? **Oui, demandé par Matthias le 06/10.** (D03)
 2. Les sorts innés raciaux se lancent-ils sans emplacement, avec un compteur par repos
    long ? **Oui, demandé par Matthias le 06/10 ; fait (PR #82).** (D08)
-3. Un multiclassé suit-il ses dés de vie par classe ? **Un compteur global, demandé
-   par Matthias le 09/10 ; précisé le 10/10 après analyse RAW par l'agent
-   `regles-dnd` : « global » porte sur le CALCUL du nombre de dés récupérés au
-   repos long (niveau total du personnage, pas la seule classe primaire), mais le
-   suivi reste par type de dé (d6/d8/d10/d12, un par classe) — fusionner en un
-   seul entier serait RAW-incorrect (casserait le plafond par classe et le choix
-   du type de dé à dépenser). Quand la moitié du total ne suffit pas à tout
-   récupérer (RAW silencieux sur ce cas) : le joueur choisit quels dés sont
-   récupérés en priorité, cohérent avec le choix déjà explicite pour la dépense.**
+3. Un multiclassé suit-il ses dés de vie par classe ? **Fait (PR #126).** Un
+   compteur global, demandé par Matthias le 09/10 ; précisé le 10/10 après
+   analyse RAW par l'agent `regles-dnd` : « global » porte sur le CALCUL du
+   nombre de dés récupérés au repos long (niveau total du personnage, pas la
+   seule classe primaire), mais le suivi reste par type de dé (d6/d8/d10/d12,
+   un par classe) — fusionner en un seul entier aurait été RAW-incorrect
+   (aurait cassé le plafond par classe et le choix du type de dé à dépenser).
+   Quand la moitié du total ne suffit pas à tout récupérer (RAW silencieux sur
+   ce cas) : le joueur choisit quels dés sont récupérés en priorité, cohérent
+   avec le choix déjà explicite pour la dépense. Un bug trouvé en revue (perte
+   silencieuse de PV sur un repos déjà en file hors ligne à l'ancien format de
+   payload au moment du déploiement) a été corrigé avant merge.
 4. La limite de sorts préparés doit-elle être bloquante, et non simplement affichée ?
    Aujourd'hui `setSpellPrepared` ne vérifie rien. **Oui, bloquante, demandé par
    Matthias le 09/10 ; précisé le 10/10 après analyse RAW par l'agent
