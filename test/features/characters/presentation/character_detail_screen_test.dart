@@ -78,6 +78,17 @@ class _FakeCharacterRepository implements CharacterRepository {
   int applyRestCallCount = 0;
   Object? applyRestErrorToThrow;
 
+  /// Captures de l'appel a [applyRest] - voir le groupe de tests
+  /// "repos d'un personnage multiclasse (dieux de vie par classe)" de ce
+  /// fichier : verifie que `_applyRest`/`_onRestApplied`
+  /// (`character_detail_screen.dart`) transmettent fidelement au depot les
+  /// maps construites par la feuille (`rest_sheet.dart`), jamais verifie
+  /// plus haut que `rest_sheet_test.dart` (qui ne connait pas
+  /// `CharacterRepository`).
+  Map<String, int>? lastAppliedHitDiceSpentByClassId;
+  int? lastAppliedAppliedGain;
+  Map<String, int>? lastAppliedHitDiceRecoveredByClassId;
+
   /// Fiche renvoyée par [fetchCharacterDetail] une fois un repos appliqué
   /// avec succès — simule l'effet en base de `applyRest` (le vrai dépôt
   /// recalcule les emplacements de sorts), `null` pour ne rien changer.
@@ -328,6 +339,9 @@ class _FakeCharacterRepository implements CharacterRepository {
     if (applyRestErrorToThrow != null) throw applyRestErrorToThrow!;
     lastAppliedRestType = type;
     lastAppliedRestClassName = className;
+    lastAppliedHitDiceSpentByClassId = hitDiceSpentByClassId;
+    lastAppliedAppliedGain = appliedGain;
+    lastAppliedHitDiceRecoveredByClassId = hitDiceRecoveredByClassId;
     if (detailAfterRest != null) detailToReturn = detailAfterRest;
     return WriteOutcome.synced;
   }
@@ -2281,6 +2295,139 @@ void main() {
         find.bySemanticsLabel('Emplacements de sorts : 2 restants sur 2'),
         findsOneWidget,
       );
+    });
+
+    // Scenario bout-en-bout (QA, voir docs/dette-technique.md pour le
+    // contexte du chantier) : jusqu'ici seul `rest_sheet_test.dart`
+    // verifiait la construction de ces deux maps par la feuille elle-meme
+    // -- ce groupe verifie que le reste de la chaine
+    // (`_RestSheetContentState._apply` -> `_CharacterDetailScreenState
+    // ._applyRest`/`._onRestApplied` -> `CharacterRepository.applyRest`)
+    // transmet fidelement ce que le joueur a choisi, sans jamais inverser
+    // depende/recupere (les deux sont des `Map<String, int>`, un copier-
+    // coller fautif entre les deux ne serait jamais detecte par
+    // `flutter analyze`).
+    testWidgets('personnage multiclasse (Guerrier 5 / Magicien 3) : repos '
+        'court avec dés dépensés dans LES DEUX classes transmet '
+        'hitDiceSpentByClassId/appliedGain fidèlement au dépôt', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: const [
+          CharacterDetailClassRow(
+            classId: 1,
+            hitDie: 10,
+            className: 'Guerrier',
+            level: 5,
+            isPrimary: true,
+            savingThrowProficiencies: ['str', 'con'],
+            hitDiceSpent: 1,
+          ),
+          CharacterDetailClassRow(
+            classId: 2,
+            hitDie: 6,
+            className: 'Magicien',
+            level: 3,
+            isPrimary: false,
+            savingThrowProficiencies: ['int', 'wis'],
+          ),
+        ],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('REPOS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('REPOS COURT'));
+      await tester.pumpAndSettle();
+
+      // Guerrier (premier pool) : 1 dé. Magicien (second pool) : 2 dés.
+      await tester.tap(find.bySemanticsLabel('Augmenter').at(0));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Augmenter').at(1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Augmenter').at(1));
+      await tester.pumpAndSettle();
+      // Valeur moyenne : déterministe (contrairement à "Lancer les dés"),
+      // pour que [lastAppliedAppliedGain] soit vérifiable sans dépendre
+      // d'une graine aléatoire.
+      await tester.tap(find.text('VALEUR MOYENNE'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyRestCallCount, 1);
+      expect(fakeRepository.lastAppliedRestType, RestType.short);
+      expect(fakeRepository.lastAppliedHitDiceSpentByClassId, {'1': 1, '2': 2});
+      // d10 moyenne (6) + modificateur Con (+1) = 7 ; d6 moyenne (4) + 1 =
+      // 5, deux fois = 10 ; brut 17, plafonné à la marge réelle (18 -> 30 =
+      // 12).
+      expect(fakeRepository.lastAppliedAppliedGain, 12);
+      // Toujours vide pour un repos court (voir `RestSheetResult`) : ne
+      // doit jamais fuiter une valeur résiduelle d'un repos long précédent.
+      expect(fakeRepository.lastAppliedHitDiceRecoveredByClassId, const {});
+    });
+
+    testWidgets('personnage multiclasse (Guerrier 5 / Magicien 3) : repos '
+        'long avec récupération insuffisante affiche le choix de '
+        'répartition et transmet hitDiceRecoveredByClassId au dépôt', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: const [
+          CharacterDetailClassRow(
+            classId: 1,
+            hitDie: 10,
+            className: 'Guerrier',
+            level: 5,
+            isPrimary: true,
+            savingThrowProficiencies: ['str', 'con'],
+            hitDiceSpent: 3,
+          ),
+          CharacterDetailClassRow(
+            classId: 2,
+            hitDie: 6,
+            className: 'Magicien',
+            level: 3,
+            isPrimary: false,
+            savingThrowProficiencies: ['int', 'wis'],
+            hitDiceSpent: 2,
+          ),
+        ],
+      );
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('REPOS'));
+      await tester.pumpAndSettle();
+
+      // Niveau total 8 -> récupéré = max(1, 8 ~/ 2) = 4, insuffisant face
+      // aux 5 dés dépensés (3 + 2) répartis sur deux pools réellement
+      // concernés : la feuille doit proposer le choix de répartition.
+      expect(
+        find.text(
+          'Dés de vie récupérés : 4 — répartissez-les entre vos classes',
+        ),
+        findsOneWidget,
+      );
+
+      // Répartition par défaut gardée telle quelle (Guerrier 3, Magicien
+      // 1 — voir `rest_sheet_test.dart` pour la même règle isolée).
+      await tester.tap(find.text('APPLIQUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyRestCallCount, 1);
+      expect(fakeRepository.lastAppliedRestType, RestType.long);
+      expect(fakeRepository.lastAppliedHitDiceRecoveredByClassId, {
+        '1': 3,
+        '2': 1,
+      });
+      // Toujours vide pour un repos long (voir `RestSheetResult`).
+      expect(fakeRepository.lastAppliedHitDiceSpentByClassId, const {});
+      expect(fakeRepository.lastAppliedAppliedGain, 0);
     });
 
     testWidgets('repos long avec "Changer mes sorts" : ouvre la sheet '
