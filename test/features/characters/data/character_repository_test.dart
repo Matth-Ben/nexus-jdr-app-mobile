@@ -2432,6 +2432,10 @@ void main() {
     /// [spellClassRows] : `spell_classes` (`class_id`) — liste de classe
     /// du sort visé, seulement lue en multiclassage quand l'origine
     /// n'est pas déjà connue.
+    /// [subclassSpellRows] : `subclass_spells` (`subclass_id`, `spell_id`,
+    /// `class_level`) — sorts "toujours préparés" des sous-classes du
+    /// personnage (D77), seulement lue si [classRows] porte au moins un
+    /// `subclass_id` non nul.
     /// [existingOrdinaryRow] : ligne `character_spells` déjà existante
     /// pour LE sort visé (n'importe quel statut) — non nulle, l'UPDATE
     /// la trouve (l'INSERT n'est jamais tenté) et, en multiclassage,
@@ -2442,6 +2446,7 @@ void main() {
       List<Map<String, dynamic>> abilityScoreRows = const [],
       List<Map<String, dynamic>> preparedSpellRows = const [],
       List<Map<String, dynamic>> spellClassRows = const [],
+      List<Map<String, dynamic>> subclassSpellRows = const [],
       Map<String, dynamic>? existingOrdinaryRow,
       List<Map<String, dynamic>>? capturedInserts,
     }) async {
@@ -2452,6 +2457,7 @@ void main() {
             'character_classes': classRows,
             'character_ability_scores': abilityScoreRows,
             'spell_classes': spellClassRows,
+            'subclass_spells': subclassSpellRows,
           },
           rowsOverride: (request) {
             if (request.url.pathSegments.last != 'character_spells') {
@@ -2470,9 +2476,9 @@ void main() {
                 capturedInserts?.add(Map<String, dynamic>.from(inserted));
                 return const [];
               case 'GET':
-                // PostgREST normalise `.select('source_class_id,
+                // PostgREST normalise `.select('spell_id, source_class_id,
                 // spells(level)')` sans l'espace après la virgule.
-                if (select == 'source_class_id,spells(level)') {
+                if (select == 'spell_id,source_class_id,spells(level)') {
                   return preparedSpellRows;
                 }
                 // `select('source_class_id')` (résolution en
@@ -2644,6 +2650,169 @@ void main() {
           expect(capturedInserts.single['source_class_id'], isNull);
         },
       );
+    });
+
+    // D77 (`docs/dette-technique.md`) : un sort choisi normalement PUIS
+    // devenu accordé par une sous-classe (domaine de Clerc, serment de
+    // Paladin) ne doit jamais compter dans la limite — exactement comme
+    // côté affichage (`CharacterSpellEntry.isAlwaysPrepared`). Avant ce
+    // correctif, le serveur le comptait quand même : l'écran pouvait
+    // présenter un sort comme encore cochable (exclu du décompte affiché)
+    // et le serveur le rejetait quand même au moment d'écrire.
+    group('D77 : un sort accordé par une sous-classe est exclu du décompte '
+        'serveur, comme côté affichage', () {
+      test('limite techniquement "atteinte" en comptant le sort accordé, '
+          'mais toujours sous la limite une fois exclu : autorise', () async {
+        final capturedInserts = <Map<String, dynamic>>[];
+        final repo = await repository(
+          classRows: const [
+            {'class_id': 3, 'level': 3, 'subclass_id': 99},
+          ],
+          abilityScoreRows: const [
+            {'ability_id': 'wis', 'score': 14}, // limite 5
+          ],
+          // 5 lignes 'préparé' : 4 réellement choisies + 1 (spell_id
+          // 777) aussi accordée par la sous-classe. Sans l'exclusion
+          // (D77), le décompte vaudrait 5 (limite atteinte, rejet) ;
+          // avec elle, 4 (sous la limite, autorisé).
+          preparedSpellRows: [
+            {
+              'spell_id': 777,
+              'source_class_id': 3,
+              'spells': {'level': 1},
+            },
+            for (var i = 1; i < 5; i++)
+              {
+                'spell_id': 100 + i,
+                'source_class_id': 3,
+                'spells': {'level': 1},
+              },
+          ],
+          // Domaine de Clerc, sort 777 accordé dès le niveau 1 — déjà
+          // atteint (classLevel du personnage = 3).
+          subclassSpellRows: const [
+            {'subclass_id': 99, 'spell_id': 777, 'class_level': 1},
+          ],
+          capturedInserts: capturedInserts,
+        );
+
+        final outcome = await repo.setSpellPrepared(
+          characterId: characterId,
+          spellId: spellId,
+          prepared: true,
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(capturedInserts, hasLength(1));
+      });
+
+      test('le sort accordé exclu ne retire PAS encore assez pour passer '
+          'sous la limite : rejette tout de même', () async {
+        final capturedInserts = <Map<String, dynamic>>[];
+        final repo = await repository(
+          classRows: const [
+            {'class_id': 3, 'level': 3, 'subclass_id': 99},
+          ],
+          abilityScoreRows: const [
+            {'ability_id': 'wis', 'score': 14}, // limite 5
+          ],
+          // 6 lignes 'préparé' dont 1 accordée (777) : décompte réel 5
+          // (>= limite 5), toujours bloqué même après exclusion.
+          preparedSpellRows: [
+            {
+              'spell_id': 777,
+              'source_class_id': 3,
+              'spells': {'level': 1},
+            },
+            for (var i = 1; i < 6; i++)
+              {
+                'spell_id': 100 + i,
+                'source_class_id': 3,
+                'spells': {'level': 1},
+              },
+          ],
+          subclassSpellRows: const [
+            {'subclass_id': 99, 'spell_id': 777, 'class_level': 1},
+          ],
+          capturedInserts: capturedInserts,
+        );
+
+        await expectLater(
+          repo.setSpellPrepared(
+            characterId: characterId,
+            spellId: spellId,
+            prepared: true,
+          ),
+          throwsA(isA<CharacterFailure>()),
+        );
+        expect(capturedInserts, isEmpty);
+      });
+
+      test('le niveau de classe n\'a pas encore atteint le niveau requis '
+          'par la sous-classe : le sort compte normalement (pas accordé '
+          'encore)', () async {
+        final capturedInserts = <Map<String, dynamic>>[];
+        final repo = await repository(
+          classRows: const [
+            // Niveau 1 : le domaine n'accorde rien avant le niveau 3.
+            {'class_id': 3, 'level': 1, 'subclass_id': 99},
+          ],
+          abilityScoreRows: const [
+            {'ability_id': 'wis', 'score': 10}, // limite 1
+          ],
+          preparedSpellRows: const [
+            {
+              'spell_id': 777,
+              'source_class_id': 3,
+              'spells': {'level': 1},
+            },
+          ],
+          subclassSpellRows: const [
+            {'subclass_id': 99, 'spell_id': 777, 'class_level': 3},
+          ],
+          capturedInserts: capturedInserts,
+        );
+
+        await expectLater(
+          repo.setSpellPrepared(
+            characterId: characterId,
+            spellId: spellId,
+            prepared: true,
+          ),
+          throwsA(isA<CharacterFailure>()),
+        );
+        expect(capturedInserts, isEmpty);
+      });
+
+      test('aucune sous-classe : aucune requête subclass_spells, rien '
+          'd\'exclu', () async {
+        final capturedInserts = <Map<String, dynamic>>[];
+        final repo = await repository(
+          classRows: const [
+            {'class_id': 3, 'level': 1},
+          ],
+          abilityScoreRows: const [
+            {'ability_id': 'wis', 'score': 10}, // limite 1
+          ],
+          preparedSpellRows: const [
+            {
+              'spell_id': 777,
+              'source_class_id': 3,
+              'spells': {'level': 1},
+            },
+          ],
+          capturedInserts: capturedInserts,
+        );
+
+        await expectLater(
+          repo.setSpellPrepared(
+            characterId: characterId,
+            spellId: spellId,
+            prepared: true,
+          ),
+          throwsA(isA<CharacterFailure>()),
+        );
+      });
     });
 
     group('multiclassé (RAW : chaque classe calcule sa propre limite)', () {

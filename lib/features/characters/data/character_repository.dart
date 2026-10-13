@@ -351,11 +351,12 @@ abstract class CharacterRepository {
   /// le cas mono-classe. Voir `_resolvePreparingClassAndEnforceLimit` pour
   /// le détail des requêtes dédiées (volontairement PAS
   /// `fetchCharacterDetail`, bien plus lourd et qui aurait aussi forcé à
-  /// réécrire tous les tests déjà en place sur cette méthode) et la
-  /// simplification assumée qui y est documentée. La classe ainsi résolue
-  /// est aussi écrite comme `source_class_id` sur l'éventuelle NOUVELLE
-  /// ligne créée plus bas (D40 : cette colonne n'était encore jamais écrite
-  /// à l'insertion).
+  /// réécrire tous les tests déjà en place sur cette méthode) — y compris
+  /// l'exclusion des sorts par ailleurs accordés par une sous-classe du
+  /// décompte (D77, corrigé le 13/10/2026). La classe ainsi résolue est
+  /// aussi écrite comme `source_class_id` sur l'éventuelle NOUVELLE ligne
+  /// créée plus bas (D40 : cette colonne n'était encore jamais écrite à
+  /// l'insertion).
   ///
   /// Garde côté écriture : une ligne au statut 'inné' n'est jamais modifiée,
   /// et un sort qui n'a que des lignes 'inné' ne reçoit aucune nouvelle
@@ -2293,42 +2294,64 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// RAW effectivement dépassée.
   ///
   /// **Requêtes dédiées, volontairement PAS `fetchCharacterDetail`** (la
-  /// fiche complète, bien plus lourde : sorts accordés par sous-classe,
-  /// inventaire, compétences... tout ce dont cette vérification n'a pas
-  /// besoin — et qui aurait aussi forcé à réécrire tous les tests déjà en
-  /// place sur [setSpellPrepared], qui ne simulent QUE les appels
-  /// `character_spells`). Coût pour le cas courant (une seule classe qui
-  /// prépare) : 3 requêtes (`character_classes`, `character_ability_scores`
-  /// via [_fetchAllAbilityScores], `character_spells` déjà préparés) — 2 de
-  /// plus en multiclassage si l'origine n'est pas déjà connue (voir
-  /// ci-dessous). [CharacterClass.fromId] donne le nom français de chaque
-  /// classe sans requête `translations` supplémentaire (dette D04).
+  /// fiche complète, bien plus lourde : inventaire, compétences... tout ce
+  /// dont cette vérification n'a pas besoin — et qui aurait aussi forcé à
+  /// réécrire tous les tests déjà en place sur [setSpellPrepared], qui ne
+  /// simulent QUE les appels `character_spells`). Coût pour le cas courant
+  /// (une seule classe qui prépare, pas de sous-classe accordant de sort) :
+  /// 3 requêtes (`character_classes`, `character_ability_scores` via
+  /// [_fetchAllAbilityScores], `character_spells` déjà préparés) — une de
+  /// plus (`subclass_spells`) dès qu'une sous-classe est choisie (voir D77
+  /// ci-dessous), 2 de plus en multiclassage si l'origine n'est pas déjà
+  /// connue (voir ci-dessous). [CharacterClass.fromId] donne le nom
+  /// français de chaque classe sans requête `translations` supplémentaire
+  /// (dette D04).
   ///
-  /// **Simplification assumée, à valider par `regles-dnd`** : contrairement
-  /// à `CharacterDetail.preparedSpellCount`/
-  /// `PreparedSpellsLimit.limitsByClass` (logique de référence, utilisée par
-  /// l'affichage), cette vérification ne retranche PAS un sort par ailleurs
+  /// **D77 (`docs/dette-technique.md`), corrigé le 13/10/2026** : cette
+  /// vérification retranche désormais, exactement comme
+  /// `CharacterDetail.preparedSpellCount`/`PreparedSpellsLimit.limitsByClass`
+  /// (logique de référence, utilisée par l'affichage), un sort par ailleurs
   /// accordé automatiquement par une sous-classe (domaine de Clerc, serment
   /// de Paladin) qui porterait AUSSI une ligne ordinaire `character_spells`
-  /// à 'préparé' (recoupement rare : un sort choisi normalement avant de
-  /// devenir un sort de domaine/serment). Dans ce cas précis seulement,
-  /// cette vérification peut être trop stricte d'un sort (bloque un sort de
-  /// moins que la vraie limite RAW) — jamais trop permissive (ne laisse
-  /// jamais dépasser la limite réelle) : direction jugée sûre pour un filet
-  /// de sécurité serveur plutôt qu'une règle dupliquée en SQL.
+  /// à 'préparé' (recoupement : un sort choisi normalement avant de devenir
+  /// un sort de domaine/serment) — voir le calcul de `grantedSpellIds`
+  /// ci-dessous, transmis à [_preparedSpellCountsByClass]. Avant ce
+  /// correctif, trouvé par l'agent `regles-dnd` en relecture : l'écran
+  /// pouvait présenter ce sort comme encore cochable (exclu du décompte
+  /// affiché) alors que le serveur le comptait quand même, rejetant une
+  /// action que l'écran venait de montrer comme permise.
   Future<Object?> _resolvePreparingClassAndEnforceLimit({
     required String characterId,
     required int spellId,
   }) async {
     final classRows = await _client
         .from('character_classes')
-        .select('class_id, level')
+        .select('class_id, level, subclass_id')
         .eq('character_id', characterId);
 
     final preparingClasses =
         <({Object classId, String className, int level})>[];
+    // D77 (`docs/dette-technique.md`) : un sort choisi normalement PUIS
+    // devenu accordé par une sous-classe (domaine de Clerc, serment de
+    // Paladin) ne doit jamais compter dans la limite, exactement comme côté
+    // affichage (`CharacterSpellEntry.isAlwaysPrepared`/`grantSource`,
+    // `PreparedSpellsLimit._countsTowardPreparedLimit`) — sans cette
+    // exclusion, le serveur pouvait rejeter un sort que l'écran présentait
+    // pourtant comme encore cochable (contradiction visible par le joueur).
+    // Toutes les lignes `character_classes` comptent ici (pas seulement
+    // celles qui préparent) : `SubclassSpellGrantResolver` ne filtre pas
+    // non plus par ce critère ailleurs dans le code.
+    final subclassProgress = <({int subclassId, int classLevel})>[];
     for (final row in classRows) {
       final classId = row['class_id'];
+      final subclassId = row['subclass_id'];
+      final level = (row['level'] as num?)?.toInt() ?? 0;
+      if (subclassId is num) {
+        subclassProgress.add((
+          subclassId: subclassId.toInt(),
+          classLevel: level,
+        ));
+      }
       final characterClass = CharacterClass.fromId(classId);
       if (characterClass == null) continue;
       if (!PreparedSpellsLimit.preparesSpells(characterClass.frenchName)) {
@@ -2337,15 +2360,45 @@ class SupabaseCharacterRepository implements CharacterRepository {
       preparingClasses.add((
         classId: classId as Object,
         className: characterClass.frenchName,
-        level: (row['level'] as num?)?.toInt() ?? 0,
+        level: level,
       ));
     }
     if (preparingClasses.isEmpty) return null;
+
+    var grantedSpellIds = const <int>{};
+    if (subclassProgress.isNotEmpty) {
+      final grantRows = await _client
+          .from('subclass_spells')
+          .select('subclass_id, spell_id, class_level')
+          .eq('grant_kind', 'always_prepared')
+          .inFilter('subclass_id', [
+            for (final p in subclassProgress) p.subclassId,
+          ]);
+      final ids = <int>{};
+      for (final grant in grantRows) {
+        final grantSubclassId = grant['subclass_id'];
+        final grantSpellId = grant['spell_id'];
+        final grantClassLevel = grant['class_level'];
+        if (grantSubclassId is! num ||
+            grantSpellId is! num ||
+            grantClassLevel is! num) {
+          continue;
+        }
+        final applies = subclassProgress.any(
+          (p) =>
+              p.subclassId == grantSubclassId.toInt() &&
+              grantClassLevel.toInt() <= p.classLevel,
+        );
+        if (applies) ids.add(grantSpellId.toInt());
+      }
+      grantedSpellIds = ids;
+    }
 
     final abilityScores = await _fetchAllAbilityScores(characterId);
     final countsByClassId = await _preparedSpellCountsByClass(
       characterId: characterId,
       classIds: [for (final c in preparingClasses) c.classId],
+      excludedSpellIds: grantedSpellIds,
     );
 
     int limitOf(({Object classId, String className, int level}) target) =>
@@ -2454,19 +2507,31 @@ class SupabaseCharacterRepository implements CharacterRepository {
   /// la relation `character_spells.spell_id -> spells.id` plutôt qu'une
   /// requête séparée, puis filtré côté Dart (pas via PostgREST, pour rester
   /// indépendant d'une syntaxe de filtre sur colonne embarquée).
+  ///
+  /// [excludedSpellIds] (D77, `docs/dette-technique.md`) : identifiants de
+  /// sorts par ailleurs accordés par une sous-classe (voir l'appelant) —
+  /// jamais comptés, même si leur ligne `character_spells` est bien
+  /// 'préparé' : exactement l'exclusion déjà appliquée côté affichage
+  /// (`CharacterSpellEntry.isAlwaysPrepared`), pour ne jamais rejeter un
+  /// sort que l'écran présente pourtant comme encore cochable.
   Future<Map<String, int>> _preparedSpellCountsByClass({
     required String characterId,
     required List<Object> classIds,
+    Set<int> excludedSpellIds = const {},
   }) async {
     if (classIds.isEmpty) return const {};
     final rows = await _client
         .from('character_spells')
-        .select('source_class_id, spells(level)')
+        .select('spell_id, source_class_id, spells(level)')
         .eq('character_id', characterId)
         .eq('status', SpellStatus.prepared.value)
         .inFilter('source_class_id', classIds);
     final counts = <String, int>{};
     for (final row in rows) {
+      final spellId = row['spell_id'];
+      if (spellId is num && excludedSpellIds.contains(spellId.toInt())) {
+        continue;
+      }
       final sourceClassId = row['source_class_id'];
       if (sourceClassId == null) continue;
       final spellRelation = row['spells'];
