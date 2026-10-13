@@ -5,35 +5,41 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/segmented_toggle.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../domain/prepared_spells_limit.dart';
 import '../../domain/spell_preparation_filter.dart';
 
 /// Carte "PRÉPARATION DES SORTS" en tête de l'onglet "Sorts"
 /// (`character_spells_tab_body.dart`), affichée dès qu'au moins un sort du
 /// personnage se prépare — demande utilisateur du 06/10/2026 : regroupe la
-/// note d'explication (icône ⓘ, voir [showSpellPreparationInfoSheet]), le
-/// compteur "SORTS PRÉPARÉS X / Y" ([PreparedSpellsCounter]) et la bascule
-/// de filtre "Tous"/"Préparés"/"Non préparés".
+/// note d'explication (icône ⓘ, voir [showSpellPreparationInfoSheet]), le(s)
+/// compteur(s) "SORTS PRÉPARÉS X / Y" ([PreparedSpellsCounter], un par
+/// classe qui prépare depuis le chantier de blocage RAW du 13/10/2026 — voir
+/// [classLimits]) et la bascule de filtre "Tous"/"Préparés"/"Non préparés".
 class SpellPreparationCard extends StatelessWidget {
   const SpellPreparationCard({
     required this.filter,
     required this.onFilterChanged,
-    required this.preparedCount,
-    this.preparedLimit,
+    required this.classLimits,
     super.key,
   });
 
   final SpellPreparationFilter filter;
   final ValueChanged<SpellPreparationFilter> onFilterChanged;
 
-  /// Nombre de sorts préparés par le joueur (`CharacterDetail
-  /// .preparedSpellCount`, sorts mineurs et sorts accordés exclus).
-  final int preparedCount;
-
-  /// Limite de sorts préparés (`CharacterDetail.preparedSpellLimit`), `null`
-  /// masque le compteur (classe à sorts connus, ou multiclassage de
-  /// plusieurs classes qui préparent). Simple indicateur : n'empêche jamais
-  /// de préparer un sort au-delà.
-  final int? preparedLimit;
+  /// Décompte et limite par classe qui prépare (`CharacterDetail
+  /// .preparedSpellsByClass`, voir
+  /// `domain/prepared_spells_limit.dart::PreparedSpellsLimit.limitsByClass`) :
+  /// liste vide masque tout compteur (aucune classe ne prépare) ; un seul
+  /// élément affiche EXACTEMENT le rendu historique mono-classe (un seul
+  /// [PreparedSpellsCounter], libellé inchangé) ; plusieurs éléments
+  /// affichent un [PreparedSpellsCounter] par classe, avec son nom en
+  /// libellé — remplace l'ancien masquage total dès que plusieurs classes
+  /// préparaient (demande de Matthias du 09/10/2026, précisée le 10/10).
+  /// Reste un simple indicateur ici : n'empêche jamais de préparer un sort
+  /// au-delà par lui-même (le blocage réel vit côté écriture,
+  /// `CharacterRepository.setSpellPrepared`, et côté sélection dans
+  /// `prepare_spells_sheet.dart`).
+  final List<ClassPreparedSpells> classLimits;
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +77,7 @@ class SpellPreparationCard extends StatelessWidget {
                 ),
                 onPressed: () => showSpellPreparationInfoSheet(
                   context,
-                  preparedLimit: preparedLimit,
+                  classLimits: classLimits,
                 ),
               ),
             ],
@@ -83,13 +89,28 @@ class SpellPreparationCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (preparedLimit != null) ...[
+                // Une seule classe qui prépare : rendu historique
+                // inchangé (un seul compteur, libellé générique). Plusieurs
+                // classes : un compteur par classe, avec son nom en libellé
+                // — remplace l'ancien masquage total, voir la doc de
+                // [classLimits].
+                if (classLimits.length == 1) ...[
                   PreparedSpellsCounter(
-                    count: preparedCount,
-                    limit: preparedLimit!,
+                    count: classLimits.single.preparedCount,
+                    limit: classLimits.single.limit,
                   ),
                   const SizedBox(height: AppSpacing.md),
-                ],
+                ] else if (classLimits.length > 1)
+                  for (final classLimit in classLimits) ...[
+                    PreparedSpellsCounter(
+                      count: classLimit.preparedCount,
+                      limit: classLimit.limit,
+                      label:
+                          'SORTS PRÉPARÉS — '
+                          '${classLimit.className.toUpperCase()}',
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
                 SegmentedToggle<SpellPreparationFilter>(
                   options: [
                     for (final option in SpellPreparationFilter.values)
@@ -116,11 +137,19 @@ class PreparedSpellsCounter extends StatelessWidget {
   const PreparedSpellsCounter({
     required this.count,
     required this.limit,
+    this.label = 'SORTS PRÉPARÉS',
     super.key,
   });
 
   final int count;
   final int limit;
+
+  /// Libellé affiché au-dessus du décompte — `'SORTS PRÉPARÉS'` par défaut
+  /// (rendu mono-classe historique, strictement inchangé). Un personnage
+  /// multiclassé avec plusieurs classes qui préparent (voir
+  /// `SpellPreparationCard.classLimits`) fournit un libellé par classe (ex.
+  /// `'SORTS PRÉPARÉS — CLERC'`) pour distinguer les compteurs empilés.
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +166,7 @@ class PreparedSpellsCounter extends StatelessWidget {
       container: true,
       excludeSemantics: true,
       label:
-          'Sorts préparés : $count sur $limit'
+          '$label : $count sur $limit'
           '${over ? ', limite dépassée' : ''}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,7 +177,7 @@ class PreparedSpellsCounter extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
               Expanded(
                 child: Text(
-                  'SORTS PRÉPARÉS',
+                  label,
                   style: AppTypography.display(
                     fontSize: 11,
                     color: AppColors.textSecondary,
@@ -204,12 +233,20 @@ class PreparedSpellsCounter extends StatelessWidget {
 /// [SpellPreparationCard]) — gabarit B ([SheetHeaderBar] + contenu
 /// scrollable, même patron que `spell_info_panel.dart`) : rappel de la règle
 /// 5e et de ce que fait l'app, demande utilisateur du 06/10/2026.
-/// [preparedLimit] : limite actuelle du personnage, rappelée dans la note si
-/// non nulle.
+/// [classLimits] : limite(s) actuelle(s) du personnage, rappelée(s) dans la
+/// note si non vide — une classe par élément, voir
+/// `SpellPreparationCard.classLimits`.
 Future<void> showSpellPreparationInfoSheet(
   BuildContext context, {
-  int? preparedLimit,
+  List<ClassPreparedSpells> classLimits = const [],
 }) {
+  final limitsSentence = switch (classLimits) {
+    [] => '',
+    [final only] => ' Votre limite actuelle : ${only.limit}.',
+    _ =>
+      ' Vos limites actuelles : '
+          '${classLimits.map((c) => '${c.className} ${c.limit}').join(', ')}.',
+  };
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -245,11 +282,15 @@ Future<void> showSpellPreparationInfoSheet(
                         body:
                             'Clerc, Druide et Magicien : modificateur de '
                             'caractéristique d\'incantation + niveau de '
-                            'classe. Paladin : modificateur de Charisme + '
-                            'moitié du niveau. Minimum 1.'
-                            '${preparedLimit == null ? '' : ' Votre limite actuelle : $preparedLimit.'}'
-                            ' Le compteur est indicatif : il signale un '
-                            'dépassement sans le bloquer.',
+                            'classe. Paladin et Artificier (demi-lanceurs) : '
+                            'modificateur + moitié du niveau. Minimum 1. '
+                            'Multiclassé avec plusieurs classes qui '
+                            'préparent : chaque classe a sa propre limite, '
+                            'jamais un total commun.'
+                            '$limitsSentence Une fois la limite atteinte, '
+                            'impossible de préparer un nouveau sort de '
+                            'cette classe sans en dé-préparer un autre '
+                            'd\'abord.',
                       ),
                       const _InfoEntry(
                         icon: Icons.auto_awesome,

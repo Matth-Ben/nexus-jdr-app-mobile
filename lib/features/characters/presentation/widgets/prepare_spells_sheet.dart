@@ -9,6 +9,7 @@ import '../../../../core/widgets/dice_type_badge.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
+import '../../domain/prepared_spells_limit.dart';
 import '../../domain/spell_damage_dice_extractor.dart';
 import '../../domain/spell_name_filter.dart';
 import '../../domain/spell_status_formatter.dart';
@@ -32,16 +33,21 @@ import 'spell_preparation_card.dart';
 ///
 /// [spells] est la liste complète déjà fournie par `CharacterDetail.spells`
 /// (déjà fusionnée côté `CharacterRepository`
-/// `_fetchPreparedCasterClassListSpellIds`) — aucune requête réseau
+/// `_fetchPreparedCasterClassListSpellRows`) — aucune requête réseau
 /// supplémentaire ici, uniquement du filtrage de présentation.
-/// [preparedLimit] (`CharacterDetail.preparedSpellLimit`) : `null` masque le
-/// compteur "SORTS PRÉPARÉS X / Y".
+/// [classLimits] (`CharacterDetail.preparedSpellsByClass`) : liste vide
+/// masque tout compteur ; gouverne aussi, depuis le chantier de blocage RAW
+/// du 13/10/2026, quelles cases restent cochables (voir [_canCheck]) — le
+/// blocage réel reste porté par l'écriture
+/// (`CharacterRepository.setSpellPrepared`), cette sheet ne fait
+/// qu'empêcher visuellement une action que le serveur rejetterait de toute
+/// façon.
 Future<void> showPrepareSpellsSheet(
   BuildContext context, {
   required List<CharacterSpellEntry> spells,
   required List<CharacterSpellSlot> spellSlots,
   CharacterSpellSlot? pactSlot,
-  int? preparedLimit,
+  List<ClassPreparedSpells> classLimits = const [],
   required ToggleSpellFlagCallback onTogglePrepared,
   required CastSpellCallback onCastSpell,
 }) {
@@ -53,7 +59,7 @@ Future<void> showPrepareSpellsSheet(
       spells: spells,
       spellSlots: spellSlots,
       pactSlot: pactSlot,
-      preparedLimit: preparedLimit,
+      classLimits: classLimits,
       onTogglePrepared: onTogglePrepared,
       onCastSpell: onCastSpell,
     ),
@@ -65,7 +71,7 @@ class _PrepareSpellsSheetContent extends StatefulWidget {
     required this.spells,
     required this.spellSlots,
     this.pactSlot,
-    this.preparedLimit,
+    this.classLimits = const [],
     required this.onTogglePrepared,
     required this.onCastSpell,
   });
@@ -73,7 +79,7 @@ class _PrepareSpellsSheetContent extends StatefulWidget {
   final List<CharacterSpellEntry> spells;
   final List<CharacterSpellSlot> spellSlots;
   final CharacterSpellSlot? pactSlot;
-  final int? preparedLimit;
+  final List<ClassPreparedSpells> classLimits;
   final ToggleSpellFlagCallback onTogglePrepared;
   final CastSpellCallback onCastSpell;
 
@@ -136,6 +142,60 @@ class _PrepareSpellsSheetContentState
             SpellStatusFormatter.canTogglePrepared(spell) && _isPrepared(spell),
       )
       .length;
+
+  /// Même principe que [_preparedCount], restreint aux sorts cochés
+  /// attribués à [classId] (voir [CharacterSpellEntry.sourceClassIds]) —
+  /// seulement pertinent quand [widget.classLimits] compte 2+ classes (voir
+  /// [_canCheck] : jamais utilisé dans le cas mono-classe, qui garde
+  /// [_preparedCount] tel quel).
+  int _preparedCountForClass(Object classId) => widget.spells
+      .where(
+        (spell) =>
+            SpellStatusFormatter.canTogglePrepared(spell) &&
+            _isPrepared(spell) &&
+            spell.sourceClassIds
+                .map((id) => id.toString())
+                .contains(classId.toString()),
+      )
+      .length;
+
+  /// `true` si [spell] peut être cochée dans cette sheet — toujours vrai
+  /// pour dé-cocher (voir la doc de classe de [showPrepareSpellsSheet] :
+  /// aucune limite ne s'applique à la baisse). Pour cocher un sort pas
+  /// encore préparé, empêche visuellement de dépasser la limite de SA
+  /// classe (demande de Matthias du 09/10/2026, précisée le 10/10) :
+  /// - une seule classe qui prépare ([widget.classLimits] à un élément) :
+  ///   même règle globale que le rendu mono-classe historique
+  ///   ([_preparedCount] contre sa limite unique), sans tenir compte de
+  ///   [CharacterSpellEntry.sourceClassIds] — aucune ambiguïté possible
+  ///   avec une seule classe candidate.
+  /// - plusieurs classes qui préparent : résout LA classe de [spell] via
+  ///   [CharacterSpellEntry.sourceClassIds]. Une origine non ambiguë
+  ///   (exactement une classe candidate parmi [widget.classLimits]) est
+  ///   comparée à sa propre limite ([_preparedCountForClass]). Une origine
+  ///   inconnue ou ambiguë (zéro ou 2+ candidats : donnée antérieure à ce
+  ///   chantier, ou sort partagé par les listes complètes de deux classes
+  ///   du personnage jamais encore préparé d'aucune des deux) reste
+  ///   cochable ici — **fail-open**, l'écriture serveur
+  ///   (`CharacterRepository.setSpellPrepared`) reste le filet de sécurité
+  ///   final et affiche un message explicite si elle rejette malgré tout.
+  bool _canCheck(CharacterSpellEntry spell) {
+    if (_isPrepared(spell)) return true;
+    if (widget.classLimits.isEmpty) return true;
+    if (widget.classLimits.length == 1) {
+      return _preparedCount < widget.classLimits.single.limit;
+    }
+    final candidates = [
+      for (final classLimit in widget.classLimits)
+        if (spell.sourceClassIds
+            .map((id) => id.toString())
+            .contains(classLimit.classId.toString()))
+          classLimit,
+    ];
+    if (candidates.length != 1) return true;
+    final target = candidates.single;
+    return _preparedCountForClass(target.classId) < target.limit;
+  }
 
   /// Reconstruit [spell] avec un [CharacterSpellEntry.status] à jour de
   /// [_preparedIds] — `character_detail_screen.dart::_toggleSpellPrepared`
@@ -233,7 +293,12 @@ class _PrepareSpellsSheetContentState
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 child: _SpellSearchField(controller: _searchController),
               ),
-              if (widget.preparedLimit != null)
+              // Une seule classe qui prépare : rendu historique inchangé
+              // (un seul compteur, décompte local [_preparedCount]).
+              // Plusieurs classes : un compteur par classe, décompte local
+              // par classe ([_preparedCountForClass]) — remplace l'ancien
+              // masquage total, même principe que `SpellPreparationCard`.
+              if (widget.classLimits.length == 1)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
@@ -243,7 +308,31 @@ class _PrepareSpellsSheetContentState
                   ),
                   child: PreparedSpellsCounter(
                     count: _preparedCount,
-                    limit: widget.preparedLimit!,
+                    limit: widget.classLimits.single.limit,
+                  ),
+                )
+              else if (widget.classLimits.length > 1)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                  ),
+                  child: Column(
+                    children: [
+                      for (final classLimit in widget.classLimits) ...[
+                        PreparedSpellsCounter(
+                          count: _preparedCountForClass(classLimit.classId),
+                          limit: classLimit.limit,
+                          label:
+                              'SORTS PRÉPARÉS — '
+                              '${classLimit.className.toUpperCase()}',
+                        ),
+                        if (classLimit != widget.classLimits.last)
+                          const SizedBox(height: AppSpacing.md),
+                      ],
+                    ],
                   ),
                 ),
               Expanded(
@@ -265,6 +354,7 @@ class _PrepareSpellsSheetContentState
                               spellSlots: widget.spellSlots,
                               pactSlot: widget.pactSlot,
                               isPrepared: _isPrepared,
+                              canCheck: _canCheck,
                               onTogglePrepared: _togglePrepared,
                               onCastSpell: widget.onCastSpell,
                             ),
@@ -351,6 +441,7 @@ class _SheetSpellLevelGroup extends StatelessWidget {
     required this.spellSlots,
     this.pactSlot,
     required this.isPrepared,
+    required this.canCheck,
     required this.onTogglePrepared,
     required this.onCastSpell,
   });
@@ -360,6 +451,11 @@ class _SheetSpellLevelGroup extends StatelessWidget {
   final List<CharacterSpellSlot> spellSlots;
   final CharacterSpellSlot? pactSlot;
   final bool Function(CharacterSpellEntry spell) isPrepared;
+
+  /// Voir `_PrepareSpellsSheetContentState._canCheck` : `false` désactive la
+  /// case d'un sort PAS encore préparé qui ferait dépasser la limite de SA
+  /// classe (sans effet sur un sort déjà préparé, toujours dé-cochable).
+  final bool Function(CharacterSpellEntry spell) canCheck;
   final ToggleSpellFlagCallback onTogglePrepared;
   final CastSpellCallback onCastSpell;
 
@@ -390,6 +486,7 @@ class _SheetSpellLevelGroup extends StatelessWidget {
           _SpellCheckRow(
             spell: spell,
             checked: spell.isAlwaysPrepared || isPrepared(spell),
+            canCheck: canCheck(spell),
             spellSlots: spellSlots,
             pactSlot: pactSlot,
             togglePrepared: onTogglePrepared,
@@ -407,6 +504,7 @@ class _SpellCheckRow extends StatelessWidget {
   const _SpellCheckRow({
     required this.spell,
     required this.checked,
+    required this.canCheck,
     required this.spellSlots,
     this.pactSlot,
     required this.togglePrepared,
@@ -415,6 +513,11 @@ class _SpellCheckRow extends StatelessWidget {
 
   final CharacterSpellEntry spell;
   final bool checked;
+
+  /// Voir `_PrepareSpellsSheetContentState._canCheck` — sans effet si
+  /// [checked] est déjà vrai (toujours dé-cochable, voir [enabled]
+  /// ci-dessous).
+  final bool canCheck;
   final List<CharacterSpellSlot> spellSlots;
   final CharacterSpellSlot? pactSlot;
   final ToggleSpellFlagCallback togglePrepared;
@@ -426,14 +529,20 @@ class _SpellCheckRow extends StatelessWidget {
     // retirable — voir `CharacterSpellEntry.isAlwaysPrepared` et
     // `SpellStatusFormatter.canTogglePrepared`.
     final grantedBySubclass = spell.isAlwaysPrepared;
+    // Limite de sorts préparés atteinte pour la classe de ce sort (voir
+    // `_canCheck`) : case estompée et non cochable, MÊME rendu que l'étape
+    // 6/9 "Sorts" de l'assistant de création pour un quota déjà atteint
+    // (`spells_step_screen.dart`) — jamais pour un sort déjà coché, qui
+    // reste toujours dé-cochable.
+    final enabled = !grantedBySubclass && (checked || canCheck);
     final dice = SpellDamageDiceExtractor.extract(spell.description);
 
     final tile = CheckableOptionTile(
       title: spell.name,
       subtitle: SpellStatusFormatter.subtitle(spell),
       checked: checked,
-      enabled: !grantedBySubclass,
-      onTap: grantedBySubclass ? null : () => togglePrepared(spell),
+      enabled: enabled,
+      onTap: enabled ? () => togglePrepared(spell) : null,
       titleTrailing: dice == null
           ? null
           : DiceTypeBadge(

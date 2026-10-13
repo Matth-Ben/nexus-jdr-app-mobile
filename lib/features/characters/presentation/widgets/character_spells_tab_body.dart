@@ -174,8 +174,7 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
             filter: preparationFilter,
             onFilterChanged: (filter) =>
                 setState(() => _preparationFilter = filter),
-            preparedCount: detail.preparedSpellCount,
-            preparedLimit: detail.preparedSpellLimit,
+            classLimits: detail.preparedSpellsByClass,
           ),
           const SizedBox(height: AppSpacing.md),
         ],

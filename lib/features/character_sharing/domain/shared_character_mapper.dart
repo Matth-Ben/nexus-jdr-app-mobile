@@ -344,7 +344,13 @@ List<CharacterSpellEntry> _mapSpellsWithGrants(Map<String, dynamic> json) {
   final result = <CharacterSpellEntry>[];
   final seen = <int>{};
   for (final row in _listOfMaps(json['spells'])) {
-    final entry = _mapSpell(row, requiresPreparation: requiresPreparation(row));
+    final rowSourceClassIds =
+        sourceClassIds[_asInt(row['spell_id'])] ?? const {};
+    final entry = _mapSpell(
+      row,
+      requiresPreparation: requiresPreparation(row),
+      sourceClassIds: rowSourceClassIds,
+    );
     seen.add(entry.id);
     final grant = grants[entry.id];
     result.add(
@@ -355,6 +361,7 @@ List<CharacterSpellEntry> _mapSpellsWithGrants(Map<String, dynamic> json) {
               grantSource: grant,
               status: SpellStatus.prepared,
               requiresPreparation: requiresPreparation(row),
+              sourceClassIds: rowSourceClassIds,
             ),
     );
   }
@@ -367,6 +374,7 @@ List<CharacterSpellEntry> _mapSpellsWithGrants(Map<String, dynamic> json) {
         status: SpellStatus.prepared,
         isPersisted: false,
         requiresPreparation: requiresPreparation(entry.value),
+        sourceClassIds: sourceClassIds[entry.key] ?? const {},
       ),
     );
   }
@@ -379,6 +387,7 @@ CharacterSpellEntry _mapSpell(
   SpellStatus? status,
   bool isPersisted = true,
   bool requiresPreparation = true,
+  Set<int> sourceClassIds = const {},
 }) {
   return CharacterSpellEntry(
     id: _asInt(row['spell_id']),
@@ -396,6 +405,12 @@ CharacterSpellEntry _mapSpell(
     grantSource: grantSource,
     isPersisted: isPersisted,
     requiresPreparation: requiresPreparation,
+    // Vue partagée (lecture seule, jamais de bascule de préparation) : la
+    // ventilation par classe de `PreparedSpellsLimit.limitsByClass` n'est
+    // pas affichée ici à ce jour (voir la doc de classe de ce fichier), mais
+    // reporté tel quel pour rester cohérent avec la fiche du propriétaire
+    // si un futur écran venait à en avoir besoin.
+    sourceClassIds: sourceClassIds,
     // Renvoyé par le RPC depuis l'ajout du compteur de sort inné ; absent
     // (réponse d'une version antérieure) ou inexploitable : 0, usage
     // disponible. Lu ligne par ligne : cette vue produit une entrée par

@@ -145,6 +145,30 @@ abstract final class CharacterSpellRowMapper {
     return sources;
   }
 
+  /// `{spell_id: {class_id, ...}}` depuis les lignes `{spell_id, class_id}`
+  /// produites par
+  /// `CharacterRepository._fetchPreparedCasterClassListSpellRows` (liste de
+  /// classe complète d'un lanceur à préparation — Clerc/Druide/Paladin/
+  /// Artificier) : même forme que [parseSourceClassIds], seule la
+  /// provenance diffère (liste RAW de la classe, jamais une ligne
+  /// `character_spells` réellement écrite). Sert de repli, dans
+  /// [toCharacterSpellEntries], pour attribuer une classe d'origine à un
+  /// sort jamais encore préparé (aucune ligne réelle, donc absent de
+  /// [parseSourceClassIds]) — voir [CharacterSpellEntry.sourceClassIds].
+  static Map<int, Set<int>> parseClassListClassIds(
+    List<Map<String, dynamic>> rows,
+  ) {
+    final result = <int, Set<int>>{};
+    for (final row in rows) {
+      final spellId = row['spell_id'];
+      final classId = row['class_id'];
+      if (spellId is num && classId is num) {
+        result.putIfAbsent(spellId.toInt(), () => {}).add(classId.toInt());
+      }
+    }
+    return result;
+  }
+
   /// `{spell_id: innate_uses_spent}` — usages innés dépensés depuis le
   /// dernier repos long (`character_spells.innate_uses_spent`), lus sur les
   /// seules lignes au statut 'inné'.
@@ -210,10 +234,13 @@ abstract final class CharacterSpellRowMapper {
   /// explicitement (voir la doc de [CharacterSpellEntry.hasInnateRoute]).
   ///
   /// [classes] (les classes du personnage) et [sourceClassIds] (voir
-  /// [parseSourceClassIds]) servent à dériver
-  /// [CharacterSpellEntry.requiresPreparation]. [classes] est obligatoire :
-  /// sans les classes, tout sort retombe sur « à préparer », et un Barde ne
-  /// pourrait plus lancer ses sorts.
+  /// [parseSourceClassIds] — l'appelant y fusionne déjà, le cas échéant,
+  /// [parseClassListClassIds] en repli, voir la doc de
+  /// [CharacterSpellEntry.sourceClassIds]) servent à dériver
+  /// [CharacterSpellEntry.requiresPreparation] ET sont désormais reportés
+  /// tels quels sur chaque entrée ([CharacterSpellEntry.sourceClassIds]).
+  /// [classes] est obligatoire : sans les classes, tout sort retombe sur
+  /// « à préparer », et un Barde ne pourrait plus lancer ses sorts.
   static List<CharacterSpellEntry> toCharacterSpellEntries(
     List<Map<String, dynamic>> spellRows, {
     required Map<String, String> names,
@@ -260,6 +287,7 @@ abstract final class CharacterSpellRowMapper {
             classes: classes,
             sourceClassIds: sourceClassIds[id] ?? const {},
           ),
+          sourceClassIds: sourceClassIds[id] ?? const {},
           innateUsesSpent: innateUsesSpent[id] ?? 0,
           // Détection explicite (D43), indépendante de `status` ci-dessus :
           // voir la doc de [parseInnateSpellIds] et de

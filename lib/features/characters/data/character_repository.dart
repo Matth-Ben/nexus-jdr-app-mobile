@@ -7,9 +7,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
 import '../../../core/crash_reporting/crash_reporter.dart';
+import '../../../core/rules/character_class.dart';
 import '../../../core/rules/spell_status.dart';
 import '../../../core/utils/french_text_normalizer.dart';
 import '../../../core/network/connectivity_checker.dart';
+import '../../character_creation/domain/ability_score_rules.dart';
 import '../../character_creation/domain/spellcasting_rules.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
@@ -31,6 +33,7 @@ import '../domain/level_up_subclass_option.dart';
 import '../domain/multiclass_prerequisites.dart';
 import '../domain/portrait_storage_path_resolver.dart';
 import '../domain/prepared_caster_spell_list.dart';
+import '../domain/prepared_spells_limit.dart';
 import '../domain/rest_type.dart';
 import '../domain/reward_item_draft.dart';
 import '../domain/spell_slot_progression.dart';
@@ -327,13 +330,33 @@ abstract class CharacterRepository {
 
   /// Écrit directement `character_spells.status` ('connu' ↔ 'préparé') —
   /// bascule "Préparer ce sort"/"Ne plus préparer" du panneau "Infos"
-  /// (`presentation/widgets/spell_info_panel.dart`), voir
+  /// (`presentation/widgets/spell_info_panel.dart`) et de la sheet "Préparer
+  /// mes sorts" (`presentation/widgets/prepare_spells_sheet.dart`), voir
   /// `domain/spell_status_formatter.dart` pour les règles (jamais appelée
-  /// pour un sort mineur ou inné). Aucune limite quotidienne de sorts
-  /// préparés n'est vérifiée ici (modificateur de caractéristique + niveau,
-  /// règle 5e) : reste un simple flag, sans simulation des règles complètes
-  /// — même principe que le statut "mort"
-  /// (`docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2).
+  /// pour un sort mineur ou inné).
+  ///
+  /// **Limite de sorts préparés RAW 5e désormais bloquante** (décision de
+  /// Matthias du 09/10/2026, précisée le 10/10 après analyse RAW de l'agent
+  /// `regles-dnd`, voir `docs/dette-technique.md`, D40 et « Décisions en
+  /// attente » point 4) : [prepared] à `true` pour un sort PAS déjà préparé
+  /// vérifie d'abord que la classe d'origine de [spellId] n'a pas déjà
+  /// atteint sa propre limite ([PreparedSpellsLimit.limitFor]) — lève une
+  /// [CharacterFailure] explicite (nom de la classe, décompte/limite) si
+  /// c'est le cas, AVANT toute écriture. Dé-préparer ([prepared] à `false`)
+  /// ne vérifie jamais rien : toujours permis, aucune limite ne s'applique à
+  /// la baisse. RAW, chaque classe qui prépare calcule sa propre limite
+  /// séparément (PHB, « Multiclassing — Spells Known and Prepared »), jamais
+  /// un total fusionné : un personnage multiclassé avec deux classes qui
+  /// préparent ou plus (ex. Clerc/Paladin) est donc couvert, pas seulement
+  /// le cas mono-classe. Voir `_resolvePreparingClassAndEnforceLimit` pour
+  /// le détail des requêtes dédiées (volontairement PAS
+  /// `fetchCharacterDetail`, bien plus lourd et qui aurait aussi forcé à
+  /// réécrire tous les tests déjà en place sur cette méthode) — y compris
+  /// l'exclusion des sorts par ailleurs accordés par une sous-classe du
+  /// décompte (D77, corrigé le 13/10/2026). La classe ainsi résolue est
+  /// aussi écrite comme `source_class_id` sur l'éventuelle NOUVELLE ligne
+  /// créée plus bas (D40 : cette colonne n'était encore jamais écrite à
+  /// l'insertion).
   ///
   /// Garde côté écriture : une ligne au statut 'inné' n'est jamais modifiée,
   /// et un sort qui n'a que des lignes 'inné' ne reçoit aucune nouvelle
@@ -2159,6 +2182,20 @@ class SupabaseCharacterRepository implements CharacterRepository {
       return WriteOutcome.queued;
     }
 
+    // Vérification bloquante AVANT toute écriture, et volontairement HORS du
+    // `try`/`catch` ci-dessous : une [CharacterFailure] levée ici doit se
+    // propager telle quelle à l'appelant (même convention que les autres
+    // écritures de ce dépôt, ex. `applyLevelUp`), pas être ré-enveloppée par
+    // `mapUnknownCharacterError()` comme le ferait le `catch (_)` générique
+    // de ce bloc s'il l'attrapait. Jamais appelée pour dé-préparer : voir la
+    // doc de classe de [CharacterRepository.setSpellPrepared].
+    final resolvedSourceClassId = prepared
+        ? await _resolvePreparingClassAndEnforceLimit(
+            characterId: characterId,
+            spellId: spellId,
+          )
+        : null;
+
     try {
       final updated = await _client
           .from('character_spells')
@@ -2176,7 +2213,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .select('id');
       // Sort de la liste de classe d'un lanceur à préparation, sans ligne
       // `character_spells` tant qu'il n'a jamais été préparé (voir
-      // `_fetchPreparedCasterClassListSpellIds`) : la créer. Pas d'upsert
+      // `_fetchPreparedCasterClassListSpellRows`) : la créer. Pas d'upsert
       // possible : la contrainte unique posée par D10
       // (`character_spells_unique_ordinary_per_spell`) est partielle (ne
       // porte que sur les lignes non-innées) et PostgREST n'expose pas de
@@ -2198,6 +2235,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
             'character_id': characterId,
             'spell_id': spellId,
             'status': SpellStatus.prepared.value,
+            // D40 (`docs/dette-technique.md`) : cette colonne n'était encore
+            // jamais écrite à l'insertion avant ce chantier — `null` si la
+            // résolution ci-dessus n'a pas pu déterminer de classe (fail
+            // open, voir sa documentation), jamais une valeur devinée.
+            'source_class_id': resolvedSourceClassId,
           });
         } on PostgrestException catch (error) {
           // D42 : course entre la vérification `existing` ci-dessus et cet
@@ -2230,6 +2272,275 @@ class SupabaseCharacterRepository implements CharacterRepository {
     } catch (_) {
       throw mapUnknownCharacterError();
     }
+  }
+
+  /// Avant d'écrire `status: 'préparé'` pour un NOUVEAU sort (jamais pour
+  /// dé-préparer, voir la doc de [setSpellPrepared]) : vérifie que la classe
+  /// d'origine de [spellId] n'a pas déjà atteint sa propre limite RAW de
+  /// sorts préparés (PHB, « Multiclassing — Spells Known and Prepared » :
+  /// chaque classe qui prépare calcule sa propre limite séparément, jamais
+  /// un total fusionné — voir `domain/prepared_spells_limit.dart`). Lève une
+  /// [CharacterFailure] explicite (nom de la classe, décompte/limite) si la
+  /// limite est déjà atteinte ou dépassée.
+  ///
+  /// Renvoie la classe d'origine résolue pour [spellId] (à écrire comme
+  /// `source_class_id` sur l'éventuelle nouvelle ligne `character_spells`,
+  /// voir [setSpellPrepared], D40 du registre de dette technique) — `null`
+  /// si le personnage n'a aucune classe qui prépare (ne devrait pas arriver :
+  /// un sort sans classe qui prépare n'est jamais proposé à la préparation
+  /// par l'UI) ou si l'origine reste ambiguë après résolution (voir plus
+  /// bas) : dans les deux cas, **fail-open** — ne bloque jamais sur une
+  /// donnée qu'elle n'arrive pas à interpréter, seulement sur une limite
+  /// RAW effectivement dépassée.
+  ///
+  /// **Requêtes dédiées, volontairement PAS `fetchCharacterDetail`** (la
+  /// fiche complète, bien plus lourde : inventaire, compétences... tout ce
+  /// dont cette vérification n'a pas besoin — et qui aurait aussi forcé à
+  /// réécrire tous les tests déjà en place sur [setSpellPrepared], qui ne
+  /// simulent QUE les appels `character_spells`). Coût pour le cas courant
+  /// (une seule classe qui prépare, pas de sous-classe accordant de sort) :
+  /// 3 requêtes (`character_classes`, `character_ability_scores` via
+  /// [_fetchAllAbilityScores], `character_spells` déjà préparés) — une de
+  /// plus (`subclass_spells`) dès qu'une sous-classe est choisie (voir D77
+  /// ci-dessous), 2 de plus en multiclassage si l'origine n'est pas déjà
+  /// connue (voir ci-dessous). [CharacterClass.fromId] donne le nom
+  /// français de chaque classe sans requête `translations` supplémentaire
+  /// (dette D04).
+  ///
+  /// **D77 (`docs/dette-technique.md`), corrigé le 13/10/2026** : cette
+  /// vérification retranche désormais, exactement comme
+  /// `CharacterDetail.preparedSpellCount`/`PreparedSpellsLimit.limitsByClass`
+  /// (logique de référence, utilisée par l'affichage), un sort par ailleurs
+  /// accordé automatiquement par une sous-classe (domaine de Clerc, serment
+  /// de Paladin) qui porterait AUSSI une ligne ordinaire `character_spells`
+  /// à 'préparé' (recoupement : un sort choisi normalement avant de devenir
+  /// un sort de domaine/serment) — voir le calcul de `grantedSpellIds`
+  /// ci-dessous, transmis à [_preparedSpellCountsByClass]. Avant ce
+  /// correctif, trouvé par l'agent `regles-dnd` en relecture : l'écran
+  /// pouvait présenter ce sort comme encore cochable (exclu du décompte
+  /// affiché) alors que le serveur le comptait quand même, rejetant une
+  /// action que l'écran venait de montrer comme permise.
+  Future<Object?> _resolvePreparingClassAndEnforceLimit({
+    required String characterId,
+    required int spellId,
+  }) async {
+    final classRows = await _client
+        .from('character_classes')
+        .select('class_id, level, subclass_id')
+        .eq('character_id', characterId);
+
+    final preparingClasses =
+        <({Object classId, String className, int level})>[];
+    // D77 (`docs/dette-technique.md`) : un sort choisi normalement PUIS
+    // devenu accordé par une sous-classe (domaine de Clerc, serment de
+    // Paladin) ne doit jamais compter dans la limite, exactement comme côté
+    // affichage (`CharacterSpellEntry.isAlwaysPrepared`/`grantSource`,
+    // `PreparedSpellsLimit._countsTowardPreparedLimit`) — sans cette
+    // exclusion, le serveur pouvait rejeter un sort que l'écran présentait
+    // pourtant comme encore cochable (contradiction visible par le joueur).
+    // Toutes les lignes `character_classes` comptent ici (pas seulement
+    // celles qui préparent) : `SubclassSpellGrantResolver` ne filtre pas
+    // non plus par ce critère ailleurs dans le code.
+    final subclassProgress = <({int subclassId, int classLevel})>[];
+    for (final row in classRows) {
+      final classId = row['class_id'];
+      final subclassId = row['subclass_id'];
+      final level = (row['level'] as num?)?.toInt() ?? 0;
+      if (subclassId is num) {
+        subclassProgress.add((
+          subclassId: subclassId.toInt(),
+          classLevel: level,
+        ));
+      }
+      final characterClass = CharacterClass.fromId(classId);
+      if (characterClass == null) continue;
+      if (!PreparedSpellsLimit.preparesSpells(characterClass.frenchName)) {
+        continue;
+      }
+      preparingClasses.add((
+        classId: classId as Object,
+        className: characterClass.frenchName,
+        level: level,
+      ));
+    }
+    if (preparingClasses.isEmpty) return null;
+
+    var grantedSpellIds = const <int>{};
+    if (subclassProgress.isNotEmpty) {
+      final grantRows = await _client
+          .from('subclass_spells')
+          .select('subclass_id, spell_id, class_level')
+          .eq('grant_kind', 'always_prepared')
+          .inFilter('subclass_id', [
+            for (final p in subclassProgress) p.subclassId,
+          ]);
+      final ids = <int>{};
+      for (final grant in grantRows) {
+        final grantSubclassId = grant['subclass_id'];
+        final grantSpellId = grant['spell_id'];
+        final grantClassLevel = grant['class_level'];
+        if (grantSubclassId is! num ||
+            grantSpellId is! num ||
+            grantClassLevel is! num) {
+          continue;
+        }
+        final applies = subclassProgress.any(
+          (p) =>
+              p.subclassId == grantSubclassId.toInt() &&
+              grantClassLevel.toInt() <= p.classLevel,
+        );
+        if (applies) ids.add(grantSpellId.toInt());
+      }
+      grantedSpellIds = ids;
+    }
+
+    final abilityScores = await _fetchAllAbilityScores(characterId);
+    final countsByClassId = await _preparedSpellCountsByClass(
+      characterId: characterId,
+      classIds: [for (final c in preparingClasses) c.classId],
+      excludedSpellIds: grantedSpellIds,
+    );
+
+    int limitOf(({Object classId, String className, int level}) target) =>
+        PreparedSpellsLimit.limitFor(
+          className: target.className,
+          classLevel: target.level,
+          abilityModifier: AbilityScoreRules.abilityModifier(
+            abilityScores[PreparedSpellsLimit.abilityKeyFor(
+                  target.className,
+                )] ??
+                10,
+          ),
+        ) ??
+        1;
+
+    Object? resolvedClassId;
+    if (preparingClasses.length == 1) {
+      // Cas courant, zéro requête supplémentaire par rapport à avant ce
+      // chantier : une seule classe candidate, aucune ambiguïté possible.
+      resolvedClassId = preparingClasses.single.classId;
+    } else {
+      // Multiclassage avec 2+ classes qui préparent (ex. Clerc/Paladin) :
+      // l'origine DÉJÀ connue pour CE sort (n'importe quel statut, jamais
+      // une ligne 'inné' — même garde que [setSpellPrepared]) est
+      // autoritaire, jamais recalculée.
+      final existingSourceRow = await _client
+          .from('character_spells')
+          .select('source_class_id')
+          .eq('character_id', characterId)
+          .eq('spell_id', spellId)
+          .neq('status', SpellStatus.innate.value)
+          .not('source_class_id', 'is', null)
+          .limit(1)
+          .maybeSingle();
+      final existingSourceClassId = existingSourceRow?['source_class_id'];
+      if (existingSourceClassId != null) {
+        resolvedClassId = existingSourceClassId;
+      } else {
+        // Jamais préparé/choisi depuis aucune classe : sort de la liste
+        // complète d'un lanceur à préparation (Clerc/Druide/Paladin/
+        // Artificier) encore sans ligne pour ce sort. Résout via
+        // `spell_classes` (liste RAW de la classe), restreint aux classes
+        // PRÉPARANTES du personnage.
+        final spellClassRows = await _client
+            .from('spell_classes')
+            .select('class_id')
+            .eq('spell_id', spellId)
+            .inFilter('class_id', [
+              for (final c in preparingClasses) c.classId,
+            ]);
+        final candidateIds = {
+          for (final row in spellClassRows) row['class_id'].toString(),
+        };
+        final candidates = [
+          for (final c in preparingClasses)
+            if (candidateIds.contains(c.classId.toString())) c,
+        ];
+        if (candidates.length == 1) {
+          resolvedClassId = candidates.single.classId;
+        } else if (candidates.length > 1) {
+          // Ambiguïté RAW réelle (sort présent sur la liste de PLUSIEURS
+          // classes préparantes du personnage, ex. Clerc/Druide partageant
+          // un sort) : RAW laisserait le joueur choisir de quelle classe il
+          // le prépare, notre UI ne propose pas ce choix — attribution par
+          // défaut à celle qui a encore de la place, documentée pour la
+          // revue RAW ; si aucune n'en a, à la première de la liste (le
+          // rejet qui suit nommera alors cette classe).
+          ({Object classId, String className, int level})? withRoom;
+          for (final c in candidates) {
+            final count = countsByClassId[c.classId.toString()] ?? 0;
+            if (count < limitOf(c)) {
+              withRoom = c;
+              break;
+            }
+          }
+          resolvedClassId = (withRoom ?? candidates.first).classId;
+        }
+        // `candidates.isEmpty` : origine réellement inconnue (ne devrait pas
+        // arriver pour un sort proposé par l'UI) — `resolvedClassId` reste
+        // `null`, fail-open (voir la doc de classe).
+      }
+    }
+
+    if (resolvedClassId == null) return null;
+    final target = preparingClasses.firstWhere(
+      (c) => c.classId.toString() == resolvedClassId.toString(),
+    );
+    final limit = limitOf(target);
+    final currentCount = countsByClassId[target.classId.toString()] ?? 0;
+    if (currentCount >= limit) {
+      throw CharacterFailure(
+        'Limite de sorts préparés atteinte pour ${target.className} '
+        '($currentCount/$limit) : ne plus préparer un sort de cette classe '
+        "avant d'en préparer un nouveau.",
+      );
+    }
+    return resolvedClassId;
+  }
+
+  /// `{classId.toString(): count}` — sorts de niveau >= 1 au statut
+  /// 'préparé' de [characterId], groupés par `character_spells
+  /// .source_class_id`, restreint à [classIds] (les classes PRÉPARANTES du
+  /// personnage, voir [_resolvePreparingClassAndEnforceLimit]). Le niveau du
+  /// sort (pour exclure les sorts mineurs — jamais comptés, jamais limités,
+  /// voir `PreparedSpellsLimit._countsTowardPreparedLimit`) est embarqué via
+  /// la relation `character_spells.spell_id -> spells.id` plutôt qu'une
+  /// requête séparée, puis filtré côté Dart (pas via PostgREST, pour rester
+  /// indépendant d'une syntaxe de filtre sur colonne embarquée).
+  ///
+  /// [excludedSpellIds] (D77, `docs/dette-technique.md`) : identifiants de
+  /// sorts par ailleurs accordés par une sous-classe (voir l'appelant) —
+  /// jamais comptés, même si leur ligne `character_spells` est bien
+  /// 'préparé' : exactement l'exclusion déjà appliquée côté affichage
+  /// (`CharacterSpellEntry.isAlwaysPrepared`), pour ne jamais rejeter un
+  /// sort que l'écran présente pourtant comme encore cochable.
+  Future<Map<String, int>> _preparedSpellCountsByClass({
+    required String characterId,
+    required List<Object> classIds,
+    Set<int> excludedSpellIds = const {},
+  }) async {
+    if (classIds.isEmpty) return const {};
+    final rows = await _client
+        .from('character_spells')
+        .select('spell_id, source_class_id, spells(level)')
+        .eq('character_id', characterId)
+        .eq('status', SpellStatus.prepared.value)
+        .inFilter('source_class_id', classIds);
+    final counts = <String, int>{};
+    for (final row in rows) {
+      final spellId = row['spell_id'];
+      if (spellId is num && excludedSpellIds.contains(spellId.toInt())) {
+        continue;
+      }
+      final sourceClassId = row['source_class_id'];
+      if (sourceClassId == null) continue;
+      final spellRelation = row['spells'];
+      final level = spellRelation is Map ? spellRelation['level'] : null;
+      if (level is! num || level <= 0) continue;
+      final key = sourceClassId.toString();
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
   }
 
   @override
@@ -4741,9 +5052,13 @@ class SupabaseCharacterRepository implements CharacterRepository {
         subclassSpellRows,
       ),
     ).keys;
-    final classListSpellIds = await _fetchPreparedCasterClassListSpellIds(
-      row,
-      classNames: CharacterRowMapper.parseTranslatedNames(classNameRows),
+    final classListSpellClassRows =
+        await _fetchPreparedCasterClassListSpellRows(
+          row,
+          classNames: CharacterRowMapper.parseTranslatedNames(classNameRows),
+        );
+    final classListSpellIds = CharacterSpellRowMapper.collectSpellIds(
+      classListSpellClassRows,
     );
     final spellIds = <int>{
       ...CharacterSpellRowMapper.collectSpellIds(
@@ -4864,6 +5179,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       'languageNameRows': languageNameRows,
       'spellRows': spellRows,
       'subclassSpellRows': subclassSpellRows,
+      'classListSpellClassRows': classListSpellClassRows,
       'spellNameRows': spellNameRows,
       'spellDescriptionRows': spellDescriptionRows,
       'itemNameRows': itemNameRows,
@@ -4872,17 +5188,32 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   /// Sorts de la liste de classe d'un lanceur à préparation (Clerc, Druide,
-  /// Paladin — voir `domain/prepared_caster_spell_list.dart`) : tous les
-  /// sorts de la classe du niveau 1 au plus haut niveau lançable, hors
-  /// contenu incomplet. Ils rejoignent `spellRows` comme les autres ; ceux
-  /// sans ligne `character_spells` sont affichés "connu, non préparé" et
-  /// [setSpellPrepared] crée leur ligne quand le joueur les prépare.
-  /// Ensemble vide (aucune requête) pour toute autre classe.
-  Future<Set<int>> _fetchPreparedCasterClassListSpellIds(
+  /// Paladin, Artificier — voir `domain/prepared_caster_spell_list.dart`) :
+  /// tous les sorts de la classe du niveau 1 au plus haut niveau lançable,
+  /// hors contenu incomplet. Ils rejoignent `spellRows` comme les autres ;
+  /// ceux sans ligne `character_spells` sont affichés "connu, non préparé"
+  /// et [setSpellPrepared] crée leur ligne quand le joueur les prépare.
+  ///
+  /// Renvoie une ligne `{spell_id, class_id}` par (sort, classe) — PAS un
+  /// simple ensemble d'identifiants de sort comme avant ce chantier : un
+  /// même sort peut apparaître sur la liste de PLUSIEURS classes préparantes
+  /// du personnage (ex. Clerc/Druide multiclassés partageant un sort), et
+  /// cette origine est nécessaire pour ventiler la limite de sorts préparés
+  /// PAR CLASSE (`CharacterSpellEntry.sourceClassIds`, voir
+  /// `domain/prepared_spells_limit.dart::PreparedSpellsLimit.limitsByClass`)
+  /// — jusqu'ici perdue dès la sortie de cette méthode (seul l'ENSEMBLE des
+  /// identifiants de sort survivait, pas leur classe d'origine). Mise en
+  /// cache telle quelle par l'appelant (`payload['classListSpellClassRows']`,
+  /// voir [_buildCharacterDetailPayload]/[_mapCharacterDetailPayload]) pour
+  /// rester disponible hors ligne — un ancien cache sans cette clé retombe
+  /// sur une liste vide, jamais de crash.
+  ///
+  /// Liste vide (aucune requête) pour un personnage sans classe de ce type.
+  Future<List<Map<String, dynamic>>> _fetchPreparedCasterClassListSpellRows(
     Map<String, dynamic> row, {
     required Map<String, String> classNames,
   }) async {
-    final ids = <int>{};
+    final rows = <Map<String, dynamic>>[];
     for (final classRow in CharacterDetailRowMapper.classRowsOf(row)) {
       final classId = classRow['class_id'];
       if (classId is! num) continue;
@@ -4910,10 +5241,12 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .not('is_incomplete', 'is', true);
       for (final spellRow in spellRows) {
         final id = spellRow['id'];
-        if (id is num) ids.add(id.toInt());
+        if (id is num) {
+          rows.add({'spell_id': id.toInt(), 'class_id': classId});
+        }
       }
     }
-    return ids;
+    return rows;
   }
 
   /// Reconstruit un [CharacterDetail] complet à partir d'un [payload] déjà
@@ -5060,6 +5393,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
         _rowsOf(payload['subclassSpellRows']),
       ),
     );
+    // Origine connue de chaque sort : priorité à une vraie ligne
+    // `character_spells` (`parseSourceClassIds`, autoritaire — un sort
+    // réellement choisi/préparé depuis une classe précise) ; repli, pour un
+    // sort SANS ligne réelle (jamais encore préparé), sur la liste de classe
+    // complète d'un lanceur à préparation (`parseClassListClassIds`, voir la
+    // doc de [_fetchPreparedCasterClassListSpellRows]) — un ancien cache
+    // sans `classListSpellClassRows` retombe sur une liste vide pour ce
+    // repli, jamais de crash. Voir `CharacterSpellEntry.sourceClassIds`.
+    final realSourceClassIds = CharacterSpellRowMapper.parseSourceClassIds(
+      CharacterDetailRowMapper.characterSpellRowsOf(row),
+    );
+    final classListClassIds = CharacterSpellRowMapper.parseClassListClassIds(
+      _rowsOf(payload['classListSpellClassRows']),
+    );
+    final sourceClassIds = <int, Set<int>>{...realSourceClassIds};
+    for (final entry in classListClassIds.entries) {
+      if (sourceClassIds[entry.key]?.isNotEmpty ?? false) continue;
+      sourceClassIds[entry.key] = entry.value;
+    }
     final spells = CharacterSpellRowMapper.toCharacterSpellEntries(
       _rowsOf(payload['spellRows']),
       grants: spellGrants,
@@ -5079,9 +5431,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         row,
         classNames: classNames,
       ),
-      sourceClassIds: CharacterSpellRowMapper.parseSourceClassIds(
-        CharacterDetailRowMapper.characterSpellRowsOf(row),
-      ),
+      sourceClassIds: sourceClassIds,
       // `innate_uses_spent` est absent d'un payload mis en cache avant sa
       // lecture : aucun usage dépensé connu, le sort inné est affiché
       // disponible (jamais de crash).

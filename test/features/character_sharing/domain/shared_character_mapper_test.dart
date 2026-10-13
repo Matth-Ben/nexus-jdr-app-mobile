@@ -424,6 +424,20 @@ void main() {
       );
       // Seul le sort de Clerc préparé compte.
       expect(detail.preparedSpellCount, 1);
+      // `sourceClassIds` reporté tel quel sur chaque entrée (même donnée
+      // que `requiresPreparation` ci-dessus, voir
+      // `CharacterSpellEntry.sourceClassIds`) : vide pour le sort 3, sans
+      // origine connue côté RPC.
+      expect(
+        {for (final s in detail.spells) s.id: s.sourceClassIds},
+        {
+          1: {1},
+          2: {2},
+          3: <int>{},
+          4: {1},
+          5: {2},
+        },
+      );
     });
   });
 

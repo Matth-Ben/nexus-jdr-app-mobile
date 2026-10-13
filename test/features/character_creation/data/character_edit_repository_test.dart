@@ -134,6 +134,11 @@ void main() {
             (spellId: 100, status: SpellStatus.prepared),
             (spellId: 101, status: SpellStatus.prepared),
           ],
+          // Toujours calculé par `CharacterEditPlanner.plan` dès que
+          // `spellInserts` est non vide (D40, `docs/dette-technique.md`) —
+          // ici la classe APRÈS changement (classId 2), simulé à la main
+          // comme le reste de ce plan de test.
+          spellSourceClassId: 2,
         ),
       );
 

@@ -220,7 +220,13 @@ class SupabaseCharacterEditRepository implements CharacterEditRepository {
               'character_id': characterId,
               'spell_id': spell.spellId,
               'status': spell.status.value,
-              'source_class_id': plan.classChange?.classId,
+              // D40 (`docs/dette-technique.md`) : `plan.classChange?.classId`
+              // vaut `null` dès que l'édition ne change NI la classe NI la
+              // sous-classe (ex. remplacer un sort de niveau 1 sans toucher
+              // à la classe), alors que la classe d'origine est connue et
+              // inchangée dans ce cas précis — voir
+              // `CharacterEditPlan.spellSourceClassId`.
+              'source_class_id': plan.spellSourceClassId,
             },
         ]);
       }

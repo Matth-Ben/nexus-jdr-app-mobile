@@ -34,6 +34,7 @@ class CharacterEditPlan {
     this.languageInserts = const {},
     this.spellDeletes = const {},
     this.spellInserts = const [],
+    this.spellSourceClassId,
   });
 
   /// Colonnes `characters` à mettre à jour (toujours écrites en bloc).
@@ -64,6 +65,18 @@ class CharacterEditPlan {
   /// suppression.
   final Set<int> spellDeletes;
   final List<({int spellId, SpellStatus status})> spellInserts;
+
+  /// `character_spells.source_class_id` à écrire sur CHAQUE ligne de
+  /// [spellInserts] — toujours la classe (unique, l'édition n'est possible
+  /// qu'au niveau 1, voir [canChangeClass] dans [plan]) du personnage APRÈS
+  /// modification, `null` seulement si [spellInserts] est vide. Avant ce
+  /// champ (D40 du registre de dette technique,
+  /// `docs/dette-technique.md`), `CharacterEditRepository.save` utilisait
+  /// `classChange?.classId` — toujours `null` quand l'édition ne change NI
+  /// la classe NI la sous-classe (ex. remplacer un sort de niveau 1 sans
+  /// toucher à la classe), alors que la classe d'origine est connue et
+  /// inchangée dans ce cas précis.
+  final int? spellSourceClassId;
 }
 
 /// Calcule un [CharacterEditPlan] en comparant le brouillon d'origine
@@ -205,6 +218,11 @@ abstract final class CharacterEditPlanner {
     // ── Sorts (niveau 1 uniquement) ──────────────────────────────────────
     var spellDeletes = const <int>{};
     var spellInserts = const <({int spellId, SpellStatus status})>[];
+    // Toujours la classe du personnage APRÈS modification (`edited.classId`)
+    // dès que ce bloc calcule des `spellInserts` — y compris sans
+    // changement de classe/sous-classe (`classChanged`/`subclassChanged`
+    // faux) : voir la doc de [CharacterEditPlan.spellSourceClassId] (D40).
+    int? spellSourceClassId;
     if (canChangeClass && editedClass != null && editedSpellCatalog != null) {
       // Lignes innées exclues (`CharacterEditSnapshot.classSpells`) : un
       // sort inné vient de la race, aucune modification de classe ne le
@@ -243,6 +261,9 @@ abstract final class CharacterEditPlanner {
         for (final row in newRows)
           if (!storedSpells.contains(row.spellId)) row,
       ];
+      if (spellInserts.isNotEmpty) {
+        spellSourceClassId = edited.classId;
+      }
     }
 
     return CharacterEditPlan(
@@ -268,6 +289,7 @@ abstract final class CharacterEditPlanner {
       languageInserts: newLanguages.difference(storedLanguages),
       spellDeletes: spellDeletes,
       spellInserts: spellInserts,
+      spellSourceClassId: spellSourceClassId,
     );
   }
 }
