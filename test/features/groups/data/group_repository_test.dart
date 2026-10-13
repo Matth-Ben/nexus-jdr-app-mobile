@@ -81,6 +81,47 @@ void main() {
         );
       },
     );
+
+    test('characterId null -> envoie {name} seul, sans character_id (MJ sans '
+        'personnage)', () async {
+      http.Request? capturedRequest;
+      final client = _buildFakeClient(
+        onRequest: (request) => capturedRequest = request,
+        responses: {
+          'create-group': {
+            'id': 'group-1',
+            'name': 'Les Lames',
+            'invite_code': 'AB3F7K2M',
+          },
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await repository.createGroup(name: 'Les Lames');
+
+      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+      expect(body, {'name': 'Les Lames'});
+    });
+
+    test('characterId vide -> envoie {name} seul, sans character_id', () async {
+      http.Request? capturedRequest;
+      final client = _buildFakeClient(
+        onRequest: (request) => capturedRequest = request,
+        responses: {
+          'create-group': {
+            'id': 'group-1',
+            'name': 'Les Lames',
+            'invite_code': 'AB3F7K2M',
+          },
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await repository.createGroup(name: 'Les Lames', characterId: '');
+
+      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+      expect(body, {'name': 'Les Lames'});
+    });
   });
 
   group('SupabaseGroupRepository.previewGroupInvite', () {
@@ -191,6 +232,50 @@ void main() {
         ),
       );
     });
+
+    test('characterId null -> envoie {code} seul, sans character_id (MJ sans '
+        'personnage)', () async {
+      http.Request? capturedRequest;
+      final client = _buildFakeClient(
+        onRequest: (request) => capturedRequest = request,
+        responses: {
+          'join-group': {'group_id': 'group-1', 'name': 'Les Lames'},
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await repository.joinGroup(code: 'AB3F7K2M');
+
+      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+      expect(body, {'code': 'AB3F7K2M'});
+    });
+
+    test(
+      '409 mj_already_assigned -> GroupInviteFailureKind.mjAlreadyAssigned',
+      () async {
+        final client = _buildFakeClient(
+          statusCode: 409,
+          responses: {
+            'join-group': {
+              'error': 'mj_already_assigned',
+              'message': 'Ce groupe a déjà un MJ sans personnage.',
+            },
+          },
+        );
+        final repository = SupabaseGroupRepository(client);
+
+        await expectLater(
+          repository.joinGroup(code: 'AB3F7K2M'),
+          throwsA(
+            isA<GroupInviteFailure>().having(
+              (f) => f.kind,
+              'kind',
+              GroupInviteFailureKind.mjAlreadyAssigned,
+            ),
+          ),
+        );
+      },
+    );
   });
 
   group('SupabaseGroupRepository.claimTreasureCurrency', () {

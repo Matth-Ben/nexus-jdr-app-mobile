@@ -55,11 +55,11 @@ abstract class GroupRepository {
 
   /// `create-group` — écran "Créer un groupe" : crée le groupe, son
   /// `group_treasure` (côté serveur) et la ligne `group_members` du créateur
-  /// (`role: 'owner'`).
-  Future<CreatedGroup> createGroup({
-    required String name,
-    required String characterId,
-  });
+  /// (`role: 'owner'`). [characterId] `null`/vide : le créateur rejoint
+  /// comme MJ sans personnage (voir `GroupMember.isGameMaster`) — au plus un
+  /// MJ sans personnage par groupe, mais aucun risque de collision ici
+  /// (groupe tout juste créé, par construction sans aucun autre membre).
+  Future<CreatedGroup> createGroup({required String name, String? characterId});
 
   /// `preview-group-invite` — étape 2/3 du flux "Rejoindre un groupe" :
   /// résout [code] en un aperçu pur (nom + nombre de membres), sans jamais
@@ -68,12 +68,12 @@ abstract class GroupRepository {
 
   /// `join-group` — étape 3/3 : crée l'adhésion `group_members`
   /// (`role: 'membre'`) entre [characterId] et le groupe désigné par [code].
-  /// Lève une [GroupInviteFailure], y compris
-  /// [GroupInviteFailureKind.alreadyInGroup].
-  Future<JoinedGroup> joinGroup({
-    required String code,
-    required String characterId,
-  });
+  /// [characterId] `null`/vide : le joueur rejoint comme MJ sans personnage
+  /// (voir `GroupMember.isGameMaster`). Lève une [GroupInviteFailure], y
+  /// compris [GroupInviteFailureKind.alreadyInGroup] et
+  /// [GroupInviteFailureKind.mjAlreadyAssigned] (un autre membre a déjà
+  /// rejoint ce groupe en tant que MJ sans personnage).
+  Future<JoinedGroup> joinGroup({required String code, String? characterId});
 
   /// Détail complet d'un groupe (identité + membres) — écran "Groupe".
   Future<GroupDetail> fetchGroupDetail(String groupId);
@@ -97,12 +97,13 @@ abstract class GroupRepository {
   /// `group_members` du joueur connecté pour ce groupe.
   Future<void> leaveGroup(String groupId);
 
-  /// "Exclure {personnage}" (owner) — supprime la ligne `group_members` de
-  /// [characterId] pour ce groupe.
-  Future<void> removeMember({
-    required String groupId,
-    required String characterId,
-  });
+  /// "Exclure {membre}" (owner) — supprime la ligne `group_members` de
+  /// [userId] pour ce groupe. Identifié par `(group_id, user_id)` — unique
+  /// par construction (contrainte `unique (group_id, user_id)` posée à la
+  /// création de la table, inchangée par PR #26) — plutôt que par
+  /// `character_id`, qui est `null` pour un MJ sans personnage
+  /// (`GroupMember.isGameMaster`) et ne permettrait donc jamais de l'exclure.
+  Future<void> removeMember({required String groupId, required String userId});
 
   /// Butin commun du groupe — onglet "Butin".
   Future<GroupTreasure> fetchGroupTreasure(String groupId);
@@ -257,12 +258,16 @@ class SupabaseGroupRepository implements GroupRepository {
   @override
   Future<CreatedGroup> createGroup({
     required String name,
-    required String characterId,
+    String? characterId,
   }) async {
     try {
       final response = await _client.functions.invoke(
         'create-group',
-        body: {'name': name, 'character_id': characterId},
+        body: {
+          'name': name,
+          if (characterId != null && characterId.isNotEmpty)
+            'character_id': characterId,
+        },
       );
       final data = _asMap(response.data);
       return CreatedGroup(
@@ -303,12 +308,16 @@ class SupabaseGroupRepository implements GroupRepository {
   @override
   Future<JoinedGroup> joinGroup({
     required String code,
-    required String characterId,
+    String? characterId,
   }) async {
     try {
       final response = await _client.functions.invoke(
         'join-group',
-        body: {'code': code, 'character_id': characterId},
+        body: {
+          'code': code,
+          if (characterId != null && characterId.isNotEmpty)
+            'character_id': characterId,
+        },
       );
       final data = _asMap(response.data);
       return JoinedGroup(
@@ -361,12 +370,16 @@ class SupabaseGroupRepository implements GroupRepository {
         entityIds: GroupMemberRowMapper.collectClassIds(memberRows),
       );
 
+      final currentUserDisplayName =
+          _client.auth.currentUser?.userMetadata?['full_name'] as String?;
       final members = memberRows
           .map(
             (row) => GroupMemberRowMapper.toGroupMember(
               row,
               raceNames: raceNames,
               classNames: classNames,
+              currentUserId: currentUserId,
+              currentUserDisplayName: currentUserDisplayName,
             ),
           )
           .toList();
@@ -457,14 +470,14 @@ class SupabaseGroupRepository implements GroupRepository {
   @override
   Future<void> removeMember({
     required String groupId,
-    required String characterId,
+    required String userId,
   }) async {
     try {
       await _client
           .from('group_members')
           .delete()
           .eq('group_id', groupId)
-          .eq('character_id', characterId);
+          .eq('user_id', userId);
     } on PostgrestException catch (error) {
       throw mapGroupError(error);
     } catch (_) {

@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$GroupMember {
 
- String get characterId; String get userId; GroupRole get role; String get name; String? get portraitUrl; String? get raceName; String? get className; int get level; int get currentHp; int get maxHp; int get temporaryHp; bool get isDead;
+ String? get characterId; String get userId; GroupRole get role; String get name; String? get portraitUrl; String? get raceName; String? get className; int? get level; int? get currentHp; int? get maxHp; int? get temporaryHp; bool? get isDead;
 /// Create a copy of GroupMember
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -46,7 +46,7 @@ abstract mixin class $GroupMemberCopyWith<$Res>  {
   factory $GroupMemberCopyWith(GroupMember value, $Res Function(GroupMember) _then) = _$GroupMemberCopyWithImpl;
 @useResult
 $Res call({
- String characterId, String userId, GroupRole role, String name, String? portraitUrl, String? raceName, String? className, int level, int currentHp, int maxHp, int temporaryHp, bool isDead
+ String? characterId, String userId, GroupRole role, String name, String? portraitUrl, String? raceName, String? className, int? level, int? currentHp, int? maxHp, int? temporaryHp, bool? isDead
 });
 
 
@@ -63,21 +63,21 @@ class _$GroupMemberCopyWithImpl<$Res>
 
 /// Create a copy of GroupMember
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? characterId = null,Object? userId = null,Object? role = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = null,Object? currentHp = null,Object? maxHp = null,Object? temporaryHp = null,Object? isDead = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? characterId = freezed,Object? userId = null,Object? role = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = freezed,Object? currentHp = freezed,Object? maxHp = freezed,Object? temporaryHp = freezed,Object? isDead = freezed,}) {
   return _then(GroupMember(
-characterId: null == characterId ? _self.characterId : characterId // ignore: cast_nullable_to_non_nullable
-as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+characterId: freezed == characterId ? _self.characterId : characterId // ignore: cast_nullable_to_non_nullable
+as String?,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as GroupRole,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,portraitUrl: freezed == portraitUrl ? _self.portraitUrl : portraitUrl // ignore: cast_nullable_to_non_nullable
 as String?,raceName: freezed == raceName ? _self.raceName : raceName // ignore: cast_nullable_to_non_nullable
 as String?,className: freezed == className ? _self.className : className // ignore: cast_nullable_to_non_nullable
-as String?,level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
-as int,currentHp: null == currentHp ? _self.currentHp : currentHp // ignore: cast_nullable_to_non_nullable
-as int,maxHp: null == maxHp ? _self.maxHp : maxHp // ignore: cast_nullable_to_non_nullable
-as int,temporaryHp: null == temporaryHp ? _self.temporaryHp : temporaryHp // ignore: cast_nullable_to_non_nullable
-as int,isDead: null == isDead ? _self.isDead : isDead // ignore: cast_nullable_to_non_nullable
-as bool,
+as String?,level: freezed == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
+as int?,currentHp: freezed == currentHp ? _self.currentHp : currentHp // ignore: cast_nullable_to_non_nullable
+as int?,maxHp: freezed == maxHp ? _self.maxHp : maxHp // ignore: cast_nullable_to_non_nullable
+as int?,temporaryHp: freezed == temporaryHp ? _self.temporaryHp : temporaryHp // ignore: cast_nullable_to_non_nullable
+as int?,isDead: freezed == isDead ? _self.isDead : isDead // ignore: cast_nullable_to_non_nullable
+as bool?,
   ));
 }
 
@@ -162,7 +162,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String characterId,  String userId,  GroupRole role,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int currentHp,  int maxHp,  int temporaryHp,  bool isDead)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? characterId,  String userId,  GroupRole role,  String name,  String? portraitUrl,  String? raceName,  String? className,  int? level,  int? currentHp,  int? maxHp,  int? temporaryHp,  bool? isDead)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _GroupMember() when $default != null:
 return $default(_that.characterId,_that.userId,_that.role,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.isDead);case _:
@@ -183,7 +183,7 @@ return $default(_that.characterId,_that.userId,_that.role,_that.name,_that.portr
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String characterId,  String userId,  GroupRole role,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int currentHp,  int maxHp,  int temporaryHp,  bool isDead)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? characterId,  String userId,  GroupRole role,  String name,  String? portraitUrl,  String? raceName,  String? className,  int? level,  int? currentHp,  int? maxHp,  int? temporaryHp,  bool? isDead)  $default,) {final _that = this;
 switch (_that) {
 case _GroupMember():
 return $default(_that.characterId,_that.userId,_that.role,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.isDead);case _:
@@ -203,7 +203,7 @@ return $default(_that.characterId,_that.userId,_that.role,_that.name,_that.portr
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String characterId,  String userId,  GroupRole role,  String name,  String? portraitUrl,  String? raceName,  String? className,  int level,  int currentHp,  int maxHp,  int temporaryHp,  bool isDead)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? characterId,  String userId,  GroupRole role,  String name,  String? portraitUrl,  String? raceName,  String? className,  int? level,  int? currentHp,  int? maxHp,  int? temporaryHp,  bool? isDead)?  $default,) {final _that = this;
 switch (_that) {
 case _GroupMember() when $default != null:
 return $default(_that.characterId,_that.userId,_that.role,_that.name,_that.portraitUrl,_that.raceName,_that.className,_that.level,_that.currentHp,_that.maxHp,_that.temporaryHp,_that.isDead);case _:
@@ -218,21 +218,21 @@ return $default(_that.characterId,_that.userId,_that.role,_that.name,_that.portr
 
 
 class _GroupMember extends GroupMember {
-  const _GroupMember({required this.characterId, required this.userId, required this.role, required this.name, this.portraitUrl, this.raceName, this.className, required this.level, required this.currentHp, required this.maxHp, required this.temporaryHp, required this.isDead}): super._();
+  const _GroupMember({this.characterId, required this.userId, required this.role, required this.name, this.portraitUrl, this.raceName, this.className, this.level, this.currentHp, this.maxHp, this.temporaryHp, this.isDead}): super._();
   
 
-@override final  String characterId;
+@override final  String? characterId;
 @override final  String userId;
 @override final  GroupRole role;
 @override final  String name;
 @override final  String? portraitUrl;
 @override final  String? raceName;
 @override final  String? className;
-@override final  int level;
-@override final  int currentHp;
-@override final  int maxHp;
-@override final  int temporaryHp;
-@override final  bool isDead;
+@override final  int? level;
+@override final  int? currentHp;
+@override final  int? maxHp;
+@override final  int? temporaryHp;
+@override final  bool? isDead;
 
 /// Create a copy of GroupMember
 /// with the given fields replaced by the non-null parameter values.
@@ -264,7 +264,7 @@ abstract mixin class _$GroupMemberCopyWith<$Res> implements $GroupMemberCopyWith
   factory _$GroupMemberCopyWith(_GroupMember value, $Res Function(_GroupMember) _then) = __$GroupMemberCopyWithImpl;
 @override @useResult
 $Res call({
- String characterId, String userId, GroupRole role, String name, String? portraitUrl, String? raceName, String? className, int level, int currentHp, int maxHp, int temporaryHp, bool isDead
+ String? characterId, String userId, GroupRole role, String name, String? portraitUrl, String? raceName, String? className, int? level, int? currentHp, int? maxHp, int? temporaryHp, bool? isDead
 });
 
 
@@ -281,21 +281,21 @@ class __$GroupMemberCopyWithImpl<$Res>
 
 /// Create a copy of GroupMember
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? characterId = null,Object? userId = null,Object? role = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = null,Object? currentHp = null,Object? maxHp = null,Object? temporaryHp = null,Object? isDead = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? characterId = freezed,Object? userId = null,Object? role = null,Object? name = null,Object? portraitUrl = freezed,Object? raceName = freezed,Object? className = freezed,Object? level = freezed,Object? currentHp = freezed,Object? maxHp = freezed,Object? temporaryHp = freezed,Object? isDead = freezed,}) {
   return _then(_GroupMember(
-characterId: null == characterId ? _self.characterId : characterId // ignore: cast_nullable_to_non_nullable
-as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+characterId: freezed == characterId ? _self.characterId : characterId // ignore: cast_nullable_to_non_nullable
+as String?,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as GroupRole,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,portraitUrl: freezed == portraitUrl ? _self.portraitUrl : portraitUrl // ignore: cast_nullable_to_non_nullable
 as String?,raceName: freezed == raceName ? _self.raceName : raceName // ignore: cast_nullable_to_non_nullable
 as String?,className: freezed == className ? _self.className : className // ignore: cast_nullable_to_non_nullable
-as String?,level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
-as int,currentHp: null == currentHp ? _self.currentHp : currentHp // ignore: cast_nullable_to_non_nullable
-as int,maxHp: null == maxHp ? _self.maxHp : maxHp // ignore: cast_nullable_to_non_nullable
-as int,temporaryHp: null == temporaryHp ? _self.temporaryHp : temporaryHp // ignore: cast_nullable_to_non_nullable
-as int,isDead: null == isDead ? _self.isDead : isDead // ignore: cast_nullable_to_non_nullable
-as bool,
+as String?,level: freezed == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
+as int?,currentHp: freezed == currentHp ? _self.currentHp : currentHp // ignore: cast_nullable_to_non_nullable
+as int?,maxHp: freezed == maxHp ? _self.maxHp : maxHp // ignore: cast_nullable_to_non_nullable
+as int?,temporaryHp: freezed == temporaryHp ? _self.temporaryHp : temporaryHp // ignore: cast_nullable_to_non_nullable
+as int?,isDead: freezed == isDead ? _self.isDead : isDead // ignore: cast_nullable_to_non_nullable
+as bool?,
   ));
 }
 

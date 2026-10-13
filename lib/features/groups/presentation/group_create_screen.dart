@@ -23,12 +23,21 @@ import 'providers/group_providers.dart';
 ///
 /// `WoodBackHeader` + corps parchemin scrollable (même gabarit que
 /// `ProfileEditScreen`) : texte d'intro, champ "Nom du groupe" (même patron
-/// que `edit_display_name_sheet.dart`), puis le choix du personnage du
-/// joueur (`charactersProvider`) — recettage direction-artistique du
-/// 13/09/2026 : la sélection se fait désormais via une tuile unique
-/// affichant le personnage choisi (voir [_CharacterSelectorTile]), qui ouvre
-/// au tap une bottom sheet reprenant la liste radio exclusive d'origine
-/// (chargement/erreur/vide même patron que `join_character_step_screen.dart`).
+/// que `edit_display_name_sheet.dart`), puis le choix du rôle du joueur dans
+/// ce groupe (`charactersProvider`) — recettage direction-artistique du
+/// 13/09/2026 : la sélection se fait via une tuile unique affichant le
+/// personnage choisi (voir [_RoleSelectorTile]), qui ouvre au tap une bottom
+/// sheet reprenant la liste radio exclusive d'origine (chargement/erreur/vide
+/// même patron que `join_character_step_screen.dart`).
+///
+/// **MJ sans personnage** (décision de Matthias du 12-13/10/2026) : le
+/// sélecteur devient tri-état — rien choisi / personnage choisi / MJ choisi
+/// ([_joinAsGameMaster]) — voir [_RoleSelectorTile]/[_GmOptionRow]. La ligne
+/// MJ de la sheet reste toujours visible/sélectionnable quel que soit l'état
+/// de `charactersProvider` (correctif d'un bug trouvé par
+/// direction-artistique : la tuile/la sheet et le bouton primaire ne doivent
+/// jamais être gatés par le chargement des personnages quand le joueur veut
+/// simplement suivre le groupe comme MJ).
 class GroupCreateScreen extends ConsumerStatefulWidget {
   const GroupCreateScreen({super.key});
 
@@ -39,6 +48,7 @@ class GroupCreateScreen extends ConsumerStatefulWidget {
 class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
   final TextEditingController _nameController = TextEditingController();
   String? _selectedCharacterId;
+  bool _joinAsGameMaster = false;
   bool _isSaving = false;
   String? _errorMessage;
 
@@ -70,16 +80,32 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
 
   void _selectCharacter(String characterId) {
     if (_isSaving) return;
-    setState(() => _selectedCharacterId = characterId);
+    setState(() {
+      _selectedCharacterId = characterId;
+      _joinAsGameMaster = false;
+    });
   }
 
-  /// Ouvre la sheet "Choisir un personnage" (tap sur [_CharacterSelectorTile])
-  /// — même gabarit de sheet "mode liste" que
-  /// `character_class_filter_sheet.dart` (`SheetHeaderBar` + `ListView`
-  /// occupant 75 % de la hauteur), réutilisant [_buildCharacterList] et
-  /// [_SelectableCharacterRow] tels quels : seul le `onTap` de chaque ligne
-  /// diffère, pour refermer la sheet immédiatement après la sélection.
-  Future<void> _openCharacterPicker(List<CharacterSummary> characters) {
+  /// Sélectionne le rôle "MJ — sans personnage" — mutuellement exclusif avec
+  /// [_selectCharacter] (voir la doc de classe).
+  void _selectGameMaster() {
+    if (_isSaving) return;
+    setState(() {
+      _joinAsGameMaster = true;
+      _selectedCharacterId = null;
+    });
+  }
+
+  /// Ouvre la sheet "CHOISIR TON RÔLE" (tap sur [_RoleSelectorTile]) — même
+  /// gabarit de sheet "mode liste" que `character_class_filter_sheet.dart`
+  /// (`SheetHeaderBar` + `ListView` occupant 75 % de la hauteur). La ligne MJ
+  /// ([_GmOptionRow]) est toujours en première position, toujours
+  /// sélectionnable ; seule la zone SOUS elle reflète l'état de
+  /// [charactersAsync] (chargement/erreur/liste/vide) — voir la doc de
+  /// classe.
+  Future<void> _openRolePicker(
+    AsyncValue<List<CharacterSummary>> charactersAsync,
+  ) {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -92,14 +118,58 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
             decoration: const BoxDecoration(color: AppColors.parchmentBg),
             child: Column(
               children: [
-                const SheetHeaderBar(title: 'CHOISIR UN PERSONNAGE'),
+                const SheetHeaderBar(title: 'CHOISIR TON RÔLE'),
                 Expanded(
-                  child: _buildCharacterList(
-                    characters,
-                    onCharacterTap: (characterId) {
-                      _selectCharacter(characterId);
-                      Navigator.of(sheetContext).pop();
-                    },
+                  child: ListView(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    children: [
+                      _GmOptionRow(
+                        selected: _joinAsGameMaster,
+                        onTap: () {
+                          _selectGameMaster();
+                          Navigator.of(sheetContext).pop();
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      charactersAsync.when(
+                        data: (characters) => characters.isEmpty
+                            ? const _NoCharacterNote()
+                            : Column(
+                                children: [
+                                  for (final character in characters) ...[
+                                    _SelectableCharacterRow(
+                                      character: character,
+                                      selected:
+                                          !_joinAsGameMaster &&
+                                          character.id == _selectedCharacterId,
+                                      onTap: () {
+                                        _selectCharacter(character.id);
+                                        Navigator.of(sheetContext).pop();
+                                      },
+                                    ),
+                                    const SizedBox(height: AppSpacing.md),
+                                  ],
+                                ],
+                              ),
+                        loading: () => const Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.lg,
+                          ),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.woodMedium,
+                            ),
+                          ),
+                        ),
+                        error: (error, stackTrace) => _ErrorState(
+                          message: error is CharacterFailure
+                              ? error.message
+                              : 'Impossible de charger vos personnages. '
+                                    'Réessayez.',
+                          onRetry: () => ref.invalidate(charactersProvider),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -113,12 +183,16 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
   bool get _canSubmit =>
       !_isSaving &&
       _nameController.text.trim().isNotEmpty &&
-      _selectedCharacterId != null;
+      (_selectedCharacterId != null || _joinAsGameMaster);
 
   Future<void> _submit() async {
     final name = _nameController.text.trim();
-    final characterId = _selectedCharacterId;
-    if (name.isEmpty || characterId == null || _isSaving) return;
+    final characterId = _joinAsGameMaster ? null : _selectedCharacterId;
+    if (name.isEmpty ||
+        (!_joinAsGameMaster && characterId == null) ||
+        _isSaving) {
+      return;
+    }
 
     setState(() {
       _isSaving = true;
@@ -203,7 +277,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       Text(
-                        'Ton personnage dans ce groupe',
+                        'Qui te représente dans ce groupe ?',
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -220,26 +294,7 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      charactersAsync.when(
-                        data: _buildCharacterSection,
-                        loading: () => const Padding(
-                          padding: EdgeInsets.symmetric(
-                            vertical: AppSpacing.lg,
-                          ),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.woodMedium,
-                            ),
-                          ),
-                        ),
-                        error: (error, stackTrace) => _ErrorState(
-                          message: error is CharacterFailure
-                              ? error.message
-                              : 'Impossible de charger vos personnages. '
-                                    'Réessayez.',
-                          onRetry: () => ref.invalidate(charactersProvider),
-                        ),
-                      ),
+                      _buildCharacterSection(charactersAsync),
                     ],
                   ),
                 ),
@@ -259,59 +314,38 @@ class _GroupCreateScreenState extends ConsumerState<GroupCreateScreen> {
     );
   }
 
-  /// Contenu affiché sous le champ "Ton personnage dans ce groupe" une fois
-  /// `charactersProvider` résolu : état vide inchangé
-  /// ([_EmptyState]), sinon la tuile de sélection unique
-  /// ([_CharacterSelectorTile]) + la note sur le code d'invitation
-  /// ([_InviteCodeNote]).
-  Widget _buildCharacterSection(List<CharacterSummary> characters) {
-    if (characters.isEmpty) {
-      return const _EmptyState();
-    }
-
+  /// Tuile de sélection ([_RoleSelectorTile]) + note sur le code d'invitation
+  /// ([_InviteCodeNote]) — toujours affichées quel que soit l'état de
+  /// [charactersAsync] (correctif de bug, voir la doc de classe) : l'état
+  /// "aucun personnage" ne remplace plus tout ce bloc (ancien [_EmptyState]
+  /// retiré), il n'apparaît désormais que dans la sheet ([_NoCharacterNote]).
+  Widget _buildCharacterSection(
+    AsyncValue<List<CharacterSummary>> charactersAsync,
+  ) {
     CharacterSummary? selectedCharacter;
-    for (final character in characters) {
-      if (character.id == _selectedCharacterId) {
-        selectedCharacter = character;
-        break;
+    if (!_joinAsGameMaster) {
+      final characters = charactersAsync.value;
+      if (characters != null) {
+        for (final character in characters) {
+          if (character.id == _selectedCharacterId) {
+            selectedCharacter = character;
+            break;
+          }
+        }
       }
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _CharacterSelectorTile(
+        _RoleSelectorTile(
           character: selectedCharacter,
-          onTap: _isSaving ? null : () => _openCharacterPicker(characters),
+          isGameMaster: _joinAsGameMaster,
+          onTap: _isSaving ? null : () => _openRolePicker(charactersAsync),
         ),
         const SizedBox(height: AppSpacing.sm),
         const _InviteCodeNote(),
       ],
-    );
-  }
-
-  /// Liste radio à sélection exclusive — inchangée depuis la version
-  /// précédente de cet écran, désormais affichée dans la sheet ouverte par
-  /// [_openCharacterPicker] plutôt que directement dans le corps de l'écran.
-  /// [onCharacterTap] permet à la sheet de refermer immédiatement après
-  /// sélection sans dupliquer cette liste.
-  Widget _buildCharacterList(
-    List<CharacterSummary> characters, {
-    required ValueChanged<String> onCharacterTap,
-  }) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      itemCount: characters.length,
-      separatorBuilder: (context, index) =>
-          const SizedBox(height: AppSpacing.md),
-      itemBuilder: (context, index) {
-        final character = characters[index];
-        return _SelectableCharacterRow(
-          character: character,
-          selected: character.id == _selectedCharacterId,
-          onTap: () => onCharacterTap(character.id),
-        );
-      },
     );
   }
 }
@@ -358,6 +392,66 @@ class _SelectableCharacterRow extends StatelessWidget {
   }
 }
 
+/// Ligne "MJ — sans personnage" de la sheet "CHOISIR TON RÔLE" — toujours en
+/// première position, toujours sélectionnable indépendamment de l'état de
+/// `charactersProvider` (voir la doc de classe de [GroupCreateScreen]). Même
+/// gabarit visuel que [_SelectableCharacterRow] (`parchment.card`/
+/// `wood.light` 2px, statique, ne change pas de couleur à la sélection — seul
+/// le radio change), même tuile 44×44 que [_RoleSelectorTile]. Pas de
+/// sous-titre sur cet écran (voir `group_join_screen.dart::_GmOptionRow` pour
+/// la variante avec sous-titre).
+class _GmOptionRow extends StatelessWidget {
+  const _GmOptionRow({required this.selected, required this.onTap});
+
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.parchmentCard,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: AppColors.woodLight,
+              width: AppBorders.card,
+            ),
+          ),
+          child: Row(
+            children: [
+              const PortraitFrame(
+                portraitUrl: null,
+                fallbackIcon: Icons.visibility_outlined,
+                classThemeColor: AppColors.woodMedium,
+                size: 44,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  'MJ — sans personnage',
+                  style: AppTypography.body(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _RadioIndicator(selected: selected),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Bouton radio 20×20px du design système — duplication volontaire de
 /// `core/widgets/selectable_option_tile.dart::_RadioIndicator` (classe
 /// privée à ce fichier, non partageable telle quelle) : même convention de
@@ -389,21 +483,30 @@ class _RadioIndicator extends StatelessWidget {
 
 /// Tuile de sélection unique remplaçant l'ancienne liste radio directement
 /// dans le corps de l'écran (recettage direction-artistique du 13/09/2026) :
-/// affiche le personnage actuellement choisi (portrait + nom), ou un
-/// placeholder "Choisir un personnage" (le motif pointillé neutre de
-/// [PortraitFrame] sans URL sert déjà de visuel de substitution) quand aucun
-/// personnage n'est encore sélectionné. Un tap ouvre
-/// [_GroupCreateScreenState._openCharacterPicker].
-class _CharacterSelectorTile extends StatelessWidget {
-  const _CharacterSelectorTile({required this.character, required this.onTap});
+/// affiche le personnage actuellement choisi (portrait + nom), le rôle "MJ —
+/// sans personnage" si [isGameMaster], ou un placeholder "Choisir un
+/// personnage ou un rôle" quand rien n'est encore sélectionné. Un tap ouvre
+/// [_GroupCreateScreenState._openRolePicker].
+class _RoleSelectorTile extends StatelessWidget {
+  const _RoleSelectorTile({
+    required this.character,
+    required this.isGameMaster,
+    required this.onTap,
+  });
 
-  /// `null` tant qu'aucun personnage n'a été choisi.
+  /// `null` tant qu'aucun personnage n'a été choisi (ou si [isGameMaster]).
   final CharacterSummary? character;
+  final bool isGameMaster;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final character = this.character;
+    final hasSelection = isGameMaster || character != null;
+    final label = isGameMaster
+        ? 'MJ — sans personnage'
+        : character?.name ?? 'Choisir un personnage ou un rôle';
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -421,18 +524,34 @@ class _CharacterSelectorTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              PortraitFrame(portraitUrl: character?.portraitUrl, size: 44),
+              isGameMaster
+                  ? const PortraitFrame(
+                      portraitUrl: null,
+                      fallbackIcon: Icons.visibility_outlined,
+                      classThemeColor: AppColors.woodMedium,
+                      size: 44,
+                    )
+                  : PortraitFrame(
+                      portraitUrl: character?.portraitUrl,
+                      size: 44,
+                    ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  character?.name ?? 'Choisir un personnage',
-                  style: AppTypography.body(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: character != null
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
-                  ),
+                  label,
+                  style: isGameMaster
+                      ? AppTypography.body(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        )
+                      : AppTypography.body(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: hasSelection
+                              ? AppColors.textPrimary
+                              : AppColors.textSecondary,
+                        ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -449,7 +568,7 @@ class _CharacterSelectorTile extends StatelessWidget {
   }
 }
 
-/// Note affichée sous [_CharacterSelectorTile] — encadré `parchmentCard`/
+/// Note affichée sous [_RoleSelectorTile] — encadré `parchmentCard`/
 /// bordure `woodLight`/`radius.sm` du design système, recettage
 /// direction-artistique du 13/09/2026.
 class _InviteCodeNote extends StatelessWidget {
@@ -523,30 +642,43 @@ class _CreatingGroupOverlay extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+/// Note compacte "aucun personnage" affichée SOUS [_GmOptionRow] dans la
+/// sheet "CHOISIR TON RÔLE" — remplace l'ancien `_EmptyState` (grand état
+/// centré qui remplaçait tout le bloc de sélection, y compris la tuile) :
+/// même gabarit que [_InviteCodeNote] (boîte `parchment.card`/`wood.light`/
+/// `radius.sm`, icône + texte sur une ligne), voir la doc de classe de
+/// [GroupCreateScreen].
+class _NoCharacterNote extends StatelessWidget {
+  const _NoCharacterNote();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.shield_moon_outlined,
-              size: 56,
-              color: AppColors.goldEnd,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.parchmentCard,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.info_outline,
+            size: 18,
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
               "Tu n'as pas encore de personnage à inscrire dans ce groupe.",
-              textAlign: TextAlign.center,
-              style: AppTypography.body(color: AppColors.textSecondary),
+              style: AppTypography.body(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

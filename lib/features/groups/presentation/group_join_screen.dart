@@ -38,17 +38,28 @@ const String _genericJoinErrorMessage =
 /// membres", `group_join_character_step_screen.dart` "Choix du personnage",
 /// tous les 3 retirés par cette tâche, ainsi que
 /// `widgets/group_join_step_header.dart`) en un seul écran scrollable : code
-/// d'invitation, personnage représentant, bouton "Rejoindre" unique.
+/// d'invitation, rôle du joueur dans ce groupe, bouton "Rejoindre" unique.
+///
+/// **MJ sans personnage** (décision de Matthias du 12-13/10/2026) : le
+/// sélecteur de personnage devient tri-état — rien choisi / personnage
+/// choisi / MJ choisi ([_joinAsGameMaster]) — voir [_RoleSelectorTile]/
+/// [_GmOptionRow]. La ligne MJ de la sheet reste toujours
+/// visible/sélectionnable quel que soit l'état de `charactersProvider`
+/// (correctif d'un bug trouvé par direction-artistique : auparavant,
+/// l'ouverture de la tuile/la sheet ET l'activation du bouton "Rejoindre"
+/// dépendaient de `charactersProvider` ayant résolu en `data`, bloquant à
+/// tort un joueur qui veut rejoindre en MJ si sa liste de personnages est
+/// lente/en erreur/hors-ligne — sans rapport avec son choix).
 ///
 /// **Logique métier migrée telle quelle**, jamais réécrite : la validation
 /// du code passe toujours par `GroupRepository.previewGroupInvite` (résout
 /// le groupe ciblé, lève une [GroupInviteFailure] `invalidCode`/`generic` —
-/// jamais `alreadyInGroup` à ce stade, aucun personnage n'est encore choisi
-/// par l'edge function `preview-group-invite`, même remarque que l'ancienne
-/// étape 2/3), puis le rattachement par `GroupRepository.joinGroup` (peut,
-/// lui, lever les 3 natures d'échec). Les deux appels sont maintenant
-/// orchestrés l'un après l'autre par [_submit] plutôt que répartis sur 2
-/// routes séparées.
+/// jamais `alreadyInGroup`/`mjAlreadyAssigned` à ce stade, aucun rôle n'est
+/// encore choisi par l'edge function `preview-group-invite`, même remarque
+/// que l'ancienne étape 2/3), puis le rattachement par
+/// `GroupRepository.joinGroup` (peut, lui, lever les 4 natures d'échec). Les
+/// deux appels sont maintenant orchestrés l'un après l'autre par [_submit]
+/// plutôt que répartis sur 2 routes séparées.
 ///
 /// **Affichage des erreurs, 2 canaux distincts** (spec de la tâche) :
 /// - code invalide (`GroupInviteFailureKind.invalidCode`, qu'il vienne de
@@ -58,8 +69,9 @@ const String _genericJoinErrorMessage =
 ///   d'illustration statique ; ce libellé "Exemple d'erreur" n'a lui-même
 ///   aucune vocation à apparaître dans l'app, seul le style (icône + texte
 ///   sans bordure) est repris pour le vrai message dynamique.
-/// - tout le reste (`alreadyInGroup`/`generic`, échec réseau) →
-///   [AlertBanner] en tête d'écran, même composant que l'ancienne étape 3/3.
+/// - tout le reste (`alreadyInGroup`/`mjAlreadyAssigned`/`generic`, échec
+///   réseau) → [AlertBanner] en tête d'écran, même composant que l'ancienne
+///   étape 3/3.
 class GroupJoinScreen extends ConsumerStatefulWidget {
   const GroupJoinScreen({this.initialCode, super.key});
 
@@ -76,6 +88,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
     text: _formatCodeDisplay(_rawCode(widget.initialCode ?? '')),
   );
   String? _selectedCharacterId;
+  bool _joinAsGameMaster = false;
   bool _isJoining = false;
   String? _codeErrorMessage;
   String? _bannerMessage;
@@ -97,6 +110,10 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
 
   String get _rawCurrentCode => _rawCode(_codeController.text);
 
+  /// Auto-sélectionne le premier personnage de [characters] tant qu'aucun
+  /// personnage n'a été explicitement choisi — comportement hérité, inchangé
+  /// par l'ajout du rôle MJ (voir la doc de classe) : n'est consulté que
+  /// lorsque [_joinAsGameMaster] est faux.
   CharacterSummary? _selectedCharacter(List<CharacterSummary> characters) {
     for (final character in characters) {
       if (character.id == _selectedCharacterId) return character;
@@ -106,17 +123,34 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
 
   void _selectCharacter(String characterId) {
     if (_isJoining) return;
-    setState(() => _selectedCharacterId = characterId);
+    setState(() {
+      _selectedCharacterId = characterId;
+      _joinAsGameMaster = false;
+    });
   }
 
-  /// Ouvre "CHOISIR UN PERSONNAGE" (tap sur la tuile de personnage) — même
-  /// gabarit de sheet "mode liste" que
-  /// `group_create_screen.dart::_openCharacterPicker` (liste radio exclusive,
-  /// `SheetHeaderBar` + 75 % de la hauteur), dupliqué ici : classes privées à
-  /// leur fichier, même rationale de duplication que le reste de ce dépôt
-  /// (voir `GroupMemberRowMapper`).
-  Future<void> _openCharacterPicker(List<CharacterSummary> characters) {
-    final selected = _selectedCharacter(characters);
+  /// Sélectionne le rôle "MJ — sans personnage" — mutuellement exclusif avec
+  /// [_selectCharacter] (voir la doc de classe).
+  void _selectGameMaster() {
+    if (_isJoining) return;
+    setState(() {
+      _joinAsGameMaster = true;
+      _selectedCharacterId = null;
+    });
+  }
+
+  /// Ouvre "CHOISIR TON RÔLE" (tap sur la tuile de rôle) — même gabarit de
+  /// sheet "mode liste" que `group_create_screen.dart::_openRolePicker`
+  /// (liste radio exclusive, `SheetHeaderBar` + 75 % de la hauteur), dupliqué
+  /// ici : classes privées à leur fichier, même rationale de duplication que
+  /// le reste de ce dépôt (voir `GroupMemberRowMapper`). La ligne MJ
+  /// ([_GmOptionRow]) est toujours en première position, toujours
+  /// sélectionnable ; seule la zone SOUS elle reflète l'état de
+  /// [charactersAsync].
+  Future<void> _openRolePicker(
+    AsyncValue<List<CharacterSummary>> charactersAsync,
+  ) {
+    final selected = _selectedCharacter(charactersAsync.value ?? const []);
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -129,24 +163,58 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
             decoration: const BoxDecoration(color: AppColors.parchmentBg),
             child: Column(
               children: [
-                const SheetHeaderBar(title: 'CHOISIR UN PERSONNAGE'),
+                const SheetHeaderBar(title: 'CHOISIR TON RÔLE'),
                 Expanded(
-                  child: ListView.separated(
+                  child: ListView(
                     padding: const EdgeInsets.all(AppSpacing.lg),
-                    itemCount: characters.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: AppSpacing.md),
-                    itemBuilder: (context, index) {
-                      final character = characters[index];
-                      return _SelectableCharacterRow(
-                        character: character,
-                        selected: character.id == selected?.id,
+                    children: [
+                      _GmOptionRow(
+                        selected: _joinAsGameMaster,
                         onTap: () {
-                          _selectCharacter(character.id);
+                          _selectGameMaster();
                           Navigator.of(sheetContext).pop();
                         },
-                      );
-                    },
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      charactersAsync.when(
+                        data: (characters) => characters.isEmpty
+                            ? const _NoCharacterNote()
+                            : Column(
+                                children: [
+                                  for (final character in characters) ...[
+                                    _SelectableCharacterRow(
+                                      character: character,
+                                      selected:
+                                          !_joinAsGameMaster &&
+                                          character.id == selected?.id,
+                                      onTap: () {
+                                        _selectCharacter(character.id);
+                                        Navigator.of(sheetContext).pop();
+                                      },
+                                    ),
+                                    const SizedBox(height: AppSpacing.md),
+                                  ],
+                                ],
+                              ),
+                        loading: () => const Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.lg,
+                          ),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.woodMedium,
+                            ),
+                          ),
+                        ),
+                        error: (error, stackTrace) => _CharacterTileError(
+                          message: error is CharacterFailure
+                              ? error.message
+                              : 'Impossible de charger vos personnages. '
+                                    'Réessayez.',
+                          onRetry: () => ref.invalidate(charactersProvider),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -157,13 +225,25 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
     );
   }
 
+  /// `true` si le bouton "Rejoindre" peut être activé — **jamais gaté par
+  /// l'état de [charactersAsync] quand [_joinAsGameMaster] est vrai** (voir
+  /// la doc de classe).
+  bool _canSubmit(AsyncValue<List<CharacterSummary>> charactersAsync) {
+    if (_isJoining) return false;
+    if (_rawCurrentCode.length < _rawCodeMinLength) return false;
+    if (_joinAsGameMaster) return true;
+    final characters = charactersAsync.value;
+    return characters != null && _selectedCharacter(characters) != null;
+  }
+
   /// Enchaîne `previewGroupInvite` (validation/résolution du code) puis
   /// `joinGroup` (rattachement) — voir la documentation de classe pour le
   /// détail de la migration et le routage des 2 canaux d'erreur.
   Future<void> _submit(List<CharacterSummary> characters) async {
     final code = _rawCurrentCode;
-    final character = _selectedCharacter(characters);
-    if (code.length < _rawCodeMinLength || character == null || _isJoining) {
+    final character = _joinAsGameMaster ? null : _selectedCharacter(characters);
+    final hasRole = _joinAsGameMaster || character != null;
+    if (code.length < _rawCodeMinLength || !hasRole || _isJoining) {
       return;
     }
 
@@ -198,7 +278,7 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
     try {
       final result = await ref
           .read(groupRepositoryProvider)
-          .joinGroup(code: code, characterId: character.id);
+          .joinGroup(code: code, characterId: character?.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Groupe rejoint !')));
@@ -212,6 +292,8 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
             _codeErrorMessage = "Ce code d'invitation n'est pas valide.";
           case GroupInviteFailureKind.alreadyInGroup:
             _bannerMessage = 'Ce personnage est déjà membre de ce groupe.';
+          case GroupInviteFailureKind.mjAlreadyAssigned:
+            _bannerMessage = 'Ce groupe a déjà un MJ sans personnage.';
           case GroupInviteFailureKind.generic:
             _bannerMessage = _genericJoinErrorMessage;
         }
@@ -228,6 +310,11 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
   @override
   Widget build(BuildContext context) {
     final charactersAsync = ref.watch(charactersProvider);
+    final characters = charactersAsync.value;
+    final selectedCharacter = _joinAsGameMaster
+        ? null
+        : (characters != null ? _selectedCharacter(characters) : null);
+    final hasResolvedEmptyList = characters != null && characters.isEmpty;
 
     return Scaffold(
       body: Stack(
@@ -269,22 +356,16 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                           _CodeErrorHint(message: _codeErrorMessage!),
                         ],
                         const SizedBox(height: AppSpacing.lg),
-                        const _SectionLabel('Ton personnage dans ce groupe'),
+                        const _SectionLabel(
+                          'Qui te représente dans ce groupe ?',
+                        ),
                         const SizedBox(height: AppSpacing.xs),
-                        charactersAsync.when(
-                          data: (characters) => _CharacterSelectorTile(
-                            character: _selectedCharacter(characters),
-                            enabled: !_isJoining && characters.isNotEmpty,
-                            onTap: () => _openCharacterPicker(characters),
-                          ),
-                          loading: () => const _CharacterTileLoading(),
-                          error: (error, stackTrace) => _CharacterTileError(
-                            message: error is CharacterFailure
-                                ? error.message
-                                : 'Impossible de charger vos personnages. '
-                                      'Réessayez.',
-                            onRetry: () => ref.invalidate(charactersProvider),
-                          ),
+                        _RoleSelectorTile(
+                          character: selectedCharacter,
+                          isGameMaster: _joinAsGameMaster,
+                          hasResolvedEmptyList: hasResolvedEmptyList,
+                          enabled: !_isJoining,
+                          onTap: () => _openRolePicker(charactersAsync),
                         ),
                       ],
                     ),
@@ -300,21 +381,13 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
                     AppSpacing.lg,
                     AppSpacing.lg,
                   ),
-                  child: charactersAsync.maybeWhen(
-                    data: (characters) => PrimaryButton(
-                      label: 'Rejoindre',
-                      isLoading: _isJoining,
-                      onPressed:
-                          _rawCurrentCode.length >= _rawCodeMinLength &&
-                              _selectedCharacter(characters) != null &&
-                              !_isJoining
-                          ? () => _submit(characters)
-                          : null,
-                    ),
-                    orElse: () => const PrimaryButton(
-                      label: 'Rejoindre',
-                      onPressed: null,
-                    ),
+                  child: PrimaryButton(
+                    label: 'Rejoindre',
+                    isLoading: _isJoining,
+                    onPressed: _canSubmit(charactersAsync)
+                        ? () =>
+                              _submit(characters ?? const <CharacterSummary>[])
+                        : null,
                   ),
                 ),
               ),
@@ -331,9 +404,10 @@ class _GroupJoinScreenState extends ConsumerState<GroupJoinScreen> {
 /// "MAJUSCULES + `textSecondary`" utilisée ailleurs dans ce module
 /// (`NOM DU GROUPE`, `MES DONNÉES`...) : la maquette "Groupe — Rejoindre"
 /// (`docs/cahier-des-charges/09-maquettes-captures.md`) montre explicitement
-/// "Code d'invitation"/"Ton personnage dans ce groupe" en casse normale, plus
-/// grand et plus sombre — recettage direction-artistique du 13/09/2026, écart
-/// assumé par rapport à la convention majuscule des autres écrans du module.
+/// "Code d'invitation"/"Qui te représente dans ce groupe ?" en casse
+/// normale, plus grand et plus sombre — recettage direction-artistique du
+/// 13/09/2026, écart assumé par rapport à la convention majuscule des autres
+/// écrans du module.
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.label);
 
@@ -436,18 +510,28 @@ class _CodeErrorHint extends StatelessWidget {
   }
 }
 
-/// Tuile affichant le personnage actuellement sélectionné (portrait, nom,
-/// "Race · Classe · Niv. X", chevron) — tap ouvre "CHOISIR UN PERSONNAGE"
-/// (voir `GroupJoinScreen._openCharacterPicker`). `character` `null` (liste
-/// vide) affiche un état neutre non interactif plutôt qu'un chevron trompeur.
-class _CharacterSelectorTile extends StatelessWidget {
-  const _CharacterSelectorTile({
+/// Tuile affichant le rôle actuellement sélectionné : le personnage choisi
+/// (portrait, nom, "Race · Classe · Niv. X"), le rôle "MJ — sans personnage"
+/// si [isGameMaster], ou un état neutre selon que [character] est `null`
+/// parce que rien n'est encore résolu (placeholder générique) ou parce que
+/// la liste de personnages est confirmée vide ([hasResolvedEmptyList]).
+///
+/// **Toujours tappable** ([enabled] ne dépend que de `!_isJoining`, jamais
+/// de l'état de `charactersProvider`) — voir la doc de classe de
+/// [GroupJoinScreen] pour le rationale du correctif. Tap ouvre "CHOISIR TON
+/// RÔLE" (voir `GroupJoinScreen._openRolePicker`).
+class _RoleSelectorTile extends StatelessWidget {
+  const _RoleSelectorTile({
     required this.character,
+    required this.isGameMaster,
+    required this.hasResolvedEmptyList,
     required this.enabled,
     required this.onTap,
   });
 
   final CharacterSummary? character;
+  final bool isGameMaster;
+  final bool hasResolvedEmptyList;
   final bool enabled;
   final VoidCallback onTap;
 
@@ -472,42 +556,20 @@ class _CharacterSelectorTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              PortraitFrame(
-                portraitUrl: summary?.portraitUrl,
-                size: 44,
-                classThemeColor: _classThemeColor(summary?.className),
-              ),
+              isGameMaster
+                  ? const PortraitFrame(
+                      portraitUrl: null,
+                      fallbackIcon: Icons.visibility_outlined,
+                      classThemeColor: AppColors.woodMedium,
+                      size: 44,
+                    )
+                  : PortraitFrame(
+                      portraitUrl: summary?.portraitUrl,
+                      size: 44,
+                      classThemeColor: _classThemeColor(summary?.className),
+                    ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: summary == null
-                    ? Text(
-                        "Tu n'as pas encore de personnage à rattacher.",
-                        style: AppTypography.body(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                        ),
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            summary.name,
-                            style: AppTypography.body(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          Text(
-                            _summaryLine(summary),
-                            style: AppTypography.body(
-                              fontSize: 13,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
+              Expanded(child: _buildLabel(summary)),
               if (enabled)
                 const Icon(
                   Icons.chevron_right,
@@ -518,6 +580,61 @@ class _CharacterSelectorTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLabel(CharacterSummary? summary) {
+    if (isGameMaster) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'MJ — sans personnage',
+            style: AppTypography.body(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          Text(
+            'Suit le groupe sans fiche de personnage.',
+            style: AppTypography.body(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      );
+    }
+    if (summary != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            summary.name,
+            style: AppTypography.body(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          Text(
+            _summaryLine(summary),
+            style: AppTypography.body(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      );
+    }
+    final text = hasResolvedEmptyList
+        ? "Tu n'as pas encore de personnage à rattacher."
+        : 'Choisir un personnage ou un rôle';
+    return Text(
+      text,
+      style: AppTypography.body(fontSize: 13, color: AppColors.textSecondary),
     );
   }
 
@@ -545,27 +662,42 @@ class _CharacterSelectorTile extends StatelessWidget {
   }
 }
 
-class _CharacterTileLoading extends StatelessWidget {
-  const _CharacterTileLoading();
+/// Note compacte "aucun personnage" affichée SOUS [_GmOptionRow] dans la
+/// sheet "CHOISIR TON RÔLE" lorsque la liste résolue est vide — même gabarit
+/// que `group_create_screen.dart::_NoCharacterNote` (boîte `parchment.card`/
+/// `wood.light`/`radius.sm`, icône + texte sur une ligne), dupliqué ici avec
+/// le texte déjà utilisé par [_RoleSelectorTile] sur cet écran.
+class _NoCharacterNote extends StatelessWidget {
+  const _NoCharacterNote();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
         color: AppColors.parchmentCard,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
       ),
-      child: const Center(
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: AppColors.woodMedium,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.info_outline,
+            size: 18,
+            color: AppColors.textSecondary,
           ),
-        ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              "Tu n'as pas encore de personnage à rattacher.",
+              style: AppTypography.body(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -604,7 +736,7 @@ class _CharacterTileError extends StatelessWidget {
   }
 }
 
-/// Ligne sélectionnable de la sheet "CHOISIR UN PERSONNAGE" — même patron que
+/// Ligne sélectionnable de la sheet "CHOISIR TON RÔLE" — même patron que
 /// `group_create_screen.dart::_SelectableCharacterRow` (`CharacterCard` +
 /// bouton radio 20×20), dupliqué ici (classe privée à son fichier).
 class _SelectableCharacterRow extends StatelessWidget {
@@ -649,6 +781,79 @@ class _SelectableCharacterRow extends StatelessWidget {
                       style: AppTypography.body(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              _RadioIndicator(selected: selected),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Ligne "MJ — sans personnage" de la sheet "CHOISIR TON RÔLE" — toujours en
+/// première position, toujours sélectionnable indépendamment de l'état de
+/// `charactersProvider` (voir la doc de classe de [GroupJoinScreen]). Même
+/// gabarit visuel que [_SelectableCharacterRow], même tuile 44×44 que
+/// [_RoleSelectorTile], titre/sous-titre identiques à son état "MJ choisi"
+/// (contrairement à `group_create_screen.dart::_GmOptionRow`, cet écran
+/// affiche un sous-titre sur 2 lignes, comme ses lignes personnage dans la
+/// tuile).
+class _GmOptionRow extends StatelessWidget {
+  const _GmOptionRow({required this.selected, required this.onTap});
+
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.parchmentCard,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: AppColors.woodLight,
+              width: AppBorders.card,
+            ),
+          ),
+          child: Row(
+            children: [
+              const PortraitFrame(
+                portraitUrl: null,
+                fallbackIcon: Icons.visibility_outlined,
+                classThemeColor: AppColors.woodMedium,
+                size: 44,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'MJ — sans personnage',
+                      style: AppTypography.body(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Suit le groupe sans fiche de personnage.',
+                      style: AppTypography.body(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],

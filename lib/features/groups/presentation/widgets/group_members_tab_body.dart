@@ -79,12 +79,15 @@ class GroupMembersTabBody extends StatelessWidget {
             member: member,
             isSelf: member.userId == detail.currentUserId,
             // Sa propre fiche s'ouvre normalement (modifiable) ; celle des
-            // autres membres en lecture seule.
-            onOpen: () => context.push(
-              member.userId == detail.currentUserId
-                  ? '/characters/${member.characterId}'
-                  : '/groups/${detail.id}/members/${member.characterId}',
-            ),
+            // autres membres en lecture seule. `null` pour un MJ sans
+            // personnage : rien à ouvrir (voir `_MemberCard.build`).
+            onOpen: member.isGameMaster
+                ? null
+                : () => context.push(
+                    member.userId == detail.currentUserId
+                        ? '/characters/${member.characterId}'
+                        : '/groups/${detail.id}/members/${member.characterId}',
+                  ),
             canRemove: detail.isOwner && member.userId != detail.currentUserId,
             onRemove: () => onRemoveMember(member),
           ),
@@ -142,13 +145,19 @@ class _MemberCard extends StatelessWidget {
   final bool isSelf;
 
   /// Ouvre la fiche du personnage (la sienne, ou celle d'un autre membre en
-  /// lecture seule).
-  final VoidCallback onOpen;
+  /// lecture seule) — `null` pour un MJ sans personnage
+  /// ([GroupMember.isGameMaster]) : rien à ouvrir, voir [build].
+  final VoidCallback? onOpen;
   final bool canRemove;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
+    // Carte MJ sans personnage : jamais de `Material`/`InkWell` (pas de zone
+    // de tap morte, rien à ouvrir), jamais le fond/la bordure "MORT", jamais
+    // de jauge PV factice (voir [_buildGameMasterCard]).
+    if (member.isGameMaster) return _buildGameMasterCard();
+
     final isDead = member.vitalStatus == CharacterVitalStatus.dead;
     final nameColor = isDead ? AppColors.textMuted : AppColors.textPrimary;
 
@@ -237,7 +246,7 @@ class _MemberCard extends StatelessWidget {
                     ),
                     if (member.vitalStatus != CharacterVitalStatus.alive) ...[
                       const SizedBox(width: AppSpacing.xs),
-                      _StatusBadge(status: member.vitalStatus),
+                      _StatusBadge(status: member.vitalStatus!),
                     ],
                   ],
                 ),
@@ -257,9 +266,9 @@ class _MemberCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    if (member.temporaryHp > 0) ...[
+                    if ((member.temporaryHp ?? 0) > 0) ...[
                       const SizedBox(width: AppSpacing.xs),
-                      _TemporaryHpChip(amount: member.temporaryHp),
+                      _TemporaryHpChip(amount: member.temporaryHp!),
                     ],
                   ],
                 ),
@@ -267,19 +276,147 @@ class _MemberCard extends StatelessWidget {
             ),
           ),
           if (canRemove)
-            SizedBox(
-              width: 44,
-              height: 44,
-              child: IconButton(
-                tooltip: 'Exclure ${member.name}',
-                onPressed: onRemove,
-                icon: const Icon(
-                  Icons.person_remove_outlined,
-                  color: AppColors.accentBrick,
-                ),
-              ),
-            ),
+            _RemoveMemberButton(memberName: member.name, onRemove: onRemove),
         ],
+      ),
+    );
+  }
+
+  /// Carte d'un membre MJ sans personnage (voir la doc de classe de
+  /// [GroupMember]) : portrait dédié (`Icons.visibility_outlined` sur fond
+  /// `wood.medium`, jamais le motif pointillé neutre qui signifierait
+  /// "personnage sans portrait"), badge pilule "MJ" ([_GameMasterBadge]) à la
+  /// place du badge de statut vital (mutuellement exclusifs, un MJ n'a pas de
+  /// `vitalStatus`), ligne PV remplacée par un texte neutre — **jamais** de
+  /// valeur factice (0/0 serait lu comme "MJ en train de mourir", contre-sens
+  /// grave). Fond de carte "vivant" normal, jamais `deadCardBackground`. Pas
+  /// de `Material`/`InkWell` : aucune zone de tap, rien à ouvrir pour un MJ
+  /// sans personnage. Le bouton "Exclure" (logique de permission inchangée)
+  /// reste affiché à l'identique.
+  Widget _buildGameMasterCard() {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.parchmentCard,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const PortraitFrame(
+            portraitUrl: null,
+            fallbackIcon: Icons.visibility_outlined,
+            classThemeColor: AppColors.woodMedium,
+            size: 64,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: member.name,
+                              style: AppTypography.body(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            if (isSelf)
+                              TextSpan(
+                                text: ' (toi)',
+                                style: AppTypography.body(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    const _GameMasterBadge(),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Ne suit pas ses PV ici.',
+                  style: AppTypography.body(
+                    fontSize: 13,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (canRemove)
+            _RemoveMemberButton(memberName: member.name, onRemove: onRemove),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bouton "Exclure {member}" en fin de carte — logique de permission gérée
+/// par l'appelant ([_MemberCard]), extrait pour être partagé à l'identique
+/// entre la carte personnage et la carte MJ sans personnage.
+class _RemoveMemberButton extends StatelessWidget {
+  const _RemoveMemberButton({required this.memberName, required this.onRemove});
+
+  final String memberName;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: IconButton(
+        tooltip: 'Exclure $memberName',
+        onPressed: onRemove,
+        icon: const Icon(
+          Icons.person_remove_outlined,
+          color: AppColors.accentBrick,
+        ),
+      ),
+    );
+  }
+}
+
+/// Badge pilule "MJ" — mutuellement exclusif avec [_StatusBadge] (un MJ sans
+/// personnage n'a pas de statut vital, voir [GroupMember.vitalStatus]) :
+/// fond `color.wood.medium`, texte `color.text.on-wood`, bordure 1px
+/// `color.wood.dark` — jamais `accentBrick`/les couleurs de statut vital.
+class _GameMasterBadge extends StatelessWidget {
+  const _GameMasterBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.woodMedium,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.woodDark, width: 1),
+      ),
+      child: Text(
+        'MJ',
+        style: AppTypography.display(fontSize: 11, color: AppColors.textOnWood),
       ),
     );
   }

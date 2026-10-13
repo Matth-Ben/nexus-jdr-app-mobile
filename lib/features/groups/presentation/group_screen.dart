@@ -96,9 +96,10 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     final confirmed = await showGroupConfirmationDialog(
       context,
       title: 'Exclure ${member.name} du groupe ?',
-      message:
-          'Son personnage garde toutes ses données, mais quitte '
-          'immédiatement le groupe.',
+      message: member.isGameMaster
+          ? 'Il/elle quitte immédiatement le groupe.'
+          : 'Son personnage garde toutes ses données, mais quitte '
+                'immédiatement le groupe.',
       confirmLabel: 'Exclure',
     );
     if (confirmed != true || !mounted) return;
@@ -106,10 +107,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     try {
       await ref
           .read(groupRepositoryProvider)
-          .removeMember(
-            groupId: widget.groupId,
-            characterId: member.characterId,
-          );
+          .removeMember(groupId: widget.groupId, userId: member.userId);
       ref.invalidate(groupDetailProvider(widget.groupId));
       if (!mounted) return;
       _showSnackBar('${member.name} a été exclu du groupe.');
@@ -396,6 +394,10 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       data: (treasure) => GroupTreasureTabBody(
         treasure: treasure,
         isBusy: _isWritingTreasure,
+        // Un MJ sans personnage peut gérer le butin commun mais ne peut pas
+        // s'en attribuer une part (aucun inventaire personnel à créditer) —
+        // voir `GroupTreasureTabBody.canClaim`.
+        canClaim: detail.currentMember?.characterId != null,
         onClaimCurrency: () => _openClaimCurrencySheet(detail, treasure),
         onClaimItem: (item) => _openClaimItemSheet(detail, item),
         onAddToTreasure: () => _openAddToTreasureSheet(treasure),
@@ -414,7 +416,13 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
 
   Widget _buildNotesTab(GroupDetail detail) {
     final characterId = detail.currentMember?.characterId;
-    if (characterId == null) return const SizedBox.shrink();
+    // Le carnet de notes est propre à un personnage — un MJ sans personnage
+    // (voir `GroupMember.isGameMaster`) n'en a pas ici (`group_notes` est
+    // indexé par `character_id`, jamais applicable à sa propre ligne). Voir
+    // `_NoNotesForGameMasterState` pour l'état désactivé explicite affiché à
+    // la place, ciblé uniquement sur SA PROPRE vue (jamais celle d'un autre
+    // membre, qui n'est jamais représentée par cet onglet).
+    if (characterId == null) return const _NoNotesForGameMasterState();
 
     final noteAsync = ref.watch(
       groupNoteProvider(groupId: widget.groupId, characterId: characterId),
@@ -435,6 +443,36 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
             : 'Impossible de charger tes notes. Réessayez.',
         onRetry: () => ref.invalidate(
           groupNoteProvider(groupId: widget.groupId, characterId: characterId),
+        ),
+      ),
+    );
+  }
+}
+
+/// État désactivé explicite de l'onglet "Notes" pour un MJ sans personnage
+/// (voir `_GroupScreenState._buildNotesTab`) — même gabarit que
+/// `group_treasure_tab_body.dart::_EmptyTreasureItemsState` (icône centrée
+/// 56px `text.muted`, texte centré `text.muted`, pas de bouton).
+class _NoNotesForGameMasterState extends StatelessWidget {
+  const _NoNotesForGameMasterState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.edit_note, size: 56, color: AppColors.textMuted),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Le carnet de notes est propre à un personnage : en tant que '
+              'MJ sans personnage, tu n\'en as pas ici.',
+              textAlign: TextAlign.center,
+              style: AppTypography.body(color: AppColors.textMuted),
+            ),
+          ],
         ),
       ),
     );

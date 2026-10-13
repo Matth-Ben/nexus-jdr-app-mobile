@@ -19,6 +19,7 @@ void main() {
   Widget buildWidget({
     required GroupTreasure treasure,
     bool isBusy = false,
+    bool canClaim = true,
     VoidCallback? onClaimCurrency,
     ClaimGroupTreasureItemCallback? onClaimItem,
     VoidCallback? onAddToTreasure,
@@ -28,6 +29,7 @@ void main() {
         body: GroupTreasureTabBody(
           treasure: treasure,
           isBusy: isBusy,
+          canClaim: canClaim,
           onClaimCurrency: onClaimCurrency ?? () {},
           onClaimItem: onClaimItem ?? (_) {},
           onAddToTreasure: onAddToTreasure ?? () {},
@@ -179,4 +181,60 @@ void main() {
       expect(addButton.onPressed, isNull);
     },
   );
+
+  testWidgets(
+    'canClaim faux (MJ sans personnage) : bandeau dédié, "Répartir vers mon '
+    'inventaire" et "S\'attribuer" assourdis, "Ajouter au butin du groupe" '
+    'reste actif',
+    (tester) async {
+      var claimCurrencyCalled = false;
+      var claimItemCalled = false;
+      var addToTreasureCalled = false;
+      await tester.pumpWidget(
+        buildWidget(
+          treasure: const GroupTreasure(
+            groupId: 'group-1',
+            currencyGp: 12,
+            items: [
+              GroupTreasureItem(itemId: 7, displayName: 'Potion', quantity: 1),
+            ],
+          ),
+          canClaim: false,
+          onClaimCurrency: () => claimCurrencyCalled = true,
+          onClaimItem: (_) => claimItemCalled = true,
+          onAddToTreasure: () => addToTreasureCalled = true,
+        ),
+      );
+
+      expect(
+        find.textContaining("tu peux gérer le butin commun mais pas"),
+        findsOneWidget,
+      );
+
+      final dashedButton = tester.widget<DashedButton>(
+        find.byType(DashedButton),
+      );
+      expect(dashedButton.onPressed, isNull);
+
+      await tester.tap(find.text('Répartir vers mon inventaire'));
+      await tester.tap(find.text("S'attribuer"));
+      await tester.tap(find.text('AJOUTER AU BUTIN DU GROUPE'));
+      await tester.pumpAndSettle();
+
+      expect(claimCurrencyCalled, isFalse);
+      expect(claimItemCalled, isFalse);
+      expect(addToTreasureCalled, isTrue);
+    },
+  );
+
+  testWidgets('canClaim vrai (défaut) : pas de bandeau dédié', (tester) async {
+    await tester.pumpWidget(
+      buildWidget(treasure: const GroupTreasure(groupId: 'group-1')),
+    );
+
+    expect(
+      find.textContaining("tu peux gérer le butin commun mais pas"),
+      findsNothing,
+    );
+  });
 }

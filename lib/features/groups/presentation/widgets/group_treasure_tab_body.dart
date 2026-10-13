@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/dashed_button.dart';
+import '../../../../core/widgets/info_banner.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../characters/presentation/widgets/character_inventory_stat_boxes_row.dart';
 import '../../domain/group_treasure.dart';
@@ -20,10 +21,18 @@ typedef ClaimGroupTreasureItemCallback = void Function(GroupTreasureItem item);
 /// [isBusy] verrouille toutes les actions d'écriture pendant qu'un appel
 /// réseau (réclamation de monnaie/d'objet, ajout au butin) est en vol — même
 /// principe que `CharacterInventoryTabBody.actionsDisabled`.
+///
+/// [canClaim] `false` pour un MJ sans personnage (`GroupMember.isGameMaster`,
+/// voir `group_screen.dart::_buildTreasureTab`) : il peut gérer le butin
+/// commun mais pas s'en attribuer une part (aucun inventaire personnel à
+/// créditer) — assourdit "Répartir vers mon inventaire" et chaque ligne
+/// "S'attribuer", sans toucher au bouton "Ajouter au butin du groupe"
+/// (n'a jamais dépendu d'un personnage).
 class GroupTreasureTabBody extends StatelessWidget {
   const GroupTreasureTabBody({
     required this.treasure,
     required this.isBusy,
+    required this.canClaim,
     required this.onClaimCurrency,
     required this.onClaimItem,
     required this.onAddToTreasure,
@@ -32,6 +41,7 @@ class GroupTreasureTabBody extends StatelessWidget {
 
   final GroupTreasure treasure;
   final bool isBusy;
+  final bool canClaim;
   final VoidCallback onClaimCurrency;
   final ClaimGroupTreasureItemCallback onClaimItem;
   final VoidCallback onAddToTreasure;
@@ -46,6 +56,16 @@ class GroupTreasureTabBody extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
+              if (!canClaim) ...[
+                const InfoBanner(
+                  icon: Icons.visibility_outlined,
+                  message:
+                      'En tant que MJ sans personnage, tu peux gérer le '
+                      "butin commun mais pas t'attribuer une part — seuls "
+                      'les membres avec un personnage le peuvent.',
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
               const _SectionLabel('MONNAIE COMMUNE'),
               const SizedBox(height: AppSpacing.sm),
               CharacterInventoryStatBoxesRow(boxes: boxes),
@@ -53,7 +73,7 @@ class GroupTreasureTabBody extends StatelessWidget {
               DashedButton(
                 icon: Icons.savings_outlined,
                 label: 'Répartir vers mon inventaire',
-                onPressed: (!isBusy && !treasure.hasNoCurrency)
+                onPressed: (canClaim && !isBusy && !treasure.hasNoCurrency)
                     ? onClaimCurrency
                     : null,
               ),
@@ -66,7 +86,9 @@ class GroupTreasureTabBody extends StatelessWidget {
                 for (final item in treasure.items) ...[
                   _TreasureItemRow(
                     item: item,
-                    onClaim: isBusy ? null : () => onClaimItem(item),
+                    onClaim: (canClaim && !isBusy)
+                        ? () => onClaimItem(item)
+                        : null,
                   ),
                   const SizedBox(height: AppSpacing.xs),
                 ],

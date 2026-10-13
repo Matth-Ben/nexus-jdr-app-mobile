@@ -21,6 +21,10 @@ GroupInviteFailure mapGroupInviteError(Object error) {
         GroupInviteFailureKind.alreadyInGroup,
         serverMessage: serverMessage,
       ),
+      'mj_already_assigned' => GroupInviteFailure(
+        GroupInviteFailureKind.mjAlreadyAssigned,
+        serverMessage: serverMessage,
+      ),
       _ => GroupInviteFailure(
         GroupInviteFailureKind.generic,
         serverMessage: serverMessage,

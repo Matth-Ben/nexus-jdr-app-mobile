@@ -37,7 +37,12 @@ abstract class GroupDetail with _$GroupDetail {
   GroupRole get currentUserRole => currentMember?.role ?? GroupRole.membre;
 
   /// Identifiants de personnage de tous les membres — voir
-  /// `GroupRepository.subscribeToMemberUpdates`.
+  /// `GroupRepository.subscribeToMemberUpdates`. Un membre MJ sans
+  /// personnage ([GroupMember.isGameMaster]) n'a pas de `characterId` : on
+  /// retombe alors sur son `userId`, qui ne correspondra jamais à un
+  /// `characters.id` réel (la table `characters` RLS-filtrée que
+  /// `subscribeToMemberUpdates` écoute) — un identifiant inoffensif qui ne
+  /// matchera simplement rien, plutôt qu'un `null` qui casserait `List<String>`.
   List<String> get memberCharacterIds =>
-      members.map((member) => member.characterId).toList();
+      members.map((member) => member.characterId ?? member.userId).toList();
 }
