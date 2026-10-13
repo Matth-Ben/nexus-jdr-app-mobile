@@ -251,7 +251,7 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<CreatedGroup> createGroup({
     required String name,
-    required String characterId,
+    String? characterId,
   }) => throw UnimplementedError();
 
   @override
@@ -259,10 +259,8 @@ class _FakeGroupRepository implements GroupRepository {
       throw UnimplementedError();
 
   @override
-  Future<JoinedGroup> joinGroup({
-    required String code,
-    required String characterId,
-  }) => throw UnimplementedError();
+  Future<JoinedGroup> joinGroup({required String code, String? characterId}) =>
+      throw UnimplementedError();
 
   @override
   Future<void> renameGroup({required String groupId, required String name}) =>
@@ -281,7 +279,7 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<void> removeMember({
     required String groupId,
-    required String characterId,
+    required String userId,
   }) => throw UnimplementedError();
 
   @override

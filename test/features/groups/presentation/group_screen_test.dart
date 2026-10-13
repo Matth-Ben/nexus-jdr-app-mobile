@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/theme/app_spacing.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
+import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/core/widgets/wood_back_header.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
@@ -43,7 +44,7 @@ class _FakeGroupRepository implements GroupRepository {
   Object? treasureErrorToThrow;
 
   Object? removeMemberError;
-  String? lastRemovedCharacterId;
+  String? lastRemovedUserId;
 
   bool leaveGroupCalled = false;
   Object? leaveGroupError;
@@ -101,9 +102,9 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<void> removeMember({
     required String groupId,
-    required String characterId,
+    required String userId,
   }) async {
-    lastRemovedCharacterId = characterId;
+    lastRemovedUserId = userId;
     if (removeMemberError != null) throw removeMemberError!;
   }
 
@@ -196,7 +197,7 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<CreatedGroup> createGroup({
     required String name,
-    required String characterId,
+    String? characterId,
   }) => throw UnimplementedError();
 
   @override
@@ -204,10 +205,8 @@ class _FakeGroupRepository implements GroupRepository {
       throw UnimplementedError();
 
   @override
-  Future<JoinedGroup> joinGroup({
-    required String code,
-    required String characterId,
-  }) => throw UnimplementedError();
+  Future<JoinedGroup> joinGroup({required String code, String? characterId}) =>
+      throw UnimplementedError();
 }
 
 GroupMember _member({
@@ -548,7 +547,7 @@ void main() {
         await tester.tap(find.text('Exclure'));
         await tester.pumpAndSettle();
 
-        expect(fakeRepository.lastRemovedCharacterId, 'char-2');
+        expect(fakeRepository.lastRemovedUserId, 'user-2');
         expect(find.textContaining('exclu du groupe'), findsOneWidget);
       },
     );
@@ -935,6 +934,126 @@ void main() {
       expect(field.controller?.text, isEmpty);
       final button = tester.widget<PrimaryButton>(find.byType(PrimaryButton));
       expect(button.onPressed, isNull);
+    });
+  });
+
+  group('MJ sans personnage (décision du 12-13/10/2026)', () {
+    final gameMaster = const GroupMember(
+      userId: 'user-mj',
+      role: GroupRole.membre,
+      name: 'Brunhilde',
+    );
+
+    GroupDetail gameMasterViewDetail() => GroupDetail(
+      id: 'group-1',
+      name: 'Les Lames de l\'Aube',
+      ownerId: 'user-1',
+      inviteCode: 'AB3F7K2M',
+      currentUserId: 'user-mj',
+      members: [owner, gameMaster],
+    );
+
+    testWidgets(
+      'onglet Membres : badge "MJ", texte PV neutre, pas de zone de tap',
+      (tester) async {
+        fakeRepository.detailToReturn = gameMasterViewDetail();
+
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+
+        expect(find.text('MJ'), findsOneWidget);
+        expect(find.text('Ne suit pas ses PV ici.'), findsOneWidget);
+
+        // Aucun `InkWell` enveloppant la carte "Brunhilde" (rien à ouvrir).
+        final gmCardText = find.textContaining('Brunhilde', findRichText: true);
+        final gmInkWell = find.ancestor(
+          of: gmCardText,
+          matching: find.byType(InkWell),
+        );
+        expect(gmInkWell, findsNothing);
+      },
+    );
+
+    testWidgets(
+      'owner : exclure le MJ sans personnage appelle removeMember avec son '
+      'userId (characterId est null, inutilisable comme clé)',
+      (tester) async {
+        fakeRepository.detailToReturn = GroupDetail(
+          id: 'group-1',
+          name: 'Les Lames de l\'Aube',
+          ownerId: 'user-1',
+          inviteCode: 'AB3F7K2M',
+          currentUserId: 'user-1',
+          members: [owner, gameMaster],
+        );
+
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.person_remove_outlined));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Exclure'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.lastRemovedUserId, 'user-mj');
+        expect(find.textContaining('a été exclu du groupe'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'onglet Butin : bandeau dédié, "Répartir vers mon inventaire" et '
+      '"S\'attribuer" assourdis',
+      (tester) async {
+        fakeRepository.detailToReturn = gameMasterViewDetail();
+        fakeRepository.treasureToReturn = const GroupTreasure(
+          groupId: 'group-1',
+          currencyGp: 12,
+          items: [
+            GroupTreasureItem(itemId: 7, displayName: 'Potion', quantity: 1),
+          ],
+        );
+
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('BUTIN'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining("tu peux gérer le butin commun mais pas"),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Répartir vers mon inventaire'));
+        await tester.tap(find.text("S'attribuer"));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.claimCurrencyCallCount, 0);
+        expect(fakeRepository.lastClaimedQuantity, isNull);
+
+        // "Ajouter au butin du groupe" reste actif (n'a jamais dépendu d'un
+        // personnage).
+        final addButton = tester.widget<SecondaryButton>(
+          find.byType(SecondaryButton),
+        );
+        expect(addButton.onPressed, isNotNull);
+      },
+    );
+
+    testWidgets('onglet Notes : état désactivé explicite, jamais vide', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = gameMasterViewDetail();
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('NOTES'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('Le carnet de notes est propre à un personnage'),
+        findsOneWidget,
+      );
+      expect(fakeRepository.noteFetchCount, 0);
     });
   });
 

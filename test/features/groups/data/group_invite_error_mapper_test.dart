@@ -34,6 +34,23 @@ void main() {
       },
     );
 
+    test(
+      'error: mj_already_assigned -> GroupInviteFailureKind.mjAlreadyAssigned',
+      () {
+        final failure = mapGroupInviteError(
+          const FunctionsHttpException(
+            status: 409,
+            details: {
+              'error': 'mj_already_assigned',
+              'message': 'Ce groupe a déjà un MJ sans personnage.',
+            },
+          ),
+        );
+
+        expect(failure.kind, GroupInviteFailureKind.mjAlreadyAssigned);
+      },
+    );
+
     test('error inconnu/internal_error -> GroupInviteFailureKind.generic', () {
       final failure = mapGroupInviteError(
         const FunctionsHttpException(

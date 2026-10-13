@@ -15,6 +15,7 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
+import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
@@ -318,7 +319,7 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<JoinedGroup> joinGroup({
     required String code,
-    required String characterId,
+    String? characterId,
   }) async {
     joinCallCount++;
     lastJoinedCode = code;
@@ -334,7 +335,7 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<CreatedGroup> createGroup({
     required String name,
-    required String characterId,
+    String? characterId,
   }) => throw UnimplementedError();
 
   @override
@@ -358,7 +359,7 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<void> removeMember({
     required String groupId,
-    required String characterId,
+    required String userId,
   }) => throw UnimplementedError();
 
   @override
@@ -572,7 +573,7 @@ void main() {
     );
   });
 
-  testWidgets('tap sur la tuile personnage ouvre "CHOISIR UN PERSONNAGE", la '
+  testWidgets('tap sur la tuile personnage ouvre "CHOISIR TON RÔLE", la '
       'sélection met à jour la tuile', (tester) async {
     fakeCharacterRepository.charactersToReturn = const [
       CharacterSummary(id: '1', name: 'Halltesse', level: 5, xp: 7000),
@@ -588,13 +589,13 @@ void main() {
     await tester.tap(find.text('Halltesse'));
     await tester.pumpAndSettle();
 
-    expect(find.text('CHOISIR UN PERSONNAGE'), findsOneWidget);
+    expect(find.text('CHOISIR TON RÔLE'), findsOneWidget);
     expect(find.text('Borgan'), findsOneWidget);
 
     await tester.tap(find.text('Borgan'));
     await tester.pumpAndSettle();
 
-    expect(find.text('CHOISIR UN PERSONNAGE'), findsNothing);
+    expect(find.text('CHOISIR TON RÔLE'), findsNothing);
     expect(find.text('Borgan'), findsOneWidget);
   });
 
@@ -721,4 +722,144 @@ void main() {
       expect(find.text('Liste des personnages'), findsOneWidget);
     },
   );
+
+  group('MJ sans personnage (décision du 12-13/10/2026)', () {
+    testWidgets(
+      'sélectionner MJ met à jour la tuile et active "Rejoindre" dès que le '
+      'code est valide',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(id: '1', name: 'Halltesse', level: 5, xp: 7000),
+        ];
+
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Halltesse'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('MJ — sans personnage'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('MJ — sans personnage'), findsOneWidget);
+        expect(
+          find.text('Suit le groupe sans fiche de personnage.'),
+          findsOneWidget,
+        );
+        expect(_isPrimaryButtonEnabled(tester), isFalse);
+
+        await tester.enterText(find.byType(TextField), 'ab3f7k');
+        await tester.pump();
+
+        expect(_isPrimaryButtonEnabled(tester), isTrue);
+      },
+    );
+
+    testWidgets(
+      'sélection exclusive : choisir un personnage après MJ désélectionne MJ',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(id: '1', name: 'Halltesse', level: 5, xp: 7000),
+        ];
+
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Halltesse'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('MJ — sans personnage'));
+        await tester.pumpAndSettle();
+        expect(find.text('MJ — sans personnage'), findsOneWidget);
+
+        await tester.tap(find.text('MJ — sans personnage'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Halltesse'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Halltesse'), findsOneWidget);
+        expect(find.text('MJ — sans personnage'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'la ligne MJ reste visible/sélectionnable même si charactersProvider '
+      'échoue — "Rejoindre" ne dépend jamais de cet état quand MJ est choisi',
+      (tester) async {
+        fakeCharacterRepository.charactersErrorToThrow = const CharacterFailure(
+          'Erreur serveur.',
+        );
+
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        expect(find.text('Choisir un personnage ou un rôle'), findsOneWidget);
+
+        await tester.tap(find.text('Choisir un personnage ou un rôle'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('MJ — sans personnage'), findsOneWidget);
+        await tester.tap(find.text('MJ — sans personnage'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), 'ab3f7k');
+        await tester.pump();
+
+        expect(_isPrimaryButtonEnabled(tester), isTrue);
+      },
+    );
+
+    testWidgets(
+      'rejoindre en MJ : joinGroup est appelé avec characterId null',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(id: '42', name: 'Borgan', level: 1, xp: 0),
+        ];
+
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Borgan'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('MJ — sans personnage'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), 'ab3f7k');
+        await tester.pump();
+        await tester.tap(find.text('REJOINDRE'));
+        await tester.pumpAndSettle();
+
+        expect(fakeGroupRepository.lastJoinedCharacterId, isNull);
+        expect(find.text('Écran Groupe group-1'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'échec "mj_already_assigned" au rattachement : bandeau encadré dédié',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [];
+        fakeGroupRepository.joinErrorToThrow = const GroupInviteFailure(
+          GroupInviteFailureKind.mjAlreadyAssigned,
+        );
+
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.text("Tu n'as pas encore de personnage à rattacher."),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('MJ — sans personnage'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), 'ab3f7k');
+        await tester.pump();
+        await tester.tap(find.text('REJOINDRE'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Ce groupe a déjà un MJ sans personnage.'),
+          findsOneWidget,
+        );
+      },
+    );
+  });
 }

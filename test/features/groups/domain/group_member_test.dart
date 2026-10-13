@@ -72,4 +72,22 @@ void main() {
       expect(_member(raceName: null, className: null).summaryLine, 'Niv. 3');
     });
   });
+
+  group('GroupMember.isGameMaster', () {
+    test('faux quand characterId est renseigné', () {
+      expect(_member().isGameMaster, isFalse);
+    });
+
+    test('vrai quand characterId est null (MJ sans personnage)', () {
+      const gameMaster = GroupMember(
+        userId: 'user-mj',
+        role: GroupRole.membre,
+        name: 'MJ',
+      );
+      expect(gameMaster.isGameMaster, isTrue);
+      expect(gameMaster.vitalStatus, isNull);
+      expect(gameMaster.hpRatio, 0);
+      expect(gameMaster.summaryLine, isEmpty);
+    });
+  });
 }

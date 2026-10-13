@@ -112,4 +112,25 @@ void main() {
 
     expect(detail.memberCharacterIds, ['char-1', 'char-2']);
   });
+
+  test('memberCharacterIds retombe sur userId pour un MJ sans personnage', () {
+    final gameMaster = GroupMember(
+      userId: 'user-mj',
+      role: GroupRole.membre,
+      name: 'MJ',
+    );
+    final detail = GroupDetail(
+      id: 'group-1',
+      name: 'Les Lames',
+      ownerId: 'user-owner',
+      inviteCode: 'AB3F7K2M',
+      currentUserId: 'user-owner',
+      members: [
+        _member(characterId: 'char-1', userId: 'user-1', role: GroupRole.owner),
+        gameMaster,
+      ],
+    );
+
+    expect(detail.memberCharacterIds, ['char-1', 'user-mj']);
+  });
 }

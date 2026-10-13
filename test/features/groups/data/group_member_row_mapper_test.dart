@@ -3,7 +3,7 @@ import 'package:personnages/features/groups/data/group_member_row_mapper.dart';
 import 'package:personnages/features/groups/domain/group_role.dart';
 
 Map<String, dynamic> _row({
-  String characterId = 'char-1',
+  String? characterId = 'char-1',
   String userId = 'user-1',
   String? role = 'owner',
   Map<String, dynamic>? character,
@@ -76,9 +76,11 @@ void main() {
         row,
         raceNames: const {'race-1': 'Elfe'},
         classNames: const {'class-1': 'Guerrier', 'class-2': 'Rôdeur'},
+        currentUserId: 'user-1',
       );
 
       expect(member.characterId, 'char-1');
+      expect(member.isGameMaster, isFalse);
       expect(member.userId, 'user-1');
       expect(member.role, GroupRole.owner);
       expect(member.name, 'Sylvi');
@@ -111,6 +113,7 @@ void main() {
         row,
         raceNames: const {'race-1': 'Humain'},
         classNames: const {'class-1': 'Barde'},
+        currentUserId: 'user-1',
       );
 
       expect(member.className, 'Barde');
@@ -122,6 +125,7 @@ void main() {
         _row(character: {}),
         raceNames: const {},
         classNames: const {},
+        currentUserId: 'user-1',
       );
 
       expect(member.name, '');
@@ -140,8 +144,71 @@ void main() {
         _row(character: {'is_dead': true}),
         raceNames: const {},
         classNames: const {},
+        currentUserId: 'user-1',
       );
       expect(member.isDead, isTrue);
+    });
+  });
+
+  group('GroupMemberRowMapper.toGroupMember — MJ sans personnage', () {
+    test('character_id null -> GroupMember.isGameMaster, champs personnage '
+        'tous null', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(characterId: null, character: null),
+        raceNames: const {},
+        classNames: const {},
+        currentUserId: 'user-2',
+      );
+
+      expect(member.characterId, isNull);
+      expect(member.isGameMaster, isTrue);
+      expect(member.userId, 'user-1');
+      expect(member.portraitUrl, isNull);
+      expect(member.raceName, isNull);
+      expect(member.className, isNull);
+      expect(member.level, isNull);
+      expect(member.currentHp, isNull);
+      expect(member.maxHp, isNull);
+      expect(member.temporaryHp, isNull);
+      expect(member.isDead, isNull);
+    });
+
+    test('ligne MJ du joueur connecté -> nom de compte réel', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(characterId: null, userId: 'user-me', character: null),
+        raceNames: const {},
+        classNames: const {},
+        currentUserId: 'user-me',
+        currentUserDisplayName: 'Brunhilde la MJ',
+      );
+
+      expect(member.name, 'Brunhilde la MJ');
+    });
+
+    test('ligne MJ du joueur connecté sans nom de compte renseigné -> '
+        'repli "MJ"', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(characterId: null, userId: 'user-me', character: null),
+        raceNames: const {},
+        classNames: const {},
+        currentUserId: 'user-me',
+        currentUserDisplayName: '   ',
+      );
+
+      expect(member.name, 'MJ');
+    });
+
+    test('ligne MJ d\'un AUTRE membre -> toujours "MJ" (pas de nom de '
+        'compte exposé pour un autre utilisateur)', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(characterId: null, userId: 'user-other', character: null),
+        raceNames: const {},
+        classNames: const {},
+        currentUserId: 'user-me',
+        currentUserDisplayName: 'Mon propre nom',
+      );
+
+      expect(member.name, 'MJ');
     });
   });
 }

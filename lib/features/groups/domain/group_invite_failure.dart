@@ -13,6 +13,12 @@ enum GroupInviteFailureKind {
   /// déjà membre de ce groupe.
   alreadyInGroup,
 
+  /// `error: "mj_already_assigned"` (409, `join-group` uniquement) — un
+  /// autre membre a déjà rejoint ce groupe en tant que MJ sans personnage
+  /// (contrainte "au plus un MJ sans personnage par groupe", voir
+  /// `GroupMember.isGameMaster`).
+  mjAlreadyAssigned,
+
   /// Tout le reste : erreur réseau, erreur serveur, ou toute exception qui
   /// n'est pas une réponse d'erreur JSON reconnue de l'edge function.
   generic,

@@ -39,11 +39,43 @@ abstract final class GroupMemberRowMapper {
     return ids;
   }
 
+  /// [currentUserId]/[currentUserDisplayName] ne servent qu'à résoudre le
+  /// [GroupMember.name] d'un membre MJ sans personnage (`character_id`
+  /// `null`, voir la doc de classe de [GroupMember]) — **limitation
+  /// documentée** : aucune colonne/fonction Postgres n'expose aujourd'hui le
+  /// nom de compte d'un AUTRE utilisateur à ce dépôt (contrairement à
+  /// `stories_gm_display_name`, propre aux histoires de l'app web) ; un MJ
+  /// ne peut donc résoudre son propre nom de compte réel
+  /// ([currentUserDisplayName], tiré de `auth.currentUser` côté appelant)
+  /// que sur SA PROPRE ligne (`row['user_id'] == currentUserId`) — toute
+  /// autre ligne MJ retombe sur le repli `'MJ'`. Signalé au chef de projet
+  /// plutôt que résolu silencieusement : une future colonne calculée
+  /// analogue à `stories_gm_display_name` (sécurité definer sur
+  /// `group_members`) permettrait d'exposer le vrai nom de compte à tous les
+  /// membres.
   static GroupMember toGroupMember(
     Map<String, dynamic> row, {
     required Map<String, String> raceNames,
     required Map<String, String> classNames,
+    required String currentUserId,
+    String? currentUserDisplayName,
   }) {
+    final characterId = row['character_id'] as String?;
+    final userId = row['user_id'] as String;
+    final role = GroupRoleRaw.fromRaw(row['role'] as String?);
+
+    if (characterId == null) {
+      return GroupMember(
+        userId: userId,
+        role: role,
+        name: _gameMasterDisplayName(
+          userId: userId,
+          currentUserId: currentUserId,
+          currentUserDisplayName: currentUserDisplayName,
+        ),
+      );
+    }
+
     final character = _characterOf(row);
     final raceId = character['race_id'];
     final classRows = _classRowsOf(character);
@@ -51,9 +83,9 @@ abstract final class GroupMemberRowMapper {
     final classId = primaryClassRow?['class_id'];
 
     return GroupMember(
-      characterId: row['character_id'] as String,
-      userId: row['user_id'] as String,
-      role: GroupRoleRaw.fromRaw(row['role'] as String?),
+      characterId: characterId,
+      userId: userId,
+      role: role,
       name: (character['name'] as String?) ?? '',
       portraitUrl: character['portrait_url'] as String?,
       raceName: raceId != null ? raceNames[raceId.toString()] : null,
@@ -64,6 +96,18 @@ abstract final class GroupMemberRowMapper {
       temporaryHp: (character['temporary_hp'] as num?)?.toInt() ?? 0,
       isDead: (character['is_dead'] as bool?) ?? false,
     );
+  }
+
+  /// Voir la doc de [toGroupMember] pour le rationale complet de cette
+  /// limitation.
+  static String _gameMasterDisplayName({
+    required String userId,
+    required String currentUserId,
+    String? currentUserDisplayName,
+  }) {
+    if (userId != currentUserId) return 'MJ';
+    final trimmed = currentUserDisplayName?.trim();
+    return (trimmed == null || trimmed.isEmpty) ? 'MJ' : trimmed;
   }
 
   static int _totalLevel(List<Map<String, dynamic>> classRows) {

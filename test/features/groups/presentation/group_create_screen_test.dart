@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
+import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
@@ -301,7 +302,7 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<CreatedGroup> createGroup({
     required String name,
-    required String characterId,
+    String? characterId,
   }) async {
     lastCreatedName = name;
     lastCreatedCharacterId = characterId;
@@ -322,10 +323,8 @@ class _FakeGroupRepository implements GroupRepository {
       throw UnimplementedError();
 
   @override
-  Future<JoinedGroup> joinGroup({
-    required String code,
-    required String characterId,
-  }) => throw UnimplementedError();
+  Future<JoinedGroup> joinGroup({required String code, String? characterId}) =>
+      throw UnimplementedError();
 
   @override
   Future<GroupDetail> fetchGroupDetail(String groupId) =>
@@ -348,7 +347,7 @@ class _FakeGroupRepository implements GroupRepository {
   @override
   Future<void> removeMember({
     required String groupId,
-    required String characterId,
+    required String userId,
   }) => throw UnimplementedError();
 
   @override
@@ -494,11 +493,11 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Nom du groupe'), findsOneWidget);
-      expect(find.text('Ton personnage dans ce groupe'), findsOneWidget);
+      expect(find.text('Qui te représente dans ce groupe ?'), findsOneWidget);
       expect(find.textContaining('représentera ta présence'), findsOneWidget);
       // Aucune sélection : la tuile affiche le placeholder, "Sylvi"
       // n'apparaît nulle part avant l'ouverture de la sheet.
-      expect(find.text('Choisir un personnage'), findsOneWidget);
+      expect(find.text('Choisir un personnage ou un rôle'), findsOneWidget);
       expect(find.text('Sylvi'), findsNothing);
       expect(
         find.textContaining("Un code d'invitation sera généré"),
@@ -645,16 +644,121 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.textContaining("Tu n'as pas encore de personnage"),
-      findsOneWidget,
-    );
-    // Sans personnage, ni tuile de sélection ni note sur le code
-    // d'invitation ne doivent s'afficher (rien à choisir).
-    expect(find.text('Choisir un personnage'), findsNothing);
+    // Correctif de bug (MJ sans personnage, 12-13/10/2026) : la tuile et la
+    // note sur le code d'invitation restent affichées même sans aucun
+    // personnage — seul un joueur qui veut choisir un VRAI personnage est
+    // concerné par l'absence de la liste ; un joueur qui veut rejoindre en
+    // MJ ne doit jamais être bloqué.
+    expect(find.text('Choisir un personnage ou un rôle'), findsOneWidget);
     expect(
       find.textContaining("Un code d'invitation sera généré"),
+      findsOneWidget,
+    );
+    // Le message dédié "aucun personnage" n'apparaît plus que dans la sheet,
+    // sous la ligne MJ.
+    expect(
+      find.textContaining("Tu n'as pas encore de personnage"),
       findsNothing,
+    );
+
+    await _openCharacterPicker(tester);
+
+    expect(find.text('CHOISIR TON RÔLE'), findsOneWidget);
+    expect(find.text('MJ — sans personnage'), findsOneWidget);
+    expect(
+      find.textContaining(
+        "Tu n'as pas encore de personnage à inscrire dans ce groupe.",
+      ),
+      findsOneWidget,
+    );
+  });
+
+  group('MJ sans personnage (décision du 12-13/10/2026)', () {
+    testWidgets(
+      'sélectionner MJ met à jour la tuile et active "Créer le groupe", '
+      'indépendamment de charactersProvider',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(id: '1', name: 'Sylvi', level: 3, xp: 900),
+        ];
+
+        await tester.pumpWidget(
+          _buildTestWidget(
+            characterRepository: fakeCharacterRepository,
+            groupRepository: fakeGroupRepository,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField), 'Les Lames');
+        await _openCharacterPicker(tester);
+        await tester.tap(find.text('MJ — sans personnage'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('MJ — sans personnage'), findsOneWidget);
+        expect(_isPrimaryButtonEnabled(tester, 'Créer le groupe'), isTrue);
+
+        await tester.tap(find.text('CRÉER LE GROUPE'));
+        await tester.pump();
+
+        expect(fakeGroupRepository.lastCreatedName, 'Les Lames');
+        expect(fakeGroupRepository.lastCreatedCharacterId, isNull);
+      },
+    );
+
+    testWidgets(
+      'sélection exclusive : choisir un personnage après MJ désélectionne MJ',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(id: '1', name: 'Sylvi', level: 3, xp: 900),
+        ];
+
+        await tester.pumpWidget(
+          _buildTestWidget(
+            characterRepository: fakeCharacterRepository,
+            groupRepository: fakeGroupRepository,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await _openCharacterPicker(tester);
+        await tester.tap(find.text('MJ — sans personnage'));
+        await tester.pumpAndSettle();
+        expect(find.text('MJ — sans personnage'), findsOneWidget);
+
+        await _selectCharacterViaSheet(tester, 'Sylvi');
+
+        expect(find.text('Sylvi'), findsOneWidget);
+        expect(find.text('MJ — sans personnage'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'la ligne MJ reste visible/sélectionnable même si charactersProvider '
+      'échoue — le bouton primaire ne dépend jamais de cet état quand MJ '
+      'est choisi',
+      (tester) async {
+        fakeCharacterRepository.charactersErrorToThrow = const CharacterFailure(
+          'Erreur serveur.',
+        );
+
+        await tester.pumpWidget(
+          _buildTestWidget(
+            characterRepository: fakeCharacterRepository,
+            groupRepository: fakeGroupRepository,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField), 'Les Lames');
+        await _openCharacterPicker(tester);
+
+        expect(find.text('MJ — sans personnage'), findsOneWidget);
+        await tester.tap(find.text('MJ — sans personnage'));
+        await tester.pumpAndSettle();
+
+        expect(_isPrimaryButtonEnabled(tester, 'Créer le groupe'), isTrue);
+      },
     );
   });
 }

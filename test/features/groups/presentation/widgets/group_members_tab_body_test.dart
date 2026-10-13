@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/features/groups/domain/group_detail.dart';
 import 'package:personnages/features/groups/domain/group_member.dart';
 import 'package:personnages/features/groups/domain/group_role.dart';
@@ -126,5 +127,68 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Fiche membre group-1 char-friend'), findsOneWidget);
+  });
+
+  group('MJ sans personnage (décision du 12-13/10/2026)', () {
+    // Nom volontairement distinct de `_me`/`_friend` (jamais un sous-chaîne
+    // de "Brunhilde"/"Eldrin") : `find.textContaining` ci-dessous ne doit
+    // jamais ambiguïser la carte MJ avec une autre carte de ce fichier.
+    const gameMaster = GroupMember(
+      userId: 'user-mj',
+      role: GroupRole.membre,
+      name: 'Oswald',
+    );
+
+    testWidgets('badge "MJ", texte PV neutre, jamais le fond "MORT"', (
+      tester,
+    ) async {
+      await _pump(tester, _detail(const [_me, gameMaster]));
+
+      expect(find.text('MJ'), findsOneWidget);
+      expect(find.text('Ne suit pas ses PV ici.'), findsOneWidget);
+      expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
+
+      final cardFinder = find.ancestor(
+        of: find.textContaining('Oswald', findRichText: true),
+        matching: find.byType(Container),
+      );
+      final decorations = tester
+          .widgetList<Container>(cardFinder)
+          .map((container) => container.decoration)
+          .whereType<BoxDecoration>()
+          .toList();
+      expect(
+        decorations.any(
+          (decoration) => decoration.color == AppColors.deadCardBackground,
+        ),
+        isFalse,
+      );
+    });
+
+    testWidgets('aucune zone de tap (rien à ouvrir)', (tester) async {
+      await _pump(tester, _detail(const [_me, gameMaster]));
+
+      final gmInkWell = find.ancestor(
+        of: find.textContaining('Oswald', findRichText: true),
+        matching: find.byType(InkWell),
+      );
+      expect(gmInkWell, findsNothing);
+    });
+
+    testWidgets('suffixe " (toi)" quand le MJ est le joueur connecté', (
+      tester,
+    ) async {
+      final detail = GroupDetail(
+        id: 'group-1',
+        name: 'Les Lames de l’Aube',
+        ownerId: 'user-mj',
+        inviteCode: 'ABC123',
+        currentUserId: 'user-mj',
+        members: const [gameMaster, _friend],
+      );
+      await _pump(tester, detail);
+
+      expect(find.textContaining('(toi)', findRichText: true), findsOneWidget);
+    });
   });
 }
