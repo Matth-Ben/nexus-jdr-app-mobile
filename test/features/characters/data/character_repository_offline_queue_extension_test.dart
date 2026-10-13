@@ -1078,6 +1078,61 @@ void main() {
         expect(await pendingWrites.allForOwner(_ownerId), isEmpty);
       }),
     );
+
+    // Non-régression (bug bloquant trouvé en revue code-reviewer) : un
+    // repos court mis en file par une version ANTÉRIEURE de l'app (avant
+    // le correctif multiclassé du 10/10/2026) porte l'ANCIEN payload
+    // scalaire (`diceSpent`/`appliedGain`), sans les clés
+    // `hitDiceSpentByClassId`/`hitDiceRecoveredByClassId`. Avant ce
+    // correctif, `applyRestOnline` subordonnait l'écriture de `current_hp`
+    // à `hitDiceSpentByClassId.isNotEmpty` — un payload sans cette clé
+    // décodait silencieusement une map vide (`_decodeClassIdCountMap`,
+    // jamais une erreur) et sautait TOUT le bloc, y compris l'écriture de
+    // `current_hp`, perdant silencieusement les PV restaurés par un dé de
+    // vie déjà dépensé par le joueur (l'entrée était quand même retirée de
+    // la file, aucune exception pour la rendre rejouable).
+    test(
+      'rest COURT mis en file au format ANTÉRIEUR au correctif multiclassé '
+      '(sans hitDiceSpentByClassId/hitDiceRecoveredByClassId) -> '
+      'synchronisé : le PATCH current_hp part tout de même, jamais perdu',
+      () async {
+        await pendingWrites.enqueue(
+          characterId: _characterId,
+          ownerId: _ownerId,
+          kind: PendingCharacterWriteKind.rest,
+          targetId: '',
+          payload: {'type': 'short', 'className': '', 'appliedGain': 4},
+        );
+        final recorded = <_Recorded>[];
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: _ownerId,
+          recorded: recorded,
+          tableRows: baseRows(),
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+        final syncer = PendingCharacterWriteSyncer(
+          client,
+          pendingWrites,
+          cache,
+          repository,
+        );
+
+        final synced = await syncer.sync();
+
+        expect(synced, {_characterId});
+        final hpWrite = recorded.singleWhere(
+          (r) => r.method == 'PATCH' && r.table == 'characters',
+        );
+        // baseRows() : current_hp 7, max_hp 10 -> 7 + 4 = 11, plafonné à 10.
+        expect(hpWrite.body, {'current_hp': 10});
+        expect(await pendingWrites.allForOwner(_ownerId), isEmpty);
+      },
+    );
   });
 
   group('Concurrence réelle D33 (targetId dans la clé du verrou)', () {

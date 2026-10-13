@@ -3568,21 +3568,32 @@ class SupabaseCharacterRepository implements CharacterRepository {
           })
           .eq('id', characterId)
           .eq('owner_id', ownerId);
-    } else if (hitDiceSpentByClassId.isNotEmpty) {
+    } else {
       // Repos court avec dépense de dés de vie (règle RAW 5e) : les dés
       // sont dépensés que le jet restaure ou non des PV (ex. PV déjà au
       // maximum, voir `rest_sheet.dart`) — ces deux écritures sont donc
-      // indépendantes l'une de l'autre. Le joueur choisit lui-même, pool par
+      // indépendantes l'une de l'autre, et doivent chacune pouvoir
+      // s'exécuter sans l'autre : [appliedGain] > 0 ne doit JAMAIS dépendre
+      // de [hitDiceSpentByClassId] non vide (correctif code-reviewer —
+      // avant lui, un repos mis en file par une version antérieure de
+      // l'app, avec l'ancien payload `diceSpent`/`appliedGain` scalaires
+      // (sans les clés `hitDiceSpentByClassId`/`hitDiceRecoveredByClassId`),
+      // décodait silencieusement [hitDiceSpentByClassId] en map vide — le
+      // bloc entier était alors sauté, perdant les PV restaurés par un dé
+      // de vie déjà dépensé par le joueur, sans jamais lever d'erreur ni
+      // laisser l'entrée rejouable). Le joueur choisit lui-même, pool par
       // pool, combien de dés de CHAQUE classe il dépense (décision chef de
       // projet du 10/10/2026) : cette méthode ne fait qu'écrire le résultat
       // déjà calculé côté appelant, jamais une classe primaire seule comme
       // avant ce correctif.
-      await _applyHitDiceDeltas(
-        classRows,
-        deltaByClassId: hitDiceSpentByClassId,
-        nextSpent: (currentSpent, delta, level) =>
-            math.min(level, currentSpent + delta),
-      );
+      if (hitDiceSpentByClassId.isNotEmpty) {
+        await _applyHitDiceDeltas(
+          classRows,
+          deltaByClassId: hitDiceSpentByClassId,
+          nextSpent: (currentSpent, delta, level) =>
+              math.min(level, currentSpent + delta),
+        );
+      }
 
       if (appliedGain > 0) {
         // Relit `current_hp`/`max_hp` ici, juste avant le calcul et
