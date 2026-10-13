@@ -9,10 +9,10 @@ enum RestType {
   /// dont la `class_features.uses_per_rest->>'rest_type'` correspondante
   /// vaut `'repos_court'`, pour les aptitudes de **toutes** les classes du
   /// personnage (multiclassage inclus) atteintes par leur niveau respectif.
-  /// Ne restaure aucun PV — le mécanisme RAW
-  /// "dépenser des dés de vie" n'est pas pris en charge (aucune colonne de
-  /// suivi des dés de vie dans le schéma actuel, gap vérifié, hors
-  /// périmètre de cette tâche).
+  /// Peut aussi restaurer des PV via la règle RAW "dépenser un(des) dé(s)
+  /// de vie" (`character_classes.hit_dice_spent`, un pool par classe — voir
+  /// `domain/hit_dice_pool.dart`/`presentation/widgets/rest_sheet.dart`),
+  /// au choix du joueur.
   short,
 
   /// Repos long : restaure `characters.current_hp` au maximum, remet
@@ -23,6 +23,11 @@ enum RestType {
   /// aptitudes de **toutes** les classes du personnage (multiclassage
   /// inclus) atteintes par leur niveau respectif, quel que soit leur
   /// `rest_type` (règle 5e RAW : un repos long recharge tout ce qu'un repos
-  /// court recharge, et plus).
+  /// court recharge, et plus). Récupère aussi la moitié (arrondie à
+  /// l'inférieur, au moins 1) du nombre total de dés de vie du personnage
+  /// (toutes classes confondues, voir
+  /// `domain/hit_dice_recovery_calculator.dart`), répartie entre les pools
+  /// dépensés — automatiquement si un seul pool est concerné ou si la
+  /// récupération suffit à tout restaurer, au choix du joueur sinon.
   long,
 }
