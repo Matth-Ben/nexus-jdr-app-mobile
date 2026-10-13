@@ -264,6 +264,41 @@ void main() {
       expect(clercLimit.preparedCount, 1);
       expect(clercLimit.isAtLimit, isTrue);
     });
+
+    test('TROIS classes qui préparent (Clerc/Druide/Paladin) : un élément par classe, ventilation générique au-delà de deux classes', () {
+      final clerc = _row('Clerc', 3, classId: 10);
+      final druide = _row('Druide', 2, classId: 20);
+      final paladin = _row('Paladin', 4, classId: 30);
+      final result = PreparedSpellsLimit.limitsByClass(
+        classes: [clerc, druide, paladin],
+        abilityScores: const {'wis': 14, 'cha': 10},
+        spells: [
+          _spell(id: 1, sourceClassIds: const {10}),
+          _spell(id: 2, sourceClassIds: const {10}),
+          _spell(id: 3, sourceClassIds: const {20}),
+          _spell(id: 4, sourceClassIds: const {30}),
+          _spell(id: 5, sourceClassIds: const {30}),
+          _spell(id: 6, sourceClassIds: const {30}),
+        ],
+      );
+
+      expect(result, hasLength(3));
+      // Clerc niveau 3 + mod Sagesse (14 -> +2) = 5.
+      final clercLimit = result.firstWhere((c) => c.className == 'Clerc');
+      expect(clercLimit.limit, 5);
+      expect(clercLimit.preparedCount, 2);
+      expect(clercLimit.isAtLimit, isFalse);
+      // Druide niveau 2 + mod Sagesse (14 -> +2) = 4.
+      final druideLimit = result.firstWhere((c) => c.className == 'Druide');
+      expect(druideLimit.limit, 4);
+      expect(druideLimit.preparedCount, 1);
+      expect(druideLimit.isAtLimit, isFalse);
+      // Paladin niveau 4, demi-lanceur (4 ~/ 2 = 2) + mod Charisme (10 -> +0) = 2, atteinte par les 3 sorts ventilés à Paladin.
+      final paladinLimit = result.firstWhere((c) => c.className == 'Paladin');
+      expect(paladinLimit.limit, 2);
+      expect(paladinLimit.preparedCount, 3);
+      expect(paladinLimit.isAtLimit, isTrue);
+    });
   });
 
   group('PreparedSpellsLimit.spellRequiresPreparation', () {

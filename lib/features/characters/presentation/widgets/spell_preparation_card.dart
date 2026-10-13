@@ -280,13 +280,13 @@ Future<void> showSpellPreparationInfoSheet(
                         icon: Icons.format_list_numbered,
                         title: 'Combien de sorts ?',
                         body:
-                            'Clerc, Druide, Magicien et Artificier : '
-                            'modificateur de caractéristique d\'incantation '
-                            '+ niveau de classe. Paladin et Artificier '
-                            '(demi-lanceurs) : modificateur + moitié du '
-                            'niveau. Minimum 1. Multiclassé avec plusieurs '
-                            'classes qui préparent : chaque classe a sa '
-                            'propre limite, jamais un total commun.'
+                            'Clerc, Druide et Magicien : modificateur de '
+                            'caractéristique d\'incantation + niveau de '
+                            'classe. Paladin et Artificier (demi-lanceurs) : '
+                            'modificateur + moitié du niveau. Minimum 1. '
+                            'Multiclassé avec plusieurs classes qui '
+                            'préparent : chaque classe a sa propre limite, '
+                            'jamais un total commun.'
                             '$limitsSentence Une fois la limite atteinte, '
                             'impossible de préparer un nouveau sort de '
                             'cette classe sans en dé-préparer un autre '

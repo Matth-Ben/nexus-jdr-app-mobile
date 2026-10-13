@@ -2449,6 +2449,7 @@ void main() {
       List<Map<String, dynamic>> subclassSpellRows = const [],
       Map<String, dynamic>? existingOrdinaryRow,
       List<Map<String, dynamic>>? capturedInserts,
+      void Function(http.Request request)? onRequest,
     }) async {
       return SupabaseCharacterRepository(
         await _buildSignedInFakeSupabaseClient(
@@ -2459,6 +2460,7 @@ void main() {
             'spell_classes': spellClassRows,
             'subclass_spells': subclassSpellRows,
           },
+          onRequest: onRequest,
           rowsOverride: (request) {
             if (request.url.pathSegments.last != 'character_spells') {
               return null;
@@ -2787,6 +2789,7 @@ void main() {
       test('aucune sous-classe : aucune requête subclass_spells, rien '
           'd\'exclu', () async {
         final capturedInserts = <Map<String, dynamic>>[];
+        final requestedTables = <String>[];
         final repo = await repository(
           classRows: const [
             {'class_id': 3, 'level': 1},
@@ -2802,6 +2805,8 @@ void main() {
             },
           ],
           capturedInserts: capturedInserts,
+          onRequest: (request) =>
+              requestedTables.add(request.url.pathSegments.last),
         );
 
         await expectLater(
@@ -2812,6 +2817,12 @@ void main() {
           ),
           throwsA(isA<CharacterFailure>()),
         );
+        // L'assertion qui manquait : ce test ne portait son nom que de
+        // nom avant ce renfort (aucune vérification sur les requêtes
+        // effectivement envoyées) — `classRows` ne porte aucun
+        // `subclass_id`, donc `subclassProgress` est vide et la requête
+        // `subclass_spells` ne doit jamais partir.
+        expect(requestedTables, isNot(contains('subclass_spells')));
       });
     });
 
@@ -2939,6 +2950,76 @@ void main() {
           ],
           spellClassRows: const [
             {'class_id': 3},
+            {'class_id': 7},
+          ],
+          capturedInserts: capturedInserts,
+        );
+
+        final outcome = await repo.setSpellPrepared(
+          characterId: characterId,
+          spellId: spellId,
+          prepared: true,
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(capturedInserts.single['source_class_id'], 7);
+      });
+
+      test('TROIS classes qui préparent (Clerc/Druide/Paladin) : résout via spell_classes parmi trois candidates, écrit la bonne origine', () async {
+        final capturedInserts = <Map<String, dynamic>>[];
+        final repo = await repository(
+          classRows: const [
+            {'class_id': 3, 'level': 3}, // Clerc, limite 5
+            {'class_id': 4, 'level': 2}, // Druide, limite 4
+            {'class_id': 7, 'level': 2}, // Paladin, limite 3
+          ],
+          abilityScoreRows: const [
+            {'ability_id': 'wis', 'score': 14},
+            {'ability_id': 'cha', 'score': 14},
+          ],
+          // Le sort n'est QUE sur la liste du Paladin (la troisième classe).
+          spellClassRows: const [
+            {'class_id': 7},
+          ],
+          capturedInserts: capturedInserts,
+        );
+
+        final outcome = await repo.setSpellPrepared(
+          characterId: characterId,
+          spellId: spellId,
+          prepared: true,
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(capturedInserts.single['source_class_id'], 7);
+      });
+
+      test('TROIS classes, ambiguïté sur les trois : Clerc et Druide déjà à leur limite, attribué à Paladin qui a encore de la place', () async {
+        final capturedInserts = <Map<String, dynamic>>[];
+        final repo = await repository(
+          classRows: const [
+            {'class_id': 3, 'level': 1}, // Clerc, limite 1 (mod 0)
+            {'class_id': 4, 'level': 1}, // Druide, limite 1 (mod 0)
+            {'class_id': 7, 'level': 2}, // Paladin, limite 3 (mod 2)
+          ],
+          abilityScoreRows: const [
+            {'ability_id': 'wis', 'score': 10},
+            {'ability_id': 'cha', 'score': 14},
+          ],
+          preparedSpellRows: [
+            {
+              'source_class_id': 3,
+              'spells': {'level': 1},
+            },
+            {
+              'source_class_id': 4,
+              'spells': {'level': 1},
+            },
+          ],
+          // Le sort est sur la liste des TROIS classes.
+          spellClassRows: const [
+            {'class_id': 3},
+            {'class_id': 4},
             {'class_id': 7},
           ],
           capturedInserts: capturedInserts,
