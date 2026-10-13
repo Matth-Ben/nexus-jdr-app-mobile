@@ -81,8 +81,9 @@ class FakeRepository implements CharacterRepository {
     required String characterId,
     required RestType type,
     required String className,
-    int diceSpent = 0,
+    Map<String, int> hitDiceSpentByClassId = const {},
     int appliedGain = 0,
+    Map<String, int> hitDiceRecoveredByClassId = const {},
   }) async {
     // RAW 5e : la magie de pacte recharge au repos COURT ET long -
     // contrairement aux emplacements classiques, jamais seulement au repos

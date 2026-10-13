@@ -85,8 +85,9 @@ class FakeRepository implements CharacterRepository {
     required String characterId,
     required RestType type,
     required String className,
-    int diceSpent = 0,
+    Map<String, int> hitDiceSpentByClassId = const {},
     int appliedGain = 0,
+    Map<String, int> hitDiceRecoveredByClassId = const {},
   }) async {
     // `_resetFeatureUses` (dépôt réel) réinitialise les aptitudes dont le
     // `rest_type` correspond, pour un repos COURT comme pour un repos long —

@@ -732,23 +732,41 @@ abstract class CharacterRepository {
   ///   emplacement, voir [setInnateSpellUsesSpent]) — juste après les
   ///   emplacements de sorts et AVANT la récupération des dés de vie, seule
   ///   écriture relative du repos long : un échec de cette remise à zéro ne
-  ///   laisse derrière lui que des écritures rejouables.
+  ///   laisse derrière lui que des écritures rejouables. Récupère aussi
+  ///   (RAW 5e) des dés de vie, voir [hitDiceRecoveredByClassId].
   /// - [RestType.short] : réinitialise uniquement (upsert) les
   ///   `character_feature_uses` (toutes classes, multiclassage inclus)
   ///   dont le `rest_type` correspondant vaut `'repos_court'`. Ne touche à
   ///   `characters.current_hp`/`character_classes.hit_dice_spent` que si
-  ///   [diceSpent] est strictement positif (règle RAW 5e "dépenser un dé de
-  ///   vie", déjà entièrement calculée côté appelant — voir [diceSpent]/
-  ///   [appliedGain] ci-dessous) ; ne touche jamais
+  ///   [hitDiceSpentByClassId] n'est pas vide (règle RAW 5e "dépenser un ou
+  ///   plusieurs dés de vie", déjà entièrement calculée côté appelant — voir
+  ///   [hitDiceSpentByClassId]/[appliedGain] ci-dessous) ; ne touche jamais
   ///   `character_spell_slots` ni `character_spells.innate_uses_spent`.
   ///
-  /// [diceSpent] : nombre de dés de vie dépensés à ce repos (toujours 0 pour
-  /// un repos long, voir `RestSheetResult`) — incrémente
-  /// `character_classes.hit_dice_spent` de la classe primaire d'autant
+  /// [hitDiceSpentByClassId] : nombre de dés de vie dépensés à ce repos
+  /// court, par `character_classes.class_id` (en chaîne, voir
+  /// `domain/hit_dice_pool.dart::HitDicePool.classId`) — toujours vide pour
+  /// un repos long (voir `RestSheetResult`). Chaque entrée incrémente
+  /// `character_classes.hit_dice_spent` de LA ligne correspondante
   /// (plafonné à `level`, cohérent avec la contrainte SQL
   /// `hit_dice_spent <= level`), **même si [appliedGain] vaut 0** (RAW : un
   /// dé de vie dépensé reste dépensé même si le jet ne restaure aucun PV,
-  /// ex. PV déjà au maximum).
+  /// ex. PV déjà au maximum). Déjà entièrement calculé côté appelant (le
+  /// joueur choisit lui-même, pool par pool, combien de dés de CHAQUE classe
+  /// il dépense — décision chef de projet du 10/10/2026, voir
+  /// `presentation/widgets/rest_sheet.dart`) : cette méthode ne fait
+  /// qu'écrire le résultat déjà calculé, jamais une validation RAW
+  /// supplémentaire (même principe que [appliedGain] ci-dessous).
+  ///
+  /// [hitDiceRecoveredByClassId] : nombre de dés de vie récupérés à ce repos
+  /// long, par `class_id` — toujours vide pour un repos court. Chaque
+  /// entrée décrémente `character_classes.hit_dice_spent` de LA ligne
+  /// correspondante (plancher 0). Déjà entièrement calculé côté appelant
+  /// (`domain/hit_dice_recovery_calculator.dart` : la moitié du niveau
+  /// TOTAL du personnage, au moins 1, répartie automatiquement si un seul
+  /// pool a des dés dépensés ou si la récupération suffit à tout restaurer,
+  /// au choix du joueur sinon) — même principe que
+  /// [hitDiceSpentByClassId] : cette méthode écrit, ne recalcule jamais.
   ///
   /// [appliedGain] : delta de PV déjà calculé par l'appelant
   /// (`HitDiceSpendCalculator.appliedGain`, déjà plafonné à `max_hp` à
@@ -781,9 +799,11 @@ abstract class CharacterRepository {
   /// initialisées à la création de personnage (gaps pré-existants
   /// documentés) : un personnage sans aucune classe ou sans aucune ligne
   /// préexistante n'a simplement rien à réinitialiser sur ces tables,
-  /// jamais une erreur. Même chose pour `hit_dice_spent`/dés de vie : un
-  /// personnage sans classe primaire identifiable n'a simplement aucune
-  /// écriture supplémentaire à faire pour cette partie.
+  /// jamais une erreur. Même chose pour `hit_dice_spent`/dés de vie : une
+  /// entrée de [hitDiceSpentByClassId]/[hitDiceRecoveredByClassId] dont le
+  /// `class_id` ne correspond à aucune ligne `character_classes` du
+  /// personnage est simplement ignorée (défensif — ne devrait jamais
+  /// survenir, l'appelant construisant ces maps depuis les mêmes classes).
   ///
   /// `character_pact_slots` (magie de pacte de l'Occultiste, voir
   /// [_resetPactSlot]) : recalculée pour les DEUX types de repos
@@ -839,8 +859,9 @@ abstract class CharacterRepository {
     required String characterId,
     required RestType type,
     required String className,
-    int diceSpent = 0,
+    Map<String, int> hitDiceSpentByClassId = const {},
     int appliedGain = 0,
+    Map<String, int> hitDiceRecoveredByClassId = const {},
   });
 
   /// Écrit les 9 colonnes texte libre de l'onglet "Histoire"
@@ -3268,8 +3289,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String characterId,
     required RestType type,
     required String className,
-    int diceSpent = 0,
+    Map<String, int> hitDiceSpentByClassId = const {},
     int appliedGain = 0,
+    Map<String, int> hitDiceRecoveredByClassId = const {},
   }) async {
     final ownerId = _requireOwnerId();
 
@@ -3291,8 +3313,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
         payload: {
           'type': type.name,
           'className': className,
-          'diceSpent': diceSpent,
+          'hitDiceSpentByClassId': hitDiceSpentByClassId,
           'appliedGain': appliedGain,
+          'hitDiceRecoveredByClassId': hitDiceRecoveredByClassId,
         },
       );
       return WriteOutcome.queued;
@@ -3326,8 +3349,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
             characterId: characterId,
             type: type,
             className: className,
-            diceSpent: diceSpent,
+            hitDiceSpentByClassId: hitDiceSpentByClassId,
             appliedGain: appliedGain,
+            hitDiceRecoveredByClassId: hitDiceRecoveredByClassId,
           );
           // `columns: null` : un repos touche de nombreuses tables, jamais
           // réductible aux colonnes `characters` que
@@ -3353,8 +3377,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
         payload: {
           'type': type.name,
           'className': className,
-          'diceSpent': diceSpent,
+          'hitDiceSpentByClassId': hitDiceSpentByClassId,
           'appliedGain': appliedGain,
+          'hitDiceRecoveredByClassId': hitDiceRecoveredByClassId,
         },
       );
       return WriteOutcome.queued;
@@ -3401,8 +3426,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String characterId,
     required RestType type,
     required String className,
-    int diceSpent = 0,
+    Map<String, int> hitDiceSpentByClassId = const {},
     int appliedGain = 0,
+    Map<String, int> hitDiceRecoveredByClassId = const {},
   }) async {
     // D35 du registre de dette technique — voir la documentation de
     // [_blockIfPendingHpOrXpWrites], appelée en tout premier (avant même
@@ -3411,14 +3437,15 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // repos long (toujours), ou un repos court avec [appliedGain] > 0
     // (seule condition qui déclenche la relecture/écriture de
     // `current_hp`/`max_hp` plus bas, voir le bloc `if (appliedGain > 0)`
-    // ci-dessous — un repos court avec seulement `diceSpent > 0` écrit
-    // `hit_dice_spent` mais jamais `current_hp`, par exemple quand les PV
-    // sont déjà au maximum). Le RAW 5e interdit `appliedGain > 0` sans
-    // `diceSpent > 0`, donc cette condition ne risque jamais de sous-
-    // bloquer un repos court qui touche réellement `current_hp`. Un repos
-    // court sans dé de vie dépensé (ou sans PV restauré) ne lit ni n'écrit
-    // jamais ces colonnes et n'a donc aucune raison d'être bloqué par un
-    // ajustement PV/XP hors ligne encore en attente pour ce personnage.
+    // ci-dessous — un repos court avec seulement [hitDiceSpentByClassId] non
+    // vide écrit `hit_dice_spent` mais jamais `current_hp`, par exemple
+    // quand les PV sont déjà au maximum). Le RAW 5e interdit `appliedGain >
+    // 0` sans dé de vie dépensé, donc cette condition ne risque jamais de
+    // sous-bloquer un repos court qui touche réellement `current_hp`. Un
+    // repos court sans dé de vie dépensé (ou sans PV restauré) ne lit ni
+    // n'écrit jamais ces colonnes et n'a donc aucune raison d'être bloqué
+    // par un ajustement PV/XP hors ligne encore en attente pour ce
+    // personnage.
     if (type == RestType.long || appliedGain > 0) {
       await _blockIfPendingHpOrXpWrites(
         ownerId: ownerId,
@@ -3448,25 +3475,30 @@ class SupabaseCharacterRepository implements CharacterRepository {
     }
 
     // Toutes les classes du personnage (multiclassage inclus) — utilisées
-    // pour retrouver la classe primaire (suivi des dés de vie), pour
-    // recalculer les emplacements de sorts (niveau de lanceur combiné de
-    // *toutes* les classes, voir [_resetSpellSlots]), pour retrouver un
-    // éventuel Occultiste (magie de pacte) et pour réinitialiser les
-    // aptitudes de *toutes* les classes (voir [_resetFeatureUses] : la
-    // lecture de la fiche, `_buildCharacterDetailPayload`/
-    // `_mapCharacterDetailPayload`, gère déjà explicitement ce cas, un
-    // repos doit suivre la même règle plutôt qu'ignorer silencieusement
-    // les classes secondaires).
+    // pour retrouver la classe primaire (savoir à quelle ligne s'applique
+    // [className]), pour recalculer les emplacements de sorts (niveau de
+    // lanceur combiné de *toutes* les classes, voir [_resetSpellSlots]),
+    // pour retrouver un éventuel Occultiste (magie de pacte), pour
+    // réinitialiser les aptitudes de *toutes* les classes (voir
+    // [_resetFeatureUses] : la lecture de la fiche,
+    // `_buildCharacterDetailPayload`/`_mapCharacterDetailPayload`, gère déjà
+    // explicitement ce cas, un repos doit suivre la même règle plutôt
+    // qu'ignorer silencieusement les classes secondaires), et pour le suivi
+    // des dés de vie de *toutes* les classes (dépense/récupération
+    // ci-dessous, décision chef de projet du 10/10/2026 — avant elle, seule
+    // la classe primaire était lue/écrite, RAW-incorrect dès qu'il y avait
+    // une deuxième classe).
     final classRows = await _client
         .from('character_classes')
         .select('id, class_id, level, is_primary, hit_dice_spent')
         .eq('character_id', characterId);
 
-    // Classe primaire : ne sert plus qu'au suivi des dés de vie ci-dessous
-    // (décision produit en attente pour un personnage multiclassé) et à
-    // savoir à quelle ligne s'applique [className]. Reste une map vide
-    // (jamais `null`) si aucune classe n'est marquée primaire : chaque
-    // site d'utilisation ci-dessous garde déjà cette garde (`isNotEmpty`).
+    // Classe primaire : ne sert plus qu'à savoir à quelle ligne s'applique
+    // [className] (emplacements de sorts ci-dessous) — le suivi des dés de
+    // vie porte maintenant sur *toutes* les lignes de [classRows], voir
+    // plus bas. Reste une map vide (jamais `null`) si aucune classe n'est
+    // marquée primaire : chaque site d'utilisation ci-dessous garde déjà
+    // cette garde (`isNotEmpty`).
     final primaryClassRow = classRows.firstWhere(
       (row) => row['is_primary'] == true,
       orElse: () => const <String, dynamic>{},
@@ -3526,29 +3558,27 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .eq('character_id', characterId)
           .gt('innate_uses_spent', 0);
 
-      if (primaryClassRow.isNotEmpty) {
-        // Récupération RAW 5e des dés de vie : la moitié du niveau de la
-        // classe primaire (arrondie à l'inférieur), au moins 1 — jamais en
-        // dessous de 0 dé dépensé restant. Silencieux côté UI (voir la
-        // documentation de [applyRest]) : aucune écriture si le personnage
-        // n'a déjà aucun dé dépensé, pour ne pas générer un `UPDATE`
-        // inutile. Faite avant la relecture de `max_hp` ci-dessous
-        // (indépendante de `characters`) — même discipline que le repos
-        // court : les étapes qui ne dépendent pas de `current_hp`/`max_hp`
-        // sont faites en premier, pour minimiser la fenêtre entre la
-        // lecture et l'écriture finale de `current_hp`.
-        final level = (primaryClassRow['level'] as num).toInt();
-        final hitDiceSpent =
-            (primaryClassRow['hit_dice_spent'] as num?)?.toInt() ?? 0;
-        final restored = math.max(1, level ~/ 2);
-        final newHitDiceSpent = math.max(0, hitDiceSpent - restored);
-        if (newHitDiceSpent != hitDiceSpent) {
-          await _client
-              .from('character_classes')
-              .update({'hit_dice_spent': newHitDiceSpent})
-              .eq('id', primaryClassRow['id']);
-        }
-      }
+      // Récupération RAW 5e des dés de vie, par classe/pool (décision chef
+      // de projet du 10/10/2026) : le NOMBRE récupéré (moitié du niveau
+      // TOTAL du personnage, au moins 1) et sa répartition entre pools sont
+      // déjà entièrement calculés côté appelant
+      // (`domain/hit_dice_recovery_calculator.dart`, voir
+      // [hitDiceRecoveredByClassId]) — cette méthode ne fait qu'écrire le
+      // résultat, jamais une classe primaire seule comme avant ce correctif
+      // (RAW-incorrect dès qu'il y avait une deuxième classe : le niveau
+      // total était ignoré). Silencieux côté UI si [hitDiceRecoveredByClassId]
+      // est vide (personnage sans aucun dé dépensé) — aucune écriture, pour
+      // ne pas générer d'`UPDATE` inutile. Faite avant la relecture de
+      // `max_hp` ci-dessous (indépendante de `characters`) — même discipline
+      // que le repos court : les étapes qui ne dépendent pas de
+      // `current_hp`/`max_hp` sont faites en premier, pour minimiser la
+      // fenêtre entre la lecture et l'écriture finale de `current_hp`.
+      await _applyHitDiceDeltas(
+        classRows,
+        deltaByClassId: hitDiceRecoveredByClassId,
+        nextSpent: (currentSpent, delta, level) =>
+            math.max(0, currentSpent - delta),
+      );
 
       // Relecture de `max_hp` juste avant l'écriture de `current_hp` —
       // dernière chose lue avant cette écriture, voir la documentation de
@@ -3582,20 +3612,31 @@ class SupabaseCharacterRepository implements CharacterRepository {
           })
           .eq('id', characterId)
           .eq('owner_id', ownerId);
-    } else if (diceSpent > 0) {
+    } else {
       // Repos court avec dépense de dés de vie (règle RAW 5e) : les dés
       // sont dépensés que le jet restaure ou non des PV (ex. PV déjà au
       // maximum, voir `rest_sheet.dart`) — ces deux écritures sont donc
-      // indépendantes l'une de l'autre.
-      if (primaryClassRow.isNotEmpty) {
-        final level = (primaryClassRow['level'] as num).toInt();
-        final hitDiceSpent =
-            (primaryClassRow['hit_dice_spent'] as num?)?.toInt() ?? 0;
-        final newHitDiceSpent = math.min(level, hitDiceSpent + diceSpent);
-        await _client
-            .from('character_classes')
-            .update({'hit_dice_spent': newHitDiceSpent})
-            .eq('id', primaryClassRow['id']);
+      // indépendantes l'une de l'autre, et doivent chacune pouvoir
+      // s'exécuter sans l'autre : [appliedGain] > 0 ne doit JAMAIS dépendre
+      // de [hitDiceSpentByClassId] non vide (correctif code-reviewer —
+      // avant lui, un repos mis en file par une version antérieure de
+      // l'app, avec l'ancien payload `diceSpent`/`appliedGain` scalaires
+      // (sans les clés `hitDiceSpentByClassId`/`hitDiceRecoveredByClassId`),
+      // décodait silencieusement [hitDiceSpentByClassId] en map vide — le
+      // bloc entier était alors sauté, perdant les PV restaurés par un dé
+      // de vie déjà dépensé par le joueur, sans jamais lever d'erreur ni
+      // laisser l'entrée rejouable). Le joueur choisit lui-même, pool par
+      // pool, combien de dés de CHAQUE classe il dépense (décision chef de
+      // projet du 10/10/2026) : cette méthode ne fait qu'écrire le résultat
+      // déjà calculé côté appelant, jamais une classe primaire seule comme
+      // avant ce correctif.
+      if (hitDiceSpentByClassId.isNotEmpty) {
+        await _applyHitDiceDeltas(
+          classRows,
+          deltaByClassId: hitDiceSpentByClassId,
+          nextSpent: (currentSpent, delta, level) =>
+              math.min(level, currentSpent + delta),
+        );
       }
 
       if (appliedGain > 0) {
@@ -3630,10 +3671,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // long, contrairement aux emplacements classiques ci-dessus (repos long
     // uniquement) — placé ici, en dehors du `if/else` ci-dessus, pour
     // s'exécuter dans les deux cas. L'Occultiste peut être une classe
-    // SECONDAIRE (contrairement à [primaryClassRow], qui ne couvre que la
-    // classe primaire pour les dés de vie ci-dessus) : résolue depuis
-    // [classRows] (TOUTES les classes) et [restClassNames] (noms déjà
-    // résolus plus haut). Circuit indépendant des emplacements classiques :
+    // SECONDAIRE (contrairement à [primaryClassRow], qui ne sert plus qu'à
+    // nommer la classe primaire pour les emplacements de sorts ci-dessus) :
+    // résolue depuis [classRows] (TOUTES les classes) et [restClassNames]
+    // (noms déjà résolus plus haut). Circuit indépendant des emplacements
+    // classiques :
     // l'Occultiste n'entre jamais dans le niveau de lanceur combiné
     // ([SpellSlotProgression.totalsForClasses] l'ignore), donc ses charges
     // ne sont jamais comptées deux fois.
@@ -3668,6 +3710,38 @@ class SupabaseCharacterRepository implements CharacterRepository {
         classLevels: classLevels,
         onlyShortRest: type == RestType.short,
       );
+    }
+  }
+
+  /// Écrit `character_classes.hit_dice_spent` pour chaque ligne de
+  /// [classRows] concernée par [deltaByClassId] (clé = `class_id` en
+  /// chaîne, voir [applyRest]/[applyRestOnline]) — un `UPDATE` par ligne
+  /// réellement modifiée, jamais pour les autres (même garde-fou "aucune
+  /// écriture inutile" que l'ancien code mono-classe-primaire qu'elle
+  /// remplace). [nextSpent] calcule la nouvelle valeur à partir du dépensé
+  /// courant, du delta demandé et du niveau de CETTE classe (plafond
+  /// `level` à la dépense via [math.min], plancher `0` à la récupération via
+  /// [math.max] — voir les deux appelants). Une entrée de [deltaByClassId]
+  /// dont la clé ne correspond à aucune ligne de [classRows] est simplement
+  /// ignorée (défensif, voir la documentation de [applyRest]).
+  Future<void> _applyHitDiceDeltas(
+    List<Map<String, dynamic>> classRows, {
+    required Map<String, int> deltaByClassId,
+    required int Function(int currentSpent, int delta, int level) nextSpent,
+  }) async {
+    if (deltaByClassId.isEmpty) return;
+    for (final row in classRows) {
+      final delta = deltaByClassId[(row['class_id'] as Object).toString()];
+      if (delta == null || delta == 0) continue;
+      final level = (row['level'] as num).toInt();
+      final currentSpent = (row['hit_dice_spent'] as num?)?.toInt() ?? 0;
+      final updatedSpent = nextSpent(currentSpent, delta, level);
+      if (updatedSpent != currentSpent) {
+        await _client
+            .from('character_classes')
+            .update({'hit_dice_spent': updatedSpent})
+            .eq('id', row['id']);
+      }
     }
   }
 

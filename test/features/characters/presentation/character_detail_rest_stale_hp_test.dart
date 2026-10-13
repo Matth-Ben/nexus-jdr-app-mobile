@@ -131,8 +131,9 @@ class FakeRepository implements CharacterRepository {
     required String characterId,
     required RestType type,
     required String className,
-    int diceSpent = 0,
+    Map<String, int> hitDiceSpentByClassId = const {},
     int appliedGain = 0,
+    Map<String, int> hitDiceRecoveredByClassId = const {},
   }) async {
     applyRestCallCount++;
     final gate = applyRestGate;

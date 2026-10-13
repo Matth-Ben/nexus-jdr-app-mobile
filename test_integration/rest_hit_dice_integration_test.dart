@@ -11,11 +11,22 @@ import 'support/test_environment.dart';
 
 /// Tests d'intégration de la règle RAW 5e "dépenser un dé de vie"
 /// (`SupabaseCharacterRepository.applyRest`, [RestType.short] avec
-/// `diceSpent`/`appliedGain`) et de la récupération de dés de vie au repos
-/// long (`character_classes.hit_dice_spent`) — voir
+/// `hitDiceSpentByClassId`/`appliedGain`) et de l'écriture de la
+/// récupération de dés de vie au repos long (`hitDiceRecoveredByClassId`,
+/// `character_classes.hit_dice_spent`) — voir
 /// `rest_repository_integration_test.dart` pour le rationale général de ce
 /// dossier et pour les scénarios déjà couverts (PV/emplacements de sorts/
 /// aptitudes rechargeables), non dupliqués ici.
+///
+/// Depuis le correctif multiclassé du 10/10/2026 (dette technique — voir
+/// `domain/hit_dice_recovery_calculator.dart`), le dépôt ne calcule plus
+/// lui-même le nombre de dés récupérés au repos long (ancienne formule
+/// serveur `max(1, level ~/ 2)`, incorrecte dès qu'il y avait une deuxième
+/// classe) : ce calcul est désormais fait côté appelant et transmis via
+/// `hitDiceRecoveredByClassId`, déjà prêt à l'emploi. Les tests du groupe
+/// "repos long" ci-dessous calculent donc ce nombre explicitement (avec la
+/// même formule RAW, en commentaire) et vérifient seulement que le dépôt
+/// écrit fidèlement ce qu'on lui transmet — jamais qu'il le recalcule.
 ///
 /// `className` toujours fictif dans ce fichier (aucun test ici ne porte sur
 /// `character_spell_slots`) — même convention que
@@ -127,7 +138,7 @@ void main() {
           characterId: characterId,
           type: RestType.short,
           className: 'Peu importe (repos court)',
-          diceSpent: 2,
+          hitDiceSpentByClassId: {anyClassId.toString(): 2},
           // Volontairement au-delà de la marge réelle (10) : le dépôt
           // doit re-clamper à `max_hp`, jamais faire confiance à
           // l'appelant (voir la doc de `applyRest`).
@@ -157,7 +168,7 @@ void main() {
           characterId: characterId,
           type: RestType.short,
           className: 'Peu importe (repos court)',
-          diceSpent: 1,
+          hitDiceSpentByClassId: {anyClassId.toString(): 1},
         );
 
         final characterRow = await fetchCharacterHp(characterId);
@@ -185,15 +196,15 @@ void main() {
           characterId: characterId,
           type: RestType.short,
           className: 'Peu importe (repos court)',
-          diceSpent: 5,
+          hitDiceSpentByClassId: {anyClassId.toString(): 5},
           appliedGain: 4,
         );
 
         expect(await fetchHitDiceSpent(characterId), 3);
       });
 
-      test('diceSpent = 0 (valeur par défaut) ne touche ni current_hp ni '
-          'hit_dice_spent', () async {
+      test('hitDiceSpentByClassId vide (valeur par défaut) ne touche ni '
+          'current_hp ni hit_dice_spent', () async {
         final characterId = await createCharacter(
           currentHp: 10,
           maxHp: 20,
@@ -250,7 +261,7 @@ void main() {
           characterId: characterId,
           type: RestType.short,
           className: 'Peu importe (repos court)',
-          diceSpent: 2,
+          hitDiceSpentByClassId: {anyClassId.toString(): 2},
           appliedGain: 5,
         );
 
@@ -260,35 +271,35 @@ void main() {
     });
 
     group('repos long (RestType.long) : récupération RAW des dés de vie', () {
-      test(
-        'restored = max(1, level ~/ 2) : level 5, 5 dés dépensés -> 3',
-        () async {
-          final characterId = await createCharacter(
-            currentHp: 1,
-            maxHp: 30,
-            level: 5,
-            hitDiceSpent: 5,
-          );
+      test('recovered = max(1, level ~/ 2), transmis par l\'appelant : level '
+          '5, 5 dés dépensés, recovered=2 -> 3', () async {
+        final characterId = await createCharacter(
+          currentHp: 1,
+          maxHp: 30,
+          level: 5,
+          hitDiceSpent: 5,
+        );
 
-          final repository = SupabaseCharacterRepository(
-            client,
-            cache,
-            pendingWrites,
-            const AlwaysOnlineConnectivityChecker(),
-          );
-          await repository.applyRest(
-            characterId: characterId,
-            type: RestType.long,
-            className: 'Aucune Classe Lanceuse',
-          );
-
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          const AlwaysOnlineConnectivityChecker(),
+        );
+        await repository.applyRest(
+          characterId: characterId,
+          type: RestType.long,
+          className: 'Aucune Classe Lanceuse',
           // max(1, 5 ~/ 2) = max(1, 2) = 2 -> 5 - 2 = 3.
-          expect(await fetchHitDiceSpent(characterId), 3);
-        },
-      );
+          hitDiceRecoveredByClassId: {anyClassId.toString(): 2},
+        );
+
+        expect(await fetchHitDiceSpent(characterId), 3);
+      });
 
       test('niveau 1 : au moins 1 dé récupéré (le plancher "au moins 1" '
-          "s'applique même à un petit niveau)", () async {
+          "s'applique même à un petit niveau, toujours calculé côté "
+          'appelant)', () async {
         final characterId = await createCharacter(
           currentHp: 1,
           maxHp: 10,
@@ -306,14 +317,16 @@ void main() {
           characterId: characterId,
           type: RestType.long,
           className: 'Aucune Classe Lanceuse',
+          // max(1, 1 ~/ 2) = max(1, 0) = 1 -> 1 - 1 = 0.
+          hitDiceRecoveredByClassId: {anyClassId.toString(): 1},
         );
 
-        // max(1, 1 ~/ 2) = max(1, 0) = 1 -> 1 - 1 = 0.
         expect(await fetchHitDiceSpent(characterId), 0);
       });
 
-      test('jamais négatif : la récupération ne dépasse pas hit_dice_spent '
-          '(niveau 10, seulement 3 dés dépensés)', () async {
+      test('jamais négatif : la récupération écrite ne descend jamais sous '
+          '0, même si le nombre transmis dépasse hit_dice_spent (niveau 10, '
+          'seulement 3 dés dépensés)', () async {
         final characterId = await createCharacter(
           currentHp: 1,
           maxHp: 50,
@@ -331,15 +344,16 @@ void main() {
           characterId: characterId,
           type: RestType.long,
           className: 'Aucune Classe Lanceuse',
+          // max(1, 10 ~/ 2) = 5, mais seulement 3 dés étaient dépensés ->
+          // max(0, 3 - 5) = 0, jamais négatif.
+          hitDiceRecoveredByClassId: {anyClassId.toString(): 5},
         );
 
-        // max(1, 10 ~/ 2) = 5, mais seulement 3 dés étaient dépensés ->
-        // max(0, 3 - 5) = 0, jamais négatif.
         expect(await fetchHitDiceSpent(characterId), 0);
       });
 
-      test('aucun dé dépensé (hit_dice_spent déjà à 0) : rien à récupérer, '
-          'reste à 0', () async {
+      test('aucune entrée hitDiceRecoveredByClassId transmise : aucune '
+          'écriture, hit_dice_spent reste inchangé (déjà à 0 ici)', () async {
         final characterId = await createCharacter(
           currentHp: 1,
           maxHp: 20,
@@ -380,9 +394,9 @@ void main() {
         );
       });
 
-      test("applyRest(short, diceSpent > 0) appelé depuis la session d'un "
-          'autre joueur ne modifie jamais current_hp/hit_dice_spent du '
-          'personnage visé', () async {
+      test("applyRest(short, hitDiceSpentByClassId non vide) appelé depuis "
+          "la session d'un autre joueur ne modifie jamais "
+          'current_hp/hit_dice_spent du personnage visé', () async {
         final otherRepository = SupabaseCharacterRepository(
           otherClient,
           cache,
@@ -394,7 +408,7 @@ void main() {
             characterId: characterId,
             type: RestType.short,
             className: 'Peu importe (repos court)',
-            diceSpent: 2,
+            hitDiceSpentByClassId: {anyClassId.toString(): 2},
             appliedGain: 8,
           );
         } catch (_) {

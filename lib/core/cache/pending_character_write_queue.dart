@@ -110,8 +110,13 @@ class PendingCharacterWrite {
   /// [PendingCharacterWriteKind.innateSpell],
   /// `{"classFeatureId": ..., "usesRemaining": ...}` pour
   /// [PendingCharacterWriteKind.classFeature],
-  /// `{"type": "short"|"long", "className": ..., "diceSpent": ...,
-  /// "appliedGain": ...}` pour [PendingCharacterWriteKind.rest] — voir
+  /// `{"type": "short"|"long", "className": ..., "hitDiceSpentByClassId":
+  /// {classId: count}, "appliedGain": ..., "hitDiceRecoveredByClassId":
+  /// {classId: count}}` pour [PendingCharacterWriteKind.rest] (clés
+  /// `classId` en chaîne — `character_classes.class_id`, voir
+  /// `domain/hit_dice_pool.dart::HitDicePool.classId` — décision chef de
+  /// projet du 10/10/2026, suivi des dés de vie par classe plutôt que la
+  /// seule classe primaire) — voir
   /// `SupabaseCharacterRepository.updateHp`/`addXp`/`castSpell`/
   /// `setInnateSpellUsesSpent`/`useClassFeature`/`applyRest`.
   final Map<String, dynamic> payload;
