@@ -530,7 +530,8 @@ void main() {
     });
 
     testWidgets('lecture seule (vue partagée, actionsDisabled) : pastille et '
-        'marqueur affichés, aucun tap', (tester) async {
+        'marqueur affichés, le tap ouvre le panneau "Infos" en lecture seule '
+        '(sans bouton "Lancer")', (tester) async {
       final casts = <CharacterSpellEntry>[];
       await _pump(
         tester,
@@ -544,7 +545,8 @@ void main() {
 
       await tester.tap(find.text('Ténèbres'));
       await tester.pumpAndSettle();
-      expect(find.text('TÉNÈBRES'), findsNothing);
+      expect(find.text('TÉNÈBRES'), findsOneWidget);
+      expect(find.widgetWithText(PrimaryButton, 'LANCER'), findsNothing);
       expect(casts, isEmpty);
     });
   });

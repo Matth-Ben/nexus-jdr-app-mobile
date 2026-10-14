@@ -85,6 +85,7 @@ void main() {
     required CharacterSpellEntry spell,
     required List<CharacterSpellSlot> spellSlots,
     CharacterSpellSlot? pactSlot,
+    bool readOnly = false,
   }) async {
     castCalls = [];
     castLevels = [];
@@ -101,6 +102,7 @@ void main() {
                   spell: spell,
                   spellSlots: spellSlots,
                   pactSlot: pactSlot,
+                  readOnly: readOnly,
                   onCastSpell: (castSpell, slot) {
                     castCalls.add(castSpell);
                     castLevels.add(slot?.level);
@@ -1429,6 +1431,123 @@ void main() {
       );
 
       expect(innateCastButton(), findsNothing);
+    });
+  });
+
+  // [readOnly] : vue en lecture seule d'un personnage (fiche d'un autre
+  // membre du groupe/lien de partage public, voir
+  // `shared_character_view_screen.dart`) — même principe que
+  // `item_info_panel_test.dart`'s `readOnly` : tout élément d'action est
+  // entièrement retiré du panneau, pas seulement désactivé/grisé.
+  group('readOnly', () {
+    const preparedSpell = CharacterSpellEntry(
+      id: 50,
+      name: 'Bénédiction',
+      level: 1,
+      school: 'Enchantement',
+      status: SpellStatus.prepared,
+      castingTime: '1 action',
+    );
+    const unpreparedSpell = CharacterSpellEntry(
+      id: 51,
+      name: 'Maléfice',
+      level: 1,
+      school: 'Enchantement',
+      status: SpellStatus.known,
+    );
+    const dualRouteSpell = CharacterSpellEntry(
+      id: 52,
+      name: 'Thaumaturgie',
+      level: 2,
+      school: 'Évocation',
+      status: SpellStatus.prepared,
+      hasInnateRoute: true,
+      castingTime: '1 action',
+    );
+
+    testWidgets('détail technique et description toujours affichés', (
+      tester,
+    ) async {
+      await pumpPanel(
+        tester,
+        spell: _fireball,
+        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 0)],
+        readOnly: true,
+      );
+
+      expect(find.text('BOULE DE FEU'), findsOneWidget);
+      expect(find.text("Temps d'incantation"), findsOneWidget);
+      expect(find.text('DESCRIPTION'), findsOneWidget);
+      expect(find.text('Une sphère de feu explose.'), findsOneWidget);
+    });
+
+    testWidgets('aucun bouton "Lancer" ni ligne de raison de blocage, même '
+        'pour un sort par ailleurs lançable', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: _fireball,
+        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 0)],
+        readOnly: true,
+      );
+
+      expect(find.widgetWithText(PrimaryButton, 'LANCER'), findsNothing);
+    });
+
+    testWidgets('aucun bouton "Lancer" ni ligne de raison pour un sort '
+        'normalement bloqué (non préparé)', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: unpreparedSpell,
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 2, used: 0)],
+        readOnly: true,
+      );
+
+      expect(find.widgetWithText(PrimaryButton, 'LANCER'), findsNothing);
+      expect(find.text(SpellCastBlockReason.unprepared.message), findsNothing);
+    });
+
+    testWidgets('aucun lien "Ne plus préparer" pour un sort par ailleurs '
+        'bascule-able', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: preparedSpell,
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 2, used: 0)],
+        readOnly: true,
+      );
+
+      expect(find.text('Ne plus préparer'), findsNothing);
+      expect(find.text('Préparer ce sort'), findsNothing);
+    });
+
+    testWidgets('aucun lien "Préparer ce sort" pour un sort non préparé', (
+      tester,
+    ) async {
+      await pumpPanel(
+        tester,
+        spell: unpreparedSpell,
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 2, used: 0)],
+        readOnly: true,
+      );
+
+      expect(find.text('Préparer ce sort'), findsNothing);
+    });
+
+    testWidgets('sort à double route (D43) : ni bouton "Lancer" principal '
+        'ni bouton "Lancer (sort inné)"', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: dualRouteSpell,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+        readOnly: true,
+      );
+
+      expect(find.widgetWithText(PrimaryButton, 'LANCER'), findsNothing);
+      expect(
+        find.widgetWithText(SecondaryButton, 'LANCER (SORT INNÉ)'),
+        findsNothing,
+      );
+      // La ligne "Utilisations" reste affichée : purement informative.
+      expect(find.text('Utilisations'), findsOneWidget);
     });
   });
 }

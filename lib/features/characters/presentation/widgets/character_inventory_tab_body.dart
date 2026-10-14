@@ -20,6 +20,7 @@ import 'character_inventory_stat_boxes_row.dart';
 import 'currency_adjustment_sheet.dart';
 import 'inventory_category_filter_sheet.dart';
 import 'item_action_sheet.dart';
+import 'item_info_panel.dart';
 
 /// Contenu de l'onglet "Inventaire" de la fiche personnage — voir
 /// `docs/cahier-des-charges/09-maquettes-captures.md`, section "Onglet
@@ -101,12 +102,18 @@ class CharacterInventoryTabBody extends StatefulWidget {
   final VoidCallback? onAddReward;
 
   /// `true` pendant qu'une écriture de cet onglet est en vol (voir
-  /// `character_detail_screen.dart::_isWritingInventory`) : désactive le tap
-  /// sur chaque carte d'objet, chaque stat box de monnaie et la tuile
-  /// "Ajouter un objet" — aucun repos (court ou long) ne touche l'inventaire
-  /// ou la monnaie (vérifié contre `CharacterRepository.applyRest`), donc ce
-  /// verrou est le seul nécessaire ici, contrairement aux onglets "Sorts"/
-  /// "Compétences" qui doivent aussi se verrouiller pendant un repos.
+  /// `character_detail_screen.dart::_isWritingInventory`), ou en permanence
+  /// pour une vue en lecture seule (fiche d'un autre membre du groupe/lien de
+  /// partage public, voir `shared_character_view_screen.dart`) : désactive le
+  /// tap sur chaque stat box de monnaie et la tuile "Ajouter un objet" —
+  /// aucun repos (court ou long) ne touche l'inventaire ou la monnaie
+  /// (vérifié contre `CharacterRepository.applyRest`), donc ce verrou est le
+  /// seul nécessaire ici, contrairement aux onglets "Sorts"/"Compétences" qui
+  /// doivent aussi se verrouiller pendant un repos. Le tap sur une carte
+  /// d'objet, lui, reste toujours actif : il ouvre le panneau "Infos" en
+  /// lecture seule plutôt que rien (voir [_CharacterInventoryTabBodyState
+  /// ._openItemInfo]), même principe que `CharacterSpellsSection
+  /// .actionsDisabled`.
   final bool actionsDisabled;
 
   /// Clé posée sur le bouton "Filtrer par catégorie" (voir
@@ -124,28 +131,37 @@ class CharacterInventoryTabBody extends StatefulWidget {
 class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
   InventoryCategoryFilter _filter = InventoryCategoryFilter.all;
 
+  /// Bonus d'attaque/modificateur de dégâts d'une arme (voir
+  /// `domain/weapon_attack_calculator.dart::WeaponAttackCalculator`) —
+  /// factorisé pour [_openItemActions] et [_openItemInfo], qui en ont tous
+  /// deux besoin pour l'afficher dans leur panneau respectif. `(null, null)`
+  /// pour tout objet qui n'est pas une arme à dé de dégâts connu.
+  (int?, int?) _weaponAttackStats(CharacterInventoryItem item) {
+    if (item.category != 'arme' || item.weaponProperties?.damageDice == null) {
+      return (null, null);
+    }
+    final proficiencyBonus = ProficiencyBonusRules.forTotalLevel(
+      widget.detail.totalLevel,
+    );
+    final attackBonus = WeaponAttackCalculator.attackBonus(
+      weaponName: item.name,
+      weaponProperties: item.weaponProperties!.properties,
+      abilityScores: widget.detail.abilityScores,
+      proficiencyTokens: widget.detail.weaponProficiencyNames,
+      proficiencyBonus: proficiencyBonus,
+    );
+    final damageModifier = WeaponAttackCalculator.abilityModifierFor(
+      weaponProperties: item.weaponProperties!.properties,
+      abilityScores: widget.detail.abilityScores,
+    );
+    return (attackBonus, damageModifier);
+  }
+
   Future<void> _openItemActions(
     BuildContext context,
     CharacterInventoryItem item,
   ) {
-    int? attackBonus;
-    int? damageModifier;
-    if (item.category == 'arme' && item.weaponProperties?.damageDice != null) {
-      final proficiencyBonus = ProficiencyBonusRules.forTotalLevel(
-        widget.detail.totalLevel,
-      );
-      attackBonus = WeaponAttackCalculator.attackBonus(
-        weaponName: item.name,
-        weaponProperties: item.weaponProperties!.properties,
-        abilityScores: widget.detail.abilityScores,
-        proficiencyTokens: widget.detail.weaponProficiencyNames,
-        proficiencyBonus: proficiencyBonus,
-      );
-      damageModifier = WeaponAttackCalculator.abilityModifierFor(
-        weaponProperties: item.weaponProperties!.properties,
-        abilityScores: widget.detail.abilityScores,
-      );
-    }
+    final (attackBonus, damageModifier) = _weaponAttackStats(item);
 
     return showItemActionSheet(
       context,
@@ -159,6 +175,31 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
           .where((item) => item.category == 'arme' && item.equipped)
           .toList(),
       onEquipWeaponToSlot: widget.onEquipWeaponToSlot,
+      weaponAttackBonus: attackBonus,
+      weaponDamageModifier: damageModifier,
+    );
+  }
+
+  /// Panneau "Infos" en lecture seule, ouvert directement au tap sur une
+  /// carte d'objet quand [CharacterInventoryTabBody.actionsDisabled] est vrai
+  /// (vue en lecture seule : fiche d'un autre membre du groupe/lien de
+  /// partage public) — même appel que
+  /// `character_equipped_weapons_card.dart::_Weapon.build`, voir sa doc
+  /// `readOnly`.
+  Future<void> _openItemInfo(
+    BuildContext context,
+    CharacterInventoryItem item,
+  ) {
+    final (attackBonus, damageModifier) = _weaponAttackStats(item);
+
+    return showItemInfoPanel(
+      context,
+      item: item,
+      onUseItem: (_) {},
+      onToggleEquipped: (_) {},
+      onToggleAttuned: (_) {},
+      attunedCount: widget.detail.attunedItemCount,
+      readOnly: true,
       weaponAttackBonus: attackBonus,
       weaponDamageModifier: damageModifier,
     );
@@ -261,8 +302,11 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
           for (final item in sortedItems) ...[
             CharacterInventoryItemCard(
               item: item,
+              // Lecture seule : le tap ouvre toujours le panneau "Infos" en
+              // lecture seule plutôt que de bloquer le tap entièrement — voir
+              // [_openItemInfo].
               onTap: widget.actionsDisabled
-                  ? null
+                  ? () => _openItemInfo(context, item)
                   : () => _openItemActions(context, item),
             ),
             const SizedBox(height: AppSpacing.sm),

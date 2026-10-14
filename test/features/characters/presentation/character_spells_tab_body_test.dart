@@ -529,8 +529,12 @@ void main() {
   });
 
   testWidgets(
-    'actionsDisabled désactive le tap sur les sorts (repos long en vol)',
+    'actionsDisabled : le tap sur un sort ouvre tout de même le panneau '
+    '"Infos", mais en lecture seule (aucun bouton "Lancer", aucun lien de '
+    'préparation pourtant applicable hors lecture seule)',
     (tester) async {
+      final casts = <CharacterSpellEntry>[];
+      final toggles = <CharacterSpellEntry>[];
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -539,25 +543,32 @@ void main() {
                 spells: const [
                   CharacterSpellEntry(
                     id: 1,
-                    name: 'Lumière',
-                    level: 0,
-                    school: 'Évocation',
+                    name: 'Maléfice',
+                    level: 1,
+                    school: 'Enchantement',
                     status: SpellStatus.known,
                   ),
                 ],
               ),
-              onCastSpell: (_, _) {},
-              onTogglePrepared: (_) {},
+              onCastSpell: (spell, _) => casts.add(spell),
+              onTogglePrepared: toggles.add,
               actionsDisabled: true,
             ),
           ),
         ),
       );
 
-      await tester.tap(find.text('Lumière'), warnIfMissed: false);
+      await tester.tap(find.text('Maléfice'));
       await tester.pumpAndSettle();
 
-      expect(find.text('LUMIÈRE'), findsNothing);
+      expect(find.text('MALÉFICE'), findsOneWidget);
+      expect(find.widgetWithText(PrimaryButton, 'LANCER'), findsNothing);
+      // Hors lecture seule, un sort 'connu' non préparé afficherait ce lien
+      // (voir `spell_info_panel_test.dart`) — ici retiré par [readOnly].
+      expect(find.text('Préparer ce sort'), findsNothing);
+      expect(find.text('Ne plus préparer'), findsNothing);
+      expect(casts, isEmpty);
+      expect(toggles, isEmpty);
     },
   );
 
