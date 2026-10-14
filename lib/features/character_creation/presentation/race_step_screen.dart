@@ -7,6 +7,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/french_text_normalizer.dart';
 import '../../../core/widgets/accent_icon_badge.dart';
+import '../../../core/widgets/info_banner.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
@@ -18,6 +19,7 @@ import '../domain/race_option.dart';
 import '../domain/race_step_selection.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
+import 'providers/character_edit_session_provider.dart';
 import 'providers/lineage_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
@@ -53,6 +55,15 @@ import 'widgets/step_help_sheet.dart';
 /// d'étendre `WoodBackHeader` (dette de fond signalée par le chef de projet,
 /// pattern à ne pas factoriser dans `core/widgets` à cette occasion — voir
 /// le principe de duplication assumée documenté dans ce module).
+///
+/// Mode modification (`CharacterEditSession`, voir [_isRaceLocked]) : la
+/// race est verrouillée inconditionnellement (décision du 09/10/2026, D53 de
+/// `docs/dette-technique.md`) — même patron que la classe verrouillée
+/// au-delà du niveau 1 sur `class_step_screen.dart`
+/// (`CharacterEditSession.canChangeClass`), mais sans seuil de niveau ici
+/// (`CharacterEditSession.canChangeRace` vaut toujours `false`) : changer de
+/// race casserait les sorts innés déjà acquis (ceux de l'ancienne race
+/// resteraient, ceux de la nouvelle n'arriveraient jamais).
 class RaceStepScreen extends ConsumerStatefulWidget {
   const RaceStepScreen({super.key});
 
@@ -107,7 +118,16 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
     if (mounted) setState(() {});
   }
 
+  /// Mode modification : la race ne peut plus jamais changer, quel que soit
+  /// le niveau (contrairement à `ClassStepScreen._isClassLocked`) — voir la
+  /// doc de classe de [RaceStepScreen].
+  bool get _isRaceLocked {
+    final session = ref.read(characterEditSessionControllerProvider);
+    return session != null && !session.canChangeRace;
+  }
+
   void _selectRace(int raceId) {
+    if (_isRaceLocked) return;
     setState(() {
       _isCustomRaceSelected = false;
       _selectedRaceId = raceId;
@@ -115,6 +135,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   }
 
   void _selectCustomRace() {
+    if (_isRaceLocked) return;
     setState(() {
       _isCustomRaceSelected = true;
       _selectedRaceId = null;
@@ -159,6 +180,13 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   /// sur un second appel réseau que l'utilisateur ne voit jamais échouer
   /// explicitement ici.
   void _submit(RaceCatalog catalog) {
+    // Race verrouillée : ni sous-race/lignée à choisir ni brouillon à
+    // changer — `SubraceStepScreen`/`LineageStepScreen` deviennent
+    // inatteignables en édition par ce chemin (voir la doc de classe).
+    if (_isRaceLocked) {
+      context.push('/characters/new/step-2');
+      return;
+    }
     final draft = ref.read(characterCreationDraftControllerProvider);
     final newRaceId = _isCustomRaceSelected ? null : _selectedRaceId;
     final raceChanged =
@@ -267,6 +295,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
       for (final race in filteredRaces)
         if (!race.isCoreSource) race,
     ];
+    final isRaceLocked = _isRaceLocked;
 
     return Column(
       children: [
@@ -296,24 +325,28 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    0,
-                  ),
-                  child: TextFormField(
-                    controller: _searchController,
-                    decoration: const InputDecoration(
-                      hintText: 'Rechercher une race...',
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: AppColors.textMuted,
+                // Filtrer une liste qu'on ne peut plus choisir n'a aucune
+                // utilité : masqué entièrement en mode modification (voir la
+                // doc de classe de [RaceStepScreen]).
+                if (!isRaceLocked)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                      AppSpacing.lg,
+                      0,
+                    ),
+                    child: TextFormField(
+                      controller: _searchController,
+                      decoration: const InputDecoration(
+                        hintText: 'Rechercher une race...',
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ),
                   ),
-                ),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(
@@ -323,6 +356,16 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                       AppSpacing.md,
                     ),
                     children: [
+                      if (isRaceLocked) ...[
+                        const InfoBanner(
+                          message:
+                              'La race ne peut pas être modifiée après la '
+                              'création du personnage : elle est liée aux '
+                              'sorts innés déjà acquis.',
+                          icon: Icons.lock_outline,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                      ],
                       if (coreRaces.isEmpty && extensionRaces.isEmpty)
                         const _EmptySearchState()
                       else ...[
@@ -342,6 +385,12 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                       SelectableOptionTile(
                         title: 'Race personnalisée',
                         selected: _isCustomRaceSelected,
+                        // Verrouillée : affiche le nom déjà saisi en lecture
+                        // seule au lieu du `TextField` éditable ci-dessous
+                        // (voir la doc de classe de [RaceStepScreen]).
+                        selectedDetail: isRaceLocked
+                            ? _customRaceController.text
+                            : null,
                         leading: const AccentIconBadge(
                           index: -1,
                           icon: Icons.shield_rounded,
@@ -349,7 +398,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                         ),
                         onTap: _selectCustomRace,
                       ),
-                      if (_isCustomRaceSelected) ...[
+                      if (_isCustomRaceSelected && !isRaceLocked) ...[
                         const SizedBox(height: AppSpacing.sm),
                         TextField(
                           controller: _customRaceController,

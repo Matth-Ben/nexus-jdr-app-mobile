@@ -11,6 +11,7 @@ import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/innate_spell_usage.dart';
 import '../../domain/spell_cast_eligibility.dart';
+import 'cast_innate_spell_confirmation_dialog.dart';
 import 'character_spells_section.dart';
 import 'spell_info_panel.dart';
 
@@ -41,9 +42,12 @@ typedef ToggleSpellFlagCallback = void Function(CharacterSpellEntry spell);
 /// [showSpellInfoPanel] — seul point d'entrée depuis l'onglet "Sorts", voir
 /// `character_spells_section.dart::_SpellRow`) : appelle directement
 /// [onCastSpell] quand un seul emplacement est éligible (ou pour un sort
-/// niveau 0 ou un sort inné à charge, `slot: null`), ouvre sinon une sheet
-/// de choix
-/// ([_SpellSlotChoiceSheetContent]).
+/// niveau 0, `slot: null`), ouvre sinon une sheet de choix
+/// ([_SpellSlotChoiceSheetContent]). Pour un sort inné à charge limitée
+/// (niveau >= 1, voir [InnateSpellUsage.isLimited]), également `slot: null`
+/// mais précédé d'une confirmation (décision utilisateur du 09/10/2026, voir
+/// `cast_innate_spell_confirmation_dialog.dart`) — jamais pour un sort
+/// mineur inné à volonté (niveau 0) ni pour un sort ordinaire.
 ///
 /// [pactSlot] (magie de pacte de l'Occultiste, `null` si non applicable —
 /// voir `CharacterDetail.pactSpellSlot`) est fusionné avec [spellSlots] AVANT
@@ -77,7 +81,12 @@ Future<void> castSpellFlow(
   // sheet de choix, même si le personnage a des emplacements (pas de
   // relance avec un emplacement dans cette version) — `slot: null`,
   // c'est l'appelant qui dépense l'usage
-  // (`character_detail_screen.dart::_castSpell`).
+  // (`character_detail_screen.dart::_castSpell`). À charge limitée
+  // (niveau >= 1, voir [InnateSpellUsage.isLimited]) : confirmation avant
+  // de dépenser cet usage unique (décision utilisateur du 09/10/2026, voir
+  // `cast_innate_spell_confirmation_dialog.dart`) — jamais pour un sort
+  // mineur inné à volonté (niveau 0, sorti avant ce `if` par le garde-fou
+  // `spell.level <= 0` ci-dessus).
   //
   // Un sort à double route (D43, `docs/dette-technique.md`) ne prend PAS
   // cette branche : `spell.status` y vaut déjà le statut ordinaire (voir
@@ -85,8 +94,14 @@ Future<void> castSpellFlow(
   // `CharacterSpellEntry.hasInnateRoute`) — ce flux reste donc celui de SA
   // route ordinaire ; sa route innée, indépendante, est lancée par un appel
   // direct à [onCastSpell] (`spell`, `null`) depuis le panneau "Infos"
-  // (`spell_info_panel.dart`), jamais via cette fonction.
+  // (`spell_info_panel.dart`), jamais via cette fonction — avec sa propre
+  // confirmation, voir sa doc.
   if (spell.status == SpellStatus.innate && InnateSpellUsage.isLimited(spell)) {
+    final confirmed = await showCastInnateSpellConfirmationDialog(
+      context,
+      spell: spell,
+    );
+    if (confirmed != true) return;
     onCastSpell(spell, null);
     return;
   }
