@@ -29,12 +29,13 @@ import 'providers/notification_preferences_providers.dart';
 ///
 /// Interrupteur principal "Notifications push" isolé (sa propre carte
 /// simple, sans en-tête de section ni icône), puis groupe "DÉCLENCHEURS"
-/// (`_SectionHeader`, 2 rangées `_ToggleRow` avec `standalone: false`
+/// (`_SectionHeader`, 3 rangées `_ToggleRow` avec `standalone: false`
 /// regroupées dans un `SettingsListCard`), puis groupe "E-MAIL" (1 rangée) —
-/// recettage direction-artistique du 13/09/2026. Les 2 rangées
+/// recettage direction-artistique du 13/09/2026. Les 3 rangées
 /// "DÉCLENCHEURS" ("Repos long non pris depuis longtemps"/
-/// `pushRestReminder` et "Accès retiré ou modifié par le MJ"/
-/// `pushAccessRevoked`) sont grisées (`onChanged: null`) quand
+/// `pushRestReminder`, "Accès retiré ou modifié par le MJ"/
+/// `pushAccessRevoked` et "Nouvelle mise à jour disponible"/
+/// `pushNewVersionAvailable`) sont grisées (`onChanged: null`) quand
 /// l'interrupteur "Notifications push" est désactivé. Le switch e-mail est
 /// toujours indépendant du push.
 ///
@@ -107,6 +108,7 @@ class _ProfileNotificationsScreenState
     bool? pushEnabled,
     bool? pushRestReminder,
     bool? pushAccessRevoked,
+    bool? pushNewVersionAvailable,
     bool? emailDigestEnabled,
   }) async {
     setState(
@@ -114,6 +116,7 @@ class _ProfileNotificationsScreenState
         pushEnabled: pushEnabled,
         pushRestReminder: pushRestReminder,
         pushAccessRevoked: pushAccessRevoked,
+        pushNewVersionAvailable: pushNewVersionAvailable,
         emailDigestEnabled: emailDigestEnabled,
       ),
     );
@@ -124,6 +127,7 @@ class _ProfileNotificationsScreenState
             pushEnabled: pushEnabled,
             pushRestReminder: pushRestReminder,
             pushAccessRevoked: pushAccessRevoked,
+            pushNewVersionAvailable: pushNewVersionAvailable,
             emailDigestEnabled: emailDigestEnabled,
           );
     } catch (_) {
@@ -203,6 +207,15 @@ class _ProfileNotificationsScreenState
                 value: prefs.pushAccessRevoked,
                 onChanged: prefs.pushEnabled
                     ? (value) => _toggle(prefs, pushAccessRevoked: value)
+                    : null,
+              ),
+              _ToggleRow(
+                standalone: false,
+                icon: Icons.file_download_outlined,
+                title: 'Nouvelle mise à jour disponible',
+                value: prefs.pushNewVersionAvailable,
+                onChanged: prefs.pushEnabled
+                    ? (value) => _toggle(prefs, pushNewVersionAvailable: value)
                     : null,
               ),
             ],

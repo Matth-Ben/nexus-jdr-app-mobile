@@ -228,6 +228,86 @@ void main() {
       },
     );
 
+    testWidgets(
+      'tap sur une notification "nouvelle version" (type: new_version) '
+      'route vers l\'accueil, même avec un characterId par ailleurs absent',
+      (tester) async {
+        final router = container.read(appRouterProvider);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        final registrar = container.read(pushTokenRegistrarProvider);
+        addTearDown(registrar.dispose);
+
+        gateway.emitMessageOpenedApp(
+          const RemoteMessage(
+            data: {
+              'type': 'new_version',
+              'platform': 'android',
+              'version': '2.4.0',
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('home'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'tap sur une notification "nouvelle version" ramène à l\'accueil '
+      '(go) en dépilant une route déjà ouverte, plutôt que de l\'empiler '
+      '(push)',
+      (tester) async {
+        final router = container.read(appRouterProvider);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        final registrar = container.read(pushTokenRegistrarProvider);
+        addTearDown(registrar.dispose);
+
+        // Simule un personnage déjà ouvert (ex. routage précédent sur
+        // "accès retiré") avant l'arrivée de la notification "nouvelle
+        // version".
+        router.push('/characters/char-99');
+        await tester.pumpAndSettle();
+        expect(find.text('character:char-99'), findsOneWidget);
+
+        gateway.emitMessageOpenedApp(
+          const RemoteMessage(data: {'type': 'new_version'}),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('home'), findsOneWidget);
+        expect(find.text('character:char-99'), findsNothing);
+        expect(router.routerDelegate.currentConfiguration.uri.toString(), '/');
+      },
+    );
+
+    testWidgets('app lancée depuis une notification "nouvelle version" '
+        '(getInitialMessage) route aussi vers l\'accueil', (tester) async {
+      gateway.initialMessageToReturn = const RemoteMessage(
+        data: {'type': 'new_version'},
+      );
+      final router = container.read(appRouterProvider);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      container.read(pushTokenRegistrarProvider);
+      await tester.pumpAndSettle();
+
+      expect(find.text('home'), findsOneWidget);
+    });
+
     test('dispose() annule tous les abonnements : plus aucun enregistrement '
         'déclenché après', () async {
       gateway.settingsToReturn = _settings(AuthorizationStatus.authorized);

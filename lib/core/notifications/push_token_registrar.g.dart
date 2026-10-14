@@ -33,13 +33,22 @@ part of 'push_token_registrar.dart';
 ///   [scaffoldMessengerKeyProvider] (aucune UI dédiée pour cette itération,
 ///   cohérent avec le reste de ce dépôt pour des messages informatifs).
 /// - **Tap sur une notification** ([PushNotificationGateway
-///   .onMessageOpenedApp]/[PushNotificationGateway.getInitialMessage]) :
-///   route vers `/characters/:id` si le payload `data` contient un
-///   `characterId` — hypothèse de format `{characterId: string}` adoptée ici
-///   pour les 2 déclencheurs actuels ("accès retiré"/"rappel de repos"), qui
-///   concernent tous deux un personnage précis ; à faire matcher côté
-///   backend (edge functions FCM du dépôt web, chantier séparé en cours en
-///   parallèle) si le format réellement envoyé diverge.
+///   .onMessageOpenedApp]/[PushNotificationGateway.getInitialMessage],
+///   routé par [_routeFromMessage]) : deux formats de payload `data`
+///   possibles selon le déclencheur —
+///     - `{type: 'new_version', ...}` ("nouvelle version disponible") :
+///       route vers l'accueil (`/`), où vit déjà `UpdateSuggestedBanner`
+///       (`features/app_update/presentation/widgets/update_suggested_banner
+///       .dart`) — c'est justement le changement de
+///       `app_versions.latest_version` qui a déclenché l'envoi de cette
+///       notification, donc la bannière a de quoi s'afficher dès l'arrivée
+///       sur cet écran.
+///     - `{characterId: string}` (sans `type`) : route vers
+///       `/characters/:id` — hypothèse de format adoptée ici pour les 2
+///       déclencheurs restants ("accès retiré"/"rappel de repos"), qui
+///       concernent tous deux un personnage précis ; à faire matcher côté
+///       backend (edge functions FCM du dépôt web, chantier séparé en cours
+///       en parallèle) si le format réellement envoyé diverge.
 
 @ProviderFor(pushTokenRegistrar)
 final pushTokenRegistrarProvider = PushTokenRegistrarProvider._();
@@ -69,13 +78,22 @@ final pushTokenRegistrarProvider = PushTokenRegistrarProvider._();
 ///   [scaffoldMessengerKeyProvider] (aucune UI dédiée pour cette itération,
 ///   cohérent avec le reste de ce dépôt pour des messages informatifs).
 /// - **Tap sur une notification** ([PushNotificationGateway
-///   .onMessageOpenedApp]/[PushNotificationGateway.getInitialMessage]) :
-///   route vers `/characters/:id` si le payload `data` contient un
-///   `characterId` — hypothèse de format `{characterId: string}` adoptée ici
-///   pour les 2 déclencheurs actuels ("accès retiré"/"rappel de repos"), qui
-///   concernent tous deux un personnage précis ; à faire matcher côté
-///   backend (edge functions FCM du dépôt web, chantier séparé en cours en
-///   parallèle) si le format réellement envoyé diverge.
+///   .onMessageOpenedApp]/[PushNotificationGateway.getInitialMessage],
+///   routé par [_routeFromMessage]) : deux formats de payload `data`
+///   possibles selon le déclencheur —
+///     - `{type: 'new_version', ...}` ("nouvelle version disponible") :
+///       route vers l'accueil (`/`), où vit déjà `UpdateSuggestedBanner`
+///       (`features/app_update/presentation/widgets/update_suggested_banner
+///       .dart`) — c'est justement le changement de
+///       `app_versions.latest_version` qui a déclenché l'envoi de cette
+///       notification, donc la bannière a de quoi s'afficher dès l'arrivée
+///       sur cet écran.
+///     - `{characterId: string}` (sans `type`) : route vers
+///       `/characters/:id` — hypothèse de format adoptée ici pour les 2
+///       déclencheurs restants ("accès retiré"/"rappel de repos"), qui
+///       concernent tous deux un personnage précis ; à faire matcher côté
+///       backend (edge functions FCM du dépôt web, chantier séparé en cours
+///       en parallèle) si le format réellement envoyé diverge.
 
 final class PushTokenRegistrarProvider
     extends
@@ -110,13 +128,22 @@ final class PushTokenRegistrarProvider
   ///   [scaffoldMessengerKeyProvider] (aucune UI dédiée pour cette itération,
   ///   cohérent avec le reste de ce dépôt pour des messages informatifs).
   /// - **Tap sur une notification** ([PushNotificationGateway
-  ///   .onMessageOpenedApp]/[PushNotificationGateway.getInitialMessage]) :
-  ///   route vers `/characters/:id` si le payload `data` contient un
-  ///   `characterId` — hypothèse de format `{characterId: string}` adoptée ici
-  ///   pour les 2 déclencheurs actuels ("accès retiré"/"rappel de repos"), qui
-  ///   concernent tous deux un personnage précis ; à faire matcher côté
-  ///   backend (edge functions FCM du dépôt web, chantier séparé en cours en
-  ///   parallèle) si le format réellement envoyé diverge.
+  ///   .onMessageOpenedApp]/[PushNotificationGateway.getInitialMessage],
+  ///   routé par [_routeFromMessage]) : deux formats de payload `data`
+  ///   possibles selon le déclencheur —
+  ///     - `{type: 'new_version', ...}` ("nouvelle version disponible") :
+  ///       route vers l'accueil (`/`), où vit déjà `UpdateSuggestedBanner`
+  ///       (`features/app_update/presentation/widgets/update_suggested_banner
+  ///       .dart`) — c'est justement le changement de
+  ///       `app_versions.latest_version` qui a déclenché l'envoi de cette
+  ///       notification, donc la bannière a de quoi s'afficher dès l'arrivée
+  ///       sur cet écran.
+  ///     - `{characterId: string}` (sans `type`) : route vers
+  ///       `/characters/:id` — hypothèse de format adoptée ici pour les 2
+  ///       déclencheurs restants ("accès retiré"/"rappel de repos"), qui
+  ///       concernent tous deux un personnage précis ; à faire matcher côté
+  ///       backend (edge functions FCM du dépôt web, chantier séparé en cours
+  ///       en parallèle) si le format réellement envoyé diverge.
   PushTokenRegistrarProvider._()
     : super(
         from: null,

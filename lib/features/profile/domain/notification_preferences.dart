@@ -7,7 +7,7 @@
 ///
 /// Volontairement une classe simple (pas `freezed`) : même précédent que
 /// `features/characters/domain/character_detail_class_row.dart::CharacterDetailClassRow`
-/// — une donnée à 4 booléens, sans logique de sérialisation complexe (jamais
+/// — une donnée à 5 booléens, sans logique de sérialisation complexe (jamais
 /// générée depuis le schéma Supabase, contrairement aux modèles de
 /// `character_creation/`).
 ///
@@ -25,11 +25,17 @@
 /// utilisateur" à notifier tant que les invitations nominatives
 /// (`12-partage-et-groupes.md` section 5.7, "extension future") ne sont pas
 /// construites. À ajouter ici le jour où ce chantier existe.
+///
+/// **[pushNewVersionAvailable] est un 4e déclencheur, hors de cette
+/// énumération** de `15-profil-parametres.md` section 3.1 (qui n'en liste que
+/// 3) — ajouté après coup pour relayer en push la même information que la
+/// bannière in-app `UpdateSuggestedBanner` (voir sa doc de classe).
 class NotificationPreferences {
   const NotificationPreferences({
     this.pushEnabled = true,
     this.pushRestReminder = true,
     this.pushAccessRevoked = true,
+    this.pushNewVersionAvailable = true,
     this.emailDigestEnabled = false,
   });
 
@@ -52,6 +58,14 @@ class NotificationPreferences {
   /// "Accès à une histoire retiré" — dépend de [pushEnabled].
   final bool pushAccessRevoked;
 
+  /// "Nouvelle mise à jour disponible" — dépend de [pushEnabled]. Même
+  /// événement serveur que `UpdateSuggestedBanner`
+  /// (`features/app_update/presentation/widgets/update_suggested_banner.dart`) :
+  /// le changement de `app_versions.latest_version`, déjà affiché en bannière
+  /// sur l'écran d'accueil — cet interrupteur n'ajoute qu'un canal push
+  /// redondant vers la même information, jamais une donnée distincte.
+  final bool pushNewVersionAvailable;
+
   /// "Recevoir un résumé par email" — indépendant de [pushEnabled] (canal
   /// email, pas push).
   final bool emailDigestEnabled;
@@ -66,6 +80,8 @@ class NotificationPreferences {
       pushEnabled: row['push_enabled'] as bool? ?? true,
       pushRestReminder: row['push_rest_reminder'] as bool? ?? true,
       pushAccessRevoked: row['push_access_revoked'] as bool? ?? true,
+      pushNewVersionAvailable:
+          row['push_new_version_available'] as bool? ?? true,
       emailDigestEnabled: row['email_digest_enabled'] as bool? ?? false,
     );
   }
@@ -74,12 +90,15 @@ class NotificationPreferences {
     bool? pushEnabled,
     bool? pushRestReminder,
     bool? pushAccessRevoked,
+    bool? pushNewVersionAvailable,
     bool? emailDigestEnabled,
   }) {
     return NotificationPreferences(
       pushEnabled: pushEnabled ?? this.pushEnabled,
       pushRestReminder: pushRestReminder ?? this.pushRestReminder,
       pushAccessRevoked: pushAccessRevoked ?? this.pushAccessRevoked,
+      pushNewVersionAvailable:
+          pushNewVersionAvailable ?? this.pushNewVersionAvailable,
       emailDigestEnabled: emailDigestEnabled ?? this.emailDigestEnabled,
     );
   }
@@ -90,6 +109,7 @@ class NotificationPreferences {
       other.pushEnabled == pushEnabled &&
       other.pushRestReminder == pushRestReminder &&
       other.pushAccessRevoked == pushAccessRevoked &&
+      other.pushNewVersionAvailable == pushNewVersionAvailable &&
       other.emailDigestEnabled == emailDigestEnabled;
 
   @override
@@ -97,6 +117,7 @@ class NotificationPreferences {
     pushEnabled,
     pushRestReminder,
     pushAccessRevoked,
+    pushNewVersionAvailable,
     emailDigestEnabled,
   );
 }
