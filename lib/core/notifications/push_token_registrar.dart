@@ -37,13 +37,22 @@ part 'push_token_registrar.g.dart';
 ///   [scaffoldMessengerKeyProvider] (aucune UI dédiée pour cette itération,
 ///   cohérent avec le reste de ce dépôt pour des messages informatifs).
 /// - **Tap sur une notification** ([PushNotificationGateway
-///   .onMessageOpenedApp]/[PushNotificationGateway.getInitialMessage]) :
-///   route vers `/characters/:id` si le payload `data` contient un
-///   `characterId` — hypothèse de format `{characterId: string}` adoptée ici
-///   pour les 2 déclencheurs actuels ("accès retiré"/"rappel de repos"), qui
-///   concernent tous deux un personnage précis ; à faire matcher côté
-///   backend (edge functions FCM du dépôt web, chantier séparé en cours en
-///   parallèle) si le format réellement envoyé diverge.
+///   .onMessageOpenedApp]/[PushNotificationGateway.getInitialMessage],
+///   routé par [_routeFromMessage]) : deux formats de payload `data`
+///   possibles selon le déclencheur —
+///     - `{type: 'new_version', ...}` ("nouvelle version disponible") :
+///       route vers l'accueil (`/`), où vit déjà `UpdateSuggestedBanner`
+///       (`features/app_update/presentation/widgets/update_suggested_banner
+///       .dart`) — c'est justement le changement de
+///       `app_versions.latest_version` qui a déclenché l'envoi de cette
+///       notification, donc la bannière a de quoi s'afficher dès l'arrivée
+///       sur cet écran.
+///     - `{characterId: string}` (sans `type`) : route vers
+///       `/characters/:id` — hypothèse de format adoptée ici pour les 2
+///       déclencheurs restants ("accès retiré"/"rappel de repos"), qui
+///       concernent tous deux un personnage précis ; à faire matcher côté
+///       backend (edge functions FCM du dépôt web, chantier séparé en cours
+///       en parallèle) si le format réellement envoyé diverge.
 @Riverpod(keepAlive: true)
 PushTokenRegistrar pushTokenRegistrar(Ref ref) {
   final registrar = PushTokenRegistrar(ref);
@@ -85,7 +94,7 @@ class PushTokenRegistrar {
       onError: (_) {},
     );
     _openedAppSubscription = gateway.onMessageOpenedApp.listen(
-      _routeToCharacterIfAny,
+      _routeFromMessage,
       onError: (_) {},
     );
     unawaited(_routeFromInitialMessage());
@@ -140,13 +149,24 @@ class PushTokenRegistrar {
       final message = await _ref
           .read(pushNotificationGatewayProvider)
           .getInitialMessage();
-      if (message != null) _routeToCharacterIfAny(message);
+      if (message != null) _routeFromMessage(message);
     } catch (_) {
       // Best-effort, silencieux — voir la doc de classe.
     }
   }
 
-  void _routeToCharacterIfAny(RemoteMessage message) {
+  /// Routage sur tap de notification — voir la doc de classe pour les 2
+  /// formats de payload `data` gérés.
+  void _routeFromMessage(RemoteMessage message) {
+    if (message.data['type'] == 'new_version') {
+      // `go` (jamais `push`) : revient à l'accueil plutôt que d'empiler une
+      // route par-dessus la pile existante — même choix que
+      // `ProfileNotificationsScreen._goBack` pour "retour à l'accueil".
+      // `GoRouter.go` est synchrone (`void`), contrairement à `.push`
+      // (`Future<T?>`) — jamais de `unawaited` ici.
+      _ref.read(appRouterProvider).go('/');
+      return;
+    }
     final characterId = message.data['characterId'] as String?;
     if (characterId == null || characterId.isEmpty) return;
     unawaited(_ref.read(appRouterProvider).push('/characters/$characterId'));

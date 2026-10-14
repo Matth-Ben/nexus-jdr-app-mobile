@@ -29,6 +29,7 @@ abstract class NotificationPreferencesRepository {
     bool? pushEnabled,
     bool? pushRestReminder,
     bool? pushAccessRevoked,
+    bool? pushNewVersionAvailable,
     bool? emailDigestEnabled,
   });
 }
@@ -57,6 +58,7 @@ class SupabaseNotificationPreferencesRepository
     bool? pushEnabled,
     bool? pushRestReminder,
     bool? pushAccessRevoked,
+    bool? pushNewVersionAvailable,
     bool? emailDigestEnabled,
   }) async {
     final ownerId = _requireOwnerId();
@@ -68,6 +70,7 @@ class SupabaseNotificationPreferencesRepository
       pushEnabled: pushEnabled,
       pushRestReminder: pushRestReminder,
       pushAccessRevoked: pushAccessRevoked,
+      pushNewVersionAvailable: pushNewVersionAvailable,
       emailDigestEnabled: emailDigestEnabled,
     );
 
@@ -78,6 +81,7 @@ class SupabaseNotificationPreferencesRepository
           'push_enabled': merged.pushEnabled,
           'push_rest_reminder': merged.pushRestReminder,
           'push_access_revoked': merged.pushAccessRevoked,
+          'push_new_version_available': merged.pushNewVersionAvailable,
           'email_digest_enabled': merged.emailDigestEnabled,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
         }, onConflict: 'user_id')

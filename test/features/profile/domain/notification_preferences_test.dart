@@ -8,13 +8,14 @@ import 'package:personnages/features/profile/domain/notification_preferences.dar
 
 void main() {
   group('NotificationPreferences.defaults', () {
-    test('pushEnabled/pushRestReminder/pushAccessRevoked à true, '
-        'emailDigestEnabled à false', () {
+    test('pushEnabled/pushRestReminder/pushAccessRevoked/'
+        'pushNewVersionAvailable à true, emailDigestEnabled à false', () {
       const prefs = NotificationPreferences.defaults();
 
       expect(prefs.pushEnabled, isTrue);
       expect(prefs.pushRestReminder, isTrue);
       expect(prefs.pushAccessRevoked, isTrue);
+      expect(prefs.pushNewVersionAvailable, isTrue);
       expect(prefs.emailDigestEnabled, isFalse);
     });
 
@@ -32,12 +33,14 @@ void main() {
         'push_enabled': false,
         'push_rest_reminder': false,
         'push_access_revoked': true,
+        'push_new_version_available': false,
         'email_digest_enabled': true,
       });
 
       expect(prefs.pushEnabled, isFalse);
       expect(prefs.pushRestReminder, isFalse);
       expect(prefs.pushAccessRevoked, isTrue);
+      expect(prefs.pushNewVersionAvailable, isFalse);
       expect(prefs.emailDigestEnabled, isTrue);
     });
 
@@ -50,6 +53,7 @@ void main() {
       expect(prefs.pushEnabled, isFalse);
       expect(prefs.pushRestReminder, isTrue);
       expect(prefs.pushAccessRevoked, isTrue);
+      expect(prefs.pushNewVersionAvailable, isTrue);
       expect(prefs.emailDigestEnabled, isFalse);
     });
 
@@ -70,6 +74,19 @@ void main() {
       expect(updated.pushEnabled, isFalse);
       expect(updated.pushRestReminder, isTrue);
       expect(updated.pushAccessRevoked, isTrue);
+      expect(updated.pushNewVersionAvailable, isTrue);
+      expect(updated.emailDigestEnabled, isFalse);
+    });
+
+    test('ne modifie que pushNewVersionAvailable quand nommé seul', () {
+      const prefs = NotificationPreferences.defaults();
+
+      final updated = prefs.copyWith(pushNewVersionAvailable: false);
+
+      expect(updated.pushNewVersionAvailable, isFalse);
+      expect(updated.pushEnabled, isTrue);
+      expect(updated.pushRestReminder, isTrue);
+      expect(updated.pushAccessRevoked, isTrue);
       expect(updated.emailDigestEnabled, isFalse);
     });
   });
@@ -80,12 +97,14 @@ void main() {
         pushEnabled: false,
         pushRestReminder: true,
         pushAccessRevoked: false,
+        pushNewVersionAvailable: false,
         emailDigestEnabled: true,
       );
       const b = NotificationPreferences(
         pushEnabled: false,
         pushRestReminder: true,
         pushAccessRevoked: false,
+        pushNewVersionAvailable: false,
         emailDigestEnabled: true,
       );
 
@@ -96,6 +115,13 @@ void main() {
     test('une valeur différente rend les instances distinctes', () {
       const a = NotificationPreferences.defaults();
       const b = NotificationPreferences(emailDigestEnabled: true);
+
+      expect(a, isNot(b));
+    });
+
+    test('pushNewVersionAvailable différent rend les instances distinctes', () {
+      const a = NotificationPreferences.defaults();
+      const b = NotificationPreferences(pushNewVersionAvailable: false);
 
       expect(a, isNot(b));
     });

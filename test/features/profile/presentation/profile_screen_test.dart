@@ -53,6 +53,7 @@ class _FakeNotificationPreferencesRepository
     bool? pushEnabled,
     bool? pushRestReminder,
     bool? pushAccessRevoked,
+    bool? pushNewVersionAvailable,
     bool? emailDigestEnabled,
   }) async => const NotificationPreferences.defaults();
 }

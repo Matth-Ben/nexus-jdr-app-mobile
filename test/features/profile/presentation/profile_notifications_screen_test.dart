@@ -1,6 +1,6 @@
 // Tests de widget de l'écran "Préférences de notifications"
 // (`presentation/profile_notifications_screen.dart`) : chargement/erreur/
-// données, groupe "DÉCLENCHEURS" (2 rangées regroupées dans un
+// données, groupe "DÉCLENCHEURS" (3 rangées regroupées dans un
 // `SettingsListCard` — voir la doc de classe de
 // `ProfileNotificationsScreen`), rangées grisées quand "Notifications push"
 // est désactivé, bascule optimiste + revert sur échec, demande de
@@ -54,6 +54,7 @@ class _FakeNotificationPreferencesRepository
     bool? pushEnabled,
     bool? pushRestReminder,
     bool? pushAccessRevoked,
+    bool? pushNewVersionAvailable,
     bool? emailDigestEnabled,
   }) async {
     if (updateCompleter != null) await updateCompleter!.future;
@@ -61,6 +62,7 @@ class _FakeNotificationPreferencesRepository
       pushEnabled: pushEnabled,
       pushRestReminder: pushRestReminder,
       pushAccessRevoked: pushAccessRevoked,
+      pushNewVersionAvailable: pushNewVersionAvailable,
       emailDigestEnabled: emailDigestEnabled,
     );
     final error = updateErrorToThrow;
@@ -213,13 +215,14 @@ void main() {
   );
 
   testWidgets(
-    'affiche les 2 groupes ("DÉCLENCHEURS"/"E-MAIL") et les 4 rangées avec '
+    'affiche les 2 groupes ("DÉCLENCHEURS"/"E-MAIL") et les 5 rangées avec '
     'leurs valeurs, sans en-tête ni icône sur "Notifications push"',
     (tester) async {
       repository.current = const NotificationPreferences(
         pushEnabled: true,
         pushRestReminder: false,
         pushAccessRevoked: true,
+        pushNewVersionAvailable: false,
         emailDigestEnabled: true,
       );
 
@@ -233,19 +236,21 @@ void main() {
       expect(find.text('Invitation à rejoindre une histoire'), findsNothing);
       expect(find.text('Repos long non pris depuis longtemps'), findsOneWidget);
       expect(find.text('Accès retiré ou modifié par le MJ'), findsOneWidget);
+      expect(find.text('Nouvelle mise à jour disponible'), findsOneWidget);
       expect(find.text('Recevoir un résumé par e-mail'), findsOneWidget);
 
-      // Icônes dédiées des 2 rangées "DÉCLENCHEURS", dans cet ordre — le
-      // groupe ne contient plus que ces 2 rangées (retrait de "Invitation à
-      // rejoindre une histoire", décision chef de projet du 13/09/2026).
+      // Icônes dédiées des 3 rangées "DÉCLENCHEURS", dans cet ordre — le
+      // groupe ne contient plus "Invitation à rejoindre une histoire"
+      // (retrait, décision chef de projet du 13/09/2026).
       expect(find.byIcon(Icons.arrow_forward), findsNothing);
       expect(find.byIcon(Icons.star_outline), findsOneWidget);
       expect(find.byIcon(Icons.warning_amber_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.file_download_outlined), findsOneWidget);
       final settingsListCard = find.byType(SettingsListCard);
       expect(settingsListCard, findsOneWidget);
       expect(
         find.descendant(of: settingsListCard, matching: find.byType(Switch)),
-        findsNWidgets(2),
+        findsNWidgets(3),
       );
 
       expect(_switchFor(tester, 'Notifications push').value, isTrue);
@@ -256,6 +261,10 @@ void main() {
       expect(
         _switchFor(tester, 'Accès retiré ou modifié par le MJ').value,
         isTrue,
+      );
+      expect(
+        _switchFor(tester, 'Nouvelle mise à jour disponible').value,
+        isFalse,
       );
       expect(_switchFor(tester, 'Recevoir un résumé par e-mail').value, isTrue);
     },
@@ -277,7 +286,7 @@ void main() {
     },
   );
 
-  testWidgets('grise les 2 rangées "DÉCLENCHEURS" adossées à une préférence '
+  testWidgets('grise les 3 rangées "DÉCLENCHEURS" adossées à une préférence '
       '(onChanged null) quand "Notifications push" est désactivé, sans '
       'affecter le switch e-mail', (tester) async {
     repository.current = const NotificationPreferences(pushEnabled: false);
@@ -293,10 +302,43 @@ void main() {
       isNull,
     );
     expect(
+      _switchFor(tester, 'Nouvelle mise à jour disponible').onChanged,
+      isNull,
+    );
+    expect(
       _switchFor(tester, 'Recevoir un résumé par e-mail').onChanged,
       isNotNull,
     );
   });
+
+  testWidgets(
+    '"Nouvelle mise à jour disponible" bascule pushNewVersionAvailable '
+    'quand "Notifications push" est activé',
+    (tester) async {
+      repository.current = const NotificationPreferences(
+        pushNewVersionAvailable: false,
+      );
+
+      await _pumpScreen(tester, repository: repository, gateway: gateway);
+
+      await tester.tap(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text('Nouvelle mise à jour disponible'),
+            matching: find.byType(Row),
+          ),
+          matching: find.byType(Switch),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(repository.updateCalls.single.pushNewVersionAvailable, isTrue);
+      expect(
+        _switchFor(tester, 'Nouvelle mise à jour disponible').value,
+        isTrue,
+      );
+    },
+  );
 
   testWidgets(
     'bascule optimiste : le switch e-mail reflète immédiatement le nouvel '
