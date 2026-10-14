@@ -91,24 +91,15 @@ void main() {
     (tester) async {
       await _pumpScreen(tester);
 
-      expect(
-        find.textContaining('Press Start 2P'),
-        findsOneWidget,
-      );
-      expect(
-        find.textContaining('SIL Open Font License'),
-        findsOneWidget,
-      );
-      expect(
-        find.textContaining('github.com/google/fonts'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Press Start 2P'), findsOneWidget);
+      expect(find.textContaining('SIL Open Font License'), findsOneWidget);
+      expect(find.textContaining('github.com/google/fonts'), findsOneWidget);
       expect(find.textContaining('google_fonts'), findsNothing);
     },
   );
 
   testWidgets('affiche le bloc encadré CC-BY (fond parchmentCardAlt, bordure '
-      'woodLight) entre les 2 sections', (tester) async {
+      'woodLight) entre la 1ère et la 2e section', (tester) async {
     await _pumpScreen(tester);
 
     expect(
