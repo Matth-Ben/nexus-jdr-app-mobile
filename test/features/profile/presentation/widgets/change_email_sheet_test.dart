@@ -337,6 +337,44 @@ void main() {
     );
 
     testWidgets(
+      'échelle 2 (plafond documenté `AppTypography.maxTextScaleFactor`, '
+      'voir `10-design-system.md` section 7) : aucun débordement, les '
+      'boutons restent visibles et actifs',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+
+        await _pumpSheet(tester);
+
+        expect(tester.takeException(), isNull);
+        final buttonRect = tester.getRect(
+          find.widgetWithText(PrimaryButton, 'ENREGISTRER'),
+        );
+        expect(buttonRect.bottom, lessThanOrEqualTo(568));
+
+        await tester.enterText(
+          find.byType(TextFormField),
+          'nouveau@exemple.com',
+        );
+        await tester.pump();
+        await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(
+          find.text(
+            'Email de confirmation envoyé. Vérifie ta boîte de réception '
+            'pour finaliser le changement.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
       'échelle 3 : aucun débordement, les boutons restent visibles et '
       'actifs (bandeau info permanent + champ + rappel d\'adresse)',
       (tester) async {

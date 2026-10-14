@@ -603,6 +603,37 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Aucun sort pour « Charme ».'), findsOneWidget);
     });
+    // La sheet entière est à hauteur fixe (`FractionallySizedBox
+    // (heightFactor: 0.9)`, voir `showPrepareSpellsSheet`) : à 568 dp et
+    // échelle 2, l'espace disponible pour [_NoMatchState] suffit déjà même
+    // sans le correctif D24 (vérifié empiriquement en rejouant ce test
+    // contre la version pré-correctif : aucun débordement). Le test
+    // précédent ne discrimine donc pas vraiment le correctif pour ce
+    // contenu-là. Un clavier ouvert (le champ de recherche a le focus,
+    // comme ici) réduit en réalité la hauteur disponible de la sheet sur un
+    // vrai appareil ; ce test le simule par un écran plus bas plutôt que par
+    // `viewInsets.bottom` — rejoué contre la version pré-correctif, il
+    // déborde bien de 66px, confirmant qu'il détecte la régression que
+    // [_NoMatchState] a corrigée.
+    testWidgets(
+      'introuvable par la recherche, texte agrandi à 200 %, clavier ouvert '
+      '(écran réduit à 320×400) : toujours affiché, aucun débordement',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 400);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+
+        await pumpSheet(tester, spells: all);
+
+        await tester.enterText(find.byType(TextField), 'Charme');
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Aucun sort pour « Charme ».'), findsOneWidget);
+      },
+    );
   });
 
   // Caractérisation d'un défaut connu, antérieur au correctif D03 (rapport

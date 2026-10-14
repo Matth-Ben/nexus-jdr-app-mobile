@@ -268,6 +268,37 @@ void main() {
     );
 
     testWidgets(
+      'échelle 2 (plafond documenté `AppTypography.maxTextScaleFactor`, '
+      'voir `10-design-system.md` section 7) : aucun débordement, les '
+      'boutons restent visibles et actifs',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+
+        final repository = await _pumpSheet(tester);
+        repository.pathToReturn = '/tmp/nexus-jdr-export-123.json';
+
+        expect(tester.takeException(), isNull);
+        final buttonRect = tester.getRect(
+          find.widgetWithText(PrimaryButton, "GÉNÉRER L'EXPORT"),
+        );
+        expect(buttonRect.bottom, lessThanOrEqualTo(568));
+
+        await tester.tap(
+          find.widgetWithText(PrimaryButton, "GÉNÉRER L'EXPORT"),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(repository.exportCallCount, 1);
+        expect(find.text('Export généré.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'échelle 3 : aucun débordement, les boutons restent visibles et '
       'actifs',
       (tester) async {

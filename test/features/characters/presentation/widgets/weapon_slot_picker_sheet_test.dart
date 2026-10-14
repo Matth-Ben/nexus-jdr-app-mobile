@@ -160,6 +160,43 @@ void main() {
       },
     );
 
+    testWidgets(
+      'échelle 2 (plafond documenté `AppTypography.maxTextScaleFactor`) : '
+      'aucun débordement, les deux sets restent sélectionnables',
+      (tester) async {
+        final result = await _open(
+          tester,
+          screenSize: const Size(320, 568),
+          textScale: 2,
+          equippedWeapons: [
+            _weapon(
+              id: 'inv-1',
+              name: 'Épée longue +1 de la lignée des rois oubliés',
+              slot: WeaponSlot.principal,
+            ),
+          ],
+        );
+
+        expect(tester.takeException(), isNull);
+
+        await tester.scrollUntilVisible(
+          find.text('Set secondaire'),
+          50,
+          scrollable: find.descendant(
+            of: find.byType(SingleChildScrollView),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Set secondaire'));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(result.closed, isTrue);
+        expect(result.value, WeaponSlot.secondary);
+      },
+    );
+
     testWidgets('échelle 3 : aucun débordement, les deux sets restent '
         'sélectionnables (défilement si besoin)', (tester) async {
       final result = await _open(
