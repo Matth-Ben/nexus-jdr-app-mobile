@@ -257,6 +257,7 @@ travaillant sur autre chose. Aucun n'a été traité.
 | Tiers-lanceurs non gérés | Chevalier occulte, Escroc arcanique. | Lu par QA |
 | Dés de vie sur la seule classe primaire | Repos et export d'un multiclassé. Décision produit. | Lu par l'audit et par dev-flutter |
 | Traduction de classe manquante | Classe traitée comme non lanceuse : un total d'emplacements peut baisser sans message au repos long. Rare. Un test « LIMITE CONNUE » épingle le cas. | Testé par QA |
+| Asymétrie UX sur l'annulation de la confirmation de sort inné (12/10) | Pour un sort seulement inné, le panneau "Infos" se ferme avant la confirmation (ne se rouvre pas si annulé) ; pour un sort à double route (D43), la confirmation s'affiche par-dessus le panneau encore ouvert (reste intact si annulé). Comportement fonctionnel identique dans les deux cas (aucun appel si annulé) — juste un ressenti visuel différent. Pas bloquant, signalé par `code-reviewer` comme piste d'harmonisation future. | Relevé par `code-reviewer` |
 | Paramètre `className` d'`applyRest` redondant | Deux sources pour le nom de la classe primaire. | Revue |
 | Montage de test dupliqué | Écran de liste des personnages monté dans deux fichiers de test ; faux client Supabase recopié. | Revue |
 | Plafond d'agrandissement en double | Deux constantes privées à 2.0 (`spell_info_panel.dart`, `sheet_header_bar.dart`), à réunir quand le design system aura une règle. | Revue |
@@ -339,7 +340,7 @@ corrigeant D09, non traités (sauf D09 lui-même).
 | ID | Sujet | Gravité | Correction proposée | État |
 |---|---|---|---|---|
 | D09 | Sorts innés supprimés lors d'un changement de classe en édition | haute | — | Corrigé (PR #83). `CharacterEditSnapshot.classSpells` exclut les lignes `'inné'` ; planificateur, hydrateur et le `DELETE` du dépôt d'édition ne touchent plus que les lignes ordinaires. |
-| D53 | Changer de race en édition est possible, mais les sorts innés de l'ancienne race restent, ceux de la nouvelle n'arrivent pas ; `characters.lineage_id` n'est ni lu ni écrit en édition | moyenne | Décision produit : verrouiller la race en édition, ou gérer l'échange de sorts innés et de `lineage_id` | Ouvert |
+| D53 | Changer de race en édition est possible, mais les sorts innés de l'ancienne race restent, ceux de la nouvelle n'arrivent pas ; `characters.lineage_id` n'est ni lu ni écrit en édition | moyenne | Décision produit : verrouiller la race en édition, ou gérer l'échange de sorts innés et de `lineage_id` | Corrigé (PR #136). Race verrouillée en édition, inconditionnellement (même patron déjà en place pour la classe au-delà du niveau 1, mais sans seuil ici) : bandeau d'avertissement, tuiles non interactives mais au rendu normal, race personnalisée en lecture seule, navigation directe sans jamais passer par sous-race/lignée en édition. |
 | D54 | L'hydrateur d'édition tronque en silence (`take(quota)`) les sorts au-delà du quota, sans message | basse | Signaler la troncature, ou refuser l'édition si le personnage dépasse déjà son quota | Ouvert |
 | D55 | `save` de l'édition non transactionnel : un échec entre la suppression et l'insertion des sorts laisse le personnage sans sorts de classe | haute | Rattaché à D05 (fonctions Postgres transactionnelles) | Ouvert |
 | D56 | Un index unique partiel sur `(character_id, spell_id)` par nature de ligne (inné/ordinaire) serait à étudier côté base, pour empêcher un doublon accidentel au-delà du cas D43 volontaire | basse | Rattaché à D10 et D42 (contrainte unique après nettoyage des doublons d'import) | Corrigé (PR #24 dépôt web, appliquée en production le 10/10, voir D10). |
@@ -550,7 +551,11 @@ commit parent).
     `lineage_id` quand un joueur change de race via l'assistant de modification ?
     **Verrouiller la race en édition, demandé par Matthias le 09/10.** (D53)
 15. Faut-il une confirmation avant de lancer un sort inné, puisqu'aucune sheet de choix
-    ne s'ouvre ? **Oui, une confirmation, demandé par Matthias le 09/10.**
+    ne s'ouvre ? **Oui, une confirmation, demandé par Matthias le 09/10 ; fait
+    (PR #136).** Dialogue affiché uniquement pour un sort inné à charge limitée (niveau
+    ≥ 1), jamais pour un sort mineur à volonté ni un sort ordinaire. Un bug de
+    débordement à grande échelle de texte trouvé sur ce nouveau dialogue a révélé le
+    même défaut sur deux calques déjà en production — consigné séparément (D81).
 
 ## Ce que l'audit n'a pas couvert
 
