@@ -135,100 +135,119 @@ class _ChangePasswordSheetContentState
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(color: AppColors.parchmentBg),
-            child: Form(
-              key: _formKey,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SheetHeaderBar(
-                    title: 'MOT DE PASSE',
-                    closeEnabled: !_isSaving,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(AppSpacing.lg),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_errorMessage != null) ...[
-                          AlertBanner(message: _errorMessage!),
-                          const SizedBox(height: AppSpacing.md),
-                        ],
-                        Text(
-                          'NOUVEAU MOT DE PASSE',
-                          style: AppTypography.body(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          decoration: const InputDecoration(
-                            hintText: '••••••••',
-                          ),
-                          validator: AuthValidators.password,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          'CONFIRMER LE MOT DE PASSE',
-                          style: AppTypography.body(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        TextFormField(
-                          controller: _confirmController,
-                          obscureText: true,
-                          decoration: const InputDecoration(
-                            hintText: '••••••••',
-                          ),
-                          validator: (value) =>
-                              AuthValidators.passwordConfirmation(
-                                value,
-                                _passwordController.text,
+          child: ConstrainedBox(
+            // Plafonne la hauteur de la sheet pour le contenu long (champs en
+            // erreur + texte agrandi, voir `10-design-system.md` section 7) :
+            // au-delà, c'est la zone défilante ajoutée ci-dessous qui absorbe
+            // le débordement plutôt que l'écran.
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+            ),
+            child: DecoratedBox(
+              decoration: const BoxDecoration(color: AppColors.parchmentBg),
+              child: Form(
+                key: _formKey,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SheetHeaderBar(
+                      title: 'MOT DE PASSE',
+                      closeEnabled: !_isSaving,
+                    ),
+                    Flexible(
+                      // `SingleChildScrollView` n'a pas de paramètre
+                      // `shrinkWrap` (contrairement à `ListView`) : il n'en a
+                      // pas besoin — avec les contraintes lâches que lui
+                      // donne ce `Flexible`, il épouse déjà la hauteur de
+                      // son contenu, et ne défile que si le contenu dépasse
+                      // l'espace laissé par le `ConstrainedBox` ci-dessus.
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (_errorMessage != null) ...[
+                                AlertBanner(message: _errorMessage!),
+                                const SizedBox(height: AppSpacing.md),
+                              ],
+                              Text(
+                                'NOUVEAU MOT DE PASSE',
+                                style: AppTypography.body(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      0,
-                      AppSpacing.lg,
-                      AppSpacing.lg,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: SecondaryButton(
-                            label: 'Annuler',
-                            surface: SecondaryButtonSurface.parchment,
-                            onPressed: _isSaving
-                                ? null
-                                : () => Navigator.of(context).pop(),
+                              const SizedBox(height: AppSpacing.xs),
+                              TextFormField(
+                                controller: _passwordController,
+                                obscureText: true,
+                                decoration: const InputDecoration(
+                                  hintText: '••••••••',
+                                ),
+                                validator: AuthValidators.password,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              Text(
+                                'CONFIRMER LE MOT DE PASSE',
+                                style: AppTypography.body(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              TextFormField(
+                                controller: _confirmController,
+                                obscureText: true,
+                                decoration: const InputDecoration(
+                                  hintText: '••••••••',
+                                ),
+                                validator: (value) =>
+                                    AuthValidators.passwordConfirmation(
+                                      value,
+                                      _passwordController.text,
+                                    ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: PrimaryButton(
-                            label: 'Enregistrer',
-                            isLoading: _isSaving,
-                            onPressed: _submit,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        0,
+                        AppSpacing.lg,
+                        AppSpacing.lg,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: SecondaryButton(
+                              label: 'Annuler',
+                              surface: SecondaryButtonSurface.parchment,
+                              onPressed: _isSaving
+                                  ? null
+                                  : () => Navigator.of(context).pop(),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: PrimaryButton(
+                              label: 'Enregistrer',
+                              isLoading: _isSaving,
+                              onPressed: _submit,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

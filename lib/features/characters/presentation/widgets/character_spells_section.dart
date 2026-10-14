@@ -341,11 +341,6 @@ const double _innateSpentFontSize = 11;
 /// autres sorts (spec direction-artistique).
 const double _innateTwoLineTextScale = 1.3;
 
-/// Plafond d'échelle de texte de la pastille « INNÉ » et de son marqueur
-/// d'usage — même valeur que la ligne de raison du panneau « Infos »
-/// (`spell_info_panel.dart::_blockReasonMaxTextScale`).
-const double _innateUsageMaxTextScale = 2;
-
 class _SpellRow extends StatelessWidget {
   const _SpellRow({
     required this.spell,
@@ -593,7 +588,7 @@ class _RowBadge extends StatelessWidget {
 /// [AppColors.accentBrick] sinon — la ligne elle-même n'est jamais atténuée.
 ///
 /// Un seul nœud sémantique pour les deux (sans `container: true`, comme
-/// [_GrantBadge]) ; texte plafonné à [_innateUsageMaxTextScale].
+/// [_GrantBadge]) ; texte plafonné à [AppTypography.maxTextScaleFactor].
 class _InnateUsage extends StatelessWidget {
   const _InnateUsage({required this.spell});
 
@@ -613,7 +608,7 @@ class _InnateUsage extends StatelessWidget {
           : 'Sort inné, épuisé, disponible après un repos long',
       excludeSemantics: true,
       child: MediaQuery.withClampedTextScaling(
-        maxScaleFactor: _innateUsageMaxTextScale,
+        maxScaleFactor: AppTypography.maxTextScaleFactor,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

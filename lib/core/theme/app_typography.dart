@@ -21,6 +21,18 @@ import 'app_colors.dart';
 /// deux polices — voir `assets/fonts/OFL-*.txt` et l'écran "Crédits &
 /// licences" (`features/profile/presentation/profile_credits_screen.dart`).
 abstract final class AppTypography {
+  /// Plafond partagé d'agrandissement du texte, voir
+  /// `docs/cahier-des-charges/10-design-system.md` section 7 (Accessibilité).
+  /// Ne couvre PAS tout le texte de l'app : seulement un sous-arbre affiché dans
+  /// un conteneur à taille contrainte qui ne peut pas grandir avec lui (titre
+  /// borné en lignes, badge dans une ligne de largeur fixe, message sous un
+  /// bouton de pied fixe). À utiliser via `MediaQuery.withClampedTextScaling(
+  /// maxScaleFactor: AppTypography.maxTextScaleFactor, child: ...)` — jamais
+  /// posé une fois pour toute l'app (romprait le redimensionnement libre du
+  /// contenu défilant), ni comme substitut à un contenu qu'il faudrait plutôt
+  /// rendre défilant.
+  static const double maxTextScaleFactor = 2.0;
+
   static TextStyle display({
     required double fontSize,
     Color color = AppColors.textPrimary,

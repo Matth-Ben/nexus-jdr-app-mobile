@@ -298,4 +298,117 @@ void main() {
       expect(find.byType(TextFormField), findsNothing);
     },
   );
+
+  group('D24 (`docs/dette-technique.md`) : texte agrandi sur petit écran', () {
+    // Hauteur réelle occupée par la sheet (du haut de sa barre de tête —
+    // toujours son premier élément — au bas de l'écran, où une bottom sheet
+    // est toujours ancrée, contenu court ou non).
+    double sheetHeight(WidgetTester tester, double screenHeight) =>
+        screenHeight - tester.getRect(find.byType(SheetHeaderBar)).top;
+
+    testWidgets(
+      'contenu court : la hauteur de la sheet suit son contenu, pas la '
+      'hauteur de l\'écran (`ConstrainedBox(maxHeight: 90 %)` n\'étire pas '
+      'un contenu court jusqu\'à son plafond)',
+      (tester) async {
+        addTearDown(tester.view.reset);
+
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1;
+        await _pumpSheet(tester);
+        final heightOnSmallScreen = sheetHeight(tester, 568);
+
+        // Referme proprement la première sheet (non `isDismissible`, via sa
+        // croix) avant d'en ouvrir une seconde sur un nouvel écran : sans
+        // quoi la seconde `pumpWidget` remplace l'arbre pendant qu'une
+        // route modale est encore en vol.
+        await tester.tap(find.byIcon(Icons.close));
+        await tester.pumpAndSettle();
+
+        tester.view.physicalSize = const Size(320, 2000);
+        await _pumpSheet(tester);
+        final heightOnTallScreen = sheetHeight(tester, 2000);
+
+        // Même contenu, plafonds de 90 % très différents (511 contre 1800) :
+        // une hauteur de sheet identique prouve qu'elle épouse son contenu
+        // plutôt que de s'étirer vers son plafond.
+        expect(heightOnTallScreen, moreOrLessEquals(heightOnSmallScreen));
+      },
+    );
+
+    testWidgets(
+      'échelle 2 (plafond documenté `AppTypography.maxTextScaleFactor`, '
+      'voir `10-design-system.md` section 7) : aucun débordement, les '
+      'boutons restent visibles et actifs',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+
+        await _pumpSheet(tester);
+
+        expect(tester.takeException(), isNull);
+        final buttonRect = tester.getRect(
+          find.widgetWithText(PrimaryButton, 'ENREGISTRER'),
+        );
+        expect(buttonRect.bottom, lessThanOrEqualTo(568));
+
+        await tester.enterText(
+          find.byType(TextFormField),
+          'nouveau@exemple.com',
+        );
+        await tester.pump();
+        await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(
+          find.text(
+            'Email de confirmation envoyé. Vérifie ta boîte de réception '
+            'pour finaliser le changement.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'échelle 3 : aucun débordement, les boutons restent visibles et '
+      'actifs (bandeau info permanent + champ + rappel d\'adresse)',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 3;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+
+        await _pumpSheet(tester);
+
+        expect(tester.takeException(), isNull);
+        final buttonRect = tester.getRect(
+          find.widgetWithText(PrimaryButton, 'ENREGISTRER'),
+        );
+        expect(buttonRect.bottom, lessThanOrEqualTo(568));
+
+        await tester.enterText(
+          find.byType(TextFormField),
+          'nouveau@exemple.com',
+        );
+        await tester.pump();
+        await tester.tap(find.widgetWithText(PrimaryButton, 'ENREGISTRER'));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(
+          find.text(
+            'Email de confirmation envoyé. Vérifie ta boîte de réception '
+            'pour finaliser le changement.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+  });
 }

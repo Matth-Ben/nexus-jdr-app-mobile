@@ -123,69 +123,88 @@ class _ExportDataSheetContentState
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(color: AppColors.parchmentBg),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SheetHeaderBar(
-                  title: 'EXPORT DE MES DONNÉES',
-                  closeEnabled: !_isGenerating,
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_errorMessage != null) ...[
-                        AlertBanner(message: _errorMessage!),
-                        const SizedBox(height: AppSpacing.md),
+          child: ConstrainedBox(
+            // Plafonne la hauteur de la sheet pour le contenu long (erreur +
+            // texte agrandi, voir `10-design-system.md` section 7) : au-delà,
+            // c'est la zone défilante ajoutée ci-dessous qui absorbe le
+            // débordement plutôt que l'écran.
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+            ),
+            child: DecoratedBox(
+              decoration: const BoxDecoration(color: AppColors.parchmentBg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SheetHeaderBar(
+                    title: 'EXPORT DE MES DONNÉES',
+                    closeEnabled: !_isGenerating,
+                  ),
+                  Flexible(
+                    // `SingleChildScrollView` n'a pas de paramètre
+                    // `shrinkWrap` (contrairement à `ListView`) : il n'en a
+                    // pas besoin — avec les contraintes lâches que lui donne
+                    // ce `Flexible`, il épouse déjà la hauteur de son
+                    // contenu, et ne défile que si le contenu dépasse
+                    // l'espace laissé par le `ConstrainedBox` ci-dessus.
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_errorMessage != null) ...[
+                              AlertBanner(message: _errorMessage!),
+                              const SizedBox(height: AppSpacing.md),
+                            ],
+                            Text(
+                              'Génère un fichier JSON contenant tous tes '
+                              'personnages et leurs données associées '
+                              '(inventaire, sorts, historique). Le fichier '
+                              'te sera proposé au partage/enregistrement '
+                              'depuis ton appareil.',
+                              style: AppTypography.body(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      0,
+                      AppSpacing.lg,
+                      AppSpacing.lg,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'Annuler',
+                            surface: SecondaryButtonSurface.parchment,
+                            onPressed: _isGenerating
+                                ? null
+                                : () => Navigator.of(context).pop(),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: PrimaryButton(
+                            label: "Générer l'export",
+                            isLoading: _isGenerating,
+                            onPressed: _generate,
+                          ),
+                        ),
                       ],
-                      Text(
-                        'Génère un fichier JSON contenant tous tes '
-                        'personnages et leurs données associées '
-                        '(inventaire, sorts, historique). Le fichier te '
-                        'sera proposé au partage/enregistrement depuis ton '
-                        'appareil.',
-                        style: AppTypography.body(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    0,
-                    AppSpacing.lg,
-                    AppSpacing.lg,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: SecondaryButton(
-                          label: 'Annuler',
-                          surface: SecondaryButtonSurface.parchment,
-                          onPressed: _isGenerating
-                              ? null
-                              : () => Navigator.of(context).pop(),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: PrimaryButton(
-                          label: "Générer l'export",
-                          isLoading: _isGenerating,
-                          onPressed: _generate,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

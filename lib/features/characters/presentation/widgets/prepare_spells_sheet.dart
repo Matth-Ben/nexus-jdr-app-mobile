@@ -409,24 +409,43 @@ class _NoMatchState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.search_off, size: 40, color: AppColors.textMuted),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              query.isEmpty
-                  ? 'Aucun sort disponible.'
-                  : 'Aucun sort pour « $query ».',
-              textAlign: TextAlign.center,
-              style: AppTypography.body(color: AppColors.textMuted),
+    // `LayoutBuilder` + `SingleChildScrollView` plutôt qu'un simple
+    // `Center` : avec un texte agrandi (réglage d'accessibilité) dans
+    // l'espace restreint de cet état vide, le contenu doit pouvoir défiler
+    // au lieu de déborder silencieusement (voir `10-design-system.md`
+    // section 7). `ConstrainedBox(minHeight: ...)` conserve le centrage
+    // vertical du cas courant (contenu plus petit que l'espace disponible).
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.search_off,
+                      size: 40,
+                      color: AppColors.textMuted,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      query.isEmpty
+                          ? 'Aucun sort disponible.'
+                          : 'Aucun sort pour « $query ».',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.body(color: AppColors.textMuted),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
