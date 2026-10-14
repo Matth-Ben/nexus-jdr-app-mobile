@@ -503,6 +503,32 @@ void main() {
       expect(casts, [(_innate, null)]);
     });
 
+    testWidgets('tap puis « Lancer », confirmation annulée : aucun appel à '
+        'onCastSpell (le bouton "Lancer" du panneau "Infos" ferme déjà ce '
+        'dernier avant la confirmation)', (tester) async {
+      final casts = <(CharacterSpellEntry, CharacterSpellSlot?)>[];
+      await _pump(
+        tester,
+        _detail(
+          const [_innate],
+          spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+        ),
+        onCastSpell: (spell, slot) => casts.add((spell, slot)),
+      );
+
+      await tester.tap(find.text('Ténèbres'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.pumpAndSettle();
+      expect(find.text('Lancer Ténèbres ?'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(SecondaryButton, 'ANNULER'));
+      await tester.pumpAndSettle();
+
+      expect(casts, isEmpty);
+      expect(find.text('Lancer Ténèbres ?'), findsNothing);
+    });
+
     testWidgets('lecture seule (vue partagée, actionsDisabled) : pastille et '
         'marqueur affichés, aucun tap', (tester) async {
       final casts = <CharacterSpellEntry>[];

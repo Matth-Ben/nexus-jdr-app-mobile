@@ -576,6 +576,25 @@ void main() {
       expect(castSlots, [null]);
     });
 
+    testWidgets('sort inné sans emplacement, confirmation annulée : aucun '
+        'appel à onCastSpell (le bouton principal du panneau "Infos" ferme '
+        'déjà ce dernier avant la confirmation, à la différence du bouton '
+        '"Lancer (sort inné)" du sort à double route, voir ce groupe de '
+        'tests)', (tester) async {
+      await pumpPanel(tester, spell: innateSpell, spellSlots: const []);
+
+      await tester.tap(castButton());
+      await tester.pumpAndSettle();
+      expect(find.text('Lancer Ténèbres ?'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(SecondaryButton, 'ANNULER'));
+      await tester.pumpAndSettle();
+
+      expect(castCalls, isEmpty);
+      expect(castSlots, isEmpty);
+      expect(find.text('Lancer Ténèbres ?'), findsNothing);
+    });
+
     testWidgets('sort inné, tous les emplacements épuisés (classique et '
         'pacte) : actif, aucune ligne', (tester) async {
       await pumpPanel(
@@ -1268,6 +1287,41 @@ void main() {
       );
       // Le panneau est refermé.
       expect(find.text('THAUMATURGIE'), findsNothing);
+    });
+
+    testWidgets('taper "Lancer (sort inné)", confirmation annulée : aucun '
+        'appel à onCastSpell, le panneau "Infos" et son bouton principal '
+        'restent intacts', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: dualRoute,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+      );
+
+      await tester.tap(innateCastButton());
+      await tester.pumpAndSettle();
+      expect(find.text('Lancer Thaumaturgie ?'), findsOneWidget);
+
+      final dialog = find.ancestor(
+        of: find.text('Lancer Thaumaturgie ?'),
+        matching: find.byType(Dialog),
+      );
+      await tester.tap(
+        find.descendant(
+          of: dialog,
+          matching: find.widgetWithText(SecondaryButton, 'ANNULER'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(castCalls, isEmpty);
+      // Le panneau "Infos" reste ouvert, les deux boutons toujours actifs.
+      expect(find.text('THAUMATURGIE'), findsOneWidget);
+      expect(tester.widget<PrimaryButton>(castButton()).onPressed, isNotNull);
+      expect(
+        tester.widget<SecondaryButton>(innateCastButton()).onPressed,
+        isNotNull,
+      );
     });
 
     testWidgets('route ordinaire bloquée (plus d\'emplacement) : bouton '
