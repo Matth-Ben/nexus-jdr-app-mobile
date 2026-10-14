@@ -15,6 +15,7 @@ import '../../domain/spell_cast_block_reason.dart';
 import '../../domain/spell_components_formatter.dart';
 import '../../domain/spell_status_formatter.dart';
 import '../../domain/spell_subtitle_formatter.dart';
+import 'cast_innate_spell_confirmation_dialog.dart';
 import 'spell_action_sheet.dart';
 
 /// Plafond d'échelle de texte de la ligne de raison sous "Lancer" : le pied
@@ -52,7 +53,9 @@ const double _blockReasonMaxTextScale = 2;
 /// connu/préparé — classe) : le pied porte alors DEUX actions "Lancer"
 /// indépendantes (voir [_SpellInfoPanelContent]) — le bouton principal pour
 /// la route ordinaire (délègue à [castSpellFlow] comme pour tout sort),
-/// et un second bouton "Lancer (sort inné)" qui appelle directement
+/// et un second bouton "Lancer (sort inné)" qui, après confirmation (décision
+/// utilisateur du 09/10/2026, voir `cast_innate_spell_confirmation_dialog
+/// .dart` — affichée par-dessus ce panneau encore ouvert), appelle directement
 /// [onCastSpell] avec `slot: null`, SANS passer par [castSpellFlow] (qui ne
 /// sait raisonner que sur la route ordinaire de ce sort une fois les deux
 /// lignes fusionnées en une entrée, voir sa doc) — exactement le même patron
@@ -78,7 +81,17 @@ Future<void> showSpellInfoPanel(
         onTogglePrepared(spell);
         Navigator.of(sheetContext).pop(false);
       },
-      onCastInnate: () {
+      onCastInnate: () async {
+        // Confirmation affichée par-dessus ce panneau "Infos" encore ouvert
+        // (décision utilisateur du 09/10/2026, voir
+        // `cast_innate_spell_confirmation_dialog.dart`) : annulée, le
+        // panneau reste ouvert sans rien changer ; confirmée, comportement
+        // inchangé (lancer puis fermer le panneau).
+        final confirmed = await showCastInnateSpellConfirmationDialog(
+          sheetContext,
+          spell: spell,
+        );
+        if (confirmed != true || !sheetContext.mounted) return;
         onCastSpell(spell, null);
         Navigator.of(sheetContext).pop(false);
       },

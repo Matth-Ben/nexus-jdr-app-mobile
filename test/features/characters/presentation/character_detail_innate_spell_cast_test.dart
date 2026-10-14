@@ -198,12 +198,24 @@ Future<void> _openSpellsTab(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// Ouvre le panneau "Infos" du sort [name] puis tape "Lancer".
+/// Ouvre le panneau "Infos" du sort [name] puis tape "Lancer" — pour un
+/// sort inné à charge limitée (niveau >= 1), une confirmation
+/// (`showCastInnateSpellConfirmationDialog`, décision utilisateur du
+/// 09/10/2026) apparaît une fois le panneau fermé : confirmée ici
+/// systématiquement (son propre bouton "Lancer"), pour que le comportement
+/// vérifié par les tests existants reste celui d'après confirmation. Un sort
+/// mineur inné (niveau 0, ex. "Lumières dansantes") n'affiche pas cette
+/// confirmation : le second tap n'a alors rien à trouver.
 Future<void> _cast(WidgetTester tester, String name) async {
   await tester.tap(find.text(name));
   await tester.pumpAndSettle();
   await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
   await tester.pumpAndSettle();
+  final confirmButton = find.widgetWithText(PrimaryButton, 'LANCER');
+  if (tester.any(confirmButton)) {
+    await tester.tap(confirmButton);
+    await tester.pumpAndSettle();
+  }
 }
 
 Future<void> _rest(WidgetTester tester, {required bool long}) async {
@@ -288,7 +300,11 @@ void main() {
   // Double déclenchement (QA) : le verrou de l'onglet ferme le double tap
   // ordinaire, et `_castInnateSpell` relit l'usage sur la fiche effective —
   // un second « Lancer » parti d'un état périmé n'écrit donc jamais un
-  // compteur à 2.
+  // compteur à 2. Depuis la confirmation (décision utilisateur du
+  // 09/10/2026), c'est son propre bouton "Lancer" qui est la dernière étape
+  // avant l'écriture : le double tap rapide est donc désormais exercé sur
+  // CE bouton, pas sur celui du panneau "Infos" (qui, lui, ne fait
+  // qu'ouvrir la confirmation en un seul tap).
   testWidgets('double tap rapide sur « Lancer » : une seule écriture, '
       'compteur à 1', (tester) async {
     final repository = await _pumpDetail(tester, _detail());
@@ -297,12 +313,15 @@ void main() {
     await tester.tap(find.text('Ténèbres'));
     await tester.pumpAndSettle();
 
-    final castButton = find.widgetWithText(PrimaryButton, 'LANCER');
-    await tester.tap(castButton);
-    await tester.pump(const Duration(milliseconds: 40));
-    await tester.tap(castButton, warnIfMissed: false);
+    await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
     await tester.pumpAndSettle();
-    // Panneau fermé, et la ligne verrouillée ne le rouvre pas.
+
+    final confirmButton = find.widgetWithText(PrimaryButton, 'LANCER');
+    await tester.tap(confirmButton);
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.tap(confirmButton, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    // Panneau et confirmation fermés, et la ligne verrouillée ne rouvre rien.
     await tester.tap(find.text('Ténèbres'), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.widgetWithText(PrimaryButton, 'LANCER'), findsNothing);

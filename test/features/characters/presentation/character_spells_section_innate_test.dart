@@ -492,6 +492,14 @@ void main() {
         find.text("Choisissez le niveau d'emplacement à utiliser."),
         findsNothing,
       );
+      // Sort inné à charge limitée : confirmation avant l'appel réel (décision
+      // utilisateur du 09/10/2026, voir
+      // `cast_innate_spell_confirmation_dialog.dart`).
+      expect(find.text('Lancer Ténèbres ?'), findsOneWidget);
+      expect(casts, isEmpty);
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.pumpAndSettle();
+
       expect(casts, [(_innate, null)]);
     });
 
@@ -589,6 +597,26 @@ void main() {
       await tester.tap(
         // `SecondaryButton` affiche son libellé en majuscules.
         find.widgetWithText(SecondaryButton, 'LANCER (SORT INNÉ)'),
+      );
+      await tester.pumpAndSettle();
+
+      // Confirmation affichée par-dessus le panneau "Infos" encore ouvert
+      // (décision utilisateur du 09/10/2026, voir
+      // `cast_innate_spell_confirmation_dialog.dart`) : scopée au `Dialog`
+      // plutôt qu'à son libellé seul, le panneau "Infos" étant encore
+      // ouvert derrière avec son propre bouton principal "LANCER"
+      // (ambigu sinon, deux candidats).
+      expect(find.text('Lancer Thaumaturgie ?'), findsOneWidget);
+      expect(casts, isEmpty);
+      final dialog = find.ancestor(
+        of: find.text('Lancer Thaumaturgie ?'),
+        matching: find.byType(Dialog),
+      );
+      await tester.tap(
+        find.descendant(
+          of: dialog,
+          matching: find.widgetWithText(PrimaryButton, 'LANCER'),
+        ),
       );
       await tester.pumpAndSettle();
 

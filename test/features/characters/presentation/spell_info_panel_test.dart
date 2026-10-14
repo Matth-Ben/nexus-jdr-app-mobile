@@ -56,6 +56,24 @@ const _fireball = CharacterSpellEntry(
   description: 'Une sphère de feu explose.',
 );
 
+/// Bouton "Lancer" de `showCastInnateSpellConfirmationDialog` (décision
+/// utilisateur du 09/10/2026, voir `cast_innate_spell_confirmation_dialog
+/// .dart`) — scopé au `Dialog` plutôt qu'à son libellé seul : pour un sort à
+/// double route (D43), cette confirmation s'affiche par-dessus le panneau
+/// "Infos" encore ouvert, dont le bouton principal porte le même libellé
+/// "LANCER" (`find.widgetWithText(PrimaryButton, 'LANCER')` serait donc
+/// ambigu, deux candidats).
+Finder _confirmDialogCastButton(WidgetTester tester, String spellName) {
+  final dialog = find.ancestor(
+    of: find.text('Lancer $spellName ?'),
+    matching: find.byType(Dialog),
+  );
+  return find.descendant(
+    of: dialog,
+    matching: find.widgetWithText(PrimaryButton, 'LANCER'),
+  );
+}
+
 void main() {
   List<CharacterSpellEntry> castCalls = [];
   List<int?> castLevels = [];
@@ -546,6 +564,13 @@ void main() {
       expectCastable(tester);
 
       await tester.tap(castButton());
+      await tester.pumpAndSettle();
+      // Sort inné à charge limitée : confirmation avant l'appel réel
+      // (décision utilisateur du 09/10/2026, voir
+      // `cast_innate_spell_confirmation_dialog.dart`).
+      expect(find.text('Lancer Ténèbres ?'), findsOneWidget);
+      expect(castCalls, isEmpty);
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
       await tester.pumpAndSettle();
       expect(castCalls, [innateSpell]);
       expect(castSlots, [null]);
@@ -1075,9 +1100,16 @@ void main() {
         find.text("Choisissez le niveau d'emplacement à utiliser."),
         findsNothing,
       );
+      expect(find.text('TÉNÈBRES'), findsNothing);
+      // Sort inné à charge limitée : confirmation avant l'appel réel
+      // (décision utilisateur du 09/10/2026, voir
+      // `cast_innate_spell_confirmation_dialog.dart`).
+      expect(find.text('Lancer Ténèbres ?'), findsOneWidget);
+      expect(castCalls, isEmpty);
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.pumpAndSettle();
       expect(castCalls, [innate]);
       expect(castSlots, [null]);
-      expect(find.text('TÉNÈBRES'), findsNothing);
     });
 
     testWidgets('sort mineur inné : ni phrase, ni ligne "Utilisations", '
@@ -1113,6 +1145,16 @@ void main() {
       expect(tester.takeException(), isNull);
 
       await tester.tap(castButton());
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      // Sort inné à charge limitée : confirmation avant l'appel réel
+      // (décision utilisateur du 09/10/2026, voir
+      // `cast_innate_spell_confirmation_dialog.dart`). `ensureVisible` :
+      // à cette échelle, le bouton de la confirmation défile hors de
+      // l'écran (`SingleChildScrollView`, voir sa doc de classe).
+      final confirmButton = find.widgetWithText(PrimaryButton, 'LANCER');
+      await tester.ensureVisible(confirmButton);
+      await tester.tap(confirmButton);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(castCalls, [innate]);
@@ -1206,6 +1248,17 @@ void main() {
       await tester.tap(innateCastButton());
       await tester.pumpAndSettle();
 
+      // Confirmation affichée par-dessus le panneau "Infos" encore ouvert
+      // (décision utilisateur du 09/10/2026, voir
+      // `cast_innate_spell_confirmation_dialog.dart`) : le panneau reste
+      // visible derrière, d'où la recherche du bouton "Lancer" scopée au
+      // `Dialog` plutôt qu'à son libellé seul (ambigu avec le bouton
+      // principal du panneau, encore affiché derrière).
+      expect(find.text('Lancer Thaumaturgie ?'), findsOneWidget);
+      expect(castCalls, isEmpty);
+      await tester.tap(_confirmDialogCastButton(tester, 'Thaumaturgie'));
+      await tester.pumpAndSettle();
+
       expect(castCalls, [dualRoute]);
       expect(castLevels, [null]);
       expect(castSlots, [null]);
@@ -1237,6 +1290,11 @@ void main() {
       );
 
       await tester.tap(innateCastButton());
+      await tester.pumpAndSettle();
+      // Confirmation affichée par-dessus le panneau "Infos" encore ouvert
+      // (voir le test "taper 'Lancer (sort inné)'" ci-dessus).
+      expect(castCalls, isEmpty);
+      await tester.tap(_confirmDialogCastButton(tester, 'Thaumaturgie'));
       await tester.pumpAndSettle();
       expect(castCalls, [dualRoute]);
       expect(castLevels, [null]);

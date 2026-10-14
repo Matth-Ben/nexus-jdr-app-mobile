@@ -26,6 +26,7 @@ import 'package:personnages/features/character_creation/domain/background_catalo
 import 'package:personnages/features/character_creation/domain/background_option.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_failure.dart';
+import 'package:personnages/features/character_creation/domain/character_edit_snapshot.dart';
 import 'package:personnages/features/character_creation/domain/class_catalog.dart';
 import 'package:personnages/features/character_creation/domain/class_option.dart';
 import 'package:personnages/features/character_creation/domain/item_catalog.dart';
@@ -41,6 +42,7 @@ import 'package:personnages/features/character_creation/domain/subrace_option.da
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_edit_session_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/lineage_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/race_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/widgets/draft_autosave_footer.dart';
@@ -1056,4 +1058,159 @@ void main() {
       });
     },
   );
+
+  group('mode modification (D53 de docs/dette-technique.md : race '
+      'verrouillée, décision utilisateur du 09/10/2026)', () {
+    void startEditSession(CharacterCreationDraft draft) {
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .replaceWith(draft);
+      container
+          .read(characterEditSessionControllerProvider.notifier)
+          .start(
+            CharacterEditSession(
+              snapshot: const CharacterEditSnapshot(
+                characterId: 'c1',
+                name: 'Brunhilde',
+                primaryClassId: 2,
+                primaryClassLevel: 1,
+                totalLevel: 1,
+                maxHp: 10,
+                currentHp: 10,
+              ),
+              originalDraft: draft,
+            ),
+          );
+    }
+
+    testWidgets(
+      'race verrouillée inconditionnellement même au niveau 1 (contrairement '
+      'à la classe) : bandeau affiché, champ de recherche masqué, tap sur '
+      'une autre race sans effet, "Suivant" va directement à l\'étape 2 '
+      'SANS passer par l\'étape "Sous-race" malgré une race qui en a',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe, _humain],
+          subraces: [_hautElfe],
+        );
+        startEditSession(
+          const CharacterCreationDraft(raceId: 1, subraceId: 10),
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining(
+            "La race ne peut pas être modifiée après la création",
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.widgetWithText(TextFormField, 'Rechercher une race...'),
+          findsNothing,
+        );
+
+        final tiles = tester.widgetList<SelectableOptionTile>(
+          find.byType(SelectableOptionTile),
+        );
+        expect(tiles.firstWhere((tile) => tile.title == 'Elfe').selected, true);
+        expect(
+          tiles.firstWhere((tile) => tile.title == 'Humain').selected,
+          false,
+        );
+
+        // Tape une autre race : aucun effet (rendu normal, pas grisé, mais
+        // `onTap` est un no-op).
+        await tester.tap(find.text('Humain'));
+        await tester.pumpAndSettle();
+        final tilesAfterTap = tester.widgetList<SelectableOptionTile>(
+          find.byType(SelectableOptionTile),
+        );
+        expect(
+          tilesAfterTap.firstWhere((tile) => tile.title == 'Elfe').selected,
+          true,
+        );
+        expect(
+          tilesAfterTap.firstWhere((tile) => tile.title == 'Humain').selected,
+          false,
+        );
+
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(
+          readDraft(),
+          const CharacterCreationDraft(raceId: 1, subraceId: 10),
+        );
+        expect(find.text('Étape suivante'), findsOneWidget);
+        expect(find.text('Étape sous-race'), findsNothing);
+        expect(find.text('Étape lignée'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'race personnalisée verrouillée : le nom déjà saisi est affiché en '
+      'lecture seule (`selectedDetail`), jamais le `TextField` éditable, '
+      'et "Suivant" ne pousse ni sous-race ni lignée',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe, _humain],
+          subraces: [_hautElfe],
+        );
+        startEditSession(
+          const CharacterCreationDraft(raceCustomText: 'Gobelours'),
+        );
+
+        await pumpTallRaceStep(tester);
+
+        expect(findCustomRaceTextField(), findsNothing);
+        expect(find.text('Gobelours'), findsOneWidget);
+        final tiles = tester.widgetList<SelectableOptionTile>(
+          find.byType(SelectableOptionTile),
+        );
+        expect(
+          tiles
+              .firstWhere((tile) => tile.title == 'Race personnalisée')
+              .selected,
+          true,
+        );
+
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(
+          readDraft(),
+          const CharacterCreationDraft(raceCustomText: 'Gobelours'),
+        );
+        expect(find.text('Étape suivante'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'hors session de modification (création) : aucun bandeau, champ de '
+      'recherche présent, race personnalisée toujours éditable '
+      '(non-régression)',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe, _humain],
+          subraces: [],
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining(
+            "La race ne peut pas être modifiée après la création",
+          ),
+          findsNothing,
+        );
+        expect(
+          find.widgetWithText(TextFormField, 'Rechercher une race...'),
+          findsOneWidget,
+        );
+      },
+    );
+  });
 }
