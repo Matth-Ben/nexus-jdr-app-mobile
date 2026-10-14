@@ -17,12 +17,6 @@ const double _titleVerticalMargin = AppSpacing.xs;
 /// Nombre de lignes du titre au-delà duquel il est tronqué par une ellipse.
 const int _titleMaxLines = 3;
 
-/// Plafond d'agrandissement du texte appliqué au seul titre : au-delà, il ne
-/// reste qu'environ 8 caractères par ligne sur un écran de 360 dp, et le
-/// titre devient une colonne de mots coupés. 2.0 couvre le redimensionnement
-/// du texte à 200 %.
-const double _titleMaxTextScale = 2;
-
 /// Côté de la zone de tap du bouton de fermeture.
 const double _closeButtonSize = 44;
 
@@ -84,7 +78,7 @@ class SheetHeaderBar extends StatelessWidget {
                     vertical: _titleVerticalMargin,
                   ),
                   child: MediaQuery.withClampedTextScaling(
-                    maxScaleFactor: _titleMaxTextScale,
+                    maxScaleFactor: AppTypography.maxTextScaleFactor,
                     // Toute la largeur disponible, comme sous l'`Expanded`
                     // d'origine : l'`Align` ne l'impose plus au titre.
                     child: SizedBox(

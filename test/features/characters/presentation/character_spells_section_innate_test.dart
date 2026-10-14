@@ -492,7 +492,41 @@ void main() {
         find.text("Choisissez le niveau d'emplacement à utiliser."),
         findsNothing,
       );
+      // Sort inné à charge limitée : confirmation avant l'appel réel (décision
+      // utilisateur du 09/10/2026, voir
+      // `cast_innate_spell_confirmation_dialog.dart`).
+      expect(find.text('Lancer Ténèbres ?'), findsOneWidget);
+      expect(casts, isEmpty);
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.pumpAndSettle();
+
       expect(casts, [(_innate, null)]);
+    });
+
+    testWidgets('tap puis « Lancer », confirmation annulée : aucun appel à '
+        'onCastSpell (le bouton "Lancer" du panneau "Infos" ferme déjà ce '
+        'dernier avant la confirmation)', (tester) async {
+      final casts = <(CharacterSpellEntry, CharacterSpellSlot?)>[];
+      await _pump(
+        tester,
+        _detail(
+          const [_innate],
+          spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+        ),
+        onCastSpell: (spell, slot) => casts.add((spell, slot)),
+      );
+
+      await tester.tap(find.text('Ténèbres'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+      await tester.pumpAndSettle();
+      expect(find.text('Lancer Ténèbres ?'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(SecondaryButton, 'ANNULER'));
+      await tester.pumpAndSettle();
+
+      expect(casts, isEmpty);
+      expect(find.text('Lancer Ténèbres ?'), findsNothing);
     });
 
     testWidgets('lecture seule (vue partagée, actionsDisabled) : pastille et '
@@ -589,6 +623,26 @@ void main() {
       await tester.tap(
         // `SecondaryButton` affiche son libellé en majuscules.
         find.widgetWithText(SecondaryButton, 'LANCER (SORT INNÉ)'),
+      );
+      await tester.pumpAndSettle();
+
+      // Confirmation affichée par-dessus le panneau "Infos" encore ouvert
+      // (décision utilisateur du 09/10/2026, voir
+      // `cast_innate_spell_confirmation_dialog.dart`) : scopée au `Dialog`
+      // plutôt qu'à son libellé seul, le panneau "Infos" étant encore
+      // ouvert derrière avec son propre bouton principal "LANCER"
+      // (ambigu sinon, deux candidats).
+      expect(find.text('Lancer Thaumaturgie ?'), findsOneWidget);
+      expect(casts, isEmpty);
+      final dialog = find.ancestor(
+        of: find.text('Lancer Thaumaturgie ?'),
+        matching: find.byType(Dialog),
+      );
+      await tester.tap(
+        find.descendant(
+          of: dialog,
+          matching: find.widgetWithText(PrimaryButton, 'LANCER'),
+        ),
       );
       await tester.pumpAndSettle();
 

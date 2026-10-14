@@ -88,11 +88,20 @@ class SheetActionRow extends StatelessWidget {
                 ),
                 if (trailingText != null) ...[
                   const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    trailingText!,
-                    style: AppTypography.body(
-                      fontSize: 11,
-                      color: trailingTextColor ?? AppColors.textMuted,
+                  // `Flexible` + ellipse : avec un libellé long côté
+                  // [label] (lui aussi réduit à sa part d'[Expanded]) et un
+                  // texte agrandi (réglage d'accessibilité), ce texte de fin
+                  // sans contrainte propre pourrait sinon déborder
+                  // horizontalement de la `Row` (débordement distinct de
+                  // celui du [label], déjà protégé par l'[Expanded]).
+                  Flexible(
+                    child: Text(
+                      trailingText!,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.body(
+                        fontSize: 11,
+                        color: trailingTextColor ?? AppColors.textMuted,
+                      ),
                     ),
                   ),
                 ],

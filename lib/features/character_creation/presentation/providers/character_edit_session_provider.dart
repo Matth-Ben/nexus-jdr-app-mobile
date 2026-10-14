@@ -18,10 +18,13 @@ CharacterEditRepository characterEditRepository(Ref ref) {
 /// Session de modification d'un personnage existant via l'assistant de
 /// création (entrée « Modifier » de la fiche, demande utilisateur du
 /// 2026-09-25). Tant qu'elle existe, les écrans de l'assistant sont en mode
-/// modification : bandeau « MODIFICATION », étape Classe verrouillée au-delà
-/// du niveau 1, caractéristiques en valeurs finales, étape Équipement
-/// sautée, étape Sorts limitée au niveau 1, et « Enregistrer les
-/// modifications » à la fin au lieu de créer un personnage.
+/// modification : bandeau « MODIFICATION », étape Race verrouillée
+/// inconditionnellement (décision du 09/10/2026 — contrairement à la classe,
+/// aucun seuil de niveau : la race est liée aux sorts innés déjà acquis),
+/// étape Classe verrouillée au-delà du niveau 1, caractéristiques en valeurs
+/// finales, étape Équipement sautée, étape Sorts limitée au niveau 1, et
+/// « Enregistrer les modifications » à la fin au lieu de créer un
+/// personnage.
 class CharacterEditSession {
   const CharacterEditSession({
     required this.snapshot,
@@ -41,6 +44,13 @@ class CharacterEditSession {
   final SpellCatalog? originalSpellCatalog;
 
   String get characterId => snapshot.characterId;
+
+  /// Décision utilisateur du 09/10/2026 : la race ne peut plus jamais changer
+  /// en édition, quel que soit le niveau (contrairement à [canChangeClass]) —
+  /// changer de race casserait les sorts innés déjà acquis (ceux de
+  /// l'ancienne race resteraient, ceux de la nouvelle n'arriveraient jamais,
+  /// voir `docs/dette-technique.md` D53).
+  bool get canChangeRace => false;
 
   /// Décision utilisateur : classe et sous-classe modifiables au niveau 1
   /// seulement.

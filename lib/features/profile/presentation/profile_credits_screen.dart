@@ -29,6 +29,13 @@ import '../../../core/widgets/wood_back_header.dart';
 ///   clôture — les deux au même style `font.body` 13px `textPrimary` que
 ///   n'importe quel paragraphe de [LegalSectionBlock], pas de composant
 ///   dédié à cette liste.
+/// - la section "Polices" ([_fontsSection]) suit le même gabarit que
+///   "Contenu de jeu" (licence + source citées en toutes lettres dans le
+///   paragraphe, pas de composant dédié) plutôt que la liste à puces
+///   "Bibliothèques open source" : les polices ne sont plus chargées par un
+///   package (`google_fonts`, retiré de `pubspec.yaml` — dette D22,
+///   `docs/dette-technique.md`) mais embarquées en asset
+///   (`assets/fonts/`), donc listées à part de la liste de bibliothèques.
 ///
 /// Lecture 100% synchrone à l'ouverture (texte statique, aucun appel
 /// réseau).
@@ -53,13 +60,24 @@ class ProfileCreditsScreen extends StatelessWidget {
     title: 'Bibliothèques open source',
     paragraphs: [
       'Flutter · Riverpod · Supabase Flutter · Drift · Freezed · '
-          'go_router · google_fonts · image_picker · file_picker · '
-          'connectivity_plus · package_info_plus · share_plus · '
-          'app_settings · url_launcher · Firebase (Core, Messaging) · '
-          'shared_preferences',
+          'go_router · image_picker · file_picker · connectivity_plus · '
+          'package_info_plus · share_plus · app_settings · url_launcher · '
+          'Firebase (Core, Messaging) · shared_preferences',
       'Ainsi que les autres bibliothèques listées dans le fichier '
           'pubspec.yaml du projet, chacune sous sa licence open source '
           "d'origine.",
+    ],
+  );
+
+  static const LegalSectionBlock _fontsSection = LegalSectionBlock(
+    title: 'Polices',
+    paragraphs: [
+      'Press Start 2P (The Press Start 2P Project Authors) et Work Sans '
+          '(The Work Sans Project Authors) sont distribuées sous licence '
+          'SIL Open Font License, version 1.1 '
+          '(scripts.sil.org/OFL), et embarquées telles quelles dans '
+          "l'application depuis le dépôt officiel Google Fonts "
+          '(github.com/google/fonts).',
     ],
   );
 
@@ -83,10 +101,12 @@ class ProfileCreditsScreen extends StatelessWidget {
                   const SizedBox(height: AppSpacing.lg),
                   const _LicenseNoticeBox(),
                   const _SectionDivider(),
+                  _fontsSection,
+                  const _SectionDivider(),
                   _openSourceSection,
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'Dernière mise à jour : 15 septembre 2026',
+                    'Dernière mise à jour : 14 octobre 2026',
                     style: AppTypography.body(
                       fontSize: 11,
                       color: AppColors.textMuted,

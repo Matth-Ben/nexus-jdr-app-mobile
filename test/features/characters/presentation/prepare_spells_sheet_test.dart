@@ -572,6 +572,68 @@ void main() {
       expect(find.text('Charme-personne'), findsNothing);
       expect(find.text('Aucun sort pour « Charme ».'), findsOneWidget);
     });
+
+    // D24 (`docs/dette-technique.md`) : l'état vide "Aucun sort..." est
+    // maintenant rendu dans un `SingleChildScrollView`
+    // (`_NoMatchState.build`) plutôt que directement `Center`, pour pouvoir
+    // défiler au lieu de déborder avec un texte agrandi sur un petit écran.
+    //
+    // Échelle 2 (le plafond documenté `AppTypography.maxTextScaleFactor`,
+    // voir `10-design-system.md` section 7), pas 3 : à 3,
+    // `_SheetSpellLevelGroup` (l'en-tête "Niveau N" + pastilles
+    // d'emplacements, ligne 488 de `prepare_spells_sheet.dart`) déborde déjà
+    // à l'ouverture de la sheet — défaut préexistant, distinct de celui
+    // corrigé ici (voir l'entrée ajoutée à `docs/dette-technique.md`), qui
+    // ferait échouer ce test pour une raison étrangère à [_NoMatchState].
+    testWidgets('introuvable par la recherche, texte agrandi à 200 % sur '
+        'petit écran (320×568) : toujours affiché, aucun débordement', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearAllTestValues);
+
+      await pumpSheet(tester, spells: all);
+
+      await tester.enterText(find.byType(TextField), 'Charme');
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Aucun sort pour « Charme ».'), findsOneWidget);
+    });
+    // La sheet entière est à hauteur fixe (`FractionallySizedBox
+    // (heightFactor: 0.9)`, voir `showPrepareSpellsSheet`) : à 568 dp et
+    // échelle 2, l'espace disponible pour [_NoMatchState] suffit déjà même
+    // sans le correctif D24 (vérifié empiriquement en rejouant ce test
+    // contre la version pré-correctif : aucun débordement). Le test
+    // précédent ne discrimine donc pas vraiment le correctif pour ce
+    // contenu-là. Un clavier ouvert (le champ de recherche a le focus,
+    // comme ici) réduit en réalité la hauteur disponible de la sheet sur un
+    // vrai appareil ; ce test le simule par un écran plus bas plutôt que par
+    // `viewInsets.bottom` — rejoué contre la version pré-correctif, il
+    // déborde bien de 66px, confirmant qu'il détecte la régression que
+    // [_NoMatchState] a corrigée.
+    testWidgets(
+      'introuvable par la recherche, texte agrandi à 200 %, clavier ouvert '
+      '(écran réduit à 320×400) : toujours affiché, aucun débordement',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 400);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+
+        await pumpSheet(tester, spells: all);
+
+        await tester.enterText(find.byType(TextField), 'Charme');
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Aucun sort pour « Charme ».'), findsOneWidget);
+      },
+    );
   });
 
   // Caractérisation d'un défaut connu, antérieur au correctif D03 (rapport

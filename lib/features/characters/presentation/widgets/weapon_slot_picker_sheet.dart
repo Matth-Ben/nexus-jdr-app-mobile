@@ -56,22 +56,47 @@ class _WeaponSlotPickerContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Container(
-        decoration: const BoxDecoration(color: AppColors.parchmentBg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SheetHeaderBar(title: 'CHOISIR UN SET'),
-            for (final slot in WeaponSlot.values) ...[
-              SheetActionRow(
-                icon: _iconFor(slot),
-                label: slot.label,
-                trailingText: _occupantsLabel(slot),
-                onTap: () => Navigator.of(context).pop(slot),
+      child: ConstrainedBox(
+        // Plafonne la hauteur de la sheet pour le contenu long (texte
+        // agrandi, voir `10-design-system.md` section 7) : au-delà, c'est la
+        // zone défilante ajoutée ci-dessous qui absorbe le débordement
+        // plutôt que l'écran.
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+        ),
+        child: Container(
+          decoration: const BoxDecoration(color: AppColors.parchmentBg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SheetHeaderBar(title: 'CHOISIR UN SET'),
+              Flexible(
+                // `SingleChildScrollView` n'a pas de paramètre `shrinkWrap`
+                // (contrairement à `ListView`) : il n'en a pas besoin — avec
+                // les contraintes lâches que lui donne ce `Flexible`, il
+                // épouse déjà la hauteur de son contenu (`constraints
+                // .constrain(child.size)`), et ne défile que si le contenu
+                // dépasse l'espace laissé par le `ConstrainedBox` ci-dessus.
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final slot in WeaponSlot.values) ...[
+                        SheetActionRow(
+                          icon: _iconFor(slot),
+                          label: slot.label,
+                          trailingText: _occupantsLabel(slot),
+                          onTap: () => Navigator.of(context).pop(slot),
+                        ),
+                        if (slot != WeaponSlot.values.last)
+                          const SheetActionDivider(),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-              if (slot != WeaponSlot.values.last) const SheetActionDivider(),
             ],
-          ],
+          ),
         ),
       ),
     );

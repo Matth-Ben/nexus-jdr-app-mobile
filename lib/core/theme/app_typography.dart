@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_colors.dart';
 
@@ -14,16 +13,26 @@ import 'app_colors.dart';
 /// pas la casse automatiquement : appeler `.toUpperCase()` sur le texte
 /// affiché au moment de l'usage.
 ///
-/// Choix technique : chargement des polices via le package `google_fonts`
-/// plutôt qu'en asset embarqué. L'écran de connexion nécessite de toute
-/// façon le réseau pour s'authentifier, et plus généralement l'app a besoin
-/// du réseau à la première utilisation (peuplement du cache `drift` des
-/// données de référence) — `google_fonts` met en cache la police après le
-/// premier téléchargement et se rabat sur une police système en cas d'échec
-/// réseau (pas de crash), ce qui est un compromis acceptable ici. À
-/// reconsidérer si un écran 100% hors-ligne doit un jour s'afficher avant
-/// toute connexion réseau (auquel cas embarquer les polices en asset).
+/// Choix technique : polices embarquées en asset (`assets/fonts/`, déclarées
+/// dans `pubspec.yaml`), jamais téléchargées à l'exécution (dette D22,
+/// `docs/dette-technique.md` — ce fichier utilisait auparavant le package
+/// `google_fonts`, qui ne pouvait afficher correctement les polices au tout
+/// premier lancement sans réseau). Licence SIL Open Font License 1.1 pour les
+/// deux polices — voir `assets/fonts/OFL-*.txt` et l'écran "Crédits &
+/// licences" (`features/profile/presentation/profile_credits_screen.dart`).
 abstract final class AppTypography {
+  /// Plafond partagé d'agrandissement du texte, voir
+  /// `docs/cahier-des-charges/10-design-system.md` section 7 (Accessibilité).
+  /// Ne couvre PAS tout le texte de l'app : seulement un sous-arbre affiché dans
+  /// un conteneur à taille contrainte qui ne peut pas grandir avec lui (titre
+  /// borné en lignes, badge dans une ligne de largeur fixe, message sous un
+  /// bouton de pied fixe). À utiliser via `MediaQuery.withClampedTextScaling(
+  /// maxScaleFactor: AppTypography.maxTextScaleFactor, child: ...)` — jamais
+  /// posé une fois pour toute l'app (romprait le redimensionnement libre du
+  /// contenu défilant), ni comme substitut à un contenu qu'il faudrait plutôt
+  /// rendre défilant.
+  static const double maxTextScaleFactor = 2.0;
+
   static TextStyle display({
     required double fontSize,
     Color color = AppColors.textPrimary,
@@ -31,7 +40,8 @@ abstract final class AppTypography {
     FontWeight fontWeight = FontWeight.normal,
     double? height,
   }) {
-    return GoogleFonts.pressStart2p(
+    return TextStyle(
+      fontFamily: 'PressStart2P',
       fontSize: fontSize,
       color: color,
       letterSpacing: letterSpacing,
@@ -46,7 +56,8 @@ abstract final class AppTypography {
     FontWeight fontWeight = FontWeight.w400,
     double? height,
   }) {
-    return GoogleFonts.workSans(
+    return TextStyle(
+      fontFamily: 'WorkSans',
       fontSize: fontSize,
       color: color,
       fontWeight: fontWeight,
