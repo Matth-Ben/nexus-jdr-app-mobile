@@ -29,6 +29,96 @@ _Rien pour l'instant._
 
 ---
 
+## [1.0.7] — 2026-10-15 (build 8)
+
+### Notes de version (stores)
+
+```
+<fr-FR>
+Personnages :
+• Sorts innés et sorts de classe gérés séparément (plus de confusion)
+• Dés de vie suivis par classe au repos (multiclasse)
+• Limite de sorts préparés par classe (multiclasse)
+• Artificier correctement un demi-lanceur
+• Race verrouillée après création ; confirmation avant un sort inné à charge
+Groupes :
+• Rejoindre/créer un groupe comme MJ, sans personnage
+• Sorts et objets des autres membres consultables en détail
+Autres :
+• Notification de nouvelle version disponible
+• Texte agrandi (accessibilité) ne déborde plus
+</fr-FR>
+```
+
+### Ajouté
+- Choix de lignée pour Drakéide, Tieffelin et Goliath à la création.
+- Choix de compétence/outil de race pour 10 races, nouvelle carte "Choix de
+  race".
+- Équipement automatique de l'arme naturelle raciale à la création (6
+  races).
+- Onglet Sorts : vue "préparés seulement" par défaut (Clerc/Druide/Paladin),
+  filtre de préparation, explication sous le bouton "Lancer" quand un sort
+  n'est pas lançable.
+- Verrou portrait uniquement sur iOS et Android.
+- Sorts innés : lancer gratuit sans emplacement, une fois par repos long —
+  y compris pour un sort à la fois inné (racial) ET appris via la classe,
+  les deux routes restant indépendantes.
+- Dés de vie multiclassé : suivi, dépense et récupération par classe au
+  repos court/long, avec choix de répartition si la récupération est
+  insuffisante pour toutes les classes.
+- Groupes : un joueur peut créer ou rejoindre un groupe en tant que MJ,
+  sans personnage.
+- Limite de sorts préparés appliquée par classe pour un lanceur
+  multiclasse, avec message explicite si la limite d'une classe est
+  dépassée.
+- Vue "Groupe → Membres" : les sorts et objets d'inventaire d'un autre
+  personnage s'ouvrent en détail (description complète), en lecture seule.
+- Notification push et réglage dédié dans Profil > Notifications quand une
+  nouvelle version de l'app est disponible.
+
+### Modifié
+- Langue Commune toujours accordée automatiquement, jamais un choix.
+- Badge de dé et ligne d'attaque clarifiés sur les armes équipées.
+- Pastille de filtre actif repositionnée, libellé d'accessibilité ajouté.
+- Barre de tête des sheets s'agrandit avec son titre plutôt que de le
+  rogner.
+- Polices embarquées dans l'app (Press Start 2P, Work Sans) au lieu d'être
+  téléchargées au premier lancement — plus fiable hors ligne.
+- Race verrouillée après la création d'un personnage (non modifiable en
+  édition) ; confirmation demandée avant de lancer un sort inné à charge
+  limitée.
+- Clé interne de classe stabilisée ; l'Artificier est maintenant traité
+  comme un demi-lanceur qui prépare ses sorts (au lieu d'un lanceur à
+  sorts connus).
+
+### Corrigé
+- L'amélioration de caractéristiques (ASI) ne bloque plus la montée de
+  niveau.
+- Recalcul correct des emplacements de sorts de toutes les classes au
+  repos long pour un personnage multiclassé.
+- Perte possible des PV/XP ajustés hors ligne.
+- Les classes à sorts connus (pas préparés) peuvent de nouveau lancer
+  leurs sorts sans action de préparation superflue.
+- L'édition d'un personnage ne supprime plus ses sorts innés.
+- Dédoublonnage fiable d'un sort en double statut, à la lecture comme à la
+  création.
+- Verrouillage des écritures PV/XP hors ligne pour éviter une perte après
+  plusieurs échecs réseau.
+- Synchronisation de la file hors ligne avant un repos ou une montée de
+  niveau.
+- Initialisation correcte des emplacements de sorts et des charges de
+  pacte à la création et à l'import XML.
+- Délai d'attente réseau global (15 s) pour éviter un blocage indéfini.
+- Cache local purgé à la déconnexion et à la suppression de compte.
+- File hors ligne étendue au lancer de sort, aux aptitudes de classe et au
+  repos (pas seulement PV/XP).
+- Correction d'une rare situation de double état lors de la préparation
+  rapide d'un sort (taps successifs).
+- Débordements de texte à grande échelle d'accessibilité (200 %) corrigés
+  sur 5 fenêtres et plusieurs badges.
+
+---
+
 ## [1.0.6] — 2026-10-04 (build 7)
 
 ### Notes de version (stores)
