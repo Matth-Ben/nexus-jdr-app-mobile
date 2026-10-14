@@ -27,14 +27,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/theme/app_theme.dart';
 import 'package:personnages/core/widgets/app_brand_badge.dart';
 import 'package:personnages/features/splash/presentation/splash_screen.dart';
 
-/// Dossier contenant `PressStart2P-Regular.ttf` et `WorkSans-Regular.ttf`,
-/// fourni par `tool/generate_splash_assets.sh`.
+/// Dossier contenant `PressStart2P-Regular.ttf` et
+/// `WorkSans-VariableFont_wght.ttf` — `assets/fonts/` du dépôt, passé par
+/// `tool/generate_splash_assets.sh` (polices embarquées, dette D22,
+/// `docs/dette-technique.md` : plus de téléchargement à récupérer).
 const _fontDir = String.fromEnvironment('SPLASH_FONT_DIR');
 
 const _outputDir = 'assets/splash';
@@ -195,27 +196,23 @@ class _Placed {
 /// texte y est rendu en pavés, et les icônes Material n'y sont pas
 /// rasterisées).
 Future<void> _loadFonts() async {
-  // Pas de téléchargement par `google_fonts` : les fichiers sont fournis.
-  GoogleFonts.config.allowRuntimeFetching = false;
-
   Future<ByteData> fromFile(String name) async {
     final bytes = await File('$_fontDir/$name').readAsBytes();
     return ByteData.sublistView(bytes);
   }
 
-  // `google_fonts` nomme chaque police `<Famille>_<variante>` et se replie
-  // sur `<Famille>` : on enregistre les deux noms.
+  // Mêmes noms de famille que `core/theme/app_typography.dart` (asset
+  // embarqué, déclaré dans `pubspec.yaml`) : pas de nom de secours à
+  // enregistrer ici.
   const families = {
     'PressStart2P': 'PressStart2P-Regular.ttf',
     // Work Sans n'apparaît dans aucune image : elle sert au relevé, pour que
     // "Préparation de la taverne…" (dernière ligne de la colonne, donc de la
     // hauteur de la toile) soit mise en page avec sa vraie police.
-    'WorkSans': 'WorkSans-Regular.ttf',
+    'WorkSans': 'WorkSans-VariableFont_wght.ttf',
   };
   for (final MapEntry(key: family, value: file) in families.entries) {
-    for (final name in [family, '${family}_regular']) {
-      await (FontLoader(name)..addFont(fromFile(file))).load();
-    }
+    await (FontLoader(family)..addFont(fromFile(file))).load();
   }
   await (FontLoader(
     'MaterialIcons',

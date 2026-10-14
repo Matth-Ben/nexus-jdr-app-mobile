@@ -1,17 +1,16 @@
 import 'dart:async';
 
-import 'package:google_fonts/google_fonts.dart';
-
 /// Exécuté automatiquement par `flutter test` avant chaque fichier de test
 /// de ce dossier (convention `flutter_test_config.dart`).
 ///
-/// Désactive le chargement réseau à la volée de `google_fonts` (voir
-/// `core/theme/app_typography.dart`) pendant les tests : sans ça, chaque
-/// test de widget touchant un texte stylé tenterait un vrai appel réseau
-/// vers Google Fonts, ce qui est lent et non déterministe (échoue
-/// silencieusement en environnement sans réseau, ce qui est le cas ici,
-/// mais autant l'assumer explicitement plutôt que d'en dépendre).
+/// Ne fait plus rien depuis l'embarquement des polices en asset (dette D22,
+/// `docs/dette-technique.md`) : ce fichier ne servait qu'à désactiver le
+/// téléchargement réseau à la volée du package `google_fonts` (retiré de
+/// `pubspec.yaml`) pendant les tests. `core/theme/app_typography.dart`
+/// référence désormais directement les familles `PressStart2P`/`WorkSans`
+/// déclarées dans `pubspec.yaml`, sans appel réseau possible. Conservé
+/// (plutôt que supprimé) comme point d'extension si une configuration de
+/// test globale redevient nécessaire.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
-  GoogleFonts.config.allowRuntimeFetching = false;
   await testMain();
 }

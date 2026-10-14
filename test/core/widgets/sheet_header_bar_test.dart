@@ -3,11 +3,12 @@
 // grandit avec le titre, agrandissement du texte plafonné, bouton de
 // fermeture ancré en haut.
 //
-// Police : `google_fonts` ne charge rien en test (voir
-// `test/flutter_test_config.dart`), le titre est donc rendu avec la police de
-// test de Flutter. Elle a la même chasse que Press Start 2P (1 em par
-// caractère), et la hauteur de ligne ne dépend pas de la police : elle vient
-// du style de texte par défaut de Material (1,43 × la taille : 1,43 × 11 =
+// Police : le harnais `flutter test` ne charge pas les polices embarquées
+// (`assets/fonts/`, voir `test/flutter_test_config.dart`) sans appel
+// explicite à `FontLoader` — absent ici —, le titre est donc rendu avec la
+// police de test de Flutter. Elle a la même chasse que Press Start 2P (1 em
+// par caractère), et la hauteur de ligne ne dépend pas de la police : elle
+// vient du style de texte par défaut de Material (1,43 × la taille : 1,43 × 11 =
 // 15,73, arrondi au pixel par Flutter — 16 px par ligne à l'échelle 1, 31 px
 // à l'échelle 2, soit 93 px pour 3 lignes). Les titres ci-dessous sont choisis
 // pour un écran de 360 dp de large : 24 caractères par ligne à l'échelle 1,

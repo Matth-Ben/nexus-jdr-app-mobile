@@ -1,9 +1,9 @@
 // Tests de widget de l'écran "Crédits & licences"
 // (`presentation/profile_credits_screen.dart`) — bandeau bois "CRÉDITS &
-// LICENCES" + retour, 2 sections `LegalSectionBlock` ("Contenu de jeu"/
-// "Bibliothèques open source"), bloc encadré CC-BY entre les deux (fond
-// `parchmentCardAlt`, bordure `woodLight`), pied de page "Dernière mise à
-// jour".
+// LICENCES" + retour, 3 sections `LegalSectionBlock` ("Contenu de jeu"/
+// "Polices"/"Bibliothèques open source"), bloc encadré CC-BY entre la
+// première et la deuxième (fond `parchmentCardAlt`, bordure `woodLight`),
+// pied de page "Dernière mise à jour".
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,13 +49,14 @@ void main() {
     expect(find.text('CRÉDITS & LICENCES'), findsOneWidget);
   });
 
-  testWidgets('affiche les 2 sections "Contenu de jeu"/"Bibliothèques '
-      'open source"', (tester) async {
+  testWidgets('affiche les 3 sections "Contenu de jeu"/"Polices"/'
+      '"Bibliothèques open source"', (tester) async {
     await _pumpScreen(tester);
 
     expect(find.text('Contenu de jeu'), findsOneWidget);
+    expect(find.text('Polices'), findsOneWidget);
     expect(find.text('Bibliothèques open source'), findsOneWidget);
-    expect(find.byType(LegalSectionBlock), findsNWidgets(2));
+    expect(find.byType(LegalSectionBlock), findsNWidgets(3));
   });
 
   testWidgets('affiche le contenu exact validé (marques Wizards of the Coast, '
@@ -83,6 +84,28 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'affiche la section "Polices" (SIL OFL, polices embarquées, plus de '
+    'mention de google_fonts dans la liste des bibliothèques)',
+    (tester) async {
+      await _pumpScreen(tester);
+
+      expect(
+        find.textContaining('Press Start 2P'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('SIL Open Font License'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('github.com/google/fonts'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('google_fonts'), findsNothing);
+    },
+  );
 
   testWidgets('affiche le bloc encadré CC-BY (fond parchmentCardAlt, bordure '
       'woodLight) entre les 2 sections', (tester) async {

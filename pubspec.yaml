@@ -53,7 +53,6 @@ dependencies:
   json_annotation: ^4.12.0
   xml: ^7.0.1
   go_router: ^18.0.0
-  google_fonts: ^8.2.1
   image_picker: ^1.2.0
   # Sélecteur de fichier natif pour l'import XML aidedd.org
   # (`lib/features/xml_import/`) — `image_picker` ne gère que les images.
@@ -190,25 +189,42 @@ flutter:
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
 
-  # To add custom fonts to your application, add a fonts section here,
-  # in this "flutter" section. Each entry in this list should have a
-  # "family" key with the font family name, and a "fonts" key with a
-  # list giving the asset and other descriptors for the font. For
-  # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
+  # Polices embarquées (dette D22, `docs/dette-technique.md`) : auparavant
+  # téléchargées à l'exécution via le package `google_fonts` (voir
+  # l'ancien doc-comment de `lib/core/theme/app_typography.dart`), ce qui
+  # empêchait tout affichage correct au tout premier lancement hors ligne.
+  # Fichiers récupérés tels quels depuis le dépôt officiel
+  # `github.com/google/fonts` (même source que celle que `google_fonts`
+  # téléchargeait lui-même) — jamais modifiés, licence SIL Open Font
+  # License 1.1 (texte complet + attribution dans `assets/fonts/OFL-*.txt`,
+  # résumé dans l'écran "Crédits & licences",
+  # `features/profile/presentation/profile_credits_screen.dart`).
   #
-  # For details regarding fonts from package dependencies,
-  # see https://flutter.dev/to/font-from-package
+  # - PressStart2P : une seule graisse (regular/400, la seule existante
+  #   pour cette police) — `AppTypography.display`.
+  # - WorkSans : police variable (un seul fichier, axe de graisse `wght`),
+  #   déclarée une fois par graisse réellement utilisée par
+  #   `AppTypography.body` dans `lib/` (vérifié par grep exhaustif plutôt
+  #   que deviné) — Flutter/Skia sélectionne l'instance de l'axe `wght` la
+  #   plus proche de chaque `weight:` déclaré ci-dessous, sans dupliquer le
+  #   fichier. Pas de graisse italique : aucun usage de `FontStyle.italic`
+  #   avec `font.body` dans ce dépôt à ce jour.
+  fonts:
+    - family: PressStart2P
+      fonts:
+        - asset: assets/fonts/PressStart2P-Regular.ttf
+    - family: WorkSans
+      fonts:
+        - asset: assets/fonts/WorkSans-VariableFont_wght.ttf
+          weight: 400
+        - asset: assets/fonts/WorkSans-VariableFont_wght.ttf
+          weight: 500
+        - asset: assets/fonts/WorkSans-VariableFont_wght.ttf
+          weight: 600
+        - asset: assets/fonts/WorkSans-VariableFont_wght.ttf
+          weight: 700
+        - asset: assets/fonts/WorkSans-VariableFont_wght.ttf
+          weight: 800
 
 # Configuration de `flutter_native_splash` (voir la dev dependency ci-dessus)
 # — génère les fichiers natifs Android/iOS de l'écran de chargement à partir
