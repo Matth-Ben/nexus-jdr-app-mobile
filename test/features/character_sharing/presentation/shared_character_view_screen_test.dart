@@ -270,6 +270,12 @@ void main() {
 
     await tester.tap(find.text('Ténèbres'));
     await tester.pumpAndSettle();
+    // Referme ce premier panneau "Infos" avant le second tap : il reste
+    // sinon ouvert par-dessus la ligne suivante (même motif de fermeture
+    // que `character_detail_action_lock_test.dart`/`character_detail_
+    // innate_spell_cast_test.dart`).
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Lueurs féeriques'));
     await tester.pumpAndSettle();
     expect(find.text('LANCER'), findsNothing);
