@@ -270,9 +270,109 @@ void main() {
 
     await tester.tap(find.text('Ténèbres'));
     await tester.pumpAndSettle();
+    // Referme ce premier panneau "Infos" avant le second tap : il reste
+    // sinon ouvert par-dessus la ligne suivante (même motif de fermeture
+    // que `character_detail_action_lock_test.dart`/`character_detail_
+    // innate_spell_cast_test.dart`).
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Lueurs féeriques'));
     await tester.pumpAndSettle();
     expect(find.text('LANCER'), findsNothing);
+  });
+
+  // Preuve bout-en-bout (qa-testeur) que le tap ouvre bien le panneau
+  // "Infos" avec sa description — le test ci-dessus ne vérifie que
+  // l'absence du bouton "LANCER", vraie aussi bien avant (tap bloqué net)
+  // qu'après le passage en lecture seule (panneau ouvert sans ce bouton),
+  // donc insuffisante à elle seule pour prouver que le panneau s'ouvre
+  // réellement.
+  testWidgets(
+    'onglet Sorts : taper un sort ouvre bien le panneau "Infos" en lecture '
+    'seule, avec son détail technique et sa description visibles',
+    (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Ténèbres',
+            level: 2,
+            school: 'Évocation',
+            status: SpellStatus.innate,
+            castingTime: '1 action',
+            description: 'Une obscurité magique se répand depuis ce point.',
+          ),
+        ],
+      );
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SORTS'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Ténèbres'));
+      await tester.pumpAndSettle();
+
+      // Le panneau "Infos" s'est bien ouvert (titre en majuscules, détail
+      // technique, description) — pas seulement l'absence du bouton
+      // "LANCER" (déjà vérifiée par le test précédent).
+      expect(find.text('TÉNÈBRES'), findsOneWidget);
+      expect(find.text("Temps d'incantation"), findsOneWidget);
+      expect(find.text('1 action'), findsOneWidget);
+      expect(find.text('DESCRIPTION'), findsOneWidget);
+      expect(
+        find.text('Une obscurité magique se répand depuis ce point.'),
+        findsOneWidget,
+      );
+      expect(find.text('LANCER'), findsNothing);
+    },
+  );
+
+  group('onglet Inventaire (SAC) : objet cliquable en lecture seule', () {
+    testWidgets(
+      'taper un objet ouvre bien le panneau "Infos" en lecture seule, avec '
+      'son détail technique et sa description visibles, sans sheet '
+      'd\'actions',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          inventory: const [
+            CharacterInventoryItem(
+              id: 'inv-1',
+              itemId: 10,
+              name: 'Grimoire de magicienne',
+              category: 'equipement_general',
+              quantity: 1,
+              equipped: false,
+              totalWeight: 3,
+              unitWeight: 3,
+              description: 'Un lourd grimoire relié de cuir noirci.',
+            ),
+          ],
+        );
+
+        await pumpSharedView(tester);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SAC'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Grimoire de magicienne'));
+        await tester.pumpAndSettle();
+
+        // Le panneau "Infos" s'est bien ouvert (titre en majuscules, détail
+        // technique, description) — pas la sheet d'actions (aucun bouton
+        // "Utiliser"/"Équiper"/"Retirer", jamais exposés en lecture seule).
+        expect(find.text('GRIMOIRE DE MAGICIENNE'), findsOneWidget);
+        expect(find.text('Poids unitaire'), findsOneWidget);
+        expect(find.text('DESCRIPTION'), findsOneWidget);
+        expect(
+          find.text('Un lourd grimoire relié de cuir noirci.'),
+          findsOneWidget,
+        );
+        expect(find.text('Utiliser'), findsNothing);
+        expect(find.text('Équiper'), findsNothing);
+        expect(find.text('Retirer'), findsNothing);
+      },
+    );
   });
 
   group('onglet Histoire (docs/cahier-des-charges/'

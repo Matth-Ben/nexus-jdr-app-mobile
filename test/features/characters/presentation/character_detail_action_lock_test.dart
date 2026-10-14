@@ -418,11 +418,17 @@ void main() {
 
       expect(repository.castSpellCallCount, 1);
 
-      // Le tap sur la ligne de sort (verrouillée) ne doit rien déclencher :
-      // ni réouverture du panneau, ni second appel réseau.
-      await tester.tap(find.text('Bouclier'), warnIfMissed: false);
+      // Le tap sur la ligne de sort (verrouillée) ouvre toujours le panneau
+      // "Infos", mais en lecture seule (`readOnly`, voir
+      // `spell_info_panel.dart`) : aucun bouton "Lancer" n'y est rendu tant
+      // que l'appel reste en vol, donc aucun second appel réseau possible
+      // depuis ce panneau (risque d'écrasement silencieux, écriture à
+      // valeur absolue).
+      await tester.tap(find.text('Bouclier'));
       await tester.pumpAndSettle();
 
+      expect(find.text('BOUCLIER'), findsOneWidget);
+      expect(find.widgetWithText(PrimaryButton, 'LANCER'), findsNothing);
       expect(
         repository.castSpellCallCount,
         1,
@@ -431,7 +437,12 @@ void main() {
             'jamais déclencher un second appel réseau (risque '
             'd\'écrasement silencieux, écriture à valeur absolue).',
       );
-      expect(find.text('BOUCLIER'), findsNothing);
+
+      // Referme ce panneau en lecture seule avant de laisser le premier
+      // appel se résoudre (sans quoi "BOUCLIER" resterait affiché deux fois
+      // selon le chemin pris plus bas).
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
 
       repository.castSpellGate.complete();
       await tester.pumpAndSettle();

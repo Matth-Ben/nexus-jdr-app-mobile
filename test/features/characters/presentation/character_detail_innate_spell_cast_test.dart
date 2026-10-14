@@ -284,10 +284,16 @@ void main() {
     expect(repository.innateCalls, hasLength(1));
     expect(find.text('Épuisé'), findsOneWidget);
     expect(find.text('Ténèbres lancé (sort inné).'), findsNothing);
-    // Verrou : un second tap pendant l'appel n'ouvre rien.
+    // Verrou : un second tap pendant l'appel ouvre tout de même le panneau
+    // "Infos", mais en lecture seule (`readOnly`, voir `spell_info_panel
+    // .dart`) : aucun bouton "Lancer" n'y est rendu tant que l'appel reste
+    // en vol.
     await tester.tap(find.text('Ténèbres'));
     await tester.pumpAndSettle();
-    expect(find.text('TÉNÈBRES'), findsNothing);
+    expect(find.text('TÉNÈBRES'), findsOneWidget);
+    expect(find.widgetWithText(PrimaryButton, 'LANCER'), findsNothing);
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
 
     repository.innateGate!.complete();
     await tester.pumpAndSettle();

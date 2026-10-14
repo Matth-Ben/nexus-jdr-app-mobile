@@ -48,6 +48,14 @@ import 'spell_action_sheet.dart';
 /// lignes fusionnées en une entrée, voir sa doc) — exactement le même patron
 /// que [onTogglePrepared] ci-dessous : ferme directement la sheet, l'appelant
 /// gère écriture optimiste + réseau.
+///
+/// [readOnly] (`false` par défaut) retire tout élément d'action de ce
+/// panneau — ni [_TogglePreparedLink], ni le pied "Lancer"/"Lancer (sort
+/// inné)" (boutons et messages de blocage) — pour un affichage purement
+/// informatif, même principe que `item_info_panel.dart::showItemInfoPanel
+/// .readOnly` : vue de partage d'un personnage (lien public `/p/:token` ou
+/// fiche d'un autre membre du groupe, `shared_character_view_screen.dart`),
+/// où aucune action d'écriture n'a de sens.
 Future<void> showSpellInfoPanel(
   BuildContext context, {
   required CharacterSpellEntry spell,
@@ -55,6 +63,7 @@ Future<void> showSpellInfoPanel(
   CharacterSpellSlot? pactSlot,
   required CastSpellCallback onCastSpell,
   required ToggleSpellFlagCallback onTogglePrepared,
+  bool readOnly = false,
 }) async {
   final shouldCast = await showModalBottomSheet<bool>(
     context: context,
@@ -64,6 +73,7 @@ Future<void> showSpellInfoPanel(
       spell: spell,
       spellSlots: spellSlots,
       pactSlot: pactSlot,
+      readOnly: readOnly,
       onTogglePrepared: () {
         onTogglePrepared(spell);
         Navigator.of(sheetContext).pop(false);
@@ -100,6 +110,7 @@ class _SpellInfoPanelContent extends StatelessWidget {
     required this.spell,
     required this.spellSlots,
     this.pactSlot,
+    this.readOnly = false,
     required this.onTogglePrepared,
     required this.onCastInnate,
   });
@@ -107,6 +118,9 @@ class _SpellInfoPanelContent extends StatelessWidget {
   final CharacterSpellEntry spell;
   final List<CharacterSpellSlot> spellSlots;
   final CharacterSpellSlot? pactSlot;
+
+  /// Voir la documentation de [showSpellInfoPanel].
+  final bool readOnly;
   final VoidCallback onTogglePrepared;
 
   /// Lancer de la route innée séparée d'un sort à double route (D43) — voir
@@ -218,7 +232,8 @@ class _SpellInfoPanelContent extends StatelessWidget {
                           ),
                         ),
                       ],
-                      if (SpellStatusFormatter.canTogglePrepared(spell)) ...[
+                      if (!readOnly &&
+                          SpellStatusFormatter.canTogglePrepared(spell)) ...[
                         const SizedBox(height: AppSpacing.sm),
                         _TogglePreparedLink(
                           prepared: spell.status == SpellStatus.prepared,
@@ -247,56 +262,34 @@ class _SpellInfoPanelContent extends StatelessWidget {
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    PrimaryButton(
-                      label: 'Lancer',
-                      onPressed: canCast
-                          ? () => Navigator.of(context).pop(true)
-                          : null,
-                    ),
-                    if (blockReason != null) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      MediaQuery.withClampedTextScaling(
-                        maxScaleFactor: AppTypography.maxTextScaleFactor,
-                        child: Text(
-                          blockReason.message,
-                          textAlign: TextAlign.center,
-                          style: AppTypography.body(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                    // Second bouton, route innée indépendante d'un sort à
-                    // double route (D43) — voir [innateDualRoute]. Jamais
-                    // affiché pour un sort SEULEMENT inné : son unique
-                    // bouton "Lancer" ci-dessus est déjà celui-ci.
-                    if (innateDualRoute) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      SecondaryButton(
-                        label: 'Lancer (sort inné)',
-                        surface: SecondaryButtonSurface.parchment,
-                        onPressed: innateBlockReason == null
-                            ? onCastInnate
+              // Pied "Lancer"/"Lancer (sort inné)" entièrement retiré en
+              // lecture seule (voir [readOnly]) — pas seulement désactivé,
+              // même principe que `item_info_panel.dart::showItemInfoPanel
+              // .readOnly` retirant son bouton contextuel de pied.
+              if (!readOnly)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      PrimaryButton(
+                        label: 'Lancer',
+                        onPressed: canCast
+                            ? () => Navigator.of(context).pop(true)
                             : null,
                       ),
-                      if (innateBlockReason != null) ...[
+                      if (blockReason != null) ...[
                         const SizedBox(height: AppSpacing.sm),
                         MediaQuery.withClampedTextScaling(
                           maxScaleFactor: AppTypography.maxTextScaleFactor,
                           child: Text(
-                            innateBlockReason.message,
+                            blockReason.message,
                             textAlign: TextAlign.center,
                             style: AppTypography.body(
                               fontSize: 12,
@@ -305,10 +298,37 @@ class _SpellInfoPanelContent extends StatelessWidget {
                           ),
                         ),
                       ],
+                      // Second bouton, route innée indépendante d'un sort à
+                      // double route (D43) — voir [innateDualRoute]. Jamais
+                      // affiché pour un sort SEULEMENT inné : son unique
+                      // bouton "Lancer" ci-dessus est déjà celui-ci.
+                      if (innateDualRoute) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        SecondaryButton(
+                          label: 'Lancer (sort inné)',
+                          surface: SecondaryButtonSurface.parchment,
+                          onPressed: innateBlockReason == null
+                              ? onCastInnate
+                              : null,
+                        ),
+                        if (innateBlockReason != null) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          MediaQuery.withClampedTextScaling(
+                            maxScaleFactor: AppTypography.maxTextScaleFactor,
+                            child: Text(
+                              innateBlockReason.message,
+                              textAlign: TextAlign.center,
+                              style: AppTypography.body(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),

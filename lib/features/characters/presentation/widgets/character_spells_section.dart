@@ -70,14 +70,17 @@ class CharacterSpellsSection extends StatelessWidget {
   final ToggleSpellFlagCallback onTogglePrepared;
 
   /// `true` pendant qu'un repos long est en cours d'application (voir
-  /// `character_detail_screen.dart::_isApplyingRest`) : désactive le tap sur
-  /// chaque sort, un repos long réinitialisant les emplacements de sorts —
-  /// même verrou déjà appliqué au bandeau PV (`CharacterVitalsCard
-  /// .hpActionsDisabled`), ferme ici le même type de course qu'un lancer de
-  /// sort démarré pendant que le repos écrit encore en base (voir la
-  /// documentation de `_castSpell`). N'affecte pas [onTogglePrepared] :
-  /// basculer la préparation d'un sort n'entre jamais en course avec un
-  /// repos, contrairement au lancer d'un sort.
+  /// `character_detail_screen.dart::_isApplyingRest`), ou en permanence pour
+  /// une vue en lecture seule (fiche d'un autre membre du groupe/lien de
+  /// partage public, voir `shared_character_view_screen.dart`) : le tap sur
+  /// chaque sort reste toujours actif, mais ouvre [showSpellInfoPanel] en
+  /// `readOnly` (voir `_SpellRow.build`) — un repos long réinitialisant les
+  /// emplacements de sorts, même verrou déjà appliqué au bandeau PV
+  /// (`CharacterVitalsCard.hpActionsDisabled`), ferme ici le même type de
+  /// course qu'un lancer de sort démarré pendant que le repos écrit encore en
+  /// base (voir la documentation de `_castSpell`). N'affecte pas
+  /// [onTogglePrepared] : basculer la préparation d'un sort n'entre jamais en
+  /// course avec un repos, contrairement au lancer d'un sort.
   final bool actionsDisabled;
 
   @override
@@ -401,16 +404,22 @@ class _SpellRow extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: enabled
-            ? () => showSpellInfoPanel(
-                context,
-                spell: spell,
-                spellSlots: spellSlots,
-                pactSlot: pactSlot,
-                onCastSpell: onCastSpell,
-                onTogglePrepared: onTogglePrepared,
-              )
-            : null,
+        // Le tap ouvre toujours le panneau "Infos" (jamais bloqué par
+        // [enabled]) : en lecture seule (`enabled` faux, ex. fiche d'un
+        // membre du groupe/lien de partage public), [showSpellInfoPanel]
+        // retire lui-même tout élément d'action (voir sa doc `readOnly`) —
+        // même principe que `character_equipped_weapons_card.dart`/
+        // `character_class_features_card.dart`, dont le tap n'a jamais été
+        // gaté par un tel flag.
+        onTap: () => showSpellInfoPanel(
+          context,
+          spell: spell,
+          spellSlots: spellSlots,
+          pactSlot: pactSlot,
+          onCastSpell: onCastSpell,
+          onTogglePrepared: onTogglePrepared,
+          readOnly: !enabled,
+        ),
         // Sort restant à préparer : ligne entière atténuée (non lançable
         // en l'état, mais toujours tappable pour ouvrir "Infos" et le
         // préparer) — demande utilisateur du 06/10/2026.

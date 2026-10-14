@@ -362,20 +362,87 @@ void main() {
       },
     );
 
-    testWidgets('actionsDisabled: le tap sur une carte n\'ouvre rien', (
-      tester,
-    ) async {
-      await _pump(
-        tester,
-        _detail(inventory: const [_dagger]),
-        actionsDisabled: true,
-      );
+    testWidgets(
+      'actionsDisabled: le tap sur une carte ouvre directement le panneau '
+      '"Infos" en lecture seule (pas la sheet d\'actions, aucun bouton '
+      "Utiliser'/'Équiper'/'Retirer')",
+      (tester) async {
+        final recorder = await _pump(
+          tester,
+          _detail(inventory: const [_dagger]),
+          actionsDisabled: true,
+        );
 
-      await tester.tap(find.text('Dague'), warnIfMissed: false);
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Dague'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Infos'), findsNothing);
-    });
+        expect(find.text('DAGUE'), findsOneWidget);
+        expect(find.text('Infos'), findsNothing);
+        expect(find.text('Utiliser'), findsNothing);
+        expect(find.text('Équiper'), findsNothing);
+        expect(find.text('Retirer'), findsNothing);
+
+        expect(recorder.useCalls, isEmpty);
+        expect(recorder.toggleCalls, isEmpty);
+        expect(recorder.removeCalls, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'actionsDisabled, objet harmonisable : le panneau "Infos" en lecture '
+      'seule ne porte pas le lien "Harmoniser cet objet"',
+      (tester) async {
+        final recorder = await _pump(
+          tester,
+          _detail(inventory: const [_ring]),
+          actionsDisabled: true,
+        );
+
+        await tester.tap(find.text('Anneau de protection'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('ANNEAU DE PROTECTION'), findsOneWidget);
+        expect(find.text('Harmoniser cet objet'), findsNothing);
+        expect(recorder.toggleAttunedCalls, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'actionsDisabled, arme avec dé de dégâts : le panneau "Infos" en '
+      'lecture seule affiche quand même le bonus d\'attaque et les dégâts',
+      (tester) async {
+        const sword = CharacterInventoryItem(
+          id: 'inv-sword',
+          itemId: 20,
+          name: 'Épée courte',
+          category: 'arme',
+          quantity: 1,
+          equipped: false,
+          weaponProperties: CharacterInventoryWeaponProperties(
+            damageDice: '1d6',
+            damageType: 'perforant',
+            properties: ['finesse', 'légère'],
+          ),
+        );
+        await _pump(
+          tester,
+          _detail(
+            inventory: const [sword],
+            abilityScores: const {'str': 10, 'dex': 16},
+          ),
+          actionsDisabled: true,
+        );
+
+        await tester.tap(find.text('Épée courte'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('ÉPÉE COURTE'), findsOneWidget);
+        expect(find.text('Attaque'), findsOneWidget);
+        expect(find.text('+3'), findsOneWidget);
+        expect(find.text('Dégâts'), findsOneWidget);
+        expect(find.text('1d6+3 perforant'), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'panneau "Infos" d\'une arme : affiche le bonus d\'attaque et les '
