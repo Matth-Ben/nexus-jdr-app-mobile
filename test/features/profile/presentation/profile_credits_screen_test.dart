@@ -130,10 +130,10 @@ void main() {
     await _pumpScreen(tester);
 
     await tester.ensureVisible(
-      find.text('Dernière mise à jour : 15 septembre 2026'),
+      find.text('Dernière mise à jour : 14 octobre 2026'),
     );
     final footer = tester.widget<Text>(
-      find.text('Dernière mise à jour : 15 septembre 2026'),
+      find.text('Dernière mise à jour : 14 octobre 2026'),
     );
     expect(footer.style?.fontSize, 11);
     expect(footer.style?.color, AppColors.textMuted);

@@ -106,7 +106,7 @@ class ProfileCreditsScreen extends StatelessWidget {
                   _openSourceSection,
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'Dernière mise à jour : 15 septembre 2026',
+                    'Dernière mise à jour : 14 octobre 2026',
                     style: AppTypography.body(
                       fontSize: 11,
                       color: AppColors.textMuted,
