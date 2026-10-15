@@ -308,6 +308,44 @@ void main() {
       expect(find.text('home'), findsOneWidget);
     });
 
+    test(
+      'registerTokenNow() : permission accordée, enregistre getToken() '
+      'puis upsertToken() sur le repository — appel explicite depuis '
+      'ProfileNotificationsScreen._togglePushEnabled (voir sa doc)',
+      () async {
+        gateway.settingsToReturn = _settings(AuthorizationStatus.authorized);
+        final registrar = container.read(pushTokenRegistrarProvider);
+
+        await registrar.registerTokenNow();
+
+        expect(gateway.getTokenCallCount, 1);
+        expect(repository.upsertedTokens, ['fcm-token-1']);
+      },
+    );
+
+    test('registerTokenNow() : permission refusée, ne récupère ni '
+        "n'enregistre aucun jeton", () async {
+      gateway.settingsToReturn = _settings(AuthorizationStatus.denied);
+      final registrar = container.read(pushTokenRegistrarProvider);
+
+      await registrar.registerTokenNow();
+
+      expect(gateway.getTokenCallCount, 0);
+      expect(repository.upsertedTokens, isEmpty);
+    });
+
+    test('registerTokenNow() : un échec du repository reste silencieux, '
+        'aucune exception ne remonte à l\'appelant', () async {
+      gateway.settingsToReturn = _settings(AuthorizationStatus.authorized);
+      repository.errorToThrow = Exception('échec simulé (double de test)');
+      final registrar = container.read(pushTokenRegistrarProvider);
+
+      // N'échoue jamais avec une exception non gérée : le simple fait que
+      // cet `await` se termine sans lever prouve l'essentiel (voir la même
+      // discipline que le test équivalent sur `start()`/`initialSession`).
+      await registrar.registerTokenNow();
+    });
+
     test('dispose() annule tous les abonnements : plus aucun enregistrement '
         'déclenché après', () async {
       gateway.settingsToReturn = _settings(AuthorizationStatus.authorized);

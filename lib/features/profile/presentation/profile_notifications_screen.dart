@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/notifications/notification_providers.dart';
 import '../../../core/notifications/push_notification_gateway.dart';
+import '../../../core/notifications/push_token_registrar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -69,6 +72,15 @@ import 'providers/notification_preferences_providers.dart';
 /// vers les réglages système dans cette itération (même limite déjà assumée
 /// pour les autorisations caméra/galerie de `ProfilePrivacyScreen`, voir
 /// `widgets/device_permissions_sheet.dart`).
+///
+/// Une fois la permission confirmée, `_togglePushEnabled` déclenche aussi
+/// immédiatement `PushTokenRegistrar.registerTokenNow()` (avant l'écriture de
+/// `push_enabled`) : sans cet appel explicite, le jeton FCM ne s'enregistre
+/// que lors de la prochaine connexion/reprise de session (`PushTokenRegistrar
+/// .start()` ne réagit qu'à `signedIn`/`initialSession`, jamais à cette
+/// bascule en cours de session) — bug réel constaté en production (un joueur
+/// activait le switch sans jamais apparaître dans `user_push_tokens` tant
+/// qu'il ne redémarrait pas complètement l'app).
 class ProfileNotificationsScreen extends ConsumerStatefulWidget {
   const ProfileNotificationsScreen({super.key});
 
@@ -100,6 +112,22 @@ class _ProfileNotificationsScreenState
       }
     }
     if (_osPermissionDenied) setState(() => _osPermissionDenied = false);
+    if (value) {
+      // Enregistre le jeton FCM tout de suite, sans attendre un prochain
+      // redémarrage de l'app — `PushTokenRegistrar.start()` (câblé tôt dans
+      // `main.dart`, pour toute la durée de la session) ne réagit, lui, qu'à
+      // une connexion effective (`AuthChangeEvent.signedIn`/
+      // `initialSession`), jamais à cette bascule faite en cours de session :
+      // sans cet appel explicite, la préférence `push_enabled` serait déjà
+      // enregistrée en base (voir l'appel à `_toggle` plus bas) alors
+      // qu'aucune ligne `user_push_tokens` n'existerait tant que
+      // l'utilisateur n'aurait pas complètement fermé puis rouvert l'app —
+      // bug réel constaté en production (voir la doc de classe de
+      // `PushTokenRegistrar.registerTokenNow`). `unawaited` : best-effort,
+      // ne doit jamais retarder ni faire échouer l'écriture de la
+      // préférence ci-dessous.
+      unawaited(ref.read(pushTokenRegistrarProvider).registerTokenNow());
+    }
     await _toggle(current, pushEnabled: value);
   }
 

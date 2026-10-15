@@ -13,6 +13,16 @@
 // doubles factices ici, sans jamais toucher au canal `firebase_messaging`
 // réel (indisponible dans `flutter test`, voir `push_notification_gateway
 // .dart`).
+//
+// Activer le switch global lit désormais aussi `pushTokenRegistrarProvider`
+// (`core/notifications/push_token_registrar.dart::registerTokenNow`, voir sa
+// doc de classe pour le rationale complet du bug corrigé) — ce qui démarre
+// pour la première fois (`PushTokenRegistrar.start()`, `keepAlive`)
+// l'ensemble de ses abonnements dans CE test, contrairement à l'app réelle où
+// `main.dart` l'a déjà fait tôt. `_FakePushNotificationGateway` implémente
+// donc entièrement l'interface (plus de `noSuchMethod`) et
+// `authStateStreamProvider`/`pushTokenRepositoryProvider` sont overridés ici
+// aussi, même si la plupart des tests de ce fichier ne les exercent jamais.
 
 import 'dart:async';
 
@@ -23,11 +33,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:personnages/core/notifications/notification_providers.dart';
 import 'package:personnages/core/notifications/push_notification_gateway.dart';
+import 'package:personnages/core/notifications/push_token_repository.dart';
 import 'package:personnages/core/widgets/settings_list_card.dart';
+import 'package:personnages/features/auth/data/auth_state_stream.dart';
+import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/data/notification_preferences_repository.dart';
 import 'package:personnages/features/profile/domain/notification_preferences.dart';
 import 'package:personnages/features/profile/presentation/profile_notifications_screen.dart';
 import 'package:personnages/features/profile/presentation/providers/notification_preferences_providers.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakeNotificationPreferencesRepository
     implements NotificationPreferencesRepository {
@@ -73,12 +87,24 @@ class _FakeNotificationPreferencesRepository
   }
 }
 
-/// Double minimal — seul `requestPermission` est exercé par
-/// `ProfileNotificationsScreen` (voir sa doc de classe : jamais aucun autre
-/// membre de [PushNotificationGateway] appelé depuis cet écran).
+/// `ProfileNotificationsScreen` n'appelle directement que
+/// `requestPermission` (voir sa doc de classe), mais ce double doit aussi
+/// satisfaire `PushTokenRegistrar.start()`/`registerTokenNow()` — lus
+/// indirectement via `pushTokenRegistrarProvider` dès qu'un test active le
+/// switch global avec permission accordée (voir l'en-tête de ce fichier) —
+/// d'où une implémentation complète plutôt qu'un `noSuchMethod` partiel.
 class _FakePushNotificationGateway implements PushNotificationGateway {
   NotificationSettings? settingsToReturn;
   int requestPermissionCallCount = 0;
+  int getTokenCallCount = 0;
+
+  /// Jeton renvoyé par [getToken] — `null` simule l'absence de Google Play
+  /// Services (voir [PushNotificationGateway.getToken]).
+  String? tokenToReturn = 'fcm-token-widget-test';
+
+  final _tokenRefreshController = StreamController<String>.broadcast();
+  final _messageController = StreamController<RemoteMessage>.broadcast();
+  final _openedAppController = StreamController<RemoteMessage>.broadcast();
 
   @override
   Future<NotificationSettings> requestPermission() async {
@@ -87,7 +113,56 @@ class _FakePushNotificationGateway implements PushNotificationGateway {
   }
 
   @override
-  Never noSuchMethod(Invocation invocation) => throw UnimplementedError();
+  Future<NotificationSettings> getNotificationSettings() async =>
+      settingsToReturn ?? _settings(AuthorizationStatus.authorized);
+
+  @override
+  Future<String?> getToken() async {
+    getTokenCallCount++;
+    return tokenToReturn;
+  }
+
+  @override
+  Stream<String> get onTokenRefresh => _tokenRefreshController.stream;
+
+  @override
+  Stream<RemoteMessage> get onMessage => _messageController.stream;
+
+  @override
+  Stream<RemoteMessage> get onMessageOpenedApp => _openedAppController.stream;
+
+  @override
+  Future<RemoteMessage?> getInitialMessage() async => null;
+}
+
+/// Flux d'auth vide — `PushTokenRegistrar.start()` s'y abonne dès la
+/// première lecture de `pushTokenRegistrarProvider` (voir l'en-tête de ce
+/// fichier), mais aucun test de cet écran n'a besoin d'y émettre quoi que ce
+/// soit : seul l'appel explicite `registerTokenNow()` est exercé ici, jamais
+/// la détection `signedIn`/`initialSession` (déjà couverte par
+/// `push_token_registrar_test.dart`).
+class _FakeAuthStateStream implements AuthStateStream {
+  @override
+  Stream<AuthState> get onAuthStateChange => const Stream.empty();
+}
+
+/// Double de `PushTokenRepository` — permet de vérifier qu'activer le
+/// switch global enregistre bien un jeton (voir
+/// `push_token_registrar_test.dart` pour le double équivalent, même
+/// patron).
+class _FakePushTokenRepository implements PushTokenRepository {
+  final List<String> upsertedTokens = [];
+  Object? errorToThrow;
+
+  @override
+  Future<void> upsertToken({
+    required String token,
+    required String platform,
+  }) async {
+    final error = errorToThrow;
+    if (error != null) throw error;
+    upsertedTokens.add(token);
+  }
 }
 
 NotificationSettings _settings(AuthorizationStatus status) {
@@ -118,6 +193,10 @@ Future<void> _pumpScreen(
   WidgetTester tester, {
   required _FakeNotificationPreferencesRepository repository,
   required _FakePushNotificationGateway gateway,
+  // `null` -> un double neuf, jamais interrogé par la plupart des tests de ce
+  // fichier (seuls ceux qui activent le switch global avec permission
+  // accordée déclenchent `registerTokenNow()`, voir l'en-tête de ce fichier).
+  _FakePushTokenRepository? pushTokenRepository,
   // `false` pour le test d'état de chargement : un `CircularProgressIndicator`
   // anime indéfiniment tant que `fetchCompleter` n'est pas résolu, ce qui
   // ferait tourner `pumpAndSettle` à l'infini (jamais "settled").
@@ -128,6 +207,10 @@ Future<void> _pumpScreen(
       overrides: [
         notificationPreferencesRepositoryProvider.overrideWithValue(repository),
         pushNotificationGatewayProvider.overrideWithValue(gateway),
+        pushTokenRepositoryProvider.overrideWithValue(
+          pushTokenRepository ?? _FakePushTokenRepository(),
+        ),
+        authStateStreamProvider.overrideWithValue(_FakeAuthStateStream()),
       ],
       child: MaterialApp.router(
         routerConfig: GoRouter(
@@ -414,6 +497,61 @@ void main() {
       findsNothing,
     );
   });
+
+  testWidgets(
+    'activer le global push accordé enregistre aussi le jeton FCM tout de '
+    "suite — sans attendre un redémarrage de l'app (bug corrigé, voir la "
+    'doc de classe de PushTokenRegistrar.registerTokenNow)',
+    (tester) async {
+      repository.current = const NotificationPreferences(pushEnabled: false);
+      gateway.settingsToReturn = _settings(AuthorizationStatus.authorized);
+      final tokenRepository = _FakePushTokenRepository();
+
+      await _pumpScreen(
+        tester,
+        repository: repository,
+        gateway: gateway,
+        pushTokenRepository: tokenRepository,
+      );
+
+      await tester.tap(find.byType(Switch).first);
+      await tester.pumpAndSettle();
+
+      expect(repository.updateCalls.single.pushEnabled, isTrue);
+      expect(gateway.getTokenCallCount, 1);
+      expect(tokenRepository.upsertedTokens, ['fcm-token-widget-test']);
+    },
+  );
+
+  testWidgets(
+    "un échec de l'enregistrement du jeton FCM n'empêche pas la préférence "
+    "push_enabled de s'enregistrer, ni n'affiche d'erreur pour ce point "
+    'précis (best-effort)',
+    (tester) async {
+      repository.current = const NotificationPreferences(pushEnabled: false);
+      gateway.settingsToReturn = _settings(AuthorizationStatus.authorized);
+      final tokenRepository = _FakePushTokenRepository()
+        ..errorToThrow = Exception('RPC indisponible (double de test)');
+
+      await _pumpScreen(
+        tester,
+        repository: repository,
+        gateway: gateway,
+        pushTokenRepository: tokenRepository,
+      );
+
+      await tester.tap(find.byType(Switch).first);
+      await tester.pumpAndSettle();
+
+      expect(repository.updateCalls.single.pushEnabled, isTrue);
+      expect(_switchFor(tester, 'Notifications push').value, isTrue);
+      expect(tokenRepository.upsertedTokens, isEmpty);
+      expect(
+        find.text("Impossible d'enregistrer ce réglage. Réessaie."),
+        findsNothing,
+      );
+    },
+  );
 
   testWidgets(
     'activer le global push avec permission refusée : rien écrit en base, '
