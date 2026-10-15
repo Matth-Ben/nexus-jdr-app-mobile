@@ -14,20 +14,31 @@ part of 'push_token_registrar.dart';
 /// uniquement pour cette itération (voir [PushNotificationGateway]).
 ///
 /// Trois responsabilités indépendantes, toutes best-effort (aucune exception
-/// ne doit jamais remonter jusqu'à l'appelant de [start]) :
-/// - **Enregistrement du jeton FCM** (`user_push_tokens`) : à chaque
-///   connexion effective (même détection `AuthChangeEvent.signedIn`/
-///   `initialSession` qu'`CharacterCreationCatalogPreloader`, voir sa doc de
-///   classe pour le rationale complet du choix d'[AuthStateStream] plutôt que
-///   `Ref.listen(authStateChangesProvider, ...)`), *si et seulement si* la
-///   permission OS est déjà accordée (jamais de demande ici — la demande
-///   n'a lieu qu'au clic explicite sur l'interrupteur global de
-///   `features/profile/presentation/profile_notifications_screen.dart`,
-///   décision chef de projet). Puis à chaque rotation du jeton
-///   ([PushNotificationGateway.onTokenRefresh]), sans revérifier la
-///   permission (un jeton dont la permission a été retirée entre-temps reste
-///   inoffensif côté backend, voir la doc de classe de
-///   [PushTokenRepository]).
+/// ne doit jamais remonter jusqu'à l'appelant de [start]/[registerTokenNow]) :
+/// - **Enregistrement du jeton FCM** (`user_push_tokens`), via
+///   [registerTokenNow] (voir sa doc pour le détail), déclenché depuis trois
+///   points distincts :
+///     - à chaque connexion effective (même détection
+///       `AuthChangeEvent.signedIn`/`initialSession` qu'
+///       `CharacterCreationCatalogPreloader`, voir sa doc de classe pour le
+///       rationale complet du choix d'[AuthStateStream] plutôt que
+///       `Ref.listen(authStateChangesProvider, ...)`) ;
+///     - à l'appel explicite de [registerTokenNow] par
+///       `ProfileNotificationsScreen._togglePushEnabled` juste après que
+///       `PushNotificationGateway.requestPermission()` a confirmé la
+///       permission — **bug corrigé** : sans cet appel, activer
+///       l'interrupteur en cours de session n'enregistrait jamais le jeton
+///       avant qu'une connexion effective (donc un redémarrage complet de
+///       l'app) ne se reproduise, alors que la préférence
+///       `notification_preferences.push_enabled` était déjà écrite en base —
+///       l'utilisateur croyait alors avoir activé les notifications sans
+///       qu'aucune ligne `user_push_tokens` n'existe tant qu'il n'avait pas
+///       fermé et rouvert l'app ;
+///     - à chaque rotation du jeton
+///       ([PushNotificationGateway.onTokenRefresh]), sans revérifier la
+///       permission (un jeton dont la permission a été retirée entre-temps
+///       reste inoffensif côté backend, voir la doc de classe de
+///       [PushTokenRepository]).
 /// - **Réception au premier plan** ([PushNotificationGateway.onMessage]) :
 ///   affiche un `SnackBar` simple (titre/corps), via
 ///   [scaffoldMessengerKeyProvider] (aucune UI dédiée pour cette itération,
@@ -59,20 +70,31 @@ final pushTokenRegistrarProvider = PushTokenRegistrarProvider._();
 /// uniquement pour cette itération (voir [PushNotificationGateway]).
 ///
 /// Trois responsabilités indépendantes, toutes best-effort (aucune exception
-/// ne doit jamais remonter jusqu'à l'appelant de [start]) :
-/// - **Enregistrement du jeton FCM** (`user_push_tokens`) : à chaque
-///   connexion effective (même détection `AuthChangeEvent.signedIn`/
-///   `initialSession` qu'`CharacterCreationCatalogPreloader`, voir sa doc de
-///   classe pour le rationale complet du choix d'[AuthStateStream] plutôt que
-///   `Ref.listen(authStateChangesProvider, ...)`), *si et seulement si* la
-///   permission OS est déjà accordée (jamais de demande ici — la demande
-///   n'a lieu qu'au clic explicite sur l'interrupteur global de
-///   `features/profile/presentation/profile_notifications_screen.dart`,
-///   décision chef de projet). Puis à chaque rotation du jeton
-///   ([PushNotificationGateway.onTokenRefresh]), sans revérifier la
-///   permission (un jeton dont la permission a été retirée entre-temps reste
-///   inoffensif côté backend, voir la doc de classe de
-///   [PushTokenRepository]).
+/// ne doit jamais remonter jusqu'à l'appelant de [start]/[registerTokenNow]) :
+/// - **Enregistrement du jeton FCM** (`user_push_tokens`), via
+///   [registerTokenNow] (voir sa doc pour le détail), déclenché depuis trois
+///   points distincts :
+///     - à chaque connexion effective (même détection
+///       `AuthChangeEvent.signedIn`/`initialSession` qu'
+///       `CharacterCreationCatalogPreloader`, voir sa doc de classe pour le
+///       rationale complet du choix d'[AuthStateStream] plutôt que
+///       `Ref.listen(authStateChangesProvider, ...)`) ;
+///     - à l'appel explicite de [registerTokenNow] par
+///       `ProfileNotificationsScreen._togglePushEnabled` juste après que
+///       `PushNotificationGateway.requestPermission()` a confirmé la
+///       permission — **bug corrigé** : sans cet appel, activer
+///       l'interrupteur en cours de session n'enregistrait jamais le jeton
+///       avant qu'une connexion effective (donc un redémarrage complet de
+///       l'app) ne se reproduise, alors que la préférence
+///       `notification_preferences.push_enabled` était déjà écrite en base —
+///       l'utilisateur croyait alors avoir activé les notifications sans
+///       qu'aucune ligne `user_push_tokens` n'existe tant qu'il n'avait pas
+///       fermé et rouvert l'app ;
+///     - à chaque rotation du jeton
+///       ([PushNotificationGateway.onTokenRefresh]), sans revérifier la
+///       permission (un jeton dont la permission a été retirée entre-temps
+///       reste inoffensif côté backend, voir la doc de classe de
+///       [PushTokenRepository]).
 /// - **Réception au premier plan** ([PushNotificationGateway.onMessage]) :
 ///   affiche un `SnackBar` simple (titre/corps), via
 ///   [scaffoldMessengerKeyProvider] (aucune UI dédiée pour cette itération,
@@ -109,20 +131,31 @@ final class PushTokenRegistrarProvider
   /// uniquement pour cette itération (voir [PushNotificationGateway]).
   ///
   /// Trois responsabilités indépendantes, toutes best-effort (aucune exception
-  /// ne doit jamais remonter jusqu'à l'appelant de [start]) :
-  /// - **Enregistrement du jeton FCM** (`user_push_tokens`) : à chaque
-  ///   connexion effective (même détection `AuthChangeEvent.signedIn`/
-  ///   `initialSession` qu'`CharacterCreationCatalogPreloader`, voir sa doc de
-  ///   classe pour le rationale complet du choix d'[AuthStateStream] plutôt que
-  ///   `Ref.listen(authStateChangesProvider, ...)`), *si et seulement si* la
-  ///   permission OS est déjà accordée (jamais de demande ici — la demande
-  ///   n'a lieu qu'au clic explicite sur l'interrupteur global de
-  ///   `features/profile/presentation/profile_notifications_screen.dart`,
-  ///   décision chef de projet). Puis à chaque rotation du jeton
-  ///   ([PushNotificationGateway.onTokenRefresh]), sans revérifier la
-  ///   permission (un jeton dont la permission a été retirée entre-temps reste
-  ///   inoffensif côté backend, voir la doc de classe de
-  ///   [PushTokenRepository]).
+  /// ne doit jamais remonter jusqu'à l'appelant de [start]/[registerTokenNow]) :
+  /// - **Enregistrement du jeton FCM** (`user_push_tokens`), via
+  ///   [registerTokenNow] (voir sa doc pour le détail), déclenché depuis trois
+  ///   points distincts :
+  ///     - à chaque connexion effective (même détection
+  ///       `AuthChangeEvent.signedIn`/`initialSession` qu'
+  ///       `CharacterCreationCatalogPreloader`, voir sa doc de classe pour le
+  ///       rationale complet du choix d'[AuthStateStream] plutôt que
+  ///       `Ref.listen(authStateChangesProvider, ...)`) ;
+  ///     - à l'appel explicite de [registerTokenNow] par
+  ///       `ProfileNotificationsScreen._togglePushEnabled` juste après que
+  ///       `PushNotificationGateway.requestPermission()` a confirmé la
+  ///       permission — **bug corrigé** : sans cet appel, activer
+  ///       l'interrupteur en cours de session n'enregistrait jamais le jeton
+  ///       avant qu'une connexion effective (donc un redémarrage complet de
+  ///       l'app) ne se reproduise, alors que la préférence
+  ///       `notification_preferences.push_enabled` était déjà écrite en base —
+  ///       l'utilisateur croyait alors avoir activé les notifications sans
+  ///       qu'aucune ligne `user_push_tokens` n'existe tant qu'il n'avait pas
+  ///       fermé et rouvert l'app ;
+  ///     - à chaque rotation du jeton
+  ///       ([PushNotificationGateway.onTokenRefresh]), sans revérifier la
+  ///       permission (un jeton dont la permission a été retirée entre-temps
+  ///       reste inoffensif côté backend, voir la doc de classe de
+  ///       [PushTokenRepository]).
   /// - **Réception au premier plan** ([PushNotificationGateway.onMessage]) :
   ///   affiche un `SnackBar` simple (titre/corps), via
   ///   [scaffoldMessengerKeyProvider] (aucune UI dédiée pour cette itération,
