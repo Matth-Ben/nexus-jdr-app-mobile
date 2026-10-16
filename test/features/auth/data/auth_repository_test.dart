@@ -29,9 +29,9 @@
 // immédiatement sans jamais toucher au stockage.
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:drift/native.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -241,6 +241,187 @@ void main() {
         expect(client.auth.currentSession, isNotNull);
       },
     );
+
+    test('displayName non vide est transmis dans `data.full_name` de la '
+        "requête /signup, trimé - contrat exact de l'optionnel displayName "
+        'documenté sur AuthRepository.signUp', () async {
+      http.Request? capturedRequest;
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/signup')) {
+          capturedRequest = request;
+          return http.Response(
+            jsonEncode(_fakeUserJson()),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      });
+
+      await SupabaseAuthRepository(client).signUp(
+        email: 'nouveau@exemple.com',
+        password: 'password1234',
+        displayName: '  Aranea Nightsong  ',
+      );
+
+      expect(capturedRequest, isNotNull);
+      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>;
+      expect(
+        data['full_name'],
+        'Aranea Nightsong',
+        reason: 'la valeur envoyée doit être trimée',
+      );
+    });
+
+    test('displayName `null` (paramètre omis) : `data` vaut `null` dans le '
+        'corps de /signup, jamais une clé `full_name` vide', () async {
+      http.Request? capturedRequest;
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/signup')) {
+          capturedRequest = request;
+          return http.Response(
+            jsonEncode(_fakeUserJson()),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      });
+
+      await SupabaseAuthRepository(client)
+          .signUp(email: 'nouveau@exemple.com', password: 'password1234');
+
+      expect(capturedRequest, isNotNull);
+      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+      expect(body['data'], isNull);
+    });
+
+    test("displayName vide/blanc après trim ('   ') a le même effet que "
+        '`null` : `data` vaut `null`, jamais une chaîne blanche stockée sous '
+        '`full_name`', () async {
+      http.Request? capturedRequest;
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/signup')) {
+          capturedRequest = request;
+          return http.Response(
+            jsonEncode(_fakeUserJson()),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      });
+
+      await SupabaseAuthRepository(client).signUp(
+        email: 'nouveau@exemple.com',
+        password: 'password1234',
+        displayName: '   ',
+      );
+
+      expect(capturedRequest, isNotNull);
+      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+      expect(body['data'], isNull);
+    });
+  });
+
+  group('SupabaseAuthRepository.signInWithGoogle', () {
+    // signInWithOAuth (extension GoTrueClientSignInProvider de
+    // package:supabase_flutter) construit l'URL /authorize localement
+    // (aucun appel HTTP avant l'ouverture du navigateur, vérifié par
+    // sondage manuel lors de la revue QA) puis appelle launchUrl (package
+    // url_launcher), un plugin à canal de méthode
+    // (MethodChannel('plugins.flutter.io/url_launcher')) qui n'est pas
+    // enregistré nativement dans ces tests VM - il faut le mocker
+    // explicitement pour observer/piloter son comportement, exactement
+    // comme le MockClient HTTP mocke _client pour toutes les autres
+    // méthodes de ce dépôt.
+    const urlLauncherChannel = MethodChannel('plugins.flutter.io/url_launcher');
+
+    setUp(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(urlLauncherChannel, null);
+    });
+
+    test("construit l'URL /authorize avec provider=google et le redirect_to "
+        'du schéma personnalisé nexusjdr://login-callback/, puis demande '
+        "l'ouverture du navigateur système via url_launcher (jamais le SDK "
+        'natif google_sign_in, voir la doc de classe de '
+        'AuthRepository.signInWithGoogle)', () async {
+      Map<Object?, Object?>? launchArguments;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(urlLauncherChannel, (call) async {
+            if (call.method == 'launch') {
+              launchArguments = call.arguments as Map<Object?, Object?>;
+              return true;
+            }
+            return null;
+          });
+
+      final client = _buildFakeSupabaseClient((request) async {
+        return http.Response('{}', 200, request: request);
+      });
+
+      await SupabaseAuthRepository(client).signInWithGoogle();
+
+      expect(launchArguments, isNotNull);
+      final launchedUri = Uri.parse(launchArguments!['url'] as String);
+      expect(launchedUri.path, endsWith('/authorize'));
+      expect(launchedUri.queryParameters['provider'], 'google');
+      expect(
+        launchedUri.queryParameters['redirect_to'],
+        'nexusjdr://login-callback/',
+      );
+    });
+
+    test("le navigateur système ne peut pas être lancé (le plugin "
+        "url_launcher lève, ex. aucune implémentation native disponible) : "
+        'traduit en AuthFailure générique, même repli que toutes les autres '
+        'méthodes de ce dépôt (mapUnknownError)', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(urlLauncherChannel, (call) async {
+            throw PlatformException(code: 'launch_error');
+          });
+
+      final client = _buildFakeSupabaseClient((request) async {
+        return http.Response('{}', 200, request: request);
+      });
+
+      await expectLater(
+        SupabaseAuthRepository(client).signInWithGoogle(),
+        throwsA(isA<AuthFailure>()),
+      );
+    });
+
+    test('launchUrl ne lève aucune exception mais renvoie simplement false '
+        "(navigateur non ouvert, ex. aucune application capable de gérer "
+        "l'URL) : traduit en AuthFailure explicite plutôt que de se "
+        "terminer silencieusement (login_screen.dart ne pourrait alors "
+        "afficher aucun message d'erreur, même symptôme que le bug "
+        "historique de confirmation d'inscription silencieuse documenté "
+        'plus haut dans ce fichier)', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(urlLauncherChannel, (call) async {
+            if (call.method == 'launch') return false;
+            return null;
+          });
+
+      final client = _buildFakeSupabaseClient((request) async {
+        return http.Response('{}', 200, request: request);
+      });
+
+      await expectLater(
+        SupabaseAuthRepository(client).signInWithGoogle(),
+        throwsA(isA<AuthFailure>()),
+      );
+    });
   });
 
   group('SupabaseAuthRepository.signOut', () {

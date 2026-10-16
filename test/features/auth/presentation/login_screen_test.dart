@@ -61,8 +61,13 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<bool> signUp({required String email, required String password}) async {
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    String? displayName,
+  }) async {
     signUpCallCount++;
+    lastSignUpDisplayName = displayName;
     if (signUpCompleter != null) {
       await signUpCompleter!.future;
     }
@@ -70,6 +75,25 @@ class _FakeAuthRepository implements AuthRepository {
       throw signUpError!;
     }
     return signUpNeedsEmailConfirmation;
+  }
+
+  /// Dernier `displayName` reçu par [signUp] — permet aux tests de vérifier
+  /// que le champ "Pseudo" de `login_screen.dart` est bien transmis au dépôt.
+  String? lastSignUpDisplayName;
+
+  Object? signInWithGoogleError;
+  int signInWithGoogleCallCount = 0;
+  Completer<void>? signInWithGoogleCompleter;
+
+  @override
+  Future<void> signInWithGoogle() async {
+    signInWithGoogleCallCount++;
+    if (signInWithGoogleCompleter != null) {
+      await signInWithGoogleCompleter!.future;
+    }
+    if (signInWithGoogleError != null) {
+      throw signInWithGoogleError!;
+    }
   }
 
   @override
@@ -113,6 +137,20 @@ void main() {
     );
   }
 
+  // Surface de test agrandie en hauteur — même rationale que
+  // `summary_step_screen_test.dart` : la carte de connexion dépasse
+  // désormais la hauteur par défaut du banc de test (~600 logiques) depuis
+  // l'ajout du champ "Pseudo", du séparateur "OU" et du bouton Google, ce
+  // qui ferait manquer un `tap()`/`enterText()` sur un élément rendu
+  // hors-écran (`SingleChildScrollView` ne scrolle pas automatiquement vers
+  // un widget juste parce qu'on l'interroge).
+  void growTestViewport(WidgetTester tester) {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  }
+
   Future<void> fillLoginForm(
     WidgetTester tester, {
     String email = 'nom@exemple.com',
@@ -125,6 +163,7 @@ void main() {
   testWidgets('affiche les champs et l\'action attendus en mode connexion', (
     WidgetTester tester,
   ) async {
+    growTestViewport(tester);
     await tester.pumpWidget(buildTestWidget());
 
     expect(find.text('Adresse e-mail'), findsOneWidget);
@@ -137,6 +176,7 @@ void main() {
   testWidgets('affiche la mention de compte unique avec l\'app Histoires', (
     WidgetTester tester,
   ) async {
+    growTestViewport(tester);
     await tester.pumpWidget(buildTestWidget());
 
     expect(find.text("Même compte que l'app Histoires"), findsOneWidget);
@@ -146,6 +186,7 @@ void main() {
     'affiche le lien "Mot de passe oublié ?" en mode connexion, absent en '
     'mode inscription',
     (WidgetTester tester) async {
+      growTestViewport(tester);
       await tester.pumpWidget(buildTestWidget());
 
       expect(find.text('Mot de passe oublié ?'), findsOneWidget);
@@ -160,6 +201,7 @@ void main() {
   testWidgets(
     'bascule vers le mode inscription et affiche le champ de confirmation',
     (WidgetTester tester) async {
+      growTestViewport(tester);
       await tester.pumpWidget(buildTestWidget());
 
       await tester.tap(find.text('Créer un compte'));
@@ -174,6 +216,7 @@ void main() {
   testWidgets(
     'basculer de mode vide le champ mot de passe précédemment saisi',
     (WidgetTester tester) async {
+      growTestViewport(tester);
       await tester.pumpWidget(buildTestWidget());
 
       await tester.enterText(find.byType(TextFormField).at(1), 'motdepasse123');
@@ -192,6 +235,7 @@ void main() {
   testWidgets('après une tentative de soumission invalide, basculer de mode ne '
       'réaffiche pas l\'erreur de validation sur le champ vidé '
       'programmatiquement', (WidgetTester tester) async {
+    growTestViewport(tester);
     await tester.pumpWidget(buildTestWidget());
 
     // Déclenche une erreur de validation en mode connexion.
@@ -215,6 +259,7 @@ void main() {
     'affiche une erreur de validation et n\'appelle pas Supabase si les '
     'champs sont vides',
     (WidgetTester tester) async {
+      growTestViewport(tester);
       await tester.pumpWidget(buildTestWidget());
 
       await tester.tap(find.text('ENTRER'));
@@ -228,6 +273,7 @@ void main() {
 
   testWidgets('affiche une erreur de validation pour un e-mail mal formé sans '
       'appeler Supabase', (WidgetTester tester) async {
+    growTestViewport(tester);
     await tester.pumpWidget(buildTestWidget());
 
     await fillLoginForm(tester, email: 'pas-un-email');
@@ -242,6 +288,7 @@ void main() {
       'correspondent pas et n\'appelle pas Supabase', (
     WidgetTester tester,
   ) async {
+    growTestViewport(tester);
     await tester.pumpWidget(buildTestWidget());
 
     await tester.tap(find.text('Créer un compte'));
@@ -262,6 +309,7 @@ void main() {
   testWidgets(
     'appelle signInWithPassword quand le formulaire de connexion est valide',
     (WidgetTester tester) async {
+      growTestViewport(tester);
       await tester.pumpWidget(buildTestWidget());
 
       await fillLoginForm(tester);
@@ -275,6 +323,7 @@ void main() {
   testWidgets('appelle signUp quand le formulaire d\'inscription est valide', (
     WidgetTester tester,
   ) async {
+    growTestViewport(tester);
     await tester.pumpWidget(buildTestWidget());
 
     await tester.tap(find.text('Créer un compte'));
@@ -295,6 +344,7 @@ void main() {
     (WidgetTester tester) async {
       fakeRepository.signUpNeedsEmailConfirmation = false;
 
+      growTestViewport(tester);
       await tester.pumpWidget(buildTestWidget());
 
       await tester.tap(find.text('Créer un compte'));
@@ -317,6 +367,7 @@ void main() {
     (WidgetTester tester) async {
       fakeRepository.signUpNeedsEmailConfirmation = true;
 
+      growTestViewport(tester);
       await tester.pumpWidget(buildTestWidget());
 
       await tester.tap(find.text('Créer un compte'));
@@ -341,6 +392,7 @@ void main() {
     (WidgetTester tester) async {
       fakeRepository.signUpNeedsEmailConfirmation = true;
 
+      growTestViewport(tester);
       await tester.pumpWidget(buildTestWidget());
 
       await tester.tap(find.text('Créer un compte'));
@@ -367,6 +419,7 @@ void main() {
         'Adresse e-mail ou mot de passe incorrect.',
       );
 
+      growTestViewport(tester);
       await tester.pumpWidget(buildTestWidget());
       await fillLoginForm(tester);
       await tester.tap(find.text('ENTRER'));
@@ -385,6 +438,7 @@ void main() {
     (WidgetTester tester) async {
       fakeRepository.signInError = Exception('boom');
 
+      growTestViewport(tester);
       await tester.pumpWidget(buildTestWidget());
       await fillLoginForm(tester);
       await tester.tap(find.text('ENTRER'));
@@ -404,6 +458,7 @@ void main() {
       final completer = Completer<void>();
       fakeRepository.signInCompleter = completer;
 
+      growTestViewport(tester);
       await tester.pumpWidget(buildTestWidget());
       await fillLoginForm(tester);
       await tester.tap(find.text('ENTRER'));
@@ -426,4 +481,266 @@ void main() {
       expect(find.text('ENTRER'), findsOneWidget);
     },
   );
+
+  group('champ Pseudo (inscription uniquement)', () {
+    testWidgets(
+      "le champ Pseudo n'apparaît qu'en mode inscription, jamais en mode "
+      'connexion',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        expect(find.text('Pseudo'), findsNothing);
+
+        await tester.tap(find.text('Créer un compte'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Pseudo'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      "soumission inscription avec Pseudo rempli transmet la valeur telle "
+      "que saisie à signUp (pas de trim() côté écran : c'est le dépôt qui "
+      "s'en charge, voir AuthRepository.signUp et auth_repository_test.dart "
+      'pour le contrat exact)',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.text('Créer un compte'));
+        await tester.pumpAndSettle();
+
+        await fillLoginForm(tester);
+        await tester.enterText(
+          find.byType(TextFormField).at(2),
+          'motdepasse123',
+        );
+        await tester.enterText(
+          find.byType(TextFormField).at(3),
+          '  Aranea Nightsong  ',
+        );
+        await tester.tap(find.text('CRÉER LE COMPTE'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.signUpCallCount, 1);
+        expect(fakeRepository.lastSignUpDisplayName, '  Aranea Nightsong  ');
+      },
+    );
+
+    testWidgets(
+      "soumission inscription sans Pseudo renseigné transmet une chaîne "
+      "vide à signUp, jamais null (_pseudoController.text renvoie toujours "
+      "une String, voir login_screen.dart) - au dépôt de traiter cette "
+      "chaîne vide comme l'absence de pseudo",
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.text('Créer un compte'));
+        await tester.pumpAndSettle();
+
+        await fillLoginForm(tester);
+        await tester.enterText(
+          find.byType(TextFormField).at(2),
+          'motdepasse123',
+        );
+        await tester.tap(find.text('CRÉER LE COMPTE'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.signUpCallCount, 1);
+        expect(fakeRepository.lastSignUpDisplayName, '');
+      },
+    );
+  });
+
+  group('connexion Google', () {
+    testWidgets('tap sur "Continuer avec Google" en mode connexion déclenche '
+        'signInWithGoogle, jamais signInWithPassword/signUp', (
+      WidgetTester tester,
+    ) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(buildTestWidget());
+
+      await tester.tap(find.text('Continuer avec Google'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.signInWithGoogleCallCount, 1);
+      expect(fakeRepository.signInCallCount, 0);
+      expect(fakeRepository.signUpCallCount, 0);
+    });
+
+    testWidgets(
+      'tap sur "Continuer avec Google" en mode inscription déclenche aussi '
+      'signInWithGoogle (le bouton est visible dans les deux modes)',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.text('Créer un compte'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Continuer avec Google'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.signInWithGoogleCallCount, 1);
+        expect(fakeRepository.signUpCallCount, 0);
+      },
+    );
+
+    testWidgets(
+      'désactive le bouton Google et affiche un indicateur de chargement '
+      'pendant la connexion Google, puis les restaure une fois terminé',
+      (WidgetTester tester) async {
+        final completer = Completer<void>();
+        fakeRepository.signInWithGoogleCompleter = completer;
+
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.text('Continuer avec Google'));
+        await tester.pump();
+
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.text('Continuer avec Google'), findsNothing);
+
+        completer.complete();
+        await tester.pumpAndSettle();
+
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.text('Continuer avec Google'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'pendant une connexion Google en cours, les champs et le bouton '
+      'email/mot de passe sont désactivés (pas de soumission concurrente '
+      'possible sur la même carte)',
+      (WidgetTester tester) async {
+        final completer = Completer<void>();
+        fakeRepository.signInWithGoogleCompleter = completer;
+
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+        await fillLoginForm(tester);
+
+        await tester.tap(find.text('Continuer avec Google'));
+        await tester.pump();
+
+        // Le bouton email/mot de passe est désactivé : le retaper ne
+        // déclenche aucun appel.
+        await tester.tap(find.text('ENTRER'), warnIfMissed: false);
+        await tester.pump();
+        expect(fakeRepository.signInCallCount, 0);
+
+        // Les champs de texte sont désactivés eux aussi.
+        final emailField = tester.widget<TextFormField>(
+          find.byType(TextFormField).at(0),
+        );
+        expect(emailField.enabled, isFalse);
+        final passwordField = tester.widget<TextFormField>(
+          find.byType(TextFormField).at(1),
+        );
+        expect(passwordField.enabled, isFalse);
+
+        completer.complete();
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets('pendant une soumission email/mot de passe en cours, le bouton '
+        'Google est désactivé (symétrique du test ci-dessus)', (
+      WidgetTester tester,
+    ) async {
+      final completer = Completer<void>();
+      fakeRepository.signInCompleter = completer;
+
+      growTestViewport(tester);
+      await tester.pumpWidget(buildTestWidget());
+      await fillLoginForm(tester);
+
+      await tester.tap(find.text('ENTRER'));
+      await tester.pump();
+
+      // Le bouton Google est désactivé : le taper ne déclenche aucun
+      // appel.
+      await tester.tap(find.text('Continuer avec Google'), warnIfMissed: false);
+      await tester.pump();
+      expect(fakeRepository.signInWithGoogleCallCount, 0);
+
+      completer.complete();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets(
+      "affiche le message d'une AuthFailure renvoyée par signInWithGoogle, "
+      "dans la même zone d'erreur que les erreurs email/mot de passe",
+      (WidgetTester tester) async {
+        fakeRepository.signInWithGoogleError = const AuthFailure(
+          'Connexion Google indisponible. Réessayez.',
+        );
+
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.text('Continuer avec Google'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Connexion Google indisponible. Réessayez.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      "affiche un message générique si signInWithGoogle lève une exception "
+      'inattendue (repli défensif, même règle que signInWithPassword/signUp)',
+      (WidgetTester tester) async {
+        fakeRepository.signInWithGoogleError = Exception('boom');
+
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.text('Continuer avec Google'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Une erreur inattendue est survenue. Réessayez.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      "après une erreur Google, l'écran reste utilisable : les champs et "
+      'le bouton Google sont de nouveau actifs, un nouveau tap réussit',
+      (WidgetTester tester) async {
+        fakeRepository.signInWithGoogleError = const AuthFailure(
+          'Erreur Google.',
+        );
+
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.text('Continuer avec Google'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Erreur Google.'), findsOneWidget);
+        expect(fakeRepository.signInWithGoogleCallCount, 1);
+
+        final emailField = tester.widget<TextFormField>(
+          find.byType(TextFormField).at(0),
+        );
+        expect(emailField.enabled, isTrue);
+
+        fakeRepository.signInWithGoogleError = null;
+        await tester.tap(find.text('Continuer avec Google'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.signInWithGoogleCallCount, 2);
+        expect(find.text('Erreur Google.'), findsNothing);
+      },
+    );
+  });
 }

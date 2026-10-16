@@ -41,7 +41,35 @@ abstract class AuthRepository {
   /// L'appelant (`login_screen.dart`) en a besoin pour savoir s'il doit
   /// afficher un message "vérifie ta boîte mail" plutôt que de compter sur
   /// une redirection automatique qui n'aura pas lieu.
-  Future<bool> signUp({required String email, required String password});
+  /// [displayName] : pseudo optionnel saisi à l'inscription (champ "Pseudo"
+  /// de `login_screen.dart`, mode inscription) — `null`/vide après `trim()`
+  /// n'ajoute aucune clé `data` à l'appel `signUp` plutôt que d'y stocker une
+  /// chaîne vide, même règle que [updateDisplayName]. Si fourni, stocké sous
+  /// la même clé `full_name` que [updateDisplayName] (cohérence avec le
+  /// profil, `docs/cahier-des-charges/15-profil-parametres.md` section 2).
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    String? displayName,
+  });
+
+  /// Démarre le flux OAuth web Google (`signInWithOAuth`, pas le SDK natif
+  /// `google_sign_in` — évite la configuration SHA-1/client IDs natifs par
+  /// plateforme, voir la doc de classe de [SupabaseAuthRepository]).
+  ///
+  /// Ouvre un navigateur système puis revient dans l'app via le schéma
+  /// personnalisé `nexusjdr://login-callback/` (enregistré dans
+  /// `android/app/src/main/AndroidManifest.xml` et `ios/Runner/Info.plist`) —
+  /// pas l'App Link universel `https://nexus-jdr.app`, qui dépend d'un
+  /// entitlement Associated Domains côté iOS non disponible tant que le
+  /// compte Apple Developer n'est pas actif (même blocage que Sign in with
+  /// Apple, explicitement hors périmètre).
+  ///
+  /// Comme pour [signInWithPassword], aucune session n'est retournée
+  /// directement par cet appel : une fois l'utilisateur revenu dans l'app
+  /// après authentification côté navigateur, `onAuthStateChange` (déjà
+  /// câblé côté routeur) déclenche la redirection.
+  Future<void> signInWithGoogle();
 
   /// Déconnecte l'utilisateur courant (ex. action "Se déconnecter" du menu
   /// profil de la liste des personnages).
@@ -280,11 +308,22 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<bool> signUp({required String email, required String password}) async {
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    String? displayName,
+  }) async {
+    final trimmedDisplayName = displayName?.trim();
     try {
       final response = await _client.auth.signUp(
         email: email,
         password: password,
+        // Clé `full_name` jamais vide (voir la doc de
+        // `AuthRepository.signUp`) : pas de `data` du tout si le pseudo
+        // n'a pas été renseigné, plutôt qu'une chaîne blanche stockée.
+        data: trimmedDisplayName == null || trimmedDisplayName.isEmpty
+            ? null
+            : {'full_name': trimmedDisplayName},
       );
       // Confirmation par e-mail activée sur ce projet Supabase (même
       // config que l'app web, voir `apps/web/app/(auth)/actions.ts`, qui ne
@@ -296,6 +335,35 @@ class SupabaseAuthRepository implements AuthRepository {
       return response.session == null;
     } on AuthException catch (error) {
       throw mapAuthException(error);
+    } catch (_) {
+      throw mapUnknownError();
+    }
+  }
+
+  @override
+  Future<void> signInWithGoogle() async {
+    try {
+      // `signInWithOAuth` construit l'URL /authorize localement (aucun
+      // appel HTTP) puis délègue l'ouverture du navigateur à `launchUrl`
+      // (package `url_launcher`), qui renvoie un `bool` plutôt que de
+      // lever une exception quand aucune application ne peut gérer l'URL
+      // (ex. aucun navigateur disponible) — ce retour doit être vérifié
+      // explicitement, sinon la méthode se termine silencieusement sans
+      // jamais ouvrir de navigateur ni signaler d'erreur à l'appelant.
+      final launched = await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'nexusjdr://login-callback/',
+      );
+      if (!launched) {
+        throw const AuthFailure(
+          "Impossible d'ouvrir le navigateur pour continuer avec Google. "
+          'Réessayez.',
+        );
+      }
+    } on AuthException catch (error) {
+      throw mapAuthException(error);
+    } on AuthFailure {
+      rethrow;
     } catch (_) {
       throw mapUnknownError();
     }
