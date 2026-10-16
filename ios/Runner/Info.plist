@@ -64,6 +64,27 @@
 				</array>
 			</dict>
 		</dict>
+		<!-- Retour de callback OAuth (connexion Google,
+	     `AuthRepository.signInWithGoogle`,
+	     `features/auth/data/auth_repository.dart`) : schéma personnalisé,
+	     pas l'App Link universel `https://nexus-jdr.app` — iOS n'a pas
+	     encore l'entitlement Associated Domains (compte Apple Developer pas
+	     encore actif, même blocage que Sign in with Apple), un schéma
+	     personnalisé ne dépend pas de ça.
+
+	     Redirect URI à autoriser côté Supabase (Authentication > URL
+	     Configuration > Redirect URLs) : `nexusjdr://login-callback/`. -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleURLName</key>
+				<string>com.nexusjdr.personnages.oauth</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>nexusjdr</string>
+				</array>
+			</dict>
+		</array>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>UILaunchStoryboardName</key>
