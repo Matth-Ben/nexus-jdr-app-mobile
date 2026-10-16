@@ -351,6 +351,12 @@ class _FakeGroupRepository implements GroupRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<void> setGroupCharacter({
+    required String groupId,
+    required String characterId,
+  }) => throw UnimplementedError();
+
+  @override
   Future<GroupTreasure> fetchGroupTreasure(String groupId) =>
       throw UnimplementedError();
 

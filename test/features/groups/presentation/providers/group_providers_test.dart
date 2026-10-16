@@ -181,6 +181,7 @@ GroupDetail _detail({required List<String> memberIds, int firstMemberHp = 10}) {
           userId: 'user-$i',
           role: i == 0 ? GroupRole.owner : GroupRole.membre,
           name: 'Personnage $i',
+          isGameMaster: false,
           level: 1,
           currentHp: i == 0 ? firstMemberHp : 10,
           maxHp: 20,
@@ -280,6 +281,12 @@ class _FakeGroupRepository implements GroupRepository {
   Future<void> removeMember({
     required String groupId,
     required String userId,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> setGroupCharacter({
+    required String groupId,
+    required String characterId,
   }) => throw UnimplementedError();
 
   @override

@@ -15,6 +15,7 @@ import '../domain/group_failure.dart';
 import '../domain/group_member.dart';
 import '../domain/group_treasure.dart';
 import '../domain/group_treasure_item.dart';
+import 'group_character_reassignment_screen.dart';
 import 'providers/group_providers.dart';
 import 'widgets/add_to_group_treasure_sheet.dart';
 import 'widgets/claim_group_treasure_currency_sheet.dart';
@@ -41,6 +42,13 @@ import 'widgets/group_treasure_tab_body.dart';
 /// monnaie/un objet, ajouter au butin) sont orchestrées ici — les sheets/
 /// onglets ne font que collecter l'action/l'entrée, même architecture que
 /// `CharacterDetailScreen`.
+///
+/// **Membre orphelin** (`GroupMember.isAwaitingCharacter`, voir la migration
+/// web `20261016090000_group_members_orphan_character.sql`) : tant que le
+/// joueur connecté n'a pas rattaché de nouveau personnage à sa ligne
+/// `group_members` (son précédent personnage a été supprimé), `build`
+/// remplace entièrement la construction normale des onglets par
+/// `GroupCharacterReassignmentScreen` — voir sa doc de classe.
 class GroupScreen extends ConsumerStatefulWidget {
   const GroupScreen({required this.groupId, super.key});
 
@@ -96,10 +104,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     final confirmed = await showGroupConfirmationDialog(
       context,
       title: 'Exclure ${member.name} du groupe ?',
-      message: member.isGameMaster
-          ? 'Il/elle quitte immédiatement le groupe.'
-          : 'Son personnage garde toutes ses données, mais quitte '
-                'immédiatement le groupe.',
+      message: _removeMemberMessage(member),
       confirmLabel: 'Exclure',
     );
     if (confirmed != true || !mounted) return;
@@ -116,6 +121,23 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     } catch (_) {
       _showSnackBar("Impossible d'exclure ce membre. Réessayez.");
     }
+  }
+
+  /// Texte de confirmation distinct selon la nature du membre — jamais le
+  /// même texte pour un MJ volontaire (sans personnage par choix) et un
+  /// membre orphelin (`GroupMember.isAwaitingCharacter`, personnage supprimé
+  /// entre-temps) : les deux ont `characterId == null`, mais la situation
+  /// n'est pas la même (voir la doc de classe de `GroupMember`).
+  String _removeMemberMessage(GroupMember member) {
+    if (member.isGameMaster) {
+      return 'Il/elle quitte immédiatement le groupe.';
+    }
+    if (member.isAwaitingCharacter) {
+      return "Son personnage a déjà été supprimé ; il/elle quitte "
+          'immédiatement le groupe.';
+    }
+    return 'Son personnage garde toutes ses données, mais quitte '
+        'immédiatement le groupe.';
   }
 
   int _treasureAmountOf(GroupTreasure treasure, CurrencyKind currency) =>
@@ -319,6 +341,16 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     ref.watch(groupMembersRealtimeWatcherProvider(widget.groupId));
     final detailAsync = ref.watch(groupDetailProvider(widget.groupId));
     final detail = detailAsync.value;
+
+    // Interception "membre orphelin" (voir `GroupMember.isAwaitingCharacter`)
+    // : le joueur connecté doit rattacher un nouveau personnage avant de
+    // pouvoir suivre ce groupe normalement — remplace entièrement la
+    // construction habituelle des onglets Membres/Butin/Notes tant que ce
+    // n'est pas fait, plutôt qu'une route séparée (ce widget consomme déjà
+    // `groupDetailProvider`, inutile de le re-résoudre ailleurs).
+    if (detail?.currentMember?.isAwaitingCharacter == true) {
+      return GroupCharacterReassignmentScreen(groupId: widget.groupId);
+    }
 
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,

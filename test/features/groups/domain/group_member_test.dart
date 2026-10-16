@@ -16,6 +16,7 @@ GroupMember _member({
     userId: 'user-1',
     role: GroupRole.membre,
     name: 'Sylvi',
+    isGameMaster: false,
     level: level,
     currentHp: currentHp,
     maxHp: maxHp,
@@ -73,21 +74,69 @@ void main() {
     });
   });
 
-  group('GroupMember.isGameMaster', () {
-    test('faux quand characterId est renseigné', () {
-      expect(_member().isGameMaster, isFalse);
+  group(
+    'GroupMember.isGameMaster — sourcé de la colonne DB, jamais dérivé',
+    () {
+      test('faux quand characterId est renseigné', () {
+        expect(_member().isGameMaster, isFalse);
+      });
+
+      test(
+        'vrai quand isGameMaster est posé explicitement (MJ volontaire)',
+        () {
+          const gameMaster = GroupMember(
+            userId: 'user-mj',
+            role: GroupRole.membre,
+            name: 'MJ',
+            isGameMaster: true,
+          );
+          expect(gameMaster.isGameMaster, isTrue);
+          expect(gameMaster.isAwaitingCharacter, isFalse);
+          expect(gameMaster.vitalStatus, isNull);
+          expect(gameMaster.hpRatio, 0);
+          expect(gameMaster.summaryLine, isEmpty);
+        },
+      );
+
+      test('characterId null ET isGameMaster faux -> PAS un MJ (orphelin) — '
+          'jamais dérivé de characterId seul', () {
+        const orphan = GroupMember(
+          userId: 'user-orphan',
+          role: GroupRole.membre,
+          name: "En attente d'un personnage",
+          isGameMaster: false,
+        );
+        expect(orphan.isGameMaster, isFalse);
+      });
+    },
+  );
+
+  group('GroupMember.isAwaitingCharacter', () {
+    test('vrai : characterId null et isGameMaster faux (orphelin)', () {
+      const orphan = GroupMember(
+        userId: 'user-orphan',
+        role: GroupRole.membre,
+        name: "En attente d'un personnage",
+        isGameMaster: false,
+      );
+      expect(orphan.isAwaitingCharacter, isTrue);
+      expect(orphan.vitalStatus, isNull);
+      expect(orphan.hpRatio, 0);
+      expect(orphan.summaryLine, isEmpty);
     });
 
-    test('vrai quand characterId est null (MJ sans personnage)', () {
+    test('faux : characterId renseigné', () {
+      expect(_member().isAwaitingCharacter, isFalse);
+    });
+
+    test('faux : MJ volontaire', () {
       const gameMaster = GroupMember(
         userId: 'user-mj',
         role: GroupRole.membre,
         name: 'MJ',
+        isGameMaster: true,
       );
-      expect(gameMaster.isGameMaster, isTrue);
-      expect(gameMaster.vitalStatus, isNull);
-      expect(gameMaster.hpRatio, 0);
-      expect(gameMaster.summaryLine, isEmpty);
+      expect(gameMaster.isAwaitingCharacter, isFalse);
     });
   });
 }

@@ -109,6 +109,12 @@ class _FakeGroupRepository implements GroupRepository {
   }
 
   @override
+  Future<void> setGroupCharacter({
+    required String groupId,
+    required String characterId,
+  }) => throw UnimplementedError();
+
+  @override
   Future<void> leaveGroup(String groupId) async {
     leaveGroupCalled = true;
     if (leaveGroupError != null) throw leaveGroupError!;
@@ -224,6 +230,7 @@ GroupMember _member({
     userId: userId,
     role: role,
     name: name,
+    isGameMaster: false,
     level: 3,
     currentHp: currentHp,
     maxHp: maxHp,
@@ -549,6 +556,103 @@ void main() {
 
         expect(fakeRepository.lastRemovedUserId, 'user-2');
         expect(find.textContaining('exclu du groupe'), findsOneWidget);
+      },
+    );
+  });
+
+  group('Exclure un membre : message de confirmation distinct selon la nature '
+      'du membre (régression — characterId == null ne doit JAMAIS confondre '
+      'MJ volontaire et orphelin)', () {
+    const gameMasterMember = GroupMember(
+      userId: 'user-mj',
+      role: GroupRole.membre,
+      name: 'Brunhilde',
+      isGameMaster: true,
+    );
+    const orphanMember = GroupMember(
+      userId: 'user-orphan',
+      role: GroupRole.membre,
+      name: 'Eldrin',
+      isGameMaster: false,
+    );
+
+    testWidgets('personnage normal : message "garde toutes ses données"', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = ownerViewDetail();
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.person_remove_outlined).first);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Son personnage garde toutes ses données, mais quitte '
+          'immédiatement le groupe.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('MJ volontaire : message neutre, jamais le texte orphelin', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = GroupDetail(
+        id: 'group-1',
+        name: 'Les Lames de l\'Aube',
+        ownerId: 'user-1',
+        inviteCode: 'AB3F7K2M',
+        currentUserId: 'user-1',
+        members: [owner, gameMasterMember],
+      );
+
+      await tester.pumpWidget(_buildTestWidget(fakeRepository));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.person_remove_outlined).first);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Il/elle quitte immédiatement le groupe.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('a déjà été supprimé'), findsNothing);
+      expect(find.textContaining('garde toutes ses données'), findsNothing);
+    });
+
+    testWidgets(
+      'membre orphelin : message dédié ("a déjà été supprimé"), jamais '
+      'le texte MJ ni celui du personnage normal',
+      (tester) async {
+        fakeRepository.detailToReturn = GroupDetail(
+          id: 'group-1',
+          name: 'Les Lames de l\'Aube',
+          ownerId: 'user-1',
+          inviteCode: 'AB3F7K2M',
+          currentUserId: 'user-1',
+          members: [owner, orphanMember],
+        );
+
+        await tester.pumpWidget(_buildTestWidget(fakeRepository));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.person_remove_outlined).first);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'Son personnage a déjà été supprimé ; il/elle quitte '
+            'immédiatement le groupe.',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Il/elle quitte immédiatement le groupe.'),
+          findsNothing,
+        );
+        expect(find.textContaining('garde toutes ses données'), findsNothing);
       },
     );
   });
@@ -942,6 +1046,7 @@ void main() {
       userId: 'user-mj',
       role: GroupRole.membre,
       name: 'Brunhilde',
+      isGameMaster: true,
     );
 
     GroupDetail gameMasterViewDetail() => GroupDetail(
@@ -954,14 +1059,18 @@ void main() {
     );
 
     testWidgets(
-      'onglet Membres : badge "MJ", texte PV neutre, pas de zone de tap',
+      'onglet Membres : libellé "MJ - {nom}", texte PV neutre, pas de zone '
+      'de tap',
       (tester) async {
         fakeRepository.detailToReturn = gameMasterViewDetail();
 
         await tester.pumpWidget(_buildTestWidget(fakeRepository));
         await tester.pumpAndSettle();
 
-        expect(find.text('MJ'), findsOneWidget);
+        expect(
+          find.textContaining('MJ - Brunhilde', findRichText: true),
+          findsOneWidget,
+        );
         expect(find.text('Ne suit pas ses PV ici.'), findsOneWidget);
 
         // Aucun `InkWell` enveloppant la carte "Brunhilde" (rien à ouvrir).

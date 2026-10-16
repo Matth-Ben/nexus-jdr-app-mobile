@@ -98,6 +98,12 @@ class _FakeGroupRepository implements GroupRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<void> setGroupCharacter({
+    required String groupId,
+    required String characterId,
+  }) => throw UnimplementedError();
+
+  @override
   Future<GroupTreasure> fetchGroupTreasure(String groupId) =>
       throw UnimplementedError();
 
@@ -156,6 +162,7 @@ GroupDetail _ownerDetail({String name = "Les Lames de l'Aube"}) => GroupDetail(
       userId: 'user-1',
       role: GroupRole.owner,
       name: 'Sylvi',
+      isGameMaster: false,
       level: 3,
       currentHp: 10,
       maxHp: 10,

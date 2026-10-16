@@ -14,6 +14,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/groups/data/group_repository.dart';
+import 'package:personnages/features/groups/domain/group_character_reassignment_failure.dart';
 import 'package:personnages/features/groups/domain/group_failure.dart';
 import 'package:personnages/features/groups/domain/group_invite_failure.dart';
 import 'package:personnages/features/groups/domain/group_treasure_item.dart';
@@ -276,6 +277,302 @@ void main() {
         );
       },
     );
+  });
+
+  group('SupabaseGroupRepository.fetchMyGroups (regression -- un groupe reste '
+      'liste meme si character_id est devenu null entre-temps)', () {
+    test('filtre group_members uniquement par user_id, jamais par '
+        'character_id -- un membre orphelin (personnage supprime) voit '
+        'toujours son groupe dans la liste', () async {
+      const ownerId = 'user-orphan';
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: ownerId,
+        onRequest: requests.add,
+        tableRows: {
+          'group_members': [
+            {
+              'group_id': 'group-1',
+              'groups': {
+                'id': 'group-1',
+                'name': "Les Lames de l'Aube",
+                'owner_id': 'user-founder',
+              },
+            },
+          ],
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      final groups = await repository.fetchMyGroups();
+
+      expect(groups, hasLength(1));
+      expect(groups.single.id, 'group-1');
+      expect(groups.single.name, "Les Lames de l'Aube");
+
+      // Chaque requete group_members de cette methode est filtree
+      // uniquement par user_id -- jamais par character_id (voir la doc
+      // de GroupRepository.fetchMyGroups) : un membre dont le
+      // personnage a ete supprime (character_id devenu null) continue
+      // de voir son groupe, le bug corrige par ce chantier.
+      final memberRequests = requests.where(
+        (request) => request.url.path.endsWith('/group_members'),
+      );
+      expect(memberRequests, isNotEmpty);
+      for (final request in memberRequests) {
+        expect(
+          request.url.queryParameters.keys,
+          isNot(contains('character_id')),
+        );
+      }
+    });
+  });
+
+  group('SupabaseGroupRepository.fetchGroupDetail', () {
+    const groupId = 'group-1';
+    const ownerId = 'owner-1';
+
+    test(
+      'sélectionne is_game_master et group_members_display_name (alias '
+      "display_name), mappe un membre orphelin en isAwaitingCharacter",
+      () async {
+        final requests = <http.Request>[];
+        final client = await _buildSignedInFakeClient(
+          ownerId: ownerId,
+          onRequest: requests.add,
+          tableRows: {
+            'groups': [
+              {
+                'id': groupId,
+                'name': 'Les Lames',
+                'owner_id': ownerId,
+                'invite_code': 'AB3F7K2M',
+              },
+            ],
+            'group_members': [
+              {
+                'character_id': null,
+                'user_id': 'user-orphan',
+                'role': 'membre',
+                'is_game_master': false,
+                'display_name': null,
+                'characters': null,
+              },
+            ],
+          },
+        );
+        final repository = SupabaseGroupRepository(client);
+
+        final detail = await repository.fetchGroupDetail(groupId);
+
+        final memberRequest = requests.firstWhere(
+          (request) => request.url.path.endsWith('/group_members'),
+        );
+        final select = memberRequest.url.queryParameters['select'] ?? '';
+        expect(select, contains('is_game_master'));
+        expect(select, contains('display_name:group_members_display_name'));
+
+        expect(detail.members, hasLength(1));
+        final member = detail.members.single;
+        expect(member.isAwaitingCharacter, isTrue);
+        expect(member.isGameMaster, isFalse);
+        expect(member.name, "En attente d'un personnage");
+      },
+    );
+  });
+
+  group('SupabaseGroupRepository.setGroupCharacter', () {
+    const groupId = 'group-1';
+    const characterId = 'char-1';
+
+    test('envoie {group_id, character_id} à set-group-character', () async {
+      http.Request? capturedRequest;
+      final client = _buildFakeClient(
+        onRequest: (request) => capturedRequest = request,
+        responses: {
+          'set-group-character': {'group_id': groupId},
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await repository.setGroupCharacter(
+        groupId: groupId,
+        characterId: characterId,
+      );
+
+      expect(capturedRequest, isNotNull);
+      expect(
+        capturedRequest!.url.path,
+        endsWith('/functions/v1/set-group-character'),
+      );
+      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+      expect(body, {'group_id': groupId, 'character_id': characterId});
+    });
+
+    test(
+      '400 invalid_body -> GroupCharacterReassignmentFailureKind.generic',
+      () async {
+        final client = _buildFakeClient(
+          statusCode: 400,
+          responses: {
+            'set-group-character': {
+              'error': 'invalid_body',
+              'message': 'Requête invalide.',
+            },
+          },
+        );
+        final repository = SupabaseGroupRepository(client);
+
+        await expectLater(
+          repository.setGroupCharacter(
+            groupId: groupId,
+            characterId: characterId,
+          ),
+          throwsA(
+            isA<GroupCharacterReassignmentFailure>().having(
+              (f) => f.kind,
+              'kind',
+              GroupCharacterReassignmentFailureKind.generic,
+            ),
+          ),
+        );
+      },
+    );
+
+    test('403 character_not_owned -> '
+        'GroupCharacterReassignmentFailureKind.characterNotOwned', () async {
+      final client = _buildFakeClient(
+        statusCode: 403,
+        responses: {
+          'set-group-character': {
+            'error': 'character_not_owned',
+            'message': "Ce personnage ne t'appartient pas.",
+          },
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await expectLater(
+        repository.setGroupCharacter(
+          groupId: groupId,
+          characterId: characterId,
+        ),
+        throwsA(
+          isA<GroupCharacterReassignmentFailure>().having(
+            (f) => f.kind,
+            'kind',
+            GroupCharacterReassignmentFailureKind.characterNotOwned,
+          ),
+        ),
+      );
+    });
+
+    test(
+      '404 not_member -> GroupCharacterReassignmentFailureKind.notMember',
+      () async {
+        final client = _buildFakeClient(
+          statusCode: 404,
+          responses: {
+            'set-group-character': {
+              'error': 'not_member',
+              'message': "Tu n'es plus membre de ce groupe.",
+            },
+          },
+        );
+        final repository = SupabaseGroupRepository(client);
+
+        await expectLater(
+          repository.setGroupCharacter(
+            groupId: groupId,
+            characterId: characterId,
+          ),
+          throwsA(
+            isA<GroupCharacterReassignmentFailure>().having(
+              (f) => f.kind,
+              'kind',
+              GroupCharacterReassignmentFailureKind.notMember,
+            ),
+          ),
+        );
+      },
+    );
+
+    test(
+      '409 not_eligible -> GroupCharacterReassignmentFailureKind.notEligible',
+      () async {
+        final client = _buildFakeClient(
+          statusCode: 409,
+          responses: {
+            'set-group-character': {
+              'error': 'not_eligible',
+              'message': 'Cette action ne te concerne plus.',
+            },
+          },
+        );
+        final repository = SupabaseGroupRepository(client);
+
+        await expectLater(
+          repository.setGroupCharacter(
+            groupId: groupId,
+            characterId: characterId,
+          ),
+          throwsA(
+            isA<GroupCharacterReassignmentFailure>().having(
+              (f) => f.kind,
+              'kind',
+              GroupCharacterReassignmentFailureKind.notEligible,
+            ),
+          ),
+        );
+      },
+    );
+
+    test('409 already_in_group -> '
+        'GroupCharacterReassignmentFailureKind.alreadyInGroup', () async {
+      final client = _buildFakeClient(
+        statusCode: 409,
+        responses: {
+          'set-group-character': {
+            'error': 'already_in_group',
+            'message': 'Ce personnage est déjà membre de ce groupe.',
+          },
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      await expectLater(
+        repository.setGroupCharacter(
+          groupId: groupId,
+          characterId: characterId,
+        ),
+        throwsA(
+          isA<GroupCharacterReassignmentFailure>().having(
+            (f) => f.kind,
+            'kind',
+            GroupCharacterReassignmentFailureKind.alreadyInGroup,
+          ),
+        ),
+      );
+    });
+
+    test('exception réseau (pas de réponse reçue) -> generic', () async {
+      final client = _buildFakeClient(throwOnRequest: true);
+      final repository = SupabaseGroupRepository(client);
+
+      await expectLater(
+        repository.setGroupCharacter(
+          groupId: groupId,
+          characterId: characterId,
+        ),
+        throwsA(
+          isA<GroupCharacterReassignmentFailure>().having(
+            (f) => f.kind,
+            'kind',
+            GroupCharacterReassignmentFailureKind.generic,
+          ),
+        ),
+      );
+    });
   });
 
   group('SupabaseGroupRepository.claimTreasureCurrency', () {

@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/crash_reporting/crash_reporter.dart';
 import '../../characters/domain/currency_kind.dart';
 import '../domain/created_group.dart';
+import '../domain/group_character_reassignment_failure.dart';
 import '../domain/group_detail.dart';
 import '../domain/group_failure.dart';
 import '../domain/group_invite_code_generator.dart';
@@ -13,6 +14,7 @@ import '../domain/group_summary.dart';
 import '../domain/group_treasure.dart';
 import '../domain/group_treasure_item.dart';
 import '../domain/joined_group.dart';
+import 'group_character_reassignment_error_mapper.dart';
 import 'group_error_mapper.dart';
 import 'group_invite_error_mapper.dart';
 import 'group_member_row_mapper.dart';
@@ -104,6 +106,17 @@ abstract class GroupRepository {
   /// `character_id`, qui est `null` pour un MJ sans personnage
   /// (`GroupMember.isGameMaster`) et ne permettrait donc jamais de l'exclure.
   Future<void> removeMember({required String groupId, required String userId});
+
+  /// `set-group-character` — un membre ORPHELIN (voir
+  /// `GroupMember.isAwaitingCharacter`) rattache un nouveau personnage à sa
+  /// ligne `group_members` pour continuer à suivre ce groupe. Jamais
+  /// utilisable autrement (jamais pour changer de personnage à volonté,
+  /// jamais pour "devenir MJ") — voir la doc de l'edge function. Lève une
+  /// [GroupCharacterReassignmentFailure].
+  Future<void> setGroupCharacter({
+    required String groupId,
+    required String characterId,
+  });
 
   /// Butin commun du groupe — onglet "Butin".
   Future<GroupTreasure> fetchGroupTreasure(String groupId);
@@ -353,6 +366,8 @@ class SupabaseGroupRepository implements GroupRepository {
             character_id,
             user_id,
             role,
+            is_game_master,
+            display_name:group_members_display_name,
             characters(
               id, name, portrait_url, current_hp, max_hp, temporary_hp,
               is_dead, race_id,
@@ -370,16 +385,12 @@ class SupabaseGroupRepository implements GroupRepository {
         entityIds: GroupMemberRowMapper.collectClassIds(memberRows),
       );
 
-      final currentUserDisplayName =
-          _client.auth.currentUser?.userMetadata?['full_name'] as String?;
       final members = memberRows
           .map(
             (row) => GroupMemberRowMapper.toGroupMember(
               row,
               raceNames: raceNames,
               classNames: classNames,
-              currentUserId: currentUserId,
-              currentUserDisplayName: currentUserDisplayName,
             ),
           )
           .toList();
@@ -482,6 +493,27 @@ class SupabaseGroupRepository implements GroupRepository {
       throw mapGroupError(error);
     } catch (_) {
       throw mapUnknownGroupError();
+    }
+  }
+
+  @override
+  Future<void> setGroupCharacter({
+    required String groupId,
+    required String characterId,
+  }) async {
+    try {
+      await _client.functions.invoke(
+        'set-group-character',
+        body: {'group_id': groupId, 'character_id': characterId},
+      );
+    } on FunctionException catch (error) {
+      throw mapGroupCharacterReassignmentError(error);
+    } on GroupCharacterReassignmentFailure {
+      rethrow;
+    } catch (_) {
+      throw const GroupCharacterReassignmentFailure(
+        GroupCharacterReassignmentFailureKind.generic,
+      );
     }
   }
 
