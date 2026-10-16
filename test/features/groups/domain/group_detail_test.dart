@@ -13,6 +13,7 @@ GroupMember _member({
     userId: userId,
     role: role,
     name: 'Perso $characterId',
+    isGameMaster: false,
     level: 1,
     currentHp: 10,
     maxHp: 10,
@@ -118,6 +119,7 @@ void main() {
       userId: 'user-mj',
       role: GroupRole.membre,
       name: 'MJ',
+      isGameMaster: true,
     );
     final detail = GroupDetail(
       id: 'group-1',

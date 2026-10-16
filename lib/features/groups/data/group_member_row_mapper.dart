@@ -39,40 +39,28 @@ abstract final class GroupMemberRowMapper {
     return ids;
   }
 
-  /// [currentUserId]/[currentUserDisplayName] ne servent qu'à résoudre le
-  /// [GroupMember.name] d'un membre MJ sans personnage (`character_id`
-  /// `null`, voir la doc de classe de [GroupMember]) — **limitation
-  /// documentée** : aucune colonne/fonction Postgres n'expose aujourd'hui le
-  /// nom de compte d'un AUTRE utilisateur à ce dépôt (contrairement à
-  /// `stories_gm_display_name`, propre aux histoires de l'app web) ; un MJ
-  /// ne peut donc résoudre son propre nom de compte réel
-  /// ([currentUserDisplayName], tiré de `auth.currentUser` côté appelant)
-  /// que sur SA PROPRE ligne (`row['user_id'] == currentUserId`) — toute
-  /// autre ligne MJ retombe sur le repli `'MJ'`. Signalé au chef de projet
-  /// plutôt que résolu silencieusement : une future colonne calculée
-  /// analogue à `stories_gm_display_name` (sécurité definer sur
-  /// `group_members`) permettrait d'exposer le vrai nom de compte à tous les
-  /// membres.
+  /// Lit la colonne calculée PostgREST `group_members_display_name` (voir la
+  /// doc de classe de [GroupMember]) — résout le nom de compte de
+  /// N'IMPORTE QUEL membre, contrairement à l'ancien mécanisme limité au MJ
+  /// lui-même. [row] doit porter cette colonne sous la clé `display_name`
+  /// (alias posé par `GroupRepository.fetchGroupDetail`).
   static GroupMember toGroupMember(
     Map<String, dynamic> row, {
     required Map<String, String> raceNames,
     required Map<String, String> classNames,
-    required String currentUserId,
-    String? currentUserDisplayName,
   }) {
     final characterId = row['character_id'] as String?;
     final userId = row['user_id'] as String;
     final role = GroupRoleRaw.fromRaw(row['role'] as String?);
+    final isGameMaster = row['is_game_master'] as bool? ?? false;
 
     if (characterId == null) {
       return GroupMember(
         userId: userId,
         role: role,
-        name: _gameMasterDisplayName(
-          userId: userId,
-          currentUserId: currentUserId,
-          currentUserDisplayName: currentUserDisplayName,
-        ),
+        isGameMaster: isGameMaster,
+        name: _accountDisplayName(row, isGameMaster: isGameMaster),
+        accountDisplayName: _trimmedDisplayName(row),
       );
     }
 
@@ -86,6 +74,7 @@ abstract final class GroupMemberRowMapper {
       characterId: characterId,
       userId: userId,
       role: role,
+      isGameMaster: isGameMaster,
       name: (character['name'] as String?) ?? '',
       portraitUrl: character['portrait_url'] as String?,
       raceName: raceId != null ? raceNames[raceId.toString()] : null,
@@ -98,16 +87,25 @@ abstract final class GroupMemberRowMapper {
     );
   }
 
-  /// Voir la doc de [toGroupMember] pour le rationale complet de cette
-  /// limitation.
-  static String _gameMasterDisplayName({
-    required String userId,
-    required String currentUserId,
-    String? currentUserDisplayName,
+  /// `null`/vide une fois `trim()` -> `null` — jamais une chaîne blanche
+  /// exploitée comme un nom résolu.
+  static String? _trimmedDisplayName(Map<String, dynamic> row) {
+    final raw = row['display_name'] as String?;
+    final trimmed = raw?.trim();
+    return (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+  }
+
+  /// Nom affiché pour un membre sans personnage ([GroupMember.characterId]
+  /// `null`, MJ volontaire ou orphelin) — voir la doc de [toGroupMember].
+  /// Replis distincts selon le rôle réel : jamais `'MJ'` pour un orphelin
+  /// (sémantiquement faux, voir la doc de classe de [GroupMember]).
+  static String _accountDisplayName(
+    Map<String, dynamic> row, {
+    required bool isGameMaster,
   }) {
-    if (userId != currentUserId) return 'MJ';
-    final trimmed = currentUserDisplayName?.trim();
-    return (trimmed == null || trimmed.isEmpty) ? 'MJ' : trimmed;
+    final name = _trimmedDisplayName(row);
+    if (name != null) return name;
+    return isGameMaster ? 'MJ' : "En attente d'un personnage";
   }
 
   static int _totalLevel(List<Map<String, dynamic>> classRows) {

@@ -24,6 +24,7 @@ import '../../features/character_sharing/presentation/shared_character_view_scre
 import '../../features/characters/presentation/character_detail_screen.dart';
 import '../../features/characters/presentation/character_list_screen.dart';
 import '../../features/characters/presentation/level_up_screen.dart';
+import '../../features/groups/presentation/group_character_reassignment_screen.dart';
 import '../../features/groups/presentation/group_create_screen.dart';
 import '../../features/groups/presentation/group_join_screen.dart';
 import '../../features/groups/presentation/group_list_screen.dart';
@@ -448,6 +449,21 @@ GoRouter appRouter(Ref ref) {
         path: '/groups/:id',
         builder: (context, state) =>
             GroupScreen(groupId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        // Écran "CHOISIR UN NOUVEAU PERSONNAGE" (`features/groups/`) — un
+        // membre ORPHELIN (`GroupMember.isAwaitingCharacter`) y rattache un
+        // nouveau personnage à sa ligne `group_members` existante. Affiché
+        // automatiquement par `GroupScreen` (interception avant les
+        // onglets normaux) ; cette route sert de filet de robustesse pour
+        // SA PROPRE carte orpheline dans `group_members_tab_body.dart`
+        // (navigation profonde/retour arrière) — voir la doc de classe de
+        // `GroupCharacterReassignmentScreen`.
+        name: 'group-reassign-character',
+        path: '/groups/:id/reassign-character',
+        builder: (context, state) => GroupCharacterReassignmentScreen(
+          groupId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         // Écran "Paramètres du groupe" (`features/groups/`) — remplace

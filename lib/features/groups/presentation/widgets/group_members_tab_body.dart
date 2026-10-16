@@ -53,10 +53,32 @@ class GroupMembersTabBody extends StatelessWidget {
   /// "ZONE DANGEREUSE").
   final VoidCallback onLeaveGroup;
 
+  /// Partitionne [members] pour afficher le MJ volontaire en premier, sans
+  /// jamais réordonner les autres membres entre eux — `List.sort()` n'est
+  /// PAS utilisé ici : son tri n'est pas garanti stable en Dart, ce qui
+  /// risquerait de réordonner aussi les membres qui ne sont pas concernés.
+  /// Au plus un membre `isGameMaster` par groupe (contrainte posée côté
+  /// base) : partitionner explicitement suffit, pas besoin d'un vrai tri. Un
+  /// membre orphelin ([GroupMember.isAwaitingCharacter]) n'est PAS trié en
+  /// première position — reste à sa position naturelle, contrairement au MJ
+  /// volontaire.
+  List<GroupMember> _orderedMembers(List<GroupMember> members) {
+    GroupMember? gameMaster;
+    final rest = <GroupMember>[];
+    for (final member in members) {
+      if (member.isGameMaster && gameMaster == null) {
+        gameMaster = member;
+      } else {
+        rest.add(member);
+      }
+    }
+    return gameMaster == null ? rest : [gameMaster, ...rest];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final members = detail.members;
-    final showBanner = members.length == 1;
+    final members = _orderedMembers(detail.members);
+    final showBanner = detail.members.length == 1;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -80,9 +102,20 @@ class GroupMembersTabBody extends StatelessWidget {
             isSelf: member.userId == detail.currentUserId,
             // Sa propre fiche s'ouvre normalement (modifiable) ; celle des
             // autres membres en lecture seule. `null` pour un MJ sans
-            // personnage : rien à ouvrir (voir `_MemberCard.build`).
+            // personnage (volontaire) : rien à ouvrir. `null` aussi pour la
+            // ligne orpheline d'un AUTRE membre (rien à ouvrir non plus) —
+            // mais SA PROPRE ligne orpheline rouvre l'écran de choix de
+            // personnage (robustesse en cas de navigation profonde/retour
+            // arrière, même si l'interception de `GroupScreen` intercepte
+            // déjà avant l'accès à cet onglet en pratique).
             onOpen: member.isGameMaster
                 ? null
+                : member.isAwaitingCharacter
+                ? (member.userId == detail.currentUserId
+                      ? () => context.push(
+                          '/groups/${detail.id}/reassign-character',
+                        )
+                      : null)
                 : () => context.push(
                     member.userId == detail.currentUserId
                         ? '/characters/${member.characterId}'
@@ -146,17 +179,27 @@ class _MemberCard extends StatelessWidget {
 
   /// Ouvre la fiche du personnage (la sienne, ou celle d'un autre membre en
   /// lecture seule) — `null` pour un MJ sans personnage
-  /// ([GroupMember.isGameMaster]) : rien à ouvrir, voir [build].
+  /// ([GroupMember.isGameMaster]) et pour la ligne orpheline d'un AUTRE
+  /// membre : rien à ouvrir. Pour SA PROPRE ligne orpheline
+  /// ([GroupMember.isAwaitingCharacter]), rouvre l'écran de choix de
+  /// personnage — voir `GroupMembersTabBody.build`.
   final VoidCallback? onOpen;
   final bool canRemove;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
-    // Carte MJ sans personnage : jamais de `Material`/`InkWell` (pas de zone
-    // de tap morte, rien à ouvrir), jamais le fond/la bordure "MORT", jamais
-    // de jauge PV factice (voir [_buildGameMasterCard]).
+    // Carte MJ volontaire : jamais de `Material`/`InkWell` (pas de zone de
+    // tap morte, rien à ouvrir), jamais le fond/la bordure "MORT", jamais de
+    // jauge PV factice (voir [_buildGameMasterCard]).
     if (member.isGameMaster) return _buildGameMasterCard();
+
+    // Carte "en attente d'un personnage" (voir
+    // [GroupMember.isAwaitingCharacter]) : même discipline que la carte MJ
+    // (jamais le fond/la bordure "MORT", jamais de jauge PV factice) — mais
+    // SA PROPRE ligne reste tappable ([onOpen] non `null` dans ce cas
+    // uniquement, voir `GroupMembersTabBody.build`).
+    if (member.isAwaitingCharacter) return _buildAwaitingCharacterCard();
 
     final isDead = member.vitalStatus == CharacterVitalStatus.dead;
     final nameColor = isDead ? AppColors.textMuted : AppColors.textPrimary;
@@ -282,17 +325,18 @@ class _MemberCard extends StatelessWidget {
     );
   }
 
-  /// Carte d'un membre MJ sans personnage (voir la doc de classe de
+  /// Carte d'un membre MJ volontaire (voir la doc de classe de
   /// [GroupMember]) : portrait dédié (`Icons.visibility_outlined` sur fond
   /// `wood.medium`, jamais le motif pointillé neutre qui signifierait
-  /// "personnage sans portrait"), badge pilule "MJ" ([_GameMasterBadge]) à la
-  /// place du badge de statut vital (mutuellement exclusifs, un MJ n'a pas de
-  /// `vitalStatus`), ligne PV remplacée par un texte neutre — **jamais** de
-  /// valeur factice (0/0 serait lu comme "MJ en train de mourir", contre-sens
-  /// grave). Fond de carte "vivant" normal, jamais `deadCardBackground`. Pas
-  /// de `Material`/`InkWell` : aucune zone de tap, rien à ouvrir pour un MJ
-  /// sans personnage. Le bouton "Exclure" (logique de permission inchangée)
-  /// reste affiché à l'identique.
+  /// "personnage sans portrait"), libellé "MJ - {nom}" (recettage
+  /// direction-artistique : préfixe `'MJ - '` en gras `textSecondary`, nom
+  /// inchangé en `textPrimary` — remplace l'ancien badge pilule
+  /// [_GameMasterBadge], retiré), ligne PV remplacée par un texte neutre —
+  /// **jamais** de valeur factice (0/0 serait lu comme "MJ en train de
+  /// mourir", contre-sens grave). Fond de carte "vivant" normal, jamais
+  /// `deadCardBackground`. Pas de `Material`/`InkWell` : aucune zone de tap,
+  /// rien à ouvrir pour un MJ volontaire. Le bouton "Exclure" (logique de
+  /// permission inchangée) reste affiché à l'identique.
   Widget _buildGameMasterCard() {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -316,39 +360,38 @@ class _MemberCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: member.name,
-                              style: AppTypography.body(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            if (isSelf)
-                              TextSpan(
-                                text: ' (toi)',
-                                style: AppTypography.body(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                          ],
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'MJ - ',
+                        style: AppTypography.body(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textSecondary,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    const _GameMasterBadge(),
-                  ],
+                      TextSpan(
+                        text: member.name,
+                        style: AppTypography.body(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (isSelf)
+                        TextSpan(
+                          text: ' (toi)',
+                          style: AppTypography.body(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
@@ -364,6 +407,106 @@ class _MemberCard extends StatelessWidget {
           if (canRemove)
             _RemoveMemberButton(memberName: member.name, onRemove: onRemove),
         ],
+      ),
+    );
+  }
+
+  /// Carte d'un membre orphelin (voir [GroupMember.isAwaitingCharacter]) :
+  /// portrait dédié (`Icons.hourglass_empty_rounded` sur fond
+  /// `accentViolet`), nom de compte + éventuel " (toi)" (jamais de badge sur
+  /// cette ligne, contrairement à [_buildGameMasterCard] avant son
+  /// recettage), ligne d'état "En attente d'un personnage" à la place de la
+  /// ligne PV — spec visuelle validée par direction-artistique. Même
+  /// discipline que [_buildGameMasterCard] : fond "vivant" normal, jamais
+  /// `deadCardBackground`, jamais de jauge PV factice. Pas de
+  /// `Material`/`InkWell` pour les AUTRES membres regardant cette carte
+  /// (rien à ouvrir) — [onOpen] n'est non-`null` que pour sa propre ligne
+  /// (voir `GroupMembersTabBody.build`), géré ici de la même façon que
+  /// [_buildGameMasterCard] gère son absence de zone de tap : si [onOpen]
+  /// est fourni, la carte entière devient tappable.
+  Widget _buildAwaitingCharacterCard() {
+    final card = Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.parchmentCard,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.woodLight, width: AppBorders.card),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const PortraitFrame(
+            portraitUrl: null,
+            fallbackIcon: Icons.hourglass_empty_rounded,
+            classThemeColor: AppColors.accentViolet,
+            size: 64,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: member.name,
+                        style: AppTypography.body(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (isSelf)
+                        TextSpan(
+                          text: ' (toi)',
+                          style: AppTypography.body(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.hourglass_empty_rounded,
+                      size: 16,
+                      color: AppColors.accentViolet,
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      "En attente d'un personnage",
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (canRemove)
+            _RemoveMemberButton(memberName: member.name, onRemove: onRemove),
+        ],
+      ),
+    );
+
+    if (onOpen == null) return card;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: card,
       ),
     );
   }
@@ -390,33 +533,6 @@ class _RemoveMemberButton extends StatelessWidget {
           Icons.person_remove_outlined,
           color: AppColors.accentBrick,
         ),
-      ),
-    );
-  }
-}
-
-/// Badge pilule "MJ" — mutuellement exclusif avec [_StatusBadge] (un MJ sans
-/// personnage n'a pas de statut vital, voir [GroupMember.vitalStatus]) :
-/// fond `color.wood.medium`, texte `color.text.on-wood`, bordure 1px
-/// `color.wood.dark` — jamais `accentBrick`/les couleurs de statut vital.
-class _GameMasterBadge extends StatelessWidget {
-  const _GameMasterBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.woodMedium,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: AppColors.woodDark, width: 1),
-      ),
-      child: Text(
-        'MJ',
-        style: AppTypography.display(fontSize: 11, color: AppColors.textOnWood),
       ),
     );
   }

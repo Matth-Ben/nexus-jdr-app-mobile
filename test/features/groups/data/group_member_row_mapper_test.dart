@@ -6,12 +6,16 @@ Map<String, dynamic> _row({
   String? characterId = 'char-1',
   String userId = 'user-1',
   String? role = 'owner',
+  bool isGameMaster = false,
+  String? displayName,
   Map<String, dynamic>? character,
 }) {
   return {
     'character_id': characterId,
     'user_id': userId,
     'role': role,
+    'is_game_master': isGameMaster,
+    'display_name': displayName,
     'characters': character,
   };
 }
@@ -76,11 +80,11 @@ void main() {
         row,
         raceNames: const {'race-1': 'Elfe'},
         classNames: const {'class-1': 'Guerrier', 'class-2': 'Rôdeur'},
-        currentUserId: 'user-1',
       );
 
       expect(member.characterId, 'char-1');
       expect(member.isGameMaster, isFalse);
+      expect(member.isAwaitingCharacter, isFalse);
       expect(member.userId, 'user-1');
       expect(member.role, GroupRole.owner);
       expect(member.name, 'Sylvi');
@@ -113,7 +117,6 @@ void main() {
         row,
         raceNames: const {'race-1': 'Humain'},
         classNames: const {'class-1': 'Barde'},
-        currentUserId: 'user-1',
       );
 
       expect(member.className, 'Barde');
@@ -125,7 +128,6 @@ void main() {
         _row(character: {}),
         raceNames: const {},
         classNames: const {},
-        currentUserId: 'user-1',
       );
 
       expect(member.name, '');
@@ -144,24 +146,23 @@ void main() {
         _row(character: {'is_dead': true}),
         raceNames: const {},
         classNames: const {},
-        currentUserId: 'user-1',
       );
       expect(member.isDead, isTrue);
     });
   });
 
-  group('GroupMemberRowMapper.toGroupMember — MJ sans personnage', () {
-    test('character_id null -> GroupMember.isGameMaster, champs personnage '
-        'tous null', () {
+  group('GroupMemberRowMapper.toGroupMember — MJ volontaire', () {
+    test('character_id null + is_game_master true -> GroupMember.isGameMaster, '
+        'champs personnage tous null', () {
       final member = GroupMemberRowMapper.toGroupMember(
-        _row(characterId: null, character: null),
+        _row(characterId: null, isGameMaster: true, character: null),
         raceNames: const {},
         classNames: const {},
-        currentUserId: 'user-2',
       );
 
       expect(member.characterId, isNull);
       expect(member.isGameMaster, isTrue);
+      expect(member.isAwaitingCharacter, isFalse);
       expect(member.userId, 'user-1');
       expect(member.portraitUrl, isNull);
       expect(member.raceName, isNull);
@@ -173,42 +174,95 @@ void main() {
       expect(member.isDead, isNull);
     });
 
-    test('ligne MJ du joueur connecté -> nom de compte réel', () {
+    test('nom résolu via group_members_display_name -> utilisé tel quel', () {
       final member = GroupMemberRowMapper.toGroupMember(
-        _row(characterId: null, userId: 'user-me', character: null),
+        _row(
+          characterId: null,
+          isGameMaster: true,
+          displayName: 'Brunhilde la MJ',
+          character: null,
+        ),
         raceNames: const {},
         classNames: const {},
-        currentUserId: 'user-me',
-        currentUserDisplayName: 'Brunhilde la MJ',
       );
 
       expect(member.name, 'Brunhilde la MJ');
+      expect(member.accountDisplayName, 'Brunhilde la MJ');
     });
 
-    test('ligne MJ du joueur connecté sans nom de compte renseigné -> '
-        'repli "MJ"', () {
+    test('nom résolu vide/blanc -> repli "MJ"', () {
       final member = GroupMemberRowMapper.toGroupMember(
-        _row(characterId: null, userId: 'user-me', character: null),
+        _row(
+          characterId: null,
+          isGameMaster: true,
+          displayName: '   ',
+          character: null,
+        ),
         raceNames: const {},
         classNames: const {},
-        currentUserId: 'user-me',
-        currentUserDisplayName: '   ',
+      );
+
+      expect(member.name, 'MJ');
+      expect(member.accountDisplayName, isNull);
+    });
+
+    test('nom absent -> repli "MJ"', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(characterId: null, isGameMaster: true, character: null),
+        raceNames: const {},
+        classNames: const {},
       );
 
       expect(member.name, 'MJ');
     });
+  });
 
-    test('ligne MJ d\'un AUTRE membre -> toujours "MJ" (pas de nom de '
-        'compte exposé pour un autre utilisateur)', () {
+  group('GroupMemberRowMapper.toGroupMember — orphelin', () {
+    test('character_id null + is_game_master false -> isAwaitingCharacter, '
+        'jamais isGameMaster', () {
       final member = GroupMemberRowMapper.toGroupMember(
-        _row(characterId: null, userId: 'user-other', character: null),
+        _row(characterId: null, character: null),
         raceNames: const {},
         classNames: const {},
-        currentUserId: 'user-me',
-        currentUserDisplayName: 'Mon propre nom',
       );
 
-      expect(member.name, 'MJ');
+      expect(member.characterId, isNull);
+      expect(member.isGameMaster, isFalse);
+      expect(member.isAwaitingCharacter, isTrue);
+    });
+
+    test('nom résolu via group_members_display_name -> utilisé tel quel', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(
+          characterId: null,
+          displayName: 'Eldrin le rescapé',
+          character: null,
+        ),
+        raceNames: const {},
+        classNames: const {},
+      );
+
+      expect(member.name, 'Eldrin le rescapé');
+    });
+
+    test('nom absent -> repli "En attente d\'un personnage", JAMAIS "MJ"', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(characterId: null, character: null),
+        raceNames: const {},
+        classNames: const {},
+      );
+
+      expect(member.name, "En attente d'un personnage");
+    });
+
+    test('nom résolu vide/blanc -> même repli, jamais "MJ"', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(characterId: null, displayName: '   ', character: null),
+        raceNames: const {},
+        classNames: const {},
+      );
+
+      expect(member.name, "En attente d'un personnage");
     });
   });
 }
