@@ -5,8 +5,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/app_brand_badge.dart';
+import '../../../core/widgets/google_g_logo.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
+import '../../../core/widgets/social_auth_button.dart';
 import '../domain/auth_failure.dart';
 import '../domain/auth_validators.dart';
 import 'providers/auth_providers.dart';
@@ -42,9 +44,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _pseudoController = TextEditingController();
 
   _AuthMode _mode = _AuthMode.login;
   bool _isSubmitting = false;
+
+  /// Distinct de [_isSubmitting] : connexion/inscription par e-mail et
+  /// connexion Google sont deux actions concurrentes possibles sur le même
+  /// écran — voir [_AuthCard], qui désactive tous les éléments interactifs
+  /// de la carte dès que l'une des deux est active, mais n'affiche
+  /// l'indicateur de chargement que sur le bouton réellement déclenché.
+  bool _isGoogleSubmitting = false;
   String? _errorMessage;
 
   /// Non-null une fois qu'une inscription a réussi mais nécessite une
@@ -60,6 +70,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _pseudoController.dispose();
     super.dispose();
   }
 
@@ -109,6 +120,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final needsEmailConfirmation = await repository.signUp(
           email: email,
           password: password,
+          displayName: _pseudoController.text,
         );
         if (!mounted) return;
         if (needsEmailConfirmation) {
@@ -131,6 +143,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  /// Connexion Google (`AuthRepository.signInWithGoogle`) — voir sa doc de
+  /// classe pour le flux complet (navigateur système puis retour dans l'app
+  /// via `nexusjdr://login-callback/`, redirection pilotée par
+  /// `onAuthStateChange` une fois revenu). Aucune validation de formulaire
+  /// ici : ce flux ne dépend d'aucun champ de la carte.
+  Future<void> _submitGoogle() async {
+    setState(() {
+      _isGoogleSubmitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await ref.read(authRepositoryProvider).signInWithGoogle();
+    } on AuthFailure catch (failure) {
+      if (!mounted) return;
+      setState(() => _errorMessage = failure.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _errorMessage = 'Une erreur inattendue est survenue. Réessayez.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleSubmitting = false);
       }
     }
   }
@@ -170,12 +210,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     formKey: _formKey,
                     isSignUp: _isSignUp,
                     isSubmitting: _isSubmitting,
+                    isGoogleSubmitting: _isGoogleSubmitting,
                     errorMessage: _errorMessage,
                     signUpConfirmationEmail: _signUpConfirmationEmail,
                     emailController: _emailController,
                     passwordController: _passwordController,
                     confirmPasswordController: _confirmPasswordController,
+                    pseudoController: _pseudoController,
                     onSubmit: _submit,
+                    onSubmitGoogle: _submitGoogle,
                     onSwitchMode: _switchMode,
                     onForgotPassword: _openForgotPasswordDialog,
                     onBackToLogin: _switchMode,
@@ -208,12 +251,15 @@ class _AuthCard extends StatelessWidget {
     required this.formKey,
     required this.isSignUp,
     required this.isSubmitting,
+    required this.isGoogleSubmitting,
     required this.errorMessage,
     required this.signUpConfirmationEmail,
     required this.emailController,
     required this.passwordController,
     required this.confirmPasswordController,
+    required this.pseudoController,
     required this.onSubmit,
+    required this.onSubmitGoogle,
     required this.onSwitchMode,
     required this.onForgotPassword,
     required this.onBackToLogin,
@@ -222,6 +268,9 @@ class _AuthCard extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final bool isSignUp;
   final bool isSubmitting;
+
+  /// Voir la doc de `_LoginScreenState._isGoogleSubmitting`.
+  final bool isGoogleSubmitting;
   final String? errorMessage;
 
   /// Non-null : remplace le formulaire par l'état "vérifie ta boîte mail"
@@ -230,7 +279,12 @@ class _AuthCard extends StatelessWidget {
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final TextEditingController confirmPasswordController;
+
+  /// Pseudo optionnel (mode inscription uniquement) — voir
+  /// `AuthRepository.signUp`.
+  final TextEditingController pseudoController;
   final VoidCallback onSubmit;
+  final VoidCallback onSubmitGoogle;
   final VoidCallback onSwitchMode;
   final VoidCallback onForgotPassword;
   final VoidCallback onBackToLogin;
@@ -253,6 +307,14 @@ class _AuthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Deux actions concurrentes possibles sur cette carte (voir la doc de
+    // `_LoginScreenState._isGoogleSubmitting`) : tant que l'une des deux est
+    // active, tous les éléments interactifs de la carte sont désactivés —
+    // seul le bouton réellement déclenché affiche son propre indicateur de
+    // chargement (`isSubmitting`/`isGoogleSubmitting` restent distincts pour
+    // ça).
+    final isBusy = isSubmitting || isGoogleSubmitting;
+
     return Stack(
       children: [
         Container(
@@ -301,6 +363,7 @@ class _AuthCard extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xs),
                       TextFormField(
                         controller: emailController,
+                        enabled: !isBusy,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
@@ -314,6 +377,7 @@ class _AuthCard extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xs),
                       TextFormField(
                         controller: passwordController,
+                        enabled: !isBusy,
                         obscureText: true,
                         textInputAction: isSignUp
                             ? TextInputAction.next
@@ -328,7 +392,7 @@ class _AuthCard extends StatelessWidget {
                           alignment: Alignment.centerRight,
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
-                            onTap: isSubmitting ? null : onForgotPassword,
+                            onTap: isBusy ? null : onForgotPassword,
                             child: Padding(
                               // Élargit la zone de tap à au moins 44x44px (section 7
                               // "Accessibilité" du design system) sans agrandir le
@@ -356,8 +420,12 @@ class _AuthCard extends StatelessWidget {
                         const SizedBox(height: AppSpacing.xs),
                         TextFormField(
                           controller: confirmPasswordController,
+                          enabled: !isBusy,
                           obscureText: true,
-                          textInputAction: TextInputAction.done,
+                          // `.next` (plus `.done`) : ce champ n'est plus le
+                          // dernier du formulaire en mode inscription depuis
+                          // l'ajout du champ "Pseudo" ci-dessous.
+                          textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
                             hintText: '••••••••',
                           ),
@@ -366,9 +434,35 @@ class _AuthCard extends StatelessWidget {
                                 value,
                                 passwordController.text,
                               ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _FieldLabel('Pseudo'),
+                        const SizedBox(height: AppSpacing.xs),
+                        TextFormField(
+                          controller: pseudoController,
+                          enabled: !isBusy,
+                          textInputAction: TextInputAction.done,
+                          decoration: const InputDecoration(
+                            hintText: "Comment veux-tu qu'on t'appelle ?",
+                          ),
                           onFieldSubmitted: (_) => onSubmit(),
                         ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          'Facultatif — tu pourras le changer plus tard dans '
+                          'ton profil.',
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
                       ],
+                      const SizedBox(height: AppSpacing.md),
+                      PrimaryButton(
+                        label: isSignUp ? 'Créer le compte' : 'Entrer',
+                        isLoading: isSubmitting,
+                        onPressed: isBusy ? null : onSubmit,
+                      ),
                       if (errorMessage != null) ...[
                         const SizedBox(height: AppSpacing.md),
                         Text(
@@ -381,10 +475,38 @@ class _AuthCard extends StatelessWidget {
                         ),
                       ],
                       const SizedBox(height: AppSpacing.md),
-                      PrimaryButton(
-                        label: isSignUp ? 'Créer le compte' : 'Entrer',
-                        isLoading: isSubmitting,
-                        onPressed: isSubmitting ? null : onSubmit,
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Divider(
+                              thickness: 1,
+                              color: AppColors.woodLight,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(
+                            'OU',
+                            style: AppTypography.body(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          const Expanded(
+                            child: Divider(
+                              thickness: 1,
+                              color: AppColors.woodLight,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      SocialAuthButton(
+                        label: 'Continuer avec Google',
+                        icon: const GoogleGLogo(),
+                        isLoading: isGoogleSubmitting,
+                        onPressed: isBusy ? null : onSubmitGoogle,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Center(
@@ -407,7 +529,7 @@ class _AuthCard extends StatelessWidget {
                             ),
                             GestureDetector(
                               behavior: HitTestBehavior.opaque,
-                              onTap: isSubmitting ? null : onSwitchMode,
+                              onTap: isBusy ? null : onSwitchMode,
                               child: Padding(
                                 // Élargit la zone de tap à au moins 44x44px (section 7
                                 // "Accessibilité" du design system) sans agrandir le

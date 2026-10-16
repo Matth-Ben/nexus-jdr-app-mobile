@@ -133,6 +133,24 @@
                     android:host="nexus-jdr.app"
                     android:pathPrefix="/p"/>
             </intent-filter>
+            <!-- Retour de callback OAuth (connexion Google,
+                 `AuthRepository.signInWithGoogle`,
+                 `features/auth/data/auth_repository.dart`) : schéma
+                 personnalisé, pas l'App Link universel ci-dessus — iOS n'a
+                 pas encore l'entitlement Associated Domains (compte Apple
+                 Developer pas encore actif, même blocage que Sign in with
+                 Apple), un schéma personnalisé ne dépend pas de ça. Jamais
+                 `android:autoVerify="true"` : ce n'est pas un App Link, juste
+                 un schéma custom, aucune vérification de domaine à faire.
+
+                 Redirect URI à autoriser côté Supabase (Authentication > URL
+                 Configuration > Redirect URLs) : `nexusjdr://login-callback/`. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="nexusjdr" android:host="login-callback"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
