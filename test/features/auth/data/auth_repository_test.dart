@@ -447,6 +447,138 @@ void main() {
     );
   });
 
+  group('SupabaseAuthRepository.markOnboardingSeen', () {
+    test("fusionne `onboarding_completed: true` dans `user_metadata` existant "
+        "sans l'écraser (clé déjà présente, ex. `full_name`)", () async {
+      http.Request? capturedRequest;
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          return http.Response(
+            jsonEncode(
+              _fakeSessionJson(userMetadata: {'full_name': 'Aranea Nightsong'}),
+            ),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.endsWith('/user')) {
+          capturedRequest = request;
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            jsonEncode({
+              ..._fakeUserJson(userMetadata: {'full_name': 'Aranea Nightsong'}),
+              'user_metadata': body['data'],
+            }),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      });
+
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
+
+      await SupabaseAuthRepository(client).markOnboardingSeen();
+
+      expect(capturedRequest, isNotNull);
+      expect(capturedRequest!.url.path, endsWith('/user'));
+      final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>;
+      expect(data['onboarding_completed'], isTrue);
+      expect(
+        data['full_name'],
+        'Aranea Nightsong',
+        reason:
+            '`user_metadata` existant ne doit jamais être écrasé, seule '
+            'la clé `onboarding_completed` doit être affectée',
+      );
+    });
+
+    test(
+      'idempotente : rappelable sans effet de bord si déjà `true`',
+      () async {
+        http.Request? capturedRequest;
+        final client = _buildFakeSupabaseClient((request) async {
+          if (request.url.path.endsWith('/token')) {
+            return http.Response(
+              jsonEncode(
+                _fakeSessionJson(userMetadata: {'onboarding_completed': true}),
+              ),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          if (request.url.path.endsWith('/user')) {
+            capturedRequest = request;
+            return http.Response(
+              jsonEncode(_fakeUserJson()),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('{}', 200, request: request);
+        });
+
+        await client.auth.signInWithPassword(
+          email: 'joueur@exemple.com',
+          password: 'password1234',
+        );
+
+        await expectLater(
+          SupabaseAuthRepository(client).markOnboardingSeen(),
+          completes,
+        );
+        final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+        expect(
+          (body['data'] as Map<String, dynamic>)['onboarding_completed'],
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      "remonte un message réseau générique quand l'appel échoue sans "
+      'réponse HTTP (ex. absence de réseau) - même mécanisme '
+      '`AuthRetryableFetchException` que les autres méthodes de ce dépôt',
+      () async {
+        final client = _buildFakeSupabaseClient((request) async {
+          if (request.url.path.endsWith('/token')) {
+            return http.Response(
+              jsonEncode(_fakeSessionJson(userMetadata: const {})),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          throw Exception('Pas de réseau (double de test).');
+        });
+
+        await client.auth.signInWithPassword(
+          email: 'joueur@exemple.com',
+          password: 'password1234',
+        );
+
+        await expectLater(
+          SupabaseAuthRepository(client).markOnboardingSeen(),
+          throwsA(
+            isA<AuthFailure>().having(
+              (failure) => failure.message,
+              'message',
+              contains('connexion internet'),
+            ),
+          ),
+        );
+      },
+    );
+  });
+
   group('SupabaseAuthRepository.updatePassword', () {
     test('envoie le nouveau mot de passe à /user', () async {
       http.Request? capturedRequest;

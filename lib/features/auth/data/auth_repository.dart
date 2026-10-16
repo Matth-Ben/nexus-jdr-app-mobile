@@ -164,6 +164,26 @@ abstract class AuthRepository {
   /// session à synchroniser, la purge peut donc être inconditionnelle (voir
   /// la doc de classe de [SupabaseAuthRepository]).
   Future<void> deleteAccount();
+
+  /// Marque le carousel d'onboarding comme vu
+  /// (`user_metadata['onboarding_completed'] = true`) — appelée en sortie de
+  /// `features/onboarding/presentation/onboarding_screen.dart` (bouton
+  /// "Passer" ou CTA final "C'est parti !"), que l'écran ait été ouvert
+  /// automatiquement par le routeur (première connexion, voir
+  /// [computeAuthRedirect] dans `core/router/app_router.dart`) ou
+  /// volontairement (profil > Aide et support > "Revoir la présentation de
+  /// l'app").
+  ///
+  /// Idempotente : rappelable sans effet de bord si déjà `true`. Même
+  /// mécanisme de fusion que [updateDisplayName]/[updateAvatar] (ne jamais
+  /// écraser le reste de `user_metadata`).
+  ///
+  /// Écriture directe uniquement, sans file d'attente hors-ligne — même
+  /// remarque que [updateDisplayName] : l'appelant ([OnboardingScreen])
+  /// n'attend d'ailleurs jamais le résultat de cet appel pour naviguer (voir
+  /// sa doc de classe), un échec réseau ici ne doit jamais bloquer la sortie
+  /// de l'écran.
+  Future<void> markOnboardingSeen();
 }
 
 /// Implémentation réelle, basée sur `Supabase.instance.client.auth`.
@@ -469,6 +489,25 @@ class SupabaseAuthRepository implements AuthRepository {
     // `AuthRepository.deleteAccount`) : plus de session à synchroniser à ce
     // stade, la purge peut être inconditionnelle plutôt que re-vérifiée.
     await _purgeLocalCache(ownerId);
+  }
+
+  @override
+  Future<void> markOnboardingSeen() async {
+    // Fusion par-dessus `user_metadata` existant — même mécanisme que
+    // [updateDisplayName]/[updateAvatar] (voir leur doc), jamais un
+    // écrasement.
+    final existingMetadata = Map<String, dynamic>.from(
+      _client.auth.currentUser?.userMetadata ?? const <String, dynamic>{},
+    );
+    existingMetadata['onboarding_completed'] = true;
+
+    try {
+      await _client.auth.updateUser(UserAttributes(data: existingMetadata));
+    } on AuthException catch (error) {
+      throw mapAuthException(error);
+    } catch (_) {
+      throw mapUnknownError();
+    }
   }
 
   /// D31 du registre de dette technique — voir la doc de classe de

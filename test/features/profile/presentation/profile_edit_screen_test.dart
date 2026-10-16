@@ -83,6 +83,9 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> removeAvatar() async {}
+
+  @override
+  Future<void> markOnboardingSeen() async {}
 }
 
 class _FakeConnectivityChecker implements ConnectivityChecker {

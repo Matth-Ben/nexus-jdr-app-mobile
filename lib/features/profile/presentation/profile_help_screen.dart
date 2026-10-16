@@ -41,9 +41,11 @@ import 'widgets/report_bug_sheet.dart';
 ///   (retirée de là au recettage du 13/09/2026, voir la doc de classe de
 ///   `ProfileScreen` — même action [showReportBugSheet], câblée à
 ///   l'identique).
-/// - "À PROPOS" : "Mentions légales / CGU" (pousse `ProfileLegalScreen`,
-///   `/profile/help/legal`) + "Crédits & licences" (pousse
-///   `ProfileCreditsScreen`, `/profile/help/credits`).
+/// - "À PROPOS" : "Revoir la présentation de l'app" (pousse
+///   `OnboardingScreen`, `/onboarding` — en tête de section, la plus
+///   actionnable des trois) + "Mentions légales / CGU" (pousse
+///   `ProfileLegalScreen`, `/profile/help/legal`) + "Crédits & licences"
+///   (pousse `ProfileCreditsScreen`, `/profile/help/credits`).
 ///
 /// "Contacter le support" (ouvre le client e-mail natif via `url_launcher`,
 /// voir [buildSupportEmailUri]) et "Signaler un bug" (ouvre
@@ -155,6 +157,12 @@ class ProfileHelpScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.sm),
                   SettingsListCard(
                     children: [
+                      MenuTile(
+                        standalone: false,
+                        icon: Icons.auto_stories_outlined,
+                        label: 'Revoir la présentation de l\'app',
+                        onTap: () => context.push('/onboarding'),
+                      ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.gavel_outlined,
