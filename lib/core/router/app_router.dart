@@ -33,6 +33,7 @@ import '../../features/groups/presentation/group_settings_screen.dart';
 import '../../features/join_story/presentation/join_character_step_screen.dart';
 import '../../features/join_story/presentation/join_code_step_screen.dart';
 import '../../features/join_story/presentation/join_confirmation_step_screen.dart';
+import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/profile/presentation/profile_credits_screen.dart';
 import '../../features/profile/presentation/profile_delete_account_screen.dart';
 import '../../features/profile/presentation/profile_edit_screen.dart';
@@ -103,6 +104,17 @@ GoRouter appRouter(Ref ref) {
       // besoin du code d'invitation porté par la query (`?code=...`), voir
       // la documentation de [computeAuthRedirect].
       location: state.uri.toString(),
+      // Dérivé de `user_metadata`, jamais d'un provider dédié : réévalué
+      // automatiquement à chaque connexion/déconnexion comme le reste de ce
+      // `redirect` (déjà branché sur `refreshListenable` via
+      // `onAuthStateChange`), mais PAS après un simple
+      // `AuthRepository.markOnboardingSeen()` seul (pas de changement de
+      // session) — voir la doc de classe d'`OnboardingScreen`, qui navigue
+      // donc elle-même en sortie plutôt que de compter sur une
+      // réévaluation automatique de ce redirect.
+      needsOnboarding:
+          client.auth.currentUser?.userMetadata?['onboarding_completed'] !=
+          true,
     ),
     routes: [
       GoRoute(
@@ -114,6 +126,18 @@ GoRouter appRouter(Ref ref) {
         name: 'login',
         path: '/login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        // Carousel de bienvenue/onboarding (`features/onboarding/`) —
+        // atteint soit forcé par [computeAuthRedirect] (`needsOnboarding`,
+        // première connexion qui suit l'introduction de cette
+        // fonctionnalité), soit poussé volontairement depuis "Profil > Aide
+        // et support > Revoir la présentation de l'app"
+        // (`profile_help_screen.dart`) — voir la doc de classe
+        // d'`OnboardingScreen`.
+        name: 'onboarding',
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         name: 'character-creation-race',
@@ -524,9 +548,22 @@ GoRouter appRouter(Ref ref) {
 /// .get_shared_character` côté dépôt web, conçu pour être consultable sans
 /// authentification), contrairement à `/join/*` (deep link "Rejoindre une
 /// histoire") qui exige bien un compte au bout du parcours.
+///
+/// **Gate d'onboarding** (`features/onboarding/presentation
+/// /onboarding_screen.dart`) : une fois connecté (jamais évalué avant — cf.
+/// le bloc `if (!isLoggedIn)` ci-dessous), [needsOnboarding] vrai et
+/// [location] ni déjà `/onboarding` ni sous `/join*` force la redirection
+/// vers `/onboarding`. **Exemption `/join/*`** (décision du chef de projet,
+/// 16/10/2026) : un lien d'invitation MJ→joueur ne doit jamais être
+/// retardé par 5 écrans de tutoriel — l'onboarding se rattrapera à la
+/// prochaine ouverture normale de l'app (`/`), pas en coupant un parcours
+/// d'invitation en cours. `/p/*` n'a pas besoin d'une exemption symétrique
+/// explicite ici : il sort déjà de la fonction tout en haut (`if (uri.path
+/// .startsWith('/p/')) return null;`), avant même d'atteindre ce bloc.
 String? computeAuthRedirect({
   required bool isLoggedIn,
   required String location,
+  bool needsOnboarding = false,
 }) {
   final uri = Uri.parse(location);
   final isOnLoginRoute = uri.path == '/login';
@@ -546,6 +583,11 @@ String? computeAuthRedirect({
       return redirectTarget;
     }
     return '/';
+  }
+  if (needsOnboarding &&
+      uri.path != '/onboarding' &&
+      !uri.path.startsWith('/join')) {
+    return '/onboarding';
   }
   return null;
 }

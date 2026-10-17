@@ -252,6 +252,209 @@ void main() {
           isNull,
         );
       });
+
+      test('connecté, needsOnboarding vrai, sur /p/{token} : ne redirige '
+          'toujours pas vers /onboarding (exempté avant même d\'atteindre ce '
+          'bloc)', () {
+        expect(
+          computeAuthRedirect(
+            isLoggedIn: true,
+            location: '/p/abc123',
+            needsOnboarding: true,
+          ),
+          isNull,
+        );
+      });
+    });
+
+    group('gate d\'onboarding (needsOnboarding)', () {
+      test('needsOnboarding par défaut (omis) : aucune redirection ajoutée, '
+          'comportement inchangé pour tout appelant existant', () {
+        expect(computeAuthRedirect(isLoggedIn: true, location: '/'), isNull);
+      });
+
+      test('non connecté, needsOnboarding vrai : reste prioritairement renvoyé '
+          'vers /login (le bloc onboarding n\'est jamais évalué avant '
+          'd\'être connecté)', () {
+        expect(
+          computeAuthRedirect(
+            isLoggedIn: false,
+            location: '/',
+            needsOnboarding: true,
+          ),
+          '/login',
+        );
+      });
+
+      test('connecté, needsOnboarding vrai, sur "/" : redirigé vers '
+          '/onboarding', () {
+        expect(
+          computeAuthRedirect(
+            isLoggedIn: true,
+            location: '/',
+            needsOnboarding: true,
+          ),
+          '/onboarding',
+        );
+      });
+
+      test('connecté, needsOnboarding vrai, déjà sur /onboarding : ne redirige '
+          'pas (pas de boucle)', () {
+        expect(
+          computeAuthRedirect(
+            isLoggedIn: true,
+            location: '/onboarding',
+            needsOnboarding: true,
+          ),
+          isNull,
+        );
+      });
+
+      test('connecté, needsOnboarding faux (déjà vu), sur "/" : ne redirige '
+          'pas vers /onboarding', () {
+        expect(
+          computeAuthRedirect(
+            isLoggedIn: true,
+            location: '/',
+            needsOnboarding: false,
+          ),
+          isNull,
+        );
+      });
+
+      test('connecté, needsOnboarding vrai, sur un deep link /join/{code} : '
+          'exempté, ne redirige jamais vers /onboarding (rationale : un lien '
+          'd\'invitation MJ→joueur ne doit jamais être retardé par le '
+          'tutoriel, voir la doc de classe de `computeAuthRedirect`)', () {
+        expect(
+          computeAuthRedirect(
+            isLoggedIn: true,
+            location: '/join/AB3F7K',
+            needsOnboarding: true,
+          ),
+          isNull,
+        );
+      });
+
+      test('connecté, needsOnboarding vrai, sur /join/step-2?code=... : '
+          'exempté lui aussi (préfixe /join couvre toutes les étapes du '
+          'flux)', () {
+        expect(
+          computeAuthRedirect(
+            isLoggedIn: true,
+            location: '/join/step-2?code=AB3F7K',
+            needsOnboarding: true,
+          ),
+          isNull,
+        );
+      });
+
+      test('connecté, needsOnboarding vrai, sur une route normale quelconque '
+          '(ex. /groups) : redirigé vers /onboarding', () {
+        expect(
+          computeAuthRedirect(
+            isLoggedIn: true,
+            location: '/groups',
+            needsOnboarding: true,
+          ),
+          '/onboarding',
+        );
+      });
+
+      test('connecté, needsOnboarding vrai, sur un deep link /join/{code} avec '
+          'une query string (ex. /join/ABC123?foo=bar) : toujours exempté - '
+          '`startsWith(\'/join\')` ne depend pas de la presence ni du contenu '
+          'd\'une query', () {
+        expect(
+          computeAuthRedirect(
+            isLoggedIn: true,
+            location: '/join/ABC123?foo=bar',
+            needsOnboarding: true,
+          ),
+          isNull,
+        );
+      });
+
+      test('non connecté, needsOnboarding vrai, sur un deep link protégé '
+          '(/join/AB3F7K) : needsOnboarding n\'interfère pas avec la reprise '
+          'du parcours après connexion, la destination reste encodée en '
+          '?redirect= exactement comme needsOnboarding=false', () {
+        expect(
+          computeAuthRedirect(
+            isLoggedIn: false,
+            location: '/join/AB3F7K',
+            needsOnboarding: true,
+          ),
+          '/login?redirect=%2Fjoin%2FAB3F7K',
+        );
+      });
+
+      test('connecté, needsOnboarding vrai, sur /login (sans ?redirect=) : un '
+          'SEUL appel à `computeAuthRedirect` renvoie "/" (pas "/onboarding" '
+          'directement) - le bloc `isOnLoginRoute` de la fonction retourne '
+          'avant d\'atteindre le bloc `needsOnboarding` ; voir le test de la '
+          'chaîne de redirections ci-dessous pour la destination FINALE '
+          'réellement atteinte par `go_router` (qui ré-évalue `redirect` sur '
+          'chaque nouvelle location jusqu\'à obtenir `null`, voir '
+          '`go_router-18.0.0/lib/src/configuration.dart::applyTopLegacyRedirect`)', () {
+        expect(
+          computeAuthRedirect(
+            isLoggedIn: true,
+            location: '/login',
+            needsOnboarding: true,
+          ),
+          '/',
+        );
+      });
+
+      test('connecté, needsOnboarding vrai, sur /login : la CHAÎNE complète de '
+          'redirections (telle que `go_router` la ré-évalue réellement, pas '
+          'un seul appel isolé) atteint bien /onboarding, pas juste "/" - '
+          '/login -> "/" -> "/onboarding" -> null', () {
+        final destination = _followRedirectChain(
+          isLoggedIn: true,
+          initialLocation: '/login',
+          needsOnboarding: true,
+        );
+
+        expect(destination, '/onboarding');
+      });
     });
   });
+}
+
+/// Simule la boucle réelle de `go_router` (`GoRouter.redirect` /
+/// `applyTopLegacyRedirect`, voir `go_router-18.0.0/lib/src/configuration
+/// .dart`) : ré-applique [computeAuthRedirect] sur chaque nouvelle location
+/// jusqu'à ce qu'elle renvoie `null`, et renvoie la destination finale
+/// effectivement atteinte. `computeAuthRedirect` seul (un appel isolé) ne
+/// renvoie que la PROCHAINE étape de la chaîne (ex. "/" depuis "/login"),
+/// jamais la destination finale si plusieurs redirections s'enchaînent -
+/// c'est exactement ce que ce test reproduit pour ne pas confondre un
+/// comportement intermédiaire correct avec une régression.
+///
+/// Un garde-fou (`maxHops`) fait échouer le test plutôt que boucler
+/// indéfiniment si jamais une régression introduisait un cycle - `go_router`
+/// lui-même lève une exception ('redirect loop detected'/'too many
+/// redirects') dans ce cas (voir `_addRedirect` du fichier cité ci-dessus).
+String _followRedirectChain({
+  required bool isLoggedIn,
+  required String initialLocation,
+  bool needsOnboarding = false,
+  int maxHops = 5,
+}) {
+  var location = initialLocation;
+  for (var hop = 0; hop < maxHops; hop++) {
+    final next = computeAuthRedirect(
+      isLoggedIn: isLoggedIn,
+      location: location,
+      needsOnboarding: needsOnboarding,
+    );
+    if (next == null) return location;
+    location = next;
+  }
+  fail(
+    'redirect loop detected (pas de null après $maxHops redirections, '
+    'dernière location : "$location")',
+  );
 }

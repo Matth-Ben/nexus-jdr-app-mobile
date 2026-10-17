@@ -70,6 +70,9 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<String> updateAvatar({required Uint8List bytes}) async => '';
+
+  @override
+  Future<void> markOnboardingSeen() async {}
 }
 
 Future<_FakeAuthRepository> _pumpSheet(

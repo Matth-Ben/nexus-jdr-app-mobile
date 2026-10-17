@@ -3,10 +3,11 @@
 // - tests de widget : bandeau bois + retour, les 3 en-têtes de section
 //   ("QUESTIONS FRÉQUENTES"/"NOUS CONTACTER"/"À PROPOS"), les 3 cartes
 //   `SettingsListCard` regroupant leurs tuiles (icônes dédiées), la
-//   navigation des 5 tuiles qui poussent désormais un écran réel (3
+//   navigation des 6 tuiles qui poussent désormais un écran réel (3
 //   questions FAQ + "Voir toutes les questions" vers `ProfileFaqScreen`,
-//   "Mentions légales / CGU" vers `ProfileLegalScreen`, "Crédits & licences"
-//   vers `ProfileCreditsScreen`), l'ouverture de la sheet "SIGNALER UN BUG"
+//   "Revoir la présentation de l'app" vers `OnboardingScreen`, "Mentions
+//   légales / CGU" vers `ProfileLegalScreen`, "Crédits & licences" vers
+//   `ProfileCreditsScreen`), l'ouverture de la sheet "SIGNALER UN BUG"
 //   (déplacée ici depuis le hub `profile_screen.dart`, voir sa doc de
 //   classe), les 2 textes d'aide sous "NOUS CONTACTER"/"À PROPOS", le pied
 //   de page version.
@@ -27,20 +28,30 @@
 // `PackageInfo.setMockInitialValues` (canal de plateforme natif lu par
 // `packageInfoProvider`, même mécanisme que `profile_screen_test.dart`).
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:personnages/core/widgets/settings_list_card.dart';
+import 'package:personnages/features/auth/data/auth_repository.dart';
+import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
+import 'package:personnages/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_credits_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_faq_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_help_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_legal_screen.dart';
 
-Future<void> _pumpScreen(WidgetTester tester) async {
+Future<void> _pumpScreen(
+  WidgetTester tester, {
+  List<Override> overrides = const [],
+}) async {
   await tester.pumpWidget(
     ProviderScope(
+      overrides: overrides,
       child: MaterialApp.router(
         routerConfig: GoRouter(
           initialLocation: '/',
@@ -79,6 +90,10 @@ Future<void> _pumpScreen(WidgetTester tester) async {
                 );
               },
             ),
+            GoRoute(
+              path: '/onboarding',
+              builder: (context, state) => const OnboardingScreen(),
+            ),
           ],
         ),
       ),
@@ -86,6 +101,60 @@ Future<void> _pumpScreen(WidgetTester tester) async {
   );
   await tester.tap(find.text('Ouvrir'));
   await tester.pumpAndSettle();
+}
+
+/// Double minimal d'[AuthRepository] pour le seul test qui a besoin
+/// d'exercer la sortie reelle d'[OnboardingScreen] depuis cet ecran
+/// (bouton "Passer" -> `markOnboardingSeen` -> pop) ; toutes les autres
+/// tuiles de [ProfileHelpScreen] n'exercent jamais `authRepositoryProvider`,
+/// donc n'ont pas besoin de cet override (voir `_pumpScreen`).
+class _FakeAuthRepository implements AuthRepository {
+  int markOnboardingSeenCallCount = 0;
+
+  @override
+  Future<void> markOnboardingSeen() async {
+    markOnboardingSeenCallCount++;
+  }
+
+  @override
+  Future<void> deleteAccount() async {}
+
+  @override
+  Future<void> signInWithPassword({
+    required String email,
+    required String password,
+  }) async {}
+
+  @override
+  Future<bool> signUp({
+    String? displayName,
+    required String email,
+    required String password,
+  }) async => false;
+
+  @override
+  Future<void> signInWithGoogle() async {}
+
+  @override
+  Future<void> signOut() async {}
+
+  @override
+  Future<void> resetPasswordForEmail({required String email}) async {}
+
+  @override
+  Future<void> updateDisplayName({required String? displayName}) async {}
+
+  @override
+  Future<void> updatePassword({required String newPassword}) async {}
+
+  @override
+  Future<void> updateEmail({required String newEmail}) async {}
+
+  @override
+  Future<String> updateAvatar({required Uint8List bytes}) async => '';
+
+  @override
+  Future<void> removeAvatar() async {}
 }
 
 void main() {
@@ -166,6 +235,48 @@ void main() {
     expect(screen.initialQuestionId, isNull);
   });
 
+  testWidgets(
+    'taper "Revoir la présentation de l\'app" pousse OnboardingScreen '
+    '(`/onboarding`)',
+    (tester) async {
+      await _pumpScreen(tester);
+
+      await tester.ensureVisible(find.text('Revoir la présentation de l\'app'));
+      await tester.tap(find.text('Revoir la présentation de l\'app'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'taper "Passer" dans OnboardingScreen pousse depuis cet ecran revient '
+    'bien sur ProfileHelpScreen (pop), jamais sur "/" - integration reelle '
+    'des deux ecrans, pas seulement la navigation generique testee dans '
+    'onboarding_screen_test.dart',
+    (tester) async {
+      final fakeAuthRepository = _FakeAuthRepository();
+      await _pumpScreen(
+        tester,
+        overrides: [
+          authRepositoryProvider.overrideWithValue(fakeAuthRepository),
+        ],
+      );
+
+      await tester.ensureVisible(find.text('Revoir la présentation de l\'app'));
+      await tester.tap(find.text('Revoir la présentation de l\'app'));
+      await tester.pumpAndSettle();
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+
+      await tester.tap(find.text('Passer'));
+      await tester.pumpAndSettle();
+
+      expect(fakeAuthRepository.markOnboardingSeenCallCount, 1);
+      expect(find.byType(OnboardingScreen), findsNothing);
+      expect(find.text('AIDE ET SUPPORT'), findsOneWidget);
+    },
+  );
+
   testWidgets('taper "Mentions légales / CGU" pousse l\'écran dédié', (
     tester,
   ) async {
@@ -224,13 +335,17 @@ void main() {
   });
 
   testWidgets(
-    'section "À PROPOS" : "Mentions légales / CGU" + "Crédits & licences" '
-    'regroupées dans un SettingsListCard, avec son texte d\'aide',
+    'section "À PROPOS" : "Revoir la présentation de l\'app" + "Mentions '
+    'légales / CGU" + "Crédits & licences" regroupées dans un '
+    'SettingsListCard, "Revoir la présentation" en tête, avec son texte '
+    'd\'aide',
     (tester) async {
       await _pumpScreen(tester);
 
+      expect(find.text('Revoir la présentation de l\'app'), findsOneWidget);
       expect(find.text('Mentions légales / CGU'), findsOneWidget);
       expect(find.text('Crédits & licences'), findsOneWidget);
+      expect(find.byIcon(Icons.auto_stories_outlined), findsOneWidget);
       expect(find.byIcon(Icons.gavel_outlined), findsOneWidget);
       expect(find.byIcon(Icons.copyright_outlined), findsOneWidget);
       expect(

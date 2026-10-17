@@ -390,6 +390,9 @@ class _FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> removeAvatar() async {}
+
+  @override
+  Future<void> markOnboardingSeen() async {}
 }
 
 /// Double d'`AppVersionRepository` (`features/app_update/`) — voir la
