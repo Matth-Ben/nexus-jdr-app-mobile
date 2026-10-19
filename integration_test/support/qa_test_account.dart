@@ -51,17 +51,36 @@ const String qaTestAccountMissingReason =
 Future<void> loginWithQaTestAccount(WidgetTester tester) async {
   await tester.enterText(emailFieldFinder, qaTestEmail);
   await tester.enterText(passwordFieldFinder, qaTestPassword);
+  // Le champ mot de passe déclenche déjà la connexion sur l'action IME
+  // "done" (`onFieldSubmitted: (_) => onSubmit()`, voir
+  // `lib/features/auth/presentation/login_screen.dart`) : cette seule
+  // action suffit à soumettre le formulaire, exactement comme un joueur qui
+  // valide son clavier plutôt que de taper le bouton. `pumpAndSettle` laisse
+  // la soumission démarrer (le bouton passe en `isLoading`, qui REMPLACE son
+  // libellé "ENTRER" par un `CircularProgressIndicator` — voir
+  // `core/widgets/primary_button.dart` — jamais les deux en même temps).
   await tester.testTextInput.receiveAction(TextInputAction.done);
   await tester.pumpAndSettle();
 
-  // `PrimaryButton` (`core/widgets/primary_button.dart`) met son libellé en
-  // majuscules à l'affichage (`label.toUpperCase()`) — le texte réellement
-  // rendu est donc "ENTRER", pas "Entrer". `tester.tap` sur ce `Text` suffit
-  // à déclencher l'`InkWell` ancêtre (hit-test standard du moteur de rendu),
-  // sans jamais cibler de coordonnées d'écran.
-  await tester.tap(find.text('ENTRER'));
+  // Bug trouvé en exécutant ce helper pour la première fois en conditions
+  // réelles (campagne QA du 19/10/2026, compte de test enfin débloqué) :
+  // un second `tap(find.text('ENTRER'))` inconditionnel après l'action
+  // "done" ci-dessus plantait avec "Found 0 widgets with text ENTRER" dès
+  // que la soumission déclenchée par "done" avait déjà fait disparaître ce
+  // libellé (bouton en `isLoading`, ou déjà redirigé après connexion
+  // réussie) — `tester.tap` n'accepte aucun `Finder` vide. Le second tap
+  // n'a donc plus de raison d'être inconditionnel : il ne sert plus qu'en
+  // repli défensif, si jamais l'action "done" simulée n'avait, pour une
+  // raison quelconque (ex. future variante de cet écran), pas déjà
+  // déclenché la soumission — jamais par coordonnées d'écran, toujours par
+  // ce même sélecteur texte (voir `core/widgets/primary_button.dart` pour
+  // la mise en majuscules du libellé).
+  final entrerButton = find.text('ENTRER');
+  if (entrerButton.evaluate().isNotEmpty) {
+    await tester.tap(entrerButton);
+    await tester.pumpAndSettle(const Duration(seconds: 1));
+  }
 
-  await tester.pumpAndSettle(const Duration(seconds: 1));
   for (var attempt = 0; attempt < 20; attempt++) {
     await tester.pump(const Duration(milliseconds: 500));
   }

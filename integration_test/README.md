@@ -22,12 +22,14 @@ Trois dossiers de tests coexistent dans ce dépôt, volontairement séparés :
 
 ```bash
 flutter test integration_test/login_screen_test.dart -d emulator-5554 \
+  --flavor dev \
   --dart-define-from-file=config/dev.json
 ```
 
 (ou tout autre appareil retourné par `flutter devices`). `config/dev.json`
 pointe vers le projet Supabase distant partagé dev/staging/prod — voir
-`config/README.md`.
+`config/README.md`. **`--flavor dev` est obligatoire sur Android** (sinon
+l'app ne trouve pas sa configuration de flavor au lancement).
 
 ### Scénarios authentifiés : compte de test requis
 
