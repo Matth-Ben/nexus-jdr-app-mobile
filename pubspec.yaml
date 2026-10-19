@@ -132,6 +132,13 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Pilote la vraie app (`WidgetTester`) sur un appareil/emulateur reel
+  # (`flutter test integration_test/<fichier>.dart -d <device>`), par
+  # opposition a `test_integration/` (tests VM purs contre un vrai
+  # Supabase local, voir `test_integration/README.md`) et `test/`
+  # (doubles factices). Voir `integration_test/README.md`.
+  integration_test:
+    sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
