@@ -52,13 +52,24 @@ class LevelUpBlockReason {
 ///   cas à n'importe quel niveau (delta calculé, étape absente si delta nul
 ///   des deux côtés — jamais un blocage).
 ///
+/// **Correctif Moine, Voie des quatre éléments (bug bloquant)** :
+/// `'discipline_elementaire'` a rejoint [resolvedChoiceTypes] — même
+/// traitement que `'invocation'` ci-dessus (nouvelle étape "Disciplines
+/// élémentaires" dédiée, basée sur le delta de
+/// `domain/elemental_disciplines_known_progression.dart` à CHAQUE niveau
+/// concerné — 3, 6, 11, 17 — indépendamment du nombre de lignes
+/// `class_features.choice_type = 'discipline_elementaire'` réellement
+/// présentes en base). Avant ce correctif, ce `choice_type` n'étant dans
+/// aucune version de [resolvedChoiceTypes], tout Moine Voie des quatre
+/// éléments restait bloqué indéfiniment à sa montée de niveau 3.
+///
 /// Un niveau qui reste bloqué bloque tout le flux *avant* même l'étape
 /// "Points de vie" (jamais de jet de dé pour rien) — ne reste concerné que
 /// tout `class_features.choice_type` non nul et encore inconnu de
-/// [resolvedChoiceTypes] (aucune valeur de ce type peuplée en base à ce jour,
-/// voir `20260825090700_seed_classes_subclasses_features.sql` côté dépôt web
-/// : les 4 valeurs peuplées — `sous_classe`/`style_combat`/`ennemi_jure`/
-/// `invocation` — y sont toutes désormais présentes).
+/// [resolvedChoiceTypes] (voir `20260825090700_seed_classes_subclasses_features.sql`
+/// côté dépôt web pour l'historique du peuplement : les valeurs
+/// `sous_classe`/`style_combat`/`ennemi_jure`/`invocation`/`pacte`/
+/// `discipline_elementaire` y sont toutes désormais présentes).
 abstract final class LevelUpBlockRules {
   /// Niveaux d'augmentation de caractéristique OU choix d'un don en
   /// alternative, règle standard 5e — codés en dur (pas de colonne dédiée en
@@ -74,9 +85,10 @@ abstract final class LevelUpBlockRules {
   /// flux — `'sous_classe'`/`'style_combat'`/`'ennemi_jure'` mènent à l'étape
   /// "Choix à faire" (increment 2, voir `domain/level_up_choice_kind.dart`),
   /// `'pacte'` (Faveur de pacte de l'Occultiste, niveau 3) à l'étape "Choix à
-  /// faire" (`LevelUpChoiceKind.pact`), `'invocation'` à la nouvelle étape
-  /// "Invocations" (voir la doc de classe
-  /// ci-dessus) — ce dernier ne passe PAS par
+  /// faire" (`LevelUpChoiceKind.pact`), `'invocation'` et
+  /// `'discipline_elementaire'` à leurs étapes dédiées respectives
+  /// ("Invocations"/"Disciplines élémentaires", voir la doc de classe
+  /// ci-dessus) — ces deux derniers ne passent PAS par
   /// [LevelUpPendingChoiceResolver.resolve] vers un [LevelUpChoiceKind].
   static const Set<String> resolvedChoiceTypes = {
     'sous_classe',
@@ -84,6 +96,7 @@ abstract final class LevelUpBlockRules {
     'ennemi_jure',
     'invocation',
     'pacte',
+    'discipline_elementaire',
   };
 
   /// Évalue si [targetLevel] doit bloquer tout le flux de montée de niveau,
