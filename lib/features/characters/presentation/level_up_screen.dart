@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,6 +33,7 @@ import '../domain/level_up_choice_kind.dart';
 import '../domain/level_up_choice_options.dart';
 import '../domain/level_up_choice_selection.dart';
 import '../domain/level_up_continue_option.dart';
+import '../domain/level_up_elemental_discipline_option.dart';
 import '../domain/level_up_hit_points_calculator.dart';
 import '../domain/level_up_invocation_option.dart';
 import '../domain/level_up_multiclass_option.dart';
@@ -85,6 +88,15 @@ enum _LevelUpPhase {
   /// Occultiste uniquement (`LevelUpStepData.requiresInvocationSelection`),
   /// entre [spells] et [summary] — voir [_buildInvocationsStep].
   invocations,
+
+  /// Moine, Voie des quatre éléments uniquement
+  /// (`LevelUpStepData.requiresElementalDisciplineSelection`), entre
+  /// [invocations] et [summary] — voir [_buildElementalDisciplinesStep].
+  /// Mutuellement exclusive avec [invocations] en pratique (gatée par
+  /// `className`, aucune classe ne déclenche les deux à la fois), mais
+  /// chaînée après par cohérence plutôt que de supposer cette exclusivité
+  /// dans l'ordre des phases.
+  elementalDisciplines,
   summary,
 }
 
@@ -280,6 +292,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// direction-artistique section 3).
   List<String> _selectedInvocationIds = [];
 
+  /// État de la sélection de disciplines élémentaires (Moine, Voie des
+  /// quatre éléments, étape "Disciplines élémentaires") — clés
+  /// `discipline.id.toString()`, même rationale que
+  /// [_selectedInvocationIds] (réutilise directement
+  /// `SpellsStepSelection.toggle`/`.isChoiceLocked`).
+  List<String> _selectedElementalDisciplineIds = [];
+
   @override
   void initState() {
     super.initState();
@@ -313,6 +332,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// [_resetSpellSelectionState].
   void _resetInvocationSelectionState() {
     _selectedInvocationIds = [];
+  }
+
+  /// Remet à zéro la sélection de disciplines élémentaires — même rationale
+  /// que [_resetInvocationSelectionState].
+  void _resetElementalDisciplineSelectionState() {
+    _selectedElementalDisciplineIds = [];
   }
 
   void _toggleNewCantrip(String name, int quota) {
@@ -408,6 +433,87 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         quota: quota,
       );
     });
+  }
+
+  /// Sous-classe du Moine qui progresse : celle choisie dans cette même
+  /// montée de niveau (étape "Choix à faire", niveau 3) s'il y en a une,
+  /// sinon celle déjà en base — même rôle que [_patronSubclassIdFor] pour
+  /// le patron de l'Occultiste.
+  int? _monkSubclassIdFor(LevelUpStepData data) {
+    if (data.choiceKind == LevelUpChoiceKind.subclass) {
+      final selected = _selectedListOptionId;
+      if (selected is num) return selected.toInt();
+    }
+    return data.knownSubclassId;
+  }
+
+  /// Disciplines élémentaires candidates pour la sous-classe résolue par
+  /// [_monkSubclassIdFor] — vide tant qu'aucune sous-classe n'est connue
+  /// (ex. niveau 3 avant que le joueur n'ait fait son choix).
+  List<LevelUpElementalDisciplineOption> _availableElementalDisciplinesFor(
+    LevelUpStepData data,
+  ) {
+    final subclassId = _monkSubclassIdFor(data);
+    if (subclassId == null) return const [];
+    return data.elementalDisciplinesBySubclass[subclassId] ?? const [];
+  }
+
+  /// Quota EFFECTIF de disciplines élémentaires à ce niveau — `min(delta
+  /// RAW, disciplines ÉLIGIBLES pour la sous-classe résolue)`, jamais le
+  /// delta RAW brut (même rationale que [_effectiveInvocationQuota] : ne
+  /// jamais promettre un quota que l'app ne peut pas tenir).
+  int _effectiveElementalDisciplineQuota(LevelUpStepData data) {
+    if (!data.requiresElementalDisciplineSelection) return 0;
+    return math.min(
+      data.elementalDisciplineDelta,
+      _availableElementalDisciplinesFor(data).length,
+    );
+  }
+
+  /// [_selectedElementalDisciplineIds] purgée des disciplines devenues
+  /// indisponibles (le joueur a pu revenir changer sa sous-classe au niveau
+  /// 3) et bornée au quota effectif — seule source lue pour l'affichage, le
+  /// récapitulatif et l'écriture, même rationale que
+  /// [_effectiveSelectedInvocationIds].
+  List<String> _effectiveSelectedElementalDisciplineIds(LevelUpStepData data) {
+    if (!data.requiresElementalDisciplineSelection) return const [];
+    final availableIds = {
+      for (final option in _availableElementalDisciplinesFor(data))
+        option.id.toString(),
+    };
+    final quota = _effectiveElementalDisciplineQuota(data);
+    final pruned = [
+      for (final id in _selectedElementalDisciplineIds)
+        if (availableIds.contains(id)) id,
+    ];
+    return pruned.length > quota ? pruned.sublist(0, quota) : pruned;
+  }
+
+  void _toggleElementalDiscipline(
+    LevelUpStepData data,
+    String disciplineId,
+    int quota,
+  ) {
+    setState(() {
+      _selectedElementalDisciplineIds = SpellsStepSelection.toggle(
+        current: _effectiveSelectedElementalDisciplineIds(data),
+        value: disciplineId,
+        quota: quota,
+      );
+    });
+  }
+
+  /// Noms des disciplines élémentaires choisies, prêts pour
+  /// `CharacterRepository.applyLevelUp` (paramètre
+  /// `elementalDisciplineNames`, écrit par NOM — voir sa documentation, pas
+  /// un identifiant à résoudre côté serveur).
+  List<String> _buildElementalDisciplineNames(LevelUpStepData data) {
+    if (!data.requiresElementalDisciplineSelection) return const [];
+    final available = _availableElementalDisciplinesFor(data);
+    return [
+      for (final id in _effectiveSelectedElementalDisciplineIds(data))
+        available.firstWhere((option) => option.id.toString() == id).name,
+    ];
   }
 
   /// Pacte connu pour la validation des prérequis d'invocations : celui choisi
@@ -727,6 +833,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         choice: _buildChoiceSelection(data),
         initialSpellIds: _buildNewSpellIds(data),
         invocationIds: _buildInvocationIds(data),
+        elementalDisciplineNames: _buildElementalDisciplineNames(data),
         racialInnateSpellIds: _racialInnateSpellIds(data),
       );
 
@@ -761,6 +868,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         _resetClassDecisionState();
         _resetSpellSelectionState();
         _resetInvocationSelectionState();
+        _resetElementalDisciplineSelectionState();
         _isApplying = false;
       });
     } on CharacterFailure catch (failure) {
@@ -884,6 +992,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       _LevelUpPhase.choice => _buildChoiceStep(data),
       _LevelUpPhase.spells => _buildSpellsStep(data),
       _LevelUpPhase.invocations => _buildInvocationsStep(data),
+      _LevelUpPhase.elementalDisciplines => _buildElementalDisciplinesStep(
+        data,
+      ),
       _LevelUpPhase.summary => _buildSummary(data),
     };
   }
@@ -1101,7 +1212,8 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         data.blockReason == null &&
         (data.choiceKind != null ||
             _hasSpellsStep(data) ||
-            _hasInvocationsStep(data));
+            _hasInvocationsStep(data) ||
+            _hasElementalDisciplinesStep(data));
 
     return Column(
       children: [
@@ -1158,20 +1270,32 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         color: AppColors.accentViolet,
                         label: 'Vos emplacements de sorts vont évoluer',
                       ),
-                      if (_hasInvocationsStep(data))
+                      if (_hasInvocationsStep(data) ||
+                          _hasElementalDisciplinesStep(data))
                         const SizedBox(height: AppSpacing.sm),
                     ],
                     // Décision assumée au-delà de la spec visuelle littérale
                     // (qui ne couvrait que les sections "Choix à faire"/
                     // "Sorts" de cette annonce) : même traitement "teaser"
-                    // pour l'étape "Invocations", par cohérence avec les deux
-                    // autres — à valider par le chef de projet si un
-                    // désaccord existe sur ce point.
-                    if (_hasInvocationsStep(data))
+                    // pour l'étape "Invocations"/"Disciplines élémentaires",
+                    // par cohérence avec les deux autres — à valider par le
+                    // chef de projet si un désaccord existe sur ce point.
+                    if (_hasInvocationsStep(data)) ...[
                       const _UpcomingStepRow(
                         icon: Icons.remove_red_eye,
                         color: AppColors.accentViolet,
                         label: 'De nouvelles invocations vous attendront',
+                      ),
+                      if (_hasElementalDisciplinesStep(data))
+                        const SizedBox(height: AppSpacing.sm),
+                    ],
+                    if (_hasElementalDisciplinesStep(data))
+                      const _UpcomingStepRow(
+                        icon: Icons.whatshot,
+                        color: AppColors.accentBrick,
+                        label:
+                            'De nouvelles disciplines élémentaires vous '
+                            'attendront',
                       ),
                   ],
                 ],
@@ -1215,46 +1339,97 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   bool _hasInvocationsStep(LevelUpStepData data) =>
       data.requiresInvocationSelection;
 
-  /// 3 à 6 selon les étapes déclenchées à ce niveau — spec visuelle
+  /// `true` si l'étape "Disciplines élémentaires" doit être affichée à ce
+  /// niveau — Moine, Voie des quatre éléments uniquement, voir
+  /// [LevelUpStepData.requiresElementalDisciplineSelection].
+  ///
+  /// Dépend du quota EFFECTIF ([_effectiveElementalDisciplineQuota]), jamais
+  /// du seul [LevelUpStepData.requiresElementalDisciplineSelection] (bug de
+  /// régression corrigé le 19/10/2026) : au niveau 3, ce dernier reste
+  /// optimiste tant que la sous-classe n'est pas choisie dans cette même
+  /// montée de niveau (voir la doc du provider) — [_monkSubclassIdFor]/
+  /// [_availableElementalDisciplinesFor] résolvent la sous-classe
+  /// EFFECTIVEMENT choisie (ou déjà connue aux niveaux 6/11/17), ce qui
+  /// donne un quota de 0 — donc une étape absente — pour toute sous-classe
+  /// autre que Voie des quatre éléments, sans code dédié supplémentaire.
+  bool _hasElementalDisciplinesStep(LevelUpStepData data) =>
+      _effectiveElementalDisciplineQuota(data) > 0;
+
+  /// 3 à 7 selon les étapes déclenchées à ce niveau — spec visuelle
   /// direction-artistique : [LevelUpStepData.choiceKind] non nul ajoute
   /// l'étape "Choix à faire" (increment 2, inchangé), [_hasSpellsStep]
   /// ajoute l'étape "Sorts", [_hasInvocationsStep] ajoute l'étape
-  /// "Invocations".
+  /// "Invocations", [_hasElementalDisciplinesStep] ajoute l'étape
+  /// "Disciplines élémentaires" (mutuellement exclusive avec
+  /// [_hasInvocationsStep] en pratique, voir [_LevelUpPhase.elementalDisciplines]).
   int _totalSteps(LevelUpStepData data) =>
       3 +
       (data.choiceKind != null ? 1 : 0) +
       (_hasSpellsStep(data) ? 1 : 0) +
-      (_hasInvocationsStep(data) ? 1 : 0);
+      (_hasInvocationsStep(data) ? 1 : 0) +
+      (_hasElementalDisciplinesStep(data) ? 1 : 0);
 
   /// Étape suivante une fois "Aptitudes"/"Choix à faire" franchies : l'étape
   /// "Sorts" si ce niveau la déclenche ([_hasSpellsStep]), sinon l'étape
-  /// "Invocations" si ce niveau la déclenche ([_hasInvocationsStep]), le
-  /// récapitulatif sinon — même logique de chaînage conditionnel que
-  /// [LevelUpChoiceKind] pour l'étape "Choix à faire". Couvre aussi le cas
-  /// défensif "condition d'affichage vraie mais 0 changement calculé" (spec
-  /// visuelle direction-artistique section 4) : ce cas ne devrait jamais se
-  /// produire en pratique pour la branche mono-classe historique (voir
+  /// "Invocations" si ce niveau la déclenche ([_hasInvocationsStep]), sinon
+  /// l'étape "Disciplines élémentaires" si ce niveau la déclenche
+  /// ([_hasElementalDisciplinesStep]), le récapitulatif sinon — même logique
+  /// de chaînage conditionnel que [LevelUpChoiceKind] pour l'étape "Choix à
+  /// faire". Couvre aussi le cas défensif "condition d'affichage vraie mais
+  /// 0 changement calculé" (spec visuelle direction-artistique section 4) :
+  /// ce cas ne devrait jamais se produire en pratique pour la branche
+  /// mono-classe historique (voir
   /// `domain/spell_slot_progression.dart::SpellSlotProgression.changesFor`),
   /// mais une liste vide retombe naturellement ici sur le récapitulatif,
   /// sans code dédié supplémentaire.
   _LevelUpPhase _phaseAfterChoiceOrAbilities(LevelUpStepData data) {
     if (_hasSpellsStep(data)) return _LevelUpPhase.spells;
     if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
+    if (_hasElementalDisciplinesStep(data)) {
+      return _LevelUpPhase.elementalDisciplines;
+    }
     return _LevelUpPhase.summary;
   }
 
   /// Étape suivante une fois "Sorts" franchie : l'étape "Invocations" si ce
-  /// niveau la déclenche ([_hasInvocationsStep]), le récapitulatif sinon.
-  _LevelUpPhase _phaseAfterSpells(LevelUpStepData data) =>
-      _hasInvocationsStep(data)
-      ? _LevelUpPhase.invocations
-      : _LevelUpPhase.summary;
+  /// niveau la déclenche ([_hasInvocationsStep]), sinon l'étape
+  /// "Disciplines élémentaires" si ce niveau la déclenche
+  /// ([_hasElementalDisciplinesStep]), le récapitulatif sinon.
+  _LevelUpPhase _phaseAfterSpells(LevelUpStepData data) {
+    if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
+    if (_hasElementalDisciplinesStep(data)) {
+      return _LevelUpPhase.elementalDisciplines;
+    }
+    return _LevelUpPhase.summary;
+  }
 
   /// Étape précédente de "Invocations" ("Retour") : l'étape "Sorts" si ce
   /// niveau la déclenche ([_hasSpellsStep]), sinon "Choix à faire" si
   /// déclenchée, sinon "Aptitudes" — même logique de repli que le "Retour"
   /// existant de l'étape "Sorts".
   _LevelUpPhase _phaseBeforeInvocations(LevelUpStepData data) {
+    if (_hasSpellsStep(data)) return _LevelUpPhase.spells;
+    if (data.choiceKind != null) return _LevelUpPhase.choice;
+    return _LevelUpPhase.abilities;
+  }
+
+  /// Étape suivante une fois "Invocations" franchie : l'étape "Disciplines
+  /// élémentaires" si ce niveau la déclenche
+  /// ([_hasElementalDisciplinesStep]) — ne devrait jamais arriver en
+  /// pratique (mutuellement exclusives, voir
+  /// [_LevelUpPhase.elementalDisciplines]), le récapitulatif sinon.
+  _LevelUpPhase _phaseAfterInvocations(LevelUpStepData data) =>
+      _hasElementalDisciplinesStep(data)
+      ? _LevelUpPhase.elementalDisciplines
+      : _LevelUpPhase.summary;
+
+  /// Étape précédente de "Disciplines élémentaires" ("Retour") : l'étape
+  /// "Invocations" si ce niveau la déclenche ([_hasInvocationsStep], ne
+  /// devrait jamais arriver en pratique), sinon "Sorts" si déclenchée,
+  /// sinon "Choix à faire" si déclenchée, sinon "Aptitudes" — même logique
+  /// de repli que [_phaseBeforeInvocations].
+  _LevelUpPhase _phaseBeforeElementalDisciplines(LevelUpStepData data) {
+    if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
     if (_hasSpellsStep(data)) return _LevelUpPhase.spells;
     if (data.choiceKind != null) return _LevelUpPhase.choice;
     return _LevelUpPhase.abilities;
@@ -2451,7 +2626,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           // de candidats est vide (quota effectif 0, déjà atteint), spec
           // visuelle direction-artistique section 3.
           onContinue: selected.length == quota
-              ? () => setState(() => _phase = _LevelUpPhase.summary)
+              ? () => setState(() => _phase = _phaseAfterInvocations(data))
               : null,
         ),
       ],
@@ -2509,6 +2684,135 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   int _invocationsStepNumber(LevelUpStepData data) {
     final spellsStepNumber = data.choiceKind != null ? 4 : 3;
     return _hasSpellsStep(data) ? spellsStepNumber + 1 : spellsStepNumber;
+  }
+
+  /// Étape "Disciplines élémentaires", affichée uniquement quand
+  /// [_hasElementalDisciplinesStep] vaut `true` (Moine, Voie des quatre
+  /// éléments) — duplicata volontaire de [_buildInvocationsStep] (même
+  /// patron : quota effectif, liste de candidates, pas d'échange d'une
+  /// discipline déjà connue contre une autre — même simplification assumée
+  /// que les étapes "Sorts"/"Invocations").
+  Widget _buildElementalDisciplinesStep(LevelUpStepData data) {
+    final stepNumber = _elementalDisciplinesStepNumber(data);
+    final quota = _effectiveElementalDisciplineQuota(data);
+    final selected = _effectiveSelectedElementalDisciplineIds(data);
+    final available = _availableElementalDisciplinesFor(data);
+
+    return Column(
+      children: [
+        LevelUpHeader(
+          eyebrow: 'MONTÉE DE NIVEAU',
+          levelLabel: 'NIVEAU $_targetLevel',
+          stepLabel:
+              'Étape $stepNumber sur ${_totalSteps(data)} · '
+              'Disciplines élémentaires',
+          remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'DISCIPLINES ÉLÉMENTAIRES CONNUES',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    _QuotaBadge(text: '${selected.length} / $quota'),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                if (available.isEmpty)
+                  const _ParchmentCard(
+                    child: _EmptyChoiceState(
+                      message:
+                          'Vous connaissez déjà toutes les disciplines '
+                          'élémentaires disponibles à ce niveau.',
+                    ),
+                  )
+                else
+                  for (var i = 0; i < available.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.xs),
+                    _elementalDisciplineTile(
+                      data,
+                      available[i],
+                      index: i,
+                      quota: quota,
+                      selected: selected,
+                    ),
+                  ],
+              ],
+            ),
+          ),
+        ),
+        _StepFooter(
+          onBack: () =>
+              setState(() => _phase = _phaseBeforeElementalDisciplines(data)),
+          // Actif dès que le quota EFFECTIF est atteint (même rationale que
+          // l'étape "Invocations") — toujours vrai quand la liste de
+          // candidates est vide (quota effectif 0, déjà atteint).
+          onContinue: selected.length == quota
+              ? () => setState(() => _phase = _LevelUpPhase.summary)
+              : null,
+        ),
+      ],
+    );
+  }
+
+  /// Une tuile de discipline élémentaire candidate — réutilise directement
+  /// `SpellsStepSelection.toggle`/`.isChoiceLocked` (même patron que
+  /// [_invocationTile]). Couleur d'accent fixe [AppColors.accentBrick]
+  /// (distincte du violet des invocations — les deux étapes sont
+  /// mutuellement exclusives en pratique, mais gardent chacune leur
+  /// identité visuelle ; `accentBrick` choisi faute de couleur "feu/terre"
+  /// dédiée dans `10-design-system.md` à ce jour — à valider par
+  /// `direction-artistique` si un désaccord existe). Aucune condition
+  /// d'éligibilité supplémentaire (contrairement à [_invocationTile]) :
+  /// [available] est déjà filtrée par niveau/déjà connu côté repository.
+  Widget _elementalDisciplineTile(
+    LevelUpStepData data,
+    LevelUpElementalDisciplineOption discipline, {
+    required int index,
+    required int quota,
+    required List<String> selected,
+  }) {
+    final id = discipline.id.toString();
+    final isSelected = selected.contains(id);
+    return CheckableOptionTile(
+      title: discipline.name,
+      subtitle: discipline.description,
+      leading: AccentIconBadge(
+        index: index,
+        icon: Icons.whatshot,
+        color: AppColors.accentBrick,
+      ),
+      checked: isSelected,
+      enabled: !SpellsStepSelection.isChoiceLocked(
+        isSelected: isSelected,
+        selectedCount: selected.length,
+        quota: quota,
+      ),
+      onTap: () => _toggleElementalDiscipline(data, id, quota),
+    );
+  }
+
+  /// 3 à 7 selon les étapes déclenchées avant "Disciplines élémentaires" à
+  /// ce niveau — même principe que [_invocationsStepNumber] (ajoute
+  /// l'étape "Invocations" si elle existe aussi, défensif : mutuellement
+  /// exclusives en pratique).
+  int _elementalDisciplinesStepNumber(LevelUpStepData data) {
+    final afterSpellsStepNumber = _invocationsStepNumber(data);
+    return _hasInvocationsStep(data)
+        ? afterSpellsStepNumber + 1
+        : afterSpellsStepNumber;
   }
 
   /// Une ligne de gain de l'étape "Sorts", et du bloc "Sorts" du
@@ -2726,6 +3030,23 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     );
   }
 
+  /// Ligne de récapitulatif du bloc "Discipline(s) élémentaire(s)" (Moine,
+  /// Voie des quatre éléments), `null` si aucune discipline n'a été choisie
+  /// à ce niveau — même patron que [_invocationSummaryGainRow]. Insérée dans
+  /// [_buildSummary] juste après ce dernier (mutuellement exclusifs en
+  /// pratique).
+  GainRow? _elementalDisciplineSummaryGainRow(LevelUpStepData data) {
+    final names = _buildElementalDisciplineNames(data);
+    if (names.isEmpty) return null;
+    final plural = names.length > 1 ? 's' : '';
+    return GainRow(
+      icon: Icons.whatshot,
+      color: AppColors.accentBrick,
+      title: 'Nouvelle$plural discipline$plural élémentaire$plural',
+      subtitle: names.join(', '),
+    );
+  }
+
   Widget _buildSummary(LevelUpStepData data) {
     final gain = _hpGain(
       hitDie: data.hitDie,
@@ -2788,6 +3109,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                           case final invocationRow?) ...[
                         const SizedBox(height: AppSpacing.md),
                         invocationRow,
+                      ],
+                      if (_elementalDisciplineSummaryGainRow(data)
+                          case final disciplineRow?) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        disciplineRow,
                       ],
                     ],
                   ),

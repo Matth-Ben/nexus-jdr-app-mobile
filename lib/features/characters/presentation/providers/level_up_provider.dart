@@ -6,12 +6,14 @@ import '../../../character_creation/domain/spell_option.dart';
 import '../../../character_creation/presentation/providers/character_creation_providers.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/character_failure.dart';
+import '../../domain/elemental_disciplines_known_progression.dart';
 import '../../domain/hit_point_bonus_rules.dart';
 import '../../domain/invocation_selection_rules.dart';
 import '../../domain/invocations_known_progression.dart';
 import '../../domain/level_up_block_reason.dart';
 import '../../domain/level_up_choice_kind.dart';
 import '../../domain/level_up_continue_option.dart';
+import '../../domain/level_up_elemental_discipline_option.dart';
 import '../../domain/level_up_feat_option.dart';
 import '../../domain/level_up_invocation_option.dart';
 import '../../domain/level_up_multiclass_option.dart';
@@ -216,6 +218,38 @@ typedef LevelUpStepData = ({
   /// [requiresInvocationSelection] est `false`) — base du quota effectif
   /// recalculé par l'écran.
   int invocationDelta,
+
+  /// `true` si l'étape "Disciplines élémentaires" doit être affichée à ce
+  /// niveau — Moine, Voie des quatre éléments uniquement, delta strictement
+  /// positif de
+  /// `domain/elemental_disciplines_known_progression.dart::ElementalDisciplinesKnownProgression`
+  /// (niveaux 3, 6, 11, 17 RAW). Correctif du bug bloquant "tout Moine Voie
+  /// des quatre éléments restait bloqué à sa montée de niveau 3" — même
+  /// traitement que [requiresInvocationSelection] ci-dessus (indépendant de
+  /// [choiceKind] : `class_features.choice_type = 'discipline_elementaire'`,
+  /// présent en base au seul niveau 3, ne mène plus à l'étape "Choix à
+  /// faire").
+  bool requiresElementalDisciplineSelection,
+
+  /// Delta RAW de disciplines élémentaires de ce niveau (0 si
+  /// [requiresElementalDisciplineSelection] est `false`).
+  int elementalDisciplineDelta,
+
+  /// Disciplines élémentaires NON déjà connues du personnage, PAR
+  /// `subclasses.id` candidat — non vide seulement si
+  /// [requiresElementalDisciplineSelection]. Porte plusieurs entrées
+  /// uniquement au niveau 3 (choix de sous-classe ET premier palier de
+  /// disciplines dans LA MÊME montée de niveau, voir [choiceKind] ==
+  /// [LevelUpChoiceKind.subclass] et [availableSubclasses]) : une entrée par
+  /// sous-classe candidate, en plus de [knownSubclassId] déjà enregistré —
+  /// même mécanisme que [patronExtendedSpells] pour le patron de
+  /// l'Occultiste. Aux niveaux 6/11/17 (sous-classe déjà choisie), ne porte
+  /// jamais plus d'une entrée (celle de [knownSubclassId]). L'écran affine
+  /// avec la sous-classe réellement sélectionnée localement (même rôle que
+  /// `_patronSubclassIdFor`/`_patronMergeFor`,
+  /// `presentation/level_up_screen.dart`).
+  Map<int, List<LevelUpElementalDisciplineOption>>
+  elementalDisciplinesBySubclass,
 
   /// Pacte de l'Occultiste déjà enregistré en base
   /// (`character_class_options`), `null` si aucun — le pacte choisi dans la
@@ -719,6 +753,90 @@ Future<LevelUpStepData> levelUpStepData(
     );
   }
 
+  // Disciplines élémentaires — étape "Disciplines élémentaires",
+  // indépendante de [choiceKind] (voir `domain/level_up_block_reason.dart`
+  // et `domain/level_up_choice_kind.dart::LevelUpPendingChoiceResolver`) —
+  // Moine, Voie des quatre éléments UNIQUEMENT (bug bloquant corrigé le
+  // 19/10/2026 : "tout Moine Voie des quatre éléments restait bloqué à sa
+  // montée de niveau 3" ; régression corrigée le même jour en revue de code
+  // : `effectiveClassName == 'Moine'` seul capturait TOUTES les sous-classes
+  // de Moine, pas seulement Voie des quatre éléments — un Moine Main
+  // ouverte/Ombre/Ivresse/Kensei/etc. déclenchait l'étape à chaque niveau
+  // 3/6/11/17 pour toute sa progression, avec le catalogue systématiquement
+  // vide pour sa vraie sous-classe).
+  //
+  // Niveaux 6/11/17 (sous-classe déjà connue, [effectiveSubclassName]
+  // résolu) : ne se déclenche que si cette sous-classe est exactement
+  // [ElementalDisciplinesKnownProgression.subclassName].
+  //
+  // Niveau 3 (sous-classe PAS encore choisie dans cette même montée de
+  // niveau) : contrairement à [patronExtendedSpells] (tous les patrons de
+  // l'Occultiste donnent des sorts étendus), une seule des ~10 sous-classes
+  // de Moine a des disciplines élémentaires — mais `choice_type = 'sous_
+  // classe'` propose systématiquement TOUTES les sous-classes de Moine au
+  // niveau 3, donc filtrer sur "Voie des quatre éléments fait partie des
+  // candidates" ne discrimine jamais rien à ce niveau précis (elle y est
+  // toujours). [requiresElementalDisciplineSelection] reste donc
+  // optimiste (`true`) tant que le choix n'est pas fait, exactement comme
+  // pour le patron ; la disponibilité RÉELLE de l'étape est déterminée
+  // ENSUITE, côté écran, à partir de la sous-classe EFFECTIVEMENT choisie
+  // (voir `_hasElementalDisciplinesStep`/`_availableElementalDisciplinesFor`,
+  // `presentation/level_up_screen.dart`, qui résout un quota effectif de 0
+  // — donc une étape absente — pour toute sous-classe autre que Voie des
+  // quatre éléments, y compris au niveau 3). Le chaînage d'étapes se
+  // recalcule ainsi APRÈS le choix de sous-classe, jamais avant.
+  final isKnownFourElementsMonk =
+      effectiveSubclassName ==
+      ElementalDisciplinesKnownProgression.subclassName;
+  final mayBecomeFourElementsMonkThisLevel =
+      choiceKind == LevelUpChoiceKind.subclass &&
+      levelData.availableSubclasses.any(
+        (option) =>
+            option.name == ElementalDisciplinesKnownProgression.subclassName,
+      );
+  final elementalDisciplineDelta =
+      effectiveClassName == 'Moine' &&
+          (isKnownFourElementsMonk || mayBecomeFourElementsMonkThisLevel)
+      ? ElementalDisciplinesKnownProgression.newDisciplinesAt(
+          effectiveTargetLevel,
+        )
+      : 0;
+  final requiresElementalDisciplineSelection = elementalDisciplineDelta > 0;
+  var elementalDisciplinesBySubclass =
+      const <int, List<LevelUpElementalDisciplineOption>>{};
+  if (requiresElementalDisciplineSelection) {
+    // Même rationale que [patronExtendedSpells] plus haut : au niveau 3, le
+    // choix de sous-classe (`choiceKind == LevelUpChoiceKind.subclass`) et
+    // le premier palier de disciplines sont déclenchés par LA MÊME montée
+    // de niveau, avant que le joueur n'ait choisi sa sous-classe —
+    // impossible de savoir ici laquelle sera retenue. Récupère donc le
+    // catalogue pour [knownSubclassId] (déjà choisi, cas normal : niveaux
+    // 6/11/17) ET pour chaque sous-classe candidate de
+    // `levelData.availableSubclasses` (cas du niveau 3 lui-même) — l'écran
+    // affine ensuite avec la sous-classe réellement sélectionnée localement
+    // (même mécanisme que `_patronSubclassIdFor`/`_patronMergeFor`,
+    // `presentation/level_up_screen.dart`).
+    final candidateSubclassIds = <int>{
+      ?knownSubclassId,
+      if (choiceKind == LevelUpChoiceKind.subclass)
+        for (final option in levelData.availableSubclasses)
+          (option.id as num).toInt(),
+    };
+    final repository = ref.watch(characterRepositoryProvider);
+    final entries = await Future.wait([
+      for (final subclassId in candidateSubclassIds)
+        repository
+            .fetchAvailableElementalDisciplines(
+              characterId: characterId,
+              classId: effectiveClassId,
+              subclassId: subclassId,
+              targetLevel: effectiveTargetLevel,
+            )
+            .then((options) => MapEntry(subclassId, options)),
+    ]);
+    elementalDisciplinesBySubclass = Map.fromEntries(entries);
+  }
+
   // Dons — étape "Choix à faire", sous-mode "don" (voir
   // `domain/level_up_choice_selection.dart::LevelUpChoiceSelection.featId`) :
   // une seule requête réseau supplémentaire, uniquement quand ce niveau
@@ -770,6 +888,9 @@ Future<LevelUpStepData> levelUpStepData(
     availableInvocations: availableInvocations,
     invocationQuota: invocationQuota,
     invocationDelta: invocationDelta,
+    requiresElementalDisciplineSelection: requiresElementalDisciplineSelection,
+    elementalDisciplineDelta: elementalDisciplineDelta,
+    elementalDisciplinesBySubclass: elementalDisciplinesBySubclass,
     knownPact: knownPact,
     knownCantripSpellIds: knownCantripSpellIds,
     knownSpellIds: knownSpellIds,

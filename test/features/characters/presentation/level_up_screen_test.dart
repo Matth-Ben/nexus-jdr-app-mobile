@@ -43,6 +43,7 @@ import 'package:personnages/features/characters/domain/invocation_prerequisites.
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
 import 'package:personnages/features/characters/domain/level_up_feat_option.dart';
 import 'package:personnages/features/characters/domain/level_up_invocation_option.dart';
+import 'package:personnages/features/characters/domain/level_up_elemental_discipline_option.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_kind.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
@@ -67,6 +68,7 @@ class _AppliedLevelUp {
     required this.choice,
     required this.initialSpellIds,
     required this.invocationIds,
+    required this.elementalDisciplineNames,
     required this.racialInnateSpellIds,
   });
 
@@ -79,6 +81,7 @@ class _AppliedLevelUp {
   final LevelUpChoiceSelection? choice;
   final List<int> initialSpellIds;
   final List<int> invocationIds;
+  final List<String> elementalDisciplineNames;
   final List<int> racialInnateSpellIds;
 }
 
@@ -211,6 +214,12 @@ class _FakeCharacterRepository implements CharacterRepository {
   List<LevelUpFeatOption> featsToReturn = const [];
   List<LevelUpInvocationOption> invocationsToReturn = const [];
 
+  // Vide par défaut, même rationale que [invocationsToReturn] — overridable
+  // par test de l'étape "Disciplines élémentaires" (Moine, Voie des quatre
+  // éléments).
+  List<LevelUpElementalDisciplineOption> elementalDisciplinesToReturn =
+      const [];
+
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
 
@@ -244,6 +253,15 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) async => invocationsToReturn;
 
   @override
+  Future<List<LevelUpElementalDisciplineOption>>
+  fetchAvailableElementalDisciplines({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  }) async => elementalDisciplinesToReturn;
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -255,6 +273,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
     List<int> invocationIds = const [],
+    List<String> elementalDisciplineNames = const [],
     List<int> racialInnateSpellIds = const [],
   }) async {
     applyLevelUpCalls.add(
@@ -268,6 +287,7 @@ class _FakeCharacterRepository implements CharacterRepository {
         choice: choice,
         initialSpellIds: initialSpellIds,
         invocationIds: invocationIds,
+        elementalDisciplineNames: elementalDisciplineNames,
         racialInnateSpellIds: racialInnateSpellIds,
       ),
     );
@@ -3475,6 +3495,304 @@ void main() {
       expect(find.text('Mains brulantes'), findsNothing);
       expect(find.textContaining('· Patron'), findsNothing);
     });
+  });
+
+  group('etape "Disciplines elementaires" (Moine, Voie des quatre elements) — '
+      'correctif bug bloquant', () {
+    testWidgets(
+      'niveau 3 (bug original : choix de sous-classe ET 1er palier de '
+      'disciplines dans la meme montee de niveau) : le niveau 3 ne '
+      'bloque plus, enchaine Sous-classe puis Disciplines elementaires '
+      'une fois "Voie des quatre elements" choisie, quota effectif 2, '
+      'pluriel au recapitulatif, applyLevelUp recoit les 2 noms',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 20,
+              hitDie: 8,
+              className: 'Moine',
+              level: 2,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(
+            choiceType: 'sous_classe',
+            automaticFeatures: [],
+            availableSubclasses: [
+              LevelUpSubclassOption(id: 66, name: 'Voie des quatre éléments'),
+              LevelUpSubclassOption(id: 67, name: 'Voie de la main ouverte'),
+            ],
+          ),
+        };
+        fakeRepository.elementalDisciplinesToReturn = const [
+          LevelUpElementalDisciplineOption(
+            id: 701,
+            name: 'Souffle du dragon',
+            description: '',
+          ),
+          LevelUpElementalDisciplineOption(
+            id: 702,
+            name: 'Patience de la montagne',
+            description: '',
+          ),
+          LevelUpElementalDisciplineOption(
+            id: 703,
+            name: 'Fureur de la tempête',
+            description: '',
+          ),
+        ];
+
+        // Avant le correctif, ce niveau restait bloqué indéfiniment
+        // ('discipline_elementaire' absent de resolvedChoiceTypes) : la
+        // seule assertion "l'écran de blocage n'apparaît jamais" suffit à
+        // couvrir la régression, le reste du test couvre le flux complet.
+        //
+        // "Étape 1 sur 4" (pas 5) à ce stade : la sous-classe n'est pas
+        // encore choisie, donc l'étape "Disciplines élémentaires" ne compte
+        // pas encore dans le total (voir la régression corrigée en revue de
+        // code — `_hasElementalDisciplinesStep` dépend désormais de la
+        // sous-classe EFFECTIVEMENT choisie, jamais d'une supposition
+        // optimiste avant le choix) ; le total passe à 5 une fois "Voie des
+        // quatre éléments" choisie, voir plus bas.
+        await pushPastAnnouncement(tester, 3);
+        expect(find.textContaining('bloqu'), findsNothing);
+        expect(find.text('Étape 1 sur 4 · Points de vie'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        // "sur 4" ici aussi (pas encore 5) : la sous-classe n'est pas
+        // encore choisie à ce point, voir le commentaire plus haut.
+        expect(find.text('Étape 3 sur 4 · Sous-classe'), findsOneWidget);
+        await tester.tap(find.text('Voie des quatre éléments'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Étape 4 sur 5 · Disciplines élémentaires'),
+          findsOneWidget,
+        );
+        expect(find.text('0 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Étape 4 sur 5 · Disciplines élémentaires'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Souffle du dragon'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Fureur de la tempête'));
+        await tester.pumpAndSettle();
+        expect(find.text('2 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nouvelles disciplines élémentaires'), findsOneWidget);
+        expect(
+          find.text('Souffle du dragon, Fureur de la tempête'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Moine');
+        expect(applied.elementalDisciplineNames.toSet(), {
+          'Souffle du dragon',
+          'Fureur de la tempête',
+        });
+      },
+    );
+
+    testWidgets('niveau 6 (sous-classe deja connue, pas de choix simultane) : '
+        'delta 1, quota effectif 1, singulier au recapitulatif', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [
+          const CharacterDetailClassRow(
+            classId: 20,
+            hitDie: 8,
+            className: 'Moine',
+            level: 5,
+            isPrimary: true,
+            savingThrowProficiencies: [],
+            subclassId: 66,
+            subclassName: 'Voie des quatre éléments',
+          ),
+        ],
+        xp: 0,
+      );
+      fakeRepository.levelDataByLevel = {
+        6: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+      fakeRepository.elementalDisciplinesToReturn = const [
+        LevelUpElementalDisciplineOption(
+          id: 704,
+          name: 'Pas du vent',
+          description: '',
+        ),
+      ];
+
+      await pushPastAnnouncement(tester, 6);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Étape 3 sur 4 · Disciplines élémentaires'),
+        findsOneWidget,
+      );
+      expect(find.text('0 / 1'), findsOneWidget);
+
+      await tester.tap(find.text('Pas du vent'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 1'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nouvelle discipline élémentaire'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyLevelUpCalls.single.elementalDisciplineNames, [
+        'Pas du vent',
+      ]);
+    });
+  });
+
+  group('etape "Disciplines elementaires" — regression : un Moine d\'une AUTRE '
+      'sous-classe (Voie de la main ouverte) ne doit JAMAIS la declencher '
+      '(bug corrige en revue de code : seul className == \'Moine\' etait '
+      'teste, jamais la sous-classe)', () {
+    void expectNoElementalDisciplinesMention() {
+      expect(find.textContaining('Disciplines élémentaires'), findsNothing);
+      expect(find.textContaining('discipline élémentaire'), findsNothing);
+      expect(
+        find.textContaining(
+          'Vous connaissez déjà toutes les disciplines élémentaires',
+        ),
+        findsNothing,
+      );
+    }
+
+    testWidgets('niveau 3 (choix de sous-classe dans la meme montee de niveau, '
+        '"Voie des quatre elements" candidate au meme choix) : en '
+        'choisissant "Voie de la main ouverte", le chainage se recalcule '
+        'APRES le choix et sabsente de letape', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [
+          const CharacterDetailClassRow(
+            classId: 20,
+            hitDie: 8,
+            className: 'Moine',
+            level: 2,
+            isPrimary: true,
+            savingThrowProficiencies: [],
+          ),
+        ],
+        xp: 0,
+      );
+      fakeRepository.levelDataByLevel = {
+        3: const LevelUpLevelData(
+          choiceType: 'sous_classe',
+          automaticFeatures: [],
+          availableSubclasses: [
+            LevelUpSubclassOption(id: 66, name: 'Voie des quatre éléments'),
+            LevelUpSubclassOption(id: 67, name: 'Voie de la main ouverte'),
+          ],
+        ),
+      };
+
+      await pushPastAnnouncement(tester, 3);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape 3 sur 4 · Sous-classe'), findsOneWidget);
+      await tester.tap(find.text('Voie de la main ouverte'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      // Directement au récapitulatif, jamais à "Disciplines élémentaires".
+      expectNoElementalDisciplinesMention();
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      final applied = fakeRepository.applyLevelUpCalls.single;
+      expect(applied.className, 'Moine');
+      expect(applied.elementalDisciplineNames, isEmpty);
+    });
+
+    for (final level in [6, 11, 17]) {
+      testWidgets('niveau $level (sous-classe "Voie de la main ouverte" deja '
+          'connue, pas de choix simultane) : aucune etape, aucun message, '
+          'meme si le delta RAW de disciplines connues est strictement '
+          'positif a ce niveau', (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            CharacterDetailClassRow(
+              classId: 20,
+              hitDie: 8,
+              className: 'Moine',
+              level: level - 1,
+              isPrimary: true,
+              savingThrowProficiencies: const [],
+              subclassId: 67,
+              subclassName: 'Voie de la main ouverte',
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          level: const LevelUpLevelData(
+            choiceType: null,
+            automaticFeatures: [],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, level);
+        expect(find.text('Étape 1 sur 3 · Points de vie'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Étape 2 sur 3 · Aptitudes de classe'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        // Directement au récapitulatif, jamais à "Disciplines élémentaires".
+        expectNoElementalDisciplinesMention();
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Moine');
+        expect(applied.elementalDisciplineNames, isEmpty);
+      });
+    }
   });
 
   group('Faveur de pacte (Occultiste niveau 3, choice_type pacte)', () {

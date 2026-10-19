@@ -68,6 +68,10 @@ abstract final class MulticlassProficiencies {
       'Maîtrise des armes courantes',
     ],
     'Magicien': [],
+    'Artificier': [
+      'Maîtrise des armures légères',
+      "Maîtrise d'un type d'outils d'artisan au choix",
+    ],
   };
 
   /// Libellés français à afficher tels quels (`GainRow.subtitle`), une entrée
@@ -120,6 +124,7 @@ abstract final class MulticlassProficiencies {
     'Ensorceleur': [],
     'Occultiste': ['légère'],
     'Magicien': [],
+    'Artificier': ['légère'],
   };
 
   /// Même principe que [_multiclassArmorTokensByClassName], pour
@@ -137,6 +142,10 @@ abstract final class MulticlassProficiencies {
     'Ensorceleur': [],
     'Occultiste': ['courantes'],
     'Magicien': [],
+    // RAW (Tasha's Cauldron of Everything) : aucune maîtrise d'arme accordée
+    // par le multiclassage Artificier, listé explicitement plutôt que de
+    // compter sur le repli `?? const []`.
+    'Artificier': [],
   };
 
   /// Liste vide si [className] est absente de la table, même convention que

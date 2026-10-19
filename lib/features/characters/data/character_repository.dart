@@ -26,6 +26,7 @@ import '../domain/inventory_catalog_item.dart';
 import '../domain/level_up_apply_result.dart';
 import '../domain/level_up_choice_kind.dart';
 import '../domain/level_up_choice_selection.dart';
+import '../domain/level_up_elemental_discipline_option.dart';
 import '../domain/level_up_feat_option.dart';
 import '../domain/level_up_invocation_option.dart';
 import '../domain/level_up_level_data.dart';
@@ -51,6 +52,7 @@ import 'character_spell_row_mapper.dart';
 import 'class_feature_row_mapper.dart';
 import 'inventory_catalog_row_mapper.dart';
 import 'level_up_choice_row_mapper.dart';
+import 'level_up_elemental_discipline_row_mapper.dart';
 import 'level_up_feat_row_mapper.dart';
 import 'level_up_invocation_row_mapper.dart';
 import 'pact_weapon_row_mapper.dart';
@@ -580,6 +582,28 @@ abstract class CharacterRepository {
     required String characterId,
   });
 
+  /// Disciplines élémentaires `class_options` (`option_type =
+  /// 'discipline_elementaire'`) de la sous-classe [subclassId] dont
+  /// `min_level <= targetLevel`, NON déjà connues de [characterId] — étape
+  /// "Disciplines élémentaires" de la montée de niveau (Moine, Voie des
+  /// quatre éléments, voir
+  /// `domain/elemental_disciplines_known_progression.dart`). "Déjà connue"
+  /// se lit sur `character_class_options.chosen_value` pour la ligne
+  /// `class_features` dont `class_id = classId` et `choice_type =
+  /// 'discipline_elementaire'` (une seule en base à ce jour, voir
+  /// `domain/level_up_block_reason.dart` — jamais une par palier) : même
+  /// résolution par nom que l'écriture, voir
+  /// `applyLevelUp.elementalDisciplineNames`. Noms/descriptions résolus via
+  /// `translations` (`entity_type = 'class_option'`) — voir
+  /// `domain/level_up_elemental_discipline_option.dart`.
+  Future<List<LevelUpElementalDisciplineOption>>
+  fetchAvailableElementalDisciplines({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  });
+
   /// Applique une montée de niveau déjà validée par le joueur (écran
   /// "Montée de niveau", récapitulatif). Deux branches, selon
   /// [isMulticlassing] :
@@ -674,6 +698,26 @@ abstract class CharacterRepository {
   /// `domain/invocations_known_progression.dart`), déjà résolues en
   /// identifiants par l'appelant. Toujours vide hors de ce cas.
   ///
+  /// [elementalDisciplineNames] : disciplines élémentaires nouvellement
+  /// choisies (Moine, Voie des quatre éléments, voir
+  /// `domain/elemental_disciplines_known_progression.dart`), par NOM déjà
+  /// résolu par l'appelant (`LevelUpElementalDisciplineOption.name`) —
+  /// écrites dans `character_class_options` (`chosen_value` = ce nom, même
+  /// convention texte libre que les styles de combat/ennemis jurés, jamais
+  /// un identifiant à résoudre : `character_class_options` n'a pas de
+  /// colonne dédiée à un FK vers `class_options`). `class_feature_id`
+  /// résolu depuis [classId] (ligne `class_features` dont `choice_type =
+  /// 'discipline_elementaire'`, une seule en base à ce jour — réutilisée pour
+  /// CHAQUE palier 3/6/11/17, jamais une par palier, voir
+  /// `domain/level_up_block_reason.dart`) ; `level` = niveau interne à la
+  /// classe qui progresse (même convention que
+  /// [LevelUpChoiceKind.fightingStyle]/[LevelUpChoiceKind.favoredEnemy]).
+  /// Lève une [CharacterFailure] si aucune ligne `class_features` de ce
+  /// `choice_type` n'existe pour [classId] alors que cette liste est non
+  /// vide (ne devrait jamais arriver : l'appelant ne déclenche cette étape
+  /// que si le personnage progresse effectivement en Moine Voie des quatre
+  /// éléments). Toujours vide hors de ce cas.
+  ///
   /// [racialInnateSpellIds] : sorts innés raciaux (`racial_innate_spells`,
   /// lignes sans choix de lignée) devenus accessibles à ce nouveau niveau
   /// TOTAL, déjà résolus par
@@ -726,6 +770,7 @@ abstract class CharacterRepository {
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
     List<int> invocationIds = const [],
+    List<String> elementalDisciplineNames = const [],
     List<int> racialInnateSpellIds = const [],
   });
 
@@ -3211,6 +3256,79 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   @override
+  Future<List<LevelUpElementalDisciplineOption>>
+  fetchAvailableElementalDisciplines({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  }) async {
+    try {
+      // Ligne `class_features` de ce `choice_type` pour [classId] — une
+      // seule en base à ce jour, réutilisée pour CHAQUE palier (voir la
+      // documentation de [applyLevelUp]), jamais filtrée par niveau. `null`
+      // si introuvable (défensif : ne devrait pas arriver, cette méthode
+      // n'est appelée que pour une classe/sous-classe qui déclenche
+      // effectivement cette étape) — dans ce cas, aucune discipline n'est
+      // jamais considérée "déjà connue" (le filtre ci-dessous reste vide).
+      final disciplineFeatureRows = await _client
+          .from('class_features')
+          .select('id')
+          .eq('class_id', classId)
+          .eq('choice_type', 'discipline_elementaire')
+          .limit(1);
+
+      final knownNames = <String>{};
+      if (disciplineFeatureRows.isNotEmpty) {
+        final disciplineFeatureId = (disciplineFeatureRows.first['id'] as num)
+            .toInt();
+        final knownRows = await _client
+            .from('character_class_options')
+            .select('chosen_value')
+            .eq('character_id', characterId)
+            .eq('class_feature_id', disciplineFeatureId);
+        knownNames.addAll([
+          for (final row in knownRows)
+            if (row['chosen_value'] is String) row['chosen_value'] as String,
+        ]);
+      }
+
+      final allRows = await _client
+          .from('class_options')
+          .select('id, min_level')
+          .eq('subclass_id', subclassId)
+          .eq('option_type', 'discipline_elementaire')
+          .lte('min_level', targetLevel);
+
+      final ids = LevelUpElementalDisciplineRowMapper.collectIds(allRows);
+      final names = await _fetchTranslatedNames(
+        entityType: 'class_option',
+        entityIds: ids,
+      );
+      final descriptions = await _fetchTranslatedField(
+        entityType: 'class_option',
+        fieldName: 'description',
+        entityIds: ids,
+      );
+
+      final availableRows = [
+        for (final row in allRows)
+          if (!knownNames.contains(names[row['id'].toString()])) row,
+      ];
+
+      return LevelUpElementalDisciplineRowMapper.toOptions(
+        availableRows,
+        names: names,
+        descriptions: descriptions,
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -3222,6 +3340,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
     List<int> invocationIds = const [],
+    List<String> elementalDisciplineNames = const [],
     List<int> racialInnateSpellIds = const [],
   }) async {
     final ownerId = _requireOwnerId();
@@ -3528,6 +3647,44 @@ class SupabaseCharacterRepository implements CharacterRepository {
         await _client.from('character_invocations').insert([
           for (final invocationId in invocationIds)
             {'character_id': characterId, 'invocation_id': invocationId},
+        ]);
+      }
+
+      if (elementalDisciplineNames.isNotEmpty) {
+        // Disciplines élémentaires nouvellement choisies (étape
+        // "Disciplines élémentaires", Moine/Voie des quatre éléments, voir
+        // la documentation de [CharacterRepository.applyLevelUp]) — quota
+        // déjà appliqué côté écran (même discipline que [invocationIds]
+        // ci-dessus), cette méthode se contente de résoudre le
+        // `class_feature_id` et d'écrire les `chosen_value` reçus.
+        //
+        // Une seule ligne `class_features` de ce `choice_type` existe en
+        // base à ce jour (voir `domain/level_up_block_reason.dart`) —
+        // réutilisée pour CHAQUE palier (3/6/11/17), jamais une par palier :
+        // contrairement à `fetchLevelUpLevelData` (scopé au niveau ciblé),
+        // cette recherche n'est PAS filtrée par niveau.
+        final disciplineFeatureRows = await _client
+            .from('class_features')
+            .select('id')
+            .eq('class_id', classId)
+            .eq('choice_type', 'discipline_elementaire')
+            .limit(1);
+        if (disciplineFeatureRows.isEmpty) {
+          throw const CharacterFailure(
+            'Discipline élémentaire : aptitude de classe introuvable pour '
+            'cette classe.',
+          );
+        }
+        final disciplineFeatureId = (disciplineFeatureRows.first['id'] as num)
+            .toInt();
+        await _client.from('character_class_options').insert([
+          for (final name in elementalDisciplineNames)
+            {
+              'character_id': characterId,
+              'class_feature_id': disciplineFeatureId,
+              'level': newClassLevel,
+              'chosen_value': name,
+            },
         ]);
       }
 
