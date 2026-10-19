@@ -258,7 +258,7 @@ travaillant sur autre chose. Aucun n'a été traité.
 | Boutons Groupes et Profil sans libellé | Même défaut que le bouton de filtre, corrigé lui. | Mesuré par QA |
 | En-tête de la liste des personnages | Déborde de 25 px à l'échelle de texte 3, avec la police de test. | Mesuré par QA, à confirmer avec la vraie police |
 | Deux demi-lanceurs cumulés | `combinedCasterLevel` additionne puis divise par 2 : Paladin 3 / Rôdeur 3 donne 3, une lecture par classe donnerait 2. Touche aussi la montée de niveau. **Confirmé par Matthias le 09/10 : addition puis division est la règle RAW stricte voulue — comportement actuel déjà conforme, aucune correction nécessaire.** | Lu par QA |
-| Tiers-lanceurs non gérés | Chevalier occulte, Escroc arcanique. | Lu par QA |
+| Tiers-lanceurs non gérés | Chevalier occulte, Escroc arcanique : aptitude "Incantation" présente en base (`class_features`) mais 0 sort accordé (`subclass_spells` vide), aucune table d'emplacements/cantrips/caractéristique d'incantation (classe parente `CasterType.none`). **Confirmé par Matthias le 18/10 : limitation connue acceptée pour l'instant, pas de correctif immédiat.** La campagne de tests de montée de niveau/multiclassage de la même date évite volontairement de choisir ces deux sous-classes tant que ce n'est pas traité. | Lu par QA, confirmé par `regles-dnd` le 18/10 |
 | Dés de vie sur la seule classe primaire | Repos et export d'un multiclassé. Décision produit. | Lu par l'audit et par dev-flutter |
 | Traduction de classe manquante | Classe traitée comme non lanceuse : un total d'emplacements peut baisser sans message au repos long. Rare. Un test « LIMITE CONNUE » épingle le cas. | Testé par QA |
 | Asymétrie UX sur l'annulation de la confirmation de sort inné (12/10) | Pour un sort seulement inné, le panneau "Infos" se ferme avant la confirmation (ne se rouvre pas si annulé) ; pour un sort à double route (D43), la confirmation s'affiche par-dessus le panneau encore ouvert (reste intact si annulé). Comportement fonctionnel identique dans les deux cas (aucun appel si annulé) — juste un ressenti visuel différent. Pas bloquant, signalé par `code-reviewer` comme piste d'harmonisation future. | Relevé par `code-reviewer` |
@@ -463,6 +463,7 @@ commit parent).
 | D72 | Colonne `character_inventory.weapon_slot` utilisée côté mobile depuis le 22/09 (`lib/features/characters/domain/weapon_slot.dart`) mais absente de toutes les migrations du dépôt web — même défaut que D58 (`is_incomplete`). `supabase db reset` échoue dès qu'une requête touche cette colonne ; 7 des 16 échecs de `test_integration/` lui sont directement imputables. | haute | Migration `alter table character_inventory add column if not exists weapon_slot text check (weapon_slot in ('principal', 'secondaire'))`, placée chronologiquement avant le 22/09 | Corrigé (PR #25, dépôt web). Colonne/contrainte reproduites fidèlement (vérifié par dump en lecture seule du projet distant, deux fois indépendamment) : `text` nullable, `CHECK` sur `'principal'`/`'secondaire'`. Aucune autre colonne orpheline trouvée sur `character_inventory`. |
 | D73 | 6 des 16 échecs de `test_integration/` viennent d'un `Worker failed to boot` sur l'edge function `create-group` (`SupabaseGroupRepository.createGroup`) — logs Docker : « failed to bootstrap runtime : failed to determine entrypoint ». Semble être un conteneur `supabase_edge_runtime` local resté actif trop longtemps (infra, pas un bug de code), mais pas vérifié davantage. | basse | Vérifier après un `supabase stop`/`supabase start` propre si l'edge function boote correctement ; si le problème persiste, creuser plus avant de se fier à un futur run de test touchant les groupes | Ouvert |
 | D75 | 6 échecs dans `test_integration/character_creation_repository_integration_test.dart` (tri `ascending: true` qui ne trie pas ; `No element` sur un item catalogue) — trouvé par `qa-testeur` en validant les dés de vie multiclassé (12/10), confirmé indépendant de ce chantier en rejouant à l'identique sur `main`. Suspecté : staleness du stack Supabase local (partagé entre plusieurs worktrees/branches, actif depuis plusieurs jours), pas forcément un vrai bug produit. | basse | Reproduire après un `supabase stop`/`supabase start`/`db reset` propre, isolé de tout worktree concurrent ; si le problème persiste, creuser le tri et l'item catalogue manquant comme un vrai défaut | Ouvert |
+| D82 | `subclass_spells` gagne une colonne `option_key` (PR #29, dépôt web, migration `20261019090000`) pour porter les 8 terrains du Cercle de la Terre du Druide (audit RAW du 18-19/10). Une fois cette migration appliquée par Matthias et la section C du correctif de contenu exécutée, les 3 points de lecture Dart de `subclass_spells` (`character_repository.dart` ×2, `warlock_pact_spell_repository.dart`, qui sélectionnent des colonnes explicites sans `option_key`) renverront les 8 terrains sans distinction pour un Druide Cercle de la Terre tant qu'ils ne filtrent pas sur le terrain choisi par le personnage. | haute (bloque l'affichage correct des sorts de cercle une fois le contenu inséré) | `dev-flutter` : ajouter `option_key` à la sélection et filtrer sur le terrain choisi, une fois la migration mergée | Ouvert, à traiter avant d'activer la section C |
 
 ## Décisions en attente
 
@@ -560,6 +561,14 @@ commit parent).
     ≥ 1), jamais pour un sort mineur à volonté ni un sort ordinaire. Un bug de
     débordement à grande échelle de texte trouvé sur ce nouveau dialogue a révélé le
     même défaut sur deux calques déjà en production — consigné séparément (D81).
+17. Quand une aptitude de domaine divin (ou plus largement de classe/sous-classe) existe
+    en base dupliquée sous deux libellés correspondant au MdJ 2014 classique et à sa
+    révision MdJ 2024, laquelle garder systématiquement ? **Toujours le MdJ 2024,
+    demandé par Matthias le 18/10/2026**, pour rester cohérent avec les races
+    (Orc/Aasimar notamment) déjà sourcées MdJ 2024 dans ce catalogue — décision prise
+    pendant l'audit RAW complet classes/races/multiclassage du 18/10, à appliquer sans
+    rouvrir la question pour chaque sous-classe individuellement (ex. Clerc Duperie id
+    27, Clerc Lumière id 29, déjà tranchées ainsi par `regles-dnd`).
 
 ## Ce que l'audit n'a pas couvert
 
