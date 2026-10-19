@@ -27,7 +27,8 @@ const String qaTestPassword = String.fromEnvironment('QA_TEST_PASSWORD');
 /// `true` si [qaTestEmail]/[qaTestPassword] ont été fournis — les tests qui
 /// en dépendent doivent se `skip` explicitement sinon (jamais échouer avec
 /// un message d'erreur réseau opaque), voir [requireQaTestAccount].
-bool get hasQaTestAccount => qaTestEmail.isNotEmpty && qaTestPassword.isNotEmpty;
+bool get hasQaTestAccount =>
+    qaTestEmail.isNotEmpty && qaTestPassword.isNotEmpty;
 
 /// Message de `skip` uniforme pour tout test authentifié de ce dossier tant
 /// que [hasQaTestAccount] est faux.

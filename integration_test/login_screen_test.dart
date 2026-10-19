@@ -41,55 +41,52 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized().testTextInput.register();
   });
 
-  testWidgets(
-    "écran de connexion : état vide, erreurs de validation, bascule "
-    'connexion/inscription',
-    (tester) async {
-      await launchApp(tester);
+  testWidgets("écran de connexion : état vide, erreurs de validation, bascule "
+      'connexion/inscription', (tester) async {
+    await launchApp(tester);
 
-      // --- État nominal : écran de connexion affiché (pas de session) ---
-      expect(find.text('NEXUS JDR'), findsOneWidget);
-      expect(find.text('ENTRER DANS LA TAVERNE'), findsOneWidget);
-      expect(emailFieldFinder, findsOneWidget);
-      expect(passwordFieldFinder, findsOneWidget);
+    // --- État nominal : écran de connexion affiché (pas de session) ---
+    expect(find.text('NEXUS JDR'), findsOneWidget);
+    expect(find.text('ENTRER DANS LA TAVERNE'), findsOneWidget);
+    expect(emailFieldFinder, findsOneWidget);
+    expect(passwordFieldFinder, findsOneWidget);
 
-      // --- État "erreur" : soumission du formulaire vide ---
-      await _tapText(tester, 'ENTRER');
-      await tester.pumpAndSettle();
-      // `AuthValidators.email`/`.password` (lib/features/auth/domain/
-      // auth_validators.dart) refusent un champ vide, sans jamais contacter
-      // Supabase (voir le doc-comment de `_LoginScreenState._submit`).
-      expect(find.text('Saisissez votre adresse e-mail.'), findsOneWidget);
-      expect(find.text('Saisissez votre mot de passe.'), findsOneWidget);
+    // --- État "erreur" : soumission du formulaire vide ---
+    await _tapText(tester, 'ENTRER');
+    await tester.pumpAndSettle();
+    // `AuthValidators.email`/`.password` (lib/features/auth/domain/
+    // auth_validators.dart) refusent un champ vide, sans jamais contacter
+    // Supabase (voir le doc-comment de `_LoginScreenState._submit`).
+    expect(find.text('Saisissez votre adresse e-mail.'), findsOneWidget);
+    expect(find.text('Saisissez votre mot de passe.'), findsOneWidget);
 
-      // --- Adresse mal formée / mot de passe trop court ---
-      await tester.enterText(emailFieldFinder, 'pas-un-email');
-      await tester.enterText(passwordFieldFinder, 'x');
-      await tester.pump();
-      await _tapText(tester, 'ENTRER');
-      await tester.pumpAndSettle();
-      expect(find.text('Adresse e-mail invalide.'), findsOneWidget);
-      expect(
-        find.text('Le mot de passe doit contenir au moins 6 caractères.'),
-        findsOneWidget,
-      );
-      // Le formulaire ne doit toujours pas avoir déclenché de redirection :
-      // on doit être encore sur l'écran de connexion.
-      expect(find.text('ENTRER DANS LA TAVERNE'), findsOneWidget);
+    // --- Adresse mal formée / mot de passe trop court ---
+    await tester.enterText(emailFieldFinder, 'pas-un-email');
+    await tester.enterText(passwordFieldFinder, 'x');
+    await tester.pump();
+    await _tapText(tester, 'ENTRER');
+    await tester.pumpAndSettle();
+    expect(find.text('Adresse e-mail invalide.'), findsOneWidget);
+    expect(
+      find.text('Le mot de passe doit contenir au moins 6 caractères.'),
+      findsOneWidget,
+    );
+    // Le formulaire ne doit toujours pas avoir déclenché de redirection :
+    // on doit être encore sur l'écran de connexion.
+    expect(find.text('ENTRER DANS LA TAVERNE'), findsOneWidget);
 
-      // --- Bascule vers le mode inscription ---
-      await _tapText(tester, 'Créer un compte');
-      await tester.pumpAndSettle();
-      expect(find.text('CRÉER UN COMPTE'), findsOneWidget);
-      expect(find.text('Confirmer le mot de passe'), findsOneWidget);
-      expect(find.text('Pseudo'), findsOneWidget);
+    // --- Bascule vers le mode inscription ---
+    await _tapText(tester, 'Créer un compte');
+    await tester.pumpAndSettle();
+    expect(find.text('CRÉER UN COMPTE'), findsOneWidget);
+    expect(find.text('Confirmer le mot de passe'), findsOneWidget);
+    expect(find.text('Pseudo'), findsOneWidget);
 
-      // --- Retour au mode connexion ---
-      await _tapText(tester, 'Se connecter');
-      await tester.pumpAndSettle();
-      expect(find.text('ENTRER DANS LA TAVERNE'), findsOneWidget);
-    },
-  );
+    // --- Retour au mode connexion ---
+    await _tapText(tester, 'Se connecter');
+    await tester.pumpAndSettle();
+    expect(find.text('ENTRER DANS LA TAVERNE'), findsOneWidget);
+  });
 
   testWidgets(
     "inscription : un signUp jetable aboutit à l'état "
