@@ -70,6 +70,33 @@ void main() {
       );
     });
 
+    test("'discipline_elementaire' ne renvoie jamais de LevelUpChoiceKind "
+        '(correctif Moine, Voie des quatre éléments) : ce choice_type est '
+        'dans resolvedChoiceTypes (ne bloque plus le flux), mais mène à la '
+        'nouvelle étape "Disciplines élémentaires" dédiée, jamais à l\'étape '
+        '"Choix à faire"', () {
+      expect(
+        LevelUpPendingChoiceResolver.resolve(
+          targetLevel: 3,
+          classFeatureChoiceType: 'discipline_elementaire',
+        ),
+        isNull,
+      );
+    });
+
+    test("'discipline_elementaire' reste prioritaire sur un niveau ASI "
+        '(jamais rencontré en pratique — la seule ligne '
+        "'discipline_elementaire' est au niveau 3 — mais couvre le cas où "
+        'ce ne serait plus vrai un jour)', () {
+      expect(
+        LevelUpPendingChoiceResolver.resolve(
+          targetLevel: 4,
+          classFeatureChoiceType: 'discipline_elementaire',
+        ),
+        isNull,
+      );
+    });
+
     test('un niveau ASI (4/8/12/16/19) sans choice_type -> '
         'LevelUpChoiceKind.abilityScoreImprovement', () {
       for (final level in [4, 8, 12, 16, 19]) {

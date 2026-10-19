@@ -5,12 +5,15 @@ import 'level_up_block_reason.dart';
 /// `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 6,
 /// point 3.
 ///
-/// `invocation` (Occultiste, plusieurs niveaux) n'a volontairement PAS de
-/// valeur d'énumération ici : couverte par la nouvelle étape "Invocations",
-/// distincte de l'étape "Choix à faire" (voir
-/// `presentation/level_up_screen.dart` et
-/// `domain/invocations_known_progression.dart`) — [LevelUpPendingChoiceResolver]
-/// renvoie `null` pour ce `choice_type` plutôt qu'un [LevelUpChoiceKind].
+/// `invocation` (Occultiste, plusieurs niveaux) et `discipline_elementaire`
+/// (Moine, Voie des quatre éléments, plusieurs niveaux) n'ont volontairement
+/// PAS de valeur d'énumération ici : couverts par leurs étapes dédiées
+/// respectives ("Invocations"/"Disciplines élémentaires"), distinctes de
+/// l'étape "Choix à faire" (voir `presentation/level_up_screen.dart`,
+/// `domain/invocations_known_progression.dart` et
+/// `domain/elemental_disciplines_known_progression.dart`) —
+/// [LevelUpPendingChoiceResolver] renvoie `null` pour ces deux `choice_type`
+/// plutôt qu'un [LevelUpChoiceKind].
 enum LevelUpChoiceKind {
   /// Répartition de 2 points entre caractéristiques (niveaux codés en dur
   /// `LevelUpBlockRules.abilityScoreImprovementLevels`), OU choix d'un don en
@@ -51,18 +54,22 @@ abstract final class LevelUpPendingChoiceResolver {
     required int targetLevel,
     required String? classFeatureChoiceType,
   }) {
-    // `'invocation'` est dans `resolvedChoiceTypes` (ne bloque plus le flux,
-    // voir `LevelUpBlockRules.evaluate`) mais ne mène PAS à l'étape "Choix à
-    // faire" : la nouvelle étape "Invocations" (dédiée, basée sur le delta de
-    // `domain/invocations_known_progression.dart` à chaque niveau concerné,
-    // pas seulement celui où cette ligne `class_features.choice_type` existe
-    // en base) la couvre à la place — voir
-    // `presentation/level_up_screen.dart`. Testée avant le `switch`
-    // ci-dessous plutôt qu'incluse dedans, pour ne jamais confondre "aucun
+    // `'invocation'`/`'discipline_elementaire'` sont dans
+    // `resolvedChoiceTypes` (ne bloquent plus le flux, voir
+    // `LevelUpBlockRules.evaluate`) mais ne mènent PAS à l'étape "Choix à
+    // faire" : leurs étapes dédiées respectives ("Invocations", basée sur le
+    // delta de `domain/invocations_known_progression.dart" ; "Disciplines
+    // élémentaires", basée sur le delta de
+    // `domain/elemental_disciplines_known_progression.dart`), à chaque
+    // niveau concerné, pas seulement celui où la ligne
+    // `class_features.choice_type` existe en base, les couvrent à la place —
+    // voir `presentation/level_up_screen.dart`. Testées avant le `switch`
+    // ci-dessous plutôt qu'incluses dedans, pour ne jamais confondre "aucun
     // choix à faire à cette étape" (retour `null`, cas normal) avec le
-    // `StateError` défensif qui protège les 4 seules valeurs qui, elles,
+    // `StateError` défensif qui protège les seules valeurs qui, elles,
     // doivent obligatoirement produire un [LevelUpChoiceKind].
-    if (classFeatureChoiceType == 'invocation') {
+    if (classFeatureChoiceType == 'invocation' ||
+        classFeatureChoiceType == 'discipline_elementaire') {
       return null;
     }
 
@@ -77,8 +84,8 @@ abstract final class LevelUpPendingChoiceResolver {
         'pacte' => LevelUpChoiceKind.pact,
         // Ne devrait jamais arriver : `LevelUpBlockRules.resolvedChoiceTypes`
         // et ce `switch` doivent rester synchronisés (les 4 seules valeurs,
-        // hors `'invocation'` déjà exclue ci-dessus, qu'`evaluate` laisse
-        // passer sans bloquer).
+        // hors `'invocation'`/`'discipline_elementaire'` déjà exclues
+        // ci-dessus, qu'`evaluate` laisse passer sans bloquer).
         _ => throw StateError(
           'choice_type "$classFeatureChoiceType" déclaré résolu par '
           'LevelUpBlockRules.resolvedChoiceTypes mais non mappé par '
