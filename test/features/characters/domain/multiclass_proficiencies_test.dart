@@ -39,6 +39,13 @@ void main() {
       );
     });
 
+    test("Artificier : armures légères + outils d'artisan au choix", () {
+      expect(MulticlassProficiencies.multiclassProficienciesFor('Artificier'), [
+        'Maîtrise des armures légères',
+        "Maîtrise d'un type d'outils d'artisan au choix",
+      ]);
+    });
+
     test('classe absente de la table -> liste vide, jamais une exception', () {
       expect(
         MulticlassProficiencies.multiclassProficienciesFor('ClasseInconnue'),
@@ -65,6 +72,7 @@ void main() {
       'Ensorceleur': <String>[],
       'Occultiste': ['légère'],
       'Magicien': <String>[],
+      'Artificier': ['légère'],
     };
 
     for (final entry in expectedByClassName.entries) {
@@ -102,6 +110,7 @@ void main() {
       'Ensorceleur': <String>[],
       'Occultiste': ['courantes'],
       'Magicien': <String>[],
+      'Artificier': <String>[],
     };
 
     for (final entry in expectedByClassName.entries) {

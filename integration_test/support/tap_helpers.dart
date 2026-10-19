@@ -1,0 +1,95 @@
+import 'package:flutter_test/flutter_test.dart';
+
+/// Timeout court (au lieu des 10 minutes par defaut de
+/// `WidgetTester.pumpAndSettle`) pour TOUS les `pumpAndSettle` de ce
+/// dossier -- une vraie action/transition reseau de cette app se
+/// stabilise en quelques secondes au pire ; au-dela, mieux vaut un echec
+/// de test rapide et explicite (`FlutterError` de timeout, avec la pile
+/// d'appel exacte) qu'un test qui semble "bloque" indefiniment (vecu
+/// en conditions reelles pendant cette campagne QA : un defaut de 10 min
+/// masquait un vrai probleme -- apply du niveau 2 jamais retombe -- sous
+/// une attente si longue qu'elle semblait un plantage de l'outillage).
+const Duration settleTimeout = Duration(seconds: 10);
+
+/// Fait défiler [finder] (premier résultat si plusieurs correspondances,
+/// voir [skip]) dans le `Scrollable` ancêtre le plus proche puis tape
+/// dessus — jamais par coordonnées d'écran (voir `integration_test/README.md`,
+/// section "Sélecteurs"), même patron que `login_screen_test.dart::_tapText`.
+///
+/// Réutilisé par tous les parcours de ce dossier (assistant de création,
+/// montée de niveau) pour taper un bouton/une tuile identifiée par son texte
+/// visible : tous les boutons `PrimaryButton`/`SecondaryButton` affichent
+/// leur libellé en MAJUSCULES (`label.toUpperCase()`), donc [text] doit être
+/// déjà en majuscules pour un bouton — voir
+/// `core/widgets/primary_button.dart`/`secondary_button.dart`. Les titres de
+/// tuile (`SelectableOptionTile`/`CheckableOptionTile`) gardent eux leur
+/// casse d'origine (pas de transformation, voir leurs sources).
+Future<void> tapText(WidgetTester tester, String text, {int skip = 0}) async {
+  final finder = find.text(text);
+  final target = finder.at(skip);
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle(settleTimeout);
+  await tester.tap(target);
+  await tester.pumpAndSettle(settleTimeout);
+}
+
+/// Variante de [tapText] qui n'échoue pas si [text] n'existe pas sur l'écran
+/// actuel — renvoie `true` si le tap a eu lieu. Utilisée pour les étapes
+/// optionnelles de l'assistant de création/montée de niveau (ex. sous-race,
+/// bonus racial au choix, étape "Choix à faire") dont la présence dépend des
+/// données choisies plus haut dans le parcours.
+Future<bool> tapTextIfPresent(WidgetTester tester, String text) async {
+  if (find.text(text).evaluate().isEmpty) return false;
+  await tapText(tester, text);
+  return true;
+}
+
+/// `true` si [text] est présent à l'écran, sans tenter de défiler ni taper —
+/// utilisé pour les assertions de présence/absence d'une étape (ex.
+/// régression "Disciplines élémentaires" absente pour un Moine d'une autre
+/// sous-classe).
+bool isTextPresent(String text) => find.text(text).evaluate().isNotEmpty;
+
+/// Pompe plusieurs fois avec une petite pause, pour les transitions réseau
+/// qu'un seul `pumpAndSettle` ne couvre pas toujours de façon fiable (même
+/// rationale que `app_launch.dart::launchApp`) — utilisé après une action qui
+/// déclenche un appel Supabase (ex. "Créer le personnage", "Continuer" sur le
+/// récapitulatif de montée de niveau).
+Future<void> pumpUntilSettled(
+  WidgetTester tester, {
+  int attempts = 20,
+  Duration step = const Duration(milliseconds: 500),
+}) async {
+  for (var i = 0; i < attempts; i++) {
+    await tester.pump(step);
+  }
+  await tester.pumpAndSettle(settleTimeout);
+}
+
+/// Fait défiler [listFinder] (typiquement `find.byType(ListView).first`) par
+/// petits pas jusqu'à ce que [text] soit monté dans l'arbre de widgets, puis
+/// tape dessus — nécessaire pour les tuiles hors du `cacheExtent` initial
+/// d'une liste longue (ex. l'étape 1/9 "Race" : ~38 races, les dernières de
+/// la liste "RACES D'EXTENSION" ne sont pas montées tant qu'on n'a pas
+/// défilé jusqu'à elles, même avec `ListView(children: [...])` — la
+/// construction reste paresseuse par sliver sous le capot). Préférer
+/// [tapText] seul quand [text] est déjà visible sans défilement (ex. tout
+/// le reste de l'assistant de création, dont les listes sont courtes).
+Future<void> scrollUntilVisibleThenTap(
+  WidgetTester tester,
+  Finder listFinder,
+  String text, {
+  int maxDrags = 25,
+}) async {
+  for (var i = 0; i < maxDrags; i++) {
+    if (find.text(text).evaluate().isNotEmpty) {
+      await tapText(tester, text);
+      return;
+    }
+    await tester.drag(listFinder, const Offset(0, -250));
+    await tester.pumpAndSettle(settleTimeout);
+  }
+  // Dernière tentative (déclenche l'erreur standard de `tapText` si toujours
+  // absent, plutôt qu'un échec silencieux).
+  await tapText(tester, text);
+}

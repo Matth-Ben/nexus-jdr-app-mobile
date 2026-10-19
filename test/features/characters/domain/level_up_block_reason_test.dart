@@ -29,19 +29,34 @@ void main() {
         );
         expect(reason, isNull);
       });
+
+      test("'discipline_elementaire' ne bloque plus (correctif Moine, Voie "
+          'des quatre éléments) — rejoint resolvedChoiceTypes, mène '
+          'désormais à la nouvelle étape "Disciplines élémentaires", '
+          'jamais à l\'étape "Choix à faire" : avant ce correctif, tout '
+          'Moine Voie des quatre éléments restait bloqué indéfiniment à sa '
+          'montée de niveau 3', () {
+        final reason = LevelUpBlockRules.evaluate(
+          targetLevel: 3,
+          className: 'Moine',
+          classFeatureChoiceType: 'discipline_elementaire',
+        );
+        expect(reason, isNull);
+      });
     },
   );
 
   group('LevelUpBlockRules.evaluate — increment 2 : resolvedChoiceTypes ne '
       'bloquent plus', () {
     test('resolvedChoiceTypes contient exactement sous_classe/'
-        'style_combat/ennemi_jure/invocation/pacte', () {
+        'style_combat/ennemi_jure/invocation/pacte/discipline_elementaire', () {
       expect(LevelUpBlockRules.resolvedChoiceTypes, {
         'sous_classe',
         'style_combat',
         'ennemi_jure',
         'invocation',
         'pacte',
+        'discipline_elementaire',
       });
     });
 

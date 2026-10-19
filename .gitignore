@@ -66,3 +66,7 @@ config/prod.json
 # test_integration/README.md) — clé anon propre à chaque poste (générée par
 # `supabase start`, différente d'une machine à l'autre).
 config/integration.json
+
+# Compte de test confirmé pour integration_test/ (voir
+# integration_test/README.md) — identifiants réels, jamais committés.
+config/qa_test_account.json

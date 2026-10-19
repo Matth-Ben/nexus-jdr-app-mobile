@@ -33,6 +33,7 @@ import 'package:personnages/features/characters/domain/level_up_apply_result.dar
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_feat_option.dart';
 import 'package:personnages/features/characters/domain/level_up_invocation_option.dart';
+import 'package:personnages/features/characters/domain/level_up_elemental_discipline_option.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/domain/reward_item_draft.dart';
@@ -209,6 +210,15 @@ class FakeRepository implements CharacterRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<List<LevelUpElementalDisciplineOption>>
+  fetchAvailableElementalDisciplines({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -220,6 +230,7 @@ class FakeRepository implements CharacterRepository {
     LevelUpChoiceSelection? choice,
     List<int> initialSpellIds = const [],
     List<int> invocationIds = const [],
+    List<String> elementalDisciplineNames = const [],
     List<int> racialInnateSpellIds = const [],
   }) => throw UnimplementedError();
 
