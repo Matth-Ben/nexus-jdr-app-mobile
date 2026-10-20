@@ -74,100 +74,91 @@ void main() {
 
   group('SupabaseCharacterRepository.applyLevelUp — elementalDisciplineNames '
       '(D86)', () {
-    test(
-      "résout la ligne `class_features` malgré `class_id` NULL (seul "
-      '`subclass_id` rempli) : la montée de niveau réussit et la discipline '
-      'est écrite — ÉCHOUERAIT (CharacterFailure) avec un filtre '
-      "`.eq('class_id', classId)` sur cette résolution",
-      () async {
-        final recorded = <_Recorded>[];
-        final repo = await repository(
-          recorded: recorded,
-          rows: {
-            'character_classes': [
-              {'id': 'cc-1', 'class_id': classId, 'level': 2},
-            ],
-            'characters': [
-              {'max_hp': 10, 'current_hp': 10},
-            ],
-            'class_features': [disciplineFeatureRow],
-          },
-        );
+    test("résout la ligne `class_features` malgré `class_id` NULL (seul "
+        '`subclass_id` rempli) : la montée de niveau réussit et la discipline '
+        'est écrite — ÉCHOUERAIT (CharacterFailure) avec un filtre '
+        "`.eq('class_id', classId)` sur cette résolution", () async {
+      final recorded = <_Recorded>[];
+      final repo = await repository(
+        recorded: recorded,
+        rows: {
+          'character_classes': [
+            {'id': 'cc-1', 'class_id': classId, 'level': 2},
+          ],
+          'characters': [
+            {'max_hp': 10, 'current_hp': 10},
+          ],
+          'class_features': [disciplineFeatureRow],
+        },
+      );
 
-        final result = await repo.applyLevelUp(
-          characterId: characterId,
-          classId: classId,
-          className: 'Moine',
-          isMulticlassing: false,
-          hpRolled: 4,
-          hpMethod: 'roll',
-          hpGain: 4,
-          elementalDisciplineNames: const ['Souffle du dragon'],
-        );
+      final result = await repo.applyLevelUp(
+        characterId: characterId,
+        classId: classId,
+        className: 'Moine',
+        isMulticlassing: false,
+        hpRolled: 4,
+        hpMethod: 'roll',
+        hpGain: 4,
+        elementalDisciplineNames: const ['Souffle du dragon'],
+      );
 
-        expect(result.newLevel, 3);
+      expect(result.newLevel, 3);
 
-        final optionWrites = recorded
-            .where(
-              (r) => r.table == 'character_class_options' && r.method != 'GET',
-            )
-            .toList();
-        expect(optionWrites, hasLength(1));
-        final insertedRows = (optionWrites.single.body! as List)
-            .cast<Map<String, dynamic>>();
-        expect(insertedRows.single, {
-          'character_id': characterId,
-          'class_feature_id': disciplineFeatureId,
-          'level': 3,
-          'chosen_value': 'Souffle du dragon',
-        });
-      },
-    );
+      final optionWrites = recorded
+          .where(
+            (r) => r.table == 'character_class_options' && r.method != 'GET',
+          )
+          .toList();
+      expect(optionWrites, hasLength(1));
+      final insertedRows = (optionWrites.single.body! as List)
+          .cast<Map<String, dynamic>>();
+      expect(insertedRows.single, {
+        'character_id': characterId,
+        'class_feature_id': disciplineFeatureId,
+        'level': 3,
+        'chosen_value': 'Souffle du dragon',
+      });
+    });
   });
 
   group(
     'SupabaseCharacterRepository.fetchAvailableElementalDisciplines (D86)',
     () {
-      test(
-        'une discipline déjà choisie à un palier précédent est exclue du '
-        "catalogue — resterait TOUJOURS proposée (jamais exclue) avec un "
-        "filtre `.eq('class_id', classId)` sur cette résolution",
-        () async {
-          final repo = await repository(
-            rows: {
-              'class_features': [disciplineFeatureRow],
-              // Déjà choisie au niveau 3.
-              'character_class_options': [
-                {
-                  'chosen_value': 'Souffle du dragon',
-                  'class_feature_id': disciplineFeatureId,
-                },
-              ],
-              'class_options': [
-                {'id': 1, 'min_level': 3},
-                {'id': 2, 'min_level': 6},
-              ],
-              'translations': [
-                {'entity_id': '1', 'value': 'Souffle du dragon'},
-                {
-                  'entity_id': '2',
-                  'value': 'Poing qui frappe comme la foudre',
-                },
-              ],
-            },
-          );
+      test('une discipline déjà choisie à un palier précédent est exclue du '
+          "catalogue — resterait TOUJOURS proposée (jamais exclue) avec un "
+          "filtre `.eq('class_id', classId)` sur cette résolution", () async {
+        final repo = await repository(
+          rows: {
+            'class_features': [disciplineFeatureRow],
+            // Déjà choisie au niveau 3.
+            'character_class_options': [
+              {
+                'chosen_value': 'Souffle du dragon',
+                'class_feature_id': disciplineFeatureId,
+              },
+            ],
+            'class_options': [
+              {'id': 1, 'min_level': 3},
+              {'id': 2, 'min_level': 6},
+            ],
+            'translations': [
+              {'entity_id': '1', 'value': 'Souffle du dragon'},
+              {'entity_id': '2', 'value': 'Poing qui frappe comme la foudre'},
+            ],
+          },
+        );
 
-          final options = await repo.fetchAvailableElementalDisciplines(
-            characterId: characterId,
-            classId: classId,
-            subclassId: subclassId,
-            targetLevel: 6,
-          );
+        final options = await repo.fetchAvailableElementalDisciplines(
+          characterId: characterId,
+          classId: classId,
+          subclassId: subclassId,
+          targetLevel: 6,
+        );
 
-          expect(options, hasLength(1));
-          expect(options.single.name, 'Poing qui frappe comme la foudre');
-        },
-      );
+        expect(options, hasLength(1));
+        expect(options.single.name, 'Poing qui frappe comme la foudre');
+      });
     },
   );
 }
@@ -234,7 +225,10 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
         if (entry.key == 'select' || entry.key == 'order') {
           continue;
         }
-        rows = [for (final row in rows) if (_matchesEq(row, entry)) row];
+        rows = [
+          for (final row in rows)
+            if (_matchesEq(row, entry)) row,
+        ];
       }
     }
     return http.Response(
