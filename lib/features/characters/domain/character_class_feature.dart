@@ -4,14 +4,25 @@
 /// `data/class_feature_row_mapper.dart` pour la résolution depuis
 /// `class_features`/`character_feature_uses`.
 ///
-/// Portée volontairement limitée à cette itération : les aptitudes de
-/// sous-classe (`class_features.subclass_id`) ne sont jamais incluses ici,
-/// pas seulement parce qu'elles ne sont pas encore affichées, mais parce que
-/// l'assistant de création ne permet pas encore de choisir de sous-classe
-/// (`character_classes.subclass_id` reste toujours `null` à la création,
-/// voir `character_creation_repository.dart::createCharacter`) — rien à
-/// résoudre pour l'instant. À reprendre le jour où le choix de sous-classe
-/// est ajouté à l'assistant.
+/// Inclut aussi bien les aptitudes de classe de base
+/// (`class_features.class_id`) que les aptitudes de sous-classe
+/// (`class_features.subclass_id`) de la sous-classe effectivement choisie
+/// par le personnage pour chacune de ses classes
+/// (`character_classes.subclass_id`, écrit par la montée de niveau,
+/// `LevelUpChoiceKind.subclass`) — les deux apparaissent ensemble sur la
+/// même carte, triées (voir `data/character_repository.dart
+/// ::_mapCharacterDetailPayload`, tri alphabétique français, pas par
+/// niveau d'acquisition). Une classe sans sous-classe encore choisie
+/// n'ajoute simplement rien pour elle, sans erreur.
+///
+/// **Historique** : cette portée excluait initialement toute aptitude de
+/// sous-classe (bug architectural trouvé par l'agent `regles-dnd` en
+/// investiguant le Guerrier Maître de guerre, périmètre élargi à toutes les
+/// sous-classes) — la précondition d'origine ("l'assistant de création ne
+/// permet pas encore de choisir de sous-classe") n'était déjà plus vraie
+/// depuis l'ajout du choix de sous-classe à la montée de niveau ; voir
+/// `data/class_feature_row_mapper.dart::ClassFeatureRowMapper.filterAttained`
+/// pour le détail du correctif.
 ///
 /// Volontairement une classe simple (pas `freezed`), même précédent que
 /// `CharacterDetailClassRow` : donnée en lecture seule affichée telle
