@@ -30,6 +30,7 @@ import '../domain/level_up_elemental_discipline_option.dart';
 import '../domain/level_up_feat_option.dart';
 import '../domain/level_up_invocation_option.dart';
 import '../domain/level_up_level_data.dart';
+import '../domain/level_up_maneuver_option.dart';
 import '../domain/level_up_subclass_option.dart';
 import '../domain/multiclass_prerequisites.dart';
 import '../domain/portrait_storage_path_resolver.dart';
@@ -55,6 +56,7 @@ import 'level_up_choice_row_mapper.dart';
 import 'level_up_elemental_discipline_row_mapper.dart';
 import 'level_up_feat_row_mapper.dart';
 import 'level_up_invocation_row_mapper.dart';
+import 'level_up_maneuver_row_mapper.dart';
 import 'pact_weapon_row_mapper.dart';
 import 'pending_character_write_syncer.dart';
 
@@ -604,6 +606,36 @@ abstract class CharacterRepository {
     required int targetLevel,
   });
 
+  /// Manœuvres `class_options` (`option_type = 'manoeuvre'`) de la
+  /// sous-classe [subclassId] dont `min_level <= targetLevel`, NON déjà
+  /// connues de [characterId] — étape "Manœuvres" de la montée de niveau
+  /// (Guerrier, Maître de guerre, voir
+  /// `domain/maneuvers_known_progression.dart`). "Déjà connue" se lit sur
+  /// `character_class_options.chosen_value` pour la ligne `class_features`
+  /// dont `choice_type = 'manoeuvre'` — repérée par ce `choice_type` SEUL
+  /// (valeur globalement unique dans toute la base à ce jour, confirmée par
+  /// `regles-dnd` : aucune autre sous-classe du jeu n'a de manœuvres),
+  /// jamais par [classId] ni [subclassId] : contrairement à
+  /// [fetchAvailableElementalDisciplines] (qui résout sa propre ligne
+  /// `class_features` via `.eq('class_id', classId)`, alors que
+  /// `class_features.class_id` est NULL sur une ligne de sous-classe comme
+  /// celle-ci — voir D85 du registre de dette technique,
+  /// `docs/dette-technique.md`, soupçon non confirmé faute d'accès direct à
+  /// la base pour cet agent), cette méthode ne dépend d'aucun filtre
+  /// `class_id`/`subclass_id` pour cette résolution précise. [classId] est
+  /// néanmoins conservé dans la signature pour la symétrie avec
+  /// [fetchAvailableElementalDisciplines] (même forme d'appel côté
+  /// `presentation/providers/level_up_provider.dart`), bien qu'il ne soit
+  /// pas utilisé par cette implémentation. Noms/descriptions résolus via
+  /// `translations` (`entity_type = 'class_option'`) — voir
+  /// `domain/level_up_maneuver_option.dart`.
+  Future<List<LevelUpManeuverOption>> fetchAvailableManeuvers({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  });
+
   /// Applique une montée de niveau déjà validée par le joueur (écran
   /// "Montée de niveau", récapitulatif). Deux branches, selon
   /// [isMulticlassing] :
@@ -718,6 +750,25 @@ abstract class CharacterRepository {
   /// que si le personnage progresse effectivement en Moine Voie des quatre
   /// éléments). Toujours vide hors de ce cas.
   ///
+  /// [maneuverNames] : manœuvres nouvellement choisies (Guerrier, Maître de
+  /// guerre, voir `domain/maneuvers_known_progression.dart`), par NOM déjà
+  /// résolu par l'appelant (`LevelUpManeuverOption.name`) — même convention
+  /// texte libre que [elementalDisciplineNames] ci-dessus, écrites dans
+  /// `character_class_options`. **Résolution du `class_feature_id` plus
+  /// prudente que [elementalDisciplineNames]** : la ligne `class_features`
+  /// dont `choice_type = 'manoeuvre'` est repérée SEULE (ce `choice_type`
+  /// est globalement unique dans toute la base, confirmé par `regles-dnd`),
+  /// jamais via `.eq('class_id', classId)` — `class_features.class_id` est
+  /// NULL sur cette ligne de sous-classe (voir D85 du registre de dette
+  /// technique, `docs/dette-technique.md`, même situation que
+  /// `discipline_elementaire`/`sort_domaine`/`sort_mineur_bonus` : un
+  /// filtre `.eq('class_id', classId)` ne la retrouverait jamais). `level` =
+  /// niveau interne à la classe qui progresse (même convention que
+  /// [elementalDisciplineNames]). Lève une [CharacterFailure] si aucune
+  /// ligne `class_features` de ce `choice_type` n'existe en base alors que
+  /// cette liste est non vide (ne devrait jamais arriver). Toujours vide
+  /// hors de ce cas.
+  ///
   /// [racialInnateSpellIds] : sorts innés raciaux (`racial_innate_spells`,
   /// lignes sans choix de lignée) devenus accessibles à ce nouveau niveau
   /// TOTAL, déjà résolus par
@@ -771,6 +822,7 @@ abstract class CharacterRepository {
     List<int> initialSpellIds = const [],
     List<int> invocationIds = const [],
     List<String> elementalDisciplineNames = const [],
+    List<String> maneuverNames = const [],
     List<int> racialInnateSpellIds = const [],
   });
 
@@ -3331,6 +3383,80 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   @override
+  Future<List<LevelUpManeuverOption>> fetchAvailableManeuvers({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  }) async {
+    try {
+      // Ligne `class_features` de ce `choice_type` — une seule dans TOUTE
+      // la base (`'manoeuvre'` est globalement unique, confirmé par
+      // `regles-dnd`), repérée SANS filtre `class_id`/`subclass_id` (voir la
+      // documentation de [CharacterRepository.fetchAvailableManeuvers] :
+      // contrairement à [fetchAvailableElementalDisciplines],
+      // `class_features.class_id` est NULL sur cette ligne de sous-classe,
+      // un filtre `.eq('class_id', classId)` ne la retrouverait jamais).
+      // `null` si introuvable (défensif) — dans ce cas, aucune manœuvre
+      // n'est jamais considérée "déjà connue" (le filtre ci-dessous reste
+      // vide).
+      final maneuverFeatureRows = await _client
+          .from('class_features')
+          .select('id')
+          .eq('choice_type', 'manoeuvre')
+          .limit(1);
+
+      final knownNames = <String>{};
+      if (maneuverFeatureRows.isNotEmpty) {
+        final maneuverFeatureId = (maneuverFeatureRows.first['id'] as num)
+            .toInt();
+        final knownRows = await _client
+            .from('character_class_options')
+            .select('chosen_value')
+            .eq('character_id', characterId)
+            .eq('class_feature_id', maneuverFeatureId);
+        knownNames.addAll([
+          for (final row in knownRows)
+            if (row['chosen_value'] is String) row['chosen_value'] as String,
+        ]);
+      }
+
+      final allRows = await _client
+          .from('class_options')
+          .select('id, min_level')
+          .eq('subclass_id', subclassId)
+          .eq('option_type', 'manoeuvre')
+          .lte('min_level', targetLevel);
+
+      final ids = LevelUpManeuverRowMapper.collectIds(allRows);
+      final names = await _fetchTranslatedNames(
+        entityType: 'class_option',
+        entityIds: ids,
+      );
+      final descriptions = await _fetchTranslatedField(
+        entityType: 'class_option',
+        fieldName: 'description',
+        entityIds: ids,
+      );
+
+      final availableRows = [
+        for (final row in allRows)
+          if (!knownNames.contains(names[row['id'].toString()])) row,
+      ];
+
+      return LevelUpManeuverRowMapper.toOptions(
+        availableRows,
+        names: names,
+        descriptions: descriptions,
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -3343,6 +3469,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     List<int> initialSpellIds = const [],
     List<int> invocationIds = const [],
     List<String> elementalDisciplineNames = const [],
+    List<String> maneuverNames = const [],
     List<int> racialInnateSpellIds = const [],
   }) async {
     final ownerId = _requireOwnerId();
@@ -3684,6 +3811,46 @@ class SupabaseCharacterRepository implements CharacterRepository {
             {
               'character_id': characterId,
               'class_feature_id': disciplineFeatureId,
+              'level': newClassLevel,
+              'chosen_value': name,
+            },
+        ]);
+      }
+
+      if (maneuverNames.isNotEmpty) {
+        // Manœuvres nouvellement choisies (étape "Manœuvres", Guerrier
+        // Maître de guerre, voir la documentation de
+        // [CharacterRepository.applyLevelUp]) — quota déjà appliqué côté
+        // écran (même discipline que [invocationIds]/
+        // [elementalDisciplineNames] ci-dessus).
+        //
+        // **Résolution plus prudente que [elementalDisciplineNames]** :
+        // repérée SEULE via `choice_type = 'manoeuvre'` (globalement unique
+        // dans toute la base, confirmé par `regles-dnd`), jamais via
+        // `.eq('class_id', classId)` — `class_features.class_id` est NULL
+        // sur cette ligne de sous-classe (voir D85 du registre de dette
+        // technique, `docs/dette-technique.md`, et la documentation de
+        // [fetchAvailableManeuvers]). Une seule ligne existe en base à ce
+        // jour (niveau 3 uniquement) — réutilisée pour CHAQUE palier
+        // (3/7/10/15), jamais une par palier, même convention que
+        // [elementalDisciplineNames].
+        final maneuverFeatureRows = await _client
+            .from('class_features')
+            .select('id')
+            .eq('choice_type', 'manoeuvre')
+            .limit(1);
+        if (maneuverFeatureRows.isEmpty) {
+          throw const CharacterFailure(
+            'Manœuvre : aptitude de classe introuvable.',
+          );
+        }
+        final maneuverFeatureId = (maneuverFeatureRows.first['id'] as num)
+            .toInt();
+        await _client.from('character_class_options').insert([
+          for (final name in maneuverNames)
+            {
+              'character_id': characterId,
+              'class_feature_id': maneuverFeatureId,
               'level': newClassLevel,
               'chosen_value': name,
             },
@@ -4424,7 +4591,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }) async {
     if (classIds.isEmpty) return;
 
-    const featureSelect = 'id, class_id, subclass_id, level, uses_per_rest';
+    // `choice_type` ajouté (override du dé de supériorité du Guerrier
+    // Maître de guerre, voir [_rechargedAmount] et
+    // `ClassFeatureRowMapper.effectiveUsesMax`) : sans lui, un repos
+    // rechargerait toujours la réserve à la valeur statique de la base
+    // (4, RAW-exacte seulement aux niveaux 3-6), en désaccord avec le total
+    // affiché par `_mapCharacterDetailPayload` à partir du niveau 7.
+    const featureSelect =
+        'id, class_id, subclass_id, level, uses_per_rest, choice_type';
     final featureRowsById = <Object, Map<String, dynamic>>{};
     final baseRows = await _client
         .from('class_features')
@@ -4454,7 +4628,12 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final payload = [
       for (final row in attainedRows)
         if (_rechargedAmount(
-              row['uses_per_rest'] as Map<String, dynamic>?,
+              row,
+              ownerLevel: ClassFeatureRowMapper.ownerLevelOf(
+                row,
+                classLevels: classLevels,
+                subclassLevels: subclassLevels,
+              ),
               onlyShortRest: onlyShortRest,
             )
             case final amount?)
@@ -4471,14 +4650,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
         .upsert(payload, onConflict: 'character_id,class_feature_id');
   }
 
-  /// Total d'utilisations à écrire pour l'aptitude décrite par [usesPerRest]
-  /// si ce repos doit la recharger, `null` sinon — jamais rien à écrire dans
+  /// Total d'utilisations à écrire pour l'aptitude décrite par [row] si ce
+  /// repos doit la recharger, `null` sinon — jamais rien à écrire dans
   /// `character_feature_uses` dans ce cas (aptitude non rechargée par ce
   /// type de repos, ou pas d'usage limité du tout).
   ///
   /// `null` dans 2 cas distincts, tous deux traités identiquement (aucune
   /// ligne écrite) :
-  /// - [usesPerRest] lui-même `null` — aptitude passive, voir
+  /// - `row['uses_per_rest']` nul — aptitude passive, voir
   ///   `CharacterClassFeature.isPassive`.
   /// - `uses_per_rest->>'amount'` absent alors que `rest_type` est renseigné
   ///   — cas réel constaté côté seed (ex. `class_features.id = 6`,
@@ -4486,15 +4665,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
   ///   local) : même convention que
   ///   `ClassFeatureRowMapper.toCharacterClassFeature` (`usesMax` nul ⇒
   ///   `isPassive`), pour ne jamais écrire un total inconnu.
+  ///
+  /// Le total réellement écrit passe par
+  /// `ClassFeatureRowMapper.effectiveUsesMax` ([ownerLevel]) — jamais
+  /// directement `uses_per_rest->>'amount'` — pour que la réserve de dés de
+  /// supériorité du Guerrier Maître de guerre (`choice_type == 'manoeuvre'`)
+  /// soit rechargée au total RAW du niveau courant, pas à la valeur statique
+  /// de la base (voir `domain/superiority_dice_progression.dart`). Sans
+  /// effet sur toute autre aptitude.
   int? _rechargedAmount(
-    Map<String, dynamic>? usesPerRest, {
+    Map<String, dynamic> row, {
+    required int? ownerLevel,
     required bool onlyShortRest,
   }) {
+    final usesPerRest = row['uses_per_rest'] as Map<String, dynamic>?;
     if (usesPerRest == null) return null;
     if (onlyShortRest && usesPerRest['rest_type'] != 'repos_court') {
       return null;
     }
-    return (usesPerRest['amount'] as num?)?.toInt();
+    return ClassFeatureRowMapper.effectiveUsesMax(row, ownerLevel: ownerLevel);
   }
 
   /// Recalcule `character_spell_slots` pour [afterClasses] (TOUTES les
@@ -5197,7 +5386,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // 42703 `column class_features.description does not exist`, PostgREST
       // ne renvoyant alors qu'un replis silencieux sur le cache). Elle vit
       // dans `translations`, même pattern que `spells`/`items` ci-dessous.
-      const featureSelect = 'id, class_id, subclass_id, level, uses_per_rest';
+      //
+      // `choice_type` ajouté (override du dé de supériorité du Guerrier
+      // Maître de guerre, voir
+      // `ClassFeatureRowMapper.effectiveUsesMax`/
+      // `domain/superiority_dice_progression.dart`) : seul moyen de repérer
+      // "Supériorité martiale" sans dépendre d'un `id` câblé en dur.
+      const featureSelect =
+          'id, class_id, subclass_id, level, uses_per_rest, choice_type';
       final featureRowsById = <Object, Map<String, dynamic>>{};
       final baseRows = await _client
           .from('class_features')
@@ -5546,10 +5742,15 @@ class SupabaseCharacterRepository implements CharacterRepository {
       ),
     );
 
+    final classLevelsForFeatures = CharacterDetailRowMapper.collectClassLevels(
+      row,
+    );
+    final subclassLevelsForFeatures =
+        CharacterDetailRowMapper.collectSubclassLevels(row);
     final attainedFeatureRows = ClassFeatureRowMapper.filterAttained(
       _rowsOf(payload['classFeatureRows']),
-      classLevels: CharacterDetailRowMapper.collectClassLevels(row),
-      subclassLevels: CharacterDetailRowMapper.collectSubclassLevels(row),
+      classLevels: classLevelsForFeatures,
+      subclassLevels: subclassLevelsForFeatures,
     );
     final classFeatureNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['classFeatureNameRows']),
@@ -5575,6 +5776,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
           names: classFeatureNames,
           descriptions: classFeatureDescriptions,
           usesRemaining: usesRemaining,
+          // Override du dé de supériorité (Guerrier Maître de guerre), voir
+          // `ClassFeatureRowMapper.effectiveUsesMax` — sans effet pour
+          // toute autre aptitude (`choice_type != 'manoeuvre'`).
+          ownerLevel: ClassFeatureRowMapper.ownerLevelOf(
+            featureRow,
+            classLevels: classLevelsForFeatures,
+            subclassLevels: subclassLevelsForFeatures,
+          ),
         ),
     ]..sort((a, b) => FrenchTextNormalizer.compare(a.name, b.name));
     final classChoices = CharacterDetailRowMapper.parseClassChoices(

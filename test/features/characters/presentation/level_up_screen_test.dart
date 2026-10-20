@@ -44,6 +44,7 @@ import 'package:personnages/features/characters/domain/level_up_apply_result.dar
 import 'package:personnages/features/characters/domain/level_up_feat_option.dart';
 import 'package:personnages/features/characters/domain/level_up_invocation_option.dart';
 import 'package:personnages/features/characters/domain/level_up_elemental_discipline_option.dart';
+import 'package:personnages/features/characters/domain/level_up_maneuver_option.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_kind.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
@@ -69,6 +70,7 @@ class _AppliedLevelUp {
     required this.initialSpellIds,
     required this.invocationIds,
     required this.elementalDisciplineNames,
+    required this.maneuverNames,
     required this.racialInnateSpellIds,
   });
 
@@ -82,6 +84,7 @@ class _AppliedLevelUp {
   final List<int> initialSpellIds;
   final List<int> invocationIds;
   final List<String> elementalDisciplineNames;
+  final List<String> maneuverNames;
   final List<int> racialInnateSpellIds;
 }
 
@@ -220,6 +223,11 @@ class _FakeCharacterRepository implements CharacterRepository {
   List<LevelUpElementalDisciplineOption> elementalDisciplinesToReturn =
       const [];
 
+  // Vide par défaut, même rationale que [elementalDisciplinesToReturn] —
+  // overridable par test de l'étape "Manœuvres" (Guerrier, Maître de
+  // guerre).
+  List<LevelUpManeuverOption> maneuversToReturn = const [];
+
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
 
@@ -262,6 +270,14 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) async => elementalDisciplinesToReturn;
 
   @override
+  Future<List<LevelUpManeuverOption>> fetchAvailableManeuvers({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  }) async => maneuversToReturn;
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -274,6 +290,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     List<int> initialSpellIds = const [],
     List<int> invocationIds = const [],
     List<String> elementalDisciplineNames = const [],
+    List<String> maneuverNames = const [],
     List<int> racialInnateSpellIds = const [],
   }) async {
     applyLevelUpCalls.add(
@@ -288,6 +305,7 @@ class _FakeCharacterRepository implements CharacterRepository {
         initialSpellIds: initialSpellIds,
         invocationIds: invocationIds,
         elementalDisciplineNames: elementalDisciplineNames,
+        maneuverNames: maneuverNames,
         racialInnateSpellIds: racialInnateSpellIds,
       ),
     );
@@ -3792,6 +3810,279 @@ void main() {
         expect(applied.className, 'Moine');
         expect(applied.elementalDisciplineNames, isEmpty);
       });
+    }
+  });
+
+  group('etape "Manoeuvres" (Guerrier, Maitre de guerre)', () {
+    testWidgets(
+      'niveau 3 (choix de sous-classe ET 1er palier de manoeuvres dans la '
+      'meme montee de niveau) : enchaine Sous-classe puis Manoeuvres une '
+      'fois "Maître de guerre" choisie, quota effectif 3, pluriel au '
+      'recapitulatif, applyLevelUp recoit les 3 noms',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 2,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(
+            choiceType: 'sous_classe',
+            automaticFeatures: [],
+            availableSubclasses: [
+              LevelUpSubclassOption(id: 80, name: 'Maître de guerre'),
+              LevelUpSubclassOption(id: 81, name: 'Champion'),
+            ],
+          ),
+        };
+        fakeRepository.maneuversToReturn = const [
+          LevelUpManeuverOption(id: 901, name: 'Feinte', description: ''),
+          LevelUpManeuverOption(
+            id: 902,
+            name: 'Attaque déconcertante',
+            description: '',
+          ),
+          LevelUpManeuverOption(id: 903, name: 'Parade', description: ''),
+          LevelUpManeuverOption(
+            id: 904,
+            name: 'Repli précipité',
+            description: '',
+          ),
+        ];
+
+        // "Étape 1 sur 4" (pas 5) à ce stade : la sous-classe n'est pas
+        // encore choisie, donc l'étape "Manœuvres" ne compte pas encore
+        // dans le total — même rationale que le correctif Moine (voir
+        // `_hasManeuversStep`).
+        await pushPastAnnouncement(tester, 3);
+        expect(find.textContaining('bloqu'), findsNothing);
+        expect(find.text('Étape 1 sur 4 · Points de vie'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 4 · Sous-classe'), findsOneWidget);
+        await tester.tap(find.text('Maître de guerre'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Manœuvres'), findsOneWidget);
+        expect(find.text('0 / 3'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Étape 4 sur 5 · Manœuvres'), findsOneWidget);
+
+        await tester.tap(find.text('Feinte'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Parade'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Repli précipité'));
+        await tester.pumpAndSettle();
+        expect(find.text('3 / 3'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nouvelles manœuvres'), findsOneWidget);
+        expect(find.text('Feinte, Parade, Repli précipité'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Guerrier');
+        expect(applied.maneuverNames.toSet(), {
+          'Feinte',
+          'Parade',
+          'Repli précipité',
+        });
+      },
+    );
+
+    testWidgets(
+      'niveau 7 (sous-classe deja connue, pas de choix simultane, delta RAW '
+      '2) mais catalogue epuise a 1 candidate restante : quota effectif 1 '
+      '(jamais le delta RAW brut), singulier au recapitulatif',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 6,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+              subclassId: 80,
+              subclassName: 'Maître de guerre',
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          7: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.maneuversToReturn = const [
+          LevelUpManeuverOption(id: 905, name: 'Harcèlement', description: ''),
+        ];
+
+        await pushPastAnnouncement(tester, 7);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 4 · Manœuvres'), findsOneWidget);
+        expect(find.text('0 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('Harcèlement'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nouvelle manœuvre'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.maneuverNames, [
+          'Harcèlement',
+        ]);
+      },
+    );
+  });
+
+  group('etape "Manoeuvres" — regression : un Guerrier d\'un AUTRE '
+      'archetype (Champion) ne doit JAMAIS la declencher (meme bug deja '
+      'trouve et corrige pour le Moine : seul className == \'Guerrier\' ne '
+      'doit jamais suffire, la sous-classe effective doit aussi etre '
+      'testee)', () {
+    void expectNoManeuversMention() {
+      expect(find.textContaining('Manœuvres'), findsNothing);
+      expect(find.textContaining('manœuvre'), findsNothing);
+      expect(
+        find.textContaining('Vous connaissez déjà toutes les manœuvres'),
+        findsNothing,
+      );
+    }
+
+    testWidgets('niveau 3 (choix de sous-classe dans la meme montee de niveau, '
+        '"Maître de guerre" candidate au meme choix) : en choisissant '
+        '"Champion", le chainage se recalcule APRES le choix et s\'absente '
+        'de l\'etape', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [
+          const CharacterDetailClassRow(
+            classId: 1,
+            hitDie: 10,
+            className: 'Guerrier',
+            level: 2,
+            isPrimary: true,
+            savingThrowProficiencies: [],
+          ),
+        ],
+        xp: 0,
+      );
+      fakeRepository.levelDataByLevel = {
+        3: const LevelUpLevelData(
+          choiceType: 'sous_classe',
+          automaticFeatures: [],
+          availableSubclasses: [
+            LevelUpSubclassOption(id: 80, name: 'Maître de guerre'),
+            LevelUpSubclassOption(id: 81, name: 'Champion'),
+          ],
+        ),
+      };
+
+      await pushPastAnnouncement(tester, 3);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape 3 sur 4 · Sous-classe'), findsOneWidget);
+      await tester.tap(find.text('Champion'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      // Directement au récapitulatif, jamais à "Manœuvres".
+      expectNoManeuversMention();
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      final applied = fakeRepository.applyLevelUpCalls.single;
+      expect(applied.className, 'Guerrier');
+      expect(applied.maneuverNames, isEmpty);
+    });
+
+    for (final level in [7, 10, 15]) {
+      testWidgets(
+        'niveau $level (sous-classe "Champion" deja connue, pas de choix '
+        'simultane) : aucune etape, aucun message, meme si le delta RAW de '
+        'manoeuvres connues est strictement positif a ce niveau',
+        (tester) async {
+          fakeRepository.detailToReturn = _baseDetail.copyWith(
+            classes: [
+              CharacterDetailClassRow(
+                classId: 1,
+                hitDie: 10,
+                className: 'Guerrier',
+                level: level - 1,
+                isPrimary: true,
+                savingThrowProficiencies: const [],
+                subclassId: 81,
+                subclassName: 'Champion',
+              ),
+            ],
+            xp: 0,
+          );
+          fakeRepository.levelDataByLevel = {
+            level: const LevelUpLevelData(
+              choiceType: null,
+              automaticFeatures: [],
+            ),
+          };
+
+          await pushPastAnnouncement(tester, level);
+          expect(find.text('Étape 1 sur 3 · Points de vie'), findsOneWidget);
+
+          await tester.tap(find.text('CONTINUER'));
+          await tester.pumpAndSettle();
+          expect(
+            find.text('Étape 2 sur 3 · Aptitudes de classe'),
+            findsOneWidget,
+          );
+
+          await tester.tap(find.text('CONTINUER'));
+          await tester.pumpAndSettle();
+
+          // Directement au récapitulatif, jamais à "Manœuvres".
+          expectNoManeuversMention();
+
+          await tester.tap(find.text('CONTINUER'));
+          await tester.pumpAndSettle();
+
+          final applied = fakeRepository.applyLevelUpCalls.single;
+          expect(applied.className, 'Guerrier');
+          expect(applied.maneuverNames, isEmpty);
+        },
+      );
     }
   });
 

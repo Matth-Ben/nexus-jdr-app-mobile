@@ -36,6 +36,7 @@ import '../domain/level_up_continue_option.dart';
 import '../domain/level_up_elemental_discipline_option.dart';
 import '../domain/level_up_hit_points_calculator.dart';
 import '../domain/level_up_invocation_option.dart';
+import '../domain/level_up_maneuver_option.dart';
 import '../domain/level_up_multiclass_option.dart';
 import '../domain/patron_extended_spells.dart';
 import '../domain/signed_modifier_formatter.dart';
@@ -91,12 +92,21 @@ enum _LevelUpPhase {
 
   /// Moine, Voie des quatre éléments uniquement
   /// (`LevelUpStepData.requiresElementalDisciplineSelection`), entre
-  /// [invocations] et [summary] — voir [_buildElementalDisciplinesStep].
+  /// [invocations] et [maneuvers] — voir [_buildElementalDisciplinesStep].
   /// Mutuellement exclusive avec [invocations] en pratique (gatée par
   /// `className`, aucune classe ne déclenche les deux à la fois), mais
   /// chaînée après par cohérence plutôt que de supposer cette exclusivité
   /// dans l'ordre des phases.
   elementalDisciplines,
+
+  /// Guerrier, Maître de guerre uniquement
+  /// (`LevelUpStepData.requiresManeuverSelection`), entre
+  /// [elementalDisciplines] et [summary] — voir [_buildManeuversStep].
+  /// Mutuellement exclusive avec [invocations]/[elementalDisciplines] en
+  /// pratique (même rationale que ci-dessus), mais chaînée après elles par
+  /// cohérence plutôt que de supposer cette exclusivité dans l'ordre des
+  /// phases.
+  maneuvers,
   summary,
 }
 
@@ -299,6 +309,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// `SpellsStepSelection.toggle`/`.isChoiceLocked`).
   List<String> _selectedElementalDisciplineIds = [];
 
+  /// État de la sélection de manœuvres (Guerrier, Maître de guerre, étape
+  /// "Manœuvres") — clés `maneuver.id.toString()`, même rationale que
+  /// [_selectedElementalDisciplineIds].
+  List<String> _selectedManeuverIds = [];
+
   @override
   void initState() {
     super.initState();
@@ -338,6 +353,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// que [_resetInvocationSelectionState].
   void _resetElementalDisciplineSelectionState() {
     _selectedElementalDisciplineIds = [];
+  }
+
+  /// Remet à zéro la sélection de manœuvres — même rationale que
+  /// [_resetElementalDisciplineSelectionState].
+  void _resetManeuverSelectionState() {
+    _selectedManeuverIds = [];
   }
 
   void _toggleNewCantrip(String name, int quota) {
@@ -512,6 +533,76 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     final available = _availableElementalDisciplinesFor(data);
     return [
       for (final id in _effectiveSelectedElementalDisciplineIds(data))
+        available.firstWhere((option) => option.id.toString() == id).name,
+    ];
+  }
+
+  /// Sous-classe du Guerrier qui progresse : celle choisie dans cette même
+  /// montée de niveau (étape "Choix à faire", niveau 3) s'il y en a une,
+  /// sinon celle déjà en base — même rôle que [_monkSubclassIdFor] pour les
+  /// disciplines élémentaires.
+  int? _fighterSubclassIdFor(LevelUpStepData data) {
+    if (data.choiceKind == LevelUpChoiceKind.subclass) {
+      final selected = _selectedListOptionId;
+      if (selected is num) return selected.toInt();
+    }
+    return data.knownSubclassId;
+  }
+
+  /// Manœuvres candidates pour la sous-classe résolue par
+  /// [_fighterSubclassIdFor] — vide tant qu'aucune sous-classe n'est connue
+  /// (ex. niveau 3 avant que le joueur n'ait fait son choix).
+  List<LevelUpManeuverOption> _availableManeuversFor(LevelUpStepData data) {
+    final subclassId = _fighterSubclassIdFor(data);
+    if (subclassId == null) return const [];
+    return data.maneuversBySubclass[subclassId] ?? const [];
+  }
+
+  /// Quota EFFECTIF de manœuvres à ce niveau — `min(delta RAW, manœuvres
+  /// ÉLIGIBLES pour la sous-classe résolue)`, jamais le delta RAW brut (même
+  /// rationale que [_effectiveElementalDisciplineQuota]).
+  int _effectiveManeuverQuota(LevelUpStepData data) {
+    if (!data.requiresManeuverSelection) return 0;
+    return math.min(data.maneuverDelta, _availableManeuversFor(data).length);
+  }
+
+  /// [_selectedManeuverIds] purgée des manœuvres devenues indisponibles (le
+  /// joueur a pu revenir changer sa sous-classe au niveau 3) et bornée au
+  /// quota effectif — seule source lue pour l'affichage, le récapitulatif et
+  /// l'écriture, même rationale que
+  /// [_effectiveSelectedElementalDisciplineIds].
+  List<String> _effectiveSelectedManeuverIds(LevelUpStepData data) {
+    if (!data.requiresManeuverSelection) return const [];
+    final availableIds = {
+      for (final option in _availableManeuversFor(data)) option.id.toString(),
+    };
+    final quota = _effectiveManeuverQuota(data);
+    final pruned = [
+      for (final id in _selectedManeuverIds)
+        if (availableIds.contains(id)) id,
+    ];
+    return pruned.length > quota ? pruned.sublist(0, quota) : pruned;
+  }
+
+  void _toggleManeuver(LevelUpStepData data, String maneuverId, int quota) {
+    setState(() {
+      _selectedManeuverIds = SpellsStepSelection.toggle(
+        current: _effectiveSelectedManeuverIds(data),
+        value: maneuverId,
+        quota: quota,
+      );
+    });
+  }
+
+  /// Noms des manœuvres choisies, prêts pour
+  /// `CharacterRepository.applyLevelUp` (paramètre `maneuverNames`, écrit
+  /// par NOM — voir sa documentation, pas un identifiant à résoudre côté
+  /// serveur).
+  List<String> _buildManeuverNames(LevelUpStepData data) {
+    if (!data.requiresManeuverSelection) return const [];
+    final available = _availableManeuversFor(data);
+    return [
+      for (final id in _effectiveSelectedManeuverIds(data))
         available.firstWhere((option) => option.id.toString() == id).name,
     ];
   }
@@ -834,6 +925,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         initialSpellIds: _buildNewSpellIds(data),
         invocationIds: _buildInvocationIds(data),
         elementalDisciplineNames: _buildElementalDisciplineNames(data),
+        maneuverNames: _buildManeuverNames(data),
         racialInnateSpellIds: _racialInnateSpellIds(data),
       );
 
@@ -869,6 +961,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         _resetSpellSelectionState();
         _resetInvocationSelectionState();
         _resetElementalDisciplineSelectionState();
+        _resetManeuverSelectionState();
         _isApplying = false;
       });
     } on CharacterFailure catch (failure) {
@@ -995,6 +1088,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       _LevelUpPhase.elementalDisciplines => _buildElementalDisciplinesStep(
         data,
       ),
+      _LevelUpPhase.maneuvers => _buildManeuversStep(data),
       _LevelUpPhase.summary => _buildSummary(data),
     };
   }
@@ -1213,7 +1307,8 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         (data.choiceKind != null ||
             _hasSpellsStep(data) ||
             _hasInvocationsStep(data) ||
-            _hasElementalDisciplinesStep(data));
+            _hasElementalDisciplinesStep(data) ||
+            _hasManeuversStep(data));
 
     return Column(
       children: [
@@ -1271,31 +1366,43 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         label: 'Vos emplacements de sorts vont évoluer',
                       ),
                       if (_hasInvocationsStep(data) ||
-                          _hasElementalDisciplinesStep(data))
+                          _hasElementalDisciplinesStep(data) ||
+                          _hasManeuversStep(data))
                         const SizedBox(height: AppSpacing.sm),
                     ],
                     // Décision assumée au-delà de la spec visuelle littérale
                     // (qui ne couvrait que les sections "Choix à faire"/
                     // "Sorts" de cette annonce) : même traitement "teaser"
-                    // pour l'étape "Invocations"/"Disciplines élémentaires",
-                    // par cohérence avec les deux autres — à valider par le
-                    // chef de projet si un désaccord existe sur ce point.
+                    // pour l'étape "Invocations"/"Disciplines élémentaires"/
+                    // "Manœuvres", par cohérence avec les autres — à valider
+                    // par le chef de projet si un désaccord existe sur ce
+                    // point.
                     if (_hasInvocationsStep(data)) ...[
                       const _UpcomingStepRow(
                         icon: Icons.remove_red_eye,
                         color: AppColors.accentViolet,
                         label: 'De nouvelles invocations vous attendront',
                       ),
-                      if (_hasElementalDisciplinesStep(data))
+                      if (_hasElementalDisciplinesStep(data) ||
+                          _hasManeuversStep(data))
                         const SizedBox(height: AppSpacing.sm),
                     ],
-                    if (_hasElementalDisciplinesStep(data))
+                    if (_hasElementalDisciplinesStep(data)) ...[
                       const _UpcomingStepRow(
                         icon: Icons.whatshot,
                         color: AppColors.accentBrick,
                         label:
                             'De nouvelles disciplines élémentaires vous '
                             'attendront',
+                      ),
+                      if (_hasManeuversStep(data))
+                        const SizedBox(height: AppSpacing.sm),
+                    ],
+                    if (_hasManeuversStep(data))
+                      const _UpcomingStepRow(
+                        icon: Icons.shield_moon,
+                        color: AppColors.accentBlue,
+                        label: 'De nouvelles manœuvres vous attendront',
                       ),
                   ],
                 ],
@@ -1355,30 +1462,44 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   bool _hasElementalDisciplinesStep(LevelUpStepData data) =>
       _effectiveElementalDisciplineQuota(data) > 0;
 
-  /// 3 à 7 selon les étapes déclenchées à ce niveau — spec visuelle
+  /// `true` si l'étape "Manœuvres" doit être affichée à ce niveau —
+  /// Guerrier, Maître de guerre uniquement, voir
+  /// [LevelUpStepData.requiresManeuverSelection]. Même rationale que
+  /// [_hasElementalDisciplinesStep] (dépend du quota EFFECTIF
+  /// [_effectiveManeuverQuota], jamais du seul
+  /// [LevelUpStepData.requiresManeuverSelection] — même garde-fou contre la
+  /// régression "toute sous-classe de la classe concernée déclenche
+  /// l'étape").
+  bool _hasManeuversStep(LevelUpStepData data) =>
+      _effectiveManeuverQuota(data) > 0;
+
+  /// 3 à 8 selon les étapes déclenchées à ce niveau — spec visuelle
   /// direction-artistique : [LevelUpStepData.choiceKind] non nul ajoute
   /// l'étape "Choix à faire" (increment 2, inchangé), [_hasSpellsStep]
   /// ajoute l'étape "Sorts", [_hasInvocationsStep] ajoute l'étape
   /// "Invocations", [_hasElementalDisciplinesStep] ajoute l'étape
-  /// "Disciplines élémentaires" (mutuellement exclusive avec
-  /// [_hasInvocationsStep] en pratique, voir [_LevelUpPhase.elementalDisciplines]).
+  /// "Disciplines élémentaires", [_hasManeuversStep] ajoute l'étape
+  /// "Manœuvres" (les trois dernières mutuellement exclusives en pratique,
+  /// voir [_LevelUpPhase.elementalDisciplines]/[_LevelUpPhase.maneuvers]).
   int _totalSteps(LevelUpStepData data) =>
       3 +
       (data.choiceKind != null ? 1 : 0) +
       (_hasSpellsStep(data) ? 1 : 0) +
       (_hasInvocationsStep(data) ? 1 : 0) +
-      (_hasElementalDisciplinesStep(data) ? 1 : 0);
+      (_hasElementalDisciplinesStep(data) ? 1 : 0) +
+      (_hasManeuversStep(data) ? 1 : 0);
 
   /// Étape suivante une fois "Aptitudes"/"Choix à faire" franchies : l'étape
   /// "Sorts" si ce niveau la déclenche ([_hasSpellsStep]), sinon l'étape
   /// "Invocations" si ce niveau la déclenche ([_hasInvocationsStep]), sinon
   /// l'étape "Disciplines élémentaires" si ce niveau la déclenche
-  /// ([_hasElementalDisciplinesStep]), le récapitulatif sinon — même logique
-  /// de chaînage conditionnel que [LevelUpChoiceKind] pour l'étape "Choix à
-  /// faire". Couvre aussi le cas défensif "condition d'affichage vraie mais
-  /// 0 changement calculé" (spec visuelle direction-artistique section 4) :
-  /// ce cas ne devrait jamais se produire en pratique pour la branche
-  /// mono-classe historique (voir
+  /// ([_hasElementalDisciplinesStep]), sinon l'étape "Manœuvres" si ce
+  /// niveau la déclenche ([_hasManeuversStep]), le récapitulatif sinon —
+  /// même logique de chaînage conditionnel que [LevelUpChoiceKind] pour
+  /// l'étape "Choix à faire". Couvre aussi le cas défensif "condition
+  /// d'affichage vraie mais 0 changement calculé" (spec visuelle
+  /// direction-artistique section 4) : ce cas ne devrait jamais se produire
+  /// en pratique pour la branche mono-classe historique (voir
   /// `domain/spell_slot_progression.dart::SpellSlotProgression.changesFor`),
   /// mais une liste vide retombe naturellement ici sur le récapitulatif,
   /// sans code dédié supplémentaire.
@@ -1388,18 +1509,21 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     if (_hasElementalDisciplinesStep(data)) {
       return _LevelUpPhase.elementalDisciplines;
     }
+    if (_hasManeuversStep(data)) return _LevelUpPhase.maneuvers;
     return _LevelUpPhase.summary;
   }
 
   /// Étape suivante une fois "Sorts" franchie : l'étape "Invocations" si ce
   /// niveau la déclenche ([_hasInvocationsStep]), sinon l'étape
   /// "Disciplines élémentaires" si ce niveau la déclenche
-  /// ([_hasElementalDisciplinesStep]), le récapitulatif sinon.
+  /// ([_hasElementalDisciplinesStep]), sinon l'étape "Manœuvres" si ce
+  /// niveau la déclenche ([_hasManeuversStep]), le récapitulatif sinon.
   _LevelUpPhase _phaseAfterSpells(LevelUpStepData data) {
     if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
     if (_hasElementalDisciplinesStep(data)) {
       return _LevelUpPhase.elementalDisciplines;
     }
+    if (_hasManeuversStep(data)) return _LevelUpPhase.maneuvers;
     return _LevelUpPhase.summary;
   }
 
@@ -1415,13 +1539,18 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
 
   /// Étape suivante une fois "Invocations" franchie : l'étape "Disciplines
   /// élémentaires" si ce niveau la déclenche
-  /// ([_hasElementalDisciplinesStep]) — ne devrait jamais arriver en
-  /// pratique (mutuellement exclusives, voir
-  /// [_LevelUpPhase.elementalDisciplines]), le récapitulatif sinon.
-  _LevelUpPhase _phaseAfterInvocations(LevelUpStepData data) =>
-      _hasElementalDisciplinesStep(data)
-      ? _LevelUpPhase.elementalDisciplines
-      : _LevelUpPhase.summary;
+  /// ([_hasElementalDisciplinesStep]), sinon l'étape "Manœuvres" si ce
+  /// niveau la déclenche ([_hasManeuversStep]) — ni l'une ni l'autre ne
+  /// devrait jamais arriver en pratique (mutuellement exclusives, voir
+  /// [_LevelUpPhase.elementalDisciplines]/[_LevelUpPhase.maneuvers]), le
+  /// récapitulatif sinon.
+  _LevelUpPhase _phaseAfterInvocations(LevelUpStepData data) {
+    if (_hasElementalDisciplinesStep(data)) {
+      return _LevelUpPhase.elementalDisciplines;
+    }
+    if (_hasManeuversStep(data)) return _LevelUpPhase.maneuvers;
+    return _LevelUpPhase.summary;
+  }
 
   /// Étape précédente de "Disciplines élémentaires" ("Retour") : l'étape
   /// "Invocations" si ce niveau la déclenche ([_hasInvocationsStep], ne
@@ -1429,6 +1558,31 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// sinon "Choix à faire" si déclenchée, sinon "Aptitudes" — même logique
   /// de repli que [_phaseBeforeInvocations].
   _LevelUpPhase _phaseBeforeElementalDisciplines(LevelUpStepData data) {
+    if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
+    if (_hasSpellsStep(data)) return _LevelUpPhase.spells;
+    if (data.choiceKind != null) return _LevelUpPhase.choice;
+    return _LevelUpPhase.abilities;
+  }
+
+  /// Étape suivante une fois "Disciplines élémentaires" franchie : l'étape
+  /// "Manœuvres" si ce niveau la déclenche ([_hasManeuversStep]) — ne
+  /// devrait jamais arriver en pratique (mutuellement exclusives, voir
+  /// [_LevelUpPhase.elementalDisciplines]/[_LevelUpPhase.maneuvers]), le
+  /// récapitulatif sinon.
+  _LevelUpPhase _phaseAfterElementalDisciplines(LevelUpStepData data) =>
+      _hasManeuversStep(data) ? _LevelUpPhase.maneuvers : _LevelUpPhase.summary;
+
+  /// Étape précédente de "Manœuvres" ("Retour") : l'étape "Disciplines
+  /// élémentaires" si ce niveau la déclenche
+  /// ([_hasElementalDisciplinesStep], ne devrait jamais arriver en
+  /// pratique), sinon "Invocations" si déclenchée (ne devrait jamais arriver
+  /// non plus), sinon "Sorts" si déclenchée, sinon "Choix à faire" si
+  /// déclenchée, sinon "Aptitudes" — même logique de repli que
+  /// [_phaseBeforeElementalDisciplines].
+  _LevelUpPhase _phaseBeforeManeuvers(LevelUpStepData data) {
+    if (_hasElementalDisciplinesStep(data)) {
+      return _LevelUpPhase.elementalDisciplines;
+    }
     if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
     if (_hasSpellsStep(data)) return _LevelUpPhase.spells;
     if (data.choiceKind != null) return _LevelUpPhase.choice;
@@ -2760,7 +2914,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           // l'étape "Invocations") — toujours vrai quand la liste de
           // candidates est vide (quota effectif 0, déjà atteint).
           onContinue: selected.length == quota
-              ? () => setState(() => _phase = _LevelUpPhase.summary)
+              ? () => setState(
+                  () => _phase = _phaseAfterElementalDisciplines(data),
+                )
               : null,
         ),
       ],
@@ -2813,6 +2969,131 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return _hasInvocationsStep(data)
         ? afterSpellsStepNumber + 1
         : afterSpellsStepNumber;
+  }
+
+  /// Étape "Manœuvres", affichée uniquement quand [_hasManeuversStep] vaut
+  /// `true` (Guerrier, Maître de guerre) — duplicata volontaire de
+  /// [_buildElementalDisciplinesStep] (même patron : quota effectif, liste
+  /// de candidates, pas d'échange d'une manœuvre déjà connue contre une
+  /// autre — même simplification assumée que les étapes "Sorts"/
+  /// "Invocations"/"Disciplines élémentaires").
+  Widget _buildManeuversStep(LevelUpStepData data) {
+    final stepNumber = _maneuversStepNumber(data);
+    final quota = _effectiveManeuverQuota(data);
+    final selected = _effectiveSelectedManeuverIds(data);
+    final available = _availableManeuversFor(data);
+
+    return Column(
+      children: [
+        LevelUpHeader(
+          eyebrow: 'MONTÉE DE NIVEAU',
+          levelLabel: 'NIVEAU $_targetLevel',
+          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Manœuvres',
+          remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'MANŒUVRES CONNUES',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    _QuotaBadge(text: '${selected.length} / $quota'),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                if (available.isEmpty)
+                  const _ParchmentCard(
+                    child: _EmptyChoiceState(
+                      message:
+                          'Vous connaissez déjà toutes les manœuvres '
+                          'disponibles.',
+                    ),
+                  )
+                else
+                  for (var i = 0; i < available.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.xs),
+                    _maneuverTile(
+                      data,
+                      available[i],
+                      index: i,
+                      quota: quota,
+                      selected: selected,
+                    ),
+                  ],
+              ],
+            ),
+          ),
+        ),
+        _StepFooter(
+          onBack: () => setState(() => _phase = _phaseBeforeManeuvers(data)),
+          // Actif dès que le quota EFFECTIF est atteint (même rationale que
+          // l'étape "Disciplines élémentaires") — toujours vrai quand la
+          // liste de candidates est vide (quota effectif 0, déjà atteint).
+          onContinue: selected.length == quota
+              ? () => setState(() => _phase = _LevelUpPhase.summary)
+              : null,
+        ),
+      ],
+    );
+  }
+
+  /// Une tuile de manœuvre candidate — réutilise directement
+  /// `SpellsStepSelection.toggle`/`.isChoiceLocked` (même patron que
+  /// [_elementalDisciplineTile]). Couleur d'accent fixe
+  /// [AppColors.accentBlue] (distincte du violet des invocations et du
+  /// brique des disciplines élémentaires — les trois étapes sont
+  /// mutuellement exclusives en pratique, mais gardent chacune leur
+  /// identité visuelle). Aucune condition d'éligibilité supplémentaire
+  /// (contrairement à [_invocationTile]) : [available] est déjà filtrée par
+  /// niveau/déjà connue côté repository.
+  Widget _maneuverTile(
+    LevelUpStepData data,
+    LevelUpManeuverOption maneuver, {
+    required int index,
+    required int quota,
+    required List<String> selected,
+  }) {
+    final id = maneuver.id.toString();
+    final isSelected = selected.contains(id);
+    return CheckableOptionTile(
+      title: maneuver.name,
+      subtitle: maneuver.description,
+      leading: AccentIconBadge(
+        index: index,
+        icon: Icons.shield_moon,
+        color: AppColors.accentBlue,
+      ),
+      checked: isSelected,
+      enabled: !SpellsStepSelection.isChoiceLocked(
+        isSelected: isSelected,
+        selectedCount: selected.length,
+        quota: quota,
+      ),
+      onTap: () => _toggleManeuver(data, id, quota),
+    );
+  }
+
+  /// 3 à 8 selon les étapes déclenchées avant "Manœuvres" à ce niveau —
+  /// même principe que [_elementalDisciplinesStepNumber] (ajoute l'étape
+  /// "Disciplines élémentaires" si elle existe aussi, défensif :
+  /// mutuellement exclusives en pratique).
+  int _maneuversStepNumber(LevelUpStepData data) {
+    final afterInvocationsStepNumber = _elementalDisciplinesStepNumber(data);
+    return _hasElementalDisciplinesStep(data)
+        ? afterInvocationsStepNumber + 1
+        : afterInvocationsStepNumber;
   }
 
   /// Une ligne de gain de l'étape "Sorts", et du bloc "Sorts" du
@@ -3047,6 +3328,23 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     );
   }
 
+  /// Ligne de récapitulatif du bloc "Manœuvre(s)" (Guerrier, Maître de
+  /// guerre), `null` si aucune manœuvre n'a été choisie à ce niveau — même
+  /// patron que [_elementalDisciplineSummaryGainRow]. Insérée dans
+  /// [_buildSummary] juste après ce dernier (mutuellement exclusifs en
+  /// pratique).
+  GainRow? _maneuverSummaryGainRow(LevelUpStepData data) {
+    final names = _buildManeuverNames(data);
+    if (names.isEmpty) return null;
+    final plural = names.length > 1 ? 's' : '';
+    return GainRow(
+      icon: Icons.shield_moon,
+      color: AppColors.accentBlue,
+      title: 'Nouvelle$plural manœuvre$plural',
+      subtitle: names.join(', '),
+    );
+  }
+
   Widget _buildSummary(LevelUpStepData data) {
     final gain = _hpGain(
       hitDie: data.hitDie,
@@ -3114,6 +3412,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                           case final disciplineRow?) ...[
                         const SizedBox(height: AppSpacing.md),
                         disciplineRow,
+                      ],
+                      if (_maneuverSummaryGainRow(data)
+                          case final maneuverRow?) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        maneuverRow,
                       ],
                     ],
                   ),

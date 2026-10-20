@@ -247,5 +247,134 @@ void main() {
       );
       expect(withoutDescription.description, '');
     });
+
+    test(
+      'override "Supériorité martiale" (Guerrier Maître de guerre, '
+      'choice_type == manoeuvre) : usesMax suit la table RAW du niveau '
+      'EFFECTIF (ownerLevel), jamais la valeur statique de uses_per_rest',
+      () {
+        // Niveau 7 : RAW 5 dés, alors que la base stocke statiquement 4
+        // (valeur RAW-exacte seulement pour les niveaux 3-6).
+        final feature = ClassFeatureRowMapper.toCharacterClassFeature(
+          {
+            'id': 747,
+            'subclass_id': 48,
+            'level': 3,
+            'uses_per_rest': {'amount': 4, 'rest_type': 'repos_court'},
+            'choice_type': 'manoeuvre',
+          },
+          names: const {'747': 'Supériorité martiale'},
+          descriptions: const {},
+          usesRemaining: const {},
+          ownerLevel: 7,
+        );
+
+        expect(feature.usesMax, 5);
+        expect(feature.restType, 'repos_court');
+      },
+    );
+
+    test('override "Supériorité martiale" : retombe sur la valeur statique '
+        'quand ownerLevel est null (comportement historique, ex. '
+        '`fetchLevelUpLevelData` qui ne le fournit jamais)', () {
+      final feature = ClassFeatureRowMapper.toCharacterClassFeature(
+        {
+          'id': 747,
+          'subclass_id': 48,
+          'level': 3,
+          'uses_per_rest': {'amount': 4, 'rest_type': 'repos_court'},
+          'choice_type': 'manoeuvre',
+        },
+        names: const {},
+        descriptions: const {},
+        usesRemaining: const {},
+      );
+
+      expect(feature.usesMax, 4);
+    });
+
+    test('une aptitude dont choice_type n\'est pas "manoeuvre" n\'est jamais '
+        'affectée par l\'override, même avec un ownerLevel fourni', () {
+      final feature = ClassFeatureRowMapper.toCharacterClassFeature(
+        {
+          'id': 1,
+          'class_id': 5,
+          'level': 2,
+          'uses_per_rest': {'amount': 1, 'rest_type': 'repos_court'},
+          'choice_type': 'sous_classe',
+        },
+        names: const {},
+        descriptions: const {},
+        usesRemaining: const {},
+        ownerLevel: 15,
+      );
+
+      expect(feature.usesMax, 1);
+    });
+  });
+
+  group('ClassFeatureRowMapper.ownerLevelOf', () {
+    test('résout via classLevels quand class_id est non nul', () {
+      final level = ClassFeatureRowMapper.ownerLevelOf(
+        {'id': 1, 'class_id': 5, 'level': 1},
+        classLevels: const {'5': 4},
+        subclassLevels: const {},
+      );
+      expect(level, 4);
+    });
+
+    test('résout via subclassLevels quand class_id est nul et subclass_id '
+        'non nul', () {
+      final level = ClassFeatureRowMapper.ownerLevelOf(
+        {'id': 1, 'class_id': null, 'subclass_id': 48, 'level': 3},
+        classLevels: const {},
+        subclassLevels: const {'48': 7},
+      );
+      expect(level, 7);
+    });
+
+    test(
+      'null quand ni class_id ni subclass_id ne sont résolus (défensif)',
+      () {
+        final level = ClassFeatureRowMapper.ownerLevelOf(
+          {'id': 1, 'class_id': null, 'subclass_id': null, 'level': 1},
+          classLevels: const {},
+          subclassLevels: const {},
+        );
+        expect(level, isNull);
+      },
+    );
+  });
+
+  group('ClassFeatureRowMapper.effectiveUsesMax', () {
+    test('une aptitude passive (uses_per_rest nul) reste passive même avec '
+        'choice_type == manoeuvre et un ownerLevel fourni (défensif : ne '
+        'devrait jamais arriver en pratique pour id747)', () {
+      final usesMax = ClassFeatureRowMapper.effectiveUsesMax({
+        'id': 747,
+        'subclass_id': 48,
+        'level': 3,
+        'uses_per_rest': null,
+        'choice_type': 'manoeuvre',
+      }, ownerLevel: 10);
+      expect(usesMax, isNull);
+    });
+
+    test('override exact aux 5 paliers RAW de la réserve de dés de '
+        'supériorité (4/5/5/6/6)', () {
+      const row = {
+        'id': 747,
+        'subclass_id': 48,
+        'level': 3,
+        'uses_per_rest': {'amount': 4, 'rest_type': 'repos_court'},
+        'choice_type': 'manoeuvre',
+      };
+      expect(ClassFeatureRowMapper.effectiveUsesMax(row, ownerLevel: 3), 4);
+      expect(ClassFeatureRowMapper.effectiveUsesMax(row, ownerLevel: 6), 4);
+      expect(ClassFeatureRowMapper.effectiveUsesMax(row, ownerLevel: 7), 5);
+      expect(ClassFeatureRowMapper.effectiveUsesMax(row, ownerLevel: 10), 5);
+      expect(ClassFeatureRowMapper.effectiveUsesMax(row, ownerLevel: 15), 6);
+      expect(ClassFeatureRowMapper.effectiveUsesMax(row, ownerLevel: 18), 6);
+    });
   });
 }

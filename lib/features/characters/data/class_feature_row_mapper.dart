@@ -1,4 +1,5 @@
 import '../domain/character_class_feature.dart';
+import '../domain/superiority_dice_progression.dart';
 
 /// Fonctions de mapping pures entre les lignes brutes renvoyées par
 /// PostgREST (`class_features`, `character_feature_uses`, `translations`) et
@@ -103,6 +104,67 @@ abstract final class ClassFeatureRowMapper {
     return result;
   }
 
+  /// Niveau du "propriétaire" (classe de base OU sous-classe) d'une ligne
+  /// `class_features` — même règle de résolution que [filterAttained]
+  /// (`class_id` -> [classLevels], `subclass_id` -> [subclassLevels],
+  /// mutuellement exclusifs en base), exposée séparément pour
+  /// [effectiveUsesMax] : contrairement à [filterAttained] (qui ne garde que
+  /// les lignes déjà atteintes), celle-ci est appelée sur des lignes DÉJÀ
+  /// filtrées, uniquement pour connaître le niveau courant du personnage
+  /// dans cette classe/sous-classe. `null` si ni l'un ni l'autre n'est
+  /// résolu (ne devrait pas arriver sur une ligne déjà filtrée par
+  /// [filterAttained]).
+  static int? ownerLevelOf(
+    Map<String, dynamic> row, {
+    required Map<String, int> classLevels,
+    required Map<String, int> subclassLevels,
+  }) {
+    final classId = row['class_id'];
+    if (classId != null) return classLevels[classId.toString()];
+    final subclassId = row['subclass_id'];
+    if (subclassId != null) return subclassLevels[subclassId.toString()];
+    return null;
+  }
+
+  /// `uses_per_rest->>'amount'` effectif pour [row], `null` pour une
+  /// aptitude passive — **override ciblé** pour "Supériorité martiale"
+  /// (Guerrier Maître de guerre, `class_features.choice_type ==
+  /// 'manoeuvre'`) : remplace la valeur statique de la base (RAW-exacte
+  /// seulement pour les niveaux 3-6) par la vraie table de progression RAW
+  /// (`SuperiorityDiceProgression.diceCountAt`), au niveau EFFECTIF du
+  /// personnage dans la classe/sous-classe porteuse ([ownerLevel], voir
+  /// [ownerLevelOf]) — voir la documentation de classe de
+  /// `domain/superiority_dice_progression.dart` pour le rationale complet de
+  /// cet override (pourquoi il est ciblé sur cette seule aptitude, repérée
+  /// par son `choice_type` globalement unique, plutôt qu'un mécanisme
+  /// générique). Partagé par [toCharacterClassFeature] (affichage de la
+  /// carte "APTITUDES DE CLASSE") et
+  /// `SupabaseCharacterRepository._rechargedAmount` (recharge au repos) —
+  /// les deux chemins doivent impérativement s'accorder, sans quoi un repos
+  /// rechargerait la réserve à un total différent de celui affiché.
+  ///
+  /// Retombe sur la valeur statique de la base dans tous les autres cas :
+  /// [ownerLevel] non résolu (défensif), ou `choice_type` différent de
+  /// [SuperiorityDiceProgression.choiceType].
+  static int? effectiveUsesMax(
+    Map<String, dynamic> row, {
+    required int? ownerLevel,
+  }) {
+    final usesPerRest = row['uses_per_rest'] as Map<String, dynamic>?;
+    // Une aptitude sans `uses_per_rest` du tout reste passive quoi qu'il
+    // arrive (défensif : `choice_type == 'manoeuvre'` sans `uses_per_rest`
+    // ne devrait jamais se produire en pratique, voir id747 en base, mais
+    // cet override ne doit jamais, par lui-même, transformer une aptitude
+    // passive en aptitude à usage limité).
+    if (usesPerRest == null) return null;
+    final staticAmount = (usesPerRest['amount'] as num?)?.toInt();
+    if (ownerLevel == null) return staticAmount;
+    if (row['choice_type'] != SuperiorityDiceProgression.choiceType) {
+      return staticAmount;
+    }
+    return SuperiorityDiceProgression.diceCountAt(ownerLevel);
+  }
+
   /// Construit un [CharacterClassFeature] à partir d'une ligne brute
   /// `class_features` (déjà filtrée par [filterAttained]), des noms et
   /// descriptions déjà résolus (`names`/`descriptions`, voir [collectIds] —
@@ -111,15 +173,24 @@ abstract final class ClassFeatureRowMapper {
   /// (`usesRemaining`, voir [parseUsesRemaining]). `uses_per_rest` absent ou
   /// de forme inattendue retombe sur une aptitude passive plutôt que de
   /// crasher.
+  ///
+  /// [ownerLevel] (voir [ownerLevelOf]) : `null` par défaut (comportement
+  /// historique inchangé pour tout appelant qui ne le fournit pas encore,
+  /// ex. `fetchLevelUpLevelData` — `'manoeuvre'` n'y apparaît de toute façon
+  /// jamais, voir sa documentation) — transmis par
+  /// `SupabaseCharacterRepository._mapCharacterDetailPayload` pour que la
+  /// carte "APTITUDES DE CLASSE" affiche le total RAW exact de "Supériorité
+  /// martiale" au niveau courant (voir [effectiveUsesMax]).
   static CharacterClassFeature toCharacterClassFeature(
     Map<String, dynamic> row, {
     required Map<String, String> names,
     required Map<String, String> descriptions,
     required Map<String, int> usesRemaining,
+    int? ownerLevel,
   }) {
     final id = (row['id'] as num).toInt();
     final usesPerRest = row['uses_per_rest'] as Map<String, dynamic>?;
-    final usesMax = (usesPerRest?['amount'] as num?)?.toInt();
+    final usesMax = effectiveUsesMax(row, ownerLevel: ownerLevel);
 
     return CharacterClassFeature(
       id: id,
