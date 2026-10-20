@@ -83,4 +83,44 @@ void main() {
     expect(find.text('SUPPRIMER DÉFINITIVEMENT'), findsOneWidget);
     expect(find.text('Supprimer définitivement'), findsNothing);
   });
+
+  group('isLoading (miroir de PrimaryButton.isLoading, suppression groupée '
+      'de personnages)', () {
+    testWidgets(
+      'remplace le libellé par un indicateur de progression et désactive '
+      'le bouton (onPressed non appelé au tap)',
+      (tester) async {
+        var tapped = false;
+        await tester.pumpWidget(
+          wrap(
+            DestructiveButton(
+              label: 'Supprimer',
+              isLoading: true,
+              onPressed: () => tapped = true,
+            ),
+          ),
+        );
+
+        expect(find.text('Supprimer'), findsNothing);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+        await tester.tap(
+          find.byType(CircularProgressIndicator),
+          warnIfMissed: false,
+        );
+        expect(tapped, isFalse);
+      },
+    );
+
+    testWidgets('false (par défaut) : comportement inchangé, libellé affiché', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(DestructiveButton(label: 'Supprimer', onPressed: () {})),
+      );
+
+      expect(find.text('Supprimer'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+    });
+  });
 }

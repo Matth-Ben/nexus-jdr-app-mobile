@@ -18,12 +18,17 @@ import '../../app_update/presentation/widgets/update_suggested_banner.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
 import '../../character_creation/presentation/providers/character_edit_session_provider.dart';
 import '../../character_creation/presentation/providers/character_creation_return_route_provider.dart';
+import '../domain/character_failure.dart';
 import '../domain/character_list_filter.dart';
 import '../domain/character_status_filter.dart';
 import '../domain/character_summary.dart';
+import '../domain/write_outcome.dart';
 import 'providers/character_providers.dart';
 import 'widgets/character_card.dart';
+import 'widgets/character_card_action_sheet.dart';
+import 'widgets/character_delete_confirmation.dart';
 import 'widgets/character_list_filter_sheet.dart';
+import 'widgets/character_selection_action_bar.dart';
 import 'widgets/connection_error_state.dart';
 
 /// Écran d'accueil listant les personnages du joueur connecté
@@ -67,6 +72,20 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   final TextEditingController _searchController = TextEditingController();
   Set<String> _selectedClassNames = {};
   Set<CharacterStatusFilter> _selectedStatuses = {};
+
+  /// `true` pendant le mode sélection multiple (bouton `_SelectionModeButton`
+  /// de `_SearchRow`) — voir la spec de la tâche "Mode sélection multiple +
+  /// suppression groupée".
+  bool _selectionMode = false;
+
+  /// Identifiants des personnages cochés en mode sélection — toujours vide
+  /// hors de ce mode (voir [_enterSelectionMode]/[_exitSelectionMode]).
+  Set<String> _selectedCharacterIds = {};
+
+  /// `true` pendant l'exécution de [_deleteSelectedCharacters] — désactive
+  /// "Annuler" et bascule `DestructiveButton.isLoading` sur
+  /// `CharacterSelectionActionBar`.
+  bool _isDeletingSelection = false;
 
   @override
   void initState() {
@@ -127,6 +146,148 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
     ref.invalidate(charactersProvider);
   }
 
+  void _enterSelectionMode() {
+    setState(() {
+      _selectionMode = true;
+      _selectedCharacterIds = {};
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _selectionMode = false;
+      _selectedCharacterIds = {};
+    });
+  }
+
+  void _toggleCharacterSelected(String characterId) {
+    setState(() {
+      if (!_selectedCharacterIds.remove(characterId)) {
+        _selectedCharacterIds.add(characterId);
+      }
+    });
+  }
+
+  /// Message affiché quand une suppression (groupée ou non) échoue faute de
+  /// connectivité — copie identique à
+  /// `character_detail_screen.dart::_offlineNotPersistedMessage` (privé à
+  /// cette classe, donc dupliqué ici à l'identique plutôt qu'importé) :
+  /// `CharacterRepository.deleteCharacter` ne met jamais cette écriture en
+  /// file de synchro, même rationale que [CharacterRepository.setDead].
+  static const _offlineNotPersistedMessage =
+      "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
+      'fois reconnecté.';
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Supprime tous les personnages actuellement sélectionnés (bouton
+  /// "Supprimer" de [CharacterSelectionActionBar]), après confirmation.
+  ///
+  /// Appelle `CharacterRepository.deleteCharacter` séquentiellement plutôt
+  /// qu'en parallèle (`Future.wait`) : la méthode elle-même ne touche aucun
+  /// état mutable partagé (ni `PendingCharacterWriteQueue`, ni cache — voir
+  /// sa documentation, cette écriture n'est jamais mise en file), donc rien
+  /// n'empêcherait techniquement un envoi parallèle ; le choix séquentiel
+  /// est fait pour garder un suivi simple et fiable de quel personnage a
+  /// précisément échoué (nécessaire pour l'échec partiel, voir la spec de la
+  /// tâche) plutôt que pour une contrainte technique du dépôt — une
+  /// suppression groupée reste une action rare, le coût de latence d'un
+  /// enchaînement séquentiel est négligeable pour les volumes réalistes de
+  /// cette liste.
+  Future<void> _deleteSelectedCharacters(
+    List<CharacterSummary> allCharacters,
+  ) async {
+    final selected = allCharacters
+        .where((character) => _selectedCharacterIds.contains(character.id))
+        .toList();
+    if (selected.isEmpty) return;
+
+    final confirmed = selected.length == 1
+        ? await showDeleteCharacterConfirmationDialog(
+            context,
+            characterName: selected.single.name,
+          )
+        : await showDeleteCharactersConfirmationDialog(
+            context,
+            count: selected.length,
+          );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isDeletingSelection = true);
+
+    final repository = ref.read(characterRepositoryProvider);
+    final failedIds = <String>{};
+    var offlineFailureCount = 0;
+
+    for (final character in selected) {
+      try {
+        final outcome = await repository.deleteCharacter(
+          characterId: character.id,
+        );
+        if (outcome == WriteOutcome.queued) {
+          failedIds.add(character.id);
+          offlineFailureCount++;
+        }
+      } on CharacterFailure {
+        failedIds.add(character.id);
+      } catch (_) {
+        failedIds.add(character.id);
+      }
+    }
+
+    if (!mounted) return;
+    ref.invalidate(charactersProvider);
+
+    final succeededCount = selected.length - failedIds.length;
+
+    if (failedIds.isEmpty) {
+      setState(() {
+        _isDeletingSelection = false;
+        _selectionMode = false;
+        _selectedCharacterIds = {};
+      });
+      return;
+    }
+
+    setState(() {
+      _isDeletingSelection = false;
+      // Le mode sélection reste actif avec seulement les personnages en
+      // échec encore cochés (spec de la tâche).
+      _selectedCharacterIds = failedIds;
+    });
+
+    if (succeededCount == 0) {
+      _showSnackBar(
+        offlineFailureCount == failedIds.length
+            ? _offlineNotPersistedMessage
+            : 'Impossible de supprimer les personnages sélectionnés. '
+                  'Réessayez.',
+      );
+      return;
+    }
+
+    _showSnackBar(_partialDeleteMessage(succeededCount, failedIds.length));
+  }
+
+  /// "X personnage(s) supprimé(s), Y n'a/n'ont pas pu être supprimé(s)."
+  /// (spec de la tâche) — accords au singulier/pluriel plutôt qu'un gabarit
+  /// littéral "(s)", cohérent avec le reste de la copie de cet écran (voir
+  /// `CharacterSelectionActionBar._selectionCountLabel`, même principe à
+  /// trois formes).
+  String _partialDeleteMessage(int succeededCount, int failedCount) {
+    final succeededLabel = succeededCount == 1
+        ? '1 personnage supprimé'
+        : '$succeededCount personnages supprimés';
+    final failedLabel = failedCount == 1
+        ? "1 personnage n'a pas pu être supprimé"
+        : "$failedCount personnages n'ont pas pu être supprimés";
+    return '$succeededLabel, $failedLabel.';
+  }
+
   @override
   Widget build(BuildContext context) {
     final charactersAsync = ref.watch(charactersProvider);
@@ -146,6 +307,20 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
         onRetry: () => ref.invalidate(charactersProvider),
       );
     }
+
+    final characters = charactersAsync.value;
+    // Calculé une fois ici (plutôt que recalculé dans la branche `data:` du
+    // `maybeWhen` ci-dessous) : `_SelectionModeButton` a besoin de connaître
+    // la liste visible (après recherche/filtre) pour son état désactivé,
+    // avant même d'atteindre la zone de contenu.
+    final visible = characters == null
+        ? null
+        : CharacterListFilter.apply(
+            characters: characters,
+            query: _searchController.text,
+            classNames: _selectedClassNames,
+            statuses: _selectedStatuses,
+          );
 
     return SceneScaffold(
       body: SafeArea(
@@ -176,9 +351,16 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
                         _selectedStatuses.isNotEmpty,
                     // `null` (chargement) : bouton filtre sans effet, rien à
                     // filtrer tant que la liste n'a pas résolu.
-                    onTapFilter: charactersAsync.value == null
+                    onTapFilter: characters == null
                         ? null
-                        : () => _openFilterSheet(charactersAsync.value!),
+                        : () => _openFilterSheet(characters),
+                    selectionMode: _selectionMode,
+                    // Désactivé tant que la liste charge ou que la liste
+                    // visible est vide (spec de la tâche) : rien à
+                    // sélectionner dans les deux cas.
+                    onTapSelectionMode: (visible == null || visible.isEmpty)
+                        ? null
+                        : _enterSelectionMode,
                   ),
                 ],
               ),
@@ -188,20 +370,19 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
               // plus haut par le retour anticipé sur `charactersAsync.hasError`
               // — seuls `data`/`loading` restent possibles ici.
               child: charactersAsync.maybeWhen(
-                data: (characters) {
-                  final visible = CharacterListFilter.apply(
-                    characters: characters,
-                    query: _searchController.text,
-                    classNames: _selectedClassNames,
-                    statuses: _selectedStatuses,
-                  );
-                  if (characters.isNotEmpty && visible.isEmpty) {
+                data: (_) {
+                  if (characters!.isNotEmpty && visible!.isEmpty) {
                     return _SearchEmptyState(
                       query: _searchController.text.trim(),
                       onReset: _resetSearch,
                     );
                   }
-                  return _CharacterList(characters: visible);
+                  return _CharacterList(
+                    characters: visible!,
+                    selectionMode: _selectionMode,
+                    selectedCharacterIds: _selectedCharacterIds,
+                    onToggleSelected: _toggleCharacterSelected,
+                  );
                 },
                 orElse: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.goldEnd),
@@ -215,34 +396,44 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
                 AppSpacing.lg,
                 AppSpacing.lg,
               ),
-              // Le bouton "Rejoindre une histoire" (`_JoinStoryButton`,
-              // flux `features/join_story/`) est volontairement masqué ici :
-              // cette fonctionnalité est mise de côté le temps de terminer
-              // le reste du recettage direction-artistique (section non
-              // encore traitée). Le flux et ses routes (`/join`, `/join/
-              // step-2`, `/join/step-3`, `/join/:code`) restent en place
-              // dans le code, simplement plus atteignables depuis l'UI —
-              // aucune configuration native de deep link n'est de toute
-              // façon encore branchée pour `/join/:code` (voir
-              // `app_router.dart`), donc ce retrait masque bien
-              // intégralement la fonctionnalité pour l'instant.
-              child: Row(
-                children: [
-                  Expanded(
-                    child: PrimaryButton(
-                      label: '+ Créer',
-                      onPressed: () => _startCreation(context, ref),
+              child: _selectionMode
+                  ? CharacterSelectionActionBar(
+                      selectedCount: _selectedCharacterIds.length,
+                      isDeleting: _isDeletingSelection,
+                      onCancel: _exitSelectionMode,
+                      onDelete: _selectedCharacterIds.isEmpty
+                          ? null
+                          : () => _deleteSelectedCharacters(characters ?? []),
+                    )
+                  // Le bouton "Rejoindre une histoire" (`_JoinStoryButton`,
+                  // flux `features/join_story/`) est volontairement masqué
+                  // ici : cette fonctionnalité est mise de côté le temps de
+                  // terminer le reste du recettage direction-artistique
+                  // (section non encore traitée). Le flux et ses routes
+                  // (`/join`, `/join/step-2`, `/join/step-3`, `/join/:code`)
+                  // restent en place dans le code, simplement plus
+                  // atteignables depuis l'UI — aucune configuration native
+                  // de deep link n'est de toute façon encore branchée pour
+                  // `/join/:code` (voir `app_router.dart`), donc ce retrait
+                  // masque bien intégralement la fonctionnalité pour
+                  // l'instant.
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: PrimaryButton(
+                            label: '+ Créer',
+                            onPressed: () => _startCreation(context, ref),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'Importer XML',
+                            onPressed: () => _startXmlImport(context),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: SecondaryButton(
-                      label: 'Importer XML',
-                      onPressed: () => _startXmlImport(context),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -373,6 +564,8 @@ class _SearchRow extends StatelessWidget {
     required this.controller,
     required this.filterActive,
     required this.onTapFilter,
+    required this.selectionMode,
+    required this.onTapSelectionMode,
   });
 
   final TextEditingController controller;
@@ -383,6 +576,16 @@ class _SearchRow extends StatelessWidget {
   final bool filterActive;
 
   final VoidCallback? onTapFilter;
+
+  /// `true` pendant le mode sélection multiple : masque [_FilterButton] et
+  /// [_SelectionModeButton] (pas de bouton "Annuler" ici, il vit dans
+  /// `CharacterSelectionActionBar` en pied d'écran), le champ de recherche
+  /// prend alors toute la largeur.
+  final bool selectionMode;
+
+  /// `null` désactive [_SelectionModeButton] (liste en chargement ou liste
+  /// visible vide) — sans effet si [selectionMode] est déjà `true`.
+  final VoidCallback? onTapSelectionMode;
 
   @override
   Widget build(BuildContext context) {
@@ -405,8 +608,12 @@ class _SearchRow extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: AppSpacing.sm),
-        _FilterButton(active: filterActive, onTap: onTapFilter),
+        if (!selectionMode) ...[
+          const SizedBox(width: AppSpacing.sm),
+          _FilterButton(active: filterActive, onTap: onTapFilter),
+          const SizedBox(width: AppSpacing.sm),
+          _SelectionModeButton(onTap: onTapSelectionMode),
+        ],
       ],
     );
   }
@@ -496,6 +703,50 @@ class _FilterActiveDot extends StatelessWidget {
   }
 }
 
+/// Bouton d'entrée en mode sélection multiple, 44×44, calque exact de
+/// [_FilterButton] (même fond/bordure/rayon) — icône `Icons.checklist` au
+/// lieu de l'entonnoir, jamais de pastille d'état (contrairement à
+/// [_FilterButton], ce bouton n'a pas d'état "actif" propre : une fois tapé,
+/// il disparaît avec le reste de `_SearchRow` au profit du mode sélection).
+class _SelectionModeButton extends StatelessWidget {
+  const _SelectionModeButton({required this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: 'Sélectionner plusieurs personnages',
+      child: Material(
+        color: AppColors.parchmentCard,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          onTap: onTap,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(
+                color: AppColors.woodLight,
+                width: AppBorders.card,
+              ),
+            ),
+            child: const Icon(
+              Icons.checklist,
+              size: 24,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Icône groupes ronde en haut à droite (`Icons.groups_outlined`), à côté du
 /// bouton profil — voir `docs/cahier-des-charges/12-partage-et-groupes.md`
 /// section 2 : point d'entrée du système de groupe. Navigue TOUJOURS vers
@@ -575,13 +826,25 @@ class _ProfileButton extends StatelessWidget {
   }
 }
 
-class _CharacterList extends StatelessWidget {
-  const _CharacterList({required this.characters});
+/// `ConsumerWidget` (plutôt que `StatelessWidget`, comportement historique)
+/// : le clic long hors mode sélection ouvre `showCharacterCardActionSheet`,
+/// qui a besoin d'un [WidgetRef] pour appeler `characterRepositoryProvider`
+/// (archiver/marquer mort/supprimer) — voir sa documentation de classe.
+class _CharacterList extends ConsumerWidget {
+  const _CharacterList({
+    required this.characters,
+    required this.selectionMode,
+    required this.selectedCharacterIds,
+    required this.onToggleSelected,
+  });
 
   final List<CharacterSummary> characters;
+  final bool selectionMode;
+  final Set<String> selectedCharacterIds;
+  final ValueChanged<String> onToggleSelected;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (characters.isEmpty) {
       return const _EmptyState();
     }
@@ -593,12 +856,28 @@ class _CharacterList extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
       itemBuilder: (context, index) {
         final character = characters[index];
+        // En mode sélection, le clic long est identique au tap (bascule la
+        // sélection) et n'ouvre jamais la sheet d'actions — spec de la
+        // tâche, voir la documentation de classe de
+        // `CharacterCard.onLongPress`.
+        final onTap = selectionMode
+            ? () => onToggleSelected(character.id)
+            : () => context.push(
+                '/characters/${character.id}',
+                extra: character.name,
+              );
         return CharacterCard(
           character: character,
-          onTap: () => context.push(
-            '/characters/${character.id}',
-            extra: character.name,
-          ),
+          onTap: onTap,
+          onLongPress: selectionMode
+              ? onTap
+              : () => showCharacterCardActionSheet(
+                  context,
+                  ref,
+                  character: character,
+                ),
+          selectionMode: selectionMode,
+          selected: selectedCharacterIds.contains(character.id),
         );
       },
     );

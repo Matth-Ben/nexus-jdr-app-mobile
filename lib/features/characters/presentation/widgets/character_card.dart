@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/dashed_border_painter.dart';
 import '../../../../core/widgets/portrait_frame.dart';
+import '../../../../core/widgets/selection_checkbox.dart';
 import '../../domain/character_summary.dart';
 
 /// Carte d'un personnage dans la liste d'accueil (`character_list_screen.dart`),
@@ -27,10 +28,35 @@ import '../../domain/character_summary.dart';
 /// (Phase 4, voir `02-modele-donnees.md`) — voir la consigne de la tâche qui
 /// a produit cet écran.
 class CharacterCard extends StatelessWidget {
-  const CharacterCard({required this.character, this.onTap, super.key});
+  const CharacterCard({
+    required this.character,
+    this.onTap,
+    this.onLongPress,
+    this.selectionMode = false,
+    this.selected = false,
+    super.key,
+  });
 
   final CharacterSummary character;
   final VoidCallback? onTap;
+
+  /// Appui long — volontairement un simple callback générique plutôt qu'un
+  /// comportement interne au composant : hors [selectionMode], l'appelant y
+  /// branche l'ouverture de `showCharacterCardActionSheet`
+  /// (`character_list_screen.dart`), en [selectionMode] il y branche la même
+  /// bascule de sélection que [onTap] (spec de la tâche "clic long pendant
+  /// le mode sélection = identique au tap") — cette carte n'a donc jamais
+  /// besoin de connaître la différence elle-même.
+  final VoidCallback? onLongPress;
+
+  /// `true` pendant le mode sélection multiple de `character_list_screen.dart` :
+  /// affiche la case à cocher ([selected]) avant le portrait.
+  final bool selectionMode;
+
+  /// Sans effet si [selectionMode] est `false`. Remplace la couleur de
+  /// bordure habituelle (normale/morte/pointillée archivée) par
+  /// `AppColors.goldEnd` quand `true` (spec de la tâche).
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +67,20 @@ class CharacterCard extends StatelessWidget {
     final summaryColor = isDead
         ? AppColors.textOnWoodMuted
         : AppColors.textSecondary;
+
+    // Couleur de bordure "normale"/"morte" (sans la variante pointillée
+    // archivée, gérée séparément ci-dessous) — `goldEnd` prime dès que la
+    // carte est sélectionnée (mode sélection multiple), quel que soit le
+    // statut mort/vivant.
+    final solidBorderColor = selected
+        ? AppColors.goldEnd
+        : (isDead ? AppColors.woodDark : AppColors.woodMedium);
+    // Couleur de la bordure pointillée (variante "archivée") — `woodMedium`
+    // par défaut, quel que soit le statut mort, même `goldEnd` que ci-dessus
+    // une fois sélectionnée.
+    final dashedBorderColor = selected
+        ? AppColors.goldEnd
+        : AppColors.woodMedium;
 
     final card = Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -58,7 +98,7 @@ class CharacterCard extends StatelessWidget {
         border: isArchived
             ? null
             : Border.all(
-                color: isDead ? AppColors.woodDark : AppColors.woodMedium,
+                color: solidBorderColor,
                 width: AppBorders.cardEmphasis,
               ),
         boxShadow: const [
@@ -77,6 +117,16 @@ class CharacterCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (selectionMode) ...[
+            SizedBox(
+              height: 64,
+              child: Align(
+                alignment: Alignment.center,
+                child: SelectionCheckbox(checked: selected),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+          ],
           PortraitFrame(
             portraitUrl: character.portraitUrl,
             fallbackIcon: isDead ? Icons.mood_bad : Icons.person_outline,
@@ -125,10 +175,11 @@ class CharacterCard extends StatelessWidget {
       ),
     );
 
-    return Material(
+    final inkWell = Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Opacity(
           // ~75 % d'opacité pour la variante "archivée" (design système) —
@@ -136,15 +187,20 @@ class CharacterCard extends StatelessWidget {
           opacity: isArchived ? 0.75 : 1,
           child: isArchived
               ? CustomPaint(
-                  painter: const DashedBorderPainter(
-                    color: AppColors.woodMedium,
-                  ),
+                  painter: DashedBorderPainter(color: dashedBorderColor),
                   child: card,
                 )
               : card,
         ),
       ),
     );
+
+    // `Semantics(selected: ...)` seulement en mode sélection : hors de ce
+    // mode, [selected] vaut toujours `false` et n'a aucune signification
+    // sémantique à porter (spec de la tâche).
+    return selectionMode
+        ? Semantics(selected: selected, child: inkWell)
+        : inkWell;
   }
 
   /// "Race · Classe · Niv. X", en omettant les segments non résolus (race
