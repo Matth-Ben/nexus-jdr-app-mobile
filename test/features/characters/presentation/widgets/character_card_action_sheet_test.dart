@@ -573,6 +573,33 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('CharacterFailure : affiche le message du dépôt', (
+      tester,
+    ) async {
+      fakeRepository.setDeadError = const CharacterFailure(
+        'Erreur spécifique statut mort.',
+      );
+      await openSheet(tester);
+
+      await tester.tap(find.text('Marquer comme mort'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Erreur spécifique statut mort.'), findsOneWidget);
+    });
+
+    testWidgets('échec générique : message générique', (tester) async {
+      fakeRepository.setDeadError = StateError('boom');
+      await openSheet(tester);
+
+      await tester.tap(find.text('Marquer comme mort'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Impossible de mettre à jour le statut. Réessayez.'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('"Supprimer le personnage"', () {

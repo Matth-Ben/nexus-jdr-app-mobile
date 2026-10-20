@@ -1713,6 +1713,30 @@ void main() {
     );
 
     testWidgets(
+      'bouton de sélection désactivé quand une recherche/un filtre ne '
+      'laisse aucun personnage visible (liste non vide côté serveur, mais '
+      'rien à sélectionner dans l\'état filtré actuel)',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = twoCharacters;
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Rechercher un personnage'),
+          'Zarbingle introuvable',
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining('AUCUN RÉSULTAT'), findsOneWidget);
+
+        await tester.tap(find.byIcon(Icons.checklist), warnIfMissed: false);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Annuler'), findsNothing);
+      },
+    );
+
+    testWidgets(
       'tap sur le bouton de sélection : masque filtre/sélection, affiche '
       'une case à cocher par carte et la barre d\'action du bas',
       (tester) async {
@@ -1916,6 +1940,43 @@ void main() {
         expect(find.text('1 personnage sélectionné'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'échec partiel : le personnage dont la suppression a réussi disparaît '
+      'bien de la liste visible une fois charactersProvider invalidé (pas '
+      'seulement le compteur/la sélection, voir le test ci-dessus) — simule '
+      'côté serveur ce que `deleteCharacter` a réellement fait pour "1"',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = twoCharacters;
+        fakeCharacterRepository.deleteErrorByCharacterId['2'] =
+            const CharacterFailure('boom');
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        await tester.tap(find.byIcon(Icons.checklist));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Halltesse Ambrelune'));
+        await tester.tap(find.text('Borgan Pierrefort'));
+        await tester.pumpAndSettle();
+
+        // Le refetch déclenché par `ref.invalidate(charactersProvider)`
+        // appelle à nouveau `fetchCharacters` : seul "2" (Borgan, en échec)
+        // doit encore exister côté serveur une fois "1" réellement
+        // supprimé.
+        fakeCharacterRepository.charactersToReturn = [twoCharacters[1]];
+
+        await tester.tap(find.text('SUPPRIMER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Supprimer (2)'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Halltesse Ambrelune'), findsNothing);
+        expect(find.text('Borgan Pierrefort'), findsOneWidget);
+        // Toujours cochée (personnage en échec) : la case à cocher doit
+        // rester visible, pas de doublon ni de carte fantôme.
+        expect(find.byType(SelectionCheckbox), findsOneWidget);
+      },
+    );
   });
 
   group('clic long sur une carte (hors mode sélection) : menu d\'actions', () {
@@ -1944,6 +2005,36 @@ void main() {
         expect(find.text('Elfe · Magicienne · Niv. 5'), findsNWidgets(2));
         expect(find.text('Modifier'), findsOneWidget);
         expect(find.text('Supprimer le personnage'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'en mode sélection multiple, le clic long bascule la sélection au '
+      'lieu d\'ouvrir la sheet (spec de la tâche)',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = const [
+          CharacterSummary(
+            id: '1',
+            name: 'Halltesse Ambrelune',
+            level: 5,
+            xp: 0,
+          ),
+        ];
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        await tester.tap(find.byIcon(Icons.checklist));
+        await tester.pumpAndSettle();
+
+        await tester.longPress(find.byType(CharacterCard));
+        await tester.pumpAndSettle();
+
+        // La sheet ne s'est pas ouverte : pas d'action "Modifier"/"Supprimer
+        // le personnage" affichée, et le compteur de sélection reflète bien
+        // la bascule.
+        expect(find.text('Modifier'), findsNothing);
+        expect(find.text('Supprimer le personnage'), findsNothing);
+        expect(find.text('1 personnage sélectionné'), findsOneWidget);
       },
     );
   });
