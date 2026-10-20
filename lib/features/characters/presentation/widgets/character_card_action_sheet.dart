@@ -12,6 +12,7 @@ import '../../domain/character_summary.dart';
 import '../../domain/write_outcome.dart';
 import '../providers/character_providers.dart';
 import 'character_delete_confirmation.dart';
+import 'character_write_feedback.dart';
 
 /// Ouvre la sheet "Actions de personnage" (clic long sur une carte de
 /// `character_list_screen.dart`, hors mode sélection) — même gabarit A que
@@ -60,14 +61,6 @@ Future<void> showCharacterCardActionSheet(
   }
 }
 
-/// Même message que `character_detail_screen.dart::_offlineNotPersistedMessage`
-/// (privé à cette classe, donc dupliqué ici à l'identique plutôt
-/// qu'importé) : un toggle/une suppression hors-ligne depuis cette sheet
-/// n'est, comme depuis la fiche, jamais mis en file de synchro.
-const _offlineNotPersistedMessage =
-    "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-    'fois reconnecté.';
-
 void _showSnackBar(BuildContext context, String message) {
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -89,7 +82,7 @@ Future<void> _toggleArchived(
         );
     if (!context.mounted) return;
     if (outcome == WriteOutcome.queued) {
-      _showSnackBar(context, _offlineNotPersistedMessage);
+      _showSnackBar(context, offlineNotPersistedMessage);
       return;
     }
     ref.invalidate(charactersProvider);
@@ -113,7 +106,7 @@ Future<void> _toggleDead(
         .setDead(characterId: character.id, isDead: !character.isDead);
     if (!context.mounted) return;
     if (outcome == WriteOutcome.queued) {
-      _showSnackBar(context, _offlineNotPersistedMessage);
+      _showSnackBar(context, offlineNotPersistedMessage);
       return;
     }
     ref.invalidate(charactersProvider);
@@ -145,7 +138,7 @@ Future<void> _delete(
         .deleteCharacter(characterId: character.id);
     if (!context.mounted) return;
     if (outcome == WriteOutcome.queued) {
-      _showSnackBar(context, _offlineNotPersistedMessage);
+      _showSnackBar(context, offlineNotPersistedMessage);
       return;
     }
     ref.invalidate(charactersProvider);

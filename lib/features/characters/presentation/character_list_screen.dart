@@ -29,6 +29,7 @@ import 'widgets/character_card_action_sheet.dart';
 import 'widgets/character_delete_confirmation.dart';
 import 'widgets/character_list_filter_sheet.dart';
 import 'widgets/character_selection_action_bar.dart';
+import 'widgets/character_write_feedback.dart';
 import 'widgets/connection_error_state.dart';
 
 /// Écran d'accueil listant les personnages du joueur connecté
@@ -168,16 +169,6 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
     });
   }
 
-  /// Message affiché quand une suppression (groupée ou non) échoue faute de
-  /// connectivité — copie identique à
-  /// `character_detail_screen.dart::_offlineNotPersistedMessage` (privé à
-  /// cette classe, donc dupliqué ici à l'identique plutôt qu'importé) :
-  /// `CharacterRepository.deleteCharacter` ne met jamais cette écriture en
-  /// file de synchro, même rationale que [CharacterRepository.setDead].
-  static const _offlineNotPersistedMessage =
-      "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-      'fois reconnecté.';
-
   void _showSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -261,9 +252,14 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
     });
 
     if (succeededCount == 0) {
+      // `CharacterRepository.deleteCharacter` ne met jamais cette écriture
+      // en file de synchro (voir [offlineNotPersistedMessage],
+      // `widgets/character_write_feedback.dart`) : une suppression groupée
+      // entièrement en échec faute de réseau se signale donc avec ce
+      // message plutôt qu'avec la promesse d'une synchronisation future.
       _showSnackBar(
         offlineFailureCount == failedIds.length
-            ? _offlineNotPersistedMessage
+            ? offlineNotPersistedMessage
             : 'Impossible de supprimer les personnages sélectionnés. '
                   'Réessayez.',
       );
@@ -381,6 +377,7 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
                     characters: visible!,
                     selectionMode: _selectionMode,
                     selectedCharacterIds: _selectedCharacterIds,
+                    isDeletingSelection: _isDeletingSelection,
                     onToggleSelected: _toggleCharacterSelected,
                   );
                 },
@@ -835,12 +832,23 @@ class _CharacterList extends ConsumerWidget {
     required this.characters,
     required this.selectionMode,
     required this.selectedCharacterIds,
+    required this.isDeletingSelection,
     required this.onToggleSelected,
   });
 
   final List<CharacterSummary> characters;
   final bool selectionMode;
   final Set<String> selectedCharacterIds;
+
+  /// `true` pendant `_CharacterListScreenState._deleteSelectedCharacters`
+  /// (dette technique D89, registre `docs/dette-technique.md`) : désactive
+  /// le tap/clic long de bascule de sélection sur chaque carte tant qu'une
+  /// suppression groupée est en cours, pour qu'un changement de sélection
+  /// fait pendant l'attente réseau ne soit plus silencieusement écrasé par
+  /// le `setState(() { _selectedCharacterIds = failedIds; })` final. Les
+  /// boutons "Annuler"/"Supprimer" de `CharacterSelectionActionBar` sont
+  /// déjà protégés indépendamment (`isDeleting`).
+  final bool isDeletingSelection;
   final ValueChanged<String> onToggleSelected;
 
   @override
@@ -859,9 +867,13 @@ class _CharacterList extends ConsumerWidget {
         // En mode sélection, le clic long est identique au tap (bascule la
         // sélection) et n'ouvre jamais la sheet d'actions — spec de la
         // tâche, voir la documentation de classe de
-        // `CharacterCard.onLongPress`.
+        // `CharacterCard.onLongPress`. `null` pendant une suppression
+        // groupée en cours ([isDeletingSelection]) plutôt que la bascule de
+        // sélection habituelle — voir sa documentation.
         final onTap = selectionMode
-            ? () => onToggleSelected(character.id)
+            ? (isDeletingSelection
+                  ? null
+                  : () => onToggleSelected(character.id))
             : () => context.push(
                 '/characters/${character.id}',
                 extra: character.name,

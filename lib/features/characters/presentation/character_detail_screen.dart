@@ -54,6 +54,7 @@ import 'widgets/character_spells_tab_body.dart';
 import 'widgets/character_story_edit_sheet.dart';
 import 'widgets/character_story_tab_body.dart';
 import 'widgets/character_vitals_card.dart';
+import 'widgets/character_write_feedback.dart';
 import 'widgets/dice_roll_sheet.dart';
 import 'widgets/hp_adjustment_sheet.dart';
 import 'widgets/pact_weapon_picker_sheet.dart';
@@ -1139,7 +1140,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             newQuantity: newQuantity,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1173,7 +1174,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             equipped: newEquipped,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1207,7 +1208,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             attuned: newAttuned,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1237,7 +1238,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             inventoryId: item.id,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1265,7 +1266,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             newAmount: newAmount,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1294,7 +1295,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             quantity: quantity,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1320,7 +1321,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             quantity: quantity,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1375,7 +1376,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             items: items,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1431,7 +1432,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         );
         if (outcome == WriteOutcome.queued) {
           await _refreshCharacterDetail();
-          _showSnackBar(_offlineNotPersistedMessage);
+          _showSnackBar(offlineNotPersistedMessage);
           return;
         }
       }
@@ -1442,7 +1443,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       );
       if (outcome == WriteOutcome.queued) {
         await _refreshCharacterDetail();
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1483,7 +1484,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           .read(pactWeaponRepositoryProvider)
           .setPactWeapon(characterId: widget.characterId, itemId: picked.id);
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1606,7 +1607,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // `castSpell`/`useClassFeature`), donc jamais synchronisée plus
         // tard — message honnête distinct de [_offlineQueuedMessage], même
         // convention que `_castSpell`/`_useClassFeature`.
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -1634,7 +1635,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       if (outcome == WriteOutcome.queued) {
         // Voir la documentation de `CharacterRepository.setArchived` : même
         // convention que [_toggleDead] (jamais mis en file d'attente).
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -1669,7 +1670,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // Voir la documentation de `CharacterRepository.deleteCharacter` :
         // même convention que [_toggleDead]/[_toggleArchived] (jamais mis en
         // file), le personnage n'a donc pas été supprimé.
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       _goBack();
@@ -1697,7 +1698,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // Voir la documentation de `CharacterRepository.setInspiration` :
         // même convention que [_toggleDead]/[_toggleArchived] (jamais mis en
         // file).
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -1725,7 +1726,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           );
       if (!mounted) return;
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(_offlineNotPersistedMessage);
+        _showSnackBar(offlineNotPersistedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -1998,29 +1999,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// `_useClassFeature`/`_applyRest`). Même registre que le reste des
   /// messages de cet écran (ex. "Impossible d'ajouter l'XP. Réessayez."),
   /// honnête sur le fait que le changement n'est pas encore confirmé côté
-  /// serveur — mais, contrairement à [_offlineNotPersistedMessage], promet
-  /// une synchronisation future réelle : l'état optimiste local déjà posé
-  /// par l'appelant n'est jamais annulé dans ce cas (voir chaque appelant).
+  /// serveur — mais, contrairement à [offlineNotPersistedMessage]
+  /// (`widgets/character_write_feedback.dart`), promet une synchronisation
+  /// future réelle : l'état optimiste local déjà posé par l'appelant n'est
+  /// jamais annulé dans ce cas (voir chaque appelant).
   static const _offlineQueuedMessage =
       'Hors ligne : sera synchronisé dès que la connexion revient.';
-
-  /// Message affiché quand une écriture qui n'est **toujours pas** mise en
-  /// file (`useInventoryItem`/`setInventoryItemEquipped`/`equipWeaponToSlot`/
-  /// `setInventoryItemAttuned`/`removeInventoryItem`/`adjustCurrency`/
-  /// `addInventoryItem`/`addCustomInventoryItem`/`addReward`/
-  /// `updateStoryFields` — décision chef de projet du 09/10/2026, D11 : seuls
-  /// le lancer de sort, les aptitudes et le repos ont été étendus, ces
-  /// écritures de l'onglet "Inventaire"/"Histoire" restent hors périmètre)
-  /// retourne [WriteOutcome.queued] (mode hors-ligne). Distinct de
-  /// [_offlineQueuedMessage] à dessein : rien ne sera synchronisé
-  /// automatiquement au retour du réseau pour ces écritures, donc pas de
-  /// promesse de synchronisation ici. L'état optimiste local (quand il y en
-  /// a un) est aussi annulé dans ce cas (revert) : laisser affichée une
-  /// valeur modifiée serait trompeur puisque rien ne sera jamais
-  /// synchronisé.
-  static const _offlineNotPersistedMessage =
-      "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-      'fois reconnecté.';
 
   void _showSnackBar(String message) {
     if (!mounted) return;

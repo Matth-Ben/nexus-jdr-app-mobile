@@ -60,6 +60,14 @@ class _FakeCharacterRepository implements CharacterRepository {
   final Map<String, Object> deleteErrorByCharacterId = {};
   final List<String> deleteCharacterCalls = [];
 
+  /// Permet de geler [deleteCharacter] en plein vol (dette technique D89,
+  /// registre `docs/dette-technique.md`) : quand défini, l'appel
+  /// n'aboutit qu'une fois ce `Completer` complété, pour qu'un test puisse
+  /// interagir avec l'écran pendant qu'une suppression groupée est
+  /// réellement "en cours" (`_isDeletingSelection == true`), plutôt que de
+  /// se fier à un simple `Future` déjà résolu.
+  Completer<void>? deleteCharacterGate;
+
   @override
   Future<List<CharacterSummary>> fetchCharacters() async {
     fetchCallCount++;
@@ -94,6 +102,9 @@ class _FakeCharacterRepository implements CharacterRepository {
   @override
   Future<WriteOutcome> deleteCharacter({required String characterId}) async {
     deleteCharacterCalls.add(characterId);
+    if (deleteCharacterGate != null) {
+      await deleteCharacterGate!.future;
+    }
     final error = deleteErrorByCharacterId[characterId];
     if (error != null) throw error;
     return deleteOutcomeByCharacterId[characterId] ?? WriteOutcome.synced;
@@ -1975,6 +1986,66 @@ void main() {
         // Toujours cochée (personnage en échec) : la case à cocher doit
         // rester visible, pas de doublon ni de carte fantôme.
         expect(find.byType(SelectionCheckbox), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'dette technique D89 : taper une carte pendant qu\'une suppression '
+      'groupée est en cours (_isDeletingSelection == true) ne modifie pas '
+      'la sélection — seul le tap/clic long de bascule est désactivé, pas '
+      'besoin d\'attendre la fin de l\'appel réseau pour le constater',
+      (tester) async {
+        fakeCharacterRepository.charactersToReturn = twoCharacters;
+        fakeCharacterRepository.deleteCharacterGate = Completer<void>();
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        await tester.tap(find.byIcon(Icons.checklist));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Halltesse Ambrelune'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 personnage sélectionné'), findsOneWidget);
+
+        await tester.tap(find.text('SUPPRIMER'));
+        await tester.pumpAndSettle();
+        expect(find.text('Supprimer Halltesse Ambrelune ?'), findsOneWidget);
+        await tester.tap(find.text('Supprimer'));
+        // Pas de `pumpAndSettle` ici : une fois la suppression "en cours"
+        // (`_isDeletingSelection == true`), `DestructiveButton.isLoading`
+        // affiche un `CircularProgressIndicator` qui s'anime indéfiniment
+        // tant que [_FakeCharacterRepository.deleteCharacterGate] n'est pas
+        // complété — `pumpAndSettle` ne se stabiliserait donc jamais. Une
+        // poignée de frames suffit à fermer le dialogue de confirmation et
+        // à atteindre l'état "suppression en cours".
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Tap sur l'autre carte (non sélectionnée) pendant l'attente :
+        // avant le correctif, cela l'aurait cochée (bascule normale en
+        // mode sélection) — désormais sans effet.
+        await tester.tap(find.text('Borgan Pierrefort'), warnIfMissed: false);
+        await tester.pump();
+        expect(find.text('1 personnage sélectionné'), findsOneWidget);
+        expect(find.text('2 personnages sélectionnés'), findsNothing);
+
+        // Un clic long pendant l'attente n'a pas plus d'effet (même
+        // callback que le tap en mode sélection).
+        await tester.longPress(
+          find.text('Borgan Pierrefort'),
+          warnIfMissed: false,
+        );
+        await tester.pump();
+        expect(find.text('1 personnage sélectionné'), findsOneWidget);
+
+        // Débloque la suppression : l'écran revient à son état normal,
+        // rien n'a jamais été perdu ni corrompu par les taps ignorés
+        // ci-dessus.
+        fakeCharacterRepository.deleteCharacterGate!.complete();
+        await tester.pumpAndSettle();
+
+        expect(fakeCharacterRepository.deleteCharacterCalls, ['1']);
+        expect(find.text('Annuler'), findsNothing);
+        expect(find.text('+ CRÉER'), findsOneWidget);
       },
     );
   });
