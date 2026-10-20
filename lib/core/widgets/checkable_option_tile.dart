@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import 'selection_checkbox.dart';
 
 /// Ligne de liste sélectionnable à choix multiple, composant "Case à cocher
 /// / élément de liste sélectionnable" de
@@ -124,7 +125,8 @@ class CheckableOptionTile extends StatelessWidget {
     // l'un ni l'autre (ex. onglet "Historique" de l'étape 7/9), aucun
     // indicateur n'est rendu du tout, ni à gauche ni à droite.
     final indicator =
-        trailing ?? (showIndicator ? _Checkbox(checked: checked) : null);
+        trailing ??
+        (showIndicator ? SelectionCheckbox(checked: checked) : null);
 
     return Opacity(
       opacity: isDimmed ? 0.45 : 1,
@@ -218,34 +220,6 @@ class CheckableOptionTile extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Case à cocher 18×18px du design système : bordure 1.5px `wood.light` à
-/// l'état non coché ; à l'état coché, fond `gold-end` + bordure `wood.dark`
-/// + coche blanche.
-class _Checkbox extends StatelessWidget {
-  const _Checkbox({required this.checked});
-
-  final bool checked;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 18,
-      height: 18,
-      decoration: BoxDecoration(
-        color: checked ? AppColors.goldEnd : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(
-          color: checked ? AppColors.woodDark : AppColors.woodLight,
-          width: 1.5,
-        ),
-      ),
-      child: checked
-          ? const Icon(Icons.check, size: 13, color: Colors.white)
-          : null,
     );
   }
 }

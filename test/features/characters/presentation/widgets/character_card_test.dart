@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/dashed_border_painter.dart';
 import 'package:personnages/core/widgets/portrait_frame.dart';
+import 'package:personnages/core/widgets/selection_checkbox.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_card.dart';
 
@@ -20,10 +21,25 @@ const _baseSummary = CharacterSummary(
   xp: 7000,
 );
 
-Future<void> _pump(WidgetTester tester, CharacterSummary character) async {
+Future<void> _pump(
+  WidgetTester tester,
+  CharacterSummary character, {
+  bool selectionMode = false,
+  bool selected = false,
+  VoidCallback? onTap,
+  VoidCallback? onLongPress,
+}) async {
   await tester.pumpWidget(
     MaterialApp(
-      home: Scaffold(body: CharacterCard(character: character)),
+      home: Scaffold(
+        body: CharacterCard(
+          character: character,
+          selectionMode: selectionMode,
+          selected: selected,
+          onTap: onTap,
+          onLongPress: onLongPress,
+        ),
+      ),
     ),
   );
 }
@@ -197,6 +213,207 @@ void main() {
         );
 
         expect(portraitClassThemeColor(tester), isNull);
+      },
+    );
+  });
+
+  group('mode sélection multiple (character_list_screen.dart)', () {
+    testWidgets(
+      'selectionMode: false (par défaut) : aucune case à cocher affichée',
+      (tester) async {
+        await _pump(tester, _baseSummary);
+
+        expect(find.byType(SelectionCheckbox), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'selectionMode: true : affiche la case à cocher avant le portrait, '
+      'reflétant [selected]',
+      (tester) async {
+        await _pump(tester, _baseSummary, selectionMode: true, selected: true);
+
+        final checkbox = tester.widget<SelectionCheckbox>(
+          find.byType(SelectionCheckbox),
+        );
+        expect(checkbox.checked, isTrue);
+
+        final checkboxX = tester.getTopLeft(find.byType(SelectionCheckbox)).dx;
+        final portraitX = tester.getTopLeft(find.byType(PortraitFrame)).dx;
+        expect(
+          checkboxX,
+          lessThan(portraitX),
+          reason: 'la case à cocher doit précéder le portrait',
+        );
+      },
+    );
+
+    testWidgets(
+      'selectionMode: true, selected: false : case à cocher décochée',
+      (tester) async {
+        await _pump(tester, _baseSummary, selectionMode: true);
+
+        final checkbox = tester.widget<SelectionCheckbox>(
+          find.byType(SelectionCheckbox),
+        );
+        expect(checkbox.checked, isFalse);
+      },
+    );
+
+    testWidgets(
+      'selected: true sur une carte normale : bordure dorée (goldEnd) au '
+      'lieu de wood.medium',
+      (tester) async {
+        await _pump(tester, _baseSummary, selectionMode: true, selected: true);
+
+        final container = tester
+            .widgetList<Container>(find.byType(Container))
+            .firstWhere(
+              (c) =>
+                  c.decoration is BoxDecoration &&
+                  (c.decoration! as BoxDecoration).boxShadow != null,
+            );
+        final decoration = container.decoration! as BoxDecoration;
+        final border = decoration.border! as Border;
+        expect(border.top.color, AppColors.goldEnd);
+      },
+    );
+
+    testWidgets(
+      'selected: true sur une carte morte : bordure dorée (goldEnd) au lieu '
+      'de wood.dark, fond wood.dark inchangé',
+      (tester) async {
+        await _pump(
+          tester,
+          _baseSummary.copyWith(isDead: true),
+          selectionMode: true,
+          selected: true,
+        );
+
+        final container = tester
+            .widgetList<Container>(find.byType(Container))
+            .firstWhere(
+              (c) =>
+                  c.decoration is BoxDecoration &&
+                  (c.decoration! as BoxDecoration).boxShadow != null,
+            );
+        final decoration = container.decoration! as BoxDecoration;
+        expect(decoration.color, AppColors.woodDark);
+        final border = decoration.border! as Border;
+        expect(border.top.color, AppColors.goldEnd);
+      },
+    );
+
+    testWidgets('selected: true sur une carte archivée (bordure pointillée) : '
+        'DashedBorderPainter.color devient goldEnd', (tester) async {
+      await _pump(
+        tester,
+        // Portrait défini : même raison que le test "personnage archivé"
+        // plus haut dans ce fichier — sans lui, `PortraitFrame` peint
+        // elle-même un second `DashedBorderPainter` pour son placeholder
+        // "sans portrait", ce qui ferait échouer `tester.widget` (plusieurs
+        // correspondances).
+        _baseSummary.copyWith(
+          isArchived: true,
+          portraitUrl: 'https://example.com/halltesse.jpg',
+        ),
+        selectionMode: true,
+        selected: true,
+      );
+
+      final painter =
+          tester
+                  .widget<CustomPaint>(
+                    find.byWidgetPredicate(
+                      (widget) =>
+                          widget is CustomPaint &&
+                          widget.painter is DashedBorderPainter,
+                    ),
+                  )
+                  .painter!
+              as DashedBorderPainter;
+      expect(painter.color, AppColors.goldEnd);
+    });
+
+    testWidgets('selected: false : les bordures restent sur leurs couleurs '
+        'habituelles (pas de régression)', (tester) async {
+      await _pump(tester, _baseSummary, selectionMode: true);
+
+      final container = tester
+          .widgetList<Container>(find.byType(Container))
+          .firstWhere(
+            (c) =>
+                c.decoration is BoxDecoration &&
+                (c.decoration! as BoxDecoration).boxShadow != null,
+          );
+      final decoration = container.decoration! as BoxDecoration;
+      final border = decoration.border! as Border;
+      expect(border.top.color, AppColors.woodMedium);
+    });
+
+    testWidgets('Semantics(selected: ...) seulement en mode sélection', (
+      tester,
+    ) async {
+      await _pump(tester, _baseSummary, selectionMode: true, selected: true);
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Semantics && widget.properties.selected == true,
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'hors mode sélection, [selected] est sans effet sémantique (toujours '
+      'false en pratique côté appelant)',
+      (tester) async {
+        await _pump(tester, _baseSummary);
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Semantics && widget.properties.selected != null,
+          ),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'onLongPress est appelé au clic long, indépendamment de onTap',
+      (tester) async {
+        var longPressed = false;
+        await _pump(
+          tester,
+          _baseSummary,
+          onTap: () {},
+          onLongPress: () => longPressed = true,
+        );
+
+        await tester.longPress(find.byType(CharacterCard));
+        expect(longPressed, isTrue);
+      },
+    );
+
+    testWidgets(
+      'en mode sélection, l\'appelant peut brancher onLongPress sur le '
+      'même callback que onTap (bascule de sélection) — ce composant ne '
+      'fait aucune distinction interne entre les deux',
+      (tester) async {
+        var toggleCount = 0;
+        await _pump(
+          tester,
+          _baseSummary,
+          selectionMode: true,
+          onTap: () => toggleCount++,
+          onLongPress: () => toggleCount++,
+        );
+
+        await tester.tap(find.byType(CharacterCard));
+        await tester.longPress(find.byType(CharacterCard));
+
+        expect(toggleCount, 2);
       },
     );
   });

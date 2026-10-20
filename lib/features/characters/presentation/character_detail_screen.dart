@@ -8,7 +8,6 @@ import '../../../core/rules/spell_status.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/widgets/destructive_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/wood_back_header.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
@@ -40,6 +39,7 @@ import '../../character_creation/presentation/widgets/step_help_sheet.dart';
 import '../domain/character_sheet_help.dart';
 import 'widgets/add_reward_sheet.dart';
 import 'widgets/add_xp_sheet.dart';
+import 'widgets/character_delete_confirmation.dart';
 import 'widgets/character_ability_score_grid.dart';
 import 'widgets/character_adventures_card.dart';
 import 'widgets/character_detail_tab_bar.dart';
@@ -2576,73 +2576,4 @@ class _ErrorState extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Dialogue de confirmation "Supprimer {nom} ?" — calque exact de
-/// `item_action_sheet.dart::showRemoveInventoryItemConfirmationDialog`, avec
-/// un texte adapté à la portée bien plus large de cette suppression (tout le
-/// personnage, pas un seul objet). Retourne `true` si le joueur confirme,
-/// `false`/`null` sinon.
-Future<bool?> showDeleteCharacterConfirmationDialog(
-  BuildContext context, {
-  required String characterName,
-}) {
-  return showDialog<bool>(
-    context: context,
-    builder: (context) => Dialog(
-      backgroundColor: AppColors.parchmentCard,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        side: const BorderSide(
-          color: AppColors.woodLight,
-          width: AppBorders.card,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Supprimer $characterName ?',
-              style: AppTypography.body(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Cette action est définitive : le personnage et toutes ses '
-              'données (sorts, inventaire, historique...) seront '
-              'irrémédiablement supprimés.',
-              style: AppTypography.body(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'Annuler',
-                    surface: SecondaryButtonSurface.parchment,
-                    onPressed: () => Navigator.of(context).pop(false),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: DestructiveButton(
-                    label: 'Supprimer',
-                    onPressed: () => Navigator.of(context).pop(true),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }

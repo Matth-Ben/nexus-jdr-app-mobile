@@ -36,12 +36,20 @@ import '../theme/app_typography.dart';
 /// du 13/09/2026, écran "Partage — Gérer le lien", action "Désactiver le
 /// partage" avec `Icons.block`) : taille 18, `AppColors.accentBrick`, `null`
 /// par défaut (aucun usage existant n'en a besoin).
+///
+/// [isLoading] remplace le libellé par un indicateur de progression et
+/// désactive le bouton — en miroir exact de [PrimaryButton.isLoading],
+/// nécessaire pour la suppression groupée de personnages (mode sélection
+/// multiple de `character_list_screen.dart`, potentiellement plusieurs
+/// appels réseau séquentiels). `false` par défaut : comportement inchangé
+/// pour tous les usages existants.
 class DestructiveButton extends StatelessWidget {
   const DestructiveButton({
     required this.label,
     required this.onPressed,
     this.filled = false,
     this.icon,
+    this.isLoading = false,
     super.key,
   });
 
@@ -57,9 +65,12 @@ class DestructiveButton extends StatelessWidget {
   /// classe.
   final IconData? icon;
 
+  /// Voir la documentation de classe.
+  final bool isLoading;
+
   @override
   Widget build(BuildContext context) {
-    final isEnabled = onPressed != null;
+    final isEnabled = onPressed != null && !isLoading;
 
     return Opacity(
       opacity: isEnabled ? 1 : 0.6,
@@ -85,42 +96,58 @@ class DestructiveButton extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 48),
               child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (icon != null) ...[
-                        Icon(icon, size: 18, color: AppColors.accentBrick),
-                        const SizedBox(width: AppSpacing.xs),
-                      ],
-                      // `Flexible` : sans lui, `Text` reçoit une largeur non
-                      // bornée de la part de `Row` (perd la contrainte de
-                      // largeur propagée par `Padding` quand il en était
-                      // l'unique enfant direct) et ne s'enroule/ne rétrécit
-                      // plus — régression réelle trouvée sur "Dissoudre le
-                      // groupe" (libellé long, `RenderFlex overflowed`).
-                      Flexible(
-                        child: Text(
-                          filled ? label.toUpperCase() : label,
-                          textAlign: TextAlign.center,
-                          style: filled
-                              ? AppTypography.display(
-                                  fontSize: 11,
-                                  color: AppColors.textOnWood,
-                                )
-                              : AppTypography.body(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.accentBrick,
-                                ),
+                child: isLoading
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: filled
+                              ? AppColors.textOnWood
+                              : AppColors.accentBrick,
+                        ),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (icon != null) ...[
+                              Icon(
+                                icon,
+                                size: 18,
+                                color: AppColors.accentBrick,
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                            ],
+                            // `Flexible` : sans lui, `Text` reçoit une
+                            // largeur non bornée de la part de `Row` (perd la
+                            // contrainte de largeur propagée par `Padding`
+                            // quand il en était l'unique enfant direct) et ne
+                            // s'enroule/ne rétrécit plus — régression réelle
+                            // trouvée sur "Dissoudre le groupe" (libellé
+                            // long, `RenderFlex overflowed`).
+                            Flexible(
+                              child: Text(
+                                filled ? label.toUpperCase() : label,
+                                textAlign: TextAlign.center,
+                                style: filled
+                                    ? AppTypography.display(
+                                        fontSize: 11,
+                                        color: AppColors.textOnWood,
+                                      )
+                                    : AppTypography.body(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.accentBrick,
+                                      ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
               ),
             ),
           ),
