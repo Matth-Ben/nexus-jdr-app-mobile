@@ -16,8 +16,10 @@ import '../../domain/level_up_continue_option.dart';
 import '../../domain/level_up_elemental_discipline_option.dart';
 import '../../domain/level_up_feat_option.dart';
 import '../../domain/level_up_invocation_option.dart';
+import '../../domain/level_up_maneuver_option.dart';
 import '../../domain/level_up_multiclass_option.dart';
 import '../../domain/level_up_subclass_option.dart';
+import '../../domain/maneuvers_known_progression.dart';
 import '../../domain/multiclass_prerequisites.dart';
 import '../../domain/multiclass_proficiencies.dart';
 import '../../domain/patron_extended_spells.dart';
@@ -250,6 +252,28 @@ typedef LevelUpStepData = ({
   /// `presentation/level_up_screen.dart`).
   Map<int, List<LevelUpElementalDisciplineOption>>
   elementalDisciplinesBySubclass,
+
+  /// `true` si l'étape "Manœuvres" doit être affichée à ce niveau —
+  /// Guerrier, Maître de guerre uniquement, delta strictement positif de
+  /// `domain/maneuvers_known_progression.dart::ManeuversKnownProgression`
+  /// (niveaux 3, 7, 10, 15 RAW). Même traitement/même garde-fou contre la
+  /// régression "toute sous-classe de la classe concernée déclenche l'étape"
+  /// que [requiresElementalDisciplineSelection] ci-dessus (indépendant de
+  /// [choiceKind] : `class_features.choice_type = 'manoeuvre'`, présent en
+  /// base au seul niveau 3, ne mène pas à l'étape "Choix à faire" — voir
+  /// `domain/level_up_block_reason.dart`).
+  bool requiresManeuverSelection,
+
+  /// Delta RAW de manœuvres de ce niveau (0 si [requiresManeuverSelection]
+  /// est `false`).
+  int maneuverDelta,
+
+  /// Manœuvres NON déjà connues du personnage, PAR `subclasses.id` candidat
+  /// — non vide seulement si [requiresManeuverSelection]. Même mécanisme que
+  /// [elementalDisciplinesBySubclass] (plusieurs entrées possibles au
+  /// niveau 3, choix de sous-classe ET premier palier de manœuvres dans LA
+  /// MÊME montée de niveau).
+  Map<int, List<LevelUpManeuverOption>> maneuversBySubclass,
 
   /// Pacte de l'Occultiste déjà enregistré en base
   /// (`character_class_options`), `null` si aucun — le pacte choisi dans la
@@ -837,6 +861,55 @@ Future<LevelUpStepData> levelUpStepData(
     elementalDisciplinesBySubclass = Map.fromEntries(entries);
   }
 
+  // Manœuvres — étape "Manœuvres", indépendante de [choiceKind] (même
+  // traitement que les disciplines élémentaires ci-dessus) — Guerrier,
+  // Maître de guerre UNIQUEMENT. Même garde-fou contre la régression "toute
+  // sous-classe de la classe concernée déclenche l'étape" que les
+  // disciplines élémentaires (voir le commentaire détaillé ci-dessus,
+  // identique à ceci près que `className` vaut 'Guerrier' et que la table
+  // de progression est `ManeuversKnownProgression`) : [isKnownWarMaster]/
+  // [mayBecomeWarMasterThisLevel] jouent exactement le même rôle que
+  // [isKnownFourElementsMonk]/[mayBecomeFourElementsMonkThisLevel].
+  final isKnownWarMaster =
+      effectiveSubclassName == ManeuversKnownProgression.subclassName;
+  final mayBecomeWarMasterThisLevel =
+      choiceKind == LevelUpChoiceKind.subclass &&
+      levelData.availableSubclasses.any(
+        (option) => option.name == ManeuversKnownProgression.subclassName,
+      );
+  final maneuverDelta =
+      effectiveClassName == 'Guerrier' &&
+          (isKnownWarMaster || mayBecomeWarMasterThisLevel)
+      ? ManeuversKnownProgression.newManeuversAt(effectiveTargetLevel)
+      : 0;
+  final requiresManeuverSelection = maneuverDelta > 0;
+  var maneuversBySubclass = const <int, List<LevelUpManeuverOption>>{};
+  if (requiresManeuverSelection) {
+    // Même rationale que [elementalDisciplinesBySubclass] ci-dessus : au
+    // niveau 3, le choix de sous-classe et le premier palier de manœuvres
+    // sont déclenchés par LA MÊME montée de niveau, avant que le joueur
+    // n'ait choisi sa sous-classe.
+    final candidateSubclassIds = <int>{
+      ?knownSubclassId,
+      if (choiceKind == LevelUpChoiceKind.subclass)
+        for (final option in levelData.availableSubclasses)
+          (option.id as num).toInt(),
+    };
+    final repository = ref.watch(characterRepositoryProvider);
+    final maneuverEntries = await Future.wait([
+      for (final subclassId in candidateSubclassIds)
+        repository
+            .fetchAvailableManeuvers(
+              characterId: characterId,
+              classId: effectiveClassId,
+              subclassId: subclassId,
+              targetLevel: effectiveTargetLevel,
+            )
+            .then((options) => MapEntry(subclassId, options)),
+    ]);
+    maneuversBySubclass = Map.fromEntries(maneuverEntries);
+  }
+
   // Dons — étape "Choix à faire", sous-mode "don" (voir
   // `domain/level_up_choice_selection.dart::LevelUpChoiceSelection.featId`) :
   // une seule requête réseau supplémentaire, uniquement quand ce niveau
@@ -891,6 +964,9 @@ Future<LevelUpStepData> levelUpStepData(
     requiresElementalDisciplineSelection: requiresElementalDisciplineSelection,
     elementalDisciplineDelta: elementalDisciplineDelta,
     elementalDisciplinesBySubclass: elementalDisciplinesBySubclass,
+    requiresManeuverSelection: requiresManeuverSelection,
+    maneuverDelta: maneuverDelta,
+    maneuversBySubclass: maneuversBySubclass,
     knownPact: knownPact,
     knownCantripSpellIds: knownCantripSpellIds,
     knownSpellIds: knownSpellIds,

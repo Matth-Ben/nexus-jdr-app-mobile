@@ -293,6 +293,92 @@ void main() {
         ]);
       });
 
+      test(
+        'classFeatures : inclut aussi les aptitudes de SOUS-classe de la '
+        'sous-classe déjà choisie (bug architectural corrigé, trouvé par '
+        'regles-dnd en investiguant le Guerrier Maître de guerre) — '
+        'filtrées par le niveau de LA CLASSE qui porte la sous-classe, pas '
+        'un niveau de sous-classe séparé (qui n\'existe pas en base)',
+        () async {
+          final subclassRows =
+              Map<String, List<Map<String, dynamic>>>.from(tableRows)..addAll({
+                'characters': [
+                  {
+                    ...tableRows['characters']!.single,
+                    'character_classes': [
+                      {
+                        'class_id': 2,
+                        'subclass_id': 77,
+                        'level': 5,
+                        'is_primary': true,
+                        'classes': {
+                          'saving_throw_proficiencies': ['str', 'con'],
+                          'hit_die': 10,
+                        },
+                      },
+                    ],
+                  },
+                ],
+                'class_features': [
+                  {
+                    'id': 50,
+                    'class_id': 2,
+                    'subclass_id': null,
+                    'level': 3,
+                    'uses_per_rest': {'amount': 2, 'rest_type': 'repos_court'},
+                  },
+                  {'id': 60, 'class_id': null, 'subclass_id': 77, 'level': 3},
+                  // Pas encore atteint : niveau 7 > niveau 5 de la classe
+                  // porteuse de la sous-classe (jamais un niveau de
+                  // sous-classe séparé, inexistant en base).
+                  {'id': 61, 'class_id': null, 'subclass_id': 77, 'level': 7},
+                ],
+                'translations': [
+                  ...tableRows['translations']!,
+                  {'entity_id': '60', 'value': 'Supériorité martiale'},
+                  {'entity_id': '61', 'value': 'Jamais atteinte'},
+                ],
+              });
+
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            tableRows: subclassRows,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _AlwaysOnlineConnectivityChecker(),
+          );
+
+          final detail = await repository.fetchCharacterDetail(characterId);
+
+          expect(detail.classFeatures.map((f) => f.name), [
+            'Deuxième souffle',
+            'Supériorité martiale',
+          ]);
+        },
+      );
+
+      test('classFeatures : une classe sans sous-classe encore choisie '
+          '(subclass_id null) n\'ajoute simplement rien pour elle, sans '
+          'erreur — comportement inchangé de la fixture partagée', () async {
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: tableRows,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+        final detail = await repository.fetchCharacterDetail(characterId);
+
+        expect(detail.classFeatures.map((f) => f.name), ['Deuxième souffle']);
+      });
+
       test('échec réseau + cache déjà présent : retombe sur le cache et '
           'produit la même fiche que le mapper direct', () async {
         final onlineClient = await _buildSignedInFakeSupabaseClient(
