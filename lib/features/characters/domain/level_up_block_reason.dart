@@ -63,6 +63,37 @@ class LevelUpBlockReason {
 /// aucune version de [resolvedChoiceTypes], tout Moine Voie des quatre
 /// éléments restait bloqué indéfiniment à sa montée de niveau 3.
 ///
+/// **Chantier "tir arcanique/rune/infusion"** : `'tir_arcanique'` (Guerrier,
+/// Archer arcanique), `'rune'` (Guerrier, Chevalier runique) et `'infusion'`
+/// (Artificier, aptitude de CLASSE) ont rejoint [resolvedChoiceTypes] — même
+/// traitement que `'discipline_elementaire'`/`'invocation'` ci-dessus
+/// (étapes dédiées "Tirs arcaniques"/"Runes"/"Infusions", basées sur le
+/// delta de `domain/arcane_shots_known_progression.dart`/
+/// `domain/runes_known_progression.dart`/
+/// `domain/infusions_known_progression.dart`). Ces 3 lignes `class_features`
+/// ont `choice_type = NULL` en base au moment de ce chantier (un SQL de
+/// correction de contenu, préparé pour Matthias, doit encore être exécuté
+/// côté dépôt web) : cet ajout à [resolvedChoiceTypes] est donc écrit pour
+/// fonctionner correctement une fois ce SQL appliqué, mais ne change rien
+/// tant qu'il ne l'est pas (un `choice_type` nul ne passe jamais par ce
+/// test, voir [evaluate] ci-dessous) — même défense que le reste de ce
+/// fichier face à un contenu non encore peuplé.
+///
+/// **Correctif D92** (`docs/dette-technique.md`) : `'manoeuvre'` (Guerrier,
+/// Maître de guerre) a rejoint [resolvedChoiceTypes] — même traitement que
+/// `'tir_arcanique'`/`'rune'`/`'infusion'` ci-dessus (étape dédiée
+/// "Manœuvres" déjà câblée, `domain/maneuvers_known_progression.dart`, basée
+/// sur `requiresManeuverSelection`/`maneuverDelta` dans
+/// `presentation/providers/level_up_provider.dart`, indépendamment de
+/// [LevelUpPendingChoiceResolver.resolve]). Avant ce correctif, si
+/// `class_features.choice_type = 'manoeuvre'` devenait non nul en base,
+/// [evaluate] aurait bloqué tout Guerrier Maître de guerre à son niveau 3
+/// malgré cette étape déjà fonctionnelle — exactement le bug D86 rejoué.
+/// `'manoeuvre'` a aussi rejoint l'exclusion correspondante de
+/// [LevelUpPendingChoiceResolver.resolve] (`domain/level_up_choice_kind.dart`)
+/// pour que le `StateError` défensif de cette méthode ne se déclenche pas à
+/// tort une fois cette valeur non nulle en base.
+///
 /// Un niveau qui reste bloqué bloque tout le flux *avant* même l'étape
 /// "Points de vie" (jamais de jet de dé pour rien) — ne reste concerné que
 /// tout `class_features.choice_type` non nul et encore inconnu de
@@ -85,10 +116,12 @@ abstract final class LevelUpBlockRules {
   /// flux — `'sous_classe'`/`'style_combat'`/`'ennemi_jure'` mènent à l'étape
   /// "Choix à faire" (increment 2, voir `domain/level_up_choice_kind.dart`),
   /// `'pacte'` (Faveur de pacte de l'Occultiste, niveau 3) à l'étape "Choix à
-  /// faire" (`LevelUpChoiceKind.pact`), `'invocation'` et
-  /// `'discipline_elementaire'` à leurs étapes dédiées respectives
-  /// ("Invocations"/"Disciplines élémentaires", voir la doc de classe
-  /// ci-dessus) — ces deux derniers ne passent PAS par
+  /// faire" (`LevelUpChoiceKind.pact`), `'invocation'`,
+  /// `'discipline_elementaire'`, `'tir_arcanique'`, `'rune'`, `'infusion'` et
+  /// `'manoeuvre'` à leurs étapes dédiées respectives
+  /// ("Invocations"/"Disciplines élémentaires"/"Tirs
+  /// arcaniques"/"Runes"/"Infusions"/"Manœuvres", voir la doc de classe
+  /// ci-dessus) — ces six derniers ne passent PAS par
   /// [LevelUpPendingChoiceResolver.resolve] vers un [LevelUpChoiceKind].
   static const Set<String> resolvedChoiceTypes = {
     'sous_classe',
@@ -97,6 +130,10 @@ abstract final class LevelUpBlockRules {
     'invocation',
     'pacte',
     'discipline_elementaire',
+    'tir_arcanique',
+    'rune',
+    'infusion',
+    'manoeuvre',
   };
 
   /// Évalue si [targetLevel] doit bloquer tout le flux de montée de niveau,

@@ -48,7 +48,11 @@ import "package:personnages/features/characters/domain/level_up_choice_selection
 import "package:personnages/features/characters/domain/level_up_feat_option.dart";
 import "package:personnages/features/characters/domain/level_up_invocation_option.dart";
 import "package:personnages/features/characters/domain/level_up_elemental_discipline_option.dart";
+import "package:personnages/features/characters/domain/level_up_arcane_shot_option.dart";
+import "package:personnages/features/characters/domain/level_up_infusion_option.dart";
+import "package:personnages/features/characters/domain/level_up_infusion_swap.dart";
 import "package:personnages/features/characters/domain/level_up_maneuver_option.dart";
+import "package:personnages/features/characters/domain/level_up_rune_option.dart";
 import "package:personnages/features/characters/domain/level_up_level_data.dart";
 import "package:personnages/features/characters/domain/rest_type.dart";
 import "package:personnages/features/characters/domain/reward_item_draft.dart";
@@ -243,6 +247,34 @@ class FakeRepository implements CharacterRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<List<LevelUpArcaneShotOption>> fetchAvailableArcaneShots({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<List<LevelUpRuneOption>> fetchAvailableRunes({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<List<LevelUpInfusionOption>> fetchAvailableInfusions({
+    required String characterId,
+    required Object classId,
+    required int targetLevel,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<List<String>> fetchKnownInfusionNames({
+    required String characterId,
+  }) async => throw UnimplementedError();
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -256,6 +288,10 @@ class FakeRepository implements CharacterRepository {
     List<int> invocationIds = const [],
     List<String> elementalDisciplineNames = const [],
     List<String> maneuverNames = const [],
+    List<String> arcaneShotNames = const [],
+    List<String> runeNames = const [],
+    List<String> infusionNames = const [],
+    LevelUpInfusionSwap? infusionSwap,
     List<int> racialInnateSpellIds = const [],
   }) {
     throw UnimplementedError();

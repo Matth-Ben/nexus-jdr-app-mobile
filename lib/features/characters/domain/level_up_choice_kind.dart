@@ -5,14 +5,23 @@ import 'level_up_block_reason.dart';
 /// `docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 6,
 /// point 3.
 ///
-/// `invocation` (Occultiste, plusieurs niveaux) et `discipline_elementaire`
-/// (Moine, Voie des quatre éléments, plusieurs niveaux) n'ont volontairement
-/// PAS de valeur d'énumération ici : couverts par leurs étapes dédiées
-/// respectives ("Invocations"/"Disciplines élémentaires"), distinctes de
-/// l'étape "Choix à faire" (voir `presentation/level_up_screen.dart`,
-/// `domain/invocations_known_progression.dart` et
-/// `domain/elemental_disciplines_known_progression.dart`) —
-/// [LevelUpPendingChoiceResolver] renvoie `null` pour ces deux `choice_type`
+/// `invocation` (Occultiste, plusieurs niveaux), `discipline_elementaire`
+/// (Moine, Voie des quatre éléments, plusieurs niveaux), `manoeuvre`
+/// (Guerrier, Maître de guerre, plusieurs niveaux), `tir_arcanique`
+/// (Guerrier, Archer arcanique, plusieurs niveaux), `rune` (Guerrier,
+/// Chevalier runique, plusieurs niveaux) et `infusion` (Artificier, aptitude
+/// de classe, plusieurs niveaux) n'ont volontairement PAS de valeur
+/// d'énumération ici : couverts par leurs étapes dédiées respectives
+/// ("Invocations"/"Disciplines élémentaires"/"Manœuvres"/"Tirs
+/// arcaniques"/"Runes"/"Infusions"), distinctes de l'étape "Choix à faire"
+/// (voir `presentation/level_up_screen.dart`,
+/// `domain/invocations_known_progression.dart`,
+/// `domain/elemental_disciplines_known_progression.dart`,
+/// `domain/maneuvers_known_progression.dart`,
+/// `domain/arcane_shots_known_progression.dart`,
+/// `domain/runes_known_progression.dart` et
+/// `domain/infusions_known_progression.dart`) —
+/// [LevelUpPendingChoiceResolver] renvoie `null` pour ces six `choice_type`
 /// plutôt qu'un [LevelUpChoiceKind].
 enum LevelUpChoiceKind {
   /// Répartition de 2 points entre caractéristiques (niveaux codés en dur
@@ -54,22 +63,35 @@ abstract final class LevelUpPendingChoiceResolver {
     required int targetLevel,
     required String? classFeatureChoiceType,
   }) {
-    // `'invocation'`/`'discipline_elementaire'` sont dans
-    // `resolvedChoiceTypes` (ne bloquent plus le flux, voir
-    // `LevelUpBlockRules.evaluate`) mais ne mènent PAS à l'étape "Choix à
-    // faire" : leurs étapes dédiées respectives ("Invocations", basée sur le
-    // delta de `domain/invocations_known_progression.dart" ; "Disciplines
+    // `'invocation'`/`'discipline_elementaire'`/`'tir_arcanique'`/`'rune'`/
+    // `'infusion'`/`'manoeuvre'` sont dans `resolvedChoiceTypes` (ne
+    // bloquent plus le flux, voir `LevelUpBlockRules.evaluate`) mais ne
+    // mènent PAS à l'étape "Choix à faire" : leurs étapes dédiées
+    // respectives ("Invocations", basée sur le delta de
+    // `domain/invocations_known_progression.dart" ; "Disciplines
     // élémentaires", basée sur le delta de
-    // `domain/elemental_disciplines_known_progression.dart`), à chaque
-    // niveau concerné, pas seulement celui où la ligne
-    // `class_features.choice_type` existe en base, les couvrent à la place —
-    // voir `presentation/level_up_screen.dart`. Testées avant le `switch`
-    // ci-dessous plutôt qu'incluses dedans, pour ne jamais confondre "aucun
-    // choix à faire à cette étape" (retour `null`, cas normal) avec le
-    // `StateError` défensif qui protège les seules valeurs qui, elles,
-    // doivent obligatoirement produire un [LevelUpChoiceKind].
+    // `domain/elemental_disciplines_known_progression.dart` ; "Tirs
+    // arcaniques"/"Runes"/"Infusions"/"Manœuvres", basées respectivement sur
+    // le delta de `domain/arcane_shots_known_progression.dart`/
+    // `domain/runes_known_progression.dart`/
+    // `domain/infusions_known_progression.dart`/
+    // `domain/maneuvers_known_progression.dart`), à chaque niveau concerné,
+    // pas seulement celui où la ligne `class_features.choice_type` existe en
+    // base, les couvrent à la place — voir `presentation/level_up_screen.dart`.
+    // Testées avant le `switch` ci-dessous plutôt qu'incluses dedans, pour ne
+    // jamais confondre "aucun choix à faire à cette étape" (retour `null`,
+    // cas normal) avec le `StateError` défensif qui protège les seules
+    // valeurs qui, elles, doivent obligatoirement produire un
+    // [LevelUpChoiceKind] (D92 : `'manoeuvre'` a rejoint cette exclusion en
+    // même temps que `resolvedChoiceTypes`, sinon ce `StateError` se
+    // déclencherait à tort dès que `choice_type = 'manoeuvre'` deviendrait
+    // non nul en base).
     if (classFeatureChoiceType == 'invocation' ||
-        classFeatureChoiceType == 'discipline_elementaire') {
+        classFeatureChoiceType == 'discipline_elementaire' ||
+        classFeatureChoiceType == 'tir_arcanique' ||
+        classFeatureChoiceType == 'rune' ||
+        classFeatureChoiceType == 'infusion' ||
+        classFeatureChoiceType == 'manoeuvre') {
       return null;
     }
 
@@ -84,8 +106,14 @@ abstract final class LevelUpPendingChoiceResolver {
         'pacte' => LevelUpChoiceKind.pact,
         // Ne devrait jamais arriver : `LevelUpBlockRules.resolvedChoiceTypes`
         // et ce `switch` doivent rester synchronisés (les 4 seules valeurs,
-        // hors `'invocation'`/`'discipline_elementaire'` déjà exclues
-        // ci-dessus, qu'`evaluate` laisse passer sans bloquer).
+        // hors `'invocation'`/`'discipline_elementaire'`/`'tir_arcanique'`/
+        // `'rune'`/`'infusion'`/`'manoeuvre'` déjà exclues ci-dessus, qu'
+        // `evaluate` laisse passer sans bloquer). Correctif D92
+        // (`docs/dette-technique.md`) : `'manoeuvre'` a rejoint à la fois
+        // `resolvedChoiceTypes` et l'exclusion ci-dessus — ne jamais ajouter
+        // un nouveau `case 'manoeuvre' =>` ici : sa propre étape dédiée
+        // "Manœuvres" (`domain/maneuvers_known_progression.dart`) ne produit
+        // jamais de [LevelUpChoiceKind].
         _ => throw StateError(
           'choice_type "$classFeatureChoiceType" déclaré résolu par '
           'LevelUpBlockRules.resolvedChoiceTypes mais non mappé par '

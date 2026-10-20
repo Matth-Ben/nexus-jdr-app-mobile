@@ -25,13 +25,17 @@ import '../domain/currency_kind.dart';
 import '../domain/gallery_photo_storage_path_resolver.dart';
 import '../domain/inventory_catalog_item.dart';
 import '../domain/level_up_apply_result.dart';
+import '../domain/level_up_arcane_shot_option.dart';
 import '../domain/level_up_choice_kind.dart';
 import '../domain/level_up_choice_selection.dart';
 import '../domain/level_up_elemental_discipline_option.dart';
 import '../domain/level_up_feat_option.dart';
+import '../domain/level_up_infusion_option.dart';
+import '../domain/level_up_infusion_swap.dart';
 import '../domain/level_up_invocation_option.dart';
 import '../domain/level_up_level_data.dart';
 import '../domain/level_up_maneuver_option.dart';
+import '../domain/level_up_rune_option.dart';
 import '../domain/level_up_subclass_option.dart';
 import '../domain/multiclass_prerequisites.dart';
 import '../domain/portrait_storage_path_resolver.dart';
@@ -53,11 +57,14 @@ import 'character_skill_row_mapper.dart';
 import 'character_spell_row_mapper.dart';
 import 'class_feature_row_mapper.dart';
 import 'inventory_catalog_row_mapper.dart';
+import 'level_up_arcane_shot_row_mapper.dart';
 import 'level_up_choice_row_mapper.dart';
 import 'level_up_elemental_discipline_row_mapper.dart';
 import 'level_up_feat_row_mapper.dart';
+import 'level_up_infusion_row_mapper.dart';
 import 'level_up_invocation_row_mapper.dart';
 import 'level_up_maneuver_row_mapper.dart';
+import 'level_up_rune_row_mapper.dart';
 import 'pact_weapon_row_mapper.dart';
 import 'pending_character_write_syncer.dart';
 
@@ -649,6 +656,88 @@ abstract class CharacterRepository {
     required int targetLevel,
   });
 
+  /// Tirs arcaniques `class_options` (`option_type = 'tir_arcanique'`) de la
+  /// sous-classe [subclassId] dont `min_level <= targetLevel`, NON déjà
+  /// connus de [characterId] — étape "Tirs arcaniques" de la montée de
+  /// niveau (Guerrier, Archer arcanique, voir
+  /// `domain/arcane_shots_known_progression.dart`). Même résolution que
+  /// [fetchAvailableManeuvers] (`choice_type = 'tir_arcanique'` SEUL,
+  /// jamais `.eq('class_id', classId)` — `class_features.class_id` est NULL
+  /// sur cette ligne de sous-classe, voir D85/D86 du registre de dette
+  /// technique, `docs/dette-technique.md`). [classId] conservé dans la
+  /// signature pour la symétrie avec [fetchAvailableElementalDisciplines]/
+  /// [fetchAvailableManeuvers], bien qu'il ne soit pas utilisé par cette
+  /// implémentation. Noms/descriptions résolus via `translations`
+  /// (`entity_type = 'class_option'`) — voir
+  /// `domain/level_up_arcane_shot_option.dart`.
+  Future<List<LevelUpArcaneShotOption>> fetchAvailableArcaneShots({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  });
+
+  /// Runes `class_options` (`option_type = 'rune'`) de la sous-classe
+  /// [subclassId] dont `min_level <= targetLevel`, NON déjà connues de
+  /// [characterId] — étape "Runes" de la montée de niveau (Guerrier,
+  /// Chevalier runique, voir `domain/runes_known_progression.dart`). Même
+  /// résolution que [fetchAvailableManeuvers] (`choice_type = 'rune'` SEUL,
+  /// jamais `.eq('class_id', classId)`). [classId] conservé dans la
+  /// signature pour la même symétrie que [fetchAvailableArcaneShots]. Noms/
+  /// descriptions résolus via `translations` (`entity_type =
+  /// 'class_option'`) — voir `domain/level_up_rune_option.dart`.
+  ///
+  /// Le filtre `min_level <= targetLevel` matérialise à lui seul la règle
+  /// "2 des 6 runes n'ont `min_level = 7` qu'en PRÉREQUIS, pas en palier de
+  /// gain" (voir la doc de classe de `RunesKnownProgression`) : au niveau 3
+  /// seules les 4 runes `min_level = 3` sont candidates, à partir du niveau
+  /// 10 (premier palier de gain après 7) les 6 le sont.
+  Future<List<LevelUpRuneOption>> fetchAvailableRunes({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  });
+
+  /// Infusions `class_options` (`option_type = 'infusion'`, `class_id` de
+  /// l'Artificier, `subclass_id` NULL — aptitude de CLASSE) dont
+  /// `min_level <= targetLevel`, NON déjà connues de [characterId] — étape
+  /// "Infusions" de la montée de niveau (Artificier, voir
+  /// `domain/infusions_known_progression.dart`). **Contrairement à**
+  /// [fetchAvailableArcaneShots]/[fetchAvailableRunes]/
+  /// [fetchAvailableManeuvers] (qui filtrent par `subclass_id`), cette
+  /// aptitude est de classe : filtrée par [classId] (`.eq('class_id',
+  /// classId)` ici valide, `class_features.class_id` est bien rempli sur
+  /// une ligne de CLASSE — jamais NULL comme sur une ligne de sous-classe,
+  /// voir D85/D86). "Déjà connue" se lit sur
+  /// `character_class_options.chosen_value` pour la ligne `class_features`
+  /// dont `choice_type = 'infusion'` (id=1296, "Infusion d'objets"),
+  /// repérée par ce `choice_type` SEUL (même prudence que
+  /// [fetchAvailableManeuvers], au cas où `class_id` ne serait pas fiable
+  /// non plus sur cette ligne précise). Noms/descriptions/prérequis
+  /// textuels (type de support d'objet) résolus via `translations`
+  /// (`entity_type = 'class_option'`) et `class_options.prerequisites->>
+  /// 'text'` — voir `domain/level_up_infusion_option.dart`. Ne filtre
+  /// jamais sur le second compteur RAW "objets infusés simultanément" (non
+  /// modélisé, voir D93 du registre de dette technique,
+  /// `docs/dette-technique.md`).
+  Future<List<LevelUpInfusionOption>> fetchAvailableInfusions({
+    required String characterId,
+    required Object classId,
+    required int targetLevel,
+  });
+
+  /// Infusions DÉJÀ connues de [characterId] (`character_class_options.
+  /// chosen_value` pour la ligne `class_features.choice_type = 'infusion'`)
+  /// — alimente [LevelUpStepData.knownInfusionNames]/
+  /// [LevelUpStepData.canSwapInfusion] (étape "Infusions", voir la
+  /// documentation de [applyLevelUp]`.infusionSwap` pour la divergence de
+  /// modèle assumée, D93 du registre de dette technique,
+  /// `docs/dette-technique.md`). Liste vide (jamais d'erreur) si la ligne
+  /// `class_features` correspondante est introuvable — même défense que
+  /// [fetchAvailableInfusions].
+  Future<List<String>> fetchKnownInfusionNames({required String characterId});
+
   /// Applique une montée de niveau déjà validée par le joueur (écran
   /// "Montée de niveau", récapitulatif). Deux branches, selon
   /// [isMulticlassing] :
@@ -792,6 +881,44 @@ abstract class CharacterRepository {
   /// cette liste est non vide (ne devrait jamais arriver). Toujours vide
   /// hors de ce cas.
   ///
+  /// [arcaneShotNames] : tirs arcaniques nouvellement choisis (Guerrier,
+  /// Archer arcanique, voir `domain/arcane_shots_known_progression.dart`) et
+  /// [runeNames] : runes nouvellement choisies (Guerrier, Chevalier
+  /// runique, voir `domain/runes_known_progression.dart`) — même convention
+  /// texte libre, même résolution du `class_feature_id` (`choice_type =
+  /// 'tir_arcanique'`/`'rune'` SEUL, jamais `.eq('class_id', classId)`) et
+  /// même garde défensive (`CharacterFailure` si la ligne `class_features`
+  /// correspondante est introuvable alors que la liste est non vide) que
+  /// [maneuverNames] ci-dessus. Toujours vides hors de ces cas.
+  ///
+  /// [infusionNames] : infusions nouvellement choisies (Artificier, voir
+  /// `domain/infusions_known_progression.dart`), même convention texte libre
+  /// — mais `class_feature_id` résolu via `choice_type = 'infusion'` SEUL
+  /// (id=1296, "Infusion d'objets", aptitude de CLASSE — contrairement à
+  /// [arcaneShotNames]/[runeNames]/[maneuverNames], qui sont des aptitudes
+  /// de SOUS-CLASSE). Toujours vide hors de ce cas.
+  ///
+  /// [infusionSwap] : échange RAW-exact d'UNE infusion déjà connue contre
+  /// une autre, proposé à CHAQUE niveau d'Artificier (pas seulement ceux où
+  /// [infusionNames] est non vide) — **divergence de modèle assumée**, voir
+  /// D93 du registre de dette technique, `docs/dette-technique.md` : seule
+  /// mécanique de ce chantier ("tirs arcaniques"/"runes"/"manœuvres"/
+  /// "infusions") à autoriser un échange, décision explicite de Matthias.
+  /// `null` si le joueur n'échange aucune infusion ce niveau (cas normal
+  /// pour la plupart des niveaux, le remplacement restant optionnel à
+  /// chaque palier). Quand non nul : supprime la ligne
+  /// `character_class_options` existante dont `chosen_value ==
+  /// removedName` (même `class_feature_id` que [infusionNames]) puis insère
+  /// une nouvelle ligne `chosen_value: addedName` au niveau interne courant
+  /// — jamais un simple `UPDATE` du `chosen_value` (une ligne porte aussi
+  /// `level`, celui où l'infusion a été APPRISE à l'origine : un `UPDATE`
+  /// réécrirait silencieusement ce niveau d'origine sur l'infusion de
+  /// remplacement). Lève une [CharacterFailure] si [removedName] n'est pas
+  /// trouvé parmi les infusions déjà connues de [characterId] (ne devrait
+  /// jamais arriver : l'écran ne propose que des infusions déjà connues en
+  /// retrait), ou si aucune ligne `class_features` de `choice_type =
+  /// 'infusion'` n'existe en base.
+  ///
   /// [racialInnateSpellIds] : sorts innés raciaux (`racial_innate_spells`,
   /// lignes sans choix de lignée) devenus accessibles à ce nouveau niveau
   /// TOTAL, déjà résolus par
@@ -846,6 +973,10 @@ abstract class CharacterRepository {
     List<int> invocationIds = const [],
     List<String> elementalDisciplineNames = const [],
     List<String> maneuverNames = const [],
+    List<String> arcaneShotNames = const [],
+    List<String> runeNames = const [],
+    List<String> infusionNames = const [],
+    LevelUpInfusionSwap? infusionSwap,
     List<int> racialInnateSpellIds = const [],
   });
 
@@ -3502,6 +3633,252 @@ class SupabaseCharacterRepository implements CharacterRepository {
   }
 
   @override
+  Future<List<LevelUpArcaneShotOption>> fetchAvailableArcaneShots({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  }) async {
+    try {
+      // Même résolution que [fetchAvailableManeuvers] : `choice_type =
+      // 'tir_arcanique'` SEUL (globalement unique, confirmé par
+      // `regles-dnd`), jamais `.eq('class_id', classId)` —
+      // `class_features.class_id` est NULL sur cette ligne de sous-classe
+      // (voir D85/D86 du registre de dette technique,
+      // `docs/dette-technique.md`). `null` si introuvable (défensif) — dans
+      // ce cas, aucun tir arcanique n'est jamais considéré "déjà connu".
+      final arcaneShotFeatureRows = await _client
+          .from('class_features')
+          .select('id')
+          .eq('choice_type', 'tir_arcanique')
+          .limit(1);
+
+      final knownNames = <String>{};
+      if (arcaneShotFeatureRows.isNotEmpty) {
+        final arcaneShotFeatureId = (arcaneShotFeatureRows.first['id'] as num)
+            .toInt();
+        final knownRows = await _client
+            .from('character_class_options')
+            .select('chosen_value')
+            .eq('character_id', characterId)
+            .eq('class_feature_id', arcaneShotFeatureId);
+        knownNames.addAll([
+          for (final row in knownRows)
+            if (row['chosen_value'] is String) row['chosen_value'] as String,
+        ]);
+      }
+
+      final allRows = await _client
+          .from('class_options')
+          .select('id, min_level')
+          .eq('subclass_id', subclassId)
+          .eq('option_type', 'tir_arcanique')
+          .lte('min_level', targetLevel);
+
+      final ids = LevelUpArcaneShotRowMapper.collectIds(allRows);
+      final names = await _fetchTranslatedNames(
+        entityType: 'class_option',
+        entityIds: ids,
+      );
+      final descriptions = await _fetchTranslatedField(
+        entityType: 'class_option',
+        fieldName: 'description',
+        entityIds: ids,
+      );
+
+      final availableRows = [
+        for (final row in allRows)
+          if (!knownNames.contains(names[row['id'].toString()])) row,
+      ];
+
+      return LevelUpArcaneShotRowMapper.toOptions(
+        availableRows,
+        names: names,
+        descriptions: descriptions,
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<List<LevelUpRuneOption>> fetchAvailableRunes({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  }) async {
+    try {
+      // Même résolution que [fetchAvailableManeuvers] : `choice_type =
+      // 'rune'` SEUL (globalement unique, confirmé par `regles-dnd`),
+      // jamais `.eq('class_id', classId)` — `class_features.class_id` est
+      // NULL sur cette ligne de sous-classe (voir D85/D86 du registre de
+      // dette technique, `docs/dette-technique.md`). `null` si introuvable
+      // (défensif) — dans ce cas, aucune rune n'est jamais considérée "déjà
+      // connue".
+      final runeFeatureRows = await _client
+          .from('class_features')
+          .select('id')
+          .eq('choice_type', 'rune')
+          .limit(1);
+
+      final knownNames = <String>{};
+      if (runeFeatureRows.isNotEmpty) {
+        final runeFeatureId = (runeFeatureRows.first['id'] as num).toInt();
+        final knownRows = await _client
+            .from('character_class_options')
+            .select('chosen_value')
+            .eq('character_id', characterId)
+            .eq('class_feature_id', runeFeatureId);
+        knownNames.addAll([
+          for (final row in knownRows)
+            if (row['chosen_value'] is String) row['chosen_value'] as String,
+        ]);
+      }
+
+      // `min_level <= targetLevel` matérialise à lui seul la règle "2 des 6
+      // runes n'ont `min_level = 7` qu'en prérequis, pas en palier de gain"
+      // (voir la doc de classe de [RunesKnownProgression]) : au niveau 3
+      // seules les 4 runes `min_level = 3` sont candidates, à partir du
+      // niveau 10 les 6 le sont.
+      final allRows = await _client
+          .from('class_options')
+          .select('id, min_level')
+          .eq('subclass_id', subclassId)
+          .eq('option_type', 'rune')
+          .lte('min_level', targetLevel);
+
+      final ids = LevelUpRuneRowMapper.collectIds(allRows);
+      final names = await _fetchTranslatedNames(
+        entityType: 'class_option',
+        entityIds: ids,
+      );
+      final descriptions = await _fetchTranslatedField(
+        entityType: 'class_option',
+        fieldName: 'description',
+        entityIds: ids,
+      );
+
+      final availableRows = [
+        for (final row in allRows)
+          if (!knownNames.contains(names[row['id'].toString()])) row,
+      ];
+
+      return LevelUpRuneRowMapper.toOptions(
+        availableRows,
+        names: names,
+        descriptions: descriptions,
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<List<LevelUpInfusionOption>> fetchAvailableInfusions({
+    required String characterId,
+    required Object classId,
+    required int targetLevel,
+  }) async {
+    try {
+      // Aptitude de CLASSE (contrairement à `tir_arcanique`/`rune`/
+      // `manoeuvre`, des aptitudes de sous-classe) : `choice_type =
+      // 'infusion'` repéré SEUL malgré tout, même prudence que
+      // [fetchAvailableManeuvers] plutôt qu'un filtre `.eq('class_id',
+      // classId)` — voir la documentation de
+      // [CharacterRepository.fetchAvailableInfusions]. `null` si introuvable
+      // (défensif) — dans ce cas, aucune infusion n'est jamais considérée
+      // "déjà connue".
+      final infusionFeatureRows = await _client
+          .from('class_features')
+          .select('id')
+          .eq('choice_type', 'infusion')
+          .limit(1);
+
+      final knownNames = <String>{};
+      if (infusionFeatureRows.isNotEmpty) {
+        final infusionFeatureId = (infusionFeatureRows.first['id'] as num)
+            .toInt();
+        final knownRows = await _client
+            .from('character_class_options')
+            .select('chosen_value')
+            .eq('character_id', characterId)
+            .eq('class_feature_id', infusionFeatureId);
+        knownNames.addAll([
+          for (final row in knownRows)
+            if (row['chosen_value'] is String) row['chosen_value'] as String,
+        ]);
+      }
+
+      final allRows = await _client
+          .from('class_options')
+          .select('id, min_level, prerequisites')
+          .eq('class_id', classId)
+          .eq('option_type', 'infusion')
+          .lte('min_level', targetLevel);
+
+      final ids = LevelUpInfusionRowMapper.collectIds(allRows);
+      final names = await _fetchTranslatedNames(
+        entityType: 'class_option',
+        entityIds: ids,
+      );
+      final descriptions = await _fetchTranslatedField(
+        entityType: 'class_option',
+        fieldName: 'description',
+        entityIds: ids,
+      );
+
+      final availableRows = [
+        for (final row in allRows)
+          if (!knownNames.contains(names[row['id'].toString()])) row,
+      ];
+
+      return LevelUpInfusionRowMapper.toOptions(
+        availableRows,
+        names: names,
+        descriptions: descriptions,
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<List<String>> fetchKnownInfusionNames({
+    required String characterId,
+  }) async {
+    try {
+      final infusionFeatureRows = await _client
+          .from('class_features')
+          .select('id')
+          .eq('choice_type', 'infusion')
+          .limit(1);
+      if (infusionFeatureRows.isEmpty) return const [];
+      final infusionFeatureId = (infusionFeatureRows.first['id'] as num)
+          .toInt();
+      final knownRows = await _client
+          .from('character_class_options')
+          .select('chosen_value')
+          .eq('character_id', characterId)
+          .eq('class_feature_id', infusionFeatureId);
+      return [
+        for (final row in knownRows)
+          if (row['chosen_value'] is String) row['chosen_value'] as String,
+      ];
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -3515,6 +3892,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
     List<int> invocationIds = const [],
     List<String> elementalDisciplineNames = const [],
     List<String> maneuverNames = const [],
+    List<String> arcaneShotNames = const [],
+    List<String> runeNames = const [],
+    List<String> infusionNames = const [],
+    LevelUpInfusionSwap? infusionSwap,
     List<int> racialInnateSpellIds = const [],
   }) async {
     final ownerId = _requireOwnerId();
@@ -4011,6 +4392,138 @@ class SupabaseCharacterRepository implements CharacterRepository {
               'chosen_value': name,
             },
         ]);
+      }
+
+      if (arcaneShotNames.isNotEmpty) {
+        // Tirs arcaniques nouvellement choisis (étape "Tirs arcaniques",
+        // Guerrier Archer arcanique) — même patron que [maneuverNames]
+        // ci-dessus (résolution `choice_type` SEUL, une seule ligne
+        // `class_features` réutilisée pour CHAQUE palier 3/7/10/15/18).
+        final arcaneShotFeatureRows = await _client
+            .from('class_features')
+            .select('id')
+            .eq('choice_type', 'tir_arcanique')
+            .limit(1);
+        if (arcaneShotFeatureRows.isEmpty) {
+          throw const CharacterFailure(
+            'Tir arcanique : aptitude de classe introuvable.',
+          );
+        }
+        final arcaneShotFeatureId = (arcaneShotFeatureRows.first['id'] as num)
+            .toInt();
+        await _client.from('character_class_options').insert([
+          for (final name in arcaneShotNames)
+            {
+              'character_id': characterId,
+              'class_feature_id': arcaneShotFeatureId,
+              'level': newClassLevel,
+              'chosen_value': name,
+            },
+        ]);
+      }
+
+      if (runeNames.isNotEmpty) {
+        // Runes nouvellement choisies (étape "Runes", Guerrier Chevalier
+        // runique) — même patron que [maneuverNames] ci-dessus (résolution
+        // `choice_type` SEUL, une seule ligne `class_features` réutilisée
+        // pour CHAQUE palier 3/10/18).
+        final runeFeatureRows = await _client
+            .from('class_features')
+            .select('id')
+            .eq('choice_type', 'rune')
+            .limit(1);
+        if (runeFeatureRows.isEmpty) {
+          throw const CharacterFailure(
+            'Rune : aptitude de classe introuvable.',
+          );
+        }
+        final runeFeatureId = (runeFeatureRows.first['id'] as num).toInt();
+        await _client.from('character_class_options').insert([
+          for (final name in runeNames)
+            {
+              'character_id': characterId,
+              'class_feature_id': runeFeatureId,
+              'level': newClassLevel,
+              'chosen_value': name,
+            },
+        ]);
+      }
+
+      // Infusions nouvellement choisies ET/OU échange d'une infusion déjà
+      // connue (étape "Infusions", Artificier) — [infusionNames]/
+      // [infusionSwap] partagent la même ligne `class_features`
+      // (`choice_type = 'infusion'`, aptitude de CLASSE, id=1296), résolue
+      // une seule fois si l'un ou l'autre est non vide/non nul — voir la
+      // documentation de [CharacterRepository.applyLevelUp] pour la
+      // divergence de modèle assumée de [infusionSwap] (D93 du registre de
+      // dette technique, `docs/dette-technique.md`).
+      if (infusionNames.isNotEmpty || infusionSwap != null) {
+        final infusionFeatureRows = await _client
+            .from('class_features')
+            .select('id')
+            .eq('choice_type', 'infusion')
+            .limit(1);
+        if (infusionFeatureRows.isEmpty) {
+          throw const CharacterFailure(
+            'Infusion : aptitude de classe introuvable.',
+          );
+        }
+        final infusionFeatureId = (infusionFeatureRows.first['id'] as num)
+            .toInt();
+
+        if (infusionNames.isNotEmpty) {
+          await _client.from('character_class_options').insert([
+            for (final name in infusionNames)
+              {
+                'character_id': characterId,
+                'class_feature_id': infusionFeatureId,
+                'level': newClassLevel,
+                'chosen_value': name,
+              },
+          ]);
+        }
+
+        if (infusionSwap != null) {
+          // Jamais un simple `UPDATE` du `chosen_value` (voir la
+          // documentation de [infusionSwap] : une ligne porte aussi `level`,
+          // celui où l'infusion a été APPRISE à l'origine — un `UPDATE`
+          // réécrirait silencieusement ce niveau d'origine sur l'infusion de
+          // remplacement). Revérifié contre la base juste avant l'écriture
+          // (même discipline défensive que [_applyAbilityScoreImprovement]/
+          // [_fetchAlreadyOrdinarySpellIds], jamais de confiance aveugle
+          // dans la lecture de l'appelant) : `INSERT` d'abord, puis `DELETE`
+          // par `id` explicite (jamais par `chosen_value` directement, pour
+          // ne supprimer qu'UNE seule ligne même en cas d'homonymie
+          // improbable) — ordre volontairement inversé par rapport à un
+          // DELETE-puis-INSERT naïf (revue de code-reviewer avant merge) :
+          // si l'INSERT échoue (coupure réseau...), aucune infusion connue
+          // n'est perdue ; si c'est le DELETE qui échoue après un INSERT
+          // réussi, le pire résultat est un doublon visible et inoffensif,
+          // jamais une perte de donnée silencieuse.
+          final removedRows = await _client
+              .from('character_class_options')
+              .select('id')
+              .eq('character_id', characterId)
+              .eq('class_feature_id', infusionFeatureId)
+              .eq('chosen_value', infusionSwap.removedName)
+              .limit(1);
+          if (removedRows.isEmpty) {
+            throw CharacterFailure(
+              'Infusion "${infusionSwap.removedName}" introuvable parmi les '
+              'infusions déjà connues.',
+            );
+          }
+          await _client.from('character_class_options').insert({
+            'character_id': characterId,
+            'class_feature_id': infusionFeatureId,
+            'level': newClassLevel,
+            'chosen_value': infusionSwap.addedName,
+          });
+          await _client
+              .from('character_class_options')
+              .delete()
+              .eq('id', removedRows.first['id']);
+        }
       }
 
       if (racialInnateSpellIds.isNotEmpty) {

@@ -28,6 +28,7 @@ import '../../character_creation/domain/spell_selection_resolver.dart';
 import '../../character_creation/domain/spells_step_selection.dart';
 import '../domain/character_failure.dart';
 import '../domain/invocation_selection_rules.dart';
+import '../domain/level_up_arcane_shot_option.dart';
 import '../domain/level_up_chain_resolver.dart';
 import '../domain/level_up_choice_kind.dart';
 import '../domain/level_up_choice_options.dart';
@@ -35,9 +36,12 @@ import '../domain/level_up_choice_selection.dart';
 import '../domain/level_up_continue_option.dart';
 import '../domain/level_up_elemental_discipline_option.dart';
 import '../domain/level_up_hit_points_calculator.dart';
+import '../domain/level_up_infusion_option.dart';
+import '../domain/level_up_infusion_swap.dart';
 import '../domain/level_up_invocation_option.dart';
 import '../domain/level_up_maneuver_option.dart';
 import '../domain/level_up_multiclass_option.dart';
+import '../domain/level_up_rune_option.dart';
 import '../domain/patron_extended_spells.dart';
 import '../domain/signed_modifier_formatter.dart';
 import '../domain/spell_slot_change.dart';
@@ -101,12 +105,34 @@ enum _LevelUpPhase {
 
   /// Guerrier, Maître de guerre uniquement
   /// (`LevelUpStepData.requiresManeuverSelection`), entre
-  /// [elementalDisciplines] et [summary] — voir [_buildManeuversStep].
+  /// [elementalDisciplines] et [arcaneShots] — voir [_buildManeuversStep].
   /// Mutuellement exclusive avec [invocations]/[elementalDisciplines] en
   /// pratique (même rationale que ci-dessus), mais chaînée après elles par
   /// cohérence plutôt que de supposer cette exclusivité dans l'ordre des
   /// phases.
   maneuvers,
+
+  /// Guerrier, Archer arcanique uniquement
+  /// (`LevelUpStepData.requiresArcaneShotSelection`), entre [maneuvers] et
+  /// [runes] — voir [_buildArcaneShotsStep]. Même remarque d'exclusivité
+  /// mutuelle que [maneuvers] : 3 sous-classes de Guerrier différentes
+  /// (Maître de guerre/Archer arcanique/Chevalier runique) ne déclenchent
+  /// jamais deux de ces 3 étapes à la fois pour un même personnage.
+  arcaneShots,
+
+  /// Guerrier, Chevalier runique uniquement
+  /// (`LevelUpStepData.requiresRuneSelection`), entre [arcaneShots] et
+  /// [infusions] — voir [_buildRunesStep].
+  runes,
+
+  /// Artificier uniquement (`LevelUpStepData.requiresInfusionSelection` OU
+  /// `LevelUpStepData.canSwapInfusion` — contrairement aux autres phases
+  /// dédiées, peut être affichée même sans nouvelle infusion connue ce
+  /// niveau, pour l'échange RAW-exact d'une infusion déjà connue, voir
+  /// `domain/level_up_infusion_swap.dart` et D93 de
+  /// `docs/dette-technique.md`), entre [runes] et [summary] — voir
+  /// [_buildInfusionsStep].
+  infusions,
   summary,
 }
 
@@ -314,6 +340,38 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// [_selectedElementalDisciplineIds].
   List<String> _selectedManeuverIds = [];
 
+  /// État de la sélection de tirs arcaniques (Guerrier, Archer arcanique,
+  /// étape "Tirs arcaniques") — clés `arcaneShot.id.toString()`, même
+  /// rationale que [_selectedManeuverIds].
+  List<String> _selectedArcaneShotIds = [];
+
+  /// État de la sélection de runes (Guerrier, Chevalier runique, étape
+  /// "Runes") — clés `rune.id.toString()`, même rationale que
+  /// [_selectedArcaneShotIds].
+  List<String> _selectedRuneIds = [];
+
+  /// État de la sélection de NOUVELLES infusions (Artificier, étape
+  /// "Infusions") — clés `infusion.id.toString()`, même rationale que
+  /// [_selectedRuneIds]. Distinct de [_infusionSwapRemovedName]/
+  /// [_infusionSwapAddedId] ci-dessous (échange, sous-section séparée de la
+  /// même étape).
+  List<String> _selectedInfusionIds = [];
+
+  /// Nom de l'infusion déjà connue retirée par l'échange optionnel de
+  /// l'étape "Infusions" (voir `domain/level_up_infusion_swap.dart` et D93
+  /// de `docs/dette-technique.md`) — `null` si le joueur n'échange aucune
+  /// infusion ce niveau (cas par défaut). Indépendant de
+  /// [_selectedInfusionIds] : l'échange reste possible même à un niveau où
+  /// [LevelUpStepData.requiresInfusionSelection] est `false`.
+  String? _infusionSwapRemovedName;
+
+  /// `class_options.id.toString()` de l'infusion choisie en remplacement de
+  /// [_infusionSwapRemovedName] — `null` tant qu'aucune infusion de
+  /// remplacement n'est choisie. Sans effet si [_infusionSwapRemovedName]
+  /// est `null` (l'écran ne construit l'échange que si les deux sont
+  /// renseignés, voir [_buildInfusionSwap]).
+  String? _infusionSwapAddedId;
+
   @override
   void initState() {
     super.initState();
@@ -359,6 +417,28 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// [_resetElementalDisciplineSelectionState].
   void _resetManeuverSelectionState() {
     _selectedManeuverIds = [];
+  }
+
+  /// Remet à zéro la sélection de tirs arcaniques — même rationale que
+  /// [_resetManeuverSelectionState].
+  void _resetArcaneShotSelectionState() {
+    _selectedArcaneShotIds = [];
+  }
+
+  /// Remet à zéro la sélection de runes — même rationale que
+  /// [_resetArcaneShotSelectionState].
+  void _resetRuneSelectionState() {
+    _selectedRuneIds = [];
+  }
+
+  /// Remet à zéro la sélection de NOUVELLES infusions ET l'échange en
+  /// cours — même rationale que [_resetRuneSelectionState], étendue à
+  /// [_infusionSwapRemovedName]/[_infusionSwapAddedId] (sous-section
+  /// "échange" de la même étape, voir leur documentation).
+  void _resetInfusionSelectionState() {
+    _selectedInfusionIds = [];
+    _infusionSwapRemovedName = null;
+    _infusionSwapAddedId = null;
   }
 
   void _toggleNewCantrip(String name, int quota) {
@@ -605,6 +685,229 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       for (final id in _effectiveSelectedManeuverIds(data))
         available.firstWhere((option) => option.id.toString() == id).name,
     ];
+  }
+
+  /// Tirs arcaniques candidats pour la sous-classe résolue par
+  /// [_fighterSubclassIdFor] (même résolveur de sous-classe que
+  /// [_availableManeuversFor] : les deux étapes sont gatées sur le même
+  /// Guerrier, seule la sous-classe EFFECTIVE change laquelle des deux a un
+  /// quota effectif non nul) — vide tant qu'aucune sous-classe n'est connue.
+  List<LevelUpArcaneShotOption> _availableArcaneShotsFor(LevelUpStepData data) {
+    final subclassId = _fighterSubclassIdFor(data);
+    if (subclassId == null) return const [];
+    return data.arcaneShotsBySubclass[subclassId] ?? const [];
+  }
+
+  /// Quota EFFECTIF de tirs arcaniques à ce niveau — même rationale que
+  /// [_effectiveManeuverQuota].
+  int _effectiveArcaneShotQuota(LevelUpStepData data) {
+    if (!data.requiresArcaneShotSelection) return 0;
+    return math.min(
+      data.arcaneShotDelta,
+      _availableArcaneShotsFor(data).length,
+    );
+  }
+
+  /// [_selectedArcaneShotIds] purgée/bornée — même rationale que
+  /// [_effectiveSelectedManeuverIds].
+  List<String> _effectiveSelectedArcaneShotIds(LevelUpStepData data) {
+    if (!data.requiresArcaneShotSelection) return const [];
+    final availableIds = {
+      for (final option in _availableArcaneShotsFor(data)) option.id.toString(),
+    };
+    final quota = _effectiveArcaneShotQuota(data);
+    final pruned = [
+      for (final id in _selectedArcaneShotIds)
+        if (availableIds.contains(id)) id,
+    ];
+    return pruned.length > quota ? pruned.sublist(0, quota) : pruned;
+  }
+
+  void _toggleArcaneShot(LevelUpStepData data, String arcaneShotId, int quota) {
+    setState(() {
+      _selectedArcaneShotIds = SpellsStepSelection.toggle(
+        current: _effectiveSelectedArcaneShotIds(data),
+        value: arcaneShotId,
+        quota: quota,
+      );
+    });
+  }
+
+  /// Noms des tirs arcaniques choisis, prêts pour
+  /// `CharacterRepository.applyLevelUp` (paramètre `arcaneShotNames`) — même
+  /// rationale que [_buildManeuverNames].
+  List<String> _buildArcaneShotNames(LevelUpStepData data) {
+    if (!data.requiresArcaneShotSelection) return const [];
+    final available = _availableArcaneShotsFor(data);
+    return [
+      for (final id in _effectiveSelectedArcaneShotIds(data))
+        available.firstWhere((option) => option.id.toString() == id).name,
+    ];
+  }
+
+  /// Runes candidates pour la sous-classe résolue par [_fighterSubclassIdFor]
+  /// — vide tant qu'aucune sous-classe n'est connue.
+  List<LevelUpRuneOption> _availableRunesFor(LevelUpStepData data) {
+    final subclassId = _fighterSubclassIdFor(data);
+    if (subclassId == null) return const [];
+    return data.runesBySubclass[subclassId] ?? const [];
+  }
+
+  /// Quota EFFECTIF de runes à ce niveau — même rationale que
+  /// [_effectiveManeuverQuota]. Au niveau 18 ("Maître des runes"), le delta
+  /// RAW est égal au nombre de runes encore disponibles (voir
+  /// `domain/runes_known_progression.dart`) : le quota effectif force donc
+  /// la sélection de TOUTES les runes restantes, sans code dédié
+  /// supplémentaire pour ce capstone.
+  int _effectiveRuneQuota(LevelUpStepData data) {
+    if (!data.requiresRuneSelection) return 0;
+    return math.min(data.runeDelta, _availableRunesFor(data).length);
+  }
+
+  /// [_selectedRuneIds] purgée/bornée — même rationale que
+  /// [_effectiveSelectedManeuverIds].
+  List<String> _effectiveSelectedRuneIds(LevelUpStepData data) {
+    if (!data.requiresRuneSelection) return const [];
+    final availableIds = {
+      for (final option in _availableRunesFor(data)) option.id.toString(),
+    };
+    final quota = _effectiveRuneQuota(data);
+    final pruned = [
+      for (final id in _selectedRuneIds)
+        if (availableIds.contains(id)) id,
+    ];
+    return pruned.length > quota ? pruned.sublist(0, quota) : pruned;
+  }
+
+  void _toggleRune(LevelUpStepData data, String runeId, int quota) {
+    setState(() {
+      _selectedRuneIds = SpellsStepSelection.toggle(
+        current: _effectiveSelectedRuneIds(data),
+        value: runeId,
+        quota: quota,
+      );
+    });
+  }
+
+  /// Noms des runes choisies, prêts pour
+  /// `CharacterRepository.applyLevelUp` (paramètre `runeNames`) — même
+  /// rationale que [_buildManeuverNames].
+  List<String> _buildRuneNames(LevelUpStepData data) {
+    if (!data.requiresRuneSelection) return const [];
+    final available = _availableRunesFor(data);
+    return [
+      for (final id in _effectiveSelectedRuneIds(data))
+        available.firstWhere((option) => option.id.toString() == id).name,
+    ];
+  }
+
+  /// Quota EFFECTIF de NOUVELLES infusions à ce niveau — même rationale que
+  /// [_effectiveManeuverQuota], mais contre `data.availableInfusions`
+  /// directement (pas de résolution de sous-classe : aptitude de CLASSE).
+  int _effectiveInfusionQuota(LevelUpStepData data) {
+    if (!data.requiresInfusionSelection) return 0;
+    return math.min(data.infusionDelta, data.availableInfusions.length);
+  }
+
+  /// [_selectedInfusionIds] purgée/bornée ET débarrassée de l'infusion
+  /// choisie en remplacement par l'échange en cours ([_infusionSwapAddedId])
+  /// — une même infusion ne peut pas être à la fois une NOUVELLE infusion
+  /// apprise par le quota normal et l'infusion de remplacement de l'échange
+  /// (les deux écritures seraient redondantes et ambiguës côté serveur, voir
+  /// [_buildInfusionSwap]).
+  List<String> _effectiveSelectedInfusionIds(LevelUpStepData data) {
+    if (!data.requiresInfusionSelection) return const [];
+    final availableIds = {
+      for (final option in data.availableInfusions) option.id.toString(),
+    };
+    final quota = _effectiveInfusionQuota(data);
+    final pruned = [
+      for (final id in _selectedInfusionIds)
+        if (availableIds.contains(id) && id != _infusionSwapAddedId) id,
+    ];
+    return pruned.length > quota ? pruned.sublist(0, quota) : pruned;
+  }
+
+  void _toggleInfusion(LevelUpStepData data, String infusionId, int quota) {
+    setState(() {
+      _selectedInfusionIds = SpellsStepSelection.toggle(
+        current: _effectiveSelectedInfusionIds(data),
+        value: infusionId,
+        quota: quota,
+      );
+    });
+  }
+
+  /// Noms des NOUVELLES infusions choisies, prêts pour
+  /// `CharacterRepository.applyLevelUp` (paramètre `infusionNames`) — même
+  /// rationale que [_buildManeuverNames]. Ne contient JAMAIS l'infusion de
+  /// remplacement de l'échange (voir [_buildInfusionSwap], paramètre séparé
+  /// `infusionSwap`).
+  List<String> _buildInfusionNames(LevelUpStepData data) {
+    if (!data.requiresInfusionSelection) return const [];
+    final available = data.availableInfusions;
+    return [
+      for (final id in _effectiveSelectedInfusionIds(data))
+        available.firstWhere((option) => option.id.toString() == id).name,
+    ];
+  }
+
+  /// Infusions candidates pour la sous-section "échange" de l'étape
+  /// "Infusions" : [LevelUpStepData.availableInfusions] (non déjà connues),
+  /// MOINS celles déjà réservées par [_effectiveSelectedInfusionIds] (une
+  /// infusion ne peut pas être choisie deux fois dans la même montée de
+  /// niveau, que ce soit comme nouvelle infusion ou comme remplacement).
+  List<LevelUpInfusionOption> _availableInfusionsForSwap(LevelUpStepData data) {
+    final reserved = _effectiveSelectedInfusionIds(data).toSet();
+    return [
+      for (final option in data.availableInfusions)
+        if (!reserved.contains(option.id.toString())) option,
+    ];
+  }
+
+  /// Sélectionne/désélectionne [removedName] comme infusion retirée par
+  /// l'échange — désélectionner remet aussi [_infusionSwapAddedId] à `null`
+  /// (un remplacement sans infusion retirée n'a pas de sens).
+  void _toggleInfusionSwapRemoved(String removedName) {
+    setState(() {
+      if (_infusionSwapRemovedName == removedName) {
+        _infusionSwapRemovedName = null;
+        _infusionSwapAddedId = null;
+      } else {
+        _infusionSwapRemovedName = removedName;
+        _infusionSwapAddedId = null;
+      }
+    });
+  }
+
+  /// Sélectionne/désélectionne [addedId] comme infusion de remplacement —
+  /// sans effet si [_infusionSwapRemovedName] est encore `null` (l'écran
+  /// masque cette section tant qu'aucune infusion à retirer n'est choisie,
+  /// voir [_buildInfusionsStep]).
+  void _toggleInfusionSwapAdded(String addedId) {
+    if (_infusionSwapRemovedName == null) return;
+    setState(() {
+      _infusionSwapAddedId = _infusionSwapAddedId == addedId ? null : addedId;
+    });
+  }
+
+  /// Construit l'échange d'infusion prêt pour
+  /// `CharacterRepository.applyLevelUp` (paramètre `infusionSwap`) — `null`
+  /// tant que [_infusionSwapRemovedName] ET [_infusionSwapAddedId] ne sont
+  /// pas TOUS LES DEUX renseignés (échange optionnel, jamais partiel).
+  LevelUpInfusionSwap? _buildInfusionSwap(LevelUpStepData data) {
+    final removedName = _infusionSwapRemovedName;
+    final addedId = _infusionSwapAddedId;
+    if (removedName == null || addedId == null) return null;
+    for (final option in _availableInfusionsForSwap(data)) {
+      if (option.id.toString() == addedId) {
+        return LevelUpInfusionSwap(
+          removedName: removedName,
+          addedName: option.name,
+        );
+      }
+    }
+    return null;
   }
 
   /// Pacte connu pour la validation des prérequis d'invocations : celui choisi
@@ -926,6 +1229,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         invocationIds: _buildInvocationIds(data),
         elementalDisciplineNames: _buildElementalDisciplineNames(data),
         maneuverNames: _buildManeuverNames(data),
+        arcaneShotNames: _buildArcaneShotNames(data),
+        runeNames: _buildRuneNames(data),
+        infusionNames: _buildInfusionNames(data),
+        infusionSwap: _buildInfusionSwap(data),
         racialInnateSpellIds: _racialInnateSpellIds(data),
       );
 
@@ -962,6 +1269,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         _resetInvocationSelectionState();
         _resetElementalDisciplineSelectionState();
         _resetManeuverSelectionState();
+        _resetArcaneShotSelectionState();
+        _resetRuneSelectionState();
+        _resetInfusionSelectionState();
         _isApplying = false;
       });
     } on CharacterFailure catch (failure) {
@@ -1089,6 +1399,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         data,
       ),
       _LevelUpPhase.maneuvers => _buildManeuversStep(data),
+      _LevelUpPhase.arcaneShots => _buildArcaneShotsStep(data),
+      _LevelUpPhase.runes => _buildRunesStep(data),
+      _LevelUpPhase.infusions => _buildInfusionsStep(data),
       _LevelUpPhase.summary => _buildSummary(data),
     };
   }
@@ -1308,7 +1621,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
             _hasSpellsStep(data) ||
             _hasInvocationsStep(data) ||
             _hasElementalDisciplinesStep(data) ||
-            _hasManeuversStep(data));
+            _hasManeuversStep(data) ||
+            _hasArcaneShotsStep(data) ||
+            _hasRunesStep(data) ||
+            _hasInfusionsStep(data));
 
     return Column(
       children: [
@@ -1367,16 +1683,19 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                       ),
                       if (_hasInvocationsStep(data) ||
                           _hasElementalDisciplinesStep(data) ||
-                          _hasManeuversStep(data))
+                          _hasManeuversStep(data) ||
+                          _hasArcaneShotsStep(data) ||
+                          _hasRunesStep(data) ||
+                          _hasInfusionsStep(data))
                         const SizedBox(height: AppSpacing.sm),
                     ],
                     // Décision assumée au-delà de la spec visuelle littérale
                     // (qui ne couvrait que les sections "Choix à faire"/
                     // "Sorts" de cette annonce) : même traitement "teaser"
                     // pour l'étape "Invocations"/"Disciplines élémentaires"/
-                    // "Manœuvres", par cohérence avec les autres — à valider
-                    // par le chef de projet si un désaccord existe sur ce
-                    // point.
+                    // "Manœuvres"/"Tirs arcaniques"/"Runes"/"Infusions", par
+                    // cohérence avec les autres — à valider par le chef de
+                    // projet si un désaccord existe sur ce point.
                     if (_hasInvocationsStep(data)) ...[
                       const _UpcomingStepRow(
                         icon: Icons.remove_red_eye,
@@ -1384,7 +1703,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         label: 'De nouvelles invocations vous attendront',
                       ),
                       if (_hasElementalDisciplinesStep(data) ||
-                          _hasManeuversStep(data))
+                          _hasManeuversStep(data) ||
+                          _hasArcaneShotsStep(data) ||
+                          _hasRunesStep(data) ||
+                          _hasInfusionsStep(data))
                         const SizedBox(height: AppSpacing.sm),
                     ],
                     if (_hasElementalDisciplinesStep(data)) ...[
@@ -1395,14 +1717,46 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                             'De nouvelles disciplines élémentaires vous '
                             'attendront',
                       ),
-                      if (_hasManeuversStep(data))
+                      if (_hasManeuversStep(data) ||
+                          _hasArcaneShotsStep(data) ||
+                          _hasRunesStep(data) ||
+                          _hasInfusionsStep(data))
                         const SizedBox(height: AppSpacing.sm),
                     ],
-                    if (_hasManeuversStep(data))
+                    if (_hasManeuversStep(data)) ...[
                       const _UpcomingStepRow(
                         icon: Icons.shield_moon,
                         color: AppColors.accentBlue,
                         label: 'De nouvelles manœuvres vous attendront',
+                      ),
+                      if (_hasArcaneShotsStep(data) ||
+                          _hasRunesStep(data) ||
+                          _hasInfusionsStep(data))
+                        const SizedBox(height: AppSpacing.sm),
+                    ],
+                    if (_hasArcaneShotsStep(data)) ...[
+                      const _UpcomingStepRow(
+                        icon: Icons.gps_fixed,
+                        color: AppColors.accentBrick,
+                        label: 'De nouveaux tirs arcaniques vous attendront',
+                      ),
+                      if (_hasRunesStep(data) || _hasInfusionsStep(data))
+                        const SizedBox(height: AppSpacing.sm),
+                    ],
+                    if (_hasRunesStep(data)) ...[
+                      const _UpcomingStepRow(
+                        icon: Icons.font_download,
+                        color: AppColors.accentTeal,
+                        label: 'De nouvelles runes vous attendront',
+                      ),
+                      if (_hasInfusionsStep(data))
+                        const SizedBox(height: AppSpacing.sm),
+                    ],
+                    if (_hasInfusionsStep(data))
+                      const _UpcomingStepRow(
+                        icon: Icons.science,
+                        color: AppColors.accentViolet,
+                        label: 'Vos infusions vont évoluer',
                       ),
                   ],
                 ],
@@ -1473,59 +1827,93 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   bool _hasManeuversStep(LevelUpStepData data) =>
       _effectiveManeuverQuota(data) > 0;
 
-  /// 3 à 8 selon les étapes déclenchées à ce niveau — spec visuelle
+  /// `true` si l'étape "Tirs arcaniques" doit être affichée à ce niveau —
+  /// Guerrier, Archer arcanique uniquement, voir
+  /// [LevelUpStepData.requiresArcaneShotSelection]. Même rationale que
+  /// [_hasManeuversStep] (dépend du quota EFFECTIF
+  /// [_effectiveArcaneShotQuota]).
+  bool _hasArcaneShotsStep(LevelUpStepData data) =>
+      _effectiveArcaneShotQuota(data) > 0;
+
+  /// `true` si l'étape "Runes" doit être affichée à ce niveau — Guerrier,
+  /// Chevalier runique uniquement, voir [LevelUpStepData.requiresRuneSelection].
+  /// Même rationale que [_hasManeuversStep].
+  bool _hasRunesStep(LevelUpStepData data) => _effectiveRuneQuota(data) > 0;
+
+  /// `true` si l'étape "Infusions" doit être affichée à ce niveau —
+  /// Artificier uniquement. **Contrairement aux autres `_hasXxxStep`** :
+  /// vrai dès que [LevelUpStepData.canSwapInfusion] l'est, même si le quota
+  /// effectif de NOUVELLES infusions est nul — l'échange RAW-exact (voir
+  /// `domain/level_up_infusion_swap.dart`, D93 de `docs/dette-technique.md`)
+  /// reste proposé à CHAQUE niveau d'Artificier.
+  bool _hasInfusionsStep(LevelUpStepData data) =>
+      _effectiveInfusionQuota(data) > 0 || data.canSwapInfusion;
+
+  /// 3 à 11 selon les étapes déclenchées à ce niveau — spec visuelle
   /// direction-artistique : [LevelUpStepData.choiceKind] non nul ajoute
   /// l'étape "Choix à faire" (increment 2, inchangé), [_hasSpellsStep]
   /// ajoute l'étape "Sorts", [_hasInvocationsStep] ajoute l'étape
   /// "Invocations", [_hasElementalDisciplinesStep] ajoute l'étape
-  /// "Disciplines élémentaires", [_hasManeuversStep] ajoute l'étape
-  /// "Manœuvres" (les trois dernières mutuellement exclusives en pratique,
-  /// voir [_LevelUpPhase.elementalDisciplines]/[_LevelUpPhase.maneuvers]).
+  /// "Disciplines élémentaires", [_hasManeuversStep]/[_hasArcaneShotsStep]/
+  /// [_hasRunesStep] ajoutent respectivement les étapes "Manœuvres"/"Tirs
+  /// arcaniques"/"Runes", [_hasInfusionsStep] ajoute l'étape "Infusions"
+  /// (ces 6 dernières mutuellement exclusives en pratique — chaque
+  /// mécanique est gatée par une classe/sous-classe distincte, voir
+  /// [_LevelUpPhase.elementalDisciplines]/[_LevelUpPhase.maneuvers]/
+  /// [_LevelUpPhase.arcaneShots]/[_LevelUpPhase.runes]/
+  /// [_LevelUpPhase.infusions]).
   int _totalSteps(LevelUpStepData data) =>
       3 +
       (data.choiceKind != null ? 1 : 0) +
       (_hasSpellsStep(data) ? 1 : 0) +
       (_hasInvocationsStep(data) ? 1 : 0) +
       (_hasElementalDisciplinesStep(data) ? 1 : 0) +
-      (_hasManeuversStep(data) ? 1 : 0);
+      (_hasManeuversStep(data) ? 1 : 0) +
+      (_hasArcaneShotsStep(data) ? 1 : 0) +
+      (_hasRunesStep(data) ? 1 : 0) +
+      (_hasInfusionsStep(data) ? 1 : 0);
+
+  /// Première étape déclenchée parmi "Invocations"/"Disciplines
+  /// élémentaires"/"Manœuvres"/"Tirs arcaniques"/"Runes"/"Infusions", dans
+  /// cet ordre de chaînage (voir [_LevelUpPhase]) — le récapitulatif si
+  /// aucune n'est déclenchée. Factorisée ici (réutilisée par
+  /// [_phaseAfterChoiceOrAbilities] et [_phaseAfterSpells], qui partagent
+  /// exactement ce même chaînage une fois leur propre étape franchie).
+  _LevelUpPhase _firstStepAfterInvocationsFamily(LevelUpStepData data) {
+    if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
+    if (_hasElementalDisciplinesStep(data)) {
+      return _LevelUpPhase.elementalDisciplines;
+    }
+    if (_hasManeuversStep(data)) return _LevelUpPhase.maneuvers;
+    if (_hasArcaneShotsStep(data)) return _LevelUpPhase.arcaneShots;
+    if (_hasRunesStep(data)) return _LevelUpPhase.runes;
+    if (_hasInfusionsStep(data)) return _LevelUpPhase.infusions;
+    return _LevelUpPhase.summary;
+  }
 
   /// Étape suivante une fois "Aptitudes"/"Choix à faire" franchies : l'étape
-  /// "Sorts" si ce niveau la déclenche ([_hasSpellsStep]), sinon l'étape
-  /// "Invocations" si ce niveau la déclenche ([_hasInvocationsStep]), sinon
-  /// l'étape "Disciplines élémentaires" si ce niveau la déclenche
-  /// ([_hasElementalDisciplinesStep]), sinon l'étape "Manœuvres" si ce
-  /// niveau la déclenche ([_hasManeuversStep]), le récapitulatif sinon —
-  /// même logique de chaînage conditionnel que [LevelUpChoiceKind] pour
-  /// l'étape "Choix à faire". Couvre aussi le cas défensif "condition
-  /// d'affichage vraie mais 0 changement calculé" (spec visuelle
-  /// direction-artistique section 4) : ce cas ne devrait jamais se produire
-  /// en pratique pour la branche mono-classe historique (voir
+  /// "Sorts" si ce niveau la déclenche ([_hasSpellsStep]), sinon la première
+  /// étape déclenchée parmi "Invocations"/"Disciplines élémentaires"/
+  /// "Manœuvres"/"Tirs arcaniques"/"Runes"/"Infusions"
+  /// ([_firstStepAfterInvocationsFamily]) — même logique de chaînage
+  /// conditionnel que [LevelUpChoiceKind] pour l'étape "Choix à faire".
+  /// Couvre aussi le cas défensif "condition d'affichage vraie mais 0
+  /// changement calculé" (spec visuelle direction-artistique section 4) : ce
+  /// cas ne devrait jamais se produire en pratique pour la branche
+  /// mono-classe historique (voir
   /// `domain/spell_slot_progression.dart::SpellSlotProgression.changesFor`),
   /// mais une liste vide retombe naturellement ici sur le récapitulatif,
   /// sans code dédié supplémentaire.
   _LevelUpPhase _phaseAfterChoiceOrAbilities(LevelUpStepData data) {
     if (_hasSpellsStep(data)) return _LevelUpPhase.spells;
-    if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
-    if (_hasElementalDisciplinesStep(data)) {
-      return _LevelUpPhase.elementalDisciplines;
-    }
-    if (_hasManeuversStep(data)) return _LevelUpPhase.maneuvers;
-    return _LevelUpPhase.summary;
+    return _firstStepAfterInvocationsFamily(data);
   }
 
-  /// Étape suivante une fois "Sorts" franchie : l'étape "Invocations" si ce
-  /// niveau la déclenche ([_hasInvocationsStep]), sinon l'étape
-  /// "Disciplines élémentaires" si ce niveau la déclenche
-  /// ([_hasElementalDisciplinesStep]), sinon l'étape "Manœuvres" si ce
-  /// niveau la déclenche ([_hasManeuversStep]), le récapitulatif sinon.
-  _LevelUpPhase _phaseAfterSpells(LevelUpStepData data) {
-    if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
-    if (_hasElementalDisciplinesStep(data)) {
-      return _LevelUpPhase.elementalDisciplines;
-    }
-    if (_hasManeuversStep(data)) return _LevelUpPhase.maneuvers;
-    return _LevelUpPhase.summary;
-  }
+  /// Étape suivante une fois "Sorts" franchie — même chaînage que
+  /// [_phaseAfterChoiceOrAbilities] une fois "Sorts" lui-même écarté, voir
+  /// [_firstStepAfterInvocationsFamily].
+  _LevelUpPhase _phaseAfterSpells(LevelUpStepData data) =>
+      _firstStepAfterInvocationsFamily(data);
 
   /// Étape précédente de "Invocations" ("Retour") : l'étape "Sorts" si ce
   /// niveau la déclenche ([_hasSpellsStep]), sinon "Choix à faire" si
@@ -1537,18 +1925,20 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return _LevelUpPhase.abilities;
   }
 
-  /// Étape suivante une fois "Invocations" franchie : l'étape "Disciplines
-  /// élémentaires" si ce niveau la déclenche
-  /// ([_hasElementalDisciplinesStep]), sinon l'étape "Manœuvres" si ce
-  /// niveau la déclenche ([_hasManeuversStep]) — ni l'une ni l'autre ne
-  /// devrait jamais arriver en pratique (mutuellement exclusives, voir
-  /// [_LevelUpPhase.elementalDisciplines]/[_LevelUpPhase.maneuvers]), le
-  /// récapitulatif sinon.
+  /// Étape suivante une fois "Invocations" franchie : la première étape
+  /// déclenchée parmi "Disciplines élémentaires"/"Manœuvres"/"Tirs
+  /// arcaniques"/"Runes"/"Infusions" — aucune ne devrait jamais être
+  /// déclenchée en même temps que "Invocations" en pratique (mutuellement
+  /// exclusives, chacune gatée par une classe distincte), le récapitulatif
+  /// sinon.
   _LevelUpPhase _phaseAfterInvocations(LevelUpStepData data) {
     if (_hasElementalDisciplinesStep(data)) {
       return _LevelUpPhase.elementalDisciplines;
     }
     if (_hasManeuversStep(data)) return _LevelUpPhase.maneuvers;
+    if (_hasArcaneShotsStep(data)) return _LevelUpPhase.arcaneShots;
+    if (_hasRunesStep(data)) return _LevelUpPhase.runes;
+    if (_hasInfusionsStep(data)) return _LevelUpPhase.infusions;
     return _LevelUpPhase.summary;
   }
 
@@ -1564,13 +1954,17 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return _LevelUpPhase.abilities;
   }
 
-  /// Étape suivante une fois "Disciplines élémentaires" franchie : l'étape
-  /// "Manœuvres" si ce niveau la déclenche ([_hasManeuversStep]) — ne
-  /// devrait jamais arriver en pratique (mutuellement exclusives, voir
-  /// [_LevelUpPhase.elementalDisciplines]/[_LevelUpPhase.maneuvers]), le
-  /// récapitulatif sinon.
-  _LevelUpPhase _phaseAfterElementalDisciplines(LevelUpStepData data) =>
-      _hasManeuversStep(data) ? _LevelUpPhase.maneuvers : _LevelUpPhase.summary;
+  /// Étape suivante une fois "Disciplines élémentaires" franchie : la
+  /// première étape déclenchée parmi "Manœuvres"/"Tirs arcaniques"/
+  /// "Runes"/"Infusions" — aucune ne devrait jamais être déclenchée en même
+  /// temps en pratique (mutuellement exclusives), le récapitulatif sinon.
+  _LevelUpPhase _phaseAfterElementalDisciplines(LevelUpStepData data) {
+    if (_hasManeuversStep(data)) return _LevelUpPhase.maneuvers;
+    if (_hasArcaneShotsStep(data)) return _LevelUpPhase.arcaneShots;
+    if (_hasRunesStep(data)) return _LevelUpPhase.runes;
+    if (_hasInfusionsStep(data)) return _LevelUpPhase.infusions;
+    return _LevelUpPhase.summary;
+  }
 
   /// Étape précédente de "Manœuvres" ("Retour") : l'étape "Disciplines
   /// élémentaires" si ce niveau la déclenche
@@ -1580,6 +1974,80 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// déclenchée, sinon "Aptitudes" — même logique de repli que
   /// [_phaseBeforeElementalDisciplines].
   _LevelUpPhase _phaseBeforeManeuvers(LevelUpStepData data) {
+    if (_hasElementalDisciplinesStep(data)) {
+      return _LevelUpPhase.elementalDisciplines;
+    }
+    if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
+    if (_hasSpellsStep(data)) return _LevelUpPhase.spells;
+    if (data.choiceKind != null) return _LevelUpPhase.choice;
+    return _LevelUpPhase.abilities;
+  }
+
+  /// Étape suivante une fois "Manœuvres" franchie : la première étape
+  /// déclenchée parmi "Tirs arcaniques"/"Runes"/"Infusions" — aucune ne
+  /// devrait jamais être déclenchée en même temps en pratique (mutuellement
+  /// exclusives : 3 sous-classes de Guerrier différentes), le récapitulatif
+  /// sinon.
+  _LevelUpPhase _phaseAfterManeuvers(LevelUpStepData data) {
+    if (_hasArcaneShotsStep(data)) return _LevelUpPhase.arcaneShots;
+    if (_hasRunesStep(data)) return _LevelUpPhase.runes;
+    if (_hasInfusionsStep(data)) return _LevelUpPhase.infusions;
+    return _LevelUpPhase.summary;
+  }
+
+  /// Étape précédente de "Tirs arcaniques" ("Retour") : même logique de
+  /// repli que [_phaseBeforeManeuvers], avec "Manœuvres" en plus (ne
+  /// devrait jamais arriver en pratique non plus).
+  _LevelUpPhase _phaseBeforeArcaneShots(LevelUpStepData data) {
+    if (_hasManeuversStep(data)) return _LevelUpPhase.maneuvers;
+    if (_hasElementalDisciplinesStep(data)) {
+      return _LevelUpPhase.elementalDisciplines;
+    }
+    if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
+    if (_hasSpellsStep(data)) return _LevelUpPhase.spells;
+    if (data.choiceKind != null) return _LevelUpPhase.choice;
+    return _LevelUpPhase.abilities;
+  }
+
+  /// Étape suivante une fois "Tirs arcaniques" franchie : la première étape
+  /// déclenchée parmi "Runes"/"Infusions" (mutuellement exclusives en
+  /// pratique), le récapitulatif sinon.
+  _LevelUpPhase _phaseAfterArcaneShots(LevelUpStepData data) {
+    if (_hasRunesStep(data)) return _LevelUpPhase.runes;
+    if (_hasInfusionsStep(data)) return _LevelUpPhase.infusions;
+    return _LevelUpPhase.summary;
+  }
+
+  /// Étape précédente de "Runes" ("Retour") : même logique de repli que
+  /// [_phaseBeforeArcaneShots], avec "Tirs arcaniques" en plus (ne devrait
+  /// jamais arriver en pratique non plus).
+  _LevelUpPhase _phaseBeforeRunes(LevelUpStepData data) {
+    if (_hasArcaneShotsStep(data)) return _LevelUpPhase.arcaneShots;
+    if (_hasManeuversStep(data)) return _LevelUpPhase.maneuvers;
+    if (_hasElementalDisciplinesStep(data)) {
+      return _LevelUpPhase.elementalDisciplines;
+    }
+    if (_hasInvocationsStep(data)) return _LevelUpPhase.invocations;
+    if (_hasSpellsStep(data)) return _LevelUpPhase.spells;
+    if (data.choiceKind != null) return _LevelUpPhase.choice;
+    return _LevelUpPhase.abilities;
+  }
+
+  /// Étape suivante une fois "Runes" franchie : l'étape "Infusions" si ce
+  /// niveau la déclenche ([_hasInfusionsStep], ne devrait jamais arriver en
+  /// pratique : Chevalier runique et Artificier sont deux classes
+  /// différentes), le récapitulatif sinon.
+  _LevelUpPhase _phaseAfterRunes(LevelUpStepData data) =>
+      _hasInfusionsStep(data) ? _LevelUpPhase.infusions : _LevelUpPhase.summary;
+
+  /// Étape précédente de "Infusions" ("Retour") : même logique de repli que
+  /// [_phaseBeforeRunes], avec "Runes" en plus (ne devrait jamais arriver en
+  /// pratique non plus : Chevalier runique et Artificier sont deux classes
+  /// différentes).
+  _LevelUpPhase _phaseBeforeInfusions(LevelUpStepData data) {
+    if (_hasRunesStep(data)) return _LevelUpPhase.runes;
+    if (_hasArcaneShotsStep(data)) return _LevelUpPhase.arcaneShots;
+    if (_hasManeuversStep(data)) return _LevelUpPhase.maneuvers;
     if (_hasElementalDisciplinesStep(data)) {
       return _LevelUpPhase.elementalDisciplines;
     }
@@ -3042,7 +3510,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           // l'étape "Disciplines élémentaires") — toujours vrai quand la
           // liste de candidates est vide (quota effectif 0, déjà atteint).
           onContinue: selected.length == quota
-              ? () => setState(() => _phase = _LevelUpPhase.summary)
+              ? () => setState(() => _phase = _phaseAfterManeuvers(data))
               : null,
         ),
       ],
@@ -3094,6 +3562,407 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return _hasElementalDisciplinesStep(data)
         ? afterInvocationsStepNumber + 1
         : afterInvocationsStepNumber;
+  }
+
+  /// Étape "Tirs arcaniques", affichée uniquement quand [_hasArcaneShotsStep]
+  /// vaut `true` (Guerrier, Archer arcanique) — duplicata volontaire de
+  /// [_buildManeuversStep] (même patron : quota effectif, liste de
+  /// candidates, pas d'échange).
+  Widget _buildArcaneShotsStep(LevelUpStepData data) {
+    final stepNumber = _arcaneShotsStepNumber(data);
+    final quota = _effectiveArcaneShotQuota(data);
+    final selected = _effectiveSelectedArcaneShotIds(data);
+    final available = _availableArcaneShotsFor(data);
+
+    return Column(
+      children: [
+        LevelUpHeader(
+          eyebrow: 'MONTÉE DE NIVEAU',
+          levelLabel: 'NIVEAU $_targetLevel',
+          stepLabel:
+              'Étape $stepNumber sur ${_totalSteps(data)} · Tirs arcaniques',
+          remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'TIRS ARCANIQUES CONNUS',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    _QuotaBadge(text: '${selected.length} / $quota'),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                if (available.isEmpty)
+                  const _ParchmentCard(
+                    child: _EmptyChoiceState(
+                      message:
+                          'Vous connaissez déjà tous les tirs arcaniques '
+                          'disponibles.',
+                    ),
+                  )
+                else
+                  for (var i = 0; i < available.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.xs),
+                    _arcaneShotTile(
+                      data,
+                      available[i],
+                      index: i,
+                      quota: quota,
+                      selected: selected,
+                    ),
+                  ],
+              ],
+            ),
+          ),
+        ),
+        _StepFooter(
+          onBack: () => setState(() => _phase = _phaseBeforeArcaneShots(data)),
+          onContinue: selected.length == quota
+              ? () => setState(() => _phase = _phaseAfterArcaneShots(data))
+              : null,
+        ),
+      ],
+    );
+  }
+
+  /// Une tuile de tir arcanique candidat — même patron que [_maneuverTile],
+  /// couleur d'accent fixe [AppColors.accentBrick].
+  Widget _arcaneShotTile(
+    LevelUpStepData data,
+    LevelUpArcaneShotOption arcaneShot, {
+    required int index,
+    required int quota,
+    required List<String> selected,
+  }) {
+    final id = arcaneShot.id.toString();
+    final isSelected = selected.contains(id);
+    return CheckableOptionTile(
+      title: arcaneShot.name,
+      subtitle: arcaneShot.description,
+      leading: AccentIconBadge(
+        index: index,
+        icon: Icons.gps_fixed,
+        color: AppColors.accentBrick,
+      ),
+      checked: isSelected,
+      enabled: !SpellsStepSelection.isChoiceLocked(
+        isSelected: isSelected,
+        selectedCount: selected.length,
+        quota: quota,
+      ),
+      onTap: () => _toggleArcaneShot(data, id, quota),
+    );
+  }
+
+  /// 3 à 11 selon les étapes déclenchées avant "Tirs arcaniques" à ce
+  /// niveau — même principe que [_maneuversStepNumber].
+  int _arcaneShotsStepNumber(LevelUpStepData data) {
+    final afterManeuversStepNumber = _maneuversStepNumber(data);
+    return _hasManeuversStep(data)
+        ? afterManeuversStepNumber + 1
+        : afterManeuversStepNumber;
+  }
+
+  /// Étape "Runes", affichée uniquement quand [_hasRunesStep] vaut `true`
+  /// (Guerrier, Chevalier runique) — duplicata volontaire de
+  /// [_buildArcaneShotsStep].
+  Widget _buildRunesStep(LevelUpStepData data) {
+    final stepNumber = _runesStepNumber(data);
+    final quota = _effectiveRuneQuota(data);
+    final selected = _effectiveSelectedRuneIds(data);
+    final available = _availableRunesFor(data);
+
+    return Column(
+      children: [
+        LevelUpHeader(
+          eyebrow: 'MONTÉE DE NIVEAU',
+          levelLabel: 'NIVEAU $_targetLevel',
+          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Runes',
+          remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'RUNES CONNUES',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    _QuotaBadge(text: '${selected.length} / $quota'),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                if (available.isEmpty)
+                  const _ParchmentCard(
+                    child: _EmptyChoiceState(
+                      message:
+                          'Vous connaissez déjà toutes les runes '
+                          'disponibles.',
+                    ),
+                  )
+                else
+                  for (var i = 0; i < available.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.xs),
+                    _runeTile(
+                      data,
+                      available[i],
+                      index: i,
+                      quota: quota,
+                      selected: selected,
+                    ),
+                  ],
+              ],
+            ),
+          ),
+        ),
+        _StepFooter(
+          onBack: () => setState(() => _phase = _phaseBeforeRunes(data)),
+          onContinue: selected.length == quota
+              ? () => setState(() => _phase = _phaseAfterRunes(data))
+              : null,
+        ),
+      ],
+    );
+  }
+
+  /// Une tuile de rune candidate — même patron que [_maneuverTile], couleur
+  /// d'accent fixe [AppColors.accentTeal].
+  Widget _runeTile(
+    LevelUpStepData data,
+    LevelUpRuneOption rune, {
+    required int index,
+    required int quota,
+    required List<String> selected,
+  }) {
+    final id = rune.id.toString();
+    final isSelected = selected.contains(id);
+    return CheckableOptionTile(
+      title: rune.name,
+      subtitle: rune.description,
+      leading: AccentIconBadge(
+        index: index,
+        icon: Icons.font_download,
+        color: AppColors.accentTeal,
+      ),
+      checked: isSelected,
+      enabled: !SpellsStepSelection.isChoiceLocked(
+        isSelected: isSelected,
+        selectedCount: selected.length,
+        quota: quota,
+      ),
+      onTap: () => _toggleRune(data, id, quota),
+    );
+  }
+
+  /// 3 à 11 selon les étapes déclenchées avant "Runes" à ce niveau — même
+  /// principe que [_arcaneShotsStepNumber].
+  int _runesStepNumber(LevelUpStepData data) {
+    final afterArcaneShotsStepNumber = _arcaneShotsStepNumber(data);
+    return _hasArcaneShotsStep(data)
+        ? afterArcaneShotsStepNumber + 1
+        : afterArcaneShotsStepNumber;
+  }
+
+  /// Étape "Infusions" (Artificier) — **structurellement distincte** des 5
+  /// autres étapes dédiées de ce fichier : porte DEUX sous-sections
+  /// indépendantes plutôt qu'une seule liste à quota.
+  /// - "Nouvelles infusions" : même patron que [_buildRunesStep] (quota
+  ///   effectif, liste de candidates), affichée seulement si
+  ///   [LevelUpStepData.requiresInfusionSelection].
+  /// - "Remplacer une infusion" : échange RAW-exact optionnel (voir
+  ///   `domain/level_up_infusion_swap.dart`, D93 de
+  ///   `docs/dette-technique.md`), affichée dès que
+  ///   [LevelUpStepData.canSwapInfusion] vaut `true` — INDÉPENDAMMENT de la
+  ///   première sous-section (un niveau peut n'avoir que l'une, l'autre, les
+  ///   deux, ou ni l'une ni l'autre si aucune des deux conditions n'est
+  ///   remplie, auquel cas [_hasInfusionsStep] vaut `false` et cette étape
+  ///   n'est jamais atteinte).
+  Widget _buildInfusionsStep(LevelUpStepData data) {
+    final stepNumber = _infusionsStepNumber(data);
+    final quota = _effectiveInfusionQuota(data);
+    final selected = _effectiveSelectedInfusionIds(data);
+    final available = data.availableInfusions;
+    final canContinue =
+        selected.length == quota &&
+        (_infusionSwapRemovedName == null || _infusionSwapAddedId != null);
+
+    return Column(
+      children: [
+        LevelUpHeader(
+          eyebrow: 'MONTÉE DE NIVEAU',
+          levelLabel: 'NIVEAU $_targetLevel',
+          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Infusions',
+          remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.sm),
+                if (data.requiresInfusionSelection) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'NOUVELLES INFUSIONS',
+                        style: AppTypography.body(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      _QuotaBadge(text: '${selected.length} / $quota'),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  if (available.isEmpty)
+                    const _ParchmentCard(
+                      child: _EmptyChoiceState(
+                        message:
+                            'Vous connaissez déjà toutes les infusions '
+                            'disponibles.',
+                      ),
+                    )
+                  else
+                    for (var i = 0; i < available.length; i++) ...[
+                      if (i > 0) const SizedBox(height: AppSpacing.xs),
+                      _infusionTile(
+                        data,
+                        available[i],
+                        index: i,
+                        quota: quota,
+                        selected: selected,
+                      ),
+                    ],
+                  const SizedBox(height: AppSpacing.lg),
+                ],
+                if (data.canSwapInfusion) ...[
+                  Text(
+                    'REMPLACER UNE INFUSION (OPTIONNEL)',
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  for (var i = 0; i < data.knownInfusionNames.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.xs),
+                    SelectableOptionTile(
+                      title: data.knownInfusionNames[i],
+                      selected:
+                          _infusionSwapRemovedName ==
+                          data.knownInfusionNames[i],
+                      onTap: () => _toggleInfusionSwapRemoved(
+                        data.knownInfusionNames[i],
+                      ),
+                    ),
+                  ],
+                  if (_infusionSwapRemovedName != null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'REMPLACÉE PAR',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    for (final option in _availableInfusionsForSwap(data))
+                      SelectableOptionTile(
+                        title: option.name,
+                        subtitle: option.prerequisiteText,
+                        selected: _infusionSwapAddedId == option.id.toString(),
+                        onTap: () =>
+                            _toggleInfusionSwapAdded(option.id.toString()),
+                      ),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ),
+        _StepFooter(
+          onBack: () => setState(() => _phase = _phaseBeforeInfusions(data)),
+          onContinue: canContinue
+              ? () => setState(() => _phase = _LevelUpPhase.summary)
+              : null,
+        ),
+      ],
+    );
+  }
+
+  /// Une tuile de NOUVELLE infusion candidate — même patron que
+  /// [_maneuverTile], couleur d'accent fixe [AppColors.accentViolet]
+  /// (réutilisée de [_invocationTile] : Occultiste et Artificier ne
+  /// déclenchent jamais les deux étapes dans la même session en pratique,
+  /// aucune des 4 couleurs d'accent du design system n'étant dédiée à cette
+  /// 6e mécanique), sous-titre composé de la description suivie du
+  /// prérequis de support d'objet quand renseigné (purement informatif, voir
+  /// `domain/level_up_infusion_option.dart`).
+  Widget _infusionTile(
+    LevelUpStepData data,
+    LevelUpInfusionOption infusion, {
+    required int index,
+    required int quota,
+    required List<String> selected,
+  }) {
+    final id = infusion.id.toString();
+    final isSelected = selected.contains(id);
+    final prerequisiteText = infusion.prerequisiteText;
+    return CheckableOptionTile(
+      title: infusion.name,
+      subtitle: prerequisiteText == null
+          ? infusion.description
+          : '${infusion.description}\n$prerequisiteText',
+      leading: AccentIconBadge(
+        index: index,
+        icon: Icons.science,
+        color: AppColors.accentViolet,
+      ),
+      checked: isSelected,
+      enabled: !SpellsStepSelection.isChoiceLocked(
+        isSelected: isSelected,
+        selectedCount: selected.length,
+        quota: quota,
+      ),
+      onTap: () => _toggleInfusion(data, id, quota),
+    );
+  }
+
+  /// 3 à 11 selon les étapes déclenchées avant "Infusions" à ce niveau —
+  /// même principe que [_runesStepNumber].
+  int _infusionsStepNumber(LevelUpStepData data) {
+    final afterRunesStepNumber = _runesStepNumber(data);
+    return _hasRunesStep(data)
+        ? afterRunesStepNumber + 1
+        : afterRunesStepNumber;
   }
 
   /// Une ligne de gain de l'étape "Sorts", et du bloc "Sorts" du
@@ -3345,6 +4214,68 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     );
   }
 
+  /// Ligne de récapitulatif du bloc "Tir(s) arcanique(s)" (Guerrier, Archer
+  /// arcanique), `null` si aucun tir arcanique n'a été choisi à ce niveau —
+  /// même patron que [_maneuverSummaryGainRow].
+  GainRow? _arcaneShotSummaryGainRow(LevelUpStepData data) {
+    final names = _buildArcaneShotNames(data);
+    if (names.isEmpty) return null;
+    final plural = names.length > 1 ? 's' : '';
+    return GainRow(
+      icon: Icons.gps_fixed,
+      color: AppColors.accentBrick,
+      title: 'Nouveau$plural tir$plural arcanique$plural',
+      subtitle: names.join(', '),
+    );
+  }
+
+  /// Ligne de récapitulatif du bloc "Rune(s)" (Guerrier, Chevalier runique),
+  /// `null` si aucune rune n'a été choisie à ce niveau — même patron que
+  /// [_arcaneShotSummaryGainRow].
+  GainRow? _runeSummaryGainRow(LevelUpStepData data) {
+    final names = _buildRuneNames(data);
+    if (names.isEmpty) return null;
+    final plural = names.length > 1 ? 's' : '';
+    return GainRow(
+      icon: Icons.font_download,
+      color: AppColors.accentTeal,
+      title: 'Nouvelle$plural rune$plural',
+      subtitle: names.join(', '),
+    );
+  }
+
+  /// Ligne de récapitulatif du bloc "Infusion(s)" (Artificier), `null` si
+  /// aucune NOUVELLE infusion n'a été choisie à ce niveau — même patron que
+  /// [_runeSummaryGainRow]. L'échange éventuel ([_infusionSwapSummaryGainRow])
+  /// est une ligne séparée, jamais fusionnée avec celle-ci : les deux
+  /// peuvent coexister (un même niveau peut à la fois apprendre une nouvelle
+  /// infusion ET en échanger une autre).
+  GainRow? _infusionSummaryGainRow(LevelUpStepData data) {
+    final names = _buildInfusionNames(data);
+    if (names.isEmpty) return null;
+    final plural = names.length > 1 ? 's' : '';
+    return GainRow(
+      icon: Icons.science,
+      color: AppColors.accentViolet,
+      title: 'Nouvelle$plural infusion$plural',
+      subtitle: names.join(', '),
+    );
+  }
+
+  /// Ligne de récapitulatif de l'échange d'infusion (voir
+  /// `domain/level_up_infusion_swap.dart`), `null` si aucun échange n'est
+  /// construit ce niveau (voir [_buildInfusionSwap]).
+  GainRow? _infusionSwapSummaryGainRow(LevelUpStepData data) {
+    final swap = _buildInfusionSwap(data);
+    if (swap == null) return null;
+    return GainRow(
+      icon: Icons.sync_alt,
+      color: AppColors.accentViolet,
+      title: 'Infusion remplacée',
+      subtitle: '${swap.removedName} → ${swap.addedName}',
+    );
+  }
+
   Widget _buildSummary(LevelUpStepData data) {
     final gain = _hpGain(
       hitDie: data.hitDie,
@@ -3417,6 +4348,25 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                           case final maneuverRow?) ...[
                         const SizedBox(height: AppSpacing.md),
                         maneuverRow,
+                      ],
+                      if (_arcaneShotSummaryGainRow(data)
+                          case final arcaneShotRow?) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        arcaneShotRow,
+                      ],
+                      if (_runeSummaryGainRow(data) case final runeRow?) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        runeRow,
+                      ],
+                      if (_infusionSummaryGainRow(data)
+                          case final infusionRow?) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        infusionRow,
+                      ],
+                      if (_infusionSwapSummaryGainRow(data)
+                          case final infusionSwapRow?) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        infusionSwapRow,
                       ],
                     ],
                   ),

@@ -41,10 +41,14 @@ import 'package:personnages/features/characters/domain/currency_kind.dart';
 import 'package:personnages/features/characters/domain/inventory_catalog_item.dart';
 import 'package:personnages/features/characters/domain/invocation_prerequisites.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
+import 'package:personnages/features/characters/domain/level_up_arcane_shot_option.dart';
 import 'package:personnages/features/characters/domain/level_up_feat_option.dart';
+import 'package:personnages/features/characters/domain/level_up_infusion_option.dart';
+import 'package:personnages/features/characters/domain/level_up_infusion_swap.dart';
 import 'package:personnages/features/characters/domain/level_up_invocation_option.dart';
 import 'package:personnages/features/characters/domain/level_up_elemental_discipline_option.dart';
 import 'package:personnages/features/characters/domain/level_up_maneuver_option.dart';
+import 'package:personnages/features/characters/domain/level_up_rune_option.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_kind.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
@@ -71,6 +75,10 @@ class _AppliedLevelUp {
     required this.invocationIds,
     required this.elementalDisciplineNames,
     required this.maneuverNames,
+    required this.arcaneShotNames,
+    required this.runeNames,
+    required this.infusionNames,
+    required this.infusionSwap,
     required this.racialInnateSpellIds,
   });
 
@@ -85,6 +93,10 @@ class _AppliedLevelUp {
   final List<int> invocationIds;
   final List<String> elementalDisciplineNames;
   final List<String> maneuverNames;
+  final List<String> arcaneShotNames;
+  final List<String> runeNames;
+  final List<String> infusionNames;
+  final LevelUpInfusionSwap? infusionSwap;
   final List<int> racialInnateSpellIds;
 }
 
@@ -228,6 +240,22 @@ class _FakeCharacterRepository implements CharacterRepository {
   // guerre).
   List<LevelUpManeuverOption> maneuversToReturn = const [];
 
+  // Vide par défaut, même rationale que [maneuversToReturn] — overridable
+  // par test de l'étape "Tirs arcaniques" (Guerrier, Archer arcanique).
+  List<LevelUpArcaneShotOption> arcaneShotsToReturn = const [];
+
+  // Vide par défaut, même rationale que [arcaneShotsToReturn] — overridable
+  // par test de l'étape "Runes" (Guerrier, Chevalier runique).
+  List<LevelUpRuneOption> runesToReturn = const [];
+
+  // Vide par défaut, même rationale que [runesToReturn] — overridable par
+  // test de l'étape "Infusions" (Artificier).
+  List<LevelUpInfusionOption> infusionsToReturn = const [];
+
+  // Vide par défaut — infusions déjà connues du personnage, overridable par
+  // test de la sous-section "échange" de l'étape "Infusions".
+  List<String> knownInfusionNamesToReturn = const [];
+
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
 
@@ -278,6 +306,34 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) async => maneuversToReturn;
 
   @override
+  Future<List<LevelUpArcaneShotOption>> fetchAvailableArcaneShots({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  }) async => arcaneShotsToReturn;
+
+  @override
+  Future<List<LevelUpRuneOption>> fetchAvailableRunes({
+    required String characterId,
+    required Object classId,
+    required int subclassId,
+    required int targetLevel,
+  }) async => runesToReturn;
+
+  @override
+  Future<List<LevelUpInfusionOption>> fetchAvailableInfusions({
+    required String characterId,
+    required Object classId,
+    required int targetLevel,
+  }) async => infusionsToReturn;
+
+  @override
+  Future<List<String>> fetchKnownInfusionNames({
+    required String characterId,
+  }) async => knownInfusionNamesToReturn;
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -291,6 +347,10 @@ class _FakeCharacterRepository implements CharacterRepository {
     List<int> invocationIds = const [],
     List<String> elementalDisciplineNames = const [],
     List<String> maneuverNames = const [],
+    List<String> arcaneShotNames = const [],
+    List<String> runeNames = const [],
+    List<String> infusionNames = const [],
+    LevelUpInfusionSwap? infusionSwap,
     List<int> racialInnateSpellIds = const [],
   }) async {
     applyLevelUpCalls.add(
@@ -306,6 +366,10 @@ class _FakeCharacterRepository implements CharacterRepository {
         invocationIds: invocationIds,
         elementalDisciplineNames: elementalDisciplineNames,
         maneuverNames: maneuverNames,
+        arcaneShotNames: arcaneShotNames,
+        runeNames: runeNames,
+        infusionNames: infusionNames,
+        infusionSwap: infusionSwap,
         racialInnateSpellIds: racialInnateSpellIds,
       ),
     );
@@ -4084,6 +4148,480 @@ void main() {
         },
       );
     }
+  });
+
+  group('etape "Tirs arcaniques" (Guerrier, Archer arcanique)', () {
+    testWidgets(
+      'niveau 3 (choix de sous-classe ET 1er palier de tirs arcaniques dans '
+      'la meme montee de niveau) : enchaine Sous-classe puis Tirs '
+      'arcaniques une fois "Archer arcanique" choisie, quota effectif 2, '
+      'applyLevelUp recoit les 2 noms',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 2,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(
+            choiceType: 'sous_classe',
+            automaticFeatures: [],
+            availableSubclasses: [
+              LevelUpSubclassOption(id: 50, name: 'Archer arcanique'),
+              LevelUpSubclassOption(id: 81, name: 'Champion'),
+            ],
+          ),
+        };
+        fakeRepository.arcaneShotsToReturn = const [
+          LevelUpArcaneShotOption(id: 1, name: 'Tir explosif', description: ''),
+          LevelUpArcaneShotOption(
+            id: 2,
+            name: 'Décharge foudroyante',
+            description: '',
+          ),
+          LevelUpArcaneShotOption(id: 3, name: 'Tir perçant', description: ''),
+        ];
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 4 · Sous-classe'), findsOneWidget);
+        await tester.tap(find.text('Archer arcanique'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Tirs arcaniques'), findsOneWidget);
+        expect(find.text('0 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('Décharge foudroyante'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Tir perçant'));
+        await tester.pumpAndSettle();
+        expect(find.text('2 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Décharge foudroyante, Tir perçant'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Guerrier');
+        expect(applied.arcaneShotNames.toSet(), {
+          'Décharge foudroyante',
+          'Tir perçant',
+        });
+      },
+    );
+  });
+
+  group('etape "Tirs arcaniques" — regression : un Guerrier d\'un AUTRE '
+      'archetype (Champion) ne doit JAMAIS la declencher (meme bug deja '
+      'trouve et corrige pour le Moine/Maitre de guerre)', () {
+    for (final level in [3, 7, 10, 15, 18]) {
+      testWidgets('niveau $level (sous-classe "Champion" deja connue) : aucune '
+          'etape, aucun message, meme si le delta RAW de tirs arcaniques '
+          'connus est strictement positif a ce niveau', (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: level - 1,
+              isPrimary: true,
+              savingThrowProficiencies: const [],
+              subclassId: 81,
+              subclassName: 'Champion',
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          level: const LevelUpLevelData(
+            choiceType: null,
+            automaticFeatures: [],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, level);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Tirs arcaniques'), findsNothing);
+        expect(find.textContaining('tir arcanique'), findsNothing);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.arcaneShotNames, isEmpty);
+      });
+    }
+  });
+
+  group('etape "Runes" (Guerrier, Chevalier runique)', () {
+    testWidgets(
+      'niveau 3 (choix de sous-classe ET 1er palier de runes dans la meme '
+      'montee de niveau) : seules les runes min_level=3 sont candidates, '
+      'quota effectif 2',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 2,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(
+            choiceType: 'sous_classe',
+            automaticFeatures: [],
+            availableSubclasses: [
+              LevelUpSubclassOption(id: 52, name: 'Chevalier runique'),
+              LevelUpSubclassOption(id: 81, name: 'Champion'),
+            ],
+          ),
+        };
+        // Simule la résolution déjà faite côté repository (min_level
+        // <= targetLevel) : au niveau 3, seules les 2 runes min_level=3
+        // sont renvoyées par `fetchAvailableRunes`.
+        fakeRepository.runesToReturn = const [
+          LevelUpRuneOption(id: 1, name: 'Rune de Cloué', description: ''),
+          LevelUpRuneOption(id: 2, name: 'Rune de Feu', description: ''),
+        ];
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 4 · Sous-classe'), findsOneWidget);
+        await tester.tap(find.text('Chevalier runique'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Runes'), findsOneWidget);
+        expect(find.text('0 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('Rune de Cloué'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Rune de Feu'));
+        await tester.pumpAndSettle();
+        expect(find.text('2 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.runeNames.toSet(), {'Rune de Cloué', 'Rune de Feu'});
+      },
+    );
+
+    testWidgets(
+      'niveau 18 ("Maître des runes", capstone) : le delta RAW (3) force la '
+      'selection de TOUTES les runes restantes, sans octroi automatique '
+      'silencieux',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 17,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+              subclassId: 52,
+              subclassName: 'Chevalier runique',
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          18: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.runesToReturn = const [
+          LevelUpRuneOption(id: 3, name: 'Rune de Géant', description: ''),
+          LevelUpRuneOption(id: 4, name: 'Rune de Protection', description: ''),
+          LevelUpRuneOption(id: 5, name: 'Rune de Terreur', description: ''),
+        ];
+
+        await pushPastAnnouncement(tester, 18);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('0 / 3'), findsOneWidget);
+        await tester.tap(find.text('Rune de Géant'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Rune de Protection'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Rune de Terreur'));
+        await tester.pumpAndSettle();
+        expect(find.text('3 / 3'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.runeNames.toSet(), {
+          'Rune de Géant',
+          'Rune de Protection',
+          'Rune de Terreur',
+        });
+      },
+    );
+  });
+
+  group('etape "Runes" — regression : un Guerrier d\'un AUTRE archetype '
+      '(Champion) ne doit JAMAIS la declencher', () {
+    for (final level in [3, 10, 18]) {
+      testWidgets('niveau $level (sous-classe "Champion" deja connue) : aucune '
+          'etape, aucun message', (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: level - 1,
+              isPrimary: true,
+              savingThrowProficiencies: const [],
+              subclassId: 81,
+              subclassName: 'Champion',
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          level: const LevelUpLevelData(
+            choiceType: null,
+            automaticFeatures: [],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, level);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('Runes'), findsNothing);
+        expect(find.textContaining('rune'), findsNothing);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.runeNames, isEmpty);
+      });
+    }
+  });
+
+  group('etape "Infusions" (Artificier)', () {
+    testWidgets(
+      'niveau 2 (premier palier, rien de connu encore) : quota 4, aucune '
+      'section d\'echange (rien a echanger)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 13,
+              hitDie: 8,
+              className: 'Artificier',
+              level: 1,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          2: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.knownInfusionNamesToReturn = const [];
+        fakeRepository.infusionsToReturn = const [
+          LevelUpInfusionOption(
+            id: 1,
+            name: 'Armure renforcée',
+            description: '',
+          ),
+          LevelUpInfusionOption(id: 2, name: 'Lame enchantée', description: ''),
+          LevelUpInfusionOption(
+            id: 3,
+            name: 'Anneau de protection +1',
+            description: '',
+          ),
+          LevelUpInfusionOption(
+            id: 4,
+            name: 'Baguette du magicien guerrier',
+            description: '',
+          ),
+        ];
+
+        await pushPastAnnouncement(tester, 2);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        // Étape "Sorts" intercalée : l'Artificier est traité comme un
+        // demi-lanceur (même table que Paladin/Rôdeur, D41) qui débloque son
+        // premier emplacement de sort au niveau 2 — aucune sélection requise
+        // ici (aucun cantrip/sort connu en jeu pour l'Artificier), un simple
+        // "Continuer" suffit.
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Infusions'), findsOneWidget);
+        expect(find.text('0 / 4'), findsOneWidget);
+        expect(find.textContaining('REMPLACER UNE INFUSION'), findsNothing);
+
+        for (final name in [
+          'Armure renforcée',
+          'Lame enchantée',
+          'Anneau de protection +1',
+          'Baguette du magicien guerrier',
+        ]) {
+          await tester.tap(find.text(name));
+          await tester.pumpAndSettle();
+        }
+        expect(find.text('4 / 4'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Artificier');
+        expect(applied.infusionNames.toSet(), {
+          'Armure renforcée',
+          'Lame enchantée',
+          'Anneau de protection +1',
+          'Baguette du magicien guerrier',
+        });
+        expect(applied.infusionSwap, isNull);
+      },
+    );
+
+    testWidgets(
+      'niveau 3 (delta nul, mais au moins une infusion deja connue) : '
+      'etape "Infusions" affichee UNIQUEMENT pour la section "echange" '
+      '(RAW-exact, divergence assumee D93) — remplacer une infusion connue '
+      'par une autre',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 13,
+              hitDie: 8,
+              className: 'Artificier',
+              level: 2,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.knownInfusionNamesToReturn = const ['Armure renforcée'];
+        fakeRepository.infusionsToReturn = const [
+          LevelUpInfusionOption(id: 2, name: 'Lame enchantée', description: ''),
+        ];
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        // Étape "Sorts" intercalée (même rationale que le test niveau 2 :
+        // l'Artificier débloque aussi un nouveau palier d'emplacements au
+        // niveau 3, table demi-lanceur Paladin/Rôdeur).
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Infusions'), findsOneWidget);
+        // Aucun quota de nouvelles infusions à ce niveau (delta nul).
+        expect(find.textContaining('NOUVELLES INFUSIONS'), findsNothing);
+        expect(find.textContaining('REMPLACER UNE INFUSION'), findsOneWidget);
+
+        await tester.tap(find.text('Armure renforcée'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Lame enchantée'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.infusionNames, isEmpty);
+        expect(applied.infusionSwap?.removedName, 'Armure renforcée');
+        expect(applied.infusionSwap?.addedName, 'Lame enchantée');
+      },
+    );
+  });
+
+  group('etape "Infusions" — regression : une AUTRE classe (Rodeur) ne doit '
+      'JAMAIS la declencher', () {
+    testWidgets('Rôdeur niveau 2 : aucune étape "Infusions", aucun message', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [
+          const CharacterDetailClassRow(
+            classId: 5,
+            hitDie: 10,
+            className: 'Rôdeur',
+            level: 1,
+            isPrimary: true,
+            savingThrowProficiencies: [],
+          ),
+        ],
+        xp: 0,
+      );
+      fakeRepository.levelDataByLevel = {
+        2: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+
+      await pushPastAnnouncement(tester, 2);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Infusions'), findsNothing);
+      expect(find.textContaining('infusion'), findsNothing);
+    });
   });
 
   group('Faveur de pacte (Occultiste niveau 3, choice_type pacte)', () {
