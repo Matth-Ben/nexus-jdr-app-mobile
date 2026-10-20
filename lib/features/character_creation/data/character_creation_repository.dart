@@ -1378,11 +1378,26 @@ class SupabaseCharacterCreationRepository
         ]);
       }
 
-      final spellRows = SpellSelectionResolver.resolve(
-        cantripNames: draft.classCantripChoices,
-        levelOneSpellNames: draft.classLevelOneSpellChoices,
+      // Plafonné à [PreparedSpellsLimit.limitFor] (D79, `docs/dette-
+      // technique.md`) : [SpellSelectionResolver.resolve] marque tout le
+      // quota de sélection comme `'préparé'` pour une classe à préparation
+      // (Clerc, Druide, Magicien, Paladin, Artificier), sans jamais tenir
+      // compte du vrai modificateur de caractéristique final
+      // ([finalAbilityScores], déjà calculé plus haut avec les bonus
+      // raciaux) — l'excédent est rétrogradé à `'connu'` par
+      // [SpellSelectionResolver.capToPreparedLimit], voir sa documentation.
+      // Classe niveau 1 (la seule en jeu à la création) : `classLevel: 1`.
+      final spellRows = SpellSelectionResolver.capToPreparedLimit(
+        rows: SpellSelectionResolver.resolve(
+          cantripNames: draft.classCantripChoices,
+          levelOneSpellNames: draft.classLevelOneSpellChoices,
+          catalog: spellCatalog,
+          className: classOption.name,
+        ),
         catalog: spellCatalog,
         className: classOption.name,
+        classLevel: 1,
+        abilityScores: finalAbilityScores,
       );
       if (spellRows.isNotEmpty) {
         await _client.from('character_spells').insert([

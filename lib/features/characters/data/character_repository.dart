@@ -12,6 +12,7 @@ import '../../../core/rules/spell_status.dart';
 import '../../../core/utils/french_text_normalizer.dart';
 import '../../../core/network/connectivity_checker.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
+import '../../character_creation/domain/spell_selection_resolver.dart';
 import '../../character_creation/domain/spellcasting_rules.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
@@ -707,9 +708,12 @@ abstract class CharacterRepository {
   ///
   /// [initialSpellIds] : sorts/cantrips nouvellement appris à écrire dans
   /// `character_spells` (`status` dérivé de [className] via
-  /// `SpellcastingRules.statusFor`, `source_class_id: classId`) — déjà
-  /// résolus en identifiants par l'appelant (le catalogue de sorts est déjà
-  /// chargé côté écran, voir `presentation/providers/level_up_provider.dart`).
+  /// `SpellcastingRules.statusFor`, `source_class_id: classId`, puis
+  /// plafonné au vrai plafond RAW de sorts préparés — D79 du registre de
+  /// dette technique, `docs/dette-technique.md` — voir le commentaire sur le
+  /// bloc d'écriture lui-même) — déjà résolus en identifiants par l'appelant
+  /// (le catalogue de sorts est déjà chargé côté écran, voir
+  /// `presentation/providers/level_up_provider.dart`).
   /// **Nom conservé tel quel malgré la généralisation** (chantier "sorts
   /// connus par niveau", voir `domain/spells_known_progression.dart`) : ce
   /// paramètre couvrait à l'origine uniquement les sorts de départ d'une
@@ -2483,34 +2487,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
     }
     if (preparingClasses.isEmpty) return null;
 
-    var grantedSpellIds = const <int>{};
-    if (subclassProgress.isNotEmpty) {
-      final grantRows = await _client
-          .from('subclass_spells')
-          .select('subclass_id, spell_id, class_level')
-          .eq('grant_kind', 'always_prepared')
-          .inFilter('subclass_id', [
-            for (final p in subclassProgress) p.subclassId,
-          ]);
-      final ids = <int>{};
-      for (final grant in grantRows) {
-        final grantSubclassId = grant['subclass_id'];
-        final grantSpellId = grant['spell_id'];
-        final grantClassLevel = grant['class_level'];
-        if (grantSubclassId is! num ||
-            grantSpellId is! num ||
-            grantClassLevel is! num) {
-          continue;
-        }
-        final applies = subclassProgress.any(
-          (p) =>
-              p.subclassId == grantSubclassId.toInt() &&
-              grantClassLevel.toInt() <= p.classLevel,
-        );
-        if (applies) ids.add(grantSpellId.toInt());
-      }
-      grantedSpellIds = ids;
-    }
+    final grantedSpellIds = await _grantedAlwaysPreparedSpellIds(
+      subclassProgress,
+    );
 
     final abilityScores = await _fetchAllAbilityScores(characterId);
     final countsByClassId = await _preparedSpellCountsByClass(
@@ -2614,6 +2593,47 @@ class SupabaseCharacterRepository implements CharacterRepository {
       );
     }
     return resolvedClassId;
+  }
+
+  /// Sorts "toujours préparés" accordés par la/les sous-classe(s) décrites
+  /// par [subclassProgress] (`subclass_spells`, `grant_kind =
+  /// 'always_prepared'`, filtré par `class_level <= subclassProgress
+  /// .classLevel`) — D77 (`docs/dette-technique.md`). Extrait de
+  /// [_resolvePreparingClassAndEnforceLimit] pour que le troisième site de
+  /// D79 (voir le bloc `initialSpellIds` de [applyLevelUp]) applique
+  /// EXACTEMENT la même résolution avant d'appeler
+  /// [_preparedSpellCountsByClass] en `excludedSpellIds`, sans dupliquer la
+  /// requête/logique entre les deux appelants. Vide si [subclassProgress]
+  /// est vide (aucune requête).
+  Future<Set<int>> _grantedAlwaysPreparedSpellIds(
+    List<({int subclassId, int classLevel})> subclassProgress,
+  ) async {
+    if (subclassProgress.isEmpty) return const {};
+    final grantRows = await _client
+        .from('subclass_spells')
+        .select('subclass_id, spell_id, class_level')
+        .eq('grant_kind', 'always_prepared')
+        .inFilter('subclass_id', [
+          for (final p in subclassProgress) p.subclassId,
+        ]);
+    final ids = <int>{};
+    for (final grant in grantRows) {
+      final grantSubclassId = grant['subclass_id'];
+      final grantSpellId = grant['spell_id'];
+      final grantClassLevel = grant['class_level'];
+      if (grantSubclassId is! num ||
+          grantSpellId is! num ||
+          grantClassLevel is! num) {
+        continue;
+      }
+      final applies = subclassProgress.any(
+        (p) =>
+            p.subclassId == grantSubclassId.toInt() &&
+            grantClassLevel.toInt() <= p.classLevel,
+      );
+      if (applies) ids.add(grantSpellId.toInt());
+    }
+    return ids;
   }
 
   /// `{classId.toString(): count}` — sorts de niveau >= 1 au statut
@@ -3779,13 +3799,117 @@ class SupabaseCharacterRepository implements CharacterRepository {
             if (!alreadyOrdinarySpellIds.contains(spellId)) spellId,
         };
         if (newInitialSpellIds.isNotEmpty) {
-          final status = SpellcastingRules.statusFor(className).value;
-          await _client.from('character_spells').insert([
+          final status = SpellcastingRules.statusFor(className);
+          var rows = [
             for (final spellId in newInitialSpellIds)
+              (spellId: spellId, status: status),
+          ];
+          // Troisième site de D79 (`docs/dette-technique.md`) : [status]
+          // ci-dessus marque TOUT nouveau sort/cantrip d'une classe à
+          // préparation (Clerc, Druide, Magicien, Paladin, Artificier)
+          // comme `'préparé'`, sans jamais tenir compte du vrai plafond RAW
+          // (`PreparedSpellsLimit.limitFor`) — même bug que les deux
+          // premiers sites (`CharacterCreationRepository.createCharacter`,
+          // `CharacterEditPlanner.plan`), déjà corrigés via
+          // `SpellSelectionResolver.capToPreparedLimit`. En pratique,
+          // n'affecte QUE le Magicien : c'est la seule classe à préparation
+          // présente dans `domain/spells_known_progression.dart
+          // ::SpellsKnownProgression.spellsKnownByLevel` (croissance du
+          // grimoire, +2 sorts de niveau >= 1 par montée de niveau) —
+          // Clerc/Druide/Paladin/Artificier n'y figurent que côté cantrips
+          // (toujours niveau 0, jamais plafonnés, voir
+          // [SpellSelectionResolver.capRowsToPreparedLimit]), donc
+          // [newInitialSpellIds] ne contient jamais de sort de niveau >= 1
+          // pour eux à ce stade (voir
+          // `presentation/providers/level_up_provider.dart::requiresSpellSelection`).
+          // Couvre aussi bien la croissance normale du grimoire À CHAQUE
+          // niveau qu'un multiclassage TARDIF vers le Magicien (après le
+          // niveau 1 total) : ce dernier ne passe jamais par
+          // `CharacterEditPlanner` (réservé au niveau 1 total, voir
+          // [CharacterEditPlanner.plan]), seulement par cette méthode.
+          //
+          // Contrairement aux deux premiers sites (toujours 0 sort déjà
+          // préparé de cette classe, personnage fraîchement créé/édité au
+          // niveau 1) : ici le plafond doit tenir compte du TOTAL CUMULÉ,
+          // pas seulement de [rows] — [alreadyPreparedCounts] rouvre le
+          // compteur de [SpellSelectionResolver.capRowsToPreparedLimit] là
+          // où `_resolvePreparingClassAndEnforceLimit` (vérification
+          // bloquante de [setSpellPrepared]) l'aurait trouvé, même requête
+          // ([_preparedSpellCountsByClass]) — jamais recalculé à la main
+          // ici. Un multiclassage tardif (classe fraîchement ajoutée) donne
+          // naturellement 0 (aucune ligne encore écrite pour [classId]),
+          // donc le même code couvre aussi ce cas sans branche séparée.
+          //
+          // D77 (`docs/dette-technique.md`) : [_preparedSpellCountsByClass]
+          // n'exclut les sorts mineurs et les sorts accordés par une
+          // sous-classe (domaine de Clerc, serment de Paladin...) QUE si
+          // l'appelant lui passe `excludedSpellIds` — jamais automatiquement
+          // (point relevé en relecture de code, cette méthode appelait la
+          // fonction sans cet argument). [grantedSpellIds] ci-dessous
+          // reproduit donc, via [_grantedAlwaysPreparedSpellIds], exactement
+          // la même résolution que `_resolvePreparingClassAndEnforceLimit` :
+          // sans elle, un sort "toujours préparé" d'une sous-classe du
+          // Magicien (aucune à ce jour, mais le code ne doit pas dépendre
+          // d'une coïncidence de contenu) porterait AUSSI une ligne
+          // ordinaire `character_spells` à 'préparé' et serait compté deux
+          // fois, sur-comptant la limite déjà atteinte et rétrogradant à
+          // tort un sort de grimoire légitimement préparé.
+          if (PreparedSpellsLimit.preparesSpells(className)) {
+            final spellLevelRows = await _client
+                .from('spells')
+                .select('id, level')
+                .inFilter('id', newInitialSpellIds.toList());
+            final levelById = {
+              for (final row in spellLevelRows)
+                (row['id'] as num).toInt(): (row['level'] as num).toInt(),
+            };
+            final abilityKey = PreparedSpellsLimit.abilityKeyFor(className);
+            final abilityScores = await _fetchAllAbilityScores(characterId);
+            final score = abilityKey == null
+                ? 10
+                : (abilityScores[abilityKey] ?? 10);
+            final limit =
+                PreparedSpellsLimit.limitFor(
+                  className: className,
+                  classLevel: newClassLevel,
+                  abilityModifier: AbilityScoreRules.abilityModifier(score),
+                ) ??
+                1;
+            final currentSubclassRows = await _client
+                .from('character_classes')
+                .select('level, subclass_id')
+                .eq('character_id', characterId);
+            final currentSubclassProgress =
+                <({int subclassId, int classLevel})>[
+                  for (final row in currentSubclassRows)
+                    if (row['subclass_id'] is num)
+                      (
+                        subclassId: (row['subclass_id'] as num).toInt(),
+                        classLevel: (row['level'] as num?)?.toInt() ?? 0,
+                      ),
+                ];
+            final grantedSpellIds = await _grantedAlwaysPreparedSpellIds(
+              currentSubclassProgress,
+            );
+            final alreadyPreparedCounts = await _preparedSpellCountsByClass(
+              characterId: characterId,
+              classIds: [classId],
+              excludedSpellIds: grantedSpellIds,
+            );
+            rows = SpellSelectionResolver.capRowsToPreparedLimit(
+              rows: rows,
+              levelById: levelById,
+              limit: limit,
+              initialPreparedCount:
+                  alreadyPreparedCounts[classId.toString()] ?? 0,
+            );
+          }
+          await _client.from('character_spells').insert([
+            for (final row in rows)
               {
                 'character_id': characterId,
-                'spell_id': spellId,
-                'status': status,
+                'spell_id': row.spellId,
+                'status': row.status.value,
                 'source_class_id': classId,
               },
           ]);

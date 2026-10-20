@@ -55,6 +55,8 @@ void main() {
   const occultisteClassId = 2;
   const knownSpellId = 100; // déjà connu du personnage via sa classe Barde.
   const newSpellId = 101; // vrai nouveau sort initial de l'Occultiste.
+  const magicienClassId = 3;
+  const fighterClassId = 4;
 
   Future<SupabaseCharacterRepository> repository({
     Map<String, List<Map<String, dynamic>>> rows = const {},
@@ -252,6 +254,302 @@ void main() {
         'status': 'connu',
         'source_class_id': occultisteClassId,
       });
+    });
+  });
+
+  // D79 du registre de dette technique (`docs/dette-technique.md`), troisième
+  // site corrigé : [SpellcastingRules.statusFor] marque TOUT nouveau sort de
+  // niveau >= 1 d'une classe à préparation comme `'préparé'`, sans jamais
+  // tenir compte du vrai plafond RAW (`PreparedSpellsLimit.limitFor`) — en
+  // pratique, seul le Magicien emprunte ce chemin pour des sorts de niveau
+  // >= 1 (croissance du grimoire, voir
+  // `domain/spells_known_progression.dart::SpellsKnownProgression
+  // .spellsKnownByLevel`). [SupabaseCharacterRepository.applyLevelUp] doit
+  // désormais rétrograder l'excédent vers `'connu'`, exactement comme
+  // `CharacterCreationRepository.createCharacter`/`CharacterEditPlanner.plan`
+  // (mêmes deux premiers sites, déjà corrigés) — à ceci près que le plafond
+  // doit ici tenir compte du TOTAL déjà préparé par les niveaux précédents,
+  // pas seulement des sorts ajoutés à CE niveau.
+  group('SupabaseCharacterRepository.applyLevelUp — plafond de préparation '
+      'du Magicien (D79)', () {
+    test('montée de niveau du Magicien : le grimoire grandit de 2 sorts, mais '
+        'le plafond de préparation (déjà atteint par les niveaux précédents) '
+        "rétrograde les deux nouveaux sorts en 'connu' plutôt que de les "
+        "marquer 'préparé'", () async {
+      final recorded = <_Recorded>[];
+      const firstNewSpellId = 501;
+      const secondNewSpellId = 502;
+      final repo = await repository(
+        recorded: recorded,
+        rows: {
+          // Magicien niveau 4 -> 5 (continue, pas un multiclassage).
+          'character_classes': [
+            {'id': 'cc-wizard', 'class_id': magicienClassId, 'level': 4},
+          ],
+          'characters': [
+            {'max_hp': 30, 'current_hp': 30},
+          ],
+          // Intelligence 8 (modificateur -1) : limite RAW au niveau 5 =
+          // 5 (niveau de classe) + (-1) = 4.
+          'character_ability_scores': [
+            {'ability_id': 'int', 'score': 8},
+          ],
+          // 4 sorts de niveau >= 1 déjà préparés par ce personnage pour
+          // le Magicien (venant de niveaux précédents) : la limite (4) est
+          // déjà atteinte avant même ce niveau.
+          'character_spells': [
+            for (final id in [400, 401, 402, 403])
+              {
+                'spell_id': id,
+                'status': 'préparé',
+                'source_class_id': magicienClassId,
+                'spells': {'level': 1},
+              },
+          ],
+          // Niveaux des deux nouveaux sorts de grimoire (niveau 1, donc
+          // comptabilisables — jamais un cantrip).
+          'spells': [
+            {'id': firstNewSpellId, 'level': 1},
+            {'id': secondNewSpellId, 'level': 1},
+          ],
+        },
+      );
+
+      final result = await repo.applyLevelUp(
+        characterId: characterId,
+        classId: magicienClassId,
+        className: 'Magicien',
+        isMulticlassing: false,
+        hpRolled: 4,
+        hpMethod: 'roll',
+        hpGain: 4,
+        initialSpellIds: const [firstNewSpellId, secondNewSpellId],
+      );
+
+      expect(result.newLevel, 5);
+
+      final spellWrites = recorded
+          .where((r) => r.table == 'character_spells' && r.method != 'GET')
+          .toList();
+      expect(spellWrites, hasLength(1));
+      final insertedRows = (spellWrites.single.body! as List)
+          .cast<Map<String, dynamic>>();
+      expect(insertedRows, [
+        {
+          'character_id': characterId,
+          'spell_id': firstNewSpellId,
+          'status': 'connu',
+          'source_class_id': magicienClassId,
+        },
+        {
+          'character_id': characterId,
+          'spell_id': secondNewSpellId,
+          'status': 'connu',
+          'source_class_id': magicienClassId,
+        },
+      ]);
+    });
+
+    // Point relevé par `code-reviewer` avant merge (`docs/dette-technique.md`,
+    // entrée D79, troisième site) : le premier correctif de ce troisième site
+    // appelait [_preparedSpellCountsByClass] sans `excludedSpellIds` —
+    // contrairement au site déjà correct de D77
+    // (`_resolvePreparingClassAndEnforceLimit`), qui exclut les sorts
+    // "toujours préparés" d'une sous-classe (`subclass_spells`, `grant_kind
+    // = 'always_prepared'`) pour ne jamais les compter en double avec une
+    // ligne ordinaire `character_spells` à 'préparé'. Sous-classe de
+    // Magicien FICTIVE pour ce test (aucune n'accorde `'always_prepared'` en
+    // base à ce jour, non vérifié en production par manque d'accès lecture
+    // — le code doit rester défensif indépendamment de ce constat).
+    test(
+      "un sort déjà 'préparé' par ailleurs accordé 'toujours préparé' par la "
+      "sous-classe du personnage ne doit jamais compter deux fois dans le "
+      'plafond : exclu du compteur, il libère de la place pour un nouveau '
+      'sort de grimoire',
+      () async {
+        final recorded = <_Recorded>[];
+        const firstNewSpellId = 501;
+        const secondNewSpellId = 502;
+        const wizardSubclassId = 900;
+        // Parmi les 4 sorts déjà 'préparé' ci-dessous, celui-ci est AUSSI
+        // accordé 'toujours préparé' par la sous-classe du personnage —
+        // recoupement (D77) : sans l'exclusion, il est compté deux fois.
+        const alwaysPreparedSpellId = 403;
+        final repo = await repository(
+          recorded: recorded,
+          rows: {
+            // Magicien niveau 4 -> 5 (continue, pas un multiclassage),
+            // sous-classe déjà choisie (atteinte dès le niveau 2, donc déjà
+            // active au niveau 4).
+            'character_classes': [
+              {
+                'id': 'cc-wizard',
+                'class_id': magicienClassId,
+                'level': 4,
+                'subclass_id': wizardSubclassId,
+              },
+            ],
+            'characters': [
+              {'max_hp': 30, 'current_hp': 30},
+            ],
+            // Intelligence 8 (modificateur -1) : limite RAW au niveau 5 =
+            // 5 (niveau de classe) + (-1) = 4, identique au premier test de
+            // ce groupe.
+            'character_ability_scores': [
+              {'ability_id': 'int', 'score': 8},
+            ],
+            // 4 sorts de niveau >= 1 déjà préparés par ce personnage pour
+            // le Magicien — mais un seul doit réellement compter dans la
+            // limite une fois [alwaysPreparedSpellId] exclu : 3/4, une place
+            // reste donc libre avant même ce niveau.
+            'character_spells': [
+              for (final id in [400, 401, 402, alwaysPreparedSpellId])
+                {
+                  'spell_id': id,
+                  'status': 'préparé',
+                  'source_class_id': magicienClassId,
+                  'spells': {'level': 1},
+                },
+            ],
+            // Sort "toujours préparé" de la sous-classe du personnage,
+            // accordé dès le niveau de classe 2 (déjà atteint au niveau 4) —
+            // même table/`grant_kind` que D77.
+            'subclass_spells': [
+              {
+                'subclass_id': wizardSubclassId,
+                'spell_id': alwaysPreparedSpellId,
+                'class_level': 2,
+                'grant_kind': 'always_prepared',
+              },
+            ],
+            // Niveaux des deux nouveaux sorts de grimoire (niveau 1, donc
+            // comptabilisables — jamais un cantrip).
+            'spells': [
+              {'id': firstNewSpellId, 'level': 1},
+              {'id': secondNewSpellId, 'level': 1},
+            ],
+          },
+        );
+
+        final result = await repo.applyLevelUp(
+          characterId: characterId,
+          classId: magicienClassId,
+          className: 'Magicien',
+          isMulticlassing: false,
+          hpRolled: 4,
+          hpMethod: 'roll',
+          hpGain: 4,
+          initialSpellIds: const [firstNewSpellId, secondNewSpellId],
+        );
+
+        expect(result.newLevel, 5);
+
+        final spellWrites = recorded
+            .where((r) => r.table == 'character_spells' && r.method != 'GET')
+            .toList();
+        expect(spellWrites, hasLength(1));
+        final insertedRows = (spellWrites.single.body! as List)
+            .cast<Map<String, dynamic>>();
+        // Compteur réel 3/4 (place libre) : le premier nouveau sort reste
+        // 'préparé', seul le second excède la limite — sans l'exclusion du
+        // sort "toujours préparé" (compteur erroné 4/4, limite déjà
+        // atteinte), les deux auraient été rétrogradés en 'connu'.
+        expect(insertedRows, [
+          {
+            'character_id': characterId,
+            'spell_id': firstNewSpellId,
+            'status': 'préparé',
+            'source_class_id': magicienClassId,
+          },
+          {
+            'character_id': characterId,
+            'spell_id': secondNewSpellId,
+            'status': 'connu',
+            'source_class_id': magicienClassId,
+          },
+        ]);
+      },
+    );
+
+    test('multiclassage tardif (après le niveau 1 total) vers le Magicien : le '
+        'plafond de préparation RAW du niveau 1 de la classe (pas le quota de '
+        'sélection) rétrograde malgré tout l\'excédent en \'connu\'', () async {
+      final recorded = <_Recorded>[];
+      const firstSpellId = 501;
+      const secondSpellId = 502;
+      const thirdSpellId = 503;
+      final repo = await repository(
+        recorded: recorded,
+        rows: {
+          // Personnage déjà Guerrier niveau 5, multiclasse en Magicien
+          // pour la première fois (niveau 1 de cette nouvelle classe) —
+          // ne passe jamais par `CharacterEditPlanner` (réservé au niveau
+          // 1 TOTAL), seulement par cette méthode.
+          'character_classes': [
+            {'id': 'cc-fighter', 'class_id': fighterClassId, 'level': 5},
+          ],
+          'characters': [
+            {'max_hp': 40, 'current_hp': 40},
+          ],
+          // Intelligence 13 (prérequis Magicien rempli, modificateur +1) ;
+          // Force 14 (prérequis Guerrier déjà possédé toujours rempli).
+          'character_ability_scores': [
+            {'ability_id': 'int', 'score': 13},
+            {'ability_id': 'str', 'score': 14},
+          ],
+          'translations': [
+            {'entity_id': '$fighterClassId', 'value': 'Guerrier'},
+          ],
+          'character_spells': <Map<String, dynamic>>[],
+          // Niveau 1 de Magicien : limite RAW = 1 (niveau de classe) + 1
+          // (modificateur d'Intelligence) = 2, pour 3 sorts choisis.
+          'spells': [
+            {'id': firstSpellId, 'level': 1},
+            {'id': secondSpellId, 'level': 1},
+            {'id': thirdSpellId, 'level': 1},
+          ],
+        },
+      );
+
+      final result = await repo.applyLevelUp(
+        characterId: characterId,
+        classId: magicienClassId,
+        className: 'Magicien',
+        isMulticlassing: true,
+        hpRolled: 4,
+        hpMethod: 'roll',
+        hpGain: 4,
+        initialSpellIds: const [firstSpellId, secondSpellId, thirdSpellId],
+      );
+
+      expect(result.newLevel, 6);
+
+      final spellWrites = recorded
+          .where((r) => r.table == 'character_spells' && r.method != 'GET')
+          .toList();
+      expect(spellWrites, hasLength(1));
+      final insertedRows = (spellWrites.single.body! as List)
+          .cast<Map<String, dynamic>>();
+      expect(insertedRows, [
+        {
+          'character_id': characterId,
+          'spell_id': firstSpellId,
+          'status': 'préparé',
+          'source_class_id': magicienClassId,
+        },
+        {
+          'character_id': characterId,
+          'spell_id': secondSpellId,
+          'status': 'préparé',
+          'source_class_id': magicienClassId,
+        },
+        {
+          'character_id': characterId,
+          'spell_id': thirdSpellId,
+          'status': 'connu',
+          'source_class_id': magicienClassId,
+        },
+      ]);
     });
   });
 }

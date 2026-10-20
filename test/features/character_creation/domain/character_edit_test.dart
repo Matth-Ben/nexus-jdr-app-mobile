@@ -668,5 +668,81 @@ void main() {
         expect(plan.spellInserts, isEmpty);
       });
     });
+
+    // D79 (`docs/dette-technique.md`) : [CharacterEditPlanner.plan] marquait
+    // `'préparé'` tout le quota de sélection d'une classe à préparation
+    // (Clerc, Druide, Magicien, Paladin, Artificier), sans jamais recalculer
+    // le vrai modificateur de caractéristique — même règle et même plafond
+    // (`PreparedSpellsLimit.limitFor`, via
+    // `SpellSelectionResolver.capToPreparedLimit`) qu'à la création
+    // (`CharacterCreationRepository.createCharacter`).
+    group('plafond des sorts préparés (D79)', () {
+      test('multiclassage niveau 1 vers un lanceur à préparation, Sagesse '
+          "faible : seul le plafond RAW reste 'préparé'", () {
+        final snapshot = _snapshot(
+          totalLevel: 1,
+          classId: 1,
+          maxHp: 10,
+          currentHp: 10,
+        );
+        final original = _hydrate(snapshot);
+        final plan = _plan(
+          snapshot,
+          original,
+          original.copyWith(
+            classId: 2,
+            // Sagesse 8 (mod -1) : plafond = niveau 1 + (-1) -> plancher 1
+            // (`PreparedSpellsLimit.limitFor`).
+            abilityScores: {...?original.abilityScores, 'wis': 8},
+            classCantripChoices: const ['Flamme sacrée'],
+            classLevelOneSpellChoices: const ['Soins', 'Bénédiction'],
+          ),
+          editedClass: _clerc,
+          editedSpellCatalog: _clercSpells,
+        );
+
+        expect(plan.spellDeletes, isEmpty);
+        // Quota de sélection inchangé (3 lignes écrites), mais une seule
+        // (le cantrip ne comptant jamais, voir [PreparedSpellsLimit])
+        // reste 'préparé' parmi les sorts de niveau 1 ; l'autre devient
+        // 'connu'.
+        expect(plan.spellInserts, [
+          (spellId: 100, status: SpellStatus.prepared),
+          (spellId: 101, status: SpellStatus.prepared),
+          (spellId: 102, status: SpellStatus.known),
+        ]);
+      });
+
+      test('même multiclassage, Sagesse suffisante : tout le quota '
+          "sélectionné reste 'préparé'", () {
+        final snapshot = _snapshot(
+          totalLevel: 1,
+          classId: 1,
+          maxHp: 10,
+          currentHp: 10,
+        );
+        final original = _hydrate(snapshot);
+        final plan = _plan(
+          snapshot,
+          original,
+          original.copyWith(
+            classId: 2,
+            // Sagesse 16 (mod +3) : plafond = niveau 1 + 3 = 4, largement
+            // suffisant pour les 2 sorts de niveau 1 choisis ci-dessous.
+            abilityScores: {...?original.abilityScores, 'wis': 16},
+            classCantripChoices: const ['Flamme sacrée'],
+            classLevelOneSpellChoices: const ['Soins', 'Bénédiction'],
+          ),
+          editedClass: _clerc,
+          editedSpellCatalog: _clercSpells,
+        );
+
+        expect(plan.spellInserts, [
+          (spellId: 100, status: SpellStatus.prepared),
+          (spellId: 101, status: SpellStatus.prepared),
+          (spellId: 102, status: SpellStatus.prepared),
+        ]);
+      });
+    });
   });
 }
