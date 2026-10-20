@@ -589,13 +589,25 @@ abstract class CharacterRepository {
   /// quatre éléments, voir
   /// `domain/elemental_disciplines_known_progression.dart`). "Déjà connue"
   /// se lit sur `character_class_options.chosen_value` pour la ligne
-  /// `class_features` dont `class_id = classId` et `choice_type =
-  /// 'discipline_elementaire'` (une seule en base à ce jour, voir
-  /// `domain/level_up_block_reason.dart` — jamais une par palier) : même
-  /// résolution par nom que l'écriture, voir
-  /// `applyLevelUp.elementalDisciplineNames`. Noms/descriptions résolus via
-  /// `translations` (`entity_type = 'class_option'`) — voir
-  /// `domain/level_up_elemental_discipline_option.dart`.
+  /// `class_features` dont `choice_type = 'discipline_elementaire'` —
+  /// repérée par ce `choice_type` SEUL (valeur globalement unique dans toute
+  /// la base à ce jour, confirmée par `regles-dnd` : aucune autre
+  /// sous-classe du jeu n'a de disciplines élémentaires), jamais via
+  /// `.eq('class_id', classId)` : `class_features.class_id` est NULL sur
+  /// cette ligne (ligne de sous-classe, seul `subclass_id` est rempli) — un
+  /// filtre `.eq('class_id', classId)` ne la retrouve structurellement
+  /// jamais en PostgREST/SQL (`col = valeur` ne matche jamais NULL), ce qui
+  /// a causé une régression (voir D85 du registre de dette technique,
+  /// `docs/dette-technique.md`) : `applyLevelUp` levait systématiquement une
+  /// [CharacterFailure] dès qu'une discipline élémentaire était choisie, et
+  /// cette méthode considérait TOUJOURS qu'aucune discipline n'était déjà
+  /// connue. [classId] est néanmoins conservé dans la signature pour la
+  /// symétrie avec [fetchAvailableManeuvers] (même forme d'appel côté
+  /// `presentation/providers/level_up_provider.dart`), bien qu'il ne soit
+  /// pas utilisé par cette résolution. Même résolution par nom que
+  /// l'écriture, voir `applyLevelUp.elementalDisciplineNames`. Noms/
+  /// descriptions résolus via `translations` (`entity_type = 'class_option'`)
+  /// — voir `domain/level_up_elemental_discipline_option.dart`.
   Future<List<LevelUpElementalDisciplineOption>>
   fetchAvailableElementalDisciplines({
     required String characterId,
@@ -706,17 +718,24 @@ abstract class CharacterRepository {
   /// convention texte libre que les styles de combat/ennemis jurés, jamais
   /// un identifiant à résoudre : `character_class_options` n'a pas de
   /// colonne dédiée à un FK vers `class_options`). `class_feature_id`
-  /// résolu depuis [classId] (ligne `class_features` dont `choice_type =
-  /// 'discipline_elementaire'`, une seule en base à ce jour — réutilisée pour
-  /// CHAQUE palier 3/6/11/17, jamais une par palier, voir
-  /// `domain/level_up_block_reason.dart`) ; `level` = niveau interne à la
-  /// classe qui progresse (même convention que
+  /// résolu via la ligne `class_features` dont `choice_type =
+  /// 'discipline_elementaire'` — repérée par ce `choice_type` SEUL (valeur
+  /// globalement unique dans toute la base, confirmée par `regles-dnd`),
+  /// **jamais via `.eq('class_id', classId)`** : `class_features.class_id`
+  /// est NULL sur cette ligne de sous-classe, un tel filtre ne la retrouve
+  /// structurellement jamais (`col = valeur` ne matche jamais NULL en
+  /// PostgREST/SQL) — voir D85 du registre de dette technique,
+  /// `docs/dette-technique.md`, et la documentation de
+  /// [fetchAvailableElementalDisciplines]. Une seule ligne existe en base à
+  /// ce jour — réutilisée pour CHAQUE palier 3/6/11/17, jamais une par
+  /// palier, voir `domain/level_up_block_reason.dart`) ; `level` = niveau
+  /// interne à la classe qui progresse (même convention que
   /// [LevelUpChoiceKind.fightingStyle]/[LevelUpChoiceKind.favoredEnemy]).
   /// Lève une [CharacterFailure] si aucune ligne `class_features` de ce
-  /// `choice_type` n'existe pour [classId] alors que cette liste est non
-  /// vide (ne devrait jamais arriver : l'appelant ne déclenche cette étape
-  /// que si le personnage progresse effectivement en Moine Voie des quatre
-  /// éléments). Toujours vide hors de ce cas.
+  /// `choice_type` n'existe en base alors que cette liste est non vide (ne
+  /// devrait jamais arriver : l'appelant ne déclenche cette étape que si le
+  /// personnage progresse effectivement en Moine Voie des quatre éléments).
+  /// Toujours vide hors de ce cas.
   ///
   /// [racialInnateSpellIds] : sorts innés raciaux (`racial_innate_spells`,
   /// lignes sans choix de lignée) devenus accessibles à ce nouveau niveau
@@ -3264,17 +3283,23 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required int targetLevel,
   }) async {
     try {
-      // Ligne `class_features` de ce `choice_type` pour [classId] — une
-      // seule en base à ce jour, réutilisée pour CHAQUE palier (voir la
-      // documentation de [applyLevelUp]), jamais filtrée par niveau. `null`
-      // si introuvable (défensif : ne devrait pas arriver, cette méthode
-      // n'est appelée que pour une classe/sous-classe qui déclenche
-      // effectivement cette étape) — dans ce cas, aucune discipline n'est
-      // jamais considérée "déjà connue" (le filtre ci-dessous reste vide).
+      // Ligne `class_features` de ce `choice_type` — une seule dans TOUTE
+      // la base (`'discipline_elementaire'` est globalement unique, confirmé
+      // par `regles-dnd`), repérée SANS filtre `class_id`/`subclass_id` (voir
+      // la documentation de [fetchAvailableElementalDisciplines] :
+      // `class_features.class_id` est NULL sur cette ligne de sous-classe, un
+      // filtre `.eq('class_id', classId)` ne la retrouve structurellement
+      // jamais — régression corrigée, voir D85 du registre de dette
+      // technique, `docs/dette-technique.md`). Réutilisée pour CHAQUE palier
+      // (voir la documentation de [applyLevelUp]), jamais filtrée par
+      // niveau. `null` si introuvable (défensif : ne devrait pas arriver,
+      // cette méthode n'est appelée que pour une classe/sous-classe qui
+      // déclenche effectivement cette étape) — dans ce cas, aucune
+      // discipline n'est jamais considérée "déjà connue" (le filtre
+      // ci-dessous reste vide).
       final disciplineFeatureRows = await _client
           .from('class_features')
           .select('id')
-          .eq('class_id', classId)
           .eq('choice_type', 'discipline_elementaire')
           .limit(1);
 
@@ -3658,15 +3683,22 @@ class SupabaseCharacterRepository implements CharacterRepository {
         // ci-dessus), cette méthode se contente de résoudre le
         // `class_feature_id` et d'écrire les `chosen_value` reçus.
         //
-        // Une seule ligne `class_features` de ce `choice_type` existe en
-        // base à ce jour (voir `domain/level_up_block_reason.dart`) —
-        // réutilisée pour CHAQUE palier (3/6/11/17), jamais une par palier :
-        // contrairement à `fetchLevelUpLevelData` (scopé au niveau ciblé),
-        // cette recherche n'est PAS filtrée par niveau.
+        // Repérée via `choice_type = 'discipline_elementaire'` SEUL (ce
+        // `choice_type` est globalement unique dans toute la base, confirmé
+        // par `regles-dnd`), jamais via `.eq('class_id', classId)` —
+        // `class_features.class_id` est NULL sur cette ligne de sous-classe,
+        // un tel filtre ne la retrouve structurellement jamais (régression
+        // corrigée, voir D85 du registre de dette technique,
+        // `docs/dette-technique.md`, et la documentation de
+        // [fetchAvailableElementalDisciplines]). Une seule ligne
+        // `class_features` de ce `choice_type` existe en base à ce jour
+        // (voir `domain/level_up_block_reason.dart`) — réutilisée pour
+        // CHAQUE palier (3/6/11/17), jamais une par palier : contrairement à
+        // `fetchLevelUpLevelData` (scopé au niveau ciblé), cette recherche
+        // n'est PAS filtrée par niveau.
         final disciplineFeatureRows = await _client
             .from('class_features')
             .select('id')
-            .eq('class_id', classId)
             .eq('choice_type', 'discipline_elementaire')
             .limit(1);
         if (disciplineFeatureRows.isEmpty) {
