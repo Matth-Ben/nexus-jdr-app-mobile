@@ -1469,6 +1469,7 @@ void _testCatalogTtl({
       required CharacterCreationDraft draft,
       required Map<String, List<Map<String, dynamic>>> tableRows,
       SpellCatalog spellCatalog = const SpellCatalog(spells: []),
+      ClassOption createdClassOption = classOption,
     }) async {
       final db = AppDatabase(NativeDatabase.memory());
       addTearDown(db.close);
@@ -1495,7 +1496,7 @@ void _testCatalogTtl({
         draft: draft,
         characterName: 'Test',
         raceCatalog: const RaceCatalog(races: [], subraces: []),
-        classOption: classOption,
+        classOption: createdClassOption,
         backgroundOption: backgroundOption,
         skillCatalog: const SkillCatalog(skills: []),
         toolCatalog: const ToolCatalog(tools: []),
@@ -1634,6 +1635,259 @@ void _testCatalogTtl({
       // Clerc prépare ses sorts : `SpellcastingRules.statusFor('Clerc')`.
       expect(ordinaryInsert['status'], 'préparé');
       expect(ordinaryInsert['source_class_id'], 3);
+    });
+  });
+
+  group('SupabaseCharacterCreationRepository.createCharacter — plafond des '
+      'sorts préparés (D79)', () {
+    // Même harnais JWT/transport HTTP que le groupe "sorts innés raciaux"
+    // ci-dessus (`signedInClient`), dupliqué ici plutôt que factorisé —
+    // même rationale documentée par le groupe "langue Commune" plus bas.
+    String jwt() {
+      String part(Map<String, Object> json) =>
+          base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+      return '${part({'alg': 'HS256', 'typ': 'JWT'})}.'
+          '${part({'sub': 'user-1', 'exp': 4102444800})}.sig';
+    }
+
+    Future<SupabaseClient> signedInClient({
+      required Map<String, List<Map<String, dynamic>>> tableRows,
+      void Function(http.Request request)? onRequest,
+    }) async {
+      final client = SupabaseClient(
+        'https://fake.supabase.test',
+        'fake-anon-key',
+        httpClient: MockClient((request) async {
+          onRequest?.call(request);
+          final table = request.url.pathSegments.last;
+          final Object body = table == 'characters'
+              ? const {'id': 'char-1'}
+              : (tableRows[table] ?? const <Map<String, dynamic>>[]);
+          return http.Response(
+            jsonEncode(body),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+        postgrestOptions: const PostgrestClientOptions(retryEnabled: false),
+        authOptions: const AuthClientOptions(
+          authFlowType: AuthFlowType.implicit,
+        ),
+      );
+      await client.auth.recoverSession(
+        jsonEncode({
+          'access_token': jwt(),
+          'refresh_token': 'r',
+          'token_type': 'bearer',
+          'expires_in': 3600,
+          'expires_at': 4102444800,
+          'user': {
+            'id': 'user-1',
+            'aud': 'authenticated',
+            'app_metadata': <String, dynamic>{},
+            'user_metadata': <String, dynamic>{},
+            'created_at': '2026-01-01T00:00:00Z',
+          },
+        }),
+      );
+      return client;
+    }
+
+    Future<List<Map<String, dynamic>>> createAndCaptureSpellInserts({
+      required CharacterCreationDraft draft,
+      required ClassOption classOption,
+      required SpellCatalog spellCatalog,
+    }) async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final spellInserts = <Map<String, dynamic>>[];
+      final client = await signedInClient(
+        tableRows: const {},
+        onRequest: (request) {
+          if (request.method == 'POST' &&
+              request.url.pathSegments.last == 'character_spells') {
+            final body = jsonDecode(request.body);
+            spellInserts.addAll(
+              (body as List).map(
+                (row) => Map<String, dynamic>.from(row as Map),
+              ),
+            );
+          }
+        },
+      );
+
+      await SupabaseCharacterCreationRepository(
+        client,
+        ReferenceDataCache(db),
+      ).createCharacter(
+        draft: draft,
+        characterName: 'Test',
+        raceCatalog: const RaceCatalog(races: [], subraces: []),
+        classOption: classOption,
+        backgroundOption: const BackgroundOption(
+          id: 1,
+          name: 'Acolyte',
+          skillProficiencies: [],
+          featureName: '',
+          featureDescription: '',
+        ),
+        skillCatalog: const SkillCatalog(skills: []),
+        toolCatalog: const ToolCatalog(tools: []),
+        languageCatalog: const LanguageCatalog(languages: []),
+        spellCatalog: spellCatalog,
+        itemCatalog: const ItemCatalog(items: []),
+      );
+
+      return spellInserts;
+    }
+
+    const magicienSpellCatalog = SpellCatalog(
+      spells: [
+        SpellOption(
+          id: 201,
+          name: 'Projectile magique',
+          level: 1,
+          school: '',
+          castingTime: '',
+        ),
+        SpellOption(
+          id: 202,
+          name: 'Détection de la magie',
+          level: 1,
+          school: '',
+          castingTime: '',
+        ),
+        SpellOption(
+          id: 203,
+          name: 'Image miroir',
+          level: 1,
+          school: '',
+          castingTime: '',
+        ),
+        SpellOption(
+          id: 204,
+          name: 'Toile d\'araignée',
+          level: 1,
+          school: '',
+          castingTime: '',
+        ),
+      ],
+    );
+
+    test('Magicien à faible Intelligence : le quota de sélection (6 sorts '
+        'de grimoire) reste écrit, mais seul le plafond RAW est '
+        "'préparé' — l'excédent devient 'connu'", () async {
+      const magicien = ClassOption(
+        id: 5,
+        name: 'Magicien',
+        description: '',
+        hitDie: 6,
+      );
+      final spellInserts = await createAndCaptureSpellInserts(
+        draft: const CharacterCreationDraft(
+          classId: 5,
+          // Intelligence 8 (mod -1) : plafond RAW = niveau 1 + (-1)
+          // -> plancher 1 (`PreparedSpellsLimit.limitFor`).
+          abilityScores: {'int': 8},
+          classLevelOneSpellChoices: [
+            'Projectile magique',
+            'Détection de la magie',
+            'Image miroir',
+            'Toile d\'araignée',
+          ],
+        ),
+        classOption: magicien,
+        spellCatalog: magicienSpellCatalog,
+      );
+
+      // Quota de sélection inchangé : les 4 sorts choisis sont tous
+      // écrits (le vrai quota RAW de 6 n'est pas atteint dans ce
+      // brouillon de test, sans conséquence sur ce qui est vérifié
+      // ici — la règle de plafonnement est indépendante du nombre de
+      // sorts sélectionnés).
+      expect(spellInserts, hasLength(4));
+      final preparedCount = spellInserts
+          .where((row) => row['status'] == 'préparé')
+          .length;
+      final knownCount = spellInserts
+          .where((row) => row['status'] == 'connu')
+          .length;
+      expect(preparedCount, 1);
+      expect(knownCount, 3);
+      // Le premier sort choisi reste préparé (ordre de sélection, voir
+      // `SpellSelectionResolver.capToPreparedLimit`).
+      expect(
+        spellInserts.firstWhere((row) => row['spell_id'] == 201)['status'],
+        'préparé',
+      );
+      for (final demotedId in [202, 203, 204]) {
+        expect(
+          spellInserts.firstWhere(
+            (row) => row['spell_id'] == demotedId,
+          )['status'],
+          'connu',
+        );
+      }
+      // `source_class_id` inchangé par la rétrogradation.
+      expect(spellInserts.every((row) => row['source_class_id'] == 5), isTrue);
+    });
+
+    test('Magicien à Intelligence suffisante : tout le quota sélectionné '
+        'reste préparé', () async {
+      const magicien = ClassOption(
+        id: 5,
+        name: 'Magicien',
+        description: '',
+        hitDie: 6,
+      );
+      final spellInserts = await createAndCaptureSpellInserts(
+        draft: const CharacterCreationDraft(
+          classId: 5,
+          // Intelligence 16 (mod +3) : plafond RAW = niveau 1 + 3 = 4,
+          // exactement le nombre de sorts sélectionnés ci-dessous.
+          abilityScores: {'int': 16},
+          classLevelOneSpellChoices: [
+            'Projectile magique',
+            'Détection de la magie',
+            'Image miroir',
+            'Toile d\'araignée',
+          ],
+        ),
+        classOption: magicien,
+        spellCatalog: magicienSpellCatalog,
+      );
+
+      expect(spellInserts, hasLength(4));
+      expect(spellInserts.every((row) => row['status'] == 'préparé'), isTrue);
+    });
+
+    test('modificateur très négatif : le plafond RAW reste à 1, jamais 0 '
+        'ni négatif', () async {
+      const magicien = ClassOption(
+        id: 5,
+        name: 'Magicien',
+        description: '',
+        hitDie: 6,
+      );
+      final spellInserts = await createAndCaptureSpellInserts(
+        draft: const CharacterCreationDraft(
+          classId: 5,
+          // Intelligence 1 (mod -5) : base niveau 1 + (-5) = -4 ->
+          // plancher 1.
+          abilityScores: {'int': 1},
+          classLevelOneSpellChoices: [
+            'Projectile magique',
+            'Détection de la magie',
+            'Image miroir',
+            'Toile d\'araignée',
+          ],
+        ),
+        classOption: magicien,
+        spellCatalog: magicienSpellCatalog,
+      );
+
+      expect(spellInserts.where((row) => row['status'] == 'préparé').length, 1);
     });
   });
 

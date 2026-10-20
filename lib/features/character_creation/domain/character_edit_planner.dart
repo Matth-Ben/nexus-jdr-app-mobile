@@ -246,11 +246,28 @@ abstract final class CharacterEditPlanner {
               ))
                 row.spellId,
             };
-      final newRows = SpellSelectionResolver.resolve(
-        cantripNames: edited.classCantripChoices,
-        levelOneSpellNames: edited.classLevelOneSpellChoices,
+      // Plafonné à [PreparedSpellsLimit.limitFor] (D79, `docs/dette-
+      // technique.md`), même règle qu'à la création
+      // (`CharacterCreationRepository.createCharacter`) : [editedClass] n'est
+      // modifiable qu'au niveau 1 ([canChangeClass] ci-dessus), donc
+      // `classLevel: 1` ici aussi — un multiclassage ajouté PLUS TARD (via
+      // la montée de niveau, `CharacterRepository.applyLevelUp`) ne passe
+      // jamais par ce planificateur. [edited.abilityScores] sont déjà des
+      // valeurs FINALES (décision du 2026-09-25, voir la doc de classe),
+      // jamais besoin de recharger `RaceCatalog` ici contrairement à
+      // [SpellcastingRules] (quotas de sélection, eux, jamais recalculés
+      // depuis l'ability score réel).
+      final newRows = SpellSelectionResolver.capToPreparedLimit(
+        rows: SpellSelectionResolver.resolve(
+          cantripNames: edited.classCantripChoices,
+          levelOneSpellNames: edited.classLevelOneSpellChoices,
+          catalog: editedSpellCatalog,
+          className: editedClass.name,
+        ),
         catalog: editedSpellCatalog,
         className: editedClass.name,
+        classLevel: 1,
+        abilityScores: edited.abilityScores ?? const {},
       );
       final newSpells = {for (final row in newRows) row.spellId};
       // Changement de classe : aucun sort de l'ancienne classe ne reste.
