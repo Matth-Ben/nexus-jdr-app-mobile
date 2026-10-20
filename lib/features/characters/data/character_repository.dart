@@ -790,8 +790,9 @@ abstract class CharacterRepository {
   ///   laissé tel quel ; réinitialise (upsert)
   ///   `character_feature_uses.uses_remaining` pour toutes les
   ///   `class_features` de **toutes** les classes du personnage
-  ///   (multiclassage inclus) atteintes par leur niveau respectif, quel que
-  ///   soit leur `rest_type` ; et récupère (RAW 5e) des dés de vie sur la
+  ///   (multiclassage inclus) ET de leurs éventuelles sous-classes déjà
+  ///   choisies, atteintes par leur niveau respectif, quel que soit leur
+  ///   `rest_type` ; et récupère (RAW 5e) des dés de vie sur la
   ///   classe primaire : `character_classes.hit_dice_spent = max(0,
   ///   hit_dice_spent - max(1, level ~/ 2))`. Purement silencieux côté UI
   ///   (aucun retour transporté par cette méthode ne le reflète) — voir la
@@ -803,8 +804,9 @@ abstract class CharacterRepository {
   ///   laisse derrière lui que des écritures rejouables. Récupère aussi
   ///   (RAW 5e) des dés de vie, voir [hitDiceRecoveredByClassId].
   /// - [RestType.short] : réinitialise uniquement (upsert) les
-  ///   `character_feature_uses` (toutes classes, multiclassage inclus)
-  ///   dont le `rest_type` correspondant vaut `'repos_court'`. Ne touche à
+  ///   `character_feature_uses` (toutes classes et sous-classes,
+  ///   multiclassage inclus) dont le `rest_type` correspondant vaut
+  ///   `'repos_court'`. Ne touche à
   ///   `characters.current_hp`/`character_classes.hit_dice_spent` que si
   ///   [hitDiceSpentByClassId] n'est pas vide (règle RAW 5e "dépenser un ou
   ///   plusieurs dés de vie", déjà entièrement calculée côté appelant — voir
@@ -3947,18 +3949,20 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // [className]), pour recalculer les emplacements de sorts (niveau de
     // lanceur combiné de *toutes* les classes, voir [_resetSpellSlots]),
     // pour retrouver un éventuel Occultiste (magie de pacte), pour
-    // réinitialiser les aptitudes de *toutes* les classes (voir
-    // [_resetFeatureUses] : la lecture de la fiche,
-    // `_buildCharacterDetailPayload`/`_mapCharacterDetailPayload`, gère déjà
-    // explicitement ce cas, un repos doit suivre la même règle plutôt
-    // qu'ignorer silencieusement les classes secondaires), et pour le suivi
-    // des dés de vie de *toutes* les classes (dépense/récupération
-    // ci-dessous, décision chef de projet du 10/10/2026 — avant elle, seule
-    // la classe primaire était lue/écrite, RAW-incorrect dès qu'il y avait
-    // une deuxième classe).
+    // réinitialiser les aptitudes de *toutes* les classes ET de leurs
+    // éventuelles sous-classes déjà choisies (voir [_resetFeatureUses] : la
+    // lecture de la fiche, `_buildCharacterDetailPayload`/
+    // `_mapCharacterDetailPayload`, gère déjà explicitement ce cas, un repos
+    // doit suivre la même règle plutôt qu'ignorer silencieusement les
+    // classes secondaires ou les sous-classes — `subclass_id` sélectionné
+    // ci-dessous pour cette seule raison, [className]/dés de vie ne s'en
+    // servent pas), et pour le suivi des dés de vie de *toutes* les classes
+    // (dépense/récupération ci-dessous, décision chef de projet du
+    // 10/10/2026 — avant elle, seule la classe primaire était lue/écrite,
+    // RAW-incorrect dès qu'il y avait une deuxième classe).
     final classRows = await _client
         .from('character_classes')
-        .select('id, class_id, level, is_primary, hit_dice_spent')
+        .select('id, class_id, subclass_id, level, is_primary, hit_dice_spent')
         .eq('character_id', characterId);
 
     // Classe primaire : ne sert plus qu'à savoir à quelle ligne s'applique
@@ -4172,10 +4176,22 @@ class SupabaseCharacterRepository implements CharacterRepository {
         for (final row in classRows)
           (row['class_id'] as Object).toString(): (row['level'] as num).toInt(),
       };
+      final subclassIds = <Object>{
+        for (final row in classRows)
+          if (row['subclass_id'] != null) row['subclass_id'] as Object,
+      };
+      final subclassLevels = <String, int>{
+        for (final row in classRows)
+          if (row['subclass_id'] != null)
+            (row['subclass_id'] as Object).toString(): (row['level'] as num)
+                .toInt(),
+      };
       await _resetFeatureUses(
         characterId: characterId,
         classIds: classIds,
         classLevels: classLevels,
+        subclassIds: subclassIds,
+        subclassLevels: subclassLevels,
         onlyShortRest: type == RestType.short,
       );
     }
@@ -4365,13 +4381,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
 
   /// Réinitialise (upsert) `character_feature_uses.uses_remaining` pour les
   /// `class_features` de **toutes** les classes du personnage ([classIds])
-  /// atteintes par leur niveau respectif ([classLevels]) — personnage
-  /// multiclassé inclus. Réutilise littéralement
+  /// ET de leurs éventuelles sous-classes déjà choisies ([subclassIds])
+  /// atteintes par leur niveau respectif ([classLevels]/[subclassLevels]) —
+  /// personnage multiclassé inclus. Réutilise littéralement
   /// [ClassFeatureRowMapper.filterAttained], même règle de filtrage que la
   /// lecture de la fiche (`_buildCharacterDetailPayload`/
   /// `_mapCharacterDetailPayload`, qui gère déjà explicitement ce cas pour la
   /// même raison : "pour un personnage multiclassé où plusieurs
   /// `class_id`... sont mélangés").
+  ///
+  /// [subclassIds]/[subclassLevels] ajoutés en même temps que le correctif
+  /// d'affichage de `_buildCharacterDetailPayload` (voir sa documentation) —
+  /// avant cet ajout, une aptitude de sous-classe à usage limité (ex. une
+  /// discipline du Moine Voie des quatre éléments hors coût en ki) n'était
+  /// de toute façon jamais affichée nulle part, donc jamais utilisable
+  /// (`useClassFeature` n'est atteignable que depuis la carte "APTITUDES DE
+  /// CLASSE") ; une fois le correctif d'affichage appliqué seul, une telle
+  /// aptitude serait devenue utilisable sans jamais être rechargée par un
+  /// repos — corrigé ici en même temps plutôt que livré comme régression
+  /// connue.
   ///
   /// [onlyShortRest] détermine quelles aptitudes à usage limité sont
   /// rechargées (voir [_rechargedAmount]) : `false` pour un repos long
@@ -4390,18 +4418,37 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String characterId,
     required Set<Object> classIds,
     required Map<String, int> classLevels,
+    Set<Object> subclassIds = const {},
+    Map<String, int> subclassLevels = const {},
     required bool onlyShortRest,
   }) async {
     if (classIds.isEmpty) return;
 
-    final featureRows = await _client
+    const featureSelect = 'id, class_id, subclass_id, level, uses_per_rest';
+    final featureRowsById = <Object, Map<String, dynamic>>{};
+    final baseRows = await _client
         .from('class_features')
-        .select('id, class_id, level, uses_per_rest')
+        .select(featureSelect)
         .inFilter('class_id', classIds.toList());
+    for (final featureRow in baseRows) {
+      final id = featureRow['id'];
+      if (id != null) featureRowsById[id] = featureRow;
+    }
+    if (subclassIds.isNotEmpty) {
+      final subclassFeatureRows = await _client
+          .from('class_features')
+          .select(featureSelect)
+          .inFilter('subclass_id', subclassIds.toList());
+      for (final featureRow in subclassFeatureRows) {
+        final id = featureRow['id'];
+        if (id != null) featureRowsById[id] = featureRow;
+      }
+    }
 
     final attainedRows = ClassFeatureRowMapper.filterAttained(
-      featureRows,
+      featureRowsById.values.toList(),
       classLevels: classLevels,
+      subclassLevels: subclassLevels,
     );
 
     final payload = [
@@ -5105,19 +5152,41 @@ class SupabaseCharacterRepository implements CharacterRepository {
       entityIds: CharacterSkillRowMapper.collectIds(skillRows),
     );
 
-    // Aptitudes de classe, carte "APTITUDES DE CLASSE" — `class_features`
-    // n'est pas liée directement à `characters` (seulement via `classes`),
-    // donc interrogée séparément, filtrée sur les `class_id` du personnage.
-    // Aucune requête (ni `class_features` ni `translations`) si le
-    // personnage n'a aucune classe (brouillon incomplet) : listes vides.
+    // Aptitudes de classe ET de sous-classe, carte "APTITUDES DE CLASSE" —
+    // `class_features` n'est pas liée directement à `characters` (seulement
+    // via `classes`/`subclasses`), donc interrogée séparément : une requête
+    // filtrée sur les `class_id` du personnage (aptitudes de classe de
+    // base), et, si le personnage a déjà choisi au moins une sous-classe
+    // (`character_classes.subclass_id`), une seconde filtrée sur ces
+    // `subclass_id` (aptitudes de sous-classe). Aucune requête (ni l'une ni
+    // l'autre, ni `translations`) si le personnage n'a aucune classe
+    // (brouillon incomplet) : listes vides.
     //
-    // `.order('level', ascending: true)` : affichage déterministe,
-    // important pour un personnage multiclassé où plusieurs `class_id`
-    // (donc plusieurs jeux d'aptitudes) sont mélangés dans une même
-    // requête — sans quoi PostgREST ne garantit aucun ordre particulier.
+    // **Bug architectural corrigé** (trouvé par l'agent `regles-dnd` en
+    // investiguant le Guerrier Maître de guerre, périmètre élargi à toutes
+    // les sous-classes) : avant ce correctif, seule la requête `class_id`
+    // existait — aucune aptitude de sous-classe n'était jamais résolue ni
+    // affichée, pour aucune sous-classe du jeu, voir la documentation de
+    // classe de `domain/character_class_feature.dart` et
+    // `ClassFeatureRowMapper.filterAttained`.
+    //
+    // Les deux résultats sont fusionnés dans une map par `id` (jamais une
+    // simple concaténation) : défense en profondeur contre un doublon
+    // (ne devrait jamais arriver en pratique, `class_id`/`subclass_id` étant
+    // mutuellement exclusifs en base, mais une ligne comptée deux fois
+    // afficherait l'aptitude deux fois sur la carte).
+    //
+    // `.order('level', ascending: true)` sur chaque requête : affichage
+    // déterministe, important pour un personnage multiclassé où plusieurs
+    // `class_id`/`subclass_id` (donc plusieurs jeux d'aptitudes) sont
+    // mélangés — sans quoi PostgREST ne garantit aucun ordre particulier.
     // Signalé en revue QA. `ascending: true` explicite, pas la valeur par
-    // défaut, même correctif que `skills` ci-dessus.
+    // défaut, même correctif que `skills` ci-dessus. Sans conséquence sur
+    // l'ordre final affiché (tri alphabétique français, voir
+    // [_mapCharacterDetailPayload]) : seulement sur le déterminisme de ce
+    // qui est mis en cache.
     final classIds = CharacterDetailRowMapper.collectClassIdsRaw(row);
+    final subclassIds = CharacterDetailRowMapper.collectSubclassIdsRaw(row);
     var classFeatureRows = const <Map<String, dynamic>>[];
     var classFeatureNameRows = const <Map<String, dynamic>>[];
     var classFeatureDescriptionRows = const <Map<String, dynamic>>[];
@@ -5128,14 +5197,33 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // 42703 `column class_features.description does not exist`, PostgREST
       // ne renvoyant alors qu'un replis silencieux sur le cache). Elle vit
       // dans `translations`, même pattern que `spells`/`items` ci-dessous.
-      classFeatureRows = await _client
+      const featureSelect = 'id, class_id, subclass_id, level, uses_per_rest';
+      final featureRowsById = <Object, Map<String, dynamic>>{};
+      final baseRows = await _client
           .from('class_features')
-          .select('id, class_id, level, uses_per_rest')
+          .select(featureSelect)
           .inFilter('class_id', classIds.toList())
           .order('level', ascending: true);
+      for (final featureRow in baseRows) {
+        final id = featureRow['id'];
+        if (id != null) featureRowsById[id] = featureRow;
+      }
+      if (subclassIds.isNotEmpty) {
+        final subclassFeatureRows = await _client
+            .from('class_features')
+            .select(featureSelect)
+            .inFilter('subclass_id', subclassIds.toList())
+            .order('level', ascending: true);
+        for (final featureRow in subclassFeatureRows) {
+          final id = featureRow['id'];
+          if (id != null) featureRowsById[id] = featureRow;
+        }
+      }
+      classFeatureRows = featureRowsById.values.toList();
       final attainedRows = ClassFeatureRowMapper.filterAttained(
         classFeatureRows,
         classLevels: CharacterDetailRowMapper.collectClassLevels(row),
+        subclassLevels: CharacterDetailRowMapper.collectSubclassLevels(row),
       );
       final attainedIds = ClassFeatureRowMapper.collectIds(attainedRows);
       classFeatureNameRows = await _fetchTranslationRows(
@@ -5461,6 +5549,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     final attainedFeatureRows = ClassFeatureRowMapper.filterAttained(
       _rowsOf(payload['classFeatureRows']),
       classLevels: CharacterDetailRowMapper.collectClassLevels(row),
+      subclassLevels: CharacterDetailRowMapper.collectSubclassLevels(row),
     );
     final classFeatureNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['classFeatureNameRows']),

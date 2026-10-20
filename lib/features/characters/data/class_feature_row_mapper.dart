@@ -8,8 +8,8 @@ import '../domain/character_class_feature.dart';
 /// Voir le commentaire de classe de `CharacterSkillRowMapper` pour le
 /// rationale de duplication avec les mappers de `character_creation/data/`,
 /// et la documentation de classe de [CharacterClassFeature] pour la portée
-/// volontairement limitée aux aptitudes de classe (jamais de sous-classe) à
-/// cette itération.
+/// désormais étendue aux aptitudes de sous-classe (bug architectural corrigé,
+/// voir [filterAttained]).
 abstract final class ClassFeatureRowMapper {
   /// Identifiants (`id`) à résoudre via `translations`, normalisés en
   /// `String`.
@@ -24,31 +24,65 @@ abstract final class ClassFeatureRowMapper {
     return ids;
   }
 
-  /// Ne garde que les lignes `class_features` dont le niveau est atteint par
-  /// la classe correspondante — [classLevels] associe un `class_id`
-  /// (normalisé en `String`) au niveau de cette classe pour le personnage
-  /// (`character_classes.level`). Une ligne dont la classe n'est pas
-  /// présente dans [classLevels] (ne devrait pas arriver, la requête
-  /// `class_features` est déjà filtrée sur les `class_id` du personnage) est
-  /// ignorée par prudence plutôt que de crasher.
+  /// Ne garde que les lignes `class_features` dont le niveau est atteint —
+  /// par la classe correspondante pour une ligne de classe de base
+  /// (`row['class_id']` non nul, [classLevels] associe un `class_id`
+  /// normalisé en `String` au niveau de cette classe pour le personnage,
+  /// `character_classes.level`), ou par la classe QUI PORTE la sous-classe
+  /// pour une ligne de sous-classe (`row['subclass_id']` non nul,
+  /// [subclassLevels] associe de même un `subclass_id` normalisé en
+  /// `String` au niveau de la classe `character_classes` dont c'est la
+  /// sous-classe choisie — jamais un niveau de sous-classe séparé, qui
+  /// n'existe pas en base : une sous-classe progresse au même rythme que sa
+  /// classe).
   ///
-  /// Ne filtre pas explicitement sur `subclass_id is null` : la requête
-  /// amont (`SupabaseCharacterRepository.fetchCharacterDetail`) filtre déjà
-  /// `class_id in (...)`, ce qui exclut mécaniquement les aptitudes de
-  /// sous-classe (`class_id` toujours `null` sur ces lignes-là, voir
-  /// `class_features_class_or_subclass` côté migration).
+  /// **Bug architectural corrigé** (trouvé par l'agent `regles-dnd` en
+  /// investiguant le Guerrier Maître de guerre, périmètre élargi à toutes
+  /// les sous-classes) : avant ce correctif, toute ligne sans `class_id`
+  /// (donc toute aptitude de sous-classe, `class_id`/`subclass_id` étant
+  /// mutuellement exclusifs en base) était ignorée sans condition — la carte
+  /// "APTITUDES DE CLASSE" n'affichait alors jamais aucune aptitude de
+  /// sous-classe, pour aucune sous-classe du jeu. Ce comportement datait
+  /// d'avant l'ajout du choix de sous-classe à la montée de niveau (voir
+  /// l'historique de ce fichier) ; [subclassLevels] est vide par défaut pour
+  /// ne pas casser un appelant qui ne l'a pas encore mis à jour (même
+  /// comportement qu'avant ce correctif dans ce cas).
+  ///
+  /// Une ligne sans `class_id` NI `subclass_id` exploitable (ne devrait pas
+  /// arriver), ou dont la classe/sous-classe correspondante n'est pas
+  /// présente dans [classLevels]/[subclassLevels] (ne devrait pas arriver
+  /// non plus, les requêtes amont filtrent déjà sur les classes/sous-classes
+  /// du personnage), est ignorée par prudence plutôt que de crasher.
+  ///
+  /// Ne filtre jamais sur `choice_type` : une aptitude de sous-classe qui
+  /// représente un choix du joueur (ex. "Supériorité martiale" du Maître de
+  /// guerre, qui ouvre le choix de manœuvres) apparaît malgré tout sur cette
+  /// carte comme texte informatif — même précédent déjà en place pour les
+  /// aptitudes de classe de base portant un `choice_type`
+  /// (`style_combat`/`ennemi_jure`/`pacte`...), dont la valeur réellement
+  /// choisie par le joueur est résolue séparément sur la carte "CHOIX DE
+  /// CLASSE" (`domain/character_class_choice.dart`) sans que cela fasse
+  /// doublon.
   static List<Map<String, dynamic>> filterAttained(
     List<Map<String, dynamic>> rows, {
     required Map<String, int> classLevels,
+    Map<String, int> subclassLevels = const {},
   }) {
     final result = <Map<String, dynamic>>[];
     for (final row in rows) {
       final classId = row['class_id'];
-      if (classId == null) continue;
-      final classLevel = classLevels[classId.toString()];
-      if (classLevel == null) continue;
+      final subclassId = row['subclass_id'];
+      final int? ownerLevel;
+      if (classId != null) {
+        ownerLevel = classLevels[classId.toString()];
+      } else if (subclassId != null) {
+        ownerLevel = subclassLevels[subclassId.toString()];
+      } else {
+        continue;
+      }
+      if (ownerLevel == null) continue;
       final featureLevel = (row['level'] as num?)?.toInt() ?? 0;
-      if (featureLevel > classLevel) continue;
+      if (featureLevel > ownerLevel) continue;
       result.add(row);
     }
     return result;

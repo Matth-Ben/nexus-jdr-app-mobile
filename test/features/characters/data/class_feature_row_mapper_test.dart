@@ -43,7 +43,9 @@ void main() {
       expect(result.map((r) => r['id']), [1]);
     });
 
-    test('une ligne sans class_id (aptitude de sous-classe) est ignorée', () {
+    test('une ligne de sous-classe (class_id nul) est ignorée tant que '
+        'subclassLevels n\'est pas fourni (compatibilité arrière, appelant '
+        'non mis à jour)', () {
       final rows = [
         {'id': 1, 'class_id': null, 'subclass_id': 9, 'level': 1},
       ];
@@ -51,6 +53,75 @@ void main() {
       final result = ClassFeatureRowMapper.filterAttained(
         rows,
         classLevels: const {'5': 3},
+      );
+
+      expect(result, isEmpty);
+    });
+
+    test('bug architectural corrigé : une ligne de sous-classe '
+        '(class_id nul, subclass_id non nul) est désormais incluse si son '
+        'niveau est atteint par la classe qui porte cette sous-classe '
+        '(subclassLevels)', () {
+      final rows = [
+        {'id': 1, 'class_id': null, 'subclass_id': 9, 'level': 3},
+        // Pas encore atteint par le niveau de la classe porteuse (5).
+        {'id': 2, 'class_id': null, 'subclass_id': 9, 'level': 7},
+      ];
+
+      final result = ClassFeatureRowMapper.filterAttained(
+        rows,
+        classLevels: const {},
+        subclassLevels: const {'9': 5},
+      );
+
+      expect(result.map((r) => r['id']), [1]);
+    });
+
+    test('aptitudes de classe de base ET de sous-classe mélangées : chacune '
+        'filtrée par la bonne map (classLevels pour class_id, '
+        'subclassLevels pour subclass_id), sans interférence entre les '
+        'deux', () {
+      final rows = [
+        {'id': 1, 'class_id': 5, 'subclass_id': null, 'level': 1},
+        {'id': 2, 'class_id': null, 'subclass_id': 9, 'level': 3},
+        // Classe de base niveau 10, pas encore atteint par la classe (3).
+        {'id': 3, 'class_id': 5, 'subclass_id': null, 'level': 10},
+      ];
+
+      final result = ClassFeatureRowMapper.filterAttained(
+        rows,
+        classLevels: const {'5': 3},
+        subclassLevels: const {'9': 3},
+      );
+
+      expect(result.map((r) => r['id']), [1, 2]);
+    });
+
+    test('une ligne de sous-classe dont la sous-classe est absente de '
+        'subclassLevels (ne devrait pas arriver, sécurité) est ignorée', () {
+      final rows = [
+        {'id': 1, 'class_id': null, 'subclass_id': 9, 'level': 1},
+      ];
+
+      final result = ClassFeatureRowMapper.filterAttained(
+        rows,
+        classLevels: const {},
+        subclassLevels: const {'99': 10},
+      );
+
+      expect(result, isEmpty);
+    });
+
+    test('une ligne sans class_id NI subclass_id exploitable est ignorée '
+        '(ne devrait pas arriver)', () {
+      final rows = [
+        {'id': 1, 'class_id': null, 'subclass_id': null, 'level': 1},
+      ];
+
+      final result = ClassFeatureRowMapper.filterAttained(
+        rows,
+        classLevels: const {'5': 3},
+        subclassLevels: const {'9': 3},
       );
 
       expect(result, isEmpty);

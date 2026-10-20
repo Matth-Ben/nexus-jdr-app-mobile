@@ -164,6 +164,41 @@ abstract final class CharacterDetailRowMapper {
     return levels;
   }
 
+  /// Identifiants de sous-classe en `int` (pas stringifiés), pour
+  /// interroger `class_features.subclass_id` (`.inFilter`) — distinct de
+  /// [collectSubclassIds] qui stringifie pour `translations.entity_id`
+  /// (`text`). Une ligne sans `subclass_id` exploitable est ignorée. Voir
+  /// `SupabaseCharacterRepository._buildCharacterDetailPayload`.
+  static Set<int> collectSubclassIdsRaw(Map<String, dynamic> row) {
+    final ids = <int>{};
+    for (final classRow in classRowsOf(row)) {
+      final id = classRow['subclass_id'];
+      if (id is num) {
+        ids.add(id.toInt());
+      }
+    }
+    return ids;
+  }
+
+  /// `{subclass_id (stringifié): level}` — même principe que
+  /// [collectClassLevels], mais la clé est le `subclass_id` et la valeur le
+  /// niveau de LA CLASSE qui porte cette sous-classe (`character_classes
+  /// .level` de la ligne où `subclass_id` est renseigné) : une sous-classe
+  /// n'a pas de niveau propre, elle progresse au même rythme que sa classe.
+  /// Sert à `ClassFeatureRowMapper.filterAttained` pour les aptitudes de
+  /// sous-classe (`class_features.subclass_id` non nul). Une sous-classe
+  /// apparaissant deux fois (ne devrait pas arriver, une sous-classe est
+  /// propre à une classe) garde le niveau de sa dernière occurrence.
+  static Map<String, int> collectSubclassLevels(Map<String, dynamic> row) {
+    final levels = <String, int>{};
+    for (final classRow in classRowsOf(row)) {
+      final subclassId = classRow['subclass_id'];
+      if (subclassId == null) continue;
+      levels[subclassId.toString()] = (classRow['level'] as num?)?.toInt() ?? 0;
+    }
+    return levels;
+  }
+
   static List<Map<String, dynamic>> skillProficiencyRowsOf(
     Map<String, dynamic> row,
   ) {

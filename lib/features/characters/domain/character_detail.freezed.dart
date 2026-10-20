@@ -98,10 +98,11 @@ mixin _$CharacterDetail {
 /// onglet "Compétences", carte "LES 18 COMPÉTENCES". Liste vide tant
 /// qu'aucune compétence de référence n'a pu être résolue (ne devrait
 /// arriver que pour un stack de contenu vide).
- List<CharacterSkillRow> get skills;/// Aptitudes de classe déjà atteintes par le niveau actuel du
+ List<CharacterSkillRow> get skills;/// Aptitudes de classe (et de sous-classe, pour une classe dont la
+/// sous-classe est déjà choisie) déjà atteintes par le niveau actuel du
 /// personnage — onglet "Compétences", carte "APTITUDES DE CLASSE". Voir
 /// la documentation de classe de [CharacterClassFeature] pour la portée
-/// (aptitudes de sous-classe jamais incluses à cette itération).
+/// exacte.
  List<CharacterClassFeature> get classFeatures;/// Choix de classe résolus par niveau ("Style de combat"/"Ennemi juré",
 /// `character_class_options`) — onglet "Compétences", carte "CHOIX DE
 /// CLASSE". Même gap de lecture que [classes]`.subclassName` — voir la
@@ -608,15 +609,17 @@ class _CharacterDetail extends CharacterDetail {
   return EqualUnmodifiableListView(_skills);
 }
 
-/// Aptitudes de classe déjà atteintes par le niveau actuel du
+/// Aptitudes de classe (et de sous-classe, pour une classe dont la
+/// sous-classe est déjà choisie) déjà atteintes par le niveau actuel du
 /// personnage — onglet "Compétences", carte "APTITUDES DE CLASSE". Voir
 /// la documentation de classe de [CharacterClassFeature] pour la portée
-/// (aptitudes de sous-classe jamais incluses à cette itération).
+/// exacte.
  final  List<CharacterClassFeature> _classFeatures;
-/// Aptitudes de classe déjà atteintes par le niveau actuel du
+/// Aptitudes de classe (et de sous-classe, pour une classe dont la
+/// sous-classe est déjà choisie) déjà atteintes par le niveau actuel du
 /// personnage — onglet "Compétences", carte "APTITUDES DE CLASSE". Voir
 /// la documentation de classe de [CharacterClassFeature] pour la portée
-/// (aptitudes de sous-classe jamais incluses à cette itération).
+/// exacte.
 @override@JsonKey() List<CharacterClassFeature> get classFeatures {
   if (_classFeatures is EqualUnmodifiableListView) return _classFeatures;
   // ignore: implicit_dynamic_type

@@ -162,10 +162,11 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// arriver que pour un stack de contenu vide).
     @Default(<CharacterSkillRow>[]) List<CharacterSkillRow> skills,
 
-    /// Aptitudes de classe déjà atteintes par le niveau actuel du
+    /// Aptitudes de classe (et de sous-classe, pour une classe dont la
+    /// sous-classe est déjà choisie) déjà atteintes par le niveau actuel du
     /// personnage — onglet "Compétences", carte "APTITUDES DE CLASSE". Voir
     /// la documentation de classe de [CharacterClassFeature] pour la portée
-    /// (aptitudes de sous-classe jamais incluses à cette itération).
+    /// exacte.
     @Default(<CharacterClassFeature>[])
     List<CharacterClassFeature> classFeatures,
 

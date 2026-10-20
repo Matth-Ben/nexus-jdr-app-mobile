@@ -74,6 +74,12 @@ void main() {
   /// résolu côté dépôt). [failOn] : requêtes auxquelles le double répond par
   /// une erreur 500. [journal] : journal fourni par l'appelant, pour le
   /// consulter même quand `applyRest` lève.
+  ///
+  /// [subclassIdByClassName]/[classFeatureRows] : sous-classe déjà choisie
+  /// pour une classe de [classes] (`character_classes.subclass_id`) et
+  /// lignes `class_features` brutes (classe de base ET/OU sous-classe) —
+  /// voir le groupe "réinitialisation character_feature_uses" ci-dessous,
+  /// seul endroit qui les utilise.
   Future<List<_Recorded>> applyRest({
     required List<({String className, int level})> classes,
     RestType type = RestType.long,
@@ -90,6 +96,8 @@ void main() {
     Map<String, int> hitDiceSpentByClassId = const {},
     int appliedGain = 0,
     Map<String, int> hitDiceRecoveredByClassId = const {},
+    Map<String, int> subclassIdByClassName = const {},
+    List<Map<String, dynamic>> classFeatureRows = const [],
   }) async {
     final recorded = journal ?? <_Recorded>[];
     final client = await _buildSignedInFakeSupabaseClient(
@@ -105,6 +113,7 @@ void main() {
             {
               'id': 'cc-$i',
               'class_id': idOf(classes[i].className),
+              'subclass_id': subclassIdByClassName[classes[i].className],
               'level': classes[i].level,
               'is_primary': hasPrimary && i == 0,
               'hit_dice_spent':
@@ -117,6 +126,7 @@ void main() {
               {'entity_id': entry.key.toString(), 'value': entry.value},
         ],
         'character_spell_slots': existingSlotRows,
+        'class_features': classFeatureRows,
       },
     );
     final repository = SupabaseCharacterRepository(
@@ -1367,6 +1377,141 @@ void main() {
       final writes = hitDiceWrites(recorded);
       expect(writes, hasLength(1));
       expect(writes.single.body, {'hit_dice_spent': 1});
+    });
+  });
+
+  group('applyRest — réinitialisation character_feature_uses, classes ET '
+      'sous-classes déjà choisies (bug architectural corrigé, voir '
+      'ClassFeatureRowMapper.filterAttained)', () {
+    /// Lignes réellement upsertées dans `character_feature_uses` (`POST`,
+    /// upsert PostgREST) — `[]` si aucune (payload vide, aucune requête
+    /// émise, voir `SupabaseCharacterRepository._resetFeatureUses`).
+    List<Map<String, dynamic>> featureUsesUpserts(List<_Recorded> recorded) {
+      final upserts = recorded
+          .where(
+            (r) => r.table == 'character_feature_uses' && r.method == 'POST',
+          )
+          .toList();
+      if (upserts.isEmpty) return const [];
+      expect(
+        upserts,
+        hasLength(1),
+        reason: 'un seul upsert character_feature_uses par repos',
+      );
+      return (upserts.single.body as List<dynamic>)
+          .cast<Map<String, dynamic>>();
+    }
+
+    test('repos long : réinitialise aussi une aptitude de SOUS-classe déjà '
+        'atteinte par le niveau de sa classe — avant ce correctif, '
+        '_resetFeatureUses ne requêtait class_features que par class_id, '
+        'jamais par subclass_id : cette aptitude ne se rechargeait donc '
+        'jamais au repos une fois affichée (et donc utilisable) sur la '
+        'carte "APTITUDES DE CLASSE"', () async {
+      const subclassId = 99;
+      final recorded = await applyRest(
+        classes: [(className: 'Rôdeur', level: 6)],
+        subclassIdByClassName: {'Rôdeur': subclassId},
+        classFeatureRows: [
+          {
+            'id': 10,
+            'class_id': idOf('Rôdeur'),
+            'subclass_id': null,
+            'level': 1,
+            'uses_per_rest': {'amount': 4, 'rest_type': 'repos_long'},
+          },
+          {
+            'id': 20,
+            'class_id': null,
+            'subclass_id': subclassId,
+            'level': 3,
+            'uses_per_rest': {'amount': 2, 'rest_type': 'repos_long'},
+          },
+        ],
+      );
+
+      final upserts = featureUsesUpserts(recorded);
+      expect(
+        upserts.map((row) => row['class_feature_id']).toSet(),
+        {10, 20},
+        reason:
+            "l'aptitude de sous-classe (id 20, niveau 3 atteint par une "
+            'classe niveau 6) doit être réinitialisée au même titre que '
+            "l'aptitude de classe de base (id 10)",
+      );
+      final subclassRow = upserts.firstWhere(
+        (row) => row['class_feature_id'] == 20,
+      );
+      expect(subclassRow['uses_remaining'], 2);
+    });
+
+    test('une aptitude de sous-classe pas encore atteinte (niveau de la '
+        'classe insuffisant) n\'est pas réinitialisée', () async {
+      const subclassId = 99;
+      final recorded = await applyRest(
+        classes: [(className: 'Rôdeur', level: 2)],
+        subclassIdByClassName: {'Rôdeur': subclassId},
+        classFeatureRows: [
+          {
+            'id': 20,
+            'class_id': null,
+            'subclass_id': subclassId,
+            'level': 3,
+            'uses_per_rest': {'amount': 2, 'rest_type': 'repos_long'},
+          },
+        ],
+      );
+
+      expect(featureUsesUpserts(recorded), isEmpty);
+    });
+
+    test('repos court : ne réinitialise une aptitude de sous-classe que si '
+        'son rest_type vaut repos_court, même règle que pour une aptitude '
+        'de classe de base', () async {
+      const subclassId = 99;
+      final recorded = await applyRest(
+        type: RestType.short,
+        classes: [(className: 'Rôdeur', level: 6)],
+        subclassIdByClassName: {'Rôdeur': subclassId},
+        classFeatureRows: [
+          {
+            'id': 20,
+            'class_id': null,
+            'subclass_id': subclassId,
+            'level': 3,
+            'uses_per_rest': {'amount': 2, 'rest_type': 'repos_long'},
+          },
+          {
+            'id': 21,
+            'class_id': null,
+            'subclass_id': subclassId,
+            'level': 3,
+            'uses_per_rest': {'amount': 1, 'rest_type': 'repos_court'},
+          },
+        ],
+      );
+
+      final upserts = featureUsesUpserts(recorded);
+      expect(upserts.map((row) => row['class_feature_id']), [21]);
+    });
+
+    test('aucune sous-classe choisie : comportement strictement inchangé '
+        '(seule la classe de base est réinitialisée)', () async {
+      final recorded = await applyRest(
+        classes: [(className: 'Magicien', level: 5)],
+        classFeatureRows: [
+          {
+            'id': 10,
+            'class_id': idOf('Magicien'),
+            'subclass_id': null,
+            'level': 1,
+            'uses_per_rest': {'amount': 3, 'rest_type': 'repos_long'},
+          },
+        ],
+      );
+
+      final upserts = featureUsesUpserts(recorded);
+      expect(upserts.map((row) => row['class_feature_id']), [10]);
     });
   });
 }

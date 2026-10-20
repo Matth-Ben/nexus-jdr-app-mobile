@@ -564,6 +564,29 @@ void main() {
       });
     });
 
+    test('collectSubclassIdsRaw collecte les subclass_id en Set<int>, '
+        'ignore les lignes sans sous-classe choisie', () {
+      final row = _row(
+        characterClasses: const [
+          {'class_id': 5, 'subclass_id': 13, 'level': 3, 'is_primary': true},
+          {'class_id': 7, 'subclass_id': null, 'level': 2, 'is_primary': false},
+        ],
+      );
+      expect(CharacterDetailRowMapper.collectSubclassIdsRaw(row), {13});
+    });
+
+    test('collectSubclassLevels construit {subclass_id: level de la classe '
+        'qui porte cette sous-classe} — pas un niveau de sous-classe '
+        'séparé, qui n\'existe pas en base', () {
+      final row = _row(
+        characterClasses: const [
+          {'class_id': 5, 'subclass_id': 13, 'level': 6, 'is_primary': true},
+          {'class_id': 7, 'subclass_id': null, 'level': 2, 'is_primary': false},
+        ],
+      );
+      expect(CharacterDetailRowMapper.collectSubclassLevels(row), {'13': 6});
+    });
+
     test('collectToolIds/parseToolProficiencyNames : custom_text prioritaire '
         'sur le nom résolu via translations, tool_id sans traduction résolue '
         'retombe sur un libellé générique', () {
