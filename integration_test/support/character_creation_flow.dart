@@ -164,7 +164,25 @@ Future<void> fillAbilityScoreRacialBonusIfPresentStub() async {}
 /// "+1 / +1 / +1" est propose (races a bonus flexibles), le selectionne.
 /// Puis coche les premiers FilterChip encore actifs jusqu'a ce que la carte
 /// affiche son etat "complet".
+///
+/// Bug trouve et corrige pendant cette campagne QA (Aasimar/Druide, premier
+/// scenario sans multiclassage -- donc sans aucun appel a
+/// [incrementAbilityScore], le seul autre endroit qui defile cette meme
+/// liste) : [RacialBonusChoiceCard] est le DERNIER enfant du
+/// `ListView(children: [...])` de l'etape, apres les 6 lignes de
+/// caracteristiques -- meme piege de montage paresseux que documente sur
+/// [incrementAbilityScore]. Sans defilement prealable, "Bonus racial au
+/// choix" n'est jamais monte a l'ecran et cette fonction concluait a tort
+/// qu'aucun bonus racial au choix n'etait propose, laissant "SUIVANT"
+/// durablement desactive -- l'assistant derivait alors jusqu'a l'etape 9/9
+/// sans jamais atteindre son `TextFormField` (`Bad state: No element`), un
+/// symptome tres eloigne de la cause reelle.
 Future<void> fillAbilityScoreRacialBonusIfPresent(WidgetTester tester) async {
+  for (var drag = 0; drag < 10; drag++) {
+    if (find.text('Bonus racial au choix').evaluate().isNotEmpty) break;
+    await tester.drag(find.byType(ListView).first, const Offset(0, -200));
+    await tester.pumpAndSettle(settleTimeout);
+  }
   if (find.text('Bonus racial au choix').evaluate().isEmpty) return;
 
   await tapTextIfPresent(tester, '+1 / +1 / +1');
