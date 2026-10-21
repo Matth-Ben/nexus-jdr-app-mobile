@@ -106,7 +106,42 @@ disposition.
   le projet distant — écran de connexion (vide/erreurs de validation,
   bascule connexion/inscription, un vrai `signUp` jetable jusqu'à l'état
   "vérifiez vos e-mails").
-- Scénarios authentifiés (création des 13 classes, montée de niveau sur le
-  contenu corrigé, races, multiclassage) : **non exécutés**, bloqués par
-  l'absence d'un compte de test confirmé (voir ci-dessus) — à reprendre une
-  fois `config/qa_test_account.json` renseigné.
+- Compte de test confirmé débloqué le 19/10/2026 : scénarios authentifiés
+  exécutés depuis cette date (voir les comptes-rendus QA correspondants).
+- Multiclassage (4 combos) : `multiclass_fighter_rogue_test.dart`,
+  `multiclass_paladin_warlock_test.dart`, `multiclass_ranger_druid_test.dart`,
+  `multiclass_wizard_cleric_test.dart` — exécutés avec succès.
+- Moine Voie des quatre éléments (`level_up_monk_four_elements_test.dart`) :
+  exécuté avec succès (confirme le correctif commit d781354).
+- Guerrier Maître de guerre (`level_up_fighter_battle_master_test.dart`) :
+  exécuté avec succès — confirme en conditions réelles le correctif PR #153
+  (manœuvres/dés de supériorité, D85 du registre de dette technique). A
+  nécessité d'enrichir `support/level_up_flow.dart::runOneLevelUp` (étape
+  "Manœuvres" jamais gérée jusque-là, même trou que les disciplines
+  élémentaires avant leur correctif) — voir le commentaire de ce bloc.
+- Druide Cercle de la Terre (`level_up_druid_circle_of_land_test.dart`) :
+  exécuté avec succès.
+- Barbare, Barde, Clerc (seul), Occultiste (seul), Magicien (seul), Rôdeur
+  (seul) : exécutés avec succès (21/10/2026) — voir
+  `level_up_barbarian_test.dart`, `level_up_bard_test.dart`,
+  `level_up_cleric_test.dart`, `level_up_warlock_test.dart`,
+  `level_up_wizard_test.dart`, `level_up_ranger_test.dart`. Observation hors
+  périmètre de ce test (Barbare/Orc) : une aptitude affichée dans l'onglet
+  APT. porte littéralement le libellé "Restriction : nains uniquement" —
+  signalé à `dev-flutter`, pas corrigé ici.
+- Ensorceleur (`level_up_sorcerer_test.dart`) : **BUG confirmé reproductible
+  (2/2 exécutions)** — la montée de niveau 3 (Métamagie) ne produit aucun
+  bouton "CONTINUER" exploitable (`RangeError`, voir le commentaire du
+  fichier de test) ; `choice_type` de la Métamagie absent de
+  `LevelUpChoiceKind`/`LevelUpBlockRules.resolvedChoiceTypes` et d'aucune
+  étape dédiée de `level_up_screen.dart` (recherche "metamagie"/"metamagic"
+  infructueuse dans `lib/features/characters`) — signalé à `dev-flutter`,
+  pas corrigé ici.
+- Roublard, Artificier (création uniquement pour ce dernier, infusions hors
+  périmètre tant que PR #159 n'est pas mergée) : **non exécutés** — tests
+  écrits (`level_up_rogue_test.dart`, `level_up_artificer_test.dart`) mais
+  campagne interrompue par une instabilité de l'émulateur `emulator-5554`
+  (stockage saturé puis deux ANR système consécutifs puis écran noir
+  persistant malgré plusieurs redémarrages `adb reboot`) — à reprendre une
+  fois l'émulateur relancé proprement (recommandé : redémarrage complet
+  depuis Android Studio/`emulator`, pas seulement `adb reboot`).
