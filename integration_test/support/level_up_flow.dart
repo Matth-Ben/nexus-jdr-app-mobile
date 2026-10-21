@@ -225,6 +225,24 @@ Future<LevelUpOutcome> runOneLevelUp(
     await pumpUntilSettled(tester, attempts: 4);
   }
 
+  // Etape "Metamagie" (Ensorceleur) -- memes tuiles CheckableOptionTile a
+  // quota que "Disciplines elementaires"/"Manoeuvres" ci-dessus (voir
+  // level_up_screen.dart::_metamagicTile) -- jamais gere ici avant cette
+  // campagne QA (correctif D99/cablage Metamagie, 21/10/2026) : sans ce
+  // bloc, "CONTINUER" restait desactive tant que le quota de nouvelles
+  // options n'etait pas atteint, et [runOneLevelUp] le retapait a vide dans
+  // la boucle de rattrapage ci-dessous sans jamais le signaler comme un
+  // blocage -- meme piege que les manoeuvres/disciplines avant leur
+  // correctif. La sous-section optionnelle "Remplacer une option" n'a
+  // besoin d'aucune interaction : elle n'est jamais obligatoire tant
+  // qu'aucune tuile de retrait n'est tapee (voir
+  // level_up_screen.dart::_buildMetamagicStep, `canContinue`).
+  if (find.text('NOUVELLES OPTIONS DE MÉTAMAGIE').evaluate().isNotEmpty) {
+    await fillAvailableCheckableTiles(tester);
+    await tapText(tester, 'CONTINUER');
+    await pumpUntilSettled(tester, attempts: 4);
+  }
+
   // Recapitulatif : "CONTINUER" applique (ecrit en base) et revient a la
   // fiche -- ou enchaine directement sur l'annonce du niveau suivant si un
   // seuil XP supplementaire est deja franchi (improbable ici : la montee
