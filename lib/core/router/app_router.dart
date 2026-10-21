@@ -10,6 +10,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/character_creation/presentation/ability_score_step_screen.dart';
 import '../../features/character_creation/presentation/appearance_and_backstory_step_screen.dart';
 import '../../features/character_creation/presentation/background_step_screen.dart';
+import '../../features/character_creation/presentation/class_choice_step_screen.dart';
 import '../../features/character_creation/presentation/class_step_screen.dart';
 import '../../features/character_creation/presentation/equipment_step_screen.dart';
 import '../../features/character_creation/presentation/lineage_step_screen.dart';
@@ -176,6 +177,21 @@ GoRouter appRouter(Ref ref) {
         name: 'character-creation-subclass',
         path: '/characters/new/subclass',
         builder: (context, state) => const SubclassStepScreen(),
+      ),
+      GoRoute(
+        // Correctif D99 (`docs/dette-technique.md`) : choix nommé de classe
+        // dès le niveau 1, poussée depuis deux points distincts, jamais
+        // toutes les deux à la fois pour un même personnage (voir la doc de
+        // classe de `ClassChoiceStepScreen`) :
+        // - Guerrier/Rôdeur (Style de combat/Ennemi juré), depuis
+        //   '/characters/new/step-2' (`ClassStepScreen._submit`), juste
+        //   après le choix de classe ;
+        // - Roublard (Expertise), depuis '/characters/new/step-5'
+        //   (`SkillsAndToolsStepScreen._submit`), après les choix de
+        //   compétences de cette étape.
+        name: 'character-creation-class-choice',
+        path: '/characters/new/class-choice',
+        builder: (context, state) => const ClassChoiceStepScreen(),
       ),
       GoRoute(
         name: 'character-creation-background',

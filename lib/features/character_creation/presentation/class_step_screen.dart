@@ -13,6 +13,7 @@ import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/class_catalog.dart';
+import '../domain/class_choice_rules.dart';
 import '../domain/creation_step_help.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
@@ -76,6 +77,20 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
     return session != null && !session.canChangeClass;
   }
 
+  /// Mode modification, quel que soit le niveau (contrairement à
+  /// [_isClassLocked], qui ne vaut qu'au-delà du niveau 1) — contournement
+  /// D102 (`docs/dette-technique.md`) : ni `CharacterEditHydrator` ni
+  /// `CharacterEditPlanner`/`CharacterEditRepository` ne pré-remplissent ou
+  /// ne persistent `classFeatureChoiceValue` (Style de combat/Ennemi juré,
+  /// correctif D99). Un personnage de niveau 1 en édition peut toujours
+  /// changer de classe (`_isClassLocked` vaut `false`), mais ne doit jamais
+  /// se voir proposer ce choix nommé tant que ce chantier séparé (D102) n'a
+  /// pas étendu ces trois classes à l'édition : le joueur le verrait, le
+  /// ferait, et le choix serait perdu en silence à l'enregistrement. Voir
+  /// `_submit` pour le point d'usage.
+  bool get _isEditMode =>
+      ref.read(characterEditSessionControllerProvider) != null;
+
   void _selectClass(int classId) {
     if (_isClassLocked) return;
     setState(() {
@@ -114,6 +129,25 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
       context.push('/characters/new/step-3');
       return;
     }
+    final classId = _selectedClassId!;
+    final draft = ref.read(characterCreationDraftControllerProvider);
+    ref
+        .read(characterCreationDraftControllerProvider.notifier)
+        .setClass(
+          classId: classId,
+          subclassId: draft.classId == classId ? draft.subclassId : null,
+        );
+    // Guerrier/Rôdeur : choix nommé de classe dès le niveau 1 (Style de
+    // combat/Ennemi juré) — correctif D99 (`docs/dette-technique.md`).
+    // Poussé AVANT la logique "sous-classe concernée ?" ci-dessous : ces 2
+    // classes ne sont jamais concernées par un choix de sous-classe au
+    // niveau 1 (voir `domain/class_choice_rules.dart`), donc pas de conflit
+    // d'ordre à gérer. Jamais en mode modification (`_isEditMode`) :
+    // contournement D102, voir sa doc de classe.
+    if (!_isEditMode && ClassChoiceRules.isConcerned(classId)) {
+      context.push('/characters/new/class-choice');
+      return;
+    }
     var subclassAsync = ref.read(subclassChoiceCatalogProvider);
     if (subclassAsync.isLoading && !subclassAsync.hasValue) {
       try {
@@ -124,14 +158,6 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
       if (!mounted) return;
       subclassAsync = ref.read(subclassChoiceCatalogProvider);
     }
-    final classId = _selectedClassId!;
-    final draft = ref.read(characterCreationDraftControllerProvider);
-    ref
-        .read(characterCreationDraftControllerProvider.notifier)
-        .setClass(
-          classId: classId,
-          subclassId: draft.classId == classId ? draft.subclassId : null,
-        );
     final concerned = subclassAsync.value?.isConcerned(classId) ?? false;
     if (concerned) {
       context.push('/characters/new/subclass');

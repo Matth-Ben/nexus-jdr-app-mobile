@@ -162,6 +162,21 @@ const _ermite = BackgroundOption(
   featureDescription: '',
 );
 
+/// `classes.id = 9`, le VRAI id du Roublard (correctif D99,
+/// `docs/dette-technique.md`) — distinct des fixtures ci-dessus (ids 1/2/3,
+/// sans rapport avec les ids réels), nécessaire pour exercer
+/// `SkillsAndToolsStepScreen._submit`'s branche Roublard (Expertise, étape
+/// `ClassChoiceStepScreen`, testée dans son propre fichier
+/// `class_choice_step_screen_test.dart`).
+const _realRoublard = ClassOption(
+  id: 9,
+  name: 'Roublard',
+  description: '',
+  hitDie: 8,
+  skillChoices: ClassSkillChoices(count: 1, choices: ['Discrétion']),
+  grantedToolNames: ['outils de voleur'],
+);
+
 // Classe dédiée aux tests des sections 5/6 "(RACE)" : quota (1) ET candidats
 // ('Athlétisme'/'Perception') volontairement distincts/sans chevauchement
 // avec les candidats du Changelin/Satyre utilisés aux côtés de cette classe
@@ -331,6 +346,16 @@ void main() {
           path: '/characters/new/step-8',
           builder: (context, state) => const Scaffold(
             body: Center(child: Text('Étape suivante (sorts sautés)')),
+          ),
+        ),
+        GoRoute(
+          // Correctif D99 : stub de `ClassChoiceStepScreen`, testé dans son
+          // propre fichier (`class_choice_step_screen_test.dart`) — ici on
+          // vérifie seulement que `SkillsAndToolsStepScreen` pousse bien
+          // cette route pour le Roublard.
+          path: '/characters/new/class-choice',
+          builder: (context, state) => const Scaffold(
+            body: Center(child: Text('Étape choix de classe')),
           ),
         ),
       ],
@@ -1476,6 +1501,108 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Abandonner la création ?'), findsOneWidget);
+      },
+    );
+  });
+
+  group('Roublard : Expertise au niveau 1 (correctif D99, '
+      'docs/dette-technique.md)', () {
+    testWidgets('"Suivant" pousse \'/characters/new/class-choice\' APRÈS la '
+        'résolution des choix de compétences, pas directement '
+        "l'étape suivante", (WidgetTester tester) async {
+      fakeRepository.classCatalogToReturn = const ClassCatalog(
+        classes: [_realRoublard],
+      );
+      fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+        backgrounds: [_ermite],
+      );
+      selectClassAndBackground(classId: 9, backgroundId: 10);
+
+      await pumpSkillsAndToolsStep(tester);
+
+      await tester.tap(find.text('Discrétion'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      // Le brouillon porte déjà `classSkillChoices` (résolu par CETTE
+      // étape) : c'est précisément ce qui rend les compétences
+      // candidates à l'Expertise disponibles sur l'écran suivant.
+      expect(readDraft().classSkillChoices, const ['Discrétion']);
+      expect(find.text('Étape suivante'), findsNothing);
+      expect(find.text('Étape suivante (sorts sautés)'), findsNothing);
+      expect(find.text('Étape choix de classe'), findsOneWidget);
+    });
+
+    testWidgets('une autre classe (Guerrier) continue de suivre la logique '
+        'existante, inchangée', (WidgetTester tester) async {
+      fakeRepository.classCatalogToReturn = const ClassCatalog(
+        classes: [_guerrier],
+      );
+      fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+        backgrounds: [_ermite],
+      );
+      selectClassAndBackground(classId: 1, backgroundId: 10);
+
+      await pumpSkillsAndToolsStep(tester);
+
+      await tester.tap(find.text('Athlétisme'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Intimidation'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
+    });
+
+    testWidgets(
+      'régression D102 (docs/dette-technique.md) : en mode modification '
+      "d'un personnage Roublard de niveau 1, \"Suivant\" ne pousse jamais "
+      "'/characters/new/class-choice' (Expertise), contrairement à la "
+      'création ci-dessus — ni `CharacterEditHydrator` ni '
+      '`CharacterEditPlanner`/`CharacterEditRepository` ne pré-remplissent '
+      'ou ne persistent `expertiseSkillChoices` : l\'écran mentirait en '
+      'silence au joueur sur l\'enregistrement de son choix',
+      (WidgetTester tester) async {
+        fakeRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [_realRoublard],
+        );
+        fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+          backgrounds: [_ermite],
+        );
+        const draft = CharacterCreationDraft(classId: 9, backgroundId: 10);
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .replaceWith(draft);
+        container
+            .read(characterEditSessionControllerProvider.notifier)
+            .start(
+              const CharacterEditSession(
+                snapshot: CharacterEditSnapshot(
+                  characterId: 'c1',
+                  name: 'Brunhilde',
+                  primaryClassId: 9,
+                  primaryClassLevel: 1,
+                  totalLevel: 1,
+                  maxHp: 8,
+                  currentHp: 8,
+                ),
+                originalDraft: draft,
+              ),
+            );
+
+        await pumpSkillsAndToolsStep(tester);
+
+        await tester.tap(find.text('Discrétion'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape choix de classe'), findsNothing);
+        // Étape Équipement toujours sautée en mode modification (voir
+        // `_submit`), classe non lanceuse de sorts : direction l'étape 8.
+        expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
       },
     );
   });
