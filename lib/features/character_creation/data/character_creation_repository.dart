@@ -15,8 +15,10 @@ import '../domain/character_creation_draft.dart';
 import '../domain/character_creation_equipment_resolver.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/class_catalog.dart';
+import '../domain/class_choice_rules.dart';
 import '../domain/class_option.dart';
 import '../domain/equipment_choice_tab.dart';
+import '../domain/expertise_step_selection.dart';
 import '../domain/final_ability_scores_resolver.dart';
 import '../../characters/domain/hit_point_bonus_rules.dart';
 import '../domain/class_starting_equipment.dart';
@@ -1282,11 +1284,31 @@ class SupabaseCharacterCreationRepository
         ...draft.raceSkillChoices,
         ...(raceOption?.skillProficiencies ?? const <String>[]),
       ];
-      final skillRows = SkillProficiencyResolver.resolve(
+      // Calculé ici (plutôt que plus bas, voir l'ancien emplacement de
+      // `skillIdByName` juste avant `character_race_choices`) pour pouvoir
+      // déjà résoudre les `skill_id` de l'Expertise du Roublard
+      // ([expertiseSkillIds] ci-dessous) avant l'insertion de
+      // `character_skill_proficiencies` — correctif D99
+      // (`docs/dette-technique.md`).
+      final skillIdByName = {
+        for (final skill in skillCatalog.skills) skill.name: skill.id,
+      };
+      final rawSkillRows = SkillProficiencyResolver.resolve(
         classSkillNames: draft.classSkillChoices,
         backgroundSkillNames: backgroundOption.skillProficiencies,
         raceSkillNames: raceSkillNames,
         catalog: skillCatalog,
+      );
+      // Rehausse la maîtrise des compétences choisies pour l'Expertise du
+      // Roublard au niveau 1 ('competente' -> 'expertise', voir
+      // `domain/expertise_step_selection.dart`) — correctif D99. Vide pour
+      // toute autre classe, ou tant que rien n'est choisi.
+      final expertiseSkillIds = <int>{
+        for (final name in draft.expertiseSkillChoices) ?skillIdByName[name],
+      };
+      final skillRows = ExpertiseStepSelection.upgradeToExpertise(
+        skillRows: rawSkillRows,
+        expertiseSkillIds: expertiseSkillIds,
       );
       if (skillRows.isNotEmpty) {
         await _client.from('character_skill_proficiencies').insert([
@@ -1327,10 +1349,8 @@ class SupabaseCharacterCreationRepository
       // mêmes catalogues que ci-dessus ; un nom sans correspondance (ne
       // devrait pas arriver, voir [SkillProficiencyResolver]/
       // [ToolProficiencyResolver]) est ignoré plutôt que de faire échouer
-      // toute la création.
-      final skillIdByName = {
-        for (final skill in skillCatalog.skills) skill.name: skill.id,
-      };
+      // toute la création. `skillIdByName` déjà calculé plus haut (voir
+      // [expertiseSkillIds]), réutilisé tel quel ici.
       final raceSkillIds = <int>{
         for (final name in raceSkillNames) ?skillIdByName[name],
       };
@@ -1487,6 +1507,130 @@ class SupabaseCharacterCreationRepository
               'notes': null,
             },
         ]);
+      }
+
+      // Choix nommés de niveau 1 faits DIRECTEMENT à la création — correctif
+      // D99 (`docs/dette-technique.md`) : jusqu'ici, seul le multiclassage
+      // tardif via l'écran de montée de niveau proposait ces choix
+      // (`character_class_options`, jamais écrite par [createCharacter]
+      // avant ce correctif, pour un personnage créé directement dans une
+      // classe de départ qui en a un dès le niveau 1). Résolution de la
+      // ligne `class_features` concernée via le même principe déjà établi
+      // côté montée de niveau : `choice_type` + `class_id` pour un choix de
+      // CLASSE (Style de combat/Ennemi juré/Expertise, voir
+      // `domain/class_choice_rules.dart`), `choice_type` SEUL (sans
+      // `class_id`, toujours NULL sur une ligne de sous-classe — voir D85/D86
+      // du registre de dette technique) pour un choix de SOUS-CLASSE
+      // (Ancêtre draconique). Une ligne `class_features` introuvable (cas
+      // défensif, ne devrait jamais arriver pour les 4 mécaniques couvertes)
+      // n'écrit simplement rien, plutôt que de faire échouer toute la
+      // création.
+      final classFeatureChoiceValue = draft.classFeatureChoiceValue;
+      if (classFeatureChoiceValue != null) {
+        final kind = ClassChoiceRules.kindFor(classOption.id);
+        if (kind != null) {
+          final featureRows = await _client
+              .from('class_features')
+              .select('id')
+              .eq('class_id', classOption.id)
+              .eq('level', 1)
+              .eq('choice_type', ClassChoiceRules.choiceTypeFor(kind))
+              .limit(1);
+          if (featureRows.isNotEmpty) {
+            final classFeatureId = (featureRows.first['id'] as num).toInt();
+            await _client.from('character_class_options').insert({
+              'character_id': characterId,
+              'class_feature_id': classFeatureId,
+              'level': 1,
+              'chosen_value': classFeatureChoiceValue,
+            });
+          }
+        }
+      }
+
+      // Expertise du Roublard : une ligne `character_class_options` par
+      // "emplacement" utilisé (compétence(s) + éventuellement la
+      // substitution outils de voleur), même convention que les autres
+      // choix à quota multiple de ce chantier (ex. manœuvres/disciplines
+      // élémentaires côté montée de niveau) — jamais une seule ligne avec
+      // les noms joints. Le bonus chiffré réel (`proficiency = 'expertise'`)
+      // a déjà été appliqué plus haut sur `character_skill_proficiencies`
+      // (voir [expertiseSkillIds]) : cette table-ci ne sert qu'à l'affichage
+      // "CHOIX DE CLASSE" de la fiche, même rôle que pour Style de
+      // combat/Ennemi juré.
+      if (draft.expertiseSkillChoices.isNotEmpty ||
+          draft.expertiseThievesToolsSubstitution) {
+        final expertiseFeatureRows = await _client
+            .from('class_features')
+            .select('id')
+            .eq('class_id', classOption.id)
+            .eq('level', 1)
+            .eq('choice_type', 'expertise')
+            .limit(1);
+        if (expertiseFeatureRows.isNotEmpty) {
+          final expertiseFeatureId = (expertiseFeatureRows.first['id'] as num)
+              .toInt();
+          // La maîtrise d'outils de voleur est TOUJOURS accordée
+          // automatiquement au Roublard (`ClassOption.grantedToolNames`,
+          // jamais un choix) : premier (et seul) nom de cette liste plutôt
+          // qu'une chaîne `'outils de voleur'` codée en dur, voir
+          // `domain/expertise_step_selection.dart`.
+          final thievesToolsName =
+              draft.expertiseThievesToolsSubstitution &&
+                  classOption.grantedToolNames.isNotEmpty
+              ? classOption.grantedToolNames.first
+              : null;
+          final expertiseOptionRows = [
+            for (final name in draft.expertiseSkillChoices)
+              {
+                'character_id': characterId,
+                'class_feature_id': expertiseFeatureId,
+                'level': 1,
+                'chosen_value': name,
+              },
+            if (thievesToolsName != null)
+              {
+                'character_id': characterId,
+                'class_feature_id': expertiseFeatureId,
+                'level': 1,
+                'chosen_value': thievesToolsName,
+              },
+          ];
+          if (expertiseOptionRows.isNotEmpty) {
+            await _client
+                .from('character_class_options')
+                .insert(expertiseOptionRows);
+          }
+        }
+      }
+
+      // Second choix de niveau 1 propre à la SOUS-CLASSE (ex. Ancêtre
+      // draconique du Lignage draconique, Ensorceleur) — voir
+      // `domain/subclass_feature_choice.dart`. Résolu via `subclass_id` +
+      // `choice_type` non nul ET différent de `'sous_classe'` (ce dernier
+      // étant déjà le choix de sous-classe lui-même, jamais écrit ici),
+      // générique plutôt qu'une liste de sous-classes codée en dur.
+      final subclassFeatureChoiceValue = draft.subclassFeatureChoiceValue;
+      final subclassId = draft.subclassId;
+      if (subclassFeatureChoiceValue != null && subclassId != null) {
+        final subclassFeatureRows = await _client
+            .from('class_features')
+            .select('id')
+            .eq('subclass_id', subclassId)
+            .eq('level', 1)
+            .not('choice_type', 'is', null)
+            .neq('choice_type', 'sous_classe')
+            .limit(1);
+        if (subclassFeatureRows.isNotEmpty) {
+          final subclassFeatureId = (subclassFeatureRows.first['id'] as num)
+              .toInt();
+          await _client.from('character_class_options').insert({
+            'character_id': characterId,
+            'class_feature_id': subclassFeatureId,
+            'level': 1,
+            'chosen_value': subclassFeatureChoiceValue,
+          });
+        }
       }
 
       return characterId;

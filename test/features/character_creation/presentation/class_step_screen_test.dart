@@ -135,6 +135,17 @@ const _guerrier = ClassOption(
   hitDie: 10,
 );
 
+/// `classes.id = 5`, le VRAI id du Guerrier (correctif D99,
+/// `docs/dette-technique.md`) — distinct de [_guerrier] ci-dessus (id de
+/// fixture 2, sans rapport avec les ids réels, utilisé par les tests
+/// préexistants qui ne testent pas `ClassChoiceRules`).
+const _realGuerrier = ClassOption(
+  id: 5,
+  name: 'Guerrier',
+  description: 'Maître du combat.',
+  hitDie: 10,
+);
+
 void main() {
   late _FakeCharacterCreationRepository fakeRepository;
   late _FakeSubclassChoiceRepository fakeSubclassRepository;
@@ -181,6 +192,15 @@ void main() {
           path: '/characters/new/subclass',
           builder: (context, state) =>
               const Scaffold(body: Center(child: Text('Étape sous-classe'))),
+        ),
+        GoRoute(
+          // Correctif D99 : stub de `ClassChoiceStepScreen`, testé dans son
+          // propre fichier (`class_choice_step_screen_test.dart`) — ici on
+          // vérifie seulement que `ClassStepScreen` pousse bien cette route.
+          path: '/characters/new/class-choice',
+          builder: (context, state) => const Scaffold(
+            body: Center(child: Text('Étape choix de classe')),
+          ),
         ),
         GoRoute(
           path: '/characters/new/step-3',
@@ -484,6 +504,52 @@ void main() {
       expect(readDraft(), const CharacterCreationDraft(classId: 2));
     },
   );
+
+  group('choix nommé de classe au niveau 1 (correctif D99, '
+      'docs/dette-technique.md)', () {
+    testWidgets('Guerrier (classes.id = 5) : "Suivant" pousse '
+        "'/characters/new/class-choice', pas la logique sous-classe", (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.catalogToReturn = const ClassCatalog(
+        classes: [_magicien, _realGuerrier],
+      );
+
+      await pumpClassStep(tester);
+
+      await tester.tap(find.text('Guerrier'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(readDraft(), const CharacterCreationDraft(classId: 5));
+      expect(find.text('Étape choix de classe'), findsOneWidget);
+      expect(find.text('Étape sous-classe'), findsNothing);
+      // Le catalogue de sous-classes n'a même pas besoin d'être résolu
+      // pour cette classe : aucun appel réseau supplémentaire déclenché
+      // par ce court-circuit.
+    });
+
+    testWidgets(
+      'une classe non concernée (Magicien) continue de suivre la logique '
+      'sous-classe existante, inchangée',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const ClassCatalog(
+          classes: [_magicien],
+        );
+
+        await pumpClassStep(tester);
+
+        await tester.tap(find.text('Magicien'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape choix de classe'), findsNothing);
+        expect(find.text('Étape suivante'), findsOneWidget);
+      },
+    );
+  });
 
   group('aide contextuelle / abandon (docs/cahier-des-charges/'
       '11-fonctionnalites-a-ajouter.md section 3)', () {

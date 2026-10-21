@@ -2647,6 +2647,287 @@ void _testCatalogTtl({
       },
     );
   });
+
+  group(
+    'SupabaseCharacterCreationRepository.createCharacter — choix nommés de '
+    'niveau 1 faits à la création (correctif D99, docs/dette-technique.md)',
+    () {
+      // Même principe que le harnais JWT/transport HTTP des groupes
+      // précédents (`signedInClient`), dupliqué ici plutôt que factorisé —
+      // voir la doc de classe de ce fichier.
+      String jwt() {
+        String part(Map<String, Object> json) =>
+            base64Url.encode(utf8.encode(jsonEncode(json))).replaceAll('=', '');
+        return '${part({'alg': 'HS256', 'typ': 'JWT'})}.'
+            '${part({'sub': 'user-1', 'exp': 4102444800})}.sig';
+      }
+
+      Future<SupabaseClient> signedInClient({
+        required Map<String, List<Map<String, dynamic>>> tableRows,
+        void Function(http.Request request)? onRequest,
+      }) async {
+        final client = SupabaseClient(
+          'https://fake.supabase.test',
+          'fake-anon-key',
+          httpClient: MockClient((request) async {
+            onRequest?.call(request);
+            final table = request.url.pathSegments.last;
+            final Object body = table == 'characters'
+                ? const {'id': 'char-1'}
+                : (tableRows[table] ?? const <Map<String, dynamic>>[]);
+            return http.Response(
+              jsonEncode(body),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }),
+          postgrestOptions: const PostgrestClientOptions(retryEnabled: false),
+          authOptions: const AuthClientOptions(
+            authFlowType: AuthFlowType.implicit,
+          ),
+        );
+        await client.auth.recoverSession(
+          jsonEncode({
+            'access_token': jwt(),
+            'refresh_token': 'r',
+            'token_type': 'bearer',
+            'expires_in': 3600,
+            'expires_at': 4102444800,
+            'user': {
+              'id': 'user-1',
+              'aud': 'authenticated',
+              'app_metadata': <String, dynamic>{},
+              'user_metadata': <String, dynamic>{},
+              'created_at': '2026-01-01T00:00:00Z',
+            },
+          }),
+        );
+        return client;
+      }
+
+      const raceCatalog = RaceCatalog(races: [], subraces: []);
+      const backgroundOption = BackgroundOption(
+        id: 1,
+        name: 'Soldat',
+        skillProficiencies: [],
+        featureName: '',
+        featureDescription: '',
+      );
+
+      /// `class_features.id = 5`, classId du Guerrier (réel) — voir
+      /// `domain/class_choice_rules.dart`.
+      const guerrier = ClassOption(
+        id: 5,
+        name: 'Guerrier',
+        description: '',
+        hitDie: 10,
+      );
+
+      /// `classes.id = 9`, le Roublard, avec sa maîtrise d'outils de voleur
+      /// toujours accordée automatiquement.
+      const roublard = ClassOption(
+        id: 9,
+        name: 'Roublard',
+        description: '',
+        hitDie: 8,
+        skillChoices: ClassSkillChoices(count: 1, choices: ['Discrétion']),
+        grantedToolNames: ['outils de voleur'],
+      );
+
+      const skillCatalog = SkillCatalog(
+        skills: [SkillOption(id: 50, name: 'Discrétion', abilityId: 'dex')],
+      );
+
+      Future<
+        ({
+          List<Map<String, dynamic>> classOptionInserts,
+          List<Map<String, dynamic>> skillInserts,
+        })
+      >
+      createAndCapture({
+        required CharacterCreationDraft draft,
+        required ClassOption classOption,
+        Map<String, List<Map<String, dynamic>>> extraTableRows = const {},
+      }) async {
+        final db = AppDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        final classOptionInserts = <Map<String, dynamic>>[];
+        final skillInserts = <Map<String, dynamic>>[];
+        final client = await signedInClient(
+          tableRows: extraTableRows,
+          onRequest: (request) {
+            if (request.method != 'POST') return;
+            final table = request.url.pathSegments.last;
+            final body = jsonDecode(request.body);
+            // `.insert({...})` (une seule ligne, style_combat/Ancêtre
+            // draconique) sérialise un objet JSON nu, pas une liste —
+            // contrairement à `.insert([...])` (expertise, plusieurs
+            // lignes) : les deux formes doivent être capturées ici.
+            final rows = body is List
+                ? body.map((row) => Map<String, dynamic>.from(row as Map))
+                : [Map<String, dynamic>.from(body as Map)];
+            if (table == 'character_class_options') {
+              classOptionInserts.addAll(rows);
+            } else if (table == 'character_skill_proficiencies') {
+              skillInserts.addAll(rows);
+            }
+          },
+        );
+
+        await SupabaseCharacterCreationRepository(
+          client,
+          ReferenceDataCache(db),
+        ).createCharacter(
+          draft: draft,
+          characterName: 'Test',
+          raceCatalog: raceCatalog,
+          classOption: classOption,
+          backgroundOption: backgroundOption,
+          skillCatalog: skillCatalog,
+          toolCatalog: const ToolCatalog(tools: []),
+          languageCatalog: const LanguageCatalog(languages: []),
+          spellCatalog: const SpellCatalog(spells: []),
+          itemCatalog: const ItemCatalog(items: []),
+        );
+
+        return (
+          classOptionInserts: classOptionInserts,
+          skillInserts: skillInserts,
+        );
+      }
+
+      test(
+        'Guerrier (Style de combat) : écrit une ligne character_class_options '
+        'avec le class_feature_id résolu et le libellé choisi',
+        () async {
+          final result = await createAndCapture(
+            draft: const CharacterCreationDraft(
+              classId: 5,
+              classFeatureChoiceValue: 'Duel',
+            ),
+            classOption: guerrier,
+            extraTableRows: {
+              'class_features': [
+                {'id': 15},
+              ],
+            },
+          );
+
+          expect(result.classOptionInserts, hasLength(1));
+          expect(result.classOptionInserts.single['class_feature_id'], 15);
+          expect(result.classOptionInserts.single['level'], 1);
+          expect(result.classOptionInserts.single['chosen_value'], 'Duel');
+        },
+      );
+
+      test('ligne class_features introuvable (cas défensif) : aucune écriture, '
+          'la création réussit malgré tout', () async {
+        final result = await createAndCapture(
+          draft: const CharacterCreationDraft(
+            classId: 5,
+            classFeatureChoiceValue: 'Duel',
+          ),
+          classOption: guerrier,
+          extraTableRows: const {},
+        );
+
+        expect(result.classOptionInserts, isEmpty);
+      });
+
+      test('Roublard (Expertise) : 1 compétence + substitution outils de '
+          'voleur écrit 2 lignes character_class_options, ET rehausse la '
+          'compétence choisie à \'expertise\' dans '
+          'character_skill_proficiencies', () async {
+        final result = await createAndCapture(
+          draft: const CharacterCreationDraft(
+            classId: 9,
+            classSkillChoices: ['Discrétion'],
+            expertiseSkillChoices: ['Discrétion'],
+            expertiseThievesToolsSubstitution: true,
+          ),
+          classOption: roublard,
+          extraTableRows: {
+            'class_features': [
+              {'id': 33},
+            ],
+          },
+        );
+
+        expect(result.classOptionInserts, hasLength(2));
+        expect(
+          result.classOptionInserts.map((row) => row['chosen_value']),
+          containsAll(<String>['Discrétion', 'outils de voleur']),
+        );
+        expect(
+          result.classOptionInserts.every(
+            (row) => row['class_feature_id'] == 33,
+          ),
+          isTrue,
+        );
+
+        final discretionRow = result.skillInserts.singleWhere(
+          (row) => row['skill_id'] == 50,
+        );
+        expect(discretionRow['proficiency'], 'expertise');
+      });
+
+      test('Roublard (Expertise) sans substitution outils : la compétence '
+          'choisie est rehaussée, aucune ligne \'outils de voleur\'', () async {
+        final result = await createAndCapture(
+          draft: const CharacterCreationDraft(
+            classId: 9,
+            classSkillChoices: ['Discrétion'],
+            expertiseSkillChoices: ['Discrétion'],
+          ),
+          classOption: roublard,
+          extraTableRows: {
+            'class_features': [
+              {'id': 33},
+            ],
+          },
+        );
+
+        expect(result.classOptionInserts, hasLength(1));
+        expect(result.classOptionInserts.single['chosen_value'], 'Discrétion');
+        final discretionRow = result.skillInserts.singleWhere(
+          (row) => row['skill_id'] == 50,
+        );
+        expect(discretionRow['proficiency'], 'expertise');
+      });
+
+      test('Ensorceleur, Lignage draconique (Ancêtre draconique) : écrit une '
+          'ligne character_class_options résolue par subclass_id seul (jamais '
+          'class_id, NULL sur une ligne de sous-classe)', () async {
+        const ensorceleur = ClassOption(
+          id: 6,
+          name: 'Ensorceleur',
+          description: '',
+          hitDie: 6,
+        );
+        final result = await createAndCapture(
+          draft: const CharacterCreationDraft(
+            classId: 6,
+            subclassId: 12,
+            subclassFeatureChoiceValue: 'Dragon rouge',
+          ),
+          classOption: ensorceleur,
+          extraTableRows: {
+            'class_features': [
+              {'id': 368},
+            ],
+          },
+        );
+
+        expect(result.classOptionInserts, hasLength(1));
+        expect(result.classOptionInserts.single['class_feature_id'], 368);
+        expect(
+          result.classOptionInserts.single['chosen_value'],
+          'Dragon rouge',
+        );
+      });
+    },
+  );
 }
 
 /// Réécrit directement (hors `ReferenceDataCache`, en accédant à [db]) le
