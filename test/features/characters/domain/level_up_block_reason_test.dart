@@ -94,6 +94,41 @@ void main() {
         );
         expect(reason, isNull);
       });
+
+      test("'metamagie' ne bloque plus (Ensorceleur, aptitude de CLASSE) — "
+          'rejoint resolvedChoiceTypes, mène désormais à la nouvelle étape '
+          '"Métamagie", jamais à l\'étape "Choix à faire"', () {
+        final reason = LevelUpBlockRules.evaluate(
+          targetLevel: 3,
+          className: 'Ensorceleur',
+          classFeatureChoiceType: 'metamagie',
+        );
+        expect(reason, isNull);
+      });
+
+      test("'expertise' ne bloque plus (Barde/Roublard, aptitude de CLASSE) "
+          '— rejoint resolvedChoiceTypes, mène désormais à la nouvelle '
+          'étape "Expertise", jamais à l\'étape "Choix à faire"', () {
+        final reason = LevelUpBlockRules.evaluate(
+          targetLevel: 3,
+          className: 'Barde',
+          classFeatureChoiceType: 'expertise',
+        );
+        expect(reason, isNull);
+      });
+
+      test("'ancetre_draconique' ne bloque plus (Ensorceleur, Lignage "
+          'draconique, aptitude de SOUS-CLASSE) — rejoint '
+          'resolvedChoiceTypes par précaution défensive (même rationale que '
+          "D85/D92), mène désormais à la nouvelle étape \"Ascendance "
+          'draconique", jamais à l\'étape "Choix à faire"', () {
+        final reason = LevelUpBlockRules.evaluate(
+          targetLevel: 1,
+          className: 'Ensorceleur',
+          classFeatureChoiceType: 'ancetre_draconique',
+        );
+        expect(reason, isNull);
+      });
     },
   );
 
@@ -101,7 +136,8 @@ void main() {
       'bloquent plus', () {
     test('resolvedChoiceTypes contient exactement sous_classe/'
         'style_combat/ennemi_jure/invocation/pacte/discipline_elementaire/'
-        'tir_arcanique/rune/infusion/manoeuvre', () {
+        'tir_arcanique/rune/infusion/manoeuvre/metamagie/expertise/'
+        'ancetre_draconique', () {
       expect(LevelUpBlockRules.resolvedChoiceTypes, {
         'sous_classe',
         'style_combat',
@@ -113,6 +149,9 @@ void main() {
         'rune',
         'infusion',
         'manoeuvre',
+        'metamagie',
+        'expertise',
+        'ancetre_draconique',
       });
     });
 

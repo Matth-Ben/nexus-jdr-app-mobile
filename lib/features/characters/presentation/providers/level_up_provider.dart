@@ -8,6 +8,7 @@ import '../../domain/arcane_shots_known_progression.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/character_failure.dart';
 import '../../domain/elemental_disciplines_known_progression.dart';
+import '../../domain/expertise_known_progression.dart';
 import '../../domain/hit_point_bonus_rules.dart';
 import '../../domain/infusions_known_progression.dart';
 import '../../domain/invocation_selection_rules.dart';
@@ -16,15 +17,19 @@ import '../../domain/level_up_arcane_shot_option.dart';
 import '../../domain/level_up_block_reason.dart';
 import '../../domain/level_up_choice_kind.dart';
 import '../../domain/level_up_continue_option.dart';
+import '../../domain/level_up_draconic_ancestry_option.dart';
 import '../../domain/level_up_elemental_discipline_option.dart';
+import '../../domain/level_up_expertise_option.dart';
 import '../../domain/level_up_feat_option.dart';
 import '../../domain/level_up_infusion_option.dart';
 import '../../domain/level_up_invocation_option.dart';
 import '../../domain/level_up_maneuver_option.dart';
+import '../../domain/level_up_metamagic_option.dart';
 import '../../domain/level_up_multiclass_option.dart';
 import '../../domain/level_up_rune_option.dart';
 import '../../domain/level_up_subclass_option.dart';
 import '../../domain/maneuvers_known_progression.dart';
+import '../../domain/metamagic_known_progression.dart';
 import '../../domain/multiclass_prerequisites.dart';
 import '../../domain/multiclass_proficiencies.dart';
 import '../../domain/patron_extended_spells.dart';
@@ -355,6 +360,87 @@ typedef LevelUpStepData = ({
   /// — candidates au retrait de l'étape "Infusions" quand [canSwapInfusion]
   /// est vrai. Vide sinon.
   List<String> knownInfusionNames,
+
+  /// `true` si l'étape "Métamagie" doit être affichée à ce niveau —
+  /// Ensorceleur UNIQUEMENT, delta strictement positif de
+  /// `domain/metamagic_known_progression.dart::MetamagicKnownProgression`
+  /// (niveaux 3, 10, 17 RAW). Aptitude de CLASSE (comme [requiresInfusionSelection],
+  /// pas de sous-classe) : ne dépend que de [effectiveClassName].
+  bool requiresMetamagicSelection,
+
+  /// Delta RAW d'options de Métamagie de ce niveau (0 si
+  /// [requiresMetamagicSelection] est `false`).
+  int metamagicDelta,
+
+  /// Options de Métamagie NON déjà connues du personnage dont `min_level <=`
+  /// ce niveau — non vide seulement si [requiresMetamagicSelection].
+  List<LevelUpMetamagicOption> availableMetamagicOptions,
+
+  /// `true` si l'étape "Métamagie" doit proposer l'échange d'une option déjà
+  /// connue contre une autre (voir `domain/level_up_metamagic_swap.dart`) —
+  /// même divergence de modèle assumée que l'Artificier
+  /// ([canSwapInfusion], D93 du registre de dette technique) : proposé à
+  /// CHAQUE niveau d'Ensorceleur, indépendant de
+  /// [requiresMetamagicSelection]. `true` dès que [effectiveClassName] vaut
+  /// 'Ensorceleur' ET que [knownMetamagicNames] n'est pas vide.
+  bool canSwapMetamagic,
+
+  /// Options de Métamagie déjà connues du personnage — candidates au
+  /// retrait de l'étape "Métamagie" quand [canSwapMetamagic] est vrai. Vide
+  /// sinon.
+  List<String> knownMetamagicNames,
+
+  /// `true` si l'étape "Expertise" doit être affichée à ce niveau —
+  /// Barde (niveaux 3/10) ou Roublard (niveaux 1/6) UNIQUEMENT, voir
+  /// `domain/expertise_known_progression.dart`. Seul le niveau 1 de
+  /// MULTICLASSAGE tardif en Roublard déclenche ce champ ici (comme tout
+  /// autre niveau 1 de nouvelle classe, [effectiveTargetLevel] vaut alors
+  /// 1) : ce provider ne couvre que le flux de montée de niveau. La
+  /// création native d'un personnage Roublard niveau 1 n'écrit PAS ce choix
+  /// aujourd'hui (aucun écran de création dédié, voir D99 de
+  /// `docs/dette-technique.md`).
+  bool requiresExpertiseSelection,
+
+  /// Quota RAW de compétences à passer en Expertise à ce niveau — toujours 2
+  /// ou 0, JAMAIS plafonné ici (voir `ExpertiseKnownProgression.quotaAt`,
+  /// qui renvoie la valeur brute). Le plafonnage au nombre de compétences
+  /// ÉLIGIBLES (`min(2, availableExpertiseSkills.length)`, même rationale
+  /// que [invocationQuota]) est délégué à l'écran
+  /// (`_effectiveExpertiseSkillQuota` dans `level_up_screen.dart`) — jamais
+  /// rencontré en pratique (18 compétences, largement assez), mais
+  /// défensif. 0 si [requiresExpertiseSelection] est `false`.
+  int expertiseQuota,
+
+  /// Compétences déjà maîtrisées (`proficiency == 'competente'`) et donc
+  /// éligibles à l'Expertise — lues depuis `CharacterDetail.skills`
+  /// (aucune requête réseau supplémentaire, voir
+  /// `domain/level_up_expertise_option.dart`). Exclut déjà, par construction,
+  /// toute compétence déjà en Expertise (pool GLOBAL au personnage). Non
+  /// vide seulement si [requiresExpertiseSelection].
+  List<LevelUpExpertiseOption> availableExpertiseSkills,
+
+  /// `true` si l'étape "Ascendance draconique" doit être affichée à ce
+  /// niveau — Ensorceleur, Lignage draconique, niveau 1 de sous-classe
+  /// UNIQUEMENT (choix figé à vie, jamais réoffert). Même mécanisme que
+  /// [requiresElementalDisciplineSelection] pour la simultanéité avec le
+  /// choix de sous-classe lui-même : `true` dès lors que [effectiveClassName]
+  /// vaut 'Ensorceleur', [effectiveTargetLevel] vaut 1, ET que la sous-classe
+  /// Lignage draconique est soit déjà connue, soit candidate à ce niveau. Ce
+  /// provider ne couvre que le flux de montée de niveau (donc en pratique le
+  /// multiclassage tardif vers Ensorceleur, le niveau 1 étant presque
+  /// toujours atteint à la création) : la création native d'un personnage
+  /// Ensorceleur niveau 1 n'écrit PAS ce choix aujourd'hui (même lacune
+  /// générique que [requiresExpertiseSelection], voir D99 de
+  /// `docs/dette-technique.md`).
+  bool requiresDraconicAncestrySelection,
+
+  /// Options d'Ascendance draconique, PAR `subclasses.id` candidat — même
+  /// mécanisme que [elementalDisciplinesBySubclass] (plusieurs entrées
+  /// possibles au niveau 1, choix de sous-classe ET choix du type de dégâts
+  /// dans LA MÊME montée de niveau). Vide tant que le contenu
+  /// (`class_options`, `option_type = 'ancetre_draconique'`) n'est pas
+  /// peuplé.
+  Map<int, List<LevelUpDraconicAncestryOption>> draconicAncestryBySubclass,
 
   /// Pacte de l'Occultiste déjà enregistré en base
   /// (`character_class_options`), `null` si aucun — le pacte choisi dans la
@@ -1116,6 +1202,98 @@ Future<LevelUpStepData> levelUpStepData(
     }
   }
 
+  // Métamagie — étape "Métamagie", Ensorceleur UNIQUEMENT. Aptitude de
+  // CLASSE (même traitement que les infusions ci-dessus : aucun
+  // `isKnownXxx`/`mayBecomeXxxThisLevel` ni `Map<int, ...>` par sous-classe
+  // n'est nécessaire — [effectiveClassName] seul suffit à gater).
+  final metamagicDelta =
+      effectiveClassName == MetamagicKnownProgression.className
+      ? MetamagicKnownProgression.newMetamagicOptionsAt(effectiveTargetLevel)
+      : 0;
+  final requiresMetamagicSelection = metamagicDelta > 0;
+  var availableMetamagicOptions = const <LevelUpMetamagicOption>[];
+  var knownMetamagicNames = const <String>[];
+  var canSwapMetamagic = false;
+  if (effectiveClassName == MetamagicKnownProgression.className) {
+    final repository = ref.watch(characterRepositoryProvider);
+    // [knownMetamagicNames] toujours lu dès que la classe est l'Ensorceleur
+    // (pas seulement quand [requiresMetamagicSelection] est vrai) :
+    // l'échange de Métamagie ([canSwapMetamagic]) est proposé à CHAQUE
+    // niveau d'Ensorceleur, même rationale que [canSwapInfusion] (D93 du
+    // registre de dette technique).
+    knownMetamagicNames = await repository.fetchKnownMetamagicNames(
+      characterId: characterId,
+      classId: effectiveClassId,
+    );
+    canSwapMetamagic = knownMetamagicNames.isNotEmpty;
+    if (requiresMetamagicSelection || canSwapMetamagic) {
+      availableMetamagicOptions = await repository
+          .fetchAvailableMetamagicOptions(
+            characterId: characterId,
+            classId: effectiveClassId,
+            targetLevel: effectiveTargetLevel,
+          );
+    }
+  }
+
+  // Expertise — étape "Expertise", Barde (niveaux 3/10) ou Roublard
+  // (niveaux 1/6) UNIQUEMENT. Contrairement à toutes les mécaniques
+  // ci-dessus, aucune requête réseau supplémentaire : le pool éligible
+  // (compétences déjà `'competente'`) est déjà porté par
+  // `CharacterDetail.skills` (voir `domain/level_up_expertise_option.dart`).
+  final expertiseQuota = ExpertiseKnownProgression.quotaAt(
+    effectiveClassName,
+    effectiveTargetLevel,
+  );
+  final requiresExpertiseSelection = expertiseQuota > 0;
+  var availableExpertiseSkills = const <LevelUpExpertiseOption>[];
+  if (requiresExpertiseSelection) {
+    availableExpertiseSkills = [
+      for (final skill in detail.skills)
+        if (skill.proficiency == 'competente')
+          LevelUpExpertiseOption(skillId: skill.id, name: skill.name),
+    ];
+  }
+  // Ascendance draconique — aptitude "Ancêtre draconique", Ensorceleur,
+  // Lignage draconique, niveau 1 de sous-classe UNIQUEMENT (choix figé à
+  // vie, jamais réoffert — contrairement à [elementalDisciplinesBySubclass]/
+  // [maneuversBySubclass]/[arcaneShotsBySubclass]/[runesBySubclass], qui se
+  // déclenchent à plusieurs paliers). Même rationale de simultanéité avec le
+  // choix de sous-classe (niveau 1 ici, niveau 3 pour les disciplines
+  // élémentaires) : [isKnownDraconicBloodline]/
+  // [mayBecomeDraconicBloodlineThisLevel] jouent le même rôle que
+  // [isKnownFourElementsMonk]/[mayBecomeFourElementsMonkThisLevel].
+  const draconicBloodlineSubclassName = 'Lignage draconique';
+  final isKnownDraconicBloodline =
+      effectiveSubclassName == draconicBloodlineSubclassName;
+  final mayBecomeDraconicBloodlineThisLevel =
+      choiceKind == LevelUpChoiceKind.subclass &&
+      levelData.availableSubclasses.any(
+        (option) => option.name == draconicBloodlineSubclassName,
+      );
+  final requiresDraconicAncestrySelection =
+      effectiveClassName == 'Ensorceleur' &&
+      effectiveTargetLevel == 1 &&
+      (isKnownDraconicBloodline || mayBecomeDraconicBloodlineThisLevel);
+  var draconicAncestryBySubclass =
+      const <int, List<LevelUpDraconicAncestryOption>>{};
+  if (requiresDraconicAncestrySelection) {
+    final candidateSubclassIds = <int>{
+      ?knownSubclassId,
+      if (choiceKind == LevelUpChoiceKind.subclass)
+        for (final option in levelData.availableSubclasses)
+          (option.id as num).toInt(),
+    };
+    final repository = ref.watch(characterRepositoryProvider);
+    final draconicEntries = await Future.wait([
+      for (final subclassId in candidateSubclassIds)
+        repository
+            .fetchAvailableDraconicAncestryOptions(subclassId: subclassId)
+            .then((options) => MapEntry(subclassId, options)),
+    ]);
+    draconicAncestryBySubclass = Map.fromEntries(draconicEntries);
+  }
+
   // Dons — étape "Choix à faire", sous-mode "don" (voir
   // `domain/level_up_choice_selection.dart::LevelUpChoiceSelection.featId`) :
   // une seule requête réseau supplémentaire, uniquement quand ce niveau
@@ -1184,6 +1362,16 @@ Future<LevelUpStepData> levelUpStepData(
     availableInfusions: availableInfusions,
     canSwapInfusion: canSwapInfusion,
     knownInfusionNames: knownInfusionNames,
+    requiresMetamagicSelection: requiresMetamagicSelection,
+    metamagicDelta: metamagicDelta,
+    availableMetamagicOptions: availableMetamagicOptions,
+    canSwapMetamagic: canSwapMetamagic,
+    knownMetamagicNames: knownMetamagicNames,
+    requiresExpertiseSelection: requiresExpertiseSelection,
+    expertiseQuota: expertiseQuota,
+    availableExpertiseSkills: availableExpertiseSkills,
+    requiresDraconicAncestrySelection: requiresDraconicAncestrySelection,
+    draconicAncestryBySubclass: draconicAncestryBySubclass,
     knownPact: knownPact,
     knownCantripSpellIds: knownCantripSpellIds,
     knownSpellIds: knownSpellIds,

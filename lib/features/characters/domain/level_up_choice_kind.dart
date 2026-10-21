@@ -9,19 +9,25 @@ import 'level_up_block_reason.dart';
 /// (Moine, Voie des quatre éléments, plusieurs niveaux), `manoeuvre`
 /// (Guerrier, Maître de guerre, plusieurs niveaux), `tir_arcanique`
 /// (Guerrier, Archer arcanique, plusieurs niveaux), `rune` (Guerrier,
-/// Chevalier runique, plusieurs niveaux) et `infusion` (Artificier, aptitude
-/// de classe, plusieurs niveaux) n'ont volontairement PAS de valeur
-/// d'énumération ici : couverts par leurs étapes dédiées respectives
-/// ("Invocations"/"Disciplines élémentaires"/"Manœuvres"/"Tirs
-/// arcaniques"/"Runes"/"Infusions"), distinctes de l'étape "Choix à faire"
-/// (voir `presentation/level_up_screen.dart`,
+/// Chevalier runique, plusieurs niveaux), `infusion` (Artificier, aptitude
+/// de classe, plusieurs niveaux), `metamagie` (Ensorceleur, aptitude de
+/// classe, plusieurs niveaux), `expertise` (Barde/Roublard, aptitude de
+/// classe, plusieurs niveaux) et `ancetre_draconique` (Ensorceleur, Lignage
+/// draconique, niveau 1 de sous-classe uniquement) n'ont volontairement PAS
+/// de valeur d'énumération ici : couverts par leurs étapes dédiées
+/// respectives ("Invocations"/"Disciplines élémentaires"/"Manœuvres"/"Tirs
+/// arcaniques"/"Runes"/"Infusions"/"Métamagie"/"Expertise"/"Ascendance
+/// draconique"), distinctes de l'étape "Choix à faire" (voir
+/// `presentation/level_up_screen.dart`,
 /// `domain/invocations_known_progression.dart`,
 /// `domain/elemental_disciplines_known_progression.dart`,
 /// `domain/maneuvers_known_progression.dart`,
 /// `domain/arcane_shots_known_progression.dart`,
-/// `domain/runes_known_progression.dart` et
-/// `domain/infusions_known_progression.dart`) —
-/// [LevelUpPendingChoiceResolver] renvoie `null` pour ces six `choice_type`
+/// `domain/runes_known_progression.dart`,
+/// `domain/infusions_known_progression.dart`,
+/// `domain/metamagic_known_progression.dart` et
+/// `domain/expertise_known_progression.dart`) —
+/// [LevelUpPendingChoiceResolver] renvoie `null` pour ces neuf `choice_type`
 /// plutôt qu'un [LevelUpChoiceKind].
 enum LevelUpChoiceKind {
   /// Répartition de 2 points entre caractéristiques (niveaux codés en dur
@@ -91,7 +97,10 @@ abstract final class LevelUpPendingChoiceResolver {
         classFeatureChoiceType == 'tir_arcanique' ||
         classFeatureChoiceType == 'rune' ||
         classFeatureChoiceType == 'infusion' ||
-        classFeatureChoiceType == 'manoeuvre') {
+        classFeatureChoiceType == 'manoeuvre' ||
+        classFeatureChoiceType == 'metamagie' ||
+        classFeatureChoiceType == 'expertise' ||
+        classFeatureChoiceType == 'ancetre_draconique') {
       return null;
     }
 
@@ -107,13 +116,15 @@ abstract final class LevelUpPendingChoiceResolver {
         // Ne devrait jamais arriver : `LevelUpBlockRules.resolvedChoiceTypes`
         // et ce `switch` doivent rester synchronisés (les 4 seules valeurs,
         // hors `'invocation'`/`'discipline_elementaire'`/`'tir_arcanique'`/
-        // `'rune'`/`'infusion'`/`'manoeuvre'` déjà exclues ci-dessus, qu'
-        // `evaluate` laisse passer sans bloquer). Correctif D92
-        // (`docs/dette-technique.md`) : `'manoeuvre'` a rejoint à la fois
-        // `resolvedChoiceTypes` et l'exclusion ci-dessus — ne jamais ajouter
-        // un nouveau `case 'manoeuvre' =>` ici : sa propre étape dédiée
-        // "Manœuvres" (`domain/maneuvers_known_progression.dart`) ne produit
-        // jamais de [LevelUpChoiceKind].
+        // `'rune'`/`'infusion'`/`'manoeuvre'`/`'metamagie'`/`'expertise'`/
+        // `'ancetre_draconique'` déjà exclues ci-dessus, qu'`evaluate` laisse
+        // passer sans bloquer). Correctif D92 (`docs/dette-technique.md`) :
+        // `'manoeuvre'` a rejoint à la fois `resolvedChoiceTypes` et
+        // l'exclusion ci-dessus, puis `'metamagie'`/`'expertise'`/
+        // `'ancetre_draconique'` au chantier suivant — ne jamais ajouter de
+        // nouveau `case` pour l'une de ces valeurs ici : leurs propres étapes
+        // dédiées ("Manœuvres"/"Métamagie"/"Expertise"/"Ascendance
+        // draconique") ne produisent jamais de [LevelUpChoiceKind].
         _ => throw StateError(
           'choice_type "$classFeatureChoiceType" déclaré résolu par '
           'LevelUpBlockRules.resolvedChoiceTypes mais non mappé par '
