@@ -28,6 +28,7 @@ import '../domain/level_up_apply_result.dart';
 import '../domain/level_up_arcane_shot_option.dart';
 import '../domain/level_up_choice_kind.dart';
 import '../domain/level_up_choice_selection.dart';
+import '../domain/level_up_draconic_ancestry_option.dart';
 import '../domain/level_up_elemental_discipline_option.dart';
 import '../domain/level_up_feat_option.dart';
 import '../domain/level_up_infusion_option.dart';
@@ -35,6 +36,8 @@ import '../domain/level_up_infusion_swap.dart';
 import '../domain/level_up_invocation_option.dart';
 import '../domain/level_up_level_data.dart';
 import '../domain/level_up_maneuver_option.dart';
+import '../domain/level_up_metamagic_option.dart';
+import '../domain/level_up_metamagic_swap.dart';
 import '../domain/level_up_rune_option.dart';
 import '../domain/level_up_subclass_option.dart';
 import '../domain/multiclass_prerequisites.dart';
@@ -59,11 +62,13 @@ import 'class_feature_row_mapper.dart';
 import 'inventory_catalog_row_mapper.dart';
 import 'level_up_arcane_shot_row_mapper.dart';
 import 'level_up_choice_row_mapper.dart';
+import 'level_up_draconic_ancestry_row_mapper.dart';
 import 'level_up_elemental_discipline_row_mapper.dart';
 import 'level_up_feat_row_mapper.dart';
 import 'level_up_infusion_row_mapper.dart';
 import 'level_up_invocation_row_mapper.dart';
 import 'level_up_maneuver_row_mapper.dart';
+import 'level_up_metamagic_row_mapper.dart';
 import 'level_up_rune_row_mapper.dart';
 import 'pact_weapon_row_mapper.dart';
 import 'pending_character_write_syncer.dart';
@@ -738,6 +743,58 @@ abstract class CharacterRepository {
   /// [fetchAvailableInfusions].
   Future<List<String>> fetchKnownInfusionNames({required String characterId});
 
+  /// Options de Métamagie `class_options` (`option_type = 'metamagie'`,
+  /// `class_id` de l'Ensorceleur, `subclass_id` NULL — aptitude de CLASSE)
+  /// dont `min_level <= targetLevel`, NON déjà connues de [characterId] —
+  /// étape "Métamagie" de la montée de niveau (voir
+  /// `domain/metamagic_known_progression.dart`). Résolution de la ligne
+  /// `class_features` : contrairement aux aptitudes de SOUS-classe
+  /// (manœuvres/tirs arcaniques/runes), filtrée par [classId]
+  /// (`.eq('class_id', classId)`, valide ici — `class_id` est bien rempli
+  /// sur une ligne de classe) ET `choice_type = 'metamagie'` : 3 lignes
+  /// existent en base (une par palier 3/10/17, pas une seule comme
+  /// `'infusion'`), la plus basse (niveau 3) est prise comme ancre unique,
+  /// réutilisée pour TOUTE écriture (nouvelles options ET échange) afin que
+  /// la lecture "déjà connues" (toujours agrégée sur les 3 ids, jamais
+  /// seulement l'ancre) retrouve systématiquement tout ce qui a été écrit —
+  /// voir `applyLevelUp.metamagicNames`/`metamagicSwap`. Noms/descriptions/
+  /// coût (purement informatif) résolus via `translations` (`entity_type =
+  /// 'class_option'`) et `class_options.prerequisites->>'cost'` — voir
+  /// `domain/level_up_metamagic_option.dart`.
+  Future<List<LevelUpMetamagicOption>> fetchAvailableMetamagicOptions({
+    required String characterId,
+    required Object classId,
+    required int targetLevel,
+  });
+
+  /// Options de Métamagie DÉJÀ connues de [characterId] — alimente
+  /// [LevelUpStepData.knownMetamagicNames]/[LevelUpStepData.canSwapMetamagic]
+  /// (étape "Métamagie", échange RAW-exact proposé à CHAQUE niveau
+  /// d'Ensorceleur, même divergence de modèle assumée que l'Artificier, D93
+  /// du registre de dette technique, `docs/dette-technique.md`). Liste vide
+  /// (jamais d'erreur) si aucune ligne `class_features` de ce `choice_type`
+  /// n'existe pour [classId] — même défense que [fetchAvailableMetamagicOptions].
+  Future<List<String>> fetchKnownMetamagicNames({
+    required String characterId,
+    required Object classId,
+  });
+
+  /// Options d'Ascendance draconique `class_options` (`option_type =
+  /// 'ancetre_draconique'`, `class_id` NULL, `subclass_id` du Lignage
+  /// draconique — aptitude de SOUS-CLASSE) — aptitude "Ancêtre draconique"
+  /// (Ensorceleur, Lignage draconique, niveau 1 UNIQUEMENT, voir
+  /// `domain/level_up_draconic_ancestry_option.dart`). Aucune notion de
+  /// "déjà connue" (choix unique, figé à vie, jamais réoffert : ce niveau ne
+  /// se représente plus une fois franchi) — contrairement aux autres
+  /// catalogues de ce fichier. Contenu (`class_options`, 10 lignes
+  /// attendues) pas encore peuplé au moment de l'écriture de cette méthode
+  /// (script séparé de Matthias) : renvoie une liste vide tant qu'il ne
+  /// l'est pas, jamais d'erreur. Noms/descriptions résolus via
+  /// `translations` (`entity_type = 'class_option'`), type de dégâts extrait
+  /// de `class_options.prerequisites->>'damage_type'`.
+  Future<List<LevelUpDraconicAncestryOption>>
+  fetchAvailableDraconicAncestryOptions({required Object subclassId});
+
   /// Applique une montée de niveau déjà validée par le joueur (écran
   /// "Montée de niveau", récapitulatif). Deux branches, selon
   /// [isMulticlassing] :
@@ -943,6 +1000,56 @@ abstract class CharacterRepository {
   /// coexistent, chacune sous son propre index unique partiel, jamais en
   /// conflit l'une avec l'autre). Toujours vide hors de ce cas.
   ///
+  /// [metamagicNames] : options de Métamagie nouvellement choisies
+  /// (Ensorceleur, voir `domain/metamagic_known_progression.dart`), par NOM
+  /// déjà résolu par l'appelant — même convention texte libre que
+  /// [infusionNames]. [metamagicSwap] : échange RAW-exact d'une option déjà
+  /// connue contre une autre, proposé à CHAQUE niveau d'Ensorceleur (même
+  /// divergence de modèle assumée que [infusionSwap], D93 du registre de
+  /// dette technique) — `class_feature_id` résolu via `.eq('class_id',
+  /// classId).eq('choice_type', 'metamagie')` (aptitude de CLASSE, 3 lignes
+  /// en base, la plus basse prise comme ancre unique pour toute écriture —
+  /// voir [fetchAvailableMetamagicOptions]). Toujours vides/nul hors de ce
+  /// cas.
+  ///
+  /// [expertiseSkillIds] : `skills.id` des compétences passées en Expertise
+  /// (Barde/Roublard, voir `domain/expertise_known_progression.dart`) —
+  /// contrairement aux autres listes de ce paramètre, n'écrit PAS
+  /// `character_class_options` mais `UPDATE
+  /// character_skill_proficiencies.proficiency = 'expertise'` directement
+  /// (l'Expertise n'a pas de catalogue `class_options` propre, voir la
+  /// documentation de classe de `domain/level_up_expertise_option.dart`) —
+  /// revérifié juste avant l'écriture que chaque compétence est bien
+  /// actuellement 'competente' (même discipline défensive que
+  /// [_applyAbilityScoreImprovement]), lève une [CharacterFailure] sinon.
+  /// [expertiseThievesToolsSubstitution] (Roublard uniquement, RAW : une des
+  /// 2 places d'Expertise substituée par la maîtrise des outils de voleur) :
+  /// l'app ne modélise aucun niveau de maîtrise pour les outils
+  /// (`character_tool_proficiencies` est une simple table de présence, sans
+  /// colonne `proficiency` — contrairement aux compétences) ; ce choix est
+  /// donc enregistré comme un simple marqueur texte libre dans
+  /// `character_class_options` (`chosen_value: 'Outils de voleur'`,
+  /// `class_feature_id` résolu via `.eq('class_id', classId).eq
+  /// ('choice_type', 'expertise').eq('level', newClassLevel)`), sans effet
+  /// sur un quelconque bonus calculé (aucun n'existe pour les outils dans
+  /// l'app aujourd'hui) — décision documentée plutôt que silencieuse, voir
+  /// le rapport de la tâche qui a introduit ce paramètre. `false` hors de ce
+  /// cas.
+  ///
+  /// [draconicAncestryDamageType] : type de dégâts choisi pour l'aptitude
+  /// "Ancêtre draconique" (Ensorceleur, Lignage draconique, niveau 1 de
+  /// sous-classe UNIQUEMENT, voir
+  /// `domain/level_up_draconic_ancestry_option.dart`) — texte libre
+  /// ('acide'/'foudre'/'froid'/'feu'/'poison'), écrit directement dans
+  /// `character_class_options.chosen_value` (`class_feature_id` résolu via
+  /// `.eq('choice_type', 'ancetre_draconique')` SEUL, aptitude de
+  /// SOUS-CLASSE comme les manœuvres/runes — `class_id` NULL sur cette
+  /// ligne) : pilote ensuite `CharacterDetail.draconicAncestryDamageType`
+  /// (lu depuis `classChoices`, même mécanisme générique que
+  /// `fightingStyles`). Choix figé à vie : aucune revérification "déjà
+  /// choisi" ici, ce niveau ne se représente jamais une seconde fois. `null`
+  /// hors de ce cas.
+  ///
   /// [hpRolled] et [hpGain] sont déjà calculés par l'appelant (voir
   /// `domain/level_up_hit_points_calculator.dart`), cette méthode ne fait
   /// qu'écrire le résultat déjà calculé — même principe que [updateHp].
@@ -977,6 +1084,11 @@ abstract class CharacterRepository {
     List<String> runeNames = const [],
     List<String> infusionNames = const [],
     LevelUpInfusionSwap? infusionSwap,
+    List<String> metamagicNames = const [],
+    LevelUpMetamagicSwap? metamagicSwap,
+    List<int> expertiseSkillIds = const [],
+    bool expertiseThievesToolsSubstitution = false,
+    String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   });
 
@@ -3878,6 +3990,143 @@ class SupabaseCharacterRepository implements CharacterRepository {
     }
   }
 
+  /// Lignes `class_features` (`id`, `level`) de [classId] dont `choice_type
+  /// = 'metamagie'`, triées par `level` croissant — la première (niveau 3)
+  /// sert d'ancre unique pour TOUTE écriture de Métamagie (nouvelles options
+  /// ET échange), voir la documentation de
+  /// [fetchAvailableMetamagicOptions]. Liste vide si aucune ligne de ce
+  /// `choice_type` n'existe pour [classId] (défensif, contenu non peuplé).
+  Future<List<Map<String, dynamic>>> _fetchMetamagicFeatureRows(
+    Object classId,
+  ) {
+    return _client
+        .from('class_features')
+        .select('id, level')
+        .eq('class_id', classId)
+        .eq('choice_type', 'metamagie')
+        .order('level', ascending: true);
+  }
+
+  @override
+  Future<List<LevelUpMetamagicOption>> fetchAvailableMetamagicOptions({
+    required String characterId,
+    required Object classId,
+    required int targetLevel,
+  }) async {
+    try {
+      final metamagicFeatureRows = await _fetchMetamagicFeatureRows(classId);
+      final metamagicFeatureIds = [
+        for (final row in metamagicFeatureRows) (row['id'] as num).toInt(),
+      ];
+
+      final knownNames = <String>{};
+      if (metamagicFeatureIds.isNotEmpty) {
+        final knownRows = await _client
+            .from('character_class_options')
+            .select('chosen_value')
+            .eq('character_id', characterId)
+            .inFilter('class_feature_id', metamagicFeatureIds);
+        knownNames.addAll([
+          for (final row in knownRows)
+            if (row['chosen_value'] is String) row['chosen_value'] as String,
+        ]);
+      }
+
+      final allRows = await _client
+          .from('class_options')
+          .select('id, min_level, prerequisites')
+          .eq('class_id', classId)
+          .eq('option_type', 'metamagie')
+          .lte('min_level', targetLevel);
+
+      final ids = LevelUpMetamagicRowMapper.collectIds(allRows);
+      final names = await _fetchTranslatedNames(
+        entityType: 'class_option',
+        entityIds: ids,
+      );
+      final descriptions = await _fetchTranslatedField(
+        entityType: 'class_option',
+        fieldName: 'description',
+        entityIds: ids,
+      );
+
+      final availableRows = [
+        for (final row in allRows)
+          if (!knownNames.contains(names[row['id'].toString()])) row,
+      ];
+
+      return LevelUpMetamagicRowMapper.toOptions(
+        availableRows,
+        names: names,
+        descriptions: descriptions,
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<List<String>> fetchKnownMetamagicNames({
+    required String characterId,
+    required Object classId,
+  }) async {
+    try {
+      final metamagicFeatureRows = await _fetchMetamagicFeatureRows(classId);
+      final metamagicFeatureIds = [
+        for (final row in metamagicFeatureRows) (row['id'] as num).toInt(),
+      ];
+      if (metamagicFeatureIds.isEmpty) return const [];
+      final knownRows = await _client
+          .from('character_class_options')
+          .select('chosen_value')
+          .eq('character_id', characterId)
+          .inFilter('class_feature_id', metamagicFeatureIds);
+      return [
+        for (final row in knownRows)
+          if (row['chosen_value'] is String) row['chosen_value'] as String,
+      ];
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<List<LevelUpDraconicAncestryOption>>
+  fetchAvailableDraconicAncestryOptions({required Object subclassId}) async {
+    try {
+      final allRows = await _client
+          .from('class_options')
+          .select('id, min_level, prerequisites')
+          .eq('subclass_id', subclassId)
+          .eq('option_type', 'ancetre_draconique');
+
+      final ids = LevelUpDraconicAncestryRowMapper.collectIds(allRows);
+      final names = await _fetchTranslatedNames(
+        entityType: 'class_option',
+        entityIds: ids,
+      );
+      final descriptions = await _fetchTranslatedField(
+        entityType: 'class_option',
+        fieldName: 'description',
+        entityIds: ids,
+      );
+
+      return LevelUpDraconicAncestryRowMapper.toOptions(
+        allRows,
+        names: names,
+        descriptions: descriptions,
+      );
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
   @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
@@ -3896,6 +4145,11 @@ class SupabaseCharacterRepository implements CharacterRepository {
     List<String> runeNames = const [],
     List<String> infusionNames = const [],
     LevelUpInfusionSwap? infusionSwap,
+    List<String> metamagicNames = const [],
+    LevelUpMetamagicSwap? metamagicSwap,
+    List<int> expertiseSkillIds = const [],
+    bool expertiseThievesToolsSubstitution = false,
+    String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   }) async {
     final ownerId = _requireOwnerId();
@@ -4524,6 +4778,154 @@ class SupabaseCharacterRepository implements CharacterRepository {
               .delete()
               .eq('id', removedRows.first['id']);
         }
+      }
+
+      // Options de Métamagie nouvellement choisies ET/OU échange d'une
+      // option déjà connue (étape "Métamagie", Ensorceleur) —
+      // [metamagicNames]/[metamagicSwap] partagent la même ancre
+      // `class_features` (3 lignes en base, une par palier 3/10/17 — la
+      // plus basse prise comme ancre unique, voir
+      // [_fetchMetamagicFeatureRows] et la documentation de
+      // [CharacterRepository.applyLevelUp]), résolue une seule fois si l'un
+      // ou l'autre est non vide/non nul. Même patron défensif que
+      // [infusionSwap] (INSERT puis DELETE par `id` explicite, jamais
+      // l'inverse) pour la même raison : ne jamais perdre une option connue
+      // si le DELETE échoue après un INSERT réussi.
+      if (metamagicNames.isNotEmpty || metamagicSwap != null) {
+        final metamagicFeatureRows = await _fetchMetamagicFeatureRows(classId);
+        if (metamagicFeatureRows.isEmpty) {
+          throw const CharacterFailure(
+            'Métamagie : aptitude de classe introuvable.',
+          );
+        }
+        final metamagicFeatureId = (metamagicFeatureRows.first['id'] as num)
+            .toInt();
+
+        if (metamagicNames.isNotEmpty) {
+          await _client.from('character_class_options').insert([
+            for (final name in metamagicNames)
+              {
+                'character_id': characterId,
+                'class_feature_id': metamagicFeatureId,
+                'level': newClassLevel,
+                'chosen_value': name,
+              },
+          ]);
+        }
+
+        if (metamagicSwap != null) {
+          final removedRows = await _client
+              .from('character_class_options')
+              .select('id')
+              .eq('character_id', characterId)
+              .eq('class_feature_id', metamagicFeatureId)
+              .eq('chosen_value', metamagicSwap.removedName)
+              .limit(1);
+          if (removedRows.isEmpty) {
+            throw CharacterFailure(
+              'Métamagie "${metamagicSwap.removedName}" introuvable parmi '
+              'les options déjà connues.',
+            );
+          }
+          await _client.from('character_class_options').insert({
+            'character_id': characterId,
+            'class_feature_id': metamagicFeatureId,
+            'level': newClassLevel,
+            'chosen_value': metamagicSwap.addedName,
+          });
+          await _client
+              .from('character_class_options')
+              .delete()
+              .eq('id', removedRows.first['id']);
+        }
+      }
+
+      // Expertise (Barde/Roublard) : contrairement à tout ce qui précède,
+      // n'écrit jamais `character_class_options` pour les compétences
+      // elles-mêmes — voir la documentation de
+      // [CharacterRepository.applyLevelUp] : l'effet RAW se matérialise
+      // directement sur `character_skill_proficiencies.proficiency`, déjà
+      // la source de vérité lue par `CharacterDetail.skills`/
+      // `SkillBonusCalculator`.
+      if (expertiseSkillIds.isNotEmpty) {
+        final currentRows = await _client
+            .from('character_skill_proficiencies')
+            .select('skill_id, proficiency')
+            .eq('character_id', characterId)
+            .inFilter('skill_id', expertiseSkillIds);
+        final currentProficiencyBySkillId = {
+          for (final row in currentRows)
+            (row['skill_id'] as num).toInt(): row['proficiency'] as String?,
+        };
+        for (final skillId in expertiseSkillIds) {
+          if (currentProficiencyBySkillId[skillId] != 'competente') {
+            throw const CharacterFailure(
+              'Expertise : une des compétences choisies n\'est plus '
+              'maîtrisée — revenez en arrière et choisissez à nouveau.',
+            );
+          }
+        }
+        await _client
+            .from('character_skill_proficiencies')
+            .update({'proficiency': 'expertise'})
+            .eq('character_id', characterId)
+            .inFilter('skill_id', expertiseSkillIds);
+      }
+
+      // Substitution Roublard "Expertise des outils de voleur" : simple
+      // marqueur texte libre (voir la documentation de
+      // [CharacterRepository.applyLevelUp] — aucun bonus calculé n'existe
+      // pour les outils dans l'app aujourd'hui), `class_feature_id` résolu
+      // via [classId]+[newClassLevel] (une seule ligne `class_features`
+      // existe pour `('expertise', classId, newClassLevel)`, contrairement
+      // à la Métamagie qui en a 3 pour la même classe).
+      if (expertiseThievesToolsSubstitution) {
+        final expertiseFeatureRows = await _client
+            .from('class_features')
+            .select('id')
+            .eq('class_id', classId)
+            .eq('choice_type', 'expertise')
+            .eq('level', newClassLevel)
+            .limit(1);
+        if (expertiseFeatureRows.isEmpty) {
+          throw const CharacterFailure(
+            'Expertise : aptitude de classe introuvable à ce niveau.',
+          );
+        }
+        final expertiseFeatureId = (expertiseFeatureRows.first['id'] as num)
+            .toInt();
+        await _client.from('character_class_options').insert({
+          'character_id': characterId,
+          'class_feature_id': expertiseFeatureId,
+          'level': newClassLevel,
+          'chosen_value': 'Outils de voleur',
+        });
+      }
+
+      // Ascendance draconique (Ensorceleur, Lignage draconique, niveau 1 de
+      // sous-classe UNIQUEMENT) : choix figé à vie, `class_feature_id`
+      // résolu via `choice_type` SEUL (aptitude de SOUS-CLASSE, `class_id`
+      // NULL sur cette ligne — même prudence que [maneuverNames]/
+      // [runeNames]).
+      if (draconicAncestryDamageType != null) {
+        final draconicFeatureRows = await _client
+            .from('class_features')
+            .select('id')
+            .eq('choice_type', 'ancetre_draconique')
+            .limit(1);
+        if (draconicFeatureRows.isEmpty) {
+          throw const CharacterFailure(
+            'Ancêtre draconique : aptitude de sous-classe introuvable.',
+          );
+        }
+        final draconicFeatureId = (draconicFeatureRows.first['id'] as num)
+            .toInt();
+        await _client.from('character_class_options').insert({
+          'character_id': characterId,
+          'class_feature_id': draconicFeatureId,
+          'level': newClassLevel,
+          'chosen_value': draconicAncestryDamageType,
+        });
       }
 
       if (racialInnateSpellIds.isNotEmpty) {

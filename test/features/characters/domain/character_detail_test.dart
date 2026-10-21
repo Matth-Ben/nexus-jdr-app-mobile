@@ -1,9 +1,27 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/rules/spell_status.dart';
+import 'package:personnages/features/characters/domain/character_class_choice.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
+
+CharacterInventoryItem _equippedArmor({
+  required int acBase,
+  required String acDexBonus,
+}) => CharacterInventoryItem(
+  id: 'armor-1',
+  itemId: 1,
+  name: 'Armure',
+  category: 'armure',
+  quantity: 1,
+  equipped: true,
+  armorProperties: CharacterInventoryArmorProperties(
+    acBase: acBase,
+    acDexBonus: acDexBonus,
+    stealthDisadvantage: false,
+  ),
+);
 
 CharacterDetail _detail({
   List<CharacterDetailClassRow> classes = const [],
@@ -14,6 +32,7 @@ CharacterDetail _detail({
   Map<String, int> abilityScores = const {},
   List<CharacterInventoryItem> inventory = const [],
   List<CharacterSpellEntry> spells = const [],
+  List<CharacterClassChoice> classChoices = const [],
 }) {
   return CharacterDetail(
     id: '1',
@@ -26,6 +45,7 @@ CharacterDetail _detail({
     abilityScores: abilityScores,
     inventory: inventory,
     spells: spells,
+    classChoices: classChoices,
   );
 }
 
@@ -338,6 +358,84 @@ void main() {
         (c) => c.className == 'Paladin',
       );
       expect(paladinLimit.preparedCount, 0);
+    });
+  });
+
+  group('CharacterDetail.draconicAncestryDamageType', () {
+    test('lit le type de dégâts depuis classChoices (même mécanisme que '
+        'fightingStyles/hasBladePact)', () {
+      final detail = _detail(
+        classChoices: const [
+          CharacterClassChoice(
+            featureName: 'Ancêtre draconique',
+            chosenValue: 'feu',
+          ),
+        ],
+      );
+      expect(detail.draconicAncestryDamageType, 'feu');
+    });
+
+    test('null si le personnage n\'a pas fait ce choix', () {
+      final detail = _detail();
+      expect(detail.draconicAncestryDamageType, isNull);
+    });
+
+    test('null si classChoices porte un autre choix de classe', () {
+      final detail = _detail(
+        classChoices: const [
+          CharacterClassChoice(
+            featureName: 'Style de combat',
+            chosenValue: 'Défense',
+          ),
+        ],
+      );
+      expect(detail.draconicAncestryDamageType, isNull);
+    });
+  });
+
+  group('CharacterDetail.armorClass — filtrage de fightingStyles', () {
+    // Régression : fightingStyles agrégeait autrefois le chosenValue de TOUS
+    // les classChoices sans filtrer par featureName (même table
+    // `character_class_options` que Métamagie/Ancêtre draconique/Outils de
+    // voleur/types de dégâts) avant d'alimenter
+    // `ArmorClassCalculator.compute`, qui cherche littéralement 'Défense'.
+    test("n'accorde PAS le bonus de Défense si 'Défense' vient d'un choix "
+        'autre que Style de combat', () {
+      final detail = _detail(
+        abilityScores: const {'dex': 14},
+        inventory: [_equippedArmor(acBase: 12, acDexBonus: 'max_2')],
+        classChoices: const [
+          CharacterClassChoice(
+            featureName: 'Métamagie',
+            chosenValue: 'Défense',
+          ),
+          CharacterClassChoice(
+            featureName: 'Ancêtre draconique',
+            chosenValue: 'Défense',
+          ),
+        ],
+      );
+      // 12 (base) + 2 (dex, plafonné) — PAS +1 de Défense.
+      expect(detail.armorClass, 14);
+    });
+
+    test('accorde le bonus de Défense quand il vient de Style de combat', () {
+      final detail = _detail(
+        abilityScores: const {'dex': 14},
+        inventory: [_equippedArmor(acBase: 12, acDexBonus: 'max_2')],
+        classChoices: const [
+          CharacterClassChoice(
+            featureName: 'Métamagie',
+            chosenValue: 'Défense',
+          ),
+          CharacterClassChoice(
+            featureName: 'Style de combat',
+            chosenValue: 'Défense',
+          ),
+        ],
+      );
+      // 12 (base) + 2 (dex, plafonné) + 1 (Défense).
+      expect(detail.armorClass, 15);
     });
   });
 }

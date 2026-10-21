@@ -23,6 +23,9 @@ import 'package:personnages/features/characters/domain/level_up_maneuver_option.
 import 'package:personnages/features/characters/domain/level_up_arcane_shot_option.dart';
 import 'package:personnages/features/characters/domain/level_up_infusion_option.dart';
 import 'package:personnages/features/characters/domain/level_up_infusion_swap.dart';
+import 'package:personnages/features/characters/domain/level_up_metamagic_option.dart';
+import 'package:personnages/features/characters/domain/level_up_metamagic_swap.dart';
+import 'package:personnages/features/characters/domain/level_up_draconic_ancestry_option.dart';
 import 'package:personnages/features/characters/domain/level_up_rune_option.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
 import 'package:personnages/features/characters/domain/level_up_level_data.dart';
@@ -213,6 +216,24 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) async => throw UnimplementedError();
 
   @override
+  Future<List<LevelUpMetamagicOption>> fetchAvailableMetamagicOptions({
+    required String characterId,
+    required Object classId,
+    required int targetLevel,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<List<String>> fetchKnownMetamagicNames({
+    required String characterId,
+    required Object classId,
+  }) async => throw UnimplementedError();
+
+  @override
+  Future<List<LevelUpDraconicAncestryOption>>
+  fetchAvailableDraconicAncestryOptions({required Object subclassId}) async =>
+      throw UnimplementedError();
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -230,6 +251,11 @@ class _FakeCharacterRepository implements CharacterRepository {
     List<String> runeNames = const [],
     List<String> infusionNames = const [],
     LevelUpInfusionSwap? infusionSwap,
+    List<String> metamagicNames = const [],
+    LevelUpMetamagicSwap? metamagicSwap,
+    List<int> expertiseSkillIds = const [],
+    bool expertiseThievesToolsSubstitution = false,
+    String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   }) => throw UnimplementedError();
 

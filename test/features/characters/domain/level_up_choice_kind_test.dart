@@ -163,6 +163,49 @@ void main() {
       );
     });
 
+    test("'metamagie' ne renvoie jamais de LevelUpChoiceKind (Ensorceleur, "
+        'aptitude de CLASSE) : ce choice_type est dans resolvedChoiceTypes '
+        '(ne bloque plus le flux), mais mène à la nouvelle étape '
+        '"Métamagie" dédiée, jamais à l\'étape "Choix à faire" — vérifie '
+        'que le StateError défensif du switch ci-dessous ne se déclenche '
+        'pas', () {
+      expect(
+        LevelUpPendingChoiceResolver.resolve(
+          targetLevel: 3,
+          classFeatureChoiceType: 'metamagie',
+        ),
+        isNull,
+      );
+    });
+
+    test("'expertise' ne renvoie jamais de LevelUpChoiceKind (Barde/"
+        'Roublard, aptitude de CLASSE) : ce choice_type est dans '
+        'resolvedChoiceTypes (ne bloque plus le flux), mais mène à la '
+        'nouvelle étape "Expertise" dédiée, jamais à l\'étape "Choix à '
+        'faire"', () {
+      expect(
+        LevelUpPendingChoiceResolver.resolve(
+          targetLevel: 3,
+          classFeatureChoiceType: 'expertise',
+        ),
+        isNull,
+      );
+    });
+
+    test("'ancetre_draconique' ne renvoie jamais de LevelUpChoiceKind "
+        '(Ensorceleur, Lignage draconique, aptitude de SOUS-CLASSE) : ce '
+        'choice_type est dans resolvedChoiceTypes (ne bloque plus le '
+        'flux), mais mène à la nouvelle étape "Ascendance draconique" '
+        'dédiée, jamais à l\'étape "Choix à faire"', () {
+      expect(
+        LevelUpPendingChoiceResolver.resolve(
+          targetLevel: 1,
+          classFeatureChoiceType: 'ancetre_draconique',
+        ),
+        isNull,
+      );
+    });
+
     test('un niveau ASI (4/8/12/16/19) sans choice_type -> '
         'LevelUpChoiceKind.abilityScoreImprovement', () {
       for (final level in [4, 8, 12, 16, 19]) {

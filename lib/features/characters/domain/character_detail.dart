@@ -440,7 +440,10 @@ abstract class CharacterDetail with _$CharacterDetail {
     inventory: inventory,
     classNames: {for (final row in classes) row.className},
     subclassNames: {for (final row in classes) ?row.subclassName},
-    fightingStyles: {for (final choice in classChoices) choice.chosenValue},
+    fightingStyles: {
+      for (final choice in classChoices)
+        if (choice.featureName == 'Style de combat') choice.chosenValue,
+    },
   );
 
   /// Bonus d'initiative (D&D 5e : modificateur de Dextérité), calculé à la
@@ -461,6 +464,24 @@ abstract class CharacterDetail with _$CharacterDetail {
         row.className == 'Occultiste' &&
         PactWeaponRules.isCursedBlade(row.subclassName),
   );
+
+  /// Type de dégâts choisi pour l'aptitude "Ancêtre draconique"
+  /// (Ensorceleur, Lignage draconique, niveau 1 de sous-classe UNIQUEMENT,
+  /// voir `domain/level_up_draconic_ancestry_option.dart`) — `null` si le
+  /// personnage n'a pas fait ce choix (pas Lignage draconique, ou contenu
+  /// pas encore peuplé en base). Pilote Résilience draconique (résistance)
+  /// et Affinité élémentaire : lu depuis [classChoices] (même mécanisme
+  /// générique que [fightingStyles]/[hasBladePact] ci-dessus) — la ligne
+  /// `character_class_options` est écrite par `applyLevelUp` avec
+  /// `chosen_value` = le type de dégâts lui-même (texte libre), pas un
+  /// identifiant. **Câblage de code uniquement à ce jour** : l'affichage
+  /// dynamique de ce type dans le texte des aptitudes "Résilience
+  /// draconique"/"Affinité élémentaire" reste à faire une fois leur contenu
+  /// peuplé (hors périmètre de ce chantier).
+  String? get draconicAncestryDamageType => classChoices
+      .where((choice) => choice.featureName == 'Ancêtre draconique')
+      .map((choice) => choice.chosenValue)
+      .firstOrNull;
 
   /// Poids total de [inventory], en kilogrammes — voir
   /// `InventoryWeightCalculator`.

@@ -94,6 +94,24 @@ class LevelUpBlockReason {
 /// pour que le `StateError` défensif de cette méthode ne se déclenche pas à
 /// tort une fois cette valeur non nulle en base.
 ///
+/// **Chantier "métamagie/expertise/ancêtre draconique"** : `'metamagie'`
+/// (Ensorceleur, aptitude de CLASSE, voir
+/// `domain/metamagic_known_progression.dart`) et `'expertise'` (Barde/
+/// Roublard, aptitude de CLASSE, voir
+/// `domain/expertise_known_progression.dart`) ont rejoint
+/// [resolvedChoiceTypes] — même traitement que `'infusion'`/`'manoeuvre'`
+/// ci-dessus (étapes dédiées "Métamagie"/"Expertise", basées sur un delta/
+/// quota RAW à CHAQUE niveau concerné, indépendamment du `choice_type`
+/// littéral). `'ancetre_draconique'` (Ensorceleur, Lignage draconique,
+/// aptitude de SOUS-CLASSE, `class_id` NULL) a aussi rejoint
+/// [resolvedChoiceTypes] par précaution défensive — même rationale que D85/
+/// D92 du registre de dette technique (`docs/dette-technique.md`) : le
+/// mécanisme exact par lequel un `choice_type` de sous-classe (`class_id`
+/// NULL) pourrait atteindre [evaluate] n'est toujours pas identifié avec
+/// certitude, mais `'manoeuvre'`/`'discipline_elementaire'` ont tous deux
+/// fini par y être exposés malgré ce même filtre `class_id` en théorie
+/// disqualifiant — ajouté par prudence plutôt que de revivre le même bug.
+///
 /// Un niveau qui reste bloqué bloque tout le flux *avant* même l'étape
 /// "Points de vie" (jamais de jet de dé pour rien) — ne reste concerné que
 /// tout `class_features.choice_type` non nul et encore inconnu de
@@ -134,6 +152,9 @@ abstract final class LevelUpBlockRules {
     'rune',
     'infusion',
     'manoeuvre',
+    'metamagie',
+    'expertise',
+    'ancetre_draconique',
   };
 
   /// Évalue si [targetLevel] doit bloquer tout le flux de montée de niveau,

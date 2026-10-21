@@ -34,6 +34,7 @@ import 'package:personnages/features/characters/domain/character_class_feature.d
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/domain/character_failure.dart';
+import 'package:personnages/features/characters/domain/character_skill_row.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/patron_extended_spells.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
@@ -42,12 +43,15 @@ import 'package:personnages/features/characters/domain/inventory_catalog_item.da
 import 'package:personnages/features/characters/domain/invocation_prerequisites.dart';
 import 'package:personnages/features/characters/domain/level_up_apply_result.dart';
 import 'package:personnages/features/characters/domain/level_up_arcane_shot_option.dart';
+import 'package:personnages/features/characters/domain/level_up_draconic_ancestry_option.dart';
 import 'package:personnages/features/characters/domain/level_up_feat_option.dart';
 import 'package:personnages/features/characters/domain/level_up_infusion_option.dart';
 import 'package:personnages/features/characters/domain/level_up_infusion_swap.dart';
 import 'package:personnages/features/characters/domain/level_up_invocation_option.dart';
 import 'package:personnages/features/characters/domain/level_up_elemental_discipline_option.dart';
 import 'package:personnages/features/characters/domain/level_up_maneuver_option.dart';
+import 'package:personnages/features/characters/domain/level_up_metamagic_option.dart';
+import 'package:personnages/features/characters/domain/level_up_metamagic_swap.dart';
 import 'package:personnages/features/characters/domain/level_up_rune_option.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_kind.dart';
 import 'package:personnages/features/characters/domain/level_up_choice_selection.dart';
@@ -79,6 +83,11 @@ class _AppliedLevelUp {
     required this.runeNames,
     required this.infusionNames,
     required this.infusionSwap,
+    required this.metamagicNames,
+    required this.metamagicSwap,
+    required this.expertiseSkillIds,
+    required this.expertiseThievesToolsSubstitution,
+    required this.draconicAncestryDamageType,
     required this.racialInnateSpellIds,
   });
 
@@ -97,6 +106,11 @@ class _AppliedLevelUp {
   final List<String> runeNames;
   final List<String> infusionNames;
   final LevelUpInfusionSwap? infusionSwap;
+  final List<String> metamagicNames;
+  final LevelUpMetamagicSwap? metamagicSwap;
+  final List<int> expertiseSkillIds;
+  final bool expertiseThievesToolsSubstitution;
+  final String? draconicAncestryDamageType;
   final List<int> racialInnateSpellIds;
 }
 
@@ -256,6 +270,20 @@ class _FakeCharacterRepository implements CharacterRepository {
   // test de la sous-section "échange" de l'étape "Infusions".
   List<String> knownInfusionNamesToReturn = const [];
 
+  // Vide par défaut, même rationale que [infusionsToReturn] — overridable
+  // par test de l'étape "Métamagie" (Ensorceleur).
+  List<LevelUpMetamagicOption> metamagicOptionsToReturn = const [];
+
+  // Vide par défaut, même rationale que [knownInfusionNamesToReturn] —
+  // overridable par test de la sous-section "échange" de l'étape
+  // "Métamagie".
+  List<String> knownMetamagicNamesToReturn = const [];
+
+  // Vide par défaut — overridable par test de l'étape "Ascendance
+  // draconique" (Ensorceleur, Lignage draconique).
+  List<LevelUpDraconicAncestryOption> draconicAncestryOptionsToReturn =
+      const [];
+
   @override
   Future<List<CharacterSummary>> fetchCharacters() async => const [];
 
@@ -334,6 +362,24 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) async => knownInfusionNamesToReturn;
 
   @override
+  Future<List<LevelUpMetamagicOption>> fetchAvailableMetamagicOptions({
+    required String characterId,
+    required Object classId,
+    required int targetLevel,
+  }) async => metamagicOptionsToReturn;
+
+  @override
+  Future<List<String>> fetchKnownMetamagicNames({
+    required String characterId,
+    required Object classId,
+  }) async => knownMetamagicNamesToReturn;
+
+  @override
+  Future<List<LevelUpDraconicAncestryOption>>
+  fetchAvailableDraconicAncestryOptions({required Object subclassId}) async =>
+      draconicAncestryOptionsToReturn;
+
+  @override
   Future<LevelUpApplyResult> applyLevelUp({
     required String characterId,
     required Object classId,
@@ -351,6 +397,11 @@ class _FakeCharacterRepository implements CharacterRepository {
     List<String> runeNames = const [],
     List<String> infusionNames = const [],
     LevelUpInfusionSwap? infusionSwap,
+    List<String> metamagicNames = const [],
+    LevelUpMetamagicSwap? metamagicSwap,
+    List<int> expertiseSkillIds = const [],
+    bool expertiseThievesToolsSubstitution = false,
+    String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   }) async {
     applyLevelUpCalls.add(
@@ -370,6 +421,11 @@ class _FakeCharacterRepository implements CharacterRepository {
         runeNames: runeNames,
         infusionNames: infusionNames,
         infusionSwap: infusionSwap,
+        metamagicNames: metamagicNames,
+        metamagicSwap: metamagicSwap,
+        expertiseSkillIds: expertiseSkillIds,
+        expertiseThievesToolsSubstitution: expertiseThievesToolsSubstitution,
+        draconicAncestryDamageType: draconicAncestryDamageType,
         racialInnateSpellIds: racialInnateSpellIds,
       ),
     );
@@ -4589,6 +4645,780 @@ void main() {
         expect(applied.infusionNames, isEmpty);
         expect(applied.infusionSwap?.removedName, 'Armure renforcée');
         expect(applied.infusionSwap?.addedName, 'Lame enchantée');
+      },
+    );
+  });
+
+  group('etape "Metamagie" (Ensorceleur)', () {
+    testWidgets(
+      'niveau 3 (premier palier) : quota 2, pas de section d\'echange '
+      '(rien a echanger)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 12,
+              hitDie: 6,
+              className: 'Ensorceleur',
+              level: 2,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.knownMetamagicNamesToReturn = const [];
+        fakeRepository.metamagicOptionsToReturn = const [
+          LevelUpMetamagicOption(id: 1, name: 'Sort discret', description: ''),
+          LevelUpMetamagicOption(id: 2, name: 'Sort prolongé', description: ''),
+        ];
+        fakeCreationRepository.spellCatalogByClassId = {
+          12: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 500,
+                name: 'Projectile magique',
+                level: 1,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        // Étape "Sorts" intercalée (1 nouveau sort connu à ce niveau,
+        // delta de cantrips nul — voir `spells_known_progression.dart`).
+        await tester.tap(find.text('Projectile magique'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Métamagie'), findsOneWidget);
+        expect(find.text('0 / 2'), findsOneWidget);
+        expect(find.textContaining('REMPLACER UNE OPTION'), findsNothing);
+
+        await tester.tap(find.text('Sort discret'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Sort prolongé'));
+        await tester.pumpAndSettle();
+        expect(find.text('2 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Ensorceleur');
+        expect(applied.metamagicNames.toSet(), {
+          'Sort discret',
+          'Sort prolongé',
+        });
+        expect(applied.metamagicSwap, isNull);
+      },
+    );
+
+    testWidgets('niveau 14 (delta nul, mais au moins une option deja connue) : '
+        'etape "Metamagie" affichee UNIQUEMENT pour l\'echange (D93) — '
+        'remplacer une option connue par une autre', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [
+          const CharacterDetailClassRow(
+            classId: 12,
+            hitDie: 6,
+            className: 'Ensorceleur',
+            level: 13,
+            isPrimary: true,
+            savingThrowProficiencies: [],
+          ),
+        ],
+        xp: 0,
+      );
+      fakeRepository.levelDataByLevel = {
+        14: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+      fakeRepository.knownMetamagicNamesToReturn = const ['Sort discret'];
+      fakeRepository.metamagicOptionsToReturn = const [
+        LevelUpMetamagicOption(id: 2, name: 'Sort prolongé', description: ''),
+      ];
+
+      await pushPastAnnouncement(tester, 14);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape 3 sur 4 · Métamagie'), findsOneWidget);
+      expect(find.textContaining('NOUVELLES OPTIONS'), findsNothing);
+      expect(find.textContaining('REMPLACER UNE OPTION'), findsOneWidget);
+
+      await tester.tap(find.text('Sort discret'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sort prolongé'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      final applied = fakeRepository.applyLevelUpCalls.single;
+      expect(applied.metamagicNames, isEmpty);
+      expect(applied.metamagicSwap?.removedName, 'Sort discret');
+      expect(applied.metamagicSwap?.addedName, 'Sort prolongé');
+    });
+  });
+
+  group('etape "Expertise" (Barde/Roublard)', () {
+    testWidgets(
+      'Barde niveau 3 : quota 2 parmi les competences deja maitrisees, '
+      'pas de substitution outils (Barde uniquement)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 7,
+              hitDie: 8,
+              className: 'Barde',
+              level: 2,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+          skills: const [
+            CharacterSkillRow(
+              id: 1,
+              name: 'Discrétion',
+              abilityId: 'dex',
+              proficiency: 'competente',
+            ),
+            CharacterSkillRow(
+              id: 2,
+              name: 'Persuasion',
+              abilityId: 'cha',
+              proficiency: 'competente',
+            ),
+            CharacterSkillRow(
+              id: 3,
+              name: 'Arcanes',
+              abilityId: 'int',
+              proficiency: 'aucune',
+            ),
+          ],
+        );
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeCreationRepository.spellCatalogByClassId = {
+          7: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 700,
+                name: 'Vague tonnante',
+                level: 1,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        // Étape "Sorts" intercalée (1 nouveau sort connu à ce niveau,
+        // delta de cantrips nul).
+        await tester.tap(find.text('Vague tonnante'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Expertise'), findsOneWidget);
+        expect(find.text('Arcanes'), findsNothing);
+        expect(find.textContaining('Outils de voleur'), findsNothing);
+
+        await tester.tap(find.text('Discrétion'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Persuasion'));
+        await tester.pumpAndSettle();
+        expect(find.text('2 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.expertiseSkillIds.toSet(), {1, 2});
+        expect(applied.expertiseThievesToolsSubstitution, isFalse);
+      },
+    );
+
+    testWidgets(
+      'Barde niveau 3 : une seule competence "competente" disponible (quota '
+      'RAW 2 jamais atteignable) — le bouton CONTINUER doit rester grise '
+      'tant que cette unique selection n\'est pas faite, puis devenir '
+      'actionnable sans attendre un second choix impossible (regression du '
+      'quota plafonne au catalogue disponible, voir '
+      '[_effectiveExpertiseSkillQuota])',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 7,
+              hitDie: 8,
+              className: 'Barde',
+              level: 2,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+          skills: const [
+            CharacterSkillRow(
+              id: 1,
+              name: 'Discrétion',
+              abilityId: 'dex',
+              proficiency: 'competente',
+            ),
+            CharacterSkillRow(
+              id: 3,
+              name: 'Arcanes',
+              abilityId: 'int',
+              proficiency: 'aucune',
+            ),
+          ],
+        );
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeCreationRepository.spellCatalogByClassId = {
+          7: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 700,
+                name: 'Vague tonnante',
+                level: 1,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Vague tonnante'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('· Expertise'), findsOneWidget);
+        expect(find.text('Arcanes'), findsNothing);
+        // 1 seule competence "competente" eligible : le badge affiche le
+        // quota EFFECTIF plafonne au catalogue (1), pas le quota RAW (2).
+        expect(find.text('0 / 1'), findsOneWidget);
+
+        // Avant le correctif, `canContinue` comparait le total selectionne
+        // au quota RAW (`data.expertiseQuota` = 2), jamais atteignable ici
+        // (1 seule competence disponible) : tapoter CONTINUER ne devait
+        // rien declencher, l'ecran reste sur "Expertise".
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('· Expertise'), findsOneWidget);
+
+        await tester.tap(find.text('Discrétion'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.expertiseSkillIds, [1]);
+        expect(applied.expertiseThievesToolsSubstitution, isFalse);
+      },
+    );
+
+    testWidgets(
+      'Roublard niveau 6 : substitution "Outils de voleur" prend une des '
+      '2 places, quota de competences reduit a 1',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 9,
+              hitDie: 8,
+              className: 'Roublard',
+              level: 5,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+          skills: const [
+            CharacterSkillRow(
+              id: 1,
+              name: 'Discrétion',
+              abilityId: 'dex',
+              proficiency: 'competente',
+            ),
+            CharacterSkillRow(
+              id: 2,
+              name: 'Escamotage',
+              abilityId: 'dex',
+              proficiency: 'competente',
+            ),
+          ],
+        );
+        fakeRepository.levelDataByLevel = {
+          6: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+
+        await pushPastAnnouncement(tester, 6);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Outils de voleur'), findsOneWidget);
+        await tester.tap(find.text('Outils de voleur'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Discrétion'));
+        await tester.pumpAndSettle();
+        expect(find.text('2 / 2'), findsOneWidget);
+        // Le quota de compétences est désormais réduit à 1 (substitution
+        // comprise) : "Escamotage" ne peut plus être cochée.
+        await tester.tap(find.text('Escamotage'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('2 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.expertiseSkillIds, [1]);
+        expect(applied.expertiseThievesToolsSubstitution, isTrue);
+      },
+    );
+
+    testWidgets(
+      'Roublard niveau 6 : vivier de competences "competente" vide — seule '
+      'la substitution "Outils de voleur" est disponible, le flux doit '
+      'pouvoir aller jusqu\'au bout une fois celle-ci selectionnee '
+      '(regression du quota plafonne au catalogue disponible : avant le '
+      'correctif, le maximum atteignable ici — 1, via la seule '
+      'substitution — n\'egalait jamais le quota RAW de 2, bouton CONTINUER '
+      'bloque indefiniment)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 9,
+              hitDie: 8,
+              className: 'Roublard',
+              level: 5,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+          skills: const [],
+        );
+        fakeRepository.levelDataByLevel = {
+          6: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+
+        await pushPastAnnouncement(tester, 6);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Outils de voleur'), findsOneWidget);
+        // Aucune competence eligible : le quota effectif est deja a 0 sans
+        // la substitution (badge plafonne au catalogue, pas le quota RAW).
+        expect(find.text('0 / 0'), findsOneWidget);
+
+        await tester.tap(find.text('Outils de voleur'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.expertiseSkillIds, isEmpty);
+        expect(applied.expertiseThievesToolsSubstitution, isTrue);
+      },
+    );
+
+    testWidgets(
+      'Roublard niveau 1 pris en MULTICLASSAGE TARDIF (pas la création) '
+      'declenche aussi l\'etape Expertise — meme chemin que la montee de '
+      'niveau classique, [effectiveTargetLevel] vaut 1',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          abilityScores: {'str': 15, 'dex': 15, 'con': 14},
+          skills: const [
+            CharacterSkillRow(
+              id: 1,
+              name: 'Discrétion',
+              abilityId: 'dex',
+              proficiency: 'competente',
+            ),
+            CharacterSkillRow(
+              id: 2,
+              name: 'Perception',
+              abilityId: 'wis',
+              proficiency: 'competente',
+            ),
+          ],
+        );
+        fakeCreationRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [
+            ClassOption(id: 1, name: 'Guerrier', description: '', hitDie: 10),
+            ClassOption(id: 9, name: 'Roublard', description: '', hitDie: 8),
+          ],
+        );
+        fakeRepository.levelDataByLevel = {
+          1: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/char-1/level-up?level=5');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Se multiclasser en Roublard'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // classDecision -> annonce
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // annonce -> PV
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // PV -> Aptitudes
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER')); // Aptitudes -> Expertise
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('· Expertise'), findsOneWidget);
+        expect(find.text('Outils de voleur'), findsOneWidget);
+
+        await tester.tap(find.text('Discrétion'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Perception'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Roublard');
+        expect(applied.isMulticlassing, isTrue);
+        expect(applied.expertiseSkillIds.toSet(), {1, 2});
+      },
+    );
+  });
+
+  group('etape "Ascendance draconique" (Ensorceleur, Lignage draconique, '
+      'multiclassage niveau 1)', () {
+    testWidgets('choix de sous-classe ET type de degats dans la meme montee de '
+        'niveau : enchaine Sous-classe -> Sorts -> Ascendance draconique', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        abilityScores: {'str': 15, 'cha': 14, 'con': 14},
+      );
+      fakeCreationRepository.classCatalogToReturn = const ClassCatalog(
+        classes: [
+          ClassOption(id: 1, name: 'Guerrier', description: '', hitDie: 10),
+          ClassOption(id: 12, name: 'Ensorceleur', description: '', hitDie: 6),
+        ],
+      );
+      fakeRepository.levelDataByLevel = {
+        1: const LevelUpLevelData(
+          choiceType: 'sous_classe',
+          automaticFeatures: [],
+          availableSubclasses: [
+            LevelUpSubclassOption(id: 30, name: 'Lignage draconique'),
+          ],
+        ),
+      };
+      fakeRepository.draconicAncestryOptionsToReturn = const [
+        LevelUpDraconicAncestryOption(
+          id: 1,
+          name: 'Dragon rouge',
+          description: '',
+          damageType: 'feu',
+        ),
+        LevelUpDraconicAncestryOption(
+          id: 2,
+          name: 'Dragon blanc',
+          description: '',
+          damageType: 'froid',
+        ),
+      ];
+      fakeCreationRepository.spellCatalogByClassId = {
+        12: const SpellCatalog(
+          spells: [
+            SpellOption(
+              id: 600,
+              name: 'Trait de feu',
+              level: 0,
+              school: 'Évocation',
+              castingTime: '1 action',
+            ),
+            SpellOption(
+              id: 601,
+              name: 'Lumière',
+              level: 0,
+              school: 'Évocation',
+              castingTime: '1 action',
+            ),
+            SpellOption(
+              id: 602,
+              name: 'Lame de feu',
+              level: 0,
+              school: 'Évocation',
+              castingTime: '1 action',
+            ),
+            SpellOption(
+              id: 603,
+              name: 'Mains brûlantes',
+              level: 0,
+              school: 'Évocation',
+              castingTime: '1 action',
+            ),
+            SpellOption(
+              id: 604,
+              name: 'Projectile magique',
+              level: 1,
+              school: 'Évocation',
+              castingTime: '1 action',
+            ),
+            SpellOption(
+              id: 605,
+              name: 'Toile d\'araignée',
+              level: 1,
+              school: 'Invocation',
+              castingTime: '1 action',
+            ),
+          ],
+        ),
+      };
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+      router.push('/characters/char-1/level-up?level=5');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Se multiclasser en Ensorceleur'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER')); // classDecision -> annonce
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER')); // annonce -> PV
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER')); // PV -> Aptitudes
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER')); // Aptitudes -> Sous-classe
+      await tester.pumpAndSettle();
+
+      expect(find.text('Lignage draconique'), findsOneWidget);
+      await tester.tap(find.text('Lignage draconique'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER')); // Sous-classe -> Sorts
+      await tester.pumpAndSettle();
+
+      for (final name in [
+        'Trait de feu',
+        'Lumière',
+        'Lame de feu',
+        'Mains brûlantes',
+      ]) {
+        await tester.ensureVisible(find.text(name));
+        await tester.tap(find.text(name));
+        await tester.pumpAndSettle();
+      }
+      await tester.ensureVisible(find.text('Sorts'));
+      await tester.tap(find.text('Sorts'));
+      await tester.pumpAndSettle();
+      for (final name in ['Projectile magique', 'Toile d\'araignée']) {
+        await tester.ensureVisible(find.text(name));
+        await tester.tap(find.text(name));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.text('CONTINUER')); // Sorts -> Ascendance
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Ascendance draconique'), findsWidgets);
+      await tester.tap(find.text('Dragon rouge'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER')); // -> récapitulatif
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ascendance draconique'), findsOneWidget);
+      expect(find.text('feu'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER')); // applique
+      await tester.pumpAndSettle();
+
+      final applied = fakeRepository.applyLevelUpCalls.single;
+      expect(applied.className, 'Ensorceleur');
+      expect(applied.isMulticlassing, isTrue);
+      expect(applied.draconicAncestryDamageType, 'feu');
+    });
+
+    testWidgets(
+      'contenu pas encore peuple (aucune option) : etape absente, pas de '
+      'blocage',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          abilityScores: {'str': 15, 'cha': 14, 'con': 14},
+        );
+        fakeCreationRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [
+            ClassOption(id: 1, name: 'Guerrier', description: '', hitDie: 10),
+            ClassOption(
+              id: 12,
+              name: 'Ensorceleur',
+              description: '',
+              hitDie: 6,
+            ),
+          ],
+        );
+        fakeRepository.levelDataByLevel = {
+          1: const LevelUpLevelData(
+            choiceType: 'sous_classe',
+            automaticFeatures: [],
+            availableSubclasses: [
+              LevelUpSubclassOption(id: 30, name: 'Lignage draconique'),
+            ],
+          ),
+        };
+        fakeRepository.draconicAncestryOptionsToReturn = const [];
+        fakeCreationRepository.spellCatalogByClassId = {
+          12: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 600,
+                name: 'Trait de feu',
+                level: 0,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 601,
+                name: 'Lumière',
+                level: 0,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 602,
+                name: 'Lame de feu',
+                level: 0,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 603,
+                name: 'Mains brûlantes',
+                level: 0,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 604,
+                name: 'Projectile magique',
+                level: 1,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+              SpellOption(
+                id: 605,
+                name: 'Toile d\'araignée',
+                level: 1,
+                school: 'Invocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        router.push('/characters/char-1/level-up?level=5');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Se multiclasser en Ensorceleur'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Lignage draconique'), findsOneWidget);
+        await tester.tap(find.text('Lignage draconique'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        for (final name in [
+          'Trait de feu',
+          'Lumière',
+          'Lame de feu',
+          'Mains brûlantes',
+        ]) {
+          await tester.ensureVisible(find.text(name));
+          await tester.tap(find.text(name));
+          await tester.pumpAndSettle();
+        }
+        await tester.ensureVisible(find.text('Sorts'));
+        await tester.tap(find.text('Sorts'));
+        await tester.pumpAndSettle();
+        for (final name in ['Projectile magique', 'Toile d\'araignée']) {
+          await tester.ensureVisible(find.text(name));
+          await tester.tap(find.text(name));
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find.text('CONTINUER')); // Sorts -> récapitulatif
+        await tester.pumpAndSettle();
+
+        // Directement au récapitulatif (aucune exception, aucun blocage) :
+        // l'étape "Ascendance draconique" est absente, le contenu
+        // (`class_options`) n'étant pas encore peuplé.
+        expect(find.textContaining('Ascendance draconique'), findsNothing);
+        expect(find.text('CONTINUER'), findsOneWidget);
       },
     );
   });

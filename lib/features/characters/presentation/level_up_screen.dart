@@ -34,12 +34,16 @@ import '../domain/level_up_choice_kind.dart';
 import '../domain/level_up_choice_options.dart';
 import '../domain/level_up_choice_selection.dart';
 import '../domain/level_up_continue_option.dart';
+import '../domain/level_up_draconic_ancestry_option.dart';
 import '../domain/level_up_elemental_discipline_option.dart';
+import '../domain/level_up_expertise_option.dart';
 import '../domain/level_up_hit_points_calculator.dart';
 import '../domain/level_up_infusion_option.dart';
 import '../domain/level_up_infusion_swap.dart';
 import '../domain/level_up_invocation_option.dart';
 import '../domain/level_up_maneuver_option.dart';
+import '../domain/level_up_metamagic_option.dart';
+import '../domain/level_up_metamagic_swap.dart';
 import '../domain/level_up_multiclass_option.dart';
 import '../domain/level_up_rune_option.dart';
 import '../domain/patron_extended_spells.dart';
@@ -133,6 +137,24 @@ enum _LevelUpPhase {
   /// `docs/dette-technique.md`), entre [runes] et [summary] — voir
   /// [_buildInfusionsStep].
   infusions,
+
+  /// Ensorceleur uniquement (`LevelUpStepData.requiresMetamagicSelection` OU
+  /// `LevelUpStepData.canSwapMetamagic` — même exception que [infusions] :
+  /// peut être affichée même sans nouvelle option connue ce niveau, pour
+  /// l'échange RAW-exact d'une option déjà connue), entre [infusions] et
+  /// [expertise] — voir [_buildMetamagicStep].
+  metamagie,
+
+  /// Barde (niveaux 3/10) ou Roublard (niveaux 6, le niveau 1 du Roublard
+  /// passant par la création/l'édition, pas ce provider —
+  /// `LevelUpStepData.requiresExpertiseSelection`), entre [metamagie] et
+  /// [draconicAncestry] — voir [_buildExpertiseStep].
+  expertise,
+
+  /// Ensorceleur, Lignage draconique, niveau 1 de sous-classe uniquement
+  /// (`LevelUpStepData.requiresDraconicAncestrySelection`), entre
+  /// [expertise] et [summary] — voir [_buildDraconicAncestryStep].
+  draconicAncestry,
   summary,
 }
 
@@ -372,6 +394,41 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// renseignés, voir [_buildInfusionSwap]).
   String? _infusionSwapAddedId;
 
+  /// État de la sélection de NOUVELLES options de Métamagie (Ensorceleur,
+  /// étape "Métamagie") — même rationale que [_selectedInfusionIds].
+  /// Distinct de [_metamagicSwapRemovedName]/[_metamagicSwapAddedId]
+  /// ci-dessous.
+  List<String> _selectedMetamagicIds = [];
+
+  /// Nom de l'option de Métamagie déjà connue retirée par l'échange
+  /// optionnel de l'étape "Métamagie" (voir
+  /// `domain/level_up_metamagic_swap.dart`) — même rationale que
+  /// [_infusionSwapRemovedName].
+  String? _metamagicSwapRemovedName;
+
+  /// `class_options.id.toString()` de l'option choisie en remplacement de
+  /// [_metamagicSwapRemovedName] — même rationale que [_infusionSwapAddedId].
+  String? _metamagicSwapAddedId;
+
+  /// État de la sélection de compétences en Expertise (Barde/Roublard,
+  /// étape "Expertise") — clés `skill.id.toString()`, même rationale que
+  /// [_selectedInfusionIds].
+  List<String> _selectedExpertiseSkillIds = [];
+
+  /// `true` si le joueur substitue la maîtrise des outils de voleur à une
+  /// des 2 places d'Expertise (Roublard uniquement, voir
+  /// `domain/expertise_known_progression.dart::ExpertiseKnownProgression.allowsThievesToolsSubstitution`)
+  /// — réduit d'autant le quota effectif de compétences sélectionnables,
+  /// voir [_effectiveExpertiseSkillQuota].
+  bool _expertiseThievesToolsSelected = false;
+
+  /// `class_options.id.toString()` de l'option d'Ascendance draconique
+  /// choisie (Ensorceleur, Lignage draconique, niveau 1 de sous-classe
+  /// UNIQUEMENT) — sélection unique (quota RAW de 1, jamais de liste comme
+  /// les autres mécaniques de ce chantier), `null` tant qu'aucun type de
+  /// dégâts n'est choisi.
+  String? _selectedDraconicAncestryId;
+
   @override
   void initState() {
     super.initState();
@@ -439,6 +496,27 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     _selectedInfusionIds = [];
     _infusionSwapRemovedName = null;
     _infusionSwapAddedId = null;
+  }
+
+  /// Remet à zéro la sélection de Métamagie ET l'échange en cours — même
+  /// rationale que [_resetInfusionSelectionState].
+  void _resetMetamagicSelectionState() {
+    _selectedMetamagicIds = [];
+    _metamagicSwapRemovedName = null;
+    _metamagicSwapAddedId = null;
+  }
+
+  /// Remet à zéro la sélection d'Expertise — même rationale que
+  /// [_resetMetamagicSelectionState].
+  void _resetExpertiseSelectionState() {
+    _selectedExpertiseSkillIds = [];
+    _expertiseThievesToolsSelected = false;
+  }
+
+  /// Remet à zéro la sélection d'Ascendance draconique — même rationale que
+  /// [_resetExpertiseSelectionState].
+  void _resetDraconicAncestrySelectionState() {
+    _selectedDraconicAncestryId = null;
   }
 
   void _toggleNewCantrip(String name, int quota) {
@@ -910,6 +988,222 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return null;
   }
 
+  /// Quota EFFECTIF de NOUVELLES options de Métamagie à ce niveau — même
+  /// rationale que [_effectiveInfusionQuota] (aptitude de CLASSE, pas de
+  /// résolution de sous-classe).
+  int _effectiveMetamagicQuota(LevelUpStepData data) {
+    if (!data.requiresMetamagicSelection) return 0;
+    return math.min(data.metamagicDelta, data.availableMetamagicOptions.length);
+  }
+
+  /// [_selectedMetamagicIds] purgée/bornée ET débarrassée de l'option
+  /// choisie en remplacement par l'échange en cours
+  /// ([_metamagicSwapAddedId]) — même rationale que
+  /// [_effectiveSelectedInfusionIds].
+  List<String> _effectiveSelectedMetamagicIds(LevelUpStepData data) {
+    if (!data.requiresMetamagicSelection) return const [];
+    final availableIds = {
+      for (final option in data.availableMetamagicOptions) option.id.toString(),
+    };
+    final quota = _effectiveMetamagicQuota(data);
+    final pruned = [
+      for (final id in _selectedMetamagicIds)
+        if (availableIds.contains(id) && id != _metamagicSwapAddedId) id,
+    ];
+    return pruned.length > quota ? pruned.sublist(0, quota) : pruned;
+  }
+
+  void _toggleMetamagic(LevelUpStepData data, String metamagicId, int quota) {
+    setState(() {
+      _selectedMetamagicIds = SpellsStepSelection.toggle(
+        current: _effectiveSelectedMetamagicIds(data),
+        value: metamagicId,
+        quota: quota,
+      );
+    });
+  }
+
+  /// Noms des NOUVELLES options de Métamagie choisies, prêts pour
+  /// `CharacterRepository.applyLevelUp` (paramètre `metamagicNames`) — même
+  /// rationale que [_buildInfusionNames].
+  List<String> _buildMetamagicNames(LevelUpStepData data) {
+    if (!data.requiresMetamagicSelection) return const [];
+    final available = data.availableMetamagicOptions;
+    return [
+      for (final id in _effectiveSelectedMetamagicIds(data))
+        available.firstWhere((option) => option.id.toString() == id).name,
+    ];
+  }
+
+  /// Options de Métamagie candidates pour la sous-section "échange" de
+  /// l'étape "Métamagie" — même rationale que [_availableInfusionsForSwap].
+  List<LevelUpMetamagicOption> _availableMetamagicOptionsForSwap(
+    LevelUpStepData data,
+  ) {
+    final reserved = _effectiveSelectedMetamagicIds(data).toSet();
+    return [
+      for (final option in data.availableMetamagicOptions)
+        if (!reserved.contains(option.id.toString())) option,
+    ];
+  }
+
+  /// Sélectionne/désélectionne [removedName] comme option retirée par
+  /// l'échange — même rationale que [_toggleInfusionSwapRemoved].
+  void _toggleMetamagicSwapRemoved(String removedName) {
+    setState(() {
+      if (_metamagicSwapRemovedName == removedName) {
+        _metamagicSwapRemovedName = null;
+        _metamagicSwapAddedId = null;
+      } else {
+        _metamagicSwapRemovedName = removedName;
+        _metamagicSwapAddedId = null;
+      }
+    });
+  }
+
+  /// Sélectionne/désélectionne [addedId] comme option de remplacement —
+  /// même rationale que [_toggleInfusionSwapAdded].
+  void _toggleMetamagicSwapAdded(String addedId) {
+    if (_metamagicSwapRemovedName == null) return;
+    setState(() {
+      _metamagicSwapAddedId = _metamagicSwapAddedId == addedId ? null : addedId;
+    });
+  }
+
+  /// Construit l'échange de Métamagie prêt pour
+  /// `CharacterRepository.applyLevelUp` (paramètre `metamagicSwap`) — même
+  /// rationale que [_buildInfusionSwap].
+  LevelUpMetamagicSwap? _buildMetamagicSwap(LevelUpStepData data) {
+    final removedName = _metamagicSwapRemovedName;
+    final addedId = _metamagicSwapAddedId;
+    if (removedName == null || addedId == null) return null;
+    for (final option in _availableMetamagicOptionsForSwap(data)) {
+      if (option.id.toString() == addedId) {
+        return LevelUpMetamagicSwap(
+          removedName: removedName,
+          addedName: option.name,
+        );
+      }
+    }
+    return null;
+  }
+
+  /// Quota EFFECTIF de compétences sélectionnables à l'étape "Expertise" —
+  /// `data.expertiseQuota` MOINS 1 si [_expertiseThievesToolsSelected] (la
+  /// substitution Roublard prend une des 2 places), plafonné au nombre de
+  /// compétences ÉLIGIBLES ([LevelUpStepData.availableExpertiseSkills]),
+  /// même rationale que [_effectiveInfusionQuota].
+  int _effectiveExpertiseSkillQuota(LevelUpStepData data) {
+    if (!data.requiresExpertiseSelection) return 0;
+    final quotaAfterSubstitution =
+        data.expertiseQuota - (_expertiseThievesToolsSelected ? 1 : 0);
+    return math.min(
+      quotaAfterSubstitution,
+      data.availableExpertiseSkills.length,
+    );
+  }
+
+  /// [_selectedExpertiseSkillIds] purgée/bornée — même rationale que
+  /// [_effectiveSelectedInfusionIds].
+  List<String> _effectiveSelectedExpertiseSkillIds(LevelUpStepData data) {
+    if (!data.requiresExpertiseSelection) return const [];
+    final availableIds = {
+      for (final option in data.availableExpertiseSkills)
+        option.skillId.toString(),
+    };
+    final quota = _effectiveExpertiseSkillQuota(data);
+    final pruned = [
+      for (final id in _selectedExpertiseSkillIds)
+        if (availableIds.contains(id)) id,
+    ];
+    return pruned.length > quota ? pruned.sublist(0, quota) : pruned;
+  }
+
+  void _toggleExpertiseSkill(LevelUpStepData data, String skillId, int quota) {
+    setState(() {
+      _selectedExpertiseSkillIds = SpellsStepSelection.toggle(
+        current: _effectiveSelectedExpertiseSkillIds(data),
+        value: skillId,
+        quota: quota,
+      );
+    });
+  }
+
+  /// Bascule [_expertiseThievesToolsSelected] — purge aussitôt
+  /// [_selectedExpertiseSkillIds] si le quota effectif vient de baisser (une
+  /// compétence déjà cochée peut déborder du nouveau quota), même garde que
+  /// [_effectiveSelectedExpertiseSkillIds] appliquerait de toute façon au
+  /// prochain affichage, appliquée ici immédiatement pour que le compteur de
+  /// l'étape reste cohérent sans attendre un second re-rendu.
+  void _toggleExpertiseThievesTools(LevelUpStepData data) {
+    setState(() {
+      _expertiseThievesToolsSelected = !_expertiseThievesToolsSelected;
+      final quota = _effectiveExpertiseSkillQuota(data);
+      if (_selectedExpertiseSkillIds.length > quota) {
+        _selectedExpertiseSkillIds = _selectedExpertiseSkillIds.sublist(
+          0,
+          quota,
+        );
+      }
+    });
+  }
+
+  /// `skills.id` des compétences passées en Expertise, prêts pour
+  /// `CharacterRepository.applyLevelUp` (paramètre `expertiseSkillIds`).
+  List<int> _buildExpertiseSkillIds(LevelUpStepData data) {
+    if (!data.requiresExpertiseSelection) return const [];
+    return [
+      for (final id in _effectiveSelectedExpertiseSkillIds(data)) int.parse(id),
+    ];
+  }
+
+  /// Sous-classe de l'Ensorceleur qui progresse : celle choisie dans cette
+  /// même montée de niveau (étape "Choix à faire", niveau 1) s'il y en a
+  /// une, sinon celle déjà en base — même rôle que [_monkSubclassIdFor] pour
+  /// les disciplines élémentaires.
+  int? _sorcererSubclassIdFor(LevelUpStepData data) {
+    if (data.choiceKind == LevelUpChoiceKind.subclass) {
+      final selected = _selectedListOptionId;
+      if (selected is num) return selected.toInt();
+    }
+    return data.knownSubclassId;
+  }
+
+  /// Options d'Ascendance draconique candidates pour la sous-classe résolue
+  /// par [_sorcererSubclassIdFor] — vide tant qu'aucune sous-classe n'est
+  /// connue, ou tant que le contenu (`class_options`, `option_type =
+  /// 'ancetre_draconique'`) n'est pas peuplé.
+  List<LevelUpDraconicAncestryOption> _availableDraconicAncestryOptionsFor(
+    LevelUpStepData data,
+  ) {
+    final subclassId = _sorcererSubclassIdFor(data);
+    if (subclassId == null) return const [];
+    return data.draconicAncestryBySubclass[subclassId] ?? const [];
+  }
+
+  /// Sélectionne/désélectionne [optionId] comme type de dégâts choisi —
+  /// quota RAW de 1, contrairement aux autres mécaniques de ce chantier :
+  /// pas de `SpellsStepSelection.toggle`, juste une bascule simple.
+  void _toggleDraconicAncestry(String optionId) {
+    setState(() {
+      _selectedDraconicAncestryId = _selectedDraconicAncestryId == optionId
+          ? null
+          : optionId;
+    });
+  }
+
+  /// Type de dégâts choisi, prêt pour `CharacterRepository.applyLevelUp`
+  /// (paramètre `draconicAncestryDamageType`) — `null` tant qu'aucune option
+  /// n'est sélectionnée.
+  String? _buildDraconicAncestryDamageType(LevelUpStepData data) {
+    final selectedId = _selectedDraconicAncestryId;
+    if (selectedId == null) return null;
+    for (final option in _availableDraconicAncestryOptionsFor(data)) {
+      if (option.id.toString() == selectedId) return option.damageType;
+    }
+    return null;
+  }
+
   /// Pacte connu pour la validation des prérequis d'invocations : celui choisi
   /// dans cette même montée de niveau (étape "Choix à faire", ex. Pacte de la
   /// lame au niveau 3) s'il y en a un, sinon celui déjà en base.
@@ -1233,6 +1527,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         runeNames: _buildRuneNames(data),
         infusionNames: _buildInfusionNames(data),
         infusionSwap: _buildInfusionSwap(data),
+        metamagicNames: _buildMetamagicNames(data),
+        metamagicSwap: _buildMetamagicSwap(data),
+        expertiseSkillIds: _buildExpertiseSkillIds(data),
+        expertiseThievesToolsSubstitution: _expertiseThievesToolsSelected,
+        draconicAncestryDamageType: _buildDraconicAncestryDamageType(data),
         racialInnateSpellIds: _racialInnateSpellIds(data),
       );
 
@@ -1272,6 +1571,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         _resetArcaneShotSelectionState();
         _resetRuneSelectionState();
         _resetInfusionSelectionState();
+        _resetMetamagicSelectionState();
+        _resetExpertiseSelectionState();
+        _resetDraconicAncestrySelectionState();
         _isApplying = false;
       });
     } on CharacterFailure catch (failure) {
@@ -1402,6 +1704,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       _LevelUpPhase.arcaneShots => _buildArcaneShotsStep(data),
       _LevelUpPhase.runes => _buildRunesStep(data),
       _LevelUpPhase.infusions => _buildInfusionsStep(data),
+      _LevelUpPhase.metamagie => _buildMetamagicStep(data),
+      _LevelUpPhase.expertise => _buildExpertiseStep(data),
+      _LevelUpPhase.draconicAncestry => _buildDraconicAncestryStep(data),
       _LevelUpPhase.summary => _buildSummary(data),
     };
   }
@@ -1849,7 +2154,30 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   bool _hasInfusionsStep(LevelUpStepData data) =>
       _effectiveInfusionQuota(data) > 0 || data.canSwapInfusion;
 
-  /// 3 à 11 selon les étapes déclenchées à ce niveau — spec visuelle
+  /// `true` si l'étape "Métamagie" doit être affichée à ce niveau —
+  /// Ensorceleur uniquement. Même exception que [_hasInfusionsStep] :
+  /// vrai dès que [LevelUpStepData.canSwapMetamagic] l'est, même si le
+  /// quota effectif de NOUVELLES options est nul.
+  bool _hasMetamagicStep(LevelUpStepData data) =>
+      _effectiveMetamagicQuota(data) > 0 || data.canSwapMetamagic;
+
+  /// `true` si l'étape "Expertise" doit être affichée à ce niveau — Barde/
+  /// Roublard uniquement, voir [LevelUpStepData.requiresExpertiseSelection].
+  bool _hasExpertiseStep(LevelUpStepData data) => data.expertiseQuota > 0;
+
+  /// `true` si l'étape "Ascendance draconique" doit être affichée à ce
+  /// niveau — Ensorceleur, Lignage draconique, niveau 1 UNIQUEMENT.
+  /// **Contrairement aux autres `_hasXxxStep`** : ne suffit pas que
+  /// [LevelUpStepData.requiresDraconicAncestrySelection] soit vrai, le
+  /// catalogue candidat doit aussi être non vide (contenu pas encore peuplé
+  /// au moment de l'écriture de cette méthode, voir
+  /// `domain/level_up_draconic_ancestry_option.dart`) : jamais piéger le
+  /// joueur dans une étape obligatoire sans aucune option sélectionnable.
+  bool _hasDraconicAncestryStep(LevelUpStepData data) =>
+      data.requiresDraconicAncestrySelection &&
+      _availableDraconicAncestryOptionsFor(data).isNotEmpty;
+
+  /// 3 à 14 selon les étapes déclenchées à ce niveau — spec visuelle
   /// direction-artistique : [LevelUpStepData.choiceKind] non nul ajoute
   /// l'étape "Choix à faire" (increment 2, inchangé), [_hasSpellsStep]
   /// ajoute l'étape "Sorts", [_hasInvocationsStep] ajoute l'étape
@@ -1871,7 +2199,24 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       (_hasManeuversStep(data) ? 1 : 0) +
       (_hasArcaneShotsStep(data) ? 1 : 0) +
       (_hasRunesStep(data) ? 1 : 0) +
-      (_hasInfusionsStep(data) ? 1 : 0);
+      (_hasInfusionsStep(data) ? 1 : 0) +
+      (_hasMetamagicStep(data) ? 1 : 0) +
+      (_hasExpertiseStep(data) ? 1 : 0) +
+      (_hasDraconicAncestryStep(data) ? 1 : 0);
+
+  /// Première étape déclenchée parmi "Métamagie"/"Expertise"/"Ascendance
+  /// draconique", dans cet ordre de chaînage (voir [_LevelUpPhase]) — le
+  /// récapitulatif si aucune n'est déclenchée. Factorisée ici (réutilisée
+  /// par tous les `_phaseAfterXxx` dont la chaîne se poursuivait
+  /// auparavant directement vers [_LevelUpPhase.summary] après "Infusions"
+  /// — même rôle que [_firstStepAfterInvocationsFamily] pour la famille
+  /// précédente).
+  _LevelUpPhase _firstStepAfterInfusionsFamily(LevelUpStepData data) {
+    if (_hasMetamagicStep(data)) return _LevelUpPhase.metamagie;
+    if (_hasExpertiseStep(data)) return _LevelUpPhase.expertise;
+    if (_hasDraconicAncestryStep(data)) return _LevelUpPhase.draconicAncestry;
+    return _LevelUpPhase.summary;
+  }
 
   /// Première étape déclenchée parmi "Invocations"/"Disciplines
   /// élémentaires"/"Manœuvres"/"Tirs arcaniques"/"Runes"/"Infusions", dans
@@ -1888,7 +2233,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     if (_hasArcaneShotsStep(data)) return _LevelUpPhase.arcaneShots;
     if (_hasRunesStep(data)) return _LevelUpPhase.runes;
     if (_hasInfusionsStep(data)) return _LevelUpPhase.infusions;
-    return _LevelUpPhase.summary;
+    return _firstStepAfterInfusionsFamily(data);
   }
 
   /// Étape suivante une fois "Aptitudes"/"Choix à faire" franchies : l'étape
@@ -1939,7 +2284,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     if (_hasArcaneShotsStep(data)) return _LevelUpPhase.arcaneShots;
     if (_hasRunesStep(data)) return _LevelUpPhase.runes;
     if (_hasInfusionsStep(data)) return _LevelUpPhase.infusions;
-    return _LevelUpPhase.summary;
+    return _firstStepAfterInfusionsFamily(data);
   }
 
   /// Étape précédente de "Disciplines élémentaires" ("Retour") : l'étape
@@ -1963,7 +2308,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     if (_hasArcaneShotsStep(data)) return _LevelUpPhase.arcaneShots;
     if (_hasRunesStep(data)) return _LevelUpPhase.runes;
     if (_hasInfusionsStep(data)) return _LevelUpPhase.infusions;
-    return _LevelUpPhase.summary;
+    return _firstStepAfterInfusionsFamily(data);
   }
 
   /// Étape précédente de "Manœuvres" ("Retour") : l'étape "Disciplines
@@ -1992,7 +2337,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     if (_hasArcaneShotsStep(data)) return _LevelUpPhase.arcaneShots;
     if (_hasRunesStep(data)) return _LevelUpPhase.runes;
     if (_hasInfusionsStep(data)) return _LevelUpPhase.infusions;
-    return _LevelUpPhase.summary;
+    return _firstStepAfterInfusionsFamily(data);
   }
 
   /// Étape précédente de "Tirs arcaniques" ("Retour") : même logique de
@@ -2015,7 +2360,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   _LevelUpPhase _phaseAfterArcaneShots(LevelUpStepData data) {
     if (_hasRunesStep(data)) return _LevelUpPhase.runes;
     if (_hasInfusionsStep(data)) return _LevelUpPhase.infusions;
-    return _LevelUpPhase.summary;
+    return _firstStepAfterInfusionsFamily(data);
   }
 
   /// Étape précédente de "Runes" ("Retour") : même logique de repli que
@@ -2038,7 +2383,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// pratique : Chevalier runique et Artificier sont deux classes
   /// différentes), le récapitulatif sinon.
   _LevelUpPhase _phaseAfterRunes(LevelUpStepData data) =>
-      _hasInfusionsStep(data) ? _LevelUpPhase.infusions : _LevelUpPhase.summary;
+      _hasInfusionsStep(data)
+      ? _LevelUpPhase.infusions
+      : _firstStepAfterInfusionsFamily(data);
 
   /// Étape précédente de "Infusions" ("Retour") : même logique de repli que
   /// [_phaseBeforeRunes], avec "Runes" en plus (ne devrait jamais arriver en
@@ -2056,6 +2403,58 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     if (data.choiceKind != null) return _LevelUpPhase.choice;
     return _LevelUpPhase.abilities;
   }
+
+  /// Étape suivante une fois "Infusions" franchie : la première étape
+  /// déclenchée parmi "Métamagie"/"Expertise"/"Ascendance draconique" — voir
+  /// [_firstStepAfterInfusionsFamily].
+  _LevelUpPhase _phaseAfterInfusions(LevelUpStepData data) =>
+      _firstStepAfterInfusionsFamily(data);
+
+  /// Étape précédente de "Métamagie" ("Retour") : l'étape "Infusions" si ce
+  /// niveau la déclenche ([_hasInfusionsStep], ne devrait jamais arriver en
+  /// pratique : Artificier et Ensorceleur sont deux classes différentes),
+  /// sinon même chaînage que [_phaseBeforeInfusions].
+  _LevelUpPhase _phaseBeforeMetamagic(LevelUpStepData data) =>
+      _hasInfusionsStep(data)
+      ? _LevelUpPhase.infusions
+      : _phaseBeforeInfusions(data);
+
+  /// Étape suivante une fois "Métamagie" franchie : la première étape
+  /// déclenchée parmi "Expertise"/"Ascendance draconique" — aucune ne
+  /// devrait jamais être déclenchée en même temps en pratique (mutuellement
+  /// exclusives : Ensorceleur/Barde/Roublard sont 3 classes différentes), le
+  /// récapitulatif sinon.
+  _LevelUpPhase _phaseAfterMetamagic(LevelUpStepData data) {
+    if (_hasExpertiseStep(data)) return _LevelUpPhase.expertise;
+    if (_hasDraconicAncestryStep(data)) return _LevelUpPhase.draconicAncestry;
+    return _LevelUpPhase.summary;
+  }
+
+  /// Étape précédente de "Expertise" ("Retour") : l'étape "Métamagie" si ce
+  /// niveau la déclenche ([_hasMetamagicStep], ne devrait jamais arriver en
+  /// pratique), sinon même chaînage que [_phaseBeforeMetamagic].
+  _LevelUpPhase _phaseBeforeExpertise(LevelUpStepData data) =>
+      _hasMetamagicStep(data)
+      ? _LevelUpPhase.metamagie
+      : _phaseBeforeMetamagic(data);
+
+  /// Étape suivante une fois "Expertise" franchie : l'étape "Ascendance
+  /// draconique" si ce niveau la déclenche ([_hasDraconicAncestryStep], ne
+  /// devrait jamais arriver en pratique : Barde/Roublard et Ensorceleur sont
+  /// des classes différentes), le récapitulatif sinon.
+  _LevelUpPhase _phaseAfterExpertise(LevelUpStepData data) =>
+      _hasDraconicAncestryStep(data)
+      ? _LevelUpPhase.draconicAncestry
+      : _LevelUpPhase.summary;
+
+  /// Étape précédente de "Ascendance draconique" ("Retour") : l'étape
+  /// "Expertise" si ce niveau la déclenche ([_hasExpertiseStep], ne devrait
+  /// jamais arriver en pratique), sinon même chaînage que
+  /// [_phaseBeforeExpertise].
+  _LevelUpPhase _phaseBeforeDraconicAncestry(LevelUpStepData data) =>
+      _hasExpertiseStep(data)
+      ? _LevelUpPhase.expertise
+      : _phaseBeforeExpertise(data);
 
   Widget _buildHpStep(LevelUpStepData data) {
     final hpRolled = _hpRolledValue(data.hitDie);
@@ -3911,7 +4310,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         _StepFooter(
           onBack: () => setState(() => _phase = _phaseBeforeInfusions(data)),
           onContinue: canContinue
-              ? () => setState(() => _phase = _LevelUpPhase.summary)
+              ? () => setState(() => _phase = _phaseAfterInfusions(data))
               : null,
         ),
       ],
@@ -3963,6 +4362,379 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return _hasRunesStep(data)
         ? afterRunesStepNumber + 1
         : afterRunesStepNumber;
+  }
+
+  /// Même principe que [_infusionsStepNumber], avec "Infusions" en plus.
+  int _metamagicStepNumber(LevelUpStepData data) {
+    final afterInfusionsStepNumber = _infusionsStepNumber(data);
+    return _hasInfusionsStep(data)
+        ? afterInfusionsStepNumber + 1
+        : afterInfusionsStepNumber;
+  }
+
+  /// Même principe que [_metamagicStepNumber], avec "Métamagie" en plus.
+  int _expertiseStepNumber(LevelUpStepData data) {
+    final afterMetamagicStepNumber = _metamagicStepNumber(data);
+    return _hasMetamagicStep(data)
+        ? afterMetamagicStepNumber + 1
+        : afterMetamagicStepNumber;
+  }
+
+  /// Même principe que [_expertiseStepNumber], avec "Expertise" en plus.
+  int _draconicAncestryStepNumber(LevelUpStepData data) {
+    final afterExpertiseStepNumber = _expertiseStepNumber(data);
+    return _hasExpertiseStep(data)
+        ? afterExpertiseStepNumber + 1
+        : afterExpertiseStepNumber;
+  }
+
+  /// Étape "Métamagie" (Ensorceleur) — même structure que
+  /// [_buildInfusionsStep] (nouvelles options + échange optionnel).
+  Widget _buildMetamagicStep(LevelUpStepData data) {
+    final stepNumber = _metamagicStepNumber(data);
+    final quota = _effectiveMetamagicQuota(data);
+    final selected = _effectiveSelectedMetamagicIds(data);
+    final available = data.availableMetamagicOptions;
+    final canContinue =
+        selected.length == quota &&
+        (_metamagicSwapRemovedName == null || _metamagicSwapAddedId != null);
+
+    return Column(
+      children: [
+        LevelUpHeader(
+          eyebrow: 'MONTÉE DE NIVEAU',
+          levelLabel: 'NIVEAU $_targetLevel',
+          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Métamagie',
+          remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.sm),
+                if (data.requiresMetamagicSelection) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'NOUVELLES OPTIONS DE MÉTAMAGIE',
+                        style: AppTypography.body(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      _QuotaBadge(text: '${selected.length} / $quota'),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  if (available.isEmpty)
+                    const _ParchmentCard(
+                      child: _EmptyChoiceState(
+                        message:
+                            'Vous connaissez déjà toutes les options de '
+                            'Métamagie disponibles.',
+                      ),
+                    )
+                  else
+                    for (var i = 0; i < available.length; i++) ...[
+                      if (i > 0) const SizedBox(height: AppSpacing.xs),
+                      _metamagicTile(
+                        data,
+                        available[i],
+                        index: i,
+                        quota: quota,
+                        selected: selected,
+                      ),
+                    ],
+                  const SizedBox(height: AppSpacing.lg),
+                ],
+                if (data.canSwapMetamagic) ...[
+                  Text(
+                    'REMPLACER UNE OPTION (OPTIONNEL)',
+                    style: AppTypography.body(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  for (var i = 0; i < data.knownMetamagicNames.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.xs),
+                    SelectableOptionTile(
+                      title: data.knownMetamagicNames[i],
+                      selected:
+                          _metamagicSwapRemovedName ==
+                          data.knownMetamagicNames[i],
+                      onTap: () => _toggleMetamagicSwapRemoved(
+                        data.knownMetamagicNames[i],
+                      ),
+                    ),
+                  ],
+                  if (_metamagicSwapRemovedName != null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'REMPLACÉE PAR',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    for (final option in _availableMetamagicOptionsForSwap(
+                      data,
+                    ))
+                      SelectableOptionTile(
+                        title: option.name,
+                        subtitle: option.costText,
+                        selected: _metamagicSwapAddedId == option.id.toString(),
+                        onTap: () =>
+                            _toggleMetamagicSwapAdded(option.id.toString()),
+                      ),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ),
+        _StepFooter(
+          onBack: () => setState(() => _phase = _phaseBeforeMetamagic(data)),
+          onContinue: canContinue
+              ? () => setState(() => _phase = _phaseAfterMetamagic(data))
+              : null,
+        ),
+      ],
+    );
+  }
+
+  /// Une tuile de NOUVELLE option de Métamagie candidate — même patron que
+  /// [_infusionTile], sous-titre composé de la description suivie du coût
+  /// en points de sorcellerie quand renseigné (purement informatif).
+  Widget _metamagicTile(
+    LevelUpStepData data,
+    LevelUpMetamagicOption option, {
+    required int index,
+    required int quota,
+    required List<String> selected,
+  }) {
+    final id = option.id.toString();
+    final isSelected = selected.contains(id);
+    final costText = option.costText;
+    return CheckableOptionTile(
+      title: option.name,
+      subtitle: costText == null
+          ? option.description
+          : '${option.description}\n$costText',
+      leading: AccentIconBadge(
+        index: index,
+        icon: Icons.auto_fix_high,
+        color: AppColors.accentViolet,
+      ),
+      checked: isSelected,
+      enabled: !SpellsStepSelection.isChoiceLocked(
+        isSelected: isSelected,
+        selectedCount: selected.length,
+        quota: quota,
+      ),
+      onTap: () => _toggleMetamagic(data, id, quota),
+    );
+  }
+
+  /// Étape "Expertise" (Barde/Roublard) — liste de compétences déjà
+  /// maîtrisées (voir [LevelUpStepData.availableExpertiseSkills]), plus la
+  /// substitution "Outils de voleur" pour le Roublard
+  /// ([LevelUpStepData.allowsThievesToolsSubstitution]).
+  Widget _buildExpertiseStep(LevelUpStepData data) {
+    final stepNumber = _expertiseStepNumber(data);
+    final quota = _effectiveExpertiseSkillQuota(data);
+    final selected = _effectiveSelectedExpertiseSkillIds(data);
+    final available = data.availableExpertiseSkills;
+    final thievesToolsBit = _expertiseThievesToolsSelected ? 1 : 0;
+    final totalSelected = selected.length + thievesToolsBit;
+    // Quota total EFFECTIF (places de compétences + substitution outils de
+    // voleur), plafonné au catalogue disponible — même motif défensif que
+    // [_buildMetamagicStep]/[_buildInvocationsStep] : `quota` (voir
+    // [_effectiveExpertiseSkillQuota]) est déjà capé au nombre de
+    // compétences éligibles, donc `quota + thievesToolsBit` équivaut à
+    // `min(data.expertiseQuota, available.length + thievesToolsBit)`.
+    // Comparer `totalSelected` à la valeur RAW `data.expertiseQuota` (comme
+    // avant ce correctif) bloquait indéfiniment le bouton CONTINUER dès que
+    // moins de compétences étaient disponibles que le quota RAW (ex. Barde
+    // niveau 3 avec peu de compétences `competente`, ou Roublard avec un
+    // vivier vide où la substitution outils de voleur ne compense qu'une
+    // seule des deux places).
+    final effectiveTotalQuota = quota + thievesToolsBit;
+    final canContinue = totalSelected == effectiveTotalQuota;
+
+    return Column(
+      children: [
+        LevelUpHeader(
+          eyebrow: 'MONTÉE DE NIVEAU',
+          levelLabel: 'NIVEAU $_targetLevel',
+          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Expertise',
+          remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'COMPÉTENCES EN EXPERTISE',
+                      style: AppTypography.body(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    _QuotaBadge(text: '$totalSelected / $effectiveTotalQuota'),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                if (data.allowsThievesToolsSubstitution) ...[
+                  CheckableOptionTile(
+                    title: 'Outils de voleur',
+                    subtitle:
+                        'Substitue une des places d\'Expertise à la '
+                        'maîtrise des outils de voleur.',
+                    leading: const AccentIconBadge(
+                      index: 0,
+                      icon: Icons.construction,
+                      color: AppColors.accentViolet,
+                    ),
+                    checked: _expertiseThievesToolsSelected,
+                    enabled:
+                        _expertiseThievesToolsSelected ||
+                        totalSelected < data.expertiseQuota,
+                    onTap: () => _toggleExpertiseThievesTools(data),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                ],
+                if (available.isEmpty)
+                  const _ParchmentCard(
+                    child: _EmptyChoiceState(
+                      message:
+                          'Aucune compétence déjà maîtrisée à faire passer '
+                          'en Expertise.',
+                    ),
+                  )
+                else
+                  for (var i = 0; i < available.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.xs),
+                    _expertiseSkillTile(
+                      data,
+                      available[i],
+                      index: i + (data.allowsThievesToolsSubstitution ? 1 : 0),
+                      quota: quota,
+                      selected: selected,
+                    ),
+                  ],
+              ],
+            ),
+          ),
+        ),
+        _StepFooter(
+          onBack: () => setState(() => _phase = _phaseBeforeExpertise(data)),
+          onContinue: canContinue
+              ? () => setState(() => _phase = _phaseAfterExpertise(data))
+              : null,
+        ),
+      ],
+    );
+  }
+
+  /// Une tuile de compétence candidate à l'Expertise — même patron que
+  /// [_infusionTile], sans sous-titre (aucune description associée à une
+  /// compétence, contrairement aux catalogues `class_options`).
+  Widget _expertiseSkillTile(
+    LevelUpStepData data,
+    LevelUpExpertiseOption option, {
+    required int index,
+    required int quota,
+    required List<String> selected,
+  }) {
+    final id = option.skillId.toString();
+    final isSelected = selected.contains(id);
+    return CheckableOptionTile(
+      title: option.name,
+      leading: AccentIconBadge(
+        index: index,
+        icon: Icons.star,
+        color: AppColors.accentViolet,
+      ),
+      checked: isSelected,
+      enabled: !SpellsStepSelection.isChoiceLocked(
+        isSelected: isSelected,
+        selectedCount: selected.length,
+        quota: quota,
+      ),
+      onTap: () => _toggleExpertiseSkill(data, id, quota),
+    );
+  }
+
+  /// Étape "Ascendance draconique" (Ensorceleur, Lignage draconique, niveau
+  /// 1 de sous-classe) — sélection UNIQUE du type de dégâts (quota RAW de
+  /// 1), voir [LevelUpStepData.draconicAncestryBySubclass].
+  Widget _buildDraconicAncestryStep(LevelUpStepData data) {
+    final stepNumber = _draconicAncestryStepNumber(data);
+    final available = _availableDraconicAncestryOptionsFor(data);
+    final canContinue = _selectedDraconicAncestryId != null;
+
+    return Column(
+      children: [
+        LevelUpHeader(
+          eyebrow: 'MONTÉE DE NIVEAU',
+          levelLabel: 'NIVEAU $_targetLevel',
+          stepLabel:
+              'Étape $stepNumber sur ${_totalSteps(data)} · '
+              'Ascendance draconique',
+          remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'TYPE DE DÉGÂTS',
+                  style: AppTypography.body(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                for (final option in available)
+                  SelectableOptionTile(
+                    title: option.name,
+                    subtitle: option.description,
+                    selected:
+                        _selectedDraconicAncestryId == option.id.toString(),
+                    onTap: () => _toggleDraconicAncestry(option.id.toString()),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        _StepFooter(
+          onBack: () =>
+              setState(() => _phase = _phaseBeforeDraconicAncestry(data)),
+          onContinue: canContinue
+              ? () => setState(() => _phase = _LevelUpPhase.summary)
+              : null,
+        ),
+      ],
+    );
   }
 
   /// Une ligne de gain de l'étape "Sorts", et du bloc "Sorts" du
@@ -4276,6 +5048,66 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     );
   }
 
+  /// Ligne de récapitulatif du bloc "Métamagie" (Ensorceleur), `null` si
+  /// aucune NOUVELLE option n'a été choisie à ce niveau — même patron que
+  /// [_infusionSummaryGainRow].
+  GainRow? _metamagicSummaryGainRow(LevelUpStepData data) {
+    final names = _buildMetamagicNames(data);
+    if (names.isEmpty) return null;
+    final plural = names.length > 1 ? 's' : '';
+    return GainRow(
+      icon: Icons.auto_fix_high,
+      color: AppColors.accentViolet,
+      title: 'Nouvelle$plural option$plural de Métamagie',
+      subtitle: names.join(', '),
+    );
+  }
+
+  /// Ligne de récapitulatif de l'échange de Métamagie — même patron que
+  /// [_infusionSwapSummaryGainRow].
+  GainRow? _metamagicSwapSummaryGainRow(LevelUpStepData data) {
+    final swap = _buildMetamagicSwap(data);
+    if (swap == null) return null;
+    return GainRow(
+      icon: Icons.sync_alt,
+      color: AppColors.accentViolet,
+      title: 'Métamagie remplacée',
+      subtitle: '${swap.removedName} → ${swap.addedName}',
+    );
+  }
+
+  /// Ligne de récapitulatif du bloc "Expertise" (Barde/Roublard), `null` si
+  /// aucune compétence n'a été choisie à ce niveau (ou substitution seule).
+  GainRow? _expertiseSummaryGainRow(LevelUpStepData data) {
+    final skillIds = _effectiveSelectedExpertiseSkillIds(data).toSet();
+    final names = [
+      for (final option in data.availableExpertiseSkills)
+        if (skillIds.contains(option.skillId.toString())) option.name,
+      if (_expertiseThievesToolsSelected) 'Outils de voleur',
+    ];
+    if (names.isEmpty) return null;
+    final plural = names.length > 1 ? 's' : '';
+    return GainRow(
+      icon: Icons.star,
+      color: AppColors.accentViolet,
+      title: 'Expertise$plural',
+      subtitle: names.join(', '),
+    );
+  }
+
+  /// Ligne de récapitulatif du bloc "Ascendance draconique" (Ensorceleur,
+  /// Lignage draconique), `null` si aucun type de dégâts n'a été choisi.
+  GainRow? _draconicAncestrySummaryGainRow(LevelUpStepData data) {
+    final damageType = _buildDraconicAncestryDamageType(data);
+    if (damageType == null) return null;
+    return GainRow(
+      icon: Icons.whatshot,
+      color: AppColors.accentViolet,
+      title: 'Ascendance draconique',
+      subtitle: damageType,
+    );
+  }
+
   Widget _buildSummary(LevelUpStepData data) {
     final gain = _hpGain(
       hitDie: data.hitDie,
@@ -4367,6 +5199,26 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                           case final infusionSwapRow?) ...[
                         const SizedBox(height: AppSpacing.md),
                         infusionSwapRow,
+                      ],
+                      if (_metamagicSummaryGainRow(data)
+                          case final metamagicRow?) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        metamagicRow,
+                      ],
+                      if (_metamagicSwapSummaryGainRow(data)
+                          case final metamagicSwapRow?) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        metamagicSwapRow,
+                      ],
+                      if (_expertiseSummaryGainRow(data)
+                          case final expertiseRow?) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        expertiseRow,
+                      ],
+                      if (_draconicAncestrySummaryGainRow(data)
+                          case final draconicRow?) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        draconicRow,
                       ],
                     ],
                   ),
