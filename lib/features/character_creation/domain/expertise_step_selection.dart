@@ -3,19 +3,27 @@
 /// `presentation/class_choice_step_screen.dart` pour rester testable sans
 /// widget — même principe que `SkillsAndToolsStepSelection`.
 ///
-/// RAW (confirmé par lecture directe du *Manuel des Joueurs*, mécanique déjà
-/// établie, pas une question RAW nouvelle pour ce chantier) : le Roublard
-/// choisit 2 compétences DÉJÀ maîtrisées (classe/race/historique) pour y
-/// gagner l'Expertise (double bonus de maîtrise), OU remplace une des deux
-/// par sa maîtrise d'outils de voleur (toujours accordée automatiquement au
-/// Roublard, voir `ClassOption.grantedToolNames`). Les outils n'ayant aucun
-/// bonus chiffré modélisé dans cette app (voir
-/// `CharacterToolProficienciesCard`), cette substitution reste purement
-/// descriptive côté persistance (`character_class_options.chosen_value`) :
-/// aucun calcul de bonus n'en découle, contrairement aux 2 compétences
-/// (qui, elles, passent réellement `character_skill_proficiencies.proficiency`
-/// à `'expertise'` — voir `data/character_creation_repository.dart
-/// ::createCharacter`).
+/// RAW (*Manuel des Joueurs*, Roublard, Expertise) : au niveau 1, le Roublard
+/// choisit exactement 2 compétences DÉJÀ maîtrisées (classe/race/historique)
+/// pour y gagner l'Expertise (double bonus de maîtrise) — AUCUNE
+/// substitution par la maîtrise des outils de voleur n'existe à ce niveau.
+/// Cette substitution ("vous pouvez choisir deux compétences supplémentaires
+/// ou votre maîtrise des outils de voleur") n'existe RAW qu'**au niveau 6**
+/// — correctif D100 (`docs/dette-technique.md`) : la première implémentation
+/// (D99) la proposait par erreur dès la création, `ClassChoiceStepScreen`
+/// (mode Roublard niveau 1) ne la propose donc plus. Le paramètre
+/// [bool thievesToolsSubstitution]/les méthodes ci-dessous le conservent
+/// volontairement (jamais atteignable à `true` depuis ce point d'entrée
+/// niveau 1) pour être réutilisés tels quels par un futur chantier
+/// "Expertise niveau 6" (second lot d'Expertise + substitution outils de
+/// voleur, maîtrise toujours accordée automatiquement au Roublard, voir
+/// `ClassOption.grantedToolNames`). Les outils n'ayant aucun bonus chiffré
+/// modélisé dans cette app (voir `CharacterToolProficienciesCard`), cette
+/// substitution restera purement descriptive côté persistance
+/// (`character_class_options.chosen_value`) : aucun calcul de bonus n'en
+/// découle, contrairement aux 2 compétences (qui, elles, passent réellement
+/// `character_skill_proficiencies.proficiency` à `'expertise'` — voir
+/// `data/character_creation_repository.dart::createCharacter`).
 abstract final class ExpertiseStepSelection {
   /// Quota RAW : 2 "emplacements" d'Expertise au niveau 1 du Roublard.
   static const int quota = 2;

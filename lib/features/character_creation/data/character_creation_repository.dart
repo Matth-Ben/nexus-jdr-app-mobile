@@ -1549,17 +1549,27 @@ class SupabaseCharacterCreationRepository
       }
 
       // Expertise du Roublard : une ligne `character_class_options` par
-      // "emplacement" utilisé (compétence(s) + éventuellement la
-      // substitution outils de voleur), même convention que les autres
-      // choix à quota multiple de ce chantier (ex. manœuvres/disciplines
-      // élémentaires côté montée de niveau) — jamais une seule ligne avec
-      // les noms joints. Le bonus chiffré réel (`proficiency = 'expertise'`)
-      // a déjà été appliqué plus haut sur `character_skill_proficiencies`
-      // (voir [expertiseSkillIds]) : cette table-ci ne sert qu'à l'affichage
+      // compétence choisie, même convention que les autres choix à quota
+      // multiple de ce chantier (ex. manœuvres/disciplines élémentaires côté
+      // montée de niveau) — jamais une seule ligne avec les noms joints. Le
+      // bonus chiffré réel (`proficiency = 'expertise'`) a déjà été appliqué
+      // plus haut sur `character_skill_proficiencies` (voir
+      // [expertiseSkillIds]) : cette table-ci ne sert qu'à l'affichage
       // "CHOIX DE CLASSE" de la fiche, même rôle que pour Style de
       // combat/Ennemi juré.
-      if (draft.expertiseSkillChoices.isNotEmpty ||
-          draft.expertiseThievesToolsSubstitution) {
+      //
+      // Jamais de substitution "outils de voleur" écrite ICI — correctif
+      // D100 (`docs/dette-technique.md`) : RAW, cette substitution n'existe
+      // qu'au niveau 6 ("Au niveau 6, vous pouvez choisir deux compétences
+      // supplémentaires ou votre maîtrise des outils de voleur" — *Manuel
+      // des Joueurs*, Roublard, Expertise), jamais au niveau 1. Le champ
+      // `draft.expertiseThievesToolsSubstitution`/le paramètre
+      // `thievesToolsSubstitution` de `ExpertiseStepSelection` restent dans
+      // le modèle pour un futur chantier "Expertise niveau 6" (voir sa doc
+      // de classe), mais aucun chemin de ce point d'entrée (création,
+      // niveau 1) ne peut plus le faire passer à `true` : `ClassChoiceStepScreen`
+      // ne propose plus la tuile correspondante.
+      if (draft.expertiseSkillChoices.isNotEmpty) {
         final expertiseFeatureRows = await _client
             .from('class_features')
             .select('id')
@@ -1570,16 +1580,6 @@ class SupabaseCharacterCreationRepository
         if (expertiseFeatureRows.isNotEmpty) {
           final expertiseFeatureId = (expertiseFeatureRows.first['id'] as num)
               .toInt();
-          // La maîtrise d'outils de voleur est TOUJOURS accordée
-          // automatiquement au Roublard (`ClassOption.grantedToolNames`,
-          // jamais un choix) : premier (et seul) nom de cette liste plutôt
-          // qu'une chaîne `'outils de voleur'` codée en dur, voir
-          // `domain/expertise_step_selection.dart`.
-          final thievesToolsName =
-              draft.expertiseThievesToolsSubstitution &&
-                  classOption.grantedToolNames.isNotEmpty
-              ? classOption.grantedToolNames.first
-              : null;
           final expertiseOptionRows = [
             for (final name in draft.expertiseSkillChoices)
               {
@@ -1587,13 +1587,6 @@ class SupabaseCharacterCreationRepository
                 'class_feature_id': expertiseFeatureId,
                 'level': 1,
                 'chosen_value': name,
-              },
-            if (thievesToolsName != null)
-              {
-                'character_id': characterId,
-                'class_feature_id': expertiseFeatureId,
-                'level': 1,
-                'chosen_value': thievesToolsName,
               },
           ];
           if (expertiseOptionRows.isNotEmpty) {

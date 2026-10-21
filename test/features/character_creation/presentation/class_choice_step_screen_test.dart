@@ -416,9 +416,10 @@ void main() {
       await pumpClassChoiceStep(tester);
     }
 
-    testWidgets('affiche "COMPÉTENCES MAÎTRISÉES" avec le badge de quota, les '
-        'compétences candidates (classe + historique) ET la substitution '
-        'outils de voleur', (WidgetTester tester) async {
+    testWidgets('affiche "COMPÉTENCES MAÎTRISÉES" avec le badge de quota et '
+        'les compétences candidates (classe + historique)', (
+      WidgetTester tester,
+    ) async {
       await pumpRoublardStep(tester);
 
       expect(find.text('2. Expertise'), findsOneWidget);
@@ -429,8 +430,17 @@ void main() {
       // Compétence accordée par l'historique (Ermite), elle aussi
       // candidate — union dédupliquée classe/race/historique.
       expect(find.text('Médecine'), findsOneWidget);
-      expect(find.text('outils de voleur'), findsOneWidget);
       expect(nextEnabled(tester), isFalse);
+    });
+
+    testWidgets("régression D100 (`docs/dette-technique.md`) : AUCUNE option "
+        "'outils de voleur' n'est affichée à ce stade (niveau 1, création) "
+        "même si la classe l'accorde automatiquement (`grantedToolNames`) — "
+        'RAW, la substitution de l\'Expertise par les outils de voleur '
+        "n'existe qu'au niveau 6", (WidgetTester tester) async {
+      await pumpRoublardStep(tester);
+
+      expect(find.text('outils de voleur'), findsNothing);
     });
 
     testWidgets('2 compétences choisies -> "Suivant" actif, écrit '
@@ -454,28 +464,6 @@ void main() {
       expect(draft.expertiseThievesToolsSubstitution, isFalse);
       expect(find.text('Étape Équipement'), findsOneWidget);
     });
-
-    testWidgets(
-      '1 compétence + substitution outils de voleur -> "Suivant" actif, '
-      'écrit expertiseThievesToolsSubstitution',
-      (WidgetTester tester) async {
-        await pumpRoublardStep(tester);
-
-        await tester.tap(find.text('Discrétion'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('outils de voleur'));
-        await tester.pumpAndSettle();
-
-        expect(nextEnabled(tester), isTrue);
-
-        await tester.tap(find.text('SUIVANT'));
-        await tester.pumpAndSettle();
-
-        final draft = readDraft();
-        expect(draft.expertiseSkillChoices, ['Discrétion']);
-        expect(draft.expertiseThievesToolsSubstitution, isTrue);
-      },
-    );
 
     testWidgets(
       'quota atteint : les tuiles non cochées restantes sont désactivées, '

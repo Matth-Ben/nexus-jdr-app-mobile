@@ -81,7 +81,6 @@ class _ClassChoiceStepScreenState extends ConsumerState<ClassChoiceStepScreen> {
 
   /// Mode [ClassChoiceKind.expertise] uniquement.
   late List<String> _selectedSkillNames;
-  bool _thievesToolsSubstitution = false;
 
   bool _announced = false;
 
@@ -102,7 +101,6 @@ class _ClassChoiceStepScreenState extends ConsumerState<ClassChoiceStepScreen> {
               (classId == _roublardClassId ? ClassChoiceKind.expertise : null));
     _selectedValue = draft.classFeatureChoiceValue;
     _selectedSkillNames = List.of(draft.expertiseSkillChoices);
-    _thievesToolsSubstitution = draft.expertiseThievesToolsSubstitution;
 
     if (classId == null || _kind == null) {
       // Cas défensif (ex. deep-link direct sur cette route) : cet écran
@@ -140,9 +138,11 @@ class _ClassChoiceStepScreenState extends ConsumerState<ClassChoiceStepScreen> {
       characterCreationDraftControllerProvider.notifier,
     );
     if (_kind == ClassChoiceKind.expertise) {
+      // Jamais de substitution outils de voleur à ce stade (niveau 1,
+      // création) — correctif D100, voir `domain/expertise_step_selection.dart`.
       notifier.setExpertiseChoices(
         skillNames: _selectedSkillNames,
-        thievesToolsSubstitution: _thievesToolsSubstitution,
+        thievesToolsSubstitution: false,
       );
       final editSession = ref.read(characterEditSessionControllerProvider);
       // Roublard non lanceur de sorts à aucun niveau : jamais l'étape 6/9,
@@ -172,7 +172,6 @@ class _ClassChoiceStepScreenState extends ConsumerState<ClassChoiceStepScreen> {
       body: kind == ClassChoiceKind.expertise
           ? _ExpertiseBody(
               selectedSkillNames: _selectedSkillNames,
-              thievesToolsSubstitution: _thievesToolsSubstitution,
               onToggleSkill: (skill, quota) => setState(() {
                 _selectedSkillNames = _toggle(
                   current: _selectedSkillNames,
@@ -180,9 +179,6 @@ class _ClassChoiceStepScreenState extends ConsumerState<ClassChoiceStepScreen> {
                   quota: quota,
                 );
               }),
-              onToggleThievesTools: () => setState(
-                () => _thievesToolsSubstitution = !_thievesToolsSubstitution,
-              ),
               onGoBack: _goBack,
               onSubmit: _submit,
               onAnnounce: _announceOnce,
@@ -346,21 +342,24 @@ class _NamedChoiceBody extends ConsumerWidget {
 
 /// Corps de l'écran pour [ClassChoiceKind.expertise] (choix multiple, quota
 /// 2, Roublard).
+///
+/// Jamais de case "outils de voleur" ici — correctif D100
+/// (`docs/dette-technique.md`) : RAW, la substitution de l'Expertise du
+/// Roublard par la maîtrise des outils de voleur n'existe qu'au niveau 6, pas
+/// au niveau 1. Voir la doc de classe de `ExpertiseStepSelection` pour le
+/// rationale complet et la doc de ce fichier pour le futur chantier
+/// "Expertise niveau 6" qui réutilisera `thievesToolsSubstitution`.
 class _ExpertiseBody extends ConsumerWidget {
   const _ExpertiseBody({
     required this.selectedSkillNames,
-    required this.thievesToolsSubstitution,
     required this.onToggleSkill,
-    required this.onToggleThievesTools,
     required this.onGoBack,
     required this.onSubmit,
     required this.onAnnounce,
   });
 
   final List<String> selectedSkillNames;
-  final bool thievesToolsSubstitution;
   final void Function(String skill, int quota) onToggleSkill;
-  final VoidCallback onToggleThievesTools;
   final VoidCallback onGoBack;
   final VoidCallback onSubmit;
   final ValueChanged<String> onAnnounce;
@@ -386,29 +385,25 @@ class _ExpertiseBody extends ConsumerWidget {
           backgroundSkillNames: backgroundOption.skillProficiencies,
           raceSkillNames: raceSkillNames,
         );
-        // Maîtrise d'outils de voleur, toujours accordée automatiquement au
-        // Roublard — premier (et seul) nom plutôt qu'une chaîne codée en
-        // dur, voir `domain/expertise_step_selection.dart`.
-        final thievesToolsName = classOption.grantedToolNames.isEmpty
-            ? null
-            : classOption.grantedToolNames.first;
-        final availableOptionsCount =
-            candidateSkillNames.length + (thievesToolsName == null ? 0 : 1);
+        // Aucune substitution outils de voleur à ce stade (voir la doc de
+        // classe) : [availableOptionsCount] ne compte que les compétences
+        // candidates.
+        final availableOptionsCount = candidateSkillNames.length;
         final effectiveQuota = ExpertiseStepSelection.effectiveQuota(
           availableOptionsCount,
         );
         final skillQuota = ExpertiseStepSelection.skillQuota(
           availableOptionsCount: availableOptionsCount,
-          thievesToolsSubstitution: thievesToolsSubstitution,
+          thievesToolsSubstitution: false,
         );
         final canProceed = ExpertiseStepSelection.canProceed(
           availableOptionsCount: availableOptionsCount,
           selectedSkillNames: selectedSkillNames,
-          thievesToolsSubstitution: thievesToolsSubstitution,
+          thievesToolsSubstitution: false,
         );
         final selectedCount = ExpertiseStepSelection.selectedCount(
           selectedSkillNames: selectedSkillNames,
-          thievesToolsSubstitution: thievesToolsSubstitution,
+          thievesToolsSubstitution: false,
         );
 
         if (effectiveQuota > 0) {
@@ -474,14 +469,6 @@ class _ExpertiseBody extends ConsumerWidget {
                             if (i > 0) const SizedBox(height: AppSpacing.xs),
                             _skillTile(candidateSkillNames[i], skillQuota),
                           ],
-                          if (thievesToolsName != null) ...[
-                            const SizedBox(height: AppSpacing.xs),
-                            _thievesToolsTile(
-                              thievesToolsName,
-                              effectiveQuota,
-                              selectedCount,
-                            ),
-                          ],
                         ],
                       ),
               ),
@@ -524,15 +511,6 @@ class _ExpertiseBody extends ConsumerWidget {
       checked: isSelected,
       enabled: isSelected || selectedSkillNames.length < quota,
       onTap: () => onToggleSkill(skill, quota),
-    );
-  }
-
-  Widget _thievesToolsTile(String name, int effectiveQuota, int selectedCount) {
-    return CheckableOptionTile(
-      title: name,
-      checked: thievesToolsSubstitution,
-      enabled: thievesToolsSubstitution || selectedCount < effectiveQuota,
-      onTap: onToggleThievesTools,
     );
   }
 }

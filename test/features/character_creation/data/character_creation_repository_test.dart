@@ -2835,42 +2835,42 @@ void _testCatalogTtl({
         expect(result.classOptionInserts, isEmpty);
       });
 
-      test('Roublard (Expertise) : 1 compétence + substitution outils de '
-          'voleur écrit 2 lignes character_class_options, ET rehausse la '
-          'compétence choisie à \'expertise\' dans '
-          'character_skill_proficiencies', () async {
-        final result = await createAndCapture(
-          draft: const CharacterCreationDraft(
-            classId: 9,
-            classSkillChoices: ['Discrétion'],
-            expertiseSkillChoices: ['Discrétion'],
-            expertiseThievesToolsSubstitution: true,
-          ),
-          classOption: roublard,
-          extraTableRows: {
-            'class_features': [
-              {'id': 33},
-            ],
-          },
-        );
+      test(
+        'Roublard (Expertise) : même si expertiseThievesToolsSubstitution '
+        'vaut true dans le brouillon (ne devrait jamais arriver depuis '
+        "l'UI niveau 1 création, correctif D100 — RAW, cette substitution "
+        "n'existe qu'au niveau 6), createCharacter n'écrit JAMAIS de ligne "
+        "'outils de voleur' : seule la compétence choisie est écrite, et "
+        'rehaussée à \'expertise\' dans character_skill_proficiencies',
+        () async {
+          final result = await createAndCapture(
+            draft: const CharacterCreationDraft(
+              classId: 9,
+              classSkillChoices: ['Discrétion'],
+              expertiseSkillChoices: ['Discrétion'],
+              expertiseThievesToolsSubstitution: true,
+            ),
+            classOption: roublard,
+            extraTableRows: {
+              'class_features': [
+                {'id': 33},
+              ],
+            },
+          );
 
-        expect(result.classOptionInserts, hasLength(2));
-        expect(
-          result.classOptionInserts.map((row) => row['chosen_value']),
-          containsAll(<String>['Discrétion', 'outils de voleur']),
-        );
-        expect(
-          result.classOptionInserts.every(
-            (row) => row['class_feature_id'] == 33,
-          ),
-          isTrue,
-        );
+          expect(result.classOptionInserts, hasLength(1));
+          expect(
+            result.classOptionInserts.single['chosen_value'],
+            'Discrétion',
+          );
+          expect(result.classOptionInserts.single['class_feature_id'], 33);
 
-        final discretionRow = result.skillInserts.singleWhere(
-          (row) => row['skill_id'] == 50,
-        );
-        expect(discretionRow['proficiency'], 'expertise');
-      });
+          final discretionRow = result.skillInserts.singleWhere(
+            (row) => row['skill_id'] == 50,
+          );
+          expect(discretionRow['proficiency'], 'expertise');
+        },
+      );
 
       test('Roublard (Expertise) sans substitution outils : la compétence '
           'choisie est rehaussée, aucune ligne \'outils de voleur\'', () async {
