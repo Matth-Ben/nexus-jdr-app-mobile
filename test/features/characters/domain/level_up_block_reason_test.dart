@@ -43,13 +43,65 @@ void main() {
         );
         expect(reason, isNull);
       });
+
+      test("'tir_arcanique' ne bloque plus (Guerrier, Archer arcanique) — "
+          'rejoint resolvedChoiceTypes, mène désormais à la nouvelle étape '
+          '"Tirs arcaniques", jamais à l\'étape "Choix à faire" — écrit pour '
+          "fonctionner une fois le SQL de correction appliqué (choice_type "
+          'actuellement NULL en base pour cette ligne, voir '
+          'docs/dette-technique.md)', () {
+        final reason = LevelUpBlockRules.evaluate(
+          targetLevel: 3,
+          className: 'Guerrier',
+          classFeatureChoiceType: 'tir_arcanique',
+        );
+        expect(reason, isNull);
+      });
+
+      test("'rune' ne bloque plus (Guerrier, Chevalier runique) — rejoint "
+          'resolvedChoiceTypes, mène désormais à la nouvelle étape "Runes", '
+          'jamais à l\'étape "Choix à faire"', () {
+        final reason = LevelUpBlockRules.evaluate(
+          targetLevel: 3,
+          className: 'Guerrier',
+          classFeatureChoiceType: 'rune',
+        );
+        expect(reason, isNull);
+      });
+
+      test("'infusion' ne bloque plus (Artificier, aptitude de CLASSE) — "
+          'rejoint resolvedChoiceTypes, mène désormais à la nouvelle étape '
+          '"Infusions", jamais à l\'étape "Choix à faire"', () {
+        final reason = LevelUpBlockRules.evaluate(
+          targetLevel: 2,
+          className: 'Artificier',
+          classFeatureChoiceType: 'infusion',
+        );
+        expect(reason, isNull);
+      });
+
+      test("'manoeuvre' ne bloque plus (Guerrier, Maître de guerre) — "
+          'correctif D92 (docs/dette-technique.md) : rejoint '
+          'resolvedChoiceTypes, mène désormais à la nouvelle étape '
+          '"Manœuvres", jamais à l\'étape "Choix à faire" — avant ce '
+          'correctif, tout Guerrier Maître de guerre aurait été bloqué '
+          'indéfiniment à son niveau 3 dès que ce choice_type serait devenu '
+          'non nul en base', () {
+        final reason = LevelUpBlockRules.evaluate(
+          targetLevel: 3,
+          className: 'Guerrier',
+          classFeatureChoiceType: 'manoeuvre',
+        );
+        expect(reason, isNull);
+      });
     },
   );
 
   group('LevelUpBlockRules.evaluate — increment 2 : resolvedChoiceTypes ne '
       'bloquent plus', () {
     test('resolvedChoiceTypes contient exactement sous_classe/'
-        'style_combat/ennemi_jure/invocation/pacte/discipline_elementaire', () {
+        'style_combat/ennemi_jure/invocation/pacte/discipline_elementaire/'
+        'tir_arcanique/rune/infusion/manoeuvre', () {
       expect(LevelUpBlockRules.resolvedChoiceTypes, {
         'sous_classe',
         'style_combat',
@@ -57,6 +109,10 @@ void main() {
         'invocation',
         'pacte',
         'discipline_elementaire',
+        'tir_arcanique',
+        'rune',
+        'infusion',
+        'manoeuvre',
       });
     });
 

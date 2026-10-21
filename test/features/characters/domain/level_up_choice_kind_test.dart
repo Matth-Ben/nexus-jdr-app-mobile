@@ -97,6 +97,72 @@ void main() {
       );
     });
 
+    test("'tir_arcanique' ne renvoie jamais de LevelUpChoiceKind (Guerrier, "
+        'Archer arcanique) : ce choice_type est dans resolvedChoiceTypes '
+        '(ne bloque plus le flux), mais mène à la nouvelle étape "Tirs '
+        'arcaniques" dédiée, jamais à l\'étape "Choix à faire"', () {
+      expect(
+        LevelUpPendingChoiceResolver.resolve(
+          targetLevel: 3,
+          classFeatureChoiceType: 'tir_arcanique',
+        ),
+        isNull,
+      );
+    });
+
+    test("'rune' ne renvoie jamais de LevelUpChoiceKind (Guerrier, "
+        'Chevalier runique) : ce choice_type est dans resolvedChoiceTypes '
+        '(ne bloque plus le flux), mais mène à la nouvelle étape "Runes" '
+        'dédiée, jamais à l\'étape "Choix à faire"', () {
+      expect(
+        LevelUpPendingChoiceResolver.resolve(
+          targetLevel: 3,
+          classFeatureChoiceType: 'rune',
+        ),
+        isNull,
+      );
+    });
+
+    test("'infusion' ne renvoie jamais de LevelUpChoiceKind (Artificier, "
+        'aptitude de CLASSE) : ce choice_type est dans resolvedChoiceTypes '
+        '(ne bloque plus le flux), mais mène à la nouvelle étape '
+        '"Infusions" dédiée, jamais à l\'étape "Choix à faire"', () {
+      expect(
+        LevelUpPendingChoiceResolver.resolve(
+          targetLevel: 2,
+          classFeatureChoiceType: 'infusion',
+        ),
+        isNull,
+      );
+    });
+
+    test("'manoeuvre' ne renvoie jamais de LevelUpChoiceKind (correctif D92, "
+        'Guerrier Maître de guerre) : ce choice_type est dans '
+        'resolvedChoiceTypes (ne bloque plus le flux), mais mène à la '
+        'nouvelle étape "Manœuvres" dédiée, jamais à l\'étape "Choix à '
+        'faire" — vérifie que le StateError défensif du switch ci-dessous '
+        'ne se déclenche pas', () {
+      expect(
+        LevelUpPendingChoiceResolver.resolve(
+          targetLevel: 3,
+          classFeatureChoiceType: 'manoeuvre',
+        ),
+        isNull,
+      );
+    });
+
+    test("'manoeuvre' reste prioritaire sur un niveau ASI (jamais rencontré "
+        "en pratique — la seule ligne 'manoeuvre' est au niveau 3 — mais "
+        'couvre le cas où ce ne serait plus vrai un jour)', () {
+      expect(
+        LevelUpPendingChoiceResolver.resolve(
+          targetLevel: 4,
+          classFeatureChoiceType: 'manoeuvre',
+        ),
+        isNull,
+      );
+    });
+
     test('un niveau ASI (4/8/12/16/19) sans choice_type -> '
         'LevelUpChoiceKind.abilityScoreImprovement', () {
       for (final level in [4, 8, 12, 16, 19]) {

@@ -4,26 +4,32 @@ import '../../../character_creation/domain/ability_score_rules.dart';
 import '../../../character_creation/domain/spell_catalog.dart';
 import '../../../character_creation/domain/spell_option.dart';
 import '../../../character_creation/presentation/providers/character_creation_providers.dart';
+import '../../domain/arcane_shots_known_progression.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/character_failure.dart';
 import '../../domain/elemental_disciplines_known_progression.dart';
 import '../../domain/hit_point_bonus_rules.dart';
+import '../../domain/infusions_known_progression.dart';
 import '../../domain/invocation_selection_rules.dart';
 import '../../domain/invocations_known_progression.dart';
+import '../../domain/level_up_arcane_shot_option.dart';
 import '../../domain/level_up_block_reason.dart';
 import '../../domain/level_up_choice_kind.dart';
 import '../../domain/level_up_continue_option.dart';
 import '../../domain/level_up_elemental_discipline_option.dart';
 import '../../domain/level_up_feat_option.dart';
+import '../../domain/level_up_infusion_option.dart';
 import '../../domain/level_up_invocation_option.dart';
 import '../../domain/level_up_maneuver_option.dart';
 import '../../domain/level_up_multiclass_option.dart';
+import '../../domain/level_up_rune_option.dart';
 import '../../domain/level_up_subclass_option.dart';
 import '../../domain/maneuvers_known_progression.dart';
 import '../../domain/multiclass_prerequisites.dart';
 import '../../domain/multiclass_proficiencies.dart';
 import '../../domain/patron_extended_spells.dart';
 import '../../domain/racial_innate_spell_grant.dart';
+import '../../domain/runes_known_progression.dart';
 import '../../domain/spell_slot_change.dart';
 import '../../domain/spell_slot_progression.dart';
 import '../../domain/spells_known_progression.dart';
@@ -274,6 +280,81 @@ typedef LevelUpStepData = ({
   /// niveau 3, choix de sous-classe ET premier palier de manœuvres dans LA
   /// MÊME montée de niveau).
   Map<int, List<LevelUpManeuverOption>> maneuversBySubclass,
+
+  /// `true` si l'étape "Tirs arcaniques" doit être affichée à ce niveau —
+  /// Guerrier, Archer arcanique uniquement, delta strictement positif de
+  /// `domain/arcane_shots_known_progression.dart::ArcaneShotsKnownProgression`
+  /// (niveaux 3, 7, 10, 15, 18 RAW). Même traitement/même garde-fou contre la
+  /// régression "toute sous-classe de la classe concernée déclenche l'étape"
+  /// que [requiresManeuverSelection]/[requiresElementalDisciplineSelection]
+  /// ci-dessus (indépendant de [choiceKind] : `class_features.choice_type =
+  /// 'tir_arcanique'`, présent en base au seul niveau 3, ne mène pas à
+  /// l'étape "Choix à faire").
+  bool requiresArcaneShotSelection,
+
+  /// Delta RAW de tirs arcaniques de ce niveau (0 si
+  /// [requiresArcaneShotSelection] est `false`).
+  int arcaneShotDelta,
+
+  /// Tirs arcaniques NON déjà connus du personnage, PAR `subclasses.id`
+  /// candidat — même mécanisme que [maneuversBySubclass].
+  Map<int, List<LevelUpArcaneShotOption>> arcaneShotsBySubclass,
+
+  /// `true` si l'étape "Runes" doit être affichée à ce niveau — Guerrier,
+  /// Chevalier runique uniquement, delta strictement positif de
+  /// `domain/runes_known_progression.dart::RunesKnownProgression` (niveaux
+  /// 3, 10, 18 RAW — PAS 7, contrairement aux tirs arcaniques/manœuvres).
+  /// Même traitement/même garde-fou que [requiresArcaneShotSelection]
+  /// ci-dessus.
+  bool requiresRuneSelection,
+
+  /// Delta RAW de runes de ce niveau (0 si [requiresRuneSelection] est
+  /// `false`).
+  int runeDelta,
+
+  /// Runes NON déjà connues du personnage, PAR `subclasses.id` candidat —
+  /// même mécanisme que [maneuversBySubclass].
+  Map<int, List<LevelUpRuneOption>> runesBySubclass,
+
+  /// `true` si l'étape "Infusions" doit être affichée à ce niveau —
+  /// Artificier uniquement, delta strictement positif de
+  /// `domain/infusions_known_progression.dart::InfusionsKnownProgression`
+  /// (niveaux 2, 6, 10, 14, 18 RAW). **Aptitude de CLASSE, pas de
+  /// sous-classe** — contrairement à [requiresArcaneShotSelection]/
+  /// [requiresRuneSelection]/[requiresManeuverSelection] ci-dessus, ne
+  /// dépend que de [effectiveClassName] (jamais d'une sous-classe candidate/
+  /// déjà connue), donc pas de `mayBecome...ThisLevel` équivalent ni de
+  /// `Map<int, ...>` par sous-classe (voir [availableInfusions], une simple
+  /// liste).
+  bool requiresInfusionSelection,
+
+  /// Delta RAW d'infusions de ce niveau (0 si [requiresInfusionSelection]
+  /// est `false`).
+  int infusionDelta,
+
+  /// Infusions NON déjà connues du personnage dont `min_level <=` ce
+  /// niveau — non vide seulement si [requiresInfusionSelection].
+  List<LevelUpInfusionOption> availableInfusions,
+
+  /// `true` si l'étape "Infusions" doit proposer l'échange d'une infusion
+  /// déjà connue contre une autre (voir `domain/level_up_infusion_swap.dart`
+  /// et D93 du registre de dette technique, `docs/dette-technique.md`) —
+  /// divergence de modèle assumée : contrairement aux 3 autres mécaniques de
+  /// ce chantier (jamais d'échange), proposé à CHAQUE niveau d'Artificier
+  /// (indépendant de [requiresInfusionSelection]/[infusionDelta] : un niveau
+  /// sans nouvelle infusion connue peut malgré tout proposer un échange).
+  /// `true` dès que [effectiveClassName] vaut 'Artificier' ET que
+  /// [knownInfusionNames] n'est pas vide (rien à échanger avant d'avoir
+  /// appris au moins une infusion — en particulier, jamais vrai au niveau 2
+  /// lui-même, où les 4 premières infusions sont apprises dans CETTE même
+  /// montée de niveau, pas encore en base).
+  bool canSwapInfusion,
+
+  /// Infusions déjà connues du personnage (`character_class_options.
+  /// chosen_value` pour la ligne `class_features.choice_type = 'infusion'`)
+  /// — candidates au retrait de l'étape "Infusions" quand [canSwapInfusion]
+  /// est vrai. Vide sinon.
+  List<String> knownInfusionNames,
 
   /// Pacte de l'Occultiste déjà enregistré en base
   /// (`character_class_options`), `null` si aucun — le pacte choisi dans la
@@ -910,6 +991,131 @@ Future<LevelUpStepData> levelUpStepData(
     maneuversBySubclass = Map.fromEntries(maneuverEntries);
   }
 
+  // Tirs arcaniques — étape "Tirs arcaniques", même traitement/même
+  // garde-fou que les manœuvres/disciplines élémentaires ci-dessus —
+  // Guerrier, Archer arcanique UNIQUEMENT. [isKnownArcaneArcher]/
+  // [mayBecomeArcaneArcherThisLevel] jouent exactement le même rôle que
+  // [isKnownFourElementsMonk]/[mayBecomeFourElementsMonkThisLevel].
+  final isKnownArcaneArcher =
+      effectiveSubclassName == ArcaneShotsKnownProgression.subclassName;
+  final mayBecomeArcaneArcherThisLevel =
+      choiceKind == LevelUpChoiceKind.subclass &&
+      levelData.availableSubclasses.any(
+        (option) => option.name == ArcaneShotsKnownProgression.subclassName,
+      );
+  final arcaneShotDelta =
+      effectiveClassName == 'Guerrier' &&
+          (isKnownArcaneArcher || mayBecomeArcaneArcherThisLevel)
+      ? ArcaneShotsKnownProgression.newArcaneShotsAt(effectiveTargetLevel)
+      : 0;
+  final requiresArcaneShotSelection = arcaneShotDelta > 0;
+  var arcaneShotsBySubclass = const <int, List<LevelUpArcaneShotOption>>{};
+  if (requiresArcaneShotSelection) {
+    // Même rationale que [maneuversBySubclass] ci-dessus : au niveau 3, le
+    // choix de sous-classe et le premier palier de tirs arcaniques sont
+    // déclenchés par LA MÊME montée de niveau, avant que le joueur n'ait
+    // choisi sa sous-classe.
+    final candidateSubclassIds = <int>{
+      ?knownSubclassId,
+      if (choiceKind == LevelUpChoiceKind.subclass)
+        for (final option in levelData.availableSubclasses)
+          (option.id as num).toInt(),
+    };
+    final repository = ref.watch(characterRepositoryProvider);
+    final arcaneShotEntries = await Future.wait([
+      for (final subclassId in candidateSubclassIds)
+        repository
+            .fetchAvailableArcaneShots(
+              characterId: characterId,
+              classId: effectiveClassId,
+              subclassId: subclassId,
+              targetLevel: effectiveTargetLevel,
+            )
+            .then((options) => MapEntry(subclassId, options)),
+    ]);
+    arcaneShotsBySubclass = Map.fromEntries(arcaneShotEntries);
+  }
+
+  // Runes — étape "Runes", même traitement/même garde-fou que les tirs
+  // arcaniques ci-dessus — Guerrier, Chevalier runique UNIQUEMENT.
+  // [isKnownRuneKnight]/[mayBecomeRuneKnightThisLevel] jouent le même rôle
+  // que [isKnownArcaneArcher]/[mayBecomeArcaneArcherThisLevel] — la table de
+  // progression (`RunesKnownProgression`) déclenche aux niveaux 3/10/18,
+  // PAS 7 (contrairement aux tirs arcaniques/manœuvres).
+  final isKnownRuneKnight =
+      effectiveSubclassName == RunesKnownProgression.subclassName;
+  final mayBecomeRuneKnightThisLevel =
+      choiceKind == LevelUpChoiceKind.subclass &&
+      levelData.availableSubclasses.any(
+        (option) => option.name == RunesKnownProgression.subclassName,
+      );
+  final runeDelta =
+      effectiveClassName == 'Guerrier' &&
+          (isKnownRuneKnight || mayBecomeRuneKnightThisLevel)
+      ? RunesKnownProgression.newRunesAt(effectiveTargetLevel)
+      : 0;
+  final requiresRuneSelection = runeDelta > 0;
+  var runesBySubclass = const <int, List<LevelUpRuneOption>>{};
+  if (requiresRuneSelection) {
+    final candidateSubclassIds = <int>{
+      ?knownSubclassId,
+      if (choiceKind == LevelUpChoiceKind.subclass)
+        for (final option in levelData.availableSubclasses)
+          (option.id as num).toInt(),
+    };
+    final repository = ref.watch(characterRepositoryProvider);
+    final runeEntries = await Future.wait([
+      for (final subclassId in candidateSubclassIds)
+        repository
+            .fetchAvailableRunes(
+              characterId: characterId,
+              classId: effectiveClassId,
+              subclassId: subclassId,
+              targetLevel: effectiveTargetLevel,
+            )
+            .then((options) => MapEntry(subclassId, options)),
+    ]);
+    runesBySubclass = Map.fromEntries(runeEntries);
+  }
+
+  // Infusions — étape "Infusions", Artificier UNIQUEMENT. Aptitude de
+  // CLASSE (pas de sous-classe, voir la doc de classe de
+  // [LevelUpStepData.requiresInfusionSelection]) : contrairement aux tirs
+  // arcaniques/runes/manœuvres/disciplines élémentaires ci-dessus, aucun
+  // `isKnownXxx`/`mayBecomeXxxThisLevel` ni `Map<int, ...>` par sous-classe
+  // n'est nécessaire — [effectiveClassName] seul suffit à gater.
+  final infusionDelta =
+      effectiveClassName == InfusionsKnownProgression.className
+      ? InfusionsKnownProgression.newInfusionsAt(effectiveTargetLevel)
+      : 0;
+  final requiresInfusionSelection = infusionDelta > 0;
+  var availableInfusions = const <LevelUpInfusionOption>[];
+  var knownInfusionNames = const <String>[];
+  var canSwapInfusion = false;
+  if (effectiveClassName == InfusionsKnownProgression.className) {
+    final repository = ref.watch(characterRepositoryProvider);
+    // [knownInfusionNames] est toujours lu dès que la classe est
+    // l'Artificier (pas seulement quand [requiresInfusionSelection] est
+    // vrai) : l'échange d'infusion ([canSwapInfusion]) est proposé à CHAQUE
+    // niveau d'Artificier, indépendamment du delta de ce niveau précis (voir
+    // D93 du registre de dette technique, `docs/dette-technique.md`).
+    knownInfusionNames = await repository.fetchKnownInfusionNames(
+      characterId: characterId,
+    );
+    canSwapInfusion = knownInfusionNames.isNotEmpty;
+    // [availableInfusions] sert aux DEUX sous-sections de l'étape
+    // "Infusions" (nouvelles infusions ET infusion de remplacement en cas
+    // d'échange) : chargé dès que l'une ou l'autre est pertinente, jamais
+    // seulement [requiresInfusionSelection].
+    if (requiresInfusionSelection || canSwapInfusion) {
+      availableInfusions = await repository.fetchAvailableInfusions(
+        characterId: characterId,
+        classId: effectiveClassId,
+        targetLevel: effectiveTargetLevel,
+      );
+    }
+  }
+
   // Dons — étape "Choix à faire", sous-mode "don" (voir
   // `domain/level_up_choice_selection.dart::LevelUpChoiceSelection.featId`) :
   // une seule requête réseau supplémentaire, uniquement quand ce niveau
@@ -967,6 +1173,17 @@ Future<LevelUpStepData> levelUpStepData(
     requiresManeuverSelection: requiresManeuverSelection,
     maneuverDelta: maneuverDelta,
     maneuversBySubclass: maneuversBySubclass,
+    requiresArcaneShotSelection: requiresArcaneShotSelection,
+    arcaneShotDelta: arcaneShotDelta,
+    arcaneShotsBySubclass: arcaneShotsBySubclass,
+    requiresRuneSelection: requiresRuneSelection,
+    runeDelta: runeDelta,
+    runesBySubclass: runesBySubclass,
+    requiresInfusionSelection: requiresInfusionSelection,
+    infusionDelta: infusionDelta,
+    availableInfusions: availableInfusions,
+    canSwapInfusion: canSwapInfusion,
+    knownInfusionNames: knownInfusionNames,
     knownPact: knownPact,
     knownCantripSpellIds: knownCantripSpellIds,
     knownSpellIds: knownSpellIds,
