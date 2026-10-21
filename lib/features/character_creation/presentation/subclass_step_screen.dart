@@ -12,15 +12,19 @@ import '../domain/character_creation_failure.dart';
 import '../domain/class_catalog.dart';
 import '../domain/class_option.dart';
 import '../domain/creation_step_help.dart';
+import '../domain/subclass_feature_choice_selection.dart';
 import '../domain/subclass_step_selection.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
+import 'providers/character_edit_session_provider.dart';
 import 'providers/subclass_choice_providers.dart';
+import 'providers/subclass_feature_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
 import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 import 'widgets/subclass_choice_block.dart';
+import 'widgets/subclass_feature_choice_block.dart';
 
 /// Étape 2/9 "Sous-classe" de l'assistant de création de personnage, second
 /// écran de l'étape "Classe" — atteinte uniquement depuis `ClassStepScreen`
@@ -54,6 +58,11 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
   int? _classId;
   int? _selectedSubclassId;
 
+  /// Second choix de niveau 1 propre à la sous-classe (ex. Ancêtre
+  /// draconique) — correctif D99 (`docs/dette-technique.md`), voir
+  /// `SubclassFeatureChoiceBlock`.
+  String? _selectedSubclassFeatureOptionName;
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +71,7 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
     // Réhydrate le choix déjà fait (retour en arrière depuis une étape
     // suivante) — même rationale que `ClassStepScreen.initState`.
     _selectedSubclassId = draft.subclassId;
+    _selectedSubclassFeatureOptionName = draft.subclassFeatureChoiceValue;
 
     if (_classId == null) {
       // Cas défensif (ex. deep-link direct sur cette route) : cet écran
@@ -79,9 +89,13 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
   /// Met à jour le brouillon en mémoire et passe à l'étape suivante — aucun
   /// appel réseau ici, même rationale que `ClassStepScreen._submit`.
   void _submit() {
-    ref
-        .read(characterCreationDraftControllerProvider.notifier)
-        .setClass(classId: _classId!, subclassId: _selectedSubclassId);
+    final notifier = ref.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+    notifier.setClass(classId: _classId!, subclassId: _selectedSubclassId);
+    // Après `setClass` (qui efface ce champ si la sous-classe a changé) :
+    // réécrit la valeur actuelle de l'écran, correctif D99.
+    notifier.setSubclassFeatureChoice(_selectedSubclassFeatureOptionName);
     context.push('/characters/new/step-3');
   }
 
@@ -160,11 +174,32 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
         )
         .name;
     final subclassAsync = ref.watch(subclassChoiceCatalogProvider);
-    final canProceed = SubclassStepSelection.canProceed(
-      catalogAsync: subclassAsync,
-      classId: classId,
-      selectedSubclassId: _selectedSubclassId,
-    );
+    final selectedSubclassId = _selectedSubclassId;
+    final isEditMode = ref.read(characterEditSessionControllerProvider) != null;
+    // Second choix de niveau 1 (ex. Ancêtre draconique) : chargé uniquement
+    // une fois une sous-classe sélectionnée (le provider est une "family"
+    // paramétrée par `subclassId`) — correctif D99. Jamais en mode
+    // modification (`isEditMode`) : contournement D102
+    // (`docs/dette-technique.md`) — ni `CharacterEditHydrator` ni
+    // `CharacterEditPlanner`/`CharacterEditRepository` ne pré-remplissent ou
+    // ne persistent `subclassFeatureChoiceValue`, un choix fait ici en
+    // édition serait perdu en silence à l'enregistrement. Rester `null` ici
+    // retire aussi ce choix de `canProceed` ci-dessous ET du rendu (voir
+    // `SubclassFeatureChoiceBlock` plus bas, monté seulement si non `null`).
+    final featureChoiceAsync = (isEditMode || selectedSubclassId == null)
+        ? null
+        : ref.watch(subclassFeatureChoiceProvider(selectedSubclassId));
+    final canProceed =
+        SubclassStepSelection.canProceed(
+          catalogAsync: subclassAsync,
+          classId: classId,
+          selectedSubclassId: _selectedSubclassId,
+        ) &&
+        (featureChoiceAsync == null ||
+            SubclassFeatureChoiceSelection.canProceed(
+              catalogAsync: featureChoiceAsync,
+              selectedOptionName: _selectedSubclassFeatureOptionName,
+            ));
 
     return Column(
       children: [
@@ -208,11 +243,35 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
                         className: className,
                         catalogAsync: subclassAsync,
                         selectedSubclassId: _selectedSubclassId,
-                        onSelect: (id) =>
-                            setState(() => _selectedSubclassId = id),
+                        onSelect: (id) => setState(() {
+                          // Une sous-classe différente efface le second
+                          // choix de niveau 1 (ex. Ancêtre draconique) —
+                          // correctif D99, même rationale que
+                          // `ClassStepScreen._submit` pour `subclassId`.
+                          if (_selectedSubclassId != id) {
+                            _selectedSubclassFeatureOptionName = null;
+                          }
+                          _selectedSubclassId = id;
+                        }),
                         onRetry: () =>
                             ref.invalidate(subclassChoiceCatalogProvider),
                       ),
+                      if (selectedSubclassId != null &&
+                          featureChoiceAsync != null) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        SubclassFeatureChoiceBlock(
+                          subclassId: selectedSubclassId,
+                          catalogAsync: featureChoiceAsync,
+                          selectedOptionName:
+                              _selectedSubclassFeatureOptionName,
+                          onSelect: (name) => setState(
+                            () => _selectedSubclassFeatureOptionName = name,
+                          ),
+                          onRetry: () => ref.invalidate(
+                            subclassFeatureChoiceProvider(selectedSubclassId),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

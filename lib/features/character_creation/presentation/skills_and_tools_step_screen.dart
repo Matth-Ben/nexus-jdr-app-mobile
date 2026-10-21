@@ -142,6 +142,11 @@ class _SkillsAndToolsStepScreenState
   /// (`context.push` à chaque étape) n'a jamais empilé l'étape 6 pour ce
   /// personnage, donc `pop()` depuis l'étape 7 atterrit directement ici, sans
   /// logique supplémentaire à écrire côté étape 7.
+  /// `classes.id` du Roublard — voir `domain/class_choice_rules.dart` pour
+  /// le rationale de ce point d'insertion dédié (APRÈS cette étape, pas
+  /// juste après la classe).
+  static const int _roublardClassId = 9;
+
   void _submit(ClassOption classOption) {
     ref
         .read(characterCreationDraftControllerProvider.notifier)
@@ -155,6 +160,22 @@ class _SkillsAndToolsStepScreenState
     // Mode modification : étape Sorts réservée au niveau 1, étape
     // Équipement toujours sautée (l'inventaire se gère depuis l'onglet Sac).
     final editSession = ref.read(characterEditSessionControllerProvider);
+    // Roublard : Expertise au niveau 1 (correctif D99,
+    // `docs/dette-technique.md`) — APRÈS la résolution des choix de
+    // compétences ci-dessus (les compétences candidates à l'Expertise
+    // n'existent pas encore avant). `ClassChoiceStepScreen` recalcule
+    // lui-même la route suivante (jamais l'étape 6/9 "Sorts" : le Roublard
+    // n'est RAW lanceur de sorts à aucun niveau), pas besoin de calculer
+    // `spellsStepApplies` ici pour cette classe. Jamais en mode modification
+    // (`editSession != null`) : contournement D102
+    // (`docs/dette-technique.md`) — ni `CharacterEditHydrator` ni
+    // `CharacterEditPlanner`/`CharacterEditRepository` ne pré-remplissent ou
+    // ne persistent `expertiseSkillChoices`, un choix fait ici en édition
+    // serait perdu en silence à l'enregistrement.
+    if (classOption.id == _roublardClassId && editSession == null) {
+      context.push('/characters/new/class-choice');
+      return;
+    }
     final spellsStepApplies =
         SpellcastingRules.isSpellcastingClass(classOption.name) &&
         (editSession?.canEditSpells ?? true);

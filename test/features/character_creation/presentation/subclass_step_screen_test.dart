@@ -29,10 +29,16 @@ import 'package:personnages/features/character_creation/domain/skill_catalog.dar
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
 import 'package:personnages/features/character_creation/domain/subclass_choice_catalog.dart';
 import 'package:personnages/features/character_creation/domain/subclass_choice_option.dart';
+import 'package:personnages/features/character_creation/domain/subclass_feature_choice.dart';
+import 'package:personnages/features/character_creation/domain/subclass_feature_option.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
+import 'package:personnages/features/character_creation/data/subclass_feature_choice_repository.dart';
+import 'package:personnages/features/character_creation/domain/character_edit_snapshot.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_edit_session_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/subclass_choice_providers.dart';
+import 'package:personnages/features/character_creation/presentation/providers/subclass_feature_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/subclass_step_screen.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
@@ -102,6 +108,18 @@ class _FakeSubclassChoiceRepository implements SubclassChoiceRepository {
   }
 }
 
+class _FakeSubclassFeatureChoiceRepository
+    implements SubclassFeatureChoiceRepository {
+  SubclassFeatureChoice? choiceToReturn;
+  Object? errorToThrow;
+
+  @override
+  Future<SubclassFeatureChoice?> fetchFor(int subclassId) async {
+    if (errorToThrow != null) throw errorToThrow!;
+    return choiceToReturn;
+  }
+}
+
 const _clerc = ClassOption(
   id: 3,
   name: 'Clerc',
@@ -109,29 +127,51 @@ const _clerc = ClassOption(
   hitDie: 8,
 );
 
+const _ensorceleur = ClassOption(
+  id: 6,
+  name: 'Ensorceleur',
+  description: 'Lanceur inné.',
+  hitDie: 6,
+);
+
 const _vie = SubclassChoiceOption(id: 31, name: 'Domaine de la Vie');
 const _guerre = SubclassChoiceOption(id: 32, name: 'Domaine de la Guerre');
+const _lignageDraconique = SubclassChoiceOption(
+  id: 12,
+  name: 'Lignage draconique',
+);
+
+const _dragonRouge = SubclassFeatureOption(id: 1, name: 'Dragon rouge');
+const _dragonBleu = SubclassFeatureOption(id: 2, name: 'Dragon bleu');
 
 void main() {
   late _FakeCharacterCreationRepository fakeRepository;
   late _FakeSubclassChoiceRepository fakeSubclassRepository;
+  late _FakeSubclassFeatureChoiceRepository fakeFeatureRepository;
   late ProviderContainer container;
   late GoRouter router;
 
   setUp(() {
     fakeRepository = _FakeCharacterCreationRepository();
-    fakeRepository.catalogToReturn = const ClassCatalog(classes: [_clerc]);
+    fakeRepository.catalogToReturn = const ClassCatalog(
+      classes: [_clerc, _ensorceleur],
+    );
     fakeSubclassRepository = _FakeSubclassChoiceRepository();
     fakeSubclassRepository.catalog = const SubclassChoiceCatalog(
       optionsByClassId: {
         3: [_vie, _guerre],
+        6: [_lignageDraconique],
       },
     );
+    fakeFeatureRepository = _FakeSubclassFeatureChoiceRepository();
     container = ProviderContainer(
       overrides: [
         characterCreationRepositoryProvider.overrideWithValue(fakeRepository),
         subclassChoiceRepositoryProvider.overrideWithValue(
           fakeSubclassRepository,
+        ),
+        subclassFeatureChoiceRepositoryProvider.overrideWithValue(
+          fakeFeatureRepository,
         ),
       ],
     );
@@ -187,9 +227,65 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Variante pour le second choix de niveau 1 propre à la sous-classe
+  /// (Ancêtre draconique, correctif D99) — classe/sous-classe paramétrables,
+  /// la sous-classe étant déjà choisie à l'arrivée (contrairement à
+  /// [pumpSubclassStep], qui part d'un choix encore vide).
+  Future<void> pumpSubclassFeatureStep(
+    WidgetTester tester, {
+    required int classId,
+    required int subclassId,
+  }) async {
+    container
+        .read(characterCreationDraftControllerProvider.notifier)
+        .setClass(classId: classId, subclassId: subclassId);
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+    router.push('/characters/new/subclass');
+    await tester.pumpAndSettle();
+  }
+
   bool nextEnabled(WidgetTester tester) =>
       tester.widget<PrimaryButton>(find.byType(PrimaryButton)).onPressed !=
       null;
+
+  /// Variante [pumpSubclassFeatureStep] démarrant une session de
+  /// modification (niveau 1, classe modifiable) avant de pomper l'écran —
+  /// régression D102 (`docs/dette-technique.md`) : `SubclassFeatureChoiceBlock`
+  /// ne doit jamais s'afficher dans ce mode, voir le groupe de tests dédié.
+  Future<void> pumpSubclassFeatureStepInEditMode(
+    WidgetTester tester, {
+    required int classId,
+    required int subclassId,
+  }) async {
+    final draft = CharacterCreationDraft(
+      classId: classId,
+      subclassId: subclassId,
+    );
+    container
+        .read(characterCreationDraftControllerProvider.notifier)
+        .replaceWith(draft);
+    container
+        .read(characterEditSessionControllerProvider.notifier)
+        .start(
+          CharacterEditSession(
+            snapshot: CharacterEditSnapshot(
+              characterId: 'c1',
+              name: 'Brunhilde',
+              primaryClassId: classId,
+              primaryClassLevel: 1,
+              totalLevel: 1,
+              maxHp: 8,
+              currentHp: 8,
+            ),
+            originalDraft: draft,
+          ),
+        );
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+    router.push('/characters/new/subclass');
+    await tester.pumpAndSettle();
+  }
 
   testWidgets('charge le nom de la classe et les options de sous-classe', (
     WidgetTester tester,
@@ -327,4 +423,122 @@ void main() {
       expect(find.text('Domaine de la Vie'), findsOneWidget);
     },
   );
+
+  group('SubclassFeatureChoiceBlock (correctif D99, Ancêtre draconique)', () {
+    testWidgets(
+      'affiche les options et bloque "Suivant" tant qu\'aucune n\'est '
+      'choisie',
+      (WidgetTester tester) async {
+        fakeFeatureRepository.choiceToReturn = const SubclassFeatureChoice(
+          classFeatureId: 368,
+          featureName: 'Ancêtre draconique',
+          options: [_dragonRouge, _dragonBleu],
+        );
+
+        await pumpSubclassFeatureStep(tester, classId: 6, subclassId: 12);
+
+        expect(find.text('Ancêtre draconique'), findsOneWidget);
+        expect(find.text('Dragon rouge'), findsOneWidget);
+        expect(find.text('Dragon bleu'), findsOneWidget);
+        expect(nextEnabled(tester), isFalse);
+      },
+    );
+
+    testWidgets(
+      'sélectionner une option écrit subclassFeatureChoiceValue dans le '
+      'brouillon et active "Suivant"',
+      (WidgetTester tester) async {
+        fakeFeatureRepository.choiceToReturn = const SubclassFeatureChoice(
+          classFeatureId: 368,
+          featureName: 'Ancêtre draconique',
+          options: [_dragonRouge, _dragonBleu],
+        );
+
+        await pumpSubclassFeatureStep(tester, classId: 6, subclassId: 12);
+
+        await tester.tap(find.text('Dragon rouge'));
+        await tester.pumpAndSettle();
+
+        expect(nextEnabled(tester), isTrue);
+
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(
+          readDraft(),
+          const CharacterCreationDraft(
+            classId: 6,
+            subclassId: 12,
+            subclassFeatureChoiceValue: 'Dragon rouge',
+          ),
+        );
+      },
+    );
+
+    testWidgets(
+      'sous-classe sans second choix (choix == null) : aucun bloc affiché, '
+      '"Suivant" jamais bloqué par ce choix',
+      (WidgetTester tester) async {
+        fakeFeatureRepository.choiceToReturn = null;
+
+        await pumpSubclassFeatureStep(tester, classId: 3, subclassId: 31);
+
+        expect(find.text('Ancêtre draconique'), findsNothing);
+        expect(nextEnabled(tester), isTrue);
+      },
+    );
+
+    testWidgets('catalogue de class_options vide (D95, script SQL pas encore '
+        'exécuté) : texte défensif non bloquant', (WidgetTester tester) async {
+      fakeFeatureRepository.choiceToReturn = const SubclassFeatureChoice(
+        classFeatureId: 368,
+        featureName: 'Ancêtre draconique',
+        options: [],
+      );
+
+      await pumpSubclassFeatureStep(tester, classId: 6, subclassId: 12);
+
+      expect(
+        find.textContaining("Aucune option n'est disponible"),
+        findsOneWidget,
+      );
+      expect(nextEnabled(tester), isTrue);
+    });
+
+    testWidgets(
+      'régression D102 (docs/dette-technique.md) : en mode modification '
+      "d'un personnage Ensorceleur de niveau 1 avec le Lignage draconique "
+      'déjà choisi, le bloc "Ancêtre draconique" ne s\'affiche jamais, même '
+      "si le catalogue indique un second choix disponible — ni "
+      '`CharacterEditHydrator` ni `CharacterEditPlanner`/'
+      '`CharacterEditRepository` ne pré-remplissent ou ne persistent '
+      '`subclassFeatureChoiceValue` : l\'écran mentirait en silence au '
+      "joueur sur l'enregistrement de son choix. \"Suivant\" n'est jamais "
+      'bloqué par ce choix caché.',
+      (WidgetTester tester) async {
+        fakeFeatureRepository.choiceToReturn = const SubclassFeatureChoice(
+          classFeatureId: 368,
+          featureName: 'Ancêtre draconique',
+          options: [_dragonRouge, _dragonBleu],
+        );
+
+        await pumpSubclassFeatureStepInEditMode(
+          tester,
+          classId: 6,
+          subclassId: 12,
+        );
+
+        expect(find.text('Ancêtre draconique'), findsNothing);
+        expect(find.text('Dragon rouge'), findsNothing);
+        expect(find.text('Dragon bleu'), findsNothing);
+        expect(nextEnabled(tester), isTrue);
+
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(readDraft().subclassFeatureChoiceValue, isNull);
+        expect(find.text('Étape suivante'), findsOneWidget);
+      },
+    );
+  });
 }

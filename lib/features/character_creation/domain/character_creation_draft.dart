@@ -234,5 +234,47 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     /// Alignement choisi à l'étape 8 (`characters.alignment_id`), `null` si
     /// aucun.
     int? alignmentId,
+
+    /// Choix nommé de CLASSE fait dès le niveau 1, à l'écran
+    /// `ClassChoiceStepScreen` poussé juste après `ClassStepScreen` —
+    /// correctif D99 (`docs/dette-technique.md`). Libellé choisi dans
+    /// `LevelUpChoiceOptions.fightingStyles`/`.favoredEnemies` selon la
+    /// classe (voir `domain/class_choice_rules.dart`) : Style de combat du
+    /// Guerrier, Ennemi juré du Rôdeur. `null` tant qu'aucune classe
+    /// concernée n'est choisie, ou que rien n'est encore choisi. N'inclut
+    /// PAS l'Expertise du Roublard (voir [expertiseSkillChoices]), ni
+    /// l'Ancêtre draconique (voir [subclassFeatureChoiceValue]) — chacun son
+    /// propre champ, pour ne jamais mélanger les 3 écritures distinctes de
+    /// `character_class_options` au moment de `createCharacter` (voir
+    /// `data/character_creation_repository.dart`).
+    String? classFeatureChoiceValue,
+
+    /// Second choix de niveau 1 propre à la SOUS-CLASSE choisie (ex. type de
+    /// dragon pour l'Ancêtre draconique du Lignage draconique, Ensorceleur),
+    /// fait sur `SubclassStepScreen` via `SubclassFeatureChoiceBlock` —
+    /// correctif D99. Nom de l'option choisie (ex. "Dragon rouge"), `null`
+    /// tant qu'aucune sous-classe concernée n'est choisie, ou que rien n'est
+    /// encore choisi. Voir `domain/subclass_feature_choice.dart`.
+    String? subclassFeatureChoiceValue,
+
+    /// Compétences choisies pour l'Expertise du Roublard au niveau 1, à
+    /// l'écran `ClassChoiceStepScreen` poussé par `SkillsAndToolsStepScreen`
+    /// APRÈS la résolution des choix de compétences de cette étape (pas
+    /// juste après la classe : les compétences candidates n'existent pas
+    /// encore à ce stade) — correctif D99. Noms affichés, même décision
+    /// noms-plutôt-qu'ids que [classSkillChoices]. Quota RAW 2, qui peut
+    /// être réduit à 1 (voir [expertiseThievesToolsSubstitution]) — voir
+    /// `domain/expertise_step_selection.dart`. Vide tant que rien n'est
+    /// encore choisi, ou pour toute classe autre que le Roublard.
+    @Default(<String>[]) List<String> expertiseSkillChoices,
+
+    /// `true` si une des 2 "cases" d'Expertise du Roublard est utilisée sur
+    /// sa maîtrise d'outils de voleur plutôt que sur une compétence (RAW :
+    /// "deux compétences, OU une compétence et les outils de voleur") —
+    /// purement descriptif à la persistance, voir
+    /// `domain/expertise_step_selection.dart` pour le rationale de l'absence
+    /// de bonus chiffré associé. `false` par défaut/tant que rien n'est
+    /// choisi.
+    @Default(false) bool expertiseThievesToolsSubstitution,
   }) = _CharacterCreationDraft;
 }

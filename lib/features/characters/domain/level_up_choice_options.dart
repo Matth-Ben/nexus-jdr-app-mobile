@@ -36,5 +36,6 @@ abstract final class LevelUpChoiceOptions {
     'Monstruosités',
     'Morts-vivants',
     'Plantes',
+    'Vases',
   ];
 }

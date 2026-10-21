@@ -24,8 +24,8 @@ void main() {
   });
 
   group('LevelUpChoiceOptions.favoredEnemies', () {
-    test('contient les 12 types de créatures du Manuel des Joueurs 5e', () {
-      expect(LevelUpChoiceOptions.favoredEnemies, hasLength(12));
+    test('contient les 13 types de créatures du Manuel des Joueurs 5e', () {
+      expect(LevelUpChoiceOptions.favoredEnemies, hasLength(13));
       expect(LevelUpChoiceOptions.favoredEnemies.toSet(), {
         'Aberrations',
         'Bêtes',
@@ -39,6 +39,7 @@ void main() {
         'Monstruosités',
         'Plantes',
         'Morts-vivants',
+        'Vases',
       });
     });
 

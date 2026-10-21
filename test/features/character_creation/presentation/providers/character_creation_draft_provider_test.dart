@@ -454,4 +454,113 @@ void main() {
       );
     });
   });
+
+  group(
+    'choix nommés de niveau 1 (correctif D99, docs/dette-technique.md)',
+    () {
+      test('setClassFeatureChoice/setSubclassFeatureChoice/setExpertiseChoices '
+          "écrivent chacun leur champ, sans affecter les autres", () {
+        final controller = container.read(
+          characterCreationDraftControllerProvider.notifier,
+        );
+        controller.setClass(classId: 5);
+        controller.setClassFeatureChoice('Duel');
+
+        var draft = container.read(characterCreationDraftControllerProvider);
+        expect(draft.classFeatureChoiceValue, 'Duel');
+        expect(draft.subclassFeatureChoiceValue, isNull);
+        expect(draft.expertiseSkillChoices, isEmpty);
+
+        controller.setSubclassFeatureChoice('Dragon rouge');
+        draft = container.read(characterCreationDraftControllerProvider);
+        expect(draft.classFeatureChoiceValue, 'Duel');
+        expect(draft.subclassFeatureChoiceValue, 'Dragon rouge');
+
+        controller.setExpertiseChoices(
+          skillNames: ['Discrétion', 'Perception'],
+          thievesToolsSubstitution: false,
+        );
+        draft = container.read(characterCreationDraftControllerProvider);
+        expect(draft.classFeatureChoiceValue, 'Duel');
+        expect(draft.subclassFeatureChoiceValue, 'Dragon rouge');
+        expect(draft.expertiseSkillChoices, ['Discrétion', 'Perception']);
+        expect(draft.expertiseThievesToolsSubstitution, isFalse);
+      });
+
+      test('classe différente : classFeatureChoiceValue et l\'Expertise sont '
+          'vidés (ne valent que pour la classe précédente)', () {
+        final controller = container.read(
+          characterCreationDraftControllerProvider.notifier,
+        );
+        controller.setClass(classId: 9);
+        controller.setExpertiseChoices(
+          skillNames: ['Discrétion'],
+          thievesToolsSubstitution: true,
+        );
+        controller.setClassFeatureChoice('Duel');
+
+        controller.setClass(classId: 5);
+
+        final draft = container.read(characterCreationDraftControllerProvider);
+        expect(draft.classId, 5);
+        expect(draft.classFeatureChoiceValue, isNull);
+        expect(draft.expertiseSkillChoices, isEmpty);
+        expect(draft.expertiseThievesToolsSubstitution, isFalse);
+      });
+
+      test(
+        'même classe, retapée (pas de changement réel) : rien n\'est effacé',
+        () {
+          final controller = container.read(
+            characterCreationDraftControllerProvider.notifier,
+          );
+          controller.setClass(classId: 5);
+          controller.setClassFeatureChoice('Duel');
+
+          controller.setClass(classId: 5);
+
+          final draft = container.read(
+            characterCreationDraftControllerProvider,
+          );
+          expect(draft.classFeatureChoiceValue, 'Duel');
+        },
+      );
+
+      test('sous-classe différente (même classe) : subclassFeatureChoiceValue '
+          'est vidé', () {
+        final controller = container.read(
+          characterCreationDraftControllerProvider.notifier,
+        );
+        controller.setClass(classId: 6, subclassId: 12);
+        controller.setSubclassFeatureChoice('Dragon rouge');
+
+        controller.setClass(classId: 6, subclassId: 13);
+
+        final draft = container.read(characterCreationDraftControllerProvider);
+        expect(draft.subclassId, 13);
+        expect(draft.subclassFeatureChoiceValue, isNull);
+      });
+
+      test('reset remet les 4 champs à zéro', () {
+        final controller = container.read(
+          characterCreationDraftControllerProvider.notifier,
+        );
+        controller.setClass(classId: 5);
+        controller.setClassFeatureChoice('Duel');
+        controller.setSubclassFeatureChoice('Dragon rouge');
+        controller.setExpertiseChoices(
+          skillNames: ['Discrétion'],
+          thievesToolsSubstitution: true,
+        );
+
+        controller.reset();
+
+        final draft = container.read(characterCreationDraftControllerProvider);
+        expect(draft.classFeatureChoiceValue, isNull);
+        expect(draft.subclassFeatureChoiceValue, isNull);
+        expect(draft.expertiseSkillChoices, isEmpty);
+        expect(draft.expertiseThievesToolsSubstitution, isFalse);
+      });
+    },
+  );
 }

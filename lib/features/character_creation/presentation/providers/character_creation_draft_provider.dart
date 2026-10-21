@@ -99,6 +99,51 @@ class CharacterCreationDraftController
           ? const <String>[]
           : state.classLevelOneSpellChoices,
       classEquipmentOption: classChanged ? null : state.classEquipmentOption,
+      // Style de combat/Ennemi juré (`ClassChoiceStepScreen`) ne vaut que
+      // pour la classe précédente — correctif D99.
+      classFeatureChoiceValue: classChanged
+          ? null
+          : state.classFeatureChoiceValue,
+      // Expertise du Roublard ne vaut que pour la classe précédente — même
+      // rationale.
+      expertiseSkillChoices: classChanged
+          ? const <String>[]
+          : state.expertiseSkillChoices,
+      expertiseThievesToolsSubstitution: classChanged
+          ? false
+          : state.expertiseThievesToolsSubstitution,
+      // Ancêtre draconique (ou tout second choix de sous-classe futur) ne
+      // vaut que pour la sous-classe précédente.
+      subclassFeatureChoiceValue: classChanged || subclassChanged
+          ? null
+          : state.subclassFeatureChoiceValue,
+    );
+  }
+
+  /// Met à jour le choix nommé de CLASSE fait dès le niveau 1 (Style de
+  /// combat du Guerrier/Ennemi juré du Rôdeur), à `ClassChoiceStepScreen` —
+  /// correctif D99 (`docs/dette-technique.md`).
+  void setClassFeatureChoice(String? value) {
+    state = state.copyWith(classFeatureChoiceValue: value);
+  }
+
+  /// Met à jour le second choix de niveau 1 propre à la sous-classe choisie
+  /// (ex. Ancêtre draconique), à `SubclassFeatureChoiceBlock` —
+  /// correctif D99.
+  void setSubclassFeatureChoice(String? value) {
+    state = state.copyWith(subclassFeatureChoiceValue: value);
+  }
+
+  /// Met à jour l'Expertise du Roublard faite au niveau 1, à
+  /// `ClassChoiceStepScreen` (poussé par `SkillsAndToolsStepScreen`, APRÈS
+  /// les choix de compétences de cette étape) — correctif D99.
+  void setExpertiseChoices({
+    required List<String> skillNames,
+    required bool thievesToolsSubstitution,
+  }) {
+    state = state.copyWith(
+      expertiseSkillChoices: skillNames,
+      expertiseThievesToolsSubstitution: thievesToolsSubstitution,
     );
   }
 
