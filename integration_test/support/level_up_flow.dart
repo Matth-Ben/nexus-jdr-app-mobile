@@ -80,6 +80,7 @@ Future<LevelUpOutcome> runOneLevelUp(
       blocked: true,
       screenText: blockingText,
       hadElementalDisciplinesStep: false,
+      hadManeuversStep: false,
     );
   }
 
@@ -208,6 +209,22 @@ Future<LevelUpOutcome> runOneLevelUp(
     await pumpUntilSettled(tester, attempts: 4);
   }
 
+  // Etape "Manoeuvres" (Guerrier, Maitre de guerre) -- meme patron que
+  // l'etape "Disciplines elementaires" ci-dessus (tuiles CheckableOptionTile
+  // a quota, voir level_up_screen.dart::_maneuverTile) -- jamais gere ici
+  // avant cette campagne QA (reverification du correctif PR #153/D85) :
+  // sans ce bloc, "CONTINUER" restait desactive tant que le quota de 3
+  // manoeuvres n'etait pas atteint, et [runOneLevelUp] le retapait a vide
+  // dans la boucle de rattrapage ci-dessous sans jamais le signaler comme
+  // un blocage -- un faux "non bloque" masquant que l'etape n'avait jamais
+  // ete remplie.
+  final hadManeuversStep = hasManeuversStepVisible();
+  if (hadManeuversStep) {
+    await fillAvailableCheckableTiles(tester);
+    await tapText(tester, 'CONTINUER');
+    await pumpUntilSettled(tester, attempts: 4);
+  }
+
   // Recapitulatif : "CONTINUER" applique (ecrit en base) et revient a la
   // fiche -- ou enchaine directement sur l'annonce du niveau suivant si un
   // seuil XP supplementaire est deja franchi (improbable ici : la montee
@@ -249,6 +266,7 @@ Future<LevelUpOutcome> runOneLevelUp(
       blocked: true,
       screenText: blockingText,
       hadElementalDisciplinesStep: hadElementalDisciplinesStep,
+      hadManeuversStep: hadManeuversStep,
     );
   }
 
@@ -256,6 +274,7 @@ Future<LevelUpOutcome> runOneLevelUp(
     blocked: false,
     screenText: const [],
     hadElementalDisciplinesStep: hadElementalDisciplinesStep,
+    hadManeuversStep: hadManeuversStep,
   );
 }
 
@@ -265,6 +284,7 @@ class LevelUpOutcome {
     required this.blocked,
     required this.screenText,
     required this.hadElementalDisciplinesStep,
+    required this.hadManeuversStep,
   });
 
   /// `true` si le flux s'est arrete sur l'ecran "NIVEAU ATTEINT" (choix non
@@ -284,6 +304,12 @@ class LevelUpOutcome {
   /// hasElementalDisciplinesStepVisible, qui ne refleterait plus que
   /// l'ecran final une fois le flux termine).
   final bool hadElementalDisciplinesStep;
+
+  /// `true` si l'etape "Manoeuvres" (Guerrier, Maitre de guerre) a ete
+  /// rencontree pendant CE niveau -- meme role que
+  /// [hadElementalDisciplinesStep], ajoute pendant cette campagne QA
+  /// (reverification du correctif PR #153/D85).
+  final bool hadManeuversStep;
 }
 
 /// `true` si une etape "Disciplines elementaires" est visible sur l'ecran
@@ -293,6 +319,15 @@ bool hasElementalDisciplinesStepVisible() => find
     .text('DISCIPLINES \u00c9L\u00c9MENTAIRES CONNUES')
     .evaluate()
     .isNotEmpty;
+
+/// `true` si une etape "Manoeuvres" (Guerrier, Maitre de guerre) est
+/// visible sur l'ecran courant -- meme role que
+/// [hasElementalDisciplinesStepVisible], ajoute pendant cette campagne QA
+/// (reverification du correctif PR #153/D85) en constatant que cette etape
+/// n'etait gere par AUCUNE fonction de ce fichier (voir le commentaire du
+/// bloc "Manoeuvres" de [runOneLevelUp]).
+bool hasManeuversStepVisible() =>
+    find.text('MAN\u0152UVRES CONNUES').evaluate().isNotEmpty;
 
 /// Ouvre un personnage par son nom depuis CharacterListScreen (deja
 /// affichee) -- tape la carte portant ce nom (voir

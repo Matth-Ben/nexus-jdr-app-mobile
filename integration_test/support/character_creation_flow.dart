@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
+import 'package:personnages/core/widgets/selectable_option_tile.dart';
 
 import 'tap_helpers.dart';
 
@@ -29,6 +30,7 @@ Future<void> createCharacter(
   String? subraceName,
   required String className,
   String? subclassName,
+  bool autoPickSubclassIfOffered = false,
   required String backgroundName,
   Map<String, int> abilityIncrements = const {},
 }) async {
@@ -78,6 +80,21 @@ Future<void> createCharacter(
     await pumpUntilSettled(tester, attempts: 4);
     await tapText(tester, 'SUIVANT');
     await pumpUntilSettled(tester, attempts: 4);
+  } else if (autoPickSubclassIfOffered) {
+    for (var drag = 0; drag < 6; drag++) {
+      if (find.byType(SelectableOptionTile).evaluate().isNotEmpty) break;
+      await tester.drag(find.byType(ListView).first, const Offset(0, -200));
+      await tester.pumpAndSettle(settleTimeout);
+    }
+    if (find.byType(SelectableOptionTile).evaluate().isNotEmpty) {
+      final finder = find.byType(SelectableOptionTile).first;
+      await tester.ensureVisible(finder);
+      await tester.pumpAndSettle(settleTimeout);
+      await tester.tap(finder);
+      await pumpUntilSettled(tester, attempts: 4);
+      await tapText(tester, 'SUIVANT');
+      await pumpUntilSettled(tester, attempts: 4);
+    }
   }
 
   // Etape 3/9 : Historique (~36 historiques, peut necessiter un
