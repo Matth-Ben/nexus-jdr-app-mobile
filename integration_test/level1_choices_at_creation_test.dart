@@ -6,14 +6,25 @@
 // voir proposer leur second choix de niveau 1 DES LA CREATION, pas
 // seulement au multiclassage tardif.
 //
-// Ecrit specifiquement pour cette campagne plutot que de reutiliser
-// support/character_creation_flow.dart::createCharacter tel quel : ce
-// helper partage ne gere ni ClassChoiceStepScreen (Guerrier/Rodeur juste
-// apres la Classe, Roublard juste apres Competences et outils) ni le
-// second SelectableOptionTile de SubclassFeatureChoiceBlock (Ancetre
-// draconique) -- aucun des deux n'existait avant le correctif D99 de cette
-// nuit. Reimplemente une version minimale du parcours de creation, inline,
-// pour les 4 scenarios de cette campagne uniquement.
+// Ecrit a l'origine (21/10/2026) sans reutiliser
+// support/character_creation_flow.dart::createCharacter : au moment de ce
+// chantier (D99), ce helper partage ne gerait ni ClassChoiceStepScreen
+// (Guerrier/Rodeur juste apres la Classe, Roublard juste apres Competences
+// et outils) ni le second SelectableOptionTile de SubclassFeatureChoiceBlock
+// (Ancetre draconique) -- aucun des deux n'existait avant ce correctif.
+// `createCharacter` gere maintenant les deux (correctif D108, meme nuit,
+// docs/dette-technique.md) -- mais ce fichier garde volontairement SA PROPRE
+// implementation minimale du parcours jusqu'au choix inclus (plutot que de
+// l'appeler) : contrairement aux ~13 fichiers `level_up_*`/`multiclass_*`
+// qui veulent juste AVANCER au plus vite jusqu'a la montee de niveau,
+// chaque scenario ici doit explicitement INSPECTER l'ecran intermediaire
+// (texte affiche, nombre d'options, absence d'option RAW-fausse) avant de
+// faire son choix -- ce que `createCharacter`/`_resolveClassChoiceStepScreenIfPresent`
+// font volontairement en boite noire (resolution automatique, aucune
+// assertion). Les deux chemins restent donc legitimement distincts, pas un
+// risque de divergence a corriger : `createCharacter` reste la seule source
+// de verite sur COMMENT franchir ces ecrans en boite noire, ce fichier sur
+// CE QU'ils doivent afficher.
 import "package:flutter/material.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:integration_test/integration_test.dart";
@@ -129,7 +140,9 @@ void main() {
     await tapText(tester, "SUIVANT");
     await pumpUntilSettled(tester, attempts: 4);
 
-    const name = "QA-Test-Guerrier-D99";
+    // Horodate (D109, docs/dette-technique.md) : evite un doublon en base a
+    // chaque relance de ce fichier.
+    final name = qaUniqueCharacterName("QA-Test-Guerrier-D99");
     await finishCreationFromBackgroundStep(tester, name);
 
     expect(
@@ -182,7 +195,9 @@ void main() {
     await tapText(tester, "SUIVANT");
     await pumpUntilSettled(tester, attempts: 4);
 
-    const name = "QA-Test-Rodeur-D99";
+    // Horodate (D109, docs/dette-technique.md) : evite un doublon en base a
+    // chaque relance de ce fichier.
+    final name = qaUniqueCharacterName("QA-Test-Rodeur-D99");
     await finishCreationFromBackgroundStep(tester, name);
 
     expect(
@@ -260,7 +275,9 @@ void main() {
       await tapText(tester, "SUIVANT");
       await pumpUntilSettled(tester, attempts: 4);
 
-      const name = "QA-Test-Roublard-D99";
+      // Horodate (D109, docs/dette-technique.md) : evite un doublon en base
+      // a chaque relance de ce fichier.
+      final name = qaUniqueCharacterName("QA-Test-Roublard-D99");
       await tapText(tester, "SUIVANT");
       await pumpUntilSettled(tester, attempts: 4);
       await tapText(tester, "SUIVANT");
@@ -323,7 +340,9 @@ void main() {
       await tapText(tester, "SUIVANT");
       await pumpUntilSettled(tester, attempts: 4);
 
-      const name = "QA-Test-Ensorceleur-D99";
+      // Horodate (D109, docs/dette-technique.md) : evite un doublon en base
+      // a chaque relance de ce fichier.
+      final name = qaUniqueCharacterName("QA-Test-Ensorceleur-D99");
       await finishCreationFromBackgroundStep(tester, name);
 
       expect(
