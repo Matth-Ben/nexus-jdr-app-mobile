@@ -86,7 +86,6 @@ class _AppliedLevelUp {
     required this.metamagicNames,
     required this.metamagicSwap,
     required this.expertiseSkillIds,
-    required this.expertiseThievesToolsSubstitution,
     required this.draconicAncestryDamageType,
     required this.racialInnateSpellIds,
   });
@@ -109,7 +108,6 @@ class _AppliedLevelUp {
   final List<String> metamagicNames;
   final LevelUpMetamagicSwap? metamagicSwap;
   final List<int> expertiseSkillIds;
-  final bool expertiseThievesToolsSubstitution;
   final String? draconicAncestryDamageType;
   final List<int> racialInnateSpellIds;
 }
@@ -400,7 +398,6 @@ class _FakeCharacterRepository implements CharacterRepository {
     List<String> metamagicNames = const [],
     LevelUpMetamagicSwap? metamagicSwap,
     List<int> expertiseSkillIds = const [],
-    bool expertiseThievesToolsSubstitution = false,
     String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   }) async {
@@ -424,7 +421,6 @@ class _FakeCharacterRepository implements CharacterRepository {
         metamagicNames: metamagicNames,
         metamagicSwap: metamagicSwap,
         expertiseSkillIds: expertiseSkillIds,
-        expertiseThievesToolsSubstitution: expertiseThievesToolsSubstitution,
         draconicAncestryDamageType: draconicAncestryDamageType,
         racialInnateSpellIds: racialInnateSpellIds,
       ),
@@ -4781,7 +4777,8 @@ void main() {
   group('etape "Expertise" (Barde/Roublard)', () {
     testWidgets(
       'Barde niveau 3 : quota 2 parmi les competences deja maitrisees, '
-      'pas de substitution outils (Barde uniquement)',
+      'aucune substitution outils de voleur proposee (D104 : RAW-fausse, '
+      'retiree)',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail.copyWith(
           classes: [
@@ -4863,7 +4860,6 @@ void main() {
 
         final applied = fakeRepository.applyLevelUpCalls.single;
         expect(applied.expertiseSkillIds.toSet(), {1, 2});
-        expect(applied.expertiseThievesToolsSubstitution, isFalse);
       },
     );
 
@@ -4955,13 +4951,13 @@ void main() {
 
         final applied = fakeRepository.applyLevelUpCalls.single;
         expect(applied.expertiseSkillIds, [1]);
-        expect(applied.expertiseThievesToolsSubstitution, isFalse);
       },
     );
 
     testWidgets(
-      'Roublard niveau 6 : substitution "Outils de voleur" prend une des '
-      '2 places, quota de competences reduit a 1',
+      'Roublard niveau 6 : aucune substitution "Outils de voleur" — quota '
+      'RAW de 2 competences, les deux "competente" sont selectionnables '
+      '(D104 de docs/dette-technique.md)',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail.copyWith(
           classes: [
@@ -5000,16 +4996,11 @@ void main() {
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Outils de voleur'), findsOneWidget);
-        await tester.tap(find.text('Outils de voleur'));
-        await tester.pumpAndSettle();
+        expect(find.text('Outils de voleur'), findsNothing);
 
         await tester.tap(find.text('Discrétion'));
         await tester.pumpAndSettle();
-        expect(find.text('2 / 2'), findsOneWidget);
-        // Le quota de compétences est désormais réduit à 1 (substitution
-        // comprise) : "Escamotage" ne peut plus être cochée.
-        await tester.tap(find.text('Escamotage'), warnIfMissed: false);
+        await tester.tap(find.text('Escamotage'));
         await tester.pumpAndSettle();
         expect(find.text('2 / 2'), findsOneWidget);
 
@@ -5019,19 +5010,14 @@ void main() {
         await tester.pumpAndSettle();
 
         final applied = fakeRepository.applyLevelUpCalls.single;
-        expect(applied.expertiseSkillIds, [1]);
-        expect(applied.expertiseThievesToolsSubstitution, isTrue);
+        expect(applied.expertiseSkillIds.toSet(), {1, 2});
       },
     );
 
     testWidgets(
-      'Roublard niveau 6 : vivier de competences "competente" vide — seule '
-      'la substitution "Outils de voleur" est disponible, le flux doit '
-      'pouvoir aller jusqu\'au bout une fois celle-ci selectionnee '
-      '(regression du quota plafonne au catalogue disponible : avant le '
-      'correctif, le maximum atteignable ici — 1, via la seule '
-      'substitution — n\'egalait jamais le quota RAW de 2, bouton CONTINUER '
-      'bloque indefiniment)',
+      'Roublard niveau 6 : vivier de competences "competente" vide — aucune '
+      'substitution de secours, le quota effectif plafonne a 0 et le flux '
+      'continue immediatement sans aucun choix a faire',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail.copyWith(
           classes: [
@@ -5057,14 +5043,11 @@ void main() {
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Outils de voleur'), findsOneWidget);
-        // Aucune competence eligible : le quota effectif est deja a 0 sans
-        // la substitution (badge plafonne au catalogue, pas le quota RAW).
+        expect(find.text('Outils de voleur'), findsNothing);
+        // Aucune competence eligible : le quota effectif est a 0 (badge
+        // plafonne au catalogue, pas le quota RAW de 2) — CONTINUER est
+        // directement actionnable, sans aucun choix de secours a proposer.
         expect(find.text('0 / 0'), findsOneWidget);
-
-        await tester.tap(find.text('Outils de voleur'));
-        await tester.pumpAndSettle();
-        expect(find.text('1 / 1'), findsOneWidget);
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
@@ -5073,7 +5056,6 @@ void main() {
 
         final applied = fakeRepository.applyLevelUpCalls.single;
         expect(applied.expertiseSkillIds, isEmpty);
-        expect(applied.expertiseThievesToolsSubstitution, isTrue);
       },
     );
 
@@ -5126,7 +5108,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.textContaining('· Expertise'), findsOneWidget);
-        expect(find.text('Outils de voleur'), findsOneWidget);
+        expect(find.text('Outils de voleur'), findsNothing);
 
         await tester.tap(find.text('Discrétion'));
         await tester.pumpAndSettle();

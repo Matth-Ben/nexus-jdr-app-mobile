@@ -38,23 +38,21 @@ void main() {
     });
   });
 
-  group('ExpertiseKnownProgression.allowsThievesToolsSubstitution', () {
-    test('true pour le Roublard uniquement', () {
-      expect(
-        ExpertiseKnownProgression.allowsThievesToolsSubstitution('Roublard'),
-        isTrue,
-      );
-    });
-
-    test('false pour le Barde (et toute autre classe)', () {
-      expect(
-        ExpertiseKnownProgression.allowsThievesToolsSubstitution('Barde'),
-        isFalse,
-      );
-      expect(
-        ExpertiseKnownProgression.allowsThievesToolsSubstitution('Guerrier'),
-        isFalse,
-      );
-    });
+  // D104 de docs/dette-technique.md : la substitution "outils de voleur" à
+  // une place d'Expertise est RAW-fausse (le texte 2024 du Manuel des
+  // Joueurs l'a supprimée complètement, vérifié par 2 sources primaires
+  // indépendantes) — retirée du modèle. `quotaAt` ne connaît donc QUE deux
+  // valeurs, jamais 1 (ce que renverrait une substitution partielle), et
+  // aucune méthode de substitution n'existe plus sur cette classe.
+  test('le quota ne vaut jamais 1 (pas de substitution partielle)', () {
+    for (final className in ['Barde', 'Roublard']) {
+      for (var level = 1; level <= 20; level++) {
+        expect(
+          ExpertiseKnownProgression.quotaAt(className, level),
+          isNot(1),
+          reason: '$className niveau $level',
+        );
+      }
+    }
   });
 }

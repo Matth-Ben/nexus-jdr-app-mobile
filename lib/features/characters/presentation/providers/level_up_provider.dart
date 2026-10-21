@@ -419,12 +419,6 @@ typedef LevelUpStepData = ({
   /// vide seulement si [requiresExpertiseSelection].
   List<LevelUpExpertiseOption> availableExpertiseSkills,
 
-  /// `true` si la substitution "Expertise des outils de voleur" doit être
-  /// proposée à ce niveau (Roublard UNIQUEMENT, voir
-  /// `domain/expertise_known_progression.dart::ExpertiseKnownProgression.allowsThievesToolsSubstitution`).
-  /// `false` pour le Barde et hors de [requiresExpertiseSelection].
-  bool allowsThievesToolsSubstitution,
-
   /// `true` si l'étape "Ascendance draconique" doit être affichée à ce
   /// niveau — Ensorceleur, Lignage draconique, niveau 1 de sous-classe
   /// UNIQUEMENT (choix figé à vie, jamais réoffert). Même mécanisme que
@@ -1260,12 +1254,6 @@ Future<LevelUpStepData> levelUpStepData(
           LevelUpExpertiseOption(skillId: skill.id, name: skill.name),
     ];
   }
-  final allowsThievesToolsSubstitution =
-      requiresExpertiseSelection &&
-      ExpertiseKnownProgression.allowsThievesToolsSubstitution(
-        effectiveClassName,
-      );
-
   // Ascendance draconique — aptitude "Ancêtre draconique", Ensorceleur,
   // Lignage draconique, niveau 1 de sous-classe UNIQUEMENT (choix figé à
   // vie, jamais réoffert — contrairement à [elementalDisciplinesBySubclass]/
@@ -1382,7 +1370,6 @@ Future<LevelUpStepData> levelUpStepData(
     requiresExpertiseSelection: requiresExpertiseSelection,
     expertiseQuota: expertiseQuota,
     availableExpertiseSkills: availableExpertiseSkills,
-    allowsThievesToolsSubstitution: allowsThievesToolsSubstitution,
     requiresDraconicAncestrySelection: requiresDraconicAncestrySelection,
     draconicAncestryBySubclass: draconicAncestryBySubclass,
     knownPact: knownPact,

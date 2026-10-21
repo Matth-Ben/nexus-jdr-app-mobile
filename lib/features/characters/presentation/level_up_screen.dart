@@ -415,13 +415,6 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// [_selectedInfusionIds].
   List<String> _selectedExpertiseSkillIds = [];
 
-  /// `true` si le joueur substitue la maîtrise des outils de voleur à une
-  /// des 2 places d'Expertise (Roublard uniquement, voir
-  /// `domain/expertise_known_progression.dart::ExpertiseKnownProgression.allowsThievesToolsSubstitution`)
-  /// — réduit d'autant le quota effectif de compétences sélectionnables,
-  /// voir [_effectiveExpertiseSkillQuota].
-  bool _expertiseThievesToolsSelected = false;
-
   /// `class_options.id.toString()` de l'option d'Ascendance draconique
   /// choisie (Ensorceleur, Lignage draconique, niveau 1 de sous-classe
   /// UNIQUEMENT) — sélection unique (quota RAW de 1, jamais de liste comme
@@ -510,7 +503,6 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// [_resetMetamagicSelectionState].
   void _resetExpertiseSelectionState() {
     _selectedExpertiseSkillIds = [];
-    _expertiseThievesToolsSelected = false;
   }
 
   /// Remet à zéro la sélection d'Ascendance draconique — même rationale que
@@ -1089,18 +1081,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   }
 
   /// Quota EFFECTIF de compétences sélectionnables à l'étape "Expertise" —
-  /// `data.expertiseQuota` MOINS 1 si [_expertiseThievesToolsSelected] (la
-  /// substitution Roublard prend une des 2 places), plafonné au nombre de
-  /// compétences ÉLIGIBLES ([LevelUpStepData.availableExpertiseSkills]),
-  /// même rationale que [_effectiveInfusionQuota].
+  /// `data.expertiseQuota` plafonné au nombre de compétences ÉLIGIBLES
+  /// ([LevelUpStepData.availableExpertiseSkills]), même rationale que
+  /// [_effectiveInfusionQuota].
   int _effectiveExpertiseSkillQuota(LevelUpStepData data) {
     if (!data.requiresExpertiseSelection) return 0;
-    final quotaAfterSubstitution =
-        data.expertiseQuota - (_expertiseThievesToolsSelected ? 1 : 0);
-    return math.min(
-      quotaAfterSubstitution,
-      data.availableExpertiseSkills.length,
-    );
+    return math.min(data.expertiseQuota, data.availableExpertiseSkills.length);
   }
 
   /// [_selectedExpertiseSkillIds] purgée/bornée — même rationale que
@@ -1126,25 +1112,6 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         value: skillId,
         quota: quota,
       );
-    });
-  }
-
-  /// Bascule [_expertiseThievesToolsSelected] — purge aussitôt
-  /// [_selectedExpertiseSkillIds] si le quota effectif vient de baisser (une
-  /// compétence déjà cochée peut déborder du nouveau quota), même garde que
-  /// [_effectiveSelectedExpertiseSkillIds] appliquerait de toute façon au
-  /// prochain affichage, appliquée ici immédiatement pour que le compteur de
-  /// l'étape reste cohérent sans attendre un second re-rendu.
-  void _toggleExpertiseThievesTools(LevelUpStepData data) {
-    setState(() {
-      _expertiseThievesToolsSelected = !_expertiseThievesToolsSelected;
-      final quota = _effectiveExpertiseSkillQuota(data);
-      if (_selectedExpertiseSkillIds.length > quota) {
-        _selectedExpertiseSkillIds = _selectedExpertiseSkillIds.sublist(
-          0,
-          quota,
-        );
-      }
     });
   }
 
@@ -1530,7 +1497,6 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         metamagicNames: _buildMetamagicNames(data),
         metamagicSwap: _buildMetamagicSwap(data),
         expertiseSkillIds: _buildExpertiseSkillIds(data),
-        expertiseThievesToolsSubstitution: _expertiseThievesToolsSelected,
         draconicAncestryDamageType: _buildDraconicAncestryDamageType(data),
         racialInnateSpellIds: _racialInnateSpellIds(data),
       );
@@ -4544,30 +4510,17 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   }
 
   /// Étape "Expertise" (Barde/Roublard) — liste de compétences déjà
-  /// maîtrisées (voir [LevelUpStepData.availableExpertiseSkills]), plus la
-  /// substitution "Outils de voleur" pour le Roublard
-  /// ([LevelUpStepData.allowsThievesToolsSubstitution]).
+  /// maîtrisées (voir [LevelUpStepData.availableExpertiseSkills]). Choix de
+  /// compétences UNIQUEMENT, à tous les niveaux et pour les deux classes
+  /// (voir `domain/expertise_known_progression.dart` — RAW 2024 vérifiée,
+  /// aucune substitution d'outils de voleur n'existe, D104 de
+  /// `docs/dette-technique.md`).
   Widget _buildExpertiseStep(LevelUpStepData data) {
     final stepNumber = _expertiseStepNumber(data);
     final quota = _effectiveExpertiseSkillQuota(data);
     final selected = _effectiveSelectedExpertiseSkillIds(data);
     final available = data.availableExpertiseSkills;
-    final thievesToolsBit = _expertiseThievesToolsSelected ? 1 : 0;
-    final totalSelected = selected.length + thievesToolsBit;
-    // Quota total EFFECTIF (places de compétences + substitution outils de
-    // voleur), plafonné au catalogue disponible — même motif défensif que
-    // [_buildMetamagicStep]/[_buildInvocationsStep] : `quota` (voir
-    // [_effectiveExpertiseSkillQuota]) est déjà capé au nombre de
-    // compétences éligibles, donc `quota + thievesToolsBit` équivaut à
-    // `min(data.expertiseQuota, available.length + thievesToolsBit)`.
-    // Comparer `totalSelected` à la valeur RAW `data.expertiseQuota` (comme
-    // avant ce correctif) bloquait indéfiniment le bouton CONTINUER dès que
-    // moins de compétences étaient disponibles que le quota RAW (ex. Barde
-    // niveau 3 avec peu de compétences `competente`, ou Roublard avec un
-    // vivier vide où la substitution outils de voleur ne compense qu'une
-    // seule des deux places).
-    final effectiveTotalQuota = quota + thievesToolsBit;
-    final canContinue = totalSelected == effectiveTotalQuota;
+    final canContinue = selected.length == quota;
 
     return Column(
       children: [
@@ -4595,29 +4548,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    _QuotaBadge(text: '$totalSelected / $effectiveTotalQuota'),
+                    _QuotaBadge(text: '${selected.length} / $quota'),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                if (data.allowsThievesToolsSubstitution) ...[
-                  CheckableOptionTile(
-                    title: 'Outils de voleur',
-                    subtitle:
-                        'Substitue une des places d\'Expertise à la '
-                        'maîtrise des outils de voleur.',
-                    leading: const AccentIconBadge(
-                      index: 0,
-                      icon: Icons.construction,
-                      color: AppColors.accentViolet,
-                    ),
-                    checked: _expertiseThievesToolsSelected,
-                    enabled:
-                        _expertiseThievesToolsSelected ||
-                        totalSelected < data.expertiseQuota,
-                    onTap: () => _toggleExpertiseThievesTools(data),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                ],
                 if (available.isEmpty)
                   const _ParchmentCard(
                     child: _EmptyChoiceState(
@@ -4632,7 +4566,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                     _expertiseSkillTile(
                       data,
                       available[i],
-                      index: i + (data.allowsThievesToolsSubstitution ? 1 : 0),
+                      index: i,
                       quota: quota,
                       selected: selected,
                     ),
@@ -5077,13 +5011,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   }
 
   /// Ligne de récapitulatif du bloc "Expertise" (Barde/Roublard), `null` si
-  /// aucune compétence n'a été choisie à ce niveau (ou substitution seule).
+  /// aucune compétence n'a été choisie à ce niveau.
   GainRow? _expertiseSummaryGainRow(LevelUpStepData data) {
     final skillIds = _effectiveSelectedExpertiseSkillIds(data).toSet();
     final names = [
       for (final option in data.availableExpertiseSkills)
         if (skillIds.contains(option.skillId.toString())) option.name,
-      if (_expertiseThievesToolsSelected) 'Outils de voleur',
     ];
     if (names.isEmpty) return null;
     final plural = names.length > 1 ? 's' : '';

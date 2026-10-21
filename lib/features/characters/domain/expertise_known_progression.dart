@@ -47,11 +47,4 @@ abstract final class ExpertiseKnownProgression {
     }
     return 0;
   }
-
-  /// `true` seulement pour le Roublard (RAW : substitution de la maîtrise
-  /// des outils de voleur à une des 2 places d'Expertise, aux DEUX
-  /// déclenchements 1 et 6, indépendamment l'un de l'autre — jamais pour le
-  /// Barde).
-  static bool allowsThievesToolsSubstitution(String className) =>
-      className == roguishClassName;
 }

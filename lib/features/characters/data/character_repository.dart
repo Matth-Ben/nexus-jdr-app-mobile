@@ -1021,20 +1021,11 @@ abstract class CharacterRepository {
   /// documentation de classe de `domain/level_up_expertise_option.dart`) —
   /// revérifié juste avant l'écriture que chaque compétence est bien
   /// actuellement 'competente' (même discipline défensive que
-  /// [_applyAbilityScoreImprovement]), lève une [CharacterFailure] sinon.
-  /// [expertiseThievesToolsSubstitution] (Roublard uniquement, RAW : une des
-  /// 2 places d'Expertise substituée par la maîtrise des outils de voleur) :
-  /// l'app ne modélise aucun niveau de maîtrise pour les outils
-  /// (`character_tool_proficiencies` est une simple table de présence, sans
-  /// colonne `proficiency` — contrairement aux compétences) ; ce choix est
-  /// donc enregistré comme un simple marqueur texte libre dans
-  /// `character_class_options` (`chosen_value: 'Outils de voleur'`,
-  /// `class_feature_id` résolu via `.eq('class_id', classId).eq
-  /// ('choice_type', 'expertise').eq('level', newClassLevel)`), sans effet
-  /// sur un quelconque bonus calculé (aucun n'existe pour les outils dans
-  /// l'app aujourd'hui) — décision documentée plutôt que silencieuse, voir
-  /// le rapport de la tâche qui a introduit ce paramètre. `false` hors de ce
-  /// cas.
+  /// [_applyAbilityScoreImprovement]), lève une [CharacterFailure] sinon. Pas
+  /// de substitution d'outils de voleur : RAW 2024 vérifiée, l'Expertise du
+  /// Roublard (comme celle du Barde) ne porte que sur des compétences, à
+  /// tous les niveaux (D104 de `docs/dette-technique.md` — un ancien
+  /// paramètre `expertiseThievesToolsSubstitution` RAW-faux a été retiré).
   ///
   /// [draconicAncestryDamageType] : type de dégâts choisi pour l'aptitude
   /// "Ancêtre draconique" (Ensorceleur, Lignage draconique, niveau 1 de
@@ -1087,7 +1078,6 @@ abstract class CharacterRepository {
     List<String> metamagicNames = const [],
     LevelUpMetamagicSwap? metamagicSwap,
     List<int> expertiseSkillIds = const [],
-    bool expertiseThievesToolsSubstitution = false,
     String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   });
@@ -4148,7 +4138,6 @@ class SupabaseCharacterRepository implements CharacterRepository {
     List<String> metamagicNames = const [],
     LevelUpMetamagicSwap? metamagicSwap,
     List<int> expertiseSkillIds = const [],
-    bool expertiseThievesToolsSubstitution = false,
     String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   }) async {
@@ -4870,36 +4859,6 @@ class SupabaseCharacterRepository implements CharacterRepository {
             .update({'proficiency': 'expertise'})
             .eq('character_id', characterId)
             .inFilter('skill_id', expertiseSkillIds);
-      }
-
-      // Substitution Roublard "Expertise des outils de voleur" : simple
-      // marqueur texte libre (voir la documentation de
-      // [CharacterRepository.applyLevelUp] — aucun bonus calculé n'existe
-      // pour les outils dans l'app aujourd'hui), `class_feature_id` résolu
-      // via [classId]+[newClassLevel] (une seule ligne `class_features`
-      // existe pour `('expertise', classId, newClassLevel)`, contrairement
-      // à la Métamagie qui en a 3 pour la même classe).
-      if (expertiseThievesToolsSubstitution) {
-        final expertiseFeatureRows = await _client
-            .from('class_features')
-            .select('id')
-            .eq('class_id', classId)
-            .eq('choice_type', 'expertise')
-            .eq('level', newClassLevel)
-            .limit(1);
-        if (expertiseFeatureRows.isEmpty) {
-          throw const CharacterFailure(
-            'Expertise : aptitude de classe introuvable à ce niveau.',
-          );
-        }
-        final expertiseFeatureId = (expertiseFeatureRows.first['id'] as num)
-            .toInt();
-        await _client.from('character_class_options').insert({
-          'character_id': characterId,
-          'class_feature_id': expertiseFeatureId,
-          'level': newClassLevel,
-          'chosen_value': 'Outils de voleur',
-        });
       }
 
       // Ascendance draconique (Ensorceleur, Lignage draconique, niveau 1 de

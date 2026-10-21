@@ -26,10 +26,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// - Expertise : AUCUNE ligne `character_class_options` pour les
 ///   compétences elles-mêmes — écrit directement
 ///   `character_skill_proficiencies.proficiency = 'expertise'`, après
-///   revérification que la compétence est bien 'competente'. La
-///   substitution Roublard "Outils de voleur" écrit un simple marqueur texte
-///   libre, résolu via `class_id` + `level` (une seule ligne `class_features`
-///   par niveau, contrairement à la Métamagie).
+///   revérification que la compétence est bien 'competente'. Aucune
+///   substitution "Outils de voleur" n'existe (D104 de
+///   `docs/dette-technique.md` — RAW-fausse, retirée).
 /// - Ancêtre draconique : choix de SOUS-CLASSE (`class_id` NULL), résolu via
 ///   `choice_type` SEUL comme les manœuvres/runes.
 void main() {
@@ -487,55 +486,58 @@ void main() {
   });
 
   group('SupabaseCharacterRepository.applyLevelUp — '
-      'expertiseThievesToolsSubstitution', () {
-    test('écrit un marqueur texte libre résolu via class_id + level '
-        '(Roublard)', () async {
-      final recorded = <_Recorded>[];
-      const roguishExpertiseFeatureId = 303;
-      final repo = await repository(
-        recorded: recorded,
-        rows: {
-          'character_classes': [
-            {'id': 'cc-1', 'class_id': roguishClassId, 'level': 5},
-          ],
-          'characters': [
-            {'max_hp': 10, 'current_hp': 10},
-          ],
-          'class_features': [
-            {
-              'id': roguishExpertiseFeatureId,
-              'class_id': roguishClassId,
-              'level': 6,
-              'choice_type': 'expertise',
-            },
-          ],
-        },
-      );
+      'Expertise du Roublard (pas de substitution outils de voleur, D104)', () {
+    test(
+      'niveau 6 : écrit uniquement les compétences choisies, '
+      'aucune ligne character_class_options pour les outils de voleur',
+      () async {
+        final recorded = <_Recorded>[];
+        final repo = await repository(
+          recorded: recorded,
+          rows: {
+            'character_classes': [
+              {'id': 'cc-1', 'class_id': roguishClassId, 'level': 5},
+            ],
+            'characters': [
+              {'max_hp': 10, 'current_hp': 10},
+            ],
+            'class_features': const [],
+            'character_skill_proficiencies': [
+              {'skill_id': 1, 'proficiency': 'competente'},
+              {'skill_id': 2, 'proficiency': 'competente'},
+            ],
+          },
+        );
 
-      await repo.applyLevelUp(
-        characterId: characterId,
-        classId: roguishClassId,
-        className: 'Roublard',
-        isMulticlassing: false,
-        hpRolled: 4,
-        hpMethod: 'roll',
-        hpGain: 4,
-        expertiseThievesToolsSubstitution: true,
-      );
+        await repo.applyLevelUp(
+          characterId: characterId,
+          classId: roguishClassId,
+          className: 'Roublard',
+          isMulticlassing: false,
+          hpRolled: 4,
+          hpMethod: 'roll',
+          hpGain: 4,
+          expertiseSkillIds: const [1, 2],
+        );
 
-      final inserts = recorded
-          .where(
-            (r) => r.table == 'character_class_options' && r.method == 'POST',
-          )
-          .toList();
-      expect(inserts, hasLength(1));
-      expect(inserts.single.body, {
-        'character_id': characterId,
-        'class_feature_id': roguishExpertiseFeatureId,
-        'level': 6,
-        'chosen_value': 'Outils de voleur',
-      });
-    });
+        final updates = recorded
+            .where(
+              (r) =>
+                  r.table == 'character_skill_proficiencies' &&
+                  r.method == 'PATCH',
+            )
+            .toList();
+        expect(updates, hasLength(1));
+        expect(updates.single.body, {'proficiency': 'expertise'});
+
+        final classOptionWrites = recorded
+            .where(
+              (r) => r.table == 'character_class_options' && r.method != 'GET',
+            )
+            .toList();
+        expect(classOptionWrites, isEmpty);
+      },
+    );
   });
 
   group(
