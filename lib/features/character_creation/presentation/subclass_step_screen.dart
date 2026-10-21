@@ -16,6 +16,7 @@ import '../domain/subclass_feature_choice_selection.dart';
 import '../domain/subclass_step_selection.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
+import 'providers/character_edit_session_provider.dart';
 import 'providers/subclass_choice_providers.dart';
 import 'providers/subclass_feature_choice_providers.dart';
 import 'widgets/abandon_creation_flow.dart';
@@ -174,10 +175,18 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
         .name;
     final subclassAsync = ref.watch(subclassChoiceCatalogProvider);
     final selectedSubclassId = _selectedSubclassId;
+    final isEditMode = ref.read(characterEditSessionControllerProvider) != null;
     // Second choix de niveau 1 (ex. Ancêtre draconique) : chargé uniquement
     // une fois une sous-classe sélectionnée (le provider est une "family"
-    // paramétrée par `subclassId`) — correctif D99.
-    final featureChoiceAsync = selectedSubclassId == null
+    // paramétrée par `subclassId`) — correctif D99. Jamais en mode
+    // modification (`isEditMode`) : contournement D102
+    // (`docs/dette-technique.md`) — ni `CharacterEditHydrator` ni
+    // `CharacterEditPlanner`/`CharacterEditRepository` ne pré-remplissent ou
+    // ne persistent `subclassFeatureChoiceValue`, un choix fait ici en
+    // édition serait perdu en silence à l'enregistrement. Rester `null` ici
+    // retire aussi ce choix de `canProceed` ci-dessous ET du rendu (voir
+    // `SubclassFeatureChoiceBlock` plus bas, monté seulement si non `null`).
+    final featureChoiceAsync = (isEditMode || selectedSubclassId == null)
         ? null
         : ref.watch(subclassFeatureChoiceProvider(selectedSubclassId));
     final canProceed =

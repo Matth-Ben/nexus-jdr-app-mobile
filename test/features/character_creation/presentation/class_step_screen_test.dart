@@ -146,6 +146,15 @@ const _realGuerrier = ClassOption(
   hitDie: 10,
 );
 
+/// `classes.id = 8`, le VRAI id du Rôdeur (correctif D99,
+/// `docs/dette-technique.md`) — même rationale que [_realGuerrier].
+const _realRodeur = ClassOption(
+  id: 8,
+  name: 'Rôdeur',
+  description: 'Traqueur.',
+  hitDie: 10,
+);
+
 void main() {
   late _FakeCharacterCreationRepository fakeRepository;
   late _FakeSubclassChoiceRepository fakeSubclassRepository;
@@ -888,5 +897,55 @@ void main() {
 
       expect(readDraft().classId, 1);
     });
+
+    testWidgets(
+      'régression D102 (docs/dette-technique.md) : au niveau 1, choisir le '
+      'Guerrier (classes.id = 5, choix nommé de classe niveau 1 — '
+      'ClassChoiceRules.isConcerned) ne pousse jamais '
+      "'/characters/new/class-choice' en mode modification, contrairement "
+      'à la création (voir le groupe "choix nommé de classe au niveau 1" '
+      'ci-dessus) — ni `CharacterEditHydrator` ni '
+      '`CharacterEditPlanner`/`CharacterEditRepository` ne pré-remplissent '
+      'ou ne persistent `classFeatureChoiceValue` : l\'écran mentirait en '
+      'silence au joueur sur l\'enregistrement de son choix',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const ClassCatalog(
+          classes: [_magicien, _realGuerrier],
+        );
+        startEditSession(totalLevel: 1);
+        await pumpClassStep(tester);
+
+        await tester.tap(find.text('Guerrier'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(readDraft().classId, 5);
+        expect(find.text('Étape choix de classe'), findsNothing);
+        expect(find.text('Étape suivante'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'régression D102 (docs/dette-technique.md) : même constat pour le '
+      'Rôdeur (classes.id = 8, choix nommé "Ennemi juré") — même garde-fou '
+      'que le Guerrier ci-dessus, cas distinct exigé par le correctif',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const ClassCatalog(
+          classes: [_magicien, _realRodeur],
+        );
+        startEditSession(totalLevel: 1);
+        await pumpClassStep(tester);
+
+        await tester.tap(find.text('Rôdeur'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(readDraft().classId, 8);
+        expect(find.text('Étape choix de classe'), findsNothing);
+        expect(find.text('Étape suivante'), findsOneWidget);
+      },
+    );
   });
 }

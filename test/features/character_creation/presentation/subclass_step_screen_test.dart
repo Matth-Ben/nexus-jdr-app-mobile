@@ -33,8 +33,10 @@ import 'package:personnages/features/character_creation/domain/subclass_feature_
 import 'package:personnages/features/character_creation/domain/subclass_feature_option.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/data/subclass_feature_choice_repository.dart';
+import 'package:personnages/features/character_creation/domain/character_edit_snapshot.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
+import 'package:personnages/features/character_creation/presentation/providers/character_edit_session_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/subclass_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/providers/subclass_feature_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/subclass_step_screen.dart';
@@ -246,6 +248,44 @@ void main() {
   bool nextEnabled(WidgetTester tester) =>
       tester.widget<PrimaryButton>(find.byType(PrimaryButton)).onPressed !=
       null;
+
+  /// Variante [pumpSubclassFeatureStep] démarrant une session de
+  /// modification (niveau 1, classe modifiable) avant de pomper l'écran —
+  /// régression D102 (`docs/dette-technique.md`) : `SubclassFeatureChoiceBlock`
+  /// ne doit jamais s'afficher dans ce mode, voir le groupe de tests dédié.
+  Future<void> pumpSubclassFeatureStepInEditMode(
+    WidgetTester tester, {
+    required int classId,
+    required int subclassId,
+  }) async {
+    final draft = CharacterCreationDraft(
+      classId: classId,
+      subclassId: subclassId,
+    );
+    container
+        .read(characterCreationDraftControllerProvider.notifier)
+        .replaceWith(draft);
+    container
+        .read(characterEditSessionControllerProvider.notifier)
+        .start(
+          CharacterEditSession(
+            snapshot: CharacterEditSnapshot(
+              characterId: 'c1',
+              name: 'Brunhilde',
+              primaryClassId: classId,
+              primaryClassLevel: 1,
+              totalLevel: 1,
+              maxHp: 8,
+              currentHp: 8,
+            ),
+            originalDraft: draft,
+          ),
+        );
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+    router.push('/characters/new/subclass');
+    await tester.pumpAndSettle();
+  }
 
   testWidgets('charge le nom de la classe et les options de sous-classe', (
     WidgetTester tester,
@@ -464,5 +504,41 @@ void main() {
       );
       expect(nextEnabled(tester), isTrue);
     });
+
+    testWidgets(
+      'régression D102 (docs/dette-technique.md) : en mode modification '
+      "d'un personnage Ensorceleur de niveau 1 avec le Lignage draconique "
+      'déjà choisi, le bloc "Ancêtre draconique" ne s\'affiche jamais, même '
+      "si le catalogue indique un second choix disponible — ni "
+      '`CharacterEditHydrator` ni `CharacterEditPlanner`/'
+      '`CharacterEditRepository` ne pré-remplissent ou ne persistent '
+      '`subclassFeatureChoiceValue` : l\'écran mentirait en silence au '
+      "joueur sur l'enregistrement de son choix. \"Suivant\" n'est jamais "
+      'bloqué par ce choix caché.',
+      (WidgetTester tester) async {
+        fakeFeatureRepository.choiceToReturn = const SubclassFeatureChoice(
+          classFeatureId: 368,
+          featureName: 'Ancêtre draconique',
+          options: [_dragonRouge, _dragonBleu],
+        );
+
+        await pumpSubclassFeatureStepInEditMode(
+          tester,
+          classId: 6,
+          subclassId: 12,
+        );
+
+        expect(find.text('Ancêtre draconique'), findsNothing);
+        expect(find.text('Dragon rouge'), findsNothing);
+        expect(find.text('Dragon bleu'), findsNothing);
+        expect(nextEnabled(tester), isTrue);
+
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(readDraft().subclassFeatureChoiceValue, isNull);
+        expect(find.text('Étape suivante'), findsOneWidget);
+      },
+    );
   });
 }

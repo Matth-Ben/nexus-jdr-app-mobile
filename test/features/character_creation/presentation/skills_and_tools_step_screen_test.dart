@@ -1555,5 +1555,55 @@ void main() {
 
       expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
     });
+
+    testWidgets(
+      'régression D102 (docs/dette-technique.md) : en mode modification '
+      "d'un personnage Roublard de niveau 1, \"Suivant\" ne pousse jamais "
+      "'/characters/new/class-choice' (Expertise), contrairement à la "
+      'création ci-dessus — ni `CharacterEditHydrator` ni '
+      '`CharacterEditPlanner`/`CharacterEditRepository` ne pré-remplissent '
+      'ou ne persistent `expertiseSkillChoices` : l\'écran mentirait en '
+      'silence au joueur sur l\'enregistrement de son choix',
+      (WidgetTester tester) async {
+        fakeRepository.classCatalogToReturn = const ClassCatalog(
+          classes: [_realRoublard],
+        );
+        fakeRepository.backgroundCatalogToReturn = const BackgroundCatalog(
+          backgrounds: [_ermite],
+        );
+        const draft = CharacterCreationDraft(classId: 9, backgroundId: 10);
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .replaceWith(draft);
+        container
+            .read(characterEditSessionControllerProvider.notifier)
+            .start(
+              const CharacterEditSession(
+                snapshot: CharacterEditSnapshot(
+                  characterId: 'c1',
+                  name: 'Brunhilde',
+                  primaryClassId: 9,
+                  primaryClassLevel: 1,
+                  totalLevel: 1,
+                  maxHp: 8,
+                  currentHp: 8,
+                ),
+                originalDraft: draft,
+              ),
+            );
+
+        await pumpSkillsAndToolsStep(tester);
+
+        await tester.tap(find.text('Discrétion'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape choix de classe'), findsNothing);
+        // Étape Équipement toujours sautée en mode modification (voir
+        // `_submit`), classe non lanceuse de sorts : direction l'étape 8.
+        expect(find.text('Étape suivante (sorts sautés)'), findsOneWidget);
+      },
+    );
   });
 }
