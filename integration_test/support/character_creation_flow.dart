@@ -106,12 +106,12 @@ Future<void> createCharacter(
     for (var drag = 0; drag < 6; drag++) {
       if (find.byType(SelectableOptionTile).evaluate().isNotEmpty) break;
       await tester.drag(find.byType(ListView).first, const Offset(0, -200));
-      await tester.pumpAndSettle(settleTimeout);
+      await settleQuickly(tester);
     }
     if (find.byType(SelectableOptionTile).evaluate().isNotEmpty) {
       final finder = find.byType(SelectableOptionTile).first;
       await tester.ensureVisible(finder);
-      await tester.pumpAndSettle(settleTimeout);
+      await settleQuickly(tester);
       await tester.tap(finder);
       await pumpUntilSettled(tester, attempts: 4);
       await _resolveSubclassFeatureChoiceIfPresent(tester);
@@ -230,12 +230,12 @@ Future<void> _resolveClassChoiceStepScreenIfPresent(WidgetTester tester) async {
     for (var drag = 0; drag < 6; drag++) {
       if (find.byType(SelectableOptionTile).evaluate().isNotEmpty) break;
       await tester.drag(find.byType(ListView).first, const Offset(0, -200));
-      await tester.pumpAndSettle(settleTimeout);
+      await settleQuickly(tester);
     }
     if (find.byType(SelectableOptionTile).evaluate().isNotEmpty) {
       final finder = find.byType(SelectableOptionTile).first;
       await tester.ensureVisible(finder);
-      await tester.pumpAndSettle(settleTimeout);
+      await settleQuickly(tester);
       await tester.tap(finder);
       await pumpUntilSettled(tester, attempts: 4);
     }
@@ -282,7 +282,7 @@ Future<void> _resolveSubclassFeatureChoiceIfPresent(WidgetTester tester) async {
     );
     if (tileFinder.evaluate().isNotEmpty) break;
     await tester.drag(find.byType(ListView).first, const Offset(0, -200));
-    await tester.pumpAndSettle(settleTimeout);
+    await settleQuickly(tester);
   }
 
   final tileFinder = find.descendant(
@@ -293,7 +293,7 @@ Future<void> _resolveSubclassFeatureChoiceIfPresent(WidgetTester tester) async {
 
   final finder = tileFinder.first;
   await tester.ensureVisible(finder);
-  await tester.pumpAndSettle(settleTimeout);
+  await settleQuickly(tester);
   await tester.tap(finder);
   await pumpUntilSettled(tester, attempts: 4);
 }
@@ -327,7 +327,7 @@ Future<void> fillAbilityScoreRacialBonusIfPresent(WidgetTester tester) async {
   for (var drag = 0; drag < 10; drag++) {
     if (find.text('Bonus racial au choix').evaluate().isNotEmpty) break;
     await tester.drag(find.byType(ListView).first, const Offset(0, -200));
-    await tester.pumpAndSettle(settleTimeout);
+    await settleQuickly(tester);
   }
   if (find.text('Bonus racial au choix').evaluate().isEmpty) return;
 
@@ -343,9 +343,9 @@ Future<void> fillAbilityScoreRacialBonusIfPresent(WidgetTester tester) async {
     if (target == null) break;
     final finder = find.byWidget(target);
     await tester.ensureVisible(finder);
-    await tester.pumpAndSettle(settleTimeout);
+    await settleQuickly(tester);
     await tester.tap(finder);
-    await tester.pumpAndSettle(settleTimeout);
+    await settleQuickly(tester);
   }
 }
 
@@ -395,9 +395,9 @@ Future<void> fillAvailableCheckableTiles(
       tappedThisCycle = true;
       final finder = find.byType(CheckableOptionTile).at(index);
       await tester.ensureVisible(finder);
-      await tester.pumpAndSettle(settleTimeout);
+      await settleQuickly(tester);
       await tester.tap(finder);
-      await tester.pumpAndSettle(settleTimeout);
+      await settleQuickly(tester);
     }
     final listFinder = find.byType(ListView);
     if (listFinder.evaluate().isEmpty) break;
@@ -406,7 +406,7 @@ Future<void> fillAvailableCheckableTiles(
         .map((t) => t.title)
         .toSet();
     await tester.drag(listFinder.first, const Offset(0, -400));
-    await tester.pumpAndSettle(settleTimeout);
+    await settleQuickly(tester);
     final afterDrag = tester
         .widgetList<CheckableOptionTile>(find.byType(CheckableOptionTile))
         .map((t) => t.title)
@@ -464,7 +464,7 @@ Future<void> incrementAbilityScore(
   for (var drag = 0; drag < 10; drag++) {
     if (find.text(label!).evaluate().isNotEmpty) break;
     await tester.drag(find.byType(ListView).first, const Offset(0, -200));
-    await tester.pumpAndSettle(settleTimeout);
+    await settleQuickly(tester);
   }
 
   final rowFinder = find
@@ -477,8 +477,8 @@ Future<void> incrementAbilityScore(
 
   for (var i = 0; i < times; i++) {
     await tester.ensureVisible(addIconFinder);
-    await tester.pumpAndSettle(settleTimeout);
+    await settleQuickly(tester);
     await tester.tap(addIconFinder);
-    await tester.pumpAndSettle(settleTimeout);
+    await settleQuickly(tester);
   }
 }
