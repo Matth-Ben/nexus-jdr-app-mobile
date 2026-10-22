@@ -43,7 +43,9 @@ void main() {
     }
     await _bootToCharacterList(tester);
 
-    const name = 'QA-Test-Moine4Elements';
+    // Horodate (D109, docs/dette-technique.md) : evite un doublon en base a
+    // chaque relance de ce fichier.
+    final name = qaUniqueCharacterName('QA-Test-Moine4Elements');
     await createCharacter(
       tester,
       characterName: name,
@@ -111,7 +113,9 @@ void main() {
     }
     await _bootToCharacterList(tester);
 
-    const name = 'QA-Test-MoineControle';
+    // Horodate (D109, docs/dette-technique.md) : evite un doublon en base a
+    // chaque relance de ce fichier.
+    final name = qaUniqueCharacterName('QA-Test-MoineControle');
     await createCharacter(
       tester,
       characterName: name,

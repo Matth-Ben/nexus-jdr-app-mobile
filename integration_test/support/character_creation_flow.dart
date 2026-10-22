@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/checkable_option_tile.dart';
 import 'package:personnages/core/widgets/selectable_option_tile.dart';
+import 'package:personnages/features/character_creation/presentation/class_choice_step_screen.dart';
+import 'package:personnages/features/character_creation/presentation/widgets/subclass_feature_choice_block.dart';
 
 import 'tap_helpers.dart';
 
@@ -23,6 +25,19 @@ import 'tap_helpers.dart';
 /// pour `ListView(children: [...])`) : [raceName] passe toujours par
 /// [scrollUntilVisibleThenTap]. Les autres etapes ont des listes courtes
 /// (classe, sous-classe, historique, sous-race) : [tapText] simple suffit.
+///
+/// Gere aussi, depuis le correctif D108 (`docs/dette-technique.md`), les 4
+/// choix de niveau 1 natifs introduits par D99 qui n'existaient pas quand ce
+/// helper a ete ecrit -- jamais parametrables ici (resolution automatique
+/// systematique avec la premiere option disponible), voir la doc de classe
+/// de [_resolveClassChoiceStepScreenIfPresent]/
+/// [_resolveSubclassFeatureChoiceIfPresent] :
+/// - Guerrier/Rodeur : ecran "Style de combat"/"Ennemi jure" juste apres
+///   l'etape Classe.
+/// - Roublard : ecran "Expertise" juste apres l'etape Competences et outils.
+/// - Ensorceleur + Lignage draconique (ou toute future sous-classe avec un
+///   second choix de niveau 1) : second `SelectableOptionTile` sur
+///   `SubclassFeatureChoiceBlock`, dans l'ecran Sous-classe existant.
 Future<void> createCharacter(
   WidgetTester tester, {
   required String characterName,
@@ -70,6 +85,12 @@ Future<void> createCharacter(
   await tapText(tester, 'SUIVANT');
   await pumpUntilSettled(tester, attempts: 4);
 
+  // Guerrier/Rodeur uniquement (D99/D108) : `ClassStepScreen._submit` pousse
+  // directement `ClassChoiceStepScreen` ici (Style de combat/Ennemi jure),
+  // jamais l'etape Sous-classe -- sans effet pour toute autre classe (voir la
+  // doc de classe de [_resolveClassChoiceStepScreenIfPresent]).
+  await _resolveClassChoiceStepScreenIfPresent(tester);
+
   // Etape 2b/9 : Sous-classe (Clerc/Occultiste/Ensorceleur uniquement).
   if (subclassName != null) {
     await scrollUntilVisibleThenTap(
@@ -78,6 +99,7 @@ Future<void> createCharacter(
       subclassName,
     );
     await pumpUntilSettled(tester, attempts: 4);
+    await _resolveSubclassFeatureChoiceIfPresent(tester);
     await tapText(tester, 'SUIVANT');
     await pumpUntilSettled(tester, attempts: 4);
   } else if (autoPickSubclassIfOffered) {
@@ -92,6 +114,7 @@ Future<void> createCharacter(
       await tester.pumpAndSettle(settleTimeout);
       await tester.tap(finder);
       await pumpUntilSettled(tester, attempts: 4);
+      await _resolveSubclassFeatureChoiceIfPresent(tester);
       await tapText(tester, 'SUIVANT');
       await pumpUntilSettled(tester, attempts: 4);
     }
@@ -128,6 +151,11 @@ Future<void> createCharacter(
   await fillAvailableCheckableTiles(tester);
   await tapText(tester, 'SUIVANT');
   await pumpUntilSettled(tester, attempts: 4);
+
+  // Roublard uniquement (D99/D108) : `SkillsAndToolsStepScreen._submit`
+  // pousse `ClassChoiceStepScreen` ici (Expertise) -- sans effet pour toute
+  // autre classe.
+  await _resolveClassChoiceStepScreenIfPresent(tester);
 
   // Etape 6/9 : Sorts (seulement classe lanceuse, sautee sinon).
   //
@@ -167,6 +195,107 @@ Future<void> createCharacter(
   await tester.pump();
   await tapText(tester, 'CRÉER LE PERSONNAGE');
   await pumpUntilSettled(tester, attempts: 10);
+}
+
+/// Resout `ClassChoiceStepScreen` s'il est l'ecran courant -- correctif
+/// D99/D108 (`docs/dette-technique.md`). Deux points d'insertion possibles
+/// dans [createCharacter], tous deux sans effet (retour immediat) si cet
+/// ecran n'est pas monte :
+/// - juste apres l'etape Classe (Guerrier "Style de combat", Rodeur "Ennemi
+///   jure") ;
+/// - juste apres l'etape Competences et outils (Roublard "Expertise").
+///
+/// Un seul ecran, deux corps differents (voir la doc de classe de
+/// `ClassChoiceStepScreen`) distingues ici par le type de tuile monte :
+/// `CheckableOptionTile` (choix multiple a quota -- Expertise, resolu via
+/// [fillAvailableCheckableTiles], deja robuste a un quota de 0) ou
+/// `SelectableOptionTile` (choix exclusif -- Style de combat/Ennemi jure,
+/// premiere option disponible tapee, meme pattern defensif -- quelques
+/// defilements si la premiere tuile n'est pas encore montee -- que la
+/// section `autoPickSubclassIfOffered` de [createCharacter]).
+///
+/// Jamais parametrable (resolution automatique systematique, premiere
+/// option disponible) : aucun paramètre equivalent a [createCharacter]'s
+/// `subclassName`/`autoPickSubclassIfOffered` n'existe pour ce choix nomme,
+/// donc pas de mecanisme existant a respecter ici -- voir la demande de
+/// correctif D108.
+Future<void> _resolveClassChoiceStepScreenIfPresent(WidgetTester tester) async {
+  if (find.byType(ClassChoiceStepScreen).evaluate().isEmpty) return;
+
+  if (find.byType(CheckableOptionTile).evaluate().isNotEmpty) {
+    // Mode Expertise (Roublard, choix multiple a quota).
+    await fillAvailableCheckableTiles(tester);
+  } else {
+    // Mode Style de combat/Ennemi jure (Guerrier/Rodeur, choix exclusif).
+    for (var drag = 0; drag < 6; drag++) {
+      if (find.byType(SelectableOptionTile).evaluate().isNotEmpty) break;
+      await tester.drag(find.byType(ListView).first, const Offset(0, -200));
+      await tester.pumpAndSettle(settleTimeout);
+    }
+    if (find.byType(SelectableOptionTile).evaluate().isNotEmpty) {
+      final finder = find.byType(SelectableOptionTile).first;
+      await tester.ensureVisible(finder);
+      await tester.pumpAndSettle(settleTimeout);
+      await tester.tap(finder);
+      await pumpUntilSettled(tester, attempts: 4);
+    }
+  }
+
+  await tapText(tester, 'SUIVANT');
+  await pumpUntilSettled(tester, attempts: 4);
+}
+
+/// Resout le second choix de niveau 1 propre a la sous-classe (ex. Ancetre
+/// draconique du Lignage draconique, Ensorceleur), porte par
+/// `SubclassFeatureChoiceBlock` sur l'ecran Sous-classe existant -- correctif
+/// D99/D108. Sans effet (retour immediat) si ce bloc n'est pas monte (toute
+/// sous-classe sans second choix de niveau 1, l'immense majorite) ou s'il
+/// n'affiche aucune tuile (sous-classe sans options -- cas defensif,
+/// `choice_type` renseigne sans ligne `class_options`).
+///
+/// A appeler juste apres avoir selectionne la sous-classe (tuile tapee,
+/// `pumpUntilSettled` deja fait par l'appelant), avant de taper "SUIVANT" --
+/// `SubclassFeatureChoiceBlock` n'est monte par `SubclassStepScreen` qu'une
+/// fois `selectedSubclassId` non nul.
+///
+/// Les tuiles de ce bloc sont cherchees PARMI SES SEULS DESCENDANTS
+/// (`find.descendant`), jamais parmi tous les `SelectableOptionTile` de
+/// l'ecran : le bloc de choix de sous-classe lui-meme (`SubclassChoiceBlock`,
+/// juste au-dessus dans le meme `ListView`) utilise aussi ce type de tuile
+/// pour les AUTRES sous-classes non choisies -- les confondre taperait une
+/// sous-classe differente de celle deja selectionnee plutot que l'option de
+/// second choix voulue.
+///
+/// Jamais parametrable, meme rationale que
+/// [_resolveClassChoiceStepScreenIfPresent].
+Future<void> _resolveSubclassFeatureChoiceIfPresent(WidgetTester tester) async {
+  final blockFinder = find.byType(SubclassFeatureChoiceBlock);
+  if (blockFinder.evaluate().isEmpty) return;
+
+  // Meme piege de montage paresseux que [scrollUntilVisibleThenTap] : ce
+  // bloc peut etre monte juste en dehors du cache initial du long
+  // `ListView` de l'etape Sous-classe.
+  for (var drag = 0; drag < 6; drag++) {
+    final tileFinder = find.descendant(
+      of: blockFinder,
+      matching: find.byType(SelectableOptionTile),
+    );
+    if (tileFinder.evaluate().isNotEmpty) break;
+    await tester.drag(find.byType(ListView).first, const Offset(0, -200));
+    await tester.pumpAndSettle(settleTimeout);
+  }
+
+  final tileFinder = find.descendant(
+    of: blockFinder,
+    matching: find.byType(SelectableOptionTile),
+  );
+  if (tileFinder.evaluate().isEmpty) return;
+
+  final finder = tileFinder.first;
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle(settleTimeout);
+  await tester.tap(finder);
+  await pumpUntilSettled(tester, attempts: 4);
 }
 
 /// Point d'extension explicite : rien a faire a l'etape 1/9 elle-meme (le

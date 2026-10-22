@@ -11,6 +11,20 @@ import 'package:flutter_test/flutter_test.dart';
 /// une attente si longue qu'elle semblait un plantage de l'outillage).
 const Duration settleTimeout = Duration(seconds: 10);
 
+/// Construit un nom de personnage de test unique, suffixe d'un horodatage en
+/// microsecondes -- correctif D109 (`docs/dette-technique.md`) : plusieurs
+/// fichiers `level_up_*`/`multiclass_*` codaient leur nom de personnage de
+/// test en dur (ex. `'QA-Test-Ensorceleur'`), sans aucun moyen de le faire
+/// varier -- relancer un meme fichier deux fois sur le projet Supabase
+/// distant partage (jamais nettoye automatiquement, voir
+/// `integration_test/README.md` "Donnees de test laissees en base") cree
+/// alors un doublon supplementaire a chaque fois (3 deja trouves en base
+/// pour `QA-Test-Ensorceleur` avant ce correctif, voir D107). Meme principe
+/// que `login_screen_test.dart`, qui horodate deja ses e-mails jetables pour
+/// la meme raison.
+String qaUniqueCharacterName(String base) =>
+    '$base-${DateTime.now().microsecondsSinceEpoch}';
+
 /// Fait défiler [finder] (premier résultat si plusieurs correspondances,
 /// voir [skip]) dans le `Scrollable` ancêtre le plus proche puis tape
 /// dessus — jamais par coordonnées d'écran (voir `integration_test/README.md`,

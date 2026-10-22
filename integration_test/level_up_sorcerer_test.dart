@@ -60,7 +60,10 @@ void main() {
     await tapTextIfPresent(tester, 'Passer');
     await pumpUntilSettled(tester, attempts: 6);
 
-    const name = 'QA-Test-Ensorceleur';
+    // Horodate (D109, docs/dette-technique.md) : relancer ce fichier sans
+    // suffixe variable creait un doublon supplementaire a chaque fois (3
+    // deja trouves en base avant ce correctif, voir D107).
+    final name = qaUniqueCharacterName('QA-Test-Ensorceleur');
     await createCharacter(
       tester,
       characterName: name,

@@ -32,7 +32,9 @@ void main() {
     await tapTextIfPresent(tester, 'Passer');
     await pumpUntilSettled(tester, attempts: 6);
 
-    const name = 'QA-Test-Rodeur';
+    // Horodate (D109, docs/dette-technique.md) : evite un doublon en base a
+    // chaque relance de ce fichier.
+    final name = qaUniqueCharacterName('QA-Test-Rodeur');
     await createCharacter(
       tester,
       characterName: name,
