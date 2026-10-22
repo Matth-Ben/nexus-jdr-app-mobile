@@ -136,6 +136,23 @@ void main() {
     await tapText(tester, "SUIVANT");
     await pumpUntilSettled(tester, attempts: 4);
 
+    // Etape 6/9 : Sorts (seulement classe lanceuse, sautee sinon) --
+    // correctif D114 (docs/dette-technique.md) : meme logique que
+    // support/character_creation_flow.dart::createCharacter (commentaire
+    // "Etape 6/9 : Sorts"), jamais appliquee ici avant ce correctif -- sans
+    // effet pour Guerrier/Rodeur (aucune des deux etiquettes n'est montee),
+    // necessaire pour Ensorceleur (D95/D99).
+    if (find.text("SORTS MINEURS CONNUS").evaluate().isNotEmpty ||
+        find.text("SORTS DE NIVEAU 1 CONNUS").evaluate().isNotEmpty) {
+      await fillAvailableCheckableTiles(tester);
+      if (await tapTextIfPresent(tester, "Niveau 1")) {
+        await pumpUntilSettled(tester, attempts: 4);
+        await fillAvailableCheckableTiles(tester);
+      }
+      await tapText(tester, "SUIVANT");
+      await pumpUntilSettled(tester, attempts: 4);
+    }
+
     await tapText(tester, "SUIVANT");
     await pumpUntilSettled(tester, attempts: 4);
 
@@ -230,7 +247,17 @@ void main() {
           "options.",
     );
 
-    await tapText(tester, options.first);
+    // Correctif D114 (docs/dette-technique.md) : a ce stade la liste a ete
+    // defilee jusqu'en bas par [scrollAndCollectAllSelectableOptionTitles]
+    // ci-dessus pour collecter les 13 titres -- `options.first`
+    // ("Aberrations", 1ere option alphabetique) n'est donc plus montee dans
+    // l'arbre de widgets. [scrollUntilVisibleThenTap] (et non [tapText] nu)
+    // redefile au besoin jusqu'a ce qu'elle soit a nouveau visible.
+    await scrollUntilVisibleThenTap(
+      tester,
+      find.byType(ListView).first,
+      options.first,
+    );
     await pumpUntilSettled(tester, attempts: 4);
     await tapText(tester, "SUIVANT");
     await pumpUntilSettled(tester, attempts: 4);

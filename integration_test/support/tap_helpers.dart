@@ -53,6 +53,27 @@ Future<void> settleQuickly(WidgetTester tester) => tester.pumpAndSettle(
 String qaUniqueCharacterName(String base) =>
     '$base-${DateTime.now().microsecondsSinceEpoch}';
 
+/// Fait défiler [listFinder] vers le bas puis tape [text]. Variante interne
+/// de [scrollUntilVisibleThenTap] isolant UN SEUL sens de défilement -- voir
+/// sa doc pour la raison des deux sens (correctif D114).
+Future<bool> _scrollTowardThenTap(
+  WidgetTester tester,
+  Finder listFinder,
+  String text,
+  Offset dragOffset,
+  int maxDrags,
+) async {
+  for (var i = 0; i < maxDrags; i++) {
+    if (find.text(text).evaluate().isNotEmpty) {
+      await tapText(tester, text);
+      return true;
+    }
+    await tester.drag(listFinder, dragOffset);
+    await settleQuickly(tester);
+  }
+  return false;
+}
+
 /// Fait défiler [finder] (premier résultat si plusieurs correspondances,
 /// voir [skip]) dans le `Scrollable` ancêtre le plus proche puis tape
 /// dessus — jamais par coordonnées d'écran (voir `integration_test/README.md`,
@@ -117,19 +138,42 @@ Future<void> pumpUntilSettled(
 /// construction reste paresseuse par sliver sous le capot). Préférer
 /// [tapText] seul quand [text] est déjà visible sans défilement (ex. tout
 /// le reste de l'assistant de création, dont les listes sont courtes).
+///
+/// Défile d'abord VERS LE BAS (cas d'usage historique -- ex. "Humain",
+/// recherché depuis le sommet d'une liste de races fraîchement affichée),
+/// puis, si [text] n'a toujours pas été trouvé après [maxDrags] défilements,
+/// VERS LE HAUT -- correctif D114 (`docs/dette-technique.md`) :
+/// `level1_choices_at_creation_test.dart` recherche "Aberrations" (1ère
+/// option d'"Ennemi juré") juste après avoir défilé la même liste jusqu'à
+/// son extrémité basse pour en collecter les 13 titres
+/// (`scrollAndCollectAllSelectableOptionTitles`) -- cette option n'est donc
+/// plus montée dans l'arbre de widgets, et seul un défilement vers le HAUT
+/// peut la ramener en vue. Sans effet sur les appelants déjà en place : si
+/// [text] est trouvé dès le premier sens (cas le plus courant), le second
+/// sens n'est jamais tenté.
 Future<void> scrollUntilVisibleThenTap(
   WidgetTester tester,
   Finder listFinder,
   String text, {
   int maxDrags = 25,
 }) async {
-  for (var i = 0; i < maxDrags; i++) {
-    if (find.text(text).evaluate().isNotEmpty) {
-      await tapText(tester, text);
-      return;
-    }
-    await tester.drag(listFinder, const Offset(0, -250));
-    await settleQuickly(tester);
+  if (await _scrollTowardThenTap(
+    tester,
+    listFinder,
+    text,
+    const Offset(0, -250),
+    maxDrags,
+  )) {
+    return;
+  }
+  if (await _scrollTowardThenTap(
+    tester,
+    listFinder,
+    text,
+    const Offset(0, 250),
+    maxDrags,
+  )) {
+    return;
   }
   // Dernière tentative (déclenche l'erreur standard de `tapText` si toujours
   // absent, plutôt qu'un échec silencieux).
