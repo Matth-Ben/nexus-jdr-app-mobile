@@ -9,7 +9,35 @@ import 'package:flutter_test/flutter_test.dart';
 /// en conditions reelles pendant cette campagne QA : un defaut de 10 min
 /// masquait un vrai probleme -- apply du niveau 2 jamais retombe -- sous
 /// une attente si longue qu'elle semblait un plantage de l'outillage).
+///
+/// Correctif D111 (`docs/dette-technique.md`) : avant ce correctif, cette
+/// constante etait passee en 1er argument positionnel de `pumpAndSettle`
+/// (`pumpAndSettle(settleTimeout)`) -- qui correspond a `duration`
+/// (l'intervalle entre deux pumps), pas a `timeout` (3e argument). Elle ne
+/// raccourcissait donc rien : le vrai timeout de blocage restait le defaut
+/// Flutter de 10 minutes.
+///
+/// `WidgetTester.pumpAndSettle` declare ses 3 parametres entre CROCHETS
+/// (`[Duration duration = ..., EnginePhase phase = ...,
+/// Duration timeout = ...]`, voir `flutter_test/lib/src/widget_tester.dart`)
+/// -- donc POSITIONNELS optionnels, PAS nommes (accolades) malgre leurs noms
+/// explicites dans la signature : `pumpAndSettle(timeout: settleTimeout)`
+/// echoue a la compilation (`undefined_named_parameter`, verifie en tentant
+/// ce correctif). Utiliser [settleQuickly] ci-dessous plutot que
+/// `tester.pumpAndSettle(settleTimeout)` nu -- il positionne correctement
+/// cette constante en 3e argument, apres les 2 premiers a leur valeur par
+/// defaut.
 const Duration settleTimeout = Duration(seconds: 10);
+
+/// Equivalent de `tester.pumpAndSettle()` avec le timeout court
+/// [settleTimeout] au lieu du defaut Flutter de 10 minutes -- a utiliser
+/// PARTOUT dans ce dossier a la place de `tester.pumpAndSettle(settleTimeout)`
+/// (voir la doc de [settleTimeout], correctif D111).
+Future<void> settleQuickly(WidgetTester tester) => tester.pumpAndSettle(
+  const Duration(milliseconds: 100),
+  EnginePhase.sendSemanticsUpdate,
+  settleTimeout,
+);
 
 /// Construit un nom de personnage de test unique, suffixe d'un horodatage en
 /// microsecondes -- correctif D109 (`docs/dette-technique.md`) : plusieurs
@@ -42,9 +70,9 @@ Future<void> tapText(WidgetTester tester, String text, {int skip = 0}) async {
   final finder = find.text(text);
   final target = finder.at(skip);
   await tester.ensureVisible(target);
-  await tester.pumpAndSettle(settleTimeout);
+  await settleQuickly(tester);
   await tester.tap(target);
-  await tester.pumpAndSettle(settleTimeout);
+  await settleQuickly(tester);
 }
 
 /// Variante de [tapText] qui n'échoue pas si [text] n'existe pas sur l'écran
@@ -77,7 +105,7 @@ Future<void> pumpUntilSettled(
   for (var i = 0; i < attempts; i++) {
     await tester.pump(step);
   }
-  await tester.pumpAndSettle(settleTimeout);
+  await settleQuickly(tester);
 }
 
 /// Fait défiler [listFinder] (typiquement `find.byType(ListView).first`) par
@@ -101,7 +129,7 @@ Future<void> scrollUntilVisibleThenTap(
       return;
     }
     await tester.drag(listFinder, const Offset(0, -250));
-    await tester.pumpAndSettle(settleTimeout);
+    await settleQuickly(tester);
   }
   // Dernière tentative (déclenche l'erreur standard de `tapText` si toujours
   // absent, plutôt qu'un échec silencieux).

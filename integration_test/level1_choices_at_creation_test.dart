@@ -30,6 +30,7 @@ import "package:flutter_test/flutter_test.dart";
 import "package:integration_test/integration_test.dart";
 import "package:personnages/core/widgets/checkable_option_tile.dart";
 import "package:personnages/core/widgets/selectable_option_tile.dart";
+import "package:personnages/features/character_creation/presentation/widgets/subclass_feature_choice_block.dart";
 
 import "support/app_launch.dart";
 import "support/character_creation_flow.dart"
@@ -39,6 +40,45 @@ import "support/tap_helpers.dart";
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  // Correctif D112 (`docs/dette-technique.md`) : compter directement
+  // `tester.widgetList<SelectableOptionTile>(...)` SANS defiler prealablement
+  // ne voit que les tuiles deja montees dans le `cacheExtent` initial d'un
+  // `ListView` long (meme piege de montage paresseux que
+  // `support/tap_helpers.dart::scrollUntilVisibleThenTap` -- observe en
+  // conditions reelles pour "Ennemi jure" : 7 options montees sur 13
+  // attendues sans defilement). [listFinder] est deroule par petits pas en
+  // accumulant les titres DEJA vus dans un `Set` (une tuile peut etre
+  // demontee une fois trop loin du cache -- l'union cumulee reste robuste a
+  // sa disparition ulterieure, contrairement a un simple comptage instantane)
+  // jusqu'a ce qu'un defilement supplementaire n'en revele plus aucun nouveau
+  // -- meme logique de detection de fin de liste que
+  // `character_creation_flow.dart::fillAvailableCheckableTiles`
+  // (comparaison des titres avant/apres defilement).
+  Future<Set<String>> scrollAndCollectAllSelectableOptionTitles(
+    WidgetTester tester,
+    Finder listFinder, {
+    int maxDrags = 25,
+  }) async {
+    final titles = <String>{};
+    for (var i = 0; i < maxDrags; i++) {
+      titles.addAll(
+        tester
+            .widgetList<SelectableOptionTile>(find.byType(SelectableOptionTile))
+            .map((t) => t.title),
+      );
+      final beforeDrag = titles.length;
+      await tester.drag(listFinder, const Offset(0, -250));
+      await settleQuickly(tester);
+      titles.addAll(
+        tester
+            .widgetList<SelectableOptionTile>(find.byType(SelectableOptionTile))
+            .map((t) => t.title),
+      );
+      if (titles.length == beforeDrag) break;
+    }
+    return titles;
+  }
 
   Future<void> openCharacterList(WidgetTester tester) async {
     await launchApp(tester);
@@ -174,10 +214,10 @@ void main() {
           "proposer son second choix de niveau 1 (Ennemi jure) "
           "directement apres le choix de classe a la creation.",
     );
-    final options = tester
-        .widgetList<SelectableOptionTile>(find.byType(SelectableOptionTile))
-        .map((t) => t.title)
-        .toList();
+    final options = (await scrollAndCollectAllSelectableOptionTitles(
+      tester,
+      find.byType(ListView).first,
+    )).toList();
     // ignore: avoid_print
     print("OBSERVATION Ennemi jure (options proposees) : $options");
     expect(options, isNotEmpty);
@@ -317,8 +357,22 @@ void main() {
       );
       await pumpUntilSettled(tester, attempts: 4);
 
+      // Correctif D112 (`docs/dette-technique.md`) : scope aux SEULS
+      // descendants de `SubclassFeatureChoiceBlock` (Ancetre draconique) --
+      // sans ce `find.descendant`, le finder remonte aussi les tuiles non
+      // selectionnees de `SubclassChoiceBlock` juste au-dessus dans le meme
+      // `ListView` (choix de sous-classe lui-meme), d'ou 17 options
+      // observees en conditions reelles au lieu de 10 (7 autres origines
+      // magiques + 10 types de dragon) -- meme pattern que
+      // `character_creation_flow.dart::_resolveSubclassFeatureChoiceIfPresent`
+      // (ajoute au correctif D108).
       final remainingOptions = tester
-          .widgetList<SelectableOptionTile>(find.byType(SelectableOptionTile))
+          .widgetList<SelectableOptionTile>(
+            find.descendant(
+              of: find.byType(SubclassFeatureChoiceBlock),
+              matching: find.byType(SelectableOptionTile),
+            ),
+          )
           .where((t) => !t.selected)
           .map((t) => t.title)
           .toList();
