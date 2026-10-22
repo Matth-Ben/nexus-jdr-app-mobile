@@ -19,7 +19,7 @@ import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
-/// Étape 3/9 de l'assistant de création de personnage : choix de l'historique
+/// Étape 4/10 de l'assistant de création de personnage : choix de l'historique
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
 /// point 3, maquette `04_étape_3_historique.png`).
 ///

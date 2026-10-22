@@ -24,7 +24,7 @@ import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
-/// Étape 2/9 de l'assistant de création de personnage : choix de la classe
+/// Étape 3/10 de l'assistant de création de personnage : choix de la classe
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
 /// point 2, maquette `03_étape_2_classe.png`).
 ///

@@ -30,7 +30,7 @@ import 'widgets/draft_autosave_footer.dart';
 import 'widgets/racial_bonus_choice_card.dart';
 import 'widgets/step_help_sheet.dart';
 
-/// Étape 4/9 de l'assistant de création de personnage : scores de
+/// Étape 5/10 de l'assistant de création de personnage : scores de
 /// caractéristiques (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`
 /// section 3 point 4, maquette `05_étape_4_caractéristiques.png`).
 ///

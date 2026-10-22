@@ -30,7 +30,7 @@ import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
-/// Étape 7/9 de l'assistant de création de personnage : équipement de départ
+/// Étape 8/10 de l'assistant de création de personnage : équipement de départ
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
 /// point 7, maquette réelle "Étape 7 — Équipement de départ" —
 /// `docs/cahier-des-charges/09-maquettes-captures.md`).

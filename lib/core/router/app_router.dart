@@ -234,9 +234,9 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const SpellsStepScreen(),
       ),
       GoRoute(
-        // Atteinte directement depuis l'étape 5/9 pour une classe non
+        // Atteinte directement depuis l'étape 6/10 pour une classe non
         // lanceuse de sorts (`SkillsAndToolsStepScreen._submit` saute
-        // l'étape 6/9) — voir `domain/spellcasting_rules.dart`.
+        // l'étape 7/10) — voir `domain/spellcasting_rules.dart`.
         name: 'character-creation-equipment',
         path: '/characters/new/step-7',
         builder: (context, state) => const EquipmentStepScreen(),
@@ -247,7 +247,7 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const AppearanceAndBackstoryStepScreen(),
       ),
       GoRoute(
-        // Étape 9/9 "Récapitulatif" : dernière étape, seule à écrire en
+        // Étape 10/10 "Récapitulatif" : dernière étape, seule à écrire en
         // base (voir `presentation/summary_step_screen.dart`).
         name: 'character-creation-summary',
         path: '/characters/new/step-9',

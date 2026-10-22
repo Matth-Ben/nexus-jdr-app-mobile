@@ -26,7 +26,7 @@ import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
-/// Étape 5/9 de l'assistant de création de personnage : compétences et
+/// Étape 6/10 de l'assistant de création de personnage : compétences et
 /// outils (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`
 /// section 3 point 5, maquette `06_étape_5_compétences_et_outils.png`).
 ///

@@ -25,7 +25,7 @@ import 'widgets/draft_autosave_footer.dart';
 import 'widgets/spell_option_info_sheet.dart';
 import 'widgets/step_help_sheet.dart';
 
-/// Étape 6/9 de l'assistant de création de personnage : sorts
+/// Étape 7/10 de l'assistant de création de personnage : sorts
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
 /// point 6, maquette réelle vérifiée au pixel près, voir la tâche qui a
 /// produit ce fichier pour le rapport de vérification).
