@@ -3,27 +3,18 @@
 // niveau 1), sorts connus, points de sorcellerie (niveau 2), Metamagie
 // (niveau 3), puis ASI (niveau 4).
 //
-// BUG trouve et reproduit 2 fois sur l'app reelle (21/10/2026, jamais
-// corrige ici -- a transmettre a dev-flutter) : la montee de niveau 3
-// (Metamagie) ne mene jamais a un ecran affichant un bouton "CONTINUER"
-// exploitable -- `tapText(tester, 'CONTINUER')` echoue avec un `RangeError`
-// (aucune occurrence du texte trouvee), juste apres l'annonce du niveau.
-// Aucune exception n'est levee cote app (pas d'"EXCEPTION CAUGHT BY WIDGETS
-// LIBRARY" dans les logs), donc pas un plantage franc -- plutot un ecran
-// inattendu que ce test ne sait pas interpreter. Cause probable (lecture de
-// code, pas confirmee par acces direct a la base) :
-// `domain/level_up_choice_kind.dart::LevelUpChoiceKind` et
-// `domain/level_up_block_reason.dart::LevelUpBlockRules.resolvedChoiceTypes`
-// ne contiennent AUCUNE valeur pour la Metamagie (contrairement a
-// 'sous_classe'/'style_combat'/'ennemi_jure'/'pacte'/'invocation'/
-// 'discipline_elementaire'), et aucune etape dediee de
-// `presentation/level_up_screen.dart` ne la mentionne (recherche
-// "metamagie"/"metamagic" infructueuse dans tout `lib/features/characters`).
-// La Metamagie du Sorcier (PHB, niveau 3, 2 options parmi la liste complete)
-// semble donc ne jamais avoir ete implementee cote app, a la difference des
-// manoeuvres du Guerrier Maitre de guerre (implementees mais non couvertes
-// par ce dossier de tests avant cette campagne, voir
-// level_up_fighter_battle_master_test.dart).
+// BUG trouve et reproduit 2 fois sur l'app reelle le 21/10/2026 (CORRIGE
+// depuis -- voir D113, docs/dette-technique.md) : la montee de niveau 3
+// (Metamagie) ne menait jamais a un ecran affichant un bouton "CONTINUER"
+// exploitable -- `tapText(tester, 'CONTINUER')` echouait avec un
+// `RangeError` juste apres l'annonce du niveau, faute de cablage cote app
+// (Metamagie absente de `LevelUpChoiceKind`/`LevelUpBlockRules` et de
+// `level_up_screen.dart`, voir l'audit `choice_type` du 21/10, D94). Cable
+// depuis par le correctif Metamagie/Expertise/Ancetre draconique (PR #161,
+// commit 9c386b0) : `support/level_up_flow.dart::runOneLevelUp` gere
+// maintenant l'etape "NOUVELLES OPTIONS DE METAMAGIE" comme les autres
+// choix a quota (disciplines elementaires, manoeuvres). Ce fichier n'attend
+// donc plus de blocage au niveau 3 (voir l'`expect`/`fail` ci-dessous).
 //
 // Nom exact de l'Origine magique seme en base non confirme a l'ecriture de
 // ce test (seul "Domaine de la Vie" du Clerc et "Le Grand Ancien" de

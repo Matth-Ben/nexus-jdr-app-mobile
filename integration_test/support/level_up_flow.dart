@@ -137,11 +137,11 @@ Future<LevelUpOutcome> runOneLevelUp(
   if (hasAsiStep) {
     final incrementIcon = find.byIcon(Icons.add).first;
     await tester.ensureVisible(incrementIcon);
-    await tester.pumpAndSettle(settleTimeout);
+    await settleQuickly(tester);
     await tester.tap(incrementIcon);
     await tester.pump();
     await tester.tap(incrementIcon);
-    await tester.pumpAndSettle(settleTimeout);
+    await settleQuickly(tester);
   }
   // Un seul CONTINUER explicite ici -- UNIQUEMENT pour sortir de l'etape
   // "Choix a faire"/ASI elle-meme si elle a ete rencontree : sans elle (ex.
