@@ -1229,7 +1229,10 @@ Future<LevelUpStepData> levelUpStepData(
   // n'est nécessaire — [effectiveClassName] seul suffit à gater).
   final metamagicDelta =
       effectiveClassName == MetamagicKnownProgression.className
-      ? MetamagicKnownProgression.newMetamagicOptionsAt(effectiveTargetLevel)
+      ? MetamagicKnownProgression.newMetamagicOptionsAt(
+          effectiveTargetLevel,
+          edition: detail.edition,
+        )
       : 0;
   final requiresMetamagicSelection = metamagicDelta > 0;
   var availableMetamagicOptions = const <LevelUpMetamagicOption>[];

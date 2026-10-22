@@ -4727,6 +4727,137 @@ void main() {
       },
     );
 
+    testWidgets(
+      'niveau 2 (premier palier EDITION 2024, avance d\'un niveau par '
+      'rapport a 2014) : quota 2, pas de section d\'echange (rien a '
+      'echanger) — chantier "choix d\'edition 2014/2024 par personnage", '
+      '`MetamagicKnownProgression.metamagicKnownByLevel2024`',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          edition: '2024',
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 12,
+              hitDie: 6,
+              className: 'Ensorceleur',
+              level: 1,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          2: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.knownMetamagicNamesToReturn = const [];
+        fakeRepository.metamagicOptionsToReturn = const [
+          LevelUpMetamagicOption(id: 1, name: 'Sort discret', description: ''),
+          LevelUpMetamagicOption(id: 2, name: 'Sort prolongé', description: ''),
+        ];
+        fakeCreationRepository.spellCatalogByClassId = {
+          12: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 500,
+                name: 'Projectile magique',
+                level: 1,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, 2);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        // Étape "Sorts" intercalée — même rationale que le test niveau 3
+        // (2014) ci-dessus.
+        await tester.tap(find.text('Projectile magique'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Métamagie'), findsOneWidget);
+        expect(find.text('0 / 2'), findsOneWidget);
+        expect(find.textContaining('REMPLACER UNE OPTION'), findsNothing);
+
+        await tester.tap(find.text('Sort discret'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Sort prolongé'));
+        await tester.pumpAndSettle();
+        expect(find.text('2 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Ensorceleur');
+        expect(applied.metamagicNames.toSet(), {
+          'Sort discret',
+          'Sort prolongé',
+        });
+        expect(applied.metamagicSwap, isNull);
+      },
+    );
+
+    testWidgets(
+      'niveau 2 EDITION 2014 (defaut) : aucune etape "Metamagie" (le premier '
+      'palier 2014 est au niveau 3, pas 2 — non-regression du correctif '
+      'edition)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 12,
+              hitDie: 6,
+              className: 'Ensorceleur',
+              level: 1,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          2: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.knownMetamagicNamesToReturn = const [];
+        fakeCreationRepository.spellCatalogByClassId = {
+          12: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 500,
+                name: 'Projectile magique',
+                level: 1,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, 2);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Projectile magique'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('· Métamagie'), findsNothing);
+      },
+    );
+
     testWidgets('niveau 14 (delta nul, mais au moins une option deja connue), '
         'personnage EDITION 2024 : etape "Metamagie" affichee UNIQUEMENT '
         'pour l\'echange (D93) — remplacer une option connue par une autre '
