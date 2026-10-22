@@ -1135,6 +1135,12 @@ class SupabaseCharacterCreationRepository
           .insert({
             'owner_id': ownerId,
             'name': characterName,
+            // Choisie à l'étape 1 "Édition" (`EditionStepScreen`, TOUTE
+            // PREMIÈRE étape de l'assistant), immuable ensuite — voir
+            // `domain/character_creation_draft.dart::edition`. Jamais
+            // `null` (`@Default('2014')` sur le brouillon, même défaut que
+            // la colonne DB).
+            'edition': draft.edition,
             'race_id': draft.raceId,
             'subrace_id': draft.subraceId,
             'lineage_id': lineageId,
@@ -1549,27 +1555,27 @@ class SupabaseCharacterCreationRepository
       }
 
       // Expertise du Roublard : une ligne `character_class_options` par
-      // compétence choisie, même convention que les autres choix à quota
-      // multiple de ce chantier (ex. manœuvres/disciplines élémentaires côté
-      // montée de niveau) — jamais une seule ligne avec les noms joints. Le
-      // bonus chiffré réel (`proficiency = 'expertise'`) a déjà été appliqué
-      // plus haut sur `character_skill_proficiencies` (voir
-      // [expertiseSkillIds]) : cette table-ci ne sert qu'à l'affichage
+      // "emplacement" utilisé (compétence(s) + éventuellement la
+      // substitution outils de voleur, RAW 2014 UNIQUEMENT — voir la doc de
+      // classe d'`ExpertiseStepSelection`), même convention que les autres
+      // choix à quota multiple de ce chantier (ex. manœuvres/disciplines
+      // élémentaires côté montée de niveau) — jamais une seule ligne avec
+      // les noms joints. Le bonus chiffré réel (`proficiency = 'expertise'`)
+      // a déjà été appliqué plus haut sur `character_skill_proficiencies`
+      // (voir [expertiseSkillIds]) : cette table-ci ne sert qu'à l'affichage
       // "CHOIX DE CLASSE" de la fiche, même rôle que pour Style de
       // combat/Ennemi juré.
       //
-      // Jamais de substitution "outils de voleur" écrite ICI — correctif
-      // D100 (`docs/dette-technique.md`) : RAW, cette substitution n'existe
-      // qu'au niveau 6 ("Au niveau 6, vous pouvez choisir deux compétences
-      // supplémentaires ou votre maîtrise des outils de voleur" — *Manuel
-      // des Joueurs*, Roublard, Expertise), jamais au niveau 1. Le champ
-      // `draft.expertiseThievesToolsSubstitution`/le paramètre
-      // `thievesToolsSubstitution` de `ExpertiseStepSelection` restent dans
-      // le modèle pour un futur chantier "Expertise niveau 6" (voir sa doc
-      // de classe), mais aucun chemin de ce point d'entrée (création,
-      // niveau 1) ne peut plus le faire passer à `true` : `ClassChoiceStepScreen`
-      // ne propose plus la tuile correspondante.
-      if (draft.expertiseSkillChoices.isNotEmpty) {
+      // `draft.edition == '2014'` revérifié ici en plus du gating déjà fait
+      // par `ClassChoiceStepScreen` (qui ne propose la tuile correspondante
+      // que pour cette édition) : discipline défensive, même principe que
+      // les autres revérifications serveur de ce fichier — un brouillon ne
+      // devrait jamais arriver ici avec `expertiseThievesToolsSubstitution:
+      // true` ET `edition: '2024'`, mais cette méthode ne doit jamais faire
+      // confiance aveuglément à l'UI pour une règle RAW.
+      if (draft.expertiseSkillChoices.isNotEmpty ||
+          (draft.expertiseThievesToolsSubstitution &&
+              draft.edition == '2014')) {
         final expertiseFeatureRows = await _client
             .from('class_features')
             .select('id')
@@ -1580,6 +1586,17 @@ class SupabaseCharacterCreationRepository
         if (expertiseFeatureRows.isNotEmpty) {
           final expertiseFeatureId = (expertiseFeatureRows.first['id'] as num)
               .toInt();
+          // La maîtrise d'outils de voleur est TOUJOURS accordée
+          // automatiquement au Roublard (`ClassOption.grantedToolNames`,
+          // jamais un choix) : premier (et seul) nom de cette liste plutôt
+          // qu'une chaîne `'outils de voleur'` codée en dur, voir
+          // `domain/expertise_step_selection.dart`.
+          final thievesToolsName =
+              draft.expertiseThievesToolsSubstitution &&
+                  draft.edition == '2014' &&
+                  classOption.grantedToolNames.isNotEmpty
+              ? classOption.grantedToolNames.first
+              : null;
           final expertiseOptionRows = [
             for (final name in draft.expertiseSkillChoices)
               {
@@ -1587,6 +1604,13 @@ class SupabaseCharacterCreationRepository
                 'class_feature_id': expertiseFeatureId,
                 'level': 1,
                 'chosen_value': name,
+              },
+            if (thievesToolsName != null)
+              {
+                'character_id': characterId,
+                'class_feature_id': expertiseFeatureId,
+                'level': 1,
+                'chosen_value': thievesToolsName,
               },
           ];
           if (expertiseOptionRows.isNotEmpty) {

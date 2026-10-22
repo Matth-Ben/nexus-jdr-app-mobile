@@ -37,9 +37,12 @@ import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
-/// Étape 9/9 de l'assistant de création de personnage : récapitulatif
+/// Étape 10/10 de l'assistant de création de personnage : récapitulatif
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
-/// point 9, spec visuelle validée par l'agent `direction-artistique`).
+/// point 9, spec visuelle validée par l'agent `direction-artistique`) —
+/// étape 9/9 avant le chantier "choix d'édition 2014/2024 par personnage"
+/// (voir `EditionStepScreen`, qui a décalé d'un cran la numérotation
+/// affichée de toutes les étapes, celle-ci incluse).
 ///
 /// Dernière étape, et la seule de tout l'assistant qui écrit réellement en
 /// base : "Créer le personnage" déclenche
@@ -48,7 +51,7 @@ import 'widgets/step_help_sheet.dart';
 /// d'échec partiel), toutes les étapes précédentes se contentant de mettre à
 /// jour le brouillon en mémoire (`CharacterCreationDraftController`).
 ///
-/// Capture aussi le seul champ de tout l'assistant qu'aucune étape 1-8 ne
+/// Capture aussi le seul champ de tout l'assistant qu'aucune étape 1-9 ne
 /// capture : le nom du personnage (`CharacterCreationDraft.characterName`,
 /// gap identifié et validé avec l'utilisateur). `characters.name` est `not
 /// null default ''` en base (un nom vide passerait donc techniquement), mais
@@ -74,17 +77,18 @@ import 'widgets/step_help_sheet.dart';
 /// suggérées à l'origine.
 ///
 /// **Piège déjà corrigé une fois** (régression relevée par `qa-testeur`) :
-/// l'étape 6/9 "Sorts" est absente de la pile pour une classe non lanceuse de
-/// sorts (`SkillsAndToolsStepScreen._submit` la saute, poussant directement
-/// l'étape 7/9) — la pile ne contient alors que 8 écrans au lieu de 9. Le
-/// simple calcul `_totalSteps - stepNumber` suppose à tort que les 9 étapes
-/// sont toujours présentes : il dépile une fois de trop pour toute étape
-/// cible **avant** l'étape 6 absente (4 "Caractéristiques" et 5 "Compétences"
-/// /"Outils"/"Langues"), même si aucune ligne ne cible jamais l'étape 6
-/// elle-même pour une telle classe (les lignes "Sorts mineurs"/"Sorts niveau
-/// 1" sont masquées, voir [_SummaryStepScreenState._buildContent]) — ce
-/// masquage ne suffisait donc pas à rendre le calcul correct pour les
-/// étapes situées *avant* le trou. Voir [_SummaryStepScreenState._editStep].
+/// l'étape 7/10 "Sorts" est absente de la pile pour une classe non lanceuse
+/// de sorts (`SkillsAndToolsStepScreen._submit` la saute, poussant
+/// directement l'étape 8/10) — la pile ne contient alors que 9 écrans au
+/// lieu de 10. Le simple calcul `_totalSteps - stepNumber` suppose à tort
+/// que les 10 étapes sont toujours présentes : il dépile une fois de trop
+/// pour toute étape cible **avant** l'étape 7 absente (5 "Caractéristiques"
+/// et 6 "Compétences"/"Outils"/"Langues"), même si aucune ligne ne cible
+/// jamais l'étape 7 elle-même pour une telle classe (les lignes "Sorts
+/// mineurs"/"Sorts niveau 1" sont masquées, voir
+/// [_SummaryStepScreenState._buildContent]) — ce masquage ne suffisait donc
+/// pas à rendre le calcul correct pour les étapes situées *avant* le trou.
+/// Voir [_SummaryStepScreenState._editStep].
 ///
 /// Porte aussi, comme les étapes 1-8, le pied de page [DraftAutosaveFooter]
 /// avec son lien "Abandonner" — décision du chef de projet suite à une
@@ -103,7 +107,7 @@ class SummaryStepScreen extends ConsumerStatefulWidget {
 }
 
 class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   late final TextEditingController _nameController;
 
@@ -181,17 +185,17 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
         (editSession?.canEditSpells ?? true);
 
     var popsNeeded = _totalSteps - stepNumber;
-    // L'étape 6/9 "Sorts" est absente de la pile pour une classe non
+    // L'étape 7/10 "Sorts" est absente de la pile pour une classe non
     // lanceuse de sorts (voir la documentation de classe) : toute étape
-    // cible strictement avant elle (4 ou 5) doit alors franchir un écran de
-    // moins pour être atteinte. Ne s'applique jamais à `stepNumber == 6`
+    // cible strictement avant elle (5 ou 6) doit alors franchir un écran de
+    // moins pour être atteinte. Ne s'applique jamais à `stepNumber == 7`
     // lui-même : aucune ligne ne le cible pour une telle classe (lignes
     // "Sorts mineurs"/"Sorts niveau 1" masquées, voir [_buildContent]).
-    if (!isSpellcaster && stepNumber <= 5) {
+    if (!isSpellcaster && stepNumber <= 6) {
       popsNeeded -= 1;
     }
-    // Mode modification : l'étape 7/9 "Équipement" n'est jamais empilée.
-    if (editSession != null && stepNumber <= 6) {
+    // Mode modification : l'étape 8/10 "Équipement" n'est jamais empilée.
+    if (editSession != null && stepNumber <= 7) {
       popsNeeded -= 1;
     }
 
@@ -355,7 +359,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
           children: [
             _Header(
               onBack: _goBack,
-              currentStep: 9,
+              currentStep: 10,
               totalSteps: _totalSteps,
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.summary),
@@ -474,17 +478,17 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
     final rows = <({String title, String value, int stepNumber})>[
       // Pas de ligne "Classe" dans ce récapitulatif (la classe n'apparaît que
       // dans l'en-tête) : la sous-classe ouvre donc la liste, avec le libellé
-      // propre à la classe, et renvoie à l'étape 2 "Classe".
+      // propre à la classe, et renvoie à l'étape 3 "Classe".
       if (draft.subclassId != null)
         (
           title: SubclassChoiceRules.titleFor(className),
           value: subclassName ?? SubclassChoiceRules.fallbackTitle,
-          stepNumber: 2,
+          stepNumber: 3,
         ),
       (
         title: 'Caractéristiques',
         value: _formatAbilityScores(finalAbilityScores),
-        stepNumber: 4,
+        stepNumber: 5,
       ),
       (
         title: 'Compétences',
@@ -496,7 +500,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
             ...?raceOption?.skillProficiencies,
           ],
         ).join(', '),
-        stepNumber: 5,
+        stepNumber: 6,
       ),
       if (draft.classToolChoices.isNotEmpty || draft.raceToolChoices.isNotEmpty)
         (
@@ -505,37 +509,37 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
             ...draft.classToolChoices,
             ...draft.raceToolChoices,
           ].join(', '),
-          stepNumber: 5,
+          stepNumber: 6,
         ),
       if (draft.backgroundLanguageChoices.isNotEmpty)
         (
           title: 'Langues',
           value: draft.backgroundLanguageChoices.join(', '),
-          stepNumber: 5,
+          stepNumber: 6,
         ),
       if (showCantripRow)
         (
           title: 'Sorts mineurs',
           value: '${draft.classCantripChoices.length} sélectionné(s)',
-          stepNumber: 6,
+          stepNumber: 7,
         ),
       if (showLevelOneRow)
         (
           title: 'Sorts niveau 1',
           value: '${draft.classLevelOneSpellChoices.length} sélectionné(s)',
-          stepNumber: 6,
+          stepNumber: 7,
         ),
       // Mode modification : l'inventaire se gère depuis l'onglet Sac.
       if (editSession == null)
         (
           title: 'Équipement',
           value: _formatEquipmentSummary(draft, data),
-          stepNumber: 7,
+          stepNumber: 8,
         ),
       (
         title: 'Histoire & portrait',
         value: _hasAnyAppearanceText(draft) ? 'Renseignés' : 'Non renseignés',
-        stepNumber: 8,
+        stepNumber: 9,
       ),
     ];
 
@@ -1012,7 +1016,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '9. Récapitulatif',
+                          '10. Récapitulatif',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

@@ -104,6 +104,7 @@ CharacterEditSnapshot _snapshot({
   int backgroundId = 1,
   int maxHp = 44,
   int currentHp = 30,
+  String edition = '2014',
   List<int> skillIds = const [1, 3, 5, 6, 7],
   List<int> languageIds = const [10],
   List<int> spellIds = const [],
@@ -117,6 +118,7 @@ CharacterEditSnapshot _snapshot({
     totalLevel: totalLevel,
     maxHp: maxHp,
     currentHp: currentHp,
+    edition: edition,
     raceId: 3,
     backgroundId: backgroundId,
     abilityScores: const {
@@ -247,6 +249,23 @@ void main() {
         (spellId: 101, status: SpellStatus.known),
       ]);
     });
+
+    // Chantier "choix d'édition 2014/2024 par personnage".
+    test('edition absente de la ligne -> \'2014\' (repli défensif, même '
+        'rationale que maxHp/currentHp)', () {
+      final snapshot = CharacterEditSnapshot.fromRow({'id': 'c1'});
+
+      expect(snapshot.edition, '2014');
+    });
+
+    test('edition = \'2024\' en base est bien remontée telle quelle', () {
+      final snapshot = CharacterEditSnapshot.fromRow({
+        'id': 'c1',
+        'edition': '2024',
+      });
+
+      expect(snapshot.edition, '2024');
+    });
   });
 
   group('CharacterEditHydrator', () {
@@ -293,6 +312,14 @@ void main() {
 
       expect(draft.classCantripChoices, ['Flamme sacrée']);
       expect(draft.classLevelOneSpellChoices, ['Soins']);
+    });
+
+    test('reporte snapshot.edition telle quelle dans le brouillon (jamais le '
+        'défaut \'2014\' du constructeur quand le personnage est en 2024) — '
+        'chantier "choix d\'édition 2014/2024 par personnage"', () {
+      final draft = _hydrate(_snapshot(edition: '2024'));
+
+      expect(draft.edition, '2024');
     });
   });
 

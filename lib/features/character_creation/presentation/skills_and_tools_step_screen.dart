@@ -50,7 +50,7 @@ class SkillsAndToolsStepScreen extends ConsumerStatefulWidget {
 
 class _SkillsAndToolsStepScreenState
     extends ConsumerState<SkillsAndToolsStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   late List<String> _selectedClassSkills;
   late List<String> _selectedClassTools;
@@ -312,7 +312,7 @@ class _SkillsAndToolsStepScreenState
       children: [
         _Header(
           onBack: _goBack,
-          currentStep: 5,
+          currentStep: 6,
           totalSteps: _totalSteps,
           onHelp: () =>
               showStepHelpSheet(context, CreationStepHelp.skillsAndTools),
@@ -787,7 +787,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '5. Compétences',
+                          '6. Compétences',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

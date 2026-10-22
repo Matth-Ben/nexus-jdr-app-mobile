@@ -456,10 +456,10 @@ void main() {
 
       await pumpSkillsAndToolsStep(tester);
 
-      final title = tester.widget<Text>(find.text('5. Compétences'));
+      final title = tester.widget<Text>(find.text('6. Compétences'));
       expect(title.style?.color, AppColors.textOnWood);
 
-      final stepLabel = tester.widget<Text>(find.text('Étape 5 / 9'));
+      final stepLabel = tester.widget<Text>(find.text('Étape 6 / 10'));
       expect(stepLabel.style?.color, AppColors.textOnWoodMuted);
 
       final woodBanner = find
@@ -1447,7 +1447,7 @@ void main() {
         await tester.tap(find.byIcon(Icons.help_outline));
         await tester.pumpAndSettle();
 
-        expect(find.text('5. COMPÉTENCES'), findsOneWidget);
+        expect(find.text('6. COMPÉTENCES'), findsOneWidget);
       },
     );
 

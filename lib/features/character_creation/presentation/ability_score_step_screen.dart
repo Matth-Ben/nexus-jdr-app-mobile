@@ -59,7 +59,7 @@ class AbilityScoreStepScreen extends ConsumerStatefulWidget {
 
 class _AbilityScoreStepScreenState
     extends ConsumerState<AbilityScoreStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   late AbilityScoreMethod _method;
   late Map<String, int> _scores;
@@ -341,7 +341,7 @@ class _AbilityScoreStepScreenState
       children: [
         _Header(
           onBack: _goBack,
-          currentStep: 4,
+          currentStep: 5,
           totalSteps: _totalSteps,
           onHelp: () =>
               showStepHelpSheet(context, CreationStepHelp.abilityScore),
@@ -654,7 +654,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '4. Caractéristiques',
+                          '5. Caractéristiques',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

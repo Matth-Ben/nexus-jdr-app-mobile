@@ -27,8 +27,18 @@ class StepHelpContent {
 /// aide ne le soit — une entrée de map absente ne se remarquerait qu'à
 /// l'exécution.
 abstract final class CreationStepHelp {
+  static const edition = StepHelpContent(
+    title: '1. Édition',
+    body:
+        "Choisis l'édition des règles D&D 5e selon laquelle ce personnage "
+        'sera géré : 2014 (Manuel des Joueurs original) ou 2024 (édition '
+        "revue, avec quelques ajustements de règles). Ce choix est "
+        "définitif — il ne pourra plus être changé une fois le personnage "
+        'créé.',
+  );
+
   static const race = StepHelpContent(
-    title: '1. Race',
+    title: '2. Race',
     body:
         "La race de ton personnage détermine son ascendance (elfe, nain, "
         'humain…) et lui donne des traits particuliers : bonus de '
@@ -39,7 +49,7 @@ abstract final class CreationStepHelp {
   );
 
   static const classStep = StepHelpContent(
-    title: '2. Classe',
+    title: '3. Classe',
     body:
         'La classe définit le rôle de combat et les capacités de ton '
         'personnage : guerrier robuste au corps-à-corps, magicien maniant '
@@ -49,7 +59,7 @@ abstract final class CreationStepHelp {
   );
 
   static const background = StepHelpContent(
-    title: '3. Historique',
+    title: '4. Historique',
     body:
         "L'historique raconte ce que faisait ton personnage avant de "
         'devenir aventurier (soldat, érudit, criminel…). Il apporte des '
@@ -58,7 +68,7 @@ abstract final class CreationStepHelp {
   );
 
   static const abilityScore = StepHelpContent(
-    title: '4. Caractéristiques',
+    title: '5. Caractéristiques',
     body:
         'Les 6 caractéristiques (Force, Dextérité, Constitution, '
         'Intelligence, Sagesse, Charisme) mesurent les aptitudes physiques '
@@ -70,7 +80,7 @@ abstract final class CreationStepHelp {
   );
 
   static const skillsAndTools = StepHelpContent(
-    title: '5. Compétences',
+    title: '6. Compétences',
     body:
         'Les compétences représentent ce que ton personnage sait '
         'particulièrement bien faire (Discrétion, Persuasion, Arcanes…). '
@@ -80,7 +90,7 @@ abstract final class CreationStepHelp {
   );
 
   static const spells = StepHelpContent(
-    title: '6. Sorts',
+    title: '7. Sorts',
     body:
         'Si ta classe lance des sorts, cette étape te permet de choisir '
         'tes sorts mineurs (utilisables à volonté, sans limite) et tes '
@@ -89,7 +99,7 @@ abstract final class CreationStepHelp {
   );
 
   static const equipment = StepHelpContent(
-    title: '7. Équipement',
+    title: '8. Équipement',
     body:
         "Choisis l'équipement de départ de ton personnage : soit le "
         'paquetage standard proposé par ta classe et ton historique, soit '
@@ -98,7 +108,7 @@ abstract final class CreationStepHelp {
   );
 
   static const appearanceAndBackstory = StepHelpContent(
-    title: '8. Apparence, histoire et portrait',
+    title: '9. Apparence, histoire et portrait',
     body:
         "Ces champs sont facultatifs : ils t'aident à donner vie à ton "
         'personnage (apparence physique, traits de personnalité, idéaux, '
@@ -107,7 +117,7 @@ abstract final class CreationStepHelp {
   );
 
   static const summary = StepHelpContent(
-    title: '9. Récapitulatif',
+    title: '10. Récapitulatif',
     body:
         "Vérifie l'ensemble des choix faits aux étapes précédentes avant "
         'de créer définitivement ton personnage. Tu peux encore revenir '

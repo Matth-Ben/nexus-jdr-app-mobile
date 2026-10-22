@@ -75,7 +75,7 @@ class EquipmentStepScreen extends ConsumerStatefulWidget {
 }
 
 class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   late EquipmentChoiceTab _activeTab;
   late Map<String, int> _cart;
@@ -224,7 +224,7 @@ class _EquipmentStepScreenState extends ConsumerState<EquipmentStepScreen> {
       children: [
         _Header(
           onBack: _goBack,
-          currentStep: 7,
+          currentStep: 8,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.equipment),
         ),
@@ -618,7 +618,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '7. Équipement',
+                          '8. Équipement',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

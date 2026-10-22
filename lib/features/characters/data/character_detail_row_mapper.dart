@@ -199,6 +199,18 @@ abstract final class CharacterDetailRowMapper {
     return levels;
   }
 
+  /// Édition de règles du personnage (`characters.edition`), `'2014'` par
+  /// défaut si la colonne est absente/nulle — même défaut que
+  /// `CharacterDetail.edition` et `SupabaseCharacterRepository
+  /// ._fetchCharacterEdition`. Sert à
+  /// `ClassFeatureRowMapper.filterAttained` (`SupabaseCharacterRepository
+  /// ._buildCharacterDetailPayload`/`_mapCharacterDetailPayload`) pour ne
+  /// jamais afficher, sur la carte "APTITUDES DE CLASSE", une ligne
+  /// `class_features` spécifique à l'AUTRE édition que celle de ce
+  /// personnage.
+  static String editionOf(Map<String, dynamic> row) =>
+      (row['edition'] as String?) ?? '2014';
+
   static List<Map<String, dynamic>> skillProficiencyRowsOf(
     Map<String, dynamic> row,
   ) {
@@ -800,6 +812,7 @@ abstract final class CharacterDetailRowMapper {
     return CharacterDetail(
       id: row['id'] as String,
       name: row['name'] as String,
+      edition: editionOf(row),
       portraitUrl: row['portrait_url'] as String?,
       raceName: raceId != null ? raceNames[raceId.toString()] : null,
       raceId: raceId is num ? raceId.toInt() : null,

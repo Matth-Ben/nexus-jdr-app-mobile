@@ -129,6 +129,175 @@ void main() {
     });
   });
 
+  // Chantier "choix d'édition 2014/2024 par personnage" : Métamagie a
+  // désormais 2 jeux de lignes `class_features` par classe (niveaux 3/10/17
+  // en 2014, 2/10/17 en 2024) — les niveaux 10 et 17 sont communs aux deux
+  // éditions avec des `id` DISTINCTS, jamais les deux à la fois pour un même
+  // personnage (voir `EditionContentResolver`).
+  group('SupabaseCharacterRepository.fetchAvailableMetamagicOptions — '
+      'filtre par édition (EditionContentResolver)', () {
+    const metamagicFeatureId2 = 1001;
+    const metamagicFeatureId10Edition2024 = 1002;
+    const metamagicFeatureId17Edition2024 = 1003;
+
+    Map<String, List<Map<String, dynamic>>> rowsFor(String edition) => {
+      'characters': [
+        {'id': characterId, 'edition': edition},
+      ],
+      'class_features': [
+        {
+          'id': metamagicFeatureId3,
+          'class_id': sorcererClassId,
+          'level': 3,
+          'choice_type': 'metamagie',
+          'edition': '2014',
+        },
+        {
+          'id': metamagicFeatureId10,
+          'class_id': sorcererClassId,
+          'level': 10,
+          'choice_type': 'metamagie',
+          'edition': '2014',
+        },
+        {
+          'id': metamagicFeatureId17,
+          'class_id': sorcererClassId,
+          'level': 17,
+          'choice_type': 'metamagie',
+          'edition': '2014',
+        },
+        {
+          'id': metamagicFeatureId2,
+          'class_id': sorcererClassId,
+          'level': 2,
+          'choice_type': 'metamagie',
+          'edition': '2024',
+        },
+        {
+          'id': metamagicFeatureId10Edition2024,
+          'class_id': sorcererClassId,
+          'level': 10,
+          'choice_type': 'metamagie',
+          'edition': '2024',
+        },
+        {
+          'id': metamagicFeatureId17Edition2024,
+          'class_id': sorcererClassId,
+          'level': 17,
+          'choice_type': 'metamagie',
+          'edition': '2024',
+        },
+      ],
+      'class_options': [
+        {'id': 1, 'min_level': 2},
+      ],
+      'translations': [
+        {'entity_id': '1', 'value': 'Sort prolongé'},
+      ],
+    };
+
+    // Le double de test HTTP de ce fichier ignore les filtres de requête
+    // (`.inFilter(...)` compris, voir sa documentation de classe
+    // `_buildSignedInFakeSupabaseClient`) : il est donc impossible de
+    // vérifier ces 3 ids via le résultat retourné par `fetchKnownMetamagicNames`
+    // elle-même (`character_class_options` renverrait ses lignes quels que
+    // soient les ids demandés). On vérifie à la place directement la
+    // requête GET enregistrée (`_Recorded.query`), qui porte bien les 3 ids
+    // RÉSOLUS par [EditionContentResolver] avant tout filtrage serveur —
+    // c'est ce calcul précis que ce correctif ajoute.
+    test('personnage édition 2014 : la requête character_class_options filtre '
+        'sur les 3 ids edition=2014 UNIQUEMENT (jamais les ids 2024, même '
+        'niveau 10/17 communs aux deux éditions)', () async {
+      final recorded = <_Recorded>[];
+      final repo = await repository(recorded: recorded, rows: rowsFor('2014'));
+
+      await repo.fetchKnownMetamagicNames(
+        characterId: characterId,
+        classId: sorcererClassId,
+      );
+
+      final reads = recorded
+          .where(
+            (r) => r.table == 'character_class_options' && r.method == 'GET',
+          )
+          .toList();
+      expect(reads, hasLength(1));
+      expect(
+        reads.single.query['class_feature_id'],
+        'in.($metamagicFeatureId3,$metamagicFeatureId10,$metamagicFeatureId17)',
+      );
+    });
+
+    test('personnage édition 2024 : la requête character_class_options filtre '
+        'sur les 3 ids edition=2024 UNIQUEMENT', () async {
+      final recorded = <_Recorded>[];
+      final repo = await repository(recorded: recorded, rows: rowsFor('2024'));
+
+      await repo.fetchKnownMetamagicNames(
+        characterId: characterId,
+        classId: sorcererClassId,
+      );
+
+      final reads = recorded
+          .where(
+            (r) => r.table == 'character_class_options' && r.method == 'GET',
+          )
+          .toList();
+      expect(reads, hasLength(1));
+      expect(
+        reads.single.query['class_feature_id'],
+        'in.($metamagicFeatureId2,$metamagicFeatureId10Edition2024,'
+        '$metamagicFeatureId17Edition2024)',
+      );
+    });
+
+    test('applyLevelUp écrit sur l\'ancre de PLUS BAS niveau DE L\'ÉDITION '
+        'DU PERSONNAGE (niveau 2 en 2024, pas niveau 3 de 2014)', () async {
+      final recorded = <_Recorded>[];
+      final repo = await repository(
+        recorded: recorded,
+        rows: {
+          ...rowsFor('2024'),
+          'character_classes': [
+            {'id': 'cc-1', 'class_id': sorcererClassId, 'level': 9},
+          ],
+          'characters': [
+            {
+              'id': characterId,
+              'edition': '2024',
+              'max_hp': 10,
+              'current_hp': 10,
+            },
+          ],
+        },
+      );
+
+      await repo.applyLevelUp(
+        characterId: characterId,
+        classId: sorcererClassId,
+        className: 'Ensorceleur',
+        isMulticlassing: false,
+        hpRolled: 4,
+        hpMethod: 'roll',
+        hpGain: 4,
+        metamagicNames: const ['Sort foudroyant'],
+      );
+
+      final inserts = recorded
+          .where(
+            (r) => r.table == 'character_class_options' && r.method == 'POST',
+          )
+          .toList();
+      expect(inserts, hasLength(1));
+      final insertedRows = inserts.single.body as List<dynamic>;
+      expect(insertedRows, hasLength(1));
+      expect(
+        insertedRows.single,
+        containsPair('class_feature_id', metamagicFeatureId2),
+      );
+    });
+  });
+
   group('SupabaseCharacterRepository.fetchKnownMetamagicNames', () {
     test(
       'agrège les chosen_value des 3 lignes class_features (3/10/17)',
@@ -486,58 +655,107 @@ void main() {
   });
 
   group('SupabaseCharacterRepository.applyLevelUp — '
-      'Expertise du Roublard (pas de substitution outils de voleur, D104)', () {
-    test(
-      'niveau 6 : écrit uniquement les compétences choisies, '
-      'aucune ligne character_class_options pour les outils de voleur',
-      () async {
-        final recorded = <_Recorded>[];
-        final repo = await repository(
-          recorded: recorded,
-          rows: {
-            'character_classes': [
-              {'id': 'cc-1', 'class_id': roguishClassId, 'level': 5},
-            ],
-            'characters': [
-              {'max_hp': 10, 'current_hp': 10},
-            ],
-            'class_features': const [],
-            'character_skill_proficiencies': [
-              {'skill_id': 1, 'proficiency': 'competente'},
-              {'skill_id': 2, 'proficiency': 'competente'},
-            ],
-          },
-        );
+      'Expertise du Roublard (compétences + substitution outils de voleur, '
+      'chantier "choix d\'édition 2014/2024 par personnage" — réintroduit '
+      'après D104 de docs/dette-technique.md)', () {
+    test('niveau 6, aucune substitution : écrit uniquement les compétences '
+        'choisies, aucune ligne character_class_options pour les outils de '
+        'voleur', () async {
+      final recorded = <_Recorded>[];
+      final repo = await repository(
+        recorded: recorded,
+        rows: {
+          'character_classes': [
+            {'id': 'cc-1', 'class_id': roguishClassId, 'level': 5},
+          ],
+          'characters': [
+            {'max_hp': 10, 'current_hp': 10},
+          ],
+          'class_features': const [],
+          'character_skill_proficiencies': [
+            {'skill_id': 1, 'proficiency': 'competente'},
+            {'skill_id': 2, 'proficiency': 'competente'},
+          ],
+        },
+      );
 
-        await repo.applyLevelUp(
-          characterId: characterId,
-          classId: roguishClassId,
-          className: 'Roublard',
-          isMulticlassing: false,
-          hpRolled: 4,
-          hpMethod: 'roll',
-          hpGain: 4,
-          expertiseSkillIds: const [1, 2],
-        );
+      await repo.applyLevelUp(
+        characterId: characterId,
+        classId: roguishClassId,
+        className: 'Roublard',
+        isMulticlassing: false,
+        hpRolled: 4,
+        hpMethod: 'roll',
+        hpGain: 4,
+        expertiseSkillIds: const [1, 2],
+      );
 
-        final updates = recorded
-            .where(
-              (r) =>
-                  r.table == 'character_skill_proficiencies' &&
-                  r.method == 'PATCH',
-            )
-            .toList();
-        expect(updates, hasLength(1));
-        expect(updates.single.body, {'proficiency': 'expertise'});
+      final updates = recorded
+          .where(
+            (r) =>
+                r.table == 'character_skill_proficiencies' &&
+                r.method == 'PATCH',
+          )
+          .toList();
+      expect(updates, hasLength(1));
+      expect(updates.single.body, {'proficiency': 'expertise'});
 
-        final classOptionWrites = recorded
-            .where(
-              (r) => r.table == 'character_class_options' && r.method != 'GET',
-            )
-            .toList();
-        expect(classOptionWrites, isEmpty);
-      },
-    );
+      final classOptionWrites = recorded
+          .where(
+            (r) => r.table == 'character_class_options' && r.method != 'GET',
+          )
+          .toList();
+      expect(classOptionWrites, isEmpty);
+    });
+
+    test('niveau 6, substitution demandée : écrit un marqueur texte libre '
+        'résolu via class_id + level', () async {
+      final recorded = <_Recorded>[];
+      const roguishExpertiseFeatureId = 303;
+      final repo = await repository(
+        recorded: recorded,
+        rows: {
+          'character_classes': [
+            {'id': 'cc-1', 'class_id': roguishClassId, 'level': 5},
+          ],
+          'characters': [
+            {'max_hp': 10, 'current_hp': 10},
+          ],
+          'class_features': [
+            {
+              'id': roguishExpertiseFeatureId,
+              'class_id': roguishClassId,
+              'level': 6,
+              'choice_type': 'expertise',
+            },
+          ],
+        },
+      );
+
+      await repo.applyLevelUp(
+        characterId: characterId,
+        classId: roguishClassId,
+        className: 'Roublard',
+        isMulticlassing: false,
+        hpRolled: 4,
+        hpMethod: 'roll',
+        hpGain: 4,
+        expertiseThievesToolsSubstitution: true,
+      );
+
+      final inserts = recorded
+          .where(
+            (r) => r.table == 'character_class_options' && r.method == 'POST',
+          )
+          .toList();
+      expect(inserts, hasLength(1));
+      expect(inserts.single.body, {
+        'character_id': characterId,
+        'class_feature_id': roguishExpertiseFeatureId,
+        'level': 6,
+        'chosen_value': 'Outils de voleur',
+      });
+    });
   });
 
   group(

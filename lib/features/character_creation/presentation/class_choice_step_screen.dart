@@ -58,8 +58,10 @@ import 'widgets/step_help_sheet.dart';
 /// bois + corps parchemin), PAS le registre "scène intégrale" de
 /// `LevelUpScreen` — ces deux écrans de montée de niveau et de création
 /// restent volontairement découplés (voir leur documentation de classe
-/// respective). `currentStep: 2` ne compte pas comme une étape à part
-/// entière des 9 (même principe que `SubclassStepScreen`).
+/// respective). `currentStep: 3` ne compte pas comme une étape à part
+/// entière des 10 (depuis le chantier "choix d'édition 2014/2024 par
+/// personnage", `EditionStepScreen`) — même principe que
+/// `SubclassStepScreen`.
 ///
 /// `_MinimalHeader`/en-tête dupliqués localement plutôt que factorisés —
 /// même rationale que le reste de ce module.
@@ -81,6 +83,7 @@ class _ClassChoiceStepScreenState extends ConsumerState<ClassChoiceStepScreen> {
 
   /// Mode [ClassChoiceKind.expertise] uniquement.
   late List<String> _selectedSkillNames;
+  bool _thievesToolsSubstitution = false;
 
   bool _announced = false;
 
@@ -101,6 +104,7 @@ class _ClassChoiceStepScreenState extends ConsumerState<ClassChoiceStepScreen> {
               (classId == _roublardClassId ? ClassChoiceKind.expertise : null));
     _selectedValue = draft.classFeatureChoiceValue;
     _selectedSkillNames = List.of(draft.expertiseSkillChoices);
+    _thievesToolsSubstitution = draft.expertiseThievesToolsSubstitution;
 
     if (classId == null || _kind == null) {
       // Cas défensif (ex. deep-link direct sur cette route) : cet écran
@@ -138,11 +142,14 @@ class _ClassChoiceStepScreenState extends ConsumerState<ClassChoiceStepScreen> {
       characterCreationDraftControllerProvider.notifier,
     );
     if (_kind == ClassChoiceKind.expertise) {
-      // Jamais de substitution outils de voleur à ce stade (niveau 1,
-      // création) — correctif D100, voir `domain/expertise_step_selection.dart`.
+      // Substitution outils de voleur : RAW 2014 UNIQUEMENT (voir la doc de
+      // classe de `_ExpertiseBody`/`domain/expertise_step_selection.dart`) —
+      // `_thievesToolsSubstitution` ne peut de toute façon valoir `true`
+      // ici que si la tuile correspondante a été affichée, elle-même
+      // conditionnée à `draft.edition == '2014'`.
       notifier.setExpertiseChoices(
         skillNames: _selectedSkillNames,
-        thievesToolsSubstitution: false,
+        thievesToolsSubstitution: _thievesToolsSubstitution,
       );
       final editSession = ref.read(characterEditSessionControllerProvider);
       // Roublard non lanceur de sorts à aucun niveau : jamais l'étape 6/9,
@@ -172,6 +179,7 @@ class _ClassChoiceStepScreenState extends ConsumerState<ClassChoiceStepScreen> {
       body: kind == ClassChoiceKind.expertise
           ? _ExpertiseBody(
               selectedSkillNames: _selectedSkillNames,
+              thievesToolsSubstitution: _thievesToolsSubstitution,
               onToggleSkill: (skill, quota) => setState(() {
                 _selectedSkillNames = _toggle(
                   current: _selectedSkillNames,
@@ -179,6 +187,9 @@ class _ClassChoiceStepScreenState extends ConsumerState<ClassChoiceStepScreen> {
                   quota: quota,
                 );
               }),
+              onToggleThievesTools: () => setState(
+                () => _thievesToolsSubstitution = !_thievesToolsSubstitution,
+              ),
               onGoBack: _goBack,
               onSubmit: _submit,
               onAnnounce: _announceOnce,
@@ -343,23 +354,26 @@ class _NamedChoiceBody extends ConsumerWidget {
 /// Corps de l'écran pour [ClassChoiceKind.expertise] (choix multiple, quota
 /// 2, Roublard).
 ///
-/// Jamais de case "outils de voleur" ici — correctif D100
-/// (`docs/dette-technique.md`) : RAW, la substitution de l'Expertise du
-/// Roublard par la maîtrise des outils de voleur n'existe qu'au niveau 6, pas
-/// au niveau 1. Voir la doc de classe de `ExpertiseStepSelection` pour le
-/// rationale complet et la doc de ce fichier pour le futur chantier
-/// "Expertise niveau 6" qui réutilisera `thievesToolsSubstitution`.
+/// Case "outils de voleur" proposée UNIQUEMENT pour un brouillon dont
+/// `edition` vaut `'2014'` — chantier "choix d'édition 2014/2024 par
+/// personnage" : voir la doc de classe de `ExpertiseStepSelection` pour le
+/// rationale RAW complet (réintroduit après avoir été retiré à tort en D100
+/// de `docs/dette-technique.md`, sur la base d'une citation RAW erronée).
 class _ExpertiseBody extends ConsumerWidget {
   const _ExpertiseBody({
     required this.selectedSkillNames,
+    required this.thievesToolsSubstitution,
     required this.onToggleSkill,
+    required this.onToggleThievesTools,
     required this.onGoBack,
     required this.onSubmit,
     required this.onAnnounce,
   });
 
   final List<String> selectedSkillNames;
+  final bool thievesToolsSubstitution;
   final void Function(String skill, int quota) onToggleSkill;
+  final VoidCallback onToggleThievesTools;
   final VoidCallback onGoBack;
   final VoidCallback onSubmit;
   final ValueChanged<String> onAnnounce;
@@ -372,38 +386,43 @@ class _ExpertiseBody extends ConsumerWidget {
       data: (data) {
         final classOption = data.classOption;
         final backgroundOption = data.backgroundOption;
+        final draft = ref.read(characterCreationDraftControllerProvider);
         final raceSkillNames = <String>[
-          ...ref
-              .read(characterCreationDraftControllerProvider)
-              .raceSkillChoices,
+          ...draft.raceSkillChoices,
           ...(data.raceOption?.skillProficiencies ?? const <String>[]),
         ];
         final candidateSkillNames = SkillProficiencyResolver.resolveNames(
-          classSkillNames: ref
-              .read(characterCreationDraftControllerProvider)
-              .classSkillChoices,
+          classSkillNames: draft.classSkillChoices,
           backgroundSkillNames: backgroundOption.skillProficiencies,
           raceSkillNames: raceSkillNames,
         );
-        // Aucune substitution outils de voleur à ce stade (voir la doc de
-        // classe) : [availableOptionsCount] ne compte que les compétences
-        // candidates.
-        final availableOptionsCount = candidateSkillNames.length;
+        // Substitution outils de voleur : RAW 2014 UNIQUEMENT (voir la doc
+        // de classe) — maîtrise d'outils de voleur toujours accordée
+        // automatiquement au Roublard, premier (et seul) nom de cette liste
+        // plutôt qu'une chaîne 'outils de voleur' codée en dur, voir
+        // `domain/expertise_step_selection.dart`.
+        final isEdition2014 = draft.edition == '2014';
+        final thievesToolsName =
+            isEdition2014 && classOption.grantedToolNames.isNotEmpty
+            ? classOption.grantedToolNames.first
+            : null;
+        final availableOptionsCount =
+            candidateSkillNames.length + (thievesToolsName == null ? 0 : 1);
         final effectiveQuota = ExpertiseStepSelection.effectiveQuota(
           availableOptionsCount,
         );
         final skillQuota = ExpertiseStepSelection.skillQuota(
           availableOptionsCount: availableOptionsCount,
-          thievesToolsSubstitution: false,
+          thievesToolsSubstitution: thievesToolsSubstitution,
         );
         final canProceed = ExpertiseStepSelection.canProceed(
           availableOptionsCount: availableOptionsCount,
           selectedSkillNames: selectedSkillNames,
-          thievesToolsSubstitution: false,
+          thievesToolsSubstitution: thievesToolsSubstitution,
         );
         final selectedCount = ExpertiseStepSelection.selectedCount(
           selectedSkillNames: selectedSkillNames,
-          thievesToolsSubstitution: false,
+          thievesToolsSubstitution: thievesToolsSubstitution,
         );
 
         if (effectiveQuota > 0) {
@@ -469,6 +488,14 @@ class _ExpertiseBody extends ConsumerWidget {
                             if (i > 0) const SizedBox(height: AppSpacing.xs),
                             _skillTile(candidateSkillNames[i], skillQuota),
                           ],
+                          if (thievesToolsName != null) ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            _thievesToolsTile(
+                              thievesToolsName,
+                              effectiveQuota,
+                              selectedCount,
+                            ),
+                          ],
                         ],
                       ),
               ),
@@ -511,6 +538,15 @@ class _ExpertiseBody extends ConsumerWidget {
       checked: isSelected,
       enabled: isSelected || selectedSkillNames.length < quota,
       onTap: () => onToggleSkill(skill, quota),
+    );
+  }
+
+  Widget _thievesToolsTile(String name, int effectiveQuota, int selectedCount) {
+    return CheckableOptionTile(
+      title: name,
+      checked: thievesToolsSubstitution,
+      enabled: thievesToolsSubstitution || selectedCount < effectiveQuota,
+      onTap: onToggleThievesTools,
     );
   }
 }
@@ -603,8 +639,8 @@ class _Scaffold extends StatelessWidget {
         _Header(
           onBack: onGoBack,
           title: title,
-          currentStep: 2,
-          totalSteps: 9,
+          currentStep: 3,
+          totalSteps: 10,
           onHelp: () => showStepHelpSheet(
             context,
             title == ClassChoiceRules.titleFor(ClassChoiceKind.expertise)
@@ -725,7 +761,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '2. $title',
+                          '3. $title',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

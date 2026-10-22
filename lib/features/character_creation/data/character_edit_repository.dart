@@ -53,7 +53,7 @@ class SupabaseCharacterEditRepository implements CharacterEditRepository {
       final row = await _client
           .from('characters')
           .select('''
-            id, name, portrait_url, max_hp, current_hp,
+            id, name, edition, portrait_url, max_hp, current_hp,
             race_id, subrace_id, race_custom_text, background_id, alignment_id,
             sexe, age, height, weight, eyes, skin, hair,
             appearance_text, traits_text, ideals_text, bonds_text, flaws_text,

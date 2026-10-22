@@ -96,6 +96,12 @@ void main() {
     await tapText(tester, "+ CRÉER");
     await pumpUntilSettled(tester, attempts: 6);
 
+    // Etape 1/10 : Edition -- chantier "choix d'edition 2014/2024 par
+    // personnage", meme resolution automatique que
+    // support/character_creation_flow.dart::createCharacter.
+    await tapText(tester, "SUIVANT");
+    await pumpUntilSettled(tester, attempts: 4);
+
     await scrollUntilVisibleThenTap(
       tester,
       find.byType(ListView).first,

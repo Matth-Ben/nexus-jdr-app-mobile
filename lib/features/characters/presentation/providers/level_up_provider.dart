@@ -382,7 +382,13 @@ typedef LevelUpStepData = ({
   /// ([canSwapInfusion], D93 du registre de dette technique) : proposé à
   /// CHAQUE niveau d'Ensorceleur, indépendant de
   /// [requiresMetamagicSelection]. `true` dès que [effectiveClassName] vaut
-  /// 'Ensorceleur' ET que [knownMetamagicNames] n'est pas vide.
+  /// 'Ensorceleur' ET que [knownMetamagicNames] n'est pas vide ET que
+  /// `CharacterDetail.edition` vaut `'2024'` — chantier "choix d'édition
+  /// 2014/2024 par personnage" (vérifié par texte primaire 2014 PHB :
+  /// l'option Métamagie du Manuel des Joueurs 2014 n'a AUCUNE clause
+  /// d'échange, "Vous gagnez deux options de Métamagie... une autre aux
+  /// niveaux 10 et 17", point final — l'échange est une addition du Manuel
+  /// des Joueurs 2024, jamais RAW en 2014).
   bool canSwapMetamagic,
 
   /// Options de Métamagie déjà connues du personnage — candidates au
@@ -418,6 +424,21 @@ typedef LevelUpStepData = ({
   /// toute compétence déjà en Expertise (pool GLOBAL au personnage). Non
   /// vide seulement si [requiresExpertiseSelection].
   List<LevelUpExpertiseOption> availableExpertiseSkills,
+
+  /// `true` si la substitution "Expertise des outils de voleur" doit être
+  /// proposée à ce niveau (Roublard UNIQUEMENT, voir
+  /// `domain/expertise_known_progression.dart::ExpertiseKnownProgression.allowsThievesToolsSubstitution`)
+  /// — réintroduit par le chantier "choix d'édition 2014/2024 par
+  /// personnage" (retiré en D104 de `docs/dette-technique.md` sur la base
+  /// d'une citation RAW erronée : le texte 2014 PHB autorise bien cette
+  /// substitution, aux DEUX niveaux 1 et 6 — "At 1st level... or one of
+  /// your skill proficiencies and your proficiency with thieves' tools" /
+  /// "At 6th level... in skills or with thieves' tools", vérifié par texte
+  /// primaire). `false` pour le Barde et hors de
+  /// [requiresExpertiseSelection], et surtout `false` dès que
+  /// `CharacterDetail.edition` vaut `'2024'` (le texte 2024 l'a
+  /// complètement supprimée, aux deux niveaux).
+  bool allowsThievesToolsSubstitution,
 
   /// `true` si l'étape "Ascendance draconique" doit être affichée à ce
   /// niveau — Ensorceleur, Lignage draconique, niveau 1 de sous-classe
@@ -1225,7 +1246,11 @@ Future<LevelUpStepData> levelUpStepData(
       characterId: characterId,
       classId: effectiveClassId,
     );
-    canSwapMetamagic = knownMetamagicNames.isNotEmpty;
+    // Échange de Métamagie : RAW 2024 UNIQUEMENT (voir la documentation de
+    // [LevelUpStepData.canSwapMetamagic]) — un personnage 2014 ne le voit
+    // jamais, quel que soit [knownMetamagicNames].
+    canSwapMetamagic =
+        detail.edition == '2024' && knownMetamagicNames.isNotEmpty;
     if (requiresMetamagicSelection || canSwapMetamagic) {
       availableMetamagicOptions = await repository
           .fetchAvailableMetamagicOptions(
@@ -1244,6 +1269,7 @@ Future<LevelUpStepData> levelUpStepData(
   final expertiseQuota = ExpertiseKnownProgression.quotaAt(
     effectiveClassName,
     effectiveTargetLevel,
+    edition: detail.edition,
   );
   final requiresExpertiseSelection = expertiseQuota > 0;
   var availableExpertiseSkills = const <LevelUpExpertiseOption>[];
@@ -1254,6 +1280,14 @@ Future<LevelUpStepData> levelUpStepData(
           LevelUpExpertiseOption(skillId: skill.id, name: skill.name),
     ];
   }
+  // Substitution outils de voleur (Roublard, RAW 2014 UNIQUEMENT) — voir la
+  // documentation de [LevelUpStepData.allowsThievesToolsSubstitution].
+  final allowsThievesToolsSubstitution =
+      requiresExpertiseSelection &&
+      detail.edition == '2014' &&
+      ExpertiseKnownProgression.allowsThievesToolsSubstitution(
+        effectiveClassName,
+      );
   // Ascendance draconique — aptitude "Ancêtre draconique", Ensorceleur,
   // Lignage draconique, niveau 1 de sous-classe UNIQUEMENT (choix figé à
   // vie, jamais réoffert — contrairement à [elementalDisciplinesBySubclass]/
@@ -1370,6 +1404,7 @@ Future<LevelUpStepData> levelUpStepData(
     requiresExpertiseSelection: requiresExpertiseSelection,
     expertiseQuota: expertiseQuota,
     availableExpertiseSkills: availableExpertiseSkills,
+    allowsThievesToolsSubstitution: allowsThievesToolsSubstitution,
     requiresDraconicAncestrySelection: requiresDraconicAncestrySelection,
     draconicAncestryBySubclass: draconicAncestryBySubclass,
     knownPact: knownPact,

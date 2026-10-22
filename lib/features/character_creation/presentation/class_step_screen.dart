@@ -48,7 +48,7 @@ class ClassStepScreen extends ConsumerStatefulWidget {
 }
 
 class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   int? _selectedClassId;
 
@@ -238,7 +238,7 @@ class _ClassStepScreenState extends ConsumerState<ClassStepScreen> {
       children: [
         _Header(
           onBack: _goBack,
-          currentStep: 2,
+          currentStep: 3,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.classStep),
         ),
@@ -410,7 +410,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '2. Classe',
+                          '3. Classe',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

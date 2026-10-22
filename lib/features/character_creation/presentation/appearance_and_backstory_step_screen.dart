@@ -64,7 +64,7 @@ class AppearanceAndBackstoryStepScreen extends ConsumerStatefulWidget {
 
 class _AppearanceAndBackstoryStepScreenState
     extends ConsumerState<AppearanceAndBackstoryStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   /// Les 7 champs courts d'identité puis les 9 champs texte dans l'ordre
   /// canonique, voir le commentaire de classe ci-dessus. L'index dans cette liste est aussi l'index utilisé dans
@@ -275,7 +275,7 @@ class _AppearanceAndBackstoryStepScreenState
         children: [
           _Header(
             onBack: _goBack,
-            currentStep: 8,
+            currentStep: 9,
             totalSteps: _totalSteps,
             onHelp: () => showStepHelpSheet(
               context,
@@ -671,7 +671,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '8. Histoire',
+                          '9. Histoire',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

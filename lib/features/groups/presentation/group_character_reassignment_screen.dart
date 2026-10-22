@@ -70,7 +70,7 @@ class _GroupCharacterReassignmentScreenState
     if (_isSaving) return;
     ref.read(characterCreationDraftControllerProvider.notifier).reset();
     ref.read(characterCreationReturnRouteControllerProvider.notifier).set(null);
-    await context.push('/characters/new');
+    await context.push('/characters/new/edition');
     if (!mounted) return;
     ref.invalidate(charactersProvider);
   }

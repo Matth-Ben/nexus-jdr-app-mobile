@@ -64,9 +64,28 @@ abstract final class ClassFeatureRowMapper {
   /// choisie par le joueur est résolue séparément sur la carte "CHOIX DE
   /// CLASSE" (`domain/character_class_choice.dart`) sans que cela fasse
   /// doublon.
+  ///
+  /// Exclut aussi toute ligne dont `class_features.edition` est renseigné
+  /// (`'2014'`/`'2024'`) et diffère de [characterEdition] — chantier "choix
+  /// d'édition 2014/2024 par personnage" (voir `CharacterDetail.edition`) :
+  /// une mécanique dont le contenu diffère entre éditions (ex. Métamagie de
+  /// l'Ensorceleur, Expertise du Barde) peut désormais avoir 2 jeux de
+  /// lignes `class_features` sous le MÊME nom et, potentiellement, le même
+  /// niveau atteint — sans ce filtre, un personnage verrait cette aptitude
+  /// affichée EN DOUBLE sur la carte "APTITUDES DE CLASSE" (même bug que
+  /// celui déjà corrigé pour les doublons multiclasse, voir le registre de
+  /// dette technique D94/D110, mais pour la dimension édition). Une ligne
+  /// `edition IS NULL` (contenu inchangé entre les deux éditions) n'est
+  /// jamais exclue par ce filtre, quelle que soit [characterEdition] — voir
+  /// [EditionContentResolver] pour la même convention DB appliquée ailleurs
+  /// (par regroupement plutôt que par exclusion simple, nécessaire quand
+  /// plusieurs lignes DISTINCTES peuvent légitimement partager la même clé
+  /// de regroupement ; inutile ici, `filterAttained` ne regroupe jamais ses
+  /// lignes).
   static List<Map<String, dynamic>> filterAttained(
     List<Map<String, dynamic>> rows, {
     required Map<String, int> classLevels,
+    required String characterEdition,
     Map<String, int> subclassLevels = const {},
   }) {
     final result = <Map<String, dynamic>>[];
@@ -84,6 +103,8 @@ abstract final class ClassFeatureRowMapper {
       if (ownerLevel == null) continue;
       final featureLevel = (row['level'] as num?)?.toInt() ?? 0;
       if (featureLevel > ownerLevel) continue;
+      final rowEdition = row['edition'];
+      if (rowEdition != null && rowEdition != characterEdition) continue;
       result.add(row);
     }
     return result;

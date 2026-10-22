@@ -458,7 +458,7 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
     // sur `/` une fois terminée, jamais reprendre un retour paramétré d'une
     // tentative précédente.
     ref.read(characterCreationReturnRouteControllerProvider.notifier).set(null);
-    context.push('/characters/new');
+    context.push('/characters/new/edition');
   }
 
   /// Ouvre le sélecteur de fichier natif (`file_picker`, seul package du

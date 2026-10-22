@@ -31,10 +31,11 @@ import 'widgets/subclass_feature_choice_block.dart';
 /// (`_submit`) quand la classe choisie choisit sa sous-classe dès le
 /// niveau 1 (`SubclassChoiceCatalog.isConcerned`).
 ///
-/// Ne fait PAS avancer le compteur d'étape (`currentStep: 2`, comme
+/// Ne fait PAS avancer le compteur d'étape (`currentStep: 3`, comme
 /// `ClassStepScreen`) : c'est un second écran de la même étape logique, pas
-/// une étape à part entière du parcours en 9 étapes — même principe que
-/// `SubraceStepScreen` (étape 1 "Race").
+/// une étape à part entière du parcours en 10 étapes (depuis le chantier
+/// "choix d'édition 2014/2024 par personnage", `EditionStepScreen`) — même
+/// principe que `SubraceStepScreen` (étape 2 "Race").
 ///
 /// Réutilise `SubclassChoiceBlock` (`widgets/subclass_choice_block.dart`)
 /// tel quel comme corps principal : ce widget est déjà autonome (chargement/
@@ -53,7 +54,7 @@ class SubclassStepScreen extends ConsumerStatefulWidget {
 }
 
 class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   int? _classId;
   int? _selectedSubclassId;
@@ -205,7 +206,7 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
       children: [
         _Header(
           onBack: _goBack,
-          currentStep: 2,
+          currentStep: 3,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.classStep),
         ),
@@ -381,7 +382,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '2. Sous-classe',
+                          '3. Sous-classe',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

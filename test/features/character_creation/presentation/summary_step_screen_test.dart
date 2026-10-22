@@ -611,15 +611,18 @@ void main() {
   );
 
   // Régression : pour une classe NON lanceuse de sorts, la navigation réelle
-  // ne pousse jamais l'étape 6 (`skills_and_tools_step_screen.dart` saute
-  // directement à `/characters/new/step-7`, voir son commentaire). La pile
-  // reconstruite ci-dessous reproduit fidèlement ce cas (step-6 omise), ce
-  // que `pumpSummaryStep` (toujours 8 étapes, step-6 incluse) ne fait
-  // jamais — voir le rapport QA de l'étape 9/9 : `_editStep` calcule
-  // `popsNeeded = _totalSteps - stepNumber` (une formule qui suppose que les
-  // 9 étapes sont TOUTES présentes dans la pile), ce qui dépile un cran de
-  // trop pour toute ligne ciblant une étape <= 5 dès que l'étape 6 est
-  // absente de la pile.
+  // ne pousse jamais l'étape 7 (`skills_and_tools_step_screen.dart` saute
+  // directement à `/characters/new/step-7`, voir son commentaire — le NOM de
+  // route reste `step-7` malgré le décalage de numérotation affichée du
+  // chantier "choix d'édition 2014/2024 par personnage", voir
+  // `EditionStepScreen`). La pile reconstruite ci-dessous reproduit
+  // fidèlement ce cas (step-6 omise), ce que `pumpSummaryStep` (toujours 8
+  // étapes, step-6 incluse) ne fait jamais — voir le rapport QA de l'étape
+  // 9/9 (10/10 depuis ce chantier) : `_editStep` calcule `popsNeeded =
+  // _totalSteps - stepNumber` (une formule qui suppose que les 10 étapes
+  // sont TOUTES présentes dans la pile), ce qui dépile un cran de trop pour
+  // toute ligne ciblant une étape <= 6 dès que l'étape 7 est absente de la
+  // pile.
   Future<void> pumpSummaryStepForNonCasterClass(WidgetTester tester) async {
     const guerrier = ClassOption(
       id: 4,
@@ -655,9 +658,9 @@ void main() {
   }
 
   testWidgets(
-    'RÉGRESSION : pour une classe non lanceuse de sorts (étape 6 absente de '
+    'RÉGRESSION : pour une classe non lanceuse de sorts (étape 7 absente de '
     'la pile), tapoter le crayon "Caractéristiques" dépile jusqu\'à l\'étape '
-    '4 (Caractéristiques), pas l\'étape 3 (Historique)',
+    '5 (Caractéristiques), pas l\'étape 4 (Historique)',
     (WidgetTester tester) async {
       await pumpSummaryStepForNonCasterClass(tester);
 
@@ -672,18 +675,18 @@ void main() {
         find.text('Étape Caractéristiques'),
         findsOneWidget,
         reason:
-            "_editStep dépile _totalSteps(9) - stepNumber(4) = 5 fois, alors "
-            "que seuls 4 pops séparent l'étape 9 de l'étape 4 quand l'étape "
-            "6 est absente de la pile (classe non lanceuse) : le 5e pop "
-            "atterrit sur l'étape 3 (Historique) au lieu de 4.",
+            "_editStep dépile _totalSteps(10) - stepNumber(5) = 5 fois, "
+            "alors que seuls 4 pops séparent l'étape 10 de l'étape 5 quand "
+            "l'étape 7 est absente de la pile (classe non lanceuse) : le 5e "
+            "pop atterrit sur l'étape 4 (Historique) au lieu de 5.",
       );
     },
   );
 
   testWidgets(
-    'RÉGRESSION : pour une classe non lanceuse de sorts (étape 6 absente de '
-    'la pile), tapoter le crayon "Compétences" dépile jusqu\'à l\'étape 5 '
-    '(Compétences), pas l\'étape 4 (Caractéristiques)',
+    'RÉGRESSION : pour une classe non lanceuse de sorts (étape 7 absente de '
+    'la pile), tapoter le crayon "Compétences" dépile jusqu\'à l\'étape 6 '
+    '(Compétences), pas l\'étape 5 (Caractéristiques)',
     (WidgetTester tester) async {
       await pumpSummaryStepForNonCasterClass(tester);
 
@@ -699,9 +702,9 @@ void main() {
         findsOneWidget,
         reason:
             "même bug que le test précédent, décalé d'une étape : "
-            "_editStep dépile 9 - 5 = 4 fois au lieu des 3 pops réellement "
-            "nécessaires, atterrissant sur l'étape 4 (Caractéristiques) au "
-            "lieu de 5.",
+            "_editStep dépile 10 - 6 = 4 fois au lieu des 3 pops réellement "
+            "nécessaires, atterrissant sur l'étape 5 (Caractéristiques) au "
+            "lieu de 6.",
       );
     },
   );
@@ -803,7 +806,7 @@ void main() {
         await tester.tap(find.byIcon(Icons.help_outline));
         await tester.pumpAndSettle();
 
-        expect(find.text('9. RÉCAPITULATIF'), findsOneWidget);
+        expect(find.text('10. RÉCAPITULATIF'), findsOneWidget);
       },
     );
 

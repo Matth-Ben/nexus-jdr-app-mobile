@@ -26,9 +26,12 @@ import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
-/// Étape 1/9 de l'assistant de création de personnage : choix de la race
+/// Étape 2/10 de l'assistant de création de personnage : choix de la race
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
-/// point 1, maquette `02_étape_1_race.png`).
+/// point 1, maquette `02_étape_1_race.png`) — étape 1/10 depuis le chantier
+/// "choix d'édition 2014/2024 par personnage" (voir `EditionStepScreen`,
+/// poussée AVANT cet écran, qui a décalé d'un cran la numérotation affichée
+/// de toutes les étapes suivantes).
 ///
 /// Le choix de sous-race n'est PAS traité sur cet écran : pour une race qui
 /// en a, `_submit` pousse `SubraceStepScreen`, une étape séparée (même
@@ -72,7 +75,7 @@ class RaceStepScreen extends ConsumerStatefulWidget {
 }
 
 class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   final _customRaceController = TextEditingController();
 
@@ -301,7 +304,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
       children: [
         _Header(
           onBack: _goToCharacterList,
-          currentStep: 1,
+          currentStep: 2,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.race),
         ),
@@ -616,7 +619,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '1. Race',
+                          '2. Race',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

@@ -51,7 +51,7 @@ class BackgroundStepScreen extends ConsumerStatefulWidget {
 }
 
 class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   int? _selectedBackgroundId;
 
@@ -152,7 +152,7 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
       children: [
         _Header(
           onBack: _goBack,
-          currentStep: 3,
+          currentStep: 4,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.background),
         ),
@@ -314,7 +314,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '3. Historique',
+                          '4. Historique',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

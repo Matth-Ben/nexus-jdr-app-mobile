@@ -22,15 +22,17 @@ import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
-/// Étape 1/9 "Sous-race" de l'assistant de création de personnage, second
+/// Étape 2/10 "Sous-race" de l'assistant de création de personnage, second
 /// écran de l'étape "Race" — atteinte uniquement depuis `RaceStepScreen`
 /// (`_submit`) quand la race choisie a des sous-races (`RaceCatalog
 /// .subracesOf`), jamais directement, jamais pour une race personnalisée.
 ///
-/// Ne fait PAS avancer le compteur d'étape (`currentStep: 1`, comme
+/// Ne fait PAS avancer le compteur d'étape (`currentStep: 2`, comme
 /// `RaceStepScreen`) : c'est un second écran de la même étape logique, pas
-/// une étape à part entière du parcours en 9 étapes — même principe que la
-/// numérotation figée de `SubclassStepScreen` (étape 2 "Classe").
+/// une étape à part entière du parcours en 10 étapes (depuis le chantier
+/// "choix d'édition 2014/2024 par personnage", `EditionStepScreen`) — même
+/// principe que la numérotation figée de `SubclassStepScreen` (étape 3
+/// "Classe").
 ///
 /// `_Header`/`_MinimalHeader`/`_ErrorState` dupliqués localement plutôt que
 /// factorisés avec `RaceStepScreen` (`race_step_screen.dart`) : voir la doc
@@ -44,7 +46,7 @@ class SubraceStepScreen extends ConsumerStatefulWidget {
 }
 
 class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   int? _raceId;
   int? _selectedSubraceId;
@@ -172,7 +174,7 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
       children: [
         _Header(
           onBack: _goBack,
-          currentStep: 1,
+          currentStep: 2,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.race),
         ),
@@ -334,7 +336,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '1. Sous-race',
+                          '2. Sous-race',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

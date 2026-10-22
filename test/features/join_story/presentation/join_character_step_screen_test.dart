@@ -270,6 +270,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     List<String> metamagicNames = const [],
     LevelUpMetamagicSwap? metamagicSwap,
     List<int> expertiseSkillIds = const [],
+    bool expertiseThievesToolsSubstitution = false,
     String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   }) {
@@ -469,6 +470,11 @@ GoRouter _buildTestRouter() {
         path: '/join/step-3',
         builder: (context, state) =>
             JoinCharacterStepScreen(code: state.uri.queryParameters['code']!),
+      ),
+      GoRoute(
+        path: '/characters/new/edition',
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text('Assistant de création'))),
       ),
       GoRoute(
         path: '/characters/new',

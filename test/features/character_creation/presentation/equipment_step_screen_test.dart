@@ -600,7 +600,7 @@ void main() {
         await tester.tap(find.byIcon(Icons.help_outline));
         await tester.pumpAndSettle();
 
-        expect(find.text('7. ÉQUIPEMENT'), findsOneWidget);
+        expect(find.text('8. ÉQUIPEMENT'), findsOneWidget);
       },
     );
 

@@ -23,6 +23,7 @@ void main() {
       final result = ClassFeatureRowMapper.filterAttained(
         rows,
         classLevels: const {'5': 3},
+        characterEdition: '2014',
       );
 
       expect(result.map((r) => r['id']), [1, 2]);
@@ -38,6 +39,7 @@ void main() {
       final result = ClassFeatureRowMapper.filterAttained(
         rows,
         classLevels: const {'5': 3},
+        characterEdition: '2014',
       );
 
       expect(result.map((r) => r['id']), [1]);
@@ -53,6 +55,7 @@ void main() {
       final result = ClassFeatureRowMapper.filterAttained(
         rows,
         classLevels: const {'5': 3},
+        characterEdition: '2014',
       );
 
       expect(result, isEmpty);
@@ -72,6 +75,7 @@ void main() {
         rows,
         classLevels: const {},
         subclassLevels: const {'9': 5},
+        characterEdition: '2014',
       );
 
       expect(result.map((r) => r['id']), [1]);
@@ -92,6 +96,7 @@ void main() {
         rows,
         classLevels: const {'5': 3},
         subclassLevels: const {'9': 3},
+        characterEdition: '2014',
       );
 
       expect(result.map((r) => r['id']), [1, 2]);
@@ -107,6 +112,7 @@ void main() {
         rows,
         classLevels: const {},
         subclassLevels: const {'99': 10},
+        characterEdition: '2014',
       );
 
       expect(result, isEmpty);
@@ -122,6 +128,7 @@ void main() {
         rows,
         classLevels: const {'5': 3},
         subclassLevels: const {'9': 3},
+        characterEdition: '2014',
       );
 
       expect(result, isEmpty);
@@ -147,9 +154,92 @@ void main() {
       final result = ClassFeatureRowMapper.filterAttained(
         rows,
         classLevels: const {'5': 5, '7': 5},
+        characterEdition: '2014',
       );
 
       expect(result.map((r) => r['id']), [10, 20, 11, 21]);
+    });
+
+    // Non-régression : contenu pilote "choix d'édition 2014/2024 par
+    // personnage" — une mécanique dont le contenu diffère entre éditions
+    // (ex. Métamagie de l'Ensorceleur) peut désormais avoir 2 lignes
+    // `class_features` sous le même nom, une par édition, potentiellement
+    // au même niveau. Sans le filtre `edition` de `filterAttained`, un
+    // personnage `edition: '2014'` verrait les DEUX lignes retenues (même
+    // niveau atteint pour les deux) et donc l'aptitude affichée EN DOUBLE
+    // sur la carte "APTITUDES DE CLASSE" — même bug que D94/D110
+    // (doublon multiclasse), mais pour la dimension édition.
+    test('exclut une ligne class_features dont `edition` diffère de celle '
+        'du personnage, même niveau atteint pour les deux (régression '
+        'doublon "Métamagie" 2014/2024)', () {
+      final rows = [
+        {'id': 1, 'class_id': 5, 'level': 3, 'edition': '2014'},
+        {'id': 2, 'class_id': 5, 'level': 3, 'edition': '2024'},
+      ];
+
+      final result = ClassFeatureRowMapper.filterAttained(
+        rows,
+        classLevels: const {'5': 3},
+        characterEdition: '2014',
+      );
+
+      expect(result.map((r) => r['id']), [1]);
+    });
+
+    test('exclut une ligne class_features dont `edition` diffère de celle '
+        'du personnage — symétrique, personnage `edition: \'2024\'`', () {
+      final rows = [
+        {'id': 1, 'class_id': 5, 'level': 3, 'edition': '2014'},
+        {'id': 2, 'class_id': 5, 'level': 3, 'edition': '2024'},
+      ];
+
+      final result = ClassFeatureRowMapper.filterAttained(
+        rows,
+        classLevels: const {'5': 3},
+        characterEdition: '2024',
+      );
+
+      expect(result.map((r) => r['id']), [2]);
+    });
+
+    test('une ligne `edition IS NULL` (contenu inchangé entre les deux '
+        'éditions) n\'est jamais exclue par ce filtre, quelle que soit '
+        'characterEdition', () {
+      final rows = [
+        {'id': 1, 'class_id': 5, 'level': 3, 'edition': null},
+      ];
+
+      expect(
+        ClassFeatureRowMapper.filterAttained(
+          rows,
+          classLevels: const {'5': 3},
+          characterEdition: '2014',
+        ).map((r) => r['id']),
+        [1],
+      );
+      expect(
+        ClassFeatureRowMapper.filterAttained(
+          rows,
+          classLevels: const {'5': 3},
+          characterEdition: '2024',
+        ).map((r) => r['id']),
+        [1],
+      );
+    });
+
+    test('une ligne sans clé `edition` du tout (select ne l\'a pas '
+        'demandée) est traitée comme `edition IS NULL`, jamais exclue', () {
+      final rows = [
+        {'id': 1, 'class_id': 5, 'level': 3},
+      ];
+
+      final result = ClassFeatureRowMapper.filterAttained(
+        rows,
+        classLevels: const {'5': 3},
+        characterEdition: '2024',
+      );
+
+      expect(result.map((r) => r['id']), [1]);
     });
   });
 

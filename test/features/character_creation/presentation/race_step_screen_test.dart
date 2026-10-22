@@ -347,10 +347,10 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
-      final title = tester.widget<Text>(find.text('1. Race'));
+      final title = tester.widget<Text>(find.text('2. Race'));
       expect(title.style?.color, AppColors.textOnWood);
 
-      final stepLabel = tester.widget<Text>(find.text('Étape 1 / 9'));
+      final stepLabel = tester.widget<Text>(find.text('Étape 2 / 10'));
       expect(stepLabel.style?.color, AppColors.textOnWoodMuted);
 
       final woodBanner = find
@@ -893,7 +893,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.help_outline));
       await tester.pumpAndSettle();
 
-      expect(find.text('1. RACE'), findsOneWidget);
+      expect(find.text('2. RACE'), findsOneWidget);
     });
 
     testWidgets(

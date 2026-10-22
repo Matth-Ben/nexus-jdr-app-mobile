@@ -56,7 +56,7 @@ class SpellsStepScreen extends ConsumerStatefulWidget {
 enum _SpellTab { cantrip, levelOne }
 
 class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   late List<String> _selectedCantrips;
   late List<String> _selectedLevelOneSpells;
@@ -242,7 +242,7 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
       children: [
         _Header(
           onBack: _goBack,
-          currentStep: 6,
+          currentStep: 7,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
           showCantripTab: showCantripTab,
@@ -531,7 +531,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '6. Sorts',
+                          '7. Sorts',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

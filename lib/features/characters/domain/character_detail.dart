@@ -38,6 +38,23 @@ abstract class CharacterDetail with _$CharacterDetail {
     required String id,
     required String name,
 
+    /// `characters.edition` — `'2014'` (Manuel des Joueurs) ou `'2024'`
+    /// (Manuel des Joueurs revu), choisie une fois pour toutes à la création
+    /// (`EditionStepScreen`, voir `character_creation/domain
+    /// /character_creation_draft.dart::edition`), immuable ensuite : aucun
+    /// écran ne permet de la changer après coup. `@Default('2014')` : même
+    /// défaut que la colonne DB (`not null default '2014'`) et même
+    /// rationale défensive que [isDead]/[currencyGp] pour un ancien cache
+    /// hors-ligne écrit avant l'introduction de cette colonne (payload JSON
+    /// sans `edition`, voir `data/character_detail_row_mapper.dart`) — ce
+    /// repli silencieux reproduit exactement le comportement RAW déjà en
+    /// vigueur pour tout personnage créé avant ce chantier (toujours
+    /// 2014 PHB). Pilote le filtre d'édition sur le contenu Métamagie/
+    /// Expertise (voir `data/character_repository.dart`) et le gating de
+    /// l'échange de Métamagie/de la substitution outils de voleur du
+    /// Roublard (voir `presentation/providers/level_up_provider.dart`).
+    @Default('2014') String edition,
+
     /// URL publique du portrait (`characters.portrait_url`), `null` si le
     /// joueur n'en a pas encore défini un.
     String? portraitUrl,

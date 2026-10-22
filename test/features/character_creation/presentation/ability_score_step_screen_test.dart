@@ -247,10 +247,10 @@ void main() {
     (WidgetTester tester) async {
       await pumpAbilityScoreStep(tester);
 
-      final title = tester.widget<Text>(find.text('4. Caractéristiques'));
+      final title = tester.widget<Text>(find.text('5. Caractéristiques'));
       expect(title.style?.color, AppColors.textOnWood);
 
-      final stepLabel = tester.widget<Text>(find.text('Étape 4 / 9'));
+      final stepLabel = tester.widget<Text>(find.text('Étape 5 / 10'));
       expect(stepLabel.style?.color, AppColors.textOnWoodMuted);
 
       final woodBanner = find
@@ -511,7 +511,7 @@ void main() {
         await tester.tap(find.byIcon(Icons.help_outline));
         await tester.pumpAndSettle();
 
-        expect(find.text('4. CARACTÉRISTIQUES'), findsOneWidget);
+        expect(find.text('5. CARACTÉRISTIQUES'), findsOneWidget);
       },
     );
 
