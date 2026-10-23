@@ -111,6 +111,14 @@ typedef XmlImportSaveData = ({
   /// saveImportedCharacter` n'avait sinon aucun moyen d'obtenir sans
   /// relire la table `classes` une seconde fois.
   String? className,
+
+  /// `character_classes.subclass_id` — sous-classe résolue depuis `classPath`
+  /// (`<classPath>` du XML) contre le catalogue complet `subclasses`
+  /// (`SubclassCatalog`, voir `xml_character_import_resolver.dart`) ; `null`
+  /// si `classPath` est absent du XML (personnage n'ayant pas encore choisi
+  /// de sous-classe) ou non reconnu (jamais bloquant, voir la documentation
+  /// de classe de [XmlImportSaveDataResolver]).
+  int? subclassId,
   int level,
   Map<String, int> abilityScores,
   List<XmlImportLevelHpLine> levelHp,

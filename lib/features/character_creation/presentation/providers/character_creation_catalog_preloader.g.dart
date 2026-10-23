@@ -9,18 +9,23 @@ part of 'character_creation_catalog_preloader.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 /// Vit toute la durée de l'app (`keepAlive`, instancié tôt — voir
-/// `main.dart`) : précharge en arrière-plan les 8 catalogues de référence
+/// `main.dart`) : précharge en arrière-plan les 9 catalogues de référence
 /// non paramétrés de l'assistant de création (`CharacterCreationRepository
 /// .fetchRaceCatalog`/`fetchClassCatalog`/`fetchBackgroundCatalog`/
 /// `fetchToolCatalog`/`fetchLanguageCatalog`/`fetchItemCatalog`/
-/// `fetchSkillCatalog`/`fetchAlignmentCatalog`), pour que leur cache local
-/// (`ReferenceDataCache`, TTL 48h — voir la doc de classe de
-/// `SupabaseCharacterCreationRepository`) soit déjà chaud avant que
+/// `fetchSkillCatalog`/`fetchAlignmentCatalog`/`fetchSubclassCatalog`), pour
+/// que leur cache local (`ReferenceDataCache`, TTL 48h — voir la doc de
+/// classe de `SupabaseCharacterCreationRepository`) soit déjà chaud avant que
 /// l'utilisateur n'atteigne l'assistant de création lui-même — chantier de
 /// performance perçue (réduire les allers-retours réseau visibles à
-/// l'ouverture d'un écran).
+/// l'ouverture d'un écran). `fetchAlignmentCatalog`/`fetchSubclassCatalog` ne
+/// sont jamais consommés par l'assistant de création manuel lui-même (voir
+/// leur documentation respective) mais sont préchargés comme les 7 autres :
+/// même rationale (cache déjà chaud) appliquée à l'écran de vérification de
+/// l'import XML aidedd.org (`features/xml_import/`), qui les consomme tous
+/// les deux.
 ///
-/// `fetchSpellCatalog` (le 9e catalogue) est délibérément exclu de ce
+/// `fetchSpellCatalog` (le 10e catalogue) est délibérément exclu de ce
 /// préchargement : il est paramétré par `classId` (`spell_catalog:$classId`,
 /// une entrée de cache par classe), et aucune classe "par défaut" n'a de
 /// sens à précharger avant que l'utilisateur n'en choisisse une à l'étape
@@ -78,18 +83,23 @@ final characterCreationCatalogPreloaderProvider =
     CharacterCreationCatalogPreloaderProvider._();
 
 /// Vit toute la durée de l'app (`keepAlive`, instancié tôt — voir
-/// `main.dart`) : précharge en arrière-plan les 8 catalogues de référence
+/// `main.dart`) : précharge en arrière-plan les 9 catalogues de référence
 /// non paramétrés de l'assistant de création (`CharacterCreationRepository
 /// .fetchRaceCatalog`/`fetchClassCatalog`/`fetchBackgroundCatalog`/
 /// `fetchToolCatalog`/`fetchLanguageCatalog`/`fetchItemCatalog`/
-/// `fetchSkillCatalog`/`fetchAlignmentCatalog`), pour que leur cache local
-/// (`ReferenceDataCache`, TTL 48h — voir la doc de classe de
-/// `SupabaseCharacterCreationRepository`) soit déjà chaud avant que
+/// `fetchSkillCatalog`/`fetchAlignmentCatalog`/`fetchSubclassCatalog`), pour
+/// que leur cache local (`ReferenceDataCache`, TTL 48h — voir la doc de
+/// classe de `SupabaseCharacterCreationRepository`) soit déjà chaud avant que
 /// l'utilisateur n'atteigne l'assistant de création lui-même — chantier de
 /// performance perçue (réduire les allers-retours réseau visibles à
-/// l'ouverture d'un écran).
+/// l'ouverture d'un écran). `fetchAlignmentCatalog`/`fetchSubclassCatalog` ne
+/// sont jamais consommés par l'assistant de création manuel lui-même (voir
+/// leur documentation respective) mais sont préchargés comme les 7 autres :
+/// même rationale (cache déjà chaud) appliquée à l'écran de vérification de
+/// l'import XML aidedd.org (`features/xml_import/`), qui les consomme tous
+/// les deux.
 ///
-/// `fetchSpellCatalog` (le 9e catalogue) est délibérément exclu de ce
+/// `fetchSpellCatalog` (le 10e catalogue) est délibérément exclu de ce
 /// préchargement : il est paramétré par `classId` (`spell_catalog:$classId`,
 /// une entrée de cache par classe), et aucune classe "par défaut" n'a de
 /// sens à précharger avant que l'utilisateur n'en choisisse une à l'étape
@@ -151,18 +161,23 @@ final class CharacterCreationCatalogPreloaderProvider
         >
     with $Provider<CharacterCreationCatalogPreloader> {
   /// Vit toute la durée de l'app (`keepAlive`, instancié tôt — voir
-  /// `main.dart`) : précharge en arrière-plan les 8 catalogues de référence
+  /// `main.dart`) : précharge en arrière-plan les 9 catalogues de référence
   /// non paramétrés de l'assistant de création (`CharacterCreationRepository
   /// .fetchRaceCatalog`/`fetchClassCatalog`/`fetchBackgroundCatalog`/
   /// `fetchToolCatalog`/`fetchLanguageCatalog`/`fetchItemCatalog`/
-  /// `fetchSkillCatalog`/`fetchAlignmentCatalog`), pour que leur cache local
-  /// (`ReferenceDataCache`, TTL 48h — voir la doc de classe de
-  /// `SupabaseCharacterCreationRepository`) soit déjà chaud avant que
+  /// `fetchSkillCatalog`/`fetchAlignmentCatalog`/`fetchSubclassCatalog`), pour
+  /// que leur cache local (`ReferenceDataCache`, TTL 48h — voir la doc de
+  /// classe de `SupabaseCharacterCreationRepository`) soit déjà chaud avant que
   /// l'utilisateur n'atteigne l'assistant de création lui-même — chantier de
   /// performance perçue (réduire les allers-retours réseau visibles à
-  /// l'ouverture d'un écran).
+  /// l'ouverture d'un écran). `fetchAlignmentCatalog`/`fetchSubclassCatalog` ne
+  /// sont jamais consommés par l'assistant de création manuel lui-même (voir
+  /// leur documentation respective) mais sont préchargés comme les 7 autres :
+  /// même rationale (cache déjà chaud) appliquée à l'écran de vérification de
+  /// l'import XML aidedd.org (`features/xml_import/`), qui les consomme tous
+  /// les deux.
   ///
-  /// `fetchSpellCatalog` (le 9e catalogue) est délibérément exclu de ce
+  /// `fetchSpellCatalog` (le 10e catalogue) est délibérément exclu de ce
   /// préchargement : il est paramétré par `classId` (`spell_catalog:$classId`,
   /// une entrée de cache par classe), et aucune classe "par défaut" n'a de
   /// sens à précharger avant que l'utilisateur n'en choisisse une à l'étape

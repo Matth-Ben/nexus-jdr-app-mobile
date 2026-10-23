@@ -13,6 +13,7 @@ import '../../../character_creation/domain/race_option.dart';
 import '../../../character_creation/domain/skill_catalog.dart';
 import '../../../character_creation/domain/spell_catalog.dart';
 import '../../../character_creation/domain/spell_option.dart';
+import '../../../character_creation/domain/subclass_catalog.dart';
 import '../../../character_creation/domain/tool_catalog.dart';
 import '../../../character_creation/presentation/providers/character_creation_providers.dart';
 import '../../data/xml_character_import_parser.dart';
@@ -23,6 +24,7 @@ import '../../domain/xml_character_import_resolver.dart';
 import '../../domain/xml_field_resolution.dart';
 import '../../domain/xml_import_parse_result.dart';
 import '../../domain/xml_name_resolver.dart';
+import '../../domain/xml_named_option.dart';
 import '../../domain/xml_race_resolver.dart';
 
 part 'xml_import_providers.g.dart';
@@ -85,6 +87,12 @@ typedef XmlImportReviewData = ({
   ItemCatalog itemCatalog,
   SkillCatalog skillCatalog,
   AlignmentCatalog alignmentCatalog,
+
+  /// Catalogue complet des sous-classes (`subclasses`), toutes classes
+  /// confondues — voir `SubclassCatalog` pour le rationale. [_buildRows] de
+  /// `presentation/xml_import_review_screen.dart` en filtre les candidats
+  /// sur `resolved.characterClass` pour la bottom sheet de correction.
+  SubclassCatalog subclassCatalog,
 });
 
 /// Charge, parse et résout un export XML aidedd.org [xmlSource] (contenu
@@ -127,6 +135,7 @@ class XmlImportReviewController extends _$XmlImportReviewController {
     final itemCatalog = await repository.fetchItemCatalog();
     final skillCatalog = await repository.fetchSkillCatalog();
     final alignmentCatalog = await repository.fetchAlignmentCatalog();
+    final subclassCatalog = await repository.fetchSubclassCatalog();
 
     // La classe doit être devinée par nom *avant* de pouvoir charger le
     // catalogue de sorts (paramétré par `classId`, voir
@@ -153,6 +162,10 @@ class XmlImportReviewController extends _$XmlImportReviewController {
       toolCatalog: toolCatalog,
       languageCatalog: languageCatalog,
       spellCatalog: spellCatalog,
+      subclassCandidates: _subclassCandidatesFor(
+        guessedClass: guessedClass,
+        subclassCatalog: subclassCatalog,
+      ),
     );
 
     return (
@@ -167,6 +180,7 @@ class XmlImportReviewController extends _$XmlImportReviewController {
       itemCatalog: itemCatalog,
       skillCatalog: skillCatalog,
       alignmentCatalog: alignmentCatalog,
+      subclassCatalog: subclassCatalog,
     );
   }
 
@@ -185,7 +199,31 @@ class XmlImportReviewController extends _$XmlImportReviewController {
       itemCatalog: current.itemCatalog,
       skillCatalog: current.skillCatalog,
       alignmentCatalog: current.alignmentCatalog,
+      subclassCatalog: current.subclassCatalog,
     ));
+  }
+
+  /// Candidats [XmlNamedOption] de `subclasses` pour la classe déjà résolue
+  /// [guessedClass] (`characterClass`), seul filtre pertinent : deux
+  /// sous-classes de classes différentes peuvent légitimement porter le même
+  /// nom traduit (rare, mais pas garanti impossible), ne jamais proposer de
+  /// candidat d'une autre classe évite une résolution par nom ambiguë. Liste
+  /// vide si [guessedClass] n'est pas [XmlFieldResolutionRecognized] (classe
+  /// elle-même non reconnue) — `classPath` retombe alors systématiquement
+  /// sur [XmlFieldResolution.unrecognized], comportement sûr (voir la
+  /// documentation de classe de [XmlNamedOption]).
+  static List<XmlNamedOption> _subclassCandidatesFor({
+    required XmlFieldResolution<ClassOption> guessedClass,
+    required SubclassCatalog subclassCatalog,
+  }) {
+    return switch (guessedClass) {
+      XmlFieldResolutionRecognized<ClassOption>(:final value) => [
+        for (final subclass in subclassCatalog.subclasses)
+          if (subclass.classId == value.id)
+            XmlNamedOption(id: subclass.id, name: subclass.name),
+      ],
+      _ => const [],
+    };
   }
 
   /// Corrige la race vers l'entrée [name] de [RaceCatalog.races] (candidats
@@ -226,7 +264,13 @@ class XmlImportReviewController extends _$XmlImportReviewController {
       candidates: current.classCatalog.classes,
       nameOf: (classOption) => classOption.name,
     );
-    _updateResolved(current.resolved.copyWith(characterClass: match));
+    // La sous-classe déjà résolue (`classPath`) l'était contre les candidats
+    // de l'ancienne classe (voir [_subclassCandidatesFor]) : changer de
+    // classe invalide ce choix, même discipline que `race`/`subrace` dans
+    // [correctRace].
+    _updateResolved(
+      current.resolved.copyWith(characterClass: match, subclass: null),
+    );
   }
 
   void correctBackground(String name) {
@@ -238,6 +282,25 @@ class XmlImportReviewController extends _$XmlImportReviewController {
       nameOf: (background) => background.name,
     );
     _updateResolved(current.resolved.copyWith(background: match));
+  }
+
+  /// Corrige la sous-classe (`classPath`) vers l'entrée [name] parmi les
+  /// candidates de la classe ACTUELLEMENT résolue (`current.resolved
+  /// .characterClass`, pas la classe devinée au chargement initial — une
+  /// correction de classe précédente via [correctClass] change le jeu de
+  /// candidats pertinent) — voir [_subclassCandidatesFor].
+  void correctSubclass(String name) {
+    final current = state.value;
+    if (current == null) return;
+    final match = XmlNameResolver.resolveByName(
+      rawName: name,
+      candidates: _subclassCandidatesFor(
+        guessedClass: current.resolved.characterClass,
+        subclassCatalog: current.subclassCatalog,
+      ),
+      nameOf: (subclass) => subclass.name,
+    );
+    _updateResolved(current.resolved.copyWith(subclass: match));
   }
 
   /// Corrige une entrée de `toolProficiencies[groupId][index]` vers l'outil

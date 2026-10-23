@@ -24,6 +24,7 @@ import 'package:personnages/features/character_creation/domain/race_catalog.dart
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_option.dart';
+import 'package:personnages/features/character_creation/domain/subclass_catalog.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
@@ -156,6 +157,9 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   @override
   Future<AlignmentCatalog> fetchAlignmentCatalog() =>
       throw UnimplementedError();
+
+  @override
+  Future<SubclassCatalog> fetchSubclassCatalog() => throw UnimplementedError();
 
   @override
   Future<String> createCharacter({

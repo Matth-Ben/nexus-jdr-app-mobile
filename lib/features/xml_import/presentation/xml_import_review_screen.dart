@@ -12,6 +12,7 @@ import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/sheet_header_bar.dart';
 import '../../character_creation/domain/ability_score_definitions.dart';
 import '../../character_creation/domain/character_creation_failure.dart';
+import '../../character_creation/domain/class_option.dart';
 import '../../character_creation/domain/race_option.dart';
 import '../../character_creation/domain/racial_bonus_choice.dart';
 import '../../character_creation/domain/spell_option.dart';
@@ -427,15 +428,18 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
   ///
   /// Périmètre volontairement réduit par rapport au tableau complet du
   /// cahier des charges : `styleCombat1`/`styleCombat2`/`favoredEnemy0`/
-  /// `favoredEnemy6`/`favoredEnemy14`/`pack`/`classPath` (sous-classe)/
-  /// `knownInvocation` ne sont ni affichés ni corrigibles ici — aucune table
-  /// de correspondance fiable ni aucun catalogue Supabase encore précédent
-  /// dans ce dépôt pour ces champs (`class_features`/`invocations`/
-  /// `subclasses`), et l'assistant de création manuel lui-même ne propose
-  /// encore aucun choix de sous-classe/invocation/style de combat — les
-  /// afficher comme "corrigibles" aurait été trompeur (aucune correction
-  /// n'aurait jamais rien changé à la sauvegarde). Décision de périmètre
-  /// signalée au chef de projet plutôt qu'appliquée silencieusement.
+  /// `favoredEnemy6`/`favoredEnemy14`/`pack`/`knownInvocation` ne sont ni
+  /// affichés ni corrigibles ici — aucune table de correspondance fiable ni
+  /// aucun catalogue Supabase encore précédent dans ce dépôt pour ces champs
+  /// (`class_features`/`invocations`) — les afficher comme "corrigibles"
+  /// aurait été trompeur (aucune correction n'aurait jamais rien changé à la
+  /// sauvegarde). Décision de périmètre signalée au chef de projet plutôt
+  /// qu'appliquée silencieusement.
+  ///
+  /// `classPath` (sous-classe) n'est en revanche plus dans ce lot exclu
+  /// depuis que la table `subclasses` est peuplée : affiché et corrigible
+  /// comme Race/Classe/Historique, voir le bloc "Sous-classe" ci-dessous et
+  /// `SubclassCatalog`/[XmlImportReviewController.correctSubclass].
   List<Widget> _buildRows(BuildContext context, XmlImportReviewData data) {
     final resolved = data.resolved;
     final widgets = <Widget>[];
@@ -521,6 +525,37 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
       ],
       onCorrect: (label) => _controller().correctClass(label),
     );
+
+    // Sous-classe (`classPath`) : affichée uniquement si présente dans le
+    // fichier source (`resolved.subclass == null` signifie "personnage
+    // n'ayant pas encore choisi de sous-classe", voir la documentation de
+    // `XmlCharacterImportResolved.subclass` — jamais une alerte dans ce cas,
+    // même principe que "Expérience"/`resolved.xp`). Contrairement aux
+    // autres champs à catalogue unique (Race/Classe/Historique), les
+    // candidats de correction sont filtrés sur la classe ACTUELLEMENT
+    // résolue (`resolved.characterClass`, qui peut avoir déjà été corrigée
+    // ci-dessus) : deux sous-classes de classes différentes peuvent
+    // légitimement porter le même nom traduit, voir
+    // `XmlImportReviewController._subclassCandidatesFor`.
+    final subclassResolution = resolved.subclass;
+    if (subclassResolution != null) {
+      final classIdForSubclass = switch (resolved.characterClass) {
+        XmlFieldResolutionRecognized<ClassOption>(:final value) => value.id,
+        _ => null,
+      };
+      _addSingleCatalogField(
+        addSummary: addSummary,
+        addAlert: addAlert,
+        title: 'Sous-classe',
+        resolution: subclassResolution,
+        valueOf: (subclass) => subclass.name,
+        candidates: [
+          for (final subclass in data.subclassCatalog.subclasses)
+            if (subclass.classId == classIdForSubclass) subclass.name,
+        ],
+        onCorrect: (label) => _controller().correctSubclass(label),
+      );
+    }
 
     // Niveau.
     addSummary('Niveau', '${resolved.level}');
@@ -810,19 +845,20 @@ class _XmlImportReviewScreenState extends ConsumerState<XmlImportReviewScreen> {
   /// Construit le message de la carte informative neutre listant les champs
   /// réellement présents dans [resolved] mais non importés automatiquement
   /// (`styleCombat1`/`styleCombat2` -> "Style de combat", `favoredEnemy0`/
-  /// `favoredEnemy6`/`favoredEnemy14` -> "Ennemi juré", `subclass` ->
-  /// "Sous-classe", `knownInvocations` -> "Invocation connue") ainsi que les
-  /// augmentations de caractéristiques (`aug_carac0/1/2`, voir
-  /// `docs/xml-import-reference-mapping.md` section "aug_caracN (ASI) —
-  /// correction" : hypothèse de mapping initiale invalidée, aucune
-  /// persistance construite dessus pour ne pas fausser silencieusement les
-  /// caractéristiques d'un personnage importé). `null` si aucun de ces
-  /// champs n'est présent dans ce fichier précis.
+  /// `favoredEnemy6`/`favoredEnemy14` -> "Ennemi juré", `knownInvocations` ->
+  /// "Invocation connue") ainsi que les augmentations de caractéristiques
+  /// (`aug_carac0/1/2`, voir `docs/xml-import-reference-mapping.md` section
+  /// "aug_caracN (ASI) — correction" : hypothèse de mapping initiale
+  /// invalidée, aucune persistance construite dessus pour ne pas fausser
+  /// silencieusement les caractéristiques d'un personnage importé). `null`
+  /// si aucun de ces champs n'est présent dans ce fichier précis.
+  ///
+  /// `subclass` n'y figure plus (voir la doc de [_buildRows]) : affiché et
+  /// corrigible comme un champ normal désormais, plus "non importé".
   String? _buildUnhandledInfoMessage(XmlCharacterImportResolved resolved) {
     final unhandledFields = [
       if (resolved.styleCombat1 != null || resolved.styleCombat2 != null)
         'Style de combat',
-      if (resolved.subclass != null) 'Sous-classe',
       if (resolved.knownInvocations.isNotEmpty) 'Invocation connue',
       if (resolved.favoredEnemy0 != null ||
           resolved.favoredEnemy6 != null ||

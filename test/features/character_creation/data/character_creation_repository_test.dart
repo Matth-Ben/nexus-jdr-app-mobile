@@ -31,10 +31,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Ces tests couvrent la stratégie "réseau d'abord, cache en secours" du
 /// cache local (`ReferenceDataCache`, `lib/core/cache/`) sur
-/// `SupabaseCharacterCreationRepository`, pour les 9 catalogues
+/// `SupabaseCharacterCreationRepository`, pour les 10 catalogues
 /// `fetchXCatalog` (voir [_testCatalogCaching], appelé une fois par
-/// catalogue dans `main()` — `fetchAlignmentCatalog` ajouté après coup, pour
-/// `features/xml_import/`, voir la doc de classe d'`AlignmentOption`).
+/// catalogue dans `main()` — `fetchAlignmentCatalog`/`fetchSubclassCatalog`
+/// ajoutés après coup, pour `features/xml_import/`, voir la doc de classe
+/// d'`AlignmentOption`/`SubclassCatalog`).
 /// Aucun double factice de `SupabaseClient`
 /// lui-même n'existait déjà dans ce dépôt avant cette tâche (voir
 /// `test_integration/README.md` : les repositories `Supabase*` sont
@@ -330,6 +331,26 @@ void main() {
         expect(catalog.alignments, hasLength(1));
         expect(catalog.alignments.single.name, 'Loyal bon');
         expect(catalog.alignments.single.id, 8);
+      },
+    );
+
+    _testCatalogCaching(
+      description: 'fetchSubclassCatalog',
+      cacheKey: 'subclass_catalog',
+      cache: () => cache,
+      fetch: (repository) => repository.fetchSubclassCatalog(),
+      tableRows: {
+        'subclasses': [
+          {'id': 9, 'class_id': 3},
+        ],
+        'translations': [
+          {'entity_id': '9', 'value': 'Domaine de la vie'},
+        ],
+      },
+      verifySuccess: (dynamic catalog) {
+        expect(catalog.subclasses, hasLength(1));
+        expect(catalog.subclasses.single.name, 'Domaine de la vie');
+        expect(catalog.subclasses.single.classId, 3);
       },
     );
 

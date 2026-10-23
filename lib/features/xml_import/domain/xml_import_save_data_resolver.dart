@@ -15,6 +15,7 @@ import 'xml_field_resolution.dart';
 import 'xml_import_hit_points_calculator.dart';
 import 'xml_import_save_data.dart';
 import 'xml_name_resolver.dart';
+import 'xml_named_option.dart';
 
 /// Ferme le chaînon manquant laissé ouvert par l'increment 1 (voir la
 /// documentation de classe de `aidedd_reference_tables.dart`) : convertit un
@@ -24,6 +25,13 @@ import 'xml_name_resolver.dart';
 /// **libellé aidedd** (`String`) — vers de vrais identifiants des tables de
 /// référence internes de l'app (`items.id`/`skills.id`/`alignments.id`),
 /// prêts à être écrits par `data/xml_import_repository.dart`.
+///
+/// `subclass` subit un passage similaire, mais plus léger : déjà résolu vers
+/// un vrai [XmlNamedOption] (`subclasses.id`) par l'increment 1 (voir
+/// `xml_character_import_resolver.dart`), il ne reste ici qu'à en extraire
+/// l'`id` vers [XmlImportSaveData.subclassId] (voir plus bas) — `null` sans
+/// erreur si `resolved.subclass` n'est pas [XmlFieldResolutionRecognized]
+/// (absent du XML ou non reconnu), jamais bloquant.
 ///
 /// Race/classe/historique/outils/langues/sorts n'ont **pas** besoin de ce
 /// second passage : `xml_character_import_resolver.dart` (increment 1) les
@@ -76,6 +84,16 @@ abstract final class XmlImportSaveDataResolver {
     final subclassName = switch (resolved.subclass) {
       XmlFieldResolutionRecognized(:final value) => value.name,
       XmlFieldResolutionUnrecognized(:final rawValue) => rawValue,
+      _ => null,
+    };
+    // `character_classes.subclass_id` : seulement pour une sous-classe
+    // effectivement reconnue contre le catalogue complet `subclasses`
+    // ([SubclassCatalog], voir `xml_character_import_resolver.dart`) — un
+    // `classPath` absent ou non reconnu (faute de frappe, mauvaise classe)
+    // retombe sur `null`, jamais bloquant (voir la documentation de classe).
+    final subclassId = switch (resolved.subclass) {
+      XmlFieldResolutionRecognized<XmlNamedOption>(:final value) =>
+        value.id is int ? value.id as int : int.tryParse(value.id.toString()),
       _ => null,
     };
     // Export de l'app : PV maximum déjà définitifs (bonus compris), voir
@@ -134,6 +152,7 @@ abstract final class XmlImportSaveDataResolver {
       currencyCp: resolved.cp,
       classId: classValue?.id,
       className: classValue?.name,
+      subclassId: subclassId,
       level: resolved.level,
       abilityScores: abilityScores,
       levelHp: [

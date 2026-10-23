@@ -32,6 +32,7 @@ import '../domain/skill_catalog.dart';
 import '../domain/skill_proficiency_resolver.dart';
 import '../domain/spell_catalog.dart';
 import '../domain/spell_selection_resolver.dart';
+import '../domain/subclass_catalog.dart';
 import '../domain/tool_catalog.dart';
 import '../domain/tool_proficiency_resolver.dart';
 import 'background_row_mapper.dart';
@@ -42,6 +43,7 @@ import 'language_row_mapper.dart';
 import 'race_row_mapper.dart';
 import 'skill_row_mapper.dart';
 import 'spell_row_mapper.dart';
+import 'subclass_row_mapper.dart';
 import 'tool_row_mapper.dart';
 
 /// Langue d'affichage des noms de race/sous-race/classe, en dur pour
@@ -76,12 +78,15 @@ const String _skillCatalogErrorMessage =
 const String _alignmentCatalogErrorMessage =
     'Impossible de charger les alignements disponibles. Réessayez.';
 
+const String _subclassCatalogErrorMessage =
+    'Impossible de charger les sous-classes disponibles. Réessayez.';
+
 const String _createCharacterErrorMessage =
     'Impossible de créer le personnage. Réessayez.';
 
-/// Clés de cache (`ReferenceDataCache`) des 7 catalogues non paramétrés —
+/// Clés de cache (`ReferenceDataCache`) des 8 catalogues non paramétrés —
 /// `fetchSpellCatalog` construit la sienne dynamiquement (`'spell_catalog_v2:$classId'`,
-/// voir sa documentation), les 7 autres sont globales (une seule entrée pour
+/// voir sa documentation), les 8 autres sont globales (une seule entrée pour
 /// tous les utilisateurs/personnages, ce sont des données de référence).
 const String _raceCatalogCacheKey = 'race_catalog';
 const String _classCatalogCacheKey = 'class_catalog';
@@ -91,6 +96,7 @@ const String _languageCatalogCacheKey = 'language_catalog';
 const String _itemCatalogCacheKey = 'item_catalog';
 const String _skillCatalogCacheKey = 'skill_catalog';
 const String _alignmentCatalogCacheKey = 'alignment_catalog';
+const String _subclassCatalogCacheKey = 'subclass_catalog';
 
 /// Passerelle vers les données de l'assistant de création de personnage.
 ///
@@ -174,6 +180,18 @@ abstract class CharacterCreationRepository {
   /// jamais par l'assistant de création lui-même (`characters.alignment_id`
   /// y reste toujours `null`, voir [createCharacter]).
   Future<AlignmentCatalog> fetchAlignmentCatalog();
+
+  /// Récupère l'intégralité des sous-classes disponibles (`subclasses`),
+  /// toutes classes et tous niveaux d'obtention confondus, avec leur nom
+  /// déjà résolu (`translations`, locale FR) — voir la documentation de
+  /// classe de [SubclassCatalog]/[SubclassOption] pour le rationale complet.
+  /// Utilisé par l'écran de vérification de l'import XML aidedd.org
+  /// (`features/xml_import/`) pour résoudre `classPath`, jamais par
+  /// l'assistant de création manuel lui-même (qui choisit sa propre
+  /// sous-classe de niveau 1 via `SubclassChoiceRepository`, un catalogue
+  /// distinct et volontairement filtré) — même rationale que
+  /// [fetchAlignmentCatalog].
+  Future<SubclassCatalog> fetchSubclassCatalog();
 
   /// Crée le personnage complet à partir du brouillon [draft] et des
   /// catalogues déjà résolus (déjà chargés par l'écran "Récapitulatif" pour
@@ -1002,6 +1020,61 @@ class SupabaseCharacterCreationRepository
         final id = (row['id'] as num).toInt();
         return AlignmentOption(id: id, name: names[id.toString()] ?? '');
       }).toList(),
+    );
+  }
+
+  @override
+  Future<SubclassCatalog> fetchSubclassCatalog() async {
+    final freshCached = await _mappedFromFreshCache(
+      _subclassCatalogCacheKey,
+      _mapSubclassCatalogPayload,
+    );
+    if (freshCached != null) return freshCached;
+    try {
+      final subclassRows = await _client
+          .from('subclasses')
+          .select('id, class_id')
+          .order('id', ascending: true);
+
+      final nameRows = await _fetchTranslationRows(
+        entityType: 'subclass',
+        entityIds: SubclassRowMapper.collectIds(subclassRows),
+      );
+
+      final payload = <String, dynamic>{
+        'subclasses': subclassRows,
+        'subclassNames': nameRows,
+      };
+      await _writeCacheBestEffort(_subclassCatalogCacheKey, payload);
+      return _mapSubclassCatalogPayload(payload);
+    } on PostgrestException catch (error) {
+      final cached = await _mappedFromCache(
+        _subclassCatalogCacheKey,
+        _mapSubclassCatalogPayload,
+      );
+      if (cached != null) return cached;
+      throw mapCharacterCreationError(
+        error,
+        fallbackMessage: _subclassCatalogErrorMessage,
+      );
+    } catch (_) {
+      final cached = await _mappedFromCache(
+        _subclassCatalogCacheKey,
+        _mapSubclassCatalogPayload,
+      );
+      if (cached != null) return cached;
+      throw mapUnknownCharacterCreationError();
+    }
+  }
+
+  SubclassCatalog _mapSubclassCatalogPayload(Map<String, dynamic> payload) {
+    final names = SubclassRowMapper.parseTranslatedNames(
+      _rowsOf(payload['subclassNames']),
+    );
+    return SubclassCatalog(
+      subclasses: _rowsOf(payload['subclasses'])
+          .map((row) => SubclassRowMapper.toSubclassOption(row, names: names))
+          .toList(),
     );
   }
 

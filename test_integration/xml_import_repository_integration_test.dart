@@ -286,6 +286,7 @@ XmlImportSaveData _minimalSaveData({
     currencyCp: 0,
     classId: classId,
     className: className,
+    subclassId: null,
     level: level,
     abilityScores: const <String, int>{},
     levelHp: const [],
