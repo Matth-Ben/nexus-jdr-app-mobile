@@ -1026,6 +1026,17 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
 /// exactement la valeur demandée. Les filtres `.inFilter(...)` (encodés
 /// `in.(...)`), `.lte(...)`, `.order(...)` restent ignorés (hors périmètre
 /// de D105).
+///
+/// **Divergence délibérée** par rapport à `_matchesEq` de
+/// `character_repository_level_up_elemental_disciplines_test.dart`, qui
+/// implémente la sémantique SQL/PostgREST EXACTE d'un `eq` (une colonne
+/// absente/NULL ne correspond JAMAIS à un filtre `.eq(...)`, précisément le
+/// comportement qui a produit la régression D86) : ici, une colonne ABSENTE
+/// passe le filtre. Conséquence directe pour tout futur scénario de ce
+/// fichier : une nouvelle ligne `class_features` DOIT déclarer explicitement
+/// `class_id`/`choice_type` (même `null`) pour rester couverte par ce
+/// filtrage — l'omettre repasse silencieusement cette ligne en mode
+/// permissif et rouvre le trou que D105 vient de fermer.
 bool _rowMatchesEqFilters(Map<String, dynamic> row, Map<String, String> query) {
   for (final entry in query.entries) {
     if (!entry.value.startsWith('eq.')) continue;
