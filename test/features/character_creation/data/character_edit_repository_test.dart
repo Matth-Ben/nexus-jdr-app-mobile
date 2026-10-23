@@ -410,6 +410,74 @@ void main() {
       expect(insertedRow(onSkills[2]), {'proficiency': 'competente'});
       expect(onSkills[2].url.queryParameters['skill_id'], 'in.(7)');
     });
+
+    test('classChange (classChanged: true) ET classFeatureChoiceWrite dans '
+        'le même plan : la purge en bloc de character_class_options '
+        '(classChange.classChanged) précède toujours la résolution/'
+        'réinsertion de la nouvelle valeur nommée (GET class_features -> '
+        'DELETE scopé par class_feature_id -> POST)', () async {
+      final requests = <http.Request>[];
+      final client = await signedInClient(
+        requests: requests,
+        classFeatureRows: [
+          {'id': 15},
+        ],
+      );
+
+      await SupabaseCharacterEditRepository(client).save(
+        characterId: characterId,
+        plan: const CharacterEditPlan(
+          characterUpdate: {'name': 'Brasc'},
+          classChange: (
+            classId: 5,
+            subclassId: null,
+            hpRolled: 10,
+            classChanged: true,
+          ),
+          classFeatureChoiceWrite: (
+            classId: 5,
+            choiceType: 'style_combat',
+            chosenValue: 'Duel',
+          ),
+        ),
+      );
+
+      // Purge en bloc : le seul DELETE sur character_class_options SANS
+      // filtre class_feature_id (déclenchée par classChange.classChanged,
+      // AVANT toute résolution de choix nommé).
+      final bulkPurgeIndex = requests.indexWhere(
+        (request) =>
+            request.method == 'DELETE' &&
+            request.url.pathSegments.last == 'character_class_options' &&
+            !request.url.queryParameters.containsKey('class_feature_id'),
+      );
+      final featureQueryIndex = requests.indexWhere(
+        (request) => request.url.pathSegments.last == 'class_features',
+      );
+      final scopedDeleteIndex = requests.indexWhere(
+        (request) =>
+            request.method == 'DELETE' &&
+            request.url.pathSegments.last == 'character_class_options' &&
+            request.url.queryParameters['class_feature_id'] == 'eq.15',
+      );
+      final insertIndex = requests.indexWhere(
+        (request) =>
+            request.method == 'POST' &&
+            request.url.pathSegments.last == 'character_class_options',
+      );
+
+      expect(bulkPurgeIndex, isNot(-1));
+      expect(featureQueryIndex, isNot(-1));
+      expect(scopedDeleteIndex, isNot(-1));
+      expect(insertIndex, isNot(-1));
+      // Ordre réel attendu : purge en bloc -> GET class_features -> DELETE
+      // scopé -> POST. Sans cet ordre, la purge en bloc (déclenchée par le
+      // changement de classe) pourrait effacer la ligne que la résolution
+      // du choix nommé vient d'insérer pour la NOUVELLE classe.
+      expect(bulkPurgeIndex, lessThan(featureQueryIndex));
+      expect(featureQueryIndex, lessThan(scopedDeleteIndex));
+      expect(scopedDeleteIndex, lessThan(insertIndex));
+    });
   });
 
   group('lecture, plan puis enregistrement — sorts innés (D09)', () {

@@ -1459,6 +1459,50 @@ void main() {
           expect(plan.expertiseSkillUpgrades, isEmpty);
           expect(plan.expertiseOptionsWrite, isNull);
         });
+
+        test('une compétence nouvellement choisie comme compétence de '
+            "classe (absente de storedSkills) ET mise en Expertise dans le "
+            "même brouillon : skillInserts ET expertiseSkillUpgrades "
+            'portent toutes les deux son id — plan réel du '
+            'planificateur, pas écrit à la main', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 9,
+            // `_ermite` (historique par défaut de `_plan`) ne maîtrise ni
+            // n'octroie Athlétisme : son ajout ne peut venir que du choix de
+            // compétence de classe ci-dessous, jamais de l'historique.
+            skillIds: const [7],
+            expertiseSkillIds: const [7],
+          );
+          final original = _hydrate(snapshot, classOption: _realRoublard);
+          expect(original.classSkillChoices, ['Discrétion']);
+          expect(original.expertiseSkillChoices, ['Discrétion']);
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(
+              classSkillChoices: const ['Discrétion', 'Athlétisme'],
+              expertiseSkillChoices: const ['Discrétion', 'Athlétisme'],
+            ),
+            originalClass: _realRoublard,
+            editedClass: _realRoublard,
+          );
+
+          // Athlétisme = skill id 1 (`_skills`).
+          expect(plan.skillInserts, contains(1));
+          expect(plan.expertiseSkillUpgrades, contains(1));
+          expect(
+            plan.skillInserts.intersection(plan.expertiseSkillUpgrades),
+            isNotEmpty,
+            reason:
+                'une compétence peut être écrite dans les deux ensembles à '
+                'la fois : `expertiseSkillUpgrades` suppose déjà la ligne '
+                'créée par `skillInserts` (voir le commentaire sur '
+                "l'ordre des requêtes dans "
+                '`character_edit_repository_test.dart`)',
+          );
+        });
       });
 
       test('au-delà du niveau 1 (canChangeClass faux) : les 3 écritures '
