@@ -1630,7 +1630,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_class_options(class_feature_id, level, chosen_value),
             character_race_choices(kind, skill_id, tool_id),
             character_invocations(invocation_id),
-            character_feats(feat_id),
+            character_feats(feat_id, level_taken),
             character_inventory(
               id, item_id, custom_name, quantity, equipped, weapon_slot, is_attuned, notes,
               items(
@@ -6437,17 +6437,18 @@ class SupabaseCharacterRepository implements CharacterRepository {
       entityIds: CharacterDetailRowMapper.collectRaceIds(row),
     );
     // Vitesse de déplacement (onglet "Personnage", `CharacterStatPillsRow`)
-    // : contrairement au nom de race (résolu via `translations` ci-dessus),
-    // `speed` est une colonne directe de `races` — requête dédiée plutôt
-    // qu'un ajout à `_fetchTranslationRows` (qui ne connaît que la table
-    // `translations`). `race_id` est unique par personnage (pas un ensemble
-    // comme les classes), un simple `.maybeSingle()` suffit.
+    // ET traits raciaux (onglet "Aptitudes", carte "TRAITS RACIAUX") :
+    // contrairement au nom de race (résolu via `translations` ci-dessus),
+    // `speed`/`traits` sont des colonnes directes de `races` — requête
+    // dédiée plutôt qu'un ajout à `_fetchTranslationRows` (qui ne connaît
+    // que la table `translations`). `race_id` est unique par personnage (pas
+    // un ensemble comme les classes), un simple `.maybeSingle()` suffit.
     final raceId = row['race_id'];
     final raceRow = raceId == null
         ? null
         : await _client
               .from('races')
-              .select('id, speed')
+              .select('id, speed, traits')
               .eq('id', raceId)
               .maybeSingle();
     final subraceNameRows = await _fetchTranslationRows(
@@ -6455,6 +6456,18 @@ class SupabaseCharacterRepository implements CharacterRepository {
       fieldName: 'name',
       entityIds: CharacterDetailRowMapper.collectSubraceIds(row),
     );
+    // Traits raciaux de la sous-race (si le personnage en a une), à la
+    // suite de ceux de la race de base ci-dessus — même rationale que
+    // [raceRow] : `traits` est une colonne directe de `subraces`, hors de
+    // portée de `_fetchTranslationRows`.
+    final subraceId = row['subrace_id'];
+    final subraceRow = subraceId == null
+        ? null
+        : await _client
+              .from('subraces')
+              .select('id, traits')
+              .eq('id', subraceId)
+              .maybeSingle();
     final classNameRows = await _fetchTranslationRows(
       entityType: 'class',
       fieldName: 'name',
@@ -6490,14 +6503,30 @@ class SupabaseCharacterRepository implements CharacterRepository {
       ).map((id) => id.toString()).toSet(),
     );
     // Noms des dons possédés (`character_feats`) — bonus de PV du don
-    // Robuste, voir `domain/hit_point_bonus_rules.dart`.
+    // Robuste, voir `domain/hit_point_bonus_rules.dart`. Descriptions +
+    // prérequis textuels ajoutés pour la carte "DONS" de l'onglet
+    // "Aptitudes" (`character_feats_card.dart`) : même résolution que
+    // `LevelUpFeatRowMapper`/`fetchAvailableFeats` côté montée de niveau,
+    // dupliquée ici (voir la doc de classe de `CharacterFeatSummary`).
+    final featIds = CharacterDetailRowMapper.collectFeatIds(
+      CharacterDetailRowMapper.featRowsOf(row),
+    );
     final featNameRows = await _fetchTranslationRows(
       entityType: 'feat',
       fieldName: 'name',
-      entityIds: CharacterDetailRowMapper.collectFeatIds(
-        CharacterDetailRowMapper.featRowsOf(row),
-      ),
+      entityIds: featIds,
     );
+    final featDescriptionRows = await _fetchTranslationRows(
+      entityType: 'feat',
+      fieldName: 'description',
+      entityIds: featIds,
+    );
+    final featPrerequisiteRows = featIds.isEmpty
+        ? const <Map<String, dynamic>>[]
+        : await _client
+              .from('feats')
+              .select('id, prerequisites')
+              .inFilter('id', featIds.map(int.parse).toList());
 
     // Les 18 [CharacterSkillRow] de l'onglet "Compétences" : `skills` est
     // une table de référence à peuplement fixe (pas liée à `characters`),
@@ -6790,6 +6819,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     return <String, dynamic>{
       CharacterDetailCache.rowKey: row,
       'raceRow': raceRow,
+      'subraceRow': subraceRow,
       'pactWeaponItemRow': pactWeaponItemRow,
       'pactWeaponNameRows': pactWeaponNameRows,
       'raceNameRows': raceNameRows,
@@ -6800,6 +6830,8 @@ class SupabaseCharacterRepository implements CharacterRepository {
       'subclassNameRows': subclassNameRows,
       'invocationNameRows': invocationNameRows,
       'featNameRows': featNameRows,
+      'featDescriptionRows': featDescriptionRows,
+      'featPrerequisiteRows': featPrerequisiteRows,
       'skillRows': skillRows,
       'skillNameRows': skillNameRows,
       'classFeatureRows': classFeatureRows,
@@ -6916,9 +6948,24 @@ class SupabaseCharacterRepository implements CharacterRepository {
     );
     // Absente d'un cache écrit avant l'ajout des dons : `_rowsOf` renvoie
     // alors une liste vide (aucun don connu, comportement antérieur).
-    final featNames = CharacterRowMapper.parseTranslatedNames(
+    final featNameMap = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['featNameRows']),
-    ).values.toList()..sort();
+    );
+    final featNames = featNameMap.values.toList()..sort();
+    // Carte "DONS" de l'onglet "Aptitudes" — absente (listes vides) d'un
+    // cache écrit avant l'ajout de la description/du prérequis : chaque don
+    // retombe alors sur une description vide et aucun prérequis, jamais de
+    // crash (voir `CharacterDetailRowMapper.parseFeats`).
+    final feats = CharacterDetailRowMapper.parseFeats(
+      CharacterDetailRowMapper.featRowsOf(row),
+      names: featNameMap,
+      descriptions: CharacterRowMapper.parseTranslatedNames(
+        _rowsOf(payload['featDescriptionRows']),
+      ),
+      prerequisiteTexts: CharacterDetailRowMapper.parseFeatPrerequisiteTexts(
+        _rowsOf(payload['featPrerequisiteRows']),
+      ),
+    );
 
     final skillNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['skillNameRows']),
@@ -7111,6 +7158,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
 
     final raceRow = payload['raceRow'] as Map<String, dynamic>?;
     final speed = (raceRow?['speed'] as num?)?.toInt();
+    // Carte "TRAITS RACIAUX" de l'onglet "Aptitudes" — race de base d'abord,
+    // puis sous-race à la suite (ordre authored en base préservé dans
+    // chacune des deux listes, voir `CharacterDetailRowMapper.parseRaceTraits`).
+    final subraceRow = payload['subraceRow'] as Map<String, dynamic>?;
+    final racialTraits = [
+      ...CharacterDetailRowMapper.parseRaceTraits(raceRow?['traits']),
+      ...CharacterDetailRowMapper.parseRaceTraits(subraceRow?['traits']),
+    ];
 
     // Absente des payloads mis en cache avant l'arme de pacte : `null`.
     final pactWeaponItemRow = payload['pactWeaponItemRow'];
@@ -7134,6 +7189,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       subclassNames: subclassNames,
       skills: skills,
       classFeatures: classFeatures,
+      racialTraits: racialTraits,
       classChoices: classChoices,
       raceSkillChoiceNames: raceSkillChoiceNames,
       raceToolChoiceNames: raceToolChoiceNames,
@@ -7143,6 +7199,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       spellSlots: CharacterDetailRowMapper.parseSpellSlots(row),
       knownInvocationNames: knownInvocationNames,
       featNames: featNames,
+      feats: feats,
       inventory: inventory,
       adventures: adventures,
       pactWeapon: pactWeapon,

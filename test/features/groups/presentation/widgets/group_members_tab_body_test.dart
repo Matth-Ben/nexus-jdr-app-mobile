@@ -343,4 +343,78 @@ void main() {
       expect(find.textContaining('(toi)', findRichText: true), findsOneWidget);
     });
   });
+
+  group('Ligne 3 : Classe d\'Armure (GroupMember.armorClass)', () {
+    const gameMaster = GroupMember(
+      userId: 'user-mj',
+      role: GroupRole.membre,
+      name: 'Oswald',
+      isGameMaster: true,
+    );
+    const orphan = GroupMember(
+      userId: 'user-orphan',
+      role: GroupRole.membre,
+      name: "En attente d'un personnage",
+      isGameMaster: false,
+    );
+
+    testWidgets('armorClassBonus nul -> "CA {valeur}" seul, sans suffixe', (
+      tester,
+    ) async {
+      final member = _me.copyWith(armorClass: 16, armorClassBonus: 0);
+      await _pump(tester, _detail([member]));
+
+      expect(find.text('CA 16'), findsOneWidget);
+    });
+
+    testWidgets(
+      'armorClassBonus positif -> suffixe signé "+N" après la valeur',
+      (tester) async {
+        final member = _me.copyWith(armorClass: 18, armorClassBonus: 2);
+        await _pump(tester, _detail([member]));
+
+        expect(find.text('CA 16'), findsNothing);
+        expect(
+          find.textContaining('CA 18 +2', findRichText: true),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'armorClassBonus négatif -> suffixe signé avec le vrai signe moins '
+      'Unicode',
+      (tester) async {
+        final member = _me.copyWith(armorClass: 13, armorClassBonus: -1);
+        await _pump(tester, _detail([member]));
+
+        expect(
+          find.textContaining('CA 13 −1', findRichText: true),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'armorClass null (ex. membre pas encore enrichi) -> aucune ligne CA',
+      (tester) async {
+        // `_friend` n'a pas `armorClass` renseigné (null par défaut).
+        await _pump(tester, _detail([_friend]));
+
+        expect(find.textContaining('CA '), findsNothing);
+      },
+    );
+
+    testWidgets('jamais affichée sur la carte MJ volontaire', (tester) async {
+      await _pump(tester, _detail([_me, gameMaster]));
+
+      expect(find.textContaining('CA '), findsNothing);
+    });
+
+    testWidgets('jamais affichée sur la carte orpheline', (tester) async {
+      await _pump(tester, _detail([_me, orphan]));
+
+      expect(find.textContaining('CA '), findsNothing);
+    });
+  });
 }

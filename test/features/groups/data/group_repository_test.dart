@@ -379,6 +379,76 @@ void main() {
         expect(member.name, "En attente d'un personnage");
       },
     );
+
+    test('sélectionne armor_class_bonus/character_ability_scores/'
+        'character_inventory/character_class_options/subclass_id et calcule '
+        'armorClass/armorClassBonus pour un membre avec personnage', () async {
+      final requests = <http.Request>[];
+      final client = await _buildSignedInFakeClient(
+        ownerId: ownerId,
+        onRequest: requests.add,
+        tableRows: {
+          'groups': [
+            {
+              'id': groupId,
+              'name': 'Les Lames',
+              'owner_id': ownerId,
+              'invite_code': 'AB3F7K2M',
+            },
+          ],
+          'group_members': [
+            {
+              'character_id': 'char-1',
+              'user_id': ownerId,
+              'role': 'owner',
+              'is_game_master': false,
+              'display_name': null,
+              'characters': {
+                'id': 'char-1',
+                'name': 'Sylvi',
+                'current_hp': 10,
+                'max_hp': 10,
+                'temporary_hp': 0,
+                'is_dead': false,
+                'armor_class_bonus': 1,
+                // Aucune classe/race liée : les requêtes `translations`
+                // correspondantes (`_fetchTranslatedNames`) ne sont jamais
+                // déclenchées (ensembles d'identifiants vides), seul le
+                // calcul de CA depuis les caractéristiques/l'inventaire
+                // est exercé ici — voir `group_member_row_mapper_test.dart`
+                // pour la couverture complète (classe/sous-classe/style de
+                // combat) du mapper pur.
+                'character_classes': <Map<String, dynamic>>[],
+                'character_ability_scores': [
+                  {'ability_id': 'dex', 'score': 14},
+                ],
+                'character_class_options': <Map<String, dynamic>>[],
+                'character_inventory': <Map<String, dynamic>>[],
+              },
+            },
+          ],
+        },
+      );
+      final repository = SupabaseGroupRepository(client);
+
+      final detail = await repository.fetchGroupDetail(groupId);
+
+      final memberRequest = requests.firstWhere(
+        (request) => request.url.path.endsWith('/group_members'),
+      );
+      final select = memberRequest.url.queryParameters['select'] ?? '';
+      expect(select, contains('armor_class_bonus'));
+      expect(select, contains('character_ability_scores'));
+      expect(select, contains('character_inventory'));
+      expect(select, contains('character_class_options'));
+      expect(select, contains('subclass_id'));
+      expect(select, contains('armor_properties'));
+
+      final member = detail.members.single;
+      // 10 (base, sans armure) + 2 (dex) + 1 (bonus manuel).
+      expect(member.armorClass, 13);
+      expect(member.armorClassBonus, 1);
+    });
   });
 
   group('SupabaseGroupRepository.setGroupCharacter', () {

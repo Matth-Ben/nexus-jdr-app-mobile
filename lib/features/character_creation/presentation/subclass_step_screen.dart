@@ -184,6 +184,15 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
     // proposer quand même ce second choix si cette route était atteinte
     // autrement (ex. deep-link direct) — même principe que les autres
     // revérifications serveur/écran de ce module.
+    // Précision (suite à relecture code-reviewer de la PR #173, D102) :
+    // le chemin où `editSession != null && !editSession.canChangeClass`
+    // arrive ici est aujourd'hui confirmé INATTEIGNABLE par la navigation
+    // réelle de l'app — `ClassStepScreen._submit` retourne tôt avant
+    // d'atteindre cet écran dès que la classe est verrouillée (édition,
+    // niveau > 1). Ce n'est PAS un reliquat mort à nettoyer : c'est une
+    // défense en profondeur délibérée contre un futur refactor de
+    // `ClassStepScreen._submit`, ou une restauration d'état/deep-link qui
+    // pousserait directement cette route sans repasser par `_submit`.
     final editSession = ref.read(characterEditSessionControllerProvider);
     final canShowFeatureChoice =
         editSession == null || editSession.canChangeClass;

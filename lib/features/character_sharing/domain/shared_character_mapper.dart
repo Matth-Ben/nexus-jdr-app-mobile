@@ -41,6 +41,17 @@ import 'shared_character_skill_catalog.dart';
 /// - [CharacterDetail.skills] : reconstruit à partir des 18 compétences
 ///   D&D 5e (voir [SharedCharacterSkillCatalog]), le RPC ne renvoyant que les
 ///   compétences effectivement maîtrisées (voir sa doc de classe).
+/// - [CharacterDetail.racialTraits]/[CharacterDetail.feats] (ajoutés à
+///   `CharacterDetail` pour les cartes "TRAITS RACIAUX"/"DONS" de l'onglet
+///   "Aptitudes", audit chef de projet) : `get_shared_character`/
+///   `get_group_member_character` (dépôt web) ne renvoient à ce jour AUCUNE
+///   des données nécessaires (`races.traits`/`subraces.traits`,
+///   `character_feats` + descriptions) — ces deux champs restent donc à leur
+///   défaut (liste vide) ici, les deux cartes ne s'affichent jamais sur la
+///   vue partagée/vue d'un membre du groupe, contrairement à la fiche du
+///   propriétaire. **Gap backend connu, signalé au chef de projet plutôt que
+///   deviné** : combler ce manque nécessite d'étendre les RPC côté dépôt web
+///   (hors périmètre de ce dépôt), pas une correction côté mapper.
 ///
 /// [CharacterDetail.galleryPhotos]/[CharacterDetail.journalEntries] sont, eux,
 /// bien renvoyés par le RPC (`photos`/`journal_entries`, ajoutés par

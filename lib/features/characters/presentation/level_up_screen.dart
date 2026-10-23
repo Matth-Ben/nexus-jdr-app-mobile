@@ -2954,7 +2954,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         id: feat.id,
                         title: feat.name,
                         subtitle: feat.prerequisiteText,
-                        onInfoTap: () => showFeatInfoPanel(context, feat: feat),
+                        onInfoTap: () => showFeatInfoPanel(
+                          context,
+                          name: feat.name,
+                          description: feat.description,
+                          prerequisiteText: feat.prerequisiteText,
+                        ),
                       ),
                   ],
                 ),

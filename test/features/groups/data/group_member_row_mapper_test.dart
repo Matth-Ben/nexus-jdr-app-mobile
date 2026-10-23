@@ -265,4 +265,256 @@ void main() {
       expect(member.name, "En attente d'un personnage");
     });
   });
+
+  group('GroupMemberRowMapper.toGroupMember — armorClass/armorClassBonus', () {
+    test('avec armure équipée, Dex plafonnée, aucun bonus manuel', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(
+          character: {
+            'name': 'Sylvi',
+            'armor_class_bonus': 0,
+            'character_ability_scores': [
+              {'ability_id': 'dex', 'score': 18},
+            ],
+            'character_inventory': [
+              {
+                'id': 'inv-1',
+                'item_id': 1,
+                'quantity': 1,
+                'equipped': true,
+                'items': {
+                  'category': 'armure',
+                  'armor_properties': {'ac_base': 12, 'ac_dex_bonus': 'max_2'},
+                },
+              },
+            ],
+          },
+        ),
+        raceNames: const {},
+        classNames: const {},
+      );
+
+      // 12 (base) + 2 (dex +4, plafonné à 2) + 0 (bonus manuel).
+      expect(member.armorClass, 14);
+      expect(member.armorClassBonus, 0);
+    });
+
+    test('sans armure équipée -> 10 + Dex (repli RAW de base)', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(
+          character: {
+            'name': 'Sylvi',
+            'character_ability_scores': [
+              {'ability_id': 'dex', 'score': 14},
+            ],
+          },
+        ),
+        raceNames: const {},
+        classNames: const {},
+      );
+
+      expect(member.armorClass, 12);
+      expect(member.armorClassBonus, 0);
+    });
+
+    test('armor_class_bonus manuel non nul -> additionné au total, exposé '
+        'séparément pour le suffixe signé', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(
+          character: {
+            'name': 'Sylvi',
+            'armor_class_bonus': 2,
+            'character_ability_scores': [
+              {'ability_id': 'dex', 'score': 10},
+            ],
+          },
+        ),
+        raceNames: const {},
+        classNames: const {},
+      );
+
+      // 10 (base, Dex +0) + 2 (bonus manuel).
+      expect(member.armorClass, 12);
+      expect(member.armorClassBonus, 2);
+    });
+
+    test('armor_class_bonus manuel négatif -> soustrait au total', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(
+          character: {
+            'name': 'Sylvi',
+            'armor_class_bonus': -1,
+            'character_ability_scores': [
+              {'ability_id': 'dex', 'score': 10},
+            ],
+          },
+        ),
+        raceNames: const {},
+        classNames: const {},
+      );
+
+      expect(member.armorClass, 9);
+      expect(member.armorClassBonus, -1);
+    });
+
+    test('style de combat Défense résolu via class_feature_id -> +1 avec '
+        'armure équipée', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(
+          character: {
+            'name': 'Sylvi',
+            'character_ability_scores': [
+              {'ability_id': 'dex', 'score': 14},
+            ],
+            'character_class_options': [
+              {'class_feature_id': 100, 'chosen_value': 'Défense'},
+            ],
+            'character_inventory': [
+              {
+                'id': 'inv-1',
+                'item_id': 1,
+                'quantity': 1,
+                'equipped': true,
+                'items': {
+                  'category': 'armure',
+                  'armor_properties': {'ac_base': 12, 'ac_dex_bonus': 'max_2'},
+                },
+              },
+            ],
+          },
+        ),
+        raceNames: const {},
+        classNames: const {},
+        classFeatureNames: const {'100': 'Style de combat'},
+      );
+
+      // 12 (base) + 2 (dex, plafonné) + 1 (Défense).
+      expect(member.armorClass, 15);
+    });
+
+    test('régression : "Défense" venant d\'une aptitude autre que "Style de '
+        'combat" n\'accorde PAS le bonus (même garde-fou que '
+        'CharacterDetail.armorClass)', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(
+          character: {
+            'name': 'Sylvi',
+            'character_ability_scores': [
+              {'ability_id': 'dex', 'score': 14},
+            ],
+            'character_class_options': [
+              {'class_feature_id': 200, 'chosen_value': 'Défense'},
+            ],
+            'character_inventory': [
+              {
+                'id': 'inv-1',
+                'item_id': 1,
+                'quantity': 1,
+                'equipped': true,
+                'items': {
+                  'category': 'armure',
+                  'armor_properties': {'ac_base': 12, 'ac_dex_bonus': 'max_2'},
+                },
+              },
+            ],
+          },
+        ),
+        raceNames: const {},
+        classNames: const {},
+        // `class_feature_id: 200` résout en "Métamagie", pas "Style de
+        // combat" : pas de bonus de Défense.
+        classFeatureNames: const {'200': 'Métamagie'},
+      );
+
+      // 12 (base) + 2 (dex, plafonné) — PAS +1 de Défense.
+      expect(member.armorClass, 14);
+    });
+
+    test('Résilience draconique (sous-classe) résolue via subclassNames -> '
+        '13 + Dex sans armure', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(
+          character: {
+            'name': 'Sylvi',
+            'character_ability_scores': [
+              {'ability_id': 'dex', 'score': 14},
+            ],
+            'character_classes': [
+              {'class_id': 1, 'subclass_id': 5, 'level': 3, 'is_primary': true},
+            ],
+          },
+        ),
+        raceNames: const {},
+        classNames: const {'1': 'Ensorceleur'},
+        subclassNames: const {'5': 'Lignage draconique'},
+      );
+
+      // 13 (base Résilience draconique) + 2 (dex).
+      expect(member.armorClass, 15);
+    });
+
+    test('MJ volontaire -> armorClass et armorClassBonus tous deux null', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(characterId: null, isGameMaster: true, character: null),
+        raceNames: const {},
+        classNames: const {},
+      );
+
+      expect(member.armorClass, isNull);
+      expect(member.armorClassBonus, isNull);
+    });
+
+    test('orphelin -> armorClass et armorClassBonus tous deux null', () {
+      final member = GroupMemberRowMapper.toGroupMember(
+        _row(characterId: null, character: null),
+        raceNames: const {},
+        classNames: const {},
+      );
+
+      expect(member.armorClass, isNull);
+      expect(member.armorClassBonus, isNull);
+    });
+  });
+
+  group('GroupMemberRowMapper.collectSubclassIds', () {
+    test('collecte les subclass_id non nuls de tous les membres', () {
+      final rows = [
+        _row(
+          character: {
+            'character_classes': [
+              {'class_id': 1, 'subclass_id': 5, 'level': 3},
+            ],
+          },
+        ),
+        _row(
+          characterId: 'char-2',
+          character: {
+            'character_classes': [
+              {'class_id': 2, 'level': 1},
+            ],
+          },
+        ),
+      ];
+
+      expect(GroupMemberRowMapper.collectSubclassIds(rows), {'5'});
+    });
+  });
+
+  group('GroupMemberRowMapper.collectClassFeatureIds', () {
+    test('collecte les class_feature_id non nuls de character_class_options '
+        'de tous les membres', () {
+      final rows = [
+        _row(
+          character: {
+            'character_class_options': [
+              {'class_feature_id': 100, 'chosen_value': 'Défense'},
+              {'class_feature_id': 200, 'chosen_value': 'feu'},
+            ],
+          },
+        ),
+      ];
+
+      expect(GroupMemberRowMapper.collectClassFeatureIds(rows), {'100', '200'});
+    });
+  });
 }

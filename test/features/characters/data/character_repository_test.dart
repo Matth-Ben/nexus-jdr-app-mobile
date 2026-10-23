@@ -654,6 +654,204 @@ void main() {
           );
         },
       );
+
+      test('racialTraits : traits de la race seule (sans sous-race), ordre '
+          'authored préservé TEL QUEL (pas de tri alphabétique)', () async {
+        final racialTraitRows =
+            Map<String, List<Map<String, dynamic>>>.from(tableRows)..addAll({
+              'races': [
+                {
+                  'id': 1,
+                  'speed': 9,
+                  'traits': [
+                    {'name': 'Polyvalence humaine', 'description': ''},
+                    {'name': 'Multilinguisme', 'description': 'Langue.'},
+                  ],
+                },
+              ],
+            });
+
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: racialTraitRows,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+        final detail = await repository.fetchCharacterDetail(characterId);
+
+        expect(detail.racialTraits.map((t) => t.name), [
+          'Polyvalence humaine',
+          'Multilinguisme',
+        ]);
+        expect(detail.racialTraits[1].description, 'Langue.');
+      });
+
+      test('racialTraits : avec une sous-race, les traits de la race de base '
+          'viennent d\'abord, ceux de la sous-race à la suite', () async {
+        final racialTraitRows =
+            Map<String, List<Map<String, dynamic>>>.from(tableRows)..addAll({
+              'characters': [
+                {...tableRows['characters']!.single, 'subrace_id': 11},
+              ],
+              'races': [
+                {
+                  'id': 1,
+                  'speed': 9,
+                  'traits': [
+                    {'name': 'Trait de race de base', 'description': ''},
+                  ],
+                },
+              ],
+              'subraces': [
+                {
+                  'id': 11,
+                  'traits': [
+                    {'name': 'Trait de sous-race', 'description': ''},
+                  ],
+                },
+              ],
+            });
+
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: racialTraitRows,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+        final detail = await repository.fetchCharacterDetail(characterId);
+
+        expect(detail.racialTraits.map((t) => t.name), [
+          'Trait de race de base',
+          'Trait de sous-race',
+        ]);
+      });
+
+      test(
+        'racialTraits : race sans colonne `traits` renseignée (table '
+        '`races` absente de la réponse) -> liste vide, jamais de crash',
+        () async {
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            tableRows: tableRows,
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _AlwaysOnlineConnectivityChecker(),
+          );
+
+          final detail = await repository.fetchCharacterDetail(characterId);
+
+          expect(detail.racialTraits, isEmpty);
+        },
+      );
+
+      test('feats : nom/description/prérequis résolus (description via '
+          'translations, PAS confondue avec le nom — même garde-fou que '
+          'spells/class_features ci-dessus), triés par niveau d\'acquisition '
+          'croissant', () async {
+        const feat1Description = 'Vos points de vie maximum augmentent.';
+        const feat2Description = 'Vous apprenez à combattre avec deux armes.';
+        final featRows = Map<String, List<Map<String, dynamic>>>.from(tableRows)
+          ..addAll({
+            'characters': [
+              {
+                ...tableRows['characters']!.single,
+                'character_feats': [
+                  {'feat_id': 81, 'level_taken': 8},
+                  {'feat_id': 80, 'level_taken': 4},
+                ],
+              },
+            ],
+            'feats': [
+              {
+                'id': 80,
+                'prerequisites': {'text': 'Aucun.'},
+              },
+              {'id': 81, 'prerequisites': <String, dynamic>{}},
+            ],
+            'translations': [
+              ...tableRows['translations']!,
+              {'entity_id': '80', 'value': 'Robuste'},
+              {'entity_id': '81', 'value': 'Combat à deux armes'},
+            ],
+          });
+
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: featRows,
+          rowsOverride: (request) {
+            if (request.url.pathSegments.last == 'translations' &&
+                request.url.queryParameters['field_name'] == 'eq.description') {
+              return [
+                {'entity_id': '80', 'value': feat1Description},
+                {'entity_id': '81', 'value': feat2Description},
+              ];
+            }
+            return null;
+          },
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+        final detail = await repository.fetchCharacterDetail(characterId);
+
+        expect(detail.feats.map((f) => f.name), [
+          'Robuste',
+          'Combat à deux armes',
+        ], reason: 'triés par level_taken croissant (4 puis 8)');
+        expect(detail.feats[0].description, feat1Description);
+        expect(detail.feats[0].prerequisiteText, 'Aucun.');
+        expect(detail.feats[1].description, feat2Description);
+        expect(
+          detail.feats[1].prerequisiteText,
+          isNull,
+          reason: 'prerequisites vide -> aucun texte de prérequis',
+        );
+        // Pas d'assertion exacte sur `detail.featNames` ici (comportement
+        // inchangé par ce chantier, déjà couvert ailleurs) : ce double de
+        // test ne filtre pas `translations` par `entity_type` (voir sa
+        // documentation de classe en tête de fichier), `featNames` y
+        // récupère donc aussi les noms résolus pour d'autres entités de
+        // la fixture partagée — artefact de ce double, pas de la
+        // production.
+        expect(
+          detail.featNames,
+          containsAll(['Robuste', 'Combat à deux armes']),
+        );
+      });
+
+      test('feats : personnage sans don possédé -> liste vide', () async {
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: tableRows,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+        final detail = await repository.fetchCharacterDetail(characterId);
+
+        expect(detail.feats, isEmpty);
+      });
     },
   );
 

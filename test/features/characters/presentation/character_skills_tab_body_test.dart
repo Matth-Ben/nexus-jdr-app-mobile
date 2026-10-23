@@ -13,6 +13,8 @@ import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
+import 'package:personnages/features/characters/domain/character_feat_summary.dart';
+import 'package:personnages/features/characters/domain/character_racial_trait.dart';
 import 'package:personnages/features/characters/domain/character_skill_row.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
@@ -22,6 +24,8 @@ CharacterDetail _detail({
   List<CharacterDetailClassRow> classes = const [],
   List<CharacterSkillRow> skills = const [],
   List<CharacterClassFeature> classFeatures = const [],
+  List<CharacterRacialTrait> racialTraits = const [],
+  List<CharacterFeatSummary> feats = const [],
   List<String> armorProficiencyNames = const [],
   List<String> weaponProficiencyNames = const [],
   List<String> toolProficiencyNames = const [],
@@ -43,6 +47,8 @@ CharacterDetail _detail({
     abilityScores: const {'dex': 16, 'int': 10},
     skills: skills,
     classFeatures: classFeatures,
+    racialTraits: racialTraits,
+    feats: feats,
     armorProficiencyNames: armorProficiencyNames,
     weaponProficiencyNames: weaponProficiencyNames,
     toolProficiencyNames: toolProficiencyNames,
@@ -415,8 +421,84 @@ void main() {
       expect(find.text('APTITUDES DE CLASSE'), findsNothing);
       expect(find.text('CHOIX DE CLASSE'), findsNothing);
       expect(find.text('INVOCATIONS CONNUES'), findsNothing);
+      expect(find.text('TRAITS RACIAUX'), findsNothing);
+      expect(find.text('DONS'), findsNothing);
     },
   );
+
+  testWidgets(
+    'la carte "TRAITS RACIAUX" affiche les traits raciaux quand non vide '
+    '(audit chef de projet : traits raciaux absents de cet onglet)',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          racialTraits: const [
+            CharacterRacialTrait(
+              name: 'Vision dans le noir',
+              description: '12 mètres.',
+            ),
+          ],
+        ),
+      );
+
+      expect(find.text('TRAITS RACIAUX'), findsOneWidget);
+      expect(find.text('Vision dans le noir'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'la carte "DONS" affiche les dons possédés quand non vide (audit chef '
+    'de projet : dons choisis absents de cet onglet)',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          feats: const [
+            CharacterFeatSummary(name: 'Robuste', description: '+2 PV.'),
+          ],
+        ),
+      );
+
+      expect(find.text('DONS'), findsOneWidget);
+      expect(find.text('Robuste'), findsOneWidget);
+    },
+  );
+
+  testWidgets('les cartes "TRAITS RACIAUX"/"DONS" s\'affichent juste après '
+      '"APTITUDES DE CLASSE", avant le champ de recherche de "LES 18 '
+      'COMPÉTENCES"', (tester) async {
+    await _pump(
+      tester,
+      _detail(
+        classFeatures: const [
+          CharacterClassFeature(id: 1, name: 'Deuxième souffle', level: 1),
+        ],
+        racialTraits: const [
+          CharacterRacialTrait(
+            name: 'Vision dans le noir',
+            description: '12 mètres.',
+          ),
+        ],
+        feats: const [
+          CharacterFeatSummary(name: 'Robuste', description: '+2 PV.'),
+        ],
+      ),
+    );
+
+    final classFeaturesY = tester
+        .getTopLeft(find.text('APTITUDES DE CLASSE'))
+        .dy;
+    final racialTraitsY = tester.getTopLeft(find.text('TRAITS RACIAUX')).dy;
+    final featsY = tester.getTopLeft(find.text('DONS')).dy;
+    final searchFieldY = tester
+        .getTopLeft(find.widgetWithText(TextField, 'Rechercher une compétence'))
+        .dy;
+
+    expect(classFeaturesY, lessThan(racialTraitsY));
+    expect(racialTraitsY, lessThan(featsY));
+    expect(featsY, lessThan(searchFieldY));
+  });
 
   testWidgets(
     'la carte "CHOIX DE RACE" affiche compétence(s)/outil(s) de race quand '

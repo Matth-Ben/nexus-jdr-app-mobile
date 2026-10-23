@@ -8,9 +8,11 @@ import 'character_adventure.dart';
 import 'character_class_choice.dart';
 import 'character_class_feature.dart';
 import 'character_detail_class_row.dart';
+import 'character_feat_summary.dart';
 import 'character_gallery_photo.dart';
 import 'character_inventory_item.dart';
 import 'character_journal_entry.dart';
+import 'character_racial_trait.dart';
 import 'character_skill_row.dart';
 import 'character_spell_entry.dart';
 import 'character_spell_slot.dart';
@@ -201,6 +203,18 @@ abstract class CharacterDetail with _$CharacterDetail {
     @Default(<CharacterClassFeature>[])
     List<CharacterClassFeature> classFeatures,
 
+    /// Traits raciaux de la race (puis, si le personnage a une sous-race, de
+    /// la sous-race à la suite) — onglet "Aptitudes", carte "TRAITS RACIAUX"
+    /// (`presentation/widgets/character_racial_traits_card.dart`). Ordre
+    /// authored en base préservé TEL QUEL (`races.traits`/`subraces.traits`,
+    /// voir `docs/cahier-des-charges/02-modele-donnees.md`) : PAS de tri
+    /// alphabétique, contrairement à [classFeatures] ci-dessus. Liste vide
+    /// pour une race personnalisée/non renseignée, ou pour un ancien cache
+    /// hors-ligne écrit avant l'introduction de ce champ (jamais de crash,
+    /// la carte est simplement masquée — voir
+    /// `data/character_repository.dart::_mapCharacterDetailPayload`).
+    @Default(<CharacterRacialTrait>[]) List<CharacterRacialTrait> racialTraits,
+
     /// Choix de classe résolus par niveau ("Style de combat"/"Ennemi juré",
     /// `character_class_options`) — onglet "Compétences", carte "CHOIX DE
     /// CLASSE". Même gap de lecture que [classes]`.subclassName` — voir la
@@ -273,6 +287,19 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// Noms (FR) des dons possédés (`character_feats`) — sert notamment au
     /// bonus de PV du don Robuste (`HitPointBonusRules`).
     @Default(<String>[]) List<String> featNames,
+
+    /// Dons possédés (`character_feats`), nom + description + prérequis
+    /// déjà résolus — onglet "Aptitudes", carte "DONS"
+    /// (`presentation/widgets/character_feats_card.dart`). Triés par niveau
+    /// d'acquisition croissant (`character_feats.level_taken`, voir
+    /// `data/character_detail_row_mapper.dart::parseFeats`). Distinct de
+    /// [featNames] ci-dessus (noms seuls, utilisé par `HitPointBonusRules`) :
+    /// gardé séparé plutôt que dérivé de ce champ pour ne rien changer au
+    /// comportement déjà en place de [featNames] (chantier dédié à
+    /// l'affichage, pas à une refonte de ce câblage existant). Liste vide
+    /// pour un personnage sans don, ou pour un ancien cache hors-ligne écrit
+    /// avant l'introduction de ce champ.
+    @Default(<CharacterFeatSummary>[]) List<CharacterFeatSummary> feats,
 
     /// Forme courante de l'arme de pacte (`character_pact_weapons`, Pacte de
     /// la lame), `null` si aucune forme n'a été choisie — ou pour un ancien
