@@ -10,9 +10,11 @@ import '../../domain/skill_bonus_calculator.dart';
 import '../../domain/skill_name_filter.dart';
 import 'character_armor_proficiencies_card.dart';
 import 'character_class_features_card.dart';
+import 'character_feats_card.dart';
 import 'character_invocations_card.dart';
 import 'character_languages_card.dart';
 import 'character_race_choices_card.dart';
+import 'character_racial_traits_card.dart';
 import 'character_skills_card.dart';
 import 'character_tool_proficiencies_card.dart';
 import 'character_weapon_proficiencies_card.dart';
@@ -45,6 +47,13 @@ import 'proficiency_detail_panel.dart';
 /// `CharacterClassChoicesCard`, qui n'existe en réalité plus sur cet écran) :
 /// signalé au chef de projet plutôt que de reproduire silencieusement le
 /// retrait sur cette nouvelle carte, faute d'indication contraire.
+///
+/// [CharacterRacialTraitsCard]/[CharacterFeatsCard] (audit chef de projet :
+/// traits raciaux et dons choisis n'étaient affichés nulle part sur cette
+/// fiche bien qu'existants en base) sont insérées juste après
+/// [CharacterClassFeaturesCard], avant le champ de recherche — même garde
+/// `isNotEmpty` que les autres cartes de cet onglet, carte entièrement
+/// masquée plutôt qu'un message "Aucun(e)..." quand vide.
 ///
 /// `StatefulWidget` (depuis l'ajout du champ de recherche filtrant "LES 18
 /// COMPÉTENCES", recettage du 13/09) : même patron que
@@ -122,6 +131,14 @@ class _CharacterSkillsTabBodyState extends State<CharacterSkillsTabBody> {
             onUseFeature: widget.onUseFeature,
             actionsDisabled: widget.actionsDisabled,
           ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+        if (detail.racialTraits.isNotEmpty) ...[
+          CharacterRacialTraitsCard(traits: detail.racialTraits),
+          const SizedBox(height: AppSpacing.md),
+        ],
+        if (detail.feats.isNotEmpty) ...[
+          CharacterFeatsCard(feats: detail.feats),
           const SizedBox(height: AppSpacing.md),
         ],
         _SkillSearchField(controller: _searchController, focusNode: _focusNode),

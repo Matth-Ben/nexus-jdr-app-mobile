@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/data/character_detail_row_mapper.dart';
 import 'package:personnages/features/characters/domain/character_class_choice.dart';
+import 'package:personnages/features/characters/domain/character_feat_summary.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
+import 'package:personnages/features/characters/domain/character_racial_trait.dart';
 
 Map<String, dynamic> _row({
   Object? raceId = 1,
@@ -1294,6 +1296,261 @@ void main() {
       expect(withoutCustomText.backgroundCustomText, isNull);
       expect(withoutCustomText.classChoices, isEmpty);
       expect(withoutCustomText.knownInvocationNames, isEmpty);
+    });
+  });
+
+  group('CharacterDetailRowMapper.parseRaceTraits', () {
+    test('parse une liste de {name, description} en CharacterRacialTrait, '
+        'ordre authored préservé (PAS de tri alphabétique)', () {
+      final traits = CharacterDetailRowMapper.parseRaceTraits([
+        {'name': 'Vision dans le noir', 'description': '12 mètres.'},
+        {'name': 'Ancêtre draconique', 'description': 'Choisissez un type.'},
+        {'name': 'Arme naturelle', 'description': 'Morsure 1d6.'},
+      ]);
+
+      expect(traits, hasLength(3));
+      expect(traits[0].name, 'Vision dans le noir');
+      expect(traits[1].name, 'Ancêtre draconique');
+      expect(traits[2].name, 'Arme naturelle');
+      expect(traits[2].description, 'Morsure 1d6.');
+    });
+
+    test('ignore une entrée sans "name" exploitable', () {
+      final traits = CharacterDetailRowMapper.parseRaceTraits([
+        {'description': 'Sans nom, ignorée.'},
+        {'name': 'Résistance', 'description': 'Au poison.'},
+      ]);
+
+      expect(traits, hasLength(1));
+      expect(traits.single.name, 'Résistance');
+    });
+
+    test('une description absente retombe sur une chaîne vide', () {
+      final traits = CharacterDetailRowMapper.parseRaceTraits([
+        {'name': 'Sans description'},
+      ]);
+
+      expect(traits.single.description, '');
+    });
+
+    test('null/type inattendu retombe sur une liste vide (race personnalisée '
+        'ou sans trait)', () {
+      expect(CharacterDetailRowMapper.parseRaceTraits(null), isEmpty);
+      expect(
+        CharacterDetailRowMapper.parseRaceTraits('pas une liste'),
+        isEmpty,
+      );
+      expect(CharacterDetailRowMapper.parseRaceTraits(const []), isEmpty);
+    });
+  });
+
+  group('CharacterDetailRowMapper.toCharacterDetail — racialTraits', () {
+    test('race seule (sans sous-race) : traits de la race de base tels '
+        'quels', () {
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        _row(),
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+        racialTraits: const [
+          CharacterRacialTrait(
+            name: 'Vision dans le noir',
+            description: '12 mètres.',
+          ),
+        ],
+      );
+
+      expect(detail.racialTraits, hasLength(1));
+      expect(detail.racialTraits.single.name, 'Vision dans le noir');
+    });
+
+    test('race + sous-race : traits de la race de base d\'abord, puis ceux '
+        'de la sous-race à la suite (ordre de concaténation à la charge de '
+        'l\'appelant, voir SupabaseCharacterRepository._mapCharacterDetailPayload)', () {
+      const baseTrait = CharacterRacialTrait(
+        name: 'Résilience naine',
+        description: 'Résistance au poison.',
+      );
+      const subraceTrait = CharacterRacialTrait(
+        name: 'Nain des collines',
+        description: '+1 point de vie par niveau.',
+      );
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        _row(subraceId: 5),
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+        racialTraits: const [baseTrait, subraceTrait],
+      );
+
+      expect(detail.racialTraits, [baseTrait, subraceTrait]);
+    });
+
+    test('absent -> liste vide (race personnalisée, ou ancien cache '
+        'hors-ligne écrit avant ce champ)', () {
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        _row(),
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.racialTraits, isEmpty);
+    });
+  });
+
+  group('CharacterDetailRowMapper.parseFeatPrerequisiteTexts', () {
+    test('extrait prerequisites->>\'text\' par id de don', () {
+      final texts = CharacterDetailRowMapper.parseFeatPrerequisiteTexts([
+        {
+          'id': 10,
+          'prerequisites': {'text': 'Force 13 ou plus.'},
+        },
+        {'id': 20, 'prerequisites': <String, dynamic>{}},
+      ]);
+
+      expect(texts, {'10': 'Force 13 ou plus.'});
+    });
+
+    test('ignore une ligne sans id, ou sans prerequisites exploitable', () {
+      final texts = CharacterDetailRowMapper.parseFeatPrerequisiteTexts([
+        {
+          'prerequisites': {'text': 'Sans id, ignorée.'},
+        },
+        {'id': 30, 'prerequisites': null},
+        {'id': 40},
+      ]);
+
+      expect(texts, isEmpty);
+    });
+  });
+
+  group('CharacterDetailRowMapper.parseFeats', () {
+    test('construit un CharacterFeatSummary par don possédé, nom/'
+        'description/prérequis résolus via les maps fournies', () {
+      final feats = CharacterDetailRowMapper.parseFeats(
+        [
+          {'feat_id': 1, 'level_taken': 4},
+        ],
+        names: const {'1': 'Robuste'},
+        descriptions: const {'1': '+2 PV par niveau.'},
+        prerequisiteTexts: const {'1': 'Aucun.'},
+      );
+
+      expect(feats, hasLength(1));
+      expect(feats.single.name, 'Robuste');
+      expect(feats.single.description, '+2 PV par niveau.');
+      expect(feats.single.prerequisiteText, 'Aucun.');
+    });
+
+    test('trie par niveau d\'acquisition (level_taken) croissant', () {
+      final feats = CharacterDetailRowMapper.parseFeats(
+        [
+          {'feat_id': 2, 'level_taken': 8},
+          {'feat_id': 1, 'level_taken': 4},
+          {'feat_id': 3, 'level_taken': 12},
+        ],
+        names: const {
+          '1': 'Don niveau 4',
+          '2': 'Don niveau 8',
+          '3': 'Don niveau 12',
+        },
+        descriptions: const {},
+        prerequisiteTexts: const {},
+      );
+
+      expect(feats.map((feat) => feat.name).toList(), [
+        'Don niveau 4',
+        'Don niveau 8',
+        'Don niveau 12',
+      ]);
+    });
+
+    test('un don sans level_taken connu (ancien cache hors-ligne) est '
+        'repoussé en fin de liste plutôt que de faire planter le tri', () {
+      final feats = CharacterDetailRowMapper.parseFeats(
+        [
+          {'feat_id': 1, 'level_taken': null},
+          {'feat_id': 2, 'level_taken': 4},
+        ],
+        names: const {'1': 'Sans niveau connu', '2': 'Avec niveau'},
+        descriptions: const {},
+        prerequisiteTexts: const {},
+      );
+
+      expect(feats.map((feat) => feat.name).toList(), [
+        'Avec niveau',
+        'Sans niveau connu',
+      ]);
+    });
+
+    test('un id sans nom résolu retombe sur un libellé générique ("Don '
+        '#id") plutôt que de crasher', () {
+      final feats = CharacterDetailRowMapper.parseFeats(
+        [
+          {'feat_id': 99, 'level_taken': 4},
+        ],
+        names: const {},
+        descriptions: const {},
+        prerequisiteTexts: const {},
+      );
+
+      expect(feats.single.name, 'Don #99');
+      expect(feats.single.description, '');
+      expect(feats.single.prerequisiteText, isNull);
+    });
+
+    test('ignore une ligne sans feat_id exploitable', () {
+      final feats = CharacterDetailRowMapper.parseFeats(
+        [
+          {'level_taken': 4},
+        ],
+        names: const {},
+        descriptions: const {},
+        prerequisiteTexts: const {},
+      );
+
+      expect(feats, isEmpty);
+    });
+  });
+
+  group('CharacterDetailRowMapper.toCharacterDetail — feats', () {
+    test('expose feats tel quel quand fourni', () {
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        _row(),
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+        feats: const [
+          CharacterFeatSummary(name: 'Robuste', description: '+2 PV.'),
+        ],
+      );
+
+      expect(detail.feats, hasLength(1));
+      expect(detail.feats.single.name, 'Robuste');
+    });
+
+    test('absent -> liste vide (personnage sans don, ou ancien cache '
+        'hors-ligne écrit avant ce champ)', () {
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        _row(),
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.feats, isEmpty);
     });
   });
 }
