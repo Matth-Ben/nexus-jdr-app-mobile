@@ -18,6 +18,7 @@ class CharacterEditSnapshot {
     required this.totalLevel,
     required this.maxHp,
     required this.currentHp,
+    this.edition = '2014',
     this.raceId,
     this.subraceId,
     this.raceCustomText,
@@ -36,6 +37,15 @@ class CharacterEditSnapshot {
 
   final String characterId;
   final String name;
+
+  /// `characters.edition` — figée à la création, jamais modifiable depuis
+  /// l'assistant en mode modification (`CharacterEditHydrator` la reporte
+  /// telle quelle dans le brouillon, voir `character_creation_draft.dart
+  /// ::edition`) : pilote le même gating Métamagie/Expertise que pour un
+  /// personnage en cours de création. `'2014'` par défaut, même rationale
+  /// défensive que [maxHp]/[currentHp] pour une ligne ancienne sans cette
+  /// colonne.
+  final String edition;
   final int? raceId;
   final int? subraceId;
   final String? raceCustomText;
@@ -128,6 +138,7 @@ class CharacterEditSnapshot {
     return CharacterEditSnapshot(
       characterId: row['id'] as String,
       name: row['name'] as String? ?? '',
+      edition: row['edition'] as String? ?? '2014',
       raceId: intOf(row['race_id']),
       subraceId: intOf(row['subrace_id']),
       raceCustomText: row['race_custom_text'] as String?,

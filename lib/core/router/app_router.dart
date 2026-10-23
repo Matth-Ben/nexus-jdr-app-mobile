@@ -12,6 +12,7 @@ import '../../features/character_creation/presentation/appearance_and_backstory_
 import '../../features/character_creation/presentation/background_step_screen.dart';
 import '../../features/character_creation/presentation/class_choice_step_screen.dart';
 import '../../features/character_creation/presentation/class_step_screen.dart';
+import '../../features/character_creation/presentation/edition_step_screen.dart';
 import '../../features/character_creation/presentation/equipment_step_screen.dart';
 import '../../features/character_creation/presentation/lineage_step_screen.dart';
 import '../../features/character_creation/presentation/race_step_screen.dart';
@@ -141,12 +142,31 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
+        // Point d'entrée d'une création BRAND NEW, chantier "choix
+        // d'édition 2014/2024 par personnage" (`EditionStepScreen`, étape
+        // 1/10, AVANT `RaceStepScreen`) — poussée par `CharacterListScreen`
+        // ("+ Créer"), `JoinCharacterStepScreen` ("+ Créer un nouveau
+        // personnage") et `GroupCharacterReassignmentScreen` ("Créer un
+        // personnage"). Jamais en mode modification : `startCharacterEdit`
+        // (`widgets/character_edit_flow.dart`) pousse directement
+        // `/characters/new` (Race) ci-dessous, l'édition d'un personnage
+        // existant étant déjà figée.
+        name: 'character-creation-edition',
+        path: '/characters/new/edition',
+        builder: (context, state) => const EditionStepScreen(),
+      ),
+      GoRoute(
+        // Étape 2/10 "Race" — atteinte depuis `EditionStepScreen._submit`
+        // pour une création BRAND NEW, ou directement en mode modification
+        // (`startCharacterEdit`, voir la route `/characters/new/edition`
+        // ci-dessus) : ce chemin direct ne revisite jamais le choix
+        // d'édition, déjà figé pour un personnage existant.
         name: 'character-creation-race',
         path: '/characters/new',
         builder: (context, state) => const RaceStepScreen(),
       ),
       GoRoute(
-        // Atteinte uniquement depuis '/characters/new' (étape 1 "Race")
+        // Atteinte uniquement depuis '/characters/new' (étape 2/10 "Race")
         // quand la race choisie a des sous-races (`RaceStepScreen._submit`)
         // — sinon '/characters/new/step-2' est atteinte directement.
         name: 'character-creation-subrace',
@@ -154,7 +174,7 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const SubraceStepScreen(),
       ),
       GoRoute(
-        // Atteinte uniquement depuis '/characters/new' (étape 1 "Race")
+        // Atteinte uniquement depuis '/characters/new' (étape 2/10 "Race")
         // quand la race choisie a des lignées 2024 à choisir SANS sous-race
         // (`RaceStepScreen._submit`, voir `LineageChoiceCatalog.isConcerned`)
         // — Drakéide, Tieffelin, Goliath à ce jour, jamais l'Elfe (qui a des
@@ -214,9 +234,9 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const SpellsStepScreen(),
       ),
       GoRoute(
-        // Atteinte directement depuis l'étape 5/9 pour une classe non
+        // Atteinte directement depuis l'étape 6/10 pour une classe non
         // lanceuse de sorts (`SkillsAndToolsStepScreen._submit` saute
-        // l'étape 6/9) — voir `domain/spellcasting_rules.dart`.
+        // l'étape 7/10) — voir `domain/spellcasting_rules.dart`.
         name: 'character-creation-equipment',
         path: '/characters/new/step-7',
         builder: (context, state) => const EquipmentStepScreen(),
@@ -227,7 +247,7 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const AppearanceAndBackstoryStepScreen(),
       ),
       GoRoute(
-        // Étape 9/9 "Récapitulatif" : dernière étape, seule à écrire en
+        // Étape 10/10 "Récapitulatif" : dernière étape, seule à écrire en
         // base (voir `presentation/summary_step_screen.dart`).
         name: 'character-creation-summary',
         path: '/characters/new/step-9',

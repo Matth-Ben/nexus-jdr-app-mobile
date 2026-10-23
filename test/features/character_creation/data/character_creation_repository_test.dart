@@ -2221,6 +2221,32 @@ void _testCatalogTtl({
       expect(result.characterInsert['lineage_id'], isNull);
       expect(result.requestedTables, isNot(contains('race_lineages')));
     });
+
+    // Chantier "choix d'édition 2014/2024 par personnage" :
+    // `draft.edition` est persisté tel quel dans `characters.edition`,
+    // immuable ensuite — voir `EditionStepScreen`/`CharacterCreationDraft
+    // .edition`.
+    test('draft.edition = \'2014\' (défaut) est persisté tel quel dans '
+        'characters.edition', () async {
+      final result = await createAndCapture(
+        draft: const CharacterCreationDraft(classId: 3, raceId: 2),
+      );
+
+      expect(result.characterInsert['edition'], '2014');
+    });
+
+    test('draft.edition = \'2024\' est persisté tel quel dans '
+        'characters.edition', () async {
+      final result = await createAndCapture(
+        draft: const CharacterCreationDraft(
+          classId: 3,
+          raceId: 2,
+          edition: '2024',
+        ),
+      );
+
+      expect(result.characterInsert['edition'], '2024');
+    });
   });
 
   group('SupabaseCharacterCreationRepository.createCharacter — '
@@ -2835,42 +2861,79 @@ void _testCatalogTtl({
         expect(result.classOptionInserts, isEmpty);
       });
 
-      test(
-        'Roublard (Expertise) : même si expertiseThievesToolsSubstitution '
-        'vaut true dans le brouillon (ne devrait jamais arriver depuis '
-        "l'UI niveau 1 création, correctif D100 — RAW, cette substitution "
-        "n'existe qu'au niveau 6), createCharacter n'écrit JAMAIS de ligne "
-        "'outils de voleur' : seule la compétence choisie est écrite, et "
-        'rehaussée à \'expertise\' dans character_skill_proficiencies',
-        () async {
-          final result = await createAndCapture(
-            draft: const CharacterCreationDraft(
-              classId: 9,
-              classSkillChoices: ['Discrétion'],
-              expertiseSkillChoices: ['Discrétion'],
-              expertiseThievesToolsSubstitution: true,
-            ),
-            classOption: roublard,
-            extraTableRows: {
-              'class_features': [
-                {'id': 33},
-              ],
-            },
-          );
+      test('Roublard (Expertise), édition 2014 (défaut) : '
+          'expertiseThievesToolsSubstitution: true écrit 2 lignes '
+          'character_class_options (compétence + outils de voleur), ET '
+          'rehausse la compétence choisie à \'expertise\' dans '
+          'character_skill_proficiencies — réintroduit par le chantier '
+          '"choix d\'édition 2014/2024 par personnage" (RAW 2014 PHB, '
+          'reverté depuis D100 de docs/dette-technique.md, basé sur une '
+          'citation erronée)', () async {
+        final result = await createAndCapture(
+          draft: const CharacterCreationDraft(
+            classId: 9,
+            classSkillChoices: ['Discrétion'],
+            expertiseSkillChoices: ['Discrétion'],
+            expertiseThievesToolsSubstitution: true,
+          ),
+          classOption: roublard,
+          extraTableRows: {
+            'class_features': [
+              {'id': 33},
+            ],
+          },
+        );
 
-          expect(result.classOptionInserts, hasLength(1));
-          expect(
-            result.classOptionInserts.single['chosen_value'],
-            'Discrétion',
-          );
-          expect(result.classOptionInserts.single['class_feature_id'], 33);
+        expect(result.classOptionInserts, hasLength(2));
+        expect(
+          result.classOptionInserts.map((row) => row['chosen_value']),
+          containsAll(<String>['Discrétion', 'outils de voleur']),
+        );
+        expect(
+          result.classOptionInserts.every(
+            (row) => row['class_feature_id'] == 33,
+          ),
+          isTrue,
+        );
 
-          final discretionRow = result.skillInserts.singleWhere(
-            (row) => row['skill_id'] == 50,
-          );
-          expect(discretionRow['proficiency'], 'expertise');
-        },
-      );
+        final discretionRow = result.skillInserts.singleWhere(
+          (row) => row['skill_id'] == 50,
+        );
+        expect(discretionRow['proficiency'], 'expertise');
+      });
+
+      test('Roublard (Expertise), édition 2024 : même si '
+          'expertiseThievesToolsSubstitution vaut true dans le brouillon (ne '
+          'devrait jamais arriver depuis l\'UI niveau 1 création, cette '
+          'substitution n\'existe RAW qu\'en 2014), createCharacter n\'écrit '
+          'JAMAIS de ligne \'outils de voleur\' pour un brouillon d\'édition '
+          '2024 — discipline défensive revérifiée côté serveur, pas '
+          'seulement côté UI', () async {
+        final result = await createAndCapture(
+          draft: const CharacterCreationDraft(
+            classId: 9,
+            edition: '2024',
+            classSkillChoices: ['Discrétion'],
+            expertiseSkillChoices: ['Discrétion'],
+            expertiseThievesToolsSubstitution: true,
+          ),
+          classOption: roublard,
+          extraTableRows: {
+            'class_features': [
+              {'id': 33},
+            ],
+          },
+        );
+
+        expect(result.classOptionInserts, hasLength(1));
+        expect(result.classOptionInserts.single['chosen_value'], 'Discrétion');
+        expect(result.classOptionInserts.single['class_feature_id'], 33);
+
+        final discretionRow = result.skillInserts.singleWhere(
+          (row) => row['skill_id'] == 50,
+        );
+        expect(discretionRow['proficiency'], 'expertise');
+      });
 
       test('Roublard (Expertise) sans substitution outils : la compétence '
           'choisie est rehaussée, aucune ligne \'outils de voleur\'', () async {

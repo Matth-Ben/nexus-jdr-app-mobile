@@ -20,6 +20,24 @@ part 'character_creation_draft.freezed.dart';
 @freezed
 abstract class CharacterCreationDraft with _$CharacterCreationDraft {
   const factory CharacterCreationDraft({
+    /// Édition de règles choisie à l'étape 1 "Édition" (TOUTE PREMIÈRE étape
+    /// de l'assistant, avant même la Race) — `'2014'` (Manuel des Joueurs) ou
+    /// `'2024'` (Manuel des Joueurs revu), persistée immuable sur
+    /// `characters.edition` par `createCharacter`. `@Default('2014')` plutôt
+    /// que `String?` : même convention que [abilityScoreMethod] (un champ
+    /// jamais "non choisi" visuellement, l'écran préselectionne toujours une
+    /// tuile) — contrairement à [abilityScoreMethod], cette valeur par
+    /// défaut correspond aussi au défaut DB (`characters.edition not null
+    /// default '2014'`, voir la migration du dépôt web), donc un personnage
+    /// créé sans jamais toucher à cet écran (ne devrait pas arriver, "Suivant"
+    /// de `EditionStepScreen` l'écrit toujours explicitement) resterait de
+    /// toute façon cohérent avec la base. Pilote le filtre d'édition sur le
+    /// contenu Métamagie/Expertise à la création (voir
+    /// `data/character_creation_repository.dart::createCharacter`) et le
+    /// gating de la substitution outils de voleur du Roublard (voir
+    /// [expertiseThievesToolsSubstitution]).
+    @Default('2014') String edition,
+
     /// Race choisie à l'étape 1, `null` si race personnalisée ou pas encore
     /// choisie.
     int? raceId,
@@ -269,12 +287,15 @@ abstract class CharacterCreationDraft with _$CharacterCreationDraft {
     @Default(<String>[]) List<String> expertiseSkillChoices,
 
     /// `true` si une des 2 "cases" d'Expertise du Roublard est utilisée sur
-    /// sa maîtrise d'outils de voleur plutôt que sur une compétence (RAW :
-    /// "deux compétences, OU une compétence et les outils de voleur") —
-    /// purement descriptif à la persistance, voir
+    /// sa maîtrise d'outils de voleur plutôt que sur une compétence (RAW
+    /// 2014 PHB : "deux compétences, OU une compétence et les outils de
+    /// voleur") — purement descriptif à la persistance, voir
     /// `domain/expertise_step_selection.dart` pour le rationale de l'absence
     /// de bonus chiffré associé. `false` par défaut/tant que rien n'est
-    /// choisi.
+    /// choisi. Chantier édition (`docs/cahier-des-charges`, choix
+    /// 2014/2024) : cette substitution n'existe RAW qu'en édition 2014 (le
+    /// texte 2024 l'a supprimée) — seulement exploitable quand [edition]
+    /// vaut `'2014'`, voir `presentation/class_choice_step_screen.dart`.
     @Default(false) bool expertiseThievesToolsSubstitution,
   }) = _CharacterCreationDraft;
 }

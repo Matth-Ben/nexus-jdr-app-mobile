@@ -24,6 +24,26 @@ void main() {
     container.dispose();
   });
 
+  test('le brouillon neuf a edition = \'2014\' par défaut, et setEdition met '
+      'à jour ce champ en conservant les autres choix déjà faits '
+      '(chantier "choix d\'édition 2014/2024 par personnage")', () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+
+    expect(
+      container.read(characterCreationDraftControllerProvider).edition,
+      '2014',
+    );
+
+    controller.setRace(raceId: 7, subraceId: null, raceCustomText: null);
+    controller.setEdition('2024');
+
+    final draft = container.read(characterCreationDraftControllerProvider);
+    expect(draft.edition, '2024');
+    expect(draft.raceId, 7);
+  });
+
   test('setRace après setClass conserve le classId déjà choisi '
       '(non-régression)', () {
     final controller = container.read(

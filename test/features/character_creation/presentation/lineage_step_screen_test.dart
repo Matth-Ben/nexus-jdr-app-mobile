@@ -123,7 +123,7 @@ void main() {
     (WidgetTester tester) async {
       await pumpLineageStep(tester);
 
-      expect(find.text('1. Lignée'), findsOneWidget);
+      expect(find.text('2. Lignée'), findsOneWidget);
       expect(find.text('Abyssal'), findsOneWidget);
       expect(find.text('Chtonien'), findsOneWidget);
       expect(find.text('Infernal'), findsOneWidget);
@@ -141,7 +141,7 @@ void main() {
 
       await pumpLineageStep(tester, raceId: 24);
 
-      expect(find.text('1. Ascendance'), findsOneWidget);
+      expect(find.text('2. Ascendance'), findsOneWidget);
       expect(find.text('Géant des nuages'), findsOneWidget);
     },
   );

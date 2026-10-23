@@ -291,6 +291,7 @@ class FakeRepository implements CharacterRepository {
     List<String> metamagicNames = const [],
     LevelUpMetamagicSwap? metamagicSwap,
     List<int> expertiseSkillIds = const [],
+    bool expertiseThievesToolsSubstitution = false,
     String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   }) => throw UnimplementedError();

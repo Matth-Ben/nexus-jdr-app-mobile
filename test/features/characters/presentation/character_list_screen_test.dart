@@ -304,6 +304,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     List<String> metamagicNames = const [],
     LevelUpMetamagicSwap? metamagicSwap,
     List<int> expertiseSkillIds = const [],
+    bool expertiseThievesToolsSubstitution = false,
     String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   }) {
@@ -574,6 +575,12 @@ void main() {
         GoRoute(
           path: '/',
           builder: (context, state) => const CharacterListScreen(),
+        ),
+        GoRoute(
+          path: '/characters/new/edition',
+          builder: (context, state) => const Scaffold(
+            body: Center(child: Text('Assistant de création')),
+          ),
         ),
         GoRoute(
           path: '/characters/new',

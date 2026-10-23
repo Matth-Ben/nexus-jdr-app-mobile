@@ -30,6 +30,14 @@ class CharacterCreationDraftController
   @override
   CharacterCreationDraft build() => const CharacterCreationDraft();
 
+  /// Met à jour l'édition de règles choisie à l'étape 1 "Édition"
+  /// (`EditionStepScreen`, TOUTE PREMIÈRE étape de l'assistant) — voir
+  /// `domain/character_creation_draft.dart::edition`. Aucun champ à effacer
+  /// sur les étapes suivantes (aucun choix fait avant celle-ci).
+  void setEdition(String edition) {
+    state = state.copyWith(edition: edition);
+  }
+
   /// Met à jour le choix de race/sous-race (ou race personnalisée) de
   /// l'étape 1. Remplace intégralement ces trois champs (pas de fusion
   /// partielle sur ces trois-là) via `copyWith` : l'appelant

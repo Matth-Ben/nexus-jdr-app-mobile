@@ -22,7 +22,7 @@ import 'widgets/creation_mode_title.dart';
 import 'widgets/draft_autosave_footer.dart';
 import 'widgets/step_help_sheet.dart';
 
-/// Étape 8/9 de l'assistant de création de personnage : apparence, histoire
+/// Étape 9/10 de l'assistant de création de personnage : apparence, histoire
 /// et portrait (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md`
 /// section 3 point 8).
 ///
@@ -46,7 +46,7 @@ import 'widgets/step_help_sheet.dart';
 ///
 /// En-tête bois plein portant le titre d'étape et la barre de progression
 /// (`_Header` ci-dessous), copié depuis `equipment_step_screen.dart` (étape
-/// 7/9) — comme sur cette étape et l'étape 6/9, le bois s'étend jusque sous
+/// 8/10) — comme sur cette étape et l'étape 7/10, le bois s'étend jusque sous
 /// `StepProgressBar` (maquette réelle `etape8_histoire_mockup.png`, revue
 /// direction artistique), contrairement à `background_step_screen.dart`
 /// (étape 3/9) qui pose ces deux éléments sur le fond parchemin — écart déjà
@@ -64,7 +64,7 @@ class AppearanceAndBackstoryStepScreen extends ConsumerStatefulWidget {
 
 class _AppearanceAndBackstoryStepScreenState
     extends ConsumerState<AppearanceAndBackstoryStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   /// Les 7 champs courts d'identité puis les 9 champs texte dans l'ordre
   /// canonique, voir le commentaire de classe ci-dessus. L'index dans cette liste est aussi l'index utilisé dans
@@ -275,7 +275,7 @@ class _AppearanceAndBackstoryStepScreenState
         children: [
           _Header(
             onBack: _goBack,
-            currentStep: 8,
+            currentStep: 9,
             totalSteps: _totalSteps,
             onHelp: () => showStepHelpSheet(
               context,
@@ -671,7 +671,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '8. Histoire',
+                          '9. Histoire',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

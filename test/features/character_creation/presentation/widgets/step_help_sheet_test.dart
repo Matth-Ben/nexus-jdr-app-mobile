@@ -32,17 +32,17 @@ void main() {
       'fourni', (tester) async {
     await _pumpSheet(tester, CreationStepHelp.race);
 
-    expect(find.text('1. RACE'), findsOneWidget);
+    expect(find.text('2. RACE'), findsOneWidget);
     expect(find.text(CreationStepHelp.race.body), findsOneWidget);
   });
 
   testWidgets('la croix du SheetHeaderBar referme la sheet', (tester) async {
     await _pumpSheet(tester, CreationStepHelp.race);
-    expect(find.text('1. RACE'), findsOneWidget);
+    expect(find.text('2. RACE'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.close));
     await tester.pumpAndSettle();
 
-    expect(find.text('1. RACE'), findsNothing);
+    expect(find.text('2. RACE'), findsNothing);
   });
 }

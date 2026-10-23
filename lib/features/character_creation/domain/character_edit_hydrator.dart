@@ -100,6 +100,13 @@ abstract final class CharacterEditHydrator {
     String? text(String column) => orNull(snapshot.texts[column]);
 
     return CharacterCreationDraft(
+      // Figée à la création, jamais modifiable depuis l'assistant en mode
+      // modification (`EditionStepScreen` n'est jamais atteinte dans ce
+      // mode, voir `widgets/character_edit_flow.dart::startCharacterEdit`)
+      // — reportée telle quelle pour que le gating Métamagie/Expertise
+      // reste correct pendant l'édition (ex. `ClassChoiceStepScreen`
+      // réatteinte pour changer les compétences d'un Roublard).
+      edition: snapshot.edition,
       raceId: snapshot.raceId,
       subraceId: snapshot.subraceId,
       raceCustomText: orNull(snapshot.raceCustomText),

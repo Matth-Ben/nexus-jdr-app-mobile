@@ -86,6 +86,7 @@ class _AppliedLevelUp {
     required this.metamagicNames,
     required this.metamagicSwap,
     required this.expertiseSkillIds,
+    required this.expertiseThievesToolsSubstitution,
     required this.draconicAncestryDamageType,
     required this.racialInnateSpellIds,
   });
@@ -108,6 +109,7 @@ class _AppliedLevelUp {
   final List<String> metamagicNames;
   final LevelUpMetamagicSwap? metamagicSwap;
   final List<int> expertiseSkillIds;
+  final bool expertiseThievesToolsSubstitution;
   final String? draconicAncestryDamageType;
   final List<int> racialInnateSpellIds;
 }
@@ -398,6 +400,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     List<String> metamagicNames = const [],
     LevelUpMetamagicSwap? metamagicSwap,
     List<int> expertiseSkillIds = const [],
+    bool expertiseThievesToolsSubstitution = false,
     String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   }) async {
@@ -421,6 +424,7 @@ class _FakeCharacterRepository implements CharacterRepository {
         metamagicNames: metamagicNames,
         metamagicSwap: metamagicSwap,
         expertiseSkillIds: expertiseSkillIds,
+        expertiseThievesToolsSubstitution: expertiseThievesToolsSubstitution,
         draconicAncestryDamageType: draconicAncestryDamageType,
         racialInnateSpellIds: racialInnateSpellIds,
       ),
@@ -4723,10 +4727,145 @@ void main() {
       },
     );
 
-    testWidgets('niveau 14 (delta nul, mais au moins une option deja connue) : '
-        'etape "Metamagie" affichee UNIQUEMENT pour l\'echange (D93) — '
-        'remplacer une option connue par une autre', (tester) async {
+    testWidgets(
+      'niveau 2 (premier palier EDITION 2024, avance d\'un niveau par '
+      'rapport a 2014) : quota 2, pas de section d\'echange (rien a '
+      'echanger) — chantier "choix d\'edition 2014/2024 par personnage", '
+      '`MetamagicKnownProgression.metamagicKnownByLevel2024`',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          edition: '2024',
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 12,
+              hitDie: 6,
+              className: 'Ensorceleur',
+              level: 1,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          2: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.knownMetamagicNamesToReturn = const [];
+        fakeRepository.metamagicOptionsToReturn = const [
+          LevelUpMetamagicOption(id: 1, name: 'Sort discret', description: ''),
+          LevelUpMetamagicOption(id: 2, name: 'Sort prolongé', description: ''),
+        ];
+        fakeCreationRepository.spellCatalogByClassId = {
+          12: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 500,
+                name: 'Projectile magique',
+                level: 1,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, 2);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        // Étape "Sorts" intercalée — même rationale que le test niveau 3
+        // (2014) ci-dessus.
+        await tester.tap(find.text('Projectile magique'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Métamagie'), findsOneWidget);
+        expect(find.text('0 / 2'), findsOneWidget);
+        expect(find.textContaining('REMPLACER UNE OPTION'), findsNothing);
+
+        await tester.tap(find.text('Sort discret'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Sort prolongé'));
+        await tester.pumpAndSettle();
+        expect(find.text('2 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.className, 'Ensorceleur');
+        expect(applied.metamagicNames.toSet(), {
+          'Sort discret',
+          'Sort prolongé',
+        });
+        expect(applied.metamagicSwap, isNull);
+      },
+    );
+
+    testWidgets(
+      'niveau 2 EDITION 2014 (defaut) : aucune etape "Metamagie" (le premier '
+      'palier 2014 est au niveau 3, pas 2 — non-regression du correctif '
+      'edition)',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 12,
+              hitDie: 6,
+              className: 'Ensorceleur',
+              level: 1,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          2: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.knownMetamagicNamesToReturn = const [];
+        fakeCreationRepository.spellCatalogByClassId = {
+          12: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 500,
+                name: 'Projectile magique',
+                level: 1,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, 2);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Projectile magique'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('· Métamagie'), findsNothing);
+      },
+    );
+
+    testWidgets('niveau 14 (delta nul, mais au moins une option deja connue), '
+        'personnage EDITION 2024 : etape "Metamagie" affichee UNIQUEMENT '
+        'pour l\'echange (D93) — remplacer une option connue par une autre '
+        '(chantier "choix d\'edition 2014/2024 par personnage" : l\'echange '
+        'n\'existe RAW qu\'en edition 2024, texte 2014 PHB verifie sans '
+        'clause d\'echange)', (tester) async {
       fakeRepository.detailToReturn = _baseDetail.copyWith(
+        edition: '2024',
         classes: [
           const CharacterDetailClassRow(
             classId: 12,
@@ -4772,13 +4911,49 @@ void main() {
       expect(applied.metamagicSwap?.removedName, 'Sort discret');
       expect(applied.metamagicSwap?.addedName, 'Sort prolongé');
     });
+
+    testWidgets(
+      'niveau 14 (delta nul, au moins une option deja connue), personnage '
+      'EDITION 2014 (defaut de CharacterDetail) : l\'etape "Metamagie" '
+      'n\'est JAMAIS affichee (ni nouvelles options, ni echange) — le '
+      'texte 2014 PHB n\'a aucune clause d\'echange, contrairement a 2024',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 12,
+              hitDie: 6,
+              className: 'Ensorceleur',
+              level: 13,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          14: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.knownMetamagicNamesToReturn = const ['Sort discret'];
+        fakeRepository.metamagicOptionsToReturn = const [
+          LevelUpMetamagicOption(id: 2, name: 'Sort prolongé', description: ''),
+        ];
+
+        await pushPastAnnouncement(tester, 14);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('· Métamagie'), findsNothing);
+        expect(find.textContaining('REMPLACER UNE OPTION'), findsNothing);
+        expect(find.textContaining('NOUVELLES OPTIONS'), findsNothing);
+      },
+    );
   });
 
   group('etape "Expertise" (Barde/Roublard)', () {
     testWidgets(
       'Barde niveau 3 : quota 2 parmi les competences deja maitrisees, '
-      'aucune substitution outils de voleur proposee (D104 : RAW-fausse, '
-      'retiree)',
+      'pas de substitution outils (Barde uniquement)',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail.copyWith(
           classes: [
@@ -4860,6 +5035,7 @@ void main() {
 
         final applied = fakeRepository.applyLevelUpCalls.single;
         expect(applied.expertiseSkillIds.toSet(), {1, 2});
+        expect(applied.expertiseThievesToolsSubstitution, isFalse);
       },
     );
 
@@ -4951,13 +5127,13 @@ void main() {
 
         final applied = fakeRepository.applyLevelUpCalls.single;
         expect(applied.expertiseSkillIds, [1]);
+        expect(applied.expertiseThievesToolsSubstitution, isFalse);
       },
     );
 
     testWidgets(
-      'Roublard niveau 6 : aucune substitution "Outils de voleur" — quota '
-      'RAW de 2 competences, les deux "competente" sont selectionnables '
-      '(D104 de docs/dette-technique.md)',
+      'Roublard niveau 6 : substitution "Outils de voleur" prend une des '
+      '2 places, quota de competences reduit a 1',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail.copyWith(
           classes: [
@@ -4996,11 +5172,16 @@ void main() {
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Outils de voleur'), findsNothing);
+        expect(find.text('Outils de voleur'), findsOneWidget);
+        await tester.tap(find.text('Outils de voleur'));
+        await tester.pumpAndSettle();
 
         await tester.tap(find.text('Discrétion'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Escamotage'));
+        expect(find.text('2 / 2'), findsOneWidget);
+        // Le quota de compétences est désormais réduit à 1 (substitution
+        // comprise) : "Escamotage" ne peut plus être cochée.
+        await tester.tap(find.text('Escamotage'), warnIfMissed: false);
         await tester.pumpAndSettle();
         expect(find.text('2 / 2'), findsOneWidget);
 
@@ -5010,14 +5191,19 @@ void main() {
         await tester.pumpAndSettle();
 
         final applied = fakeRepository.applyLevelUpCalls.single;
-        expect(applied.expertiseSkillIds.toSet(), {1, 2});
+        expect(applied.expertiseSkillIds, [1]);
+        expect(applied.expertiseThievesToolsSubstitution, isTrue);
       },
     );
 
     testWidgets(
-      'Roublard niveau 6 : vivier de competences "competente" vide — aucune '
-      'substitution de secours, le quota effectif plafonne a 0 et le flux '
-      'continue immediatement sans aucun choix a faire',
+      'Roublard niveau 6 : vivier de competences "competente" vide — seule '
+      'la substitution "Outils de voleur" est disponible, le flux doit '
+      'pouvoir aller jusqu\'au bout une fois celle-ci selectionnee '
+      '(regression du quota plafonne au catalogue disponible : avant le '
+      'correctif, le maximum atteignable ici — 1, via la seule '
+      'substitution — n\'egalait jamais le quota RAW de 2, bouton CONTINUER '
+      'bloque indefiniment)',
       (tester) async {
         fakeRepository.detailToReturn = _baseDetail.copyWith(
           classes: [
@@ -5043,11 +5229,14 @@ void main() {
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Outils de voleur'), findsNothing);
-        // Aucune competence eligible : le quota effectif est a 0 (badge
-        // plafonne au catalogue, pas le quota RAW de 2) — CONTINUER est
-        // directement actionnable, sans aucun choix de secours a proposer.
+        expect(find.text('Outils de voleur'), findsOneWidget);
+        // Aucune competence eligible : le quota effectif est deja a 0 sans
+        // la substitution (badge plafonne au catalogue, pas le quota RAW).
         expect(find.text('0 / 0'), findsOneWidget);
+
+        await tester.tap(find.text('Outils de voleur'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
@@ -5056,6 +5245,7 @@ void main() {
 
         final applied = fakeRepository.applyLevelUpCalls.single;
         expect(applied.expertiseSkillIds, isEmpty);
+        expect(applied.expertiseThievesToolsSubstitution, isTrue);
       },
     );
 
@@ -5108,7 +5298,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.textContaining('· Expertise'), findsOneWidget);
-        expect(find.text('Outils de voleur'), findsNothing);
+        expect(find.text('Outils de voleur'), findsOneWidget);
 
         await tester.tap(find.text('Discrétion'));
         await tester.pumpAndSettle();
@@ -5124,6 +5314,70 @@ void main() {
         expect(applied.className, 'Roublard');
         expect(applied.isMulticlassing, isTrue);
         expect(applied.expertiseSkillIds.toSet(), {1, 2});
+      },
+    );
+
+    testWidgets(
+      'Roublard niveau 6, personnage EDITION 2024 : JAMAIS de substitution '
+      '"Outils de voleur" (le texte 2024 l\'a supprimée entièrement) — '
+      'quota RAW de 2 compétences, les deux "competente" sont '
+      'sélectionnables, chantier "choix d\'édition 2014/2024 par '
+      'personnage"',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          edition: '2024',
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 9,
+              hitDie: 8,
+              className: 'Roublard',
+              level: 5,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+          skills: const [
+            CharacterSkillRow(
+              id: 1,
+              name: 'Discrétion',
+              abilityId: 'dex',
+              proficiency: 'competente',
+            ),
+            CharacterSkillRow(
+              id: 2,
+              name: 'Escamotage',
+              abilityId: 'dex',
+              proficiency: 'competente',
+            ),
+          ],
+        );
+        fakeRepository.levelDataByLevel = {
+          6: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+
+        await pushPastAnnouncement(tester, 6);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Outils de voleur'), findsNothing);
+
+        await tester.tap(find.text('Discrétion'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Escamotage'));
+        await tester.pumpAndSettle();
+        expect(find.text('2 / 2'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        final applied = fakeRepository.applyLevelUpCalls.single;
+        expect(applied.expertiseSkillIds.toSet(), {1, 2});
+        expect(applied.expertiseThievesToolsSubstitution, isFalse);
       },
     );
   });

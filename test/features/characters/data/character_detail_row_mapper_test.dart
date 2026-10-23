@@ -830,6 +830,42 @@ void main() {
     });
   });
 
+  // Chantier "choix d'édition 2014/2024 par personnage".
+  group('CharacterDetailRowMapper — edition', () {
+    test('edition absente de la ligne -> \'2014\' (repli défensif pour un '
+        'ancien cache hors-ligne écrit avant l\'introduction de cette '
+        'colonne, même rationale que isDead/currencyGp)', () {
+      final row = _row();
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.edition, '2014');
+    });
+
+    test('edition = \'2024\' en base est bien remontée telle quelle', () {
+      final row = _row();
+      row['edition'] = '2024';
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.edition, '2024');
+    });
+  });
+
   group('CharacterDetailRowMapper — is_dead/is_archived/inspiration/speed '
       '(onglet Personnage)', () {
     test('is_dead/is_archived/inspiration absents de la ligne -> false '

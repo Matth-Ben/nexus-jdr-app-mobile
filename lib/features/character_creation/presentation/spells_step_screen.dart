@@ -25,7 +25,7 @@ import 'widgets/draft_autosave_footer.dart';
 import 'widgets/spell_option_info_sheet.dart';
 import 'widgets/step_help_sheet.dart';
 
-/// Étape 6/9 de l'assistant de création de personnage : sorts
+/// Étape 7/10 de l'assistant de création de personnage : sorts
 /// (`docs/cahier-des-charges/04-fonctionnalites-app-mobile.md` section 3
 /// point 6, maquette réelle vérifiée au pixel près, voir la tâche qui a
 /// produit ce fichier pour le rapport de vérification).
@@ -56,7 +56,7 @@ class SpellsStepScreen extends ConsumerStatefulWidget {
 enum _SpellTab { cantrip, levelOne }
 
 class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   late List<String> _selectedCantrips;
   late List<String> _selectedLevelOneSpells;
@@ -242,7 +242,7 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
       children: [
         _Header(
           onBack: _goBack,
-          currentStep: 6,
+          currentStep: 7,
           totalSteps: _totalSteps,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
           showCantripTab: showCantripTab,
@@ -531,7 +531,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '6. Sorts',
+                          '7. Sorts',
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,

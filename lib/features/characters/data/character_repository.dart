@@ -22,6 +22,7 @@ import '../domain/character_spell_slot.dart';
 import '../domain/character_summary.dart';
 import '../domain/hit_point_bonus_rules.dart';
 import '../domain/currency_kind.dart';
+import '../domain/edition_content_resolver.dart';
 import '../domain/gallery_photo_storage_path_resolver.dart';
 import '../domain/inventory_catalog_item.dart';
 import '../domain/level_up_apply_result.dart';
@@ -1021,11 +1022,29 @@ abstract class CharacterRepository {
   /// documentation de classe de `domain/level_up_expertise_option.dart`) —
   /// revérifié juste avant l'écriture que chaque compétence est bien
   /// actuellement 'competente' (même discipline défensive que
-  /// [_applyAbilityScoreImprovement]), lève une [CharacterFailure] sinon. Pas
-  /// de substitution d'outils de voleur : RAW 2024 vérifiée, l'Expertise du
-  /// Roublard (comme celle du Barde) ne porte que sur des compétences, à
-  /// tous les niveaux (D104 de `docs/dette-technique.md` — un ancien
-  /// paramètre `expertiseThievesToolsSubstitution` RAW-faux a été retiré).
+  /// [_applyAbilityScoreImprovement]), lève une [CharacterFailure] sinon.
+  /// [expertiseThievesToolsSubstitution] (Roublard, édition 2014
+  /// UNIQUEMENT — voir `domain/expertise_known_progression.dart
+  /// ::ExpertiseKnownProgression.allowsThievesToolsSubstitution` et
+  /// `presentation/providers/level_up_provider.dart
+  /// ::LevelUpStepData.allowsThievesToolsSubstitution` pour le gating par
+  /// édition fait par l'appelant — cette méthode ne revérifie pas elle-même
+  /// l'édition du personnage, elle fait confiance à l'appelant comme pour
+  /// tout autre paramètre de choix) : RAW, une des 2 places d'Expertise
+  /// substituée par la maîtrise des outils de voleur. L'app ne modélise
+  /// aucun niveau de maîtrise pour les outils (`character_tool_proficiencies`
+  /// est une simple table de présence, sans colonne `proficiency` —
+  /// contrairement aux compétences) ; ce choix est donc enregistré comme un
+  /// simple marqueur texte libre dans `character_class_options`
+  /// (`chosen_value: 'Outils de voleur'`, `class_feature_id` résolu via
+  /// `.eq('class_id', classId).eq('choice_type', 'expertise').eq('level',
+  /// newClassLevel)`), sans effet sur un quelconque bonus calculé (aucun
+  /// n'existe pour les outils dans l'app aujourd'hui) — décision documentée
+  /// plutôt que silencieuse. `false` hors de ce cas. Réintroduit par le
+  /// chantier "choix d'édition 2014/2024 par personnage" après avoir été
+  /// retiré en D104 de `docs/dette-technique.md` sur la base d'une citation
+  /// RAW erronée (le texte 2014 PHB autorise bien cette substitution, voir
+  /// la doc de classe d'`ExpertiseKnownProgression`).
   ///
   /// [draconicAncestryDamageType] : type de dégâts choisi pour l'aptitude
   /// "Ancêtre draconique" (Ensorceleur, Lignage draconique, niveau 1 de
@@ -1078,6 +1097,7 @@ abstract class CharacterRepository {
     List<String> metamagicNames = const [],
     LevelUpMetamagicSwap? metamagicSwap,
     List<int> expertiseSkillIds = const [],
+    bool expertiseThievesToolsSubstitution = false,
     String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   });
@@ -1545,6 +1565,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
           .select('''
             id,
             name,
+            edition,
             portrait_url,
             xp,
             current_hp,
@@ -3980,21 +4001,59 @@ class SupabaseCharacterRepository implements CharacterRepository {
     }
   }
 
+  /// Édition de règles (`characters.edition`) du personnage [characterId] —
+  /// `'2014'` par défaut si la colonne ne peut pas être résolue (ne devrait
+  /// arriver que pour un personnage déjà rejeté ailleurs par la vérification
+  /// d'appartenance). Requête séparée et minimale plutôt que de faire porter
+  /// `edition` par chaque méthode publique de ce repository qui en a besoin
+  /// (`fetchKnownMetamagicNames`/`fetchAvailableMetamagicOptions` n'ont que
+  /// [characterId] comme donnée d'entrée côté personnage, pas
+  /// `CharacterDetail.edition` directement) — voir
+  /// `presentation/providers/level_up_provider.dart`, qui a déjà cette
+  /// valeur sous la main (chargée une seule fois par
+  /// `characterDetailProvider`) et ne passe donc jamais par ce chemin pour
+  /// son propre gating (échange de Métamagie/substitution outils de voleur).
+  Future<String> _fetchCharacterEdition(String characterId) async {
+    final rows = await _client
+        .from('characters')
+        .select('edition')
+        .eq('id', characterId)
+        .limit(1);
+    final edition = rows.firstOrNull?['edition'];
+    return edition is String ? edition : '2014';
+  }
+
   /// Lignes `class_features` (`id`, `level`) de [classId] dont `choice_type
-  /// = 'metamagie'`, triées par `level` croissant — la première (niveau 3)
-  /// sert d'ancre unique pour TOUTE écriture de Métamagie (nouvelles options
-  /// ET échange), voir la documentation de
-  /// [fetchAvailableMetamagicOptions]. Liste vide si aucune ligne de ce
-  /// `choice_type` n'existe pour [classId] (défensif, contenu non peuplé).
+  /// = 'metamagie'`, filtrées sur l'édition du personnage [characterId] via
+  /// [EditionContentResolver] (préfère la ligne `edition` correspondante,
+  /// sinon retombe sur la ligne `edition IS NULL`) — chantier "choix
+  /// d'édition 2014/2024 par personnage" : Métamagie (Ensorceleur) a
+  /// désormais 2 jeux de lignes par niveau (`edition='2014'` aux niveaux
+  /// 3/10/17, `edition='2024'` aux niveaux 2/10/17), qui ne doivent jamais
+  /// être mélangés pour un même personnage (sans ce filtre, les niveaux
+  /// 10/17, communs aux deux éditions, remonteraient deux lignes chacun).
+  /// Triées par `level` croissant — la première (la plus basse) sert
+  /// d'ancre unique pour TOUTE écriture de Métamagie (nouvelles options ET
+  /// échange), voir la documentation de [fetchAvailableMetamagicOptions].
+  /// Liste vide si aucune ligne de ce `choice_type` n'existe pour [classId]
+  /// (défensif, contenu non peuplé).
   Future<List<Map<String, dynamic>>> _fetchMetamagicFeatureRows(
     Object classId,
-  ) {
-    return _client
+    String characterId,
+  ) async {
+    final edition = await _fetchCharacterEdition(characterId);
+    final rows = await _client
         .from('class_features')
-        .select('id, level')
+        .select('id, level, edition')
         .eq('class_id', classId)
         .eq('choice_type', 'metamagie')
         .order('level', ascending: true);
+    final resolved = EditionContentResolver.resolve(
+      _rowsOf(rows),
+      edition: edition,
+      keyOf: (row) => row['level'],
+    )..sort((a, b) => (a['level'] as num).compareTo(b['level'] as num));
+    return resolved;
   }
 
   @override
@@ -4004,7 +4063,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required int targetLevel,
   }) async {
     try {
-      final metamagicFeatureRows = await _fetchMetamagicFeatureRows(classId);
+      final metamagicFeatureRows = await _fetchMetamagicFeatureRows(
+        classId,
+        characterId,
+      );
       final metamagicFeatureIds = [
         for (final row in metamagicFeatureRows) (row['id'] as num).toInt(),
       ];
@@ -4063,7 +4125,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required Object classId,
   }) async {
     try {
-      final metamagicFeatureRows = await _fetchMetamagicFeatureRows(classId);
+      final metamagicFeatureRows = await _fetchMetamagicFeatureRows(
+        classId,
+        characterId,
+      );
       final metamagicFeatureIds = [
         for (final row in metamagicFeatureRows) (row['id'] as num).toInt(),
       ];
@@ -4138,6 +4203,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
     List<String> metamagicNames = const [],
     LevelUpMetamagicSwap? metamagicSwap,
     List<int> expertiseSkillIds = const [],
+    bool expertiseThievesToolsSubstitution = false,
     String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   }) async {
@@ -4781,7 +4847,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // l'inverse) pour la même raison : ne jamais perdre une option connue
       // si le DELETE échoue après un INSERT réussi.
       if (metamagicNames.isNotEmpty || metamagicSwap != null) {
-        final metamagicFeatureRows = await _fetchMetamagicFeatureRows(classId);
+        final metamagicFeatureRows = await _fetchMetamagicFeatureRows(
+          classId,
+          characterId,
+        );
         if (metamagicFeatureRows.isEmpty) {
           throw const CharacterFailure(
             'Métamagie : aptitude de classe introuvable.',
@@ -4859,6 +4928,41 @@ class SupabaseCharacterRepository implements CharacterRepository {
             .update({'proficiency': 'expertise'})
             .eq('character_id', characterId)
             .inFilter('skill_id', expertiseSkillIds);
+      }
+
+      // Substitution Roublard "Expertise des outils de voleur" (édition
+      // 2014 UNIQUEMENT — voir la documentation de
+      // [CharacterRepository.applyLevelUp]) : simple marqueur texte libre
+      // (aucun bonus calculé n'existe pour les outils dans l'app
+      // aujourd'hui), `class_feature_id` résolu via [classId]+[newClassLevel]
+      // (une seule ligne `class_features` existe pour `('expertise',
+      // classId, newClassLevel)`, contrairement à la Métamagie qui en a 3
+      // pour la même classe) — cette ligne a `edition` NULL (s'applique aux
+      // deux éditions, voir `docs/cahier-des-charges`), donc pas besoin de
+      // [EditionContentResolver] ici : seul le comportement (proposer ou
+      // non cette substitution à l'appelant) diffère par édition, pas le
+      // contenu lui-même.
+      if (expertiseThievesToolsSubstitution) {
+        final expertiseFeatureRows = await _client
+            .from('class_features')
+            .select('id')
+            .eq('class_id', classId)
+            .eq('choice_type', 'expertise')
+            .eq('level', newClassLevel)
+            .limit(1);
+        if (expertiseFeatureRows.isEmpty) {
+          throw const CharacterFailure(
+            'Expertise : aptitude de classe introuvable à ce niveau.',
+          );
+        }
+        final expertiseFeatureId = (expertiseFeatureRows.first['id'] as num)
+            .toInt();
+        await _client.from('character_class_options').insert({
+          'character_id': characterId,
+          'class_feature_id': expertiseFeatureId,
+          'level': newClassLevel,
+          'chosen_value': 'Outils de voleur',
+        });
       }
 
       // Ascendance draconique (Ensorceleur, Lignage draconique, niveau 1 de
@@ -5627,8 +5731,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // rechargerait toujours la réserve à la valeur statique de la base
     // (4, RAW-exacte seulement aux niveaux 3-6), en désaccord avec le total
     // affiché par `_mapCharacterDetailPayload` à partir du niveau 7.
+    // `edition` ajouté (chantier "choix d'édition 2014/2024 par
+    // personnage") : sans lui, [ClassFeatureRowMapper.filterAttained] ne
+    // pourrait jamais exclure une ligne spécifique à l'AUTRE édition que
+    // celle du personnage — rechargeant alors au repos une aptitude qui
+    // n'est même pas affichée sur sa fiche.
     const featureSelect =
-        'id, class_id, subclass_id, level, uses_per_rest, choice_type';
+        'id, class_id, subclass_id, level, uses_per_rest, choice_type, '
+        'edition';
     final featureRowsById = <Object, Map<String, dynamic>>{};
     final baseRows = await _client
         .from('class_features')
@@ -5653,6 +5763,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       featureRowsById.values.toList(),
       classLevels: classLevels,
       subclassLevels: subclassLevels,
+      characterEdition: await _fetchCharacterEdition(characterId),
     );
 
     final payload = [
@@ -6422,8 +6533,16 @@ class SupabaseCharacterRepository implements CharacterRepository {
       // `ClassFeatureRowMapper.effectiveUsesMax`/
       // `domain/superiority_dice_progression.dart`) : seul moyen de repérer
       // "Supériorité martiale" sans dépendre d'un `id` câblé en dur.
+      // `edition` ajouté (chantier "choix d'édition 2014/2024 par
+      // personnage") : sans lui, [ClassFeatureRowMapper.filterAttained]
+      // (appelée ci-dessous ET par `_mapCharacterDetailPayload` sur ces
+      // mêmes lignes mises en cache) ne pourrait jamais exclure une ligne
+      // spécifique à l'AUTRE édition que celle du personnage — affichant
+      // alors EN DOUBLE toute aptitude dont le contenu diffère entre
+      // éditions (ex. Métamagie, Expertise).
       const featureSelect =
-          'id, class_id, subclass_id, level, uses_per_rest, choice_type';
+          'id, class_id, subclass_id, level, uses_per_rest, choice_type, '
+          'edition';
       final featureRowsById = <Object, Map<String, dynamic>>{};
       final baseRows = await _client
           .from('class_features')
@@ -6450,6 +6569,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         classFeatureRows,
         classLevels: CharacterDetailRowMapper.collectClassLevels(row),
         subclassLevels: CharacterDetailRowMapper.collectSubclassLevels(row),
+        characterEdition: CharacterDetailRowMapper.editionOf(row),
       );
       final attainedIds = ClassFeatureRowMapper.collectIds(attainedRows);
       classFeatureNameRows = await _fetchTranslationRows(
@@ -6781,6 +6901,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
       _rowsOf(payload['classFeatureRows']),
       classLevels: classLevelsForFeatures,
       subclassLevels: subclassLevelsForFeatures,
+      characterEdition: CharacterDetailRowMapper.editionOf(row),
     );
     final classFeatureNames = CharacterRowMapper.parseTranslatedNames(
       _rowsOf(payload['classFeatureNameRows']),

@@ -258,6 +258,7 @@ class _FakeCharacterRepository implements CharacterRepository {
     List<String> metamagicNames = const [],
     LevelUpMetamagicSwap? metamagicSwap,
     List<int> expertiseSkillIds = const [],
+    bool expertiseThievesToolsSubstitution = false,
     String? draconicAncestryDamageType,
     List<int> racialInnateSpellIds = const [],
   }) => throw UnimplementedError();
@@ -516,6 +517,11 @@ GoRouter _buildTestRouter() {
             child: Text('Écran Groupe ${state.pathParameters['id']}'),
           ),
         ),
+      ),
+      GoRoute(
+        path: '/characters/new/edition',
+        builder: (context, state) =>
+            const Scaffold(body: Center(child: Text("Assistant de création"))),
       ),
       GoRoute(
         path: '/characters/new',

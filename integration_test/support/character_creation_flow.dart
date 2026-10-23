@@ -52,7 +52,17 @@ Future<void> createCharacter(
   await tapText(tester, '+ CRÉER');
   await pumpUntilSettled(tester, attempts: 6);
 
-  // Etape 1/9 : Race (liste longue, defilement necessaire).
+  // Etape 1/10 : Edition -- chantier "choix d'edition 2014/2024 par
+  // personnage" (`EditionStepScreen`, TOUTE PREMIERE etape de l'assistant,
+  // AVANT Race). Jamais parametrable ici (resolution automatique
+  // systematique sur l'edition deja preselectionnee -- '2014', meme defaut
+  // que `CharacterCreationDraft.edition`) : aucun scenario de cette suite
+  // ne depend d'une edition precise, "SUIVANT" est deja actionnable sans
+  // interaction prealable.
+  await tapText(tester, 'SUIVANT');
+  await pumpUntilSettled(tester, attempts: 4);
+
+  // Etape 2/10 : Race (liste longue, defilement necessaire).
   await scrollUntilVisibleThenTap(
     tester,
     find.byType(ListView).first,

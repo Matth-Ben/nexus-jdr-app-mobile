@@ -153,10 +153,10 @@ void main() {
       // bois" (`textOnWood`/`textOnWoodMuted`), pas les couleurs "sur
       // parchemin" (`textPrimary`/`textMuted`) utilisées par erreur avant
       // correction.
-      final title = tester.widget<Text>(find.text('8. Histoire'));
+      final title = tester.widget<Text>(find.text('9. Histoire'));
       expect(title.style?.color, AppColors.textOnWood);
 
-      final stepLabel = tester.widget<Text>(find.text('Étape 8 / 9'));
+      final stepLabel = tester.widget<Text>(find.text('Étape 9 / 10'));
       expect(stepLabel.style?.color, AppColors.textOnWoodMuted);
 
       // `StepProgressBar` doit être un descendant du même `ColoredBox` bois
@@ -534,7 +534,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.help_outline));
       await tester.pumpAndSettle();
 
-      expect(find.text('8. APPARENCE, HISTOIRE ET PORTRAIT'), findsOneWidget);
+      expect(find.text('9. APPARENCE, HISTOIRE ET PORTRAIT'), findsOneWidget);
     });
 
     testWidgets(

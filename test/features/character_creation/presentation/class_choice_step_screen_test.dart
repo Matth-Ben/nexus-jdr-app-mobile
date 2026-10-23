@@ -241,7 +241,7 @@ void main() {
 
         await pumpClassChoiceStep(tester);
 
-        expect(find.text('2. Style de combat'), findsOneWidget);
+        expect(find.text('3. Style de combat'), findsOneWidget);
         expect(find.text('Archerie'), findsOneWidget);
         expect(find.text('Combat à deux armes'), findsOneWidget);
         expect(find.text('Combat à deux mains'), findsOneWidget);
@@ -297,7 +297,7 @@ void main() {
 
         await pumpClassChoiceStep(tester);
 
-        expect(find.text('2. Ennemi juré'), findsOneWidget);
+        expect(find.text('3. Ennemi juré'), findsOneWidget);
         expect(find.text('Dragons'), findsOneWidget);
         expect(find.byIcon(Icons.gps_fixed), findsWidgets);
 
@@ -416,13 +416,14 @@ void main() {
       await pumpClassChoiceStep(tester);
     }
 
-    testWidgets('affiche "COMPÉTENCES MAÎTRISÉES" avec le badge de quota et '
-        'les compétences candidates (classe + historique)', (
+    testWidgets('affiche "COMPÉTENCES MAÎTRISÉES" avec le badge de quota, les '
+        'compétences candidates (classe + historique) ET la substitution '
+        'outils de voleur (édition 2014 — défaut du brouillon)', (
       WidgetTester tester,
     ) async {
       await pumpRoublardStep(tester);
 
-      expect(find.text('2. Expertise'), findsOneWidget);
+      expect(find.text('3. Expertise'), findsOneWidget);
       expect(find.text('COMPÉTENCES MAÎTRISÉES'), findsOneWidget);
       expect(find.text('0 / 2 choisies'), findsOneWidget);
       expect(find.text('Discrétion'), findsOneWidget);
@@ -430,18 +431,25 @@ void main() {
       // Compétence accordée par l'historique (Ermite), elle aussi
       // candidate — union dédupliquée classe/race/historique.
       expect(find.text('Médecine'), findsOneWidget);
+      expect(find.text('outils de voleur'), findsOneWidget);
       expect(nextEnabled(tester), isFalse);
     });
 
-    testWidgets("régression D100 (`docs/dette-technique.md`) : AUCUNE option "
-        "'outils de voleur' n'est affichée à ce stade (niveau 1, création) "
-        "même si la classe l'accorde automatiquement (`grantedToolNames`) — "
-        'RAW, la substitution de l\'Expertise par les outils de voleur '
-        "n'existe qu'au niveau 6", (WidgetTester tester) async {
-      await pumpRoublardStep(tester);
+    testWidgets(
+      "chantier édition 2014/2024 : AUCUNE option 'outils de voleur' n'est "
+      "affichée pour un brouillon d'édition 2024, même si la classe "
+      "l'accorde automatiquement (`grantedToolNames`) — RAW, le texte 2024 "
+      'a supprimé cette substitution entièrement',
+      (WidgetTester tester) async {
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setEdition('2024');
 
-      expect(find.text('outils de voleur'), findsNothing);
-    });
+        await pumpRoublardStep(tester);
+
+        expect(find.text('outils de voleur'), findsNothing);
+      },
+    );
 
     testWidgets('2 compétences choisies -> "Suivant" actif, écrit '
         'expertiseSkillChoices sans substitution outils', (
@@ -464,6 +472,28 @@ void main() {
       expect(draft.expertiseThievesToolsSubstitution, isFalse);
       expect(find.text('Étape Équipement'), findsOneWidget);
     });
+
+    testWidgets(
+      '1 compétence + substitution outils de voleur (édition 2014) -> '
+      '"Suivant" actif, écrit expertiseThievesToolsSubstitution',
+      (WidgetTester tester) async {
+        await pumpRoublardStep(tester);
+
+        await tester.tap(find.text('Discrétion'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('outils de voleur'));
+        await tester.pumpAndSettle();
+
+        expect(nextEnabled(tester), isTrue);
+
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        final draft = readDraft();
+        expect(draft.expertiseSkillChoices, ['Discrétion']);
+        expect(draft.expertiseThievesToolsSubstitution, isTrue);
+      },
+    );
 
     testWidgets(
       'quota atteint : les tuiles non cochées restantes sont désactivées, '
@@ -514,41 +544,42 @@ void main() {
       },
     );
 
-    testWidgets('mode modification : "Suivant" pousse l\'étape 8/9 "Apparence" '
-        '(étape Équipement toujours sautée), pas l\'étape 7/9', (
-      WidgetTester tester,
-    ) async {
-      const editDraft = CharacterCreationDraft(classId: 9);
-      container
-          .read(characterCreationDraftControllerProvider.notifier)
-          .replaceWith(editDraft);
-      container
-          .read(characterEditSessionControllerProvider.notifier)
-          .start(
-            CharacterEditSession(
-              snapshot: CharacterEditSnapshot(
-                characterId: 'c1',
-                name: 'Fennick',
-                primaryClassId: 9,
-                primaryClassLevel: 1,
-                totalLevel: 1,
-                maxHp: 10,
-                currentHp: 10,
+    testWidgets(
+      'mode modification : "Suivant" pousse l\'étape 9/10 "Apparence" '
+      '(étape Équipement toujours sautée), pas l\'étape 8/10',
+      (WidgetTester tester) async {
+        const editDraft = CharacterCreationDraft(classId: 9);
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .replaceWith(editDraft);
+        container
+            .read(characterEditSessionControllerProvider.notifier)
+            .start(
+              CharacterEditSession(
+                snapshot: CharacterEditSnapshot(
+                  characterId: 'c1',
+                  name: 'Fennick',
+                  primaryClassId: 9,
+                  primaryClassLevel: 1,
+                  totalLevel: 1,
+                  maxHp: 10,
+                  currentHp: 10,
+                ),
+                originalDraft: editDraft,
               ),
-              originalDraft: editDraft,
-            ),
-          );
-      await pumpRoublardStep(tester);
+            );
+        await pumpRoublardStep(tester);
 
-      await tester.tap(find.text('Discrétion'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Perception'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('SUIVANT'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Discrétion'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Perception'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Étape Apparence'), findsOneWidget);
-      expect(find.text('Étape Équipement'), findsNothing);
-    });
+        expect(find.text('Étape Apparence'), findsOneWidget);
+        expect(find.text('Étape Équipement'), findsNothing);
+      },
+    );
   });
 }

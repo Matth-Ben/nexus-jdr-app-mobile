@@ -34,9 +34,11 @@ import 'widgets/step_help_sheet.dart';
 /// Gnome/le Génasi dont la lignée se déduit automatiquement de la sous-race
 /// choisie (voir `data/character_creation_repository.dart::createCharacter`).
 ///
-/// Ne fait PAS avancer le compteur d'étape (`currentStep: 1`, comme
+/// Ne fait PAS avancer le compteur d'étape (`currentStep: 2`, comme
 /// `RaceStepScreen`/`SubraceStepScreen`) : c'est un second écran de la même
-/// étape logique, pas une étape à part entière du parcours en 9 étapes.
+/// étape logique, pas une étape à part entière du parcours en 10 étapes
+/// (depuis le chantier "choix d'édition 2014/2024 par personnage",
+/// `EditionStepScreen`).
 ///
 /// `_Header`/`_MinimalHeader`/`_ErrorState` dupliqués localement plutôt que
 /// factorisés avec `RaceStepScreen`/`SubraceStepScreen` : voir la doc de
@@ -50,7 +52,7 @@ class LineageStepScreen extends ConsumerStatefulWidget {
 }
 
 class _LineageStepScreenState extends ConsumerState<LineageStepScreen> {
-  static const int _totalSteps = 9;
+  static const int _totalSteps = 10;
 
   int? _raceId;
   int? _selectedLineageId;
@@ -167,7 +169,7 @@ class _LineageStepScreenState extends ConsumerState<LineageStepScreen> {
       children: [
         _Header(
           onBack: _goBack,
-          currentStep: 1,
+          currentStep: 2,
           totalSteps: _totalSteps,
           bannerTitle: copy.bannerTitle,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.race),
@@ -277,18 +279,18 @@ class _LineageStepCopy {
     switch (raceId) {
       case _tieffelinRaceId:
         return const _LineageStepCopy(
-          bannerTitle: '1. Lignée',
+          bannerTitle: '2. Lignée',
           introText: 'Choisis ta lignée fiélonne.',
         );
       case _goliathRaceId:
         return const _LineageStepCopy(
-          bannerTitle: '1. Ascendance',
+          bannerTitle: '2. Ascendance',
           introText: 'Choisis ton ascendance géante.',
         );
       case _drakeideRaceId:
       default:
         return const _LineageStepCopy(
-          bannerTitle: '1. Ascendance',
+          bannerTitle: '2. Ascendance',
           introText: 'Choisis ton ascendance draconique.',
         );
     }

@@ -96,6 +96,12 @@ void main() {
     await tapText(tester, "+ CRÉER");
     await pumpUntilSettled(tester, attempts: 6);
 
+    // Etape 1/10 : Edition -- chantier "choix d'edition 2014/2024 par
+    // personnage", meme resolution automatique que
+    // support/character_creation_flow.dart::createCharacter.
+    await tapText(tester, "SUIVANT");
+    await pumpUntilSettled(tester, attempts: 4);
+
     await scrollUntilVisibleThenTap(
       tester,
       find.byType(ListView).first,
@@ -277,93 +283,93 @@ void main() {
     );
   });
 
-  testWidgets(
-    "Roublard : Expertise proposee des la creation, jamais d'outils de "
-    "voleur (D99/D100)",
-    (tester) async {
-      if (!hasQaTestAccount) {
-        // ignore: avoid_print
-        print("SKIP: $qaTestAccountMissingReason");
-        return;
-      }
-      await openCharacterList(tester);
-      await startCreationUpToClassChoice(tester, "Roublard");
-
-      expect(
-        find.textContaining("Ce choix se fait dès le niveau 1").evaluate(),
-        isEmpty,
-        reason:
-            "Inattendu : le Roublard ne devrait voir son choix "
-            "d'Expertise qu'apres l'etape Competences et outils, pas ici.",
-      );
-
-      await scrollUntilVisibleThenTap(
-        tester,
-        find.byType(ListView).first,
-        "Acolyte",
-      );
-      await pumpUntilSettled(tester, attempts: 4);
-      await tapText(tester, "SUIVANT");
-      await pumpUntilSettled(tester, attempts: 4);
-      await fillAbilityScoreRacialBonusIfPresent(tester);
-      await tapText(tester, "SUIVANT");
-      await pumpUntilSettled(tester, attempts: 4);
-
-      await fillAvailableCheckableTiles(tester);
-      await tapText(tester, "SUIVANT");
-      await pumpUntilSettled(tester, attempts: 4);
-
-      expect(
-        find.textContaining("Ce choix se fait dès le niveau 1").evaluate(),
-        isNotEmpty,
-        reason:
-            "BUG a transmettre a dev-flutter : le Roublard ne se voit pas "
-            "proposer l'Expertise apres l'etape Competences et outils a la "
-            "creation.",
-      );
-      final skillTiles = tester
-          .widgetList<CheckableOptionTile>(find.byType(CheckableOptionTile))
-          .map((t) => t.title)
-          .toList();
+  testWidgets("Roublard : Expertise proposee des la creation, outils de voleur "
+      "inclus en edition 2014 (D99/D104 Inverse)", (tester) async {
+    if (!hasQaTestAccount) {
       // ignore: avoid_print
-      print("OBSERVATION Expertise (competences candidates) : $skillTiles");
-      expect(
-        skillTiles.any(
-          (title) => title.toLowerCase().contains("outils de voleur"),
-        ),
-        isFalse,
-        reason:
-            "REGRESSION D100 (docs/dette-technique.md) : outils de voleur "
-            "apparait de nouveau comme option d'Expertise au niveau 1 -- "
-            "RAW-faux, cette substitution n'existe qu'au niveau 6.",
-      );
+      print("SKIP: $qaTestAccountMissingReason");
+      return;
+    }
+    await openCharacterList(tester);
+    await startCreationUpToClassChoice(tester, "Roublard");
 
-      await fillAvailableCheckableTiles(tester);
-      await tapText(tester, "SUIVANT");
-      await pumpUntilSettled(tester, attempts: 4);
+    expect(
+      find.textContaining("Ce choix se fait dès le niveau 1").evaluate(),
+      isEmpty,
+      reason:
+          "Inattendu : le Roublard ne devrait voir son choix "
+          "d'Expertise qu'apres l'etape Competences et outils, pas ici.",
+    );
 
-      // Horodate (D109, docs/dette-technique.md) : evite un doublon en base
-      // a chaque relance de ce fichier.
-      final name = qaUniqueCharacterName("QA-Test-Roublard-D99");
-      await tapText(tester, "SUIVANT");
-      await pumpUntilSettled(tester, attempts: 4);
-      await tapText(tester, "SUIVANT");
-      await pumpUntilSettled(tester, attempts: 4);
-      await tester.enterText(find.byType(TextFormField).first, name);
-      await tester.pump();
-      await tapText(tester, "CRÉER LE PERSONNAGE");
-      await pumpUntilSettled(tester, attempts: 10);
+    await scrollUntilVisibleThenTap(
+      tester,
+      find.byType(ListView).first,
+      "Acolyte",
+    );
+    await pumpUntilSettled(tester, attempts: 4);
+    await tapText(tester, "SUIVANT");
+    await pumpUntilSettled(tester, attempts: 4);
+    await fillAbilityScoreRacialBonusIfPresent(tester);
+    await tapText(tester, "SUIVANT");
+    await pumpUntilSettled(tester, attempts: 4);
 
-      expect(
-        find.text(name).evaluate(),
-        isNotEmpty,
-        reason:
-            "BUG a transmettre a dev-flutter : apres le choix d'Expertise, "
-            "la creation du Roublard ne revient jamais sur la liste des "
-            "personnages (ecran bloque, voir les logs ci-dessus).",
-      );
-    },
-  );
+    await fillAvailableCheckableTiles(tester);
+    await tapText(tester, "SUIVANT");
+    await pumpUntilSettled(tester, attempts: 4);
+
+    expect(
+      find.textContaining("Ce choix se fait dès le niveau 1").evaluate(),
+      isNotEmpty,
+      reason:
+          "BUG a transmettre a dev-flutter : le Roublard ne se voit pas "
+          "proposer l'Expertise apres l'etape Competences et outils a la "
+          "creation.",
+    );
+    final skillTiles = tester
+        .widgetList<CheckableOptionTile>(find.byType(CheckableOptionTile))
+        .map((t) => t.title)
+        .toList();
+    // ignore: avoid_print
+    print("OBSERVATION Expertise (competences candidates) : $skillTiles");
+    expect(
+      skillTiles.any(
+        (title) => title.toLowerCase().contains("outils de voleur"),
+      ),
+      isTrue,
+      reason:
+          "D104 Inverse (docs/dette-technique.md, chantier choix d'edition "
+          "2014/2024 par personnage) : outils de voleur DOIT apparaitre "
+          "comme option d'Expertise au niveau 1 pour un Roublard cree en "
+          "edition 2014 (defaut de ce test) -- RAW 2014 PHB, la "
+          "substitution existe bien des le niveau 1, contrairement a "
+          "l'ancienne regle D100 remplacee par ce chantier.",
+    );
+
+    await fillAvailableCheckableTiles(tester);
+    await tapText(tester, "SUIVANT");
+    await pumpUntilSettled(tester, attempts: 4);
+
+    // Horodate (D109, docs/dette-technique.md) : evite un doublon en base
+    // a chaque relance de ce fichier.
+    final name = qaUniqueCharacterName("QA-Test-Roublard-D99");
+    await tapText(tester, "SUIVANT");
+    await pumpUntilSettled(tester, attempts: 4);
+    await tapText(tester, "SUIVANT");
+    await pumpUntilSettled(tester, attempts: 4);
+    await tester.enterText(find.byType(TextFormField).first, name);
+    await tester.pump();
+    await tapText(tester, "CRÉER LE PERSONNAGE");
+    await pumpUntilSettled(tester, attempts: 10);
+
+    expect(
+      find.text(name).evaluate(),
+      isNotEmpty,
+      reason:
+          "BUG a transmettre a dev-flutter : apres le choix d'Expertise, "
+          "la creation du Roublard ne revient jamais sur la liste des "
+          "personnages (ecran bloque, voir les logs ci-dessus).",
+    );
+  });
 
   testWidgets(
     "Ensorceleur Lignage draconique : Ancetre draconique propose des la "

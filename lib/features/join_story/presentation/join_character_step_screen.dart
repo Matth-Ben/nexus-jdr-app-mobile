@@ -59,7 +59,7 @@ class _JoinCharacterStepScreenState
     ref
         .read(characterCreationReturnRouteControllerProvider.notifier)
         .set(JoinRoutes.character(widget.code));
-    context.push('/characters/new');
+    context.push('/characters/new/edition');
   }
 
   /// Tap sur une `CharacterCard` : déclenche directement le rattachement
