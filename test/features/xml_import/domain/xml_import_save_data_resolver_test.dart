@@ -20,6 +20,7 @@ import 'package:personnages/features/xml_import/domain/xml_character_import_reso
 import 'package:personnages/features/xml_import/domain/xml_field_resolution.dart';
 import 'package:personnages/features/xml_import/domain/xml_import_save_data.dart';
 import 'package:personnages/features/xml_import/domain/xml_import_save_data_resolver.dart';
+import 'package:personnages/features/xml_import/domain/xml_named_option.dart';
 import 'package:personnages/features/xml_import/domain/xml_raw_level_entry.dart';
 
 const _race = RaceOption(
@@ -657,6 +658,52 @@ void main() {
 
       expect(data.subraceId, isNull);
       expect(data.abilityScores['wis'], 10);
+    });
+  });
+
+  group('XmlImportSaveDataResolver.resolve — sous-classe (classPath)', () {
+    const domaineDeLaVie = XmlNamedOption(id: 42, name: 'Domaine de la vie');
+
+    test('sous-classe reconnue (increment 1) -> son id est repris tel quel '
+        'dans subclassId', () {
+      final data = XmlImportSaveDataResolver.resolve(
+        resolved: _resolved().copyWith(
+          subclass: const XmlFieldResolution.recognized(domaineDeLaVie),
+        ),
+        itemCatalog: _itemCatalog,
+        skillCatalog: _skillCatalog,
+        alignmentCatalog: _alignmentCatalog,
+      );
+
+      expect(data.subclassId, 42);
+    });
+
+    test('<classPath> absent du XML (resolved.subclass == null, personnage '
+        "n'ayant pas encore choisi de sous-classe) -> subclassId null, "
+        'aucune erreur', () {
+      final data = XmlImportSaveDataResolver.resolve(
+        resolved: _resolved().copyWith(subclass: null),
+        itemCatalog: _itemCatalog,
+        skillCatalog: _skillCatalog,
+        alignmentCatalog: _alignmentCatalog,
+      );
+
+      expect(data.subclassId, isNull);
+    });
+
+    test('<classPath> présent mais non reconnu (faute de frappe, ou aucun '
+        'candidat pour cette classe) -> subclassId null, jamais bloquant, '
+        'pas de crash', () {
+      final data = XmlImportSaveDataResolver.resolve(
+        resolved: _resolved().copyWith(
+          subclass: const XmlFieldResolution.unrecognized('Domaine inexistant'),
+        ),
+        itemCatalog: _itemCatalog,
+        skillCatalog: _skillCatalog,
+        alignmentCatalog: _alignmentCatalog,
+      );
+
+      expect(data.subclassId, isNull);
     });
   });
 }

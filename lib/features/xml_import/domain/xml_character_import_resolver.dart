@@ -29,13 +29,20 @@ import 'xml_race_resolver.dart';
 /// déjà chargés, exactement comme `SummaryStepScreen` le fait aujourd'hui
 /// pour l'étape 9/9 de l'assistant.
 ///
-/// [subclassCandidates]/[invocationCandidates] n'ont **pas** d'équivalent
-/// catalogue existant ailleurs dans l'app (voir la documentation de
-/// [XmlNamedOption]) : listes vides par défaut, ce qui fait retomber tout
-/// `classPath`/`knownInvocation` réellement présent sur
-/// [XmlFieldResolution.unrecognized] tant que l'appelant ne les fournit pas
-/// — comportement sûr (jamais un crash), pas un blocage de l'import (voir
-/// `03-import-xml-aidedd.md` point 4).
+/// [subclassCandidates] est désormais alimenté par l'appelant
+/// (`xml_import/presentation/providers/xml_import_providers.dart`) depuis le
+/// catalogue complet `subclasses`
+/// (`character_creation/domain/subclass_catalog.dart::SubclassCatalog`),
+/// filtré sur la classe déjà résolue (`characterClass`) — voir la
+/// documentation de [XmlNamedOption] pour le rationale de ce type générique
+/// plutôt qu'un `SubclassOption` directement. [invocationCandidates] n'a en
+/// revanche **toujours pas** d'équivalent catalogue ailleurs dans l'app :
+/// liste vide par défaut, ce qui fait retomber tout `knownInvocation`
+/// réellement présent sur [XmlFieldResolution.unrecognized] tant qu'un futur
+/// appelant ne la fournit pas — comportement sûr (jamais un crash), pas un
+/// blocage de l'import (voir `03-import-xml-aidedd.md` point 4). Un
+/// [subclassCandidates] vide (appelant qui ne l'aurait pas renseigné, ex. un
+/// test qui ne couvre pas ce champ) retombe sur le même comportement sûr.
 abstract final class XmlCharacterImportResolver {
   static XmlCharacterImportResolved resolve({
     required XmlCharacterImportRaw raw,

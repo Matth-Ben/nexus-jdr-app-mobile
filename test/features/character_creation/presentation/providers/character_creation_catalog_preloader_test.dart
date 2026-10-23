@@ -11,7 +11,7 @@
 // que `character_write_sync_coordinator_test.dart` pour
 // `connectivityCheckerProvider`. `_FakeCharacterCreationRepository`
 // (calqué sur celui de `race_step_screen_test.dart`) compte les appels à
-// chacun des 8 catalogues non paramétrés préchargés, et peut être configuré
+// chacun des 9 catalogues non paramétrés préchargés, et peut être configuré
 // pour faire échouer l'un d'entre eux sans jamais lever d'exception non
 // gérée dans le test lui-même (le préchargeur doit rester silencieux, voir
 // sa doc de classe).
@@ -34,6 +34,7 @@ import 'package:personnages/features/character_creation/domain/language_catalog.
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
+import 'package:personnages/features/character_creation/domain/subclass_catalog.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_catalog_preloader.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
@@ -61,7 +62,7 @@ void main() {
     });
 
     test('reprise de session existante au lancement (initialSession avec '
-        'session) déclenche le préchargement des 8 catalogues non '
+        'session) déclenche le préchargement des 9 catalogues non '
         'paramétrés, jamais fetchSpellCatalog', () async {
       container.read(characterCreationCatalogPreloaderProvider);
       authStateController.add(
@@ -77,6 +78,7 @@ void main() {
       expect(fakeRepository.itemCatalogCallCount, 1);
       expect(fakeRepository.skillCatalogCallCount, 1);
       expect(fakeRepository.alignmentCatalogCallCount, 1);
+      expect(fakeRepository.subclassCatalogCallCount, 1);
       expect(
         fakeRepository.spellCatalogCallCount,
         0,
@@ -160,6 +162,7 @@ void main() {
             'catalogues (ici fetchRaceCatalog) de se précharger.',
       );
       expect(fakeRepository.alignmentCatalogCallCount, 1);
+      expect(fakeRepository.subclassCatalogCallCount, 1);
     });
 
     test('dispose() annule l\'abonnement : plus aucun préchargement '
@@ -211,7 +214,7 @@ class _FakeAuthStateStream implements AuthStateStream {
 }
 
 /// Double minimal de `CharacterCreationRepository` — compte les appels à
-/// chacun des 8 catalogues non paramétrés préchargés (voir la doc de classe
+/// chacun des 9 catalogues non paramétrés préchargés (voir la doc de classe
 /// de `CharacterCreationCatalogPreloader`), plus `fetchSpellCatalog` (jamais
 /// censé être appelé par ce préchargeur, voir les tests ci-dessus).
 /// `createCharacter` n'est jamais exercé par ces tests.
@@ -225,6 +228,7 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   int itemCatalogCallCount = 0;
   int skillCatalogCallCount = 0;
   int alignmentCatalogCallCount = 0;
+  int subclassCatalogCallCount = 0;
 
   Object? classCatalogErrorToThrow;
 
@@ -284,6 +288,12 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   Future<AlignmentCatalog> fetchAlignmentCatalog() async {
     alignmentCatalogCallCount++;
     return const AlignmentCatalog(alignments: []);
+  }
+
+  @override
+  Future<SubclassCatalog> fetchSubclassCatalog() async {
+    subclassCatalogCallCount++;
+    return const SubclassCatalog(subclasses: []);
   }
 
   @override

@@ -112,13 +112,13 @@ class SupabaseXmlImportRepository implements XmlImportRepository {
         await _client.from('character_classes').insert({
           'character_id': characterId,
           'class_id': data.classId,
-          // Sous-classe non câblée dans cet increment (voir
-          // `xml_character_import_resolver.dart` : `subclassCandidates` est
-          // toujours vide faute de catalogue Supabase dédié) — cohérent avec
-          // l'assistant de création manuel, qui ne propose lui-même encore
-          // aucun choix de sous-classe (`CharacterCreationDraft` n'a pas de
-          // `subclassId`).
-          'subclass_id': null,
+          // Sous-classe résolue depuis `classPath` (`<classPath>` du XML)
+          // contre le catalogue complet `subclasses`
+          // (`character_creation/domain/subclass_catalog.dart`, voir
+          // `xml_character_import_resolver.dart`/
+          // `xml_import_save_data_resolver.dart`) — `null` si `classPath`
+          // est absent du XML ou non reconnu, jamais bloquant.
+          'subclass_id': data.subclassId,
           'level': data.level,
           'is_primary': true,
         });

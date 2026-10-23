@@ -28,6 +28,7 @@ import 'package:personnages/features/character_creation/domain/language_catalog.
 import 'package:personnages/features/character_creation/domain/race_catalog.dart';
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
+import 'package:personnages/features/character_creation/domain/subclass_catalog.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/equipment_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
@@ -87,6 +88,10 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   @override
   Future<AlignmentCatalog> fetchAlignmentCatalog() async =>
       const AlignmentCatalog(alignments: []);
+
+  @override
+  Future<SubclassCatalog> fetchSubclassCatalog() async =>
+      const SubclassCatalog(subclasses: []);
 
   @override
   Future<String> createCharacter({

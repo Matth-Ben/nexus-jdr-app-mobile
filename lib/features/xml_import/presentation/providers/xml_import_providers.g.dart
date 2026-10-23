@@ -212,7 +212,7 @@ final class XmlImportReviewControllerProvider
 }
 
 String _$xmlImportReviewControllerHash() =>
-    r'8b077ec573eb69f2073d0ebc450b4f0ee5686a0e';
+    r'3f4991ce7163443b1156612a19f1ecc30ac75dd4';
 
 /// Charge, parse et résout un export XML aidedd.org [xmlSource] (contenu
 /// déjà lu par le sélecteur de fichier natif, voir

@@ -106,15 +106,22 @@ abstract final class XmlImportAlertSummary {
   /// `favoredEnemy14`/`pack` (aucune table de correspondance fiable, aucune
   /// table `character_class_options`/`class_features` encore précédente dans
   /// ce dépôt, décision de périmètre signalée au chef de projet) ni
-  /// `subclass`/`knownInvocations` (aucun catalogue réel encore câblé, voir
-  /// `xml_character_import_resolver.dart` — l'assistant de création manuel
-  /// lui-même ne propose encore aucun choix de sous-classe/invocation)
-  /// n'entrent dans ce total.
+  /// `knownInvocations` (aucun catalogue réel encore câblé, voir
+  /// `xml_character_import_resolver.dart`) n'entrent dans ce total.
+  ///
+  /// `subclass` y entre en revanche désormais (depuis que la table
+  /// `subclasses` est peuplée et câblée, voir
+  /// `character_creation/domain/subclass_catalog.dart`) : affiché et
+  /// corrigible comme Race/Classe/Historique (voir `presentation
+  /// /xml_import_review_screen.dart`), il doit compter comme eux dans ce
+  /// total pour rester cohérent avec le bandeau "X champs nécessitent une
+  /// correction manuelle" qu'il peut lui-même déclencher.
   static int countUnresolved(XmlCharacterImportResolved resolved) {
     var count = 0;
 
     if (resolved.race.isUnrecognized) count++;
     if (resolved.characterClass.isUnrecognized) count++;
+    if (resolved.subclass?.isUnrecognized ?? false) count++;
     if (resolved.background.isUnrecognized) count++;
     if (resolved.armor.isUnrecognized) count++;
     if (resolved.shield.isUnrecognized) count++;

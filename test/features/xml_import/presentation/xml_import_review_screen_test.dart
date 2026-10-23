@@ -29,6 +29,8 @@ import 'package:personnages/features/character_creation/domain/race_option.dart'
 import 'package:personnages/features/character_creation/domain/skill_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_catalog.dart';
 import 'package:personnages/features/character_creation/domain/spell_option.dart';
+import 'package:personnages/features/character_creation/domain/subclass_catalog.dart';
+import 'package:personnages/features/character_creation/domain/subclass_option.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
@@ -77,6 +79,9 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   AlignmentCatalog alignmentCatalogToReturn = const AlignmentCatalog(
     alignments: [],
   );
+  SubclassCatalog subclassCatalogToReturn = const SubclassCatalog(
+    subclasses: [],
+  );
 
   /// Retarde artificiellement `fetchRaceCatalog` (premier appel du
   /// contrôleur) pour figer l'écran en état "Chargement" le temps du test.
@@ -115,6 +120,10 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   @override
   Future<AlignmentCatalog> fetchAlignmentCatalog() async =>
       alignmentCatalogToReturn;
+
+  @override
+  Future<SubclassCatalog> fetchSubclassCatalog() async =>
+      subclassCatalogToReturn;
 
   @override
   Future<String> createCharacter({
@@ -682,12 +691,16 @@ const _raceAndClassUnresolvedXml = '''
 ''';
 
 /// Même base que [_cleanXml], mais avec un paquetage de départ (`pack`, id
-/// 22 = "Pack (a) d'occultiste", table complète depuis l'increment 1), une
-/// sous-classe (`classPath`), un style de combat (`styleCombat1`), une
-/// invocation connue et une augmentation de caractéristique (`aug_carac0`)
-/// — aucun de ces champs n'a de catalogue/table de correspondance fiable
-/// (voir la doc de classe de `_buildUnhandledInfoMessage`), ils ne doivent
-/// donc jamais compter comme "à corriger" ni disparaître silencieusement.
+/// 22 = "Pack (a) d'occultiste", table complète depuis l'increment 1), un
+/// style de combat (`styleCombat1`), une invocation connue et une
+/// augmentation de caractéristique (`aug_carac0`) — aucun de ces champs n'a
+/// de catalogue/table de correspondance fiable (voir la doc de classe de
+/// `_buildUnhandledInfoMessage`), ils ne doivent donc jamais compter comme
+/// "à corriger" ni disparaître silencieusement. Pas de `<classPath>` ici
+/// (contrairement à une version antérieure de cette fixture) : la
+/// sous-classe a désormais son propre câblage (voir
+/// [_lifeDomainSubclass]/[_magicienSubclassXml] plus bas), elle ne fait plus
+/// partie du lot "non importé automatiquement".
 const _packAndUnhandledFieldsXml = '''
 <?xml version="1.0" encoding="UTF-8"?>
 <builder>
@@ -695,7 +708,6 @@ const _packAndUnhandledFieldsXml = '''
 <name>Test Héros</name>
 <race>Elfe</race>
 <class>Magicien</class>
-<classPath>Voie Maison</classPath>
 <background>Sage</background>
 <level>1</level>
 <str>10</str><dex>10</dex><con>10</con><int>10</int><wis>10</wis><cha>10</cha>
@@ -707,6 +719,60 @@ const _packAndUnhandledFieldsXml = '''
 <pack>22</pack>
 <styleCombat1>11</styleCombat1>
 <knownInvocation>Armure d'ombres</knownInvocation>
+<gp>0</gp><pp>0</pp><ep>0</ep><sp>0</sp><cp>0</cp>
+</character>
+</builder>
+''';
+
+/// Sous-classe du Magicien (`class_id` = `_magicien.id`) pour les deux tests
+/// dédiés à l'affichage/correction de "Sous-classe" ci-dessous.
+const _evocation = SubclassOption(
+  id: 40,
+  name: 'École d\'évocation',
+  classId: 2,
+);
+
+/// Même base que [_cleanXml], avec `<classPath>` reconnu contre
+/// [_evocation] (câblée dans `fakeCharacterCreationRepository
+/// .subclassCatalogToReturn`, voir le test qui l'utilise).
+const _recognizedSubclassXml = '''
+<?xml version="1.0" encoding="UTF-8"?>
+<builder>
+<character>
+<name>Test Héros</name>
+<race>Elfe</race>
+<class>Magicien</class>
+<classPath>École d'évocation</classPath>
+<background>Sage</background>
+<level>1</level>
+<str>10</str><dex>10</dex><con>10</con><int>10</int><wis>10</wis><cha>10</cha>
+<armor>0</armor>
+<shield>0</shield>
+<alignment>4</alignment>
+<sexe>0</sexe>
+<gp>0</gp><pp>0</pp><ep>0</ep><sp>0</sp><cp>0</cp>
+</character>
+</builder>
+''';
+
+/// Même base que [_recognizedSubclassXml], mais avec une sous-classe sans
+/// correspondance dans le catalogue complet `subclasses` (faute de frappe,
+/// ou simplement absente du catalogue factice de ce test).
+const _unrecognizedSubclassXml = '''
+<?xml version="1.0" encoding="UTF-8"?>
+<builder>
+<character>
+<name>Test Héros</name>
+<race>Elfe</race>
+<class>Magicien</class>
+<classPath>Voie Maison</classPath>
+<background>Sage</background>
+<level>1</level>
+<str>10</str><dex>10</dex><con>10</con><int>10</int><wis>10</wis><cha>10</cha>
+<armor>0</armor>
+<shield>0</shield>
+<alignment>4</alignment>
+<sexe>0</sexe>
 <gp>0</gp><pp>0</pp><ep>0</ep><sp>0</sp><cp>0</cp>
 </character>
 </builder>
@@ -984,9 +1050,9 @@ void main() {
   );
 
   testWidgets(
-    'pack affiché en carte lecture seule ; sous-classe/style de combat/'
-    'invocation/ASI listés dans une carte informative neutre, jamais '
-    'silencieusement perdus, jamais comptés comme "à corriger"',
+    'pack affiché en carte lecture seule ; style de combat/invocation/ASI '
+    'listés dans une carte informative neutre, jamais silencieusement '
+    'perdus, jamais comptés comme "à corriger"',
     (WidgetTester tester) async {
       growTestViewport(tester);
       await tester.pumpWidget(
@@ -1005,17 +1071,19 @@ void main() {
       // Paquetage de départ : carte lecture seule, jamais une alerte.
       expect(find.text('Pack (a) d\'occultiste'), findsOneWidget);
 
-      // Carte informative neutre : liste bien les 3 champs réellement
-      // présents dans ce fichier (Style de combat, Sous-classe, Invocation
-      // connue) mais pas "Ennemi juré" (absent de ce fichier précis), plus
-      // la note ASI séparée.
+      // Carte informative neutre : liste bien les 2 champs réellement
+      // présents dans ce fichier (Style de combat, Invocation connue) mais
+      // pas "Ennemi juré" (absent de ce fichier précis) ni "Sous-classe"
+      // (plus dans ce lot depuis que `subclasses` est câblée, voir les deux
+      // tests "Sous-classe" ci-dessous), plus la note ASI séparée.
       expect(
         find.textContaining(
           'Non importé automatiquement dans cette version : Style de '
-          'combat, Sous-classe, Invocation connue.',
+          'combat, Invocation connue.',
         ),
         findsOneWidget,
       );
+      expect(find.textContaining('Sous-classe'), findsNothing);
       expect(find.textContaining('Ennemi juré'), findsNothing);
       expect(
         find.textContaining('Augmentations de caractéristiques'),
@@ -1023,6 +1091,65 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'sous-classe reconnue (classPath résolu contre le catalogue complet '
+    'subclasses, filtré sur la classe) : carte résumé lecture seule, '
+    'compte comme champ reconnu',
+    (WidgetTester tester) async {
+      fakeCharacterCreationRepository.subclassCatalogToReturn =
+          const SubclassCatalog(subclasses: [_evocation]);
+
+      growTestViewport(tester);
+      await tester.pumpWidget(
+        buildTestWidget(xmlSource: _recognizedSubclassXml),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Tous les champs ont été reconnus automatiquement.'),
+        findsOneWidget,
+      );
+      expect(find.text('École d\'évocation'), findsOneWidget);
+    },
+  );
+
+  testWidgets('sous-classe non reconnue (classPath sans correspondance dans le '
+      'catalogue) : carte d\'alerte "Sous-classe", comptée comme "à '
+      'corriger", corrigible via la bottom sheet', (WidgetTester tester) async {
+    fakeCharacterCreationRepository.subclassCatalogToReturn =
+        const SubclassCatalog(subclasses: [_evocation]);
+
+    growTestViewport(tester);
+    await tester.pumpWidget(
+      buildTestWidget(xmlSource: _unrecognizedSubclassXml),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('1 champ nécessite une correction manuelle avant validation'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Sous-classe non reconnu(e) : "Voie Maison"'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Sous-classe non reconnu(e) : "Voie Maison"'));
+    await tester.pumpAndSettle();
+    expect(find.text('CORRIGER : SOUS-CLASSE'), findsOneWidget);
+
+    await tester.tap(find.text('École d\'évocation'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('CONFIRMER'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Tous les champs ont été reconnus automatiquement.'),
+      findsOneWidget,
+    );
+    expect(find.text('École d\'évocation'), findsOneWidget);
+  });
 
   testWidgets(
     'état "Erreur" (XML invalide) : bandeau "IMPORT XML" sans sous-titre, '
