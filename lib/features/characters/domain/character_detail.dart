@@ -158,6 +158,20 @@ abstract class CharacterDetail with _$CharacterDetail {
     /// simulation des règles complètes").
     int? speed,
 
+    /// `characters.armor_class_bonus` — ajustement manuel de Classe
+    /// d'Armure, saisi par le joueur pour un effet temporaire que l'app ne
+    /// modélise pas (ex. Bouclier de la foi : "+2" tant que le sort dure),
+    /// persistant jusqu'à suppression manuelle (pas de minuterie, pas de
+    /// lien avec un sort/une durée). Peut être négatif (certains effets RAW
+    /// réduisent la CA, ex. Malédiction). Toujours additionné à [armorClass]
+    /// pour l'affichage, jamais fusionné dans son calcul : [armorClass] reste
+    /// un calcul RAW pur depuis [abilityScores]/[inventory]. Bascule via la
+    /// tuile "CA" de l'onglet "Personnage" (`CharacterStatPillsRow`) — voir
+    /// `CharacterRepository.setArmorClassBonus`. `@Default(0)` comme les
+    /// autres champs ajoutés après la première version de ce modèle (voir la
+    /// remarque sur [currencyGp] ci-dessous).
+    @Default(0) int armorClassBonus,
+
     /// `characters.share_token` — jeton de partage en lecture seule
     /// (`docs/cahier-des-charges/12-partage-et-groupes.md` section 1),
     /// `null` si le partage n'a jamais été activé ou a été désactivé. Ne

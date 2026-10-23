@@ -24,6 +24,7 @@ void main() {
           'temporary_hp': 2,
           'is_dead': false,
           'inspiration': true,
+          'armor_class_bonus': 2,
           'race_speed': 9,
         },
         'classes': [
@@ -57,6 +58,7 @@ void main() {
       expect(detail.temporaryHp, 2);
       expect(detail.isDead, false);
       expect(detail.inspiration, true);
+      expect(detail.armorClassBonus, 2);
       expect(detail.speed, 9);
       expect(detail.classes, hasLength(1));
       expect(detail.classes.single.className, 'Magicienne');
@@ -243,6 +245,7 @@ void main() {
       expect(detail.spells, isEmpty);
       expect(detail.inventory, isEmpty);
       expect(detail.inspiration, isFalse);
+      expect(detail.armorClassBonus, 0);
       expect(detail.speed, isNull);
       expect(detail.galleryPhotos, isEmpty);
       expect(detail.journalEntries, isEmpty);

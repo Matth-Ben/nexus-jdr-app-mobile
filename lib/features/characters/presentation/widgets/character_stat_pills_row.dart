@@ -16,16 +16,18 @@ import '../../domain/signed_modifier_formatter.dart';
 /// (demande utilisateur du 2026-09-24) pour tenir à 4 par rangée.
 ///
 /// Réutilisée telle quelle par `SharedCharacterViewScreen` (vue en lecture
-/// seule) avec [onTapInspiration] à `null` — voir sa documentation de
-/// classe.
+/// seule) avec [onTapInspiration]/[onTapArmorClass] à `null` — voir leur
+/// documentation respective.
 class CharacterStatPillsRow extends StatelessWidget {
   const CharacterStatPillsRow({
     required this.speed,
     required this.armorClass,
+    required this.armorClassBonus,
     required this.initiative,
     required this.inspiration,
     this.onTapInspiration,
     this.onTapInitiative,
+    this.onTapArmorClass,
     super.key,
   });
 
@@ -34,8 +36,15 @@ class CharacterStatPillsRow extends StatelessWidget {
   /// fausse valeur.
   final int? speed;
 
-  /// `CharacterDetail.armorClass`, déjà calculé par l'appelant.
+  /// `CharacterDetail.armorClass`, déjà calculé par l'appelant (valeur RAW,
+  /// sans [armorClassBonus]).
   final int armorClass;
+
+  /// `CharacterDetail.armorClassBonus` — ajustement manuel persistant, voir
+  /// sa documentation de classe. Additionné à [armorClass] pour la valeur
+  /// affichée sur la tuile ; son signe est en plus affiché à part (suffixe
+  /// `+N`/`−N`), uniquement si non nul — voir `_StatPill`.
+  final int armorClassBonus;
 
   /// Bonus d'initiative (modificateur de Dextérité, D&D 5e), déjà calculé
   /// par l'appelant.
@@ -51,6 +60,12 @@ class CharacterStatPillsRow extends StatelessWidget {
   /// le tap (vue en lecture seule) sans changer son rendu.
   final VoidCallback? onTapInspiration;
 
+  /// Ouvre la feuille d'ajustement de CA (`armor_class_bonus_sheet.dart`) au
+  /// tap sur la tuile "CA" — `null` désactive le tap (vue en lecture seule,
+  /// `SharedCharacterViewScreen`) sans changer son rendu, même convention
+  /// que [onTapInspiration]/[onTapInitiative].
+  final VoidCallback? onTapArmorClass;
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -63,7 +78,14 @@ class CharacterStatPillsRow extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: _StatPill(label: 'CA', value: '$armorClass'),
+          child: _StatPill(
+            label: 'CA',
+            value: '${armorClass + armorClassBonus}',
+            valueSuffix: armorClassBonus != 0
+                ? SignedModifierFormatter.format(armorClassBonus)
+                : null,
+            onTap: onTapArmorClass,
+          ),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
@@ -91,12 +113,20 @@ class _StatPill extends StatelessWidget {
   const _StatPill({
     required this.label,
     required this.value,
+    this.valueSuffix,
     this.emphasized = false,
     this.onTap,
   });
 
   final String label;
   final String value;
+
+  /// Suffixe signé affiché à côté de [value] (tuile "CA" avec
+  /// `armorClassBonus != 0` uniquement) — `null` laisse le rendu
+  /// strictement identique à avant l'introduction de l'ajustement manuel de
+  /// CA (pas de changement visuel pour les autres tuiles, ni pour la CA
+  /// quand le bonus est nul).
+  final String? valueSuffix;
 
   /// Bordure dorée d'emphase (voir "INSPIRATION" active sur la maquette) —
   /// `false` pour Vitesse/CA/Initiative.
@@ -135,12 +165,30 @@ class _StatPill extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            value,
-            style: AppTypography.body(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                value,
+                style: AppTypography.body(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              if (valueSuffix != null) ...[
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  valueSuffix!,
+                  style: AppTypography.body(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.accentTeal,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),

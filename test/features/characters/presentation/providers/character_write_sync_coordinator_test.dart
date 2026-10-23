@@ -529,6 +529,12 @@ class _FakeCharacterRepository implements CharacterRepository {
   }) async => WriteOutcome.synced;
 
   @override
+  Future<WriteOutcome> setArmorClassBonus({
+    required String characterId,
+    required int bonus,
+  }) async => WriteOutcome.synced;
+
+  @override
   Future<WriteOutcome> setSpellFavorite({
     required String characterId,
     required int spellId,

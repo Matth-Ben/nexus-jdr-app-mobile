@@ -945,6 +945,10 @@ abstract final class CharacterDetailRowMapper {
       isDead: (row['is_dead'] as bool?) ?? false,
       isArchived: (row['is_archived'] as bool?) ?? false,
       inspiration: (row['inspiration'] as bool?) ?? false,
+      // Défaut `0` si absente/`null` (même discipline défensive que
+      // [edition] pour une ligne cachée écrite avant l'introduction de cette
+      // colonne, voir la doc de classe de `CharacterDetail.armorClassBonus`).
+      armorClassBonus: (row['armor_class_bonus'] as num?)?.toInt() ?? 0,
       speed: speed,
       shareToken: row['share_token'] as String?,
       abilityScores: parseAbilityScores(row),

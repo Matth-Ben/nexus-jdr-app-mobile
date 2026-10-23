@@ -212,6 +212,7 @@ class _CharacterTabBody extends StatelessWidget {
         CharacterStatPillsRow(
           speed: detail.speed,
           armorClass: detail.armorClass,
+          armorClassBonus: detail.armorClassBonus,
           initiative: detail.initiative,
           inspiration: detail.inspiration,
         ),
