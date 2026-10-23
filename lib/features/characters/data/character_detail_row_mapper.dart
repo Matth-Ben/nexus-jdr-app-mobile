@@ -3,9 +3,11 @@ import '../domain/character_class_choice.dart';
 import '../domain/character_class_feature.dart';
 import '../domain/character_detail.dart';
 import '../domain/character_detail_class_row.dart';
+import '../domain/character_feat_summary.dart';
 import '../domain/character_gallery_photo.dart';
 import '../domain/character_inventory_item.dart';
 import '../domain/character_journal_entry.dart';
+import '../domain/character_racial_trait.dart';
 import '../domain/character_skill_row.dart';
 import '../domain/character_spell_entry.dart';
 import '../domain/character_spell_slot.dart';
@@ -49,6 +51,36 @@ abstract final class CharacterDetailRowMapper {
 
   static Set<String> collectSubraceIds(Map<String, dynamic> row) =>
       _singletonIdSet(row['subrace_id']);
+
+  /// Parse la colonne jsonb `traits` (`races.traits`/`subraces.traits`,
+  /// liste de `{name, description}`) en `List<CharacterRacialTrait>`, ordre
+  /// authored préservé TEL QUEL (pas de tri). Une entrée sans `name`
+  /// exploitable est ignorée ; `null`/type inattendu retombe sur une liste
+  /// vide plutôt que de crasher — même règles que
+  /// `RaceRowMapper.parseTraits` (`character_creation/data/
+  /// race_row_mapper.dart`), dupliqué ici pour ne jamais coupler les deux
+  /// fonctionnalités entre elles (voir la doc de classe de
+  /// [CharacterRacialTrait]).
+  static List<CharacterRacialTrait> parseRaceTraits(dynamic raw) {
+    if (raw is! List) {
+      return const [];
+    }
+    final traits = <CharacterRacialTrait>[];
+    for (final item in raw) {
+      if (item is Map) {
+        final name = item['name'] as String?;
+        if (name != null) {
+          traits.add(
+            CharacterRacialTrait(
+              name: name,
+              description: item['description'] as String? ?? '',
+            ),
+          );
+        }
+      }
+    }
+    return traits;
+  }
 
   static Set<String> collectBackgroundIds(Map<String, dynamic> row) =>
       _singletonIdSet(row['background_id']);
@@ -516,6 +548,75 @@ abstract final class CharacterDetailRowMapper {
       if (row['feat_id'] case final num featId) featId.toInt().toString(),
   };
 
+  /// Parse les lignes brutes `feats` (`id, prerequisites`, voir
+  /// `SupabaseCharacterRepository._buildCharacterDetailPayload`) en
+  /// `{feat_id: prerequisiteText}` — même extraction que
+  /// `LevelUpFeatRowMapper.prerequisiteTextFor`
+  /// (`domain/level_up_feat_option.dart`), dupliquée ici pour ne jamais
+  /// coupler la fiche personnage à l'étape "Choix à faire" de la montée de
+  /// niveau. Une ligne sans `prerequisites->>'text'` exploitable est
+  /// absente de la map (pas d'entrée `null`).
+  static Map<String, String> parseFeatPrerequisiteTexts(
+    List<Map<String, dynamic>> rows,
+  ) {
+    final texts = <String, String>{};
+    for (final row in rows) {
+      final id = row['id'];
+      if (id == null) continue;
+      final prerequisites = row['prerequisites'];
+      if (prerequisites is Map) {
+        final text = prerequisites['text'];
+        if (text is String && text.isNotEmpty) {
+          texts[id.toString()] = text;
+        }
+      }
+    }
+    return texts;
+  }
+
+  /// Construit les [CharacterFeatSummary] des dons déjà possédés
+  /// (`character_feats`, voir [featRowsOf]) — [names]/[descriptions] déjà
+  /// résolus via `translations` (`entity_type = 'feat'`), [prerequisiteTexts]
+  /// via [parseFeatPrerequisiteTexts]. Triées par niveau d'acquisition
+  /// croissant (`character_feats.level_taken`, donnée facilement
+  /// disponible, voir la consigne d'origine de ce chantier) ; une ligne sans
+  /// `level_taken` connu (ancien cache hors-ligne écrit avant l'introduction
+  /// de cette colonne — ne devrait pas arriver en pratique, colonne `not
+  /// null`) est repoussée en fin de liste plutôt que de faire planter le
+  /// tri. Un id sans nom résolu (ne devrait pas arriver) retombe sur un
+  /// libellé générique ("Don #12") plutôt que de crasher ou de l'omettre.
+  static List<CharacterFeatSummary> parseFeats(
+    List<Map<String, dynamic>> rows, {
+    required Map<String, String> names,
+    required Map<String, String> descriptions,
+    required Map<String, String> prerequisiteTexts,
+  }) {
+    final sortedRows = [...rows]
+      ..sort((a, b) {
+        final levelA = (a['level_taken'] as num?)?.toInt();
+        final levelB = (b['level_taken'] as num?)?.toInt();
+        if (levelA == null && levelB == null) return 0;
+        if (levelA == null) return 1;
+        if (levelB == null) return -1;
+        return levelA.compareTo(levelB);
+      });
+
+    final feats = <CharacterFeatSummary>[];
+    for (final row in sortedRows) {
+      final featId = row['feat_id'];
+      if (featId == null) continue;
+      final key = featId.toString();
+      feats.add(
+        CharacterFeatSummary(
+          name: names[key] ?? 'Don #$key',
+          description: descriptions[key] ?? '',
+          prerequisiteText: prerequisiteTexts[key],
+        ),
+      );
+    }
+    return feats;
+  }
+
   static List<Map<String, dynamic>> invocationRowsOf(Map<String, dynamic> row) {
     final raw = row['character_invocations'] as List<dynamic>?;
     return raw?.cast<Map<String, dynamic>>() ?? const [];
@@ -785,6 +886,7 @@ abstract final class CharacterDetailRowMapper {
     Map<String, String> subclassNames = const {},
     List<CharacterSkillRow> skills = const [],
     List<CharacterClassFeature> classFeatures = const [],
+    List<CharacterRacialTrait> racialTraits = const [],
     List<CharacterClassChoice> classChoices = const [],
     List<String> raceSkillChoiceNames = const [],
     List<String> raceToolChoiceNames = const [],
@@ -794,6 +896,7 @@ abstract final class CharacterDetailRowMapper {
     List<CharacterSpellSlot> spellSlots = const [],
     List<String> knownInvocationNames = const [],
     List<String> featNames = const [],
+    List<CharacterFeatSummary> feats = const [],
     List<CharacterInventoryItem> inventory = const [],
     List<CharacterAdventure> adventures = const [],
     PactWeaponOption? pactWeapon,
@@ -847,6 +950,7 @@ abstract final class CharacterDetailRowMapper {
       abilityScores: parseAbilityScores(row),
       skills: skills,
       classFeatures: classFeatures,
+      racialTraits: racialTraits,
       armorProficiencyNames: mergeArmorProficiencyNames(parsedClasses),
       weaponProficiencyNames: mergeWeaponProficiencyNames(parsedClasses),
       toolProficiencyNames: toolProficiencyNames,
@@ -856,6 +960,7 @@ abstract final class CharacterDetailRowMapper {
       pactSpellSlot: parsePactSpellSlot(row),
       knownInvocationNames: knownInvocationNames,
       featNames: featNames,
+      feats: feats,
       pactWeapon: pactWeapon,
       currencyGp: (row['currency_gp'] as num?)?.toInt() ?? 0,
       currencyPp: (row['currency_pp'] as num?)?.toInt() ?? 0,

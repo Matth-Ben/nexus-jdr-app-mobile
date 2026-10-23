@@ -98,6 +98,20 @@ void main() {
       expect(detail.adventures, isEmpty);
     });
 
+    test('racialTraits/feats restent toujours vides (gap backend connu : '
+        'get_shared_character/get_group_member_character ne renvoient à ce '
+        'jour aucune des données nécessaires, voir la doc de classe de '
+        'mapSharedCharacterJson) — les cartes "TRAITS RACIAUX"/"DONS" ne '
+        's\'affichent donc jamais sur cette vue, contrairement à la fiche '
+        'du propriétaire', () {
+      final detail = mapSharedCharacterJson({
+        'character': {'id': 'char-1', 'name': 'Test'},
+      });
+
+      expect(detail.racialTraits, isEmpty);
+      expect(detail.feats, isEmpty);
+    });
+
     test('classFeatures : tri alphabétique (demande utilisateur, 2026-10-03), '
         'pas par niveau d\'acquisition — cohérent avec la fiche du '
         'propriétaire', () {
