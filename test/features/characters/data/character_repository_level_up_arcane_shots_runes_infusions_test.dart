@@ -26,9 +26,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// jamais un simple `UPDATE`.
 ///
 /// Même double `SupabaseClient`/`MockClient` « léger » que
-/// `character_repository_level_up_initial_spells_test.dart` (ignore les
-/// filtres de requête, sauf mention contraire) : suffisant ici, chaque
-/// scénario ne lit chaque table qu'une seule fois.
+/// `character_repository_level_up_initial_spells_test.dart`, mais qui
+/// respecte réellement les filtres `.eq(...)` demandés (voir
+/// [_rowMatchesEqFilters] — D105 de `docs/dette-technique.md`, corrigé :
+/// avant cette correction, TOUS les filtres étaient ignorés, ce qui rendait
+/// les propriétés documentées ci-dessus non vérifiées). Les filtres non
+/// `.eq(...)` (`.order(...)`, `.lte(...)`, `.inFilter(...)`) restent
+/// ignorés : suffisant ici, chaque scénario ne lit chaque table qu'une seule
+/// fois.
 void main() {
   late AppDatabase db;
   late ReferenceDataCache cache;
@@ -74,6 +79,25 @@ void main() {
       final repo = await repository(
         rows: {
           'class_features': [
+            // Leurres (D105 de `docs/dette-technique.md`) : d'autres
+            // `choice_type`, placés AVANT la ligne réelle — si le code
+            // résolvait sans filtrer par `choice_type` (ex. premier élément
+            // arbitraire), ce serait une de ces 2 lignes qui serait
+            // choisie, ce qui ferait échouer les assertions ci-dessous
+            // (classId introuvable dans `character_class_options`, donc
+            // "Tir explosif" ne serait jamais exclu comme déjà connu).
+            {
+              'id': runeFeatureId,
+              'class_id': null,
+              'subclass_id': runeKnightSubclassId,
+              'choice_type': 'rune',
+            },
+            {
+              'id': infusionFeatureId,
+              'class_id': artificerClassId,
+              'subclass_id': null,
+              'choice_type': 'infusion',
+            },
             {
               'id': arcaneShotFeatureId,
               'class_id': null,
@@ -140,6 +164,21 @@ void main() {
       final repo = await repository(
         rows: {
           'class_features': [
+            // Leurres (même principe que [fetchAvailableArcaneShots]
+            // ci-dessus, D105 de `docs/dette-technique.md`), placés AVANT
+            // la ligne réelle.
+            {
+              'id': arcaneShotFeatureId,
+              'class_id': null,
+              'subclass_id': arcaneArcherSubclassId,
+              'choice_type': 'tir_arcanique',
+            },
+            {
+              'id': infusionFeatureId,
+              'class_id': artificerClassId,
+              'subclass_id': null,
+              'choice_type': 'infusion',
+            },
             {
               'id': runeFeatureId,
               'class_id': null,
@@ -182,6 +221,21 @@ void main() {
       final repo = await repository(
         rows: {
           'class_features': [
+            // Leurres (même principe que [fetchAvailableArcaneShots]
+            // ci-dessus, D105 de `docs/dette-technique.md`), placés AVANT
+            // la ligne réelle.
+            {
+              'id': arcaneShotFeatureId,
+              'class_id': null,
+              'subclass_id': arcaneArcherSubclassId,
+              'choice_type': 'tir_arcanique',
+            },
+            {
+              'id': runeFeatureId,
+              'class_id': null,
+              'subclass_id': runeKnightSubclassId,
+              'choice_type': 'rune',
+            },
             {
               'id': infusionFeatureId,
               'class_id': artificerClassId,
@@ -231,6 +285,21 @@ void main() {
       final repo = await repository(
         rows: {
           'class_features': [
+            // Leurres (même principe que [fetchAvailableArcaneShots]
+            // ci-dessus, D105 de `docs/dette-technique.md`), placés AVANT
+            // la ligne réelle.
+            {
+              'id': arcaneShotFeatureId,
+              'class_id': null,
+              'subclass_id': arcaneArcherSubclassId,
+              'choice_type': 'tir_arcanique',
+            },
+            {
+              'id': runeFeatureId,
+              'class_id': null,
+              'subclass_id': runeKnightSubclassId,
+              'choice_type': 'rune',
+            },
             {
               'id': infusionFeatureId,
               'class_id': artificerClassId,
@@ -283,6 +352,25 @@ void main() {
             {'max_hp': 10, 'current_hp': 10},
           ],
           'class_features': [
+            // Leurres (D105 de `docs/dette-technique.md`) : d'autres
+            // `choice_type`, placés AVANT la ligne réelle — si la
+            // résolution ignorait `choice_type` (ex. premier élément
+            // arbitraire plutôt que la ligne filtrée), l'écriture viserait
+            // `runeFeatureId`/`infusionFeatureId` au lieu
+            // d'`arcaneShotFeatureId`, faisant échouer l'assertion
+            // ci-dessous.
+            {
+              'id': runeFeatureId,
+              'class_id': null,
+              'subclass_id': runeKnightSubclassId,
+              'choice_type': 'rune',
+            },
+            {
+              'id': infusionFeatureId,
+              'class_id': artificerClassId,
+              'subclass_id': null,
+              'choice_type': 'infusion',
+            },
             {
               'id': arcaneShotFeatureId,
               'class_id': null,
@@ -342,6 +430,20 @@ void main() {
             {'max_hp': 10, 'current_hp': 10},
           ],
           'class_features': [
+            // Leurres (même principe que le test précédent, D105 de
+            // `docs/dette-technique.md`), placés AVANT la ligne réelle.
+            {
+              'id': arcaneShotFeatureId,
+              'class_id': null,
+              'subclass_id': arcaneArcherSubclassId,
+              'choice_type': 'tir_arcanique',
+            },
+            {
+              'id': infusionFeatureId,
+              'class_id': artificerClassId,
+              'subclass_id': null,
+              'choice_type': 'infusion',
+            },
             {
               'id': runeFeatureId,
               'class_id': null,
@@ -392,6 +494,20 @@ void main() {
             {'max_hp': 10, 'current_hp': 10},
           ],
           'class_features': [
+            // Leurres (même principe que les 2 tests précédents, D105 de
+            // `docs/dette-technique.md`), placés AVANT la ligne réelle.
+            {
+              'id': arcaneShotFeatureId,
+              'class_id': null,
+              'subclass_id': arcaneArcherSubclassId,
+              'choice_type': 'tir_arcanique',
+            },
+            {
+              'id': runeFeatureId,
+              'class_id': null,
+              'subclass_id': runeKnightSubclassId,
+              'choice_type': 'rune',
+            },
             {
               'id': infusionFeatureId,
               'class_id': artificerClassId,
@@ -473,6 +589,21 @@ void main() {
             {'max_hp': 10, 'current_hp': 10},
           ],
           'class_features': [
+            // Leurres (même principe que les tests `applyLevelUp` —
+            // `arcaneShotNames`/`runeNames`/`infusionNames` ci-dessus, D105
+            // de `docs/dette-technique.md`), placés AVANT la ligne réelle.
+            {
+              'id': arcaneShotFeatureId,
+              'class_id': null,
+              'subclass_id': arcaneArcherSubclassId,
+              'choice_type': 'tir_arcanique',
+            },
+            {
+              'id': runeFeatureId,
+              'class_id': null,
+              'subclass_id': runeKnightSubclassId,
+              'choice_type': 'rune',
+            },
             {
               'id': infusionFeatureId,
               'class_id': artificerClassId,
@@ -616,13 +747,14 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
 }
 
 /// Double « léger » (même principe que
-/// `character_repository_level_up_initial_spells_test.dart`) : les lignes
-/// configurées via [tableRows] sont retournées pour TOUTE requête `GET` sur
-/// la table correspondante, sans appliquer les filtres de la requête —
-/// suffisant ici, chaque table n'étant lue qu'une seule fois par scénario
-/// (le comportement `choice_type` SEUL vs `.eq('class_id', classId)` est
-/// déjà vérifié au niveau du CODE, pas de la simulation SQL, contrairement à
-/// `character_repository_level_up_elemental_disciplines_test.dart`).
+/// `character_repository_level_up_initial_spells_test.dart`), mais qui
+/// respecte réellement les filtres `.eq(...)` demandés (voir
+/// [_rowMatchesEqFilters] — D105 de `docs/dette-technique.md`, corrigé :
+/// avant cette correction, TOUS les filtres étaient ignorés, ce qui rendait
+/// les propriétés documentées en tête de fichier non vérifiées). Les filtres
+/// non `.eq(...)` (`.order(...)`, `.lte(...)`, `.inFilter(...)`) restent
+/// ignorés : suffisant ici, chaque table n'étant lue qu'une seule fois par
+/// scénario.
 Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
   required String ownerId,
   required List<_Recorded> recorded,
@@ -638,9 +770,16 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
         body: request.body.isEmpty ? null : jsonDecode(request.body),
       ),
     );
-    final rows = tableRows[table] ?? const <Map<String, dynamic>>[];
+    final configuredRows = tableRows[table] ?? const <Map<String, dynamic>>[];
+    final rows = request.method == 'GET'
+        ? configuredRows
+              .where(
+                (row) => _rowMatchesEqFilters(row, request.url.queryParameters),
+              )
+              .toList()
+        : const <Map<String, dynamic>>[];
     return http.Response(
-      jsonEncode(request.method == 'GET' ? rows : const <Object>[]),
+      jsonEncode(rows),
       200,
       request: request,
       headers: {'content-type': 'application/json; charset=utf-8'},
@@ -664,4 +803,36 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
   );
 
   return client;
+}
+
+/// Un filtre `.eq(colonne, valeur)` PostgREST s'encode `colonne=eq.valeur`
+/// dans la query string (ex. `.eq('choice_type', 'rune')` devient
+/// `choice_type=eq.rune`) — reconnu ici via le préfixe `eq.`. Une ligne qui
+/// NE DÉCLARE PAS la colonne filtrée est considérée comme passant le filtre
+/// (beaucoup de fixtures de ce fichier omettent délibérément les colonnes
+/// non pertinentes pour leur scénario, ex. `subclass_id`/`option_type` sur
+/// des lignes `class_options` — ne pas les exiger évite de devoir réécrire
+/// toutes les fixtures existantes) ; une ligne qui déclare la colonne doit
+/// avoir exactement la valeur demandée. Les filtres `.inFilter(...)`
+/// (encodés `in.(...)`), `.lte(...)`, `.order(...)` restent ignorés (hors
+/// périmètre de D105).
+///
+/// **Divergence délibérée** par rapport à `_matchesEq` de
+/// `character_repository_level_up_elemental_disciplines_test.dart`, qui
+/// implémente la sémantique SQL/PostgREST EXACTE d'un `eq` (une colonne
+/// absente/NULL ne correspond JAMAIS à un filtre `.eq(...)`, précisément le
+/// comportement qui a produit la régression D86) : ici, une colonne ABSENTE
+/// passe le filtre. Conséquence directe pour tout futur scénario de ce
+/// fichier : une nouvelle ligne `class_features` DOIT déclarer explicitement
+/// `class_id`/`choice_type` (même `null`) pour rester couverte par ce
+/// filtrage — l'omettre repasse silencieusement cette ligne en mode
+/// permissif et rouvre le trou que D105 vient de fermer.
+bool _rowMatchesEqFilters(Map<String, dynamic> row, Map<String, String> query) {
+  for (final entry in query.entries) {
+    if (!entry.value.startsWith('eq.')) continue;
+    if (!row.containsKey(entry.key)) continue;
+    final expected = entry.value.substring(3);
+    if (row[entry.key]?.toString() != expected) return false;
+  }
+  return true;
 }
