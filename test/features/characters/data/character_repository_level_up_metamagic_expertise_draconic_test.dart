@@ -56,6 +56,14 @@ void main() {
   const metamagicFeatureId10 = 214;
   const metamagicFeatureId17 = 217;
   const draconicAncestryFeatureId = 368;
+  // Ligne leurre d'une AUTRE classe (Barde), même `choice_type = 'metamagie'`
+  // et niveau plus bas que toutes les ancres réelles de l'Ensorceleur —
+  // preuve, pour D105 de `docs/dette-technique.md`, que la résolution filtre
+  // bien par `.eq('class_id', classId)` ET PAS `choice_type` seul : si ce
+  // filtre était retiré du code, cette ligne (niveau le plus bas) serait
+  // choisie comme ancre à la place de `metamagicFeatureId3`, faisant échouer
+  // les assertions ci-dessous.
+  const decoyBardMetamagicFeatureId = 500;
 
   Future<SupabaseCharacterRepository> repository({
     Map<String, List<Map<String, dynamic>>> rows = const {},
@@ -74,7 +82,9 @@ void main() {
   group('SupabaseCharacterRepository.fetchAvailableMetamagicOptions', () {
     test('résout les 3 lignes class_features via class_id + choice_type, '
         'exclut les options déjà connues (tous ids agrégés)', () async {
+      final recorded = <_Recorded>[];
       final repo = await repository(
+        recorded: recorded,
         rows: {
           // Déjà en ordre de niveau croissant, comme le renverrait
           // `.order('level', ascending: true)` côté serveur réel.
@@ -123,6 +133,22 @@ void main() {
         classId: sorcererClassId,
         targetLevel: 3,
       );
+
+      // `character_class_options` est interrogé via `.inFilter(...)`, ignoré
+      // par ce double de test (voir sa documentation de classe) : le
+      // résultat `options` ci-dessus ne permettrait donc pas seul de
+      // détecter une régression qui résoudrait `class_features` via
+      // `choice_type` seul. Vérifié ici directement sur la requête GET
+      // enregistrée (D105 de `docs/dette-technique.md`).
+      final classFeaturesReads = recorded
+          .where((r) => r.table == 'class_features' && r.method == 'GET')
+          .toList();
+      expect(classFeaturesReads, hasLength(1));
+      expect(
+        classFeaturesReads.single.query['class_id'],
+        'eq.$sorcererClassId',
+      );
+      expect(classFeaturesReads.single.query['choice_type'], 'eq.metamagie');
 
       expect(options, hasLength(1));
       expect(options.single.name, 'Sort discret');
@@ -366,6 +392,15 @@ void main() {
               {'max_hp': 10, 'current_hp': 10},
             ],
             'class_features': [
+              // Leurre (voir sa documentation au début du fichier) : niveau
+              // plus bas que toute ancre Ensorceleur, mais d'une AUTRE
+              // classe — ne doit jamais être choisi comme ancre.
+              {
+                'id': decoyBardMetamagicFeatureId,
+                'class_id': bardClassId,
+                'level': 1,
+                'choice_type': 'metamagie',
+              },
               {
                 'id': metamagicFeatureId3,
                 'class_id': sorcererClassId,
@@ -454,6 +489,15 @@ void main() {
             {'max_hp': 10, 'current_hp': 10},
           ],
           'class_features': [
+            // Leurre (voir sa documentation au début du fichier) : niveau
+            // plus bas que l'ancre Ensorceleur, mais d'une AUTRE classe —
+            // ne doit jamais être choisi comme ancre.
+            {
+              'id': decoyBardMetamagicFeatureId,
+              'class_id': bardClassId,
+              'level': 1,
+              'choice_type': 'metamagie',
+            },
             {
               'id': metamagicFeatureId3,
               'class_id': sorcererClassId,
@@ -912,11 +956,15 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
 
 /// Double « léger » (même principe que
 /// `character_repository_level_up_arcane_shots_runes_infusions_test.dart`) :
-/// les lignes configurées via [tableRows] sont retournées pour TOUTE requête
-/// `GET` sur la table correspondante, sans appliquer les filtres de la
-/// requête (y compris `.order(...)`) — les fixtures de ce fichier fournissent
-/// donc déjà les lignes `class_features` triées par `level` croissant,
-/// exactement comme le ferait le serveur réel.
+/// les lignes configurées via [tableRows] sont retournées pour une requête
+/// `GET` sur la table correspondante SI ELLES PASSENT les filtres `.eq(...)`
+/// réellement envoyés (voir [_rowMatchesEqFilters] — D105 de
+/// `docs/dette-technique.md`, corrigé : avant cette correction, TOUS les
+/// filtres étaient ignorés, y compris `.eq('class_id', classId)`). Les
+/// filtres non `.eq(...)` (`.order(...)`, `.lte(...)`, `.inFilter(...)`)
+/// restent ignorés — les fixtures de ce fichier fournissent donc déjà les
+/// lignes `class_features` triées par `level` croissant, exactement comme le
+/// ferait le serveur réel.
 Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
   required String ownerId,
   required List<_Recorded> recorded,
@@ -932,9 +980,16 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
         body: request.body.isEmpty ? null : jsonDecode(request.body),
       ),
     );
-    final rows = tableRows[table] ?? const <Map<String, dynamic>>[];
+    final configuredRows = tableRows[table] ?? const <Map<String, dynamic>>[];
+    final rows = request.method == 'GET'
+        ? configuredRows
+              .where(
+                (row) => _rowMatchesEqFilters(row, request.url.queryParameters),
+              )
+              .toList()
+        : const <Map<String, dynamic>>[];
     return http.Response(
-      jsonEncode(request.method == 'GET' ? rows : const <Object>[]),
+      jsonEncode(rows),
       200,
       request: request,
       headers: {'content-type': 'application/json; charset=utf-8'},
@@ -958,4 +1013,36 @@ Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
   );
 
   return client;
+}
+
+/// Un filtre `.eq(colonne, valeur)` PostgREST s'encode `colonne=eq.valeur`
+/// dans la query string (ex. `.eq('class_id', 12)` devient `class_id=eq.12`)
+/// — reconnu ici via le préfixe `eq.`. Une ligne qui NE DÉCLARE PAS la
+/// colonne filtrée est considérée comme passant le filtre (beaucoup de
+/// fixtures de ce fichier omettent délibérément les colonnes non pertinentes
+/// pour leur scénario, ex. `option_type`/`class_id` sur des lignes
+/// `class_options` — ne pas les exiger évite de devoir réécrire toutes les
+/// fixtures existantes) ; une ligne qui déclare la colonne doit avoir
+/// exactement la valeur demandée. Les filtres `.inFilter(...)` (encodés
+/// `in.(...)`), `.lte(...)`, `.order(...)` restent ignorés (hors périmètre
+/// de D105).
+///
+/// **Divergence délibérée** par rapport à `_matchesEq` de
+/// `character_repository_level_up_elemental_disciplines_test.dart`, qui
+/// implémente la sémantique SQL/PostgREST EXACTE d'un `eq` (une colonne
+/// absente/NULL ne correspond JAMAIS à un filtre `.eq(...)`, précisément le
+/// comportement qui a produit la régression D86) : ici, une colonne ABSENTE
+/// passe le filtre. Conséquence directe pour tout futur scénario de ce
+/// fichier : une nouvelle ligne `class_features` DOIT déclarer explicitement
+/// `class_id`/`choice_type` (même `null`) pour rester couverte par ce
+/// filtrage — l'omettre repasse silencieusement cette ligne en mode
+/// permissif et rouvre le trou que D105 vient de fermer.
+bool _rowMatchesEqFilters(Map<String, dynamic> row, Map<String, String> query) {
+  for (final entry in query.entries) {
+    if (!entry.value.startsWith('eq.')) continue;
+    if (!row.containsKey(entry.key)) continue;
+    final expected = entry.value.substring(3);
+    if (row[entry.key]?.toString() != expected) return false;
+  }
+  return true;
 }
