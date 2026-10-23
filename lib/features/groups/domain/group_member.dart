@@ -31,11 +31,12 @@ part 'group_member.freezed.dart';
 ///
 /// Tous les champs qui n'ont de sens que pour un personnage ([portraitUrl],
 /// [raceName], [className], [level], [currentHp], [maxHp], [temporaryHp],
-/// [isDead]) sont `null` pour les deux cas sans personnage (MJ volontaire ET
-/// orphelin) — [name] devient alors le nom de COMPTE résolu via la colonne
-/// calculée PostgREST `group_members_display_name` (voir
-/// `GroupMemberRowMapper`), qui résout le vrai nom pour N'IMPORTE QUEL
-/// membre (contrairement à l'ancien mécanisme limité au MJ lui-même).
+/// [isDead], [armorClass], [armorClassBonus]) sont `null` pour les deux cas
+/// sans personnage (MJ volontaire ET orphelin) — [name] devient alors le nom
+/// de COMPTE résolu via la colonne calculée PostgREST
+/// `group_members_display_name` (voir `GroupMemberRowMapper`), qui résout le
+/// vrai nom pour N'IMPORTE QUEL membre (contrairement à l'ancien mécanisme
+/// limité au MJ lui-même).
 @freezed
 abstract class GroupMember with _$GroupMember {
   const GroupMember._();
@@ -55,6 +56,20 @@ abstract class GroupMember with _$GroupMember {
     int? temporaryHp,
     bool? isDead,
     String? accountDisplayName,
+
+    /// Classe d'Armure totale (déjà `ArmorClassCalculator.compute` +
+    /// [armorClassBonus]), affichée sous la ligne PV de l'onglet "Membres"
+    /// (`group_members_tab_body.dart`) — voir `GroupMemberRowMapper` pour le
+    /// calcul. `null` pour un membre sans personnage (MJ volontaire ou
+    /// orphelin), même règle que [currentHp]/[maxHp].
+    int? armorClass,
+
+    /// `characters.armor_class_bonus` brut (bonus manuel), `0` si aucun bonus
+    /// n'est actif — distinct d'[armorClass] (qui l'inclut déjà) pour piloter
+    /// l'affichage du suffixe signé (`SignedModifierFormatter`) uniquement
+    /// quand il est non nul. `null` pour un membre sans personnage, même
+    /// règle qu'[armorClass].
+    int? armorClassBonus,
   }) = _GroupMember;
 
   /// `true` si ce membre suit le groupe sans personnage et sans avoir choisi
