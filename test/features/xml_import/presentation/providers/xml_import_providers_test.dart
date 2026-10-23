@@ -308,34 +308,36 @@ void main() {
     );
   });
 
-  group('Sous-classe (classPath) : câblage du catalogue complet subclasses', () {
-    const clericClass = ClassOption(
-      id: 3,
-      name: 'Clerc',
-      description: '',
-      hitDie: 8,
-    );
-    const wizardClass = ClassOption(
-      id: 2,
-      name: 'Magicien',
-      description: '',
-      hitDie: 6,
-    );
-    const lifeDomain = SubclassOption(
-      id: 40,
-      name: 'Domaine de la vie',
-      classId: 3,
-    );
-    // Même nom qu'aucune autre sous-classe, mais rattachée au Magicien (id
-    // 2) plutôt qu'au Clerc (id 3) — sert à vérifier que le filtrage par
-    // classe empêche une résolution croisée.
-    const wizardOnlySubclass = SubclassOption(
-      id: 41,
-      name: 'École d\'évocation',
-      classId: 2,
-    );
+  group(
+    'Sous-classe (classPath) : câblage du catalogue complet subclasses',
+    () {
+      const clericClass = ClassOption(
+        id: 3,
+        name: 'Clerc',
+        description: '',
+        hitDie: 8,
+      );
+      const wizardClass = ClassOption(
+        id: 2,
+        name: 'Magicien',
+        description: '',
+        hitDie: 6,
+      );
+      const lifeDomain = SubclassOption(
+        id: 40,
+        name: 'Domaine de la vie',
+        classId: 3,
+      );
+      // Même nom qu'aucune autre sous-classe, mais rattachée au Magicien (id
+      // 2) plutôt qu'au Clerc (id 3) — sert à vérifier que le filtrage par
+      // classe empêche une résolution croisée.
+      const wizardOnlySubclass = SubclassOption(
+        id: 41,
+        name: 'École d\'évocation',
+        classId: 2,
+      );
 
-    const xmlWithSubclass = '''
+      const xmlWithSubclass = '''
 <?xml version="1.0" encoding="UTF-8"?>
 <builder>
 <character>
@@ -355,16 +357,12 @@ void main() {
 </builder>
 ''';
 
-    test(
-      'classe reconnue + sous-classe de CETTE classe dans le catalogue '
-      'complet -> resolved.subclass recognized',
-      () async {
+      test('classe reconnue + sous-classe de CETTE classe dans le catalogue '
+          'complet -> resolved.subclass recognized', () async {
         fakeCharacterCreationRepository.classCatalogToReturn =
             const ClassCatalog(classes: [clericClass, wizardClass]);
         fakeCharacterCreationRepository.subclassCatalogToReturn =
-            const SubclassCatalog(
-              subclasses: [lifeDomain, wizardOnlySubclass],
-            );
+            const SubclassCatalog(subclasses: [lifeDomain, wizardOnlySubclass]);
         final localProvider = xmlImportReviewControllerProvider(
           fileName: 'clerc.xml',
           xmlSource: xmlWithSubclass,
@@ -380,14 +378,11 @@ void main() {
           _ => null,
         };
         expect(subclass?.id, 40);
-      },
-    );
+      });
 
-    test(
-      'une sous-classe du même nom mais rattachée à une AUTRE classe '
-      "n'est jamais proposée comme candidat -> classPath reste "
-      'unrecognized (pas de résolution croisée entre classes)',
-      () async {
+      test('une sous-classe du même nom mais rattachée à une AUTRE classe '
+          "n'est jamais proposée comme candidat -> classPath reste "
+          'unrecognized (pas de résolution croisée entre classes)', () async {
         // "Domaine de la vie" (id 40) n'est PAS dans ce catalogue : seule
         // `wizardOnlySubclass` existe, rattachée au Magicien (id 2) — la
         // classe résolue du personnage est pourtant le Clerc (id 3).
@@ -405,66 +400,69 @@ void main() {
 
         expect(data.resolved.subclass, isNotNull);
         expect(data.resolved.subclass!.isUnrecognized, isTrue);
-      },
-    );
+      });
 
-    test(
-      'correctSubclass : résout vers un candidat de la classe ACTUELLEMENT '
-      'résolue (pas celle devinée au chargement initial)',
-      () async {
-        fakeCharacterCreationRepository.classCatalogToReturn =
-            const ClassCatalog(classes: [clericClass, wizardClass]);
-        fakeCharacterCreationRepository.subclassCatalogToReturn =
-            const SubclassCatalog(
-              subclasses: [lifeDomain, wizardOnlySubclass],
-            );
-        final localProvider = xmlImportReviewControllerProvider(
-          fileName: 'clerc-correction.xml',
-          xmlSource: xmlWithSubclass,
-        );
-        addTearDown(() => container.invalidate(localProvider));
+      test(
+        'correctSubclass : résout vers un candidat de la classe ACTUELLEMENT '
+        'résolue (pas celle devinée au chargement initial)',
+        () async {
+          fakeCharacterCreationRepository.classCatalogToReturn =
+              const ClassCatalog(classes: [clericClass, wizardClass]);
+          fakeCharacterCreationRepository.subclassCatalogToReturn =
+              const SubclassCatalog(
+                subclasses: [lifeDomain, wizardOnlySubclass],
+              );
+          final localProvider = xmlImportReviewControllerProvider(
+            fileName: 'clerc-correction.xml',
+            xmlSource: xmlWithSubclass,
+          );
+          addTearDown(() => container.invalidate(localProvider));
 
-        await container.read(localProvider.future);
-        // La classe résolue initialement est bien le Clerc.
-        expect(
+          await container.read(localProvider.future);
+          // La classe résolue initialement est bien le Clerc.
+          expect(
+            container
+                .read(localProvider)
+                .value!
+                .resolved
+                .characterClass
+                .isRecognized,
+            isTrue,
+          );
+
           container
+              .read(localProvider.notifier)
+              .correctSubclass('Domaine de la vie');
+
+          final subclass = container
               .read(localProvider)
               .value!
               .resolved
-              .characterClass
-              .isRecognized,
-          isTrue,
-        );
+              .subclass;
+          expect(subclass, isNotNull);
+          expect(subclass!.isRecognized, isTrue);
+        },
+      );
 
-        container.read(localProvider.notifier).correctSubclass(
-          'Domaine de la vie',
-        );
-
-        final subclass = container.read(localProvider).value!.resolved.subclass;
-        expect(subclass, isNotNull);
-        expect(subclass!.isRecognized, isTrue);
-      },
-    );
-
-    test(
-      'correctClass depuis une classe NON reconnue : réinitialise subclass '
-      '(classPath présent dans le XML) puis correctSubclass se résout '
-      'contre les candidats de la NOUVELLE classe, pas un fantôme de '
-      'résolution croisée (même nom, autre classe)',
-      () async {
-        // Fantôme : même nom que la sous-classe Clerc visée, mais rattaché
-        // au Magicien (id 2) — ne doit jamais être proposé une fois la
-        // classe corrigée vers le Clerc (id 3).
-        const lifeDomainGhost = SubclassOption(
-          id: 42,
-          name: 'Domaine de la vie',
-          classId: 2,
-        );
-        fakeCharacterCreationRepository.classCatalogToReturn =
-            const ClassCatalog(classes: [clericClass, wizardClass]);
-        fakeCharacterCreationRepository.subclassCatalogToReturn =
-            const SubclassCatalog(subclasses: [lifeDomain, lifeDomainGhost]);
-        const xmlWithUnrecognizedClass = '''
+      test(
+        'correctClass depuis une classe NON reconnue : réinitialise subclass '
+        '(classPath présent dans le XML) puis correctSubclass se résout '
+        'contre les candidats de la NOUVELLE classe, pas un fantôme de '
+        'résolution croisée (même nom, autre classe)',
+        () async {
+          // Fantôme : même nom que la sous-classe Clerc visée, mais rattaché
+          // au Magicien (id 2) — ne doit jamais être proposé une fois la
+          // classe corrigée vers le Clerc (id 3).
+          const lifeDomainGhost = SubclassOption(
+            id: 42,
+            name: 'Domaine de la vie',
+            classId: 2,
+          );
+          fakeCharacterCreationRepository.classCatalogToReturn =
+              const ClassCatalog(classes: [clericClass, wizardClass]);
+          fakeCharacterCreationRepository.subclassCatalogToReturn =
+              const SubclassCatalog(subclasses: [lifeDomain, lifeDomainGhost]);
+          const xmlWithUnrecognizedClass = '''
 <?xml version="1.0" encoding="UTF-8"?>
 <builder>
 <character>
@@ -483,43 +481,51 @@ void main() {
 </character>
 </builder>
 ''';
-        final localProvider = xmlImportReviewControllerProvider(
-          fileName: 'classe-maison.xml',
-          xmlSource: xmlWithUnrecognizedClass,
-        );
-        addTearDown(() => container.invalidate(localProvider));
+          final localProvider = xmlImportReviewControllerProvider(
+            fileName: 'classe-maison.xml',
+            xmlSource: xmlWithUnrecognizedClass,
+          );
+          addTearDown(() => container.invalidate(localProvider));
 
-        final data = await container.read(localProvider.future);
-        // Classe non reconnue au chargement -> aucun candidat de
-        // sous-classe (voir [_subclassCandidatesFor]) -> classPath
-        // unrecognized dès le départ, pas de fantôme possible ici non plus.
-        expect(data.resolved.characterClass.isUnrecognized, isTrue);
-        expect(data.resolved.subclass, isNotNull);
-        expect(data.resolved.subclass!.isUnrecognized, isTrue);
+          final data = await container.read(localProvider.future);
+          // Classe non reconnue au chargement -> aucun candidat de
+          // sous-classe (voir [_subclassCandidatesFor]) -> classPath
+          // unrecognized dès le départ, pas de fantôme possible ici non plus.
+          expect(data.resolved.characterClass.isUnrecognized, isTrue);
+          expect(data.resolved.subclass, isNotNull);
+          expect(data.resolved.subclass!.isUnrecognized, isTrue);
 
-        container.read(localProvider.notifier).correctClass('Clerc');
+          container.read(localProvider.notifier).correctClass('Clerc');
 
-        // La correction de classe réinitialise systématiquement la
-        // sous-classe déjà résolue (même discipline que correctRace pour
-        // subrace/racialBonusChoices) : plus aucune trace de la résolution
-        // précédente avant une nouvelle correction explicite.
-        expect(container.read(localProvider).value!.resolved.subclass, isNull);
+          // La correction de classe réinitialise systématiquement la
+          // sous-classe déjà résolue (même discipline que correctRace pour
+          // subrace/racialBonusChoices) : plus aucune trace de la résolution
+          // précédente avant une nouvelle correction explicite.
+          expect(
+            container.read(localProvider).value!.resolved.subclass,
+            isNull,
+          );
 
-        container.read(localProvider.notifier).correctSubclass(
-          'Domaine de la vie',
-        );
+          container
+              .read(localProvider.notifier)
+              .correctSubclass('Domaine de la vie');
 
-        final subclass = container.read(localProvider).value!.resolved.subclass;
-        expect(subclass, isNotNull);
-        expect(subclass!.isRecognized, isTrue);
-        final option = switch (subclass) {
-          XmlFieldResolutionRecognized<XmlNamedOption>(:final value) => value,
-          _ => null,
-        };
-        // id 40 (lifeDomain, classId 3) : jamais le fantôme id 42 (classId
-        // 2) malgré le nom identique.
-        expect(option?.id, 40);
-      },
-    );
-  });
+          final subclass = container
+              .read(localProvider)
+              .value!
+              .resolved
+              .subclass;
+          expect(subclass, isNotNull);
+          expect(subclass!.isRecognized, isTrue);
+          final option = switch (subclass) {
+            XmlFieldResolutionRecognized<XmlNamedOption>(:final value) => value,
+            _ => null,
+          };
+          // id 40 (lifeDomain, classId 3) : jamais le fantôme id 42 (classId
+          // 2) malgré le nom identique.
+          expect(option?.id, 40);
+        },
+      );
+    },
+  );
 }

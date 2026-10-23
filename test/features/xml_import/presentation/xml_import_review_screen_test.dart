@@ -1108,47 +1108,42 @@ void main() {
     },
   );
 
-  testWidgets(
-    'sous-classe non reconnue (classPath sans correspondance dans le '
-    'catalogue) : carte d\'alerte "Sous-classe", comptée comme "à '
-    'corriger", corrigible via la bottom sheet',
-    (WidgetTester tester) async {
-      fakeCharacterCreationRepository.subclassCatalogToReturn =
-          const SubclassCatalog(subclasses: [_evocation]);
+  testWidgets('sous-classe non reconnue (classPath sans correspondance dans le '
+      'catalogue) : carte d\'alerte "Sous-classe", comptée comme "à '
+      'corriger", corrigible via la bottom sheet', (WidgetTester tester) async {
+    fakeCharacterCreationRepository.subclassCatalogToReturn =
+        const SubclassCatalog(subclasses: [_evocation]);
 
-      growTestViewport(tester);
-      await tester.pumpWidget(
-        buildTestWidget(xmlSource: _unrecognizedSubclassXml),
-      );
-      await tester.pumpAndSettle();
+    growTestViewport(tester);
+    await tester.pumpWidget(
+      buildTestWidget(xmlSource: _unrecognizedSubclassXml),
+    );
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text(
-          '1 champ nécessite une correction manuelle avant validation',
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.text('Sous-classe non reconnu(e) : "Voie Maison"'),
-        findsOneWidget,
-      );
+    expect(
+      find.text('1 champ nécessite une correction manuelle avant validation'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Sous-classe non reconnu(e) : "Voie Maison"'),
+      findsOneWidget,
+    );
 
-      await tester.tap(find.text('Sous-classe non reconnu(e) : "Voie Maison"'));
-      await tester.pumpAndSettle();
-      expect(find.text('CORRIGER : SOUS-CLASSE'), findsOneWidget);
+    await tester.tap(find.text('Sous-classe non reconnu(e) : "Voie Maison"'));
+    await tester.pumpAndSettle();
+    expect(find.text('CORRIGER : SOUS-CLASSE'), findsOneWidget);
 
-      await tester.tap(find.text('École d\'évocation'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('CONFIRMER'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('École d\'évocation'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('CONFIRMER'));
+    await tester.pumpAndSettle();
 
-      expect(
-        find.text('Tous les champs ont été reconnus automatiquement.'),
-        findsOneWidget,
-      );
-      expect(find.text('École d\'évocation'), findsOneWidget);
-    },
-  );
+    expect(
+      find.text('Tous les champs ont été reconnus automatiquement.'),
+      findsOneWidget,
+    );
+    expect(find.text('École d\'évocation'), findsOneWidget);
+  });
 
   testWidgets(
     'état "Erreur" (XML invalide) : bandeau "IMPORT XML" sans sous-titre, '

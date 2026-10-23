@@ -696,9 +696,7 @@ void main() {
         'pas de crash', () {
       final data = XmlImportSaveDataResolver.resolve(
         resolved: _resolved().copyWith(
-          subclass: const XmlFieldResolution.unrecognized(
-            'Domaine inexistant',
-          ),
+          subclass: const XmlFieldResolution.unrecognized('Domaine inexistant'),
         ),
         itemCatalog: _itemCatalog,
         skillCatalog: _skillCatalog,
