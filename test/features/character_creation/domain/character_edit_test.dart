@@ -51,6 +51,35 @@ const _clerc = ClassOption(
   hitDie: 8,
   skillChoices: ClassSkillChoices(count: 2, choices: ['Religion', 'Médecine']),
 );
+
+/// `classes.id = 5`, le VRAI id du Guerrier (`ClassChoiceRules
+/// ::_kindByClassId`) — distinct de [_guerrier] ci-dessus (id de fixture 1,
+/// sans rapport avec les ids réels) : nécessaire pour les tests du choix
+/// nommé de niveau 1 (Style de combat) — correctif D102
+/// (`docs/dette-technique.md`).
+const _realGuerrier = ClassOption(
+  id: 5,
+  name: 'Guerrier',
+  description: '',
+  hitDie: 10,
+  skillChoices: ClassSkillChoices(
+    count: 2,
+    choices: ['Athlétisme', 'Intimidation', 'Perception', 'Survie'],
+  ),
+);
+
+/// `classes.id = 9`, le VRAI id du Roublard — correctif D102, même
+/// rationale que [_realGuerrier] (l'Expertise elle-même ne dépend d'aucun
+/// id de classe particulier côté `CharacterEditPlanner`, mais la
+/// substitution outils de voleur a besoin de `grantedToolNames`).
+const _realRoublard = ClassOption(
+  id: 9,
+  name: 'Roublard',
+  description: '',
+  hitDie: 8,
+  skillChoices: ClassSkillChoices(count: 1, choices: ['Discrétion']),
+  grantedToolNames: ['outils de voleur'],
+);
 const _ermite = BackgroundOption(
   id: 1,
   name: 'Ermite',
@@ -101,19 +130,28 @@ const _innateOffListSpellId = 200;
 CharacterEditSnapshot _snapshot({
   int totalLevel = 5,
   int classId = 1,
+  int? subclassId,
   int backgroundId = 1,
   int maxHp = 44,
   int currentHp = 30,
   String edition = '2014',
   List<int> skillIds = const [1, 3, 5, 6, 7],
+  // Sous-ensemble de [skillIds] dont la maîtrise est 'expertise' plutôt que
+  // 'competente' — correctif D102 (`docs/dette-technique.md`).
+  List<int> expertiseSkillIds = const [],
   List<int> languageIds = const [10],
   List<int> spellIds = const [],
   List<int> innateSpellIds = const [],
+  // Lignes `character_class_options` de niveau 1 déjà enrichies du
+  // `choice_type`/`class_id`/`subclass_id` de leur `class_features` — voir
+  // `ClassOptionRow` (correctif D102).
+  List<ClassOptionRow> classOptions = const [],
 }) {
   return CharacterEditSnapshot(
     characterId: 'c1',
     name: 'Brunhilde',
     primaryClassId: classId,
+    subclassId: subclassId,
     primaryClassLevel: totalLevel,
     totalLevel: totalLevel,
     maxHp: maxHp,
@@ -132,7 +170,13 @@ CharacterEditSnapshot _snapshot({
     identity: const {'sexe': 'Femme', 'age': ''},
     texts: const {'backstory_text': 'Née au pied des montagnes.'},
     skills: [
-      for (final id in skillIds) (skillId: id, proficiency: 'competente'),
+      for (final id in skillIds)
+        (
+          skillId: id,
+          proficiency: expertiseSkillIds.contains(id)
+              ? 'expertise'
+              : 'competente',
+        ),
     ],
     languageIds: languageIds,
     spells: [
@@ -140,6 +184,7 @@ CharacterEditSnapshot _snapshot({
         (spellId: id, status: SpellStatus.innate),
       for (final id in spellIds) (spellId: id, status: SpellStatus.prepared),
     ],
+    classOptions: classOptions,
   );
 }
 
@@ -266,6 +311,78 @@ void main() {
 
       expect(snapshot.edition, '2024');
     });
+
+    // Correctif D102 (`docs/dette-technique.md`).
+    group('classOptions (choix nommés de niveau 1)', () {
+      test('résout choice_type/class_id/subclass_id via classFeaturesById '
+          '(requête séparée, jamais une jointure Postgrest embarquée)', () {
+        final snapshot = CharacterEditSnapshot.fromRow(
+          {
+            'id': 'c1',
+            'character_class_options': [
+              {'class_feature_id': 15, 'level': 1, 'chosen_value': 'Défense'},
+            ],
+          },
+          classFeaturesById: const {
+            15: (choiceType: 'style_combat', classId: 5, subclassId: null),
+          },
+        );
+
+        expect(snapshot.classOptions, [
+          (
+            featureClassId: 5,
+            featureSubclassId: null,
+            choiceType: 'style_combat',
+            chosenValue: 'Défense',
+          ),
+        ]);
+      });
+
+      test('écarte les lignes de niveau != 1 (hors périmètre du brouillon '
+          "de l'assistant)", () {
+        final snapshot = CharacterEditSnapshot.fromRow(
+          {
+            'id': 'c1',
+            'character_class_options': [
+              {'class_feature_id': 99, 'level': 6, 'chosen_value': 'Lame'},
+            ],
+          },
+          classFeaturesById: const {
+            99: (choiceType: 'infusion', classId: 10, subclassId: null),
+          },
+        );
+
+        expect(snapshot.classOptions, isEmpty);
+      });
+
+      test('une ligne class_feature_id absente de classFeaturesById (cas '
+          'défensif) garde chosen_value mais choiceType/featureClassId/'
+          'featureSubclassId restent null — ne correspondra ensuite à '
+          'aucune résolution de `CharacterEditHydrator`', () {
+        final snapshot = CharacterEditSnapshot.fromRow({
+          'id': 'c1',
+          'character_class_options': [
+            {'class_feature_id': 404, 'level': 1, 'chosen_value': 'Défense'},
+          ],
+        });
+
+        expect(snapshot.classOptions, [
+          (
+            featureClassId: null,
+            featureSubclassId: null,
+            choiceType: null,
+            chosenValue: 'Défense',
+          ),
+        ]);
+      });
+
+      test('absence de character_class_options -> liste vide (compatibilité '
+          'arrière, personnage antérieur au correctif D99/D102)', () {
+        final snapshot = CharacterEditSnapshot.fromRow({'id': 'c1'});
+
+        expect(snapshot.classOptions, isEmpty);
+      });
+    });
   });
 
   group('CharacterEditHydrator', () {
@@ -320,6 +437,175 @@ void main() {
       final draft = _hydrate(_snapshot(edition: '2024'));
 
       expect(draft.edition, '2024');
+    });
+
+    // Choix nommés de niveau 1 — correctif D102 (`docs/dette-technique.md`).
+    group('choix nommés de niveau 1 (correctif D102)', () {
+      test('classFeatureChoiceValue pré-rempli pour un Guerrier (Style de '
+          'combat) depuis character_class_options', () {
+        final draft = _hydrate(
+          _snapshot(
+            totalLevel: 1,
+            classId: 5,
+            classOptions: const [
+              (
+                featureClassId: 5,
+                featureSubclassId: null,
+                choiceType: 'style_combat',
+                chosenValue: 'Défense',
+              ),
+            ],
+          ),
+          classOption: _realGuerrier,
+        );
+
+        expect(draft.classFeatureChoiceValue, 'Défense');
+      });
+
+      test('classFeatureChoiceValue reste null pour une classe sans ce '
+          'choix (Clerc), même si character_class_options porte une ligne '
+          "d'une AUTRE classe", () {
+        final draft = _hydrate(
+          _snapshot(
+            totalLevel: 1,
+            classId: 2,
+            classOptions: const [
+              (
+                featureClassId: 5,
+                featureSubclassId: null,
+                choiceType: 'style_combat',
+                chosenValue: 'Défense',
+              ),
+            ],
+          ),
+          classOption: _clerc,
+        );
+
+        expect(draft.classFeatureChoiceValue, isNull);
+      });
+
+      test('subclassFeatureChoiceValue pré-rempli (Ancêtre draconique) '
+          'depuis character_class_options via subclass_id', () {
+        final draft = _hydrate(
+          _snapshot(
+            totalLevel: 1,
+            classId: 6,
+            subclassId: 12,
+            classOptions: const [
+              (
+                featureClassId: null,
+                featureSubclassId: 12,
+                choiceType: 'ancetre_draconique',
+                chosenValue: 'Dragon rouge',
+              ),
+            ],
+          ),
+          classOption: const ClassOption(
+            id: 6,
+            name: 'Ensorceleur',
+            description: '',
+            hitDie: 6,
+          ),
+        );
+
+        expect(draft.subclassFeatureChoiceValue, 'Dragon rouge');
+      });
+
+      test("subclassFeatureChoiceValue reste null quand choice_type == "
+          "'sous_classe' (déjà le choix de sous-classe lui-même, pas ce "
+          'second choix)', () {
+        final draft = _hydrate(
+          _snapshot(
+            totalLevel: 1,
+            classId: 6,
+            subclassId: 12,
+            classOptions: const [
+              (
+                featureClassId: null,
+                featureSubclassId: 12,
+                choiceType: 'sous_classe',
+                chosenValue: 'Lignage draconique',
+              ),
+            ],
+          ),
+        );
+
+        expect(draft.subclassFeatureChoiceValue, isNull);
+      });
+
+      test('expertiseSkillChoices dérivé de snapshot.skills '
+          "(proficiency == 'expertise'), jamais de "
+          'character_class_options (purement descriptive)', () {
+        final draft = _hydrate(
+          _snapshot(
+            totalLevel: 1,
+            classId: 9,
+            skillIds: const [1, 7],
+            expertiseSkillIds: const [7],
+          ),
+          classOption: _realRoublard,
+        );
+
+        // Compétence 7 = 'Discrétion' dans [_skills] ; 1 = 'Athlétisme'
+        // (maîtrisée normalement, pas en Expertise).
+        expect(draft.expertiseSkillChoices, ['Discrétion']);
+      });
+
+      test('expertiseThievesToolsSubstitution résolu via '
+          'character_class_options (purement descriptive, aucun bonus '
+          'chiffré ne la porte)', () {
+        final draft = _hydrate(
+          _snapshot(
+            totalLevel: 1,
+            classId: 9,
+            edition: '2014',
+            skillIds: const [7],
+            expertiseSkillIds: const [7],
+            classOptions: const [
+              (
+                featureClassId: 9,
+                featureSubclassId: null,
+                choiceType: 'expertise',
+                chosenValue: 'outils de voleur',
+              ),
+            ],
+          ),
+          classOption: _realRoublard,
+        );
+
+        expect(draft.expertiseThievesToolsSubstitution, isTrue);
+      });
+
+      test('expertiseThievesToolsSubstitution reste faux sans ligne '
+          'character_class_options correspondante, même avec une '
+          'Expertise de compétence par ailleurs', () {
+        final draft = _hydrate(
+          _snapshot(
+            totalLevel: 1,
+            classId: 9,
+            skillIds: const [7],
+            expertiseSkillIds: const [7],
+          ),
+          classOption: _realRoublard,
+        );
+
+        expect(draft.expertiseThievesToolsSubstitution, isFalse);
+      });
+
+      test('les 4 champs restent à leur valeur par défaut sans aucune '
+          'ligne character_class_options ni compétence en Expertise '
+          '(compatibilité arrière, personnage antérieur au correctif '
+          'D102)', () {
+        final draft = _hydrate(
+          _snapshot(totalLevel: 1, classId: 5),
+          classOption: _realGuerrier,
+        );
+
+        expect(draft.classFeatureChoiceValue, isNull);
+        expect(draft.subclassFeatureChoiceValue, isNull);
+        expect(draft.expertiseSkillChoices, isEmpty);
+        expect(draft.expertiseThievesToolsSubstitution, isFalse);
+      });
     });
   });
 
@@ -769,6 +1055,487 @@ void main() {
           (spellId: 101, status: SpellStatus.prepared),
           (spellId: 102, status: SpellStatus.prepared),
         ]);
+      });
+    });
+
+    // Choix nommés de niveau 1 — correctif D102 (`docs/dette-technique.md`).
+    group('choix nommés de niveau 1 (correctif D102)', () {
+      group('Style de combat/Ennemi juré (choix de CLASSE)', () {
+        test('classe inchangée, SEULE la valeur change : '
+            'classFeatureChoiceWrite porte la nouvelle valeur, aucun '
+            'classChange', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 5,
+            classOptions: const [
+              (
+                featureClassId: 5,
+                featureSubclassId: null,
+                choiceType: 'style_combat',
+                chosenValue: 'Défense',
+              ),
+            ],
+          );
+          final original = _hydrate(snapshot, classOption: _realGuerrier);
+          expect(original.classFeatureChoiceValue, 'Défense');
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(classFeatureChoiceValue: 'Duel'),
+            originalClass: _realGuerrier,
+            editedClass: _realGuerrier,
+          );
+
+          expect(plan.classChange, isNull);
+          expect(plan.classFeatureChoiceWrite, (
+            classId: 5,
+            choiceType: 'style_combat',
+            chosenValue: 'Duel',
+          ));
+        });
+
+        test('classe ET valeur inchangées : aucune écriture (ne pas '
+            'réécrire character_class_options sans rapport avec ce '
+            'choix)', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 5,
+            classOptions: const [
+              (
+                featureClassId: 5,
+                featureSubclassId: null,
+                choiceType: 'style_combat',
+                chosenValue: 'Défense',
+              ),
+            ],
+          );
+          final original = _hydrate(snapshot, classOption: _realGuerrier);
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(),
+            originalClass: _realGuerrier,
+            editedClass: _realGuerrier,
+          );
+
+          expect(plan.classFeatureChoiceWrite, isNull);
+        });
+
+        test('changement de classe VERS le Guerrier avec une valeur : '
+            'classFeatureChoiceWrite porte la classe APRÈS modification', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 2,
+            maxHp: 10,
+            currentHp: 10,
+          );
+          final original = _hydrate(snapshot, classOption: _clerc);
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(
+              classId: 5,
+              classFeatureChoiceValue: 'Défense',
+              classCantripChoices: const [],
+              classLevelOneSpellChoices: const [],
+            ),
+            originalClass: _clerc,
+            editedClass: _realGuerrier,
+          );
+
+          expect(plan.classChange?.classChanged, isTrue);
+          expect(plan.classFeatureChoiceWrite, (
+            classId: 5,
+            choiceType: 'style_combat',
+            chosenValue: 'Défense',
+          ));
+        });
+
+        test('changement de classe VERS une classe SANS ce choix (Clerc) : '
+            'classFeatureChoiceWrite reste null', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 5,
+            classOptions: const [
+              (
+                featureClassId: 5,
+                featureSubclassId: null,
+                choiceType: 'style_combat',
+                chosenValue: 'Défense',
+              ),
+            ],
+          );
+          final original = _hydrate(snapshot, classOption: _realGuerrier);
+
+          final plan = _plan(
+            snapshot,
+            original,
+            // `CharacterCreationDraftController.setClass` aurait déjà remis
+            // `classFeatureChoiceValue` à `null` ici (classe différente) —
+            // simulé directement, le planificateur fait confiance au
+            // brouillon final.
+            original.copyWith(classId: 2, classFeatureChoiceValue: null),
+            originalClass: _realGuerrier,
+            editedClass: _clerc,
+          );
+
+          expect(plan.classChange?.classChanged, isTrue);
+          expect(plan.classFeatureChoiceWrite, isNull);
+        });
+      });
+
+      group('Ancêtre draconique (second choix de SOUS-CLASSE)', () {
+        const ensorceleur = ClassOption(
+          id: 6,
+          name: 'Ensorceleur',
+          description: '',
+          hitDie: 6,
+        );
+
+        test('sous-classe inchangée, SEULE la valeur change : '
+            'subclassFeatureChoiceWrite porte la nouvelle valeur', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 6,
+            subclassId: 12,
+            classOptions: const [
+              (
+                featureClassId: null,
+                featureSubclassId: 12,
+                choiceType: 'ancetre_draconique',
+                chosenValue: 'Dragon rouge',
+              ),
+            ],
+          );
+          final original = _hydrate(snapshot, classOption: ensorceleur);
+          expect(original.subclassFeatureChoiceValue, 'Dragon rouge');
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(subclassFeatureChoiceValue: 'Dragon bleu'),
+            originalClass: ensorceleur,
+            editedClass: ensorceleur,
+          );
+
+          expect(plan.classChange, isNull);
+          expect(plan.subclassFeatureChoiceWrite, (
+            subclassId: 12,
+            chosenValue: 'Dragon bleu',
+          ));
+        });
+
+        test('sous-classe ET valeur inchangées : aucune écriture', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 6,
+            subclassId: 12,
+            classOptions: const [
+              (
+                featureClassId: null,
+                featureSubclassId: 12,
+                choiceType: 'ancetre_draconique',
+                chosenValue: 'Dragon rouge',
+              ),
+            ],
+          );
+          final original = _hydrate(snapshot, classOption: ensorceleur);
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(),
+            originalClass: ensorceleur,
+            editedClass: ensorceleur,
+          );
+
+          expect(plan.subclassFeatureChoiceWrite, isNull);
+        });
+
+        test('changement de SOUS-CLASSE seule (même classe) avec une '
+            'nouvelle valeur : subclassFeatureChoiceWrite porte le NOUVEAU '
+            'subclassId, classChange marque un changement de sous-classe '
+            'sans changement de classe', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 6,
+            subclassId: 12,
+            classOptions: const [
+              (
+                featureClassId: null,
+                featureSubclassId: 12,
+                choiceType: 'ancetre_draconique',
+                chosenValue: 'Dragon rouge',
+              ),
+            ],
+          );
+          final original = _hydrate(snapshot, classOption: ensorceleur);
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(
+              subclassId: 13,
+              subclassFeatureChoiceValue: 'Dragon bleu',
+            ),
+            originalClass: ensorceleur,
+            editedClass: ensorceleur,
+          );
+
+          expect(plan.classChange?.classChanged, isFalse);
+          expect(plan.classChange?.subclassId, 13);
+          expect(plan.subclassFeatureChoiceWrite, (
+            subclassId: 13,
+            chosenValue: 'Dragon bleu',
+          ));
+        });
+      });
+
+      group('Expertise du Roublard', () {
+        test('ajoute une compétence à l\'Expertise : upgrade cette '
+            "compétence, expertiseOptionsWrite porte les 2 noms (l'ancienne "
+            'ET la nouvelle)', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 9,
+            backgroundId: 2, // `_soldat` : Athlétisme/Intimidation.
+            // 1/2 déjà maîtrisées via l'historique (octroi automatique), 7
+            // via la classe — cohérent avec `original`/`edited` ci-dessous,
+            // qui gardent tous les deux ce même historique : évite un
+            // `skillInserts` parasite (Intimidation) sans rapport avec ce
+            // que ce test vérifie.
+            skillIds: const [1, 2, 7],
+            expertiseSkillIds: const [7],
+          );
+          final original = _hydrate(
+            snapshot,
+            classOption: _realRoublard,
+            backgroundOption: _soldat,
+          );
+          expect(original.expertiseSkillChoices, ['Discrétion']);
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(
+              expertiseSkillChoices: ['Discrétion', 'Athlétisme'],
+            ),
+            originalClass: _realRoublard,
+            editedClass: _realRoublard,
+            originalBackground: _soldat,
+            editedBackground: _soldat,
+          );
+
+          expect(plan.expertiseSkillUpgrades, {1});
+          expect(plan.expertiseSkillDowngrades, isEmpty);
+          // Comparées champ par champ plutôt que le record entier : le
+          // record expose `chosenValues` en `List<String>`, qui ne
+          // redéfinit pas `==` (comparaison par référence) — comparer le
+          // record directement masquerait une vraie divergence de contenu
+          // derrière un faux négatif, contrairement à `expect` sur une
+          // `List` isolée (comparaison profonde par `equals()`).
+          expect(plan.expertiseOptionsWrite?.classId, 9);
+          expect(plan.expertiseOptionsWrite?.chosenValues, [
+            'Discrétion',
+            'Athlétisme',
+          ]);
+        });
+
+        test('retire une compétence de l\'Expertise (reste maîtrisée '
+            'autrement) : downgrade cette compétence à \'competente\', '
+            'expertiseOptionsWrite ne porte plus que celle restante', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 9,
+            backgroundId: 2, // `_soldat` : Athlétisme/Intimidation.
+            skillIds: const [1, 2, 7],
+            expertiseSkillIds: const [1, 7],
+          );
+          final original = _hydrate(
+            snapshot,
+            classOption: _realRoublard,
+            backgroundOption: _soldat,
+          );
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(expertiseSkillChoices: ['Discrétion']),
+            originalClass: _realRoublard,
+            editedClass: _realRoublard,
+            originalBackground: _soldat,
+            editedBackground: _soldat,
+          );
+
+          expect(plan.expertiseSkillUpgrades, isEmpty);
+          expect(plan.expertiseSkillDowngrades, {1});
+          expect(plan.expertiseOptionsWrite?.classId, 9);
+          expect(plan.expertiseOptionsWrite?.chosenValues, ['Discrétion']);
+        });
+
+        test('aucun changement : aucune écriture, aucun upgrade/downgrade', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 9,
+            skillIds: const [7],
+            expertiseSkillIds: const [7],
+          );
+          final original = _hydrate(snapshot, classOption: _realRoublard);
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(),
+            originalClass: _realRoublard,
+            editedClass: _realRoublard,
+          );
+
+          expect(plan.expertiseOptionsWrite, isNull);
+          expect(plan.expertiseSkillUpgrades, isEmpty);
+          expect(plan.expertiseSkillDowngrades, isEmpty);
+        });
+
+        test('substitution outils de voleur activée (édition 2014) : '
+            'expertiseOptionsWrite ajoute le nom de l\'outil, sans upgrade/'
+            'downgrade de compétence (jamais un bonus chiffré, voir '
+            '`ExpertiseStepSelection`)', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 9,
+            edition: '2014',
+            skillIds: const [7],
+            expertiseSkillIds: const [7],
+          );
+          final original = _hydrate(snapshot, classOption: _realRoublard);
+          expect(original.expertiseThievesToolsSubstitution, isFalse);
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(expertiseThievesToolsSubstitution: true),
+            originalClass: _realRoublard,
+            editedClass: _realRoublard,
+          );
+
+          expect(plan.expertiseOptionsWrite?.classId, 9);
+          expect(plan.expertiseOptionsWrite?.chosenValues, [
+            'Discrétion',
+            'outils de voleur',
+          ]);
+          expect(plan.expertiseSkillUpgrades, isEmpty);
+          expect(plan.expertiseSkillDowngrades, isEmpty);
+        });
+
+        test('une compétence retirée ENTIÈREMENT (plus du tout maîtrisée, '
+            'déjà dans skillDeletes) : jamais de downgrade séparé, '
+            'expertiseOptionsWrite reste null (aucune valeur restante à '
+            'écrire)', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 9,
+            skillIds: const [7],
+            expertiseSkillIds: const [7],
+          );
+          final original = _hydrate(snapshot, classOption: _realRoublard);
+          expect(original.classSkillChoices, ['Discrétion']);
+          expect(original.expertiseSkillChoices, ['Discrétion']);
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(
+              classSkillChoices: const [],
+              expertiseSkillChoices: const [],
+            ),
+            originalClass: _realRoublard,
+            editedClass: _realRoublard,
+          );
+
+          expect(plan.skillDeletes, {7});
+          expect(plan.expertiseSkillDowngrades, isEmpty);
+          expect(plan.expertiseSkillUpgrades, isEmpty);
+          expect(plan.expertiseOptionsWrite, isNull);
+        });
+
+        test('une compétence nouvellement choisie comme compétence de '
+            "classe (absente de storedSkills) ET mise en Expertise dans le "
+            "même brouillon : skillInserts ET expertiseSkillUpgrades "
+            'portent toutes les deux son id — plan réel du '
+            'planificateur, pas écrit à la main', () {
+          final snapshot = _snapshot(
+            totalLevel: 1,
+            classId: 9,
+            // `_ermite` (historique par défaut de `_plan`) ne maîtrise ni
+            // n'octroie Athlétisme : son ajout ne peut venir que du choix de
+            // compétence de classe ci-dessous, jamais de l'historique.
+            skillIds: const [7],
+            expertiseSkillIds: const [7],
+          );
+          final original = _hydrate(snapshot, classOption: _realRoublard);
+          expect(original.classSkillChoices, ['Discrétion']);
+          expect(original.expertiseSkillChoices, ['Discrétion']);
+
+          final plan = _plan(
+            snapshot,
+            original,
+            original.copyWith(
+              classSkillChoices: const ['Discrétion', 'Athlétisme'],
+              expertiseSkillChoices: const ['Discrétion', 'Athlétisme'],
+            ),
+            originalClass: _realRoublard,
+            editedClass: _realRoublard,
+          );
+
+          // Athlétisme = skill id 1 (`_skills`).
+          expect(plan.skillInserts, contains(1));
+          expect(plan.expertiseSkillUpgrades, contains(1));
+          expect(
+            plan.skillInserts.intersection(plan.expertiseSkillUpgrades),
+            isNotEmpty,
+            reason:
+                'une compétence peut être écrite dans les deux ensembles à '
+                'la fois : `expertiseSkillUpgrades` suppose déjà la ligne '
+                'créée par `skillInserts` (voir le commentaire sur '
+                "l'ordre des requêtes dans "
+                '`character_edit_repository_test.dart`)',
+          );
+        });
+      });
+
+      test('au-delà du niveau 1 (canChangeClass faux) : les 3 écritures '
+          'restent nulles/vides même si le brouillon édité porte des '
+          'valeurs différentes — discipline défensive, ces écrans ne '
+          'devraient de toute façon jamais y être atteints', () {
+        final snapshot = _snapshot(
+          totalLevel: 5,
+          classId: 5,
+          classOptions: const [
+            (
+              featureClassId: 5,
+              featureSubclassId: null,
+              choiceType: 'style_combat',
+              chosenValue: 'Défense',
+            ),
+          ],
+        );
+        final original = _hydrate(snapshot, classOption: _realGuerrier);
+
+        final plan = _plan(
+          snapshot,
+          original,
+          original.copyWith(classFeatureChoiceValue: 'Duel'),
+          originalClass: _realGuerrier,
+          editedClass: _realGuerrier,
+        );
+
+        expect(plan.classFeatureChoiceWrite, isNull);
+        expect(plan.subclassFeatureChoiceWrite, isNull);
+        expect(plan.expertiseOptionsWrite, isNull);
+        expect(plan.expertiseSkillUpgrades, isEmpty);
+        expect(plan.expertiseSkillDowngrades, isEmpty);
       });
     });
   });

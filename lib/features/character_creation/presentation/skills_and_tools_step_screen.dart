@@ -166,13 +166,15 @@ class _SkillsAndToolsStepScreenState
     // n'existent pas encore avant). `ClassChoiceStepScreen` recalcule
     // lui-même la route suivante (jamais l'étape 6/9 "Sorts" : le Roublard
     // n'est RAW lanceur de sorts à aucun niveau), pas besoin de calculer
-    // `spellsStepApplies` ici pour cette classe. Jamais en mode modification
-    // (`editSession != null`) : contournement D102
-    // (`docs/dette-technique.md`) — ni `CharacterEditHydrator` ni
-    // `CharacterEditPlanner`/`CharacterEditRepository` ne pré-remplissent ou
-    // ne persistent `expertiseSkillChoices`, un choix fait ici en édition
-    // serait perdu en silence à l'enregistrement.
-    if (classOption.id == _roublardClassId && editSession == null) {
+    // `spellsStepApplies` ici pour cette classe. Aussi en mode modification
+    // tant que la classe reste modifiable (`editSession.canChangeClass`,
+    // niveau 1) — correctif D102 : `CharacterEditHydrator`/
+    // `CharacterEditPlanner`/`CharacterEditRepository` pré-remplissent et
+    // persistent désormais `expertiseSkillChoices`/
+    // `expertiseThievesToolsSubstitution` au même titre que la classe
+    // elle-même.
+    if (classOption.id == _roublardClassId &&
+        (editSession == null || editSession.canChangeClass)) {
       context.push('/characters/new/class-choice');
       return;
     }

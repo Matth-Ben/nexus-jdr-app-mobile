@@ -1,7 +1,9 @@
 import 'background_option.dart';
 import 'character_creation_draft.dart';
 import 'character_edit_snapshot.dart';
+import 'class_choice_rules.dart';
 import 'class_option.dart';
+import 'expertise_step_selection.dart';
 import 'language_catalog.dart';
 import 'language_selection_resolver.dart';
 import 'skill_catalog.dart';
@@ -96,6 +98,68 @@ abstract final class CharacterEditHydrator {
               .toList();
     }
 
+    // Choix nommé de CLASSE fait au niveau 1 (Style de combat du
+    // Guerrier/Ennemi juré du Rôdeur) — correctif D102
+    // (`docs/dette-technique.md`) : résolution inverse de
+    // `CharacterCreationRepository.createCharacter` (`choice_type` +
+    // `class_id`, voir `ClassChoiceRules`). `null` pour toute autre classe,
+    // ou si la ligne `character_class_options` correspondante est absente
+    // (cas défensif, ex. personnage créé avant le correctif D99).
+    String? classFeatureChoiceValue;
+    final classChoiceKind = classOption == null
+        ? null
+        : ClassChoiceRules.kindFor(classOption.id);
+    if (classChoiceKind != null) {
+      final choiceType = ClassChoiceRules.choiceTypeFor(classChoiceKind);
+      for (final option in snapshot.classOptions) {
+        if (option.featureClassId == classOption!.id &&
+            option.choiceType == choiceType) {
+          classFeatureChoiceValue = option.chosenValue;
+          break;
+        }
+      }
+    }
+
+    // Second choix de niveau 1 propre à la SOUS-CLASSE (ex. Ancêtre
+    // draconique) — correctif D102, même rationale : résolution inverse via
+    // `subclass_id` + `choice_type` non nul ET différent de `'sous_classe'`
+    // (ce dernier étant déjà le choix de sous-classe lui-même).
+    String? subclassFeatureChoiceValue;
+    if (snapshot.subclassId != null) {
+      for (final option in snapshot.classOptions) {
+        if (option.featureSubclassId == snapshot.subclassId &&
+            option.choiceType != null &&
+            option.choiceType != 'sous_classe') {
+          subclassFeatureChoiceValue = option.chosenValue;
+          break;
+        }
+      }
+    }
+
+    // Expertise du Roublard au niveau 1 — correctif D102. Les compétences
+    // viennent de [snapshot.skills] (`proficiency == 'expertise'`), jamais
+    // de `character_class_options` : c'est la SEULE table qui porte le
+    // bonus réel (voir la doc de classe de `CharacterEditSnapshot
+    // ::classOptions`), `character_class_options` ne sert ici qu'à
+    // retrouver la substitution outils de voleur (purement descriptive,
+    // RAW 2014 uniquement).
+    final expertiseSkillChoices = [
+      for (final skill in snapshot.skills)
+        if (skill.proficiency == 'expertise') ?skillNameById[skill.skillId],
+    ].take(ExpertiseStepSelection.quota).toList();
+    final thievesToolsName =
+        classOption != null && classOption.grantedToolNames.isNotEmpty
+        ? classOption.grantedToolNames.first
+        : null;
+    final expertiseThievesToolsSubstitution =
+        thievesToolsName != null &&
+        snapshot.classOptions.any(
+          (option) =>
+              option.featureClassId == classOption!.id &&
+              option.choiceType == 'expertise' &&
+              option.chosenValue == thievesToolsName,
+        );
+
     String? identity(String column) => orNull(snapshot.identity[column]);
     String? text(String column) => orNull(snapshot.texts[column]);
 
@@ -119,6 +183,12 @@ abstract final class CharacterEditHydrator {
       backgroundLanguageChoices: languages,
       classCantripChoices: cantrips,
       classLevelOneSpellChoices: levelOneSpells,
+      // Choix nommés de niveau 1 — correctif D102 (`docs/dette-
+      // technique.md`), voir ci-dessus pour leur résolution.
+      classFeatureChoiceValue: classFeatureChoiceValue,
+      subclassFeatureChoiceValue: subclassFeatureChoiceValue,
+      expertiseSkillChoices: expertiseSkillChoices,
+      expertiseThievesToolsSubstitution: expertiseThievesToolsSubstitution,
       sexe: identity('sexe'),
       age: identity('age'),
       height: identity('height'),

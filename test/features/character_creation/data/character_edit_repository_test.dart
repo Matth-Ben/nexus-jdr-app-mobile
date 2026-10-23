@@ -37,9 +37,15 @@ void main() {
 
   /// [characterRow] : réponse à la lecture de `characters`
   /// (`fetchSnapshot`, `.maybeSingle()` : un OBJET JSON, pas un tableau).
+  /// [classFeatureRows] : réponse à la résolution `class_feature_id` —
+  /// correctif D102 (`docs/dette-technique.md`), `save` l'interroge pour
+  /// `classFeatureChoiceWrite`/`subclassFeatureChoiceWrite`/
+  /// `expertiseOptionsWrite` (même requête que `createCharacter`). Vide par
+  /// défaut, même rationale que [characterRow] pour les autres tables.
   Future<SupabaseClient> signedInClient({
     required List<http.Request> requests,
     Map<String, dynamic>? characterRow,
+    List<Map<String, dynamic>>? classFeatureRows,
   }) async {
     final client = SupabaseClient(
       'https://fake.supabase.test',
@@ -50,6 +56,9 @@ void main() {
             request.method == 'GET' &&
                 request.url.pathSegments.last == 'characters'
             ? (characterRow ?? const <String, dynamic>{})
+            : request.method == 'GET' &&
+                  request.url.pathSegments.last == 'class_features'
+            ? (classFeatureRows ?? const <Map<String, dynamic>>[])
             : const <Map<String, dynamic>>[];
         return http.Response(
           jsonEncode(body),
@@ -83,6 +92,14 @@ void main() {
   List<http.Request> spellRequests(List<http.Request> requests) => [
     for (final request in requests)
       if (request.url.pathSegments.last == 'character_spells') request,
+  ];
+
+  /// Requêtes visant la table [table] — correctif D102
+  /// (`docs/dette-technique.md`), même principe que [spellRequests] en
+  /// générique.
+  List<http.Request> requestsOn(List<http.Request> requests, String table) => [
+    for (final request in requests)
+      if (request.url.pathSegments.last == table) request,
   ];
 
   List<Map<String, dynamic>> insertedRows(http.Request request) => [
@@ -198,6 +215,268 @@ void main() {
           'character_pact_slots',
         ],
       );
+    });
+  });
+
+  group('SupabaseCharacterEditRepository.save — choix nommés de niveau 1 '
+      '(correctif D102, docs/dette-technique.md)', () {
+    Map<String, dynamic> insertedRow(http.Request request) =>
+        Map<String, dynamic>.from(jsonDecode(request.body) as Map);
+
+    test('classFeatureChoiceWrite : résout class_feature_id via class_id + '
+        'level=1 + choice_type, supprime l\'ancienne ligne PUIS réinsère '
+        'la nouvelle', () async {
+      final requests = <http.Request>[];
+      final client = await signedInClient(
+        requests: requests,
+        classFeatureRows: [
+          {'id': 15},
+        ],
+      );
+
+      await SupabaseCharacterEditRepository(client).save(
+        characterId: characterId,
+        plan: const CharacterEditPlan(
+          characterUpdate: {'name': 'Brasc'},
+          classFeatureChoiceWrite: (
+            classId: 5,
+            choiceType: 'style_combat',
+            chosenValue: 'Duel',
+          ),
+        ),
+      );
+
+      final featureQuery = requestsOn(requests, 'class_features').single;
+      expect(featureQuery.method, 'GET');
+      expect(featureQuery.url.queryParameters['class_id'], 'eq.5');
+      expect(featureQuery.url.queryParameters['level'], 'eq.1');
+      expect(
+        featureQuery.url.queryParameters['choice_type'],
+        'eq.style_combat',
+      );
+
+      final onOptions = requestsOn(requests, 'character_class_options');
+      expect(onOptions.map((request) => request.method), ['DELETE', 'POST']);
+      expect(onOptions.first.url.queryParameters['class_feature_id'], 'eq.15');
+      expect(insertedRow(onOptions.last), {
+        'character_id': characterId,
+        'class_feature_id': 15,
+        'level': 1,
+        'chosen_value': 'Duel',
+      });
+    });
+
+    test('classFeatureChoiceWrite : aucune ligne class_features '
+        'correspondante (cas défensif) -> aucune écriture sur '
+        'character_class_options', () async {
+      final requests = <http.Request>[];
+      final client = await signedInClient(requests: requests);
+
+      await SupabaseCharacterEditRepository(client).save(
+        characterId: characterId,
+        plan: const CharacterEditPlan(
+          characterUpdate: {'name': 'Brasc'},
+          classFeatureChoiceWrite: (
+            classId: 99,
+            choiceType: 'style_combat',
+            chosenValue: 'Duel',
+          ),
+        ),
+      );
+
+      expect(requestsOn(requests, 'character_class_options'), isEmpty);
+    });
+
+    test('subclassFeatureChoiceWrite : résout via subclass_id + level=1 + '
+        'choice_type non nul ET différent de sous_classe (2 filtres sur la '
+        'même colonne, jamais un seul écrasant l\'autre)', () async {
+      final requests = <http.Request>[];
+      final client = await signedInClient(
+        requests: requests,
+        classFeatureRows: [
+          {'id': 368},
+        ],
+      );
+
+      await SupabaseCharacterEditRepository(client).save(
+        characterId: characterId,
+        plan: const CharacterEditPlan(
+          characterUpdate: {'name': 'Zaltar'},
+          subclassFeatureChoiceWrite: (
+            subclassId: 12,
+            chosenValue: 'Dragon rouge',
+          ),
+        ),
+      );
+
+      final featureQuery = requestsOn(requests, 'class_features').single;
+      expect(featureQuery.url.queryParameters['subclass_id'], 'eq.12');
+      expect(featureQuery.url.queryParameters['level'], 'eq.1');
+      // `.not('choice_type', 'is', null).neq('choice_type', 'sous_classe')`
+      // ajoute 2 valeurs À LA MÊME clé de requête (`queryParametersAll`,
+      // jamais `queryParameters` qui n'en garderait que la dernière).
+      expect(featureQuery.url.queryParametersAll['choice_type'], [
+        'not.is.null',
+        'neq.sous_classe',
+      ]);
+
+      final onOptions = requestsOn(requests, 'character_class_options');
+      expect(onOptions.map((request) => request.method), ['DELETE', 'POST']);
+      expect(onOptions.first.url.queryParameters['class_feature_id'], 'eq.368');
+      expect(insertedRow(onOptions.last), {
+        'character_id': characterId,
+        'class_feature_id': 368,
+        'level': 1,
+        'chosen_value': 'Dragon rouge',
+      });
+    });
+
+    test('expertiseOptionsWrite : résout via class_id + level=1 + '
+        "choice_type='expertise', supprime puis réinsère UNE ligne par "
+        'valeur (compétences + substitution outils)', () async {
+      final requests = <http.Request>[];
+      final client = await signedInClient(
+        requests: requests,
+        classFeatureRows: [
+          {'id': 40},
+        ],
+      );
+
+      await SupabaseCharacterEditRepository(client).save(
+        characterId: characterId,
+        plan: const CharacterEditPlan(
+          characterUpdate: {'name': 'Lira'},
+          expertiseOptionsWrite: (
+            classId: 9,
+            chosenValues: ['Discrétion', 'outils de voleur'],
+          ),
+        ),
+      );
+
+      final featureQuery = requestsOn(requests, 'class_features').single;
+      expect(featureQuery.url.queryParameters['class_id'], 'eq.9');
+      expect(featureQuery.url.queryParameters['choice_type'], 'eq.expertise');
+
+      final onOptions = requestsOn(requests, 'character_class_options');
+      expect(onOptions.map((request) => request.method), ['DELETE', 'POST']);
+      expect(insertedRows(onOptions.last), [
+        {
+          'character_id': characterId,
+          'class_feature_id': 40,
+          'level': 1,
+          'chosen_value': 'Discrétion',
+        },
+        {
+          'character_id': characterId,
+          'class_feature_id': 40,
+          'level': 1,
+          'chosen_value': 'outils de voleur',
+        },
+      ]);
+    });
+
+    test('expertiseSkillUpgrades/Downgrades : PATCH character_skill_'
+        "proficiencies vers 'expertise'/'competente', toujours APRÈS les "
+        'éventuels skillInserts (une compétence nouvellement choisie ET '
+        'mise en Expertise doit déjà exister en base)', () async {
+      final requests = <http.Request>[];
+      final client = await signedInClient(requests: requests);
+
+      await SupabaseCharacterEditRepository(client).save(
+        characterId: characterId,
+        plan: const CharacterEditPlan(
+          characterUpdate: {'name': 'Lira'},
+          skillInserts: {1},
+          expertiseSkillUpgrades: {1},
+          expertiseSkillDowngrades: {7},
+        ),
+      );
+
+      final onSkills = requestsOn(requests, 'character_skill_proficiencies');
+      expect(onSkills.map((request) => request.method), [
+        'POST',
+        'PATCH',
+        'PATCH',
+      ]);
+      expect(insertedRows(onSkills[0]), [
+        {
+          'character_id': characterId,
+          'skill_id': 1,
+          'proficiency': 'competente',
+        },
+      ]);
+      expect(insertedRow(onSkills[1]), {'proficiency': 'expertise'});
+      expect(onSkills[1].url.queryParameters['skill_id'], 'in.(1)');
+      expect(insertedRow(onSkills[2]), {'proficiency': 'competente'});
+      expect(onSkills[2].url.queryParameters['skill_id'], 'in.(7)');
+    });
+
+    test('classChange (classChanged: true) ET classFeatureChoiceWrite dans '
+        'le même plan : la purge en bloc de character_class_options '
+        '(classChange.classChanged) précède toujours la résolution/'
+        'réinsertion de la nouvelle valeur nommée (GET class_features -> '
+        'DELETE scopé par class_feature_id -> POST)', () async {
+      final requests = <http.Request>[];
+      final client = await signedInClient(
+        requests: requests,
+        classFeatureRows: [
+          {'id': 15},
+        ],
+      );
+
+      await SupabaseCharacterEditRepository(client).save(
+        characterId: characterId,
+        plan: const CharacterEditPlan(
+          characterUpdate: {'name': 'Brasc'},
+          classChange: (
+            classId: 5,
+            subclassId: null,
+            hpRolled: 10,
+            classChanged: true,
+          ),
+          classFeatureChoiceWrite: (
+            classId: 5,
+            choiceType: 'style_combat',
+            chosenValue: 'Duel',
+          ),
+        ),
+      );
+
+      // Purge en bloc : le seul DELETE sur character_class_options SANS
+      // filtre class_feature_id (déclenchée par classChange.classChanged,
+      // AVANT toute résolution de choix nommé).
+      final bulkPurgeIndex = requests.indexWhere(
+        (request) =>
+            request.method == 'DELETE' &&
+            request.url.pathSegments.last == 'character_class_options' &&
+            !request.url.queryParameters.containsKey('class_feature_id'),
+      );
+      final featureQueryIndex = requests.indexWhere(
+        (request) => request.url.pathSegments.last == 'class_features',
+      );
+      final scopedDeleteIndex = requests.indexWhere(
+        (request) =>
+            request.method == 'DELETE' &&
+            request.url.pathSegments.last == 'character_class_options' &&
+            request.url.queryParameters['class_feature_id'] == 'eq.15',
+      );
+      final insertIndex = requests.indexWhere(
+        (request) =>
+            request.method == 'POST' &&
+            request.url.pathSegments.last == 'character_class_options',
+      );
+
+      expect(bulkPurgeIndex, isNot(-1));
+      expect(featureQueryIndex, isNot(-1));
+      expect(scopedDeleteIndex, isNot(-1));
+      expect(insertIndex, isNot(-1));
+      // Ordre réel attendu : purge en bloc -> GET class_features -> DELETE
+      // scopé -> POST. Sans cet ordre, la purge en bloc (déclenchée par le
+      // changement de classe) pourrait effacer la ligne que la résolution
+      // du choix nommé vient d'insérer pour la NOUVELLE classe.
+      expect(bulkPurgeIndex, lessThan(featureQueryIndex));
+      expect(featureQueryIndex, lessThan(scopedDeleteIndex));
+      expect(scopedDeleteIndex, lessThan(insertIndex));
     });
   });
 

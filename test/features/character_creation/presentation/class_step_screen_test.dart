@@ -899,15 +899,15 @@ void main() {
     });
 
     testWidgets(
-      'régression D102 (docs/dette-technique.md) : au niveau 1, choisir le '
+      'correctif D102 (docs/dette-technique.md) : au niveau 1, choisir le '
       'Guerrier (classes.id = 5, choix nommé de classe niveau 1 — '
-      'ClassChoiceRules.isConcerned) ne pousse jamais '
-      "'/characters/new/class-choice' en mode modification, contrairement "
-      'à la création (voir le groupe "choix nommé de classe au niveau 1" '
-      'ci-dessus) — ni `CharacterEditHydrator` ni '
-      '`CharacterEditPlanner`/`CharacterEditRepository` ne pré-remplissent '
-      'ou ne persistent `classFeatureChoiceValue` : l\'écran mentirait en '
-      'silence au joueur sur l\'enregistrement de son choix',
+      'ClassChoiceRules.isConcerned) pousse '
+      "'/characters/new/class-choice' en mode modification, exactement "
+      'comme à la création (voir le groupe "choix nommé de classe au '
+      'niveau 1" ci-dessus) — `CharacterEditHydrator`/'
+      '`CharacterEditPlanner`/`CharacterEditRepository` pré-remplissent et '
+      'persistent désormais `classFeatureChoiceValue` au même titre que la '
+      'classe elle-même',
       (WidgetTester tester) async {
         fakeRepository.catalogToReturn = const ClassCatalog(
           classes: [_magicien, _realGuerrier],
@@ -921,13 +921,13 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(readDraft().classId, 5);
-        expect(find.text('Étape choix de classe'), findsNothing);
-        expect(find.text('Étape suivante'), findsOneWidget);
+        expect(find.text('Étape choix de classe'), findsOneWidget);
+        expect(find.text('Étape suivante'), findsNothing);
       },
     );
 
     testWidgets(
-      'régression D102 (docs/dette-technique.md) : même constat pour le '
+      'correctif D102 (docs/dette-technique.md) : même constat pour le '
       'Rôdeur (classes.id = 8, choix nommé "Ennemi juré") — même garde-fou '
       'que le Guerrier ci-dessus, cas distinct exigé par le correctif',
       (WidgetTester tester) async {
@@ -943,6 +943,26 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(readDraft().classId, 8);
+        expect(find.text('Étape choix de classe'), findsOneWidget);
+        expect(find.text('Étape suivante'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'correctif D102 (docs/dette-technique.md) : au-delà du niveau 1, le '
+      'choix nommé de classe reste hors de portée en édition (classe '
+      'verrouillée, "Suivant" passe directement à l\'étape suivante, même '
+      'garde-fou que le changement de classe/sous-classe)',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const ClassCatalog(
+          classes: [_magicien, _realGuerrier],
+        );
+        startEditSession(totalLevel: 5);
+        await pumpClassStep(tester);
+
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
         expect(find.text('Étape choix de classe'), findsNothing);
         expect(find.text('Étape suivante'), findsOneWidget);
       },
