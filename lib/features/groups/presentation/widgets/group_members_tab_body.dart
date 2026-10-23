@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/info_banner.dart';
 import '../../../../core/widgets/portrait_frame.dart';
+import '../../../characters/domain/signed_modifier_formatter.dart';
 import '../../domain/character_vital_status.dart';
 import '../../domain/group_detail.dart';
 import '../../domain/group_member.dart';
@@ -315,6 +316,20 @@ class _MemberCard extends StatelessWidget {
                     ],
                   ],
                 ),
+                if (member.armorClass != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  // Ligne 3 : "CA {valeur}" (+ suffixe signé du bonus manuel
+                  // si actif) — spec direction-artistique, voir
+                  // `GroupMember.armorClass`/`armorClassBonus`. Jamais
+                  // tappable individuellement, texte seul (pas d'icône),
+                  // même style que l'ancienne ligne "résumé race/classe/
+                  // niveau" (`CharacterCard._summaryLine`), retirée de cet
+                  // onglet par le recettage direction-artistique du 13/09.
+                  _ArmorClassLine(
+                    armorClass: member.armorClass!,
+                    armorClassBonus: member.armorClassBonus ?? 0,
+                  ),
+                ],
               ],
             ),
           ),
@@ -654,6 +669,52 @@ class _MemberHpGauge extends StatelessWidget {
     }
     return const LinearGradient(
       colors: [AppColors.hpCriticalStart, AppColors.hpCriticalEnd],
+    );
+  }
+}
+
+/// Ligne 3 "CA {valeur}" (+ suffixe signé du bonus manuel si actif) — voir
+/// `GroupMember.armorClass`/`armorClassBonus`. Jamais affichée pour le MJ
+/// volontaire ni pour la carte orpheline, voir `_MemberCard._buildCard`
+/// (seul appelant).
+class _ArmorClassLine extends StatelessWidget {
+  const _ArmorClassLine({
+    required this.armorClass,
+    required this.armorClassBonus,
+  });
+
+  final int armorClass;
+  final int armorClassBonus;
+
+  @override
+  Widget build(BuildContext context) {
+    if (armorClassBonus == 0) {
+      return Text(
+        'CA $armorClass',
+        style: AppTypography.body(fontSize: 13, color: AppColors.textSecondary),
+      );
+    }
+
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: 'CA $armorClass ',
+            style: AppTypography.body(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          TextSpan(
+            text: SignedModifierFormatter.format(armorClassBonus),
+            style: AppTypography.body(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.accentTeal,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

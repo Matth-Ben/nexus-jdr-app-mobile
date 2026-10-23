@@ -37,13 +37,19 @@ abstract class GroupRealtimeSubscription {
 /// principe que `CharacterRepository`/`StoryInviteRepository`.
 ///
 /// **Discipline de lecture des coéquipiers** : la RLS autorise un membre de
-/// groupe à lire la ligne ENTIÈRE `characters`/`character_classes` d'un
-/// coéquipier (nécessaire pour que Supabase Realtime, qui ne diffuse que
+/// groupe à lire la ligne ENTIÈRE `characters`/`character_classes`/
+/// `character_ability_scores`/`character_inventory`/`character_class_options`
+/// d'un coéquipier (nécessaire pour que Supabase Realtime, qui ne diffuse que
 /// depuis une vraie policy RLS ligne-par-ligne, fonctionne) — cette
 /// implémentation ne sélectionne et n'expose jamais que le sous-ensemble
-/// portrait/nom/race/classe/niveau/PV/PV temp./statut (voir
+/// portrait/nom/race/classe/niveau/PV/PV temp./statut/CA (voir
 /// [GroupMemberRowMapper]/[fetchGroupDetail]), même si la requête pourrait
-/// techniquement lire plus, même discipline que l'app web pour le MJ.
+/// techniquement lire plus, même discipline que l'app web pour le MJ. La CA
+/// est le seul champ dérivé d'une lecture plus large
+/// (`character_ability_scores`/`character_inventory`/
+/// `character_class_options`, voir la doc de classe de
+/// [GroupMemberRowMapper]) : jamais ces champs bruts eux-mêmes, seul l'entier
+/// déjà calculé par [GroupMemberRowMapper] est exposé sur [GroupMember].
 ///
 /// Contrairement à `CharacterRepository`, aucune écriture de ce fichier ne
 /// passe par une file d'attente hors-ligne (`PendingCharacterWriteQueue`) :
@@ -370,8 +376,17 @@ class SupabaseGroupRepository implements GroupRepository {
             display_name:group_members_display_name,
             characters(
               id, name, portrait_url, current_hp, max_hp, temporary_hp,
-              is_dead, race_id,
-              character_classes(class_id, level, is_primary)
+              is_dead, race_id, armor_class_bonus,
+              character_classes(class_id, subclass_id, level, is_primary),
+              character_ability_scores(ability_id, score),
+              character_class_options(class_feature_id, chosen_value),
+              character_inventory(
+                id, item_id, quantity, equipped, is_attuned,
+                items(
+                  category, requires_attunement, ac_bonus, ac_bonus_kind,
+                  armor_properties(ac_base, ac_dex_bonus, slot)
+                )
+              )
             )
           ''')
           .eq('group_id', groupId);
@@ -384,6 +399,18 @@ class SupabaseGroupRepository implements GroupRepository {
         entityType: 'class',
         entityIds: GroupMemberRowMapper.collectClassIds(memberRows),
       );
+      // Pour `ArmorClassCalculator.compute` uniquement (Résilience
+      // draconique/style de combat Défense) — voir la doc de classe de
+      // [GroupMemberRowMapper] pour le rationale de cette exception à la
+      // discipline "sous-ensemble restreint".
+      final subclassNames = await _fetchTranslatedNames(
+        entityType: 'subclass',
+        entityIds: GroupMemberRowMapper.collectSubclassIds(memberRows),
+      );
+      final classFeatureNames = await _fetchTranslatedNames(
+        entityType: 'class_feature',
+        entityIds: GroupMemberRowMapper.collectClassFeatureIds(memberRows),
+      );
 
       final members = memberRows
           .map(
@@ -391,6 +418,8 @@ class SupabaseGroupRepository implements GroupRepository {
               row,
               raceNames: raceNames,
               classNames: classNames,
+              subclassNames: subclassNames,
+              classFeatureNames: classFeatureNames,
             ),
           )
           .toList();
