@@ -747,13 +747,14 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
 }
 
 /// Double « léger » (même principe que
-/// `character_repository_level_up_initial_spells_test.dart`) : les lignes
-/// configurées via [tableRows] sont retournées pour TOUTE requête `GET` sur
-/// la table correspondante, sans appliquer les filtres de la requête —
-/// suffisant ici, chaque table n'étant lue qu'une seule fois par scénario
-/// (le comportement `choice_type` SEUL vs `.eq('class_id', classId)` est
-/// déjà vérifié au niveau du CODE, pas de la simulation SQL, contrairement à
-/// `character_repository_level_up_elemental_disciplines_test.dart`).
+/// `character_repository_level_up_initial_spells_test.dart`), mais qui
+/// respecte réellement les filtres `.eq(...)` demandés (voir
+/// [_rowMatchesEqFilters] — D105 de `docs/dette-technique.md`, corrigé :
+/// avant cette correction, TOUS les filtres étaient ignorés, ce qui rendait
+/// les propriétés documentées en tête de fichier non vérifiées). Les filtres
+/// non `.eq(...)` (`.order(...)`, `.lte(...)`, `.inFilter(...)`) restent
+/// ignorés : suffisant ici, chaque table n'étant lue qu'une seule fois par
+/// scénario.
 Future<SupabaseClient> _buildSignedInFakeSupabaseClient({
   required String ownerId,
   required List<_Recorded> recorded,
