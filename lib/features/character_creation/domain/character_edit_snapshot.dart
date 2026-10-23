@@ -1,5 +1,31 @@
 import '../../../core/rules/spell_status.dart';
 
+/// `class_features.choice_type`/`class_id`/`subclass_id` d'une ligne
+/// `class_features` déjà résolue (par `data/character_edit_repository.dart
+/// ::fetchSnapshot`, requête séparée — même convention que
+/// `data/character_repository.dart`, qui résout toujours `class_features`
+/// via une requête dédiée plutôt qu'une jointure Postgrest embarquée),
+/// nécessaire pour reconstruire [CharacterEditSnapshot.classOptions] —
+/// correctif D102 (`docs/dette-technique.md`).
+typedef ClassFeatureChoiceInfo = ({
+  String? choiceType,
+  int? classId,
+  int? subclassId,
+});
+
+/// Ligne `character_class_options` de NIVEAU 1 enrichie du `choice_type`/
+/// `class_id`/`subclass_id` de sa ligne `class_features` associée —
+/// correctif D102. `featureClassId` non nul pour un choix de CLASSE (Style
+/// de combat/Ennemi juré/Expertise), `featureSubclassId` non nul pour un
+/// choix de SOUS-CLASSE (Ancêtre draconique), jamais les deux à la fois
+/// (même principe que `createCharacter`/`character_repository.dart`).
+typedef ClassOptionRow = ({
+  int? featureClassId,
+  int? featureSubclassId,
+  String? choiceType,
+  String chosenValue,
+});
+
 /// État brut d'un personnage existant au moment où le joueur lance
 /// « Modifier » depuis la fiche (demande utilisateur du 2026-09-25 : réutiliser
 /// l'assistant de création pour tout modifier). Identifiants bruts, pas de
@@ -33,6 +59,7 @@ class CharacterEditSnapshot {
     this.tools = const [],
     this.languageIds = const [],
     this.spells = const [],
+    this.classOptions = const [],
   });
 
   final String characterId;
@@ -87,6 +114,18 @@ class CharacterEditSnapshot {
   /// `character_spells.status` d'un sort inné racial.
   static const SpellStatus innateStatus = SpellStatus.innate;
 
+  /// Lignes `character_class_options` de NIVEAU 1 ("choix nommés" couverts
+  /// par ce brouillon : Style de combat/Ennemi juré, Expertise, Ancêtre
+  /// draconique) — correctif D102 (`docs/dette-technique.md`). Source de
+  /// [CharacterEditHydrator] pour pré-remplir `classFeatureChoiceValue`/
+  /// `subclassFeatureChoiceValue`/`expertiseThievesToolsSubstitution` (le
+  /// 4e champ, `expertiseSkillChoices`, se dérive plutôt de [skills] — le
+  /// bonus RÉEL de l'Expertise est `character_skill_proficiencies.
+  /// proficiency = 'expertise'`, cette table-ci n'étant que descriptive,
+  /// voir `domain/expertise_step_selection.dart`) et de
+  /// [CharacterEditPlanner] pour calculer les écritures à faire.
+  final List<ClassOptionRow> classOptions;
+
   /// Les sorts que l'assistant a le droit de lire comme des choix de classe
   /// et de réécrire : toutes les lignes sauf celles au statut
   /// [innateStatus]. Un sort inné vient de la race
@@ -120,10 +159,36 @@ class CharacterEditSnapshot {
     'treasure_text',
   ];
 
-  static CharacterEditSnapshot fromRow(Map<String, dynamic> row) {
+  /// [classFeaturesById] : `class_features.id` -> [ClassFeatureChoiceInfo],
+  /// résolu par une requête SÉPARÉE par l'appelant (`data
+  /// /character_edit_repository.dart::fetchSnapshot`, même convention que
+  /// `data/character_repository.dart` — jamais une jointure Postgrest
+  /// embarquée pour `class_features`, voir la doc de classe de
+  /// [ClassFeatureChoiceInfo]) à partir des `class_feature_id` trouvés dans
+  /// `row['character_class_options']`. Vide par défaut : un appelant qui ne
+  /// le fournit pas (ex. tests existants sans correctif D102) obtient
+  /// simplement [classOptions] vide plutôt qu'une erreur.
+  static CharacterEditSnapshot fromRow(
+    Map<String, dynamic> row, {
+    Map<int, ClassFeatureChoiceInfo> classFeaturesById = const {},
+  }) {
     List<Map<String, dynamic>> rowsOf(String key) =>
         (row[key] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
     int? intOf(Object? value) => value is num ? value.toInt() : null;
+
+    ClassOptionRow? classOptionRowOf(Map<String, dynamic> optionRow) {
+      if (intOf(optionRow['level']) != 1) return null;
+      final chosenValue = optionRow['chosen_value'];
+      if (chosenValue is! String) return null;
+      final featureId = intOf(optionRow['class_feature_id']);
+      final feature = featureId == null ? null : classFeaturesById[featureId];
+      return (
+        featureClassId: feature?.classId,
+        featureSubclassId: feature?.subclassId,
+        choiceType: feature?.choiceType,
+        chosenValue: chosenValue,
+      );
+    }
 
     final classRows = rowsOf('character_classes');
     final primary = classRows.firstWhere(
@@ -190,6 +255,10 @@ class CharacterEditSnapshot {
               spellId: intOf(spellRow['spell_id'])!,
               status: SpellStatus.fromValue(spellRow['status'] as String?),
             ),
+      ],
+      classOptions: [
+        for (final optionRow in rowsOf('character_class_options'))
+          ?classOptionRowOf(optionRow),
       ],
     );
   }

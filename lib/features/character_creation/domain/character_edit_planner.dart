@@ -5,6 +5,7 @@ import 'ability_score_rules.dart';
 import 'background_option.dart';
 import 'character_creation_draft.dart';
 import 'character_edit_snapshot.dart';
+import 'class_choice_rules.dart';
 import 'class_option.dart';
 import 'hit_points_calculator.dart';
 import 'language_catalog.dart';
@@ -17,6 +18,37 @@ import 'tool_catalog.dart';
 import 'tool_proficiency_resolver.dart';
 
 typedef ToolRow = ({int? toolId, String? customText});
+
+/// Choix nommé de CLASSE (Style de combat/Ennemi juré) à écrire dans
+/// `character_class_options` — correctif D102 (`docs/dette-technique.md`).
+/// `CharacterEditRepository.save` résout lui-même `class_feature_id` au
+/// moment de l'écriture (même requête `class_features` que
+/// `CharacterCreationRepository.createCharacter` : `class_id` +
+/// `level = 1` + `choice_type`), jamais mis en cache ici — une classe sans
+/// ligne `class_features` correspondante (cas défensif) n'écrit simplement
+/// rien.
+typedef ClassFeatureChoiceWrite = ({
+  int classId,
+  String choiceType,
+  String chosenValue,
+});
+
+/// Second choix de niveau 1 propre à la SOUS-CLASSE (ex. Ancêtre draconique)
+/// à écrire — correctif D102, même rationale que [ClassFeatureChoiceWrite] :
+/// `CharacterEditRepository.save` résout `class_feature_id` via
+/// `subclass_id` + `level = 1` + `choice_type` non nul ET différent de
+/// `'sous_classe'` (même requête que `createCharacter`).
+typedef SubclassFeatureChoiceWrite = ({int subclassId, String chosenValue});
+
+/// Lignes d'Expertise du Roublard (compétence(s) + éventuellement la
+/// substitution outils de voleur, RAW 2014 uniquement) à écrire — correctif
+/// D102, même rationale que [ClassFeatureChoiceWrite] :
+/// `CharacterEditRepository.save` résout `class_feature_id` via `class_id`
+/// + `level = 1` + `choice_type = 'expertise'`. [chosenValues] porte DÉJÀ
+/// les noms de compétences ET, le cas échéant, le nom de l'outil de
+/// substitution — une ligne par valeur, même convention que
+/// `createCharacter`.
+typedef ExpertiseOptionsWrite = ({int classId, List<String> chosenValues});
 
 /// Écritures à faire pour enregistrer une modification de personnage —
 /// calculées par [CharacterEditPlanner.plan], exécutées telles quelles par
@@ -35,6 +67,11 @@ class CharacterEditPlan {
     this.spellDeletes = const {},
     this.spellInserts = const [],
     this.spellSourceClassId,
+    this.classFeatureChoiceWrite,
+    this.subclassFeatureChoiceWrite,
+    this.expertiseOptionsWrite,
+    this.expertiseSkillUpgrades = const {},
+    this.expertiseSkillDowngrades = const {},
   });
 
   /// Colonnes `characters` à mettre à jour (toujours écrites en bloc).
@@ -77,6 +114,43 @@ class CharacterEditPlan {
   /// toucher à la classe), alors que la classe d'origine est connue et
   /// inchangée dans ce cas précis.
   final int? spellSourceClassId;
+
+  /// Style de combat (Guerrier)/Ennemi juré (Rôdeur) — correctif D102
+  /// (`docs/dette-technique.md`). `null` si rien à écrire : classe sans ce
+  /// choix, ou valeur inchangée sans changement de classe (voir [plan] pour
+  /// le détail du diff). `CharacterEditRepository.save` supprime TOUJOURS
+  /// la ligne existante pour ce même choix (résolue via `class_id` +
+  /// `choice_type`) avant de réinsérer — sans effet quand
+  /// [classChange]?.classChanged a déjà tout purgé, nécessaire pour un
+  /// changement de VALEUR seule (ex. "Défense" -> "Duel" sans changer de
+  /// classe).
+  final ClassFeatureChoiceWrite? classFeatureChoiceWrite;
+
+  /// Ancêtre draconique (ou tout futur second choix de sous-classe) —
+  /// correctif D102, même rationale que [classFeatureChoiceWrite].
+  final SubclassFeatureChoiceWrite? subclassFeatureChoiceWrite;
+
+  /// Expertise du Roublard (compétences + substitution outils de voleur) —
+  /// correctif D102, même rationale que [classFeatureChoiceWrite]. Lignes
+  /// purement DESCRIPTIVES de `character_class_options` (carte "CHOIX DE
+  /// CLASSE" de la fiche) : le bonus RÉEL est porté par
+  /// [expertiseSkillUpgrades]/[expertiseSkillDowngrades].
+  final ExpertiseOptionsWrite? expertiseOptionsWrite;
+
+  /// `character_skill_proficiencies.proficiency` à rehausser à
+  /// `'expertise'` — toujours un sous-ensemble de compétences déjà
+  /// maîtrisées (voir [skillInserts]/les compétences déjà stockées), jamais
+  /// une ligne séparée ni dupliquée, même convention que
+  /// `ExpertiseStepSelection.upgradeToExpertise` côté création.
+  /// `CharacterEditRepository.save` exécute cette mise à jour APRÈS
+  /// [skillInserts] : une compétence nouvellement choisie ET mise en
+  /// Expertise dans le même enregistrement doit déjà exister en base.
+  final Set<int> expertiseSkillUpgrades;
+
+  /// Compétences dont l'Expertise d'un enregistrement PRÉCÉDENT n'est plus
+  /// choisie dans ce nouvel enregistrement : repassées à `'competente'`
+  /// (jamais supprimées, le personnage reste maîtrisé) — correctif D102.
+  final Set<int> expertiseSkillDowngrades;
 }
 
 /// Calcule un [CharacterEditPlan] en comparant le brouillon d'origine
@@ -185,6 +259,10 @@ abstract final class CharacterEditPlanner {
     final storedSkills = {for (final skill in snapshot.skills) skill.skillId};
     final oldSkills = skillIdsOf(original, originalBackground);
     final newSkills = skillIdsOf(edited, editedBackground);
+    final skillDeletes = storedSkills.intersection(
+      oldSkills.difference(newSkills),
+    );
+    final skillInserts = newSkills.difference(storedSkills);
 
     // ── Outils ───────────────────────────────────────────────────────────
     List<ToolRow> toolsOf(
@@ -283,6 +361,110 @@ abstract final class CharacterEditPlanner {
       }
     }
 
+    // ── Choix nommé de CLASSE (Style de combat/Ennemi juré) ───────────────
+    // Correctif D102 (`docs/dette-technique.md`). Écrit dès que la valeur
+    // change (y compris via un changement de classe, qui a déjà remis
+    // [edited.classFeatureChoiceValue] à `null` dans le brouillon — voir
+    // `CharacterCreationDraftController.setClass` — avant d'être
+    // éventuellement réécrit par `ClassChoiceStepScreen` pour la NOUVELLE
+    // classe) : jamais quand la classe est inchangée ET la valeur
+    // identique, pour ne pas réécrire `character_class_options` à chaque
+    // enregistrement sans rapport avec ce choix.
+    ClassFeatureChoiceWrite? classFeatureChoiceWrite;
+    final classFeatureKind = canChangeClass && editedClass != null
+        ? ClassChoiceRules.kindFor(editedClass.id)
+        : null;
+    if (classFeatureKind != null &&
+        edited.classFeatureChoiceValue != null &&
+        (classChanged ||
+            edited.classFeatureChoiceValue !=
+                original.classFeatureChoiceValue)) {
+      classFeatureChoiceWrite = (
+        classId: editedClass!.id,
+        choiceType: ClassChoiceRules.choiceTypeFor(classFeatureKind),
+        chosenValue: edited.classFeatureChoiceValue!,
+      );
+    }
+
+    // ── Second choix de SOUS-CLASSE (Ancêtre draconique) ──────────────────
+    // Correctif D102, même rationale que ci-dessus : `setClass`/
+    // `SubclassStepScreen._submit` gardent déjà
+    // [edited.subclassFeatureChoiceValue] cohérent avec la sous-classe
+    // finale (`null` si elle n'a pas de second choix).
+    SubclassFeatureChoiceWrite? subclassFeatureChoiceWrite;
+    if (canChangeClass &&
+        edited.subclassId != null &&
+        edited.subclassFeatureChoiceValue != null &&
+        (classChanged ||
+            subclassChanged ||
+            edited.subclassFeatureChoiceValue !=
+                original.subclassFeatureChoiceValue)) {
+      subclassFeatureChoiceWrite = (
+        subclassId: edited.subclassId!,
+        chosenValue: edited.subclassFeatureChoiceValue!,
+      );
+    }
+
+    // ── Expertise du Roublard ──────────────────────────────────────────────
+    // Correctif D102. Deux écritures distinctes, même séparation que
+    // `createCharacter` : les lignes `character_class_options` (purement
+    // descriptives, carte "CHOIX DE CLASSE") d'une part,
+    // `character_skill_proficiencies.proficiency` (le bonus RÉEL) d'autre
+    // part — jamais la même ligne qu'un simple [skillInserts]/[skillDeletes]
+    // (une compétence peut rester maîtrisée tout en perdant son Expertise).
+    ExpertiseOptionsWrite? expertiseOptionsWrite;
+    var expertiseSkillUpgrades = const <int>{};
+    var expertiseSkillDowngrades = const <int>{};
+    if (canChangeClass && editedClass != null) {
+      final skillIdByName = {
+        for (final skill in skillCatalog.skills) skill.name: skill.id,
+      };
+      final newExpertiseSkillIds = <int>{
+        for (final name in edited.expertiseSkillChoices) ?skillIdByName[name],
+      };
+      final storedExpertiseSkillIds = {
+        for (final skill in snapshot.skills)
+          if (skill.proficiency == 'expertise') skill.skillId,
+      };
+      expertiseSkillUpgrades = newExpertiseSkillIds.difference(
+        storedExpertiseSkillIds,
+      );
+      expertiseSkillDowngrades = storedExpertiseSkillIds
+          .difference(newExpertiseSkillIds)
+          // Une compétence retirée entièrement (plus du tout maîtrisée)
+          // n'a pas besoin d'un `UPDATE` séparé, sa ligne part déjà via
+          // [skillDeletes].
+          .difference(skillDeletes);
+
+      // Substitution outils de voleur : RAW 2014 UNIQUEMENT, même
+      // résolution que `createCharacter`/`_ExpertiseBody`.
+      final isEdition2014 = edited.edition == '2014';
+      final thievesToolsName =
+          edited.expertiseThievesToolsSubstitution &&
+              isEdition2014 &&
+              editedClass.grantedToolNames.isNotEmpty
+          ? editedClass.grantedToolNames.first
+          : null;
+      final newChosenValues = [
+        ...edited.expertiseSkillChoices,
+        ?thievesToolsName,
+      ];
+      final expertiseValueChanged =
+          !_sameStringSets(
+            original.expertiseSkillChoices,
+            edited.expertiseSkillChoices,
+          ) ||
+          original.expertiseThievesToolsSubstitution !=
+              edited.expertiseThievesToolsSubstitution;
+      if (newChosenValues.isNotEmpty &&
+          (classChanged || expertiseValueChanged)) {
+        expertiseOptionsWrite = (
+          classId: editedClass.id,
+          chosenValues: newChosenValues,
+        );
+      }
+    }
+
     return CharacterEditPlan(
       characterUpdate: characterUpdate,
       classChange: (classChanged || subclassChanged) && edited.classId != null
@@ -294,8 +476,8 @@ abstract final class CharacterEditPlanner {
             )
           : null,
       abilityScores: scoresChanged ? Map.of(editedScores) : null,
-      skillDeletes: storedSkills.intersection(oldSkills.difference(newSkills)),
-      skillInserts: newSkills.difference(storedSkills),
+      skillDeletes: skillDeletes,
+      skillInserts: skillInserts,
       toolDeletes: storedTools
           .intersection(oldTools.difference(newTools))
           .toList(),
@@ -307,6 +489,21 @@ abstract final class CharacterEditPlanner {
       spellDeletes: spellDeletes,
       spellInserts: spellInserts,
       spellSourceClassId: spellSourceClassId,
+      classFeatureChoiceWrite: classFeatureChoiceWrite,
+      subclassFeatureChoiceWrite: subclassFeatureChoiceWrite,
+      expertiseOptionsWrite: expertiseOptionsWrite,
+      expertiseSkillUpgrades: expertiseSkillUpgrades,
+      expertiseSkillDowngrades: expertiseSkillDowngrades,
     );
+  }
+
+  /// `true` si [a]/[b] contiennent exactement les mêmes valeurs, sans tenir
+  /// compte de l'ordre ni des doublons — utilisé pour diffuser le choix
+  /// d'Expertise du Roublard (correctif D102) sans dépendre de l'ordre dans
+  /// lequel le joueur a (re)coché les compétences.
+  static bool _sameStringSets(List<String> a, List<String> b) {
+    final setA = a.toSet();
+    final setB = b.toSet();
+    return setA.length == setB.length && setA.containsAll(setB);
   }
 }

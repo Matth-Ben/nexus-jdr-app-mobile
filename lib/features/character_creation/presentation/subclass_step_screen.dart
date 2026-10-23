@@ -176,18 +176,27 @@ class _SubclassStepScreenState extends ConsumerState<SubclassStepScreen> {
         .name;
     final subclassAsync = ref.watch(subclassChoiceCatalogProvider);
     final selectedSubclassId = _selectedSubclassId;
-    final isEditMode = ref.read(characterEditSessionControllerProvider) != null;
+    // Mode modification d'un personnage dont la classe/sous-classe n'est
+    // PLUS modifiable (au-delà du niveau 1, voir `CharacterEditSession
+    // ::canChangeClass`) : cet écran n'est normalement jamais atteint dans
+    // ce cas (`ClassStepScreen._submit` pousse directement l'étape 3 quand
+    // `_isClassLocked`), mais cette revérification défensive évite de
+    // proposer quand même ce second choix si cette route était atteinte
+    // autrement (ex. deep-link direct) — même principe que les autres
+    // revérifications serveur/écran de ce module.
+    final editSession = ref.read(characterEditSessionControllerProvider);
+    final canShowFeatureChoice =
+        editSession == null || editSession.canChangeClass;
     // Second choix de niveau 1 (ex. Ancêtre draconique) : chargé uniquement
     // une fois une sous-classe sélectionnée (le provider est une "family"
-    // paramétrée par `subclassId`) — correctif D99. Jamais en mode
-    // modification (`isEditMode`) : contournement D102
-    // (`docs/dette-technique.md`) — ni `CharacterEditHydrator` ni
-    // `CharacterEditPlanner`/`CharacterEditRepository` ne pré-remplissent ou
-    // ne persistent `subclassFeatureChoiceValue`, un choix fait ici en
-    // édition serait perdu en silence à l'enregistrement. Rester `null` ici
-    // retire aussi ce choix de `canProceed` ci-dessous ET du rendu (voir
-    // `SubclassFeatureChoiceBlock` plus bas, monté seulement si non `null`).
-    final featureChoiceAsync = (isEditMode || selectedSubclassId == null)
+    // paramétrée par `subclassId`) — correctif D99. Aussi en mode
+    // modification tant que la classe/sous-classe reste modifiable —
+    // correctif D102 (`docs/dette-technique.md`) : `CharacterEditHydrator`/
+    // `CharacterEditPlanner`/`CharacterEditRepository` pré-remplissent et
+    // persistent désormais `subclassFeatureChoiceValue` au même titre que
+    // la sous-classe elle-même.
+    final featureChoiceAsync =
+        (!canShowFeatureChoice || selectedSubclassId == null)
         ? null
         : ref.watch(subclassFeatureChoiceProvider(selectedSubclassId));
     final canProceed =

@@ -250,13 +250,15 @@ void main() {
       null;
 
   /// Variante [pumpSubclassFeatureStep] démarrant une session de
-  /// modification (niveau 1, classe modifiable) avant de pomper l'écran —
-  /// régression D102 (`docs/dette-technique.md`) : `SubclassFeatureChoiceBlock`
-  /// ne doit jamais s'afficher dans ce mode, voir le groupe de tests dédié.
+  /// modification avant de pomper l'écran — correctif D102
+  /// (`docs/dette-technique.md`) : au niveau 1 (classe modifiable),
+  /// `SubclassFeatureChoiceBlock` s'affiche désormais comme à la création ;
+  /// au-delà, il reste hors de portée (voir le groupe de tests dédié).
   Future<void> pumpSubclassFeatureStepInEditMode(
     WidgetTester tester, {
     required int classId,
     required int subclassId,
+    int totalLevel = 1,
   }) async {
     final draft = CharacterCreationDraft(
       classId: classId,
@@ -273,8 +275,8 @@ void main() {
               characterId: 'c1',
               name: 'Brunhilde',
               primaryClassId: classId,
-              primaryClassLevel: 1,
-              totalLevel: 1,
+              primaryClassLevel: totalLevel,
+              totalLevel: totalLevel,
               maxHp: 8,
               currentHp: 8,
             ),
@@ -506,15 +508,13 @@ void main() {
     });
 
     testWidgets(
-      'régression D102 (docs/dette-technique.md) : en mode modification '
+      'correctif D102 (docs/dette-technique.md) : en mode modification '
       "d'un personnage Ensorceleur de niveau 1 avec le Lignage draconique "
-      'déjà choisi, le bloc "Ancêtre draconique" ne s\'affiche jamais, même '
-      "si le catalogue indique un second choix disponible — ni "
-      '`CharacterEditHydrator` ni `CharacterEditPlanner`/'
-      '`CharacterEditRepository` ne pré-remplissent ou ne persistent '
-      '`subclassFeatureChoiceValue` : l\'écran mentirait en silence au '
-      "joueur sur l'enregistrement de son choix. \"Suivant\" n'est jamais "
-      'bloqué par ce choix caché.',
+      'déjà choisi, le bloc "Ancêtre draconique" s\'affiche exactement '
+      'comme à la création — `CharacterEditHydrator`/'
+      '`CharacterEditPlanner`/`CharacterEditRepository` pré-remplissent et '
+      'persistent désormais `subclassFeatureChoiceValue` au même titre que '
+      'la sous-classe elle-même',
       (WidgetTester tester) async {
         fakeFeatureRepository.choiceToReturn = const SubclassFeatureChoice(
           classFeatureId: 368,
@@ -528,16 +528,47 @@ void main() {
           subclassId: 12,
         );
 
-        expect(find.text('Ancêtre draconique'), findsNothing);
-        expect(find.text('Dragon rouge'), findsNothing);
-        expect(find.text('Dragon bleu'), findsNothing);
+        expect(find.text('Ancêtre draconique'), findsOneWidget);
+        expect(find.text('Dragon rouge'), findsOneWidget);
+        expect(find.text('Dragon bleu'), findsOneWidget);
+        expect(nextEnabled(tester), isFalse);
+
+        await tester.tap(find.text('Dragon rouge'));
+        await tester.pumpAndSettle();
+
         expect(nextEnabled(tester), isTrue);
 
         await tester.tap(find.text('SUIVANT'));
         await tester.pumpAndSettle();
 
-        expect(readDraft().subclassFeatureChoiceValue, isNull);
+        expect(readDraft().subclassFeatureChoiceValue, 'Dragon rouge');
         expect(find.text('Étape suivante'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'correctif D102 (docs/dette-technique.md) : au-delà du niveau 1, le '
+      'bloc "Ancêtre draconique" reste hors de portée en édition (classe/'
+      'sous-classe verrouillées) — accès direct défensif à cette route, '
+      "cet écran n'étant de toute façon jamais poussé par "
+      '`ClassStepScreen._submit` dans ce cas',
+      (WidgetTester tester) async {
+        fakeFeatureRepository.choiceToReturn = const SubclassFeatureChoice(
+          classFeatureId: 368,
+          featureName: 'Ancêtre draconique',
+          options: [_dragonRouge, _dragonBleu],
+        );
+
+        await pumpSubclassFeatureStepInEditMode(
+          tester,
+          classId: 6,
+          subclassId: 12,
+          totalLevel: 5,
+        );
+
+        expect(find.text('Ancêtre draconique'), findsNothing);
+        expect(find.text('Dragon rouge'), findsNothing);
+        expect(find.text('Dragon bleu'), findsNothing);
       },
     );
   });
