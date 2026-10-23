@@ -24,6 +24,7 @@ import 'package:personnages/features/characters/domain/character_journal_entry.d
 import 'package:personnages/features/characters/domain/pact_weapon_option.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_pact_weapon_card.dart';
+import 'package:personnages/features/characters/presentation/widgets/character_stat_pills_row.dart';
 
 class _FakeCharacterSharingRepository implements CharacterSharingRepository {
   @override
@@ -219,6 +220,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('✓'), findsOneWidget);
+  });
+
+  testWidgets('armorClassBonus != 0 : affiche le suffixe signé, tuile "CA" non '
+      'tappable (lecture seule, aucun repository de partage n\'expose de '
+      'setArmorClassBonus)', (tester) async {
+    // Bonus volontairement différent du modificateur d'initiative de
+    // `_baseDetail` (dex 14 -> +2) : les deux suffixes partagent la même
+    // tuile `CharacterStatPillsRow`, un "+2" collide avec l'autre sinon.
+    fakeRepository.detailToReturn = _baseDetail.copyWith(armorClassBonus: 5);
+
+    await pumpSharedView(tester);
+    await tester.pumpAndSettle();
+
+    // Recherche restreinte à la rangée de tuiles : "+5" peut aussi être le
+    // modificateur d'une caractéristique/jet de sauvegarde affiché
+    // ailleurs sur le même onglet.
+    final suffixFinder = find.descendant(
+      of: find.byType(CharacterStatPillsRow),
+      matching: find.text('+5'),
+    );
+    expect(suffixFinder, findsOneWidget);
+
+    // Tap sans effet : pas d'InkWell/Material tappable pour cette tuile
+    // en lecture seule (`onTapArmorClass` non fourni par cet écran).
+    await tester.tap(find.text('CA'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(suffixFinder, findsOneWidget);
   });
 
   testWidgets('changer d\'onglet affiche le contenu de l\'onglet Compétences '

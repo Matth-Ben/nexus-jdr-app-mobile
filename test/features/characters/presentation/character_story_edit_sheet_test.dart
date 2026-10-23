@@ -114,6 +114,12 @@ class FakeRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 
   @override
+  Future<WriteOutcome> setArmorClassBonus({
+    required String characterId,
+    required int bonus,
+  }) => throw UnimplementedError();
+
+  @override
   Future<WriteOutcome> setSpellFavorite({
     required String characterId,
     required int spellId,

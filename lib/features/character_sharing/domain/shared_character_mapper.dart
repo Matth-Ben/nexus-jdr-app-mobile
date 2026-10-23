@@ -70,6 +70,14 @@ CharacterDetail mapSharedCharacterJson(Map<String, dynamic> json) {
     speed: character['race_speed'] is num
         ? (character['race_speed'] as num).toInt()
         : null,
+    // `armor_class_bonus` : voir la doc de classe de
+    // `CharacterDetail.armorClassBonus`. Repli à 0 si absent de la réponse
+    // RPC (version antérieure du RPC côté dépôt web pas encore mise à jour
+    // pour exposer cette colonne) — même garde défensive que
+    // [inspiration]/[isDead] ci-dessus pour un ancien payload.
+    armorClassBonus: character['armor_class_bonus'] is num
+        ? (character['armor_class_bonus'] as num).toInt()
+        : 0,
     abilityScores: _mapAbilityScores(json['ability_scores']),
     skills: _mapSkills(json['skill_proficiencies']),
     // Tri alphabétique (demande utilisateur, 2026-10-03), même règle que

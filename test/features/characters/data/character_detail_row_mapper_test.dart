@@ -906,6 +906,51 @@ void main() {
       expect(detail.inspiration, isTrue);
     });
 
+    test('armor_class_bonus absente de la ligne -> 0 (repli défensif pour '
+        'un ancien cache hors-ligne écrit avant l\'introduction de cette '
+        'colonne, même rationale qu\'edition)', () {
+      final row = _row();
+
+      final detail = CharacterDetailRowMapper.toCharacterDetail(
+        row,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(detail.armorClassBonus, 0);
+    });
+
+    test('armor_class_bonus positif/négatif en base est bien remonté tel '
+        'quel', () {
+      final positiveRow = _row();
+      positiveRow['armor_class_bonus'] = 2;
+      final negativeRow = _row();
+      negativeRow['armor_class_bonus'] = -3;
+
+      final positiveDetail = CharacterDetailRowMapper.toCharacterDetail(
+        positiveRow,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+      final negativeDetail = CharacterDetailRowMapper.toCharacterDetail(
+        negativeRow,
+        raceNames: const {},
+        subraceNames: const {},
+        classNames: const {},
+        backgroundNames: const {},
+        alignmentNames: const {},
+      );
+
+      expect(positiveDetail.armorClassBonus, 2);
+      expect(negativeDetail.armorClassBonus, -3);
+    });
+
     test('speed n\'est jamais lu depuis la ligne characters (colonne '
         'races.speed, résolue séparément par le dépôt) : toujours transmis '
         'tel quel via le paramètre [speed]', () {

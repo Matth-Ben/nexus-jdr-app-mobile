@@ -39,6 +39,7 @@ import '../../character_creation/presentation/widgets/step_help_sheet.dart';
 import '../domain/character_sheet_help.dart';
 import 'widgets/add_reward_sheet.dart';
 import 'widgets/add_xp_sheet.dart';
+import 'widgets/armor_class_bonus_sheet.dart';
 import 'widgets/character_delete_confirmation.dart';
 import 'widgets/character_ability_score_grid.dart';
 import 'widgets/character_adventures_card.dart';
@@ -1709,6 +1710,33 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     }
   }
 
+  /// Ajustement manuel de CA (sheet "Ajustement de CA",
+  /// `armor_class_bonus_sheet.dart`, tuile "CA" de `CharacterStatPillsRow`) :
+  /// [bonus] est déjà la nouvelle valeur absolue signée, calculée par la
+  /// sheet elle-même. Même contrat que [_toggleInspiration] (jamais mis en
+  /// file hors-ligne, voir `CharacterRepository.setArmorClassBonus`) : pas
+  /// de fusion optimiste locale dédiée — contrairement au stepper PV
+  /// ([_applyHpState]), cette valeur ne change jamais que via cette sheet à
+  /// bouton "Valider" unique (pas de double-tap rapproché possible pendant
+  /// qu'elle est ouverte).
+  Future<void> _adjustArmorClassBonus(int bonus) async {
+    try {
+      final outcome = await ref
+          .read(characterRepositoryProvider)
+          .setArmorClassBonus(characterId: widget.characterId, bonus: bonus);
+      if (!mounted) return;
+      if (outcome == WriteOutcome.queued) {
+        _showSnackBar(offlineNotPersistedMessage);
+        return;
+      }
+      ref.invalidate(characterDetailProvider(widget.characterId));
+    } on CharacterFailure catch (failure) {
+      _showSnackBar(failure.message);
+    } catch (_) {
+      _showSnackBar("Impossible d'ajuster la Classe d'Armure. Réessayez.");
+    }
+  }
+
   /// Bascule `character_spells.status` ('connu' ↔ 'préparé') — lien
   /// "Préparer ce sort"/"Ne plus préparer" du panneau "Infos"
   /// (`spell_info_panel.dart`), voir `domain/spell_status_formatter.dart`.
@@ -2375,6 +2403,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         ),
         onTapLevelUp: () => _openLevelUp(detail.totalLevel + 1),
         onTapToggleInspiration: () => _toggleInspiration(detail),
+        onTapAdjustArmorClass: () => showArmorClassBonusSheet(
+          context,
+          currentBonus: detail.armorClassBonus,
+          onApply: _adjustArmorClassBonus,
+        ),
         onTapRest: () {
           final effective = _effectiveDetail(detail);
           showRestSheet(
@@ -2413,6 +2446,7 @@ class _CharacterTabBody extends StatelessWidget {
     required this.onTapAddXp,
     required this.onTapLevelUp,
     required this.onTapToggleInspiration,
+    required this.onTapAdjustArmorClass,
     required this.onTapRest,
     required this.hpActionsDisabled,
     this.onChangePactWeapon,
@@ -2437,6 +2471,11 @@ class _CharacterTabBody extends StatelessWidget {
   /// Tuile "Inspiration" (`CharacterStatPillsRow`) — voir
   /// `_CharacterDetailScreenState._toggleInspiration`.
   final VoidCallback onTapToggleInspiration;
+
+  /// Tuile "CA" (`CharacterStatPillsRow`) — ouvre
+  /// `armor_class_bonus_sheet.dart`, voir
+  /// `_CharacterDetailScreenState._adjustArmorClassBonus`.
+  final VoidCallback onTapAdjustArmorClass;
   final VoidCallback onTapRest;
 
   /// Voir `_CharacterDetailScreenState._isApplyingRest`.
@@ -2473,6 +2512,7 @@ class _CharacterTabBody extends StatelessWidget {
         CharacterStatPillsRow(
           speed: detail.speed,
           armorClass: detail.armorClass,
+          armorClassBonus: detail.armorClassBonus,
           initiative: detail.initiative,
           inspiration: detail.inspiration,
           onTapInspiration: onTapToggleInspiration,
@@ -2481,6 +2521,7 @@ class _CharacterTabBody extends StatelessWidget {
             label: 'Initiative',
             modifier: detail.initiative,
           ),
+          onTapArmorClass: onTapAdjustArmorClass,
         ),
         const SizedBox(height: AppSpacing.md),
         CharacterVitalsCard(

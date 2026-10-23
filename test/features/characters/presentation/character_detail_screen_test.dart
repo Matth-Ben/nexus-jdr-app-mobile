@@ -143,6 +143,11 @@ class _FakeCharacterRepository implements CharacterRepository {
   WriteOutcome setInspirationOutcomeToReturn = WriteOutcome.synced;
   Object? setInspirationErrorToThrow;
 
+  int? lastSetArmorClassBonusValue;
+  int setArmorClassBonusCallCount = 0;
+  WriteOutcome setArmorClassBonusOutcomeToReturn = WriteOutcome.synced;
+  Object? setArmorClassBonusErrorToThrow;
+
   int? lastPreparedSpellId;
   bool? lastSetSpellPreparedValue;
   int setSpellPreparedCallCount = 0;
@@ -199,6 +204,19 @@ class _FakeCharacterRepository implements CharacterRepository {
     lastSetInspirationValue = inspiration;
     if (setInspirationErrorToThrow != null) throw setInspirationErrorToThrow!;
     return setInspirationOutcomeToReturn;
+  }
+
+  @override
+  Future<WriteOutcome> setArmorClassBonus({
+    required String characterId,
+    required int bonus,
+  }) async {
+    setArmorClassBonusCallCount++;
+    lastSetArmorClassBonusValue = bonus;
+    if (setArmorClassBonusErrorToThrow != null) {
+      throw setArmorClassBonusErrorToThrow!;
+    }
+    return setArmorClassBonusOutcomeToReturn;
   }
 
   @override
@@ -1563,6 +1581,93 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('INSP.'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            "Hors ligne : cette action n'a pas pu être enregistrée. "
+            'Réessayez une fois reconnecté.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'taper la tuile "CA" ouvre la sheet "Ajustement de CA" pré-remplie '
+      'avec le bonus courant',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          armorClassBonus: 2,
+        );
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('CA'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Ajustement de CA'), findsOneWidget);
+        expect(find.text('BONUS'), findsOneWidget);
+        expect(find.text('MALUS'), findsOneWidget);
+      },
+    );
+
+    testWidgets('valider "+3" dans la sheet "Ajustement de CA" appelle '
+        'setArmorClassBonus(bonus: 3)', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('CA'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('VALIDER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.setArmorClassBonusCallCount, 1);
+      expect(fakeRepository.lastSetArmorClassBonusValue, 3);
+    });
+
+    testWidgets('"Effacer" dans la sheet "Ajustement de CA" appelle '
+        'setArmorClassBonus(bonus: 0)', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(armorClassBonus: -2);
+
+      await pumpDetail(tester);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('CA'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('EFFACER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.setArmorClassBonusCallCount, 1);
+      expect(fakeRepository.lastSetArmorClassBonusValue, 0);
+    });
+
+    testWidgets(
+      'setArmorClassBonus mis en file (mode hors-ligne) : même convention '
+      'que setInspiration — jamais mis en file côté repository, message '
+      'sans promesse de synchronisation ultérieure',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+        fakeRepository.setArmorClassBonusOutcomeToReturn = WriteOutcome.queued;
+
+        await pumpDetail(tester);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('CA'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('VALIDER'));
         await tester.pumpAndSettle();
 
         expect(

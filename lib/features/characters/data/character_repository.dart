@@ -184,6 +184,20 @@ abstract class CharacterRepository {
     required bool inspiration,
   });
 
+  /// Écrit directement `characters.armor_class_bonus` — sheet "Ajustement de
+  /// CA" ouverte par un tap sur la tuile "CA" de l'onglet "Personnage"
+  /// (`CharacterStatPillsRow`/`armor_class_bonus_sheet.dart`), voir la doc
+  /// de classe de `CharacterDetail.armorClassBonus`. [bonus] est déjà la
+  /// nouvelle valeur absolue signée (peut être négatif, un malus RAW), même
+  /// contrat que [setDead]/[setArchived]/[setInspiration] (mode hors-ligne
+  /// inclus, voir la documentation de [setDead] : jamais mise en file,
+  /// écriture jugée suffisamment secondaire pour ne pas mériter sa propre
+  /// entrée dans `PendingCharacterWriteQueue`).
+  Future<WriteOutcome> setArmorClassBonus({
+    required String characterId,
+    required int bonus,
+  });
+
   /// Supprime définitivement [characterId] — action "Supprimer le
   /// personnage" du menu "…" de l'onglet "Personnage", déjà confirmée par
   /// l'appelant (dialogue de confirmation, voir
@@ -1574,6 +1588,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             is_dead,
             is_archived,
             inspiration,
+            armor_class_bonus,
             share_token,
             race_id,
             subrace_id,
@@ -2111,6 +2126,30 @@ class SupabaseCharacterRepository implements CharacterRepository {
       await _client
           .from('characters')
           .update({'inspiration': inspiration})
+          .eq('id', characterId)
+          .eq('owner_id', ownerId);
+      return WriteOutcome.synced;
+    } on PostgrestException catch (error) {
+      throw mapCharacterError(error);
+    } catch (_) {
+      throw mapUnknownCharacterError();
+    }
+  }
+
+  @override
+  Future<WriteOutcome> setArmorClassBonus({
+    required String characterId,
+    required int bonus,
+  }) async {
+    final ownerId = _requireOwnerId();
+    if (!await _connectivityChecker.hasConnection()) {
+      return WriteOutcome.queued;
+    }
+
+    try {
+      await _client
+          .from('characters')
+          .update({'armor_class_bonus': bonus})
           .eq('id', characterId)
           .eq('owner_id', ownerId);
       return WriteOutcome.synced;

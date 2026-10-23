@@ -1398,6 +1398,131 @@ void main() {
     },
   );
 
+  group('SupabaseCharacterRepository.setArmorClassBonus (ajustement manuel de '
+      'CA)', () {
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const characterId = 'char-1';
+    const ownerId = 'owner-1';
+
+    test('connectivité absente -> retourne queued sans tenter le réseau, '
+        'jamais mise en file (même règle que setDead/setArchived/'
+        'setInspiration)', () async {
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        throwOnRequest: true,
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: false),
+      );
+
+      final outcome = await repository.setArmorClassBonus(
+        characterId: characterId,
+        bonus: 2,
+      );
+
+      expect(outcome, WriteOutcome.queued);
+      expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+    });
+
+    test('connectivité présente + écriture réussie -> synced, payload '
+        '`armor_class_bonus` envoyé tel quel (bonus positif)', () async {
+      String? capturedBody;
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        onRequest: (request) {
+          if (request.url.pathSegments.last == 'characters' &&
+              request.method == 'PATCH') {
+            capturedBody = request.body;
+          }
+        },
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: true),
+      );
+
+      final outcome = await repository.setArmorClassBonus(
+        characterId: characterId,
+        bonus: 2,
+      );
+
+      expect(outcome, WriteOutcome.synced);
+      expect(capturedBody, isNotNull);
+      expect(jsonDecode(capturedBody!) as Map<String, dynamic>, {
+        'armor_class_bonus': 2,
+      });
+    });
+
+    test('connectivité présente + écriture réussie -> synced, une valeur '
+        'négative (malus RAW) est envoyée telle quelle', () async {
+      String? capturedBody;
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        onRequest: (request) {
+          if (request.url.pathSegments.last == 'characters' &&
+              request.method == 'PATCH') {
+            capturedBody = request.body;
+          }
+        },
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: true),
+      );
+
+      final outcome = await repository.setArmorClassBonus(
+        characterId: characterId,
+        bonus: -3,
+      );
+
+      expect(outcome, WriteOutcome.synced);
+      expect(capturedBody, isNotNull);
+      expect(jsonDecode(capturedBody!) as Map<String, dynamic>, {
+        'armor_class_bonus': -3,
+      });
+    });
+
+    test('connectivité présente + écriture réseau en échec -> relance '
+        'l\'erreur normalement, rien en file', () async {
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        failureStatusCode: 500,
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _FakeConnectivityChecker(connected: true),
+      );
+
+      await expectLater(
+        repository.setArmorClassBonus(characterId: characterId, bonus: 2),
+        throwsA(isA<CharacterFailure>()),
+      );
+      expect(await pendingWrites.allForOwner(ownerId), isEmpty);
+    });
+  });
+
   group(
     'SupabaseCharacterRepository.updateStoryFields (onglet "Histoire")',
     () {
