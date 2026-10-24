@@ -6,6 +6,13 @@
 // utilisateur revenant à l'étape 1 "Race" après avoir déjà choisi une classe
 // à l'étape 2, puis retapant "Suivant" (même sans rien changer), perdait
 // silencieusement `classId`.
+//
+// Couvre aussi le bug retour QA du 24/10/2026 (chantier "différenciation
+// 2014/2024 pour les races") : `setEdition` ne réinitialisait aucun champ
+// dérivé de la race quand l'édition changeait réellement (retour en arrière
+// jusqu'à `EditionStepScreen`, puis nouveau choix) — une race/sous-race/
+// lignée RAW-invalide dans la nouvelle édition restait alors dans le
+// brouillon, et les écrans suivants la réhydrataient sans la revérifier.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,24 +31,145 @@ void main() {
     container.dispose();
   });
 
-  test('le brouillon neuf a edition = \'2014\' par défaut, et setEdition met '
-      'à jour ce champ en conservant les autres choix déjà faits '
+  test('le brouillon neuf a edition = \'2014\' par défaut '
       '(chantier "choix d\'édition 2014/2024 par personnage")', () {
-    final controller = container.read(
-      characterCreationDraftControllerProvider.notifier,
-    );
-
     expect(
       container.read(characterCreationDraftControllerProvider).edition,
       '2014',
     );
+  });
 
-    controller.setRace(raceId: 7, subraceId: null, raceCustomText: null);
-    controller.setEdition('2024');
+  test('setEdition sans changement réel (même valeur) ne modifie rien '
+      "d'autre : le brouillon reste identique", () {
+    final controller = container.read(
+      characterCreationDraftControllerProvider.notifier,
+    );
+    controller.setRace(raceId: 7, subraceId: 3, raceCustomText: null);
+    controller.setClass(classId: 42);
+
+    controller.setEdition('2014');
 
     final draft = container.read(characterCreationDraftControllerProvider);
-    expect(draft.edition, '2024');
+    expect(draft.edition, '2014');
     expect(draft.raceId, 7);
+    expect(draft.subraceId, 3);
+    expect(draft.classId, 42);
+  });
+
+  group('setEdition efface les champs dérivés de la race quand l\'édition '
+      'change réellement (correctif retour QA du 24/10/2026, chantier '
+      '"différenciation 2014/2024 pour les races")', () {
+    test('race/sous-race/texte personnalisé/lignée/bonus raciaux au choix/'
+        'choix de compétence et outil de race sont tous effacés', () {
+      final controller = container.read(
+        characterCreationDraftControllerProvider.notifier,
+      );
+      controller.setRace(raceId: 7, subraceId: 3, raceCustomText: null);
+      controller.setLineage(12);
+      controller.setAbilityScores(
+        method: AbilityScoreMethod.standardArray,
+        scores: const {'str': 15},
+        racialBonusChoices: const {'dex': 2, 'con': 1},
+      );
+      controller.setSkillsAndTools(
+        classSkillChoices: [],
+        classToolChoices: [],
+        backgroundLanguageChoices: [],
+        raceSkillChoices: ['Perception'],
+        raceToolChoices: ['Luth'],
+      );
+
+      controller.setEdition('2024');
+
+      final draft = container.read(characterCreationDraftControllerProvider);
+      expect(draft.edition, '2024');
+      expect(draft.raceId, isNull);
+      expect(draft.subraceId, isNull);
+      expect(draft.raceCustomText, isNull);
+      expect(draft.lineageId, isNull);
+      expect(draft.racialBonusChoices, isEmpty);
+      expect(draft.raceSkillChoices, isEmpty);
+      expect(draft.raceToolChoices, isEmpty);
+    });
+
+    test('race personnalisée (texte libre) également effacée : pas de '
+        'validité RAW à revérifier pour elle, mais elle ne vaut de toute '
+        "façon que pour l'édition où elle a été choisie", () {
+      final controller = container.read(
+        characterCreationDraftControllerProvider.notifier,
+      );
+      controller.setRace(
+        raceId: null,
+        subraceId: null,
+        raceCustomText: 'Dragonborn maison',
+      );
+
+      controller.setEdition('2024');
+
+      final draft = container.read(characterCreationDraftControllerProvider);
+      expect(draft.raceCustomText, isNull);
+    });
+
+    test('les choix NON dérivés de la race (classe, historique, scores de '
+        'base, équipement...) sont conservés : seule la race et ce qui en '
+        'dépend est effacé', () {
+      final controller = container.read(
+        characterCreationDraftControllerProvider.notifier,
+      );
+      controller.setRace(raceId: 7, subraceId: 3, raceCustomText: null);
+      controller.setClass(classId: 42, subclassId: 420);
+      controller.setBackground(backgroundId: 5);
+      controller.setAbilityScores(
+        method: AbilityScoreMethod.pointBuy,
+        scores: const {
+          'str': 15,
+          'dex': 14,
+          'con': 13,
+          'int': 12,
+          'wis': 10,
+          'cha': 8,
+        },
+      );
+      controller.setCharacterName('Halltesse Ambrelune');
+
+      controller.setEdition('2024');
+
+      final draft = container.read(characterCreationDraftControllerProvider);
+      expect(draft.classId, 42);
+      expect(draft.subclassId, 420);
+      expect(draft.backgroundId, 5);
+      expect(draft.abilityScoreMethod, AbilityScoreMethod.pointBuy);
+      expect(draft.abilityScores, {
+        'str': 15,
+        'dex': 14,
+        'con': 13,
+        'int': 12,
+        'wis': 10,
+        'cha': 8,
+      });
+      expect(draft.characterName, 'Halltesse Ambrelune');
+    });
+
+    test('aller-retour 2014 -> 2024 -> 2014 efface les champs dérivés de la '
+        'race à CHAQUE changement réel, pas seulement au premier', () {
+      final controller = container.read(
+        characterCreationDraftControllerProvider.notifier,
+      );
+      controller.setRace(raceId: 7, subraceId: null, raceCustomText: null);
+
+      controller.setEdition('2024');
+      expect(
+        container.read(characterCreationDraftControllerProvider).raceId,
+        isNull,
+      );
+
+      controller.setRace(raceId: 2, subraceId: null, raceCustomText: null);
+      controller.setEdition('2014');
+
+      final draft = container.read(characterCreationDraftControllerProvider);
+      expect(draft.edition, '2014');
+      expect(draft.raceId, isNull);
+    });
   });
 
   test('setRace après setClass conserve le classId déjà choisi '

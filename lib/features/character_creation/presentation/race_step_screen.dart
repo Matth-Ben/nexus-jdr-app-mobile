@@ -378,11 +378,33 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
     if (_edition == '2014') {
       ref.watch(lineageChoiceCatalogProvider(edition: '2024'));
     }
-    final canProceed = RaceStepSelection.canProceed(
-      isCustomRace: _isCustomRaceSelected,
-      customRaceText: _customRaceController.text,
-      selectedRaceId: _selectedRaceId,
-    );
+    // Défense en profondeur (retour QA, chantier "différenciation 2014/2024
+    // pour les races", 24/10/2026) : `CharacterCreationDraftController
+    // .setEdition` efface déjà `raceId` à la source dès que l'édition change
+    // réellement (voir sa doc), donc ce cas ne devrait normalement plus
+    // arriver par la navigation normale de l'assistant — mais revérifier ici
+    // la disponibilité de la sélection réhydratée coûte peu et protège contre
+    // toute autre voie qui écrirait le brouillon sans passer par ce setter
+    // (ex. une future régression). Une race personnalisée ou introuvable
+    // dans [catalog] (ne devrait pas arriver, race supprimée entre deux
+    // sessions) n'est jamais bloquée ici : seule une race RÉSOLUE et
+    // explicitement indisponible dans l'édition courante l'est.
+    final selectedRaceId = _selectedRaceId;
+    RaceOption? selectedRace;
+    if (selectedRaceId != null) {
+      for (final race in catalog.races) {
+        if (race.id == selectedRaceId) selectedRace = race;
+      }
+    }
+    final selectedRaceStillAvailable =
+        selectedRace == null || _isRaceAvailable(selectedRace);
+    final canProceed =
+        selectedRaceStillAvailable &&
+        RaceStepSelection.canProceed(
+          isCustomRace: _isCustomRaceSelected,
+          customRaceText: _customRaceController.text,
+          selectedRaceId: _selectedRaceId,
+        );
     // `catalog.races` est déjà trié races de base puis races d'extension
     // (voir `data/character_creation_repository.dart::_mapRaceCatalogPayload`)
     // : un simple `where` préserve cet ordre dans chaque groupe, pas besoin
@@ -612,7 +634,12 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
               StepHelpContent(title: race.name, body: race.infoText),
             )
           : null,
-      selected: !_isCustomRaceSelected && _selectedRaceId == race.id,
+      // `&& available` : une race devenue indisponible (ex. draft réhydrié
+      // par une autre voie que `setEdition`, voir la défense en profondeur
+      // de `_buildContent`) ne s'affiche jamais comme sélectionnée — éviter
+      // l'état visuel contradictoire "grisée ET bordure dorée".
+      selected:
+          !_isCustomRaceSelected && _selectedRaceId == race.id && available,
       leading: AccentIconBadge(index: badgeIndex, icon: Icons.shield_rounded),
       onTap: () => _selectRace(race.id, available: available),
     );

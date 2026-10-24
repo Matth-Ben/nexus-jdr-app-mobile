@@ -32,10 +32,51 @@ class CharacterCreationDraftController
 
   /// Met à jour l'édition de règles choisie à l'étape 1 "Édition"
   /// (`EditionStepScreen`, TOUTE PREMIÈRE étape de l'assistant) — voir
-  /// `domain/character_creation_draft.dart::edition`. Aucun champ à effacer
-  /// sur les étapes suivantes (aucun choix fait avant celle-ci).
+  /// `domain/character_creation_draft.dart::edition`.
+  ///
+  /// Si [edition] diffère RÉELLEMENT de celle déjà en brouillon (retour en
+  /// arrière depuis une étape suivante — possible malgré la doc d'origine
+  /// de cette méthode, qui supposait à tort "aucun choix fait avant celle-
+  /// ci" — puis nouveau choix sur `EditionStepScreen`), efface intégralement
+  /// l'identité de race et tout ce qui en dérive :
+  /// `raceId`/`subraceId`/`raceCustomText`, `lineageId`,
+  /// `racialBonusChoices`, `raceSkillChoices`/`raceToolChoices` (carte
+  /// "CHOIX DE RACE", même rationale que [setRace]). Bug corrigé (retour
+  /// QA, chantier "différenciation 2014/2024 pour les races", 24/10/2026) :
+  /// avant ce correctif, une race/sous-race/lignée choisie dans l'ancienne
+  /// édition restait dans le brouillon après un changement d'édition, et
+  /// `RaceStepScreen`/`LineageStepScreen` la réhydrataient telle quelle à
+  /// l'écran (`initState`) sans revérifier sa disponibilité dans la
+  /// NOUVELLE édition (`RaceStepScreen._isRaceAvailable`,
+  /// `RaceCatalog.isUnifiedRaceIn2024`, `LineageChoiceRepository
+  /// .fetchLineageChoices`) — laissant "Suivant" actif sur une sélection
+  /// devenue RAW-invalide (ex. Demi-elfe choisi en 2014, encore sélectionné
+  /// après bascule vers 2024, sans aucun message).
+  ///
+  /// `abilityScores`/`abilityScoreMethod` ne sont PAS effacés : les scores
+  /// DE BASE (avant bonus racial) sont indépendants de l'édition — seule
+  /// leur mise en forme (bonus fixe vs choix libre, voir
+  /// `presentation/ability_score_step_screen.dart`) en dépend, déjà
+  /// recalculée à chaque visite de cette étape à partir de [racialBonusChoices]
+  /// (effacé ci-dessus) et de l'édition courante, sans rien stocker de
+  /// périmé dans le brouillon.
+  ///
+  /// Si [edition] ne change PAS (ex. l'utilisateur retape "Suivant" sur
+  /// `EditionStepScreen` sans rien changer, y compris à la toute première
+  /// visite), aucun champ n'est effacé — comportement d'avant ce correctif,
+  /// inchangé.
   void setEdition(String edition) {
-    state = state.copyWith(edition: edition);
+    if (state.edition == edition) return;
+    state = state.copyWith(
+      edition: edition,
+      raceId: null,
+      subraceId: null,
+      raceCustomText: null,
+      lineageId: null,
+      racialBonusChoices: const <String, int>{},
+      raceSkillChoices: const <String>[],
+      raceToolChoices: const <String>[],
+    );
   }
 
   /// Met à jour le choix de race/sous-race (ou race personnalisée) de

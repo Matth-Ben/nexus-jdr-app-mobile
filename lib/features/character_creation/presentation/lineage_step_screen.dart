@@ -174,9 +174,22 @@ class _LineageStepScreenState extends ConsumerState<LineageStepScreen> {
     _LineageStepCopy copy,
   ) {
     final options = catalog.optionsFor(raceId);
-    final canProceed = LineageStepSelection.canProceed(
-      selectedLineageId: _selectedLineageId,
-    );
+    // Défense en profondeur (retour QA, chantier "différenciation 2014/2024
+    // pour les races", 24/10/2026) : `CharacterCreationDraftController
+    // .setEdition` efface déjà `lineageId` à la source dès que l'édition
+    // change réellement, donc une lignée d'une AUTRE édition ne devrait
+    // normalement plus jamais survivre dans le brouillon jusqu'ici — mais
+    // revérifier qu'elle appartient toujours à [options] (celles de
+    // l'édition courante) coûte peu et protège contre toute autre voie qui
+    // écrirait le brouillon sans passer par ce setter. Sans ce garde-fou,
+    // `_submit` écrirait tel quel un `_selectedLineageId` périmé (d'une
+    // autre édition) sans qu'aucune tuile ne l'affiche comme sélectionnée.
+    final selectedLineageStillValid =
+        _selectedLineageId == null ||
+        options.any((option) => option.id == _selectedLineageId);
+    final canProceed =
+        selectedLineageStillValid &&
+        LineageStepSelection.canProceed(selectedLineageId: _selectedLineageId);
 
     return Column(
       children: [
