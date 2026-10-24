@@ -134,13 +134,29 @@ class _FakeCharacterCreationRepository implements CharacterCreationRepository {
 /// `RaceStepScreen._submit`). Toujours injecté (même vide) : sans ça,
 /// `_buildContent` toucherait le vrai `supabaseClientProvider` non
 /// initialisé en test — voir la doc de classe de `supabaseClientProvider`.
+///
+/// [catalog] sert de valeur par défaut pour TOUTE édition demandée
+/// (comportement suffisant pour la plupart des tests existants, qui ne
+/// distinguent pas les éditions) ; [catalogsByEdition] permet de surcharger
+/// explicitement le résultat pour UNE édition précise (`'2014'`/`'2024'`)
+/// — chantier "différenciation 2014/2024 pour les races" (24/10/2026),
+/// utilisé par les tests dédiés au Drakéide/Tieffelin ci-dessous.
+/// [requestedEditions] trace tous les appels, dans l'ordre, pour vérifier
+/// quelle(s) édition(s) ont effectivement été demandées.
 class _FakeLineageChoiceRepository implements LineageChoiceRepository {
   LineageChoiceCatalog catalog = const LineageChoiceCatalog(
     optionsByRaceId: {},
   );
+  final Map<String, LineageChoiceCatalog> catalogsByEdition = {};
+  final List<String> requestedEditions = [];
 
   @override
-  Future<LineageChoiceCatalog> fetchLineageChoices() async => catalog;
+  Future<LineageChoiceCatalog> fetchLineageChoices({
+    required String edition,
+  }) async {
+    requestedEditions.add(edition);
+    return catalogsByEdition[edition] ?? catalog;
+  }
 }
 
 const _elfe = RaceOption(
@@ -182,12 +198,89 @@ const _hautElfe = SubraceOption(
 // déclenchement de `LineageStepScreen` ci-dessous (id arbitraire : seul
 // compte qu'il corresponde entre `RaceCatalog`/`LineageChoiceCatalog` dans
 // ces tests, pas un vrai `races.id`).
+// `traits2024: []` (pas `null`) : le Drakéide a bien un contenu 2024 propre
+// en réalité (une des 7 races listées par le chantier "différenciation
+// 2014/2024 pour les races") — nécessaire pour que `_isRaceAvailable` ne le
+// grise pas à tort dans les tests ci-dessous qui le sélectionnent en
+// édition 2024.
 const _drakeide = RaceOption(
   id: 5,
   name: 'Drakéide',
   abilityBonuses: {},
   traits: [],
   source: "Manuel des Joueurs",
+  traits2024: [],
+);
+
+// Fixtures du chantier "différenciation 2014/2024 pour les races"
+// (24/10/2026) — voir le groupe de tests dédié ci-dessous.
+
+/// Elfe AVEC un contenu 2024 propre (contrairement à `_elfe` ci-dessus, dont
+/// `traits2024` est null par défaut — fixture partagée par de nombreux
+/// autres tests de ce fichier, non touchée pour ne pas élargir le risque de
+/// régression) : utilisée uniquement par le groupe de tests "chantier
+/// différenciation 2014/2024" ci-dessous, comme race "normale" à comparer au
+/// Demi-elfe grisé.
+const _elfeAvec2024 = RaceOption(
+  id: 6,
+  name: 'Elfe',
+  abilityBonuses: {'dex': 2},
+  traits: [],
+  source: 'Manuel des Joueurs',
+  traits2024: [],
+);
+
+/// Demi-elfe : `traits2024` null (pas d'équivalent 2024 RAW) — voir
+/// `RaceStepScreen._isRaceAvailable`.
+const _demiElfe = RaceOption(
+  id: 7,
+  name: 'Demi-elfe',
+  abilityBonuses: {
+    'cha': 2,
+    'choice_others': {'count': 2, 'amount': 1},
+  },
+  traits: [],
+  source: 'Manuel des Joueurs',
+);
+
+/// Nain "unifié" en 2024 (`traits2024` non nul sur la race elle-même,
+/// aucune de ses sous-races n'en a) — voir `RaceCatalog.isUnifiedRaceIn2024`.
+/// `id: 40` arbitraire (distinct de `_aasimar.id == 3`, jamais combinés dans
+/// le même catalogue de test).
+const _nain = RaceOption(
+  id: 40,
+  name: 'Nain',
+  abilityBonuses: {'con': 2},
+  traits: [],
+  source: 'Manuel des Joueurs',
+  traits2024: [],
+);
+
+const _nainDesCollines = SubraceOption(
+  id: 41,
+  raceId: 40,
+  name: 'Nain des collines',
+  abilityBonuses: {'wis': 1},
+  traits: [],
+);
+
+const _nainDesMontagnes = SubraceOption(
+  id: 42,
+  raceId: 40,
+  name: 'Nain des montagnes',
+  abilityBonuses: {'str': 2},
+  traits: [],
+);
+
+/// Tieffelin — `id: 9`, même valeur figée que
+/// `RaceStepScreen._tieffelinRaceId`.
+const _tieffelin = RaceOption(
+  id: 9,
+  name: 'Tieffelin',
+  abilityBonuses: {'cha': 2, 'int': 1},
+  traits: [],
+  source: 'Manuel des Joueurs',
+  traits2024: [],
 );
 
 void main() {
@@ -1065,6 +1158,275 @@ void main() {
       });
     },
   );
+
+  group('chantier "différenciation 2014/2024 pour les races" (24/10/2026)', () {
+    testWidgets(
+      'édition 2024 : le Demi-elfe (traits2024 null) est grisé et non '
+      'sélectionnable',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfeAvec2024, _demiElfe],
+          subraces: [],
+        );
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setEdition('2024');
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('Indisponible en édition 2024'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Demi-elfe'));
+        await tester.pumpAndSettle();
+
+        expect(
+          readDraft().raceId,
+          isNull,
+          reason: 'le tap sur une race grisée ne doit rien sélectionner',
+        );
+      },
+    );
+
+    testWidgets('édition 2014 : le Demi-elfe reste sélectionnable normalement '
+        '(comportement inchangé)', (WidgetTester tester) async {
+      fakeRepository.catalogToReturn = const RaceCatalog(
+        races: [_elfe, _demiElfe],
+        subraces: [],
+      );
+      // Édition 2014 par défaut (voir `CharacterCreationDraft.edition`) :
+      // aucun `setEdition` explicite ici.
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Indisponible en édition 2024'), findsNothing);
+
+      await tester.tap(find.text('Demi-elfe'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(readDraft().raceId, _demiElfe.id);
+    });
+
+    testWidgets(
+      'édition 2024, Nain (unifié, traits2024 non nul et aucune sous-race '
+      'n\'a elle-même de traits2024) : SubraceStepScreen est sautée',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_nain],
+          subraces: [_nainDesCollines, _nainDesMontagnes],
+        );
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setEdition('2024');
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Nain'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape suivante'), findsOneWidget);
+        expect(find.text('Étape sous-race'), findsNothing);
+        expect(readDraft().subraceId, isNull);
+      },
+    );
+
+    testWidgets('édition 2014, même Nain : SubraceStepScreen reste proposée '
+        'normalement (les sous-races 2014 restent utilisées)', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.catalogToReturn = const RaceCatalog(
+        races: [_nain],
+        subraces: [_nainDesCollines, _nainDesMontagnes],
+      );
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Nain'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape sous-race'), findsOneWidget);
+      expect(find.text('Étape suivante'), findsNothing);
+    });
+
+    testWidgets('édition 2014, Tieffelin : un seul legs RAW (Infernal), '
+        'LineageStepScreen sautée, lignée Infernal assignée directement', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.catalogToReturn = const RaceCatalog(
+        races: [_tieffelin],
+        subraces: [],
+      );
+      fakeLineageRepository.catalog = const LineageChoiceCatalog(
+        optionsByRaceId: {
+          9: [
+            LineageOption(id: 31, name: 'Abyssal'),
+            LineageOption(id: 32, name: 'Chtonien'),
+            LineageOption(id: 33, name: 'Infernal'),
+          ],
+        },
+      );
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Tieffelin'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape lignée'), findsNothing);
+      expect(find.text('Étape suivante'), findsOneWidget);
+      expect(readDraft().lineageId, 33);
+    });
+
+    testWidgets(
+      'édition 2024, même Tieffelin : LineageStepScreen reste affichée '
+      'normalement (3 legs au choix)',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_tieffelin],
+          subraces: [],
+        );
+        fakeLineageRepository.catalog = const LineageChoiceCatalog(
+          optionsByRaceId: {
+            9: [
+              LineageOption(id: 31, name: 'Abyssal'),
+              LineageOption(id: 32, name: 'Chtonien'),
+              LineageOption(id: 33, name: 'Infernal'),
+            ],
+          },
+        );
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setEdition('2024');
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Tieffelin'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape lignée'), findsOneWidget);
+        expect(find.text('Étape suivante'), findsNothing);
+        expect(readDraft().lineageId, isNull);
+      },
+    );
+
+    testWidgets(
+      'Drakéide, édition 2014 : le catalogue de lignées est demandé pour '
+      "l'édition '2014' (phb_ancestry côté dépôt), pas '2024'",
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_drakeide],
+          subraces: [],
+        );
+        fakeLineageRepository.catalogsByEdition['2014'] =
+            const LineageChoiceCatalog(
+              optionsByRaceId: {
+                5: [LineageOption(id: 100, name: 'Dragon noir (2014)')],
+              },
+            );
+        // Aucune entrée pour '2024' explicitement (vide par défaut, voir
+        // `_FakeLineageChoiceRepository.catalog`) : si l'écran demandait par
+        // erreur le catalogue 2024 au lieu de 2014, `isConcerned(5)` serait
+        // `false` et "Suivant" pousserait l'étape suivante directement
+        // plutôt que "/lineage" — ce test échouerait alors.
+        // Édition 2014 par défaut (voir `CharacterCreationDraft.edition`) :
+        // aucun `setEdition` explicite ici.
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Drakéide'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape lignée'), findsOneWidget);
+        expect(find.text('Étape suivante'), findsNothing);
+        expect(fakeLineageRepository.requestedEditions, contains('2014'));
+      },
+    );
+
+    testWidgets(
+      "Drakéide, édition 2024 : le catalogue de lignées est demandé pour "
+      "l'édition '2024' (2024_lineage côté dépôt)",
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_drakeide],
+          subraces: [],
+        );
+        fakeLineageRepository.catalogsByEdition['2024'] =
+            const LineageChoiceCatalog(
+              optionsByRaceId: {
+                5: [LineageOption(id: 200, name: 'Dragon noir (2024)')],
+              },
+            );
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setEdition('2024');
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Drakéide'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape lignée'), findsOneWidget);
+        expect(find.text('Étape suivante'), findsNothing);
+        expect(fakeLineageRepository.requestedEditions, contains('2024'));
+      },
+    );
+
+    testWidgets(
+      'Drakéide, édition 2014, aucune lignée phb_ancestry configurée pour '
+      'lui (catalogue 2014 vide) : "Suivant" pousse directement l\'étape '
+      'suivante, jamais "/lineage" (pas de dérivation en silence vers le '
+      'catalogue 2024)',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_drakeide],
+          subraces: [],
+        );
+        fakeLineageRepository.catalogsByEdition['2014'] =
+            const LineageChoiceCatalog(optionsByRaceId: {});
+        fakeLineageRepository.catalogsByEdition['2024'] =
+            const LineageChoiceCatalog(
+              optionsByRaceId: {
+                5: [LineageOption(id: 200, name: 'Dragon noir (2024)')],
+              },
+            );
+        // Édition 2014 par défaut.
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Drakéide'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape suivante'), findsOneWidget);
+        expect(find.text('Étape lignée'), findsNothing);
+      },
+    );
+  });
 
   group('mode modification (D53 de docs/dette-technique.md : race '
       'verrouillée, décision utilisateur du 09/10/2026)', () {

@@ -24,4 +24,33 @@ abstract class RaceCatalog with _$RaceCatalog {
   /// races).
   List<SubraceOption> subracesOf(int raceId) =>
       subraces.where((subrace) => subrace.raceId == raceId).toList();
+
+  /// `true` si [raceId] est une race "unifiée" en édition 2024 — Nain et
+  /// Halfelin à ce jour, qui perdent toute notion de sous-race dans le
+  /// Manuel des Joueurs (2024), chacune de ses anciennes sous-races (Nain
+  /// des collines/des montagnes, Halfelin lígerpied/robuste...) étant
+  /// fusionnée dans la race elle-même (`RaceOption.traits2024`) — voir
+  /// `presentation/race_step_screen.dart::_submit`, qui saute entièrement
+  /// `SubraceStepScreen` dans ce cas.
+  ///
+  /// Signal dérivé des données plutôt qu'une liste de races en dur (même
+  /// principe que `LineageChoiceCatalog.isConcerned`) : [raceId] a un
+  /// contenu 2024 propre (`RaceOption.traits2024` non nul) ET a des
+  /// sous-races, ET AUCUNE de ses sous-races n'a elle-même de contenu 2024
+  /// propre (contrairement à l'Elfe/au Gnome, dont certaines sous-races
+  /// portent un contenu 2024 distinct de la race elle-même, voir
+  /// `data/character_creation_repository.dart::createCharacter`).
+  bool isUnifiedRaceIn2024(int raceId) {
+    RaceOption? race;
+    for (final candidate in races) {
+      if (candidate.id == raceId) {
+        race = candidate;
+        break;
+      }
+    }
+    if (race?.traits2024 == null) return false;
+    final subracesList = subracesOf(raceId);
+    if (subracesList.isEmpty) return false;
+    return subracesList.every((subrace) => subrace.traits2024 == null);
+  }
 }

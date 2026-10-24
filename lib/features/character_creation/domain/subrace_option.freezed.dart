@@ -15,7 +15,10 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SubraceOption {
 
- int get id; int get raceId; String get name; Map<String, dynamic> get abilityBonuses; List<RaceTrait> get traits;
+ int get id; int get raceId; String get name; Map<String, dynamic> get abilityBonuses; List<RaceTrait> get traits;/// `subraces.traits_2024` — voir la documentation de
+/// `RaceOption.traits2024` pour le rationale complet (même chantier,
+/// même forme, même règle de `null`).
+ List<RaceTrait>? get traits2024;
 /// Create a copy of SubraceOption
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -26,16 +29,16 @@ $SubraceOptionCopyWith<SubraceOption> get copyWith => _$SubraceOptionCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SubraceOption&&(identical(other.id, id) || other.id == id)&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.abilityBonuses, abilityBonuses)&&const DeepCollectionEquality().equals(other.traits, traits));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SubraceOption&&(identical(other.id, id) || other.id == id)&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.abilityBonuses, abilityBonuses)&&const DeepCollectionEquality().equals(other.traits, traits)&&const DeepCollectionEquality().equals(other.traits2024, traits2024));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,raceId,name,const DeepCollectionEquality().hash(abilityBonuses),const DeepCollectionEquality().hash(traits));
+int get hashCode => Object.hash(runtimeType,id,raceId,name,const DeepCollectionEquality().hash(abilityBonuses),const DeepCollectionEquality().hash(traits),const DeepCollectionEquality().hash(traits2024));
 
 @override
 String toString() {
-  return 'SubraceOption(id: $id, raceId: $raceId, name: $name, abilityBonuses: $abilityBonuses, traits: $traits)';
+  return 'SubraceOption(id: $id, raceId: $raceId, name: $name, abilityBonuses: $abilityBonuses, traits: $traits, traits2024: $traits2024)';
 }
 
 
@@ -46,7 +49,7 @@ abstract mixin class $SubraceOptionCopyWith<$Res>  {
   factory $SubraceOptionCopyWith(SubraceOption value, $Res Function(SubraceOption) _then) = _$SubraceOptionCopyWithImpl;
 @useResult
 $Res call({
- int id, int raceId, String name, Map<String, dynamic> abilityBonuses, List<RaceTrait> traits
+ int id, int raceId, String name, Map<String, dynamic> abilityBonuses, List<RaceTrait> traits, List<RaceTrait>? traits2024
 });
 
 
@@ -63,14 +66,15 @@ class _$SubraceOptionCopyWithImpl<$Res>
 
 /// Create a copy of SubraceOption
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? raceId = null,Object? name = null,Object? abilityBonuses = null,Object? traits = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? raceId = null,Object? name = null,Object? abilityBonuses = null,Object? traits = null,Object? traits2024 = freezed,}) {
   return _then(SubraceOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,raceId: null == raceId ? _self.raceId : raceId // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,abilityBonuses: null == abilityBonuses ? _self.abilityBonuses : abilityBonuses // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>,traits: null == traits ? _self.traits : traits // ignore: cast_nullable_to_non_nullable
-as List<RaceTrait>,
+as List<RaceTrait>,traits2024: freezed == traits2024 ? _self.traits2024 : traits2024 // ignore: cast_nullable_to_non_nullable
+as List<RaceTrait>?,
   ));
 }
 
@@ -155,10 +159,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int raceId,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  int raceId,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits,  List<RaceTrait>? traits2024)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SubraceOption() when $default != null:
-return $default(_that.id,_that.raceId,_that.name,_that.abilityBonuses,_that.traits);case _:
+return $default(_that.id,_that.raceId,_that.name,_that.abilityBonuses,_that.traits,_that.traits2024);case _:
   return orElse();
 
 }
@@ -176,10 +180,10 @@ return $default(_that.id,_that.raceId,_that.name,_that.abilityBonuses,_that.trai
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int raceId,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  int raceId,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits,  List<RaceTrait>? traits2024)  $default,) {final _that = this;
 switch (_that) {
 case _SubraceOption():
-return $default(_that.id,_that.raceId,_that.name,_that.abilityBonuses,_that.traits);case _:
+return $default(_that.id,_that.raceId,_that.name,_that.abilityBonuses,_that.traits,_that.traits2024);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -196,10 +200,10 @@ return $default(_that.id,_that.raceId,_that.name,_that.abilityBonuses,_that.trai
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int raceId,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  int raceId,  String name,  Map<String, dynamic> abilityBonuses,  List<RaceTrait> traits,  List<RaceTrait>? traits2024)?  $default,) {final _that = this;
 switch (_that) {
 case _SubraceOption() when $default != null:
-return $default(_that.id,_that.raceId,_that.name,_that.abilityBonuses,_that.traits);case _:
+return $default(_that.id,_that.raceId,_that.name,_that.abilityBonuses,_that.traits,_that.traits2024);case _:
   return null;
 
 }
@@ -211,7 +215,7 @@ return $default(_that.id,_that.raceId,_that.name,_that.abilityBonuses,_that.trai
 
 
 class _SubraceOption extends SubraceOption {
-  const _SubraceOption({required this.id, required this.raceId, required this.name, required  Map<String, dynamic> abilityBonuses, required  List<RaceTrait> traits}): _abilityBonuses = abilityBonuses,_traits = traits,super._();
+  const _SubraceOption({required this.id, required this.raceId, required this.name, required  Map<String, dynamic> abilityBonuses, required  List<RaceTrait> traits,  List<RaceTrait>? traits2024}): _abilityBonuses = abilityBonuses,_traits = traits,_traits2024 = traits2024,super._();
   
 
 @override final  int id;
@@ -231,6 +235,21 @@ class _SubraceOption extends SubraceOption {
   return EqualUnmodifiableListView(_traits);
 }
 
+/// `subraces.traits_2024` — voir la documentation de
+/// `RaceOption.traits2024` pour le rationale complet (même chantier,
+/// même forme, même règle de `null`).
+ final  List<RaceTrait>? _traits2024;
+/// `subraces.traits_2024` — voir la documentation de
+/// `RaceOption.traits2024` pour le rationale complet (même chantier,
+/// même forme, même règle de `null`).
+@override List<RaceTrait>? get traits2024 {
+  final value = _traits2024;
+  if (value == null) return null;
+  if (_traits2024 is EqualUnmodifiableListView) return _traits2024;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(value);
+}
+
 
 /// Create a copy of SubraceOption
 /// with the given fields replaced by the non-null parameter values.
@@ -242,16 +261,16 @@ _$SubraceOptionCopyWith<_SubraceOption> get copyWith => __$SubraceOptionCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SubraceOption&&(identical(other.id, id) || other.id == id)&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other._abilityBonuses, _abilityBonuses)&&const DeepCollectionEquality().equals(other._traits, _traits));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SubraceOption&&(identical(other.id, id) || other.id == id)&&(identical(other.raceId, raceId) || other.raceId == raceId)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other._abilityBonuses, _abilityBonuses)&&const DeepCollectionEquality().equals(other._traits, _traits)&&const DeepCollectionEquality().equals(other._traits2024, _traits2024));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,raceId,name,const DeepCollectionEquality().hash(_abilityBonuses),const DeepCollectionEquality().hash(_traits));
+int get hashCode => Object.hash(runtimeType,id,raceId,name,const DeepCollectionEquality().hash(_abilityBonuses),const DeepCollectionEquality().hash(_traits),const DeepCollectionEquality().hash(_traits2024));
 
 @override
 String toString() {
-  return 'SubraceOption(id: $id, raceId: $raceId, name: $name, abilityBonuses: $abilityBonuses, traits: $traits)';
+  return 'SubraceOption(id: $id, raceId: $raceId, name: $name, abilityBonuses: $abilityBonuses, traits: $traits, traits2024: $traits2024)';
 }
 
 
@@ -262,7 +281,7 @@ abstract mixin class _$SubraceOptionCopyWith<$Res> implements $SubraceOptionCopy
   factory _$SubraceOptionCopyWith(_SubraceOption value, $Res Function(_SubraceOption) _then) = __$SubraceOptionCopyWithImpl;
 @override @useResult
 $Res call({
- int id, int raceId, String name, Map<String, dynamic> abilityBonuses, List<RaceTrait> traits
+ int id, int raceId, String name, Map<String, dynamic> abilityBonuses, List<RaceTrait> traits, List<RaceTrait>? traits2024
 });
 
 
@@ -279,14 +298,15 @@ class __$SubraceOptionCopyWithImpl<$Res>
 
 /// Create a copy of SubraceOption
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? raceId = null,Object? name = null,Object? abilityBonuses = null,Object? traits = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? raceId = null,Object? name = null,Object? abilityBonuses = null,Object? traits = null,Object? traits2024 = freezed,}) {
   return _then(_SubraceOption(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,raceId: null == raceId ? _self.raceId : raceId // ignore: cast_nullable_to_non_nullable
 as int,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,abilityBonuses: null == abilityBonuses ? _self._abilityBonuses : abilityBonuses // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>,traits: null == traits ? _self._traits : traits // ignore: cast_nullable_to_non_nullable
-as List<RaceTrait>,
+as List<RaceTrait>,traits2024: freezed == traits2024 ? _self._traits2024 : traits2024 // ignore: cast_nullable_to_non_nullable
+as List<RaceTrait>?,
   ));
 }
 

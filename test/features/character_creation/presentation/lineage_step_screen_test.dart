@@ -24,14 +24,19 @@ class _FakeLineageChoiceRepository implements LineageChoiceRepository {
   LineageChoiceCatalog catalog = const LineageChoiceCatalog(
     optionsByRaceId: {},
   );
+  final Map<String, LineageChoiceCatalog> catalogsByEdition = {};
+  final List<String> requestedEditions = [];
   Object? errorToThrow;
   Completer<LineageChoiceCatalog>? completer;
 
   @override
-  Future<LineageChoiceCatalog> fetchLineageChoices() async {
+  Future<LineageChoiceCatalog> fetchLineageChoices({
+    required String edition,
+  }) async {
+    requestedEditions.add(edition);
     if (completer != null) return completer!.future;
     if (errorToThrow != null) throw errorToThrow!;
-    return catalog;
+    return catalogsByEdition[edition] ?? catalog;
   }
 }
 
@@ -108,7 +113,16 @@ void main() {
   CharacterCreationDraft readDraft() =>
       container.read(characterCreationDraftControllerProvider);
 
-  Future<void> pumpLineageStep(WidgetTester tester, {int raceId = 9}) async {
+  Future<void> pumpLineageStep(
+    WidgetTester tester, {
+    int raceId = 9,
+    String? edition,
+  }) async {
+    if (edition != null) {
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setEdition(edition);
+    }
     container
         .read(characterCreationDraftControllerProvider.notifier)
         .setRace(raceId: raceId, subraceId: null);
@@ -259,4 +273,49 @@ void main() {
       expect(find.text('RÉESSAYER'), findsOneWidget);
     },
   );
+
+  group('Drakéide : ascendances distinctes par édition (chantier '
+      '"différenciation 2014/2024 pour les races", 24/10/2026)', () {
+    testWidgets('édition 2014 : affiche les ascendances configurées pour '
+        "l'édition '2014' (phb_ancestry), pas celles de '2024'", (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.catalogsByEdition['2014'] = const LineageChoiceCatalog(
+        optionsByRaceId: {
+          5: [LineageOption(id: 100, name: 'Dragon noir (2014)')],
+        },
+      );
+      fakeRepository.catalogsByEdition['2024'] = const LineageChoiceCatalog(
+        optionsByRaceId: {
+          5: [LineageOption(id: 200, name: 'Dragon noir (2024)')],
+        },
+      );
+
+      await pumpLineageStep(tester, raceId: 5, edition: '2014');
+
+      expect(find.text('Dragon noir (2014)'), findsOneWidget);
+      expect(find.text('Dragon noir (2024)'), findsNothing);
+      expect(fakeRepository.requestedEditions, contains('2014'));
+    });
+
+    testWidgets('édition 2024 : affiche les ascendances configurées pour '
+        "l'édition '2024', pas celles de '2014'", (WidgetTester tester) async {
+      fakeRepository.catalogsByEdition['2014'] = const LineageChoiceCatalog(
+        optionsByRaceId: {
+          5: [LineageOption(id: 100, name: 'Dragon noir (2014)')],
+        },
+      );
+      fakeRepository.catalogsByEdition['2024'] = const LineageChoiceCatalog(
+        optionsByRaceId: {
+          5: [LineageOption(id: 200, name: 'Dragon noir (2024)')],
+        },
+      );
+
+      await pumpLineageStep(tester, raceId: 5, edition: '2024');
+
+      expect(find.text('Dragon noir (2024)'), findsOneWidget);
+      expect(find.text('Dragon noir (2014)'), findsNothing);
+      expect(fakeRepository.requestedEditions, contains('2024'));
+    });
+  });
 }

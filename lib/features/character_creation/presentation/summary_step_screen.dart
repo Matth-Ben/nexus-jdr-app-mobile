@@ -448,6 +448,7 @@ class _SummaryStepScreenState extends ConsumerState<SummaryStepScreen> {
             raceCatalog: data.raceCatalog,
             raceId: draft.raceId,
             subraceId: draft.subraceId,
+            edition: draft.edition,
             racialBonusChoices: draft.racialBonusChoices,
           );
 

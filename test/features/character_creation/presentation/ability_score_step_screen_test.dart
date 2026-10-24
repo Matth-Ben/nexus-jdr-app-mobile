@@ -47,6 +47,7 @@ import 'package:personnages/features/character_creation/domain/spell_catalog.dar
 import 'package:personnages/features/character_creation/domain/subclass_catalog.dart';
 import 'package:personnages/features/character_creation/domain/tool_catalog.dart';
 import 'package:personnages/features/character_creation/domain/race_option.dart';
+import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/character_creation/presentation/ability_score_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
@@ -505,6 +506,81 @@ void main() {
       expect(find.text('8'), findsOneWidget);
     },
   );
+
+  group('édition 2024 (chantier différenciation 2014/2024 pour les races, '
+      '24/10/2026) : le bonus racial fixe du catalogue est ignoré, choix '
+      'libre systématique', () {
+    testWidgets('le bonus racial FIXE de l\'Elfe (+2 Dex) n\'est PAS appliqué '
+        'automatiquement : la carte "Bonus racial au choix" est affichée', (
+      WidgetTester tester,
+    ) async {
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setEdition('2024');
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setRace(raceId: 1, subraceId: null, raceCustomText: null);
+
+      await pumpAbilityScoreStep(tester);
+
+      expect(find.text('Bonus racial au choix'), findsOneWidget);
+      // Dextérité reste à son score de base (14, modificateur +2) : le
+      // bonus racial fixe de l'Elfe (+2 Dex) n'est pas ajouté tant que ce
+      // n'est pas un choix du joueur.
+      expect(
+        find.descendant(
+          of: rowFor('DEXTÉRITÉ'),
+          matching: find.text('Modificateur +2'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      '"Suivant" reste bloqué tant que le choix libre +2/+1 n\'est pas '
+      'entièrement réparti, même pour une race à bonus fixe en base',
+      (WidgetTester tester) async {
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setEdition('2024');
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setRace(raceId: 1, subraceId: null, raceCustomText: null);
+
+        await pumpAbilityScoreStep(tester);
+
+        final button = tester.widget<PrimaryButton>(find.byType(PrimaryButton));
+        expect(button.onPressed, isNull);
+      },
+    );
+
+    testWidgets('une fois le choix libre réparti (+2 Dex / +1 Con), "Suivant" '
+        'enregistre ce choix dans racialBonusChoices, PAS le bonus fixe du '
+        'catalogue', (WidgetTester tester) async {
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setEdition('2024');
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setRace(raceId: 1, subraceId: null, raceCustomText: null);
+
+      await pumpAbilityScoreStep(tester);
+
+      // Le motif "+2 / +1" affiche deux lignes de chips (une par bonus),
+      // chacune listant les 6 caractéristiques : le premier "Dex" trouvé
+      // est celui de la ligne "+2", le dernier "Con" celui de la ligne
+      // "+1" — voir `widgets/racial_bonus_choice_card.dart::_buildFlexible`.
+      await tester.tap(find.widgetWithText(FilterChip, 'Dex').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilterChip, 'Con').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('SUIVANT'));
+      await tester.pumpAndSettle();
+
+      expect(readDraft().racialBonusChoices, {'dex': 2, 'con': 1});
+    });
+  });
 
   group('aide contextuelle / abandon (docs/cahier-des-charges/'
       '11-fonctionnalites-a-ajouter.md section 3)', () {

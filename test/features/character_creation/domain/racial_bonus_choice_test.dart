@@ -82,6 +82,7 @@ void main() {
         raceCatalog: catalog,
         raceId: null,
         subraceId: null,
+        edition: '2014',
         racialBonusChoices: const {'str': 2, 'con': 1},
       );
       expect(scores, {'str': 17, 'dex': 14, 'con': 14});

@@ -59,6 +59,18 @@ abstract final class RaceRowMapper {
     return const {};
   }
 
+  /// Parse la colonne jsonb `traits_2024` (`races.traits_2024`/
+  /// `subraces.traits_2024`, même forme que `traits`) en
+  /// `List<RaceTrait>?` — chantier "différenciation 2014/2024 pour les
+  /// races" (24/10/2026). Contrairement à [parseTraits], `null` reste `null`
+  /// (pas de liste vide) : il distingue "pas de contenu 2024 propre" de
+  /// "contenu 2024 propre, mais vide" — voir la documentation de
+  /// `RaceOption.traits2024`.
+  static List<RaceTrait>? parseTraits2024(dynamic raw) {
+    if (raw == null) return null;
+    return parseTraits(raw);
+  }
+
   /// Parse la colonne jsonb `traits` (liste de `{name, description}`) en
   /// `List<RaceTrait>`. Une entrée sans `name` exploitable est ignorée ;
   /// `null`/type inattendu retombe sur une liste vide plutôt que de crasher.
@@ -120,6 +132,7 @@ abstract final class RaceRowMapper {
       toolChoice: parseToolChoice(row['tool_choice'], toolCatalog: toolCatalog),
       skillProficiencies: parseSkillProficiencies(row['skill_proficiencies']),
       naturalWeaponItemId: (row['natural_weapon_item_id'] as num?)?.toInt(),
+      traits2024: parseTraits2024(row['traits_2024']),
     );
   }
 
@@ -215,6 +228,7 @@ abstract final class RaceRowMapper {
       name: names[id.toString()] ?? 'Sous-race #$id',
       abilityBonuses: parseAbilityBonuses(row['ability_bonuses']),
       traits: parseTraits(row['traits']),
+      traits2024: parseTraits2024(row['traits_2024']),
     );
   }
 }

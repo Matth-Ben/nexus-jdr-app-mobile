@@ -19,6 +19,11 @@ abstract class SubraceOption with _$SubraceOption {
     required String name,
     required Map<String, dynamic> abilityBonuses,
     required List<RaceTrait> traits,
+
+    /// `subraces.traits_2024` — voir la documentation de
+    /// `RaceOption.traits2024` pour le rationale complet (même chantier,
+    /// même forme, même règle de `null`).
+    List<RaceTrait>? traits2024,
   }) = _SubraceOption;
 
   /// Ligne de résumé affichée sous le nom, voir [RaceSummaryFormatter].

@@ -6448,7 +6448,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         ? null
         : await _client
               .from('races')
-              .select('id, speed, traits')
+              .select('id, speed, traits, traits_2024')
               .eq('id', raceId)
               .maybeSingle();
     final subraceNameRows = await _fetchTranslationRows(
@@ -6465,7 +6465,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
         ? null
         : await _client
               .from('subraces')
-              .select('id, traits')
+              .select('id, traits, traits_2024')
               .eq('id', subraceId)
               .maybeSingle();
     final classNameRows = await _fetchTranslationRows(
@@ -7161,10 +7161,25 @@ class SupabaseCharacterRepository implements CharacterRepository {
     // Carte "TRAITS RACIAUX" de l'onglet "Aptitudes" — race de base d'abord,
     // puis sous-race à la suite (ordre authored en base préservé dans
     // chacune des deux listes, voir `CharacterDetailRowMapper.parseRaceTraits`).
+    // `traits_2024` préféré à `traits` en édition 2024 quand cette race/
+    // sous-race a effectivement un contenu 2024 distinct — chantier
+    // "différenciation 2014/2024 pour les races" (24/10/2026), voir
+    // `CharacterDetailRowMapper.preferredTraitsRaw`.
     final subraceRow = payload['subraceRow'] as Map<String, dynamic>?;
+    final traitsEdition = CharacterDetailRowMapper.editionOf(row);
     final racialTraits = [
-      ...CharacterDetailRowMapper.parseRaceTraits(raceRow?['traits']),
-      ...CharacterDetailRowMapper.parseRaceTraits(subraceRow?['traits']),
+      ...CharacterDetailRowMapper.parseRaceTraits(
+        CharacterDetailRowMapper.preferredTraitsRaw(
+          raceRow,
+          edition: traitsEdition,
+        ),
+      ),
+      ...CharacterDetailRowMapper.parseRaceTraits(
+        CharacterDetailRowMapper.preferredTraitsRaw(
+          subraceRow,
+          edition: traitsEdition,
+        ),
+      ),
     ];
 
     // Absente des payloads mis en cache avant l'arme de pacte : `null`.

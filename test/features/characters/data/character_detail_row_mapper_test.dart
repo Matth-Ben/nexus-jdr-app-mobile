@@ -1389,6 +1389,77 @@ void main() {
     });
   });
 
+  group('CharacterDetailRowMapper.preferredTraitsRaw (chantier différenciation '
+      '2014/2024 pour les races, 24/10/2026)', () {
+    test('entityRow null -> null (personnage sans race/sous-race)', () {
+      expect(
+        CharacterDetailRowMapper.preferredTraitsRaw(null, edition: '2024'),
+        isNull,
+      );
+    });
+
+    test('édition 2014 : traits (jamais traits_2024, même présent)', () {
+      final row = {
+        'traits': [
+          {'name': '2014', 'description': '...'},
+        ],
+        'traits_2024': [
+          {'name': '2024', 'description': '...'},
+        ],
+      };
+
+      final raw = CharacterDetailRowMapper.preferredTraitsRaw(
+        row,
+        edition: '2014',
+      );
+
+      expect(CharacterDetailRowMapper.parseRaceTraits(raw).single.name, '2014');
+    });
+
+    test(
+      'édition 2024, traits_2024 non nul : traits_2024 préféré à traits',
+      () {
+        final row = {
+          'traits': [
+            {'name': '2014', 'description': '...'},
+          ],
+          'traits_2024': [
+            {'name': '2024', 'description': '...'},
+          ],
+        };
+
+        final raw = CharacterDetailRowMapper.preferredTraitsRaw(
+          row,
+          edition: '2024',
+        );
+
+        expect(
+          CharacterDetailRowMapper.parseRaceTraits(raw).single.name,
+          '2024',
+        );
+      },
+    );
+
+    test('édition 2024, traits_2024 null (ex. Orc/Aasimar/Goliath, pas de '
+        'contenu 2024 distinct) : retombe sur traits', () {
+      final row = {
+        'traits': [
+          {'name': 'Seul contenu', 'description': '...'},
+        ],
+      };
+
+      final raw = CharacterDetailRowMapper.preferredTraitsRaw(
+        row,
+        edition: '2024',
+      );
+
+      expect(
+        CharacterDetailRowMapper.parseRaceTraits(raw).single.name,
+        'Seul contenu',
+      );
+    });
+  });
+
   group('CharacterDetailRowMapper.toCharacterDetail — racialTraits', () {
     test('race seule (sans sous-race) : traits de la race de base tels '
         'quels', () {

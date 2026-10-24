@@ -25,48 +25,83 @@ void main() {
   );
   final catalog = const RaceCatalog(races: [elfe], subraces: [hautElfe]);
 
-  test('additionne le bonus racial au score de base pour chaque '
-      'caractéristique', () {
+  test('édition 2014 : additionne le bonus racial au score de base pour '
+      'chaque caractéristique', () {
     final result = FinalAbilityScoresResolver.resolve(
       baseScores: const {'str': 15, 'dex': 14, 'con': 13},
       raceCatalog: catalog,
       raceId: 1,
       subraceId: null,
+      edition: '2014',
     );
 
     expect(result, {'str': 15, 'dex': 16, 'con': 13});
   });
 
-  test('cumule le bonus de race ET de sous-race', () {
+  test('édition 2014 : cumule le bonus de race ET de sous-race', () {
     final result = FinalAbilityScoresResolver.resolve(
       baseScores: const {'int': 10},
       raceCatalog: catalog,
       raceId: 1,
       subraceId: 10,
+      edition: '2014',
     );
 
     expect(result, {'int': 11});
   });
 
-  test('raceId null (race personnalisée) -> aucun bonus appliqué', () {
-    final result = FinalAbilityScoresResolver.resolve(
-      baseScores: const {'str': 8, 'dex': 12},
-      raceCatalog: catalog,
-      raceId: null,
-      subraceId: null,
-    );
+  test(
+    'édition 2014 : raceId null (race personnalisée) -> aucun bonus appliqué',
+    () {
+      final result = FinalAbilityScoresResolver.resolve(
+        baseScores: const {'str': 8, 'dex': 12},
+        raceCatalog: catalog,
+        raceId: null,
+        subraceId: null,
+        edition: '2014',
+      );
 
-    expect(result, {'str': 8, 'dex': 12});
-  });
+      expect(result, {'str': 8, 'dex': 12});
+    },
+  );
 
-  test('baseScores vide -> map vide', () {
+  test('édition 2014 : baseScores vide -> map vide', () {
     final result = FinalAbilityScoresResolver.resolve(
       baseScores: const {},
       raceCatalog: catalog,
       raceId: 1,
       subraceId: null,
+      edition: '2014',
     );
 
     expect(result, isEmpty);
+  });
+
+  test('édition 2024 : le bonus racial FIXE du catalogue est ignoré (RAW 2024, '
+      'l\'espèce ne donne plus de bonus de caractéristique) — chantier '
+      'différenciation 2014/2024 (24/10/2026)', () {
+    final result = FinalAbilityScoresResolver.resolve(
+      baseScores: const {'str': 15, 'dex': 14, 'con': 13},
+      raceCatalog: catalog,
+      raceId: 1,
+      subraceId: 10,
+      edition: '2024',
+    );
+
+    expect(result, {'str': 15, 'dex': 14, 'con': 13});
+  });
+
+  test('édition 2024 : seul le choix libre du joueur (racialBonusChoices) est '
+      'appliqué, le bonus fixe du catalogue reste ignoré', () {
+    final result = FinalAbilityScoresResolver.resolve(
+      baseScores: const {'str': 15, 'dex': 14, 'con': 13},
+      raceCatalog: catalog,
+      raceId: 1,
+      subraceId: 10,
+      edition: '2024',
+      racialBonusChoices: const {'dex': 2, 'con': 1},
+    );
+
+    expect(result, {'str': 15, 'dex': 16, 'con': 14});
   });
 }

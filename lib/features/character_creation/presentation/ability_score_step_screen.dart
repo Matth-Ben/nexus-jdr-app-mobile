@@ -42,9 +42,15 @@ import 'widgets/step_help_sheet.dart';
 /// modificateur affiché (bonus racial/sous-racial inclus).
 ///
 /// Un jeu de 6 scores est toujours valide quelle que soit la méthode : seule
-/// la répartition des bonus raciaux au choix (Demi-elfe, Forgelier, races à
-/// bonus flexibles — `domain/racial_bonus_choice.dart`) bloque "Suivant"
-/// tant qu'elle est incomplète.
+/// la répartition des bonus raciaux au choix bloque "Suivant" tant qu'elle
+/// est incomplète (`domain/racial_bonus_choice.dart`) — en édition 2014 :
+/// Demi-elfe/Forgelier (`choice_others`) ou une race à bonus flexibles
+/// (`choice_flexible`) ; en édition 2024 : TOUTE race, systématiquement un
+/// choix libre +2/+1 ou +1/+1/+1 (voir [_AbilityScoreStepScreenState
+/// ._racialChoiceSpec]) puisque RAW 2024 l'espèce ne donne plus de bonus de
+/// caractéristique (celui-ci vient de l'historique, non modélisé à cette
+/// étape) — chantier "différenciation 2014/2024 pour les races"
+/// (24/10/2026).
 ///
 /// En-tête bois plein dupliqué depuis `background_step_screen.dart`
 /// (`_Header` ci-dessous) — même principe que les étapes précédentes, pour
@@ -65,6 +71,19 @@ class _AbilityScoreStepScreenState
   late Map<String, int> _scores;
   int? _raceId;
   int? _subraceId;
+
+  /// Édition du brouillon (`CharacterCreationDraft.edition`), lue une seule
+  /// fois comme [_raceId]/[_subraceId] : immuable pendant cette étape (fixée
+  /// à `EditionStepScreen`, TOUTE PREMIÈRE étape de l'assistant, bien avant
+  /// celle-ci). Pilote [_racialChoiceSpec] : en 2014, le bonus racial
+  /// fixe (`RaceOption.abilityBonuses`/`SubraceOption.abilityBonuses`) est
+  /// appliqué automatiquement (comportement déjà en place pour les races à
+  /// bonus purement fixe) ; en 2024, l'espèce ne donne RAW plus aucun bonus
+  /// de caractéristique (celui-ci vient de l'historique, non modélisé à cette
+  /// étape) — modélisé ici par un choix libre systématique (+2/+1 ou
+  /// +1/+1/+1), qui ignore tout bonus racial fixe éventuellement présent en
+  /// base (chantier "différenciation 2014/2024 pour les races", 24/10/2026).
+  late String _edition;
 
   /// Bonus raciaux au choix répartis sur cette étape (voir
   /// `domain/racial_bonus_choice.dart`), vide si la race n'en a pas.
@@ -90,6 +109,7 @@ class _AbilityScoreStepScreenState
     final draft = ref.read(characterCreationDraftControllerProvider);
     _raceId = draft.raceId;
     _subraceId = draft.subraceId;
+    _edition = draft.edition;
     _racialChoices = draft.racialBonusChoices;
     final draftMethod = draft.abilityScoreMethod;
     final draftScores = draft.abilityScores;
@@ -210,8 +230,24 @@ class _AbilityScoreStepScreenState
 
   /// Bonus raciaux à répartir pour la race/sous-race du brouillon, `null` si
   /// aucun (ou en mode modification, où les scores sont déjà finaux).
+  ///
+  /// En édition 2024, toujours un choix libre (+2/+1 ou +1/+1/+1,
+  /// [FlexibleRacialBonusSpec]) quelle que soit la race : RAW 2024, l'espèce
+  /// ne donne plus de bonus de caractéristique (celui-ci vient de
+  /// l'historique, non modélisé à cette étape) — tout bonus racial fixe
+  /// éventuellement présent en base (`RaceOption.abilityBonuses`) est alors
+  /// ignoré, voir [_edition]. En édition 2014, comportement inchangé :
+  /// [RacialBonusChoiceSpec.from] ne renvoie un choix que pour les races qui
+  /// en ont RAW un (`choice_others`/`choice_flexible`), un bonus purement
+  /// fixe (la grande majorité) est appliqué automatiquement sans passer par
+  /// ici (voir [AbilityScoreModifierCalculator.racialBonusFor], utilisé
+  /// directement dans `_buildContent`).
   RacialBonusChoiceSpec? _racialChoiceSpec(RaceCatalog catalog) {
-    if (_editSession != null || _raceId == null) return null;
+    if (_editSession != null) return null;
+    if (_edition == '2024') {
+      return const FlexibleRacialBonusSpec();
+    }
+    if (_raceId == null) return null;
     Map<String, dynamic>? raceBonuses;
     for (final race in catalog.races) {
       if (race.id == _raceId) raceBonuses = race.abilityBonuses;
@@ -223,6 +259,20 @@ class _AbilityScoreStepScreenState
     return RacialBonusChoiceSpec.from(
       raceBonuses: raceBonuses,
       subraceBonuses: subraceBonuses,
+    );
+  }
+
+  /// Bonus racial fixe à ajouter au modificateur affiché (voir
+  /// `_buildContent`) — `0` en édition 2024 (voir [_racialChoiceSpec]), sinon
+  /// [AbilityScoreModifierCalculator.racialBonusFor] comme avant ce
+  /// chantier.
+  int _fixedRacialBonusFor(String abilityKey, RaceCatalog catalog) {
+    if (_edition == '2024') return 0;
+    return AbilityScoreModifierCalculator.racialBonusFor(
+      abilityKey: abilityKey,
+      catalog: catalog,
+      raceId: _raceId,
+      subraceId: _subraceId,
     );
   }
 
@@ -440,12 +490,9 @@ class _AbilityScoreStepScreenState
                                   baseScore:
                                       _scores[abilityScoreDefinitions[i].key]!,
                                   racialBonus:
-                                      AbilityScoreModifierCalculator.racialBonusFor(
-                                        abilityKey:
-                                            abilityScoreDefinitions[i].key,
-                                        catalog: catalog,
-                                        raceId: _raceId,
-                                        subraceId: _subraceId,
+                                      _fixedRacialBonusFor(
+                                        abilityScoreDefinitions[i].key,
+                                        catalog,
                                       ) +
                                       (_racialChoices[abilityScoreDefinitions[i]
                                               .key] ??

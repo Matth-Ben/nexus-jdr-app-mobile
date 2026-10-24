@@ -81,7 +81,7 @@ void main() {
       final catalog = await SupabaseLineageChoiceRepository(
         _client(okHandler),
         cache,
-      ).fetchLineageChoices();
+      ).fetchLineageChoices(edition: '2024');
 
       expect(catalog.isConcerned(5), isTrue);
       expect(catalog.optionsFor(5).map((o) => o.name), [
@@ -120,8 +120,32 @@ void main() {
       expect(catalog.optionsFor(1), isEmpty);
     });
 
+    test('la requête filtre bien sur lineage_group (2024_lineage par défaut) '
+        'et subrace_id IS NULL', () async {
+      final requests = <http.Request>[];
+      final client = _client((request) {
+        requests.add(request);
+        return okHandler(request);
+      });
+
+      await SupabaseLineageChoiceRepository(
+        client,
+        cache,
+      ).fetchLineageChoices(edition: '2024');
+
+      final lineagesRequest = requests.firstWhere(
+        (r) => r.url.pathSegments.last == 'race_lineages',
+      );
+      expect(
+        lineagesRequest.url.queryParameters['lineage_group'],
+        'eq.2024_lineage',
+      );
+      expect(lineagesRequest.url.queryParameters['subrace_id'], 'is.null');
+    });
+
+    // Chantier "différenciation 2014/2024 pour les races" (24/10/2026).
     test(
-      'la requête filtre bien sur lineage_group et subrace_id IS NULL',
+      'édition 2014 : la requête filtre sur lineage_group = phb_ancestry',
       () async {
         final requests = <http.Request>[];
         final client = _client((request) {
@@ -132,18 +156,109 @@ void main() {
         await SupabaseLineageChoiceRepository(
           client,
           cache,
-        ).fetchLineageChoices();
+        ).fetchLineageChoices(edition: '2014');
 
         final lineagesRequest = requests.firstWhere(
           (r) => r.url.pathSegments.last == 'race_lineages',
         );
         expect(
           lineagesRequest.url.queryParameters['lineage_group'],
-          'eq.2024_lineage',
+          'eq.phb_ancestry',
         );
         expect(lineagesRequest.url.queryParameters['subrace_id'], 'is.null');
       },
     );
+
+    test(
+      'édition 2014, Drakéide : 10 lignes phb_ancestry (acide/feu/foudre/'
+      'froid/poison × chromatique/métallique) distinctes du jeu 2024',
+      () async {
+        Object phbAncestryHandler(http.Request request) {
+          switch (request.url.pathSegments.last) {
+            case 'race_lineages':
+              return [
+                {'id': 100, 'race_id': 5, 'damage_type': 'acide'},
+                {'id': 101, 'race_id': 5, 'damage_type': 'feu'},
+                {'id': 102, 'race_id': 5, 'damage_type': 'foudre'},
+                {'id': 103, 'race_id': 5, 'damage_type': 'froid'},
+                {'id': 104, 'race_id': 5, 'damage_type': 'poison'},
+                {'id': 105, 'race_id': 5, 'damage_type': 'acide'},
+                {'id': 106, 'race_id': 5, 'damage_type': 'feu'},
+                {'id': 107, 'race_id': 5, 'damage_type': 'foudre'},
+                {'id': 108, 'race_id': 5, 'damage_type': 'froid'},
+                {'id': 109, 'race_id': 5, 'damage_type': 'poison'},
+              ];
+            case 'translations':
+              return [
+                for (var i = 100; i <= 109; i++)
+                  {'entity_id': '$i', 'value': 'Ancêtre draconique 2014 : X'},
+              ];
+          }
+          return const [];
+        }
+
+        final catalog = await SupabaseLineageChoiceRepository(
+          _client(phbAncestryHandler),
+          cache,
+        ).fetchLineageChoices(edition: '2014');
+
+        expect(catalog.isConcerned(5), isTrue);
+        expect(catalog.optionsFor(5), hasLength(10));
+        // Le Tieffelin/Goliath n'ont QUE des lignes 2024_lineage (aucune
+        // ligne phb_ancestry pour eux) : le catalogue 2014 ne les mentionne
+        // pas du tout, sans planter — voir la doc de classe de
+        // `LineageChoiceRepository.fetchLineageChoices`.
+        expect(catalog.isConcerned(9), isFalse);
+        expect(catalog.optionsFor(9), isEmpty);
+        expect(catalog.isConcerned(24), isFalse);
+      },
+    );
+
+    test('édition 2014, Tieffelin (aucune ligne phb_ancestry pour cette race) '
+        ': catalogue vide pour lui, pas de crash', () async {
+      Object onlyDrakeideHandler(http.Request request) {
+        if (request.url.pathSegments.last == 'race_lineages') {
+          return [
+            {'id': 100, 'race_id': 5, 'damage_type': 'acide'},
+          ];
+        }
+        if (request.url.pathSegments.last == 'translations') {
+          return [
+            {'entity_id': '100', 'value': 'Ancêtre draconique 2014 : Noir'},
+          ];
+        }
+        return const [];
+      }
+
+      final catalog = await SupabaseLineageChoiceRepository(
+        _client(onlyDrakeideHandler),
+        cache,
+      ).fetchLineageChoices(edition: '2014');
+
+      expect(catalog.isConcerned(9), isFalse);
+      expect(catalog.optionsFor(9), isEmpty);
+    });
+
+    test('les caches des deux éditions sont distincts : un fetch 2014 réussi '
+        "n'est jamais relu pour une requête 2024 qui échoue", () async {
+      await SupabaseLineageChoiceRepository(
+        _client(okHandler),
+        cache,
+      ).fetchLineageChoices(edition: '2014');
+
+      final failing = _client(
+        (request) => {'message': 'boom', 'code': 'PGRST000'},
+        status: 500,
+      );
+
+      expect(
+        SupabaseLineageChoiceRepository(
+          failing,
+          cache,
+        ).fetchLineageChoices(edition: '2024'),
+        throwsA(isA<CharacterCreationFailure>()),
+      );
+    });
 
     test('aucune lignée : catalogue vide, aucune requête translations/'
         'racial_innate_spells', () async {
@@ -156,7 +271,7 @@ void main() {
       final catalog = await SupabaseLineageChoiceRepository(
         client,
         cache,
-      ).fetchLineageChoices();
+      ).fetchLineageChoices(edition: '2024');
 
       expect(catalog.optionsByRaceId, isEmpty);
       expect(tables, ['race_lineages']);
@@ -169,7 +284,10 @@ void main() {
       );
 
       expect(
-        SupabaseLineageChoiceRepository(client, cache).fetchLineageChoices(),
+        SupabaseLineageChoiceRepository(
+          client,
+          cache,
+        ).fetchLineageChoices(edition: '2024'),
         throwsA(isA<CharacterCreationFailure>()),
       );
     });
@@ -180,7 +298,7 @@ void main() {
       await SupabaseLineageChoiceRepository(
         _client(okHandler),
         cache,
-      ).fetchLineageChoices();
+      ).fetchLineageChoices(edition: '2024');
 
       var requests = 0;
       final offline = _client((request) {
@@ -190,7 +308,7 @@ void main() {
       final catalog = await SupabaseLineageChoiceRepository(
         offline,
         cache,
-      ).fetchLineageChoices();
+      ).fetchLineageChoices(edition: '2024');
 
       expect(requests, 0);
       expect(catalog.optionsFor(24).single.name, 'Géant des nuages');
@@ -200,7 +318,7 @@ void main() {
       await SupabaseLineageChoiceRepository(
         _client(okHandler),
         cache,
-      ).fetchLineageChoices();
+      ).fetchLineageChoices(edition: '2024');
       final entry = await cacheDb
           .select(cacheDb.cachedReferenceEntries)
           .getSingle();
@@ -222,7 +340,7 @@ void main() {
       final catalog = await SupabaseLineageChoiceRepository(
         failing,
         cache,
-      ).fetchLineageChoices();
+      ).fetchLineageChoices(edition: '2024');
 
       expect(requests, greaterThan(0));
       expect(catalog.optionsFor(9), hasLength(3));
@@ -234,9 +352,41 @@ void main() {
         status: 500,
       );
       expect(
-        SupabaseLineageChoiceRepository(failing, cache).fetchLineageChoices(),
+        SupabaseLineageChoiceRepository(
+          failing,
+          cache,
+        ).fetchLineageChoices(edition: '2024'),
         throwsA(isA<CharacterCreationFailure>()),
       );
+    });
+
+    // Chantier "différenciation 2014/2024 pour les races" (24/10/2026).
+    test('le cache est bien scopé par édition : un cache frais 2024 ne sert '
+        'jamais une lecture 2014', () async {
+      await SupabaseLineageChoiceRepository(
+        _client(okHandler),
+        cache,
+      ).fetchLineageChoices(edition: '2024');
+
+      var requests = 0;
+      final offline = _client((request) {
+        requests++;
+        return const [];
+      });
+
+      final catalog = await SupabaseLineageChoiceRepository(
+        offline,
+        cache,
+      ).fetchLineageChoices(edition: '2014');
+
+      expect(
+        requests,
+        greaterThan(0),
+        reason:
+            'aucune entrée de cache 2014 : le réseau doit être retenté, '
+            'jamais servir silencieusement le cache 2024',
+      );
+      expect(catalog.optionsByRaceId, isEmpty);
     });
   });
 }
