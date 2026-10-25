@@ -647,6 +647,24 @@ Constats relevés par `code-reviewer` en relecture de la branche `feat/character
     pendant l'audit RAW complet classes/races/multiclassage du 18/10, à appliquer sans
     rouvrir la question pour chaque sous-classe individuellement (ex. Clerc Duperie id
     27, Clerc Lumière id 29, déjà tranchées ainsi par `regles-dnd`).
+18. Pour une race absente du SRD 5.1 (CC-BY) en version 2014 — l'Orc jouable n'a par
+    exemple jamais été publié en OGL/SRD sous cette édition, seulement dans Volo's Guide
+    to Monsters/Mordenkainen Presents (contenu tiers payant) — faut-il sourcer quand même
+    ce contenu hors SRD, ou rester en contenu MdJ 2024 (couvert par le SRD 5.2) pour tout
+    personnage, y compris un personnage tagué `edition='2014'` ? **Rester en contenu MdJ
+    2024 pour toute race absente du SRD 5.1, demandé par Matthias le 23/10/2026**, après
+    que l'agent `regles-dnd` a signalé le problème de licence en vérifiant le texte RAW
+    2014 de l'Orc pour Magnus (voir aussi D17, même logique déjà appliquée aux aptitudes
+    de classe/sous-classe dupliquées) — à appliquer sans rouvrir la question race par
+    race (Aasimar et Goliath, également absents du SRD 5.1, suivent la même règle).
+    Conséquence pour le chantier "choix d'édition RAW" (`01-architecture-technique.md`) :
+    aucune colonne `edition` n'est nécessaire sur `races`, ce chantier ne s'étend pas aux
+    races absentes du SRD 2014. Point non tranché signalé par `regles-dnd`, resté hors
+    champ de cette décision : les noms VF 2024 déjà en base pour l'Orc ("Poussée
+    d'adrénaline", "Acharnement") ne sont pas vérifiés mot pour mot contre une source BBE
+    officielle, et "Acharnement" pourrait être un simple renommage 2024 d'"Endurance
+    implacable" plutôt qu'un trait mécaniquement distinct — à vérifier si un doute sur le
+    contenu Orc 2024 remonte à nouveau.
 
 ## Ce que l'audit n'a pas couvert
 
