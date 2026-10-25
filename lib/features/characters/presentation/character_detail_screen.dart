@@ -1311,7 +1311,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   }
 
   /// Ajout d'un objet personnalisé (sheet "Objet personnalisé").
-  Future<void> _addCustomInventoryItem(String customName, int quantity) async {
+  Future<void> _addCustomInventoryItem(
+    String customName,
+    int quantity, {
+    String? description,
+    String? damageDice,
+    String? damageType,
+    List<String> properties = const [],
+  }) async {
     setState(() => _isWritingInventory = true);
     try {
       final outcome = await ref
@@ -1320,6 +1327,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             characterId: widget.characterId,
             customName: customName,
             quantity: quantity,
+            description: description,
+            damageDice: damageDice,
+            damageType: damageType,
+            properties: properties,
           );
       if (outcome == WriteOutcome.queued) {
         _showSnackBar(offlineNotPersistedMessage);

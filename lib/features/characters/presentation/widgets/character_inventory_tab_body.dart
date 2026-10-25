@@ -84,8 +84,18 @@ class CharacterInventoryTabBody extends StatefulWidget {
   final void Function(InventoryCatalogItem item, int quantity)
   onAddInventoryItem;
 
-  /// Reçoit le nom saisi et la quantité (sheet "Objet personnalisé").
-  final void Function(String customName, int quantity) onAddCustomInventoryItem;
+  /// Reçoit le nom saisi, la quantité, et les champs optionnels de la sheet
+  /// "Objet personnalisé" (description, et si "Arme" : dé/type de dégâts +
+  /// propriétés) — voir `add_item_flow.dart::CustomItemPickResult`.
+  final void Function(
+    String customName,
+    int quantity, {
+    String? description,
+    String? damageDice,
+    String? damageType,
+    List<String> properties,
+  })
+  onAddCustomInventoryItem;
 
   /// Action "Équiper"/"Changer de set" d'une arme (sheet "Actions d'objet",
   /// choix du set via `weapon_slot_picker_sheet.dart`) — voir
@@ -236,7 +246,14 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
     if (picked == null) return;
 
     if (picked.isCustom) {
-      widget.onAddCustomInventoryItem(picked.customName!, picked.quantity);
+      widget.onAddCustomInventoryItem(
+        picked.customName!,
+        picked.quantity,
+        description: picked.customDescription,
+        damageDice: picked.customDamageDice,
+        damageType: picked.customDamageType,
+        properties: picked.customProperties,
+      );
     } else {
       widget.onAddInventoryItem(picked.item!, picked.quantity);
     }

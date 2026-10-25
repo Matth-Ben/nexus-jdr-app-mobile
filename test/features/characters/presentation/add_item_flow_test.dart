@@ -230,6 +230,10 @@ class FakeRepository implements CharacterRepository {
     required String characterId,
     required String customName,
     required int quantity,
+    String? description,
+    String? damageDice,
+    String? damageType,
+    List<String> properties = const [],
   }) => throw UnimplementedError();
 
   @override
@@ -617,7 +621,10 @@ void main() {
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextFormField), 'Amulette de famille');
+      await tester.enterText(
+        find.byKey(const Key('customItemNameField')),
+        'Amulette de famille',
+      );
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
       await tester.pumpAndSettle();
@@ -627,7 +634,132 @@ void main() {
       expect(result!.customName, 'Amulette de famille');
       expect(result!.quantity, 1);
       expect(result!.displayName, 'Amulette de famille');
+      // "Objet simple" (défaut) -> aucun champ d'arme/description renseigné.
+      expect(result!.customDescription, isNull);
+      expect(result!.customDamageDice, isNull);
+      expect(result!.customDamageType, isNull);
+      expect(result!.customProperties, isEmpty);
     });
+
+    testWidgets(
+      'bouton "Ajouter" désactivé pour une "Arme" sans type de dégâts '
+      'choisi, même avec un nom saisi',
+      (tester) async {
+        await _pumpAndPick(tester, repository: FakeRepository());
+        await tester.tap(find.text('Objet personnalisé'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('customItemNameField')),
+          'Zanbato ancestral',
+        );
+        await tester.pump();
+        await tester.tap(find.text('ARME'));
+        await tester.pumpAndSettle();
+
+        final button = tester.widget<PrimaryButton>(
+          find.widgetWithText(PrimaryButton, 'AJOUTER'),
+        );
+        expect(button.onPressed, isNull);
+      },
+    );
+
+    testWidgets(
+      'une "Arme" renvoie la description, le dé de dégâts au format "NdM", '
+      'le type de dégâts et les propriétés (séparées par une virgule, '
+      'segments vides filtrés)',
+      (tester) async {
+        PickedInventoryAddition? result;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              characterRepositoryProvider.overrideWithValue(FakeRepository()),
+            ],
+            child: MaterialApp(
+              home: Builder(
+                builder: (context) => Scaffold(
+                  body: Center(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        result = await pickInventoryAddition(context);
+                      },
+                      child: const Text('Ouvrir'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Ouvrir'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Objet personnalisé'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byKey(const Key('customItemNameField')),
+          'Zanbato ancestral',
+        );
+        await tester.enterText(
+          find.byKey(const Key('customItemDescriptionField')),
+          'Une lame transmise de génération en génération.',
+        );
+        await tester.pump();
+        await tester.tap(find.text('ARME'));
+        await tester.pumpAndSettle();
+
+        // Augmente le nombre de dés (1 -> 2) — `.first` : la sheet affiche
+        // aussi le `StepperCounter` "QUANTITÉ" plus bas, même icône
+        // "Augmenter", mais celui du dé de dégâts est rendu en premier.
+        final diceCountIncrement = find
+            .byWidgetPredicate(
+              (widget) => widget is Icon && widget.semanticLabel == 'Augmenter',
+            )
+            .first;
+        await tester.ensureVisible(diceCountIncrement);
+        await tester.tap(diceCountIncrement);
+        await tester.pumpAndSettle();
+
+        // Faces du dé : 6 -> 8.
+        await tester.ensureVisible(
+          find.byKey(const Key('customItemDiceSidesField')),
+        );
+        await tester.tap(find.byKey(const Key('customItemDiceSidesField')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('8').last);
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(
+          find.byKey(const Key('customItemDamageTypeField')),
+        );
+        await tester.tap(find.byKey(const Key('customItemDamageTypeField')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Perforant').last);
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(
+          find.byKey(const Key('customItemPropertiesField')),
+        );
+        await tester.enterText(
+          find.byKey(const Key('customItemPropertiesField')),
+          'légère, finesse,  , ',
+        );
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
+        await tester.pumpAndSettle();
+
+        expect(result, isNotNull);
+        expect(result!.isCustom, isTrue);
+        expect(
+          result!.customDescription,
+          'Une lame transmise de génération en génération.',
+        );
+        expect(result!.customDamageDice, '2d8');
+        expect(result!.customDamageType, 'perforant');
+        expect(result!.customProperties, ['légère', 'finesse']);
+      },
+    );
   });
 
   group('sélection multiple (pickInventoryAdditions)', () {

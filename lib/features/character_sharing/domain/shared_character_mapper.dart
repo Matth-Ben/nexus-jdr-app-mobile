@@ -487,14 +487,42 @@ CharacterInventoryItem _mapInventoryItem(Map<String, dynamic> row) {
     totalWeight: hasKnownWeight ? unitWeight * quantity : null,
     unitWeight: unitWeight,
     costAmount: _costAmount(row['cost']),
-    description: row['description'] as String?,
+    description: itemId != null
+        ? row['description'] as String?
+        : row['custom_description'] as String?,
     rarity: row['rarity'] as String?,
     requiresAttunement: row['requires_attunement'] == true,
     isAttuned: row['is_attuned'] == true,
     consumable: row['consumable'] == true,
     notes: row['notes'] as String?,
-    weaponProperties: _mapWeaponProperties(_mapOf(row['weapon_properties'])),
+    weaponProperties: itemId != null
+        ? _mapWeaponProperties(_mapOf(row['weapon_properties']))
+        : _mapCustomWeaponProperties(row),
     armorProperties: _mapArmorProperties(_mapOf(row['armor_properties'])),
+  );
+}
+
+/// Équivalent de [_mapWeaponProperties] pour un objet personnalisé "Arme"
+/// (`custom_damage_dice`/`custom_damage_type`/`custom_properties`, colonnes
+/// directes sur `character_inventory` plutôt qu'une relation
+/// `weapon_properties` jointe par `item_id`) — voir
+/// `CharacterInventoryRowMapper.parseCustomWeaponProperties` côté fiche
+/// authentifiée, même règle de résolution dupliquée ici (RPC à plat, pas la
+/// même forme de ligne).
+CharacterInventoryWeaponProperties? _mapCustomWeaponProperties(
+  Map<String, dynamic> row,
+) {
+  final damageDice = row['custom_damage_dice'] as String?;
+  final damageType = row['custom_damage_type'] as String?;
+  if (damageDice == null && damageType == null) return null;
+
+  final properties = row['custom_properties'];
+  return CharacterInventoryWeaponProperties(
+    damageDice: damageDice,
+    damageType: damageType,
+    properties: properties is List
+        ? properties.whereType<String>().toList()
+        : const [],
   );
 }
 

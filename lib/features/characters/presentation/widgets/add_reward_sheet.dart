@@ -115,6 +115,10 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
                 customName: picked.customName,
                 displayName: picked.displayName,
                 quantity: picked.quantity,
+                customDescription: picked.customDescription,
+                customDamageDice: picked.customDamageDice,
+                customDamageType: picked.customDamageType,
+                customProperties: picked.customProperties,
               )
             : RewardItemDraft(
                 itemId: picked.item!.id,

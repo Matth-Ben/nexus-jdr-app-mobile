@@ -381,6 +381,10 @@ class _FakeCharacterRepository implements CharacterRepository {
     required String characterId,
     required String customName,
     required int quantity,
+    String? description,
+    String? damageDice,
+    String? damageType,
+    List<String> properties = const [],
   }) {
     throw UnimplementedError();
   }

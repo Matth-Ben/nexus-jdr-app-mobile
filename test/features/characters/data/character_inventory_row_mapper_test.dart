@@ -109,6 +109,48 @@ void main() {
     });
   });
 
+  group('CharacterInventoryRowMapper.parseCustomWeaponProperties', () {
+    test('résout custom_damage_dice/custom_damage_type/custom_properties '
+        "d'un objet personnalisé \"Arme\"", () {
+      final result = CharacterInventoryRowMapper.parseCustomWeaponProperties({
+        'custom_damage_dice': '2d6',
+        'custom_damage_type': 'contondant',
+        'custom_properties': ['lourde', 'deux mains'],
+      });
+
+      expect(result, isNotNull);
+      expect(result!.damageDice, '2d6');
+      expect(result.damageType, 'contondant');
+      expect(result.properties, ['lourde', 'deux mains']);
+      // Pas de portée pour une arme personnalisée (hors scope de la sheet).
+      expect(result.rangeNormal, isNull);
+      expect(result.rangeMax, isNull);
+    });
+
+    test('custom_properties absente -> liste vide, jamais une exception', () {
+      final result = CharacterInventoryRowMapper.parseCustomWeaponProperties({
+        'custom_damage_dice': '1d4',
+        'custom_damage_type': 'perforant',
+      });
+
+      expect(result!.properties, isEmpty);
+    });
+
+    test('null pour un objet personnalisé "Objet simple" (ni '
+        'custom_damage_dice ni custom_damage_type renseignés)', () {
+      expect(
+        CharacterInventoryRowMapper.parseCustomWeaponProperties({
+          'custom_description': 'Un simple cadeau.',
+        }),
+        isNull,
+      );
+      expect(
+        CharacterInventoryRowMapper.parseCustomWeaponProperties({}),
+        isNull,
+      );
+    });
+  });
+
   group('CharacterInventoryRowMapper.parseArmorProperties', () {
     test('résout ac_base/ac_dex_bonus/strength_requirement/'
         'stealth_disadvantage', () {
@@ -244,6 +286,46 @@ void main() {
       expect(result.single.consumable, isFalse);
       expect(result.single.weaponProperties, isNull);
       expect(result.single.armorProperties, isNull);
+    });
+
+    test('un objet personnalisé "Arme" résout description/weaponProperties '
+        'depuis les colonnes custom_description/custom_damage_dice/'
+        'custom_damage_type/custom_properties (pas `notes`, réservé à une '
+        'annotation personnelle distincte)', () {
+      final rows = [
+        {
+          'id': 'inv-11',
+          'item_id': null,
+          'custom_name': 'Zanbato ancestral',
+          'quantity': 1,
+          'equipped': false,
+          'notes': 'Trouvé dans le donjon du roi gobelin.',
+          'custom_description': 'Une lame transmise de génération en '
+              'génération.',
+          'custom_damage_dice': '2d6',
+          'custom_damage_type': 'tranchant',
+          'custom_properties': ['lourde', 'deux mains'],
+        },
+      ];
+
+      final result = CharacterInventoryRowMapper.toCharacterInventoryItems(
+        rows,
+        names: const {},
+        descriptions: const {},
+      );
+
+      final item = result.single;
+      expect(item.isCustom, isTrue);
+      expect(item.name, 'Zanbato ancestral');
+      expect(
+        item.description,
+        'Une lame transmise de génération en génération.',
+      );
+      expect(item.weaponProperties?.damageDice, '2d6');
+      expect(item.weaponProperties?.damageType, 'tranchant');
+      expect(item.weaponProperties?.properties, ['lourde', 'deux mains']);
+      // `notes` reste distinct, jamais réutilisé comme description.
+      expect(item.notes, 'Trouvé dans le donjon du roi gobelin.');
     });
 
     test('equipped == true est reflété tel quel', () {

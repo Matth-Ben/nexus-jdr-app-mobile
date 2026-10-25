@@ -234,6 +234,60 @@ void main() {
       expect(item.weaponProperties?.properties, ['versatile']);
     });
 
+    test('mappe un objet personnalisé "Arme" (description + dégâts/'
+        'propriétés depuis les colonnes `custom_*`, pas `weapon_properties`)', () {
+      final detail = mapSharedCharacterJson({
+        'character': {'id': 'char-1', 'name': 'Test'},
+        'inventory': [
+          {
+            'id': 'inv-2',
+            'item_id': null,
+            'custom_name': 'Zanbato ancestral',
+            'quantity': 1,
+            'equipped': false,
+            'custom_description': 'Une lame transmise de génération en '
+                'génération.',
+            'custom_damage_dice': '2d6',
+            'custom_damage_type': 'tranchant',
+            'custom_properties': ['lourde', 'deux mains'],
+          },
+        ],
+      });
+
+      expect(detail.inventory, hasLength(1));
+      final item = detail.inventory.single;
+      expect(item.isCustom, isTrue);
+      expect(item.name, 'Zanbato ancestral');
+      expect(
+        item.description,
+        'Une lame transmise de génération en génération.',
+      );
+      expect(item.weaponProperties?.damageDice, '2d6');
+      expect(item.weaponProperties?.damageType, 'tranchant');
+      expect(item.weaponProperties?.properties, ['lourde', 'deux mains']);
+    });
+
+    test('mappe un objet personnalisé "Objet simple" sans aucune colonne '
+        '`custom_*` renseignée (non-régression)', () {
+      final detail = mapSharedCharacterJson({
+        'character': {'id': 'char-1', 'name': 'Test'},
+        'inventory': [
+          {
+            'id': 'inv-3',
+            'item_id': null,
+            'custom_name': 'Amulette de famille',
+            'quantity': 1,
+            'equipped': false,
+          },
+        ],
+      });
+
+      final item = detail.inventory.single;
+      expect(item.name, 'Amulette de famille');
+      expect(item.description, isNull);
+      expect(item.weaponProperties, isNull);
+    });
+
     test('renvoie une fiche exploitable même avec un json quasi vide '
         '(character absent)', () {
       final detail = mapSharedCharacterJson(const {});

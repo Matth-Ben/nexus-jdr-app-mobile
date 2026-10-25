@@ -110,6 +110,36 @@ abstract final class CharacterInventoryRowMapper {
     );
   }
 
+  /// Résout les colonnes `custom_damage_dice`/`custom_damage_type`/
+  /// `custom_properties` d'une ligne `character_inventory` (objet
+  /// personnalisé "Arme", voir `add_item_flow.dart::CustomItemPickResult`)
+  /// en [CharacterInventoryWeaponProperties] — `null` si ni l'un ni l'autre
+  /// de `custom_damage_dice`/`custom_damage_type` n'est renseigné (objet
+  /// personnalisé "Objet simple", ou objet personnalisé créé avant
+  /// l'introduction de ces colonnes). Pas de portée pour une arme
+  /// personnalisée (hors scope de la sheet de création, voir
+  /// `CustomItemPickResult`) — [CharacterInventoryWeaponProperties
+  /// .rangeNormal]/[CharacterInventoryWeaponProperties.rangeMax] restent
+  /// donc toujours `null` ici.
+  static CharacterInventoryWeaponProperties? parseCustomWeaponProperties(
+    Map<String, dynamic> row,
+  ) {
+    final damageDice = row['custom_damage_dice'] as String?;
+    final damageType = row['custom_damage_type'] as String?;
+    if (damageDice == null && damageType == null) return null;
+
+    final propertiesRaw = row['custom_properties'];
+    final properties = propertiesRaw is List
+        ? propertiesRaw.whereType<String>().toList()
+        : const <String>[];
+
+    return CharacterInventoryWeaponProperties(
+      damageDice: damageDice,
+      damageType: damageType,
+      properties: properties,
+    );
+  }
+
   /// Résout `armor_properties` (embarquée sous `items`) en
   /// [CharacterInventoryArmorProperties], `null` si absente ou si
   /// `ac_base` est manquant/d'un type inattendu (`ac_base` est `not null`
@@ -193,13 +223,17 @@ abstract final class CharacterInventoryRowMapper {
           totalWeight: hasKnownWeight ? unitWeight * quantity : null,
           unitWeight: unitWeight,
           costAmount: itemId != null ? parseCostAmount(itemRow?['cost']) : null,
-          description: itemId != null ? descriptions[itemId.toString()] : null,
+          description: itemId != null
+              ? descriptions[itemId.toString()]
+              : row['custom_description'] as String?,
           rarity: itemRow?['rarity'] as String?,
           requiresAttunement: itemRow?['requires_attunement'] == true,
           isAttuned: row['is_attuned'] == true,
           consumable: itemRow?['consumable'] == true,
           notes: row['notes'] as String?,
-          weaponProperties: parseWeaponProperties(itemRow),
+          weaponProperties: itemId != null
+              ? parseWeaponProperties(itemRow)
+              : parseCustomWeaponProperties(row),
           armorProperties: parseArmorProperties(itemRow),
           weaponSlot: WeaponSlot.fromValue(row['weapon_slot'] as String?),
           acBonus: (itemRow?['ac_bonus'] as num?)?.toInt(),

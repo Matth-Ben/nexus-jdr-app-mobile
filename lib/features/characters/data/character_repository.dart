@@ -551,11 +551,23 @@ abstract class CharacterRepository {
   /// nouvelle ligne `character_inventory` avec `custom_name`, `item_id`
   /// nul.
   ///
+  /// [description]/[damageDice]/[damageType]/[properties] : colonnes
+  /// `custom_description`/`custom_damage_dice`/`custom_damage_type`/
+  /// `custom_properties` (voir `CustomItemPickResult`/
+  /// `PickedInventoryAddition.custom`) — toutes optionnelles, omises de
+  /// l'insertion plutôt qu'envoyées `null` explicitement quand non
+  /// renseignées (même convention que le reste de ce dépôt, ex.
+  /// [addReward]).
+  ///
   /// Mode hors ligne : mêmes règles que [useInventoryItem].
   Future<WriteOutcome> addCustomInventoryItem({
     required String characterId,
     required String customName,
     required int quantity,
+    String? description,
+    String? damageDice,
+    String? damageType,
+    List<String> properties = const [],
   });
 
   /// Ajoute une récompense (bouton "cadeau" du bandeau de l'onglet
@@ -1633,6 +1645,7 @@ class SupabaseCharacterRepository implements CharacterRepository {
             character_feats(feat_id, level_taken),
             character_inventory(
               id, item_id, custom_name, quantity, equipped, weapon_slot, is_attuned, notes,
+              custom_description, custom_damage_dice, custom_damage_type, custom_properties,
               items(
                 category, weight, cost, rarity, requires_attunement, consumable,
                 ac_bonus, ac_bonus_kind,
@@ -3341,6 +3354,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
     required String characterId,
     required String customName,
     required int quantity,
+    String? description,
+    String? damageDice,
+    String? damageType,
+    List<String> properties = const [],
   }) async {
     _requireOwnerId();
     if (!await _connectivityChecker.hasConnection()) {
@@ -3352,6 +3369,10 @@ class SupabaseCharacterRepository implements CharacterRepository {
         'character_id': characterId,
         'custom_name': customName,
         'quantity': quantity,
+        'custom_description': ?description,
+        'custom_damage_dice': ?damageDice,
+        'custom_damage_type': ?damageType,
+        if (properties.isNotEmpty) 'custom_properties': properties,
       });
       return WriteOutcome.synced;
     } on PostgrestException catch (error) {
@@ -3392,6 +3413,14 @@ class SupabaseCharacterRepository implements CharacterRepository {
               if (item.itemId != null) 'item_id': item.itemId,
               if (item.customName != null) 'custom_name': item.customName,
               'quantity': item.quantity,
+              if (item.customDescription != null)
+                'custom_description': item.customDescription,
+              if (item.customDamageDice != null)
+                'custom_damage_dice': item.customDamageDice,
+              if (item.customDamageType != null)
+                'custom_damage_type': item.customDamageType,
+              if (item.customProperties.isNotEmpty)
+                'custom_properties': item.customProperties,
             },
         ]);
       }

@@ -235,6 +235,10 @@ class _FakeInventoryCatalogRepository implements CharacterRepository {
     required String characterId,
     required String customName,
     required int quantity,
+    String? description,
+    String? damageDice,
+    String? damageType,
+    List<String> properties = const [],
   }) => throw UnimplementedError();
 
   @override
@@ -454,7 +458,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.byType(TextFormField).last,
+        find.byKey(const Key('customItemNameField')),
         'Amulette de famille',
       );
       await tester.pump();
@@ -489,7 +493,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Objet personnalisé'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField).last, 'Amulette');
+    await tester.enterText(
+      find.byKey(const Key('customItemNameField')),
+      'Amulette',
+    );
     await tester.pump();
     await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
     await tester.pumpAndSettle();
@@ -505,6 +512,62 @@ void main() {
     expect(lastItems!.single.quantity, 1);
     expect(lastItems!.single.isCustom, isTrue);
   });
+
+  testWidgets(
+    'validation avec un objet personnalisé "Arme" : onApply reçoit la '
+    'description/le dé de dégâts/le type de dégâts/les propriétés saisis '
+    '(mode "collecte locale")',
+    (tester) async {
+      await _pumpSheet(tester);
+
+      await tester.tap(find.text('Ajouter un objet'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Objet personnalisé'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('customItemNameField')),
+        'Zanbato ancestral',
+      );
+      await tester.enterText(
+        find.byKey(const Key('customItemDescriptionField')),
+        'Une relique familiale.',
+      );
+      await tester.pump();
+      await tester.tap(find.text('ARME'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('customItemDamageTypeField')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('customItemDamageTypeField')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Contondant').last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const Key('customItemPropertiesField')),
+      );
+      await tester.enterText(
+        find.byKey(const Key('customItemPropertiesField')),
+        'lourde',
+      );
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.widgetWithText(PrimaryButton, 'AJOUTER LA RÉCOMPENSE'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(lastItems, hasLength(1));
+      final item = lastItems!.single;
+      expect(item.isCustom, isTrue);
+      expect(item.customDescription, 'Une relique familiale.');
+      expect(item.customDamageDice, '1d6');
+      expect(item.customDamageType, 'contondant');
+      expect(item.customProperties, ['lourde']);
+    },
+  );
 
   testWidgets(
     '"+ Ajouter un objet" -> "Depuis le catalogue" ajoute une ligne à la '
