@@ -666,6 +666,16 @@ Constats relevés par `code-reviewer` en relecture de la branche `feat/character
     implacable" plutôt qu'un trait mécaniquement distinct — à vérifier si un doute sur le
     contenu Orc 2024 remonte à nouveau.
 
+## Ajouts liés à la description et aux stats d'arme des objets personnalisés (25/10/2026)
+
+Constat relevé par `dev-flutter` en implémentant la fonctionnalité (hors cahier des
+charges, décision produit directe de Matthias) — pas bloquant, le code est mergé tel
+quel.
+
+| ID | Sujet | Gravité | Correction proposée | État |
+|---|---|---|---|---|
+| D122 | Le butin de groupe (`group_treasure`/`GroupTreasureItem`, `add_to_group_treasure_sheet.dart`) réutilise le même `PickedInventoryAddition`/`RewardItemDraft` que l'ajout direct à l'inventaire et la sheet "Ajouter une récompense", mais `group_treasure.items` (jsonb) ne porte pas les colonnes `custom_description`/`custom_damage_dice`/`custom_damage_type`/`custom_properties` — un objet personnalisé "Arme" ajouté au butin de groupe puis réclamé perd sa description et ses stats d'arme. | basse (perte d'une information descriptive, pas une règle de jeu ni une perte de progression) | Étendre `group_treasure.items`/`GroupTreasureItem` pour porter les mêmes 4 champs, si cet usage (objet personnalisé-arme déposé en butin de groupe) se révèle réel en pratique | Ouvert, non traité (hors périmètre de la tâche d'origine, qui ne couvrait que l'ajout direct à l'inventaire et la sheet "Ajouter une récompense") |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont
