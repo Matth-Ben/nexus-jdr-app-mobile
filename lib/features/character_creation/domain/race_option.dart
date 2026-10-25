@@ -79,6 +79,20 @@ abstract class RaceOption with _$RaceOption {
     /// ajouter automatiquement cette arme, déjà équipée, à l'inventaire —
     /// jamais affiché tel quel dans l'UI de cette étape.
     int? naturalWeaponItemId,
+
+    /// `races.traits_2024` — traits raciaux spécifiques à l'édition 2024
+    /// (même forme jsonb que [traits], liste de `{name, description}`),
+    /// chantier "différenciation 2014/2024 pour les races" (24/10/2026).
+    /// `null` si cette race n'a pas de contenu 2024 distinct de [traits] —
+    /// soit parce qu'elle n'existe qu'en 2014 (Demi-elfe, voir
+    /// `presentation/race_step_screen.dart`, qui masque alors l'option en
+    /// édition 2024), soit parce qu'elle est commune aux deux éditions sans
+    /// texte de traits différent (Orc/Aasimar/Goliath...). Jamais utilisé
+    /// pour le calcul des bonus de caractéristiques (voir [abilityBonuses],
+    /// inchangé par ce chantier) — uniquement pour l'affichage des traits
+    /// (fiche personnage, `features/characters/data
+    /// /character_detail_row_mapper.dart::preferredTraitsRaw`).
+    List<RaceTrait>? traits2024,
   }) = _RaceOption;
 
   /// `true` si cette race vient du Manuel des Joueurs ("race de base"),

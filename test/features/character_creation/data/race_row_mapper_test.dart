@@ -104,6 +104,27 @@ void main() {
     });
   });
 
+  group('parseTraits2024', () {
+    test('parse une liste de {name, description}, même règles que '
+        'parseTraits', () {
+      final traits = RaceRowMapper.parseTraits2024([
+        {'name': 'Résilience naine', 'description': '...'},
+      ]);
+      expect(traits, [
+        const RaceTrait(name: 'Résilience naine', description: '...'),
+      ]);
+    });
+
+    test('null -> null (distinct d\'une liste vide : pas de contenu 2024 '
+        'propre à cette race)', () {
+      expect(RaceRowMapper.parseTraits2024(null), isNull);
+    });
+
+    test('type inattendu -> liste vide (comme parseTraits), pas null', () {
+      expect(RaceRowMapper.parseTraits2024('pas une liste'), isEmpty);
+    });
+  });
+
   group('toRaceOption', () {
     test('résout le nom via la map de traductions', () {
       final race = RaceRowMapper.toRaceOption(
@@ -200,6 +221,40 @@ void main() {
       );
 
       expect(race.isCoreSource, isFalse);
+    });
+
+    test('traits_2024 absent de la ligne -> traits2024 null (chantier '
+        'différenciation 2014/2024, 24/10/2026)', () {
+      final race = RaceRowMapper.toRaceOption(
+        {'id': 2, 'ability_bonuses': {}, 'traits': []},
+        names: const {'2': 'Elfe'},
+      );
+
+      expect(race.traits2024, isNull);
+    });
+
+    test('traits_2024 renseigné -> traits2024 résolu (même parsing que '
+        'traits)', () {
+      final race = RaceRowMapper.toRaceOption(
+        {
+          'id': 3,
+          'ability_bonuses': {'con': 2},
+          'traits': [
+            {'name': 'Résilience naine (2014)', 'description': '...'},
+          ],
+          'traits_2024': [
+            {'name': 'Résilience naine (2024)', 'description': '...'},
+          ],
+        },
+        names: const {'3': 'Nain'},
+      );
+
+      expect(race.traits2024, [
+        const RaceTrait(name: 'Résilience naine (2024)', description: '...'),
+      ]);
+      expect(race.traits, [
+        const RaceTrait(name: 'Résilience naine (2014)', description: '...'),
+      ]);
     });
   });
 
@@ -480,5 +535,33 @@ void main() {
         expect(subrace.name, 'Sous-race #42');
       },
     );
+
+    test('traits_2024 absent -> traits2024 null', () {
+      final subrace = RaceRowMapper.toSubraceOption(
+        {'id': 5, 'race_id': 2, 'ability_bonuses': {}, 'traits': []},
+        names: const {'5': 'Haut-elfe'},
+      );
+
+      expect(subrace.traits2024, isNull);
+    });
+
+    test('traits_2024 renseigné -> traits2024 résolu', () {
+      final subrace = RaceRowMapper.toSubraceOption(
+        {
+          'id': 5,
+          'race_id': 2,
+          'ability_bonuses': {},
+          'traits': [],
+          'traits_2024': [
+            {'name': 'Cantrip elfique', 'description': '...'},
+          ],
+        },
+        names: const {'5': 'Haut-elfe'},
+      );
+
+      expect(subrace.traits2024, [
+        const RaceTrait(name: 'Cantrip elfique', description: '...'),
+      ]);
+    });
   });
 }

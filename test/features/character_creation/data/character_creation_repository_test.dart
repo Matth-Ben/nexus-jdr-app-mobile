@@ -2185,12 +2185,14 @@ void _testCatalogTtl({
 
     test('lignée choisie explicitement (Tieffelin) : lineage_id = son id, '
         'aucune requête race_lineages (la dérivation ne sert qu\'aux races '
-        'sans choix explicite, voir Gnome/Génasi ci-dessous)', () async {
+        'sans choix explicite, voir Gnome/Génasi ci-dessous), quelle que '
+        'soit l\'édition', () async {
       final result = await createAndCapture(
         draft: const CharacterCreationDraft(
           classId: 3,
           raceId: 9,
           lineageId: 32,
+          edition: '2014',
         ),
       );
 
@@ -2198,15 +2200,43 @@ void _testCatalogTtl({
       expect(result.requestedTables, isNot(contains('race_lineages')));
     });
 
+    test('édition 2024, Gnome des forêts (sous-race correspondant à une ligne '
+        'race_lineages) : lineage_id dérivé automatiquement de la sous-race '
+        'choisie', () async {
+      final result = await createAndCapture(
+        draft: const CharacterCreationDraft(
+          classId: 3,
+          raceId: 6,
+          subraceId: 8,
+          edition: '2024',
+        ),
+        tableRows: {
+          'race_lineages': const [
+            {'id': 23},
+          ],
+        },
+      );
+
+      expect(result.characterInsert['lineage_id'], 23);
+    });
+
     test(
-      'Gnome des forêts (sous-race correspondant à une ligne race_lineages) '
-      ': lineage_id dérivé automatiquement de la sous-race choisie',
+      // Chantier "différenciation 2014/2024 pour les races" (24/10/2026) :
+      // la dérivation AUTOMATIQUE depuis la sous-race (Gnome/Génasi) est
+      // réservée à l'édition 2024 — en 2014, le personnage garde uniquement
+      // `subrace_id`, les sorts raciaux innés revenant au système
+      // `subrace_id` déjà existant (comportement d'avant l'introduction du
+      // système "Lignée"). Aucune requête `race_lineages` ne doit même être
+      // envoyée dans ce cas.
+      'édition 2014, Gnome des forêts : AUCUNE dérivation automatique, '
+      'lineage_id reste nul malgré la ligne race_lineages correspondante',
       () async {
         final result = await createAndCapture(
           draft: const CharacterCreationDraft(
             classId: 3,
             raceId: 6,
             subraceId: 8,
+            edition: '2014',
           ),
           tableRows: {
             'race_lineages': const [
@@ -2215,33 +2245,45 @@ void _testCatalogTtl({
           },
         );
 
-        expect(result.characterInsert['lineage_id'], 23);
+        expect(result.characterInsert['lineage_id'], isNull);
+        expect(result.requestedTables, isNot(contains('race_lineages')));
       },
     );
 
-    test('Gnome des profondeurs (sous-race SANS ligne race_lineages '
-        'correspondante) : lineage_id reste absent/nul', () async {
-      final result = await createAndCapture(
-        draft: const CharacterCreationDraft(
-          classId: 3,
-          raceId: 6,
-          subraceId: 99,
-        ),
-        tableRows: const {'race_lineages': []},
-      );
+    test(
+      'édition 2024, Gnome des profondeurs (sous-race SANS ligne '
+      'race_lineages correspondante) : lineage_id reste absent/nul',
+      () async {
+        final result = await createAndCapture(
+          draft: const CharacterCreationDraft(
+            classId: 3,
+            raceId: 6,
+            subraceId: 99,
+            edition: '2024',
+          ),
+          tableRows: const {'race_lineages': []},
+        );
 
-      expect(result.characterInsert['lineage_id'], isNull);
-    });
+        expect(result.characterInsert['lineage_id'], isNull);
+      },
+    );
 
-    test('ni lignée explicite ni sous-race (ex. Humain) : aucune requête '
-        'race_lineages, lineage_id reste nul', () async {
-      final result = await createAndCapture(
-        draft: const CharacterCreationDraft(classId: 3, raceId: 2),
-      );
+    test(
+      'ni lignée explicite ni sous-race (ex. Humain) : aucune requête '
+      'race_lineages, lineage_id reste nul, quelle que soit l\'édition',
+      () async {
+        final result = await createAndCapture(
+          draft: const CharacterCreationDraft(
+            classId: 3,
+            raceId: 2,
+            edition: '2024',
+          ),
+        );
 
-      expect(result.characterInsert['lineage_id'], isNull);
-      expect(result.requestedTables, isNot(contains('race_lineages')));
-    });
+        expect(result.characterInsert['lineage_id'], isNull);
+        expect(result.requestedTables, isNot(contains('race_lineages')));
+      },
+    );
 
     // Chantier "choix d'édition 2014/2024 par personnage" :
     // `draft.edition` est persisté tel quel dans `characters.edition`,

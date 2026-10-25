@@ -61,6 +61,28 @@ abstract final class CharacterDetailRowMapper {
   /// race_row_mapper.dart`), dupliqué ici pour ne jamais coupler les deux
   /// fonctionnalités entre elles (voir la doc de classe de
   /// [CharacterRacialTrait]).
+  /// Choisit, pour une ligne brute `races`/`subraces` donnée, entre
+  /// `traits_2024` et `traits` — chantier "différenciation 2014/2024 pour
+  /// les races" (24/10/2026) : `traits_2024` si le personnage est en
+  /// édition 2024 ([edition]) ET que cette race/sous-race a effectivement
+  /// un contenu 2024 distinct (colonne non nulle) ; sinon [traits]
+  /// (comportement 2014 inchangé, ou race/sous-race sans contenu 2024
+  /// propre, ex. Orc/Aasimar/Goliath qui n'ont que `traits`). `entityRow`
+  /// `null` (personnage sans race/sans sous-race) retombe sur `null`, lu par
+  /// [parseRaceTraits] comme une liste vide — même règle que l'appel direct
+  /// à `entityRow?['traits']` d'avant ce chantier.
+  static dynamic preferredTraitsRaw(
+    Map<String, dynamic>? entityRow, {
+    required String edition,
+  }) {
+    if (entityRow == null) return null;
+    if (edition == '2024') {
+      final traits2024 = entityRow['traits_2024'];
+      if (traits2024 != null) return traits2024;
+    }
+    return entityRow['traits'];
+  }
+
   static List<CharacterRacialTrait> parseRaceTraits(dynamic raw) {
     if (raw is! List) {
       return const [];

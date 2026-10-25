@@ -17,23 +17,37 @@ abstract final class FinalAbilityScoresResolver {
   /// [racialBonusChoices] : bonus raciaux au choix répartis par le joueur
   /// (`CharacterCreationDraft.racialBonusChoices`, voir
   /// `domain/racial_bonus_choice.dart`), ajoutés aux bonus fixes.
+  ///
+  /// [edition] (`CharacterCreationDraft.edition`) pilote si le bonus racial
+  /// FIXE du catalogue (`RaceOption.abilityBonuses`/`SubraceOption
+  /// .abilityBonuses`) est ajouté — chantier "différenciation 2014/2024 pour
+  /// les races" (24/10/2026) : en 2014, oui (comportement d'avant ce
+  /// chantier, inchangé) ; en 2024, non (RAW 2024, l'espèce ne donne plus de
+  /// bonus de caractéristique, modélisé entièrement par [racialBonusChoices]
+  /// — voir `presentation/ability_score_step_screen.dart`, qui impose
+  /// systématiquement un choix libre dans ce cas). Même principe que
+  /// [AbilityScoreModifierCalculator.racialBonusFor], utilisé à l'identique
+  /// à l'étape 4/9 pour l'affichage "Modificateur +X".
   static Map<String, int> resolve({
     required Map<String, int> baseScores,
     required RaceCatalog raceCatalog,
     required int? raceId,
     required int? subraceId,
+    required String edition,
     Map<String, int> racialBonusChoices = const {},
   }) {
     return {
       for (final entry in baseScores.entries)
         entry.key:
             entry.value +
-            AbilityScoreModifierCalculator.racialBonusFor(
-              abilityKey: entry.key,
-              catalog: raceCatalog,
-              raceId: raceId,
-              subraceId: subraceId,
-            ) +
+            (edition == '2024'
+                ? 0
+                : AbilityScoreModifierCalculator.racialBonusFor(
+                    abilityKey: entry.key,
+                    catalog: raceCatalog,
+                    raceId: raceId,
+                    subraceId: subraceId,
+                  )) +
             (racialBonusChoices[entry.key] ?? 0),
     };
   }

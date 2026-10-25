@@ -314,14 +314,14 @@ class SupabaseCharacterCreationRepository
       final raceRows = await _client
           .from('races')
           .select(
-            'id, ability_bonuses, traits, is_incomplete, source, '
-            'skill_choice, tool_choice, skill_proficiencies, '
+            'id, ability_bonuses, traits, traits_2024, is_incomplete, '
+            'source, skill_choice, tool_choice, skill_proficiencies, '
             'natural_weapon_item_id',
           )
           .order('id', ascending: true);
       final subraceRows = await _client
           .from('subraces')
-          .select('id, race_id, ability_bonuses, traits')
+          .select('id, race_id, ability_bonuses, traits, traits_2024')
           .order('id', ascending: true);
       final raceNameRows = await _fetchTranslationRows(
         entityType: 'race',
@@ -1103,6 +1103,7 @@ class SupabaseCharacterCreationRepository
       raceCatalog: raceCatalog,
       raceId: draft.raceId,
       subraceId: draft.subraceId,
+      edition: draft.edition,
       racialBonusChoices: draft.racialBonusChoices,
     );
     final constitutionModifier = AbilityScoreRules.abilityModifier(
@@ -1152,23 +1153,38 @@ class SupabaseCharacterCreationRepository
     // seule dérivation ne doit jamais empêcher la création du personnage,
     // `lineage_id` reste simplement `null` comme s'il n'y avait pas de
     // lignée à déduire.
+    //
+    // Cette dérivation AUTOMATIQUE (depuis la sous-race) est réservée à
+    // l'édition 2024 (chantier "différenciation 2014/2024 pour les races",
+    // 24/10/2026) : en 2014, le Gnome/Génasi garde uniquement `subrace_id`,
+    // les sorts raciaux innés revenant alors au système `subrace_id` déjà
+    // existant (`RacialInnateSpellRepository`) — c'est le comportement
+    // d'AVANT l'introduction du système "Lignée", qui représente
+    // correctement le 2014 par coïncidence historique (ces lignes
+    // existaient déjà). Le choix EXPLICITE (`draft.lineageId`, Drakéide/
+    // Tieffelin/Goliath) n'est lui PAS conditionné ici : pour le Tieffelin
+    // en 2014, c'est `presentation/race_step_screen.dart` qui écrit
+    // directement la lignée Infernal dans le brouillon (RAW 2014 n'a qu'un
+    // seul legs, sans choix), pas cette méthode.
     var lineageId = draft.lineageId;
-    final raceIdForLineage = draft.raceId;
-    final subraceIdForLineage = draft.subraceId;
-    if (lineageId == null &&
-        raceIdForLineage != null &&
-        subraceIdForLineage != null) {
-      try {
-        final rows = await _client
-            .from('race_lineages')
-            .select('id')
-            .eq('race_id', raceIdForLineage)
-            .eq('subrace_id', subraceIdForLineage)
-            .limit(1);
-        final derivedId = rows.firstOrNull?['id'];
-        if (derivedId is num) lineageId = derivedId.toInt();
-      } catch (_) {
-        // Best-effort : voir le commentaire ci-dessus.
+    if (draft.edition == '2024') {
+      final raceIdForLineage = draft.raceId;
+      final subraceIdForLineage = draft.subraceId;
+      if (lineageId == null &&
+          raceIdForLineage != null &&
+          subraceIdForLineage != null) {
+        try {
+          final rows = await _client
+              .from('race_lineages')
+              .select('id')
+              .eq('race_id', raceIdForLineage)
+              .eq('subrace_id', subraceIdForLineage)
+              .limit(1);
+          final derivedId = rows.firstOrNull?['id'];
+          if (derivedId is num) lineageId = derivedId.toInt();
+        } catch (_) {
+          // Best-effort : voir le commentaire ci-dessus.
+        }
       }
     }
 

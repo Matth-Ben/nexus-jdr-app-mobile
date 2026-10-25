@@ -14,6 +14,7 @@ import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/creation_step_help.dart';
+import '../domain/lineage_choice_catalog.dart';
 import '../domain/race_catalog.dart';
 import '../domain/race_option.dart';
 import '../domain/race_step_selection.dart';
@@ -59,6 +60,16 @@ import 'widgets/step_help_sheet.dart';
 /// pattern à ne pas factoriser dans `core/widgets` à cette occasion — voir
 /// le principe de duplication assumée documenté dans ce module).
 ///
+/// Chantier "différenciation 2014/2024 pour les races" (24/10/2026) :
+/// - le Demi-elfe (et toute race sans équivalent 2024, `RaceOption
+///   .traits2024` nul) est grisée/non sélectionnable en édition 2024, voir
+///   [_isRaceAvailable] ;
+/// - le Nain/l'Halfelin, "unifiés" sans sous-race en 2024 (`RaceCatalog
+///   .isUnifiedRaceIn2024`), sautent `SubraceStepScreen` même s'ils ont des
+///   lignes `subraces` (réservées à l'édition 2014) — voir [_submit] ;
+/// - le Tieffelin en 2014 saute `LineageStepScreen` (RAW 2014 n'a qu'un seul
+///   legs, l'Infernal, sans choix) — voir [_submit]/[_infernalLineageId].
+///
 /// Mode modification (`CharacterEditSession`, voir [_isRaceLocked]) : la
 /// race est verrouillée inconditionnellement (décision du 09/10/2026, D53 de
 /// `docs/dette-technique.md`) — même patron que la classe verrouillée
@@ -88,6 +99,20 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   int? _selectedRaceId;
   bool _isCustomRaceSelected = false;
 
+  /// Édition du brouillon, lue une seule fois comme [_selectedRaceId] : fixée
+  /// à `EditionStepScreen`, TOUTE PREMIÈRE étape de l'assistant, avant
+  /// celle-ci. Pilote [_isRaceAvailable]/[_submit] — chantier
+  /// "différenciation 2014/2024 pour les races" (24/10/2026).
+  late String _edition;
+
+  /// Race Tieffelin — RAW 2014 n'a qu'un seul legs (Infernal), sans choix
+  /// (contrairement à 2024, qui en propose trois : Infernal/Abyssal/
+  /// Chthonien) : voir [_submit], qui contourne `LineageStepScreen` pour ce
+  /// cas précis plutôt que d'y afficher un unique choix verrouillé — option
+  /// la plus simple retenue pour ce chantier. Même précédent de constante
+  /// figée que `LineageStepScreen._LineageStepCopy`.
+  static const int _tieffelinRaceId = 9;
+
   @override
   void initState() {
     super.initState();
@@ -103,6 +128,7 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
     // n'appartient plus à cet écran, voir `SubraceStepScreen`.
     final draft = ref.read(characterCreationDraftControllerProvider);
     _selectedRaceId = draft.raceId;
+    _edition = draft.edition;
     _isCustomRaceSelected = draft.raceCustomText != null;
     if (_isCustomRaceSelected) {
       _customRaceController.text = draft.raceCustomText!;
@@ -129,8 +155,18 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
     return session != null && !session.canChangeRace;
   }
 
-  void _selectRace(int raceId) {
-    if (_isRaceLocked) return;
+  /// `false` si [race] n'existe pas RAW en édition 2024 (Demi-elfe à ce
+  /// jour, remplacée par un choix Elfe/Humain avec personnalisation
+  /// narrative non modélisé ici) — toujours `true` en édition 2014. Pilote
+  /// `SelectableOptionTile.enabled`/[_selectRace] dans [_raceGroupSection] —
+  /// chantier "différenciation 2014/2024 pour les races" (24/10/2026).
+  bool _isRaceAvailable(RaceOption race) {
+    if (_edition != '2024') return true;
+    return race.traits2024 != null;
+  }
+
+  void _selectRace(int raceId, {required bool available}) {
+    if (_isRaceLocked || !available) return;
     setState(() {
       _isCustomRaceSelected = false;
       _selectedRaceId = raceId;
@@ -172,16 +208,16 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   /// qu'elle soit : il sera (ré)écrit par `SubraceStepScreen` pour les races
   /// qui en ont — voir la doc de classe. La navigation dépend de [catalog]
   /// (déjà chargé, voir `_buildContent`) : une race avec sous-races pousse
-  /// l'étape "Sous-race" ; sinon, si elle a des lignées 2024 à choisir
-  /// (`lineageChoiceCatalogProvider`, déjà résolu à ce stade — voir
-  /// `_buildContent`, qui le `watch` pour qu'il soit préchargé pendant que
-  /// l'utilisateur parcourt cet écran), l'étape "Lignée" est poussée à la
-  /// place ; sinon, l'étape 2/9 "Classe" est atteinte directement. Un
-  /// catalogue de lignées pas encore résolu (chargement/erreur, rare — voir
-  /// `_buildContent`) retombe silencieusement sur l'étape 2/9 directement :
-  /// mieux vaut sauter ce choix que bloquer la progression de l'assistant
-  /// sur un second appel réseau que l'utilisateur ne voit jamais échouer
-  /// explicitement ici.
+  /// l'étape "Sous-race" ; sinon, si elle a des lignées à choisir dans
+  /// L'ÉDITION DU BROUILLON (`lineageChoiceCatalogProvider(edition:
+  /// draft.edition)`, déjà résolu à ce stade — voir `_buildContent`, qui le
+  /// `watch` pour qu'il soit préchargé pendant que l'utilisateur parcourt cet
+  /// écran), l'étape "Lignée" est poussée à la place ; sinon, l'étape 2/9
+  /// "Classe" est atteinte directement. Un catalogue de lignées pas encore
+  /// résolu (chargement/erreur, rare — voir `_buildContent`) retombe
+  /// silencieusement sur l'étape 2/9 directement : mieux vaut sauter ce choix
+  /// que bloquer la progression de l'assistant sur un second appel réseau que
+  /// l'utilisateur ne voit jamais échouer explicitement ici.
   void _submit(RaceCatalog catalog) {
     // Race verrouillée : ni sous-race/lignée à choisir ni brouillon à
     // changer — `SubraceStepScreen`/`LineageStepScreen` deviennent
@@ -205,20 +241,74 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
               : null,
         );
     final selectedRaceId = _selectedRaceId;
+    // Nain/Halfelin en édition 2024 : race "unifiée", sans sous-race du tout
+    // (voir `RaceCatalog.isUnifiedRaceIn2024`) — `SubraceStepScreen` reste
+    // sautée même si [catalog] a bien des lignes `subraces` pour cette race
+    // (celles-ci restent utilisées en 2014).
+    final skipUnifiedSubrace =
+        selectedRaceId != null &&
+        draft.edition == '2024' &&
+        catalog.isUnifiedRaceIn2024(selectedRaceId);
     if (!_isCustomRaceSelected &&
         selectedRaceId != null &&
-        catalog.subracesOf(selectedRaceId).isNotEmpty) {
+        catalog.subracesOf(selectedRaceId).isNotEmpty &&
+        !skipUnifiedSubrace) {
       context.push('/characters/new/subrace');
       return;
     }
-    final lineageCatalog = ref.read(lineageChoiceCatalogProvider).value;
+    // Tieffelin en 2014 : vérifié EN PREMIER, INDÉPENDAMMENT du catalogue de
+    // lignées filtré par [draft.edition] ci-dessous — `race_lineages` n'a
+    // AUCUNE ligne `phb_ancestry` pour le Tieffelin (RAW 2014 n'a pas de
+    // choix d'ascendance du tout, contrairement au Drakéide), donc
+    // `isConcerned(9)` y serait toujours `false` et ce cas ne serait jamais
+    // atteint s'il dépendait de ce même catalogue. Le legs "Infernal" lui-
+    // même n'existe QUE sous `'2024_lineage'` (il représente mécaniquement
+    // le Tieffelin RAW 2014, par coïncidence de modélisation) : le lookup
+    // interroge donc explicitement `edition: '2024'`, jamais
+    // `draft.edition` — voir la doc de [_tieffelinRaceId] et de
+    // `LineageChoiceRepository.fetchLineageChoices`.
     if (!_isCustomRaceSelected &&
+        selectedRaceId == _tieffelinRaceId &&
+        draft.edition == '2014') {
+      final infernalCatalog = ref
+          .read(lineageChoiceCatalogProvider(edition: '2024'))
+          .value;
+      final infernalId = infernalCatalog == null
+          ? null
+          : _infernalLineageId(infernalCatalog);
+      if (infernalId != null) {
+        ref
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setLineage(infernalId);
+      }
+      context.push('/characters/new/step-2');
+      return;
+    }
+    final lineageCatalog = ref
+        .read(lineageChoiceCatalogProvider(edition: draft.edition))
+        .value;
+    final isLineageConcerned =
+        !_isCustomRaceSelected &&
         selectedRaceId != null &&
-        (lineageCatalog?.isConcerned(selectedRaceId) ?? false)) {
+        (lineageCatalog?.isConcerned(selectedRaceId) ?? false);
+    if (isLineageConcerned) {
       context.push('/characters/new/lineage');
     } else {
       context.push('/characters/new/step-2');
     }
+  }
+
+  /// Legs "Infernal" de [catalog] pour le Tieffelin, seul legs RAW 2014 (voir
+  /// [_tieffelinRaceId]) — recherché par nom plutôt qu'un `race_lineages.id`
+  /// en dur (potentiellement différent entre environnements de seed), `null`
+  /// si introuvable (cas défensif, ne devrait pas arriver avec les données
+  /// actuelles : `_submit` retombe alors sur l'étape 2/9 sans lignée
+  /// assignée plutôt que de planter).
+  int? _infernalLineageId(LineageChoiceCatalog catalog) {
+    for (final option in catalog.optionsFor(_tieffelinRaceId)) {
+      if (option.name == 'Infernal') return option.id;
+    }
+    return null;
   }
 
   @override
@@ -278,13 +368,43 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
     // `watch` (pas seulement `read` dans `_submit`) : déclenche son
     // chargement dès l'affichage de cet écran plutôt qu'à la soumission,
     // pour qu'il soit déjà résolu — pour N'IMPORTE QUELLE race — au moment
-    // où l'utilisateur tape "Suivant" (voir la doc de [_submit]).
-    ref.watch(lineageChoiceCatalogProvider);
-    final canProceed = RaceStepSelection.canProceed(
-      isCustomRace: _isCustomRaceSelected,
-      customRaceText: _customRaceController.text,
-      selectedRaceId: _selectedRaceId,
-    );
+    // où l'utilisateur tape "Suivant" (voir la doc de [_submit]). Catalogue
+    // de l'édition du brouillon (celui réellement utilisé pour la décision
+    // générique de `_submit`) ; en 2014, précharge AUSSI le catalogue
+    // `'2024'` (toujours nécessaire pour le lookup du legs "Infernal" du
+    // Tieffelin, voir [_infernalLineageId]) — jamais l'inverse (un brouillon
+    // 2024 n'a besoin que du sien).
+    ref.watch(lineageChoiceCatalogProvider(edition: _edition));
+    if (_edition == '2014') {
+      ref.watch(lineageChoiceCatalogProvider(edition: '2024'));
+    }
+    // Défense en profondeur (retour QA, chantier "différenciation 2014/2024
+    // pour les races", 24/10/2026) : `CharacterCreationDraftController
+    // .setEdition` efface déjà `raceId` à la source dès que l'édition change
+    // réellement (voir sa doc), donc ce cas ne devrait normalement plus
+    // arriver par la navigation normale de l'assistant — mais revérifier ici
+    // la disponibilité de la sélection réhydratée coûte peu et protège contre
+    // toute autre voie qui écrirait le brouillon sans passer par ce setter
+    // (ex. une future régression). Une race personnalisée ou introuvable
+    // dans [catalog] (ne devrait pas arriver, race supprimée entre deux
+    // sessions) n'est jamais bloquée ici : seule une race RÉSOLUE et
+    // explicitement indisponible dans l'édition courante l'est.
+    final selectedRaceId = _selectedRaceId;
+    RaceOption? selectedRace;
+    if (selectedRaceId != null) {
+      for (final race in catalog.races) {
+        if (race.id == selectedRaceId) selectedRace = race;
+      }
+    }
+    final selectedRaceStillAvailable =
+        selectedRace == null || _isRaceAvailable(selectedRace);
+    final canProceed =
+        selectedRaceStillAvailable &&
+        RaceStepSelection.canProceed(
+          isCustomRace: _isCustomRaceSelected,
+          customRaceText: _customRaceController.text,
+          selectedRaceId: _selectedRaceId,
+        );
     // `catalog.races` est déjà trié races de base puis races d'extension
     // (voir `data/character_creation_repository.dart::_mapRaceCatalogPayload`)
     // : un simple `where` préserve cet ordre dans chaque groupe, pas besoin
@@ -487,22 +607,42 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
       const SizedBox(height: AppSpacing.sm),
       for (var i = 0; i < races.length; i++) ...[
         if (i > 0) const SizedBox(height: AppSpacing.sm),
-        SelectableOptionTile(
-          title: races[i].name,
-          subtitle: races[i].summaryLine,
-          onInfo: () => showStepHelpSheet(
-            context,
-            StepHelpContent(title: races[i].name, body: races[i].infoText),
-          ),
-          selected: !_isCustomRaceSelected && _selectedRaceId == races[i].id,
-          leading: AccentIconBadge(
-            index: startIndex + i,
-            icon: Icons.shield_rounded,
-          ),
-          onTap: () => _selectRace(races[i].id),
-        ),
+        _raceTile(races[i], startIndex + i),
       ],
     ];
+  }
+
+  /// Une tuile de [race] à l'index [badgeIndex] (couleur de
+  /// [AccentIconBadge]) — extrait de [_raceGroupSection] pour calculer
+  /// [_isRaceAvailable] une seule fois par race plutôt que plusieurs fois
+  /// inline.
+  Widget _raceTile(RaceOption race, int badgeIndex) {
+    final available = _isRaceAvailable(race);
+    return SelectableOptionTile(
+      title: race.name,
+      // Message explicite plutôt qu'un résumé de bonus désormais trompeur
+      // (ces bonus 2014 ne s'appliquent plus à cette race en 2024) — voir
+      // [_isRaceAvailable].
+      subtitle: available
+          ? race.summaryLine
+          : 'Indisponible en édition 2024 — remplacée par un choix '
+                'Elfe/Humain avec personnalisation narrative.',
+      enabled: available,
+      onInfo: available
+          ? () => showStepHelpSheet(
+              context,
+              StepHelpContent(title: race.name, body: race.infoText),
+            )
+          : null,
+      // `&& available` : une race devenue indisponible (ex. draft réhydrié
+      // par une autre voie que `setEdition`, voir la défense en profondeur
+      // de `_buildContent`) ne s'affiche jamais comme sélectionnée — éviter
+      // l'état visuel contradictoire "grisée ET bordure dorée".
+      selected:
+          !_isCustomRaceSelected && _selectedRaceId == race.id && available,
+      leading: AccentIconBadge(index: badgeIndex, icon: Icons.shield_rounded),
+      onTap: () => _selectRace(race.id, available: available),
+    );
   }
 }
 

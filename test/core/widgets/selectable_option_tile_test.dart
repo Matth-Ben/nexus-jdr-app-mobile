@@ -97,4 +97,90 @@ void main() {
 
     expect(find.byIcon(Icons.info_outline_rounded), findsNothing);
   });
+
+  group('enabled (chantier différenciation 2014/2024 pour les races, '
+      '24/10/2026)', () {
+    testWidgets('enabled: false -> onTap ignoré', (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        _wrap(
+          SelectableOptionTile(
+            title: 'Demi-elfe',
+            selected: false,
+            enabled: false,
+            onTap: () => taps++,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Demi-elfe'));
+      await tester.pump();
+
+      expect(taps, 0);
+    });
+
+    testWidgets('enabled: false avec onInfo -> onInfo aussi ignoré', (
+      tester,
+    ) async {
+      var infoTaps = 0;
+      await tester.pumpWidget(
+        _wrap(
+          SelectableOptionTile(
+            title: 'Demi-elfe',
+            selected: false,
+            enabled: false,
+            onTap: () {},
+            onInfo: () => infoTaps++,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.info_outline_rounded));
+      await tester.pump();
+
+      expect(infoTaps, 0);
+    });
+
+    testWidgets('enabled: false -> la tuile est estompée (Opacity 0.45)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          SelectableOptionTile(
+            title: 'Demi-elfe',
+            selected: false,
+            enabled: false,
+            onTap: () {},
+          ),
+        ),
+      );
+
+      final opacity = tester.widget<Opacity>(
+        find
+            .ancestor(
+              of: find.text('Demi-elfe'),
+              matching: find.byType(Opacity),
+            )
+            .first,
+      );
+      expect(opacity.opacity, 0.45);
+    });
+
+    testWidgets('enabled: true (défaut) -> aucune opacité réduite', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          SelectableOptionTile(title: 'Elfe', selected: false, onTap: () {}),
+        ),
+      );
+
+      final opacity = tester.widget<Opacity>(
+        find
+            .ancestor(of: find.text('Elfe'), matching: find.byType(Opacity))
+            .first,
+      );
+      expect(opacity.opacity, 1);
+    });
+  });
 }

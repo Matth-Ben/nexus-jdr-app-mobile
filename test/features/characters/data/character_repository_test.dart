@@ -757,6 +757,100 @@ void main() {
         },
       );
 
+      // Chantier "différenciation 2014/2024 pour les races" (24/10/2026).
+      test('racialTraits : personnage en édition 2024, race ET sous-race ayant '
+          'un `traits_2024` propre -> traits_2024 préféré à traits, pour les '
+          'deux (voir CharacterDetailRowMapper.preferredTraitsRaw)', () async {
+        final racialTraitRows =
+            Map<String, List<Map<String, dynamic>>>.from(tableRows)..addAll({
+              'characters': [
+                {
+                  ...tableRows['characters']!.single,
+                  'subrace_id': 11,
+                  'edition': '2024',
+                },
+              ],
+              'races': [
+                {
+                  'id': 1,
+                  'speed': 9,
+                  'traits': [
+                    {'name': 'Trait race 2014', 'description': ''},
+                  ],
+                  'traits_2024': [
+                    {'name': 'Trait race 2024', 'description': ''},
+                  ],
+                },
+              ],
+              'subraces': [
+                {
+                  'id': 11,
+                  'traits': [
+                    {'name': 'Trait sous-race 2014', 'description': ''},
+                  ],
+                  'traits_2024': [
+                    {'name': 'Trait sous-race 2024', 'description': ''},
+                  ],
+                },
+              ],
+            });
+
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: racialTraitRows,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+        final detail = await repository.fetchCharacterDetail(characterId);
+
+        expect(detail.racialTraits.map((t) => t.name), [
+          'Trait race 2024',
+          'Trait sous-race 2024',
+        ]);
+      });
+
+      test('racialTraits : personnage en édition 2024 mais race SANS '
+          '`traits_2024` (ex. Orc/Aasimar/Goliath) -> retombe sur traits, '
+          'comportement inchangé', () async {
+        final racialTraitRows =
+            Map<String, List<Map<String, dynamic>>>.from(tableRows)..addAll({
+              'characters': [
+                {...tableRows['characters']!.single, 'edition': '2024'},
+              ],
+              'races': [
+                {
+                  'id': 1,
+                  'speed': 9,
+                  'traits': [
+                    {'name': 'Seul contenu disponible', 'description': ''},
+                  ],
+                },
+              ],
+            });
+
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: racialTraitRows,
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+        final detail = await repository.fetchCharacterDetail(characterId);
+
+        expect(detail.racialTraits.map((t) => t.name), [
+          'Seul contenu disponible',
+        ]);
+      });
+
       test('feats : nom/description/prérequis résolus (description via '
           'translations, PAS confondue avec le nom — même garde-fou que '
           'spells/class_features ci-dessus), triés par niveau d\'acquisition '

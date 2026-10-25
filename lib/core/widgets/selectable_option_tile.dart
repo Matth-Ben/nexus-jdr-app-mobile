@@ -25,6 +25,7 @@ class SelectableOptionTile extends StatelessWidget {
     this.subtitleMaxLines = 1,
     this.onInfo,
     this.infoTooltip = 'Informations',
+    this.enabled = true,
     super.key,
   });
 
@@ -60,81 +61,96 @@ class SelectableOptionTile extends StatelessWidget {
   /// Libellé d'accessibilité du bouton ⓘ.
   final String infoTooltip;
 
+  /// `false` estompe la tuile (`Opacity` à 0.45, même valeur que
+  /// `CheckableOptionTile.enabled`) et désactive l'interaction ([onTap]/
+  /// [onInfo] ignorés même fournis) — ajouté pour l'étape 1/9 "Race" (chantier
+  /// "différenciation 2014/2024 pour les races", 24/10/2026) : masquage du
+  /// Demi-elfe (et toute race sans équivalent 2024) en édition 2024, voir
+  /// `presentation/race_step_screen.dart`. [subtitle] reste affiché tel
+  /// quel : c'est l'appelant qui y place le message d'indisponibilité
+  /// plutôt que d'ajouter un second champ dédié à ce composant partagé.
+  /// `true` par défaut : comportement inchangé pour tous les usages
+  /// existants (race, sous-race, lignée).
+  final bool enabled;
+
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: AppColors.parchmentCard,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(
-              color: selected ? AppColors.goldEnd : AppColors.woodLight,
-              width: selected ? AppBorders.cardEmphasis : AppBorders.card,
-            ),
-          ),
-          child: Row(
-            children: [
-              if (leading != null) ...[
-                leading!,
-                const SizedBox(width: AppSpacing.sm),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTypography.body(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle!,
-                        maxLines: subtitleMaxLines,
-                        overflow: subtitleMaxLines == null
-                            ? TextOverflow.clip
-                            : TextOverflow.ellipsis,
-                        style: AppTypography.body(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                    if (selected && selectedDetail != null) ...[
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        selectedDetail!,
-                        style: AppTypography.body(
-                          fontSize: 12,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+    return Opacity(
+      opacity: enabled ? 1 : 0.45,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: AppColors.parchmentCard,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: selected ? AppColors.goldEnd : AppColors.woodLight,
+                width: selected ? AppBorders.cardEmphasis : AppBorders.card,
               ),
-              if (onInfo != null)
-                IconButton(
-                  tooltip: infoTooltip,
-                  onPressed: onInfo,
-                  icon: const Icon(
-                    Icons.info_outline_rounded,
-                    color: AppColors.textSecondary,
+            ),
+            child: Row(
+              children: [
+                if (leading != null) ...[
+                  leading!,
+                  const SizedBox(width: AppSpacing.sm),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: AppTypography.body(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          maxLines: subtitleMaxLines,
+                          overflow: subtitleMaxLines == null
+                              ? TextOverflow.clip
+                              : TextOverflow.ellipsis,
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                      if (selected && selectedDetail != null) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          selectedDetail!,
+                          style: AppTypography.body(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                )
-              else
-                const SizedBox(width: AppSpacing.sm),
-              _RadioIndicator(selected: selected),
-            ],
+                ),
+                if (onInfo != null)
+                  IconButton(
+                    tooltip: infoTooltip,
+                    onPressed: enabled ? onInfo : null,
+                    icon: const Icon(
+                      Icons.info_outline_rounded,
+                      color: AppColors.textSecondary,
+                    ),
+                  )
+                else
+                  const SizedBox(width: AppSpacing.sm),
+                _RadioIndicator(selected: selected),
+              ],
+            ),
           ),
         ),
       ),
