@@ -29,6 +29,63 @@ _Rien pour l'instant._
 
 ---
 
+## [1.0.8] — 2026-10-26 (build 9)
+
+### Notes de version (stores)
+
+```
+<fr-FR>
+Création :
+• Règles 2014 ou 2024 au choix par personnage (races différenciées)
+• Connexion Google, pseudo optionnel, écran de bienvenue
+Personnages :
+• Sélection multiple et suppression groupée
+• Classe d'Armure ajustable
+• Traits raciaux et dons dans Aptitudes
+• Tir arcanique, Gravure runique, Infusions
+Groupes :
+• CA de chaque membre, MJ affiché en premier
+Corrigé : montée de niveau du Moine, sous-classe à l'import XML, limite de sorts préparés
+</fr-FR>
+```
+
+### Ajouté
+- Choix de l'édition des règles (2014 ou 2024) par personnage à la
+  création (#171), avec des règles raciales différenciées selon l'édition
+  (#182).
+- Connexion avec Google et pseudo optionnel à l'inscription (#147).
+- Carrousel de bienvenue à la première connexion (#148).
+- Liste des personnages : sélection multiple, suppression groupée et menu
+  d'actions au clic long (#156).
+- Ajustement manuel de la Classe d'Armure d'un personnage (#178).
+- Onglet Aptitudes : carte des traits raciaux et des dons (#179).
+- Tir arcanique, Gravure runique et Infusion d'objets câblés dans la
+  progression de classe (#159).
+- Groupes : Classe d'Armure de chaque membre affichée dans l'onglet
+  Membres (#177).
+
+### Modifié
+- Groupes : le MJ est affiché en premier dans la liste des membres (#146).
+- Les choix nommés de niveau 1 sont modifiables en édition de personnage
+  (#173).
+- Changer d'édition des règles pendant la création réinitialise la race
+  choisie (#182).
+
+### Corrigé
+- Un groupe ne disparaît plus quand le personnage qui y était lié est
+  supprimé (#146).
+- Montée de niveau débloquée pour le Moine Voie des quatre éléments
+  (#150), et résolution de ses disciplines élémentaires (#154).
+- Maîtrises de multiclassage de l'Artificier ajoutées (#149).
+- Aptitudes de sous-classe affichées sur la carte Compétences (#153).
+- Limite de sorts préparés plafonnée au vrai modificateur de
+  caractéristique (#155).
+- Import XML : la sous-classe résolue est bien enregistrée (#181).
+- Liste des personnages : message hors ligne dédoublonné, carte protégée
+  pendant une suppression groupée (#157).
+
+---
+
 ## [1.0.7] — 2026-10-15 (build 8)
 
 ### Notes de version (stores)
