@@ -869,6 +869,81 @@ void main() {
     );
 
     testWidgets(
+      '"Retirer" après un échec d\'envoi de la capture efface le bandeau '
+      'dédié',
+      (tester) async {
+        final repository = await _pumpSheet(tester);
+        repository.errorToThrow = const BugReportFailure(
+          'x',
+          kind: BugReportFailureKind.screenshotUpload,
+        );
+        await _fillFields(tester);
+        await _attachCapture(tester);
+        await _tapSend(tester);
+        expect(
+          find.textContaining("Impossible d'envoyer la capture"),
+          findsOneWidget,
+        );
+
+        await tester.ensureVisible(find.text('Retirer'));
+        await tester.tap(find.text('Retirer'));
+        await tester.pump();
+
+        expect(
+          find.textContaining("Impossible d'envoyer la capture"),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'nouvelle capture jointe après un échec d\'envoi de la capture : le '
+      'bandeau dédié disparaît',
+      (tester) async {
+        final repository = await _pumpSheet(tester);
+        repository.errorToThrow = const BugReportFailure(
+          'x',
+          kind: BugReportFailureKind.screenshotUpload,
+        );
+        await _fillFields(tester);
+        await _attachCapture(tester);
+        await _tapSend(tester);
+        expect(
+          find.textContaining("Impossible d'envoyer la capture"),
+          findsOneWidget,
+        );
+
+        await _openSourceSheet(tester);
+        await tester.tap(find.text('Choisir dans la galerie'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining("Impossible d'envoyer la capture"),
+          findsNothing,
+        );
+        expect(find.text('Capture jointe'), findsOneWidget);
+      },
+    );
+
+    testWidgets('un autre bandeau d\'envoi (générique) n\'est pas effacé par '
+        '"Retirer"', (tester) async {
+      final repository = await _pumpSheet(tester);
+      repository.errorToThrow = const BugReportFailure('internal_error');
+      await _fillFields(tester);
+      await _attachCapture(tester);
+      await _tapSend(tester);
+
+      await tester.ensureVisible(find.text('Retirer'));
+      await tester.tap(find.text('Retirer'));
+      await tester.pump();
+
+      expect(
+        find.text("Impossible d'envoyer le signalement. Réessayez."),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
       'échec générique avec une capture jointe : bandeau générique, image '
       'conservée',
       (tester) async {
@@ -922,6 +997,56 @@ void main() {
       },
     );
   });
+
+  group('bandeau d\'erreur d\'envoi', _scrollBackToBannerTests);
+}
+
+/// Envoi déclenché depuis le bas de la sheet (défilement non nul) : le
+/// bandeau d'erreur, en tête, doit revenir dans le champ, annoncé en
+/// `liveRegion`.
+void _scrollBackToBannerTests() {
+  for (final MapEntry(key: label, value: (connected, error))
+      in <String, (bool, Object?)>{
+        'hors ligne': (false, null),
+        'BugReportFailure': (true, const BugReportFailure('x')),
+        'erreur inattendue': (true, Exception('boom')),
+      }.entries) {
+    testWidgets(
+      'échec d\'envoi ($label) depuis le bas : défilement ramené en haut, '
+      'bandeau visible en liveRegion',
+      (tester) async {
+        final repository = await _pumpSheet(tester, connected: connected);
+        repository.errorToThrow = error;
+        await _fillFields(tester);
+        await tester.ensureVisible(find.text('Ajouter une capture'));
+        await tester.pumpAndSettle();
+
+        final scrollable = tester.state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byType(SingleChildScrollView),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        expect(scrollable.position.pixels, greaterThan(0));
+
+        await _tapSend(tester);
+
+        expect(scrollable.position.pixels, 0);
+        expect(find.byType(AlertBanner), findsOneWidget);
+        expect(
+          find.ancestor(
+            of: find.byType(AlertBanner),
+            matching: find.byWidgetPredicate(
+              (w) => w is Semantics && (w.properties.liveRegion ?? false),
+            ),
+          ),
+          findsWidgets,
+        );
+      },
+    );
+  }
 }
 
 Future<void> _fillFields(WidgetTester tester) async {

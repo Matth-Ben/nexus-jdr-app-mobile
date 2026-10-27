@@ -180,6 +180,10 @@ class _ReportBugSheetContentState
     extends ConsumerState<_ReportBugSheetContent> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
+
+  /// Ramène le bandeau d'erreur d'envoi (en tête du défilement) dans le
+  /// champ quand l'envoi échoue depuis le bas de la sheet.
+  final ScrollController _scrollController = ScrollController();
   String _severity = _severityOptions.first.value;
   bool _isSaving = false;
   String? _errorMessage;
@@ -203,6 +207,7 @@ class _ReportBugSheetContentState
     _titleController.dispose();
     _descriptionController.removeListener(_handleChanged);
     _descriptionController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -244,6 +249,9 @@ class _ReportBugSheetContentState
       setState(() {
         _capture = prepared;
         _isPreparingCapture = false;
+        if (_errorMessage == _screenshotUploadErrorMessage) {
+          _errorMessage = null;
+        }
       });
     } on BugReportScreenshotFailure catch (failure) {
       if (!mounted) return;
@@ -266,6 +274,9 @@ class _ReportBugSheetContentState
     setState(() {
       _capture = null;
       _captureErrorMessage = null;
+      if (_errorMessage == _screenshotUploadErrorMessage) {
+        _errorMessage = null;
+      }
     });
   }
 
@@ -285,6 +296,7 @@ class _ReportBugSheetContentState
         _isSaving = false;
         _errorMessage = _offlineMessage;
       });
+      _scrollToErrorBanner();
       return;
     }
 
@@ -309,6 +321,7 @@ class _ReportBugSheetContentState
             ? _screenshotUploadErrorMessage
             : _genericErrorMessage;
       });
+      _scrollToErrorBanner();
     } catch (error) {
       // Voir la documentation de [_genericErrorMessage] : le détail de
       // l'échec (`BugReportFailure.message`, une exception réseau...) n'est
@@ -319,7 +332,17 @@ class _ReportBugSheetContentState
         _isSaving = false;
         _errorMessage = _genericErrorMessage;
       });
+      _scrollToErrorBanner();
     }
+  }
+
+  void _scrollToErrorBanner() {
+    if (!mounted || !_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
   }
 
   /// Bloc « Capture d'écran » (spec B.1-B.7) : en-tête et mention de
@@ -424,12 +447,16 @@ class _ReportBugSheetContentState
                 ),
                 Expanded(
                   child: SingleChildScrollView(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(AppSpacing.lg),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (_errorMessage != null) ...[
-                          AlertBanner(message: _errorMessage!),
+                          Semantics(
+                            liveRegion: true,
+                            child: AlertBanner(message: _errorMessage!),
+                          ),
                           const SizedBox(height: AppSpacing.md),
                         ],
                         // Pendant l'envoi : champs texte + sélecteur de
