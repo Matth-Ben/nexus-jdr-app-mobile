@@ -20,6 +20,12 @@ dans la Play Console (« Notes de version », 500 caractères max, balise
    joint à la Release GitHub.
 4. Téléverser `app-prod-release.aab` dans la Play Console (piste de test ou
    production) et coller les notes de version.
+5. Une fois la version installable depuis le store, passer
+   `app_versions.latest_version` à `X.Y.Z` pour la plateforme concernée
+   dans Supabase (`update public.app_versions set latest_version = 'X.Y.Z'
+   where platform = 'android';`). C'est ce changement, et lui seul, qui
+   envoie la notification push « Nouvelle version disponible » et affiche
+   la bannière de mise à jour dans l'app.
 
 ---
 
