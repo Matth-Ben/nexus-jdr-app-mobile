@@ -2,24 +2,31 @@
 // (`presentation/widgets/report_bug_sheet.dart`) — pattern autoportant
 // calqué sur `edit_display_name_sheet_test.dart`/
 // `character_story_edit_sheet_test.dart` (voir ces fichiers pour le modèle
-// de référence) : validation activant/désactivant "Envoyer", les 3 options
+// de référence) : validation activant/désactivant "Envoyer", les 4 options
 // de sévérité avec la bonne valeur technique envoyée, succès `synced` ET
 // `failed` traités identiquement côté UI, hors-ligne, erreur générique,
-// préservation de la saisie, verrouillage pendant l'envoi.
+// préservation de la saisie, verrouillage pendant l'envoi, et bloc
+// « Capture d'écran » (états vide/préparation/avec image, erreurs de choix et
+// d'envoi) avec un double du sélecteur — jamais le vrai sélecteur natif.
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/core/widgets/alert_banner.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/core/widgets/selectable_option_tile.dart';
 import 'package:personnages/core/widgets/sheet_header_bar.dart';
+import 'package:personnages/core/widgets/dashed_add_tile.dart';
 import 'package:personnages/features/bug_report/data/bug_report_repository.dart';
+import 'package:personnages/features/bug_report/data/bug_report_screenshot_picker.dart';
 import 'package:personnages/features/bug_report/domain/bug_report_failure.dart';
+import 'package:personnages/features/bug_report/domain/bug_report_screenshot.dart';
 import 'package:personnages/features/bug_report/presentation/providers/bug_report_providers.dart';
 import 'package:personnages/features/profile/presentation/widgets/report_bug_sheet.dart';
 
@@ -32,6 +39,7 @@ class _FakeBugReportRepository implements BugReportRepository {
   String? lastDescription;
   String? lastSeverity;
   String? lastCharacterId;
+  Uint8List? lastScreenshot;
   Object? errorToThrow;
 
   @override
@@ -40,15 +48,51 @@ class _FakeBugReportRepository implements BugReportRepository {
     required String description,
     required String severity,
     String? characterId,
+    Uint8List? screenshotJpeg,
   }) async {
     submitReportCallCount++;
     lastTitle = title;
     lastDescription = description;
     lastSeverity = severity;
     lastCharacterId = characterId;
+    lastScreenshot = screenshotJpeg;
     if (gateSubmitReport) await gate.future;
     final error = errorToThrow;
     if (error != null) throw error;
+  }
+}
+
+/// Double du sélecteur de capture : [pickResult]/[pickError] pour l'étape
+/// de choix, [prepareResult]/[prepareError] pour la préparation, et
+/// [prepareGate] pour observer l'état « Préparation de l'image… ».
+class _FakeScreenshotPicker implements BugReportScreenshotPicker {
+  Uint8List? pickResult = Uint8List.fromList([1, 2, 3]);
+  Object? pickError;
+  Uint8List prepareResult = Uint8List(840 * 1024);
+  Object? prepareError;
+  Completer<void>? prepareGate;
+
+  int pickCallCount = 0;
+  BugReportScreenshotSource? lastSource;
+  Uint8List? lastPreparedInput;
+
+  @override
+  Future<Uint8List?> pick(BugReportScreenshotSource source) async {
+    pickCallCount++;
+    lastSource = source;
+    final error = pickError;
+    if (error != null) throw error;
+    return pickResult;
+  }
+
+  @override
+  Future<Uint8List> prepare(Uint8List bytes) async {
+    lastPreparedInput = bytes;
+    final gate = prepareGate;
+    if (gate != null) await gate.future;
+    final error = prepareError;
+    if (error != null) throw error;
+    return prepareResult;
   }
 }
 
@@ -68,12 +112,16 @@ Future<_FakeBugReportRepository> _pumpSheet(
   WidgetTester tester, {
   bool connected = true,
   String? characterId,
+  _FakeScreenshotPicker? picker,
 }) async {
   final repository = _FakeBugReportRepository();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         bugReportRepositoryProvider.overrideWithValue(repository),
+        bugReportScreenshotPickerProvider.overrideWithValue(
+          picker ?? _FakeScreenshotPicker(),
+        ),
         connectivityCheckerProvider.overrideWithValue(
           _FakeConnectivityChecker(connected: connected),
         ),
@@ -100,23 +148,43 @@ Future<_FakeBugReportRepository> _pumpSheet(
 
 void main() {
   testWidgets(
-    'affiche le titre de la sheet, les 2 champs texte et les 3 tuiles de '
-    'sévérité, "Gênant" sélectionnée par défaut',
+    'affiche le titre de la sheet, les 2 champs texte et les 4 tuiles de '
+    'sévérité ("Contenu à corriger" en dernier, sous-titres non tronqués), '
+    '"Gênant" sélectionnée par défaut',
     (tester) async {
       await _pumpSheet(tester);
 
       expect(find.text('SIGNALER UN BUG'), findsOneWidget);
       expect(find.text('TITRE'), findsOneWidget);
       expect(find.text('DESCRIPTION'), findsOneWidget);
-      expect(find.text('À QUEL POINT ÇA TE BLOQUE ?'), findsOneWidget);
+      expect(find.text('QUEL GENRE DE SOUCI ?'), findsOneWidget);
+      expect(find.text('À QUEL POINT ÇA TE BLOQUE ?'), findsNothing);
       expect(find.text('Gênant'), findsOneWidget);
       expect(find.text('Problématique'), findsOneWidget);
       expect(find.text('Ça bloque tout'), findsOneWidget);
+      expect(find.text('Contenu à corriger'), findsOneWidget);
       expect(find.byType(TextFormField), findsNWidgets(2));
 
       final tiles = tester
           .widgetList<SelectableOptionTile>(find.byType(SelectableOptionTile))
           .toList();
+      expect(tiles.map((t) => t.title), [
+        'Gênant',
+        'Problématique',
+        'Ça bloque tout',
+        'Contenu à corriger',
+      ]);
+      expect(
+        tiles.last.subtitle,
+        'Erreur ou oubli dans un sort, un objet, une règle ou une traduction',
+      );
+      expect(tiles.every((t) => t.subtitleMaxLines == null), isTrue);
+      expect(tiles.last.leading, isNull);
+      expect(tiles.last.onInfo, isNull);
+      expect(
+        tiles.singleWhere((t) => t.title == 'Contenu à corriger').selected,
+        isFalse,
+      );
       expect(tiles.singleWhere((t) => t.title == 'Gênant').selected, isTrue);
       expect(
         tiles.singleWhere((t) => t.title == 'Problématique').selected,
@@ -435,4 +503,456 @@ void main() {
 
     expect(repository.lastCharacterId, 'char-7');
   });
+
+  testWidgets(
+    'sélectionner "Contenu à corriger" puis "Envoyer" transmet `severity: '
+    '"contenu"` au repository, sans capture par défaut',
+    (tester) async {
+      final repository = await _pumpSheet(tester);
+
+      await _fillFields(tester);
+      await tester.ensureVisible(find.text('Contenu à corriger'));
+      await tester.pump();
+      await tester.tap(find.text('Contenu à corriger'));
+      await tester.pump();
+      await _tapSend(tester);
+
+      expect(repository.lastSeverity, 'contenu');
+      expect(repository.lastScreenshot, isNull);
+    },
+  );
+
+  group("bloc « Capture d'écran »", () {
+    testWidgets('état vide : en-tête, mention de confidentialité exacte, tuile '
+        '"Ajouter une capture" sous les sévérités, dans le bloc grisable', (
+      tester,
+    ) async {
+      await _pumpSheet(tester);
+
+      expect(find.text("CAPTURE D'ÉCRAN"), findsOneWidget);
+      expect(
+        find.text(
+          "Facultatif, une seule image. Elle reste privée : seule l'équipe "
+          "de développement la voit, elle n'est jamais publiée avec ton "
+          'signalement et elle est supprimée avec ton compte. Évite quand '
+          "même d'y laisser des infos personnelles.",
+        ),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+      expect(find.text('Ajouter une capture'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('reportBugFieldsIgnorePointer')),
+          matching: find.byType(DashedAddTile),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.getTopLeft(find.text("CAPTURE D'ÉCRAN")).dy,
+        greaterThan(tester.getTopLeft(find.text('Contenu à corriger')).dy),
+      );
+      expect(
+        find.bySemanticsLabel("Ajouter une capture d'écran (facultatif)"),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'la sheet de source s\'empile (galerie en premier, puis photo) sans '
+      'fermer le signalement ; annuler ne change rien',
+      (tester) async {
+        final picker = _FakeScreenshotPicker();
+        await _pumpSheet(tester, picker: picker);
+        await _fillFields(tester);
+
+        await _openSourceSheet(tester);
+
+        expect(find.text('Choisir dans la galerie'), findsOneWidget);
+        expect(find.text('Prendre une photo'), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text('Choisir dans la galerie')).dy,
+          lessThan(tester.getTopLeft(find.text('Prendre une photo')).dy),
+        );
+        expect(find.text('Utiliser une URL'), findsNothing);
+        expect(find.text('SIGNALER UN BUG'), findsOneWidget);
+
+        // Fermeture de la sheet de source sans choix (voile).
+        await tester.tapAt(const Offset(400, 10));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Choisir dans la galerie'), findsNothing);
+        expect(find.text('SIGNALER UN BUG'), findsOneWidget);
+        expect(picker.pickCallCount, 0);
+        expect(find.text('Ajouter une capture'), findsOneWidget);
+        expect(
+          tester
+              .widget<TextFormField>(find.byType(TextFormField).first)
+              .controller!
+              .text,
+          'Titre',
+        );
+      },
+    );
+
+    testWidgets(
+      'galerie -> préparation ("Envoyer" désactivé) -> capture jointe '
+      '(poids, Remplacer/Retirer) -> envoyée au repository',
+      (tester) async {
+        final picker = _FakeScreenshotPicker()..prepareGate = Completer<void>();
+        final repository = await _pumpSheet(tester, picker: picker);
+        await _fillFields(tester);
+        expect(_sendButton(tester).onPressed, isNotNull);
+
+        await _openSourceSheet(tester);
+        await tester.tap(find.text('Choisir dans la galerie'));
+        // Pas de `pumpAndSettle` : l'indicateur de progression de l'état
+        // « Préparation » tourne en continu tant que [prepareGate] est ouvert.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(picker.lastSource, BugReportScreenshotSource.gallery);
+        expect(picker.lastPreparedInput, picker.pickResult);
+        expect(
+          find.byKey(const Key('reportBugCapturePreparing')),
+          findsOneWidget,
+        );
+        expect(find.text("Préparation de l'image…"), findsOneWidget);
+        expect(find.text('Ajouter une capture'), findsNothing);
+        expect(
+          find.bySemanticsLabel("Préparation de l'image en cours"),
+          findsOneWidget,
+        );
+        expect(
+          _sendButton(tester).onPressed,
+          isNull,
+          reason: '"Envoyer" désactivé pendant la préparation',
+        );
+
+        picker.prepareGate!.complete();
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('reportBugCaptureAttached')),
+          findsOneWidget,
+        );
+        expect(find.text('Capture jointe'), findsOneWidget);
+        expect(find.text('840 Ko'), findsOneWidget);
+        expect(find.text('Remplacer'), findsOneWidget);
+        expect(find.text('Retirer'), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text('Retirer')).dy,
+          greaterThan(tester.getTopLeft(find.text('Remplacer')).dy),
+          reason: 'boutons empilés verticalement',
+        );
+        expect(find.bySemanticsLabel("Capture d'écran jointe"), findsOneWidget);
+        expect(
+          find.bySemanticsLabel("Remplacer la capture d'écran"),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel("Retirer la capture d'écran"),
+          findsOneWidget,
+        );
+        expect(_sendButton(tester).onPressed, isNotNull);
+
+        await _tapSend(tester);
+
+        expect(repository.submitReportCallCount, 1);
+        expect(repository.lastScreenshot, same(picker.prepareResult));
+      },
+    );
+
+    testWidgets('"Prendre une photo" transmet la source appareil photo', (
+      tester,
+    ) async {
+      final picker = _FakeScreenshotPicker();
+      await _pumpSheet(tester, picker: picker);
+
+      await _openSourceSheet(tester);
+      await tester.tap(find.text('Prendre une photo'));
+      await tester.pumpAndSettle();
+
+      expect(picker.lastSource, BugReportScreenshotSource.camera);
+      expect(find.text('Capture jointe'), findsOneWidget);
+    });
+
+    testWidgets('sélecteur annulé (aucune image) : rien ne change', (
+      tester,
+    ) async {
+      final picker = _FakeScreenshotPicker()..pickResult = null;
+      await _pumpSheet(tester, picker: picker);
+
+      await _openSourceSheet(tester);
+      await tester.tap(find.text('Choisir dans la galerie'));
+      await tester.pumpAndSettle();
+
+      expect(picker.pickCallCount, 1);
+      expect(picker.lastPreparedInput, isNull);
+      expect(find.text('Ajouter une capture'), findsOneWidget);
+      expect(find.byType(AlertBanner), findsNothing);
+    });
+
+    testWidgets('"Retirer" revient immédiatement à l\'état vide, et '
+        'l\'envoi part alors sans capture', (tester) async {
+      final repository = await _pumpSheet(tester);
+      await _fillFields(tester);
+      await _attachCapture(tester);
+
+      await tester.ensureVisible(find.text('Retirer'));
+      await tester.tap(find.text('Retirer'));
+      await tester.pump();
+
+      expect(find.text('Capture jointe'), findsNothing);
+      expect(find.text('Ajouter une capture'), findsOneWidget);
+
+      await _tapSend(tester);
+      expect(repository.lastScreenshot, isNull);
+    });
+
+    final pickErrorCases = <String, (Object, bool)>{
+      'Cette image est trop lourde (plus de 5 Mo), même compressée. '
+          'Choisissez-en une autre.': (
+        const BugReportScreenshotFailure(
+          BugReportScreenshotFailureKind.tooLarge,
+        ),
+        false,
+      ),
+      "Ce format d'image n'est pas pris en charge. Choisissez une autre "
+          'image.': (
+        const BugReportScreenshotFailure(
+          BugReportScreenshotFailureKind.unsupportedFormat,
+        ),
+        false,
+      ),
+      "L'accès à vos photos ou à l'appareil photo est refusé. Autorisez-le "
+          'dans les réglages du téléphone.': (
+        const BugReportScreenshotFailure(
+          BugReportScreenshotFailureKind.accessDenied,
+        ),
+        true,
+      ),
+    };
+    for (final MapEntry(key: message, value: (error, atPick))
+        in pickErrorCases.entries) {
+      testWidgets(
+        'erreur de choix ($message) : bandeau sous la zone d\'ajout, image '
+        'non jointe, effacé à la réouverture de la sheet de source',
+        (tester) async {
+          final picker = _FakeScreenshotPicker();
+          if (atPick) {
+            picker.pickError = error;
+          } else {
+            picker.prepareError = error;
+          }
+          await _pumpSheet(tester, picker: picker);
+          await _fillFields(tester);
+
+          await _openSourceSheet(tester);
+          await tester.tap(find.text('Choisir dans la galerie'));
+          await tester.pumpAndSettle();
+
+          expect(find.text(message), findsOneWidget);
+          expect(find.text('Capture jointe'), findsNothing);
+          expect(find.text('Ajouter une capture'), findsOneWidget);
+          expect(
+            tester.getTopLeft(find.text(message)).dy,
+            greaterThan(tester.getTopLeft(find.text('Ajouter une capture')).dy),
+          );
+          expect(
+            find.ancestor(
+              of: find.byType(AlertBanner),
+              matching: find.byWidgetPredicate(
+                (w) => w is Semantics && (w.properties.liveRegion ?? false),
+              ),
+            ),
+            findsWidgets,
+          );
+          expect(_sendButton(tester).onPressed, isNotNull);
+
+          await _openSourceSheet(tester);
+          expect(find.text(message), findsNothing);
+        },
+      );
+    }
+
+    testWidgets('remplacement refusé : l\'image précédente reste jointe', (
+      tester,
+    ) async {
+      final picker = _FakeScreenshotPicker();
+      final repository = await _pumpSheet(tester, picker: picker);
+      await _fillFields(tester);
+      await _attachCapture(tester);
+      final firstCapture = picker.prepareResult;
+
+      picker
+        ..prepareResult = Uint8List(2 * 1024 * 1024)
+        ..prepareError = const BugReportScreenshotFailure(
+          BugReportScreenshotFailureKind.tooLarge,
+        );
+      await tester.ensureVisible(find.text('Remplacer'));
+      await tester.tap(find.text('Remplacer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Choisir dans la galerie'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('trop lourde'), findsOneWidget);
+      expect(find.text('Capture jointe'), findsOneWidget);
+      expect(find.text('840 Ko'), findsOneWidget);
+
+      await _tapSend(tester);
+      expect(repository.lastScreenshot, same(firstCapture));
+    });
+
+    testWidgets(
+      'remplacement réussi : la nouvelle image remplace l\'ancienne une fois '
+      'prête',
+      (tester) async {
+        final picker = _FakeScreenshotPicker();
+        final repository = await _pumpSheet(tester, picker: picker);
+        await _fillFields(tester);
+        await _attachCapture(tester);
+
+        final replacement = Uint8List((1.2 * 1024 * 1024).round());
+        picker.prepareResult = replacement;
+        await tester.ensureVisible(find.text('Remplacer'));
+        await tester.tap(find.text('Remplacer'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Choisir dans la galerie'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('1,2 Mo'), findsOneWidget);
+        await _tapSend(tester);
+        expect(repository.lastScreenshot, same(replacement));
+      },
+    );
+
+    testWidgets(
+      "échec d'envoi de la capture : bandeau dédié en haut, sheet ouverte, "
+      'saisie ET image conservées',
+      (tester) async {
+        final repository = await _pumpSheet(tester);
+        repository.errorToThrow = const BugReportFailure(
+          'Détail Storage jamais affiché.',
+          kind: BugReportFailureKind.screenshotUpload,
+        );
+        await _fillFields(tester);
+        await _attachCapture(tester);
+
+        await _tapSend(tester);
+
+        expect(
+          find.text(
+            "Impossible d'envoyer la capture. Réessayez, ou retirez-la pour "
+            'envoyer le signalement sans.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Détail Storage jamais affiché.'), findsNothing);
+        expect(find.text('SIGNALER UN BUG'), findsOneWidget);
+        expect(find.text('Capture jointe'), findsOneWidget);
+        expect(
+          tester
+              .widget<TextFormField>(find.byType(TextFormField).first)
+              .controller!
+              .text,
+          'Titre',
+        );
+
+        // Réessayer renvoie la même image.
+        repository.errorToThrow = null;
+        await _tapSend(tester);
+        expect(repository.submitReportCallCount, 2);
+        expect(repository.lastScreenshot, isNotNull);
+        expect(find.text('SIGNALER UN BUG'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'échec générique avec une capture jointe : bandeau générique, image '
+      'conservée',
+      (tester) async {
+        final repository = await _pumpSheet(tester);
+        repository.errorToThrow = const BugReportFailure('internal_error');
+        await _fillFields(tester);
+        await _attachCapture(tester);
+
+        await _tapSend(tester);
+
+        expect(
+          find.text("Impossible d'envoyer le signalement. Réessayez."),
+          findsOneWidget,
+        );
+        expect(find.text('Capture jointe'), findsOneWidget);
+      },
+    );
+
+    testWidgets('hors ligne avec une capture : bandeau hors-ligne inchangé, '
+        'image conservée, aucun envoi', (tester) async {
+      final repository = await _pumpSheet(tester, connected: false);
+      await _fillFields(tester);
+      await _attachCapture(tester);
+
+      await _tapSend(tester);
+
+      expect(
+        find.textContaining("n'a pas pu être enregistrée"),
+        findsOneWidget,
+      );
+      expect(find.text('Capture jointe'), findsOneWidget);
+      expect(repository.submitReportCallCount, 0);
+    });
+
+    testWidgets(
+      'texte agrandi (x3) : la tuile d\'ajout reste sur une ligne, sans '
+      'débordement',
+      (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 3;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+        await _pumpSheet(tester);
+        await tester.ensureVisible(find.text('Ajouter une capture'));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(
+          tester.widget<Text>(find.text('Ajouter une capture')).maxLines,
+          1,
+        );
+      },
+    );
+  });
+}
+
+Future<void> _fillFields(WidgetTester tester) async {
+  await tester.enterText(find.byType(TextFormField).first, 'Titre');
+  await tester.enterText(find.byType(TextFormField).last, 'Description.');
+  await tester.pump();
+}
+
+PrimaryButton _sendButton(WidgetTester tester) =>
+    tester.widget<PrimaryButton>(find.byType(PrimaryButton));
+
+Future<void> _tapSend(WidgetTester tester) async {
+  await tester.ensureVisible(find.byType(PrimaryButton));
+  await tester.tap(find.byType(PrimaryButton));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openSourceSheet(WidgetTester tester) async {
+  final addTile = find.text('Ajouter une capture');
+  final target = addTile.evaluate().isNotEmpty
+      ? addTile
+      : find.text('Remplacer');
+  await tester.ensureVisible(target);
+  await tester.pump();
+  await tester.tap(target);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _attachCapture(WidgetTester tester) async {
+  await _openSourceSheet(tester);
+  await tester.tap(find.text('Choisir dans la galerie'));
+  await tester.pumpAndSettle();
+  expect(find.text('Capture jointe'), findsOneWidget);
 }

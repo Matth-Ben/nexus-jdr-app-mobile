@@ -40,12 +40,18 @@ class DashedAddTile extends StatelessWidget {
               children: [
                 const Icon(Icons.add, size: 18, color: AppColors.textMuted),
                 const SizedBox(width: AppSpacing.xs),
-                Text(
-                  label,
-                  style: AppTypography.body(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textMuted,
+                // `Flexible` + une seule ligne : un libellé long ou un texte
+                // agrandi ne déborde jamais de la hauteur fixe de 48px.
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.body(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ),
               ],
