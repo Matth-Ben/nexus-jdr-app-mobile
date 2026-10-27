@@ -676,6 +676,16 @@ quel.
 |---|---|---|---|---|
 | D122 | Le butin de groupe (`group_treasure`/`GroupTreasureItem`, `add_to_group_treasure_sheet.dart`) réutilise le même `PickedInventoryAddition`/`RewardItemDraft` que l'ajout direct à l'inventaire et la sheet "Ajouter une récompense", mais `group_treasure.items` (jsonb) ne porte pas les colonnes `custom_description`/`custom_damage_dice`/`custom_damage_type`/`custom_properties` — un objet personnalisé "Arme" ajouté au butin de groupe puis réclamé perd sa description et ses stats d'arme. | basse (perte d'une information descriptive, pas une règle de jeu ni une perte de progression) | Étendre `group_treasure.items`/`GroupTreasureItem` pour porter les mêmes 4 champs, si cet usage (objet personnalisé-arme déposé en butin de groupe) se révèle réel en pratique | Ouvert, non traité (hors périmètre de la tâche d'origine, qui ne couvrait que l'ajout direct à l'inventaire et la sheet "Ajouter une récompense") |
 
+## Ajouts liés à la notification « nouvelle version » (27/10/2026)
+
+Constat relevé par la conversation principale en passant `app_versions.latest_version`
+à `1.0.8` dans Supabase (étape oubliée de 1.0.0 à 1.0.8, ajoutée depuis à la procédure
+de publication du `CHANGELOG.md`, PR #183).
+
+| ID | Sujet | Gravité | Correction proposée | État |
+|---|---|---|---|---|
+| D123 | `public.app_versions.updated_at` ne suit pas les modifications : l'`UPDATE` de `latest_version` du 27/10/2026 a laissé `updated_at` à sa valeur de création (`2026-09-14`). Aucun déclencheur ne la tient à jour, la colonne induit donc en erreur sur la date de la dernière publication. | basse (information d'audit seulement, ni la notification push ni la bannière de mise à jour ne lisent cette colonne) | Migration dans le dépôt **web** : déclencheur `BEFORE UPDATE` qui pose `updated_at = now()` sur `app_versions`, en réutilisant la fonction générique de mise à jour d'`updated_at` si le schéma en a déjà une | Ouvert, non traité |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont
