@@ -86,4 +86,91 @@ void main() {
       ),
     );
   });
+
+  test('paysage : la largeur est ramenée à maxDimension (branche '
+      'width >= height)', () {
+    final wide = img.Image(width: 400, height: 100)
+      ..clear(img.ColorRgb8(10, 120, 200));
+
+    final decoded = img.decodeJpg(
+      compressBugReportScreenshot(img.encodePng(wide), maxDimension: 200),
+    )!;
+
+    expect(decoded.width, 200);
+    expect(decoded.height, 50);
+  });
+
+  test('valeurs par défaut : 2048 px max sur le plus grand côté', () {
+    final big = img.Image(width: 1200, height: 3000)
+      ..clear(img.ColorRgb8(200, 200, 200));
+
+    final decoded = img.decodeJpg(
+      compressBugReportScreenshot(img.encodePng(big)),
+    )!;
+
+    expect(bugReportScreenshotMaxDimension, 2048);
+    expect(bugReportScreenshotJpegQuality, 85);
+    expect(decoded.height, 2048);
+    expect(decoded.width, closeTo(819, 1));
+  });
+
+  test('image plus petite que maxDimension : jamais agrandie', () {
+    final small = img.Image(width: 10, height: 20)
+      ..clear(img.ColorRgb8(1, 1, 1));
+
+    final decoded = img.decodeJpg(
+      compressBugReportScreenshot(img.encodePng(small)),
+    )!;
+
+    expect(decoded.width, 10);
+    expect(decoded.height, 20);
+  });
+
+  test('orientation EXIF (6 = rotation 90°) appliquée aux pixels, puis '
+      'métadonnées retirées', () {
+    final source = img.Image(width: 40, height: 20)
+      ..clear(img.ColorRgb8(0, 0, 255));
+    source.exif.imageIfd.orientation = 6;
+    final rotated = img.encodeJpg(source);
+    // Pixels stockés en 40 × 20, orientation 6 dans l'en-tête EXIF (le
+    // décodeur de `package:image` l'applique à la lecture).
+    expect(img.decodeJpgExif(rotated)!.imageIfd.orientation, 6);
+
+    final decoded = img.decodeJpg(compressBugReportScreenshot(rotated))!;
+
+    expect(decoded.width, 20);
+    expect(decoded.height, 40);
+    expect(decoded.exif.isEmpty, isTrue);
+    expect(
+      img.decodeJpgExif(compressBugReportScreenshot(rotated))?.isEmpty ?? true,
+      isTrue,
+    );
+  });
+
+  test('GIF à palette -> JPEG RVB', () {
+    final gif = img.encodeGif(
+      img.Image(width: 16, height: 16)..clear(img.ColorRgb8(255, 0, 0)),
+    );
+
+    final jpeg = compressBugReportScreenshot(gif);
+
+    expect(_isJpeg(jpeg), isTrue);
+    final decoded = img.decodeJpg(jpeg)!;
+    expect(decoded.numChannels, 3);
+    expect(decoded.getPixel(8, 8).r, greaterThan(200));
+  });
+
+  test('PNG tronqué (fichier corrompu) -> unsupportedFormat ou JPEG valide, '
+      'jamais une autre exception', () {
+    final png = img.encodePng(
+      img.Image(width: 64, height: 64)..clear(img.ColorRgb8(5, 6, 7)),
+    );
+    final truncated = Uint8List.sublistView(png, 0, png.length ~/ 2);
+
+    try {
+      expect(_isJpeg(compressBugReportScreenshot(truncated)), isTrue);
+    } on BugReportScreenshotFailure catch (failure) {
+      expect(failure.kind, BugReportScreenshotFailureKind.unsupportedFormat);
+    }
+  });
 }

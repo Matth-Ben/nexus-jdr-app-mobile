@@ -13,6 +13,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
@@ -99,7 +100,7 @@ class _FakeScreenshotPicker implements BugReportScreenshotPicker {
 class _FakeConnectivityChecker implements ConnectivityChecker {
   _FakeConnectivityChecker({required this.connected});
 
-  final bool connected;
+  bool connected;
 
   @override
   Future<bool> hasConnection() async => connected;
@@ -113,6 +114,7 @@ Future<_FakeBugReportRepository> _pumpSheet(
   bool connected = true,
   String? characterId,
   _FakeScreenshotPicker? picker,
+  _FakeConnectivityChecker? connectivity,
 }) async {
   final repository = _FakeBugReportRepository();
   await tester.pumpWidget(
@@ -123,7 +125,7 @@ Future<_FakeBugReportRepository> _pumpSheet(
           picker ?? _FakeScreenshotPicker(),
         ),
         connectivityCheckerProvider.overrideWithValue(
-          _FakeConnectivityChecker(connected: connected),
+          connectivity ?? _FakeConnectivityChecker(connected: connected),
         ),
       ],
       child: MaterialApp(
@@ -999,6 +1001,288 @@ void main() {
   });
 
   group('bandeau d\'erreur d\'envoi', _scrollBackToBannerTests);
+  group('QA : cas limites de la capture', _captureEdgeCaseTests);
+}
+
+void _captureEdgeCaseTests() {
+  testWidgets(
+    'fermeture de la sheet ("Annuler") pendant la préparation, puis fin de '
+    'la préparation : aucune exception (pas de setState après dispose), '
+    'aucun envoi',
+    (tester) async {
+      final picker = _FakeScreenshotPicker()..prepareGate = Completer<void>();
+      final repository = await _pumpSheet(tester, picker: picker);
+      await _fillFields(tester);
+
+      await _openSourceSheet(tester);
+      await tester.tap(find.text('Choisir dans la galerie'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(
+        find.byKey(const Key('reportBugCapturePreparing')),
+        findsOneWidget,
+      );
+
+      final cancel = tester.widget<SecondaryButton>(
+        find.widgetWithText(SecondaryButton, 'ANNULER'),
+      );
+      expect(
+        cancel.onPressed,
+        isNotNull,
+        reason: '"Annuler" reste disponible pendant la préparation',
+      );
+      await tester.ensureVisible(
+        find.widgetWithText(SecondaryButton, 'ANNULER'),
+      );
+      await tester.tap(find.widgetWithText(SecondaryButton, 'ANNULER'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('SIGNALER UN BUG'), findsNothing);
+
+      picker.prepareGate!.complete();
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(repository.submitReportCallCount, 0);
+      expect(
+        find.text('Merci, ton signalement a bien été envoyé !'),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets(
+    'fermeture pendant la préparation puis échec de la préparation : aucune '
+    'exception',
+    (tester) async {
+      final picker = _FakeScreenshotPicker()
+        ..prepareGate = Completer<void>()
+        ..prepareError = const BugReportScreenshotFailure(
+          BugReportScreenshotFailureKind.tooLarge,
+        );
+      await _pumpSheet(tester, picker: picker);
+
+      await _openSourceSheet(tester);
+      await tester.tap(find.text('Choisir dans la galerie'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.ensureVisible(
+        find.widgetWithText(SecondaryButton, 'ANNULER'),
+      );
+      await tester.tap(find.widgetWithText(SecondaryButton, 'ANNULER'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      picker.prepareGate!.complete();
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'tap sur "Envoyer" pendant la préparation : aucun envoi déclenché',
+    (tester) async {
+      final picker = _FakeScreenshotPicker()..prepareGate = Completer<void>();
+      final repository = await _pumpSheet(tester, picker: picker);
+      await _fillFields(tester);
+
+      await _openSourceSheet(tester);
+      await tester.tap(find.text('Choisir dans la galerie'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.ensureVisible(find.byType(PrimaryButton));
+      await tester.tap(find.byType(PrimaryButton), warnIfMissed: false);
+      await tester.pump();
+      expect(repository.submitReportCallCount, 0);
+
+      picker.prepareGate!.complete();
+      await tester.pumpAndSettle();
+      expect(repository.submitReportCallCount, 0);
+      expect(find.text('Capture jointe'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'double tap sur "Envoyer" (sans attendre de frame, puis pendant l\'envoi) '
+    'avec une capture : un seul appel au repository',
+    (tester) async {
+      final picker = _FakeScreenshotPicker();
+      final repository = await _pumpSheet(tester, picker: picker);
+      repository.gateSubmitReport = true;
+      await _fillFields(tester);
+      await _attachCapture(tester);
+
+      await tester.ensureVisible(find.byType(PrimaryButton));
+      await tester.pump();
+      final button = find.byType(PrimaryButton);
+      await tester.tap(button);
+      await tester.tap(button, warnIfMissed: false);
+      await tester.pump();
+      await tester.tap(button, warnIfMissed: false);
+      await tester.pump();
+
+      repository.gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(repository.submitReportCallCount, 1);
+      expect(repository.lastScreenshot, same(picker.prepareResult));
+    },
+  );
+
+  testWidgets(
+    'pendant l\'envoi, "Retirer"/"Remplacer" sont sans effet (pointeur ET '
+    'action d\'accessibilité) : l\'image envoyée reste celle jointe',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      final picker = _FakeScreenshotPicker();
+      final repository = await _pumpSheet(tester, picker: picker);
+      repository.gateSubmitReport = true;
+      await _fillFields(tester);
+      await _attachCapture(tester);
+      final pickCountBefore = picker.pickCallCount;
+
+      await tester.ensureVisible(find.byType(PrimaryButton));
+      await tester.tap(find.byType(PrimaryButton));
+      await tester.pump();
+
+      await tester.tap(find.text('Retirer'), warnIfMissed: false);
+      await tester.tap(find.text('Remplacer'), warnIfMissed: false);
+      await tester.pump();
+      final retirerNode = tester.getSemantics(
+        find.bySemanticsLabel("Retirer la capture d'écran"),
+      );
+      expect(
+        retirerNode.getSemanticsData().hasAction(SemanticsAction.tap),
+        isFalse,
+        reason: 'action de lecture vocale bloquée pendant l\'envoi',
+      );
+
+      expect(find.text('Capture jointe'), findsOneWidget);
+      expect(find.text('Choisir dans la galerie'), findsNothing);
+      expect(picker.pickCallCount, pickCountBefore);
+
+      repository.gate.complete();
+      await tester.pumpAndSettle();
+      expect(repository.lastScreenshot, same(picker.prepareResult));
+      semantics.dispose();
+    },
+  );
+
+  testWidgets(
+    'hors ligne avec une capture, puis retour du réseau : le nouvel essai '
+    'envoie la MÊME image, une seule fois',
+    (tester) async {
+      final connectivity = _FakeConnectivityChecker(connected: false);
+      final picker = _FakeScreenshotPicker();
+      final repository = await _pumpSheet(
+        tester,
+        picker: picker,
+        connectivity: connectivity,
+      );
+      await _fillFields(tester);
+      await _attachCapture(tester);
+
+      await _tapSend(tester);
+      expect(
+        find.textContaining("n'a pas pu être enregistrée"),
+        findsOneWidget,
+      );
+      expect(repository.submitReportCallCount, 0);
+
+      connectivity.connected = true;
+      await _tapSend(tester);
+
+      expect(repository.submitReportCallCount, 1);
+      expect(repository.lastScreenshot, same(picker.prepareResult));
+      expect(find.text('SIGNALER UN BUG'), findsNothing);
+    },
+  );
+
+  testWidgets('exception inattendue de la préparation (pas une '
+      'BugReportScreenshotFailure) : bandeau "format non pris en charge", '
+      'retour à l\'état vide', (tester) async {
+    final picker = _FakeScreenshotPicker()..prepareError = StateError('x');
+    await _pumpSheet(tester, picker: picker);
+
+    await _openSourceSheet(tester);
+    await tester.tap(find.text('Choisir dans la galerie'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        "Ce format d'image n'est pas pris en charge. Choisissez une autre "
+        'image.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Ajouter une capture'), findsOneWidget);
+    expect(find.byKey(const Key('reportBugCapturePreparing')), findsNothing);
+  });
+
+  testWidgets(
+    'lecture vocale : l\'action "tap" du nœud "Ajouter une capture d\'écran '
+    '(facultatif)" ouvre la sheet de source',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _pumpSheet(tester);
+      await tester.ensureVisible(find.text('Ajouter une capture'));
+      await tester.pump();
+
+      final node = tester.getSemantics(
+        find.bySemanticsLabel("Ajouter une capture d'écran (facultatif)"),
+      );
+      expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      expect(node.getSemanticsData().flagsCollection.isButton, isTrue);
+      tester.semantics.tap(
+        find.semantics.byLabel("Ajouter une capture d'écran (facultatif)"),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Choisir dans la galerie'), findsOneWidget);
+      semantics.dispose();
+    },
+  );
+
+  for (final state in const ['préparation', 'capture jointe']) {
+    testWidgets('texte agrandi (x3), téléphone portrait, état "$state" : '
+        'aucun débordement', (tester) async {
+      // Gabarit téléphone portrait (390 × 844 pt) : la surface de test par
+      // défaut (800 × 600) est trop large pour révéler un débordement
+      // horizontal de la carte « Capture jointe ».
+      tester.view.physicalSize = const Size(1170, 2532);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = 3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final picker = _FakeScreenshotPicker();
+      if (state == 'préparation') picker.prepareGate = Completer<void>();
+      await _pumpSheet(tester, picker: picker);
+
+      await _openSourceSheet(tester);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Choisir dans la galerie'));
+      if (state == 'préparation') {
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.ensureVisible(
+          find.byKey(const Key('reportBugCapturePreparing')),
+        );
+        await tester.pump();
+      } else {
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Retirer'));
+        await tester.pumpAndSettle();
+        expect(find.text('Capture jointe'), findsOneWidget);
+      }
+
+      expect(tester.takeException(), isNull);
+      if (state == 'préparation') picker.prepareGate!.complete();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
 }
 
 /// Envoi déclenché depuis le bas de la sheet (défilement non nul) : le

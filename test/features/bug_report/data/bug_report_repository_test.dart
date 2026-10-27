@@ -415,6 +415,136 @@ void main() {
           expect(requests, isEmpty);
         },
       );
+
+      test('le corps téléversé contient exactement les octets JPEG fournis, '
+          'et la requête Storage part AVANT `report-bug`', () async {
+        final requests = <http.Request>[];
+        final client = await _buildFakeSupabaseClient(
+          userId: userId,
+          onRequest: requests.add,
+          responseBody: {'id': 'report-1', 'status': 'synced'},
+        );
+        final payload = Uint8List.fromList(
+          List<int>.generate(300, (i) => (i * 7) % 256),
+        );
+
+        await SupabaseBugReportRepository(
+          client,
+          generateId: () => fileId,
+        ).submitReport(
+          title: 'Titre',
+          description: 'Description',
+          severity: 'mineur',
+          screenshotJpeg: payload,
+        );
+
+        expect(requests.map((r) => r.url.path.split('/')[1]).toList(), [
+          'storage',
+          'functions',
+        ]);
+        expect(_containsSubsequence(requests.first.bodyBytes, payload), isTrue);
+      });
+
+      test('deux envois successifs (générateur réel) : deux chemins '
+          'distincts, UUID v4 en minuscules sous l\'uid en minuscules, '
+          'jamais de réécriture du même objet', () async {
+        final requests = <http.Request>[];
+        final client = await _buildFakeSupabaseClient(
+          userId: userId,
+          onRequest: requests.add,
+          responseBody: {'id': 'report-1', 'status': 'synced'},
+        );
+        final repository = SupabaseBugReportRepository(client);
+
+        for (var i = 0; i < 2; i++) {
+          await repository.submitReport(
+            title: 'Titre',
+            description: 'Description',
+            severity: 'mineur',
+            screenshotJpeg: jpeg,
+          );
+        }
+
+        final paths = requests
+            .where((r) => r.url.path.contains('/functions/'))
+            .map(
+              (r) =>
+                  (jsonDecode(r.body) as Map<String, dynamic>)['screenshotPath']
+                      as String,
+            )
+            .toList();
+        expect(paths, hasLength(2));
+        expect(paths.toSet(), hasLength(2));
+        final pattern = RegExp(
+          '^${userId.toLowerCase()}/'
+          r'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-'
+          r'[0-9a-f]{12}\.jpg$',
+        );
+        for (final path in paths) {
+          expect(path, matches(pattern));
+        }
+        final uploads = requests.where((r) => r.url.path.contains('/storage/'));
+        expect(uploads, hasLength(2));
+        for (final upload in uploads) {
+          expect(upload.headers['x-upsert'], 'false');
+        }
+      });
+
+      test('téléversement réussi puis `report-bug` 500 -> BugReportFailure '
+          'generic (pas screenshotUpload)', () async {
+        final client = await _buildFakeSupabaseClient(
+          userId: userId,
+          statusCode: 500,
+          responseBody: {'error': 'internal_error'},
+        );
+
+        await expectLater(
+          SupabaseBugReportRepository(client).submitReport(
+            title: 'Titre',
+            description: 'Description',
+            severity: 'contenu',
+            screenshotJpeg: jpeg,
+          ),
+          throwsA(
+            isA<BugReportFailure>().having(
+              (f) => f.kind,
+              'kind',
+              BugReportFailureKind.generic,
+            ),
+          ),
+        );
+      });
+
+      for (final severity in const [
+        'mineur',
+        'majeur',
+        'bloquant',
+        'contenu',
+      ]) {
+        test(
+          'severity "$severity" transmise telle quelle avec une capture',
+          () async {
+            http.Request? invoke;
+            final client = await _buildFakeSupabaseClient(
+              userId: userId,
+              onRequest: (r) {
+                if (r.url.path.contains('/functions/')) invoke = r;
+              },
+              responseBody: {'id': 'report-1', 'status': 'synced'},
+            );
+
+            await SupabaseBugReportRepository(client).submitReport(
+              title: 'Titre',
+              description: 'Description',
+              severity: severity,
+              screenshotJpeg: jpeg,
+            );
+
+            final body = jsonDecode(invoke!.body) as Map<String, dynamic>;
+            expect(body['severity'], severity);
+          },
+        );
+      }
     });
   });
 }
@@ -483,4 +613,15 @@ Future<SupabaseClient> _buildFakeSupabaseClient({
     );
   }
   return client;
+}
+
+bool _containsSubsequence(List<int> haystack, List<int> needle) {
+  outer:
+  for (var i = 0; i + needle.length <= haystack.length; i++) {
+    for (var j = 0; j < needle.length; j++) {
+      if (haystack[i + j] != needle[j]) continue outer;
+    }
+    return true;
+  }
+  return false;
 }
