@@ -109,9 +109,14 @@ class CharacterInventoryItem {
   /// /item_info_panel.dart`.
   final double? costAmount;
 
-  /// Description résolue via `translations` (`entity_type = 'item'`,
-  /// `field_name = 'description'`) — `null` pour un objet personnalisé
-  /// (aucune ligne `items`) ou si aucune traduction n'existe pour cet objet.
+  /// Description : résolue via `translations` (`entity_type = 'item'`,
+  /// `field_name = 'description'`) pour un objet du catalogue, ou
+  /// `character_inventory.custom_description` (texte libre saisi à la
+  /// création, voir `presentation/widgets/add_item_flow.dart
+  /// ::CustomItemPickResult`) pour un objet personnalisé — jamais
+  /// `character_inventory.notes` (réservé à une annotation personnelle
+  /// distincte, voir [notes]). `null` si aucune des deux sources ne porte de
+  /// valeur.
   final String? description;
 
   /// `items.rarity` (text, nullable, aucune valeur peuplée dans le contenu
@@ -155,9 +160,16 @@ class CharacterInventoryItem {
   /// pas sur `items`).
   final String? notes;
 
-  /// Caractéristiques d'arme (`weapon_properties`, jointe par `item_id`),
-  /// `null` pour tout objet qui n'est pas une arme du catalogue (objet
-  /// personnalisé, ou catégorie différente de 'arme').
+  /// Caractéristiques d'arme : résolues via `weapon_properties` (jointe par
+  /// `item_id`) pour une arme du catalogue, ou via
+  /// `character_inventory.custom_damage_dice`/`custom_damage_type`/
+  /// `custom_properties` pour un objet personnalisé "Arme" (voir
+  /// `presentation/widgets/add_item_flow.dart::CustomItemPickResult`) —
+  /// jamais de portée dans ce second cas ([CharacterInventoryWeaponProperties
+  /// .rangeNormal]/[CharacterInventoryWeaponProperties.rangeMax] toujours
+  /// `null`, hors scope de la sheet de création). `null` pour tout autre
+  /// objet (objet personnalisé "Objet simple", ou objet du catalogue de
+  /// catégorie différente de 'arme').
   final CharacterInventoryWeaponProperties? weaponProperties;
 
   /// Caractéristiques d'armure/bouclier (`armor_properties`, jointe par
@@ -178,10 +190,14 @@ class CharacterInventoryItem {
   bool get isCustom => itemId == null;
 }
 
-/// Caractéristiques d'arme (`public.weapon_properties`) d'un
-/// [CharacterInventoryItem] — voir le panneau "Infos"
+/// Caractéristiques d'arme — `public.weapon_properties` pour un objet du
+/// catalogue (`category == 'arme'`), ou les colonnes `custom_*` de
+/// `character_inventory` pour un objet personnalisé "Arme" (`category`
+/// alors `null`, voir [CharacterInventoryItem.isCustom]) — d'un
+/// [CharacterInventoryItem]. Voir le panneau "Infos"
 /// (`presentation/widgets/item_info_panel.dart`), section "Dégâts"/
-/// "Propriétés"/"Portée", affichée uniquement pour `category == 'arme'`.
+/// "Propriétés"/"Portée", affichée dès que cette propriété est non nulle
+/// (pas de condition sur `category`).
 ///
 /// Volontairement une classe simple (pas `freezed`), même précédent que le
 /// reste de ce fichier.

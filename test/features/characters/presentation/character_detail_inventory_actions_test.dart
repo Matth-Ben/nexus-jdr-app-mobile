@@ -68,6 +68,10 @@ class FakeRepository implements CharacterRepository {
   int? lastNewAmount;
   String? lastCustomName;
   int? lastCustomQuantity;
+  String? lastCustomDescription;
+  String? lastCustomDamageDice;
+  String? lastCustomDamageType;
+  List<String>? lastCustomProperties;
   Map<CurrencyKind, int>? lastRewardCurrencyTotals;
   List<RewardItemDraft>? lastRewardItems;
 
@@ -317,10 +321,18 @@ class FakeRepository implements CharacterRepository {
     required String characterId,
     required String customName,
     required int quantity,
+    String? description,
+    String? damageDice,
+    String? damageType,
+    List<String> properties = const [],
   }) async {
     addCustomInventoryItemCallCount++;
     lastCustomName = customName;
     lastCustomQuantity = quantity;
+    lastCustomDescription = description;
+    lastCustomDamageDice = damageDice;
+    lastCustomDamageType = damageType;
+    lastCustomProperties = properties;
     return outcomeToReturn;
   }
 
@@ -930,7 +942,10 @@ void main() {
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextFormField), 'Amulette de famille');
+      await tester.enterText(
+        find.byKey(const Key('customItemNameField')),
+        'Amulette de famille',
+      );
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
       await tester.pumpAndSettle();
@@ -938,10 +953,78 @@ void main() {
       expect(repository.addCustomInventoryItemCallCount, 1);
       expect(repository.lastCustomName, 'Amulette de famille');
       expect(repository.lastCustomQuantity, 1);
+      expect(repository.lastCustomDescription, isNull);
+      expect(repository.lastCustomDamageDice, isNull);
+      expect(repository.lastCustomDamageType, isNull);
       expect(
         find.text('Amulette de famille ajouté à l\'inventaire.'),
         findsOneWidget,
       );
+    },
+  );
+
+  testWidgets(
+    'ajouter un objet personnalisé "Arme" : addCustomInventoryItem reçoit '
+    'la description, le dé/type de dégâts et les propriétés saisis',
+    (tester) async {
+      final repository = await pumpDetail(tester);
+      await openInventoryTab(tester);
+
+      await tester.tap(find.text('Objet'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Objet personnalisé'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('customItemNameField')),
+        'Zanbato ancestral',
+      );
+      await tester.enterText(
+        find.byKey(const Key('customItemDescriptionField')),
+        'Une lame transmise de génération en génération.',
+      );
+      await tester.pump();
+
+      // Bascule "Arme" du `SegmentedToggle` "TYPE D'OBJET".
+      await tester.tap(find.text('ARME'));
+      await tester.pumpAndSettle();
+
+      // Bouton "Ajouter" désactivé tant qu'aucun type de dégâts n'est
+      // choisi (requis pour une arme, pas de valeur par défaut).
+      expect(
+        tester
+            .widget<PrimaryButton>(
+              find.widgetWithText(PrimaryButton, 'AJOUTER'),
+            )
+            .onPressed,
+        isNull,
+      );
+
+      await tester.tap(find.byKey(const Key('customItemDamageTypeField')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tranchant').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('customItemPropertiesField')),
+        'lourde, deux mains',
+      );
+      await tester.pump();
+
+      await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
+      await tester.pumpAndSettle();
+
+      expect(repository.addCustomInventoryItemCallCount, 1);
+      expect(repository.lastCustomName, 'Zanbato ancestral');
+      expect(
+        repository.lastCustomDescription,
+        'Une lame transmise de génération en génération.',
+      );
+      // Dé de dégâts par défaut : 1 dé, d6 (`StepperCounter`/
+      // `DropdownButtonFormField` non modifiés dans ce test).
+      expect(repository.lastCustomDamageDice, '1d6');
+      expect(repository.lastCustomDamageType, 'tranchant');
+      expect(repository.lastCustomProperties, ['lourde', 'deux mains']);
     },
   );
 

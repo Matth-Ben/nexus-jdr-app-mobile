@@ -1531,6 +1531,82 @@ void main() {
         expect(outcome, WriteOutcome.synced);
       });
 
+      test('addCustomInventoryItem : description/damageDice/damageType/'
+          'properties renseignés -> envoyés tels quels (`custom_*`)', () async {
+        String? capturedBody;
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          onRequest: (request) {
+            if (request.url.pathSegments.last == 'character_inventory' &&
+                request.method == 'POST') {
+              capturedBody = request.body;
+            }
+          },
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.addCustomInventoryItem(
+          characterId: characterId,
+          customName: 'Zanbato ancestral',
+          quantity: 1,
+          description: 'Une lame transmise de génération en génération.',
+          damageDice: '2d6',
+          damageType: 'tranchant',
+          properties: const ['lourde', 'deux mains'],
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(capturedBody, isNotNull);
+        final payload = jsonDecode(capturedBody!) as Map<String, dynamic>;
+        expect(payload['custom_description'], isNotEmpty);
+        expect(payload['custom_damage_dice'], '2d6');
+        expect(payload['custom_damage_type'], 'tranchant');
+        expect(payload['custom_properties'], ['lourde', 'deux mains']);
+      });
+
+      test(
+        'addCustomInventoryItem : aucun des 4 champs renseigné -> '
+        'aucune colonne `custom_description`/`custom_damage_dice`/'
+        '`custom_damage_type`/`custom_properties` dans le payload '
+        '(non-régression, même convention que le reste de ce dépôt)',
+        () async {
+          String? capturedBody;
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            onRequest: (request) {
+              if (request.url.pathSegments.last == 'character_inventory' &&
+                  request.method == 'POST') {
+                capturedBody = request.body;
+              }
+            },
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
+
+          await repository.addCustomInventoryItem(
+            characterId: characterId,
+            customName: 'Amulette de famille',
+            quantity: 1,
+          );
+
+          expect(capturedBody, isNotNull);
+          final payload = jsonDecode(capturedBody!) as Map<String, dynamic>;
+          expect(payload.containsKey('custom_description'), isFalse);
+          expect(payload.containsKey('custom_damage_dice'), isFalse);
+          expect(payload.containsKey('custom_damage_type'), isFalse);
+          expect(payload.containsKey('custom_properties'), isFalse);
+        },
+      );
+
       test('addReward : connectivité absente -> retourne queued sans tenter le '
           'réseau, jamais mise en file', () async {
         final client = await _buildSignedInFakeSupabaseClient(
@@ -1583,6 +1659,60 @@ void main() {
         );
 
         expect(outcome, WriteOutcome.synced);
+      });
+
+      test('addReward : objet personnalisé "Arme" -> le payload batché '
+          'porte custom_description/custom_damage_dice/custom_damage_type/'
+          'custom_properties, l\'objet du catalogue n\'a aucune de ces '
+          'colonnes', () async {
+        String? capturedBody;
+        final client = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          onRequest: (request) {
+            if (request.url.pathSegments.last == 'character_inventory' &&
+                request.method == 'POST') {
+              capturedBody = request.body;
+            }
+          },
+        );
+        final repository = SupabaseCharacterRepository(
+          client,
+          cache,
+          pendingWrites,
+          _FakeConnectivityChecker(connected: true),
+        );
+
+        final outcome = await repository.addReward(
+          characterId: characterId,
+          newCurrencyTotals: const {},
+          items: const [
+            RewardItemDraft(itemId: 5, displayName: 'Dague', quantity: 1),
+            RewardItemDraft(
+              customName: 'Zanbato ancestral',
+              displayName: 'Zanbato ancestral',
+              quantity: 1,
+              customDescription: 'Une relique familiale.',
+              customDamageDice: '2d6',
+              customDamageType: 'tranchant',
+              customProperties: ['lourde', 'deux mains'],
+            ),
+          ],
+        );
+
+        expect(outcome, WriteOutcome.synced);
+        expect(capturedBody, isNotNull);
+        final payload = jsonDecode(capturedBody!) as List<dynamic>;
+        final catalogItem =
+            payload.firstWhere((row) => row['item_id'] == 5) as Map;
+        expect(catalogItem.containsKey('custom_description'), isFalse);
+        expect(catalogItem.containsKey('custom_damage_dice'), isFalse);
+
+        final customItem =
+            payload.firstWhere((row) => row['custom_name'] != null) as Map;
+        expect(customItem['custom_description'], 'Une relique familiale.');
+        expect(customItem['custom_damage_dice'], '2d6');
+        expect(customItem['custom_damage_type'], 'tranchant');
+        expect(customItem['custom_properties'], ['lourde', 'deux mains']);
       });
 
       test('addReward : ni monnaie ni objets (les deux vides) -> aucune '

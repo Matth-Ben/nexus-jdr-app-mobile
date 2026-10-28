@@ -88,8 +88,14 @@ Future<_Recorder> _pump(
               recorder.adjustCurrencyCalls.add((currency, amount)),
           onAddInventoryItem: (item, quantity) =>
               recorder.addItemCalls.add((item, quantity)),
-          onAddCustomInventoryItem: (name, quantity) =>
-              recorder.addCustomItemCalls.add((name, quantity)),
+          onAddCustomInventoryItem: (
+            name,
+            quantity, {
+            description,
+            damageDice,
+            damageType,
+            properties = const [],
+          }) => recorder.addCustomItemCalls.add((name, quantity)),
           onEquipWeaponToSlot: (item, slot) =>
               recorder.equipWeaponCalls.add((item, slot)),
         ),
@@ -548,7 +554,10 @@ void main() {
       await tester.tap(find.text('Objet personnalisé'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextFormField), 'Amulette de famille');
+      await tester.enterText(
+        find.byKey(const Key('customItemNameField')),
+        'Amulette de famille',
+      );
       await tester.pump();
       await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
       await tester.pumpAndSettle();
@@ -585,7 +594,14 @@ void main() {
               onRemoveItem: (_) {},
               onAdjustCurrency: (_, _) {},
               onAddInventoryItem: (_, _) {},
-              onAddCustomInventoryItem: (_, _) {},
+              onAddCustomInventoryItem: (
+                _,
+                _, {
+                description,
+                damageDice,
+                damageType,
+                properties = const [],
+              }) {},
               onEquipWeaponToSlot: (_, _) {},
               onAddReward: () => rewardTapCount++,
             ),
@@ -827,7 +843,10 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Objet personnalisé'));
         await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextFormField), 'Corde');
+        await tester.enterText(
+          find.byKey(const Key('customItemNameField')),
+          'Corde',
+        );
         await tester.pump();
         await tester.tap(find.widgetWithText(PrimaryButton, 'AJOUTER'));
         await tester.pumpAndSettle();
