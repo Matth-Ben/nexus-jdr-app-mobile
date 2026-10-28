@@ -23,32 +23,44 @@ class DashedAddTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: Container(
-        height: 48,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        child: CustomPaint(
-          painter: const DashedBorderPainter(color: AppColors.textMuted),
-          child: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.add, size: 18, color: AppColors.textMuted),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  label,
-                  style: AppTypography.body(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textMuted,
+    // `Material` transparent : sans lui, l'effet de toucher de l'`InkWell`
+    // serait masqué par le fond du parent (même recette que
+    // `CompactActionButton`).
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          height: 48,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          child: CustomPaint(
+            painter: const DashedBorderPainter(color: AppColors.textMuted),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.add, size: 18, color: AppColors.textMuted),
+                  const SizedBox(width: AppSpacing.xs),
+                  // `Flexible` + une seule ligne : un libellé long ou un texte
+                  // agrandi ne déborde jamais de la hauteur fixe de 48px.
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.body(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

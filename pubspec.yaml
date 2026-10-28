@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.7+8
+version: 1.0.8+9
 
 environment:
   sdk: ^3.13.1
@@ -54,6 +54,14 @@ dependencies:
   xml: ^7.0.1
   go_router: ^18.0.0
   image_picker: ^1.2.0
+  # Ré-encodage JPEG de la capture d'écran jointe à un signalement de bug
+  # (`features/bug_report/data/bug_report_screenshot_compressor.dart`) :
+  # `image_picker` (`imageQuality`/`maxWidth`) laisse en PNG une image PNG
+  # (iOS) ou avec canal alpha (Android) — le cas typique d'une capture
+  # d'écran —, alors que le contrat `report-bug` attend un JPEG. Pur Dart
+  # (aucun code natif), déjà résolu transitivement par
+  # `flutter_launcher_icons` avant d'être déclaré ici.
+  image: ^4.9.2
   # Sélecteur de fichier natif pour l'import XML aidedd.org
   # (`lib/features/xml_import/`) — `image_picker` ne gère que les images.
   file_picker: ^12.1.3
