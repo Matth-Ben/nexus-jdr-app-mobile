@@ -1569,40 +1569,43 @@ void main() {
         expect(payload['custom_properties'], ['lourde', 'deux mains']);
       });
 
-      test('addCustomInventoryItem : aucun des 4 champs renseigné -> '
-          'aucune colonne `custom_description`/`custom_damage_dice`/'
-          '`custom_damage_type`/`custom_properties` dans le payload '
-          '(non-régression, même convention que le reste de ce dépôt)', () async {
-        String? capturedBody;
-        final client = await _buildSignedInFakeSupabaseClient(
-          ownerId: ownerId,
-          onRequest: (request) {
-            if (request.url.pathSegments.last == 'character_inventory' &&
-                request.method == 'POST') {
-              capturedBody = request.body;
-            }
-          },
-        );
-        final repository = SupabaseCharacterRepository(
-          client,
-          cache,
-          pendingWrites,
-          _FakeConnectivityChecker(connected: true),
-        );
+      test(
+        'addCustomInventoryItem : aucun des 4 champs renseigné -> '
+        'aucune colonne `custom_description`/`custom_damage_dice`/'
+        '`custom_damage_type`/`custom_properties` dans le payload '
+        '(non-régression, même convention que le reste de ce dépôt)',
+        () async {
+          String? capturedBody;
+          final client = await _buildSignedInFakeSupabaseClient(
+            ownerId: ownerId,
+            onRequest: (request) {
+              if (request.url.pathSegments.last == 'character_inventory' &&
+                  request.method == 'POST') {
+                capturedBody = request.body;
+              }
+            },
+          );
+          final repository = SupabaseCharacterRepository(
+            client,
+            cache,
+            pendingWrites,
+            _FakeConnectivityChecker(connected: true),
+          );
 
-        await repository.addCustomInventoryItem(
-          characterId: characterId,
-          customName: 'Amulette de famille',
-          quantity: 1,
-        );
+          await repository.addCustomInventoryItem(
+            characterId: characterId,
+            customName: 'Amulette de famille',
+            quantity: 1,
+          );
 
-        expect(capturedBody, isNotNull);
-        final payload = jsonDecode(capturedBody!) as Map<String, dynamic>;
-        expect(payload.containsKey('custom_description'), isFalse);
-        expect(payload.containsKey('custom_damage_dice'), isFalse);
-        expect(payload.containsKey('custom_damage_type'), isFalse);
-        expect(payload.containsKey('custom_properties'), isFalse);
-      });
+          expect(capturedBody, isNotNull);
+          final payload = jsonDecode(capturedBody!) as Map<String, dynamic>;
+          expect(payload.containsKey('custom_description'), isFalse);
+          expect(payload.containsKey('custom_damage_dice'), isFalse);
+          expect(payload.containsKey('custom_damage_type'), isFalse);
+          expect(payload.containsKey('custom_properties'), isFalse);
+        },
+      );
 
       test('addReward : connectivité absente -> retourne queued sans tenter le '
           'réseau, jamais mise en file', () async {
@@ -1706,10 +1709,7 @@ void main() {
 
         final customItem =
             payload.firstWhere((row) => row['custom_name'] != null) as Map;
-        expect(
-          customItem['custom_description'],
-          'Une relique familiale.',
-        );
+        expect(customItem['custom_description'], 'Une relique familiale.');
         expect(customItem['custom_damage_dice'], '2d6');
         expect(customItem['custom_damage_type'], 'tranchant');
         expect(customItem['custom_properties'], ['lourde', 'deux mains']);

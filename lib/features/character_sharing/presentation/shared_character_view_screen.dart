@@ -173,8 +173,14 @@ class _SharedCharacterViewScreenState
         onRemoveItem: (_) {},
         onAdjustCurrency: (currency, newAmount) {},
         onAddInventoryItem: (item, quantity) {},
-        onAddCustomInventoryItem:
-            (customName, quantity, {description, damageDice, damageType, properties = const []}) {},
+        onAddCustomInventoryItem: (
+          customName,
+          quantity, {
+          description,
+          damageDice,
+          damageType,
+          properties = const [],
+        }) {},
         onEquipWeaponToSlot: (_, _) {},
         actionsDisabled: true,
       ),

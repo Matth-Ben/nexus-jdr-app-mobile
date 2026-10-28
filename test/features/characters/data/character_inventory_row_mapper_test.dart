@@ -300,7 +300,8 @@ void main() {
           'quantity': 1,
           'equipped': false,
           'notes': 'Trouvé dans le donjon du roi gobelin.',
-          'custom_description': 'Une lame transmise de génération en '
+          'custom_description':
+              'Une lame transmise de génération en '
               'génération.',
           'custom_damage_dice': '2d6',
           'custom_damage_type': 'tranchant',

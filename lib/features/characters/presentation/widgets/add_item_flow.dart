@@ -789,7 +789,8 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                         minLines: 3,
                         maxLines: null,
                         decoration: const InputDecoration(
-                          hintText: 'Ex. Un médaillon gravé aux armes de '
+                          hintText:
+                              'Ex. Un médaillon gravé aux armes de '
                               'votre famille.',
                         ),
                       ),
@@ -812,8 +813,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                           SegmentedToggleOption(value: true, label: 'Arme'),
                         ],
                         value: _isWeapon,
-                        onChanged: (value) =>
-                            setState(() => _isWeapon = value),
+                        onChanged: (value) => setState(() => _isWeapon = value),
                       ),
                       if (_isWeapon) ...[
                         const SizedBox(height: AppSpacing.md),
@@ -830,8 +830,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                           children: [
                             StepperCounter(
                               value: _diceCount,
-                              onIncrement: () =>
-                                  setState(() => _diceCount++),
+                              onIncrement: () => setState(() => _diceCount++),
                               onDecrement: _diceCount > 1
                                   ? () => setState(() => _diceCount--)
                                   : null,
@@ -879,8 +878,7 @@ class _CustomItemPickerContentState extends State<_CustomItemPickerContent> {
                           isExpanded: true,
                           hint: const Text('Sélectionner'),
                           items: [
-                            for (final entry
-                                in _customDamageTypeLabels.entries)
+                            for (final entry in _customDamageTypeLabels.entries)
                               DropdownMenuItem(
                                 value: entry.key,
                                 child: Text(entry.value),

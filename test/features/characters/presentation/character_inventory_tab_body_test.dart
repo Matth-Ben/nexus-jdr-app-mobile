@@ -88,15 +88,14 @@ Future<_Recorder> _pump(
               recorder.adjustCurrencyCalls.add((currency, amount)),
           onAddInventoryItem: (item, quantity) =>
               recorder.addItemCalls.add((item, quantity)),
-          onAddCustomInventoryItem:
-              (
-                name,
-                quantity, {
-                description,
-                damageDice,
-                damageType,
-                properties = const [],
-              }) => recorder.addCustomItemCalls.add((name, quantity)),
+          onAddCustomInventoryItem: (
+            name,
+            quantity, {
+            description,
+            damageDice,
+            damageType,
+            properties = const [],
+          }) => recorder.addCustomItemCalls.add((name, quantity)),
           onEquipWeaponToSlot: (item, slot) =>
               recorder.equipWeaponCalls.add((item, slot)),
         ),
@@ -595,15 +594,14 @@ void main() {
               onRemoveItem: (_) {},
               onAdjustCurrency: (_, _) {},
               onAddInventoryItem: (_, _) {},
-              onAddCustomInventoryItem:
-                  (
-                    _,
-                    _, {
-                    description,
-                    damageDice,
-                    damageType,
-                    properties = const [],
-                  }) {},
+              onAddCustomInventoryItem: (
+                _,
+                _, {
+                description,
+                damageDice,
+                damageType,
+                properties = const [],
+              }) {},
               onEquipWeaponToSlot: (_, _) {},
               onAddReward: () => rewardTapCount++,
             ),
