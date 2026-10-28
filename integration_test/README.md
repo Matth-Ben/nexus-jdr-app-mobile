@@ -145,3 +145,12 @@ disposition.
   persistant malgré plusieurs redémarrages `adb reboot`) — à reprendre une
   fois l'émulateur relancé proprement (recommandé : redémarrage complet
   depuis Android Studio/`emulator`, pas seulement `adb reboot`).
+- Objet personnalise : description + degats d'arme (`custom_inventory_item_weapon_details_test.dart`,
+  25/10/2026) : execute avec succes sur `emulator-5554` contre le projet
+  distant -- objet simple (description optionnelle, bouton jamais bloque),
+  objet "Arme" (bouton bloque sans type de degats, `DiceTypeBadge` + section
+  Degats/Proprietes affiches), persistance reelle apres fermeture/
+  reouverture de la fiche, mode "collecte locale" (`add_reward_sheet.dart`),
+  non-regression sur un objet du catalogue (Epee longue), et fiche partagee
+  (RPC `get_shared_character` verifie directement apres regeneration du
+  token depuis l'ecran "Partager" reel).
