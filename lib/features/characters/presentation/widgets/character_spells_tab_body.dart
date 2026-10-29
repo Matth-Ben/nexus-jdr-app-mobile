@@ -38,6 +38,32 @@ import 'spell_preparation_card.dart';
 /// `providers/spell_preparation_filter_preference_provider.dart` — d'où le
 /// passage de `StatefulWidget` à `ConsumerStatefulWidget`, sans rien changer
 /// chez les appelants (déjà dans l'arbre Riverpod).
+///
+/// **Le filtre mémorisé est lu via `ref.watch` dans `build()`, jamais via un
+/// `ref.read` figé en `initState` mis en cache dans un champ local** — bug
+/// confirmé par `qa-testeur` le 29/10/2026
+/// (`shared_character_view_screen_test.dart`, groupe "filtre de préparation
+/// mémorisé sur l'appareil") : `SpellPreparationFilterPreferenceController`
+/// retombe "momentanément" sur [SpellPreparationFilter.all] tant que
+/// `sharedPreferencesProvider` n'a pas résolu — TOUJOURS le cas au tout
+/// premier `build()` de ce widget (au moins un microtask Dart). Un
+/// `ref.read` en `initState` capturait donc systématiquement ce retour à
+/// vide sans jamais se corriger ensuite, puisque rien ne réécoutait le
+/// provider une fois la vraie valeur disponible. Sur la fiche du
+/// propriétaire, ça ne se voyait presque jamais : `UpdateSuggestedBanner`
+/// (`character_list_screen.dart`) lit déjà `sharedPreferencesProvider` bien
+/// avant que le joueur n'atteigne cet onglet, qui trouvait donc
+/// généralement le provider déjà résolu. `shared_character_view_screen.dart`
+/// (lecteur anonyme) ne passe jamais par cet écran d'accueil — rien ne
+/// "préchauffe" le provider avant cet onglet, le défaut y était donc
+/// déterministe. `ref.watch` (sans champ local redondant, voir `build()`)
+/// corrige ça à la racine : la carte se mettra à jour d'elle-même dès que
+/// le provider résout, au prix d'un flash très bref sur "Tous" si ce
+/// provider n'a jamais encore été lu dans la session — même compromis
+/// documenté que `UpdateBannerDismissalController.build` dans
+/// `update_banner_dismissal_provider.dart`, jugé préférable à un
+/// `ref.listen` qui aurait dû dupliquer cette même logique de
+/// resynchronisation dans un champ local, pour le même résultat visuel.
 class CharacterSpellsTabBody extends ConsumerStatefulWidget {
   const CharacterSpellsTabBody({
     required this.detail,
@@ -78,15 +104,6 @@ class _CharacterSpellsTabBodyState
   final TextEditingController _searchController = TextEditingController();
   FocusNode? _ownedFocusNode;
 
-  /// Filtre "Tous"/"Préparés"/"Non préparés" de [SpellPreparationCard] —
-  /// démarre à la valeur mémorisée côté appareil
-  /// (`spellPreparationFilterPreferenceControllerProvider`), puis vit en
-  /// état local le temps de la session de cet onglet (comme la recherche,
-  /// voir la documentation de classe) : chaque changement via
-  /// `onFilterChanged` est appliqué immédiatement (`setState`) ET persisté
-  /// pour la prochaine ouverture (de cette fiche ou d'une autre).
-  late SpellPreparationFilter _preparationFilter;
-
   FocusNode get _focusNode => widget.searchFocusNode ?? _ownedFocusNode!;
 
   @override
@@ -94,13 +111,15 @@ class _CharacterSpellsTabBodyState
     super.initState();
     if (widget.searchFocusNode == null) _ownedFocusNode = FocusNode();
     _searchController.addListener(_handleSearchChanged);
-    _preparationFilter = ref.read(
-      spellPreparationFilterPreferenceControllerProvider,
-    );
   }
 
+  /// Persiste [filter] — la carte [SpellPreparationCard] se met à jour
+  /// elle-même dès que `build()` relit
+  /// `spellPreparationFilterPreferenceControllerProvider` (`ref.watch`,
+  /// aucun `setState` local nécessaire) : `setFilter` affecte son `state`
+  /// de façon synchrone avant d'écrire sur le disque (voir sa doc), donc
+  /// l'application est immédiate même sans attendre cette écriture.
   void _handleFilterChanged(SpellPreparationFilter filter) {
-    setState(() => _preparationFilter = filter);
     unawaited(
       ref
           .read(spellPreparationFilterPreferenceControllerProvider.notifier)
@@ -176,8 +195,20 @@ class _CharacterSpellsTabBodyState
     final hasPreparation = detail.spells.any(
       SpellStatusFormatter.canTogglePrepared,
     );
+    // `ref.watch` (pas `ref.read` en `initState`, bug confirmé par
+    // `qa-testeur` le 29/10/2026 — voir le commentaire de classe) : le
+    // provider retombe "momentanément" sur [SpellPreparationFilter.all] le
+    // temps que `sharedPreferencesProvider` résolve, TOUJOURS le cas au
+    // premier `build()` de ce widget. `ref.watch` permet au rebuild
+    // automatique de rattraper la vraie valeur mémorisée dès cette
+    // résolution — y compris sur `shared_character_view_screen.dart`, où
+    // rien d'autre dans l'arbre ne lit ce provider en amont pour le
+    // "préchauffer".
+    final preferredFilter = ref.watch(
+      spellPreparationFilterPreferenceControllerProvider,
+    );
     final preparationFilter = hasPreparation
-        ? _preparationFilter
+        ? preferredFilter
         : SpellPreparationFilter.all;
     final visibleSpells = preparationFilter.apply(
       SpellNameFilter.apply(
