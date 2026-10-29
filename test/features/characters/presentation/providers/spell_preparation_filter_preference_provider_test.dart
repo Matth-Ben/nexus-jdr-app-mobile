@@ -38,62 +38,53 @@ void main() {
     );
   });
 
-  test(
-    'setFilter met à jour le state immédiatement (sans attendre l\'écriture '
-    'disque)',
-    () async {
-      final container = buildContainer();
-      await container.read(sharedPreferencesProvider.future);
+  test('setFilter met à jour le state immédiatement (sans attendre l\'écriture '
+      'disque)', () async {
+    final container = buildContainer();
+    await container.read(sharedPreferencesProvider.future);
 
-      // Volontairement pas d'`await` ici : `state` doit déjà refléter le
-      // nouveau filtre avant même que l'écriture asynchrone ne se termine
-      // (voir la doc de `setFilter`).
-      final pending = container
-          .read(spellPreparationFilterPreferenceControllerProvider.notifier)
-          .setFilter(SpellPreparationFilter.prepared);
+    // Volontairement pas d'`await` ici : `state` doit déjà refléter le
+    // nouveau filtre avant même que l'écriture asynchrone ne se termine
+    // (voir la doc de `setFilter`).
+    final pending = container
+        .read(spellPreparationFilterPreferenceControllerProvider.notifier)
+        .setFilter(SpellPreparationFilter.prepared);
 
-      expect(
-        container.read(spellPreparationFilterPreferenceControllerProvider),
-        SpellPreparationFilter.prepared,
-      );
+    expect(
+      container.read(spellPreparationFilterPreferenceControllerProvider),
+      SpellPreparationFilter.prepared,
+    );
 
-      await pending;
-    },
-  );
+    await pending;
+  });
 
-  test(
-    'le choix persiste : un nouveau container relisant les mêmes '
-    'SharedPreferences retrouve le même filtre',
-    () async {
-      final firstContainer = buildContainer();
-      await firstContainer
-          .read(spellPreparationFilterPreferenceControllerProvider.notifier)
-          .setFilter(SpellPreparationFilter.unprepared);
+  test('le choix persiste : un nouveau container relisant les mêmes '
+      'SharedPreferences retrouve le même filtre', () async {
+    final firstContainer = buildContainer();
+    await firstContainer
+        .read(spellPreparationFilterPreferenceControllerProvider.notifier)
+        .setFilter(SpellPreparationFilter.unprepared);
 
-      final secondContainer = buildContainer();
-      await secondContainer.read(sharedPreferencesProvider.future);
+    final secondContainer = buildContainer();
+    await secondContainer.read(sharedPreferencesProvider.future);
 
-      expect(
-        secondContainer.read(spellPreparationFilterPreferenceControllerProvider),
-        SpellPreparationFilter.unprepared,
-      );
-    },
-  );
+    expect(
+      secondContainer.read(spellPreparationFilterPreferenceControllerProvider),
+      SpellPreparationFilter.unprepared,
+    );
+  });
 
-  test(
-    'une valeur stockée invalide/inconnue (ex. ancienne version de l\'app) '
-    'retombe sur "Tous" plutôt que de planter',
-    () async {
-      SharedPreferences.setMockInitialValues({
-        'spell_preparation_filter_preference': 'valeur_inconnue',
-      });
-      final container = buildContainer();
-      await container.read(sharedPreferencesProvider.future);
+  test('une valeur stockée invalide/inconnue (ex. ancienne version de l\'app) '
+      'retombe sur "Tous" plutôt que de planter', () async {
+    SharedPreferences.setMockInitialValues({
+      'spell_preparation_filter_preference': 'valeur_inconnue',
+    });
+    final container = buildContainer();
+    await container.read(sharedPreferencesProvider.future);
 
-      expect(
-        container.read(spellPreparationFilterPreferenceControllerProvider),
-        SpellPreparationFilter.all,
-      );
-    },
-  );
+    expect(
+      container.read(spellPreparationFilterPreferenceControllerProvider),
+      SpellPreparationFilter.all,
+    );
+  });
 }
