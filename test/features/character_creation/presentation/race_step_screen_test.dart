@@ -243,6 +243,17 @@ const _demiElfe = RaceOption(
   source: 'Manuel des Joueurs',
 );
 
+/// Demi-orc : `traits2024` null (pas d'équivalent 2024 RAW, comme le
+/// Demi-elfe) — utilisée pour vérifier la rangée de suggestions rapides
+/// sous "Race personnalisée" (`RaceStepScreen._unavailableRaceSuggestions`).
+const _demiOrc = RaceOption(
+  id: 8,
+  name: 'Demi-orc',
+  abilityBonuses: {'str': 2, 'con': 1},
+  traits: [],
+  source: 'Manuel des Joueurs',
+);
+
 /// Nain "unifié" en 2024 (`traits2024` non nul sur la race elle-même,
 /// aucune de ses sous-races n'en a) — voir `RaceCatalog.isUnifiedRaceIn2024`.
 /// `id: 40` arbitraire (distinct de `_aasimar.id == 3`, jamais combinés dans
@@ -1161,8 +1172,9 @@ void main() {
 
   group('chantier "différenciation 2014/2024 pour les races" (24/10/2026)', () {
     testWidgets(
-      'édition 2024 : le Demi-elfe (traits2024 null) est grisé et non '
-      'sélectionnable',
+      'édition 2024 : le Demi-elfe (traits2024 null) est entièrement '
+      'absent des listes de races (décision du 30/10/2026 : masquage '
+      'complet plutôt que griséification)',
       (WidgetTester tester) async {
         fakeRepository.catalogToReturn = const RaceCatalog(
           races: [_elfeAvec2024, _demiElfe],
@@ -1176,18 +1188,16 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.textContaining('Indisponible en édition 2024'),
-          findsOneWidget,
+          find.text('Demi-elfe'),
+          findsNothing,
+          reason:
+              'une race indisponible en édition 2024 ne doit plus '
+              'apparaître du tout dans la liste, même grisée',
         );
-
-        await tester.tap(find.text('Demi-elfe'));
-        await tester.pumpAndSettle();
-
-        expect(
-          readDraft().raceId,
-          isNull,
-          reason: 'le tap sur une race grisée ne doit rien sélectionner',
-        );
+        expect(find.textContaining('Indisponible en édition 2024'), findsNothing);
+        // La race disponible de ce même catalogue reste bien affichée :
+        // seule la race indisponible est exclue, pas la liste entière.
+        expect(find.text('Elfe'), findsOneWidget);
       },
     );
 
@@ -1212,6 +1222,68 @@ void main() {
 
       expect(readDraft().raceId, _demiElfe.id);
     });
+
+    testWidgets(
+      'édition 2024, "Race personnalisée" sélectionnée : suggère les races '
+      'indisponibles dans cette édition (Demi-elfe/Demi-orc), un tap '
+      'pré-remplit le champ de saisie',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfeAvec2024, _demiElfe, _demiOrc],
+          subraces: [],
+        );
+        container
+            .read(characterCreationDraftControllerProvider.notifier)
+            .setEdition('2024');
+
+        await pumpTallRaceStep(tester);
+
+        await tester.tap(find.text('Race personnalisée'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.widgetWithText(ActionChip, 'Demi-elfe'),
+          findsOneWidget,
+        );
+        expect(
+          find.widgetWithText(ActionChip, 'Demi-orc'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.widgetWithText(ActionChip, 'Demi-orc'));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.widget<TextField>(findCustomRaceTextField()).controller!.text,
+          'Demi-orc',
+        );
+
+        await tester.tap(find.text('SUIVANT'));
+        await tester.pumpAndSettle();
+
+        expect(readDraft().raceCustomText, 'Demi-orc');
+      },
+    );
+
+    testWidgets(
+      'édition 2014, "Race personnalisée" sélectionnée : aucune suggestion '
+      'affichée (aucune race indisponible dans cette édition)',
+      (WidgetTester tester) async {
+        fakeRepository.catalogToReturn = const RaceCatalog(
+          races: [_elfe, _demiElfe],
+          subraces: [],
+        );
+        // Édition 2014 par défaut : aucun `setEdition` explicite ici.
+
+        await pumpTallRaceStep(tester);
+
+        await tester.tap(find.text('Race personnalisée'));
+        await tester.pumpAndSettle();
+
+        expect(findCustomRaceTextField(), findsOneWidget);
+        expect(find.byType(ActionChip), findsNothing);
+      },
+    );
 
     testWidgets(
       'édition 2024, Nain (unifié, traits2024 non nul et aucune sous-race '

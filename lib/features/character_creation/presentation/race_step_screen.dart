@@ -62,8 +62,12 @@ import 'widgets/step_help_sheet.dart';
 ///
 /// Chantier "différenciation 2014/2024 pour les races" (24/10/2026) :
 /// - le Demi-elfe (et toute race sans équivalent 2024, `RaceOption
-///   .traits2024` nul) est grisée/non sélectionnable en édition 2024, voir
-///   [_isRaceAvailable] ;
+///   .traits2024` nul) est masquée des listes "RACES DE BASE"/"RACES
+///   D'EXTENSION" en édition 2024, voir [_isRaceAvailable] et son point
+///   d'appel dans [_filterRaces] — retrait complet plutôt que simple
+///   griséification (décision du 30/10/2026) : son nom reste néanmoins
+///   proposé en suggestion rapide sous "Race personnalisée", voir
+///   [_unavailableRaceSuggestions] ;
 /// - le Nain/l'Halfelin, "unifiés" sans sous-race en 2024 (`RaceCatalog
 ///   .isUnifiedRaceIn2024`), sautent `SubraceStepScreen` même s'ils ont des
 ///   lignes `subraces` (réservées à l'édition 2014) — voir [_submit] ;
@@ -158,15 +162,18 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   /// `false` si [race] n'existe pas RAW en édition 2024 (Demi-elfe à ce
   /// jour, remplacée par un choix Elfe/Humain avec personnalisation
   /// narrative non modélisé ici) — toujours `true` en édition 2014. Pilote
-  /// `SelectableOptionTile.enabled`/[_selectRace] dans [_raceGroupSection] —
-  /// chantier "différenciation 2014/2024 pour les races" (24/10/2026).
+  /// [_filterRaces] (races exclues de "RACES DE BASE"/"RACES D'EXTENSION",
+  /// voir [_raceGroupSection]) et la liste de suggestions sous "Race
+  /// personnalisée" ([_unavailableRaceSuggestions]) — chantier
+  /// "différenciation 2014/2024 pour les races" (24/10/2026), devenu un
+  /// filtre plutôt qu'une griséification le 30/10/2026.
   bool _isRaceAvailable(RaceOption race) {
     if (_edition != '2024') return true;
     return race.traits2024 != null;
   }
 
-  void _selectRace(int raceId, {required bool available}) {
-    if (_isRaceLocked || !available) return;
+  void _selectRace(int raceId) {
+    if (_isRaceLocked) return;
     setState(() {
       _isCustomRaceSelected = false;
       _selectedRaceId = raceId;
@@ -419,6 +426,18 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
         if (!race.isCoreSource) race,
     ];
     final isRaceLocked = _isRaceLocked;
+    // Toujours calculée sur [catalog.races] COMPLET, jamais sur
+    // [filteredRaces] (déjà privé des races indisponibles ET du texte de
+    // recherche) : la suggestion sous "Race personnalisée" doit lister TOUTE
+    // race indisponible dans l'édition courante, quel que soit le contenu du
+    // champ de recherche (les deux champs sont indépendants) — vide en
+    // édition 2014 par construction de [_isRaceAvailable], ce qui masque
+    // naturellement [_unavailableRaceSuggestions] sans cas spécial par
+    // édition.
+    final unavailableRaces = [
+      for (final race in catalog.races)
+        if (!_isRaceAvailable(race)) race,
+    ];
 
     return Column(
       children: [
@@ -523,6 +542,10 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
                       ),
                       if (_isCustomRaceSelected && !isRaceLocked) ...[
                         const SizedBox(height: AppSpacing.sm),
+                        if (unavailableRaces.isNotEmpty) ...[
+                          _unavailableRaceSuggestions(unavailableRaces),
+                          const SizedBox(height: AppSpacing.sm),
+                        ],
                         TextField(
                           controller: _customRaceController,
                           decoration: const InputDecoration(
@@ -573,17 +596,26 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
     );
   }
 
-  /// Races dont le nom contient le texte du champ de recherche (sans accents
-  /// ni casse, voir [FrenchTextNormalizer]) ; toutes si le champ est vide.
-  /// Même patron que `PactWeaponRules.search`, dupliqué ici plutôt que
-  /// factorisé (pas de couplage entre cette étape et la fiche personnage,
-  /// voir la doc de classe de [RaceStepScreen]).
+  /// Races disponibles dans l'édition courante ([_isRaceAvailable]) ET dont
+  /// le nom contient le texte du champ de recherche (sans accents ni casse,
+  /// voir [FrenchTextNormalizer]) ; toutes les races disponibles si le champ
+  /// est vide. Une race indisponible dans l'édition courante (Demi-elfe/
+  /// Demi-orc en 2024, voir [_isRaceAvailable]) n'apparaît donc plus du tout
+  /// dans "RACES DE BASE"/"RACES D'EXTENSION" (décision du 30/10/2026,
+  /// masquage complet plutôt que griséification) — toujours sélectionnable
+  /// normalement en édition 2014, puisque [_isRaceAvailable] y vaut toujours
+  /// `true`. Le filtre de recherche lui-même est le même patron que
+  /// `PactWeaponRules.search`, dupliqué ici plutôt que factorisé (pas de
+  /// couplage entre cette étape et la fiche personnage, voir la doc de
+  /// classe de [RaceStepScreen]).
   List<RaceOption> _filterRaces(List<RaceOption> races) {
     final needle = FrenchTextNormalizer.normalize(_searchController.text);
-    if (needle.isEmpty) return races;
     return [
       for (final race in races)
-        if (FrenchTextNormalizer.normalize(race.name).contains(needle)) race,
+        if (_isRaceAvailable(race) &&
+            (needle.isEmpty ||
+                FrenchTextNormalizer.normalize(race.name).contains(needle)))
+          race,
     ];
   }
 
@@ -613,35 +645,69 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   }
 
   /// Une tuile de [race] à l'index [badgeIndex] (couleur de
-  /// [AccentIconBadge]) — extrait de [_raceGroupSection] pour calculer
-  /// [_isRaceAvailable] une seule fois par race plutôt que plusieurs fois
-  /// inline.
+  /// [AccentIconBadge]) — extrait de [_raceGroupSection].
+  ///
+  /// [race] est TOUJOURS disponible dans l'édition courante ici : les races
+  /// qu'on reçoit sont déjà filtrées par [_filterRaces] avant d'atteindre
+  /// cette méthode, voir [_buildContent] — plus de vérification de
+  /// [_isRaceAvailable] ni de blocage défensif du tap dans cette méthode
+  /// depuis le 30/10/2026 (avant cette date, cette tuile pouvait être
+  /// grisée avec un message explicatif ; elle est désormais simplement
+  /// absente de la liste, voir la doc de classe de [RaceStepScreen]).
   Widget _raceTile(RaceOption race, int badgeIndex) {
-    final available = _isRaceAvailable(race);
     return SelectableOptionTile(
       title: race.name,
-      // Message explicite plutôt qu'un résumé de bonus désormais trompeur
-      // (ces bonus 2014 ne s'appliquent plus à cette race en 2024) — voir
-      // [_isRaceAvailable].
-      subtitle: available
-          ? race.summaryLine
-          : 'Indisponible en édition 2024 — remplacée par un choix '
-                'Elfe/Humain avec personnalisation narrative.',
-      enabled: available,
-      onInfo: available
-          ? () => showStepHelpSheet(
-              context,
-              StepHelpContent(title: race.name, body: race.infoText),
-            )
-          : null,
-      // `&& available` : une race devenue indisponible (ex. draft réhydrié
-      // par une autre voie que `setEdition`, voir la défense en profondeur
-      // de `_buildContent`) ne s'affiche jamais comme sélectionnée — éviter
-      // l'état visuel contradictoire "grisée ET bordure dorée".
-      selected:
-          !_isCustomRaceSelected && _selectedRaceId == race.id && available,
+      subtitle: race.summaryLine,
+      onInfo: () => showStepHelpSheet(
+        context,
+        StepHelpContent(title: race.name, body: race.infoText),
+      ),
+      selected: !_isCustomRaceSelected && _selectedRaceId == race.id,
       leading: AccentIconBadge(index: badgeIndex, icon: Icons.shield_rounded),
-      onTap: () => _selectRace(race.id, available: available),
+      onTap: () => _selectRace(race.id),
+    );
+  }
+
+  /// Rangée de suggestions rapides affichée sous la tuile "Race
+  /// personnalisée" quand elle est sélectionnée et que [unavailableRaces]
+  /// n'est pas vide (en pratique, seulement en édition 2024 : Demi-elfe/
+  /// Demi-orc à ce jour, voir [_isRaceAvailable]) — jamais affichée en
+  /// édition 2014, où cette liste est toujours vide par construction
+  /// (aucun cas spécial par édition codé ici).
+  ///
+  /// Un tap sur une suggestion pré-remplit [_customRaceController] avec le
+  /// nom de la race (le joueur peut ensuite l'éditer librement) : objectif
+  /// du chef de projet (30/10/2026) — faciliter la création d'un personnage
+  /// dont la race réelle (Demi-elfe, Demi-orc...) n'existe plus comme
+  /// option directe dans l'édition courante, sans retaper son nom à la
+  /// main. `ActionChip` Material standard avec les tokens
+  /// `AppColors`/`AppTypography` du dépôt : aucun composant de "suggestion
+  /// cliquable pré-remplissant un champ" déjà établi ailleurs dans ce dépôt
+  /// (les `Chip`s existants, ex. `_AbilityChip` de
+  /// `racial_bonus_choice_card.dart`, sont tous des `FilterChip` à état
+  /// `selected`/`enabled` persistant, pas des déclencheurs d'action
+  /// ponctuelle) — signalé au chef de projet plutôt que deviné, voir le
+  /// compte-rendu de ce chantier.
+  Widget _unavailableRaceSuggestions(List<RaceOption> unavailableRaces) {
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      children: [
+        for (final race in unavailableRaces)
+          ActionChip(
+            label: Text(race.name),
+            labelStyle: AppTypography.body(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textSecondary,
+            ),
+            backgroundColor: AppColors.parchmentCardAlt,
+            side: const BorderSide(color: AppColors.woodLight),
+            onPressed: () => setState(() {
+              _customRaceController.text = race.name;
+            }),
+          ),
+      ],
     );
   }
 }
