@@ -6,29 +6,31 @@ import '../../../../core/theme/app_typography.dart';
 import '../../domain/currency_kind.dart';
 import '../../domain/inventory_stat_box.dart';
 
-/// Callback de tap sur une stat box de monnaie (toutes sauf "KG") — ouvre la
-/// sheet d'ajustement de cette monnaie, voir
+/// Callback de tap sur une stat box de monnaie (toutes sauf "HARM.") — ouvre
+/// la sheet d'ajustement de cette monnaie, voir
 /// `character_inventory_tab_body.dart`/`currency_adjustment_sheet.dart`.
 typedef AdjustCurrencyTapCallback = void Function(CurrencyKind currency);
 
 /// Rangée de "stat boxes" en tête de l'onglet "Inventaire" — voir
 /// `domain/inventory_stat_boxes_resolver.dart` pour leur construction.
 ///
-/// [boxes] peut compter jusqu'à 6 entrées (platine et électrum affichées en
-/// plus des 4 boxes de la maquette quand non nulles) : quand elles tiennent
-/// toutes à largeur fixe ([_boxWidth]) sur l'écran courant (cas courant, 3-4
-/// boxes), chaque box est étirée à parts égales pour occuper toute la
-/// largeur disponible plutôt que de laisser un espace vide à droite
-/// (`Row`+`Expanded`, mesuré via [LayoutBuilder]) — sinon (6 boxes sur un
-/// écran étroit), retombe sur le défilement horizontal à largeur fixe
-/// d'origine (`SingleChildScrollView`), seul moyen de rester utilisable sans
-/// rogner aucune box.
+/// [boxes] peut compter jusqu'à 6 entrées (platine, électrum et "HARM."
+/// affichées en plus des 3 boxes toujours présentes de la maquette quand
+/// non nulles/applicables) : quand elles tiennent toutes à largeur fixe
+/// ([_boxWidth]) sur l'écran courant (cas courant, 3-4 boxes), chaque box
+/// est étirée à parts égales pour occuper toute la largeur disponible
+/// plutôt que de laisser un espace vide à droite (`Row`+`Expanded`, mesuré
+/// via [LayoutBuilder]) — sinon (6 boxes sur un écran étroit), retombe sur
+/// le défilement horizontal à largeur fixe d'origine
+/// (`SingleChildScrollView`), seul moyen de rester utilisable sans rogner
+/// aucune box.
 ///
 /// Chaque box de monnaie ([InventoryStatBox.currency] non nul) est
-/// cliquable ([onTapCurrency]), pas la box "KG" (poids, pas une monnaie
-/// ajustable) — voir la spec visuelle du Flux 2 "Ajustement de monnaie".
-/// [onTapCurrency] `null` désactive le tap sur toutes les boxes (verrou
-/// `actionsDisabled` de tout l'onglet) sans changer leur rendu au repos.
+/// cliquable ([onTapCurrency]), pas la box "HARM." (compteur d'objets
+/// harmonisés, pas une monnaie ajustable) — voir la spec visuelle du Flux 2
+/// "Ajustement de monnaie". [onTapCurrency] `null` désactive le tap sur
+/// toutes les boxes (verrou `actionsDisabled` de tout l'onglet) sans
+/// changer leur rendu au repos.
 class CharacterInventoryStatBoxesRow extends StatelessWidget {
   const CharacterInventoryStatBoxesRow({
     required this.boxes,
@@ -151,7 +153,7 @@ class _StatBox extends StatelessWidget {
     );
 
     if (currency == null) {
-      // Box "KG" : jamais cliquable, voir la documentation de classe.
+      // Box "HARM." : jamais cliquable, voir la documentation de classe.
       return content;
     }
 

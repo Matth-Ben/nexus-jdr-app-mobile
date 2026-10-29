@@ -1,17 +1,15 @@
 import 'character_detail.dart';
 import 'currency_kind.dart';
 import 'inventory_stat_box.dart';
-import 'inventory_weight_calculator.dart';
-import 'weight_formatter.dart';
 
 /// Construit les [InventoryStatBox] de la rangée en tête de l'onglet
 /// "Inventaire" — voir `docs/cahier-des-charges/09-maquettes-captures.md`,
 /// section "Onglet Inventaire".
 ///
 /// Le personnage porte en réalité 5 monnaies (`currency_gp`/`pp`/`ep`/`sp`/
-/// `cp`), mais la maquette n'en montre que 3 (or/argent/cuivre) + le poids
-/// total, dans cet ordre. Décision prise pour cette itération (à valider par
-/// le chef de projet si elle doit changer) :
+/// `cp`), mais la maquette n'en montre que 3 (or/argent/cuivre), dans cet
+/// ordre. Décision prise pour cette itération (à valider par le chef de
+/// projet si elle doit changer) :
 /// - or/argent/cuivre sont **toujours** affichés, dans l'ordre de la
 ///   maquette, même à 0 (ce sont les monnaies les plus courantes ; les
 ///   masquer à 0 ferait disparaître des boxes en cours de partie, ce qui
@@ -24,18 +22,23 @@ import 'weight_formatter.dart';
 ///   standard D&D (pp > gp > ep > sp > cp), pas explicitement montré par la
 ///   maquette (qui n'affiche jamais les deux) mais le plus prévisible pour
 ///   un joueur habitué au jeu ;
-/// - la box "poids" est toujours affichée en dernier, sauf si au moins un
-///   objet harmonisable existe dans l'inventaire, auquel cas une box
-///   "HARM." (nombre d'objets harmonisés / [CharacterDetail.attunementCap])
-///   la suit — même logique d'affichage conditionnel que platine/électrum,
-///   mais sur la présence d'un objet harmonisable plutôt que sur une valeur
-///   non nulle (voir `docs/cahier-des-charges/`
-///   11-fonctionnalites-a-ajouter.md, section "Onglet Inventaire").
+/// - une box "HARM." (nombre d'objets harmonisés /
+///   [CharacterDetail.attunementCap]) est affichée en dernier, mais
+///   seulement si au moins un objet harmonisable existe dans l'inventaire —
+///   même logique d'affichage conditionnel que platine/électrum, mais sur la
+///   présence d'un objet harmonisable plutôt que sur une valeur non nulle
+///   (voir `docs/cahier-des-charges/` 11-fonctionnalites-a-ajouter.md,
+///   section "Onglet Inventaire").
 ///
-/// La rangée peut dépasser 4 boxes (jusqu'à 7 : pp, gp, ep, sp, cp, poids,
-/// harm.) — c'est au widget de rendu
-/// (`character_inventory_stat_boxes_row.dart`) de la rendre défilable
-/// horizontalement dans ce cas, pas à ce resolver.
+/// Pas de box "poids total" : elle ferait doublon avec la jauge "CHARGE"
+/// affichée juste en dessous de cette rangée
+/// (`character_inventory_capacity_gauge.dart`), qui montre déjà le même
+/// poids total (poids actuel / capacité de transport) — décision du
+/// 29/10/2026.
+///
+/// La rangée peut dépasser 4 boxes (jusqu'à 6 : pp, gp, ep, sp, cp, harm.) —
+/// c'est au widget de rendu (`character_inventory_stat_boxes_row.dart`) de
+/// la rendre défilable horizontalement dans ce cas, pas à ce resolver.
 abstract final class InventoryStatBoxesResolver {
   static List<InventoryStatBox> resolve(CharacterDetail detail) {
     final boxes = <InventoryStatBox>[];
@@ -78,14 +81,6 @@ abstract final class InventoryStatBoxesResolver {
         unit: 'PC',
         currency: CurrencyKind.copper,
       ),
-    );
-
-    // "KG", pas "LBS" comme la maquette : `items.weight` est stocké en
-    // kilogrammes côté base, voir la documentation de
-    // `CharacterInventoryItem.totalWeight`.
-    final totalWeight = InventoryWeightCalculator.totalOf(detail.inventory);
-    boxes.add(
-      InventoryStatBox(value: WeightFormatter.format(totalWeight), unit: 'KG'),
     );
 
     // "HARM." (objets harmonisés) : seulement si au moins un objet de

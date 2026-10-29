@@ -14,7 +14,7 @@ import 'package:personnages/features/characters/presentation/widgets/character_i
 const _threeBoxes = [
   InventoryStatBox(value: '42', unit: 'PO', currency: CurrencyKind.gold),
   InventoryStatBox(value: '6', unit: 'PA', currency: CurrencyKind.silver),
-  InventoryStatBox(value: '0', unit: 'KG'),
+  InventoryStatBox(value: '0/3', unit: 'HARM.'),
 ];
 
 const _sixBoxes = [
@@ -23,7 +23,7 @@ const _sixBoxes = [
   InventoryStatBox(value: '2', unit: 'PE', currency: CurrencyKind.electrum),
   InventoryStatBox(value: '6', unit: 'PA', currency: CurrencyKind.silver),
   InventoryStatBox(value: '14', unit: 'PC', currency: CurrencyKind.copper),
-  InventoryStatBox(value: '0', unit: 'KG'),
+  InventoryStatBox(value: '0/3', unit: 'HARM.'),
 ];
 
 Future<void> _pump(
@@ -87,12 +87,12 @@ void main() {
     },
   );
 
-  testWidgets('la box "KG" reste non cliquable dans les deux variantes', (
+  testWidgets('la box "HARM." reste non cliquable dans les deux variantes', (
     tester,
   ) async {
     await _pump(tester, _threeBoxes, width: 400);
 
-    await tester.tap(find.text('KG'));
+    await tester.tap(find.text('HARM.'));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);

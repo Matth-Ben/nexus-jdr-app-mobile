@@ -32,16 +32,15 @@ CharacterDetail _detail({
 void main() {
   group('InventoryStatBoxesResolver.resolve', () {
     test('or/argent/cuivre toujours affichés (même à 0), platine/électrum '
-        'jamais quand nuls, poids en dernier', () {
+        'jamais quand nuls', () {
       final boxes = InventoryStatBoxesResolver.resolve(
         _detail(currencyGp: 42, currencySp: 6, currencyCp: 14),
       );
 
-      expect(boxes.map((b) => b.unit).toList(), ['PO', 'PA', 'PC', 'KG']);
+      expect(boxes.map((b) => b.unit).toList(), ['PO', 'PA', 'PC']);
       expect(boxes[0].value, '42');
       expect(boxes[1].value, '6');
       expect(boxes[2].value, '14');
-      expect(boxes[3].value, '0');
     });
 
     test('platine non nulle insérée avant l\'or, électrum non nulle entre or '
@@ -50,47 +49,43 @@ void main() {
         _detail(currencyPp: 2, currencyGp: 42, currencyEp: 3, currencySp: 6),
       );
 
-      expect(boxes.map((b) => b.unit).toList(), [
-        'PP',
-        'PO',
-        'PE',
-        'PA',
-        'PC',
-        'KG',
-      ]);
+      expect(boxes.map((b) => b.unit).toList(), ['PP', 'PO', 'PE', 'PA', 'PC']);
       expect(boxes[0].value, '2');
       expect(boxes[2].value, '3');
     });
 
-    test('le poids total agrège les lignes d\'inventaire résolues', () {
-      final boxes = InventoryStatBoxesResolver.resolve(
-        _detail(
-          inventory: const [
-            CharacterInventoryItem(
-              id: '1',
-              itemId: 1,
-              name: 'Dague',
-              category: 'arme',
-              quantity: 2,
-              equipped: false,
-              totalWeight: 1,
-            ),
-            CharacterInventoryItem(
-              id: '2',
-              itemId: 2,
-              name: 'Sac à dos',
-              category: 'equipement_general',
-              quantity: 1,
-              equipped: false,
-              totalWeight: 5,
-            ),
-          ],
-        ),
-      );
+    test(
+      'aucune box "KG" (poids total) : doublon avec la jauge "CHARGE" '
+      'affichée juste en dessous, quel que soit le contenu de l\'inventaire',
+      () {
+        final boxes = InventoryStatBoxesResolver.resolve(
+          _detail(
+            inventory: const [
+              CharacterInventoryItem(
+                id: '1',
+                itemId: 1,
+                name: 'Dague',
+                category: 'arme',
+                quantity: 2,
+                equipped: false,
+                totalWeight: 1,
+              ),
+              CharacterInventoryItem(
+                id: '2',
+                itemId: 2,
+                name: 'Sac à dos',
+                category: 'equipement_general',
+                quantity: 1,
+                equipped: false,
+                totalWeight: 5,
+              ),
+            ],
+          ),
+        );
 
-      final weightBox = boxes.singleWhere((b) => b.unit == 'KG');
-      expect(weightBox.value, '6');
-    });
+        expect(boxes.where((b) => b.unit == 'KG'), isEmpty);
+      },
+    );
 
     test('box "HARM." absente sans objet harmonisable dans l\'inventaire', () {
       final boxes = InventoryStatBoxesResolver.resolve(
@@ -141,7 +136,7 @@ void main() {
 
       final harmBox = boxes.singleWhere((b) => b.unit == 'HARM.');
       expect(harmBox.value, '1/3');
-      // Toujours en dernier (après la box "KG").
+      // Toujours en dernier (il n'y a plus de box "KG" après elle).
       expect(boxes.last.unit, 'HARM.');
     });
   });
