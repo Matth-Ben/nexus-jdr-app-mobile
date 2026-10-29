@@ -2,12 +2,16 @@
 // l'onglet "Compétences" (voir `character_skills_tab_body_test.dart`), spec
 // validée par l'agent `direction-artistique`.
 //
-// `CharacterSpellsTabBody` n'a pas de dépendance Riverpod/réseau (l'état
-// interne du champ de recherche mis à part) : même approche que
-// `character_skills_tab_body_test.dart`, un simple `MaterialApp(home: ...)`
-// suffit à le monter.
+// `CharacterSpellsTabBody` n'a plus de dépendance Riverpod triviale : le
+// filtre de préparation est mémorisé comme préférence globale à l'appareil
+// via `spell_preparation_filter_preference_provider.dart` (demande
+// utilisateur du 29/10/2026) — même convention que
+// `update_suggested_banner_test.dart` pour le monter (`ProviderScope` +
+// `SharedPreferences.setMockInitialValues`), le champ de recherche restant
+// par ailleurs un simple état local comme avant.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/domain/spell_cast_block_reason.dart';
@@ -20,9 +24,12 @@ import 'package:personnages/features/characters/domain/character_detail_class_ro
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
+import 'package:personnages/features/characters/domain/spell_preparation_filter.dart';
+import 'package:personnages/features/characters/presentation/providers/spell_preparation_filter_preference_provider.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_spells_tab_body.dart';
 import 'package:personnages/features/characters/presentation/widgets/class_feature_action_sheet.dart';
 import 'package:personnages/features/characters/presentation/widgets/spell_action_sheet.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Classe de départ par défaut : lanceuse de sorts (Magicien), pour que les
 /// tests portant sur le contenu/l'état vide "générique" (`AUCUN SORT`)
@@ -71,13 +78,15 @@ Future<void> _pump(
   ToggleSpellFlagCallback? onTogglePrepared,
 }) async {
   await tester.pumpWidget(
-    MaterialApp(
-      home: Scaffold(
-        body: CharacterSpellsTabBody(
-          detail: detail,
-          onCastSpell: onCastSpell ?? (_, _) {},
-          onTogglePrepared: onTogglePrepared ?? (_) {},
-          onUseFeature: onUseFeature,
+    ProviderScope(
+      child: MaterialApp(
+        home: Scaffold(
+          body: CharacterSpellsTabBody(
+            detail: detail,
+            onCastSpell: onCastSpell ?? (_, _) {},
+            onTogglePrepared: onTogglePrepared ?? (_) {},
+            onUseFeature: onUseFeature,
+          ),
         ),
       ),
     ),
@@ -85,6 +94,14 @@ Future<void> _pump(
 }
 
 void main() {
+  // `CharacterSpellsTabBody` lit `sharedPreferencesProvider`
+  // (`spell_preparation_filter_preference_provider.dart`) dès son
+  // `initState` — store en mémoire remis à zéro à chaque test, même
+  // convention que `update_banner_dismissal_provider_test.dart`.
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('la section sorts regroupe par niveau avec les pastilles '
       'd\'emplacement', (tester) async {
     // find.bySemanticsLabel a besoin d'un arbre de sémantique actif — pas
@@ -536,23 +553,25 @@ void main() {
       final casts = <CharacterSpellEntry>[];
       final toggles = <CharacterSpellEntry>[];
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: CharacterSpellsTabBody(
-              detail: _detail(
-                spells: const [
-                  CharacterSpellEntry(
-                    id: 1,
-                    name: 'Maléfice',
-                    level: 1,
-                    school: 'Enchantement',
-                    status: SpellStatus.known,
-                  ),
-                ],
+        ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: CharacterSpellsTabBody(
+                detail: _detail(
+                  spells: const [
+                    CharacterSpellEntry(
+                      id: 1,
+                      name: 'Maléfice',
+                      level: 1,
+                      school: 'Enchantement',
+                      status: SpellStatus.known,
+                    ),
+                  ],
+                ),
+                onCastSpell: (spell, _) => casts.add(spell),
+                onTogglePrepared: toggles.add,
+                actionsDisabled: true,
               ),
-              onCastSpell: (spell, _) => casts.add(spell),
-              onTogglePrepared: toggles.add,
-              actionsDisabled: true,
             ),
           ),
         ),
@@ -1042,6 +1061,189 @@ void main() {
       expect(find.text('NON PRÉPARÉS'), findsNothing);
       expect(find.text('Lumière'), findsOneWidget);
     });
+  });
+
+  group('mémorisation du filtre de préparation (demande utilisateur du '
+      '29/10/2026) — préférence globale à l\'appareil, persistée via '
+      'SharedPreferences', () {
+    CharacterDetailClassRow clerc() => const CharacterDetailClassRow(
+      classId: 5,
+      className: 'Clerc',
+      level: 1,
+      isPrimary: true,
+      savingThrowProficiencies: [],
+      hitDie: 8,
+    );
+
+    const cantrip = CharacterSpellEntry(
+      id: 1,
+      name: 'Lumière',
+      level: 0,
+      school: 'Évocation',
+      status: SpellStatus.known,
+    );
+    const preparedSpell = CharacterSpellEntry(
+      id: 2,
+      name: 'Bénédiction',
+      level: 1,
+      school: 'Enchantement',
+      status: SpellStatus.prepared,
+    );
+    const unpreparedSpell = CharacterSpellEntry(
+      id: 3,
+      name: 'Soins',
+      level: 1,
+      school: 'Évocation',
+      status: SpellStatus.known,
+    );
+    const all = [cantrip, preparedSpell, unpreparedSpell];
+
+    testWidgets(
+      'par défaut (SharedPreferences vide) : le filtre démarre sur "Tous", '
+      'même valeur que l\'ancien état local',
+      (tester) async {
+        await _pump(tester, _detail(classes: [clerc()], spells: all));
+
+        expect(find.text('Soins'), findsOneWidget);
+        expect(
+          ProviderScope.containerOf(
+            tester.element(find.byType(CharacterSpellsTabBody)),
+          ).read(spellPreparationFilterPreferenceControllerProvider),
+          SpellPreparationFilter.all,
+        );
+      },
+    );
+
+    testWidgets(
+      'choisir "Préparés" puis fermer/rouvrir l\'onglet (nouvelle instance '
+      'du widget, nouveau ProviderScope, mêmes SharedPreferences) : le '
+      'filtre "Préparés" reste sélectionné, sans repasser à "Tous"',
+      (tester) async {
+        await _pump(tester, _detail(classes: [clerc()], spells: all));
+
+        await tester.tap(find.text('PRÉPARÉS'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Soins'), findsNothing);
+
+        // Nouveau `ProviderScope`/`pumpWidget` : simule la fermeture puis
+        // la réouverture de l'onglet (ou de n'importe quelle autre fiche)
+        // — `SharedPreferences` reste le même store en mémoire (pas de
+        // nouveau `setMockInitialValues` entre les deux), donc le filtre
+        // mémorisé doit être relu dès `initState`, avant toute interaction.
+        await _pump(tester, _detail(classes: [clerc()], spells: all));
+
+        expect(find.text('Soins'), findsNothing);
+        expect(find.text('Bénédiction'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'choisir "Non préparés" puis rouvrir sur une AUTRE fiche (classes/'
+      'sorts différents) : le filtre mémorisé s\'applique quand même — '
+      'préférence globale à l\'appareil, pas par personnage',
+      (tester) async {
+        await _pump(tester, _detail(classes: [clerc()], spells: all));
+
+        await tester.tap(find.text('NON PRÉPARÉS'));
+        await tester.pumpAndSettle();
+        expect(find.text('Soins'), findsOneWidget);
+        expect(find.text('Bénédiction'), findsNothing);
+
+        const otherSpells = [
+          CharacterSpellEntry(
+            id: 10,
+            name: 'Projectile magique',
+            level: 1,
+            school: 'Évocation',
+            status: SpellStatus.known,
+          ),
+          CharacterSpellEntry(
+            id: 11,
+            name: 'Bouclier',
+            level: 1,
+            school: 'Abjuration',
+            status: SpellStatus.prepared,
+          ),
+        ];
+        await _pump(
+          tester,
+          _detail(
+            classes: const [
+              CharacterDetailClassRow(
+                classId: 1,
+                className: 'Magicien',
+                level: 1,
+                isPrimary: true,
+                savingThrowProficiencies: [],
+                hitDie: 6,
+              ),
+            ],
+            spells: otherSpells,
+          ),
+        );
+
+        expect(find.text('Projectile magique'), findsOneWidget);
+        expect(find.text('Bouclier'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'classe sans mécanisme de préparation (ex. Barde seul) : le filtre '
+      'mémorisé est ignoré, forcé à "Tous" — non-régression du garde-fou '
+      '`hasPreparation`',
+      (tester) async {
+        // Mémorise "Préparés" sur une fiche Clerc, où le filtre s'applique
+        // normalement.
+        await _pump(tester, _detail(classes: [clerc()], spells: all));
+        await tester.tap(find.text('PRÉPARÉS'));
+        await tester.pumpAndSettle();
+
+        // Une fiche Barde seul (sorts "connus", jamais à préparer) ne doit
+        // jamais se voir imposer ce filtre mémorisé : la carte de
+        // préparation est absente, tous les sorts restent visibles.
+        final barde = CharacterSpellRowMapper.toCharacterSpellEntries(
+          const [
+            {'id': 20, 'level': 1, 'school': ''},
+          ],
+          names: const {'20': 'Charme-personne'},
+          descriptions: const {},
+          statuses: const {20: SpellStatus.known},
+          classes: const [
+            CharacterDetailClassRow(
+              classId: 1,
+              className: 'Barde',
+              level: 3,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+              hitDie: 8,
+            ),
+          ],
+          sourceClassIds: const {
+            20: {1},
+          },
+        );
+        await _pump(
+          tester,
+          _detail(
+            classes: const [
+              CharacterDetailClassRow(
+                classId: 1,
+                className: 'Barde',
+                level: 3,
+                isPrimary: true,
+                savingThrowProficiencies: [],
+                hitDie: 8,
+              ),
+            ],
+            spells: barde,
+          ),
+        );
+
+        expect(find.text('PRÉPARATION DES SORTS'), findsNothing);
+        expect(find.text('Charme-personne'), findsOneWidget);
+      },
+    );
   });
 
   // Barde, Ensorceleur, Occultiste, Rôdeur : sorts connus, lançables sans

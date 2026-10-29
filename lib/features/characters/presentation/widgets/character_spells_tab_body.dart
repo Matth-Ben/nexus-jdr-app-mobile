@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/rules/class_spellcasting_rule.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -9,6 +12,7 @@ import '../../domain/spell_name_filter.dart';
 import '../../domain/spell_preparation_filter.dart';
 import '../../domain/spell_status_formatter.dart';
 import '../../domain/spells_by_level_grouper.dart';
+import '../providers/spell_preparation_filter_preference_provider.dart';
 import 'character_class_features_card.dart';
 import 'character_spells_section.dart';
 import 'class_feature_action_sheet.dart';
@@ -23,13 +27,18 @@ import 'spell_preparation_card.dart';
 /// [onCastSpell]/[actionsDisabled] délégués tels quels à
 /// [CharacterSpellsSection] — voir sa documentation de classe.
 ///
-/// `StatefulWidget` (depuis l'ajout du champ de recherche, voir
+/// `ConsumerStatefulWidget` (depuis l'ajout du champ de recherche, voir
 /// `domain/spell_name_filter.dart`, puis du filtre de préparation,
 /// `domain/spell_preparation_filter.dart`) plutôt qu'un état soulevé chez
-/// l'appelant : recherche et filtre sont un pur confort d'affichage local à
+/// l'appelant : la recherche reste un pur confort d'affichage local à
 /// l'onglet, sans rien à persister ni à partager avec le reste de la fiche —
-/// même choix que la recherche de `character_list_screen.dart`.
-class CharacterSpellsTabBody extends StatefulWidget {
+/// même choix que la recherche de `character_list_screen.dart`. Le filtre de
+/// préparation, lui, est mémorisé comme préférence globale à l'appareil
+/// (demande utilisateur du 29/10/2026) via
+/// `providers/spell_preparation_filter_preference_provider.dart` — d'où le
+/// passage de `StatefulWidget` à `ConsumerStatefulWidget`, sans rien changer
+/// chez les appelants (déjà dans l'arbre Riverpod).
+class CharacterSpellsTabBody extends ConsumerStatefulWidget {
   const CharacterSpellsTabBody({
     required this.detail,
     required this.onCastSpell,
@@ -60,17 +69,23 @@ class CharacterSpellsTabBody extends StatefulWidget {
   final FocusNode? searchFocusNode;
 
   @override
-  State<CharacterSpellsTabBody> createState() => _CharacterSpellsTabBodyState();
+  ConsumerState<CharacterSpellsTabBody> createState() =>
+      _CharacterSpellsTabBodyState();
 }
 
-class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
+class _CharacterSpellsTabBodyState
+    extends ConsumerState<CharacterSpellsTabBody> {
   final TextEditingController _searchController = TextEditingController();
   FocusNode? _ownedFocusNode;
 
   /// Filtre "Tous"/"Préparés"/"Non préparés" de [SpellPreparationCard] —
-  /// état local, même rationale que la recherche (voir la documentation de
-  /// classe) : pur confort d'affichage, rien à persister.
-  SpellPreparationFilter _preparationFilter = SpellPreparationFilter.all;
+  /// démarre à la valeur mémorisée côté appareil
+  /// (`spellPreparationFilterPreferenceControllerProvider`), puis vit en
+  /// état local le temps de la session de cet onglet (comme la recherche,
+  /// voir la documentation de classe) : chaque changement via
+  /// `onFilterChanged` est appliqué immédiatement (`setState`) ET persisté
+  /// pour la prochaine ouverture (de cette fiche ou d'une autre).
+  late SpellPreparationFilter _preparationFilter;
 
   FocusNode get _focusNode => widget.searchFocusNode ?? _ownedFocusNode!;
 
@@ -79,6 +94,18 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
     super.initState();
     if (widget.searchFocusNode == null) _ownedFocusNode = FocusNode();
     _searchController.addListener(_handleSearchChanged);
+    _preparationFilter = ref.read(
+      spellPreparationFilterPreferenceControllerProvider,
+    );
+  }
+
+  void _handleFilterChanged(SpellPreparationFilter filter) {
+    setState(() => _preparationFilter = filter);
+    unawaited(
+      ref
+          .read(spellPreparationFilterPreferenceControllerProvider.notifier)
+          .setFilter(filter),
+    );
   }
 
   void _handleSearchChanged() {
@@ -172,8 +199,7 @@ class _CharacterSpellsTabBodyState extends State<CharacterSpellsTabBody> {
         if (hasPreparation) ...[
           SpellPreparationCard(
             filter: preparationFilter,
-            onFilterChanged: (filter) =>
-                setState(() => _preparationFilter = filter),
+            onFilterChanged: _handleFilterChanged,
             classLimits: detail.preparedSpellsByClass,
           ),
           const SizedBox(height: AppSpacing.md),
