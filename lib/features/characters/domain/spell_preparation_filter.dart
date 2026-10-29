@@ -4,7 +4,9 @@ import 'spell_status_formatter.dart';
 /// Filtre d'affichage de l'onglet "Sorts" selon l'état de préparation —
 /// bascule "Tous"/"Préparés"/"Non préparés" de la carte "PRÉPARATION DES
 /// SORTS" (`presentation/widgets/spell_preparation_card.dart`), demande
-/// utilisateur du 06/10/2026. Pur filtre de présentation, jamais persisté.
+/// utilisateur du 06/10/2026. Mémorisé comme préférence globale à
+/// l'appareil (pas par personnage) depuis le 29/10/2026 — voir
+/// `presentation/providers/spell_preparation_filter_preference_provider.dart`.
 enum SpellPreparationFilter {
   all('Tous'),
   prepared('Préparés'),

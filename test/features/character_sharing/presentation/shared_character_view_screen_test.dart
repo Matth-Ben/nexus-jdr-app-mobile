@@ -2,6 +2,14 @@
 // (`/p/:token`) — dépôt de test injecté via `overrideWithValue` sur
 // `characterSharingRepositoryProvider`, même principe que
 // `character_share_screen_test.dart`.
+//
+// `SharedPreferences.setMockInitialValues` (voir `setUp` global) : cet écran
+// monte `CharacterSpellsTabBody`, qui lit depuis le 29/10/2026 le filtre de
+// préparation mémorisé via `spell_preparation_filter_preference_provider.dart`
+// (préférence globale à l'appareil, jamais liée à un compte — donc valable
+// aussi pour ce lecteur anonyme, voir la doc de classe de ce provider) —
+// remis à zéro avant chaque test pour que le reste de ce fichier ne dépende
+// jamais d'une valeur mémorisée par un test antérieur.
 
 import 'dart:async';
 
@@ -25,6 +33,7 @@ import 'package:personnages/features/characters/domain/pact_weapon_option.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_pact_weapon_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_stat_pills_row.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeCharacterSharingRepository implements CharacterSharingRepository {
   @override
@@ -90,6 +99,7 @@ void main() {
 
   setUp(() {
     fakeRepository = _FakeCharacterSharingRepository();
+    SharedPreferences.setMockInitialValues({});
   });
 
   Widget buildTestWidget() {
@@ -356,6 +366,132 @@ void main() {
       expect(find.text('LANCER'), findsNothing);
     },
   );
+
+  // BUG CORRIGE (qa-testeur a trouve le defaut le 29/10/2026, corrige par
+  // dev-flutter le meme jour) -- trappe de regression permanente, conservee
+  // telle quelle : contrairement a ce qu'affirmait la doc de classe de
+  // `spell_preparation_filter_preference_provider.dart` ("valable aussi pour
+  // un lecteur anonyme de shared_character_view_screen.dart") au moment ou
+  // ce test a ete ecrit, le filtre memorise n'etait PAS applique a
+  // l'ouverture de la fiche partagee -- il retombait silencieusement sur
+  // "Tous", meme avec une valeur "prepared" deja en base au moment de
+  // l'ouverture.
+  //
+  // Cause racine (corrigee) : `CharacterSpellsTabBody` lisait la preference
+  // avec un `ref.read` UNIQUE en `initState` (snapshot figé, jamais
+  // re-ecoute ensuite), jamais un `ref.watch` reactif. Or
+  // `SpellPreparationFilterPreferenceController.build()` retombe lui-meme
+  // "momentanement" sur `SpellPreparationFilter.all` tant que
+  // `sharedPreferencesProvider` n'a pas resolu (`AsyncValue.loading` au tout
+  // premier acces, `.value` nul -- voir sa propre doc de classe) : cette
+  // resolution est TOUJOURS asynchrone (au moins un microtask Dart), meme
+  // avec `SharedPreferences.getInstance()` deja "chaud" en coulisses. Le
+  // `ref.read` de `initState` capturait donc systematiquement ce premier
+  // retour a vide des que c'etait la PREMIERE lecture de ce provider dans la
+  // session -- sans jamais se corriger ensuite, puisque rien ne re-ecoutait
+  // le provider une fois la vraie valeur disponible.
+  //
+  // Sur la fiche du proprietaire, ce defaut ne se voyait quasiment jamais en
+  // pratique : `character_list_screen.dart` (`UpdateSuggestedBanner`, voir
+  // `features/app_update/presentation/widgets/update_suggested_banner.dart`
+  // ligne 31) lit INCONDITIONNELLEMENT `updateBannerDismissalControllerProvider`
+  // -> `sharedPreferencesProvider` des l'ecran d'accueil, largement avant que
+  // le joueur ouvre une fiche puis l'onglet Sorts -- le provider avait donc
+  // toujours resolu depuis longtemps. Mais `shared_character_view_screen.dart`
+  // (lecteur anonyme d'un lien `/p/:token`) ne passe JAMAIS par
+  // `character_list_screen.dart` : AUCUN autre widget de cet arbre ne lisait
+  // jamais `sharedPreferencesProvider` avant que `CharacterSpellsTabBody` ne
+  // le fasse lui-meme au premier tap sur "SORTS" -- le defaut etait donc
+  // deterministe (pas une coincidence de timing du test), pas seulement une
+  // possibilite theorique.
+  //
+  // Correctif applique : `CharacterSpellsTabBody.build()` lit desormais la
+  // preference via `ref.watch` (plus de champ local `_preparationFilter` du
+  // tout -- voir la doc de classe de `character_spells_tab_body.dart`),
+  // pas via un `ref.read` figé en `initState` : la carte se met a jour
+  // d'elle-meme dans le build suivant la resolution de
+  // `sharedPreferencesProvider`, y compris sans rien qui "prechauffe" ce
+  // provider en amont.
+  group('onglet Sorts : filtre de préparation mémorisé sur l\'appareil '
+      '(demande utilisateur du 29/10/2026) — s\'applique aussi en lecture '
+      'seule, préférence locale jamais liée à un compte', () {
+    const cantrip = CharacterSpellEntry(
+      id: 1,
+      name: 'Lumière',
+      level: 0,
+      school: 'Évocation',
+      status: SpellStatus.known,
+    );
+    const preparedSpell = CharacterSpellEntry(
+      id: 2,
+      name: 'Bouclier',
+      level: 1,
+      school: 'Abjuration',
+      status: SpellStatus.prepared,
+    );
+    const unpreparedSpell = CharacterSpellEntry(
+      id: 3,
+      name: 'Projectile magique',
+      level: 1,
+      school: 'Évocation',
+      status: SpellStatus.known,
+    );
+
+    testWidgets(
+      'un filtre "Préparés" déjà mémorisé sur l\'appareil (ex. choisi par '
+      'le propriétaire de la fiche depuis son propre écran) s\'applique '
+      'dès l\'ouverture de la fiche partagée, sans aucune action du '
+      'lecteur anonyme',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({
+          'spell_preparation_filter_preference': 'prepared',
+        });
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          spells: const [cantrip, preparedSpell, unpreparedSpell],
+        );
+
+        await pumpSharedView(tester);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('SORTS'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('PRÉPARATION DES SORTS'), findsOneWidget);
+        expect(find.text('Bouclier'), findsOneWidget);
+        expect(find.text('Lumière'), findsOneWidget);
+        if (find.text('Projectile magique').evaluate().isNotEmpty) {
+          fail(
+            'Régression du correctif du 29/10/2026 (voir le commentaire de '
+            'ce groupe) : le filtre "Préparés" mémorisé sur l\'appareil '
+            'n\'est plus appliqué à l\'ouverture de la fiche partagée -- '
+            '"Projectile magique" (non préparé) est resté visible, la '
+            'fiche partagée est retombée sur "Tous" malgré la valeur '
+            '"prepared" déjà en base au moment de l\'ouverture.',
+          );
+        }
+
+        // Confirme que le lecteur anonyme garde la main pour en changer
+        // (préférence, pas verrou) -- comme sur la fiche du joueur.
+        await tester.tap(find.text('TOUS'));
+        await tester.pumpAndSettle();
+        expect(find.text('Projectile magique'), findsOneWidget);
+      },
+    );
+
+    testWidgets('aucune valeur mémorisée (SharedPreferences vide) : la fiche '
+        'partagée démarre sur "Tous", même comportement que l\'ancien état '
+        'local', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        spells: const [cantrip, preparedSpell, unpreparedSpell],
+      );
+
+      await pumpSharedView(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SORTS'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Projectile magique'), findsOneWidget);
+    });
+  });
 
   group('onglet Inventaire (SAC) : objet cliquable en lecture seule', () {
     testWidgets(

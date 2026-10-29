@@ -6,8 +6,14 @@
 //
 // Monté via `CharacterSpellsTabBody` (la ligne `_SpellRow` est privée), comme
 // `character_spells_tab_body_test.dart`. App en portrait uniquement.
+//
+// `CharacterSpellsTabBody` lit `sharedPreferencesProvider`
+// (`spell_preparation_filter_preference_provider.dart`) dès son `initState` —
+// `ProviderScope` + `SharedPreferences.setMockInitialValues`, même convention
+// que `character_spells_tab_body_test.dart`.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/core/theme/app_colors.dart';
@@ -21,6 +27,7 @@ import 'package:personnages/features/characters/domain/character_spell_slot.dart
 import 'package:personnages/features/characters/presentation/widgets/character_spells_section.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_spells_tab_body.dart';
 import 'package:personnages/features/characters/presentation/widgets/spell_action_sheet.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _availableLabel =
     'Sort inné, sans emplacement, 1 utilisation restante sur 1, repos long';
@@ -103,13 +110,15 @@ Future<void> _pump(
   bool actionsDisabled = false,
 }) async {
   await tester.pumpWidget(
-    MaterialApp(
-      home: Scaffold(
-        body: CharacterSpellsTabBody(
-          detail: detail,
-          onCastSpell: onCastSpell ?? (_, _) {},
-          onTogglePrepared: (_) {},
-          actionsDisabled: actionsDisabled,
+    ProviderScope(
+      child: MaterialApp(
+        home: Scaffold(
+          body: CharacterSpellsTabBody(
+            detail: detail,
+            onCastSpell: onCastSpell ?? (_, _) {},
+            onTogglePrepared: (_) {},
+            actionsDisabled: actionsDisabled,
+          ),
         ),
       ),
     ),
@@ -148,6 +157,10 @@ Finder _usageDotsOutsideSlotDots(WidgetTester tester) {
 }
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('ligne d\'un sort inné de niveau >= 1', () {
     testWidgets('disponible : pastille « INNÉ » aux tokens de la pastille '
         'd\'octroi, pastille pleine 8x8 goldEnd à 4 px, pas de « Épuisé »', (
