@@ -162,9 +162,7 @@ const _rope = CharacterInventoryItem(
 
 void main() {
   testWidgets('affiche la rangée de monnaie (or/argent/cuivre toujours '
-      'visibles), sans box "KG" doublonnant la jauge "CHARGE"', (
-    tester,
-  ) async {
+      'visibles), sans box "KG" doublonnant la jauge "CHARGE"', (tester) async {
     await _pump(tester, _detail(currencyGp: 42, currencySp: 6, currencyCp: 14));
 
     expect(find.text('42'), findsOneWidget);

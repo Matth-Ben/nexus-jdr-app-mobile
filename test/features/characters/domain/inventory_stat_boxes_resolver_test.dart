@@ -49,13 +49,7 @@ void main() {
         _detail(currencyPp: 2, currencyGp: 42, currencyEp: 3, currencySp: 6),
       );
 
-      expect(boxes.map((b) => b.unit).toList(), [
-        'PP',
-        'PO',
-        'PE',
-        'PA',
-        'PC',
-      ]);
+      expect(boxes.map((b) => b.unit).toList(), ['PP', 'PO', 'PE', 'PA', 'PC']);
       expect(boxes[0].value, '2');
       expect(boxes[2].value, '3');
     });

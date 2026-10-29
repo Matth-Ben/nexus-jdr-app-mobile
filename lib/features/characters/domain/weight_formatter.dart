@@ -1,6 +1,6 @@
 /// Formate un poids en kilogrammes pour l'onglet "Inventaire" (poids de
-/// chaque ligne, poids total de la rangée de stat boxes — voir
-/// `domain/inventory_stat_boxes_resolver.dart`).
+/// chaque ligne d'objet et poids/capacité affichés par la jauge "CHARGE" —
+/// voir `presentation/widgets/character_inventory_capacity_gauge.dart`).
 ///
 /// Duplique volontairement l'algorithme de
 /// `character_creation/domain/gold_amount_formatter.dart::GoldAmountFormatter`

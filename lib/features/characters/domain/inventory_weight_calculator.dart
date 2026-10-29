@@ -1,8 +1,9 @@
 import 'character_inventory_item.dart';
 
-/// Calcule le poids total de l'inventaire d'un personnage, pour la stat box
-/// "poids" de l'onglet "Inventaire" — voir
-/// `domain/inventory_stat_boxes_resolver.dart`.
+/// Calcule le poids total de l'inventaire d'un personnage, exposé via
+/// [CharacterDetail.inventoryWeight] et consommé par la jauge "CHARGE" de
+/// l'onglet "Inventaire" — voir
+/// `presentation/widgets/character_inventory_capacity_gauge.dart`.
 abstract final class InventoryWeightCalculator {
   /// Somme des [CharacterInventoryItem.totalWeight] de [items] — une ligne
   /// au poids inconnu (`null`, voir la documentation de
