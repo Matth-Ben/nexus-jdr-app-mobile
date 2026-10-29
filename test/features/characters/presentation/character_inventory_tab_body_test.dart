@@ -161,8 +161,10 @@ const _rope = CharacterInventoryItem(
 );
 
 void main() {
-  testWidgets('affiche la rangée de monnaie/poids (or/argent/cuivre '
-      'toujours visibles)', (tester) async {
+  testWidgets('affiche la rangée de monnaie (or/argent/cuivre toujours '
+      'visibles), sans box "KG" doublonnant la jauge "CHARGE"', (
+    tester,
+  ) async {
     await _pump(tester, _detail(currencyGp: 42, currencySp: 6, currencyCp: 14));
 
     expect(find.text('42'), findsOneWidget);
@@ -171,8 +173,9 @@ void main() {
     expect(find.text('PA'), findsOneWidget);
     expect(find.text('14'), findsOneWidget);
     expect(find.text('PC'), findsOneWidget);
-    // Poids total à 0 (aucun objet) : la box "KG" reste affichée.
-    expect(find.text('KG'), findsOneWidget);
+    // Pas de box "KG" (poids total) : elle ferait doublon avec la jauge
+    // "CHARGE" affichée juste en dessous de la rangée.
+    expect(find.text('KG'), findsNothing);
   });
 
   testWidgets('la box PP n\'apparaît que si la platine est non nulle', (
