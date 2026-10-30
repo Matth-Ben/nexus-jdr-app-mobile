@@ -3313,7 +3313,7 @@ void main() {
         await tester.tap(find.text('CHOISIR UN DON'));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byIcon(Icons.info_outline));
+        await tester.tap(find.byIcon(Icons.info_outline_rounded));
         await tester.pumpAndSettle();
 
         expect(find.text('VIGILANT'), findsOneWidget);
@@ -3442,6 +3442,78 @@ void main() {
       },
     );
     testWidgets(
+      'bouton info ouvre le panneau d\'information du sort candidat de '
+      'l\'etape Sorts (description complete) ; sa fermeture ne modifie '
+      'pas la selection en cours',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [occultisteClass(level: 1)],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          2: const LevelUpLevelData(
+            choiceType: 'invocation',
+            automaticFeatures: [],
+          ),
+        };
+        fakeCreationRepository.spellCatalogByClassId = {
+          9: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 300,
+                name: 'Armure de mage',
+                level: 1,
+                school: 'Abjuration',
+                castingTime: '1 action',
+                description:
+                    'Vous touchez une creature consentante qui ne porte '
+                    "pas d'armure.",
+              ),
+            ],
+          ),
+        };
+        fakeRepository.invocationsToReturn = const [
+          LevelUpInvocationOption(
+            id: 401,
+            name: 'Agile esquive',
+            description: '',
+          ),
+        ];
+
+        await pushPastAnnouncement(tester, 2);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 5 · Sorts'), findsOneWidget);
+        expect(find.text('0 / 1'), findsOneWidget);
+
+        await tester.tap(find.byIcon(Icons.info_outline_rounded));
+        await tester.pumpAndSettle();
+
+        expect(find.text('ARMURE DE MAGE'), findsOneWidget);
+        expect(
+          find.text(
+            "Vous touchez une creature consentante qui ne porte pas "
+            "d'armure.",
+          ),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.byIcon(Icons.close));
+        await tester.pumpAndSettle();
+
+        // Fermer le panneau ne modifie pas la sélection en cours (toujours
+        // "0 / 1") ; le sort reste sélectionnable normalement ensuite.
+        expect(find.text('Étape 3 sur 5 · Sorts'), findsOneWidget);
+        expect(find.text('0 / 1'), findsOneWidget);
+        await tester.tap(find.text('Armure de mage'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
+      },
+    );
+    testWidgets(
       'niveau 18 (delta 1, pas etape Sorts a ce niveau) : quota effectif '
       '1, Continuer desactive puis active, singulier au recapitulatif',
       (tester) async {
@@ -3533,6 +3605,58 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(fakeRepository.applyLevelUpCalls.single.invocationIds, isEmpty);
+      },
+    );
+    testWidgets(
+      'bouton info ouvre le panneau Infos de l\'invocation (description '
+      'complete, prerequis textuel) ; sa fermeture ne modifie pas la '
+      'selection en cours',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [occultisteClass(level: 17)],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          18: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.invocationsToReturn = const [
+          LevelUpInvocationOption(
+            id: 501,
+            name: 'Ailes du diable',
+            description:
+                'Vous faites apparaitre des ailes membraneuses dans votre '
+                'dos.',
+            prerequisiteText: 'Niveau 15',
+          ),
+        ];
+
+        await pushPastAnnouncement(tester, 18);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 4 · Invocations'), findsOneWidget);
+
+        await tester.tap(find.byIcon(Icons.info_outline_rounded));
+        await tester.pumpAndSettle();
+
+        expect(find.text('AILES DU DIABLE'), findsOneWidget);
+        expect(
+          find.text(
+            'Vous faites apparaitre des ailes membraneuses dans votre dos.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Prérequis : Niveau 15'), findsOneWidget);
+
+        await tester.tap(find.byIcon(Icons.close));
+        await tester.pumpAndSettle();
+
+        expect(find.text('0 / 1'), findsOneWidget);
+        await tester.tap(find.text('Ailes du diable'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
       },
     );
   });
@@ -4096,6 +4220,73 @@ void main() {
         expect(fakeRepository.applyLevelUpCalls.single.maneuverNames, [
           'Harcèlement',
         ]);
+      },
+    );
+    testWidgets(
+      'bouton info ouvre le panneau Infos de la manoeuvre (description '
+      'complete) ; sa fermeture ne modifie pas la selection en cours',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 6,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+              subclassId: 80,
+              subclassName: 'Maître de guerre',
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          7: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.maneuversToReturn = const [
+          LevelUpManeuverOption(
+            id: 905,
+            name: 'Harcèlement',
+            description:
+                'Quand vous touchez une creature avec une attaque d\'arme, '
+                'vous pouvez depenser un dé de supériorité pour la harceler.',
+          ),
+        ];
+
+        await pushPastAnnouncement(tester, 7);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 4 · Manœuvres'), findsOneWidget);
+        // La description complète est déjà affichée en subtitle de la
+        // tuile (`CheckableOptionTile` ne tronque pas le subtitle,
+        // contrairement à `SelectableOptionTile`) — une seule occurrence
+        // tant que le panneau n'est pas ouvert.
+        final descriptionFinder = find.text(
+          'Quand vous touchez une creature avec une attaque d\'arme, '
+          'vous pouvez depenser un dé de supériorité pour la harceler.',
+        );
+        expect(descriptionFinder, findsOneWidget);
+
+        await tester.tap(find.byIcon(Icons.info_outline_rounded));
+        await tester.pumpAndSettle();
+
+        expect(find.text('HARCÈLEMENT'), findsOneWidget);
+        // 2 occurrences désormais : celle du subtitle de la tuile (toujours
+        // affichée derrière le panneau) + celle du panneau "Infos".
+        expect(descriptionFinder, findsNWidgets(2));
+
+        await tester.tap(find.byIcon(Icons.close));
+        await tester.pumpAndSettle();
+
+        expect(descriptionFinder, findsOneWidget);
+        expect(find.text('0 / 1'), findsOneWidget);
+        await tester.tap(find.text('Harcèlement'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
       },
     );
   });

@@ -276,4 +276,62 @@ void main() {
       expect(find.byType(Text), findsOneWidget);
     });
   });
+
+  group('onInfo (chantier généralisation du bouton Infos aux choix de montée '
+      'de niveau, même pattern que SelectableOptionTile.onInfo)', () {
+    testWidgets(
+      'onInfo : le bouton info appelle onInfo sans déclencher onTap',
+      (tester) async {
+        var infoTaps = 0;
+        var checkTaps = 0;
+
+        await tester.pumpWidget(
+          _wrap(
+            CheckableOptionTile(
+              title: 'Trait de feu',
+              checked: false,
+              onTap: () => checkTaps++,
+              onInfo: () => infoTaps++,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byIcon(Icons.info_outline_rounded));
+        await tester.pump();
+
+        expect(infoTaps, 1);
+        expect(checkTaps, 0);
+      },
+    );
+
+    testWidgets('sans onInfo, aucun bouton info', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const CheckableOptionTile(title: 'Trait de feu', checked: false)),
+      );
+
+      expect(find.byIcon(Icons.info_outline_rounded), findsNothing);
+    });
+
+    testWidgets('enabled: false avec onInfo -> onInfo aussi ignoré', (
+      tester,
+    ) async {
+      var infoTaps = 0;
+
+      await tester.pumpWidget(
+        _wrap(
+          CheckableOptionTile(
+            title: 'Trait de feu',
+            checked: false,
+            enabled: false,
+            onInfo: () => infoTaps++,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byIcon(Icons.info_outline_rounded));
+      await tester.pump();
+
+      expect(infoTaps, 0);
+    });
+  });
 }
