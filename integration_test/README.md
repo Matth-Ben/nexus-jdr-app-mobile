@@ -154,3 +154,12 @@ disposition.
   non-regression sur un objet du catalogue (Epee longue), et fiche partagee
   (RPC `get_shared_character` verifie directement apres regeneration du
   token depuis l'ecran "Partager" reel).
+- Masquage des races indisponibles en 2024 + suggestions rapides sous
+  "Race personnalisée" (`race_step_hide_unavailable_and_custom_suggestions_test.dart`,
+  30/10/2026) : exécuté avec succès sur `emulator-5554` contre le projet
+  distant -- Demi-elfe/Demi-orc (traits2024 nul) absents des listes de
+  races en édition 2024 (Elfe inchangée), suggestions `ActionChip` sous
+  "Race personnalisée" avec pré-remplissage puis édition libre du champ,
+  création complète aboutissant avec le texte édité affiché sur la fiche,
+  et non-régression de l'édition 2014 (toutes affichées, aucune
+  suggestion).
