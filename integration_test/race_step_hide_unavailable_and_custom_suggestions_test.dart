@@ -5,7 +5,10 @@
 //   "RACES DE BASE"/"RACES D'EXTENSION", races disponibles (Elfe...)
 //   inchangees ;
 // - "Race personnalisée" selectionnee en 2024 : suggestions rapides
-//   (ActionChip) pour ces deux races, un tap pre-remplit le champ texte
+//   (`_SuggestionChip`, chip prive repere par son libelle de semantique --
+//   voir findSuggestionChip ci-dessous, retour direction-artistique du
+//   30/10/2026 ayant remplace l'ActionChip Material brut de la premiere
+//   version) pour ces deux races, un tap pre-remplit le champ texte
 //   librement editable ensuite, la creation aboutit avec le texte final et
 //   la fiche l'affiche ;
 // - edition 2014 : comportement inchange (toutes affichees/selectionnables,
@@ -83,6 +86,25 @@ void main() {
       await settleQuickly(tester);
     }
   }
+
+  // `_SuggestionChip` (`RaceStepScreen._unavailableRaceSuggestions`) est une
+  // classe privee du fichier teste, non importable ici (`find.byType` est
+  // donc inutilisable) : repere via le libelle de semantique explicite
+  // qu'il porte -- meme contournement que
+  // `race_step_screen_test.dart::findSuggestionChip`.
+  Finder findSuggestionChip(String raceName) => find.byWidgetPredicate(
+    (widget) =>
+        widget is Semantics &&
+        widget.properties.label ==
+            'Utiliser "$raceName" comme race personnalisée',
+  );
+
+  Finder findAnySuggestionChip() => find.byWidgetPredicate(
+    (widget) =>
+        widget is Semantics &&
+        (widget.properties.label?.endsWith('comme race personnalisée') ??
+            false),
+  );
 
   testWidgets('edition 2024 : Demi-elfe/Demi-orc absents des listes de races, '
       'Elfe (race normale) reste selectionnable avec son flux habituel '
@@ -194,14 +216,14 @@ void main() {
       await pumpUntilSettled(tester, attempts: 4);
 
       expect(
-        find.widgetWithText(ActionChip, 'Demi-elfe'),
+        findSuggestionChip('Demi-elfe'),
         findsOneWidget,
         reason:
             'suggestion rapide attendue pour Demi-elfe (indisponible en '
             '2024) sous "Race personnalisée".',
       );
       expect(
-        find.widgetWithText(ActionChip, 'Demi-orc'),
+        findSuggestionChip('Demi-orc'),
         findsOneWidget,
         reason:
             'suggestion rapide attendue pour Demi-orc (indisponible en '
@@ -444,7 +466,7 @@ void main() {
       await settleQuickly(tester);
       await pumpUntilSettled(tester, attempts: 4);
       expect(
-        find.byType(ActionChip),
+        findAnySuggestionChip(),
         findsNothing,
         reason:
             'aucune suggestion rapide ne doit apparaitre sous "Race '

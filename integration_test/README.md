@@ -158,8 +158,13 @@ disposition.
   "Race personnalisée" (`race_step_hide_unavailable_and_custom_suggestions_test.dart`,
   30/10/2026) : exécuté avec succès sur `emulator-5554` contre le projet
   distant -- Demi-elfe/Demi-orc (traits2024 nul) absents des listes de
-  races en édition 2024 (Elfe inchangée), suggestions `ActionChip` sous
+  races en édition 2024 (Elfe inchangée), suggestions rapides sous
   "Race personnalisée" avec pré-remplissage puis édition libre du champ,
   création complète aboutissant avec le texte édité affiché sur la fiche,
   et non-régression de l'édition 2014 (toutes affichées, aucune
-  suggestion).
+  suggestion). Repose depuis sur `_SuggestionChip` (retour direction-
+  artistique du 30/10/2026 ayant remplacé l'`ActionChip` Material brut de
+  la version initialement exécutée ci-dessus) -- fichier adapté en
+  conséquence (`findSuggestionChip`/`findAnySuggestionChip` plutôt que
+  `find.byType(ActionChip)`), non ré-exécuté sur émulateur après cet
+  ajustement purement visuel.

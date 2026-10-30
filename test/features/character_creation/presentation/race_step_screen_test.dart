@@ -379,7 +379,8 @@ void main() {
   Finder findSuggestionChip(String raceName) => find.byWidgetPredicate(
     (widget) =>
         widget is Semantics &&
-        widget.properties.label == 'Utiliser "$raceName" comme race personnalisée',
+        widget.properties.label ==
+            'Utiliser "$raceName" comme race personnalisée',
   );
 
   Finder findAnySuggestionChip() => find.byWidgetPredicate(
