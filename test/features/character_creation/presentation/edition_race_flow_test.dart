@@ -202,9 +202,10 @@ void main() {
   testWidgets(
     'Édition 2014 -> Race (Demi-elfe) -> retour -> Édition 2024 -> Race '
     '(nouvelle instance) : le Demi-elfe n\'est plus sélectionné, "Suivant" '
-    'est désactivé, la tuile est grisée avec un message explicite — le '
-    'brouillon ne garde jamais une race RAW-invalide pour sa nouvelle '
-    'édition (correctif retour QA du 24/10/2026)',
+    'est désactivé, la tuile est entièrement absente de la liste (masquage '
+    'complet depuis le 30/10/2026, auparavant grisée avec un message '
+    'explicite) — le brouillon ne garde jamais une race RAW-invalide pour '
+    'sa nouvelle édition (correctif retour QA du 24/10/2026)',
     (WidgetTester tester) async {
       // 1. Étape Édition, 2014 (déjà présélectionnée par défaut) -> Suivant.
       await tester.pumpWidget(buildTestWidget());
@@ -217,9 +218,9 @@ void main() {
 
       // 2. Étape Race : sélectionne le Demi-elfe (valide en 2014) -> Suivant.
       expect(
-        find.textContaining('Indisponible en édition 2024'),
-        findsNothing,
-        reason: 'en 2014, aucune race n\'est grisée',
+        find.text('Demi-elfe'),
+        findsOneWidget,
+        reason: 'en 2014, aucune race n\'est masquée',
       );
       await tester.tap(find.text('Demi-elfe'));
       await tester.pumpAndSettle();
@@ -261,13 +262,17 @@ void main() {
       );
 
       // 5. Nouvelle instance de `RaceStepScreen` : plus aucune race
-      // sélectionnée, "Suivant" désactivé, Demi-elfe grisée avec message —
-      // c'est exactement le scénario que QA a vu passer AVANT ce correctif
-      // (race encore sélectionnée, "Suivant" encore actif, aucun message).
+      // sélectionnée, "Suivant" désactivé, Demi-elfe entièrement absente de
+      // la liste (décision du 30/10/2026) — c'est exactement le scénario
+      // que QA a vu passer AVANT le correctif du 24/10/2026 (race encore
+      // sélectionnée, "Suivant" encore actif, aucun message).
       expect(find.text('2. Race'), findsOneWidget);
       expect(
-        find.textContaining('Indisponible en édition 2024'),
-        findsOneWidget,
+        find.text('Demi-elfe'),
+        findsNothing,
+        reason:
+            'une race indisponible dans l\'édition courante ne doit plus '
+            'apparaître du tout dans la liste, même grisée',
       );
       final nextButton = tester.widget<PrimaryButton>(
         find.byType(PrimaryButton),
@@ -280,12 +285,6 @@ void main() {
             'après la réinitialisation déclenchée par le changement '
             "d'édition",
       );
-
-      // Un tap sur la tuile grisée ne doit toujours rien sélectionner
-      // (double garde-fou : `enabled: false` sur la tuile ELLE-MÊME, pas
-      // seulement l'état du brouillon déjà vérifié ci-dessus).
-      await tester.tap(find.text('Demi-elfe'));
-      await tester.pumpAndSettle();
       expect(readDraft().raceId, isNull);
     },
   );
