@@ -103,6 +103,7 @@ const _hautElfe = SubraceOption(
   name: 'Haut-elfe',
   abilityBonuses: {'int': 1},
   traits: [RaceTrait(name: 'Cantrip elfique', description: '...')],
+  traits2024: [RaceTrait(name: 'Cantrip elfique', description: '...')],
 );
 
 const _elfeDesBois = SubraceOption(
@@ -111,6 +112,79 @@ const _elfeDesBois = SubraceOption(
   name: 'Elfe des bois',
   abilityBonuses: {'wis': 1},
   traits: [RaceTrait(name: 'Camouflage naturel', description: '...')],
+  traits2024: [RaceTrait(name: 'Camouflage naturel', description: '...')],
+);
+
+// Fixtures du chantier "différenciation 2014/2024 pour les races", étendu
+// aux sous-races le 30/10/2026 — voir `SubraceStepScreen._isSubraceAvailable`.
+// `traits2024: null` (valeur par défaut) pour les sous-races sans contenu
+// 2024 propre, `traits2024: [...]` pour celles qui en ont un (peu importe le
+// contenu réel, seule la nullité compte pour ce filtre).
+const _eladrin = SubraceOption(
+  id: 12,
+  raceId: 1,
+  name: 'Eladrin',
+  abilityBonuses: {'cha': 1},
+  traits: [RaceTrait(name: 'Pas féerique', description: '...')],
+);
+
+const _elfeMarin = SubraceOption(
+  id: 13,
+  raceId: 1,
+  name: 'Elfe marin',
+  abilityBonuses: {'con': 1},
+  traits: [RaceTrait(name: 'Enfant de la mer', description: '...')],
+);
+
+const _elfeNoir = SubraceOption(
+  id: 14,
+  raceId: 1,
+  name: 'Elfe noir (Drow)',
+  abilityBonuses: {'cha': 1},
+  traits: [RaceTrait(name: 'Magie drow', description: '...')],
+  traits2024: [RaceTrait(name: 'Magie drow', description: '...')],
+);
+
+const _shadarKai = SubraceOption(
+  id: 15,
+  raceId: 1,
+  name: 'Shadar-kai',
+  abilityBonuses: {'con': 1},
+  traits: [RaceTrait(name: 'Pas de l\'ombre', description: '...')],
+);
+
+const _gnome = RaceOption(
+  id: 2,
+  name: 'Gnome',
+  abilityBonuses: {'int': 2},
+  traits: [],
+  source: '',
+);
+
+const _gnomeDesForets = SubraceOption(
+  id: 20,
+  raceId: 2,
+  name: 'Gnome des forêts',
+  abilityBonuses: {'dex': 1},
+  traits: [RaceTrait(name: 'Illusion naturelle', description: '...')],
+  traits2024: [RaceTrait(name: 'Illusion naturelle', description: '...')],
+);
+
+const _gnomeDesProfondeurs = SubraceOption(
+  id: 21,
+  raceId: 2,
+  name: 'Gnome des profondeurs (Svirfnebelin)',
+  abilityBonuses: {'dex': 1},
+  traits: [RaceTrait(name: 'Camouflage souterrain', description: '...')],
+);
+
+const _gnomeDesRoches = SubraceOption(
+  id: 22,
+  raceId: 2,
+  name: 'Gnome des roches',
+  abilityBonuses: {'con': 1},
+  traits: [RaceTrait(name: 'Bricolage', description: '...')],
+  traits2024: [RaceTrait(name: 'Bricolage', description: '...')],
 );
 
 void main() {
@@ -294,4 +368,148 @@ void main() {
       expect(find.text('Étape Race'), findsOneWidget);
     },
   );
+
+  group('chantier "différenciation 2014/2024 pour les races", étendu aux '
+      'sous-races (30/10/2026)', () {
+    // `setEdition` AVANT `setRace` : `setEdition` efface `raceId`/
+    // `subraceId` quand l'édition change réellement (voir
+    // `CharacterCreationDraftController.setEdition`), l'ordre inverse
+    // perdrait donc la race choisie ci-dessous.
+    //
+    // Surface de test agrandie en hauteur — même rationale que
+    // `race_step_screen_test.dart::pumpTallRaceStep` (voir son commentaire) :
+    // avec 6 sous-races (Elfe en édition 2014), la hauteur par défaut
+    // (~600) laisse certaines tuiles hors du `ListView`, qui ne construit
+    // que les éléments visibles, et `find.text(...)` les manquerait.
+    Future<void> pumpSubraceStepForEdition(
+      WidgetTester tester, {
+      required String edition,
+      required RaceCatalog catalog,
+      required int raceId,
+    }) async {
+      tester.view.physicalSize = const Size(800, 1300);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      fakeRepository.catalogToReturn = catalog;
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setEdition(edition);
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setRace(raceId: raceId, subraceId: null);
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+      router.push('/characters/new/subrace');
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('édition 2024, Elfe : seules Haut-elfe/Elfe des bois/Elfe noir '
+        '(Drow) apparaissent (Eladrin/Elfe marin/Shadar-kai, sans '
+        'traits2024, sont masquées — décision du 30/10/2026, masquage '
+        'complet comme pour les races)', (WidgetTester tester) async {
+      await pumpSubraceStepForEdition(
+        tester,
+        edition: '2024',
+        catalog: const RaceCatalog(
+          races: [_elfe],
+          subraces: [
+            _eladrin,
+            _elfeDesBois,
+            _elfeMarin,
+            _elfeNoir,
+            _hautElfe,
+            _shadarKai,
+          ],
+        ),
+        raceId: 1,
+      );
+
+      expect(find.text('Haut-elfe'), findsOneWidget);
+      expect(find.text('Elfe des bois'), findsOneWidget);
+      expect(find.text('Elfe noir (Drow)'), findsOneWidget);
+      expect(find.text('Eladrin'), findsNothing);
+      expect(find.text('Elfe marin'), findsNothing);
+      expect(find.text('Shadar-kai'), findsNothing);
+    });
+
+    testWidgets(
+      'édition 2014, Elfe : les 6 sous-races restent toutes affichées '
+      '(non-régression)',
+      (WidgetTester tester) async {
+        await pumpSubraceStepForEdition(
+          tester,
+          edition: '2014',
+          catalog: const RaceCatalog(
+            races: [_elfe],
+            subraces: [
+              _eladrin,
+              _elfeDesBois,
+              _elfeMarin,
+              _elfeNoir,
+              _hautElfe,
+              _shadarKai,
+            ],
+          ),
+          raceId: 1,
+        );
+
+        for (final name in [
+          'Eladrin',
+          'Elfe des bois',
+          'Elfe marin',
+          'Elfe noir (Drow)',
+          'Haut-elfe',
+          'Shadar-kai',
+        ]) {
+          expect(find.text(name), findsOneWidget);
+        }
+      },
+    );
+
+    testWidgets(
+      'édition 2024, Gnome : seules Gnome des forêts/Gnome des roches '
+      'apparaissent (Gnome des profondeurs/Svirfnebelin, sans '
+      'traits2024, est masqué)',
+      (WidgetTester tester) async {
+        await pumpSubraceStepForEdition(
+          tester,
+          edition: '2024',
+          catalog: const RaceCatalog(
+            races: [_gnome],
+            subraces: [_gnomeDesForets, _gnomeDesProfondeurs, _gnomeDesRoches],
+          ),
+          raceId: 2,
+        );
+
+        expect(find.text('Gnome des forêts'), findsOneWidget);
+        expect(find.text('Gnome des roches'), findsOneWidget);
+        expect(find.text('Gnome des profondeurs (Svirfnebelin)'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'édition 2014, Gnome : les 3 sous-races restent toutes affichées '
+      '(non-régression)',
+      (WidgetTester tester) async {
+        await pumpSubraceStepForEdition(
+          tester,
+          edition: '2014',
+          catalog: const RaceCatalog(
+            races: [_gnome],
+            subraces: [_gnomeDesForets, _gnomeDesProfondeurs, _gnomeDesRoches],
+          ),
+          raceId: 2,
+        );
+
+        expect(find.text('Gnome des forêts'), findsOneWidget);
+        expect(
+          find.text('Gnome des profondeurs (Svirfnebelin)'),
+          findsOneWidget,
+        );
+        expect(find.text('Gnome des roches'), findsOneWidget);
+      },
+    );
+  });
 }
