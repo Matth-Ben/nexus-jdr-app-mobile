@@ -26,6 +26,7 @@ import '../../character_creation/domain/spell_catalog.dart';
 import '../../character_creation/domain/spell_option.dart';
 import '../../character_creation/domain/spell_selection_resolver.dart';
 import '../../character_creation/domain/spells_step_selection.dart';
+import '../../character_creation/presentation/widgets/spell_option_info_sheet.dart';
 import '../domain/character_failure.dart';
 import '../domain/invocation_selection_rules.dart';
 import '../domain/level_up_arcane_shot_option.dart';
@@ -2857,7 +2858,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
               subtitle: (subclass.description?.isNotEmpty ?? false)
                   ? subclass.description
                   : null,
-              onInfoTap: null,
+              onInfoTap: (subclass.description?.isNotEmpty ?? false)
+                  ? () => showFeatInfoPanel(
+                      context,
+                      name: subclass.name,
+                      description: subclass.description!,
+                    )
+                  : null,
             ),
         ],
       ),
@@ -2886,7 +2893,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
               id: pact.key,
               title: pact.label,
               subtitle: pact.description,
-              onInfoTap: null,
+              onInfoTap: () => showFeatInfoPanel(
+                context,
+                name: pact.label,
+                description: pact.description,
+              ),
             ),
         ],
       ),
@@ -3006,13 +3017,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// carte englobante (chaque [SelectableOptionTile] est déjà sa propre
   /// carte), sauf état vide (spec visuelle direction-artistique section 2).
   ///
-  /// [onInfoTap] (option) : bouton "i" additionnel affiché à côté de la
-  /// tuile, ouvrant un panneau "Infos" — jamais consommé par
-  /// [SelectableOptionTile] lui-même (composant partagé, pas de slot dédié) :
-  /// une zone de tap séparée à sa droite plutôt qu'une modification de ce
-  /// composant, seul usage à ce jour (liste de dons, section 2 de la spec
-  /// visuelle direction-artistique) — le tap sur le reste de la ligne
-  /// sélectionne l'option normalement.
+  /// [onInfoTap] (option) : branché directement sur
+  /// [SelectableOptionTile.onInfo] (composant partagé, même bouton ⓘ que
+  /// `character_creation/presentation/race_step_screen.dart`) — `null` pour
+  /// une option dont aucune description n'est disponible (style de combat,
+  /// ennemi juré : listes codées en dur sans texte de description, voir
+  /// `domain/level_up_choice_options.dart`), auquel cas
+  /// [SelectableOptionTile] n'affiche pas de bouton du tout.
   Widget _buildOptionListBody({
     required String instruction,
     required IconData icon,
@@ -3051,36 +3062,14 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           const SizedBox(height: AppSpacing.sm),
           for (var i = 0; i < options.length; i++) ...[
             if (i > 0) const SizedBox(height: AppSpacing.sm),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: SelectableOptionTile(
-                    title: options[i].title,
-                    subtitle: options[i].subtitle,
-                    selected: _selectedListOptionId == options[i].id,
-                    onTap: () =>
-                        setState(() => _selectedListOptionId = options[i].id),
-                    leading: AccentIconBadge(index: i, icon: icon),
-                  ),
-                ),
-                if (options[i].onInfoTap != null) ...[
-                  const SizedBox(width: AppSpacing.xs),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 44,
-                      minHeight: 44,
-                    ),
-                    child: IconButton(
-                      onPressed: options[i].onInfoTap,
-                      icon: const Icon(
-                        Icons.info_outline,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+            SelectableOptionTile(
+              title: options[i].title,
+              subtitle: options[i].subtitle,
+              selected: _selectedListOptionId == options[i].id,
+              onTap: () =>
+                  setState(() => _selectedListOptionId = options[i].id),
+              leading: AccentIconBadge(index: i, icon: icon),
+              onInfo: options[i].onInfoTap,
             ),
           ],
         ],
@@ -3561,6 +3550,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       subtitle: isPatronSpell ? '$baseSubtitle · Patron' : baseSubtitle,
       leading: AccentIconBadge(index: index, icon: Icons.auto_awesome),
       checked: isSelected,
+      onInfo: () => showSpellOptionInfoSheet(context, spell: spell),
       enabled: !SpellsStepSelection.isChoiceLocked(
         isSelected: isSelected,
         selectedCount: selected.length,
@@ -3695,6 +3685,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         color: AppColors.accentViolet,
       ),
       checked: isSelected,
+      onInfo: () => showFeatInfoPanel(
+        context,
+        name: invocation.name,
+        description: invocation.description,
+        prerequisiteText: invocation.prerequisiteText,
+      ),
       enabled:
           eligibility.isEligible &&
           !SpellsStepSelection.isChoiceLocked(
@@ -3825,6 +3821,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         color: AppColors.accentBrick,
       ),
       checked: isSelected,
+      onInfo: () => showFeatInfoPanel(
+        context,
+        name: discipline.name,
+        description: discipline.description,
+      ),
       enabled: !SpellsStepSelection.isChoiceLocked(
         isSelected: isSelected,
         selectedCount: selected.length,
@@ -3950,6 +3951,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         color: AppColors.accentBlue,
       ),
       checked: isSelected,
+      onInfo: () => showFeatInfoPanel(
+        context,
+        name: maneuver.name,
+        description: maneuver.description,
+      ),
       enabled: !SpellsStepSelection.isChoiceLocked(
         isSelected: isSelected,
         selectedCount: selected.length,
@@ -4064,6 +4070,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         color: AppColors.accentBrick,
       ),
       checked: isSelected,
+      onInfo: () => showFeatInfoPanel(
+        context,
+        name: arcaneShot.name,
+        description: arcaneShot.description,
+      ),
       enabled: !SpellsStepSelection.isChoiceLocked(
         isSelected: isSelected,
         selectedCount: selected.length,
@@ -4174,6 +4185,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         color: AppColors.accentTeal,
       ),
       checked: isSelected,
+      onInfo: () => showFeatInfoPanel(
+        context,
+        name: rune.name,
+        description: rune.description,
+      ),
       enabled: !SpellsStepSelection.isChoiceLocked(
         isSelected: isSelected,
         selectedCount: selected.length,
@@ -4307,6 +4323,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         selected: _infusionSwapAddedId == option.id.toString(),
                         onTap: () =>
                             _toggleInfusionSwapAdded(option.id.toString()),
+                        onInfo: () => showFeatInfoPanel(
+                          context,
+                          name: option.name,
+                          description: option.description,
+                          prerequisiteText: option.prerequisiteText,
+                        ),
                       ),
                   ],
                 ],
@@ -4353,6 +4375,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         color: AppColors.accentViolet,
       ),
       checked: isSelected,
+      onInfo: () => showFeatInfoPanel(
+        context,
+        name: infusion.name,
+        description: infusion.description,
+        prerequisiteText: prerequisiteText,
+      ),
       enabled: !SpellsStepSelection.isChoiceLocked(
         isSelected: isSelected,
         selectedCount: selected.length,
@@ -4500,6 +4528,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         selected: _metamagicSwapAddedId == option.id.toString(),
                         onTap: () =>
                             _toggleMetamagicSwapAdded(option.id.toString()),
+                        onInfo: () => showFeatInfoPanel(
+                          context,
+                          name: option.name,
+                          description: option.description,
+                        ),
                       ),
                   ],
                 ],
@@ -4541,6 +4574,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         color: AppColors.accentViolet,
       ),
       checked: isSelected,
+      onInfo: () => showFeatInfoPanel(
+        context,
+        name: option.name,
+        description: option.description,
+      ),
       enabled: !SpellsStepSelection.isChoiceLocked(
         isSelected: isSelected,
         selectedCount: selected.length,
@@ -4729,6 +4767,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                     selected:
                         _selectedDraconicAncestryId == option.id.toString(),
                     onTap: () => _toggleDraconicAncestry(option.id.toString()),
+                    onInfo: () => showFeatInfoPanel(
+                      context,
+                      name: option.name,
+                      description: option.description,
+                    ),
                   ),
               ],
             ),

@@ -45,6 +45,8 @@ class CheckableOptionTile extends StatelessWidget {
     this.trailing,
     this.showIndicator = true,
     this.titleTrailing,
+    this.onInfo,
+    this.infoTooltip = 'Informations',
     super.key,
   });
 
@@ -103,6 +105,19 @@ class CheckableOptionTile extends StatelessWidget {
   final bool enabled;
 
   final VoidCallback? onTap;
+
+  /// Affiche un bouton ⓘ (icône seule) à côté de l'indicateur, qui ouvre le
+  /// détail de l'option sans la cocher — même pattern que
+  /// [SelectableOptionTile.onInfo] (voir sa documentation), ajouté ici pour
+  /// pouvoir consulter la description d'un choix à cocher (sorts,
+  /// invocations, manœuvres... de l'étape de montée de niveau,
+  /// `presentation/level_up_screen.dart`) avant de le sélectionner. `null`
+  /// par défaut : pas de bouton, comportement inchangé pour tous les usages
+  /// existants.
+  final VoidCallback? onInfo;
+
+  /// Libellé d'accessibilité du bouton ⓘ.
+  final String infoTooltip;
 
   /// Zone de tap minimale imposée par le design système (section 7,
   /// Accessibilité : "Zones de tap ≥ 44×44px sur tous les éléments
@@ -211,6 +226,15 @@ class CheckableOptionTile extends StatelessWidget {
                     ),
                   ),
                 ],
+                if (onInfo != null)
+                  IconButton(
+                    tooltip: infoTooltip,
+                    onPressed: enabled ? onInfo : null,
+                    icon: const Icon(
+                      Icons.info_outline_rounded,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 if (leading != null && indicator != null) ...[
                   const SizedBox(width: AppSpacing.sm),
                   indicator,
