@@ -14,6 +14,7 @@ import '../domain/character_creation_failure.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/race_catalog.dart';
 import '../domain/race_option.dart';
+import '../domain/subrace_option.dart';
 import '../domain/subrace_step_selection.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'providers/character_creation_providers.dart';
@@ -38,6 +39,17 @@ import 'widgets/step_help_sheet.dart';
 /// factorisés avec `RaceStepScreen` (`race_step_screen.dart`) : voir la doc
 /// de classe de ce dernier pour le rationale de cette duplication assumée
 /// dans tout ce module.
+///
+/// Chantier "différenciation 2014/2024 pour les races" (24/10/2026),
+/// étendu aux sous-races le 30/10/2026 : une sous-race sans contenu 2024
+/// propre (`SubraceOption.traits2024` nul, ex. Eladrin/Elfe marin/Shadar-kai
+/// pour l'Elfe, Svirfnebelin pour le Gnome) est masquée en édition 2024 —
+/// voir [_isSubraceAvailable] et son point d'appel dans [_filterSubraces],
+/// même principe de masquage complet (pas de griséification) que
+/// `RaceStepScreen._isRaceAvailable`/`_filterRaces`. Le Nain/l'Halfelin
+/// (`RaceCatalog.isUnifiedRaceIn2024`) n'atteignent jamais cet écran en 2024
+/// (sauté entièrement par `RaceStepScreen._submit`) : ce filtre ne les
+/// concerne donc jamais en pratique.
 class SubraceStepScreen extends ConsumerStatefulWidget {
   const SubraceStepScreen({super.key});
 
@@ -51,11 +63,18 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
   int? _raceId;
   int? _selectedSubraceId;
 
+  /// Édition du brouillon, lue une seule fois comme [_raceId] : fixée à
+  /// `EditionStepScreen`, TOUTE PREMIÈRE étape de l'assistant, avant
+  /// celle-ci. Pilote [_isSubraceAvailable] — même rationale que
+  /// `RaceStepScreen._edition`.
+  late String _edition;
+
   @override
   void initState() {
     super.initState();
     final draft = ref.read(characterCreationDraftControllerProvider);
     _raceId = draft.raceId;
+    _edition = draft.edition;
     // Réhydrate le choix déjà fait (retour en arrière depuis une étape
     // suivante) — même rationale que `RaceStepScreen.initState`.
     _selectedSubraceId = draft.subraceId;
@@ -76,6 +95,26 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
       _selectedSubraceId = subraceId;
     });
   }
+
+  /// `false` si [subrace] n'existe pas RAW en édition 2024
+  /// (`SubraceOption.traits2024` nul) — toujours `true` en édition 2014.
+  /// Pilote [_filterSubraces] (sous-races exclues de la liste affichée) —
+  /// même principe que `RaceStepScreen._isRaceAvailable`, voir la doc de
+  /// classe de [SubraceStepScreen].
+  bool _isSubraceAvailable(SubraceOption subrace) {
+    if (_edition != '2024') return true;
+    return subrace.traits2024 != null;
+  }
+
+  /// Sous-races de [catalog] pour [_raceId] disponibles dans l'édition
+  /// courante ([_isSubraceAvailable]) — toutes les sous-races de cette race
+  /// en édition 2014, puisque [_isSubraceAvailable] y vaut toujours `true`.
+  /// Ordre d'origine préservé (`RaceCatalog.subracesOf`), un simple `where`
+  /// ne le modifie pas.
+  List<SubraceOption> _filterSubraces(RaceCatalog catalog, int raceId) => [
+    for (final subrace in catalog.subracesOf(raceId))
+      if (_isSubraceAvailable(subrace)) subrace,
+  ];
 
   void _goBack() => context.pop();
 
@@ -165,7 +204,7 @@ class _SubraceStepScreenState extends ConsumerState<SubraceStepScreen> {
           ),
         )
         .name;
-    final subraces = catalog.subracesOf(raceId);
+    final subraces = _filterSubraces(catalog, raceId);
     final canProceed = SubraceStepSelection.canProceed(
       selectedSubraceId: _selectedSubraceId,
     );
