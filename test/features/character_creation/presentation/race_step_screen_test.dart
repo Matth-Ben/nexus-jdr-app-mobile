@@ -371,6 +371,24 @@ void main() {
         widget.decoration?.hintText == 'Nom de la race personnalisée',
   );
 
+  // `_SuggestionChip` (`RaceStepScreen._unavailableRaceSuggestions`) est une
+  // classe privée du fichier testé, non importable ici (`find.byType` est
+  // donc inutilisable) : repéré via le libellé de sémantique explicite qu'il
+  // porte plutôt que via son type — même limite que `findCustomRaceTextField`
+  // ci-dessus, contournée différemment.
+  Finder findSuggestionChip(String raceName) => find.byWidgetPredicate(
+    (widget) =>
+        widget is Semantics &&
+        widget.properties.label == 'Utiliser "$raceName" comme race personnalisée',
+  );
+
+  Finder findAnySuggestionChip() => find.byWidgetPredicate(
+    (widget) =>
+        widget is Semantics &&
+        (widget.properties.label?.endsWith('comme race personnalisée') ??
+            false),
+  );
+
   // Surface de test agrandie en hauteur — même rationale que
   // `equipment_step_screen_test.dart`/`ability_score_step_screen_test.dart`
   // (voir leurs commentaires) : le champ de recherche + les en-têtes de
@@ -1238,10 +1256,10 @@ void main() {
         await tester.tap(find.text('Race personnalisée'));
         await tester.pumpAndSettle();
 
-        expect(find.widgetWithText(ActionChip, 'Demi-elfe'), findsOneWidget);
-        expect(find.widgetWithText(ActionChip, 'Demi-orc'), findsOneWidget);
+        expect(findSuggestionChip('Demi-elfe'), findsOneWidget);
+        expect(findSuggestionChip('Demi-orc'), findsOneWidget);
 
-        await tester.tap(find.widgetWithText(ActionChip, 'Demi-orc'));
+        await tester.tap(findSuggestionChip('Demi-orc'));
         await tester.pumpAndSettle();
 
         expect(
@@ -1272,7 +1290,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(findCustomRaceTextField(), findsOneWidget);
-        expect(find.byType(ActionChip), findsNothing);
+        expect(findAnySuggestionChip(), findsNothing);
       },
     );
 

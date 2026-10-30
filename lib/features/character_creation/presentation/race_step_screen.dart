@@ -680,34 +680,93 @@ class _RaceStepScreenState extends ConsumerState<RaceStepScreen> {
   /// du chef de projet (30/10/2026) — faciliter la création d'un personnage
   /// dont la race réelle (Demi-elfe, Demi-orc...) n'existe plus comme
   /// option directe dans l'édition courante, sans retaper son nom à la
-  /// main. `ActionChip` Material standard avec les tokens
-  /// `AppColors`/`AppTypography` du dépôt : aucun composant de "suggestion
-  /// cliquable pré-remplissant un champ" déjà établi ailleurs dans ce dépôt
-  /// (les `Chip`s existants, ex. `_AbilityChip` de
-  /// `racial_bonus_choice_card.dart`, sont tous des `FilterChip` à état
-  /// `selected`/`enabled` persistant, pas des déclencheurs d'action
-  /// ponctuelle) — signalé au chef de projet plutôt que deviné, voir le
-  /// compte-rendu de ce chantier.
+  /// main. Chaque suggestion est un [_SuggestionChip] (voir sa doc de
+  /// classe) : une première version utilisait un `ActionChip` Material brut
+  /// (retour direction-artistique du 30/10/2026, non conforme — rayon/zone
+  /// de tap non maîtrisés, voir `10-design-system.md` sections 3 et 7).
   Widget _unavailableRaceSuggestions(List<RaceOption> unavailableRaces) {
     return Wrap(
       spacing: AppSpacing.xs,
       runSpacing: AppSpacing.xs,
       children: [
         for (final race in unavailableRaces)
-          ActionChip(
-            label: Text(race.name),
-            labelStyle: AppTypography.body(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
-            ),
-            backgroundColor: AppColors.parchmentCardAlt,
-            side: const BorderSide(color: AppColors.woodLight),
-            onPressed: () => setState(() {
+          _SuggestionChip(
+            label: race.name,
+            onTap: () => setState(() {
               _customRaceController.text = race.name;
             }),
           ),
       ],
+    );
+  }
+}
+
+/// Chip-étiquette à déclenchement d'action ponctuelle (pas d'état `selected`
+/// persistant), utilisé par [_RaceStepScreenState._unavailableRaceSuggestions]
+/// — recette dupliquée à l'identique depuis `CharacterNameTagChip`
+/// (`features/characters/presentation/widgets/character_name_tag_chip.dart`) :
+/// fond `parchmentCardAlt`, bordure fine `woodLight`, rayon `AppRadius.sm`,
+/// texte `w700`/`textSecondary`, zone de tap >= 44×44px avec `Semantics`
+/// explicite (`10-design-system.md` sections 3 et 7) — retour
+/// direction-artistique du 30/10/2026, suite à une première version en
+/// `ActionChip` Material brut qui ne respectait aucun des deux.
+///
+/// Dupliqué ici plutôt que `CharacterNameTagChip` importé tel quel : ce
+/// composant vit dans la feature `characters` (la fiche personnage), jamais
+/// couplée à cet écran de création (voir [_filterRaces] et le principe de
+/// duplication assumée documenté dans la doc de classe de [RaceStepScreen])
+/// — et son libellé de sémantique fixe ("voir le détail") ne correspond pas
+/// à l'action réelle ici (pré-remplir un champ, pas ouvrir un détail).
+class _SuggestionChip extends StatelessWidget {
+  const _SuggestionChip({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final chip = Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.parchmentCardAlt,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.woodLight, width: 1),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.body(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+
+    // Même patron que `CharacterNameTagChip` (voir sa doc) : `Semantics`
+    // explicite avec `excludeSemantics: true` pour ne jamais fusionner avec
+    // le label du `Text` descendant, zone de tap élargie à >= 44×44 via
+    // `ConstrainedBox` sans `Center`/`Align` (étirerait le chip sur toute la
+    // largeur du `Wrap` sous contraintes lâches).
+    return Semantics(
+      button: true,
+      label: 'Utiliser "$label" comme race personnalisée',
+      onTap: onTap,
+      container: true,
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            child: chip,
+          ),
+        ),
+      ),
     );
   }
 }
