@@ -1171,35 +1171,32 @@ void main() {
   );
 
   group('chantier "différenciation 2014/2024 pour les races" (24/10/2026)', () {
-    testWidgets(
-      'édition 2024 : le Demi-elfe (traits2024 null) est entièrement '
-      'absent des listes de races (décision du 30/10/2026 : masquage '
-      'complet plutôt que griséification)',
-      (WidgetTester tester) async {
-        fakeRepository.catalogToReturn = const RaceCatalog(
-          races: [_elfeAvec2024, _demiElfe],
-          subraces: [],
-        );
-        container
-            .read(characterCreationDraftControllerProvider.notifier)
-            .setEdition('2024');
+    testWidgets('édition 2024 : le Demi-elfe (traits2024 null) est entièrement '
+        'absent des listes de races (décision du 30/10/2026 : masquage '
+        'complet plutôt que griséification)', (WidgetTester tester) async {
+      fakeRepository.catalogToReturn = const RaceCatalog(
+        races: [_elfeAvec2024, _demiElfe],
+        subraces: [],
+      );
+      container
+          .read(characterCreationDraftControllerProvider.notifier)
+          .setEdition('2024');
 
-        await tester.pumpWidget(buildTestWidget());
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
 
-        expect(
-          find.text('Demi-elfe'),
-          findsNothing,
-          reason:
-              'une race indisponible en édition 2024 ne doit plus '
-              'apparaître du tout dans la liste, même grisée',
-        );
-        expect(find.textContaining('Indisponible en édition 2024'), findsNothing);
-        // La race disponible de ce même catalogue reste bien affichée :
-        // seule la race indisponible est exclue, pas la liste entière.
-        expect(find.text('Elfe'), findsOneWidget);
-      },
-    );
+      expect(
+        find.text('Demi-elfe'),
+        findsNothing,
+        reason:
+            'une race indisponible en édition 2024 ne doit plus '
+            'apparaître du tout dans la liste, même grisée',
+      );
+      expect(find.textContaining('Indisponible en édition 2024'), findsNothing);
+      // La race disponible de ce même catalogue reste bien affichée :
+      // seule la race indisponible est exclue, pas la liste entière.
+      expect(find.text('Elfe'), findsOneWidget);
+    });
 
     testWidgets('édition 2014 : le Demi-elfe reste sélectionnable normalement '
         '(comportement inchangé)', (WidgetTester tester) async {
@@ -1241,14 +1238,8 @@ void main() {
         await tester.tap(find.text('Race personnalisée'));
         await tester.pumpAndSettle();
 
-        expect(
-          find.widgetWithText(ActionChip, 'Demi-elfe'),
-          findsOneWidget,
-        );
-        expect(
-          find.widgetWithText(ActionChip, 'Demi-orc'),
-          findsOneWidget,
-        );
+        expect(find.widgetWithText(ActionChip, 'Demi-elfe'), findsOneWidget);
+        expect(find.widgetWithText(ActionChip, 'Demi-orc'), findsOneWidget);
 
         await tester.tap(find.widgetWithText(ActionChip, 'Demi-orc'));
         await tester.pumpAndSettle();
