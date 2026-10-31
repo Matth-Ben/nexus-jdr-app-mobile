@@ -82,6 +82,7 @@ dehors du cahier des charges.
 | `code-reviewer` | Revue de code | Relire un diff avant merge (conventions, sécurité, architecture) |
 | `dette-technique` | Audit de dette technique | Analyser le code en place (périssable, fragile, mort) et produire un registre de dette priorisé — ne corrige rien lui-même |
 | `regles-dnd` | Expert des règles D&D 5e (RAW) | Valider la règle exacte **avant** d'implémenter une mécanique de jeu (sorts, emplacements, multiclassage, dés de vie, préparation), puis vérifier la fidélité RAW du code **après** — ne code pas, ne tranche jamais seul une ambiguïté RAW (remonte à la conversation principale) |
+| `rgpd` | Audit RGPD / confidentialité | Analyser l'app en place (consentement, droits d'accès/export/suppression, sous-traitants tiers, permissions OS, textes légaux vs comportement réel du code) et produire un registre d'écarts priorisé — ne corrige rien lui-même |
 
 **Tout développement passe par ces sous-agents** (décision du 06/10/2026) :
 la conversation principale n'écrit pas elle-même le code ni les tests d'une
@@ -129,6 +130,20 @@ d'attaquer une grosse fonctionnalité sur une zone déjà dense, ou sur
 demande. Il rend un registre priorisé ; le chef de projet choisit quoi
 traiter, puis chaque correction retenue suit la séquence habituelle
 (`dev-flutter` → `qa-testeur` → `code-reviewer`).
+
+### Audit RGPD / confidentialité
+
+`rgpd` n'entre pas non plus dans la séquence d'une fonctionnalité : il
+audite l'app déjà en place (consentement, droits d'accès/export/suppression,
+sous-traitants tiers, permissions OS, cohérence textes légaux ↔ code). À
+invoquer en fin de phase de roadmap, avant une soumission aux stores, ou sur
+demande. Il rend un registre d'écarts priorisé (catégories A/B/C comme
+`docs/dette-technique.md`) ; le chef de projet choisit quoi traiter, puis
+chaque correction retenue suit la séquence habituelle (`dev-flutter`/
+`dev-backend-supabase` → `qa-testeur` → `code-reviewer`). Signale aussi,
+sans jamais l'implémenter, le moment où Sign-In with Apple deviendrait
+obligatoire (directive store 4.8) si une connexion sociale tierce est
+ajoutée — l'implémentation d'Apple Sign-In elle-même reste différée.
 
 Le registre courant vit dans `docs/dette-technique.md`. Il classe la dette en
 trois catégories (bloque la production / fait perdre des données ou donne une
