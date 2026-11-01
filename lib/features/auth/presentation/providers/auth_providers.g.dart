@@ -48,7 +48,7 @@ final class AuthRepositoryProvider
   }
 }
 
-String _$authRepositoryHash() => r'67318ecc8ae52453d6d686b179cbac5c04e80ae2';
+String _$authRepositoryHash() => r'd3ec9dc0c92c7dce9dbc7b22a91317241ec953c3';
 
 /// [AuthStateStream] partagé par toute l'app — voir sa doc de classe pour le
 /// rationale ("piège `Ref.listen`") qui le distingue d'[authStateChanges]
