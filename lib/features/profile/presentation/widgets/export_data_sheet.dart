@@ -159,11 +159,12 @@ class _ExportDataSheetContentState
                               const SizedBox(height: AppSpacing.md),
                             ],
                             Text(
-                              'Génère un fichier JSON contenant tous tes '
-                              'personnages et leurs données associées '
-                              '(inventaire, sorts, historique). Le fichier '
-                              'te sera proposé au partage/enregistrement '
-                              'depuis ton appareil.',
+                              'Génère un fichier JSON contenant ton profil, '
+                              'tous tes personnages et leurs données '
+                              'associées (inventaire, sorts, historique), '
+                              'ainsi que tes groupes et tes notes de groupe. '
+                              'Le fichier te sera proposé au partage/'
+                              'enregistrement depuis ton appareil.',
                               style: AppTypography.body(
                                 fontSize: 13,
                                 color: AppColors.textSecondary,

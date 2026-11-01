@@ -1,16 +1,24 @@
 // Tests de `LocalFileDataExportRepository.exportMyData`
 // (`features/profile/data/data_export_repository.dart`) : assemble le JSON
 // attendu depuis un `CharacterRepository` factice (`fetchCharacters` +
-// `fetchCharacterDetail`), écrit un fichier dans le répertoire temporaire
-// (`path_provider`, remplacé ici par un `PathProviderPlatform` factice, même
-// principe que les autres plugins mockés de ce dépôt — jamais un vrai accès
-// disque piloté par le canal de plateforme réel, indisponible dans `flutter
-// test`), et propage telle quelle toute exception du repository sous-jacent.
+// `fetchCharacterDetail`), un `GroupRepository` factice (`fetchMyGroups` +
+// `fetchGroupDetail` + `fetchGroupNote`) et un `SupabaseClient` connecté
+// (profil `auth.currentUser`, même double de test que
+// `auth_repository_test.dart` : un vrai `SupabaseClient`/`GoTrueClient`
+// tourne, seule la réponse HTTP `/token` est fabriquée via
+// `package:http/testing.dart`), écrit un fichier dans le répertoire
+// temporaire (`path_provider`, remplacé ici par un `PathProviderPlatform`
+// factice, même principe que les autres plugins mockés de ce dépôt — jamais
+// un vrai accès disque piloté par le canal de plateforme réel, indisponible
+// dans `flutter test`), et propage telle quelle toute exception des
+// repositories sous-jacents.
 
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:personnages/core/rules/spell_status.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
@@ -21,7 +29,15 @@ import 'package:personnages/features/characters/domain/character_inventory_item.
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
+import 'package:personnages/features/groups/data/group_repository.dart';
+import 'package:personnages/features/groups/domain/group_detail.dart';
+import 'package:personnages/features/groups/domain/group_failure.dart';
+import 'package:personnages/features/groups/domain/group_member.dart';
+import 'package:personnages/features/groups/domain/group_note.dart';
+import 'package:personnages/features/groups/domain/group_role.dart';
+import 'package:personnages/features/groups/domain/group_summary.dart';
 import 'package:personnages/features/profile/data/data_export_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
   _FakePathProviderPlatform(this.tempPath);
@@ -58,6 +74,89 @@ class _FakeCharacterRepository implements CharacterRepository {
   Never noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
+/// Double minimal — seuls `fetchMyGroups`/`fetchGroupDetail`/`fetchGroupNote`
+/// sont exercés par `DataExportRepository`, le reste lève
+/// `UnimplementedError` (jamais atteint par ces tests).
+class _FakeGroupRepository implements GroupRepository {
+  List<GroupSummary> groups = const [];
+  final Map<String, GroupDetail> detailsByGroupId = {};
+  final Map<String, GroupNote> notesByKey = {};
+  Object? fetchMyGroupsErrorToThrow;
+  Object? fetchGroupNoteErrorToThrow;
+
+  @override
+  Future<List<GroupSummary>> fetchMyGroups() async {
+    final error = fetchMyGroupsErrorToThrow;
+    if (error != null) throw error;
+    return groups;
+  }
+
+  @override
+  Future<GroupDetail> fetchGroupDetail(String groupId) async {
+    final detail = detailsByGroupId[groupId];
+    if (detail == null) {
+      throw const GroupFailure('Groupe introuvable.');
+    }
+    return detail;
+  }
+
+  @override
+  Future<GroupNote> fetchGroupNote({
+    required String groupId,
+    required String characterId,
+  }) async {
+    final error = fetchGroupNoteErrorToThrow;
+    if (error != null) throw error;
+    return notesByKey['$groupId/$characterId'] ??
+        GroupNote(groupId: groupId, characterId: characterId);
+  }
+
+  @override
+  Never noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+/// Construit un `SupabaseClient` connecté (`fake-user-id`), avec les
+/// métadonnées de compte [userMetadata] — même double de test que
+/// `auth_repository_test.dart::_buildFakeSupabaseClient`, dupliqué ici (voir
+/// le rationale de duplication de `RaceRowMapper`) pour que ce fichier reste
+/// autonome.
+Future<SupabaseClient> _buildSignedInClient({
+  String email = 'joueur@exemple.com',
+  Map<String, dynamic> userMetadata = const {},
+}) async {
+  final client = SupabaseClient(
+    'https://fake.supabase.test',
+    'fake-anon-key',
+    httpClient: MockClient((request) async {
+      if (request.url.path.endsWith('/token')) {
+        return http.Response(
+          jsonEncode({
+            'access_token': 'fake-access-token',
+            'token_type': 'bearer',
+            'expires_in': 3600,
+            'refresh_token': 'fake-refresh-token',
+            'user': {
+              'id': 'fake-user-id',
+              'aud': 'authenticated',
+              'email': email,
+              'app_metadata': <String, dynamic>{},
+              'user_metadata': userMetadata,
+              'created_at': '2026-01-01T00:00:00Z',
+            },
+          }),
+          200,
+          request: request,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      return http.Response('{}', 200, request: request);
+    }),
+    authOptions: const AuthClientOptions(authFlowType: AuthFlowType.implicit),
+  );
+  await client.auth.signInWithPassword(email: email, password: 'password1234');
+  return client;
+}
+
 void main() {
   late Directory tempDir;
 
@@ -69,6 +168,23 @@ void main() {
   tearDown(() {
     tempDir.deleteSync(recursive: true);
   });
+
+  /// Construit un [LocalFileDataExportRepository] prêt à l'emploi — un
+  /// `GroupRepository`/`SupabaseClient` par défaut (aucun groupe, aucune
+  /// métadonnée de profil) quand un test ne porte pas sur eux, pour que
+  /// chaque test "personnages" garde le même niveau de bruit qu'avant
+  /// l'extension B1 du registre d'audit RGPD.
+  Future<LocalFileDataExportRepository> buildRepository({
+    required CharacterRepository characterRepository,
+    GroupRepository? groupRepository,
+    SupabaseClient? client,
+  }) async {
+    return LocalFileDataExportRepository(
+      characterRepository,
+      groupRepository ?? _FakeGroupRepository(),
+      client ?? await _buildSignedInClient(),
+    );
+  }
 
   CharacterDetail buildDetail({required String id, required String name}) {
     return CharacterDetail(
@@ -117,7 +233,9 @@ void main() {
           ),
         ]
         ..detailsById['char-1'] = buildDetail(id: 'char-1', name: 'Aranea');
-      final repository = LocalFileDataExportRepository(characterRepository);
+      final repository = await buildRepository(
+        characterRepository: characterRepository,
+      );
 
       final path = await repository.exportMyData();
 
@@ -179,8 +297,9 @@ void main() {
         ]
         ..detailsById['char-1'] = detail;
 
-      final path = await LocalFileDataExportRepository(characterRepository)
-          .exportMyData();
+      final path = await (await buildRepository(
+        characterRepository: characterRepository,
+      )).exportMyData();
 
       final payload =
           jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
@@ -211,7 +330,9 @@ void main() {
         ]
         ..detailsById['char-1'] = buildDetail(id: 'char-1', name: 'Aranea')
         ..detailsById['char-2'] = buildDetail(id: 'char-2', name: 'Borin');
-      final repository = LocalFileDataExportRepository(characterRepository);
+      final repository = await buildRepository(
+        characterRepository: characterRepository,
+      );
 
       final path = await repository.exportMyData();
       final payload =
@@ -227,7 +348,9 @@ void main() {
       'aucun personnage : `characters` vide, fichier tout de même généré',
       () async {
         final characterRepository = _FakeCharacterRepository()..summaries = [];
-        final repository = LocalFileDataExportRepository(characterRepository);
+        final repository = await buildRepository(
+          characterRepository: characterRepository,
+        );
 
         final path = await repository.exportMyData();
         final payload =
@@ -249,11 +372,289 @@ void main() {
           ),
         ]
         ..detailErrorToThrow = const CharacterFailure('Erreur serveur.');
-      final repository = LocalFileDataExportRepository(characterRepository);
+      final repository = await buildRepository(
+        characterRepository: characterRepository,
+      );
 
       await expectLater(
         repository.exportMyData(),
         throwsA(isA<CharacterFailure>()),
+      );
+    });
+  });
+
+  group('LocalFileDataExportRepository.exportMyData — profil (B1)', () {
+    test('profil : email/pseudo/avatar lus depuis `auth.currentUser` '
+        '(`user_metadata.full_name`/`avatar_url`)', () async {
+      final client = await _buildSignedInClient(
+        email: 'aranea@exemple.com',
+        userMetadata: const {
+          'full_name': 'Aranea Nightsong',
+          'avatar_url': 'https://exemple.com/avatar.png',
+        },
+      );
+      final repository = await buildRepository(
+        characterRepository: _FakeCharacterRepository(),
+        client: client,
+      );
+
+      final path = await repository.exportMyData();
+      final payload =
+          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+      final profile = payload['profile'] as Map<String, dynamic>;
+
+      expect(profile['email'], 'aranea@exemple.com');
+      expect(profile['displayName'], 'Aranea Nightsong');
+      expect(profile['avatarUrl'], 'https://exemple.com/avatar.png');
+    });
+
+    test('profil : pseudo/avatar absents de `user_metadata` -> `null`, jamais '
+        "une erreur (pas encore renseignés par le joueur)", () async {
+      final repository = await buildRepository(
+        characterRepository: _FakeCharacterRepository(),
+      );
+
+      final path = await repository.exportMyData();
+      final payload =
+          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+      final profile = payload['profile'] as Map<String, dynamic>;
+
+      expect(profile['email'], 'joueur@exemple.com');
+      expect(profile['displayName'], isNull);
+      expect(profile['avatarUrl'], isNull);
+    });
+  });
+
+  group('LocalFileDataExportRepository.exportMyData — groupes/notes (B1)', () {
+    GroupMember ownMember({String? characterId, bool isGameMaster = false}) {
+      return GroupMember(
+        characterId: characterId,
+        userId: 'fake-user-id',
+        role: GroupRole.membre,
+        name: 'Aranea',
+        isGameMaster: isGameMaster,
+      );
+    }
+
+    test('un groupe par entrée de `fetchMyGroups`, avec `id`/`name`/'
+        '`memberCount`/`founderId`', () async {
+      final groupRepository = _FakeGroupRepository()
+        ..groups = [
+          const GroupSummary(
+            id: 'group-1',
+            name: 'La Compagnie',
+            memberCount: 3,
+            founderId: 'owner-1',
+          ),
+        ]
+        ..detailsByGroupId['group-1'] = GroupDetail(
+          id: 'group-1',
+          name: 'La Compagnie',
+          ownerId: 'owner-1',
+          inviteCode: 'ABC123',
+          currentUserId: 'fake-user-id',
+          members: [ownMember(characterId: 'char-1')],
+        );
+      final repository = await buildRepository(
+        characterRepository: _FakeCharacterRepository(),
+        groupRepository: groupRepository,
+      );
+
+      final path = await repository.exportMyData();
+      final payload =
+          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+      final groups = payload['groups'] as List<dynamic>;
+
+      expect(groups, hasLength(1));
+      final group = groups.single as Map<String, dynamic>;
+      expect(group['id'], 'group-1');
+      expect(group['name'], 'La Compagnie');
+      expect(group['memberCount'], 3);
+      expect(group['founderId'], 'owner-1');
+    });
+
+    test('personnage rattaché avec une note non vide enregistrée : `note` '
+        'incluse avec son corps intégral', () async {
+      final groupRepository = _FakeGroupRepository()
+        ..groups = [
+          const GroupSummary(
+            id: 'group-1',
+            name: 'La Compagnie',
+            memberCount: 2,
+            founderId: 'owner-1',
+          ),
+        ]
+        ..detailsByGroupId['group-1'] = GroupDetail(
+          id: 'group-1',
+          name: 'La Compagnie',
+          ownerId: 'owner-1',
+          inviteCode: 'ABC123',
+          currentUserId: 'fake-user-id',
+          members: [ownMember(characterId: 'char-1')],
+        )
+        ..notesByKey['group-1/char-1'] = const GroupNote(
+          groupId: 'group-1',
+          characterId: 'char-1',
+          body: 'Le MJ a mentionné une amulette maudite au donjon.',
+        );
+      final repository = await buildRepository(
+        characterRepository: _FakeCharacterRepository(),
+        groupRepository: groupRepository,
+      );
+
+      final path = await repository.exportMyData();
+      final payload =
+          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+      final group =
+          (payload['groups'] as List<dynamic>).single as Map<String, dynamic>;
+
+      expect(
+        group['note'],
+        'Le MJ a mentionné une amulette maudite au donjon.',
+      );
+    });
+
+    test('aucune note enregistrée (`GroupNote` par défaut, corps vide) : la '
+        'clé `note` est omise plutôt qu\'incluse vide', () async {
+      final groupRepository = _FakeGroupRepository()
+        ..groups = [
+          const GroupSummary(
+            id: 'group-1',
+            name: 'La Compagnie',
+            memberCount: 2,
+            founderId: 'owner-1',
+          ),
+        ]
+        ..detailsByGroupId['group-1'] = GroupDetail(
+          id: 'group-1',
+          name: 'La Compagnie',
+          ownerId: 'owner-1',
+          inviteCode: 'ABC123',
+          currentUserId: 'fake-user-id',
+          members: [ownMember(characterId: 'char-1')],
+        );
+      final repository = await buildRepository(
+        characterRepository: _FakeCharacterRepository(),
+        groupRepository: groupRepository,
+      );
+
+      final path = await repository.exportMyData();
+      final payload =
+          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+      final group =
+          (payload['groups'] as List<dynamic>).single as Map<String, dynamic>;
+
+      expect(group.containsKey('note'), isFalse);
+    });
+
+    test('MJ sans personnage/membre orphelin (`characterId` null) : jamais '
+        'tenté de lecture de note, `note` omise', () async {
+      final groupRepository = _FakeGroupRepository()
+        ..groups = [
+          const GroupSummary(
+            id: 'group-1',
+            name: 'La Compagnie',
+            memberCount: 1,
+            founderId: 'fake-user-id',
+          ),
+        ]
+        ..detailsByGroupId['group-1'] = GroupDetail(
+          id: 'group-1',
+          name: 'La Compagnie',
+          ownerId: 'fake-user-id',
+          inviteCode: 'ABC123',
+          currentUserId: 'fake-user-id',
+          members: [ownMember(isGameMaster: true)],
+        )
+        ..fetchGroupNoteErrorToThrow = StateError(
+          'ne devrait jamais être appelé sans characterId',
+        );
+      final repository = await buildRepository(
+        characterRepository: _FakeCharacterRepository(),
+        groupRepository: groupRepository,
+      );
+
+      final path = await repository.exportMyData();
+      final payload =
+          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+      final group =
+          (payload['groups'] as List<dynamic>).single as Map<String, dynamic>;
+
+      expect(group.containsKey('note'), isFalse);
+    });
+
+    test('plusieurs groupes : un élément de `groups` par groupe, dans l\'ordre '
+        'de `fetchMyGroups`', () async {
+      final groupRepository = _FakeGroupRepository()
+        ..groups = [
+          const GroupSummary(
+            id: 'group-1',
+            name: 'La Compagnie',
+            memberCount: 2,
+            founderId: 'owner-1',
+          ),
+          const GroupSummary(
+            id: 'group-2',
+            name: 'Les Rôdeurs',
+            memberCount: 4,
+            founderId: 'owner-2',
+          ),
+        ]
+        ..detailsByGroupId['group-1'] = GroupDetail(
+          id: 'group-1',
+          name: 'La Compagnie',
+          ownerId: 'owner-1',
+          inviteCode: 'ABC123',
+          currentUserId: 'fake-user-id',
+          members: [ownMember(characterId: 'char-1')],
+        )
+        ..detailsByGroupId['group-2'] = GroupDetail(
+          id: 'group-2',
+          name: 'Les Rôdeurs',
+          ownerId: 'owner-2',
+          inviteCode: 'DEF456',
+          currentUserId: 'fake-user-id',
+          members: [ownMember(characterId: 'char-2')],
+        );
+      final repository = await buildRepository(
+        characterRepository: _FakeCharacterRepository(),
+        groupRepository: groupRepository,
+      );
+
+      final path = await repository.exportMyData();
+      final payload =
+          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+      final groups = payload['groups'] as List<dynamic>;
+
+      expect(groups, hasLength(2));
+      expect((groups[0] as Map<String, dynamic>)['id'], 'group-1');
+      expect((groups[1] as Map<String, dynamic>)['id'], 'group-2');
+    });
+
+    test('aucun groupe : `groups` vide, fichier tout de même généré', () async {
+      final repository = await buildRepository(
+        characterRepository: _FakeCharacterRepository(),
+      );
+
+      final path = await repository.exportMyData();
+      final payload =
+          jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+
+      expect(payload['groups'], isEmpty);
+    });
+
+    test('propage telle quelle une exception levée par `fetchMyGroups` (ex. '
+        '`GroupFailure`)', () async {
+      final groupRepository = _FakeGroupRepository()
+        ..fetchMyGroupsErrorToThrow = const GroupFailure('Erreur serveur.');
+      final repository = await buildRepository(
+        characterRepository: _FakeCharacterRepository(),
+        groupRepository: groupRepository,
+      );
+
+      await expectLater(
+        repository.exportMyData(),
+        throwsA(isA<GroupFailure>()),
       );
     });
   });

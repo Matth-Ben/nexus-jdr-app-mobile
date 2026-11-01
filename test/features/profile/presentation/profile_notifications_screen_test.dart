@@ -163,6 +163,9 @@ class _FakePushTokenRepository implements PushTokenRepository {
     if (error != null) throw error;
     upsertedTokens.add(token);
   }
+
+  @override
+  Future<void> releaseToken({required String token}) async {}
 }
 
 NotificationSettings _settings(AuthorizationStatus status) {

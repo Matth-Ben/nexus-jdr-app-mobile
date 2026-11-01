@@ -2,10 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../characters/data/character_repository.dart';
 import '../../characters/domain/character_detail.dart';
 import '../../characters/domain/character_inventory_item.dart';
+import '../../groups/data/group_repository.dart';
+import '../../groups/domain/group_summary.dart';
 
 /// Passerelle "Export de mes données" (sheet
 /// `presentation/widgets/export_data_sheet.dart`, tuile "Export de mes
@@ -19,8 +22,9 @@ import '../../characters/domain/character_inventory_item.dart';
 /// fiche personnage), et vit naturellement à côté du reste de
 /// `features/profile/` (même feature que le reste de la tâche
 /// "Confidentialité et données"). Elle **consomme** [CharacterRepository]
-/// (déjà l'abstraction responsable de toute lecture de personnage) plutôt
-/// que de dupliquer ses requêtes PostgREST.
+/// (déjà l'abstraction responsable de toute lecture de personnage) et
+/// [GroupRepository] (déjà l'abstraction responsable de toute lecture de
+/// groupe/note de groupe) plutôt que de dupliquer leurs requêtes PostgREST.
 ///
 /// Abstraction (plutôt qu'une classe concrète directement injectée) pour
 /// permettre aux tests de fournir un double sans jamais toucher à
@@ -28,9 +32,17 @@ import '../../characters/domain/character_inventory_item.dart';
 /// que `AuthRepository`/`CharacterRepository`.
 abstract class DataExportRepository {
   /// Récupère tous les personnages du joueur connecté (déjà résolus, y
-  /// compris inventaire/sorts/histoire) via [CharacterRepository], assemble
-  /// un unique JSON, l'écrit dans un fichier temporaire, et retourne son
-  /// chemin.
+  /// compris inventaire/sorts/histoire) via [CharacterRepository], son
+  /// profil de compte (pseudo/avatar/e-mail, déjà résolus par la session
+  /// Supabase Auth courante), ses groupes rejoints et, pour chacun d'eux, sa
+  /// note personnelle s'il en a enregistré une (via [GroupRepository]) ;
+  /// assemble un unique JSON, l'écrit dans un fichier temporaire, et
+  /// retourne son chemin.
+  ///
+  /// Exclu volontairement de cet export (registre d'audit RGPD, décision
+  /// chef de projet B1) : les signalements de bug (`bug_reports`), déjà
+  /// publiés sur GitHub (voir `features/bug_report/`), sont hors périmètre
+  /// de cet export.
   ///
   /// **Toujours des données réseau fraîches, jamais le cache local**
   /// (décision chef de projet, tâche "Confidentialité et données") : chaque
@@ -43,18 +55,30 @@ abstract class DataExportRepository {
   /// autres écritures/lectures réseau de ce dépôt), ce qui rend ce repli un
   /// cas resté théorique en pratique.
   ///
-  /// Propage telle quelle toute exception levée par [CharacterRepository]
-  /// (`CharacterFailure` ou autre) — l'appelant n'affiche de toute façon
-  /// qu'un message générique fixe quel que soit le détail de l'échec (spec
-  /// direction-artistique de la tâche), même principe que
-  /// `report_bug_sheet.dart`/`_genericErrorMessage`.
+  /// Propage telle quelle toute exception levée par [CharacterRepository]/
+  /// [GroupRepository] (`CharacterFailure`/`GroupFailure` ou autre) —
+  /// l'appelant n'affiche de toute façon qu'un message générique fixe quel
+  /// que soit le détail de l'échec (spec direction-artistique de la tâche),
+  /// même principe que `report_bug_sheet.dart`/`_genericErrorMessage`.
   Future<String> exportMyData();
 }
 
 class LocalFileDataExportRepository implements DataExportRepository {
-  LocalFileDataExportRepository(this._characterRepository);
+  LocalFileDataExportRepository(
+    this._characterRepository,
+    this._groupRepository,
+    this._client,
+  );
 
   final CharacterRepository _characterRepository;
+  final GroupRepository _groupRepository;
+
+  /// Utilisé uniquement pour lire `auth.currentUser` (pseudo/avatar/e-mail
+  /// déjà résolus par la session en cours, voir [_profileToJson]) — jamais
+  /// pour une requête PostgREST/Storage, contrairement aux autres
+  /// `Supabase*Repository` de ce dépôt qui injectent le même type pour un
+  /// usage plus large.
+  final SupabaseClient _client;
 
   @override
   Future<String> exportMyData() async {
@@ -68,9 +92,17 @@ class LocalFileDataExportRepository implements DataExportRepository {
       characters.add(_characterDetailToJson(detail));
     }
 
+    final groupSummaries = await _groupRepository.fetchMyGroups();
+    final groups = <Map<String, dynamic>>[];
+    for (final group in groupSummaries) {
+      groups.add(await _groupSummaryToJson(group));
+    }
+
     final payload = <String, dynamic>{
       'exportedAt': DateTime.now().toUtc().toIso8601String(),
+      'profile': _profileToJson(),
       'characters': characters,
+      'groups': groups,
     };
 
     // Nom de fichier horodaté — même rationale que les portraits/avatars
@@ -87,6 +119,57 @@ class LocalFileDataExportRepository implements DataExportRepository {
       const JsonEncoder.withIndent('  ').convert(payload),
     );
     return file.path;
+  }
+
+  /// Pseudo/avatar/e-mail du compte connecté — tous déjà disponibles sur la
+  /// session Supabase Auth en cours (`user_metadata['full_name']`/
+  /// `['avatar_url']`, voir `AuthRepository.updateDisplayName`/
+  /// `updateAvatar`), jamais une requête réseau séparée.
+  Map<String, dynamic> _profileToJson() {
+    final user = _client.auth.currentUser;
+    final metadata = user?.userMetadata ?? const <String, dynamic>{};
+    return {
+      'email': user?.email,
+      'displayName': metadata['full_name'] as String?,
+      'avatarUrl': metadata['avatar_url'] as String?,
+    };
+  }
+
+  /// Un groupe rejoint, avec sa note personnelle quand le joueur en a
+  /// enregistré une pour le personnage qu'il y a rattaché — `note` est omise
+  /// plutôt qu'incluse vide (voir [GroupRepository.fetchGroupNote], qui
+  /// retourne toujours une note même sans rien d'enregistré, corps vide) :
+  /// un export lu par le joueur gagne à ne pas lister une note qui n'existe
+  /// pas, plutôt qu'une clé `note: ""` sans information.
+  Future<Map<String, dynamic>> _groupSummaryToJson(GroupSummary group) async {
+    final json = <String, dynamic>{
+      'id': group.id,
+      'name': group.name,
+      'memberCount': group.memberCount,
+      'founderId': group.founderId,
+    };
+
+    // Le personnage du joueur connecté dans CE groupe n'est pas porté par
+    // [GroupSummary] (résumé volontairement léger, voir sa doc de classe) —
+    // il faut le détail complet du groupe pour le retrouver, via
+    // `GroupDetail.currentMember` (voir sa doc de classe). `null` : MJ sans
+    // personnage ou membre orphelin (`GroupMember.isAwaitingCharacter`),
+    // aucune note possible dans ces deux cas (`group_notes.character_id`
+    // n'a alors aucune ligne).
+    final characterId = (await _groupRepository.fetchGroupDetail(group.id))
+        .currentMember
+        ?.characterId;
+    if (characterId != null) {
+      final note = await _groupRepository.fetchGroupNote(
+        groupId: group.id,
+        characterId: characterId,
+      );
+      if (note.body.isNotEmpty) {
+        json['note'] = note.body;
+      }
+    }
+
+    return json;
   }
 }
 

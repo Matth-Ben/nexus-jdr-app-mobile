@@ -468,6 +468,7 @@ class _FakeGateway implements PushNotificationGateway {
 
 class _FakeRepository implements PushTokenRepository {
   final List<String> upsertedTokens = [];
+  final List<String> releasedTokens = [];
   Object? errorToThrow;
 
   @override
@@ -478,5 +479,10 @@ class _FakeRepository implements PushTokenRepository {
     final error = errorToThrow;
     if (error != null) throw error;
     upsertedTokens.add(token);
+  }
+
+  @override
+  Future<void> releaseToken({required String token}) async {
+    releasedTokens.add(token);
   }
 }

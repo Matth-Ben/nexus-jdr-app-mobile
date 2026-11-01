@@ -23,6 +23,21 @@ abstract class PushTokenRepository {
   /// du jeton et cet appel) : best-effort, jamais d'exception propagée —
   /// voir la doc de classe de [PushTokenRegistrar].
   Future<void> upsertToken({required String token, required String platform});
+
+  /// Libère [token] côté serveur — appelée à la déconnexion
+  /// (`SupabaseAuthRepository.signOut`, registre d'audit RGPD B2) via la
+  /// fonction RPC `release_push_token` (dépôt web, `SECURITY DEFINER`, même
+  /// garantie que [upsertToken] : force côté serveur `user_id = auth.uid()`
+  /// quoi qu'on lui passe) qui supprime la ligne `user_push_tokens`
+  /// correspondante pour l'utilisateur courant — un appareil déconnecté ne
+  /// doit plus recevoir de notification push tant qu'il ne se reconnecte
+  /// pas (ce qui réclamera le jeton à nouveau via [upsertToken]).
+  ///
+  /// Silencieux si personne n'est connecté — même garde qu'[upsertToken].
+  /// L'appelant ([SupabaseAuthRepository.signOut]) doit appeler cette
+  /// méthode **avant** de déconnecter effectivement la session : la RPC a
+  /// besoin d'un JWT valide pour résoudre `auth.uid()`.
+  Future<void> releaseToken({required String token});
 }
 
 class SupabasePushTokenRepository implements PushTokenRepository {
@@ -41,5 +56,12 @@ class SupabasePushTokenRepository implements PushTokenRepository {
       'claim_push_token',
       params: {'p_token': token, 'p_platform': platform},
     );
+  }
+
+  @override
+  Future<void> releaseToken({required String token}) async {
+    if (_client.auth.currentUser?.id == null) return;
+
+    await _client.rpc('release_push_token', params: {'p_token': token});
   }
 }

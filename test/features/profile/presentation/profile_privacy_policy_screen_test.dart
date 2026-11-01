@@ -86,13 +86,47 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.textContaining('• Google Firebase'), findsOneWidget);
+      expect(find.textContaining('• Google Firebase'), findsNWidgets(2));
       expect(find.textContaining('• PostHog'), findsOneWidget);
       expect(
         find.textContaining('sans ton adresse e-mail ni ton nom'),
         findsOneWidget,
       );
       expect(find.textContaining('COMPLÉTER'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'mentionne Firebase Crashlytics distinctement de la ligne Firebase '
+    '(notifications/Analytics), toujours actif et non désactivable depuis '
+    "l'app",
+    (tester) async {
+      await _pumpScreen(tester);
+
+      expect(
+        find.textContaining('• Google Firebase Crashlytics'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('ne peut pas être désactivé depuis l\'app'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'mentionne Resend pour les e-mails transactionnels (confirmation de '
+    'compte, réinitialisation de mot de passe)',
+    (tester) async {
+      await _pumpScreen(tester);
+
+      expect(
+        find.text(
+          '• Resend — envoi des e-mails transactionnels (confirmation de '
+          'compte, réinitialisation de mot de passe).',
+        ),
+        findsOneWidget,
+      );
     },
   );
 
@@ -107,10 +141,10 @@ void main() {
     await _pumpScreen(tester);
 
     await tester.ensureVisible(
-      find.text('Dernière mise à jour : 25 septembre 2026'),
+      find.text('Dernière mise à jour : 1er novembre 2026'),
     );
     final footer = tester.widget<Text>(
-      find.text('Dernière mise à jour : 25 septembre 2026'),
+      find.text('Dernière mise à jour : 1er novembre 2026'),
     );
     expect(footer.style?.fontSize, 11);
     expect(footer.style?.color, AppColors.textMuted);
