@@ -96,6 +96,21 @@ class _FakeAuthRepository implements AuthRepository {
     }
   }
 
+  Object? signInWithAppleError;
+  int signInWithAppleCallCount = 0;
+  Completer<void>? signInWithAppleCompleter;
+
+  @override
+  Future<void> signInWithApple() async {
+    signInWithAppleCallCount++;
+    if (signInWithAppleCompleter != null) {
+      await signInWithAppleCompleter!.future;
+    }
+    if (signInWithAppleError != null) {
+      throw signInWithAppleError!;
+    }
+  }
+
   @override
   Future<void> signOut() async {
     signOutCallCount++;
@@ -130,9 +145,20 @@ void main() {
     fakeRepository = _FakeAuthRepository();
   });
 
-  Widget buildTestWidget() {
+  // `appleSignInSupported` : `null` ne pose aucun `override` de
+  // `appleSignInSupportedProvider`, pour exercer la valeur de production
+  // réelle (`Platform.isIOS || Platform.isMacOS`, toujours `false` sous
+  // `flutter test` — exécuté sur hôte desktop, voir la doc de ce provider) ;
+  // `true`/`false` pose explicitement l'`override` pour simuler
+  // respectivement iOS/macOS et Android sans dépendre de la plateforme réelle
+  // d'exécution des tests.
+  Widget buildTestWidget({bool? appleSignInSupported = true}) {
     return ProviderScope(
-      overrides: [authRepositoryProvider.overrideWithValue(fakeRepository)],
+      overrides: [
+        authRepositoryProvider.overrideWithValue(fakeRepository),
+        if (appleSignInSupported != null)
+          appleSignInSupportedProvider.overrideWithValue(appleSignInSupported),
+      ],
       child: const MaterialApp(home: LoginScreen()),
     );
   }
@@ -740,6 +766,267 @@ void main() {
 
         expect(fakeRepository.signInWithGoogleCallCount, 2);
         expect(find.text('Erreur Google.'), findsNothing);
+      },
+    );
+  });
+
+  group('visibilité du bouton "Continuer avec Apple"', () {
+    testWidgets('absent par défaut sous `flutter test` (aucun `override` de '
+        '`appleSignInSupportedProvider` posé, donc valeur de production '
+        'réelle `Platform.isIOS || Platform.isMacOS`, toujours `false` sur '
+        "l'hôte desktop qui exécute ces tests — Windows en local, "
+        '`ubuntu-latest` en CI, voir `.github/workflows/ci.yml`) — point '
+        'documenté comme test manuel pour la vraie détection de plateforme, '
+        'voir la doc de `appleSignInSupportedProvider`', (
+      WidgetTester tester,
+    ) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(buildTestWidget(appleSignInSupported: null));
+
+      expect(find.text('Continuer avec Apple'), findsNothing);
+      expect(find.text('Continuer avec Google'), findsOneWidget);
+    });
+
+    testWidgets(
+      '`appleSignInSupportedProvider` à `true` (simule iOS/macOS) : visible, '
+      'avant le bouton Google',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget(appleSignInSupported: true));
+
+        expect(find.text('Continuer avec Apple'), findsOneWidget);
+        expect(find.text('Continuer avec Google'), findsOneWidget);
+        final appleCenter = tester.getCenter(find.text('Continuer avec Apple'));
+        final googleCenter = tester.getCenter(
+          find.text('Continuer avec Google'),
+        );
+        expect(
+          appleCenter.dy,
+          lessThan(googleCenter.dy),
+          reason: 'le bouton Apple doit précéder le bouton Google (spec DA)',
+        );
+      },
+    );
+
+    testWidgets(
+      '`appleSignInSupportedProvider` à `false` (simule Android) : absent, '
+      'Google reste visible',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget(appleSignInSupported: false));
+
+        expect(find.text('Continuer avec Apple'), findsNothing);
+        expect(find.text('Continuer avec Google'), findsOneWidget);
+      },
+    );
+  });
+
+  group('connexion Apple', () {
+    testWidgets('tap sur "Continuer avec Apple" en mode connexion déclenche '
+        'signInWithApple, jamais signInWithPassword/signUp/signInWithGoogle', (
+      WidgetTester tester,
+    ) async {
+      growTestViewport(tester);
+      await tester.pumpWidget(buildTestWidget());
+
+      await tester.tap(find.text('Continuer avec Apple'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.signInWithAppleCallCount, 1);
+      expect(fakeRepository.signInCallCount, 0);
+      expect(fakeRepository.signUpCallCount, 0);
+      expect(fakeRepository.signInWithGoogleCallCount, 0);
+    });
+
+    testWidgets(
+      'tap sur "Continuer avec Apple" en mode inscription déclenche aussi '
+      'signInWithApple (le bouton est visible dans les deux modes)',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.text('Créer un compte'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Continuer avec Apple'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.signInWithAppleCallCount, 1);
+        expect(fakeRepository.signUpCallCount, 0);
+      },
+    );
+
+    testWidgets(
+      'désactive le bouton Apple et affiche un indicateur de chargement '
+      'pendant la connexion Apple, puis les restaure une fois terminé',
+      (WidgetTester tester) async {
+        final completer = Completer<void>();
+        fakeRepository.signInWithAppleCompleter = completer;
+
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.text('Continuer avec Apple'));
+        await tester.pump();
+
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.text('Continuer avec Apple'), findsNothing);
+
+        completer.complete();
+        await tester.pumpAndSettle();
+
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        expect(find.text('Continuer avec Apple'), findsOneWidget);
+      },
+    );
+
+    testWidgets('pendant une connexion Apple en cours, les champs et le bouton '
+        'email/mot de passe ainsi que le bouton Google sont désactivés (pas de '
+        'soumission concurrente possible sur la même carte)', (
+      WidgetTester tester,
+    ) async {
+      final completer = Completer<void>();
+      fakeRepository.signInWithAppleCompleter = completer;
+
+      growTestViewport(tester);
+      await tester.pumpWidget(buildTestWidget());
+      await fillLoginForm(tester);
+
+      await tester.tap(find.text('Continuer avec Apple'));
+      await tester.pump();
+
+      await tester.tap(find.text('ENTRER'), warnIfMissed: false);
+      await tester.pump();
+      expect(fakeRepository.signInCallCount, 0);
+
+      await tester.tap(find.text('Continuer avec Google'), warnIfMissed: false);
+      await tester.pump();
+      expect(fakeRepository.signInWithGoogleCallCount, 0);
+
+      final emailField = tester.widget<TextFormField>(
+        find.byType(TextFormField).at(0),
+      );
+      expect(emailField.enabled, isFalse);
+
+      completer.complete();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('pendant une soumission email/mot de passe en cours, le bouton '
+        'Apple est désactivé (symétrique du test ci-dessus)', (
+      WidgetTester tester,
+    ) async {
+      final completer = Completer<void>();
+      fakeRepository.signInCompleter = completer;
+
+      growTestViewport(tester);
+      await tester.pumpWidget(buildTestWidget());
+      await fillLoginForm(tester);
+
+      await tester.tap(find.text('ENTRER'));
+      await tester.pump();
+
+      await tester.tap(find.text('Continuer avec Apple'), warnIfMissed: false);
+      await tester.pump();
+      expect(fakeRepository.signInWithAppleCallCount, 0);
+
+      completer.complete();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets(
+      "affiche le message d'une AuthFailure renvoyée par signInWithApple, "
+      "dans la même zone d'erreur que les erreurs email/mot de passe/Google",
+      (WidgetTester tester) async {
+        fakeRepository.signInWithAppleError = const AuthFailure(
+          'Connexion Apple indisponible. Réessayez.',
+        );
+
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.text('Continuer avec Apple'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Connexion Apple indisponible. Réessayez.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      "affiche un message générique si signInWithApple lève une exception "
+      'inattendue (repli défensif, même règle que signInWithPassword/signUp/'
+      'signInWithGoogle)',
+      (WidgetTester tester) async {
+        fakeRepository.signInWithAppleError = Exception('boom');
+
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.text('Continuer avec Apple'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Une erreur inattendue est survenue. Réessayez.'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'une annulation volontaire (AuthRepository.signInWithApple résolu sans '
+      'exception, voir sa doc de classe) ne laisse aucun message d\'erreur et '
+      'restaure le bouton',
+      (WidgetTester tester) async {
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        // `_FakeAuthRepository.signInWithApple` ne lève rien par défaut
+        // (`signInWithAppleError` reste `null`) : exactement le comportement
+        // documenté d'une annulation volontaire côté `SupabaseAuthRepository
+        // .signInWithApple` (retour silencieux).
+        await tester.tap(find.text('Continuer avec Apple'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.signInWithAppleCallCount, 1);
+        expect(
+          find.text('Une erreur inattendue est survenue. Réessayez.'),
+          findsNothing,
+        );
+        expect(find.text('Continuer avec Apple'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      "après une erreur Apple, l'écran reste utilisable : les champs et "
+      'le bouton Apple sont de nouveau actifs, un nouveau tap réussit',
+      (WidgetTester tester) async {
+        fakeRepository.signInWithAppleError = const AuthFailure(
+          'Erreur Apple.',
+        );
+
+        growTestViewport(tester);
+        await tester.pumpWidget(buildTestWidget());
+
+        await tester.tap(find.text('Continuer avec Apple'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Erreur Apple.'), findsOneWidget);
+        expect(fakeRepository.signInWithAppleCallCount, 1);
+
+        final emailField = tester.widget<TextFormField>(
+          find.byType(TextFormField).at(0),
+        );
+        expect(emailField.enabled, isTrue);
+
+        fakeRepository.signInWithAppleError = null;
+        await tester.tap(find.text('Continuer avec Apple'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.signInWithAppleCallCount, 2);
+        expect(find.text('Erreur Apple.'), findsNothing);
       },
     );
   });

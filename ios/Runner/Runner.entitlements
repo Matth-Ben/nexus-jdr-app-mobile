@@ -29,12 +29,36 @@
   n'ouvrira PAS directement l'app (comportement iOS : contrairement à
   Android, il n'y a pas de repli "ouvrir avec" sans association Apple
   validée).
+
+  "Sign In with Apple" (`com.apple.developer.applesignin`, voir
+  `AuthRepository.signInWithApple`,
+  `features/auth/data/auth_repository.dart`) — obligation Apple App Store
+  Review Guideline 4.8 (toute app proposant une connexion sociale tierce,
+  ici Google, doit aussi proposer Sign in with Apple).
+
+  IMPORTANT — même configuration native INCOMPLÈTE que ci-dessus, pour une
+  raison supplémentaire propre à cette capacité (signalé au chef de projet
+  plutôt que présenté comme fini) :
+  - La déclaration ci-dessous seule ne rend PAS le flux fonctionnel : il
+    faut en plus (a) activer la capacité "Sign In with Apple" sur l'App ID
+    du portail developer.apple.com, ce qui nécessite un compte Apple
+    Developer Program — **absent à ce jour** (confirmé par le chef de
+    projet) —, et (b) configurer le fournisseur Apple côté dashboard
+    Supabase Auth (Client ID = bundle identifier pour le flux natif
+    `idToken`). Tant que ces deux étapes ne sont pas faites, le bouton
+    "Continuer avec Apple" ne peut pas aboutir sur un appareil/simulateur
+    réel, même une fois ce fichier correctement référencé dans Xcode (même
+    étape 1 que pour les domaines associés ci-dessus).
 -->
 <plist version="1.0">
 <dict>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:nexus-jdr.app</string>
+	</array>
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
 	</array>
 </dict>
 </plist>

@@ -246,3 +246,104 @@ final class CurrentUserProvider extends $FunctionalProvider<User?, User?, User?>
 }
 
 String _$currentUserHash() => r'18cf8d7a817a4acbffe7f9b1c912490aee4f8e93';
+
+/// Détermine si le bouton "Continuer avec Apple" doit être proposé sur
+/// l'écran de connexion (`login_screen.dart`) — `true` sur iOS/macOS
+/// uniquement : Android n'est pas concerné par l'obligation Apple App Store
+/// Review Guideline 4.8 (qui ne s'applique qu'aux apps iOS), et le flux natif
+/// `sign_in_with_apple` n'y est de toute façon pas disponible sans
+/// configuration Services ID web supplémentaire (hors périmètre de cette
+/// tâche).
+///
+/// Passe par un provider (plutôt qu'un appel direct à `Platform.isIOS` dans
+/// `login_screen.dart`, comme le fait déjà `AppStoreUrls.current()`) pour une
+/// seule raison : permettre à `login_screen_test.dart` de l'overrider à
+/// `true` et exercer le bouton/`AuthRepository.signInWithApple` en test —
+/// `Platform.isIOS`/`isMacOS` valent toujours `false` sous `flutter test`
+/// (exécuté sur hôte desktop, Windows en local et `ubuntu-latest` en CI,
+/// voir `.github/workflows/ci.yml`), donc un appel direct rendrait ce bouton
+/// impossible à tester autrement que manuellement. Écart volontaire par
+/// rapport à la piste "`Platform.isIOS || Platform.isMacOS` en dur" de la
+/// spec d'origine — signalé au chef de projet plutôt qu'appliqué
+/// silencieusement.
+
+@ProviderFor(appleSignInSupported)
+final appleSignInSupportedProvider = AppleSignInSupportedProvider._();
+
+/// Détermine si le bouton "Continuer avec Apple" doit être proposé sur
+/// l'écran de connexion (`login_screen.dart`) — `true` sur iOS/macOS
+/// uniquement : Android n'est pas concerné par l'obligation Apple App Store
+/// Review Guideline 4.8 (qui ne s'applique qu'aux apps iOS), et le flux natif
+/// `sign_in_with_apple` n'y est de toute façon pas disponible sans
+/// configuration Services ID web supplémentaire (hors périmètre de cette
+/// tâche).
+///
+/// Passe par un provider (plutôt qu'un appel direct à `Platform.isIOS` dans
+/// `login_screen.dart`, comme le fait déjà `AppStoreUrls.current()`) pour une
+/// seule raison : permettre à `login_screen_test.dart` de l'overrider à
+/// `true` et exercer le bouton/`AuthRepository.signInWithApple` en test —
+/// `Platform.isIOS`/`isMacOS` valent toujours `false` sous `flutter test`
+/// (exécuté sur hôte desktop, Windows en local et `ubuntu-latest` en CI,
+/// voir `.github/workflows/ci.yml`), donc un appel direct rendrait ce bouton
+/// impossible à tester autrement que manuellement. Écart volontaire par
+/// rapport à la piste "`Platform.isIOS || Platform.isMacOS` en dur" de la
+/// spec d'origine — signalé au chef de projet plutôt qu'appliqué
+/// silencieusement.
+
+final class AppleSignInSupportedProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// Détermine si le bouton "Continuer avec Apple" doit être proposé sur
+  /// l'écran de connexion (`login_screen.dart`) — `true` sur iOS/macOS
+  /// uniquement : Android n'est pas concerné par l'obligation Apple App Store
+  /// Review Guideline 4.8 (qui ne s'applique qu'aux apps iOS), et le flux natif
+  /// `sign_in_with_apple` n'y est de toute façon pas disponible sans
+  /// configuration Services ID web supplémentaire (hors périmètre de cette
+  /// tâche).
+  ///
+  /// Passe par un provider (plutôt qu'un appel direct à `Platform.isIOS` dans
+  /// `login_screen.dart`, comme le fait déjà `AppStoreUrls.current()`) pour une
+  /// seule raison : permettre à `login_screen_test.dart` de l'overrider à
+  /// `true` et exercer le bouton/`AuthRepository.signInWithApple` en test —
+  /// `Platform.isIOS`/`isMacOS` valent toujours `false` sous `flutter test`
+  /// (exécuté sur hôte desktop, Windows en local et `ubuntu-latest` en CI,
+  /// voir `.github/workflows/ci.yml`), donc un appel direct rendrait ce bouton
+  /// impossible à tester autrement que manuellement. Écart volontaire par
+  /// rapport à la piste "`Platform.isIOS || Platform.isMacOS` en dur" de la
+  /// spec d'origine — signalé au chef de projet plutôt qu'appliqué
+  /// silencieusement.
+  AppleSignInSupportedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appleSignInSupportedProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appleSignInSupportedHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return appleSignInSupported(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$appleSignInSupportedHash() =>
+    r'e84c569fdbc370ebe2015fe0cd838f4f6d1aef21';

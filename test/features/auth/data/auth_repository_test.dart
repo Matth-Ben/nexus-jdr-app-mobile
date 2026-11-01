@@ -30,6 +30,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -420,6 +421,227 @@ void main() {
       await expectLater(
         SupabaseAuthRepository(client).signInWithGoogle(),
         throwsA(isA<AuthFailure>()),
+      );
+    });
+  });
+
+  group('SupabaseAuthRepository.signInWithApple', () {
+    // Le plugin `sign_in_with_apple` (canal `com.aboutyou.dart_packages.
+    // sign_in_with_apple`) contourne volontairement sa propre garde
+    // "plateforme non supportée" sous `flutter test` — voir
+    // `MethodChannelSignInWithApple.getAppleIDCredential`
+    // (`Platform.environment['FLUTTER_TEST'] != 'true'`) — et appelle donc
+    // bien ce canal même sur l'hôte desktop qui exécute ces tests (Windows
+    // en local, `ubuntu-latest` en CI). Même rationale de mock de canal de
+    // méthode que `urlLauncherChannel` ci-dessus pour `signInWithGoogle`.
+    const signInWithAppleChannel = MethodChannel(
+      'com.aboutyou.dart_packages.sign_in_with_apple',
+    );
+
+    setUp(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+    });
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(signInWithAppleChannel, null);
+    });
+
+    /// Réponse minimale valide du plugin natif pour
+    /// `performAuthorizationRequest` — voir
+    /// `parseAuthorizationCredentialAppleID`
+    /// (`package:sign_in_with_apple_platform_interface`) pour le contrat
+    /// exact (`type` et `authorizationCode` sont les deux seules clés
+    /// obligatoires).
+    Map<String, Object?> fakeAppleCredentialResponse({
+      String? identityToken = 'fake-identity-token',
+    }) {
+      return {
+        'type': 'appleid',
+        'authorizationCode': 'fake-authorization-code',
+        'identityToken': identityToken,
+        'userIdentifier': 'fake-apple-user-id',
+        'email': 'joueur@privaterelay.appleid.com',
+        'givenName': 'Aranea',
+        'familyName': 'Nightsong',
+      };
+    }
+
+    test(
+      'demande les scopes email/fullName, transmet le identityToken Apple et '
+      'un nonce brut (jamais le hash) à `signInWithIdToken` avec '
+      'provider=apple',
+      () async {
+        Map<Object?, Object?>? capturedCallArguments;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(signInWithAppleChannel, (call) async {
+              if (call.method == 'performAuthorizationRequest') {
+                capturedCallArguments =
+                    (call.arguments as List).first as Map<Object?, Object?>;
+                return fakeAppleCredentialResponse();
+              }
+              return null;
+            });
+
+        http.Request? capturedRequest;
+        final client = _buildFakeSupabaseClient((request) async {
+          if (request.url.path.endsWith('/token')) {
+            capturedRequest = request;
+            // Une session valide est requise en réponse : `GoTrueClient
+            // .signInWithIdToken` lève lui-même une `AuthException`
+            // ("An error occurred on token verification.") si
+            // `AuthResponse.session` est `null`, même pour une réponse
+            // `200` par ailleurs "réussie" (voir sa doc de classe).
+            return http.Response(
+              jsonEncode(_fakeSessionJson()),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('{}', 200, request: request);
+        });
+
+        await SupabaseAuthRepository(client).signInWithApple();
+
+        expect(
+          capturedCallArguments?['scopes'],
+          containsAll(<Object?>['email', 'fullName']),
+          reason:
+              'les deux scopes documentés par AuthRepository.signInWithApple',
+        );
+        final requestedHashedNonce = capturedCallArguments?['nonce'] as String?;
+        expect(requestedHashedNonce, isNotNull);
+
+        expect(capturedRequest, isNotNull);
+        expect(capturedRequest!.url.queryParameters['grant_type'], 'id_token');
+        final body = jsonDecode(capturedRequest!.body) as Map<String, dynamic>;
+        expect(body['provider'], 'apple');
+        expect(body['id_token'], 'fake-identity-token');
+
+        final rawNonceSentToSupabase = body['nonce'] as String?;
+        expect(rawNonceSentToSupabase, isNotNull);
+        expect(rawNonceSentToSupabase, hasLength(32));
+        // Le nonce transmis à Supabase est le nonce **brut**, jamais le hash
+        // SHA-256 envoyé à Apple (voir la doc de
+        // `AuthRepository.signInWithApple`) : les deux doivent différer,
+        // mais le hash SHA-256 du nonce brut doit retomber exactement sur le
+        // hash transmis à Apple (c'est ce que Supabase revérifie lui-même
+        // côté serveur).
+        expect(rawNonceSentToSupabase, isNot(requestedHashedNonce));
+        expect(
+          sha256.convert(utf8.encode(rawNonceSentToSupabase!)).toString(),
+          requestedHashedNonce,
+        );
+      },
+    );
+
+    test(
+      'annulation volontaire (feuille système Apple fermée par le joueur) : '
+      'retour silencieux, aucune exception, aucun appel à `signInWithIdToken`',
+      () async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(signInWithAppleChannel, (call) async {
+              if (call.method == 'performAuthorizationRequest') {
+                throw PlatformException(
+                  code: 'authorization-error/canceled',
+                  message: 'User canceled authorization',
+                );
+              }
+              return null;
+            });
+
+        var tokenRequestCount = 0;
+        final client = _buildFakeSupabaseClient((request) async {
+          if (request.url.path.endsWith('/token')) tokenRequestCount++;
+          return http.Response('{}', 200, request: request);
+        });
+
+        await expectLater(
+          SupabaseAuthRepository(client).signInWithApple(),
+          completes,
+        );
+        expect(tokenRequestCount, 0);
+      },
+    );
+
+    test('une autre erreur d\'autorisation native (ex. `failed`, vraie panne '
+        'plutôt qu\'une annulation) : traduit en AuthFailure générique, jamais '
+        'un retour silencieux', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(signInWithAppleChannel, (call) async {
+            if (call.method == 'performAuthorizationRequest') {
+              throw PlatformException(
+                code: 'authorization-error/failed',
+                message: 'Native authorization failed',
+              );
+            }
+            return null;
+          });
+
+      final client = _buildFakeSupabaseClient((request) async {
+        return http.Response('{}', 200, request: request);
+      });
+
+      await expectLater(
+        SupabaseAuthRepository(client).signInWithApple(),
+        throwsA(isA<AuthFailure>()),
+      );
+    });
+
+    test("identityToken absent de la réponse native (`null`) : traduit en "
+        'AuthFailure générique plutôt que de transmettre `null` à '
+        "`signInWithIdToken` (qui l'exige en `required`)", () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(signInWithAppleChannel, (call) async {
+            if (call.method == 'performAuthorizationRequest') {
+              return fakeAppleCredentialResponse(identityToken: null);
+            }
+            return null;
+          });
+
+      var tokenRequestCount = 0;
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) tokenRequestCount++;
+        return http.Response('{}', 200, request: request);
+      });
+
+      await expectLater(
+        SupabaseAuthRepository(client).signInWithApple(),
+        throwsA(isA<AuthFailure>()),
+      );
+      expect(tokenRequestCount, 0);
+    });
+
+    test("remonte un message réseau générique quand l'échange du jeton avec "
+        "Supabase échoue sans réponse HTTP (ex. absence de réseau) - même "
+        'mécanisme `AuthRetryableFetchException` que `signInWithGoogle` '
+        "ci-dessus, cette fois sur l'appel `signInWithIdToken` plutôt que sur "
+        "l'ouverture du navigateur", () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(signInWithAppleChannel, (call) async {
+            if (call.method == 'performAuthorizationRequest') {
+              return fakeAppleCredentialResponse();
+            }
+            return null;
+          });
+
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          throw Exception('Pas de réseau (double de test).');
+        }
+        return http.Response('{}', 200, request: request);
+      });
+
+      await expectLater(
+        SupabaseAuthRepository(client).signInWithApple(),
+        throwsA(
+          isA<AuthFailure>().having(
+            (failure) => failure.message,
+            'message',
+            contains('connexion internet'),
+          ),
+        ),
       );
     });
   });

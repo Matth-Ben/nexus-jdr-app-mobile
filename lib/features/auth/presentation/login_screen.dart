@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/apple_logo.dart';
 import '../../../core/widgets/app_brand_badge.dart';
 import '../../../core/widgets/google_g_logo.dart';
 import '../../../core/widgets/primary_button.dart';
@@ -55,6 +56,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   /// de la carte dès que l'une des deux est active, mais n'affiche
   /// l'indicateur de chargement que sur le bouton réellement déclenché.
   bool _isGoogleSubmitting = false;
+
+  /// Même rôle que [_isGoogleSubmitting], pour la connexion Apple (voir
+  /// [_AuthCard], qui désactive les mêmes éléments interactifs qu'avec
+  /// Google dès que l'une des trois soumissions concurrentes — e-mail/mot de
+  /// passe, Google, Apple — est active).
+  bool _isAppleSubmitting = false;
   String? _errorMessage;
 
   /// Non-null une fois qu'une inscription a réussi mais nécessite une
@@ -175,8 +182,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  /// Connexion Apple (`AuthRepository.signInWithApple`) — voir sa doc de
+  /// classe pour le flux complet (feuille système native, pas de
+  /// navigateur/redirection contrairement à [_submitGoogle]) et pour la
+  /// dépendance bloquante (compte Apple Developer Program à créer) qui
+  /// empêche ce flux de fonctionner en conditions réelles pour l'instant.
+  /// Même structure que [_submitGoogle] : aucune validation de formulaire,
+  /// une annulation volontaire du joueur ne lève aucune exception (voir la
+  /// doc de `AuthRepository.signInWithApple`) donc ne déclenche jamais
+  /// [_errorMessage] ici.
+  Future<void> _submitApple() async {
+    setState(() {
+      _isAppleSubmitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await ref.read(authRepositoryProvider).signInWithApple();
+    } on AuthFailure catch (failure) {
+      if (!mounted) return;
+      setState(() => _errorMessage = failure.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _errorMessage = 'Une erreur inattendue est survenue. Réessayez.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isAppleSubmitting = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final showAppleButton = ref.watch(appleSignInSupportedProvider);
+
     return SceneScaffold(
       body: SafeArea(
         child: Center(
@@ -211,6 +252,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     isSignUp: _isSignUp,
                     isSubmitting: _isSubmitting,
                     isGoogleSubmitting: _isGoogleSubmitting,
+                    isAppleSubmitting: _isAppleSubmitting,
+                    showAppleButton: showAppleButton,
                     errorMessage: _errorMessage,
                     signUpConfirmationEmail: _signUpConfirmationEmail,
                     emailController: _emailController,
@@ -219,6 +262,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     pseudoController: _pseudoController,
                     onSubmit: _submit,
                     onSubmitGoogle: _submitGoogle,
+                    onSubmitApple: _submitApple,
                     onSwitchMode: _switchMode,
                     onForgotPassword: _openForgotPasswordDialog,
                     onBackToLogin: _switchMode,
@@ -252,6 +296,8 @@ class _AuthCard extends StatelessWidget {
     required this.isSignUp,
     required this.isSubmitting,
     required this.isGoogleSubmitting,
+    required this.isAppleSubmitting,
+    required this.showAppleButton,
     required this.errorMessage,
     required this.signUpConfirmationEmail,
     required this.emailController,
@@ -260,6 +306,7 @@ class _AuthCard extends StatelessWidget {
     required this.pseudoController,
     required this.onSubmit,
     required this.onSubmitGoogle,
+    required this.onSubmitApple,
     required this.onSwitchMode,
     required this.onForgotPassword,
     required this.onBackToLogin,
@@ -271,6 +318,14 @@ class _AuthCard extends StatelessWidget {
 
   /// Voir la doc de `_LoginScreenState._isGoogleSubmitting`.
   final bool isGoogleSubmitting;
+
+  /// Voir la doc de `_LoginScreenState._isAppleSubmitting`.
+  final bool isAppleSubmitting;
+
+  /// Voir la doc de `appleSignInSupportedProvider`
+  /// (`presentation/providers/auth_providers.dart`) — `true` sur iOS/macOS
+  /// uniquement.
+  final bool showAppleButton;
   final String? errorMessage;
 
   /// Non-null : remplace le formulaire par l'état "vérifie ta boîte mail"
@@ -285,6 +340,7 @@ class _AuthCard extends StatelessWidget {
   final TextEditingController pseudoController;
   final VoidCallback onSubmit;
   final VoidCallback onSubmitGoogle;
+  final VoidCallback onSubmitApple;
   final VoidCallback onSwitchMode;
   final VoidCallback onForgotPassword;
   final VoidCallback onBackToLogin;
@@ -307,13 +363,13 @@ class _AuthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Deux actions concurrentes possibles sur cette carte (voir la doc de
-    // `_LoginScreenState._isGoogleSubmitting`) : tant que l'une des deux est
-    // active, tous les éléments interactifs de la carte sont désactivés —
-    // seul le bouton réellement déclenché affiche son propre indicateur de
-    // chargement (`isSubmitting`/`isGoogleSubmitting` restent distincts pour
-    // ça).
-    final isBusy = isSubmitting || isGoogleSubmitting;
+    // Trois actions concurrentes possibles sur cette carte (voir la doc de
+    // `_LoginScreenState._isGoogleSubmitting`/`_isAppleSubmitting`) : tant
+    // que l'une des trois est active, tous les éléments interactifs de la
+    // carte sont désactivés — seul le bouton réellement déclenché affiche
+    // son propre indicateur de chargement (`isSubmitting`/
+    // `isGoogleSubmitting`/`isAppleSubmitting` restent distincts pour ça).
+    final isBusy = isSubmitting || isGoogleSubmitting || isAppleSubmitting;
 
     return Stack(
       children: [
@@ -501,6 +557,15 @@ class _AuthCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      if (showAppleButton) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        SocialAuthButton(
+                          label: 'Continuer avec Apple',
+                          icon: const AppleLogo(),
+                          isLoading: isAppleSubmitting,
+                          onPressed: isBusy ? null : onSubmitApple,
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.md),
                       SocialAuthButton(
                         label: 'Continuer avec Google',
