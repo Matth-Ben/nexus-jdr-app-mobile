@@ -136,6 +136,16 @@ dependencies:
   # `package:http/testing.dart` dans les tests) puisqu'il est désormais
   # importé directement par du code de `lib/`.
   http: ^1.6.0
+  # Flux natif "Sign in with Apple" (`AuthRepository.signInWithApple`,
+  # `features/auth/data/auth_repository.dart`) — package officiel
+  # recommandé par Supabase pour Flutter/iOS (`signInWithIdToken`), par
+  # opposition au flux web `signInWithOAuth` déjà utilisé pour Google
+  # (obligation Apple App Store Review Guideline 4.8 : proposer Sign in with
+  # Apple dès qu'une connexion sociale tierce — ici Google — est active).
+  sign_in_with_apple: ^8.2.0
+  # Hash SHA-256 du nonce transmis à Apple (voir la doc de classe de
+  # `AuthRepository.signInWithApple`) — absent du projet avant cet ajout.
+  crypto: ^3.0.8
 
 dev_dependencies:
   flutter_test:

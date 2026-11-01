@@ -487,6 +487,9 @@ class _FakeAuthRepository implements AuthRepository {
   Future<void> signInWithGoogle() async {}
 
   @override
+  Future<void> signInWithApple() async {}
+
+  @override
   Future<void> signOut() async {
     signOutCallCount++;
   }

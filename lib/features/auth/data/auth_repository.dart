@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/pending_character_write_queue.dart';
@@ -70,6 +74,23 @@ abstract class AuthRepository {
   /// après authentification côté navigateur, `onAuthStateChange` (déjà
   /// câblé côté routeur) déclenche la redirection.
   Future<void> signInWithGoogle();
+
+  /// Démarre le flux natif "Sign in with Apple" (`signInWithIdToken`, pas
+  /// `signInWithOAuth` comme [signInWithGoogle]) — obligation Apple App
+  /// Store Review Guideline 4.8 : toute app proposant une connexion sociale
+  /// tierce (ici Google) doit aussi proposer Sign in with Apple. Voir la doc
+  /// de classe de [SupabaseAuthRepository.signInWithApple] pour le détail du
+  /// flux et, surtout, pour la dépendance bloquante qui empêche ce flux de
+  /// fonctionner en conditions réelles tant que le compte Apple Developer
+  /// Program n'est pas créé.
+  ///
+  /// Contrairement à [signInWithGoogle], ne passe jamais par un navigateur
+  /// système : le SDK natif iOS affiche directement la feuille système
+  /// Apple, et [SupabaseAuthRepository.signInWithApple] résout la session
+  /// Supabase elle-même (pas de redirection `onAuthStateChange` à attendre
+  /// après un retour d'URL — même mécanisme qu'[signInWithPassword]/[signUp]
+  /// de ce point de vue).
+  Future<void> signInWithApple();
 
   /// Déconnecte l'utilisateur courant (ex. action "Se déconnecter" du menu
   /// profil de la liste des personnages).
@@ -369,6 +390,101 @@ class SupabaseAuthRepository implements AuthRepository {
     }
   }
 
+  /// **Non testable en conditions réelles tant que deux prérequis externes à
+  /// ce dépôt ne sont pas réunis** (signalé au chef de projet plutôt que
+  /// laissé comme un oubli silencieux) :
+  /// 1. Le compte Apple Developer Program n'est pas encore créé — sans lui,
+  ///    impossible d'activer la capacité "Sign In with Apple" sur l'App ID
+  ///    côté portail developer.apple.com (voir aussi
+  ///    `ios/Runner/Runner.entitlements`, qui déclare la capacité côté
+  ///    projet Xcode mais ne peut pas être "vraie" côté Apple sans cette
+  ///    activation).
+  /// 2. Le fournisseur Apple n'est pas configuré côté dashboard Supabase
+  ///    Auth (Authentication > Providers > Apple) — pour le flux natif
+  ///    `idToken` utilisé ici, le "Client ID" attendu par Supabase est le
+  ///    bundle identifier de l'app (pas un Services ID web), à renseigner
+  ///    une fois le point 1 résolu.
+  ///
+  /// Flux natif recommandé par Supabase pour Flutter/iOS (contrairement à
+  /// [signInWithGoogle], qui reste volontairement sur le flux web
+  /// `signInWithOAuth`) :
+  /// 1. Génère un nonce aléatoire ([_generateRawNonce]) et le hash en
+  ///    SHA-256 — Apple renvoie ce hash dans le jeton d'identité signé qu'il
+  ///    délivre, pour prouver que la réponse correspond bien à cette
+  ///    requête précise (protection contre le replay) ; Supabase revérifie
+  ///    lui-même ce hash côté serveur une fois le nonce brut transmis à
+  ///    [signInWithIdToken] ci-dessous, donc ce dépôt n'a besoin de rien
+  ///    vérifier localement.
+  /// 2. Demande les scopes `email`/`fullName` via
+  ///    `SignInWithApple.getAppleIDCredential` — Apple ne garantit ces
+  ///    informations qu'à la toute première autorisation d'un utilisateur
+  ///    donné pour cette app (comportement Apple documenté, pas un bug de ce
+  ///    dépôt) : un utilisateur qui se déconnecte puis se reconnecte peut ne
+  ///    plus recevoir `email`/`givenName`/`familyName`, Supabase retombe
+  ///    alors sur les données déjà stockées côté `auth.users` lors de la
+  ///    première connexion.
+  /// 3. Transmet `identityToken` (jeton signé par Apple) et le nonce **brut**
+  ///    (jamais le hash) à `signInWithIdToken` — c'est Supabase qui revérifie
+  ///    le hash de ce nonce brut contre celui signé par Apple dans le jeton,
+  ///    jamais ce dépôt.
+  ///
+  /// Annulation volontaire (l'utilisateur ferme la feuille système Apple) :
+  /// le package lève une [SignInWithAppleAuthorizationException] avec
+  /// `AuthorizationErrorCode.canceled` — traitée ici comme un simple retour
+  /// silencieux (aucune exception propagée), jamais comme une
+  /// [AuthFailure] générique "problème inconnu" : même convention que
+  /// `BugReportScreenshotPicker.pick` (`features/bug_report/data/
+  /// bug_report_screenshot_picker.dart`), qui traite de la même façon
+  /// l'annulation d'un sélecteur natif. L'appelant (`login_screen.dart`) n'a
+  /// donc rien de particulier à faire pour ce cas : pas de bandeau d'erreur,
+  /// l'écran retombe simplement dans son état initial une fois l'appel
+  /// résolu.
+  @override
+  Future<void> signInWithApple() async {
+    final rawNonce = _generateRawNonce();
+    final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: const [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: hashedNonce,
+      );
+
+      final identityToken = credential.identityToken;
+      if (identityToken == null) {
+        // Ne devrait jamais se produire côté iOS (le SDK natif Apple fournit
+        // toujours un jeton d'identité en cas de succès) — gardé comme repli
+        // explicite plutôt qu'un `!` qui planterait l'app sur un cas limite
+        // non documenté par Apple.
+        throw mapUnknownError();
+      }
+
+      await _client.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: identityToken,
+        nonce: rawNonce,
+      );
+    } on SignInWithAppleAuthorizationException catch (error) {
+      // Annulation volontaire : retour silencieux (voir la doc de la
+      // méthode). Toute autre `AuthorizationErrorCode` (ex. `failed`,
+      // `invalidResponse`) reste une vraie panne, mappée en erreur
+      // générique.
+      if (error.code == AuthorizationErrorCode.canceled) {
+        return;
+      }
+      throw mapUnknownError();
+    } on AuthException catch (error) {
+      throw mapAuthException(error);
+    } on AuthFailure {
+      rethrow;
+    } catch (_) {
+      throw mapUnknownError();
+    }
+  }
+
   @override
   Future<void> signOut() async {
     final ownerId = _client.auth.currentUser?.id;
@@ -646,4 +762,24 @@ String? _resolveAvatarStoragePath(String publicUrl) {
   if (index == -1) return null;
   final path = publicUrl.substring(index + marker.length);
   return path.isEmpty ? null : path;
+}
+
+/// Caractères autorisés pour le nonce brut de
+/// [SupabaseAuthRepository.signInWithApple] — alphanumérique uniquement,
+/// suffisant pour un nonce (pas besoin de symboles spéciaux, qui
+/// compliqueraient sans bénéfice un éventuel encodage côté transport).
+const String _nonceCharset =
+    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+
+/// Génère un nonce aléatoire cryptographiquement sûr ([Random.secure], pas
+/// [Random] par défaut qui n'offre aucune garantie cryptographique) pour
+/// [SupabaseAuthRepository.signInWithApple] — voir sa doc de classe pour le
+/// rôle exact de ce nonce dans le flux Apple/Supabase. 32 caractères : même
+/// longueur que l'exemple du guide officiel Supabase pour ce flux.
+String _generateRawNonce([int length = 32]) {
+  final random = Random.secure();
+  return List.generate(
+    length,
+    (_) => _nonceCharset[random.nextInt(_nonceCharset.length)],
+  ).join();
 }

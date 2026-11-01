@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -67,3 +69,25 @@ User? currentUser(Ref ref) {
   ref.watch(authStateChangesProvider);
   return ref.watch(supabaseClientProvider).auth.currentUser;
 }
+
+/// Détermine si le bouton "Continuer avec Apple" doit être proposé sur
+/// l'écran de connexion (`login_screen.dart`) — `true` sur iOS/macOS
+/// uniquement : Android n'est pas concerné par l'obligation Apple App Store
+/// Review Guideline 4.8 (qui ne s'applique qu'aux apps iOS), et le flux natif
+/// `sign_in_with_apple` n'y est de toute façon pas disponible sans
+/// configuration Services ID web supplémentaire (hors périmètre de cette
+/// tâche).
+///
+/// Passe par un provider (plutôt qu'un appel direct à `Platform.isIOS` dans
+/// `login_screen.dart`, comme le fait déjà `AppStoreUrls.current()`) pour une
+/// seule raison : permettre à `login_screen_test.dart` de l'overrider à
+/// `true` et exercer le bouton/`AuthRepository.signInWithApple` en test —
+/// `Platform.isIOS`/`isMacOS` valent toujours `false` sous `flutter test`
+/// (exécuté sur hôte desktop, Windows en local et `ubuntu-latest` en CI,
+/// voir `.github/workflows/ci.yml`), donc un appel direct rendrait ce bouton
+/// impossible à tester autrement que manuellement. Écart volontaire par
+/// rapport à la piste "`Platform.isIOS || Platform.isMacOS` en dur" de la
+/// spec d'origine — signalé au chef de projet plutôt qu'appliqué
+/// silencieusement.
+@Riverpod(keepAlive: true)
+bool appleSignInSupported(Ref ref) => Platform.isIOS || Platform.isMacOS;
