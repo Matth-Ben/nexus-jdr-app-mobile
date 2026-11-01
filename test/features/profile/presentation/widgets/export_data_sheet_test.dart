@@ -106,7 +106,7 @@ void main() {
 
     expect(find.text('EXPORT DE MES DONNÉES'), findsOneWidget);
     expect(
-      find.textContaining('fichier JSON contenant tous tes personnages'),
+      find.textContaining('fichier JSON contenant ton profil'),
       findsOneWidget,
     );
   });

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/cache/cache_providers.dart';
 import '../../../../core/network/supabase_client_provider.dart';
+import '../../../../core/notifications/notification_providers.dart';
 import '../../../../core/sync/pending_write_sync_hook_provider.dart';
 import '../../data/auth_repository.dart';
 import '../../data/auth_state_stream.dart';
@@ -25,6 +26,13 @@ AuthRepository authRepository(Ref ref) {
     // `lib/main.dart`, seul point de composition du dépôt qui connaît déjà
     // toutes les `features`.
     syncPendingWrites: () => ref.read(pendingWriteSyncHookProvider)(),
+    // Registre d'audit RGPD B2 : libération best-effort du jeton push à la
+    // déconnexion (voir la doc de classe de `SupabaseAuthRepository`) —
+    // `core/notifications/` ne dépend d'aucune `feature`, donc cet import
+    // direct ne pose pas le même risque de cycle que `pendingWriteSyncHook`
+    // ci-dessus.
+    pushTokenRepository: ref.watch(pushTokenRepositoryProvider),
+    pushNotificationGateway: ref.watch(pushNotificationGatewayProvider),
   );
 }
 

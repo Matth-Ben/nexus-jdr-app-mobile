@@ -25,7 +25,10 @@ import '../../../core/widgets/wood_back_header.dart';
 ///
 /// Contenu identique à la page publique https://nexus-jdr.app/confidentialite
 /// (dépôt web, `apps/web/app/confidentialite/page.tsx`, exigée par Google
-/// Play) — mis à jour le 2026-09-25 (statistiques, notifications, dictée,
+/// Play) — mis à jour le 2026-11-01 (registre d'audit RGPD, A2/B4 : entrée
+/// dédiée Firebase Crashlytics distincte de la ligne Firebase existante, et
+/// entrée Resend pour les e-mails transactionnels Supabase Auth) ; mise à
+/// jour précédente le 2026-09-25 (statistiques, notifications, dictée,
 /// signalements de bug, éditeur). Les deux textes sont à garder alignés ;
 /// l'écran reste affiché dans l'app, sans redirection vers le site
 /// (décision utilisateur).
@@ -125,12 +128,21 @@ class ProfilePrivacyPolicyScreen extends StatelessWidget {
             "l'authentification et des photos.",
         '• Google Firebase — envoi des notifications (Firebase Cloud '
             "Messaging) et statistiques d'utilisation (Firebase Analytics).",
+        '• Google Firebase Crashlytics — rapports de plantage (traces '
+            "techniques de l'erreur et informations sur ton appareil), "
+            "collectés systématiquement pour maintenir la stabilité de "
+            "l'app. Contrairement aux statistiques d'utilisation "
+            '(Firebase Analytics/PostHog, voir ci-dessus), ce recueil ne '
+            "peut pas être désactivé depuis l'app : notre intérêt légitime "
+            "à diagnostiquer et corriger les plantages de l'app prévaut ici.",
         "• PostHog (hébergement dans l'Union européenne) — statistiques "
             "d'utilisation.",
         "• GitHub — suivi des bugs signalés : le contenu d'un signalement "
             '(titre, description, gravité, version, plateforme) est publié '
             'comme ticket dans un dépôt public, sans ton adresse e-mail ni '
             "ton nom. N'y indique donc aucune information personnelle.",
+        '• Resend — envoi des e-mails transactionnels (confirmation de '
+            'compte, réinitialisation de mot de passe).',
         '• Vercel — hébergement du site nexus-jdr.app.',
         'Certains de ces prestataires peuvent traiter des données hors de '
             "l'Union européenne ; ces transferts sont encadrés par les "
@@ -211,7 +223,7 @@ class ProfilePrivacyPolicyScreen extends StatelessWidget {
                   ],
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'Dernière mise à jour : 25 septembre 2026',
+                    'Dernière mise à jour : 1er novembre 2026',
                     style: AppTypography.body(
                       fontSize: 11,
                       color: AppColors.textMuted,

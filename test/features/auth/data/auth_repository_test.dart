@@ -40,6 +40,8 @@ import 'package:personnages/core/cache/app_database.dart'
     hide PendingCharacterWrite;
 import 'package:personnages/core/cache/pending_character_write_queue.dart';
 import 'package:personnages/core/cache/reference_data_cache.dart';
+import 'package:personnages/core/notifications/push_notification_gateway.dart';
+import 'package:personnages/core/notifications/push_token_repository.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -1844,6 +1846,141 @@ void main() {
       });
     });
   });
+
+  // Registre d'audit RGPD B2 ("jeton push jamais libéré à la déconnexion") :
+  // `signOut` tente de libérer best-effort le jeton push courant de
+  // l'appareil AVANT l'appel réseau de déconnexion — voir la doc de classe
+  // de `SupabaseAuthRepository`.
+  group('SupabaseAuthRepository.signOut — registre RGPD B2 (libération du '
+      'jeton push)', () {
+    test('appelle releaseToken AVANT _client.auth.signOut() (la RPC a besoin '
+        "d'un JWT valide pour résoudre auth.uid())", () async {
+      final callOrder = <String>[];
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          return http.Response(
+            jsonEncode(_fakeSessionJson()),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.endsWith('/logout')) {
+          callOrder.add('logout');
+        }
+        return http.Response('{}', 200, request: request);
+      });
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
+
+      final gateway = _FakePushNotificationGateway();
+      final repository = _FakePushTokenRepository();
+      gateway.onGetToken = () => callOrder.add('getToken');
+      repository.onReleaseToken = () => callOrder.add('releaseToken');
+
+      await SupabaseAuthRepository(
+        client,
+        pushTokenRepository: repository,
+        pushNotificationGateway: gateway,
+      ).signOut();
+
+      expect(repository.releasedTokens, ['fcm-token-1']);
+      expect(client.auth.currentSession, isNull);
+      expect(callOrder, ['getToken', 'releaseToken', 'logout']);
+    });
+
+    test('jeton FCM indisponible (getToken renvoie null) : ne tente jamais '
+        'releaseToken, la déconnexion se poursuit normalement', () async {
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          return http.Response(
+            jsonEncode(_fakeSessionJson()),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      });
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
+
+      final gateway = _FakePushNotificationGateway()..tokenToReturn = null;
+      final repository = _FakePushTokenRepository();
+
+      await SupabaseAuthRepository(
+        client,
+        pushTokenRepository: repository,
+        pushNotificationGateway: gateway,
+      ).signOut();
+
+      expect(repository.releasedTokens, isEmpty);
+      expect(client.auth.currentSession, isNull);
+    });
+
+    test(
+      'releaseToken échoue (ex. RPC manquante côté backend) : best-effort, '
+      'aucune exception propagée, la déconnexion se poursuit normalement',
+      () async {
+        final client = _buildFakeSupabaseClient((request) async {
+          if (request.url.path.endsWith('/token')) {
+            return http.Response(
+              jsonEncode(_fakeSessionJson()),
+              200,
+              request: request,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('{}', 200, request: request);
+        });
+        await client.auth.signInWithPassword(
+          email: 'joueur@exemple.com',
+          password: 'password1234',
+        );
+
+        final gateway = _FakePushNotificationGateway();
+        final repository = _FakePushTokenRepository()
+          ..releaseErrorToThrow = Exception('RPC indisponible (double).');
+
+        await expectLater(
+          SupabaseAuthRepository(
+            client,
+            pushTokenRepository: repository,
+            pushNotificationGateway: gateway,
+          ).signOut(),
+          completes,
+        );
+        expect(client.auth.currentSession, isNull);
+      },
+    );
+
+    test('pushTokenRepository/pushNotificationGateway non injectés (`null` par '
+        'défaut) : signOut se comporte exactement comme avant, sans jamais '
+        'tenter de libérer de jeton', () async {
+      final client = _buildFakeSupabaseClient((request) async {
+        if (request.url.path.endsWith('/token')) {
+          return http.Response(
+            jsonEncode(_fakeSessionJson()),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response('{}', 200, request: request);
+      });
+      await client.auth.signInWithPassword(
+        email: 'joueur@exemple.com',
+        password: 'password1234',
+      );
+
+      await expectLater(SupabaseAuthRepository(client).signOut(), completes);
+      expect(client.auth.currentSession, isNull);
+    });
+  });
 }
 
 /// JSON minimal d'une session GoTrue valide (`access_token`/`user.id`
@@ -1892,4 +2029,44 @@ SupabaseClient _buildFakeSupabaseClient(
     httpClient: MockClient(handler),
     authOptions: const AuthClientOptions(authFlowType: AuthFlowType.implicit),
   );
+}
+
+/// Double minimal — seul `getToken` est exercé par
+/// `SupabaseAuthRepository._releasePushTokenBestEffort`, le reste lève
+/// `UnimplementedError` (jamais atteint par ces tests) — même patron que
+/// `_FakeCharacterRepository` de `data_export_repository_test.dart`.
+class _FakePushNotificationGateway implements PushNotificationGateway {
+  String? tokenToReturn = 'fcm-token-1';
+  void Function()? onGetToken;
+
+  @override
+  Future<String?> getToken() async {
+    onGetToken?.call();
+    return tokenToReturn;
+  }
+
+  @override
+  Never noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+/// Double minimal — seul `releaseToken` est exercé par ce fichier de tests,
+/// `upsertToken` n'est jamais atteint par `SupabaseAuthRepository.signOut`.
+class _FakePushTokenRepository implements PushTokenRepository {
+  final List<String> releasedTokens = [];
+  Object? releaseErrorToThrow;
+  void Function()? onReleaseToken;
+
+  @override
+  Future<void> releaseToken({required String token}) async {
+    onReleaseToken?.call();
+    final error = releaseErrorToThrow;
+    if (error != null) throw error;
+    releasedTokens.add(token);
+  }
+
+  @override
+  Future<void> upsertToken({
+    required String token,
+    required String platform,
+  }) async {}
 }

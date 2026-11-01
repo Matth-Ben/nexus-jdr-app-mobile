@@ -54,6 +54,17 @@ import 'widgets/export_data_sheet.dart';
 /// local supplémentaire, contrairement à `ProfileNotificationsScreen`
 /// (dont le provider sous-jacent, un dépôt Supabase, n'offre pas cette
 /// garantie).
+///
+/// **Périmètre exact de cette bascule** (audit RGPD A2, décision chef de
+/// projet) : pilote uniquement Firebase Analytics + PostHog
+/// (`AnalyticsService`). Elle ne branche **jamais** Firebase Crashlytics,
+/// qui reste toujours actif en production, y compris si cette bascule est
+/// désactivée — intérêt légitime distinct (stabilité/diagnostic de l'app),
+/// non soumis à ce consentement. Voir [_ToggleRow.subtitle] ci-dessous pour
+/// le texte qui rend ce périmètre explicite à l'utilisateur, et
+/// `ProfilePrivacyPolicyScreen` (section "5. Avec qui tes données sont
+/// partagées") pour la mention dédiée de Crashlytics parmi les
+/// sous-traitants.
 class ProfilePrivacyScreen extends ConsumerWidget {
   const ProfilePrivacyScreen({super.key});
 
@@ -109,9 +120,10 @@ class ProfilePrivacyScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    "L'export contient tes personnages, leur inventaire, "
-                    'leurs sorts et leur historique (JSON, envoyé par '
-                    'e-mail).',
+                    "L'export contient ton profil, tes personnages (leur "
+                    'inventaire, leurs sorts et leur historique), tes '
+                    'groupes et tes notes de groupe (JSON, proposé au '
+                    'partage depuis ton appareil).',
                     style: AppTypography.body(
                       fontSize: 12,
                       color: AppColors.textMuted,
@@ -121,8 +133,11 @@ class ProfilePrivacyScreen extends ConsumerWidget {
                   _ToggleRow(
                     title: 'Partager mes données d\'usage',
                     subtitle:
-                        "Statistiques d'utilisation anonymes, pour "
-                        "améliorer l'app. Désactivable à tout moment.",
+                        "Statistiques d'utilisation anonymes (Firebase "
+                        'Analytics, PostHog), pour améliorer l\'app. '
+                        'Désactivable à tout moment — les rapports de '
+                        'plantage restent toujours actifs pour la stabilité '
+                        "de l'app (voir Politique de confidentialité).",
                     value: analyticsEnabled,
                     onChanged: (value) => ref
                         .read(analyticsPreferencesControllerProvider.notifier)

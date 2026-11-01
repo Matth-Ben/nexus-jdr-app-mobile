@@ -221,8 +221,9 @@ void main() {
       expect(find.byType(SettingsListCard), findsOneWidget);
       expect(
         find.text(
-          "L'export contient tes personnages, leur inventaire, leurs "
-          'sorts et leur historique (JSON, envoyé par e-mail).',
+          "L'export contient ton profil, tes personnages (leur inventaire, "
+          'leurs sorts et leur historique), tes groupes et tes notes de '
+          'groupe (JSON, proposé au partage depuis ton appareil).',
         ),
         findsOneWidget,
       );
@@ -336,8 +337,10 @@ void main() {
         expect(find.text("Partager mes données d'usage"), findsOneWidget);
         expect(
           find.text(
-            "Statistiques d'utilisation anonymes, pour améliorer l'app. "
-            'Désactivable à tout moment.',
+            "Statistiques d'utilisation anonymes (Firebase Analytics, "
+            "PostHog), pour améliorer l'app. Désactivable à tout moment — "
+            'les rapports de plantage restent toujours actifs pour la '
+            "stabilité de l'app (voir Politique de confidentialité).",
           ),
           findsOneWidget,
         );

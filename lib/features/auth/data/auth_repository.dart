@@ -8,6 +8,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/cache/pending_character_write_queue.dart';
 import '../../../core/cache/reference_data_cache.dart';
+import '../../../core/notifications/push_notification_gateway.dart';
+import '../../../core/notifications/push_token_repository.dart';
 import '../domain/auth_failure.dart';
 import 'auth_error_mapper.dart';
 
@@ -105,6 +107,11 @@ abstract class AuthRepository {
   /// [AuthFailure] **sans déconnecter** plutôt que de perdre silencieusement
   /// l'ajustement : l'appelant doit pouvoir réessayer une fois la connexion
   /// rétablie.
+  ///
+  /// Registre d'audit RGPD B2 : tente aussi, best-effort et **avant**
+  /// l'appel réseau de déconnexion, de libérer le jeton de notification push
+  /// courant de cet appareil (`PushTokenRepository.releaseToken`) — voir la
+  /// doc de classe de [SupabaseAuthRepository] pour le détail.
   Future<void> signOut();
 
   /// Déclenche l'envoi d'un e-mail de réinitialisation de mot de passe.
@@ -281,12 +288,39 @@ abstract class AuthRepository {
 /// `SupabaseAuthRepository` avec le seul `client`, pour des méthodes sans
 /// rapport avec ce garde-fou) de continuer à compiler et passer sans
 /// modification.
+///
+/// **Registre d'audit RGPD B2** ("jeton push jamais libéré à la
+/// déconnexion") : [signOut] libère best-effort le jeton de notification
+/// push courant de cet appareil, via [pushTokenRepository]
+/// ([PushTokenRepository.releaseToken]) et [pushNotificationGateway]
+/// ([PushNotificationGateway.getToken], même mécanisme que
+/// `PushTokenRegistrar._upsertToken`) — **avant** l'appel réseau de
+/// déconnexion lui-même (la RPC `release_push_token` a besoin d'un JWT
+/// valide pour résoudre `auth.uid()`, perdu dès que `_client.auth.signOut()`
+/// réussit). Même esprit best-effort que tout le reste de
+/// `PushTokenRegistrar` : aucune exception n'est jamais propagée depuis
+/// cette tentative, un échec ici ne doit jamais empêcher ni ralentir la
+/// déconnexion elle-même. [deleteAccount] n'est volontairement **pas**
+/// concernée par ce même mécanisme (voir la doc de
+/// `AuthRepository.deleteAccount` et le registre de dette technique pour le
+/// rationale : la suppression de `user_push_tokens` par cascade côté base
+/// est vérifiée séparément).
+///
+/// [pendingWriteQueue]/[referenceDataCache]/[syncPendingWrites]/
+/// [pushTokenRepository]/[pushNotificationGateway] sont tous optionnels
+/// (`null` par défaut) : seul le câblage réel (`auth_providers.dart`) les
+/// fournit. Laissés `null`, [signOut] se comporte exactement comme avant
+/// l'introduction de ce mécanisme (aucune tentative de libération de jeton)
+/// — même garantie de compatibilité que les trois premiers paramètres
+/// optionnels pour l'existant `test/features/auth/data/auth_repository_test.dart`.
 class SupabaseAuthRepository implements AuthRepository {
   const SupabaseAuthRepository(
     this._client, {
     this.pendingWriteQueue,
     this.referenceDataCache,
     this.syncPendingWrites,
+    this.pushTokenRepository,
+    this.pushNotificationGateway,
   });
 
   final SupabaseClient _client;
@@ -303,6 +337,14 @@ class SupabaseAuthRepository implements AuthRepository {
   /// compte courant — voir la doc de classe. `null` : garde-fou/purge
   /// désactivés (voir la doc de classe).
   final Future<void> Function()? syncPendingWrites;
+
+  /// Registre d'audit RGPD B2 — voir la doc de classe. `null` : libération
+  /// du jeton push désactivée (voir la doc de classe).
+  final PushTokenRepository? pushTokenRepository;
+
+  /// Registre d'audit RGPD B2 — voir la doc de classe. `null` : libération
+  /// du jeton push désactivée (voir la doc de classe).
+  final PushNotificationGateway? pushNotificationGateway;
 
   /// Bucket Storage réutilisé tel quel pour les avatars de profil — même
   /// bucket que `PortraitStoragePathResolver.bucket`
@@ -489,6 +531,11 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     final ownerId = _client.auth.currentUser?.id;
     await _ensureNoPendingWrites(ownerId);
+
+    // Registre d'audit RGPD B2 : AVANT l'appel réseau de déconnexion (voir
+    // la doc de classe pour le rationale de cet ordre) — best-effort, ne
+    // doit jamais empêcher ni ralentir la déconnexion elle-même.
+    await _releasePushTokenBestEffort();
 
     try {
       await _client.auth.signOut();
@@ -709,6 +756,28 @@ class SupabaseAuthRepository implements AuthRepository {
     final stillPending = await queue.allForOwner(ownerId);
     if (stillPending.isNotEmpty) {
       throw const AuthFailure(pendingHpXpWritesBlockedMessage);
+    }
+  }
+
+  /// Registre d'audit RGPD B2 — voir la doc de classe de
+  /// [SupabaseAuthRepository] pour le rationale complet (ordre d'appel,
+  /// best-effort). Ne fait rien si [pushTokenRepository]/
+  /// [pushNotificationGateway] n'ont pas été injectés. Jamais d'exception
+  /// propagée depuis cette méthode : un échec de libération du jeton (ex.
+  /// jeton FCM indisponible, RPC `release_push_token` manquante côté
+  /// backend, échec réseau) ne doit jamais empêcher ni ralentir la
+  /// déconnexion elle-même.
+  Future<void> _releasePushTokenBestEffort() async {
+    final repository = pushTokenRepository;
+    final gateway = pushNotificationGateway;
+    if (repository == null || gateway == null) return;
+
+    try {
+      final token = await gateway.getToken();
+      if (token == null) return;
+      await repository.releaseToken(token: token);
+    } catch (_) {
+      // Best-effort — voir la doc de la méthode.
     }
   }
 
