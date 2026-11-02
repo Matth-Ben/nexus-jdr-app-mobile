@@ -27,13 +27,16 @@
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<!-- Requis par `image_picker` (fiche personnage, upload de portrait,
-	     `features/characters/presentation/widgets/portrait_upload_sheet.dart`) :
+	     `features/characters/presentation/widgets/portrait_upload_sheet.dart` ;
+	     avatar de profil, `features/profile/presentation/widgets/avatar_edit_sheet.dart` ;
+	     capture jointe à un signalement de bug,
+	     `features/bug_report/data/bug_report_screenshot_picker.dart`) :
 	     iOS refuse silencieusement l'accès caméra/photothèque sans ces
 	     libellés d'usage. -->
 		<key>NSCameraUsageDescription</key>
-		<string>Nexus JDR a besoin de l'appareil photo pour définir le portrait d'un personnage.</string>
+		<string>Nexus JDR utilise l'appareil photo quand vous choisissez de prendre une photo : portrait ou galerie d'un personnage, avatar de votre profil, ou capture jointe à un signalement de bug.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
-		<string>Nexus JDR a besoin d'accéder à vos photos pour définir le portrait d'un personnage.</string>
+		<string>Nexus JDR accède à vos photos quand vous choisissez une image : portrait ou galerie d'un personnage, avatar de votre profil, ou capture jointe à un signalement de bug.</string>
 		<!-- Requis par `speech_to_text` (dictée vocale du bouton micro de
 	     l'onglet "Notes" de l'écran "Groupe",
 	     `features/groups/presentation/widgets/group_notes_tab_body.dart`) :
