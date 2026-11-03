@@ -56,6 +56,7 @@ import 'character_detail_cache.dart';
 import 'character_detail_row_mapper.dart';
 import 'character_error_mapper.dart';
 import 'character_inventory_row_mapper.dart';
+import 'character_list_cache.dart';
 import 'character_row_mapper.dart';
 import 'character_skill_row_mapper.dart';
 import 'character_spell_row_mapper.dart';
@@ -1382,11 +1383,12 @@ abstract class CharacterRepository {
 /// d'écrire (`CharacterDetailCache.applyConfirmedColumns`), jamais une
 /// valeur seulement mise en file.
 ///
-/// Seule [fetchCharacterDetail] utilise ce cache : les autres méthodes de ce
-/// repository restent des appels réseau directs sans repli (écritures, ou
-/// lectures hors périmètre de la fiche elle-même comme
-/// [fetchLevelUpLevelData] — voir la consigne de la tâche qui a introduit ce
-/// cache).
+/// Seule [fetchCharacterDetail] utilise ce cache (`CharacterDetailCache`) :
+/// les autres méthodes de ce repository restent des appels réseau directs
+/// sans repli (écritures, ou lectures hors périmètre de la fiche elle-même
+/// comme [fetchLevelUpLevelData] — voir la consigne de la tâche qui a
+/// introduit ce cache), à l'exception de [fetchCharacters] qui a son propre
+/// cache indépendant (voir la section suivante).
 ///
 /// **Isolation par utilisateur (décision chef de projet, non négociable)** :
 /// la clé de cache est `'character_detail:$ownerId:$characterId'`, jamais
@@ -1399,6 +1401,30 @@ abstract class CharacterRepository {
 /// joueur, sans jamais repasser par la vérification RLS. Pas besoin de vider
 /// le cache à la déconnexion : une clé scoped par `ownerId` suffit, un autre
 /// compte ne retombe jamais sur la même entrée.
+///
+/// ## Cache hors-ligne de la liste des personnages ([fetchCharacters])
+///
+/// Même stratégie "réseau d'abord, cache en secours" que
+/// [fetchCharacterDetail] ci-dessus, extension volontaire du périmètre
+/// initial de ce cache (le cahier des charges, `01-architecture-technique.md`,
+/// ne couvrait explicitement que la fiche d'un personnage *ouvert* — décision
+/// chef de projet d'étendre ce principe à l'écran d'accueil, pour qu'il reste
+/// consultable hors ligne comme n'importe quelle autre lecture de ce
+/// repository). [fetchCharacters] regroupe dans un seul payload JSON les
+/// lignes `characters` brutes ET les maps `raceNames`/`classNames` déjà
+/// résolues (voir [CharacterListCache]) — contrairement à
+/// [fetchCharacterDetail], qui met en cache les lignes `translations` brutes
+/// et les reparse à chaque lecture : ici, mettre en cache les noms déjà
+/// résolus évite de refaire les deux requêtes [_fetchTranslatedNames] en cas
+/// de repli cache, qui échoueraient de toute façon hors ligne. Ce payload est
+/// écrit dans [_cache] (best-effort) après un succès réseau, puis passé par
+/// [_mapCharacterListPayload] — le mapper pur partagé par les deux chemins
+/// (réseau et cache), qui délègue lui-même à [CharacterRowMapper.toSummary]/
+/// [CharacterListSorter.sort], jamais de logique de parsing dupliquée.
+///
+/// Cache indépendant de celui de [fetchCharacterDetail] : clé de préfixe
+/// différent (`'character_list:$ownerId'`, voir [CharacterListCache.keyFor]),
+/// même isolation par `ownerId` et même absence d'historique/d'expiration.
 class SupabaseCharacterRepository implements CharacterRepository {
   /// [_pendingWrites]/[_connectivityChecker] requis explicitement (pas de
   /// valeur par défaut fabriquée en interne) : même philosophie que le reste
@@ -1529,6 +1555,9 @@ class SupabaseCharacterRepository implements CharacterRepository {
   @override
   Future<List<CharacterSummary>> fetchCharacters() async {
     final ownerId = _requireOwnerId();
+    // Scopée par ownerId — voir la documentation de classe ("Cache
+    // hors-ligne de la liste des personnages").
+    final cacheKey = CharacterListCache.keyFor(ownerId: ownerId);
 
     try {
       final characterRows = await _client
@@ -1558,19 +1587,26 @@ class SupabaseCharacterRepository implements CharacterRepository {
         entityIds: classIds,
       );
 
-      final summaries = characterRows
-          .map(
-            (row) => CharacterRowMapper.toSummary(
-              row,
-              raceNames: raceNames,
-              classNames: classNames,
-            ),
-          )
-          .toList();
-      return CharacterListSorter.sort(summaries);
+      final payload = <String, dynamic>{
+        CharacterListCache.characterRowsKey: characterRows,
+        CharacterListCache.raceNamesKey: raceNames,
+        CharacterListCache.classNamesKey: classNames,
+      };
+      await _writeCacheBestEffort(cacheKey, payload);
+      return _mapCharacterListPayload(payload);
+    } on CharacterFailure {
+      rethrow;
     } on PostgrestException catch (error) {
+      final cached = await _mappedFromCache(cacheKey, _mapCharacterListPayload);
+      if (cached != null) {
+        return cached;
+      }
       throw mapCharacterError(error);
     } catch (_) {
+      final cached = await _mappedFromCache(cacheKey, _mapCharacterListPayload);
+      if (cached != null) {
+        return cached;
+      }
       throw mapUnknownCharacterError();
     }
   }
@@ -7250,6 +7286,31 @@ class SupabaseCharacterRepository implements CharacterRepository {
     );
   }
 
+  /// Reconstruit la liste triée de [CharacterSummary] à partir d'un
+  /// [payload] déjà construit par [fetchCharacters] (lignes `characters`
+  /// brutes + maps `raceNames`/`classNames` déjà résolues, voir
+  /// [CharacterListCache]) — jamais d'accès réseau ici, seul point de
+  /// mapping partagé par le chemin réseau (juste après un succès) et le
+  /// chemin cache (`_mappedFromCache`, dans [fetchCharacters]).
+  List<CharacterSummary> _mapCharacterListPayload(
+    Map<String, dynamic> payload,
+  ) {
+    final characterRows = _rowsOf(payload[CharacterListCache.characterRowsKey]);
+    final raceNames = _namesOf(payload[CharacterListCache.raceNamesKey]);
+    final classNames = _namesOf(payload[CharacterListCache.classNamesKey]);
+
+    final summaries = characterRows
+        .map(
+          (row) => CharacterRowMapper.toSummary(
+            row,
+            raceNames: raceNames,
+            classNames: classNames,
+          ),
+        )
+        .toList();
+    return CharacterListSorter.sort(summaries);
+  }
+
   /// Bucket Storage des couvertures d'histoire (dépôt web,
   /// `20260716212008_create_stories.sql`) — lecture publique, jamais écrit
   /// depuis ce dépôt (voir `features/join_story/data/story_invite_repository.dart`,
@@ -7319,5 +7380,21 @@ class SupabaseCharacterRepository implements CharacterRepository {
         .whereType<Object>()
         .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
+  }
+
+  /// Normalise une valeur potentiellement issue de `jsonDecode` (clés/valeurs
+  /// `dynamic` non garanties) ou directement d'une map déjà bien typée
+  /// (chemin réseau, construite par [_fetchTranslatedNames] avant tout
+  /// passage par le cache) en `Map<String, String>` — même principe
+  /// défensif que [_rowsOf], pour `raceNames`/`classNames` du payload de
+  /// [fetchCharacters] (voir [CharacterListCache]). Une valeur absente ou
+  /// d'un type inattendu retombe sur une map vide plutôt que de crasher.
+  static Map<String, String> _namesOf(Object? value) {
+    if (value is! Map) {
+      return const {};
+    }
+    return value.map(
+      (key, value) => MapEntry(key.toString(), value.toString()),
+    );
   }
 }
