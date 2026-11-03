@@ -949,6 +949,208 @@ void main() {
     },
   );
 
+  group('SupabaseCharacterRepository.fetchCharacters (cache de secours)', () {
+    // Même principe que le groupe `fetchCharacterDetail (cache de secours)`
+    // ci-dessus : 3 scénarios communs (succès réseau écrit le cache, échec
+    // réseau + cache retombe dessus, échec réseau + aucun cache relance
+    // l'erreur d'origine) + l'isolation par ownerId de la clé de cache
+    // (`'character_list:$ownerId'`, jamais `'character_list'` seul).
+    late AppDatabase db;
+    late ReferenceDataCache cache;
+    late PendingCharacterWriteQueue pendingWrites;
+
+    setUp(() {
+      db = AppDatabase(NativeDatabase.memory());
+      cache = ReferenceDataCache(db);
+      pendingWrites = PendingCharacterWriteQueue(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    const ownerId = 'owner-1';
+    final cacheKey = 'character_list:$ownerId';
+
+    final listTableRows = <String, List<Map<String, dynamic>>>{
+      'characters': [
+        {
+          'id': 'char-1',
+          'name': 'Aragorn',
+          'portrait_url': null,
+          'xp': 100,
+          'is_dead': false,
+          'is_archived': false,
+          'race_id': 1,
+          'character_classes': [
+            {'class_id': 2, 'level': 5, 'is_primary': true},
+          ],
+        },
+        {
+          'id': 'char-2',
+          'name': 'Legolas',
+          'portrait_url': null,
+          'xp': 0,
+          'is_dead': true,
+          'is_archived': false,
+          'race_id': 5,
+          'character_classes': [
+            {'class_id': 6, 'level': 3, 'is_primary': true},
+          ],
+        },
+      ],
+      'translations': [
+        {'entity_id': '1', 'value': 'Humain'},
+        {'entity_id': '2', 'value': 'Guerrier'},
+        {'entity_id': '5', 'value': 'Elfe'},
+        {'entity_id': '6', 'value': 'Rôdeur'},
+      ],
+    };
+
+    void verifySummaries(List<dynamic> summaries) {
+      // `CharacterListSorter.sort` place les personnages en vie avant les
+      // morts : Legolas (mort) doit donc venir après Aragorn.
+      expect(summaries, hasLength(2));
+      expect(summaries[0].id, 'char-1');
+      expect(summaries[0].name, 'Aragorn');
+      expect(summaries[0].raceName, 'Humain');
+      expect(summaries[0].className, 'Guerrier');
+      expect(summaries[0].level, 5);
+      expect(summaries[0].isDead, isFalse);
+      expect(summaries[1].id, 'char-2');
+      expect(summaries[1].name, 'Legolas');
+      expect(summaries[1].raceName, 'Elfe');
+      expect(summaries[1].className, 'Rôdeur');
+      expect(summaries[1].isDead, isTrue);
+    }
+
+    test('succès réseau : écrit le cache (clé scopée par ownerId) et retourne '
+        'la liste triée', () async {
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        tableRows: listTableRows,
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _AlwaysOnlineConnectivityChecker(),
+      );
+
+      final summaries = await repository.fetchCharacters();
+
+      verifySummaries(summaries);
+      expect(
+        await cache.get(cacheKey),
+        isNotNull,
+        reason: 'le succès réseau doit avoir peuplé le cache',
+      );
+    });
+
+    test('échec réseau + cache déjà présent : retombe sur le cache et '
+        'produit la même liste que le chemin réseau', () async {
+      final onlineClient = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        tableRows: listTableRows,
+      );
+      final onlineRepository = SupabaseCharacterRepository(
+        onlineClient,
+        cache,
+        pendingWrites,
+        _AlwaysOnlineConnectivityChecker(),
+      );
+      await onlineRepository.fetchCharacters();
+
+      final offlineClient = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        failureStatusCode: 500,
+      );
+      final offlineRepository = SupabaseCharacterRepository(
+        offlineClient,
+        cache,
+        pendingWrites,
+        _AlwaysOnlineConnectivityChecker(),
+      );
+
+      final summaries = await offlineRepository.fetchCharacters();
+
+      verifySummaries(summaries);
+    });
+
+    test('échec réseau + aucun cache : relance l\'erreur d\'origine', () async {
+      final client = await _buildSignedInFakeSupabaseClient(
+        ownerId: ownerId,
+        throwOnRequest: true,
+      );
+      final repository = SupabaseCharacterRepository(
+        client,
+        cache,
+        pendingWrites,
+        _AlwaysOnlineConnectivityChecker(),
+      );
+
+      await expectLater(
+        repository.fetchCharacters(),
+        throwsA(isA<CharacterFailure>()),
+      );
+    });
+
+    test(
+      'isolation par utilisateur : un changement de compte sur le même '
+      'appareil ne peut jamais lire la liste en cache d\'un autre joueur',
+      () async {
+        // `owner-1` charge sa liste avec succès réseau : le cache ne
+        // contient que 'character_list:owner-1'.
+        final ownerOneClient = await _buildSignedInFakeSupabaseClient(
+          ownerId: ownerId,
+          tableRows: listTableRows,
+        );
+        await SupabaseCharacterRepository(
+          ownerOneClient,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        ).fetchCharacters();
+        expect(await cache.get(cacheKey), isNotNull);
+
+        // `owner-2` se connecte sur le même appareil, réseau indisponible :
+        // la clé scopée par ownerId ('character_list:owner-2') n'existe
+        // pas — jamais de repli sur les données d'owner-1, l'erreur
+        // d'origine doit être relancée telle quelle.
+        const otherOwnerId = 'owner-2';
+        final ownerTwoClient = await _buildSignedInFakeSupabaseClient(
+          ownerId: otherOwnerId,
+          throwOnRequest: true,
+        );
+        final ownerTwoRepository = SupabaseCharacterRepository(
+          ownerTwoClient,
+          cache,
+          pendingWrites,
+          _AlwaysOnlineConnectivityChecker(),
+        );
+
+        await expectLater(
+          ownerTwoRepository.fetchCharacters(),
+          throwsA(isA<CharacterFailure>()),
+        );
+        expect(
+          await cache.get('character_list:$otherOwnerId'),
+          isNull,
+          reason:
+              'aucune entrée de cache ne doit jamais exister pour owner-2 : '
+              'la clé est scopée par ownerId, pas partagée entre comptes',
+        );
+        expect(
+          await cache.get(cacheKey),
+          isNotNull,
+          reason:
+              "l'entrée d'owner-1 doit rester intacte, jamais écrasée ni "
+              'lue par owner-2',
+        );
+      },
+    );
+  });
+
   group('SupabaseCharacterRepository.updateHp/addXp (mode hors-ligne)', () {
     late AppDatabase db;
     late ReferenceDataCache cache;
