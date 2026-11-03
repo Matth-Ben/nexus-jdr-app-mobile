@@ -711,6 +711,16 @@ d'écran dans « Signaler un bug » (PR web #35, PR mobile de la branche
 | D137 | Deux tests du compresseur de capture sont faibles : « PNG tronqué » accepte deux résultats (JPEG valide ou `unsupportedFormat`) sans figer le comportement ; le test EXIF ne vérifie que la balise `Make`, pas la position GPS qui motive le retrait des métadonnées. | basse (la garantie est structurelle : image neuve sans métadonnées) | Figer le comportement de `package:image` 4.9.x sur le PNG tronqué, et ajouter un test avec un GPS IFD rempli | Ouvert, non traité |
 | D138 | La compression de la capture repose sur `image_picker` côté natif pour deux cas : réduire une très grande image (panorama) avant `decodeImage`, et convertir un HEIC (illisible par `package:image`) en JPEG via `imageQuality`. Non vérifié sur appareil. | basse (au pire « format non pris en charge », sans plantage) | Vérifier une fois sur appareil réel Android et iOS avec une photo HEIC et un panorama de la galerie | Ouvert, non traité |
 
+## Ajouts liés au cache hors-ligne de la liste des personnages (03/11/2026)
+
+Constat relevé pendant l'ajout du cache hors-ligne de la liste des personnages
+(`CharacterListCache`, symétrique de `CharacterDetailCache`), signalé par `code-reviewer`
+comme un comportement déjà présent ailleurs dans ce fichier, pas introduit par cette tâche.
+
+| ID | Constat | Gravité | Correction | État |
+|---|---|---|---|---|
+| D139 | Un cache (`CharacterListCache`/`CharacterDetailCache`) dont le payload est structurellement valide mais vide (clés absentes plutôt que mal typées) ne lève jamais d'exception : `fetchCharacters()`/`fetchCharacterDetail()` retombent alors silencieusement sur « aucun personnage »/une fiche vide plutôt que sur l'erreur réseau d'origine. | basse (cas très improbable en pratique — le payload vient toujours d'un succès réseau antérieur déjà validé — mais l'utilisateur hors ligne verrait un faux « vide » plutôt qu'un message d'erreur réseau) | Si le sujet revient : distinguer « payload absent/mal typé » (déjà bien géré) de « payload présent mais structurellement vide » dans `_rowsOf`/`_namesOf`, et ne retomber sur ce dernier qu'après confirmation qu'il reflète un vrai état serveur | Ouvert, non traité |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont
