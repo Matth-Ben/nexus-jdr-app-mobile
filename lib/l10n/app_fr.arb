@@ -1,0 +1,35 @@
+{
+  "@@locale": "fr",
+  "profileLanguageMenuEntry": "Langue",
+  "@profileLanguageMenuEntry": {
+    "description": "Libellé de la tuile de menu \"Langue\" de l'écran Profil (`profile_screen.dart`), qui pousse vers `/profile/language`."
+  },
+  "profileLanguageScreenTitle": "LANGUE",
+  "@profileLanguageScreenTitle": {
+    "description": "Titre du bandeau bois (`WoodBackHeader`) de l'écran `profile_language_screen.dart`, déjà en majuscules (`font.display` ne transforme pas la casse)."
+  },
+  "profileLanguagePhoneOption": "Langue du téléphone",
+  "@profileLanguagePhoneOption": {
+    "description": "Titre de la 1ère `SelectableOptionTile` de l'écran \"Langue\" — préférence par défaut (aucune langue forcée, `LocalePreferenceController` à `null`)."
+  },
+  "profileLanguagePhoneOptionSubtitle": "Phone language",
+  "@profileLanguagePhoneOptionSubtitle": {
+    "description": "Sous-titre fixe de la 1ère `SelectableOptionTile`, toujours dans l'AUTRE langue que `profileLanguagePhoneOption` (indice bilingue volontaire pour un utilisateur qui ne lirait pas la langue active)."
+  },
+  "profileLanguagePhoneOptionDetail": "Suit la langue de l'appareil (FR/EN) ; repli sur le français si l'appareil utilise une autre langue. / Follows the device's language (FR/EN); falls back to French otherwise.",
+  "@profileLanguagePhoneOptionDetail": {
+    "description": "`selectedDetail` affiché uniquement quand la 1ère tuile est sélectionnée — texte fixe bilingue (identique dans les deux fichiers .arb), spec direction-artistique explicite : pas de logique runtime pour choisir l'ordre FR/EN."
+  },
+  "profileLanguageFrenchOption": "Français",
+  "@profileLanguageFrenchOption": {
+    "description": "Titre de la 2e `SelectableOptionTile` — nom de la langue dans sa propre langue, identique dans les deux fichiers .arb (convention habituelle d'un sélecteur de langue)."
+  },
+  "profileLanguageEnglishOption": "English",
+  "@profileLanguageEnglishOption": {
+    "description": "Titre de la 3e `SelectableOptionTile` — nom de la langue dans sa propre langue, identique dans les deux fichiers .arb (convention habituelle d'un sélecteur de langue)."
+  },
+  "profileLanguageSaveError": "Impossible d'enregistrer ce réglage. Réessaie.",
+  "@profileLanguageSaveError": {
+    "description": "SnackBar d'erreur générique si l'écriture SharedPreferences échoue au tap sur une option — même ton que les autres écrans Profil."
+  }
+}

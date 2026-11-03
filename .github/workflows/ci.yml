@@ -40,6 +40,19 @@ jobs:
             exit 1
           }
 
+      - name: Vérifie que les traductions générées (flutter gen-l10n) sont à jour
+        # `AppLocalizations` (`lib/l10n/app_localizations*.dart`) suit la même
+        # convention que les fichiers `*.g.dart`/`*.freezed.dart` ci-dessus :
+        # généré, mais committé (voir `lib/l10n/`, pas de règle `.gitignore`
+        # dédiée) — chantier "traduction de l'app" Phase A
+        # (`lib/l10n/app_fr.arb`/`app_en.arb`, `l10n.yaml`).
+        run: |
+          flutter gen-l10n
+          git diff --exit-code -- 'lib/l10n/app_localizations*.dart' || {
+            echo "::error::AppLocalizations n'est pas à jour avec lib/l10n/*.arb — lance 'flutter gen-l10n' localement et commite le résultat."
+            exit 1
+          }
+
       - name: dart format
         run: dart format --output=none --set-exit-if-changed .
 

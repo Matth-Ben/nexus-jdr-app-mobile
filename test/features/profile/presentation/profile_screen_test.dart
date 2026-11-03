@@ -23,6 +23,7 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:personnages/core/network/connectivity_checker.dart';
 import 'package:personnages/core/network/connectivity_providers.dart';
+import 'package:personnages/core/widgets/menu_tile.dart';
 import 'package:personnages/core/widgets/profile_avatar.dart';
 import 'package:personnages/core/widgets/settings_list_card.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
@@ -32,10 +33,13 @@ import 'package:personnages/features/profile/data/notification_preferences_repos
 import 'package:personnages/features/profile/domain/notification_preferences.dart';
 import 'package:personnages/features/profile/presentation/profile_edit_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_help_screen.dart';
+import 'package:personnages/features/profile/presentation/profile_language_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_notifications_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_privacy_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_screen.dart';
 import 'package:personnages/features/profile/presentation/providers/notification_preferences_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Double minimal — seul `fetch` est exercé ici : cette suite ne fait que
@@ -151,6 +155,12 @@ void main() {
 
   setUp(() {
     fakeAuthRepository = _FakeAuthRepository();
+    // `ProfileLanguageScreen` lit `localePreferenceControllerProvider`
+    // (`core/i18n/locale_preference_provider.dart`), qui résout
+    // `SharedPreferences.getInstance()` — nécessaire dès que le test navigue
+    // vers "Langue" (voir `SharedPreferences.setMockInitialValues`, même
+    // convention que `analytics_preferences_provider_test.dart`).
+    SharedPreferences.setMockInitialValues({});
   });
 
   Widget buildTestWidget({required User? user}) {
@@ -166,6 +176,17 @@ void main() {
         ),
       ],
       child: MaterialApp.router(
+        // `ProfileScreen`/`ProfileLanguageScreen` lisent `AppLocalizations.of
+        // (context)!` (chantier "traduction de l'app" Phase A) — sans ces
+        // delegates, l'appel renverrait `null` et le `!` planterait. `locale`
+        // fixé en dur sur le français (plutôt que `null`, qui suivrait la
+        // langue réelle, non garantie, de l'environnement `flutter test`) :
+        // cette suite vérifie le reste de l'écran (toujours en dur en
+        // français, Phase B), pas la bascule de langue elle-même — voir
+        // `profile_language_screen_test.dart` pour ça.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         routerConfig: GoRouter(
           initialLocation: '/',
           routes: [
@@ -199,6 +220,10 @@ void main() {
             GoRoute(
               path: '/profile/notifications',
               builder: (context, state) => const ProfileNotificationsScreen(),
+            ),
+            GoRoute(
+              path: '/profile/language',
+              builder: (context, state) => const ProfileLanguageScreen(),
             ),
           ],
         ),
@@ -269,14 +294,16 @@ void main() {
   });
 
   testWidgets(
-    'affiche les 4 lignes de menu (regroupées dans un SettingsListCard) avec '
-    'leurs icônes dédiées, sans "Signaler un bug"',
+    'affiche les 5 lignes de menu (regroupées dans un SettingsListCard) avec '
+    'leurs icônes dédiées, sans "Signaler un bug" — "Langue" en 2e position, '
+    'entre "Notifications" et "Confidentialité et données"',
     (tester) async {
       await pumpProfile(tester, user: _fakeUser());
 
       for (final label in const [
         'Modifier le profil',
         'Notifications',
+        'Langue',
         'Confidentialité et données',
         'Aide et support',
       ]) {
@@ -285,11 +312,27 @@ void main() {
       expect(find.text('Signaler un bug'), findsNothing);
       expect(find.byIcon(Icons.person_outline), findsOneWidget);
       expect(find.byIcon(Icons.notifications_none), findsOneWidget);
+      expect(find.byIcon(Icons.language), findsOneWidget);
       expect(find.byIcon(Icons.privacy_tip_outlined), findsOneWidget);
       expect(find.byIcon(Icons.help_outline), findsOneWidget);
       expect(find.byIcon(Icons.bug_report_outlined), findsNothing);
-      expect(find.byIcon(Icons.chevron_right), findsNWidgets(4));
+      expect(find.byIcon(Icons.chevron_right), findsNWidgets(5));
       expect(find.byType(SettingsListCard), findsOneWidget);
+
+      // "Langue" est bien entre "Notifications" et "Confidentialité et
+      // données" dans l'arborescence (pas juste présente ailleurs dans la
+      // page).
+      final menuTiles = tester
+          .widgetList<MenuTile>(find.byType(MenuTile))
+          .map((tile) => tile.label)
+          .toList();
+      expect(menuTiles, [
+        'Modifier le profil',
+        'Notifications',
+        'Langue',
+        'Confidentialité et données',
+        'Aide et support',
+      ]);
     },
   );
 
@@ -369,6 +412,20 @@ void main() {
     // `profile_notifications_screen_test.dart` pour le détail de cet
     // écran.
     expect(find.text('NOTIFICATIONS'), findsOneWidget);
+  });
+
+  testWidgets('taper "Langue" pousse `ProfileLanguageScreen` '
+      '(`/profile/language`)', (tester) async {
+    await pumpProfile(tester, user: _fakeUser());
+
+    await tester.tap(find.text('Langue'));
+    await tester.pumpAndSettle();
+
+    // `ProfileLanguageScreen` (route `/profile/language`) : bandeau bois
+    // "LANGUE" + ses 3 tuiles, voir `profile_language_screen_test.dart` pour
+    // le détail de cet écran.
+    expect(find.text('LANGUE'), findsOneWidget);
+    expect(find.text('Langue du téléphone'), findsOneWidget);
   });
 
   testWidgets(

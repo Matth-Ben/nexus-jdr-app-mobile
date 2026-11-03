@@ -30,6 +30,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Infrastructure de traduction standard Flutter (`.arb` + `flutter
+  # gen-l10n`, voir `l10n.yaml` et `lib/l10n/`) — chantier "traduction de
+  # l'app" Phase A (infrastructure + réglage de langue uniquement, voir
+  # `features/profile/presentation/profile_language_screen.dart`) ;
+  # `flutter_localizations` fournit les délégués Material/Widgets localisés
+  # (`AppLocalizations.localizationsDelegates`), câblés dans
+  # `main.dart::NexusJdrApp`.
+  flutter_localizations:
+    sdk: flutter
+  # Généré par `flutter gen-l10n` (classe `AppLocalizations`) à partir de
+  # `lib/l10n/app_fr.arb`/`app_en.arb` — version résolue automatiquement par
+  # `flutter pub add intl`, compatible avec la contrainte de
+  # `flutter_localizations` du SDK Flutter de ce dépôt.
+  intl: ^0.20.3
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -150,6 +164,12 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Dépendance transitive de `shared_preferences`, utilisée explicitement
+  # dans `test/core/i18n/locale_preference_provider_test.dart` pour simuler
+  # un échec d'écriture disque (`SharedPreferencesStorePlatform.instance`
+  # remplacé par un store qui lève sur `setValue`/`remove`) — déclarée ici
+  # pour satisfaire le lint `depend_on_referenced_packages`.
+  shared_preferences_platform_interface: ^2.4.2
   # Pilote la vraie app (`WidgetTester`) sur un appareil/emulateur reel
   # (`flutter test integration_test/<fichier>.dart -d <device>`), par
   # opposition a `test_integration/` (tests VM purs contre un vrai
@@ -197,6 +217,12 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+
+  # Active la génération de `AppLocalizations` par `flutter gen-l10n` à
+  # partir de `l10n.yaml`/`lib/l10n/*.arb` (déclenchée automatiquement par
+  # `flutter pub get` / `flutter test` / `flutter build`) — voir la doc de
+  # classe de `flutter_localizations` ci-dessus.
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
