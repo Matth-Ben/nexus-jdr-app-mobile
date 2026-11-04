@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/selectable_option_tile.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/inventory_category_filter.dart';
 
 /// Ouvre la sheet "Filtrer par catégorie" de l'onglet "Inventaire" —
@@ -46,7 +47,10 @@ class _InventoryCategoryFilterSheetContent extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SheetHeaderBar(title: 'FILTRER PAR CATÉGORIE'),
+            SheetHeaderBar(
+              title: AppLocalizations.of(context)!
+                  .inventoryCategoryFilterSheetTitle,
+            ),
             // `Flexible` + défilement : la barre de tête grandit avec un texte
             // agrandi dans les réglages du téléphone, les options ne doivent
             // alors jamais déborder du panneau sur petit écran (même principe

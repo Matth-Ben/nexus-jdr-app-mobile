@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/destructive_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/inventory_category_rules.dart';
@@ -186,6 +187,7 @@ class _ItemActionSheetContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isWeapon = !item.isCustom && item.category == 'arme';
     final equippable = !isWeapon && isEquippableItem(item);
     final usable = !item.isCustom && item.consumable;
@@ -214,8 +216,10 @@ class _ItemActionSheetContent extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              '${InventoryCategoryRules.labelFor(item.category)} · '
-              'x${item.quantity}',
+              l10n.itemActionSheetSubtitle(
+                InventoryCategoryRules.labelFor(item.category),
+                item.quantity,
+              ),
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -225,26 +229,28 @@ class _ItemActionSheetContent extends StatelessWidget {
             const Divider(height: 1, thickness: 1, color: Color(0xFFE0D2AB)),
             SheetActionRow(
               icon: Icons.info_outline,
-              label: 'Infos',
+              label: l10n.itemActionSheetInfoLabel,
               onTap: () => Navigator.of(context).pop(_ItemSheetAction.info),
             ),
             if (usable)
               SheetActionRow(
                 icon: Icons.check_circle_outline,
-                label: 'Utiliser',
+                label: l10n.itemActionSheetUseLabel,
                 onTap: () => Navigator.of(context).pop(_ItemSheetAction.use),
               ),
             if (isWeapon) ...[
               SheetActionRow(
                 icon: Icons.checkroom_outlined,
-                label: item.equipped ? 'Changer de set' : 'Équiper',
+                label: item.equipped
+                    ? l10n.itemActionSheetChangeSetLabel
+                    : l10n.itemActionSheetEquipLabel,
                 onTap: () =>
                     Navigator.of(context).pop(_ItemSheetAction.equipWeapon),
               ),
               if (item.equipped)
                 SheetActionRow(
                   icon: Icons.remove_circle_outline,
-                  label: 'Déséquiper',
+                  label: l10n.itemActionSheetUnequipLabel,
                   onTap: () =>
                       Navigator.of(context)
                           .pop(_ItemSheetAction.toggleEquipped),
@@ -252,7 +258,9 @@ class _ItemActionSheetContent extends StatelessWidget {
             ] else if (equippable)
               SheetActionRow(
                 icon: Icons.checkroom_outlined,
-                label: item.equipped ? 'Déséquiper' : 'Équiper',
+                label: item.equipped
+                    ? l10n.itemActionSheetUnequipLabel
+                    : l10n.itemActionSheetEquipLabel,
                 onTap: () =>
                     Navigator.of(context).pop(_ItemSheetAction.toggleEquipped),
               ),
@@ -260,11 +268,13 @@ class _ItemActionSheetContent extends StatelessWidget {
               SheetActionRow(
                 icon: item.isAttuned ? Icons.link_off : Icons.link,
                 label: item.isAttuned
-                    ? 'Ne plus harmoniser'
-                    : 'Harmoniser cet objet',
+                    ? l10n.itemActionSheetStopAttuneLabel
+                    : l10n.itemActionSheetAttuneLabel,
                 enabled: !atAttunementCap,
                 trailingText: atAttunementCap
-                    ? 'Limite (${CharacterDetail.attunementCap}) atteinte'
+                    ? l10n.itemActionSheetAttunementCapReachedLabel(
+                        CharacterDetail.attunementCap,
+                      )
                     : null,
                 onTap: () =>
                     Navigator.of(context).pop(_ItemSheetAction.toggleAttuned),
@@ -272,7 +282,7 @@ class _ItemActionSheetContent extends StatelessWidget {
             const SheetActionDivider(),
             SheetActionRow(
               icon: Icons.delete_outline,
-              label: 'Retirer',
+              label: l10n.itemActionSheetRemoveLabel,
               color: AppColors.accentBrick,
               onTap: () => Navigator.of(context).pop(_ItemSheetAction.remove),
             ),
@@ -294,58 +304,62 @@ Future<bool?> showRemoveInventoryItemConfirmationDialog(
 }) {
   return showDialog<bool>(
     context: context,
-    builder: (context) => Dialog(
-      backgroundColor: AppColors.parchmentCard,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        side: const BorderSide(
-          color: AppColors.woodLight,
-          width: AppBorders.card,
+    builder: (context) {
+      final l10n = AppLocalizations.of(context)!;
+      return Dialog(
+        backgroundColor: AppColors.parchmentCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          side: const BorderSide(
+            color: AppColors.woodLight,
+            width: AppBorders.card,
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Retirer $itemName ?',
-              style: AppTypography.body(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Cette action est définitive.',
-              style: AppTypography.body(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'Annuler',
-                    surface: SecondaryButtonSurface.parchment,
-                    onPressed: () => Navigator.of(context).pop(false),
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.itemActionSheetRemoveConfirmationTitle(itemName),
+                style: AppTypography.body(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: DestructiveButton(
-                    label: 'Retirer',
-                    onPressed: () => Navigator.of(context).pop(true),
-                  ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                l10n.itemActionSheetRemoveConfirmationBody,
+                style: AppTypography.body(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: SecondaryButton(
+                      label: l10n.itemActionSheetRemoveConfirmationCancelButton,
+                      surface: SecondaryButtonSurface.parchment,
+                      onPressed: () => Navigator.of(context).pop(false),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: DestructiveButton(
+                      label:
+                          l10n.itemActionSheetRemoveConfirmationConfirmButton,
+                      onPressed: () => Navigator.of(context).pop(true),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }

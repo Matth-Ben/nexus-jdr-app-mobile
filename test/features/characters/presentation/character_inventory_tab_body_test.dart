@@ -73,6 +73,7 @@ Future<_Recorder> _pump(
   WidgetTester tester,
   CharacterDetail detail, {
   bool actionsDisabled = false,
+  Locale locale = const Locale('fr'),
 }) async {
   final recorder = _Recorder();
   await tester.pumpWidget(
@@ -85,7 +86,7 @@ Future<_Recorder> _pump(
       // complète.
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('fr'),
+      locale: locale,
       home: Scaffold(
         body: CharacterInventoryTabBody(
           detail: detail,
@@ -596,6 +597,9 @@ void main() {
       var rewardTapCount = 0;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('fr'),
           home: Scaffold(
             body: CharacterInventoryTabBody(
               detail: _detail(),
@@ -1106,6 +1110,109 @@ void main() {
         find.text('Surchargé — poids supérieur à la capacité de transport.'),
         findsNothing,
       );
+    });
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement. Les
+    // libellés `InventoryCategoryFilter.label`/`CurrencyKind.fullLabel`
+    // (classes domain sans `BuildContext`) restent en français, hors
+    // périmètre de ce lot — voir le registre de dette technique.
+    testWidgets(
+      'état vide, bouton filtre, jauge "CHARGE" et sheet de monnaie en '
+      'anglais',
+      (tester) async {
+        await _pump(tester, _detail(currencyGp: 5), locale: const Locale('en'));
+
+        expect(find.text('EMPTY INVENTORY'), findsOneWidget);
+        expect(find.text('No item in this inventory yet.'), findsOneWidget);
+        expect(find.text('Item'), findsOneWidget);
+        expect(find.text('LOAD'), findsOneWidget);
+        expect(find.text('0 / 75 kg'), findsOneWidget);
+
+        await tester.tap(find.text('PO'));
+        await tester.pumpAndSettle();
+
+        // `currencyLabel` reste `CurrencyKind.fullLabel`, non traduit.
+        expect(find.text("Adjust pièces d'or"), findsOneWidget);
+        // `SegmentedToggle` met ses libellés en majuscules (voir
+        // `core/widgets/segmented_toggle.dart`).
+        expect(find.text('ADD'), findsOneWidget);
+        expect(find.text('REMOVE'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'filtre de catégorie, badge ÉQUIPÉ et bouton RÉCOMPENSE en anglais',
+      (tester) async {
+        await _pump(
+          tester,
+          _detail(
+            inventory: const [
+              CharacterInventoryItem(
+                id: 'inv-1',
+                itemId: 2,
+                name: 'Grimoire',
+                category: 'objet_magique',
+                quantity: 1,
+                equipped: true,
+                totalWeight: 3,
+              ),
+            ],
+          ),
+          locale: const Locale('en'),
+        );
+
+        // Le libellé du filtre actif reste `InventoryCategoryFilter.label`
+        // (domain, non traduit), le préfixe "Filter: " est lui bien anglais.
+        expect(find.text('Filter: Tout'), findsOneWidget);
+        expect(find.text('EQUIPPED'), findsOneWidget);
+        expect(find.text('REWARD'), findsOneWidget);
+      },
+    );
+
+    testWidgets('alerte de surcharge en anglais', (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          abilityScores: const {'str': 8},
+          inventory: const [
+            CharacterInventoryItem(
+              id: 'inv-1',
+              itemId: 1,
+              name: 'Enclume',
+              category: 'equipement_general',
+              quantity: 1,
+              equipped: false,
+              totalWeight: 100,
+            ),
+          ],
+        ),
+        locale: const Locale('en'),
+      );
+
+      expect(
+        find.text('Overloaded — weight exceeds carrying capacity.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('catégorie filtrée sans objet correspondant en anglais', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _detail(inventory: const [_customItem]),
+        locale: const Locale('en'),
+      );
+
+      await tester.tap(find.textContaining('Filter: '));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Armes'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No item in this category.'), findsOneWidget);
     });
   });
 }

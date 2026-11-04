@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../character_creation/domain/gold_amount_formatter.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
@@ -111,6 +112,7 @@ class _ItemInfoPanelContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Une arme n'affiche jamais le bouton "Équiper"/"Déséquiper" de ce pied
     // (armure/bouclier gardent le leur inchangé) : équiper une arme requiert
     // de choisir un set ("set principal"/"set secondaire", voir
@@ -129,25 +131,32 @@ class _ItemInfoPanelContent extends StatelessWidget {
     final infoRows = <Widget>[
       if (item.unitWeight case final unitWeight?)
         _ItemInfoRow(
-          label: 'Poids unitaire',
-          value: '${WeightFormatter.format(unitWeight)} kg',
+          label: l10n.itemInfoPanelWeightLabel,
+          value: l10n.itemInfoPanelWeightValue(
+            WeightFormatter.format(unitWeight),
+          ),
         ),
       if (item.costAmount case final costAmount?)
         _ItemInfoRow(
-          label: 'Coût',
-          value: '${GoldAmountFormatter.format(costAmount)} po',
+          label: l10n.itemInfoPanelCostLabel,
+          value: l10n.itemInfoPanelCostValue(
+            GoldAmountFormatter.format(costAmount),
+          ),
         ),
       if (item.category == 'arme' && item.equipped && item.weaponSlot != null)
-        _ItemInfoRow(label: 'Set', value: item.weaponSlot!.label),
+        _ItemInfoRow(
+          label: l10n.itemInfoPanelSetLabel,
+          value: item.weaponSlot!.label,
+        ),
       if (weapon != null) ...[
         if (weaponAttackBonus != null)
           _ItemInfoRow(
-            label: 'Attaque',
+            label: l10n.itemInfoPanelAttackLabel,
             value: SignedModifierFormatter.format(weaponAttackBonus!),
           ),
         if (weapon.damageDice != null && weapon.damageType != null)
           _ItemInfoRow(
-            label: 'Dégâts',
+            label: l10n.itemInfoPanelDamageLabel,
             value:
                 '${weapon.damageDice}'
                 '${weaponDamageModifier == null || weaponDamageModifier == 0 ? '' : SignedModifierFormatter.format(weaponDamageModifier!)} '
@@ -155,29 +164,41 @@ class _ItemInfoPanelContent extends StatelessWidget {
           ),
         if (weapon.properties.isNotEmpty)
           _ItemInfoRow(
-            label: 'Propriétés',
+            label: l10n.itemInfoPanelPropertiesLabel,
             value: weapon.properties.join(', '),
           ),
         if (weapon.rangeNormal case final rangeNormal?)
           _ItemInfoRow(
-            label: 'Portée',
+            label: l10n.itemInfoPanelRangeLabel,
             value: weapon.rangeMax != null
-                ? '${WeightFormatter.format(rangeNormal)} m '
-                      '(max ${WeightFormatter.format(weapon.rangeMax!)} m)'
-                : '${WeightFormatter.format(rangeNormal)} m',
+                ? l10n.itemInfoPanelRangeValueWithMax(
+                    WeightFormatter.format(rangeNormal),
+                    WeightFormatter.format(weapon.rangeMax!),
+                  )
+                : l10n.itemInfoPanelRangeValue(
+                    WeightFormatter.format(rangeNormal),
+                  ),
           ),
       ],
       if (armor != null) ...[
-        _ItemInfoRow(label: 'CA de base', value: '${armor.acBase}'),
         _ItemInfoRow(
-          label: 'Bonus Dex',
+          label: l10n.itemInfoPanelArmorClassLabel,
+          value: '${armor.acBase}',
+        ),
+        _ItemInfoRow(
+          label: l10n.itemInfoPanelDexBonusLabel,
           value: InventoryArmorDexBonusFormatter.format(armor.acDexBonus),
         ),
         if (armor.strengthRequirement case final strengthRequirement?)
-          _ItemInfoRow(label: 'Force requise', value: '$strengthRequirement'),
+          _ItemInfoRow(
+            label: l10n.itemInfoPanelStrengthRequirementLabel,
+            value: '$strengthRequirement',
+          ),
         _ItemInfoRow(
-          label: 'Désavantage discrétion',
-          value: armor.stealthDisadvantage ? 'Oui' : 'Non',
+          label: l10n.itemInfoPanelStealthDisadvantageLabel,
+          value: armor.stealthDisadvantage
+              ? l10n.itemInfoPanelYesLabel
+              : l10n.itemInfoPanelNoLabel,
         ),
       ],
       if (rarity != null)
@@ -185,7 +206,7 @@ class _ItemInfoPanelContent extends StatelessWidget {
         // (contrainte de contraste déjà documentée ailleurs dans ce dépôt,
         // ex. `character_inventory_stat_boxes_row.dart`).
         _ItemInfoRow(
-          label: 'Rareté',
+          label: l10n.itemInfoPanelRarityLabel,
           value: InventoryRarityFormatter.format(rarity),
         ),
     ];
@@ -222,7 +243,7 @@ class _ItemInfoPanelContent extends StatelessWidget {
                       if (infoRows.isNotEmpty)
                         const SizedBox(height: AppSpacing.md),
                       Text(
-                        'DESCRIPTION',
+                        l10n.itemInfoPanelDescriptionSectionLabel,
                         style: AppTypography.display(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -232,7 +253,7 @@ class _ItemInfoPanelContent extends StatelessWidget {
                       Text(
                         item.description?.isNotEmpty == true
                             ? item.description!
-                            : 'Aucune description disponible.',
+                            : l10n.itemInfoPanelDescriptionUnavailable,
                         style: AppTypography.body(fontSize: 14, height: 1.4),
                       ),
                     ],
@@ -248,7 +269,7 @@ class _ItemInfoPanelContent extends StatelessWidget {
                     AppSpacing.lg,
                   ),
                   child: PrimaryButton(
-                    label: 'Utiliser',
+                    label: l10n.itemInfoPanelUseButton,
                     onPressed: () =>
                         Navigator.of(context).pop(_ItemInfoPanelAction.use),
                   ),
@@ -262,7 +283,9 @@ class _ItemInfoPanelContent extends StatelessWidget {
                     AppSpacing.lg,
                   ),
                   child: PrimaryButton(
-                    label: item.equipped ? 'Déséquiper' : 'Équiper',
+                    label: item.equipped
+                        ? l10n.itemInfoPanelUnequipButton
+                        : l10n.itemInfoPanelEquipButton,
                     onPressed: () =>
                         Navigator.of(context)
                             .pop(_ItemInfoPanelAction.toggleEquipped),
@@ -298,6 +321,7 @@ class _ToggleAttunedLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final color = disabled ? AppColors.textMuted : AppColors.textSecondary;
     return InkWell(
       onTap: disabled ? null : onTap,
@@ -316,7 +340,9 @@ class _ToggleAttunedLink extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  attuned ? 'Ne plus harmoniser' : 'Harmoniser cet objet',
+                  attuned
+                      ? l10n.itemInfoPanelStopAttuneLabel
+                      : l10n.itemInfoPanelAttuneLabel,
                   style: AppTypography.body(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -327,8 +353,9 @@ class _ToggleAttunedLink extends StatelessWidget {
             ),
             if (disabled)
               Text(
-                'Limite de ${CharacterDetail.attunementCap} objets '
-                'harmonisés atteinte.',
+                l10n.itemInfoPanelAttunementCapReachedCaption(
+                  CharacterDetail.attunementCap,
+                ),
                 style: AppTypography.body(fontSize: 11, color: color),
               ),
           ],
