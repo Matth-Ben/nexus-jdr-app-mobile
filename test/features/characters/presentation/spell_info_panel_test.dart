@@ -1634,5 +1634,91 @@ void main() {
         findsOneWidget,
       );
     });
+
+    // Gap comblé par `qa-testeur` : la sheet de choix de niveau
+    // d'emplacement (`spell_action_sheet.dart`, ouverte par `castSpellFlow`
+    // quand plusieurs niveaux sont éligibles) n'avait jusqu'ici aucun test
+    // en anglais — même fixture que le test équivalent en français
+    // ("plusieurs niveaux éligibles : 'Lancer' ouvre une sheet de choix...")
+    // plus haut dans ce fichier.
+    testWidgets('sheet de choix de niveau d\'emplacement : titre, sous-titre, '
+        'libellés de niveau et bouton "CAST" en anglais', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: _fireball,
+        spellSlots: const [
+          CharacterSpellSlot(level: 3, total: 2, used: 2), // épuisé
+          CharacterSpellSlot(level: 4, total: 1, used: 0),
+        ],
+        locale: const Locale('en'),
+      );
+
+      await tester.tap(find.widgetWithText(PrimaryButton, 'CAST'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cast Boule de feu'), findsOneWidget);
+      expect(find.text('Choose the slot level to use.'), findsOneWidget);
+      expect(find.text('Level 3'), findsOneWidget);
+      expect(find.text('Level 4'), findsOneWidget);
+      expect(find.text('Spent'), findsOneWidget);
+      expect(find.widgetWithText(SecondaryButton, 'CANCEL'), findsOneWidget);
+
+      // Confirme avec la présélection par défaut (niveau 4, seul
+      // disponible) : le bouton "Cast" de la sheet elle-même, en anglais.
+      await tester.tap(find.widgetWithText(PrimaryButton, 'CAST'));
+      await tester.pumpAndSettle();
+
+      expect(castCalls, [_fireball]);
+      expect(castLevels, [4]);
+    });
+
+    // Gap comblé par `qa-testeur` : le dialogue de confirmation avant un
+    // lancer de sort inné à charge limitée
+    // (`cast_innate_spell_confirmation_dialog.dart`) n'avait jusqu'ici aucun
+    // test en anglais — même fixture que le test français "sort inné sans
+    // emplacement : actif, aucune ligne de raison, lancé sans emplacement".
+    testWidgets(
+      'confirmation de lancer d\'un sort inné à charge limitée : titre, '
+      'message et boutons en anglais',
+      (tester) async {
+        const innateSpell = CharacterSpellEntry(
+          id: 11,
+          name: 'Ténèbres',
+          level: 2,
+          school: 'Évocation',
+          status: SpellStatus.innate,
+        );
+        await pumpPanel(
+          tester,
+          spell: innateSpell,
+          spellSlots: const [],
+          locale: const Locale('en'),
+        );
+
+        await tester.tap(find.widgetWithText(PrimaryButton, 'CAST'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Cast Ténèbres?'), findsOneWidget);
+        expect(
+          find.text(
+            'This uses up one use of this innate spell, recovered only on '
+            'your next long rest.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.widgetWithText(SecondaryButton, 'CANCEL'), findsOneWidget);
+        expect(castCalls, isEmpty);
+
+        // Sort SEULEMENT inné (pas de double route) : le panneau "Infos"
+        // s'est déjà refermé avant l'ouverture de cette confirmation (voir
+        // le test français équivalent), donc son bouton "CAST" scopé au
+        // `Dialog` n'est pas nécessaire : un seul candidat.
+        await tester.tap(find.widgetWithText(PrimaryButton, 'CAST'));
+        await tester.pumpAndSettle();
+
+        expect(castCalls, [innateSpell]);
+        expect(castSlots, [null]);
+      },
+    );
   });
 }
