@@ -13,6 +13,7 @@ import 'package:personnages/features/characters/domain/pact_weapon_option.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/pact_weapon_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/pact_weapon_picker_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakePactWeaponRepository implements PactWeaponRepository {
   _FakePactWeaponRepository({this.options = const [], this.failures = 0});
@@ -74,6 +75,7 @@ Future<_Harness> _open(
   WidgetTester tester,
   _FakePactWeaponRepository repository, {
   int? currentWeaponId,
+  Locale locale = const Locale('fr'),
 }) async {
   final harness = _Harness();
   await tester.binding.setSurfaceSize(const Size(800, 1600));
@@ -82,6 +84,14 @@ Future<_Harness> _open(
     ProviderScope(
       overrides: [pactWeaponRepositoryProvider.overrideWithValue(repository)],
       child: MaterialApp(
+        // `pact_weapon_picker_sheet.dart` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B, lot "Characters —
+        // classe/race/maîtrises") : sans ces delegates, l'appel renverrait
+        // `null` et le `!` planterait. `fr` par défaut, `en` passé
+        // explicitement par le groupe "locale anglaise" plus bas.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Scaffold(
           body: Builder(
             builder: (context) => TextButton(
@@ -218,6 +228,8 @@ void main() {
       ProviderScope(
         overrides: [pactWeaponRepositoryProvider.overrideWithValue(repository)],
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => TextButton(
               onPressed: () => showPactWeaponPickerSheet(context),
@@ -271,5 +283,30 @@ void main() {
 
     expect(harness.completed, isTrue);
     expect(harness.result, isNull);
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets('titre et indice de recherche en anglais', (tester) async {
+      await _open(
+        tester,
+        _FakePactWeaponRepository(options: [_rapier]),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('WEAPON FORM'), findsOneWidget);
+      expect(find.text('Search for a weapon...'), findsOneWidget);
+    });
+
+    testWidgets('liste vide et absence de résultat en anglais', (tester) async {
+      await _open(
+        tester,
+        _FakePactWeaponRepository(),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('No weapon available.'), findsOneWidget);
+    });
   });
 }

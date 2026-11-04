@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/domain/character_class_feature.dart';
 import 'package:personnages/features/characters/presentation/widgets/class_feature_action_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 const _rage = CharacterClassFeature(
   id: 1,
@@ -34,10 +35,20 @@ void main() {
   Future<void> pumpSheet(
     WidgetTester tester, {
     required CharacterClassFeature feature,
+    Locale locale = const Locale('fr'),
   }) async {
     useCalls = [];
     await tester.pumpWidget(
       MaterialApp(
+        // `showClassFeatureActionSheet`/`showClassFeatureInfoPanel` lisent
+        // `AppLocalizations.of(context)!` (chantier "traduction de l'app"
+        // Phase B, lot "Characters — classe/race/maîtrises") : sans ces
+        // delegates, l'appel renverrait `null` et le `!` planterait. `fr`
+        // par défaut, `en` passé explicitement par le groupe "locale
+        // anglaise" plus bas.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -132,4 +143,28 @@ void main() {
       expect(button.onPressed, isNull);
     },
   );
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets('actions "Info"/"Use", "Exhausted" et panneau "Infos" en '
+        'anglais', (tester) async {
+      await pumpSheet(
+        tester,
+        feature: _exhaustedFeature,
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('Info'), findsOneWidget);
+      expect(find.text('Use'), findsOneWidget);
+      expect(find.text('Exhausted'), findsOneWidget);
+
+      await tester.tap(find.text('Info'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Obtained at level 2.'), findsOneWidget);
+      expect(find.text('Uses'), findsOneWidget);
+      expect(find.text('DESCRIPTION'), findsOneWidget);
+    });
+  });
 }

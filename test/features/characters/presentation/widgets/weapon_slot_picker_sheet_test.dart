@@ -12,6 +12,7 @@ import 'package:personnages/core/widgets/sheet_header_bar.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/weapon_slot_picker_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 CharacterInventoryItem _weapon({
   required String id,
@@ -38,6 +39,7 @@ Future<_SheetResult> _open(
   String currentItemId = 'inv-99',
   double textScale = 1,
   Size screenSize = const Size(800, 600),
+  Locale locale = const Locale('fr'),
 }) async {
   tester.view.physicalSize = screenSize;
   tester.view.devicePixelRatio = 1;
@@ -46,6 +48,14 @@ Future<_SheetResult> _open(
   final result = _SheetResult();
   await tester.pumpWidget(
     MaterialApp(
+      // `weapon_slot_picker_sheet.dart` lit `AppLocalizations.of(context)!`
+      // (chantier "traduction de l'app" Phase B, lot "Characters —
+      // classe/race/maîtrises") : sans ces delegates, l'appel renverrait
+      // `null` et le `!` planterait. `fr` par défaut, `en` passé
+      // explicitement par le groupe "locale anglaise" plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
             .copyWith(textScaler: TextScaler.linear(textScale)),
@@ -239,5 +249,18 @@ void main() {
       'directement la sheet', (tester) async {
     await _open(tester);
     expect(find.byType(PrimaryButton), findsNothing);
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement. Le libellé
+    // "Set principal"/"Set secondaire" ([WeaponSlot.label]) reste en
+    // français (hors périmètre de ce lot, voir le rapport de la tâche).
+    testWidgets('titre et "Empty" en anglais', (tester) async {
+      await _open(tester, locale: const Locale('en'));
+
+      expect(find.text('CHOOSE A SET'), findsOneWidget);
+      expect(find.text('Empty'), findsNWidgets(2));
+    });
   });
 }

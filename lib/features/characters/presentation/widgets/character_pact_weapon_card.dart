@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/compact_action_button.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/inventory_category_rules.dart';
 import '../../domain/pact_weapon_option.dart';
 import 'character_name_tag_chip.dart';
@@ -46,16 +47,9 @@ class CharacterPactWeaponCard extends StatelessWidget {
   /// d'édition visible, à proscrire en lecture seule).
   final bool readOnly;
 
-  static const String cursedBladeText =
-      'Lame maudite : vous pouvez utiliser le Charisme à la place de la '
-      "Force ou de la Dextérité pour l'attaque et les dégâts.";
-
-  static const String reminderText =
-      "Invoquée par une action. Disparaît si elle reste à plus de 1,50 m de "
-      "vous pendant 1 minute, ou si vous l'invoquez à nouveau.";
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final current = weapon;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -68,7 +62,7 @@ class CharacterPactWeaponCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ARME DE PACTE',
+            l10n.characterPactWeaponCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,
@@ -82,14 +76,16 @@ class CharacterPactWeaponCard extends StatelessWidget {
           ],
           const SizedBox(height: AppSpacing.sm),
           Text(
-            reminderText,
+            l10n.characterPactWeaponCardReminderText,
             style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
           ),
           if (!readOnly) ...[
             const SizedBox(height: AppSpacing.sm),
             CompactActionButton(
               icon: Icons.swap_horiz,
-              label: current == null ? 'Choisir une forme' : 'Changer de forme',
+              label: current == null
+                  ? l10n.characterPactWeaponCardChooseFormButton
+                  : l10n.characterPactWeaponCardChangeFormButton,
               onTap: onChangeForm,
             ),
           ],
@@ -106,6 +102,7 @@ class _Weapon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final damage = weapon.damageLabel;
     final properties = weapon.propertiesLabel;
     return Column(
@@ -115,8 +112,11 @@ class _Weapon extends StatelessWidget {
           container: true,
           excludeSemantics: true,
           label: damage == null
-              ? 'Arme de pacte : ${weapon.name}'
-              : 'Arme de pacte : ${weapon.name}, $damage',
+              ? l10n.characterPactWeaponCardSemanticLabel(weapon.name)
+              : l10n.characterPactWeaponCardSemanticLabelWithDamage(
+                  weapon.name,
+                  damage,
+                ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -162,12 +162,16 @@ class _Weapon extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        const Wrap(
+        Wrap(
           spacing: AppSpacing.xs,
           runSpacing: AppSpacing.xs,
           children: [
-            CharacterNameTagChip(name: 'Arme magique'),
-            CharacterNameTagChip(name: 'Maîtrisée'),
+            CharacterNameTagChip(
+              name: l10n.characterPactWeaponCardMagicWeaponChip,
+            ),
+            CharacterNameTagChip(
+              name: l10n.characterPactWeaponCardProficientChip,
+            ),
           ],
         ),
       ],
@@ -180,11 +184,12 @@ class _EmptyWeapon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Aucune forme choisie',
+          l10n.characterPactWeaponCardEmptyTitle,
           style: AppTypography.body(
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -192,7 +197,7 @@ class _EmptyWeapon extends StatelessWidget {
           ),
         ),
         Text(
-          "Choisissez la forme que prend votre arme lorsque vous l'invoquez.",
+          l10n.characterPactWeaponCardEmptyDescription,
           style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
         ),
       ],
@@ -205,6 +210,7 @@ class _CursedBladeLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -219,7 +225,7 @@ class _CursedBladeLine extends StatelessWidget {
         const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: Text(
-            CharacterPactWeaponCard.cursedBladeText,
+            l10n.characterPactWeaponCardCursedBladeText,
             style: AppTypography.body(
               fontSize: 12,
               color: AppColors.textSecondary,

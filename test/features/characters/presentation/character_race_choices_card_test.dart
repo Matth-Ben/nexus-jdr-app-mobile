@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_race_choices_card.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 CharacterDetail _detail({
   List<String> raceSkillChoiceNames = const [],
@@ -28,9 +29,21 @@ CharacterDetail _detail({
   );
 }
 
-Future<void> _pump(WidgetTester tester, CharacterDetail detail) async {
+Future<void> _pump(
+  WidgetTester tester,
+  CharacterDetail detail, {
+  Locale locale = const Locale('fr'),
+}) async {
   await tester.pumpWidget(
     MaterialApp(
+      // `CharacterRaceChoicesCard` lit `AppLocalizations.of(context)!`
+      // (chantier "traduction de l'app" Phase B, lot "Characters —
+      // classe/race/maîtrises") : sans ces delegates, l'appel renverrait
+      // `null` et le `!` planterait. `fr` par défaut, `en` passé
+      // explicitement par le groupe "locale anglaise" plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(body: CharacterRaceChoicesCard(detail: detail)),
     ),
   );
@@ -126,6 +139,25 @@ void main() {
     test('false si ni compétence ni outil de race ne sont renseignés '
         '(la grande majorité des races)', () {
       expect(CharacterRaceChoicesCard.hasContent(_detail()), isFalse);
+    });
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets('titre et libellés "Skill"/"Tool" en anglais', (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          raceSkillChoiceNames: const ['Persuasion'],
+          raceToolChoiceNames: const ['Outils de forgeron'],
+        ),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('RACE CHOICES'), findsOneWidget);
+      expect(find.text('Skill'), findsOneWidget);
+      expect(find.text('Tool'), findsOneWidget);
     });
   });
 }

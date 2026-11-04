@@ -15,6 +15,7 @@ import 'package:personnages/features/characters/domain/proficiency_catalog.dart'
 import 'package:personnages/features/characters/domain/proficiency_token_resolver.dart';
 import 'package:personnages/features/characters/presentation/providers/proficiency_catalog_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/proficiency_detail_panel.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeProficiencyCatalogRepository
     implements ProficiencyCatalogRepository {
@@ -84,6 +85,7 @@ Future<void> _open(
   _FakeProficiencyCatalogRepository repository, {
   required String token,
   required ProficiencyTokenKind kind,
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.binding.setSurfaceSize(const Size(800, 1600));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -93,6 +95,14 @@ Future<void> _open(
         proficiencyCatalogRepositoryProvider.overrideWithValue(repository),
       ],
       child: MaterialApp(
+        // `proficiency_detail_panel.dart` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B, lot "Characters —
+        // classe/race/maîtrises") : sans ces delegates, l'appel renverrait
+        // `null` et le `!` planterait. `fr` par défaut, `en` passé
+        // explicitement par le groupe "locale anglaise" plus bas.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Scaffold(
           body: Builder(
             builder: (context) => TextButton(
@@ -267,6 +277,8 @@ void main() {
           proficiencyCatalogRepositoryProvider.overrideWithValue(repository),
         ],
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) => TextButton(
               onPressed: () => showProficiencyDetailPanel(
@@ -333,5 +345,92 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('ARMES COURANTES'), findsNothing);
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets('gabarit complet d\'armure en anglais', (tester) async {
+      await _open(
+        tester,
+        _FakeProficiencyCatalogRepository(
+          catalog: const ProficiencyCatalog(armors: [_plateArmor]),
+        ),
+        token: 'lourde',
+        kind: ProficiencyTokenKind.armor,
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('Base AC'), findsOneWidget);
+      expect(find.text('Dex bonus'), findsOneWidget);
+      expect(find.text('Strength requirement'), findsOneWidget);
+      expect(find.text('Stealth disadvantage'), findsOneWidget);
+      expect(find.text('Yes'), findsOneWidget);
+    });
+
+    testWidgets('gabarit réduit de bouclier en anglais', (tester) async {
+      await _open(
+        tester,
+        _FakeProficiencyCatalogRepository(
+          catalog: const ProficiencyCatalog(shields: [_shield]),
+        ),
+        token: 'boucliers',
+        kind: ProficiencyTokenKind.armor,
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('AC'), findsOneWidget);
+    });
+
+    testWidgets('ligne "Properties" en anglais', (tester) async {
+      await _open(
+        tester,
+        _FakeProficiencyCatalogRepository(
+          catalog: const ProficiencyCatalog(weapons: [_dagger]),
+        ),
+        token: 'courantes',
+        kind: ProficiencyTokenKind.weapon,
+        locale: const Locale('en'),
+      );
+
+      expect(find.textContaining('Properties: '), findsOneWidget);
+    });
+
+    testWidgets('message d\'erreur en anglais', (tester) async {
+      await _open(
+        tester,
+        _FakeProficiencyCatalogRepository(
+          catalog: const ProficiencyCatalog(weapons: [_dagger]),
+          failures: 1,
+        ),
+        token: 'courantes',
+        kind: ProficiencyTokenKind.weapon,
+        locale: const Locale('en'),
+      );
+
+      expect(
+        find.text('Unable to load the catalog. Please try again.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('état vide "boucliers (non métalliques)" en anglais', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        _FakeProficiencyCatalogRepository(
+          catalog: const ProficiencyCatalog(shields: [_shield]),
+        ),
+        token: 'boucliers (non métalliques)',
+        kind: ProficiencyTokenKind.armor,
+        locale: const Locale('en'),
+      );
+
+      expect(
+        find.text('No non-metal shield available in the current catalog.'),
+        findsOneWidget,
+      );
+    });
   });
 }

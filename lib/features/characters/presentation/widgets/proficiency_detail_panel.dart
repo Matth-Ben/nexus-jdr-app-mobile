@@ -8,6 +8,7 @@ import '../../../../core/widgets/dice_type_badge.dart';
 import '../../../../core/widgets/error_retry_state.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/dice_notation_parser.dart';
 import '../../domain/inventory_armor_dex_bonus_formatter.dart';
 import '../../domain/pact_weapon_rules.dart';
@@ -52,6 +53,7 @@ class _ProficiencyDetailPanelContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final catalogAsync = ref.watch(proficiencyCatalogProvider);
 
     return SafeArea(
@@ -67,14 +69,14 @@ class _ProficiencyDetailPanelContent extends ConsumerWidget {
               ),
               Expanded(
                 child: catalogAsync.when(
-                  data: _buildDetail,
+                  data: (catalog) => _buildDetail(catalog, l10n),
                   loading: () => const Center(
                     child: CircularProgressIndicator(
                       color: AppColors.woodMedium,
                     ),
                   ),
                   error: (error, stackTrace) => ErrorRetryState(
-                    message: 'Impossible de charger le catalogue. Réessayez.',
+                    message: l10n.proficiencyDetailPanelLoadErrorMessage,
                     onRetry: () => ref.invalidate(proficiencyCatalogProvider),
                   ),
                 ),
@@ -86,7 +88,7 @@ class _ProficiencyDetailPanelContent extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetail(ProficiencyCatalog catalog) {
+  Widget _buildDetail(ProficiencyCatalog catalog, AppLocalizations l10n) {
     final ProficiencyTokenDetail detail = switch (kind) {
       ProficiencyTokenKind.weapon => ProficiencyTokenResolver.resolveWeapon(
         token: token,
@@ -108,10 +110,8 @@ class _ProficiencyDetailPanelContent extends ConsumerWidget {
       // par la spec, signalé dans le rapport de cette tâche).
       final message =
           PactWeaponRules.normalize(token) == 'boucliers (non metalliques)'
-          ? 'Aucun bouclier non métallique disponible dans le catalogue '
-                'actuel.'
-          : 'Aucun objet correspondant disponible dans le catalogue '
-                'actuel.';
+          ? l10n.proficiencyDetailPanelNoNonMetallicShieldMessage
+          : l10n.proficiencyDetailPanelNoMatchingItemMessage;
       return _EmptyCatalogState(message: message);
     }
 
@@ -169,6 +169,7 @@ class _WeaponDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dice = weapon.damageDice != null
         ? DiceNotationParser.parse(weapon.damageDice!)
         : null;
@@ -215,7 +216,7 @@ class _WeaponDetailRow extends StatelessWidget {
               TextSpan(
                 children: [
                   TextSpan(
-                    text: 'Propriétés : ',
+                    text: l10n.proficiencyDetailPanelPropertiesLabel,
                     style: AppTypography.body(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -250,6 +251,7 @@ class _ArmorDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isShield = armor.category == 'bouclier';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
@@ -266,20 +268,29 @@ class _ArmorDetailRow extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           if (isShield)
-            _DetailInfoRow(label: 'CA', value: '+${armor.acBase}')
-          else ...[
-            _DetailInfoRow(label: 'CA de base', value: '${armor.acBase}'),
             _DetailInfoRow(
-              label: 'Bonus Dex',
+              label: l10n.proficiencyDetailPanelAcLabel,
+              value: '+${armor.acBase}',
+            )
+          else ...[
+            _DetailInfoRow(
+              label: l10n.proficiencyDetailPanelAcBaseLabel,
+              value: '${armor.acBase}',
+            ),
+            _DetailInfoRow(
+              label: l10n.proficiencyDetailPanelDexBonusLabel,
               value: InventoryArmorDexBonusFormatter.format(armor.acDexBonus),
             ),
             if (armor.strengthRequirement case final strengthRequirement?)
               _DetailInfoRow(
-                label: 'Force requise',
+                label: l10n.proficiencyDetailPanelStrengthRequirementLabel,
                 value: '$strengthRequirement',
               ),
             if (armor.stealthDisadvantage)
-              _DetailInfoRow(label: 'Désavantage discrétion', value: 'Oui'),
+              _DetailInfoRow(
+                label: l10n.proficiencyDetailPanelStealthDisadvantageLabel,
+                value: l10n.proficiencyDetailPanelYesLabel,
+              ),
           ],
         ],
       ),

@@ -3139,5 +3139,261 @@
   "levelUpScreenRetryButton": "Réessayer",
   "@levelUpScreenRetryButton": {
     "description": "Bouton secondaire \"Réessayer\" de `_ErrorState`."
+  },
+  "characterClassChoicesCardTitle": "CHOIX DE CLASSE",
+  "@characterClassChoicesCardTitle": {
+    "description": "Titre de `CharacterClassChoicesCard`, onglet \"Compétences\"."
+  },
+  "characterClassChoicesCardSubclassLabel": "Sous-classe",
+  "@characterClassChoicesCardSubclassLabel": {
+    "description": "Libellé d'une entrée \"Sous-classe\" quand une seule classe du personnage a une sous-classe choisie (cas le plus courant)."
+  },
+  "characterClassChoicesCardSubclassLabelWithClass": "Sous-classe ({className})",
+  "@characterClassChoicesCardSubclassLabelWithClass": {
+    "description": "Libellé d'une entrée \"Sous-classe\" désambiguïsé par nom de classe, quand plus d'une classe du personnage a une sous-classe choisie (multiclassage).",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "characterClassFeaturesCardTitle": "APTITUDES DE CLASSE",
+  "@characterClassFeaturesCardTitle": {
+    "description": "Titre par défaut de `CharacterClassFeaturesCard` (surchargeable via son paramètre `title`, voir `character_spells_tab_body.dart`)."
+  },
+  "characterClassFeaturesCardPassiveLabel": "Passive",
+  "@characterClassFeaturesCardPassiveLabel": {
+    "description": "Libellé affiché à droite d'une aptitude de classe passive (sans compteur d'usage), carte `CharacterClassFeaturesCard`."
+  },
+  "characterFeatsCardTitle": "DONS",
+  "@characterFeatsCardTitle": {
+    "description": "Titre de `CharacterFeatsCard`, onglet \"Aptitudes\"."
+  },
+  "characterRacialTraitsCardTitle": "TRAITS RACIAUX",
+  "@characterRacialTraitsCardTitle": {
+    "description": "Titre de `CharacterRacialTraitsCard`, onglet \"Aptitudes\"."
+  },
+  "characterRacialTraitsCardPassiveLabel": "Passive",
+  "@characterRacialTraitsCardPassiveLabel": {
+    "description": "Libellé affiché à droite de chaque trait racial, toujours \"Passive\" (décision tranchée, voir la doc de classe de `CharacterRacialTraitsCard`)."
+  },
+  "characterRaceChoicesCardTitle": "CHOIX DE RACE",
+  "@characterRaceChoicesCardTitle": {
+    "description": "Titre de `CharacterRaceChoicesCard`, onglet \"Compétences\"."
+  },
+  "characterRaceChoicesCardSkillLabel": "Compétence",
+  "@characterRaceChoicesCardSkillLabel": {
+    "description": "Libellé d'une entrée de compétence de race à choix, carte `CharacterRaceChoicesCard`."
+  },
+  "characterRaceChoicesCardToolLabel": "Outil",
+  "@characterRaceChoicesCardToolLabel": {
+    "description": "Libellé d'une entrée d'outil de race à choix, carte `CharacterRaceChoicesCard`."
+  },
+  "characterArmorProficienciesCardTitle": "MAÎTRISES D'ARMURES",
+  "@characterArmorProficienciesCardTitle": {
+    "description": "Titre de `CharacterArmorProficienciesCard`, onglet \"Compétences\"."
+  },
+  "characterWeaponProficienciesCardTitle": "MAÎTRISES D'ARMES",
+  "@characterWeaponProficienciesCardTitle": {
+    "description": "Titre de `CharacterWeaponProficienciesCard`, onglet \"Compétences\"."
+  },
+  "characterToolProficienciesCardTitle": "MAÎTRISES D'OUTILS",
+  "@characterToolProficienciesCardTitle": {
+    "description": "Titre de `CharacterToolProficienciesCard`, onglet \"Compétences\"."
+  },
+  "characterLanguagesCardTitle": "LANGUES CONNUES",
+  "@characterLanguagesCardTitle": {
+    "description": "Titre de `CharacterLanguagesCard`, onglet \"Compétences\"."
+  },
+  "characterInvocationsCardTitle": "INVOCATIONS CONNUES",
+  "@characterInvocationsCardTitle": {
+    "description": "Titre de `CharacterInvocationsCard`, onglet \"Compétences\"."
+  },
+  "characterPactWeaponCardTitle": "ARME DE PACTE",
+  "@characterPactWeaponCardTitle": {
+    "description": "Titre de `CharacterPactWeaponCard`, onglet \"Personnage\" (Occultiste, Pacte de la lame)."
+  },
+  "characterPactWeaponCardCursedBladeText": "Lame maudite : vous pouvez utiliser le Charisme à la place de la Force ou de la Dextérité pour l'attaque et les dégâts.",
+  "@characterPactWeaponCardCursedBladeText": {
+    "description": "Ligne d'information affichée quand la sous-classe du personnage est Lame maudite, carte `CharacterPactWeaponCard`."
+  },
+  "characterPactWeaponCardReminderText": "Invoquée par une action. Disparaît si elle reste à plus de 1,50 m de vous pendant 1 minute, ou si vous l'invoquez à nouveau.",
+  "@characterPactWeaponCardReminderText": {
+    "description": "Rappel de règle toujours affiché en pied de `CharacterPactWeaponCard`."
+  },
+  "characterPactWeaponCardMagicWeaponChip": "Arme magique",
+  "@characterPactWeaponCardMagicWeaponChip": {
+    "description": "Chip \"Arme magique\" de `CharacterPactWeaponCard` quand une forme est choisie."
+  },
+  "characterPactWeaponCardProficientChip": "Maîtrisée",
+  "@characterPactWeaponCardProficientChip": {
+    "description": "Chip \"Maîtrisée\" de `CharacterPactWeaponCard` quand une forme est choisie."
+  },
+  "characterPactWeaponCardEmptyTitle": "Aucune forme choisie",
+  "@characterPactWeaponCardEmptyTitle": {
+    "description": "Titre de l'état vide de `CharacterPactWeaponCard` (aucune forme choisie encore)."
+  },
+  "characterPactWeaponCardEmptyDescription": "Choisissez la forme que prend votre arme lorsque vous l'invoquez.",
+  "@characterPactWeaponCardEmptyDescription": {
+    "description": "Description de l'état vide de `CharacterPactWeaponCard`."
+  },
+  "characterPactWeaponCardChooseFormButton": "Choisir une forme",
+  "@characterPactWeaponCardChooseFormButton": {
+    "description": "Libellé du bouton de `CharacterPactWeaponCard` quand aucune forme n'est encore choisie."
+  },
+  "characterPactWeaponCardChangeFormButton": "Changer de forme",
+  "@characterPactWeaponCardChangeFormButton": {
+    "description": "Libellé du bouton de `CharacterPactWeaponCard` quand une forme est déjà choisie."
+  },
+  "characterPactWeaponCardSemanticLabel": "Arme de pacte : {name}",
+  "@characterPactWeaponCardSemanticLabel": {
+    "description": "Libellé d'accessibilité (`Semantics.label`) de la forme choisie quand aucun dé de dégâts n'est connu, `CharacterPactWeaponCard`.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "characterPactWeaponCardSemanticLabelWithDamage": "Arme de pacte : {name}, {damage}",
+  "@characterPactWeaponCardSemanticLabelWithDamage": {
+    "description": "Libellé d'accessibilité (`Semantics.label`) de la forme choisie quand un dé de dégâts est connu, `CharacterPactWeaponCard`.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "damage": {
+        "type": "String"
+      }
+    }
+  },
+  "classFeatureActionSheetInfoLabel": "Infos",
+  "@classFeatureActionSheetInfoLabel": {
+    "description": "Libellé de l'action \"Infos\" de `showClassFeatureActionSheet`."
+  },
+  "classFeatureActionSheetUseLabel": "Utiliser",
+  "@classFeatureActionSheetUseLabel": {
+    "description": "Libellé de l'action \"Utiliser\" de `showClassFeatureActionSheet`."
+  },
+  "classFeatureActionSheetExhaustedLabel": "Épuisée",
+  "@classFeatureActionSheetExhaustedLabel": {
+    "description": "Texte de fin de ligne de l'action \"Utiliser\" quand l'aptitude n'a plus d'utilisation restante, `showClassFeatureActionSheet`."
+  },
+  "classFeatureInfoPanelObtainedAtLevel": "Obtenue au niveau {level}.",
+  "@classFeatureInfoPanelObtainedAtLevel": {
+    "description": "Ligne \"niveau d'obtention\" du panneau \"Infos\" d'une aptitude de classe, `showClassFeatureInfoPanel`.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "classFeatureInfoPanelUsesLabel": "Utilisations",
+  "@classFeatureInfoPanelUsesLabel": {
+    "description": "Libellé de la ligne \"Utilisations\" du panneau \"Infos\" d'une aptitude de classe, `showClassFeatureInfoPanel`."
+  },
+  "classFeatureInfoPanelPassiveLabel": "Passive",
+  "@classFeatureInfoPanelPassiveLabel": {
+    "description": "Valeur de la ligne \"Utilisations\" quand l'aptitude est passive, `showClassFeatureInfoPanel`."
+  },
+  "classFeatureInfoPanelDescriptionLabel": "DESCRIPTION",
+  "@classFeatureInfoPanelDescriptionLabel": {
+    "description": "Titre de section \"DESCRIPTION\" du panneau \"Infos\" d'une aptitude de classe, `showClassFeatureInfoPanel`."
+  },
+  "classFeatureInfoPanelDescriptionUnavailable": "Description indisponible.",
+  "@classFeatureInfoPanelDescriptionUnavailable": {
+    "description": "Repli affiché quand la description de l'aptitude est vide, `showClassFeatureInfoPanel`."
+  },
+  "classFeatureInfoPanelUseButton": "Utiliser",
+  "@classFeatureInfoPanelUseButton": {
+    "description": "Bouton primaire de pied du panneau \"Infos\" d'une aptitude de classe à usage limité, `showClassFeatureInfoPanel`."
+  },
+  "featInfoPanelPrerequisiteLabel": "Prérequis : {prerequisite}",
+  "@featInfoPanelPrerequisiteLabel": {
+    "description": "Ligne \"Prérequis\" du panneau \"Infos\" d'un don, `showFeatInfoPanel`, quand renseigné.",
+    "placeholders": {
+      "prerequisite": {
+        "type": "String"
+      }
+    }
+  },
+  "featInfoPanelDescriptionLabel": "DESCRIPTION",
+  "@featInfoPanelDescriptionLabel": {
+    "description": "Titre de section \"DESCRIPTION\" du panneau \"Infos\" d'un don, `showFeatInfoPanel`."
+  },
+  "racialTraitInfoPanelDescriptionLabel": "DESCRIPTION",
+  "@racialTraitInfoPanelDescriptionLabel": {
+    "description": "Titre de section \"DESCRIPTION\" du panneau \"Infos\" d'un trait racial, `showRacialTraitInfoPanel`."
+  },
+  "racialTraitInfoPanelDescriptionUnavailable": "Description indisponible.",
+  "@racialTraitInfoPanelDescriptionUnavailable": {
+    "description": "Repli affiché quand la description du trait racial est vide, `showRacialTraitInfoPanel`."
+  },
+  "proficiencyDetailPanelLoadErrorMessage": "Impossible de charger le catalogue. Réessayez.",
+  "@proficiencyDetailPanelLoadErrorMessage": {
+    "description": "Message d'erreur de chargement du catalogue, `showProficiencyDetailPanel`."
+  },
+  "proficiencyDetailPanelNoNonMetallicShieldMessage": "Aucun bouclier non métallique disponible dans le catalogue actuel.",
+  "@proficiencyDetailPanelNoNonMetallicShieldMessage": {
+    "description": "Message d'état vide dédié au token 'boucliers (non métalliques)', toujours vide dans ce catalogue — voir `DruidNonMetallicEquipment`."
+  },
+  "proficiencyDetailPanelNoMatchingItemMessage": "Aucun objet correspondant disponible dans le catalogue actuel.",
+  "@proficiencyDetailPanelNoMatchingItemMessage": {
+    "description": "Message d'état vide générique de repli (cas défensif, non couvert par la spec direction-artistique), `showProficiencyDetailPanel`."
+  },
+  "proficiencyDetailPanelPropertiesLabel": "Propriétés : ",
+  "@proficiencyDetailPanelPropertiesLabel": {
+    "description": "Préfixe de la ligne \"Propriétés\" d'une arme, `showProficiencyDetailPanel`."
+  },
+  "proficiencyDetailPanelAcLabel": "CA",
+  "@proficiencyDetailPanelAcLabel": {
+    "description": "Libellé de la ligne \"CA\" du gabarit réduit d'un bouclier, `showProficiencyDetailPanel`."
+  },
+  "proficiencyDetailPanelAcBaseLabel": "CA de base",
+  "@proficiencyDetailPanelAcBaseLabel": {
+    "description": "Libellé de la ligne \"CA de base\" du gabarit complet d'une armure, `showProficiencyDetailPanel`."
+  },
+  "proficiencyDetailPanelDexBonusLabel": "Bonus Dex",
+  "@proficiencyDetailPanelDexBonusLabel": {
+    "description": "Libellé de la ligne \"Bonus Dex\" du gabarit complet d'une armure, `showProficiencyDetailPanel`."
+  },
+  "proficiencyDetailPanelStrengthRequirementLabel": "Force requise",
+  "@proficiencyDetailPanelStrengthRequirementLabel": {
+    "description": "Libellé de la ligne \"Force requise\" du gabarit complet d'une armure, quand renseignée, `showProficiencyDetailPanel`."
+  },
+  "proficiencyDetailPanelStealthDisadvantageLabel": "Désavantage discrétion",
+  "@proficiencyDetailPanelStealthDisadvantageLabel": {
+    "description": "Libellé de la ligne \"Désavantage discrétion\" du gabarit complet d'une armure, quand vrai, `showProficiencyDetailPanel`."
+  },
+  "proficiencyDetailPanelYesLabel": "Oui",
+  "@proficiencyDetailPanelYesLabel": {
+    "description": "Valeur de la ligne \"Désavantage discrétion\" quand vrai, `showProficiencyDetailPanel`."
+  },
+  "pactWeaponPickerSheetTitle": "FORME DE L'ARME",
+  "@pactWeaponPickerSheetTitle": {
+    "description": "Titre de la feuille `showPactWeaponPickerSheet`."
+  },
+  "pactWeaponPickerSheetSearchHint": "Rechercher une arme...",
+  "@pactWeaponPickerSheetSearchHint": {
+    "description": "Texte d'indice du champ de recherche de `showPactWeaponPickerSheet`."
+  },
+  "pactWeaponPickerSheetLoadErrorMessage": "Impossible de charger les armes. Réessayez.",
+  "@pactWeaponPickerSheetLoadErrorMessage": {
+    "description": "Message d'erreur de chargement des armes éligibles, `showPactWeaponPickerSheet`."
+  },
+  "pactWeaponPickerSheetEmptyMessage": "Aucune arme disponible.",
+  "@pactWeaponPickerSheetEmptyMessage": {
+    "description": "Message d'état vide (catalogue sans arme éligible), `showPactWeaponPickerSheet`."
+  },
+  "pactWeaponPickerSheetNoResultsMessage": "Aucune arme trouvée.",
+  "@pactWeaponPickerSheetNoResultsMessage": {
+    "description": "Message affiché quand la recherche ne trouve aucune arme, `showPactWeaponPickerSheet`."
+  },
+  "weaponSlotPickerSheetTitle": "CHOISIR UN SET",
+  "@weaponSlotPickerSheetTitle": {
+    "description": "Titre de la feuille `showWeaponSlotPickerSheet`."
+  },
+  "weaponSlotPickerSheetEmptyLabel": "Vide",
+  "@weaponSlotPickerSheetEmptyLabel": {
+    "description": "Texte affiché en fin de ligne pour un set sans arme équipée, `showWeaponSlotPickerSheet`."
   }
 }

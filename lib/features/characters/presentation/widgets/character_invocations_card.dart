@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import 'character_name_tag_chip.dart';
 
 /// Carte compacte "INVOCATIONS CONNUES" de l'onglet "Compétences" — même
@@ -20,6 +21,7 @@ class CharacterInvocationsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -31,7 +33,7 @@ class CharacterInvocationsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'INVOCATIONS CONNUES',
+            l10n.characterInvocationsCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,

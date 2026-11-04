@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import 'character_name_tag_chip.dart';
 
 /// Carte compacte "MAÎTRISES D'ARMES" de l'onglet "Compétences" : les tokens
@@ -38,6 +39,7 @@ class CharacterWeaponProficienciesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -49,7 +51,7 @@ class CharacterWeaponProficienciesCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "MAÎTRISES D'ARMES",
+            l10n.characterWeaponProficienciesCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,

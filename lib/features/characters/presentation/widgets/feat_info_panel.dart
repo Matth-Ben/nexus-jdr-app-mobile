@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Ouvre le panneau "Infos" d'un don — même gabarit B que
 /// `class_feature_info_panel.dart` ([SheetHeaderBar], contenu scrollable),
@@ -57,6 +58,7 @@ class _FeatInfoPanelContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: FractionallySizedBox(
@@ -74,7 +76,7 @@ class _FeatInfoPanelContent extends StatelessWidget {
                     children: [
                       if (prerequisiteText case final prerequisite?) ...[
                         Text(
-                          'Prérequis : $prerequisite',
+                          l10n.featInfoPanelPrerequisiteLabel(prerequisite),
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textSecondary,
@@ -83,7 +85,7 @@ class _FeatInfoPanelContent extends StatelessWidget {
                         const SizedBox(height: AppSpacing.md),
                       ],
                       Text(
-                        'DESCRIPTION',
+                        l10n.featInfoPanelDescriptionLabel,
                         style: AppTypography.display(
                           fontSize: 11,
                           color: AppColors.textSecondary,

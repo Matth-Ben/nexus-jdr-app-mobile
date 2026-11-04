@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/weapon_slot.dart';
 
@@ -39,13 +40,15 @@ class _WeaponSlotPickerContent extends StatelessWidget {
   final List<CharacterInventoryItem> equippedWeapons;
   final String currentItemId;
 
-  String _occupantsLabel(WeaponSlot slot) {
+  String _occupantsLabel(WeaponSlot slot, AppLocalizations l10n) {
     final names = [
       for (final weapon in equippedWeapons)
         if (weapon.weaponSlot == slot && weapon.id != currentItemId)
           weapon.name,
     ];
-    return names.isEmpty ? 'Vide' : names.join(', ');
+    return names.isEmpty
+        ? l10n.weaponSlotPickerSheetEmptyLabel
+        : names.join(', ');
   }
 
   IconData _iconFor(WeaponSlot slot) => switch (slot) {
@@ -55,6 +58,7 @@ class _WeaponSlotPickerContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: ConstrainedBox(
         // Plafonne la hauteur de la sheet pour le contenu long (texte
@@ -69,7 +73,7 @@ class _WeaponSlotPickerContent extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SheetHeaderBar(title: 'CHOISIR UN SET'),
+              SheetHeaderBar(title: l10n.weaponSlotPickerSheetTitle),
               Flexible(
                 // `SingleChildScrollView` n'a pas de paramètre `shrinkWrap`
                 // (contrairement à `ListView`) : il n'en a pas besoin — avec
@@ -85,7 +89,7 @@ class _WeaponSlotPickerContent extends StatelessWidget {
                         SheetActionRow(
                           icon: _iconFor(slot),
                           label: slot.label,
-                          trailingText: _occupantsLabel(slot),
+                          trailingText: _occupantsLabel(slot, l10n),
                           onTap: () => Navigator.of(context).pop(slot),
                         ),
                         if (slot != WeaponSlot.values.last)

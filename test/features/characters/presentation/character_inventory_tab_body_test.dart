@@ -21,6 +21,7 @@ import 'package:personnages/features/characters/domain/inventory_catalog_item.da
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_inventory_item_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_inventory_tab_body.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 /// `find` sur un `CustomPaint` peint par [DashedBorderPainter] — plus fiable
 /// qu'un `find.byType(CustomPaint)` seul (d'autres `CustomPaint` internes à
@@ -76,6 +77,15 @@ Future<_Recorder> _pump(
   final recorder = _Recorder();
   await tester.pumpWidget(
     MaterialApp(
+      // `weapon_slot_picker_sheet.dart` (sheet "Choisir un set", ouverte par
+      // "Équiper"/"Changer de set") lit `AppLocalizations.of(context)!`
+      // (chantier "traduction de l'app" Phase B, lot "Characters —
+      // classe/race/maîtrises") : sans ces delegates, l'appel renverrait
+      // `null` et le `!` planterait — ricochet trouvé en lançant la suite
+      // complète.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('fr'),
       home: Scaffold(
         body: CharacterInventoryTabBody(
           detail: detail,

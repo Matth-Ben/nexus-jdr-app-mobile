@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/class_feature_usage_formatter.dart';
 import 'class_feature_info_panel.dart';
@@ -59,6 +60,7 @@ class _FeatureActionSheetContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Aptitude jamais encore utilisée (`character_feature_uses` sans ligne
     // pour elle) : aucune utilisation encore consommée, même repli que
     // `ClassFeatureUsageFormatter.format`.
@@ -98,14 +100,16 @@ class _FeatureActionSheetContent extends StatelessWidget {
             const Divider(height: 1, thickness: 1, color: Color(0xFFE0D2AB)),
             SheetActionRow(
               icon: Icons.info_outline,
-              label: 'Infos',
+              label: l10n.classFeatureActionSheetInfoLabel,
               onTap: () => Navigator.of(context).pop(_FeatureSheetAction.info),
             ),
             SheetActionRow(
               icon: Icons.bolt_outlined,
-              label: 'Utiliser',
+              label: l10n.classFeatureActionSheetUseLabel,
               enabled: !exhausted,
-              trailingText: exhausted ? 'Épuisée' : null,
+              trailingText: exhausted
+                  ? l10n.classFeatureActionSheetExhaustedLabel
+                  : null,
               trailingTextColor: AppColors.accentBrick,
               onTap: () => Navigator.of(context).pop(_FeatureSheetAction.use),
             ),

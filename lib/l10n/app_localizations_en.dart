@@ -2357,4 +2357,199 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get levelUpScreenRetryButton => 'Retry';
+
+  @override
+  String get characterClassChoicesCardTitle => 'CLASS CHOICES';
+
+  @override
+  String get characterClassChoicesCardSubclassLabel => 'Subclass';
+
+  @override
+  String characterClassChoicesCardSubclassLabelWithClass(String className) {
+    return 'Subclass ($className)';
+  }
+
+  @override
+  String get characterClassFeaturesCardTitle => 'CLASS FEATURES';
+
+  @override
+  String get characterClassFeaturesCardPassiveLabel => 'Passive';
+
+  @override
+  String get characterFeatsCardTitle => 'FEATS';
+
+  @override
+  String get characterRacialTraitsCardTitle => 'RACIAL TRAITS';
+
+  @override
+  String get characterRacialTraitsCardPassiveLabel => 'Passive';
+
+  @override
+  String get characterRaceChoicesCardTitle => 'RACE CHOICES';
+
+  @override
+  String get characterRaceChoicesCardSkillLabel => 'Skill';
+
+  @override
+  String get characterRaceChoicesCardToolLabel => 'Tool';
+
+  @override
+  String get characterArmorProficienciesCardTitle => 'ARMOR PROFICIENCIES';
+
+  @override
+  String get characterWeaponProficienciesCardTitle => 'WEAPON PROFICIENCIES';
+
+  @override
+  String get characterToolProficienciesCardTitle => 'TOOL PROFICIENCIES';
+
+  @override
+  String get characterLanguagesCardTitle => 'KNOWN LANGUAGES';
+
+  @override
+  String get characterInvocationsCardTitle => 'KNOWN INVOCATIONS';
+
+  @override
+  String get characterPactWeaponCardTitle => 'PACT WEAPON';
+
+  @override
+  String get characterPactWeaponCardCursedBladeText =>
+      'Hexblade: you can use your Charisma instead of Strength or Dexterity for the attack and damage rolls.';
+
+  @override
+  String get characterPactWeaponCardReminderText =>
+      'Summoned as an action. Disappears if it is more than 5 feet away from you for 1 minute, or if you summon it again.';
+
+  @override
+  String get characterPactWeaponCardMagicWeaponChip => 'Magic weapon';
+
+  @override
+  String get characterPactWeaponCardProficientChip => 'Proficient';
+
+  @override
+  String get characterPactWeaponCardEmptyTitle => 'No form chosen';
+
+  @override
+  String get characterPactWeaponCardEmptyDescription =>
+      'Choose the form your weapon takes when you summon it.';
+
+  @override
+  String get characterPactWeaponCardChooseFormButton => 'Choose a form';
+
+  @override
+  String get characterPactWeaponCardChangeFormButton => 'Change form';
+
+  @override
+  String characterPactWeaponCardSemanticLabel(String name) {
+    return 'Pact weapon: $name';
+  }
+
+  @override
+  String characterPactWeaponCardSemanticLabelWithDamage(
+    String name,
+    String damage,
+  ) {
+    return 'Pact weapon: $name, $damage';
+  }
+
+  @override
+  String get classFeatureActionSheetInfoLabel => 'Info';
+
+  @override
+  String get classFeatureActionSheetUseLabel => 'Use';
+
+  @override
+  String get classFeatureActionSheetExhaustedLabel => 'Exhausted';
+
+  @override
+  String classFeatureInfoPanelObtainedAtLevel(int level) {
+    return 'Obtained at level $level.';
+  }
+
+  @override
+  String get classFeatureInfoPanelUsesLabel => 'Uses';
+
+  @override
+  String get classFeatureInfoPanelPassiveLabel => 'Passive';
+
+  @override
+  String get classFeatureInfoPanelDescriptionLabel => 'DESCRIPTION';
+
+  @override
+  String get classFeatureInfoPanelDescriptionUnavailable =>
+      'Description unavailable.';
+
+  @override
+  String get classFeatureInfoPanelUseButton => 'Use';
+
+  @override
+  String featInfoPanelPrerequisiteLabel(String prerequisite) {
+    return 'Prerequisite: $prerequisite';
+  }
+
+  @override
+  String get featInfoPanelDescriptionLabel => 'DESCRIPTION';
+
+  @override
+  String get racialTraitInfoPanelDescriptionLabel => 'DESCRIPTION';
+
+  @override
+  String get racialTraitInfoPanelDescriptionUnavailable =>
+      'Description unavailable.';
+
+  @override
+  String get proficiencyDetailPanelLoadErrorMessage =>
+      'Unable to load the catalog. Please try again.';
+
+  @override
+  String get proficiencyDetailPanelNoNonMetallicShieldMessage =>
+      'No non-metal shield available in the current catalog.';
+
+  @override
+  String get proficiencyDetailPanelNoMatchingItemMessage =>
+      'No matching item available in the current catalog.';
+
+  @override
+  String get proficiencyDetailPanelPropertiesLabel => 'Properties: ';
+
+  @override
+  String get proficiencyDetailPanelAcLabel => 'AC';
+
+  @override
+  String get proficiencyDetailPanelAcBaseLabel => 'Base AC';
+
+  @override
+  String get proficiencyDetailPanelDexBonusLabel => 'Dex bonus';
+
+  @override
+  String get proficiencyDetailPanelStrengthRequirementLabel =>
+      'Strength requirement';
+
+  @override
+  String get proficiencyDetailPanelStealthDisadvantageLabel =>
+      'Stealth disadvantage';
+
+  @override
+  String get proficiencyDetailPanelYesLabel => 'Yes';
+
+  @override
+  String get pactWeaponPickerSheetTitle => 'WEAPON FORM';
+
+  @override
+  String get pactWeaponPickerSheetSearchHint => 'Search for a weapon...';
+
+  @override
+  String get pactWeaponPickerSheetLoadErrorMessage =>
+      'Unable to load the weapons. Please try again.';
+
+  @override
+  String get pactWeaponPickerSheetEmptyMessage => 'No weapon available.';
+
+  @override
+  String get pactWeaponPickerSheetNoResultsMessage => 'No weapon found.';
+
+  @override
+  String get weaponSlotPickerSheetTitle => 'CHOOSE A SET';
+
+  @override
+  String get weaponSlotPickerSheetEmptyLabel => 'Empty';
 }
