@@ -45,6 +45,7 @@ import 'package:personnages/features/characters/data/warlock_pact_spell_reposito
 import 'package:personnages/features/characters/domain/character_failure.dart';
 import 'package:personnages/features/characters/domain/patron_extended_spells.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   ClassCatalog? classCatalogToReturn;
@@ -272,10 +273,15 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
@@ -288,8 +294,11 @@ void main() {
         .setClass(classId: classId);
   }
 
-  Future<void> pumpSpellsStep(WidgetTester tester) async {
-    await tester.pumpWidget(buildTestWidget());
+  Future<void> pumpSpellsStep(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/new/step-6');
     await tester.pumpAndSettle();
@@ -677,6 +686,75 @@ void main() {
       expect(find.textContaining('Classe introuvable'), findsOneWidget);
     },
   );
+
+  group('locale anglaise (en) : texte UI fixe traduit, noms de sorts '
+      '(donnée D&D) jamais traduits', () {
+    testWidgets('affiche l\'infobulle "Help" pendant le chargement', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.classCatalogCompleter = Completer<ClassCatalog>();
+      selectClass(2);
+
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+      router.push('/characters/new/step-6');
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byTooltip('Help'), findsOneWidget);
+    });
+
+    testWidgets('message d\'erreur de repli (erreur générique, pas une '
+        '`CharacterCreationFailure`) et bouton "RETRY" en anglais', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.classCatalogErrorToThrow = Exception('boom');
+      selectClass(2);
+
+      await pumpSpellsStep(tester, locale: const Locale('en'));
+
+      expect(
+        find.text("Couldn't load the available spells. Try again."),
+        findsOneWidget,
+      );
+      expect(find.text('RETRY'), findsOneWidget);
+    });
+
+    testWidgets('écran nominal (bandeau, onglets de pilules, section, badge, '
+        'boutons) traduit — nom de sort (donnée D&D) jamais traduit', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.classCatalogToReturn = const ClassCatalog(
+        classes: [_barde],
+      );
+      fakeRepository.spellCatalogToReturn = _bardeSpellCatalog;
+      selectClass(2);
+
+      await pumpSpellsStep(tester, locale: const Locale('en'));
+
+      expect(find.text('7. Spells'), findsOneWidget);
+      expect(find.text('Step 7 / 10'), findsOneWidget);
+      expect(find.text('Cantrips'), findsOneWidget);
+      expect(find.text('Level 1'), findsOneWidget);
+      expect(find.text('KNOWN CANTRIPS'), findsOneWidget);
+      // Badge purement numérique : aucune forme à traduire.
+      expect(find.text('0 / 2'), findsOneWidget);
+      // Nom de sort : donnée D&D, jamais traduite.
+      expect(find.text('Trait de feu'), findsOneWidget);
+      expect(find.byTooltip('Description of Trait de feu'), findsOneWidget);
+      expect(find.text('BACK'), findsOneWidget);
+      expect(find.text('NEXT'), findsOneWidget);
+      expect(find.byTooltip('Help'), findsOneWidget);
+
+      await tester.tap(find.text('Trait de feu'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 2'), findsOneWidget);
+
+      await tester.tap(find.text('Level 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('KNOWN LEVEL 1 SPELLS'), findsOneWidget);
+      expect(find.text('0 / 4'), findsOneWidget);
+    });
+  });
 
   group('aide contextuelle / abandon (docs/cahier-des-charges/'
       '11-fonctionnalites-a-ajouter.md section 3)', () {

@@ -4118,4 +4118,124 @@ class AppLocalizationsFr extends AppLocalizations {
   String skillsAndToolsStepScreenQuotaBadge(int selectedCount, int quota) {
     return '$selectedCount / $quota choisies';
   }
+
+  @override
+  String get spellsStepScreenHelpTooltip => 'Aide';
+
+  @override
+  String get spellsStepScreenHeaderTitle => '7. Sorts';
+
+  @override
+  String spellsStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Étape $currentStep / $totalSteps';
+  }
+
+  @override
+  String get spellsStepScreenGenericErrorMessage =>
+      'Impossible de charger les sorts disponibles. Réessayez.';
+
+  @override
+  String get spellsStepScreenRetryButton => 'Réessayer';
+
+  @override
+  String get spellsStepScreenBackButton => 'Retour';
+
+  @override
+  String get spellsStepScreenNextButton => 'Suivant';
+
+  @override
+  String get spellsStepScreenCantripTabLabel => 'Mineurs';
+
+  @override
+  String get spellsStepScreenLevelOneTabLabel => 'Niveau 1';
+
+  @override
+  String get spellsStepScreenCantripSectionTitle => 'SORTS MINEURS CONNUS';
+
+  @override
+  String get spellsStepScreenLevelOneSectionTitle => 'SORTS DE NIVEAU 1 CONNUS';
+
+  @override
+  String spellsStepScreenQuotaBadge(int selectedCount, int quota) {
+    return '$selectedCount / $quota';
+  }
+
+  @override
+  String spellsStepScreenSpellInfoTooltip(String spellName) {
+    return 'Description de $spellName';
+  }
+
+  @override
+  String get equipmentStepScreenHelpTooltip => 'Aide';
+
+  @override
+  String get equipmentStepScreenHeaderTitle => '8. Équipement';
+
+  @override
+  String equipmentStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Étape $currentStep / $totalSteps';
+  }
+
+  @override
+  String get equipmentStepScreenGenericErrorMessage =>
+      'Impossible de charger l\'équipement de départ. Réessayez.';
+
+  @override
+  String get equipmentStepScreenRetryButton => 'Réessayer';
+
+  @override
+  String get equipmentStepScreenBackButton => 'Retour';
+
+  @override
+  String get equipmentStepScreenNextButton => 'Suivant';
+
+  @override
+  String get equipmentStepScreenBackgroundTabLabel => 'Historique';
+
+  @override
+  String equipmentStepScreenPurchaseTabLabel(String amount) {
+    return 'Acheter ($amount po)';
+  }
+
+  @override
+  String get equipmentStepScreenClassEquipmentSectionTitle =>
+      'ÉQUIPEMENT DE CLASSE';
+
+  @override
+  String equipmentStepScreenClassOptionTitle(String label) {
+    return 'Option $label';
+  }
+
+  @override
+  String get equipmentStepScreenHistoryEquipmentSectionTitle =>
+      'ÉQUIPEMENT DE L\'HISTORIQUE';
+
+  @override
+  String get equipmentStepScreenEmptyHistoryMessage =>
+      'Aucun équipement pour cet historique.';
+
+  @override
+  String get equipmentStepScreenEmptyShopMessage =>
+      'Aucun objet disponible à l\'achat.';
+
+  @override
+  String equipmentStepScreenOverBudgetMessage(String amount) {
+    return 'Budget dépassé de $amount po';
+  }
+
+  @override
+  String get equipmentStepScreenStartingGoldLabel => 'OR DE DÉPART';
+
+  @override
+  String get equipmentStepScreenRemainingGoldLabel => 'OR RESTANT';
+
+  @override
+  String equipmentStepScreenGoldAmount(String amount) {
+    return '$amount po';
+  }
+
+  @override
+  String equipmentStepScreenShopItemSubtitle(String category, String cost) {
+    return '$category · $cost po';
+  }
 }

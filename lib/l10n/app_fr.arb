@@ -5536,5 +5536,190 @@
         "type": "int"
       }
     }
+  },
+  "spellsStepScreenHelpTooltip": "Aide",
+  "@spellsStepScreenHelpTooltip": {
+    "description": "Infobulle de l'icône \"?\" du bandeau de l'étape 6/9 \"Sorts\"."
+  },
+  "spellsStepScreenHeaderTitle": "7. Sorts",
+  "@spellsStepScreenHeaderTitle": {
+    "description": "Titre d'étape affiché sur le bandeau bois, en-tête de `SpellsStepScreen`."
+  },
+  "spellsStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@spellsStepScreenStepCounter": {
+    "description": "Compteur d'étape affiché à droite du titre sur le bandeau bois.",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "spellsStepScreenGenericErrorMessage": "Impossible de charger les sorts disponibles. Réessayez.",
+  "@spellsStepScreenGenericErrorMessage": {
+    "description": "Message de repli affiché quand l'erreur n'est pas une `CharacterCreationFailure` (dont le message, lui, reste en français — D148, hors périmètre de ce lot)."
+  },
+  "spellsStepScreenRetryButton": "Réessayer",
+  "@spellsStepScreenRetryButton": {
+    "description": "Bouton de l'état d'erreur, relance les deux providers feuilles (classe + catalogue de sorts)."
+  },
+  "spellsStepScreenBackButton": "Retour",
+  "@spellsStepScreenBackButton": {
+    "description": "Bouton de retour vers l'étape 5/9 \"Compétences et outils\"."
+  },
+  "spellsStepScreenNextButton": "Suivant",
+  "@spellsStepScreenNextButton": {
+    "description": "Bouton de validation vers l'étape suivante."
+  },
+  "spellsStepScreenCantripTabLabel": "Mineurs",
+  "@spellsStepScreenCantripTabLabel": {
+    "description": "Libellé de l'onglet des sorts mineurs (\"cantrips\", niveau 0) sur le sélecteur de pilules du bandeau — n'apparaît que si les deux onglets sont visibles (voir `SpellsStepScreen._Header`)."
+  },
+  "spellsStepScreenLevelOneTabLabel": "Niveau 1",
+  "@spellsStepScreenLevelOneTabLabel": {
+    "description": "Libellé de l'onglet des sorts de niveau 1 sur le sélecteur de pilules du bandeau."
+  },
+  "spellsStepScreenCantripSectionTitle": "SORTS MINEURS CONNUS",
+  "@spellsStepScreenCantripSectionTitle": {
+    "description": "Titre de section de l'onglet \"Mineurs\", déjà en majuscules dans le code."
+  },
+  "spellsStepScreenLevelOneSectionTitle": "SORTS DE NIVEAU 1 CONNUS",
+  "@spellsStepScreenLevelOneSectionTitle": {
+    "description": "Titre de section de l'onglet \"Niveau 1\", déjà en majuscules dans le code."
+  },
+  "spellsStepScreenQuotaBadge": "{selectedCount} / {quota}",
+  "@spellsStepScreenQuotaBadge": {
+    "description": "Badge de quota à droite du titre de section (\"3 / 4\") — purement numérique, sans aucun mot à accorder (contrairement à `skillsAndToolsStepScreenQuotaBadge`, qui porte le suffixe \"choisies\") : aucune forme plurielle à distinguer, `selectedCount`/`quota` ne sont jamais mis en mots.",
+    "placeholders": {
+      "selectedCount": {
+        "type": "int"
+      },
+      "quota": {
+        "type": "int"
+      }
+    }
+  },
+  "spellsStepScreenSpellInfoTooltip": "Description de {spellName}",
+  "@spellsStepScreenSpellInfoTooltip": {
+    "description": "Infobulle du bouton ⓘ affiché à droite de chaque sort, ouvre `SpellOptionInfoSheet` (widget partagé avec `level_up_screen.dart`, hors périmètre de ce lot, voir le rapport).",
+    "placeholders": {
+      "spellName": {
+        "type": "String"
+      }
+    }
+  },
+  "equipmentStepScreenHelpTooltip": "Aide",
+  "@equipmentStepScreenHelpTooltip": {
+    "description": "Infobulle de l'icône \"?\" du bandeau de l'étape 7/9 \"Équipement de départ\"."
+  },
+  "equipmentStepScreenHeaderTitle": "8. Équipement",
+  "@equipmentStepScreenHeaderTitle": {
+    "description": "Titre d'étape affiché sur le bandeau bois, en-tête de `EquipmentStepScreen`."
+  },
+  "equipmentStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@equipmentStepScreenStepCounter": {
+    "description": "Compteur d'étape affiché à droite du titre sur le bandeau bois.",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "equipmentStepScreenGenericErrorMessage": "Impossible de charger l'équipement de départ. Réessayez.",
+  "@equipmentStepScreenGenericErrorMessage": {
+    "description": "Message de repli affiché quand l'erreur n'est pas une `CharacterCreationFailure` (dont le message, lui, reste en français — D148, hors périmètre de ce lot)."
+  },
+  "equipmentStepScreenRetryButton": "Réessayer",
+  "@equipmentStepScreenRetryButton": {
+    "description": "Bouton de l'état d'erreur, relance les trois providers feuilles (historiques, objets, classes)."
+  },
+  "equipmentStepScreenBackButton": "Retour",
+  "@equipmentStepScreenBackButton": {
+    "description": "Bouton de retour vers l'étape précédente (5/9 ou 6/9 selon la classe)."
+  },
+  "equipmentStepScreenNextButton": "Suivant",
+  "@equipmentStepScreenNextButton": {
+    "description": "Bouton de validation vers l'étape suivante."
+  },
+  "equipmentStepScreenBackgroundTabLabel": "Historique",
+  "@equipmentStepScreenBackgroundTabLabel": {
+    "description": "Libellé du premier onglet du `SegmentedToggle` (équipement automatiquement accordé par l'historique)."
+  },
+  "equipmentStepScreenPurchaseTabLabel": "Acheter ({amount} po)",
+  "@equipmentStepScreenPurchaseTabLabel": {
+    "description": "Libellé du second onglet du `SegmentedToggle`, avec le budget d'achat de l'historique entre parenthèses — unité \"po\" volontairement gardée telle quelle en anglais aussi, même rationale que `itemInfoPanelCostValue`/D145. `amount` est déjà formaté par `GoldAmountFormatter.format` (virgule française assumée, D144, hors périmètre de ce lot).",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "equipmentStepScreenClassEquipmentSectionTitle": "ÉQUIPEMENT DE CLASSE",
+  "@equipmentStepScreenClassEquipmentSectionTitle": {
+    "description": "Titre de la section optionnelle \"Équipement de classe\" (options A/B/C, affichée au-dessus des deux onglets), déjà en majuscules dans le code."
+  },
+  "equipmentStepScreenClassOptionTitle": "Option {label}",
+  "@equipmentStepScreenClassOptionTitle": {
+    "description": "Titre d'une tuile d'option d'équipement de classe — `label` est la lettre brute de `classes.starting_equipment` (\"A\"/\"B\"/\"C\"), jamais traduite.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "equipmentStepScreenHistoryEquipmentSectionTitle": "ÉQUIPEMENT DE L'HISTORIQUE",
+  "@equipmentStepScreenHistoryEquipmentSectionTitle": {
+    "description": "Titre de section de l'onglet \"Historique\", déjà en majuscules dans le code."
+  },
+  "equipmentStepScreenEmptyHistoryMessage": "Aucun équipement pour cet historique.",
+  "@equipmentStepScreenEmptyHistoryMessage": {
+    "description": "État vide de l'onglet \"Historique\" (ne devrait normalement jamais arriver pour le contenu peuplé)."
+  },
+  "equipmentStepScreenEmptyShopMessage": "Aucun objet disponible à l'achat.",
+  "@equipmentStepScreenEmptyShopMessage": {
+    "description": "État vide de l'onglet \"Acheter\" (catalogue d'objets vide, distinct de l'état d'erreur)."
+  },
+  "equipmentStepScreenOverBudgetMessage": "Budget dépassé de {amount} po",
+  "@equipmentStepScreenOverBudgetMessage": {
+    "description": "Bandeau d'alerte affiché à la place du bandeau \"OR RESTANT\" quand le panier dépasse le budget — même rationale \"po\" que `equipmentStepScreenPurchaseTabLabel`. `amount` est déjà formaté par `GoldAmountFormatter.format`.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "equipmentStepScreenStartingGoldLabel": "OR DE DÉPART",
+  "@equipmentStepScreenStartingGoldLabel": {
+    "description": "Libellé du bandeau doré sur l'onglet \"Historique\" (équipement automatiquement accordé, pas de budget à gérer), déjà en majuscules dans le code."
+  },
+  "equipmentStepScreenRemainingGoldLabel": "OR RESTANT",
+  "@equipmentStepScreenRemainingGoldLabel": {
+    "description": "Libellé du bandeau doré sur l'onglet \"Acheter\" tant que le budget n'est pas dépassé, déjà en majuscules dans le code."
+  },
+  "equipmentStepScreenGoldAmount": "{amount} po",
+  "@equipmentStepScreenGoldAmount": {
+    "description": "Montant affiché par le bandeau doré (\"OR DE DÉPART\"/\"OR RESTANT\") — même rationale \"po\" que `equipmentStepScreenPurchaseTabLabel`. `amount` est déjà formaté par `GoldAmountFormatter.format`.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "equipmentStepScreenShopItemSubtitle": "{category} · {cost} po",
+  "@equipmentStepScreenShopItemSubtitle": {
+    "description": "Sous-titre d'une tuile du catalogue d'achat (\"Arme · 2 po\") — `category` vient de `EquipmentCategoryRules.labelFor` (texte français en dur, D151, hors périmètre de ce lot) ; même rationale \"po\" que `equipmentStepScreenPurchaseTabLabel`. `cost` est déjà formaté par `GoldAmountFormatter.format`.",
+    "placeholders": {
+      "category": {
+        "type": "String"
+      },
+      "cost": {
+        "type": "String"
+      }
+    }
   }
 }

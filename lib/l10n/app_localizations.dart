@@ -6725,6 +6725,198 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{selectedCount} / {quota} choisies'**
   String skillsAndToolsStepScreenQuotaBadge(int selectedCount, int quota);
+
+  /// Infobulle de l'icône "?" du bandeau de l'étape 6/9 "Sorts".
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get spellsStepScreenHelpTooltip;
+
+  /// Titre d'étape affiché sur le bandeau bois, en-tête de `SpellsStepScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'7. Sorts'**
+  String get spellsStepScreenHeaderTitle;
+
+  /// Compteur d'étape affiché à droite du titre sur le bandeau bois.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String spellsStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Message de repli affiché quand l'erreur n'est pas une `CharacterCreationFailure` (dont le message, lui, reste en français — D148, hors périmètre de ce lot).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les sorts disponibles. Réessayez.'**
+  String get spellsStepScreenGenericErrorMessage;
+
+  /// Bouton de l'état d'erreur, relance les deux providers feuilles (classe + catalogue de sorts).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get spellsStepScreenRetryButton;
+
+  /// Bouton de retour vers l'étape 5/9 "Compétences et outils".
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get spellsStepScreenBackButton;
+
+  /// Bouton de validation vers l'étape suivante.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get spellsStepScreenNextButton;
+
+  /// Libellé de l'onglet des sorts mineurs ("cantrips", niveau 0) sur le sélecteur de pilules du bandeau — n'apparaît que si les deux onglets sont visibles (voir `SpellsStepScreen._Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Mineurs'**
+  String get spellsStepScreenCantripTabLabel;
+
+  /// Libellé de l'onglet des sorts de niveau 1 sur le sélecteur de pilules du bandeau.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau 1'**
+  String get spellsStepScreenLevelOneTabLabel;
+
+  /// Titre de section de l'onglet "Mineurs", déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS MINEURS CONNUS'**
+  String get spellsStepScreenCantripSectionTitle;
+
+  /// Titre de section de l'onglet "Niveau 1", déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS DE NIVEAU 1 CONNUS'**
+  String get spellsStepScreenLevelOneSectionTitle;
+
+  /// Badge de quota à droite du titre de section ("3 / 4") — purement numérique, sans aucun mot à accorder (contrairement à `skillsAndToolsStepScreenQuotaBadge`, qui porte le suffixe "choisies") : aucune forme plurielle à distinguer, `selectedCount`/`quota` ne sont jamais mis en mots.
+  ///
+  /// In fr, this message translates to:
+  /// **'{selectedCount} / {quota}'**
+  String spellsStepScreenQuotaBadge(int selectedCount, int quota);
+
+  /// Infobulle du bouton ⓘ affiché à droite de chaque sort, ouvre `SpellOptionInfoSheet` (widget partagé avec `level_up_screen.dart`, hors périmètre de ce lot, voir le rapport).
+  ///
+  /// In fr, this message translates to:
+  /// **'Description de {spellName}'**
+  String spellsStepScreenSpellInfoTooltip(String spellName);
+
+  /// Infobulle de l'icône "?" du bandeau de l'étape 7/9 "Équipement de départ".
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get equipmentStepScreenHelpTooltip;
+
+  /// Titre d'étape affiché sur le bandeau bois, en-tête de `EquipmentStepScreen`.
+  ///
+  /// In fr, this message translates to:
+  /// **'8. Équipement'**
+  String get equipmentStepScreenHeaderTitle;
+
+  /// Compteur d'étape affiché à droite du titre sur le bandeau bois.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String equipmentStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Message de repli affiché quand l'erreur n'est pas une `CharacterCreationFailure` (dont le message, lui, reste en français — D148, hors périmètre de ce lot).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger l\'équipement de départ. Réessayez.'**
+  String get equipmentStepScreenGenericErrorMessage;
+
+  /// Bouton de l'état d'erreur, relance les trois providers feuilles (historiques, objets, classes).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get equipmentStepScreenRetryButton;
+
+  /// Bouton de retour vers l'étape précédente (5/9 ou 6/9 selon la classe).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get equipmentStepScreenBackButton;
+
+  /// Bouton de validation vers l'étape suivante.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get equipmentStepScreenNextButton;
+
+  /// Libellé du premier onglet du `SegmentedToggle` (équipement automatiquement accordé par l'historique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Historique'**
+  String get equipmentStepScreenBackgroundTabLabel;
+
+  /// Libellé du second onglet du `SegmentedToggle`, avec le budget d'achat de l'historique entre parenthèses — unité "po" volontairement gardée telle quelle en anglais aussi, même rationale que `itemInfoPanelCostValue`/D145. `amount` est déjà formaté par `GoldAmountFormatter.format` (virgule française assumée, D144, hors périmètre de ce lot).
+  ///
+  /// In fr, this message translates to:
+  /// **'Acheter ({amount} po)'**
+  String equipmentStepScreenPurchaseTabLabel(String amount);
+
+  /// Titre de la section optionnelle "Équipement de classe" (options A/B/C, affichée au-dessus des deux onglets), déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'ÉQUIPEMENT DE CLASSE'**
+  String get equipmentStepScreenClassEquipmentSectionTitle;
+
+  /// Titre d'une tuile d'option d'équipement de classe — `label` est la lettre brute de `classes.starting_equipment` ("A"/"B"/"C"), jamais traduite.
+  ///
+  /// In fr, this message translates to:
+  /// **'Option {label}'**
+  String equipmentStepScreenClassOptionTitle(String label);
+
+  /// Titre de section de l'onglet "Historique", déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'ÉQUIPEMENT DE L\'HISTORIQUE'**
+  String get equipmentStepScreenHistoryEquipmentSectionTitle;
+
+  /// État vide de l'onglet "Historique" (ne devrait normalement jamais arriver pour le contenu peuplé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun équipement pour cet historique.'**
+  String get equipmentStepScreenEmptyHistoryMessage;
+
+  /// État vide de l'onglet "Acheter" (catalogue d'objets vide, distinct de l'état d'erreur).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun objet disponible à l\'achat.'**
+  String get equipmentStepScreenEmptyShopMessage;
+
+  /// Bandeau d'alerte affiché à la place du bandeau "OR RESTANT" quand le panier dépasse le budget — même rationale "po" que `equipmentStepScreenPurchaseTabLabel`. `amount` est déjà formaté par `GoldAmountFormatter.format`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Budget dépassé de {amount} po'**
+  String equipmentStepScreenOverBudgetMessage(String amount);
+
+  /// Libellé du bandeau doré sur l'onglet "Historique" (équipement automatiquement accordé, pas de budget à gérer), déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'OR DE DÉPART'**
+  String get equipmentStepScreenStartingGoldLabel;
+
+  /// Libellé du bandeau doré sur l'onglet "Acheter" tant que le budget n'est pas dépassé, déjà en majuscules dans le code.
+  ///
+  /// In fr, this message translates to:
+  /// **'OR RESTANT'**
+  String get equipmentStepScreenRemainingGoldLabel;
+
+  /// Montant affiché par le bandeau doré ("OR DE DÉPART"/"OR RESTANT") — même rationale "po" que `equipmentStepScreenPurchaseTabLabel`. `amount` est déjà formaté par `GoldAmountFormatter.format`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{amount} po'**
+  String equipmentStepScreenGoldAmount(String amount);
+
+  /// Sous-titre d'une tuile du catalogue d'achat ("Arme · 2 po") — `category` vient de `EquipmentCategoryRules.labelFor` (texte français en dur, D151, hors périmètre de ce lot) ; même rationale "po" que `equipmentStepScreenPurchaseTabLabel`. `cost` est déjà formaté par `GoldAmountFormatter.format`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{category} · {cost} po'**
+  String equipmentStepScreenShopItemSubtitle(String category, String cost);
 }
 
 class _AppLocalizationsDelegate

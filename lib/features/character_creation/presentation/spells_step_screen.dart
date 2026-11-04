@@ -11,6 +11,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/spell_level_tab_selector.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/spell_option.dart';
@@ -129,15 +130,17 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dataAsync = ref.watch(spellsStepDataProvider);
 
     return Scaffold(
       body: dataAsync.when(
-        data: _buildContent,
+        data: (data) => _buildContent(data, l10n),
         loading: () => Column(
           children: [
             _MinimalHeader(
               onBack: _goBack,
+              helpTooltip: l10n.spellsStepScreenHelpTooltip,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
             ),
             const Expanded(
@@ -157,14 +160,15 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
           children: [
             _MinimalHeader(
               onBack: _goBack,
+              helpTooltip: l10n.spellsStepScreenHelpTooltip,
               onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
             ),
             Expanded(
               child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
-                    : 'Impossible de charger les sorts disponibles. '
-                          'Réessayez.',
+                    : l10n.spellsStepScreenGenericErrorMessage,
+                retryLabel: l10n.spellsStepScreenRetryButton,
                 onRetry: () {
                   // Même rationale que `SkillsAndToolsStepScreen._buildContent`
                   // (voir son commentaire) : invalider les providers feuilles
@@ -210,7 +214,7 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
     );
   }
 
-  Widget _buildContent(SpellsStepData data) {
+  Widget _buildContent(SpellsStepData data, AppLocalizations l10n) {
     final className = data.classOption.name;
     final cantripQuota = SpellcastingRules.cantripQuotaFor(className);
     final levelOneQuota = SpellcastingRules.levelOneSpellQuotaFor(className);
@@ -244,11 +248,16 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
           onBack: _goBack,
           currentStep: 7,
           totalSteps: _totalSteps,
+          headerTitle: l10n.spellsStepScreenHeaderTitle,
+          stepCounterLabel: l10n.spellsStepScreenStepCounter(7, _totalSteps),
+          helpTooltip: l10n.spellsStepScreenHelpTooltip,
           onHelp: () => showStepHelpSheet(context, CreationStepHelp.spells),
           showCantripTab: showCantripTab,
           showLevelOneTab: showLevelOneTab,
           activeTab: activeTab,
           onTabChanged: _selectTab,
+          cantripTabLabel: l10n.spellsStepScreenCantripTabLabel,
+          levelOneTabLabel: l10n.spellsStepScreenLevelOneTabLabel,
         ),
         Expanded(
           child: SafeArea(
@@ -265,18 +274,20 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
                     ),
                     children: activeTab == _SpellTab.cantrip
                         ? _spellSection(
-                            title: 'SORTS MINEURS CONNUS',
+                            title: l10n.spellsStepScreenCantripSectionTitle,
                             quota: cantripQuota,
                             selected: _selectedCantrips,
                             candidates: cantrips,
                             onToggle: _toggleCantrip,
+                            l10n: l10n,
                           )
                         : _spellSection(
-                            title: 'SORTS DE NIVEAU 1 CONNUS',
+                            title: l10n.spellsStepScreenLevelOneSectionTitle,
                             quota: levelOneQuota,
                             selected: _selectedLevelOneSpells,
                             candidates: levelOneSpells,
                             onToggle: _toggleLevelOneSpell,
+                            l10n: l10n,
                           ),
                   ),
                 ),
@@ -288,7 +299,7 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Retour',
+                              label: l10n.spellsStepScreenBackButton,
                               surface: SecondaryButtonSurface.parchment,
                               onPressed: _goBack,
                             ),
@@ -296,7 +307,7 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Suivant',
+                              label: l10n.spellsStepScreenNextButton,
                               onPressed: canProceed ? _submit : null,
                             ),
                           ),
@@ -326,9 +337,13 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
     required List<String> selected,
     required List<SpellOption> candidates,
     required void Function(String name, int quota) onToggle,
+    required AppLocalizations l10n,
   }) {
     return [
-      _SectionHeader(title: title, badge: '${selected.length} / $quota'),
+      _SectionHeader(
+        title: title,
+        badge: l10n.spellsStepScreenQuotaBadge(selected.length, quota),
+      ),
       const SizedBox(height: AppSpacing.sm),
       for (var i = 0; i < candidates.length; i++) ...[
         if (i > 0) const SizedBox(height: AppSpacing.xs),
@@ -338,6 +353,7 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
           selected: selected,
           quota: quota,
           onToggle: onToggle,
+          l10n: l10n,
         ),
       ],
     ];
@@ -349,6 +365,7 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
     required List<String> selected,
     required int quota,
     required void Function(String name, int quota) onToggle,
+    required AppLocalizations l10n,
   }) {
     final isSelected = selected.contains(spell.name);
     // Bouton ⓘ hors de la tuile : reste actif même quand la tuile est
@@ -369,7 +386,7 @@ class _SpellsStepScreenState extends ConsumerState<SpellsStepScreen> {
       children: [
         Expanded(child: tile),
         IconButton(
-          tooltip: 'Description de ${spell.name}',
+          tooltip: l10n.spellsStepScreenSpellInfoTooltip(spell.name),
           icon: const Icon(
             Icons.info_outline_rounded,
             color: AppColors.textSecondary,
@@ -461,21 +478,31 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.currentStep,
     required this.totalSteps,
+    required this.headerTitle,
+    required this.stepCounterLabel,
+    required this.helpTooltip,
     required this.onHelp,
     required this.showCantripTab,
     required this.showLevelOneTab,
     required this.activeTab,
     required this.onTabChanged,
+    required this.cantripTabLabel,
+    required this.levelOneTabLabel,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
+  final String headerTitle;
+  final String stepCounterLabel;
+  final String helpTooltip;
   final VoidCallback onHelp;
   final bool showCantripTab;
   final bool showLevelOneTab;
   final _SpellTab activeTab;
   final ValueChanged<_SpellTab> onTabChanged;
+  final String cantripTabLabel;
+  final String levelOneTabLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -513,7 +540,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: helpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -531,7 +558,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '7. Sorts',
+                          headerTitle,
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -539,7 +566,7 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          stepCounterLabel,
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,
@@ -555,14 +582,14 @@ class _Header extends StatelessWidget {
                     if (showTabSelector) ...[
                       const SizedBox(height: AppSpacing.sm),
                       SpellLevelTabSelector<_SpellTab>(
-                        options: const [
+                        options: [
                           SpellLevelTabOption(
                             value: _SpellTab.cantrip,
-                            label: 'Mineurs',
+                            label: cantripTabLabel,
                           ),
                           SpellLevelTabOption(
                             value: _SpellTab.levelOne,
-                            label: 'Niveau 1',
+                            label: levelOneTabLabel,
                           ),
                         ],
                         value: activeTab,
@@ -585,9 +612,14 @@ class _Header extends StatelessWidget {
 /// impossible d'afficher le titre/la barre de progression/les onglets sur le
 /// bandeau (voir la documentation de classe de [SpellsStepScreen]).
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({required this.onBack, required this.onHelp});
+  const _MinimalHeader({
+    required this.onBack,
+    required this.helpTooltip,
+    required this.onHelp,
+  });
 
   final VoidCallback onBack;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -619,7 +651,7 @@ class _MinimalHeader extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: onHelp,
-                tooltip: 'Aide',
+                tooltip: helpTooltip,
                 icon: const Icon(
                   Icons.help_outline,
                   color: AppColors.textOnWood,
@@ -634,9 +666,14 @@ class _MinimalHeader extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
 
   final String message;
+  final String retryLabel;
   final VoidCallback onRetry;
 
   @override
@@ -659,7 +696,7 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(label: retryLabel, onPressed: onRetry),
           ],
         ),
       ),
