@@ -17,6 +17,13 @@ void main() {
         // `!` planterait.
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        // Explicite (plutôt que de compter sur le repli de résolution de
+        // locale) depuis que le titre de la carte lit aussi
+        // `AppLocalizations.of(context)!` (chantier "traduction de l'app"
+        // Phase B, lot "Characters — classe/race/maîtrises") : la locale
+        // par défaut de l'environnement de test n'est pas garantie d'être
+        // `fr` — régression trouvée en lançant la suite complète.
+        locale: const Locale('fr'),
         home: Scaffold(
           body: CharacterWeaponProficienciesCard(
             names: const ['courantes', 'martiales'],
@@ -39,6 +46,7 @@ void main() {
       MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         home: Scaffold(
           body: CharacterWeaponProficienciesCard(
             names: const ['courantes', 'dagues'],
@@ -64,6 +72,7 @@ void main() {
         MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('fr'),
           home: Scaffold(
             body: CharacterWeaponProficienciesCard(
               names: const ['courantes', 'martiales'],
@@ -92,4 +101,26 @@ void main() {
       );
     },
   );
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets('titre en anglais', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: CharacterWeaponProficienciesCard(
+              names: const ['courantes'],
+              onTapToken: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('WEAPON PROFICIENCIES'), findsOneWidget);
+    });
+  });
 }

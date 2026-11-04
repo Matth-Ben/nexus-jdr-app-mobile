@@ -70,6 +70,7 @@ Future<void> _pump(
   CharacterDetail detail, {
   VoidCallback? onEdit,
   bool actionsDisabled = false,
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.binding.setSurfaceSize(const Size(800, 2000));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -89,7 +90,7 @@ Future<void> _pump(
         // delegates, l'appel renverrait `null` et le `!` planterait.
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('fr'),
+        locale: locale,
         home: Scaffold(
           body: CharacterStoryTabBody(
             detail: detail,
@@ -391,4 +392,35 @@ void main() {
       expect(find.text('JOURNAL DE CAMPAGNE'), findsNothing);
     });
   });
+
+  testWidgets(
+    'état vide, titre/sous-titre/bouton, GALERIE et JOURNAL DE CAMPAGNE en '
+    'anglais',
+    (tester) async {
+      await _pump(tester, _detail(), locale: const Locale('en'));
+
+      expect(find.text('NO STORY YET'), findsOneWidget);
+      expect(
+        find.text(
+          "Appearance, traits, ideals... tell your character's story "
+          'whenever you want.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('TELL MY STORY'), findsOneWidget);
+      expect(find.text('GALLERY'), findsOneWidget);
+      expect(find.text('CAMPAIGN JOURNAL'), findsOneWidget);
+
+      // Les 9 libellés de champ viennent de `CharacterStoryFieldsResolver`
+      // (`domain/`, sans `BuildContext`) : restent figés en français quelle
+      // que soit la langue de l'app — voir D147 du registre de dette
+      // technique.
+      await _pump(
+        tester,
+        _detail(appearanceText: 'Cheveux argentés.'),
+        locale: const Locale('en'),
+      );
+      expect(find.text('APPARENCE PHYSIQUE'), findsOneWidget);
+    },
+  );
 }

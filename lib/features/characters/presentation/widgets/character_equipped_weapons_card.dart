@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/accent_icon_badge.dart';
 import '../../../../core/widgets/dice_type_badge.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/dice_notation_parser.dart';
 import '../../domain/inventory_category_rules.dart';
@@ -76,6 +77,7 @@ class CharacterEquippedWeaponsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -87,7 +89,7 @@ class CharacterEquippedWeaponsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ARMES ÉQUIPÉES',
+            l10n.characterEquippedWeaponsCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,
@@ -98,7 +100,7 @@ class CharacterEquippedWeaponsCard extends StatelessWidget {
             const _EmptyWeapons()
           else ...[
             _WeaponSlotSection(
-              title: 'SET PRINCIPAL',
+              title: l10n.characterEquippedWeaponsCardPrimarySetTitle,
               weapons: [
                 for (final weapon in weapons)
                   if (weapon.weaponSlot != WeaponSlot.secondary) weapon,
@@ -111,7 +113,7 @@ class CharacterEquippedWeaponsCard extends StatelessWidget {
             const SheetActionDivider(),
             const SizedBox(height: AppSpacing.sm),
             _WeaponSlotSection(
-              title: 'SET SECONDAIRE',
+              title: l10n.characterEquippedWeaponsCardSecondarySetTitle,
               weapons: [
                 for (final weapon in weapons)
                   if (weapon.weaponSlot == WeaponSlot.secondary) weapon,
@@ -160,7 +162,8 @@ class _WeaponSlotSection extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         if (weapons.isEmpty)
           Text(
-            'Aucune arme dans ce set.',
+            AppLocalizations.of(context)!
+                .characterEquippedWeaponsCardEmptySetMessage,
             style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
           )
         else
@@ -197,6 +200,7 @@ class _Weapon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final weapon = item.weaponProperties;
     final damageDice = weapon?.damageDice;
     final dice = damageDice != null
@@ -208,9 +212,13 @@ class _Weapon extends StatelessWidget {
     final rangeMax = weapon?.rangeMax;
     final range = rangeNormal != null
         ? rangeMax != null
-              ? '${WeightFormatter.format(rangeNormal)} m '
-                    '(max ${WeightFormatter.format(rangeMax)} m)'
-              : '${WeightFormatter.format(rangeNormal)} m'
+              ? l10n.characterEquippedWeaponsCardRangeValueWithMax(
+                  WeightFormatter.format(rangeNormal),
+                  WeightFormatter.format(rangeMax),
+                )
+              : l10n.characterEquippedWeaponsCardRangeValue(
+                  WeightFormatter.format(rangeNormal),
+                )
         : null;
 
     final attackBonus = damageDice != null
@@ -234,17 +242,25 @@ class _Weapon extends StatelessWidget {
               '$damageType'
         : null;
 
-    final semanticsLabel = StringBuffer('Arme équipée : ${item.name}');
+    final semanticsLabel = StringBuffer(
+      l10n.characterEquippedWeaponsCardSemanticsLabel(item.name),
+    );
     if (attackBonus != null) {
       semanticsLabel.write(
-        ', Attaque : ${SignedModifierFormatter.format(attackBonus)}',
+        l10n.characterEquippedWeaponsCardSemanticsAttackSuffix(
+          SignedModifierFormatter.format(attackBonus),
+        ),
       );
     }
     if (damage != null) semanticsLabel.write(', $damage');
     if (properties.isNotEmpty) {
       semanticsLabel.write(', ${properties.join(', ')}');
     }
-    if (range != null) semanticsLabel.write(', Portée : $range');
+    if (range != null) {
+      semanticsLabel.write(
+        l10n.characterEquippedWeaponsCardSemanticsRangeSuffix(range),
+      );
+    }
 
     return Semantics(
       container: true,
@@ -307,7 +323,7 @@ class _Weapon extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Attaque',
+                              l10n.characterEquippedWeaponsCardAttackLabel,
                               style: AppTypography.body(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,
@@ -348,11 +364,12 @@ class _EmptyWeapons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Aucune arme équipée',
+          l10n.characterEquippedWeaponsCardEmptyTitle,
           style: AppTypography.body(
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -360,8 +377,7 @@ class _EmptyWeapons extends StatelessWidget {
           ),
         ),
         Text(
-          "Équipez une arme depuis l'onglet Inventaire pour qu'elle "
-          'apparaisse ici.',
+          l10n.characterEquippedWeaponsCardEmptyDescription,
           style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
         ),
       ],

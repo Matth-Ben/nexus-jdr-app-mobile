@@ -6,26 +6,44 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/domain/character_racial_trait.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_racial_traits_card.dart';
+import 'package:personnages/l10n/app_localizations.dart';
+
+Future<void> _pump(
+  WidgetTester tester,
+  Widget child, {
+  Locale locale = const Locale('fr'),
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      // `CharacterRacialTraitsCard` lit `AppLocalizations.of(context)!`
+      // (chantier "traduction de l'app" Phase B, lot "Characters —
+      // classe/race/maîtrises") : sans ces delegates, l'appel renverrait
+      // `null` et le `!` planterait. `fr` par défaut, `en` passé
+      // explicitement par le groupe "locale anglaise" plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
+      home: Scaffold(body: child),
+    ),
+  );
+}
 
 void main() {
   testWidgets('affiche une ligne par trait, dans l\'ordre reçu (PAS de tri '
       'alphabétique) — chacune porte le libellé "Passive"', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: CharacterRacialTraitsCard(
-            traits: [
-              CharacterRacialTrait(
-                name: 'Vision dans le noir',
-                description: '12 mètres.',
-              ),
-              CharacterRacialTrait(
-                name: 'Ancêtre draconique',
-                description: 'Choisissez un type de dégâts.',
-              ),
-            ],
+    await _pump(
+      tester,
+      const CharacterRacialTraitsCard(
+        traits: [
+          CharacterRacialTrait(
+            name: 'Vision dans le noir',
+            description: '12 mètres.',
           ),
-        ),
+          CharacterRacialTrait(
+            name: 'Ancêtre draconique',
+            description: 'Choisissez un type de dégâts.',
+          ),
+        ],
       ),
     );
 
@@ -44,20 +62,17 @@ void main() {
     'affiche quand même "Passive", sans compteur ni bouton "Utiliser" — '
     'décision tranchée, voir la doc de classe de CharacterRacialTraitsCard',
     (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: CharacterRacialTraitsCard(
-              traits: [
-                CharacterRacialTrait(
-                  name: 'Poussée d\'adrénaline',
-                  description:
-                      'Une fois par repos long, en tant qu\'action '
-                      'bonus...',
-                ),
-              ],
+      await _pump(
+        tester,
+        const CharacterRacialTraitsCard(
+          traits: [
+            CharacterRacialTrait(
+              name: 'Poussée d\'adrénaline',
+              description:
+                  'Une fois par repos long, en tant qu\'action '
+                  'bonus...',
             ),
-          ),
+          ],
         ),
       );
 
@@ -70,18 +85,15 @@ void main() {
       'description), SANS ligne "Prérequis" ni "Obtenue au niveau X"', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: CharacterRacialTraitsCard(
-            traits: [
-              CharacterRacialTrait(
-                name: 'Vision dans le noir',
-                description: 'Vous voyez dans le noir jusqu\'à 12 mètres.',
-              ),
-            ],
+    await _pump(
+      tester,
+      const CharacterRacialTraitsCard(
+        traits: [
+          CharacterRacialTrait(
+            name: 'Vision dans le noir',
+            description: 'Vous voyez dans le noir jusqu\'à 12 mètres.',
           ),
-        ),
+        ],
       ),
     );
 
@@ -102,13 +114,38 @@ void main() {
   testWidgets('n\'affiche aucune ligne quand traits est vide (appelant '
       'responsable de ne pas monter cette carte, voir '
       'character_skills_tab_body.dart)', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: CharacterRacialTraitsCard(traits: [])),
-      ),
-    );
+    await _pump(tester, const CharacterRacialTraitsCard(traits: []));
 
     expect(find.text('TRAITS RACIAUX'), findsOneWidget);
     expect(find.byType(InkWell), findsNothing);
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets('titre, libellé "Passive" et panneau "Infos" en anglais', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const CharacterRacialTraitsCard(
+          traits: [
+            CharacterRacialTrait(
+              name: 'Vision dans le noir',
+              description: 'Vous voyez dans le noir jusqu\'à 12 mètres.',
+            ),
+          ],
+        ),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('RACIAL TRAITS'), findsOneWidget);
+      expect(find.text('Passive'), findsOneWidget);
+
+      await tester.tap(find.text('Vision dans le noir'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('DESCRIPTION'), findsOneWidget);
+    });
   });
 }

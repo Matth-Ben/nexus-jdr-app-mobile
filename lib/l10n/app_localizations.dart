@@ -2647,6 +2647,3298 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Bientôt disponible : la lecture hors ligne de tes personnages arrive avec une prochaine mise à jour. Pour l\'instant, une connexion est nécessaire pour charger tes personnages.'**
   String get connectionErrorStateContinueOfflineTooltip;
+
+  /// Titre de `hp_adjustment_sheet.dart` (bouton crayon du bandeau PV).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajuster les PV'**
+  String get hpAdjustmentSheetTitle;
+
+  /// Segment "Dégâts" du `SegmentedToggle` de `hp_adjustment_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dégâts'**
+  String get hpAdjustmentSheetDamageOption;
+
+  /// Segment "Soins" du `SegmentedToggle` de `hp_adjustment_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Soins'**
+  String get hpAdjustmentSheetHealOption;
+
+  /// Segment "PV temp." du `SegmentedToggle` de `hp_adjustment_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'PV temp.'**
+  String get hpAdjustmentSheetTemporaryOption;
+
+  /// Bouton secondaire "Annuler" de `hp_adjustment_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get hpAdjustmentSheetCancelButton;
+
+  /// Bouton primaire "Appliquer" de `hp_adjustment_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appliquer'**
+  String get hpAdjustmentSheetApplyButton;
+
+  /// Titre de `add_xp_sheet.dart` (bouton "+" du bandeau XP).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter de l\'XP'**
+  String get addXpSheetTitle;
+
+  /// Ligne "XP actuelle : X / Y" de `add_xp_sheet.dart` — `threshold` retombe sur `currentXp` au niveau maximum (voir `_AddXpSheetContent.build`).
+  ///
+  /// In fr, this message translates to:
+  /// **'XP actuelle : {currentXp} / {threshold}'**
+  String addXpSheetCurrentXpLabel(int currentXp, int threshold);
+
+  /// Libellé du champ de saisie du montant d'XP de `add_xp_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'XP GAGNÉE'**
+  String get addXpSheetGainedLabel;
+
+  /// `hintText` du champ de saisie du montant d'XP de `add_xp_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. 250'**
+  String get addXpSheetAmountHint;
+
+  /// Texte d'aide sous le champ de saisie du montant d'XP de `add_xp_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Montant remis par le MJ en fin de séance, par exemple.'**
+  String get addXpSheetAmountHelper;
+
+  /// Ligne "Nouveau total" de `add_xp_sheet.dart`, affichée dès qu'un montant valide est saisi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau total : {total} XP'**
+  String addXpSheetNewTotalLabel(int total);
+
+  /// Bouton secondaire "Annuler" de `add_xp_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get addXpSheetCancelButton;
+
+  /// Bouton primaire "Ajouter" de `add_xp_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get addXpSheetApplyButton;
+
+  /// Lien "Monter de niveau manuellement" de `add_xp_sheet.dart`, affiché tant que le seuil du niveau suivant n'est pas déjà franchi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Monter de niveau manuellement'**
+  String get addXpSheetManualLevelUpLink;
+
+  /// Titre (`SheetHeaderBar`) de `add_reward_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'AJOUTER UNE RÉCOMPENSE'**
+  String get addRewardSheetTitle;
+
+  /// Titre de la section "MONNAIE" de `add_reward_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'MONNAIE'**
+  String get addRewardSheetCurrencyLabel;
+
+  /// Titre de la section "OBJETS" de `add_reward_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'OBJETS'**
+  String get addRewardSheetItemsLabel;
+
+  /// Libellé de la `DashedAddTile` "Ajouter un objet" de `add_reward_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un objet'**
+  String get addRewardSheetAddItemLabel;
+
+  /// Bouton secondaire "Annuler" de `add_reward_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get addRewardSheetCancelButton;
+
+  /// Bouton primaire "Ajouter la récompense" de `add_reward_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter la récompense'**
+  String get addRewardSheetApplyButton;
+
+  /// Ligne d'objet composé localement de `add_reward_sheet.dart::_RewardItemRow` — `name` est déjà le nom d'affichage résolu (catalogue ou objet personnalisé).
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} × {quantity}'**
+  String addRewardSheetItemQuantityLabel(String name, int quantity);
+
+  /// Titre de `rest_sheet.dart` (lien "Prendre un repos").
+  ///
+  /// In fr, this message translates to:
+  /// **'Repos'**
+  String get restSheetTitle;
+
+  /// Ligne "PV actuels" de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'PV actuels : {currentHp} / {maxHp}'**
+  String restSheetCurrentHpLabel(int currentHp, int maxHp);
+
+  /// Segment "Repos court" du `SegmentedToggle` de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Repos court'**
+  String get restSheetShortOption;
+
+  /// Segment "Repos long" du `SegmentedToggle` de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Repos long'**
+  String get restSheetLongOption;
+
+  /// Bouton secondaire "Annuler" de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get restSheetCancelButton;
+
+  /// Bouton primaire "Appliquer" de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appliquer'**
+  String get restSheetApplyButton;
+
+  /// Titre de la section "Sorts préparés" du repos long de `rest_sheet.dart::_PreparedSpellsChoice`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS PRÉPARÉS'**
+  String get restSheetPreparedSpellsTitle;
+
+  /// Segment "Garder ma liste" du `SegmentedToggle` de `rest_sheet.dart::_PreparedSpellsChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garder ma liste'**
+  String get restSheetKeepListOption;
+
+  /// Segment "Changer mes sorts" du `SegmentedToggle` de `rest_sheet.dart::_PreparedSpellsChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer mes sorts'**
+  String get restSheetChangeSpellsOption;
+
+  /// Texte d'aide affiché quand "Changer mes sorts" est sélectionné dans `rest_sheet.dart::_PreparedSpellsChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Après le repos, la liste de vos sorts s\'ouvre pour choisir ceux à préparer.'**
+  String get restSheetChangeSpellsHelper;
+
+  /// Texte d'aide affiché quand "Garder ma liste" est sélectionné dans `rest_sheet.dart::_PreparedSpellsChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos sorts préparés restent les mêmes après le repos.'**
+  String get restSheetKeepListHelper;
+
+  /// Texte d'aide du repos long dans `rest_sheet.dart::_RestHelpBlock`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restaure les PV au maximum, réinitialise les emplacements de sorts et recharge toutes les aptitudes rechargeables (repos court comme repos long).'**
+  String get restSheetLongHelpText;
+
+  /// Ligne "PV après repos" du repos long dans `rest_sheet.dart::_RestHelpBlock` — `maxHp` répété volontairement (le repos long restaure toujours au maximum).
+  ///
+  /// In fr, this message translates to:
+  /// **'PV après repos : {maxHp} / {maxHp}'**
+  String restSheetAfterRestHpLabel(int maxHp);
+
+  /// Ligne d'état des dés de vie du repos court mono-classe dans `rest_sheet.dart::_ShortRestHitDiceBlock`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dés de vie disponibles : {remaining}/{total} (d{hitDie})'**
+  String restSheetHitDiceAvailableLabel(int remaining, int total, int hitDie);
+
+  /// Libellé "Dés à dépenser" du stepper de `rest_sheet.dart` (mono-classe et multiclasse).
+  ///
+  /// In fr, this message translates to:
+  /// **'Dés à dépenser'**
+  String get restSheetDiceToSpendLabel;
+
+  /// Message affiché quand aucun dé de vie n'est disponible, dans `rest_sheet.dart::_ShortRestHitDiceBlock`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun dé de vie disponible. Le repos court reste gratuit — aucune action supplémentaire requise.'**
+  String get restSheetNoHitDiceAvailable;
+
+  /// Segment "Lancer les dés" du `SegmentedToggle` de méthode de jet de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer les dés'**
+  String get restSheetRollMethodOption;
+
+  /// Segment "Valeur moyenne" du `SegmentedToggle` de méthode de jet de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Valeur moyenne'**
+  String get restSheetAverageMethodOption;
+
+  /// Lien "Relancer les dés" de `rest_sheet.dart`, affiché en méthode "Lancer les dés".
+  ///
+  /// In fr, this message translates to:
+  /// **'Relancer les dés'**
+  String get restSheetRerollLink;
+
+  /// Rappel de la formule de valeur moyenne, affiché en méthode "Valeur moyenne" dans `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'(moitié du dé arrondie au supérieur, +1, par dé)'**
+  String get restSheetAverageFormulaHint;
+
+  /// `InfoBanner` affichée quand les PV sont déjà au maximum lors d'un repos court, dans `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'PV déjà au maximum : ce repos ne restaurera aucun PV supplémentaire.'**
+  String get restSheetAlreadyMaxHpMessage;
+
+  /// Titre de la `GainRow` "PV restaurés" du repos court dans `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'PV restaurés'**
+  String get restSheetHpRestoredTitle;
+
+  /// Sous-titre de la `GainRow` "PV restaurés" du repos court dans `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{currentHp} → {newHp} (+{gain})'**
+  String restSheetHpRestoredSubtitle(int currentHp, int newHp, int gain);
+
+  /// En-tête du bloc de jet par classe, repos court multiclassé, dans `rest_sheet.dart::_MulticlassShortRestHitDiceBlock`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{className} (d{hitDie})'**
+  String restSheetPoolRolledLabel(String className, int hitDie);
+
+  /// Ligne d'état des dés de vie d'UN pool, repos court multiclassé, dans `rest_sheet.dart::_PoolSpendRow`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{className} — dés de vie disponibles : {available}/{total} (d{hitDie})'**
+  String restSheetPoolStatusLabel(
+    String className,
+    int available,
+    int total,
+    int hitDie,
+  );
+
+  /// Titre de la répartition des dés de vie récupérés, repos long multiclassé, dans `rest_sheet.dart::_LongRestRecoveryChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dés de vie récupérés : {count} — répartissez-les entre vos classes'**
+  String restSheetRecoveredAllocationTitle(int count);
+
+  /// Ligne d'UN pool de la répartition des dés de vie récupérés, dans `rest_sheet.dart::_LongRestRecoveryChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{className} (d{hitDie}) — {spent} dépensé(s)'**
+  String restSheetRecoveredPoolLabel(String className, int hitDie, int spent);
+
+  /// Ligne "Reste à répartir" de `rest_sheet.dart::_LongRestRecoveryChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reste à répartir : {remaining}'**
+  String restSheetRemainingToAllocateLabel(int remaining);
+
+  /// Formule du résultat de `dice_roll_sheet.dart` — `modifier` est déjà formaté avec son signe (`SignedModifierFormatter`).
+  ///
+  /// In fr, this message translates to:
+  /// **'d20 ({roll}) {modifier} = {total}'**
+  String diceRollSheetFormula(int roll, String modifier, int total);
+
+  /// Mention affichée sur un 20 naturel dans `dice_roll_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'RÉUSSITE CRITIQUE'**
+  String get diceRollSheetCriticalSuccess;
+
+  /// Mention affichée sur un 1 naturel dans `dice_roll_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'ÉCHEC CRITIQUE'**
+  String get diceRollSheetCriticalFailure;
+
+  /// Bouton "Relancer" de `dice_roll_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Relancer'**
+  String get diceRollSheetRerollButton;
+
+  /// Titre de `armor_class_bonus_sheet.dart` (tap sur la tuile "CA").
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajustement de CA'**
+  String get armorClassBonusSheetTitle;
+
+  /// Segment "Bonus" du `SegmentedToggle` de `armor_class_bonus_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus'**
+  String get armorClassBonusSheetBonusOption;
+
+  /// Segment "Malus" du `SegmentedToggle` de `armor_class_bonus_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Malus'**
+  String get armorClassBonusSheetMalusOption;
+
+  /// Bouton secondaire "Effacer" de `armor_class_bonus_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer'**
+  String get armorClassBonusSheetClearButton;
+
+  /// Bouton primaire "Valider" de `armor_class_bonus_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Valider'**
+  String get armorClassBonusSheetValidateButton;
+
+  /// Eyebrow commun à tout le flux "Montée de niveau" (`LevelUpHeader.eyebrow`), déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'MONTÉE DE NIVEAU'**
+  String get levelUpScreenEyebrow;
+
+  /// Eyebrow de l'écran de blocage quand un ou plusieurs niveaux du chaînage ont déjà été validés cette session (`_buildBlocked`), déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'NIVEAU ATTEINT'**
+  String get levelUpScreenLevelReachedEyebrow;
+
+  /// `LevelUpHeader.levelLabel`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'NIVEAU {level}'**
+  String levelUpScreenLevelLabel(int level);
+
+  /// `LevelUpHeader.remainingLevelsLabel`, affiché en cas de chaînage multi-niveaux.
+  ///
+  /// In fr, this message translates to:
+  /// **'{remaining, plural, =1{Encore 1 niveau à valider ensuite} other{Encore {remaining} niveaux à valider ensuite}}'**
+  String levelUpScreenRemainingLevelsLabel(int remaining);
+
+  /// `SnackBar` du lien "Voir l'historique des niveaux" (aucun écran dédié n'existe encore).
+  ///
+  /// In fr, this message translates to:
+  /// **'Bientôt disponible'**
+  String get levelUpScreenComingSoonSnackBar;
+
+  /// `_applyError` générique du récapitulatif, erreur non `CharacterFailure` interceptée par `_continueFromSummary`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer la montée de niveau. Réessayez.'**
+  String get levelUpScreenGenericApplyError;
+
+  /// Message de repli de `_ErrorState` quand l'erreur de chargement n'est pas une `CharacterFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les données de montée de niveau. Réessayez.'**
+  String get levelUpScreenGenericLoadError;
+
+  /// Instruction de l'étape `classDecision` (multiclassage/choix de la classe continuée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez comment ce niveau s\'applique.'**
+  String get levelUpScreenClassDecisionInstruction;
+
+  /// Titre d'une tuile "Continuer en {classe}" de l'étape `classDecision`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer en {className}'**
+  String levelUpScreenContinueClassOptionTitle(String className);
+
+  /// Sous-titre de la tuile "Continuer" primaire quand ce niveau est bloqué — réutilisé aussi comme corps de l'écran de blocage (`_buildBlocked`), texte identique dans les deux cas.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce niveau nécessite un choix pas encore disponible dans l\'app.'**
+  String get levelUpScreenContinueClassBlockedSubtitle;
+
+  /// Sous-titre par défaut (non bloqué) d'une tuile "Continuer en {classe}".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous progressez dans votre voie actuelle (niveau {currentLevel} → {nextLevel}).'**
+  String levelUpScreenContinueClassSubtitle(int currentLevel, int nextLevel);
+
+  /// Titre d'une tuile "Se multiclasser en {classe}" de l'étape `classDecision`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Se multiclasser en {className}'**
+  String levelUpScreenMulticlassOptionTitle(String className);
+
+  /// Sous-titre d'une tuile "Se multiclasser en {classe}" — `abilities` est déjà la liste jointe des caractéristiques qui satisfont le prérequis.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous débutez au niveau 1 dans cette classe. Prérequis rempli : {abilities}.'**
+  String levelUpScreenMulticlassOptionSubtitle(String abilities);
+
+  /// `InfoBanner` de contexte affichée en tête de toute étape concernant la nouvelle classe tant que le multiclassage est en cours.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle classe : {className} (niveau 1)'**
+  String levelUpScreenMulticlassInfoBanner(String className);
+
+  /// Titre du bloc teaser de l'annonce de niveau (`_buildAnnouncement`).
+  ///
+  /// In fr, this message translates to:
+  /// **'À venir dans les prochaines étapes'**
+  String get levelUpScreenUpcomingStepsTitle;
+
+  /// Ligne teaser "Choix à faire" de l'annonce de niveau — `choiceLabel` est déjà résolu (voir `_choiceStepLabel`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Un choix de {choiceLabel} vous attendra'**
+  String levelUpScreenUpcomingChoiceStep(String choiceLabel);
+
+  /// Ligne teaser "Sorts" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos emplacements de sorts vont évoluer'**
+  String get levelUpScreenUpcomingSpellsStep;
+
+  /// Ligne teaser "Invocations" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'De nouvelles invocations vous attendront'**
+  String get levelUpScreenUpcomingInvocationsStep;
+
+  /// Ligne teaser "Disciplines élémentaires" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'De nouvelles disciplines élémentaires vous attendront'**
+  String get levelUpScreenUpcomingElementalDisciplinesStep;
+
+  /// Ligne teaser "Manœuvres" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'De nouvelles manœuvres vous attendront'**
+  String get levelUpScreenUpcomingManeuversStep;
+
+  /// Ligne teaser "Tirs arcaniques" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'De nouveaux tirs arcaniques vous attendront'**
+  String get levelUpScreenUpcomingArcaneShotsStep;
+
+  /// Ligne teaser "Runes" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'De nouvelles runes vous attendront'**
+  String get levelUpScreenUpcomingRunesStep;
+
+  /// Ligne teaser "Infusions" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos infusions vont évoluer'**
+  String get levelUpScreenUpcomingInfusionsStep;
+
+  /// Bouton primaire "Continuer" partagé par l'annonce, le récapitulatif et `_StepFooter` (étapes 1 à 3 et dédiées).
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get levelUpScreenContinueButton;
+
+  /// Bouton secondaire "Retour" de `_StepFooter`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get levelUpScreenBackButton;
+
+  /// Titre de `GainRow` "Nouvelle aptitude" — annonce, étape "Aptitudes" et récapitulatif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle aptitude'**
+  String get levelUpScreenNewFeatureTitle;
+
+  /// Titre de `GainRow` "Nouvelle maîtrise" du bloc "Maîtrises de multiclassage" de l'étape "Aptitudes".
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle maîtrise'**
+  String get levelUpScreenNewProficiencyTitle;
+
+  /// `stepLabel` de l'étape "Points de vie" (toujours étape 1).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape 1 sur {totalSteps} · Points de vie'**
+  String levelUpScreenHpStepLabel(int totalSteps);
+
+  /// Titre "Points de vie maximum" — étape "Points de vie" et récapitulatif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Points de vie maximum'**
+  String get levelUpScreenMaxHpTitle;
+
+  /// Formule de delta des PV maximum (étape "Points de vie" et récapitulatif).
+  ///
+  /// In fr, this message translates to:
+  /// **'{oldHp} → {newHp} (+{gain})'**
+  String levelUpScreenMaxHpDelta(int oldHp, int newHp, int gain);
+
+  /// Libellé du dé de vie, branche multiclassage, étape "Points de vie".
+  ///
+  /// In fr, this message translates to:
+  /// **'Dé de vie de {className} (niveau 1) : d{hitDie}'**
+  String levelUpScreenHitDieMulticlassLabel(String className, int hitDie);
+
+  /// Libellé du dé de vie, branche classe continuée, étape "Points de vie".
+  ///
+  /// In fr, this message translates to:
+  /// **'Dé de vie de la classe : d{hitDie}'**
+  String levelUpScreenHitDieClassLabel(int hitDie);
+
+  /// Segment "Lancer le dé" du `SegmentedToggle` de méthode PV de l'étape "Points de vie".
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer le dé (d{hitDie})'**
+  String levelUpScreenRollHitDieOption(int hitDie);
+
+  /// Segment "Valeur moyenne" du `SegmentedToggle` de méthode PV de l'étape "Points de vie".
+  ///
+  /// In fr, this message translates to:
+  /// **'Valeur moyenne ({average})'**
+  String levelUpScreenAverageHitDieOption(int average);
+
+  /// Ligne "{modificateur} modificateur de Constitution" de l'étape "Points de vie" — `modifier` est déjà formaté avec son signe (`SignedModifierFormatter`).
+  ///
+  /// In fr, this message translates to:
+  /// **'{modifier} modificateur de Constitution'**
+  String levelUpScreenConstitutionModifierLabel(String modifier);
+
+  /// Lien "Relancer le dé" de l'étape "Points de vie" (méthode "Lancer le dé").
+  ///
+  /// In fr, this message translates to:
+  /// **'Relancer le dé'**
+  String get levelUpScreenRerollDieLink;
+
+  /// Rappel de la formule de valeur moyenne de l'étape "Points de vie" (méthode "Valeur moyenne").
+  ///
+  /// In fr, this message translates to:
+  /// **'(moitié du dé arrondie au supérieur, +1)'**
+  String get levelUpScreenAverageDieFormulaHint;
+
+  /// Lien sous le bouton "Continuer" de l'étape "Points de vie" (aucun écran dédié n'existe encore, voir `_showLevelHistoryComingSoon`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir l\'historique des niveaux'**
+  String get levelUpScreenLevelHistoryLink;
+
+  /// `stepLabel` de l'étape "Aptitudes" sans maîtrises de multiclassage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape 2 sur {totalSteps} · Aptitudes de classe'**
+  String levelUpScreenAbilitiesStepLabel(int totalSteps);
+
+  /// `stepLabel` de l'étape "Aptitudes" avec maîtrises de multiclassage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape 2 sur {totalSteps} · Aptitudes & maîtrises'**
+  String levelUpScreenAbilitiesStepLabelWithProficiencies(int totalSteps);
+
+  /// Titre du bloc d'aptitudes automatiques de l'étape "Aptitudes".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous obtenez automatiquement :'**
+  String get levelUpScreenAutomaticFeaturesLabel;
+
+  /// Titre du bloc "Maîtrises de multiclassage" de l'étape "Aptitudes".
+  ///
+  /// In fr, this message translates to:
+  /// **'Maîtrises de multiclassage :'**
+  String get levelUpScreenMulticlassProficienciesLabel;
+
+  /// `stepLabel` de l'étape "Choix à faire" — `choiceLabel` est déjà résolu (voir `_choiceStepLabel`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape 3 sur {totalSteps} · {choiceLabel}'**
+  String levelUpScreenChoiceStepLabel(int totalSteps, String choiceLabel);
+
+  /// Libellé court de `LevelUpChoiceKind.abilityScoreImprovement` pour le `stepLabel`/récapitulatif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Amélioration ou don'**
+  String get levelUpScreenChoiceKindAbilityScoreImprovement;
+
+  /// Libellé court de `LevelUpChoiceKind.subclass`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sous-classe'**
+  String get levelUpScreenChoiceKindSubclass;
+
+  /// Libellé court de `LevelUpChoiceKind.fightingStyle`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Style de combat'**
+  String get levelUpScreenChoiceKindFightingStyle;
+
+  /// Libellé court de `LevelUpChoiceKind.favoredEnemy`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ennemi juré'**
+  String get levelUpScreenChoiceKindFavoredEnemy;
+
+  /// Libellé court de `LevelUpChoiceKind.pact`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Faveur de pacte'**
+  String get levelUpScreenChoiceKindPact;
+
+  /// Instruction de la variante liste "Sous-classe" de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez une sous-classe.'**
+  String get levelUpScreenChooseSubclassInstruction;
+
+  /// Instruction de la variante liste "Style de combat" de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez un style de combat.'**
+  String get levelUpScreenChooseFightingStyleInstruction;
+
+  /// Instruction de la variante liste "Ennemi juré" de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez un ennemi juré.'**
+  String get levelUpScreenChooseFavoredEnemyInstruction;
+
+  /// Instruction de la variante liste "Faveur de pacte" de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez votre Faveur de pacte.'**
+  String get levelUpScreenChoosePactInstruction;
+
+  /// Instruction du sous-état ASI-ou-don de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez comment progresser.'**
+  String get levelUpScreenChooseProgressionInstruction;
+
+  /// Segment "Répartir +2" du `SegmentedToggle` ASI-ou-don de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Répartir +2'**
+  String get levelUpScreenAllocateAbilityOption;
+
+  /// Segment "Choisir un don" du `SegmentedToggle` ASI-ou-don de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un don'**
+  String get levelUpScreenChooseFeatOption;
+
+  /// Instruction de la variante liste "Don" de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez un don.'**
+  String get levelUpScreenChooseFeatInstruction;
+
+  /// Titre du sélecteur de caractéristique d'un demi-don à plusieurs choix, étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Caractéristique augmentée par {featName} (+1) :'**
+  String levelUpScreenFeatAbilityIncreaseLabel(String featName);
+
+  /// Instruction de la variante allocation ASI de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Répartissez {budget} points entre vos caractéristiques.'**
+  String levelUpScreenAllocateBudgetInstruction(int budget);
+
+  /// Ligne "Points restants" de la variante allocation ASI de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Points restants : {remaining}/{budget}'**
+  String levelUpScreenPointsRemainingLabel(int remaining, int budget);
+
+  /// Ligne affichée une fois le budget ASI entièrement réparti.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les points sont répartis.'**
+  String get levelUpScreenAllPointsAllocatedLabel;
+
+  /// Formule de delta de caractéristique de `_AllocationRow` (variante allocation ASI).
+  ///
+  /// In fr, this message translates to:
+  /// **'{oldScore} → {newScore} (+{alloc})'**
+  String levelUpScreenAbilityScoreDelta(int oldScore, int newScore, int alloc);
+
+  /// `stepLabel` de l'étape "Sorts" quand seul un recalcul automatique d'emplacements est proposé (pas de sélection de sorts connus).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Emplacements de sorts'**
+  String levelUpScreenSpellSlotsStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre du bloc de recalcul des emplacements de sorts de l'étape "Sorts" (les deux variantes).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos emplacements de sorts sont recalculés :'**
+  String get levelUpScreenSpellSlotsRecalculatedLabel;
+
+  /// Message affiché quand aucun changement d'emplacement de sorts n'est calculé pour ce niveau, étape "Sorts" (variante sélection de sorts connus).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun emplacement de sorts à ce niveau.'**
+  String get levelUpScreenNoSpellSlotsAtThisLevel;
+
+  /// `stepLabel` de l'étape "Sorts" quand une sélection de nouveaux sorts/cantrips connus est proposée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Sorts'**
+  String levelUpScreenSpellsStepLabel(int stepNumber, int totalSteps);
+
+  /// Onglet "Mineurs" (sorts mineurs) du sélecteur de l'étape "Sorts".
+  ///
+  /// In fr, this message translates to:
+  /// **'Mineurs'**
+  String get levelUpScreenCantripTab;
+
+  /// Onglet "Sorts" (niveau 1+) du sélecteur de l'étape "Sorts".
+  ///
+  /// In fr, this message translates to:
+  /// **'Sorts'**
+  String get levelUpScreenSpellsTab;
+
+  /// Onglet "Grimoire" (Livre des ombres, Pacte du grimoire) du sélecteur de l'étape "Sorts".
+  ///
+  /// In fr, this message translates to:
+  /// **'Grimoire'**
+  String get levelUpScreenPactTab;
+
+  /// Titre de section de l'onglet "Mineurs" de l'étape "Sorts", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS MINEURS CONNUS'**
+  String get levelUpScreenKnownCantripsTitle;
+
+  /// Titre de section de l'onglet "Grimoire" de l'étape "Sorts", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'LIVRE DES OMBRES'**
+  String get levelUpScreenShadowBookTitle;
+
+  /// Titre de section de l'onglet "Sorts" de l'étape "Sorts", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'NOUVEAUX SORTS CONNUS'**
+  String get levelUpScreenKnownSpellsTitle;
+
+  /// Badge "X / Y" de `_QuotaBadge`, partagé par toutes les étapes à quota (Sorts, Invocations, Disciplines élémentaires, Manœuvres, Tirs arcaniques, Runes, Infusions, Métamagie, Expertise).
+  ///
+  /// In fr, this message translates to:
+  /// **'{selected} / {quota}'**
+  String levelUpScreenQuotaBadge(int selected, int quota);
+
+  /// Sous-titre d'une tuile de sort candidat de la section "NOUVEAUX SORTS CONNUS" — `metaLine` est déjà résolu (`SpellOption.metaLine`).
+  ///
+  /// In fr, this message translates to:
+  /// **'{metaLine} (niveau {level})'**
+  String levelUpScreenSpellMetaLineWithLevel(String metaLine, int level);
+
+  /// Sous-titre d'un sort de la liste étendue du patron (Occultiste) — `baseSubtitle` est déjà résolu.
+  ///
+  /// In fr, this message translates to:
+  /// **'{baseSubtitle} · Patron'**
+  String levelUpScreenPatronSpellSubtitle(String baseSubtitle);
+
+  /// `stepLabel` de l'étape "Invocations" (Occultiste).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Invocations'**
+  String levelUpScreenInvocationsStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section de l'étape "Invocations", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'INVOCATIONS CONNUES'**
+  String get levelUpScreenKnownInvocationsTitle;
+
+  /// Message d'état vide de l'étape "Invocations" (cas attendu, pas seulement défensif).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà toutes les invocations occultistes disponibles.'**
+  String get levelUpScreenNoMoreInvocationsMessage;
+
+  /// `stepLabel` de l'étape "Disciplines élémentaires" (Moine, Voie des quatre éléments).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Disciplines élémentaires'**
+  String levelUpScreenElementalDisciplinesStepLabel(
+    int stepNumber,
+    int totalSteps,
+  );
+
+  /// Titre de section de l'étape "Disciplines élémentaires", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'DISCIPLINES ÉLÉMENTAIRES CONNUES'**
+  String get levelUpScreenKnownElementalDisciplinesTitle;
+
+  /// Message d'état vide de l'étape "Disciplines élémentaires".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà toutes les disciplines élémentaires disponibles à ce niveau.'**
+  String get levelUpScreenNoMoreElementalDisciplinesMessage;
+
+  /// `stepLabel` de l'étape "Manœuvres" (Guerrier, Maître de guerre).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Manœuvres'**
+  String levelUpScreenManeuversStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section de l'étape "Manœuvres", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'MANŒUVRES CONNUES'**
+  String get levelUpScreenKnownManeuversTitle;
+
+  /// Message d'état vide de l'étape "Manœuvres".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà toutes les manœuvres disponibles.'**
+  String get levelUpScreenNoMoreManeuversMessage;
+
+  /// `stepLabel` de l'étape "Tirs arcaniques" (Guerrier, Archer arcanique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Tirs arcaniques'**
+  String levelUpScreenArcaneShotsStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section de l'étape "Tirs arcaniques", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'TIRS ARCANIQUES CONNUS'**
+  String get levelUpScreenKnownArcaneShotsTitle;
+
+  /// Message d'état vide de l'étape "Tirs arcaniques".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà tous les tirs arcaniques disponibles.'**
+  String get levelUpScreenNoMoreArcaneShotsMessage;
+
+  /// `stepLabel` de l'étape "Runes" (Guerrier, Chevalier runique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Runes'**
+  String levelUpScreenRunesStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section de l'étape "Runes", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'RUNES CONNUES'**
+  String get levelUpScreenKnownRunesTitle;
+
+  /// Message d'état vide de l'étape "Runes".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà toutes les runes disponibles.'**
+  String get levelUpScreenNoMoreRunesMessage;
+
+  /// `stepLabel` de l'étape "Infusions" (Artificier).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Infusions'**
+  String levelUpScreenInfusionsStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section "Nouvelles infusions" de l'étape "Infusions", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'NOUVELLES INFUSIONS'**
+  String get levelUpScreenNewInfusionsTitle;
+
+  /// Message d'état vide de la section "Nouvelles infusions" de l'étape "Infusions".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà toutes les infusions disponibles.'**
+  String get levelUpScreenNoMoreInfusionsMessage;
+
+  /// Titre de section "Remplacer une infusion" de l'étape "Infusions", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'REMPLACER UNE INFUSION (OPTIONNEL)'**
+  String get levelUpScreenReplaceInfusionOptionalTitle;
+
+  /// Titre "REMPLACÉE PAR" de la sous-section échange, étapes "Infusions" et "Métamagie", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'REMPLACÉE PAR'**
+  String get levelUpScreenReplacedByLabel;
+
+  /// `stepLabel` de l'étape "Métamagie" (Ensorceleur).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Métamagie'**
+  String levelUpScreenMetamagicStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section "Nouvelles options" de l'étape "Métamagie", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'NOUVELLES OPTIONS DE MÉTAMAGIE'**
+  String get levelUpScreenNewMetamagicOptionsTitle;
+
+  /// Message d'état vide de la section "Nouvelles options" de l'étape "Métamagie".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà toutes les options de Métamagie disponibles.'**
+  String get levelUpScreenNoMoreMetamagicMessage;
+
+  /// Titre de section "Remplacer une option" de l'étape "Métamagie", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'REMPLACER UNE OPTION (OPTIONNEL)'**
+  String get levelUpScreenReplaceMetamagicOptionalTitle;
+
+  /// `stepLabel` de l'étape "Expertise" (Barde/Roublard).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Expertise'**
+  String levelUpScreenExpertiseStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section de l'étape "Expertise", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'COMPÉTENCES EN EXPERTISE'**
+  String get levelUpScreenExpertiseSkillsTitle;
+
+  /// Libellé "Outils de voleur" — tuile de substitution de l'étape "Expertise" et récapitulatif (Roublard, édition 2014).
+  ///
+  /// In fr, this message translates to:
+  /// **'Outils de voleur'**
+  String get levelUpScreenThievesToolsLabel;
+
+  /// Sous-titre de la tuile de substitution "Outils de voleur" de l'étape "Expertise".
+  ///
+  /// In fr, this message translates to:
+  /// **'Substitue une des places d\'Expertise à la maîtrise des outils de voleur.'**
+  String get levelUpScreenThievesToolsSubstitutionHint;
+
+  /// Message d'état vide de l'étape "Expertise" (aucune compétence candidate).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune compétence déjà maîtrisée à faire passer en Expertise.'**
+  String get levelUpScreenNoExpertiseCandidatesMessage;
+
+  /// `stepLabel` de l'étape "Ascendance draconique" (Ensorceleur, Lignage draconique, niveau 1 de sous-classe).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Ascendance draconique'**
+  String levelUpScreenDraconicAncestryStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section de l'étape "Ascendance draconique", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'TYPE DE DÉGÂTS'**
+  String get levelUpScreenDamageTypeTitle;
+
+  /// Titre de `GainRow` "Nouveaux emplacements de sorts" (déblocage net d'un palier) — étape "Sorts" et récapitulatif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveaux emplacements de sorts'**
+  String get levelUpScreenNewSpellSlotsTitle;
+
+  /// Titre de `GainRow` "Emplacements de sorts renforcés" (renfort d'un palier déjà actif) — étape "Sorts" et récapitulatif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Emplacements de sorts renforcés'**
+  String get levelUpScreenReinforcedSpellSlotsTitle;
+
+  /// Sous-titre de `GainRow` d'un palier d'emplacements nouvellement débloqué.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {spellLevel} débloqué'**
+  String levelUpScreenSpellSlotUnlockedSubtitle(int spellLevel);
+
+  /// Sous-titre de `GainRow` d'un palier d'emplacements renforcé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {spellLevel} : {oldTotal} → {newTotal} (+{delta})'**
+  String levelUpScreenSpellSlotReinforcedSubtitle(
+    int spellLevel,
+    int oldTotal,
+    int newTotal,
+    int delta,
+  );
+
+  /// Titre de `GainRow` de magie de pacte (Occultiste), premier dip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Magie de pacte débloquée'**
+  String get levelUpScreenPactMagicUnlockedTitle;
+
+  /// Sous-titre de `GainRow` de magie de pacte, premier dip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {slotLevel} · {charges} charge(s)'**
+  String levelUpScreenPactMagicUnlockedSubtitle(int slotLevel, int charges);
+
+  /// Titre de `GainRow` de magie de pacte, charges renforcées (niveau de charge inchangé, ou les deux changent).
+  ///
+  /// In fr, this message translates to:
+  /// **'Charges de pacte renforcées'**
+  String get levelUpScreenPactChargesReinforcedTitle;
+
+  /// Sous-titre de `GainRow` de magie de pacte, charges renforcées à niveau de charge inchangé.
+  ///
+  /// In fr, this message translates to:
+  /// **'{oldCharges} → {newCharges} charges (niveau {slotLevel})'**
+  String levelUpScreenPactChargesReinforcedSubtitle(
+    int oldCharges,
+    int newCharges,
+    int slotLevel,
+  );
+
+  /// Titre de `GainRow` de magie de pacte, niveau de charge amélioré à charges inchangées.
+  ///
+  /// In fr, this message translates to:
+  /// **'Charges de pacte améliorées'**
+  String get levelUpScreenPactChargesImprovedTitle;
+
+  /// Sous-titre de `GainRow` de magie de pacte, niveau de charge amélioré à charges inchangées.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {oldSlotLevel} → {newSlotLevel} ({newCharges} charges)'**
+  String levelUpScreenPactChargesImprovedSubtitle(
+    int oldSlotLevel,
+    int newSlotLevel,
+    int newCharges,
+  );
+
+  /// Sous-titre de `GainRow` de magie de pacte, charges ET niveau de charge changent à la fois.
+  ///
+  /// In fr, this message translates to:
+  /// **'{oldCharges} → {newCharges} charges, niveau {oldSlotLevel} → {newSlotLevel}'**
+  String levelUpScreenPactChargesBothSubtitle(
+    int oldCharges,
+    int newCharges,
+    int oldSlotLevel,
+    int newSlotLevel,
+  );
+
+  /// Titre de `GainRow` du récapitulatif, étape "Choix à faire" en mode don (ASI).
+  ///
+  /// In fr, this message translates to:
+  /// **'Don'**
+  String get levelUpScreenFeatSummaryTitle;
+
+  /// Sous-titre de `GainRow` du récapitulatif, don avec augmentation de caractéristique choisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'{featName} ({abilityLabel} +1)'**
+  String levelUpScreenFeatAbilityBonusSubtitle(
+    String featName,
+    String abilityLabel,
+  );
+
+  /// Un élément de la liste jointe du sous-titre de `GainRow` du récapitulatif, mode allocation ASI.
+  ///
+  /// In fr, this message translates to:
+  /// **'{label} +{amount}'**
+  String levelUpScreenAbilityAllocationSummaryItem(String label, int amount);
+
+  /// Titre de `GainRow` du récapitulatif, étape "Choix à faire" en mode allocation ASI.
+  ///
+  /// In fr, this message translates to:
+  /// **'Amélioration de caractéristique'**
+  String get levelUpScreenAbilityScoreImprovementTitle;
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Sorts appris" (sorts mineurs).
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveaux sorts mineurs'**
+  String get levelUpScreenNewCantripsTitle;
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Sorts appris" (niveau 1+).
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveaux sorts appris'**
+  String get levelUpScreenNewSpellsLearnedTitle;
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Sorts appris" (Livre des ombres).
+  ///
+  /// In fr, this message translates to:
+  /// **'Livre des ombres'**
+  String get levelUpScreenShadowBookGainTitle;
+
+  /// Titre de `GainRow` du récapitulatif, ajout du sort "Appel de familier" (Pacte de la chaîne).
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel de familier ajouté'**
+  String get levelUpScreenFamiliarAddedTitle;
+
+  /// Sous-titre de `GainRow` "Appel de familier ajouté".
+  ///
+  /// In fr, this message translates to:
+  /// **'Pacte de la chaîne'**
+  String get levelUpScreenChainPactSubtitle;
+
+  /// Titre de `GainRow` du récapitulatif, un sort inné racial nouvellement accordé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sort inné racial'**
+  String get levelUpScreenRacialInnateSpellTitle;
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Invocation(s)".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouvelle invocation occultiste} other{Nouvelles invocations occultistes}}'**
+  String levelUpScreenNewInvocationsSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Discipline(s) élémentaire(s)".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouvelle discipline élémentaire} other{Nouvelles disciplines élémentaires}}'**
+  String levelUpScreenNewElementalDisciplinesSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Manœuvre(s)".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouvelle manœuvre} other{Nouvelles manœuvres}}'**
+  String levelUpScreenNewManeuversSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Tir(s) arcanique(s)".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouveau tir arcanique} other{Nouveaux tirs arcaniques}}'**
+  String levelUpScreenNewArcaneShotsSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Rune(s)".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouvelle rune} other{Nouvelles runes}}'**
+  String levelUpScreenNewRunesSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Infusion(s)".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouvelle infusion} other{Nouvelles infusions}}'**
+  String levelUpScreenNewInfusionsSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, échange d'infusion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Infusion remplacée'**
+  String get levelUpScreenInfusionSwapTitle;
+
+  /// Sous-titre de `GainRow` du récapitulatif, échange d'infusion ou de Métamagie.
+  ///
+  /// In fr, this message translates to:
+  /// **'{removedName} → {addedName}'**
+  String levelUpScreenSwapSubtitle(String removedName, String addedName);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Métamagie".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouvelle option de Métamagie} other{Nouvelles options de Métamagie}}'**
+  String levelUpScreenNewMetamagicOptionsSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, échange de Métamagie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Métamagie remplacée'**
+  String get levelUpScreenMetamagicSwapTitle;
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Expertise".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Expertise} other{Expertises}}'**
+  String levelUpScreenExpertiseSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Ascendance draconique".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ascendance draconique'**
+  String get levelUpScreenDraconicAncestryTitle;
+
+  /// Message de `_EmptyFeaturesState` (état vide de l'étape "Aptitudes").
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune nouvelle aptitude de classe à ce niveau.'**
+  String get levelUpScreenNoNewFeaturesMessage;
+
+  /// Message générique de repli de `_EmptyChoiceState` (étape "Choix à faire", cas défensif).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune option disponible pour ce choix.'**
+  String get levelUpScreenNoOptionAvailableMessage;
+
+  /// Titre de l'écran de blocage (`_buildBlocked`) — `level` est le niveau DANS la classe concernée, jamais le niveau total.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {level} : choix requis'**
+  String levelUpScreenBlockedLevelTitle(int level);
+
+  /// Bouton primaire de l'écran de blocage (`_buildBlocked`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour à la fiche'**
+  String get levelUpScreenBackToSheetButton;
+
+  /// Bouton secondaire "Réessayer" de `_ErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get levelUpScreenRetryButton;
+
+  /// Titre de `CharacterClassChoicesCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'CHOIX DE CLASSE'**
+  String get characterClassChoicesCardTitle;
+
+  /// Libellé d'une entrée "Sous-classe" quand une seule classe du personnage a une sous-classe choisie (cas le plus courant).
+  ///
+  /// In fr, this message translates to:
+  /// **'Sous-classe'**
+  String get characterClassChoicesCardSubclassLabel;
+
+  /// Libellé d'une entrée "Sous-classe" désambiguïsé par nom de classe, quand plus d'une classe du personnage a une sous-classe choisie (multiclassage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Sous-classe ({className})'**
+  String characterClassChoicesCardSubclassLabelWithClass(String className);
+
+  /// Titre par défaut de `CharacterClassFeaturesCard` (surchargeable via son paramètre `title`, voir `character_spells_tab_body.dart`).
+  ///
+  /// In fr, this message translates to:
+  /// **'APTITUDES DE CLASSE'**
+  String get characterClassFeaturesCardTitle;
+
+  /// Libellé affiché à droite d'une aptitude de classe passive (sans compteur d'usage), carte `CharacterClassFeaturesCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passive'**
+  String get characterClassFeaturesCardPassiveLabel;
+
+  /// Titre de `CharacterFeatsCard`, onglet "Aptitudes".
+  ///
+  /// In fr, this message translates to:
+  /// **'DONS'**
+  String get characterFeatsCardTitle;
+
+  /// Titre de `CharacterRacialTraitsCard`, onglet "Aptitudes".
+  ///
+  /// In fr, this message translates to:
+  /// **'TRAITS RACIAUX'**
+  String get characterRacialTraitsCardTitle;
+
+  /// Libellé affiché à droite de chaque trait racial, toujours "Passive" (décision tranchée, voir la doc de classe de `CharacterRacialTraitsCard`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Passive'**
+  String get characterRacialTraitsCardPassiveLabel;
+
+  /// Titre de `CharacterRaceChoicesCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'CHOIX DE RACE'**
+  String get characterRaceChoicesCardTitle;
+
+  /// Libellé d'une entrée de compétence de race à choix, carte `CharacterRaceChoicesCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compétence'**
+  String get characterRaceChoicesCardSkillLabel;
+
+  /// Libellé d'une entrée d'outil de race à choix, carte `CharacterRaceChoicesCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Outil'**
+  String get characterRaceChoicesCardToolLabel;
+
+  /// Titre de `CharacterArmorProficienciesCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'MAÎTRISES D\'ARMURES'**
+  String get characterArmorProficienciesCardTitle;
+
+  /// Titre de `CharacterWeaponProficienciesCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'MAÎTRISES D\'ARMES'**
+  String get characterWeaponProficienciesCardTitle;
+
+  /// Titre de `CharacterToolProficienciesCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'MAÎTRISES D\'OUTILS'**
+  String get characterToolProficienciesCardTitle;
+
+  /// Titre de `CharacterLanguagesCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'LANGUES CONNUES'**
+  String get characterLanguagesCardTitle;
+
+  /// Titre de `CharacterInvocationsCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'INVOCATIONS CONNUES'**
+  String get characterInvocationsCardTitle;
+
+  /// Titre de `CharacterPactWeaponCard`, onglet "Personnage" (Occultiste, Pacte de la lame).
+  ///
+  /// In fr, this message translates to:
+  /// **'ARME DE PACTE'**
+  String get characterPactWeaponCardTitle;
+
+  /// Ligne d'information affichée quand la sous-classe du personnage est Lame maudite, carte `CharacterPactWeaponCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lame maudite : vous pouvez utiliser le Charisme à la place de la Force ou de la Dextérité pour l\'attaque et les dégâts.'**
+  String get characterPactWeaponCardCursedBladeText;
+
+  /// Rappel de règle toujours affiché en pied de `CharacterPactWeaponCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Invoquée par une action. Disparaît si elle reste à plus de 1,50 m de vous pendant 1 minute, ou si vous l\'invoquez à nouveau.'**
+  String get characterPactWeaponCardReminderText;
+
+  /// Chip "Arme magique" de `CharacterPactWeaponCard` quand une forme est choisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme magique'**
+  String get characterPactWeaponCardMagicWeaponChip;
+
+  /// Chip "Maîtrisée" de `CharacterPactWeaponCard` quand une forme est choisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maîtrisée'**
+  String get characterPactWeaponCardProficientChip;
+
+  /// Titre de l'état vide de `CharacterPactWeaponCard` (aucune forme choisie encore).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune forme choisie'**
+  String get characterPactWeaponCardEmptyTitle;
+
+  /// Description de l'état vide de `CharacterPactWeaponCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez la forme que prend votre arme lorsque vous l\'invoquez.'**
+  String get characterPactWeaponCardEmptyDescription;
+
+  /// Libellé du bouton de `CharacterPactWeaponCard` quand aucune forme n'est encore choisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir une forme'**
+  String get characterPactWeaponCardChooseFormButton;
+
+  /// Libellé du bouton de `CharacterPactWeaponCard` quand une forme est déjà choisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer de forme'**
+  String get characterPactWeaponCardChangeFormButton;
+
+  /// Libellé d'accessibilité (`Semantics.label`) de la forme choisie quand aucun dé de dégâts n'est connu, `CharacterPactWeaponCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme de pacte : {name}'**
+  String characterPactWeaponCardSemanticLabel(String name);
+
+  /// Libellé d'accessibilité (`Semantics.label`) de la forme choisie quand un dé de dégâts est connu, `CharacterPactWeaponCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme de pacte : {name}, {damage}'**
+  String characterPactWeaponCardSemanticLabelWithDamage(
+    String name,
+    String damage,
+  );
+
+  /// Libellé de l'action "Infos" de `showClassFeatureActionSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Infos'**
+  String get classFeatureActionSheetInfoLabel;
+
+  /// Libellé de l'action "Utiliser" de `showClassFeatureActionSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser'**
+  String get classFeatureActionSheetUseLabel;
+
+  /// Texte de fin de ligne de l'action "Utiliser" quand l'aptitude n'a plus d'utilisation restante, `showClassFeatureActionSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Épuisée'**
+  String get classFeatureActionSheetExhaustedLabel;
+
+  /// Ligne "niveau d'obtention" du panneau "Infos" d'une aptitude de classe, `showClassFeatureInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Obtenue au niveau {level}.'**
+  String classFeatureInfoPanelObtainedAtLevel(int level);
+
+  /// Libellé de la ligne "Utilisations" du panneau "Infos" d'une aptitude de classe, `showClassFeatureInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utilisations'**
+  String get classFeatureInfoPanelUsesLabel;
+
+  /// Valeur de la ligne "Utilisations" quand l'aptitude est passive, `showClassFeatureInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passive'**
+  String get classFeatureInfoPanelPassiveLabel;
+
+  /// Titre de section "DESCRIPTION" du panneau "Infos" d'une aptitude de classe, `showClassFeatureInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'DESCRIPTION'**
+  String get classFeatureInfoPanelDescriptionLabel;
+
+  /// Repli affiché quand la description de l'aptitude est vide, `showClassFeatureInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Description indisponible.'**
+  String get classFeatureInfoPanelDescriptionUnavailable;
+
+  /// Bouton primaire de pied du panneau "Infos" d'une aptitude de classe à usage limité, `showClassFeatureInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser'**
+  String get classFeatureInfoPanelUseButton;
+
+  /// Ligne "Prérequis" du panneau "Infos" d'un don, `showFeatInfoPanel`, quand renseigné.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prérequis : {prerequisite}'**
+  String featInfoPanelPrerequisiteLabel(String prerequisite);
+
+  /// Titre de section "DESCRIPTION" du panneau "Infos" d'un don, `showFeatInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'DESCRIPTION'**
+  String get featInfoPanelDescriptionLabel;
+
+  /// Titre de section "DESCRIPTION" du panneau "Infos" d'un trait racial, `showRacialTraitInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'DESCRIPTION'**
+  String get racialTraitInfoPanelDescriptionLabel;
+
+  /// Repli affiché quand la description du trait racial est vide, `showRacialTraitInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Description indisponible.'**
+  String get racialTraitInfoPanelDescriptionUnavailable;
+
+  /// Message d'erreur de chargement du catalogue, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger le catalogue. Réessayez.'**
+  String get proficiencyDetailPanelLoadErrorMessage;
+
+  /// Message d'état vide dédié au token 'boucliers (non métalliques)', toujours vide dans ce catalogue — voir `DruidNonMetallicEquipment`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun bouclier non métallique disponible dans le catalogue actuel.'**
+  String get proficiencyDetailPanelNoNonMetallicShieldMessage;
+
+  /// Message d'état vide générique de repli (cas défensif, non couvert par la spec direction-artistique), `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun objet correspondant disponible dans le catalogue actuel.'**
+  String get proficiencyDetailPanelNoMatchingItemMessage;
+
+  /// Préfixe de la ligne "Propriétés" d'une arme, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Propriétés : '**
+  String get proficiencyDetailPanelPropertiesLabel;
+
+  /// Libellé de la ligne "CA" du gabarit réduit d'un bouclier, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'CA'**
+  String get proficiencyDetailPanelAcLabel;
+
+  /// Libellé de la ligne "CA de base" du gabarit complet d'une armure, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'CA de base'**
+  String get proficiencyDetailPanelAcBaseLabel;
+
+  /// Libellé de la ligne "Bonus Dex" du gabarit complet d'une armure, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus Dex'**
+  String get proficiencyDetailPanelDexBonusLabel;
+
+  /// Libellé de la ligne "Force requise" du gabarit complet d'une armure, quand renseignée, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Force requise'**
+  String get proficiencyDetailPanelStrengthRequirementLabel;
+
+  /// Libellé de la ligne "Désavantage discrétion" du gabarit complet d'une armure, quand vrai, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désavantage discrétion'**
+  String get proficiencyDetailPanelStealthDisadvantageLabel;
+
+  /// Valeur de la ligne "Désavantage discrétion" quand vrai, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Oui'**
+  String get proficiencyDetailPanelYesLabel;
+
+  /// Titre de la feuille `showPactWeaponPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'FORME DE L\'ARME'**
+  String get pactWeaponPickerSheetTitle;
+
+  /// Texte d'indice du champ de recherche de `showPactWeaponPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher une arme...'**
+  String get pactWeaponPickerSheetSearchHint;
+
+  /// Message d'erreur de chargement des armes éligibles, `showPactWeaponPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les armes. Réessayez.'**
+  String get pactWeaponPickerSheetLoadErrorMessage;
+
+  /// Message d'état vide (catalogue sans arme éligible), `showPactWeaponPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune arme disponible.'**
+  String get pactWeaponPickerSheetEmptyMessage;
+
+  /// Message affiché quand la recherche ne trouve aucune arme, `showPactWeaponPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune arme trouvée.'**
+  String get pactWeaponPickerSheetNoResultsMessage;
+
+  /// Titre de la feuille `showWeaponSlotPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'CHOISIR UN SET'**
+  String get weaponSlotPickerSheetTitle;
+
+  /// Texte affiché en fin de ligne pour un set sans arme équipée, `showWeaponSlotPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vide'**
+  String get weaponSlotPickerSheetEmptyLabel;
+
+  /// Libellé du bouton "Filtre" en tête de liste de l'onglet "Inventaire" (`CompactActionButton`) — `filterLabel` reste `InventoryCategoryFilter.label`, non traduit (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtre : {filterLabel}'**
+  String characterInventoryTabBodyFilterButtonLabel(String filterLabel);
+
+  /// Libellé de la tuile pointillée "+ Objet" en pied de l'onglet "Inventaire" (`DashedAddTile`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet'**
+  String get characterInventoryTabBodyAddItemButtonLabel;
+
+  /// Libellé du bouton "Récompense" en pied de l'onglet "Inventaire" (`_RewardButton`).
+  ///
+  /// In fr, this message translates to:
+  /// **'RÉCOMPENSE'**
+  String get characterInventoryTabBodyRewardButtonLabel;
+
+  /// Message affiché quand au moins un objet existe dans l'inventaire mais qu'aucun ne correspond au filtre de catégorie actif (`_NoFilterMatchState`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun objet dans cette catégorie.'**
+  String get characterInventoryTabBodyNoFilterMatchMessage;
+
+  /// Titre de l'état vide de l'onglet "Inventaire" (`_EmptyInventoryState`), aucun objet du tout dans l'inventaire.
+  ///
+  /// In fr, this message translates to:
+  /// **'INVENTAIRE VIDE'**
+  String get characterInventoryTabBodyEmptyTitle;
+
+  /// Sous-titre de l'état vide de l'onglet "Inventaire" (`_EmptyInventoryState`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun objet dans cet inventaire pour l\'instant.'**
+  String get characterInventoryTabBodyEmptyMessage;
+
+  /// Sous-titre d'une carte d'objet de l'onglet "Inventaire" (`CharacterInventoryItemCard`) — `category` reste `InventoryCategoryRules.labelFor`, non traduit (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'{category} · x{quantity}'**
+  String characterInventoryItemCardSubtitle(String category, int quantity);
+
+  /// Badge affiché à droite d'un objet équipé, à la place de son poids (`_EquippedBadge`).
+  ///
+  /// In fr, this message translates to:
+  /// **'ÉQUIPÉ'**
+  String get characterInventoryItemCardEquippedBadge;
+
+  /// Poids affiché à droite d'un objet non équipé (`_Trailing`) — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{weight} kg'**
+  String characterInventoryItemCardWeightValue(String weight);
+
+  /// Titre de la jauge "CHARGE" de l'onglet "Inventaire" (`CharacterInventoryCapacityGauge`).
+  ///
+  /// In fr, this message translates to:
+  /// **'CHARGE'**
+  String get characterInventoryCapacityGaugeTitle;
+
+  /// Valeur "poids porté / capacité" affichée à droite du titre de la jauge "CHARGE" — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{weight} / {capacity} kg'**
+  String characterInventoryCapacityGaugeValueLabel(
+    String weight,
+    String capacity,
+  );
+
+  /// Message d'alerte affiché sous la jauge "CHARGE" quand le poids porté dépasse la capacité de transport.
+  ///
+  /// In fr, this message translates to:
+  /// **'Surchargé — poids supérieur à la capacité de transport.'**
+  String get characterInventoryCapacityGaugeOverloadedWarning;
+
+  /// Libellé d'accessibilité de la jauge "CHARGE", cas non surchargé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Charge : {weight} kilogrammes sur {capacity} kilogrammes'**
+  String characterInventoryCapacityGaugeSemanticsLabel(
+    String weight,
+    String capacity,
+  );
+
+  /// Libellé d'accessibilité de la jauge "CHARGE", cas surchargé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Charge : {weight} kilogrammes sur {capacity} kilogrammes, surchargé'**
+  String characterInventoryCapacityGaugeSemanticsLabelOverloaded(
+    String weight,
+    String capacity,
+  );
+
+  /// Titre de la carte « ARMES ÉQUIPÉES » de l'onglet « Personnage » (`CharacterEquippedWeaponsCard`).
+  ///
+  /// In fr, this message translates to:
+  /// **'ARMES ÉQUIPÉES'**
+  String get characterEquippedWeaponsCardTitle;
+
+  /// Titre de la sous-section "Set principal" de `CharacterEquippedWeaponsCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'SET PRINCIPAL'**
+  String get characterEquippedWeaponsCardPrimarySetTitle;
+
+  /// Titre de la sous-section "Set secondaire" de `CharacterEquippedWeaponsCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'SET SECONDAIRE'**
+  String get characterEquippedWeaponsCardSecondarySetTitle;
+
+  /// Message affiché par une sous-section de set sans arme équipée (`_WeaponSlotSection`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune arme dans ce set.'**
+  String get characterEquippedWeaponsCardEmptySetMessage;
+
+  /// Libellé de la ligne "Attaque" d'une arme équipée (`_Weapon`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Attaque'**
+  String get characterEquippedWeaponsCardAttackLabel;
+
+  /// Titre de l'état vide de `CharacterEquippedWeaponsCard` (`_EmptyWeapons`), aucune arme équipée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune arme équipée'**
+  String get characterEquippedWeaponsCardEmptyTitle;
+
+  /// Sous-titre de l'état vide de `CharacterEquippedWeaponsCard` (`_EmptyWeapons`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Équipez une arme depuis l\'onglet Inventaire pour qu\'elle apparaisse ici.'**
+  String get characterEquippedWeaponsCardEmptyDescription;
+
+  /// Début du libellé d'accessibilité d'une arme équipée (`_Weapon`) — `name` reste `item.name`, donnée de contenu D&D.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme équipée : {name}'**
+  String characterEquippedWeaponsCardSemanticsLabel(String name);
+
+  /// Segment "Attaque" ajouté au libellé d'accessibilité d'une arme équipée quand un bonus d'attaque est connu.
+  ///
+  /// In fr, this message translates to:
+  /// **', Attaque : {attackBonus}'**
+  String characterEquippedWeaponsCardSemanticsAttackSuffix(String attackBonus);
+
+  /// Segment "Portée" ajouté au libellé d'accessibilité d'une arme équipée à portée (arme à distance).
+  ///
+  /// In fr, this message translates to:
+  /// **', Portée : {range}'**
+  String characterEquippedWeaponsCardSemanticsRangeSuffix(String range);
+
+  /// Portée d'une arme équipée sans portée maximale distincte — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{rangeNormal} m'**
+  String characterEquippedWeaponsCardRangeValue(String rangeNormal);
+
+  /// Portée d'une arme équipée avec portée maximale distincte.
+  ///
+  /// In fr, this message translates to:
+  /// **'{rangeNormal} m (max {rangeMax} m)'**
+  String characterEquippedWeaponsCardRangeValueWithMax(
+    String rangeNormal,
+    String rangeMax,
+  );
+
+  /// Première option de la sheet d'entrée "+ Ajouter un objet" (`_AddItemEntrySheetContent`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Depuis le catalogue'**
+  String get addItemFlowCatalogEntryLabel;
+
+  /// Seconde option de la sheet d'entrée "+ Ajouter un objet" (`_AddItemEntrySheetContent`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet personnalisé'**
+  String get addItemFlowCustomEntryLabel;
+
+  /// Titre de la sheet "Depuis le catalogue" en sélection simple (`_ItemCatalogPickerContent`, `multiSelect: false`).
+  ///
+  /// In fr, this message translates to:
+  /// **'AJOUTER UN OBJET'**
+  String get addItemFlowCatalogTitleSingle;
+
+  /// Titre de la sheet "Depuis le catalogue" en sélection multiple (`_ItemCatalogPickerContent`, `multiSelect: true`).
+  ///
+  /// In fr, this message translates to:
+  /// **'AJOUTER DES OBJETS'**
+  String get addItemFlowCatalogTitleMulti;
+
+  /// Texte d'indice du champ de recherche de la sheet "Depuis le catalogue".
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher un objet...'**
+  String get addItemFlowSearchHint;
+
+  /// Message d'erreur de repli affiché quand le chargement du catalogue échoue sans `CharacterFailure` exploitable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger le catalogue d\'objets. Réessayez.'**
+  String get addItemFlowCatalogLoadErrorMessage;
+
+  /// Libellé du bouton "Ajouter" de la sheet "Depuis le catalogue" en sélection multiple, aucun objet coché.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get addItemFlowAddButtonLabel;
+
+  /// Libellé du bouton "Ajouter" de la sheet "Depuis le catalogue" en sélection multiple, avec le compte d'objets cochés entre parenthèses — même recette que `characterDeleteConfirmationMultipleConfirmButton`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter ({count})'**
+  String addItemFlowAddButtonLabelWithCount(int count);
+
+  /// Message affiché quand la recherche de la sheet "Depuis le catalogue" ne trouve aucun objet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun objet trouvé.'**
+  String get addItemFlowNoResultsMessage;
+
+  /// Sous-titre d'une ligne du catalogue avec un poids connu (`_CatalogItemRow`) — unités "po"/"kg" volontairement gardées telles quelles en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{cost} po · {weight} kg'**
+  String addItemFlowCatalogItemSubtitleWithWeight(String cost, String weight);
+
+  /// Sous-titre d'une ligne du catalogue sans poids connu (`_CatalogItemRow`).
+  ///
+  /// In fr, this message translates to:
+  /// **'{cost} po'**
+  String addItemFlowCatalogItemSubtitleNoWeight(String cost);
+
+  /// Titre de la sheet légère de quantité ouverte au tap sur une ligne du catalogue (`_ItemQuantitySheetContent`) — `itemName` reste le nom de l'objet, donnée de contenu D&D.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter {itemName}'**
+  String addItemFlowQuantitySheetTitle(String itemName);
+
+  /// Bouton "Ajouter" de la sheet légère de quantité (`_ItemQuantitySheetContent`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get addItemFlowQuantitySheetAddButton;
+
+  /// Titre de la sheet "Objet personnalisé" (`_CustomItemPickerContent`).
+  ///
+  /// In fr, this message translates to:
+  /// **'OBJET PERSONNALISÉ'**
+  String get addItemFlowCustomSheetTitle;
+
+  /// Libellé de section "Nom de l'objet" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'NOM DE L\'OBJET'**
+  String get addItemFlowCustomNameSectionLabel;
+
+  /// Texte d'indice du champ "Nom de l'objet" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. Amulette de famille'**
+  String get addItemFlowCustomNameHint;
+
+  /// Libellé de section "Description" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'DESCRIPTION'**
+  String get addItemFlowCustomDescriptionSectionLabel;
+
+  /// Texte d'indice du champ "Description" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. Un médaillon gravé aux armes de votre famille.'**
+  String get addItemFlowCustomDescriptionHint;
+
+  /// Libellé de section "Type d'objet" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'TYPE D\'OBJET'**
+  String get addItemFlowCustomTypeSectionLabel;
+
+  /// Option "Objet simple" du `SegmentedToggle` "Type d'objet" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Objet simple'**
+  String get addItemFlowCustomTypeSimpleOption;
+
+  /// Option "Arme" du `SegmentedToggle` "Type d'objet" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme'**
+  String get addItemFlowCustomTypeWeaponOption;
+
+  /// Libellé de section "Dé de dégâts" de la sheet "Objet personnalisé" (visible seulement pour le type "Arme").
+  ///
+  /// In fr, this message translates to:
+  /// **'DÉ DE DÉGÂTS'**
+  String get addItemFlowCustomDiceSectionLabel;
+
+  /// Lettre "d" affichée entre le nombre de dés et le nombre de faces du dé de dégâts (notation D&D "NdM", ex. "1d8") — gardée telle quelle en anglais aussi, notation de dés internationale.
+  ///
+  /// In fr, this message translates to:
+  /// **'d'**
+  String get addItemFlowCustomDiceNotationSeparator;
+
+  /// Libellé de section "Type de dégâts" de la sheet "Objet personnalisé" (visible seulement pour le type "Arme").
+  ///
+  /// In fr, this message translates to:
+  /// **'TYPE DE DÉGÂTS'**
+  String get addItemFlowCustomDamageTypeSectionLabel;
+
+  /// Texte d'indice du menu déroulant "Type de dégâts" de la sheet "Objet personnalisé", aucune valeur choisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sélectionner'**
+  String get addItemFlowCustomDamageTypeHint;
+
+  /// Libellé affiché pour le type de dégâts "tranchant" dans le menu déroulant de la sheet "Objet personnalisé" (valeur stockée inchangée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tranchant'**
+  String get addItemFlowDamageTypeSlashingLabel;
+
+  /// Libellé affiché pour le type de dégâts "perforant" dans le menu déroulant de la sheet "Objet personnalisé" (valeur stockée inchangée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Perforant'**
+  String get addItemFlowDamageTypePiercingLabel;
+
+  /// Libellé affiché pour le type de dégâts "contondant" dans le menu déroulant de la sheet "Objet personnalisé" (valeur stockée inchangée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Contondant'**
+  String get addItemFlowDamageTypeBludgeoningLabel;
+
+  /// Libellé de section "Propriétés" de la sheet "Objet personnalisé" (visible seulement pour le type "Arme").
+  ///
+  /// In fr, this message translates to:
+  /// **'PROPRIÉTÉS'**
+  String get addItemFlowCustomPropertiesSectionLabel;
+
+  /// Texte d'indice du champ "Propriétés" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. légère, finesse'**
+  String get addItemFlowCustomPropertiesHint;
+
+  /// Légende sous le champ "Propriétés" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Séparez plusieurs propriétés par une virgule.'**
+  String get addItemFlowCustomPropertiesCaption;
+
+  /// Libellé de section "Quantité" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'QUANTITÉ'**
+  String get addItemFlowCustomQuantitySectionLabel;
+
+  /// Bouton secondaire "Annuler" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get addItemFlowCustomCancelButton;
+
+  /// Bouton primaire "Ajouter" de la sheet "Objet personnalisé".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get addItemFlowCustomAddButton;
+
+  /// Action "Infos" de la sheet d'actions d'objet (`_ItemActionSheetContent`), toujours affichée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Infos'**
+  String get itemActionSheetInfoLabel;
+
+  /// Action "Utiliser" de la sheet d'actions d'objet, affichée pour un objet consommable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser'**
+  String get itemActionSheetUseLabel;
+
+  /// Action "Équiper" de la sheet d'actions d'objet (arme non équipée, ou armure/bouclier non équipé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Équiper'**
+  String get itemActionSheetEquipLabel;
+
+  /// Action "Changer de set" de la sheet d'actions d'objet, pour une arme déjà équipée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer de set'**
+  String get itemActionSheetChangeSetLabel;
+
+  /// Action "Déséquiper" de la sheet d'actions d'objet (arme, armure ou bouclier déjà équipé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Déséquiper'**
+  String get itemActionSheetUnequipLabel;
+
+  /// Action "Harmoniser cet objet" de la sheet d'actions d'objet, objet pas encore harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Harmoniser cet objet'**
+  String get itemActionSheetAttuneLabel;
+
+  /// Action "Ne plus harmoniser" de la sheet d'actions d'objet, objet déjà harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne plus harmoniser'**
+  String get itemActionSheetStopAttuneLabel;
+
+  /// Texte de fin de ligne de l'action d'harmonisation quand le plafond `CharacterDetail.attunementCap` est atteint pour un objet pas encore harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Limite ({cap}) atteinte'**
+  String itemActionSheetAttunementCapReachedLabel(int cap);
+
+  /// Action "Retirer" de la sheet d'actions d'objet, toujours affichée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get itemActionSheetRemoveLabel;
+
+  /// Sous-titre de l'objet en tête de la sheet d'actions d'objet — `category` reste `InventoryCategoryRules.labelFor`, non traduit (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'{category} · x{quantity}'**
+  String itemActionSheetSubtitle(String category, int quantity);
+
+  /// Titre du dialogue de confirmation "Retirer {nom} ?" — `itemName` reste le nom de l'objet, donnée de contenu D&D.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer {itemName} ?'**
+  String itemActionSheetRemoveConfirmationTitle(String itemName);
+
+  /// Corps du dialogue de confirmation "Retirer {nom} ?".
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action est définitive.'**
+  String get itemActionSheetRemoveConfirmationBody;
+
+  /// Bouton secondaire "Annuler" du dialogue de confirmation "Retirer {nom} ?".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get itemActionSheetRemoveConfirmationCancelButton;
+
+  /// Bouton destructif de confirmation du dialogue "Retirer {nom} ?".
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get itemActionSheetRemoveConfirmationConfirmButton;
+
+  /// Libellé de la ligne "Poids unitaire" du panneau "Infos" d'un objet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Poids unitaire'**
+  String get itemInfoPanelWeightLabel;
+
+  /// Valeur de la ligne "Poids unitaire" du panneau "Infos" d'un objet — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{weight} kg'**
+  String itemInfoPanelWeightValue(String weight);
+
+  /// Libellé de la ligne "Coût" du panneau "Infos" d'un objet.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coût'**
+  String get itemInfoPanelCostLabel;
+
+  /// Valeur de la ligne "Coût" du panneau "Infos" d'un objet — unité "po" volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{cost} po'**
+  String itemInfoPanelCostValue(String cost);
+
+  /// Libellé de la ligne "Set" du panneau "Infos" d'une arme équipée dont le set est connu — la valeur affichée reste `WeaponSlot.label`, non traduite (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Set'**
+  String get itemInfoPanelSetLabel;
+
+  /// Libellé de la ligne "Attaque" du panneau "Infos" d'une arme.
+  ///
+  /// In fr, this message translates to:
+  /// **'Attaque'**
+  String get itemInfoPanelAttackLabel;
+
+  /// Libellé de la ligne "Dégâts" du panneau "Infos" d'une arme.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dégâts'**
+  String get itemInfoPanelDamageLabel;
+
+  /// Libellé de la ligne "Propriétés" du panneau "Infos" d'une arme.
+  ///
+  /// In fr, this message translates to:
+  /// **'Propriétés'**
+  String get itemInfoPanelPropertiesLabel;
+
+  /// Libellé de la ligne "Portée" du panneau "Infos" d'une arme à distance.
+  ///
+  /// In fr, this message translates to:
+  /// **'Portée'**
+  String get itemInfoPanelRangeLabel;
+
+  /// Valeur de la ligne "Portée" sans portée maximale distincte — unité métrique volontairement gardée telle quelle en anglais aussi, même rationale que `characterStatPillsSpeedValue`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{rangeNormal} m'**
+  String itemInfoPanelRangeValue(String rangeNormal);
+
+  /// Valeur de la ligne "Portée" avec portée maximale distincte.
+  ///
+  /// In fr, this message translates to:
+  /// **'{rangeNormal} m (max {rangeMax} m)'**
+  String itemInfoPanelRangeValueWithMax(String rangeNormal, String rangeMax);
+
+  /// Libellé de la ligne "CA de base" du panneau "Infos" d'une armure/bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'CA de base'**
+  String get itemInfoPanelArmorClassLabel;
+
+  /// Libellé de la ligne "Bonus Dex" du panneau "Infos" d'une armure/bouclier — la valeur affichée reste `InventoryArmorDexBonusFormatter.format`, non traduite (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus Dex'**
+  String get itemInfoPanelDexBonusLabel;
+
+  /// Libellé de la ligne "Force requise" du panneau "Infos" d'une armure, affichée seulement si renseignée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Force requise'**
+  String get itemInfoPanelStrengthRequirementLabel;
+
+  /// Libellé de la ligne "Désavantage discrétion" du panneau "Infos" d'une armure/bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désavantage discrétion'**
+  String get itemInfoPanelStealthDisadvantageLabel;
+
+  /// Valeur "Oui" de la ligne "Désavantage discrétion" du panneau "Infos" d'une armure/bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Oui'**
+  String get itemInfoPanelYesLabel;
+
+  /// Valeur "Non" de la ligne "Désavantage discrétion" du panneau "Infos" d'une armure/bouclier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non'**
+  String get itemInfoPanelNoLabel;
+
+  /// Libellé de la ligne "Rareté" du panneau "Infos" d'un objet, affichée seulement si renseignée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rareté'**
+  String get itemInfoPanelRarityLabel;
+
+  /// Titre de la section "Description" du panneau "Infos" d'un objet.
+  ///
+  /// In fr, this message translates to:
+  /// **'DESCRIPTION'**
+  String get itemInfoPanelDescriptionSectionLabel;
+
+  /// Texte de repli de la section "Description" du panneau "Infos", objet sans description renseignée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune description disponible.'**
+  String get itemInfoPanelDescriptionUnavailable;
+
+  /// Bouton de pied "Utiliser" du panneau "Infos", objet consommable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser'**
+  String get itemInfoPanelUseButton;
+
+  /// Bouton de pied "Équiper" du panneau "Infos" (armure/bouclier non équipé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Équiper'**
+  String get itemInfoPanelEquipButton;
+
+  /// Bouton de pied "Déséquiper" du panneau "Infos" (armure/bouclier équipé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Déséquiper'**
+  String get itemInfoPanelUnequipButton;
+
+  /// Lien "Harmoniser cet objet" du panneau "Infos" (`_ToggleAttunedLink`), objet pas encore harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Harmoniser cet objet'**
+  String get itemInfoPanelAttuneLabel;
+
+  /// Lien "Ne plus harmoniser" du panneau "Infos" (`_ToggleAttunedLink`), objet déjà harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne plus harmoniser'**
+  String get itemInfoPanelStopAttuneLabel;
+
+  /// Légende affichée sous le lien d'harmonisation du panneau "Infos" quand le plafond `CharacterDetail.attunementCap` est atteint pour un objet pas encore harmonisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'{cap, plural, =1{Limite de 1 objet harmonisé atteinte.} other{Limite de {cap} objets harmonisés atteinte.}}'**
+  String itemInfoPanelAttunementCapReachedCaption(int cap);
+
+  /// Titre de la sheet d'ajustement de monnaie — `currencyLabel` reste `CurrencyKind.fullLabel`, non traduit (classe domain sans `BuildContext`, hors périmètre de ce lot, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajuster les {currencyLabel}'**
+  String currencyAdjustmentSheetTitle(String currencyLabel);
+
+  /// Option "Ajouter" du `SegmentedToggle` de la sheet d'ajustement de monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get currencyAdjustmentSheetAddOption;
+
+  /// Option "Retirer" du `SegmentedToggle` de la sheet d'ajustement de monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get currencyAdjustmentSheetRemoveOption;
+
+  /// Bouton secondaire "Annuler" de la sheet d'ajustement de monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get currencyAdjustmentSheetCancelButton;
+
+  /// Bouton primaire "Appliquer" de la sheet d'ajustement de monnaie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appliquer'**
+  String get currencyAdjustmentSheetApplyButton;
+
+  /// Titre de la sheet "Filtrer par catégorie" de l'onglet "Inventaire".
+  ///
+  /// In fr, this message translates to:
+  /// **'FILTRER PAR CATÉGORIE'**
+  String get inventoryCategoryFilterSheetTitle;
+
+  /// Titre "SORTS" affiché au-dessus du bloc "Magie de pacte" dans `CharacterSpellsSection` (uniquement visible si le personnage a de la magie de pacte, voir `hasPact`).
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS'**
+  String get characterSpellsSectionTitle;
+
+  /// Libellé de `_PactSlotBanner`, à côté de l'icône de flamme.
+  ///
+  /// In fr, this message translates to:
+  /// **'Magie de pacte — Niveau {level}'**
+  String characterSpellsSectionPactLabel(int level);
+
+  /// `Semantics.label` de `SpellSlotDots` pour un emplacement de pacte (`slot.isPact`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Emplacements de pacte : {remaining} restants sur {total} (niveau {level})'**
+  String characterSpellsSectionPactSlotsSemanticLabel(
+    int remaining,
+    int total,
+    int level,
+  );
+
+  /// `Semantics.label` de `SpellSlotDots` pour un emplacement classique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Emplacements de sorts : {remaining} restants sur {total}'**
+  String characterSpellsSectionSlotsSemanticLabel(int remaining, int total);
+
+  /// `Semantics.label` de `_GrantBadge` — `sourceLabel` reste `SpellGrantSource.label` (domain, non traduit, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Toujours préparé, accordé par : {sourceLabel}'**
+  String characterSpellsSectionGrantBadgeSemanticLabel(String sourceLabel);
+
+  /// Libellé de la pastille `_RowBadge` d'un sort inné (`_InnateUsage`).
+  ///
+  /// In fr, this message translates to:
+  /// **'INNÉ'**
+  String get characterSpellsSectionInnateBadgeLabel;
+
+  /// Texte affiché à la place de la pastille pleine quand l'usage inné est épuisé (`_InnateUsage`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Épuisé'**
+  String get characterSpellsSectionInnateExhaustedLabel;
+
+  /// `Semantics.label` de `_InnateUsage` quand il reste au moins un usage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sort inné, sans emplacement, {remaining, plural, =1{1 utilisation restante} other{{remaining} utilisations restantes}} sur {max}, repos long'**
+  String characterSpellsSectionInnateAvailableSemanticLabel(
+    int remaining,
+    int max,
+  );
+
+  /// `Semantics.label` de `_InnateUsage` une fois l'usage épuisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sort inné, épuisé, disponible après un repos long'**
+  String get characterSpellsSectionInnateExhaustedSemanticLabel;
+
+  /// Titre de `CharacterClassFeaturesCard` en pied de cet onglet (D142, registre de dette technique : point du titre littéral refermé par ce lot).
+  ///
+  /// In fr, this message translates to:
+  /// **'INVOCATIONS & APTITUDES À USAGE LIMITÉ'**
+  String get characterSpellsTabBodyLimitedUseFeaturesCardTitle;
+
+  /// `hintText` du champ de recherche de l'onglet "Sorts".
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher un sort'**
+  String get characterSpellsTabBodySearchHint;
+
+  /// Tooltip du bouton d'effacement du champ de recherche de l'onglet "Sorts".
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer'**
+  String get characterSpellsTabBodySearchClearTooltip;
+
+  /// Libellé "kind" de `_NoMatchState` pour le filtre `SpellPreparationFilter.all`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort'**
+  String get characterSpellsTabBodyNoMatchAllLabel;
+
+  /// Libellé "kind" de `_NoMatchState` pour le filtre `SpellPreparationFilter.prepared`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort préparé'**
+  String get characterSpellsTabBodyNoMatchPreparedLabel;
+
+  /// Libellé "kind" de `_NoMatchState` pour le filtre `SpellPreparationFilter.unprepared`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort non préparé'**
+  String get characterSpellsTabBodyNoMatchUnpreparedLabel;
+
+  /// Message de `_NoMatchState` quand la recherche est vide (`kind` déjà localisé, ex. `characterSpellsTabBodyNoMatchAllLabel`).
+  ///
+  /// In fr, this message translates to:
+  /// **'{kind}.'**
+  String characterSpellsTabBodyNoMatchMessageEmpty(String kind);
+
+  /// Message de `_NoMatchState` quand la recherche en cours ne donne aucun résultat.
+  ///
+  /// In fr, this message translates to:
+  /// **'{kind} pour « {query} ».'**
+  String characterSpellsTabBodyNoMatchMessageQuery(String kind, String query);
+
+  /// Titre de `_EmptySpellsState` (aucun sort du tout sur la fiche).
+  ///
+  /// In fr, this message translates to:
+  /// **'AUCUN SORT'**
+  String get characterSpellsTabBodyEmptyStateTitle;
+
+  /// Sous-titre de `_EmptySpellsState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort sur cette fiche pour l\'instant. Pour les classes qui lancent des sorts, ils se choisissent depuis l\'assistant de création ou à la montée de niveau.'**
+  String get characterSpellsTabBodyEmptyStateBody;
+
+  /// Titre de `_NonCasterEmptyState` (classe structurellement non lanceuse de sorts).
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette classe ne lance pas de sorts'**
+  String get characterSpellsTabBodyNonCasterTitle;
+
+  /// Repli de `className` quand le personnage n'a aucune classe (`detail.primaryClass?.className`), transmis à `characterSpellsTabBodyNonCasterBody`.
+  ///
+  /// In fr, this message translates to:
+  /// **'cette classe'**
+  String get characterSpellsTabBodyNonCasterDefaultClassName;
+
+  /// Sous-titre de `_NonCasterEmptyState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{characterName} est {className} — hors archétype dédié (ex. Chevalier occulte), cette classe ne dispose pas d\'emplacements de sorts. Cet onglet reste accessible par cohérence de navigation, mais restera vide pour ce personnage.'**
+  String characterSpellsTabBodyNonCasterBody(
+    String characterName,
+    String className,
+  );
+
+  /// Titre de la sheet de choix d'emplacement (`_SpellSlotChoiceSheetContent`), `castSpellFlow`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer {spellName}'**
+  String spellActionSheetTitle(String spellName);
+
+  /// Sous-titre de la sheet de choix d'emplacement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez le niveau d\'emplacement à utiliser.'**
+  String get spellActionSheetSubtitle;
+
+  /// Bouton secondaire "Annuler" de la sheet de choix d'emplacement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get spellActionSheetCancelButton;
+
+  /// Bouton primaire "Lancer" de la sheet de choix d'emplacement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer'**
+  String get spellActionSheetCastButton;
+
+  /// Libellé `leading` de `_SpellSlotOptionRow` pour un emplacement épuisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Épuisé'**
+  String get spellActionSheetSlotExhaustedLabel;
+
+  /// Libellé `leading` de `_SpellSlotOptionRow` quand `slot.total <= 0` (repli sans pastilles).
+  ///
+  /// In fr, this message translates to:
+  /// **'{remaining}/{total} restants'**
+  String spellActionSheetSlotRemainingLabel(int remaining, int total);
+
+  /// Titre de `_SpellSlotOptionRow` pour un emplacement de pacte.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {level} (pacte)'**
+  String spellActionSheetPactSlotLevelLabel(int level);
+
+  /// Titre de `_SpellSlotOptionRow` pour un emplacement classique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {level}'**
+  String spellActionSheetSlotLevelLabel(int level);
+
+  /// Libellé de la ligne "Utilisations" du panneau "Infos" (sort inné à charge).
+  ///
+  /// In fr, this message translates to:
+  /// **'Utilisations'**
+  String get spellInfoPanelUsagesLabel;
+
+  /// Libellé de la ligne "Temps d'incantation" du panneau "Infos".
+  ///
+  /// In fr, this message translates to:
+  /// **'Temps d\'incantation'**
+  String get spellInfoPanelCastingTimeLabel;
+
+  /// Libellé de la ligne "Portée" du panneau "Infos".
+  ///
+  /// In fr, this message translates to:
+  /// **'Portée'**
+  String get spellInfoPanelRangeLabel;
+
+  /// Libellé de la ligne "Durée" du panneau "Infos".
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée'**
+  String get spellInfoPanelDurationLabel;
+
+  /// Libellé de la ligne "Concentration" du panneau "Infos".
+  ///
+  /// In fr, this message translates to:
+  /// **'Concentration'**
+  String get spellInfoPanelConcentrationLabel;
+
+  /// Valeur de la ligne "Concentration" quand `spell.concentration` est vrai.
+  ///
+  /// In fr, this message translates to:
+  /// **'Oui'**
+  String get spellInfoPanelConcentrationYes;
+
+  /// Valeur de la ligne "Concentration" quand `spell.concentration` est faux.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non'**
+  String get spellInfoPanelConcentrationNo;
+
+  /// Note affichée pour un sort accordé par une sous-classe — `sourceLabel` reste `SpellGrantSource.label.toLowerCase()` (domain, non traduit, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Toujours préparé — sort de {sourceLabel} (ne compte pas dans la limite de sorts préparés)'**
+  String spellInfoPanelGrantSourceNote(String sourceLabel);
+
+  /// Note affichée pour un sort inné à charge limitée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sort inné — se lance sans emplacement, {usesPerLongRest} fois par repos long'**
+  String spellInfoPanelInnateNote(int usesPerLongRest);
+
+  /// Titre de section "DESCRIPTION" du panneau "Infos" (texte de description lui-même non traduit, contenu D&D).
+  ///
+  /// In fr, this message translates to:
+  /// **'DESCRIPTION'**
+  String get spellInfoPanelDescriptionTitle;
+
+  /// Bouton primaire "Lancer" en pied du panneau "Infos" (route ordinaire).
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer'**
+  String get spellInfoPanelCastButton;
+
+  /// Second bouton "Lancer (sort inné)" d'un sort à double route (D43).
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer (sort inné)'**
+  String get spellInfoPanelCastInnateButton;
+
+  /// Lien `_TogglePreparedLink` quand le sort est déjà préparé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne plus préparer'**
+  String get spellInfoPanelUnprepareLink;
+
+  /// Lien `_TogglePreparedLink` quand le sort n'est pas encore préparé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préparer ce sort'**
+  String get spellInfoPanelPrepareLink;
+
+  /// Libellé de la ligne "Composantes" du panneau "Infos" (`_SpellComponentsInfoRow`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Composantes'**
+  String get spellInfoPanelComponentsLabel;
+
+  /// Titre de `SpellPreparationCard`, réutilisé tel quel pour le titre de `showSpellPreparationInfoSheet` (même texte).
+  ///
+  /// In fr, this message translates to:
+  /// **'PRÉPARATION DES SORTS'**
+  String get spellPreparationCardTitle;
+
+  /// Tooltip de l'icône ⓘ de `SpellPreparationCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comment fonctionne la préparation des sorts ?'**
+  String get spellPreparationCardInfoTooltip;
+
+  /// Libellé de `PreparedSpellsCounter` pour une classe donnée, quand le personnage a plusieurs classes qui préparent — `className` déjà mis en majuscules par l'appelant.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS PRÉPARÉS — {className}'**
+  String spellPreparationCardClassLabel(String className);
+
+  /// Libellé par défaut de `PreparedSpellsCounter` (rendu mono-classe historique).
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS PRÉPARÉS'**
+  String get spellPreparationCardDefaultLabel;
+
+  /// Phrase d'état de `PreparedSpellsCounter` quand `count > limit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Limite dépassée de {overBy}'**
+  String spellPreparationCardOverLimitStatus(int overBy);
+
+  /// Phrase d'état de `PreparedSpellsCounter` quand `count == limit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Limite atteinte'**
+  String get spellPreparationCardLimitReachedStatus;
+
+  /// Phrase d'état de `PreparedSpellsCounter` quand `count < limit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{remaining, plural, =1{Encore 1 sort à préparer} other{Encore {remaining} sorts à préparer}}'**
+  String spellPreparationCardRemainingToPrepareStatus(int remaining);
+
+  /// Base du `Semantics.label` de `PreparedSpellsCounter` — complété par `spellPreparationCardCounterOverLimitSuffix` si la limite est dépassée.
+  ///
+  /// In fr, this message translates to:
+  /// **'{label} : {count} sur {limit}'**
+  String spellPreparationCardCounterSemanticLabel(
+    String label,
+    int count,
+    int limit,
+  );
+
+  /// Suffixe du `Semantics.label` de `PreparedSpellsCounter` quand la limite est dépassée.
+  ///
+  /// In fr, this message translates to:
+  /// **', limite dépassée'**
+  String get spellPreparationCardCounterOverLimitSuffix;
+
+  /// Titre de la première entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préparer pour lancer'**
+  String get spellPreparationCardInfoEntryPrepareTitle;
+
+  /// Corps de la première entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les sorts préparés peuvent être lancés. Les sorts non préparés restent dans la liste, grisés, après les sorts préparés. Touchez un sort puis « Préparer ce sort » ou « Ne plus préparer ».'**
+  String get spellPreparationCardInfoEntryPrepareBody;
+
+  /// Titre de la deuxième entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combien de sorts ?'**
+  String get spellPreparationCardInfoEntryHowManyTitle;
+
+  /// Corps de la deuxième entrée de `showSpellPreparationInfoSheet` — `limitsSentence` reste `spellPreparationCardSingleLimitSentence`/`spellPreparationCardMultipleLimitsSentence` (ou chaîne vide si `classLimits` est vide).
+  ///
+  /// In fr, this message translates to:
+  /// **'Clerc, Druide et Magicien : modificateur de caractéristique d\'incantation + niveau de classe. Paladin et Artificier (demi-lanceurs) : modificateur + moitié du niveau. Minimum 1. Multiclassé avec plusieurs classes qui préparent : chaque classe a sa propre limite, jamais un total commun.{limitsSentence} Une fois la limite atteinte, impossible de préparer un nouveau sort de cette classe sans en dé-préparer un autre d\'abord.'**
+  String spellPreparationCardInfoEntryHowManyBody(String limitsSentence);
+
+  /// `limitsSentence` quand `classLimits` compte exactement un élément.
+  ///
+  /// In fr, this message translates to:
+  /// **' Votre limite actuelle : {limit}.'**
+  String spellPreparationCardSingleLimitSentence(int limit);
+
+  /// `limitsSentence` quand `classLimits` compte plusieurs éléments — `limitsList` reste une concaténation "{className} {limit}" (noms de classe déjà traduits), non recomposée via `.arb`.
+  ///
+  /// In fr, this message translates to:
+  /// **' Vos limites actuelles : {limitsList}.'**
+  String spellPreparationCardMultipleLimitsSentence(String limitsList);
+
+  /// Titre de la troisième entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans préparation'**
+  String get spellPreparationCardInfoEntryNoPreparationTitle;
+
+  /// Corps de la troisième entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les sorts mineurs, les sorts innés et les sorts de domaine ou de serment n\'ont jamais à être préparés et ne comptent pas dans la limite. Un sort inné de niveau 1 ou plus se lance sans emplacement, une fois par repos long.'**
+  String get spellPreparationCardInfoEntryNoPreparationBody;
+
+  /// Titre de la quatrième entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer ne dé-prépare pas'**
+  String get spellPreparationCardInfoEntryCastDoesNotUnprepareTitle;
+
+  /// Corps de la quatrième entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer un sort consomme un emplacement, mais le sort reste préparé : vous pouvez le relancer tant qu\'il vous reste des emplacements.'**
+  String get spellPreparationCardInfoEntryCastDoesNotUnprepareBody;
+
+  /// Titre de la cinquième entrée (dernière) de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer sa liste'**
+  String get spellPreparationCardInfoEntryChangeListTitle;
+
+  /// Corps de la cinquième entrée (dernière) de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'La liste de sorts préparés se change après un repos long : le repos long vous propose de garder votre liste ou de la modifier.'**
+  String get spellPreparationCardInfoEntryChangeListBody;
+
+  /// Titre de `showPrepareSpellsSheet` (`SheetHeaderBar`).
+  ///
+  /// In fr, this message translates to:
+  /// **'PRÉPARER MES SORTS'**
+  String get prepareSpellsSheetTitle;
+
+  /// Libellé de `PreparedSpellsCounter` pour une classe donnée dans `showPrepareSpellsSheet`, quand le personnage a plusieurs classes qui préparent — `className` déjà mis en majuscules par l'appelant.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS PRÉPARÉS — {className}'**
+  String prepareSpellsSheetClassLabel(String className);
+
+  /// `hintText` du champ de recherche de `showPrepareSpellsSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher un sort'**
+  String get prepareSpellsSheetSearchHint;
+
+  /// Tooltip du bouton d'effacement du champ de recherche de `showPrepareSpellsSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer'**
+  String get prepareSpellsSheetSearchClearTooltip;
+
+  /// Message de `_NoMatchState` de `showPrepareSpellsSheet` quand la recherche est vide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort disponible.'**
+  String get prepareSpellsSheetNoMatchEmptyMessage;
+
+  /// Message de `_NoMatchState` de `showPrepareSpellsSheet` quand la recherche en cours ne donne aucun résultat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort pour « {query} ».'**
+  String prepareSpellsSheetNoMatchQueryMessage(String query);
+
+  /// Tooltip du bouton ⓘ de `_SpellCheckRow`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Description de {spellName}'**
+  String prepareSpellsSheetInfoTooltip(String spellName);
+
+  /// Titre de `showCastInnateSpellConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer {spellName} ?'**
+  String castInnateSpellConfirmationDialogTitle(String spellName);
+
+  /// Message de `showCastInnateSpellConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action consomme un usage de ce sort inné, récupéré seulement au prochain repos long.'**
+  String get castInnateSpellConfirmationDialogMessage;
+
+  /// Bouton secondaire "Annuler" de `showCastInnateSpellConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get castInnateSpellConfirmationDialogCancelButton;
+
+  /// Bouton primaire "Lancer" de `showCastInnateSpellConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer'**
+  String get castInnateSpellConfirmationDialogCastButton;
+
+  /// SnackBar de succès de `_castSpell` pour un sort de niveau 0 (rien à persister).
+  ///
+  /// In fr, this message translates to:
+  /// **'{spellName} lancé.'**
+  String characterDetailCastSpellSuccessMessage(String spellName);
+
+  /// SnackBar de succès de `_castSpell` pour un emplacement classique.
+  ///
+  /// In fr, this message translates to:
+  /// **'{spellName} lancé (emplacement niveau {slotLevel}).'**
+  String characterDetailCastSpellWithSlotSuccessMessage(
+    String spellName,
+    int slotLevel,
+  );
+
+  /// SnackBar d'échec générique de `_castSpell`/`_castPactSpell`/`_castInnateSpell`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lancer ce sort. Réessayez.'**
+  String get characterDetailCastSpellErrorMessage;
+
+  /// SnackBar de succès de `_castPactSpell`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{spellName} lancé (emplacement de pacte niveau {pactLevel}).'**
+  String characterDetailCastPactSpellSuccessMessage(
+    String spellName,
+    int pactLevel,
+  );
+
+  /// SnackBar de succès de `_castInnateSpell`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{spellName} lancé (sort inné).'**
+  String characterDetailCastInnateSpellSuccessMessage(String spellName);
+
+  /// SnackBar d'échec de `_reassertInnateUsesState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de synchroniser les sorts innés. Réessayez.'**
+  String get characterDetailInnateSpellSyncErrorMessage;
+
+  /// Titre de `_EmptyStoryState` (les 9 champs de texte libre sont tous vides).
+  ///
+  /// In fr, this message translates to:
+  /// **'AUCUNE HISTOIRE RENSEIGNÉE'**
+  String get characterStoryTabBodyEmptyStateTitle;
+
+  /// Sous-titre de `_EmptyStoryState`, absent en lecture seule (`actionsDisabled`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Apparence, traits, idéaux... raconte l\'histoire de ton personnage quand tu veux.'**
+  String get characterStoryTabBodyEmptyStateSubtitle;
+
+  /// `PrimaryButton` de `_EmptyStoryState` (met son libellé en majuscules à l'affichage), absent en lecture seule.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renseigner mon histoire'**
+  String get characterStoryTabBodyEmptyStateButtonLabel;
+
+  /// Titre du `SheetHeaderBar` de la sheet "Modifier l'histoire".
+  ///
+  /// In fr, this message translates to:
+  /// **'MODIFIER L\'HISTOIRE'**
+  String get characterStoryEditSheetTitle;
+
+  /// `SecondaryButton` "Annuler" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterStoryEditSheetCancelButton;
+
+  /// `PrimaryButton` "Enregistrer" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get characterStoryEditSheetSaveButton;
+
+  /// Libellé du 1er des 9 champs (`appearanceText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'APPARENCE PHYSIQUE'**
+  String get characterStoryEditSheetAppearanceLabel;
+
+  /// Placeholder du 1er des 9 champs (`appearanceText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Décris l\'apparence physique de ton personnage…'**
+  String get characterStoryEditSheetAppearanceHint;
+
+  /// Libellé du 2e des 9 champs (`traitsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'TRAITS DE PERSONNALITÉ'**
+  String get characterStoryEditSheetTraitsLabel;
+
+  /// Placeholder du 2e des 9 champs (`traitsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Décris les traits de personnalité de ton personnage…'**
+  String get characterStoryEditSheetTraitsHint;
+
+  /// Libellé du 3e des 9 champs (`idealsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'IDÉAUX'**
+  String get characterStoryEditSheetIdealsLabel;
+
+  /// Placeholder du 3e des 9 champs (`idealsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels idéaux guident ton personnage ?'**
+  String get characterStoryEditSheetIdealsHint;
+
+  /// Libellé du 4e des 9 champs (`bondsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'LIENS'**
+  String get characterStoryEditSheetBondsLabel;
+
+  /// Placeholder du 4e des 9 champs (`bondsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels liens unissent ton personnage à d\'autres ?'**
+  String get characterStoryEditSheetBondsHint;
+
+  /// Libellé du 5e des 9 champs (`flawsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'DÉFAUTS'**
+  String get characterStoryEditSheetFlawsLabel;
+
+  /// Placeholder du 5e des 9 champs (`flawsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels défauts ou faiblesses a ton personnage ?'**
+  String get characterStoryEditSheetFlawsHint;
+
+  /// Libellé du 6e des 9 champs (`backstoryText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'HISTOIRE PERSONNELLE'**
+  String get characterStoryEditSheetBackstoryLabel;
+
+  /// Placeholder du 6e des 9 champs (`backstoryText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Raconte l\'histoire personnelle de ton personnage…'**
+  String get characterStoryEditSheetBackstoryHint;
+
+  /// Libellé du 7e des 9 champs (`alliesText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'ALLIÉS'**
+  String get characterStoryEditSheetAlliesLabel;
+
+  /// Placeholder du 7e des 9 champs (`alliesText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels alliés ou organisations soutiennent ton personnage ?'**
+  String get characterStoryEditSheetAlliesHint;
+
+  /// Libellé du 8e des 9 champs (`featuresText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'PARTICULARITÉS'**
+  String get characterStoryEditSheetFeaturesLabel;
+
+  /// Placeholder du 8e des 9 champs (`featuresText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Décris les particularités de ton personnage…'**
+  String get characterStoryEditSheetFeaturesHint;
+
+  /// Libellé du 9e des 9 champs (`treasureText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'TRÉSOR'**
+  String get characterStoryEditSheetTreasureLabel;
+
+  /// Placeholder du 9e des 9 champs (`treasureText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels trésors ou objets précieux possède ton personnage ?'**
+  String get characterStoryEditSheetTreasureHint;
+
+  /// Bandeau d'alerte inline sur échec inattendu (pas une `CharacterFailure`) de `_submit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer les modifications. Réessayez.'**
+  String get characterStoryEditSheetGenericErrorMessage;
+
+  /// SnackBar de confirmation affiché par `showCharacterStoryEditSheet` une fois la sheet refermée avec succès.
+  ///
+  /// In fr, this message translates to:
+  /// **'Histoire mise à jour.'**
+  String get characterStoryEditSheetUpdatedMessage;
+
+  /// Titre de la carte "Journal de campagne" de l'onglet "Histoire".
+  ///
+  /// In fr, this message translates to:
+  /// **'JOURNAL DE CAMPAGNE'**
+  String get characterJournalCardTitle;
+
+  /// `DashedAddTile` de `CharacterJournalCard`, absente en lecture seule (`actionsDisabled`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter une note'**
+  String get characterJournalCardAddButtonLabel;
+
+  /// Ligne "Modifier" de la sheet d'actions ouverte au tap sur une entrée de journal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier'**
+  String get characterJournalCardEditAction;
+
+  /// Ligne "Supprimer" de la sheet d'actions ouverte au tap sur une entrée de journal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer'**
+  String get characterJournalCardRemoveAction;
+
+  /// Titre de `showRemoveJournalEntryConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer cette note ?'**
+  String get characterJournalCardRemoveConfirmationTitle;
+
+  /// Sous-titre de `showRemoveJournalEntryConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action est définitive.'**
+  String get characterJournalCardRemoveConfirmationMessage;
+
+  /// `SecondaryButton` "Annuler" de `showRemoveJournalEntryConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterJournalCardRemoveConfirmationCancelButton;
+
+  /// `DestructiveButton` "Supprimer" de `showRemoveJournalEntryConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer'**
+  String get characterJournalCardRemoveConfirmationConfirmButton;
+
+  /// SnackBar de confirmation de `_confirmAndRemove`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note supprimée.'**
+  String get characterJournalCardRemovedMessage;
+
+  /// SnackBar d'échec inattendu de `_confirmAndRemove`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de supprimer cette note. Réessayez.'**
+  String get characterJournalCardRemoveGenericErrorMessage;
+
+  /// Titre du `SheetHeaderBar` en mode ajout (`entry` null).
+  ///
+  /// In fr, this message translates to:
+  /// **'AJOUTER UNE NOTE'**
+  String get characterJournalEntryEditSheetAddTitle;
+
+  /// Titre du `SheetHeaderBar` en mode édition (`entry` non null).
+  ///
+  /// In fr, this message translates to:
+  /// **'MODIFIER LA NOTE'**
+  String get characterJournalEntryEditSheetEditTitle;
+
+  /// Placeholder du champ de texte de la note.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note de séance, événement marquant…'**
+  String get characterJournalEntryEditSheetHint;
+
+  /// `SecondaryButton` "Annuler".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterJournalEntryEditSheetCancelButton;
+
+  /// `PrimaryButton` "Enregistrer".
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get characterJournalEntryEditSheetSaveButton;
+
+  /// Bandeau d'alerte inline sur échec inattendu (pas une `CharacterFailure`) de `_submit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer cette note. Réessayez.'**
+  String get characterJournalEntryEditSheetGenericErrorMessage;
+
+  /// SnackBar de confirmation affiché par `showJournalEntryEditSheet` en mode ajout.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note ajoutée.'**
+  String get characterJournalEntryEditSheetAddedMessage;
+
+  /// SnackBar de confirmation affiché par `showJournalEntryEditSheet` en mode édition.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note modifiée.'**
+  String get characterJournalEntryEditSheetUpdatedMessage;
+
+  /// Titre de la carte "Galerie" de l'onglet "Histoire".
+  ///
+  /// In fr, this message translates to:
+  /// **'GALERIE'**
+  String get characterGalleryCardTitle;
+
+  /// Ligne "Prendre une photo" du bottom sheet "Ajouter une photo".
+  ///
+  /// In fr, this message translates to:
+  /// **'Prendre une photo'**
+  String get galleryPhotoUploadSheetCameraAction;
+
+  /// Ligne "Choisir dans la galerie" du bottom sheet "Ajouter une photo".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir dans la galerie'**
+  String get galleryPhotoUploadSheetGalleryAction;
+
+  /// Ligne "Utiliser une URL" du bottom sheet "Ajouter une photo".
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser une URL'**
+  String get galleryPhotoUploadSheetUrlAction;
+
+  /// SnackBar de confirmation de `showAddGalleryPhotoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photo ajoutée.'**
+  String get galleryPhotoUploadSheetAddedMessage;
+
+  /// SnackBar d'échec de `showAddGalleryPhotoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ajouter cette photo. Réessayez.'**
+  String get galleryPhotoUploadSheetGenericErrorMessage;
+
+  /// Titre du dialogue "Utiliser une URL".
+  ///
+  /// In fr, this message translates to:
+  /// **'URL de la photo'**
+  String get galleryPhotoUploadSheetUrlDialogTitle;
+
+  /// Placeholder du champ URL — identique quelle que soit la langue (syntaxe d'URL, pas du texte naturel).
+  ///
+  /// In fr, this message translates to:
+  /// **'https://...'**
+  String get galleryPhotoUploadSheetUrlDialogHint;
+
+  /// Repli affiché quand l'échec n'est pas une `PortraitUrlFetchFailure` (message déjà localisé par l'appelant) — voir D147 du registre de dette technique pour `PortraitUrlFetchFailure.message` elle-même, qui reste figée en français.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger cette image.'**
+  String get galleryPhotoUploadSheetUrlDialogGenericError;
+
+  /// `SecondaryButton` "Annuler" du dialogue "Utiliser une URL".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get galleryPhotoUploadSheetUrlDialogCancelButton;
+
+  /// `PrimaryButton` "Suivant" du dialogue "Utiliser une URL".
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get galleryPhotoUploadSheetUrlDialogNextButton;
+
+  /// `DestructiveButton` de la visionneuse plein écran, absent en lecture seule (`actionsDisabled`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer cette photo'**
+  String get galleryPhotoViewerScreenRemoveButtonLabel;
+
+  /// SnackBar de confirmation de `_confirmAndRemove`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photo retirée.'**
+  String get galleryPhotoViewerScreenRemovedMessage;
+
+  /// SnackBar d'échec de `_confirmAndRemove`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de retirer cette photo. Réessayez.'**
+  String get galleryPhotoViewerScreenRemoveGenericErrorMessage;
+
+  /// Titre de `showRemoveGalleryPhotoConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer cette photo ?'**
+  String get galleryPhotoViewerScreenRemoveConfirmationTitle;
+
+  /// `SecondaryButton` "Annuler" de `showRemoveGalleryPhotoConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get galleryPhotoViewerScreenRemoveConfirmationCancelButton;
+
+  /// `DestructiveButton` "Retirer" de `showRemoveGalleryPhotoConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get galleryPhotoViewerScreenRemoveConfirmationConfirmButton;
+
+  /// Ligne "Prendre une photo" du bottom sheet "changer le portrait".
+  ///
+  /// In fr, this message translates to:
+  /// **'Prendre une photo'**
+  String get portraitUploadSheetCameraAction;
+
+  /// Ligne "Choisir dans la galerie" du bottom sheet "changer le portrait".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir dans la galerie'**
+  String get portraitUploadSheetGalleryAction;
+
+  /// Ligne "Utiliser une URL" du bottom sheet "changer le portrait".
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser une URL'**
+  String get portraitUploadSheetUrlAction;
+
+  /// Ligne "Retirer le portrait" du bottom sheet "changer le portrait", proposée seulement si `hasPortrait`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer le portrait'**
+  String get portraitUploadSheetRemoveAction;
+
+  /// SnackBar de confirmation de `_confirmAndRemove`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Portrait retiré.'**
+  String get portraitUploadSheetRemovedMessage;
+
+  /// SnackBar d'échec de `_confirmAndRemove`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de retirer le portrait. Réessayez.'**
+  String get portraitUploadSheetRemoveGenericErrorMessage;
+
+  /// Titre du dialogue "Utiliser une URL" de `showPortraitUrlDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'URL du portrait'**
+  String get portraitUploadSheetUrlDialogTitle;
+
+  /// Placeholder du champ URL — identique quelle que soit la langue (syntaxe d'URL, pas du texte naturel).
+  ///
+  /// In fr, this message translates to:
+  /// **'https://...'**
+  String get portraitUploadSheetUrlDialogHint;
+
+  /// Repli affiché quand l'échec n'est pas une `PortraitUrlFetchFailure` (message déjà localisé par l'appelant) — voir D147 du registre de dette technique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger cette image.'**
+  String get portraitUploadSheetUrlDialogGenericError;
+
+  /// `SecondaryButton` "Annuler" du dialogue "Utiliser une URL".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get portraitUploadSheetUrlDialogCancelButton;
+
+  /// `PrimaryButton` "Suivant" du dialogue "Utiliser une URL".
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get portraitUploadSheetUrlDialogNextButton;
+
+  /// Titre de `showRemovePortraitConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer le portrait ?'**
+  String get portraitUploadSheetRemoveConfirmationTitle;
+
+  /// `SecondaryButton` "Annuler" de `showRemovePortraitConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get portraitUploadSheetRemoveConfirmationCancelButton;
+
+  /// `DestructiveButton` "Retirer" de `showRemovePortraitConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get portraitUploadSheetRemoveConfirmationConfirmButton;
+
+  /// Titre du `WoodBackHeader` de l'écran de recadrage.
+  ///
+  /// In fr, this message translates to:
+  /// **'RECADRAGE'**
+  String get portraitCropScreenTitle;
+
+  /// Texte d'aide sous le cadre de recadrage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pincez pour zoomer, glissez pour cadrer.'**
+  String get portraitCropScreenInstructions;
+
+  /// `SecondaryButton` "Annuler".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get portraitCropScreenCancelButton;
+
+  /// `PrimaryButton` "Valider".
+  ///
+  /// In fr, this message translates to:
+  /// **'Valider'**
+  String get portraitCropScreenSaveButton;
+
+  /// Bandeau d'alerte inline quand la capture du cadre recadré échoue (`byteData == null`) — géré directement, sans passer par une `CharacterFailure` (évite d'embarquer un message figé en français dans une exception du domaine).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de préparer l\'image. Réessayez.'**
+  String get portraitCropScreenPrepareImageErrorMessage;
+
+  /// Bandeau d'alerte inline sur échec inattendu (pas une `CharacterFailure`) de `_submit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'envoyer le portrait. Réessayez.'**
+  String get portraitCropScreenGenericErrorMessage;
+
+  /// Titre de la carte "Aventures" de l'onglet "Personnage".
+  ///
+  /// In fr, this message translates to:
+  /// **'AVENTURES'**
+  String get characterAdventuresCardTitle;
+
+  /// Sous-titre de `_AdventureRow` affiché quand `gmDisplayName` est renseigné (`gmName` est une donnée joueur, jamais traduite).
+  ///
+  /// In fr, this message translates to:
+  /// **'MJ : {gmName}'**
+  String characterAdventuresCardGmLabel(String gmName);
+
+  /// Tooltip de l'`IconButton` "Quitter" (`Icons.logout`) de `_AdventureRow`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter l\'histoire'**
+  String get characterAdventuresCardLeaveTooltip;
+
+  /// SnackBar de confirmation de `_confirmAndLeave` (`storyTitle` est une donnée joueur, jamais traduite).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as quitté {storyTitle}.'**
+  String characterAdventuresCardLeftMessage(String storyTitle);
+
+  /// SnackBar d'échec de `_confirmAndLeave`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de quitter cette histoire. Réessayez.'**
+  String get characterAdventuresCardLeaveGenericErrorMessage;
+
+  /// Titre de `showLeaveAdventureConfirmationDialog` (`storyTitle` est une donnée joueur, jamais traduite).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter « {storyTitle} » ?'**
+  String characterAdventuresCardLeaveConfirmationTitle(String storyTitle);
+
+  /// Sous-titre de `showLeaveAdventureConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton personnage garde toutes ses données. Seul le lien avec cette histoire disparaît.'**
+  String get characterAdventuresCardLeaveConfirmationMessage;
+
+  /// `SecondaryButton` "Annuler" de `showLeaveAdventureConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterAdventuresCardLeaveConfirmationCancelButton;
+
+  /// `DestructiveButton` "Quitter" de `showLeaveAdventureConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter'**
+  String get characterAdventuresCardLeaveConfirmationConfirmButton;
 }
 
 class _AppLocalizationsDelegate

@@ -8,6 +8,7 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/innate_spell_usage.dart';
@@ -130,6 +131,7 @@ class _SpellInfoPanelContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // `null` : sort lançable par sa route ORDINAIRE. Sinon la raison est
     // affichée sous le bouton "Lancer" désactivé (priorité "non préparé",
     // voir le domaine). Pour un sort SEULEMENT inné (pas de route ordinaire
@@ -165,18 +167,26 @@ class _SpellInfoPanelContent extends StatelessWidget {
     final infoRows = <Widget>[
       if (innateLimited)
         _SpellInfoRow(
-          label: 'Utilisations',
+          label: l10n.spellInfoPanelUsagesLabel,
           value: InnateSpellUsage.usageLabel(spell),
           valueColor: innateSpent ? AppColors.accentBrick : null,
           valueWeight: innateSpent ? FontWeight.w700 : null,
         ),
-      _SpellInfoRow(label: "Temps d'incantation", value: spell.castingTime),
-      _SpellInfoRow(label: 'Portée', value: spell.range),
-      _SpellComponentsInfoRow(formatted: components),
-      _SpellInfoRow(label: 'Durée', value: spell.duration),
       _SpellInfoRow(
-        label: 'Concentration',
-        value: spell.concentration ? 'Oui' : 'Non',
+        label: l10n.spellInfoPanelCastingTimeLabel,
+        value: spell.castingTime,
+      ),
+      _SpellInfoRow(label: l10n.spellInfoPanelRangeLabel, value: spell.range),
+      _SpellComponentsInfoRow(formatted: components),
+      _SpellInfoRow(
+        label: l10n.spellInfoPanelDurationLabel,
+        value: spell.duration,
+      ),
+      _SpellInfoRow(
+        label: l10n.spellInfoPanelConcentrationLabel,
+        value: spell.concentration
+            ? l10n.spellInfoPanelConcentrationYes
+            : l10n.spellInfoPanelConcentrationNo,
         valueColor: spell.concentration
             ? AppColors.accentTeal
             : AppColors.textMuted,
@@ -209,9 +219,9 @@ class _SpellInfoPanelContent extends StatelessWidget {
                       if (spell.grantSource != null) ...[
                         const SizedBox(height: AppSpacing.sm),
                         Text(
-                          'Toujours préparé — sort de '
-                          '${spell.grantSource!.label.toLowerCase()} '
-                          '(ne compte pas dans la limite de sorts préparés)',
+                          l10n.spellInfoPanelGrantSourceNote(
+                            spell.grantSource!.label.toLowerCase(),
+                          ),
                           style: AppTypography.body(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -222,9 +232,9 @@ class _SpellInfoPanelContent extends StatelessWidget {
                       if (innateLimited) ...[
                         const SizedBox(height: AppSpacing.sm),
                         Text(
-                          'Sort inné — se lance sans emplacement, '
-                          '${InnateSpellUsage.usesPerLongRest} fois par '
-                          'repos long',
+                          l10n.spellInfoPanelInnateNote(
+                            InnateSpellUsage.usesPerLongRest,
+                          ),
                           style: AppTypography.body(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -247,7 +257,7 @@ class _SpellInfoPanelContent extends StatelessWidget {
                       ],
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        'DESCRIPTION',
+                        l10n.spellInfoPanelDescriptionTitle,
                         style: AppTypography.display(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -279,7 +289,7 @@ class _SpellInfoPanelContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       PrimaryButton(
-                        label: 'Lancer',
+                        label: l10n.spellInfoPanelCastButton,
                         onPressed: canCast
                             ? () => Navigator.of(context).pop(true)
                             : null,
@@ -305,7 +315,7 @@ class _SpellInfoPanelContent extends StatelessWidget {
                       if (innateDualRoute) ...[
                         const SizedBox(height: AppSpacing.sm),
                         SecondaryButton(
-                          label: 'Lancer (sort inné)',
+                          label: l10n.spellInfoPanelCastInnateButton,
                           surface: SecondaryButtonSurface.parchment,
                           onPressed: innateBlockReason == null
                               ? onCastInnate
@@ -350,6 +360,7 @@ class _TogglePreparedLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
@@ -370,7 +381,9 @@ class _TogglePreparedLink extends StatelessWidget {
             // une ligne.
             Flexible(
               child: Text(
-                prepared ? 'Ne plus préparer' : 'Préparer ce sort',
+                prepared
+                    ? l10n.spellInfoPanelUnprepareLink
+                    : l10n.spellInfoPanelPrepareLink,
                 style: AppTypography.body(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -448,6 +461,7 @@ class _SpellComponentsInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Row(
@@ -456,7 +470,7 @@ class _SpellComponentsInfoRow extends StatelessWidget {
           SizedBox(
             width: 110,
             child: Text(
-              'Composantes',
+              l10n.spellInfoPanelComponentsLabel,
               style: AppTypography.body(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,

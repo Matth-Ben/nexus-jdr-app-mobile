@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/compact_action_button.dart';
 import '../../../../core/widgets/dashed_add_tile.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_inventory_item.dart';
 import '../../domain/currency_kind.dart';
@@ -270,6 +271,7 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final detail = widget.detail;
     final statBoxes = InventoryStatBoxesResolver.resolve(detail);
     final isEmpty = detail.inventory.isEmpty;
@@ -303,7 +305,9 @@ class _CharacterInventoryTabBodyState extends State<CharacterInventoryTabBody> {
             key: widget.filterAnchorKey,
             child: CompactActionButton(
               icon: Icons.filter_list,
-              label: 'Filtre : ${_filter.label}',
+              label: l10n.characterInventoryTabBodyFilterButtonLabel(
+                _filter.label,
+              ),
               onTap: widget.actionsDisabled
                   ? null
                   : () => _openCategoryFilter(context),
@@ -355,10 +359,14 @@ class _AddRowButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         Expanded(
-          child: DashedAddTile(label: 'Objet', onTap: onAddItem),
+          child: DashedAddTile(
+            label: l10n.characterInventoryTabBodyAddItemButtonLabel,
+            onTap: onAddItem,
+          ),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(child: _RewardButton(onTap: onAddReward)),
@@ -410,7 +418,8 @@ class _RewardButton extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     Text(
-                      'RÉCOMPENSE',
+                      AppLocalizations.of(context)!
+                          .characterInventoryTabBodyRewardButtonLabel,
                       style: AppTypography.display(
                         fontSize: 11,
                         color: AppColors.textSecondary,
@@ -442,7 +451,8 @@ class _NoFilterMatchState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Center(
         child: Text(
-          'Aucun objet dans cette catégorie.',
+          AppLocalizations.of(context)!
+              .characterInventoryTabBodyNoFilterMatchMessage,
           textAlign: TextAlign.center,
           style: AppTypography.body(color: AppColors.textMuted),
         ),
@@ -462,6 +472,7 @@ class _EmptyInventoryState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Center(
@@ -471,7 +482,7 @@ class _EmptyInventoryState extends StatelessWidget {
             const Icon(Icons.backpack, size: 48, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'INVENTAIRE VIDE',
+              l10n.characterInventoryTabBodyEmptyTitle,
               textAlign: TextAlign.center,
               style: AppTypography.display(
                 fontSize: 11,
@@ -480,7 +491,7 @@ class _EmptyInventoryState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Aucun objet dans cet inventaire pour l\'instant.',
+              l10n.characterInventoryTabBodyEmptyMessage,
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textMuted),
             ),

@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_racial_trait.dart';
 
 /// Ouvre le panneau "Infos" d'un trait racial — carte "TRAITS RACIAUX" de
@@ -42,6 +43,7 @@ class _RacialTraitInfoPanelContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: FractionallySizedBox(
@@ -58,7 +60,7 @@ class _RacialTraitInfoPanelContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'DESCRIPTION',
+                        l10n.racialTraitInfoPanelDescriptionLabel,
                         style: AppTypography.display(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -67,7 +69,7 @@ class _RacialTraitInfoPanelContent extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         trait.description.isEmpty
-                            ? 'Description indisponible.'
+                            ? l10n.racialTraitInfoPanelDescriptionUnavailable
                             : trait.description,
                         style: AppTypography.body(fontSize: 14, height: 1.4),
                       ),

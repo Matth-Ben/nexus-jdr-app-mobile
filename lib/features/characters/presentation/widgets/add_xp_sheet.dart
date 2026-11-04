@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Ouvre la feuille "Ajouter de l'XP" (bouton "+" du bandeau XP de
 /// `CharacterVitalsCard`) — sibling direct de `hp_adjustment_sheet.dart`,
@@ -108,6 +109,7 @@ class _AddXpSheetContentState extends State<_AddXpSheetContent> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Au niveau maximum (`nextLevelXpThreshold` nul), même repli que
     // `CharacterVitalsCard._XpSection` : le seuil affiché retombe sur l'XP
     // actuelle elle-même.
@@ -133,7 +135,7 @@ class _AddXpSheetContentState extends State<_AddXpSheetContent> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Ajouter de l'XP",
+              l10n.addXpSheetTitle,
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -141,7 +143,7 @@ class _AddXpSheetContentState extends State<_AddXpSheetContent> {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'XP actuelle : ${widget.currentXp} / $threshold',
+              l10n.addXpSheetCurrentXpLabel(widget.currentXp, threshold),
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -149,7 +151,7 @@ class _AddXpSheetContentState extends State<_AddXpSheetContent> {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'XP GAGNÉE',
+              l10n.addXpSheetGainedLabel,
               style: AppTypography.body(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
@@ -162,11 +164,11 @@ class _AddXpSheetContentState extends State<_AddXpSheetContent> {
               autofocus: true,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(hintText: 'Ex. 250'),
+              decoration: InputDecoration(hintText: l10n.addXpSheetAmountHint),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Montant remis par le MJ en fin de séance, par exemple.',
+              l10n.addXpSheetAmountHelper,
               style: AppTypography.body(
                 fontSize: 11,
                 color: AppColors.textMuted,
@@ -175,7 +177,7 @@ class _AddXpSheetContentState extends State<_AddXpSheetContent> {
             if (amount != null) ...[
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Nouveau total : ${widget.currentXp + amount} XP',
+                l10n.addXpSheetNewTotalLabel(widget.currentXp + amount),
                 style: AppTypography.body(
                   fontSize: 12,
                   color: AppColors.textMuted,
@@ -187,7 +189,7 @@ class _AddXpSheetContentState extends State<_AddXpSheetContent> {
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label: l10n.addXpSheetCancelButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -195,7 +197,7 @@ class _AddXpSheetContentState extends State<_AddXpSheetContent> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: PrimaryButton(
-                    label: 'Ajouter',
+                    label: l10n.addXpSheetApplyButton,
                     onPressed: amount != null ? _apply : null,
                   ),
                 ),
@@ -219,7 +221,7 @@ class _AddXpSheetContentState extends State<_AddXpSheetContent> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Monter de niveau manuellement',
+                            l10n.addXpSheetManualLevelUpLink,
                             style: AppTypography.body(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,

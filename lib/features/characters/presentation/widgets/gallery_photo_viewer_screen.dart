@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/destructive_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_gallery_photo.dart';
 import '../providers/character_detail_provider.dart';
 import '../providers/character_providers.dart';
@@ -64,6 +65,7 @@ class _GalleryPhotoViewerScreenState extends State<_GalleryPhotoViewerScreen> {
   bool _isRemoving = false;
 
   Future<void> _confirmAndRemove() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showRemoveGalleryPhotoConfirmationDialog(context);
     if (confirmed != true || !mounted) return;
 
@@ -79,14 +81,15 @@ class _GalleryPhotoViewerScreenState extends State<_GalleryPhotoViewerScreen> {
       widget.ref.invalidate(characterDetailProvider(widget.characterId));
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Photo retirée.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.galleryPhotoViewerScreenRemovedMessage)),
+      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _isRemoving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Impossible de retirer cette photo. Réessayez.'),
+        SnackBar(
+          content: Text(l10n.galleryPhotoViewerScreenRemoveGenericErrorMessage),
         ),
       );
     }
@@ -94,6 +97,7 @@ class _GalleryPhotoViewerScreenState extends State<_GalleryPhotoViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -126,7 +130,7 @@ class _GalleryPhotoViewerScreenState extends State<_GalleryPhotoViewerScreen> {
                 right: AppSpacing.lg,
                 bottom: AppSpacing.lg,
                 child: DestructiveButton(
-                  label: 'Retirer cette photo',
+                  label: l10n.galleryPhotoViewerScreenRemoveButtonLabel,
                   onPressed: _isRemoving ? null : _confirmAndRemove,
                 ),
               ),
@@ -140,6 +144,7 @@ class _GalleryPhotoViewerScreenState extends State<_GalleryPhotoViewerScreen> {
 /// Dialogue de confirmation "Retirer cette photo ?" — calque exact de
 /// `portrait_upload_sheet.dart::showRemovePortraitConfirmationDialog`.
 Future<bool?> showRemoveGalleryPhotoConfirmationDialog(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
   return showDialog<bool>(
     context: context,
     builder: (context) => Dialog(
@@ -158,7 +163,7 @@ Future<bool?> showRemoveGalleryPhotoConfirmationDialog(BuildContext context) {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Retirer cette photo ?',
+              l10n.galleryPhotoViewerScreenRemoveConfirmationTitle,
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -169,7 +174,8 @@ Future<bool?> showRemoveGalleryPhotoConfirmationDialog(BuildContext context) {
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label: l10n
+                        .galleryPhotoViewerScreenRemoveConfirmationCancelButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: () => Navigator.of(context).pop(false),
                   ),
@@ -177,7 +183,8 @@ Future<bool?> showRemoveGalleryPhotoConfirmationDialog(BuildContext context) {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: DestructiveButton(
-                    label: 'Retirer',
+                    label: l10n
+                        .galleryPhotoViewerScreenRemoveConfirmationConfirmButton,
                     onPressed: () => Navigator.of(context).pop(true),
                   ),
                 ),

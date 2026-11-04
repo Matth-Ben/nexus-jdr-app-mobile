@@ -13,6 +13,9 @@ import 'package:personnages/features/characters/domain/character_inventory_item.
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/item_action_sheet.dart';
 import 'package:personnages/features/characters/presentation/widgets/item_info_panel.dart';
+import 'package:personnages/l10n/app_localizations.dart';
+import 'package:personnages/l10n/app_localizations_en.dart';
+import 'package:personnages/l10n/app_localizations_fr.dart';
 
 const _customItem = CharacterInventoryItem(
   id: 'inv-custom',
@@ -100,6 +103,7 @@ void main() {
     List<CharacterInventoryItem> equippedWeapons = const [],
     int? weaponAttackBonus,
     int? weaponDamageModifier,
+    Locale locale = const Locale('fr'),
   }) async {
     useCalls = [];
     toggleCalls = [];
@@ -108,6 +112,15 @@ void main() {
     equipWeaponCalls = [];
     await tester.pumpWidget(
       MaterialApp(
+        // `weapon_slot_picker_sheet.dart` (sheet "Choisir un set", ouverte
+        // par "Équiper"/"Changer de set" depuis `item_action_sheet.dart`) lit
+        // `AppLocalizations.of(context)!` (chantier "traduction de l'app"
+        // Phase B, lot "Characters — classe/race/maîtrises") : sans ces
+        // delegates, l'appel renverrait `null` et le `!` planterait —
+        // ricochet trouvé en lançant la suite complète.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -539,6 +552,9 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('fr'),
             home: Builder(
               builder: (context) => Scaffold(
                 body: Center(
@@ -568,5 +584,164 @@ void main() {
         expect(find.byType(PrimaryButton), findsNothing);
       },
     );
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets(
+      'sheet d\'actions : Info/Use/Equip/Remove et sous-titre en anglais',
+      (tester) async {
+        await pumpSheet(tester, item: _sword, locale: const Locale('en'));
+
+        expect(find.text('Info'), findsOneWidget);
+        expect(find.text('Equip'), findsOneWidget);
+        expect(find.text('Remove'), findsOneWidget);
+
+        await tester.tap(find.text('Remove'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Remove Épée longue?'), findsOneWidget);
+        expect(find.text('This action is permanent.'), findsOneWidget);
+        expect(find.text('CANCEL'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'sheet d\'actions : arme équipée -> "Change set"/"Unequip" en anglais',
+      (tester) async {
+        await pumpSheet(
+          tester,
+          item: _swordEquipped,
+          equippedWeapons: [_swordEquipped],
+          locale: const Locale('en'),
+        );
+
+        expect(find.text('Change set'), findsOneWidget);
+        expect(find.text('Unequip'), findsOneWidget);
+      },
+    );
+
+    testWidgets('sheet d\'actions : objet consommable -> "Use" en anglais', (
+      tester,
+    ) async {
+      await pumpSheet(tester, item: _potion, locale: const Locale('en'));
+
+      expect(find.text('Use'), findsOneWidget);
+    });
+
+    testWidgets(
+      'sheet d\'actions : harmonisation -> "Attune to this item"/"Limit '
+      '({cap}) reached" en anglais',
+      (tester) async {
+        await pumpSheet(
+          tester,
+          item: _magicItem,
+          attunedCount: 3,
+          locale: const Locale('en'),
+        );
+
+        expect(find.text('Limit (3) reached'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'panneau "Infos" : libellés poids/coût/dégâts/propriétés en anglais',
+      (tester) async {
+        await pumpSheet(tester, item: _sword, locale: const Locale('en'));
+        await tester.tap(find.text('Info'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Unit weight'), findsOneWidget);
+        expect(find.text('Cost'), findsOneWidget);
+        expect(find.text('Damage'), findsOneWidget);
+        expect(find.text('Properties'), findsOneWidget);
+        expect(find.text('DESCRIPTION'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'panneau "Infos" d\'une armure : CA/bonus Dex/désavantage discrétion '
+      'et bouton "Unequip" en anglais',
+      (tester) async {
+        await pumpSheet(tester, item: _armor, locale: const Locale('en'));
+        await tester.tap(find.text('Info'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Base AC'), findsOneWidget);
+        expect(find.text('Dex bonus'), findsOneWidget);
+        expect(find.text('Stealth disadvantage'), findsOneWidget);
+        expect(find.text('No'), findsOneWidget);
+        expect(find.widgetWithText(PrimaryButton, 'UNEQUIP'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'panneau "Infos" d\'un objet magique : rareté, lien d\'harmonisation '
+      'et légende de plafond en anglais',
+      (tester) async {
+        await pumpSheet(
+          tester,
+          item: _magicItem,
+          attunedCount: 3,
+          locale: const Locale('en'),
+        );
+        await tester.tap(find.text('Info'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Rarity'), findsOneWidget);
+        expect(find.text('Rare'), findsOneWidget);
+        expect(find.text('Attune to this item'), findsOneWidget);
+        // Forme plurielle (`attunementCap` vaut toujours 3 en pratique dans
+        // l'app — voir `CharacterDetail.attunementCap`).
+        expect(find.text('Limit of 3 attuned items reached.'), findsOneWidget);
+      },
+    );
+
+    testWidgets('panneau "Infos" : description de repli en anglais', (
+      tester,
+    ) async {
+      await pumpSheet(tester, item: _customItem, locale: const Locale('en'));
+      await tester.tap(find.text('Info'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No description available.'), findsOneWidget);
+    });
+
+    testWidgets('panneau "Infos" d\'un consommable : bouton "Use" en anglais', (
+      tester,
+    ) async {
+      await pumpSheet(tester, item: _potion, locale: const Locale('en'));
+      await tester.tap(find.text('Info'));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(PrimaryButton, 'USE'), findsOneWidget);
+    });
+
+    test('légende de plafond d\'harmonisation : forme singulière (cap=1, non '
+        'atteignable en pratique — attunementCap vaut toujours 3 — mais '
+        'vérifiée directement pour couvrir la forme ICU plural manquante)', () {
+      final fr = AppLocalizationsFr();
+      final en = AppLocalizationsEn();
+
+      expect(
+        fr.itemInfoPanelAttunementCapReachedCaption(1),
+        'Limite de 1 objet harmonisé atteinte.',
+      );
+      expect(
+        en.itemInfoPanelAttunementCapReachedCaption(1),
+        'Limit of 1 attuned item reached.',
+      );
+      // Forme plurielle, pour mémoire (déjà couverte par un vrai widget
+      // ci-dessus avec la valeur réelle de `attunementCap`, 3).
+      expect(
+        fr.itemInfoPanelAttunementCapReachedCaption(3),
+        'Limite de 3 objets harmonisés atteinte.',
+      );
+      expect(
+        en.itemInfoPanelAttunementCapReachedCaption(3),
+        'Limit of 3 attuned items reached.',
+      );
+    });
   });
 }

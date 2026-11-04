@@ -11,6 +11,7 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/segmented_toggle.dart';
 import '../../../../core/widgets/stepper_counter.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/hit_dice_pool.dart';
 import '../../domain/hit_dice_recovery_calculator.dart';
 import '../../domain/hit_dice_spend_calculator.dart';
@@ -333,6 +334,7 @@ class _RestSheetContentState extends State<_RestSheetContent> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -361,7 +363,7 @@ class _RestSheetContentState extends State<_RestSheetContent> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Repos',
+                      l10n.restSheetTitle,
                       style: AppTypography.body(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -369,7 +371,10 @@ class _RestSheetContentState extends State<_RestSheetContent> {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      'PV actuels : ${widget.currentHp} / ${widget.maxHp}',
+                      l10n.restSheetCurrentHpLabel(
+                        widget.currentHp,
+                        widget.maxHp,
+                      ),
                       style: AppTypography.body(
                         fontSize: 13,
                         color: AppColors.textSecondary,
@@ -377,14 +382,14 @@ class _RestSheetContentState extends State<_RestSheetContent> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     SegmentedToggle<RestType>(
-                      options: const [
+                      options: [
                         SegmentedToggleOption(
                           value: RestType.short,
-                          label: 'Repos court',
+                          label: l10n.restSheetShortOption,
                         ),
                         SegmentedToggleOption(
                           value: RestType.long,
-                          label: 'Repos long',
+                          label: l10n.restSheetLongOption,
                         ),
                       ],
                       value: _type,
@@ -428,7 +433,7 @@ class _RestSheetContentState extends State<_RestSheetContent> {
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label: l10n.restSheetCancelButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -437,7 +442,10 @@ class _RestSheetContentState extends State<_RestSheetContent> {
                 Expanded(
                   // Toujours activé : un segment est toujours sélectionné,
                   // aucune saisie à valider (spec visuelle).
-                  child: PrimaryButton(label: 'Appliquer', onPressed: _apply),
+                  child: PrimaryButton(
+                    label: l10n.restSheetApplyButton,
+                    onPressed: _apply,
+                  ),
                 ),
               ],
             ),
@@ -460,6 +468,7 @@ class _PreparedSpellsChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -472,7 +481,7 @@ class _PreparedSpellsChoice extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.xs),
             Text(
-              'SORTS PRÉPARÉS',
+              l10n.restSheetPreparedSpellsTitle,
               style: AppTypography.display(
                 fontSize: 11,
                 color: AppColors.textSecondary,
@@ -482,9 +491,15 @@ class _PreparedSpellsChoice extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         SegmentedToggle<bool>(
-          options: const [
-            SegmentedToggleOption(value: false, label: 'Garder ma liste'),
-            SegmentedToggleOption(value: true, label: 'Changer mes sorts'),
+          options: [
+            SegmentedToggleOption(
+              value: false,
+              label: l10n.restSheetKeepListOption,
+            ),
+            SegmentedToggleOption(
+              value: true,
+              label: l10n.restSheetChangeSpellsOption,
+            ),
           ],
           value: change,
           onChanged: onChanged,
@@ -492,9 +507,8 @@ class _PreparedSpellsChoice extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs),
         Text(
           change
-              ? 'Après le repos, la liste de vos sorts s\'ouvre pour '
-                    'choisir ceux à préparer.'
-              : 'Vos sorts préparés restent les mêmes après le repos.',
+              ? l10n.restSheetChangeSpellsHelper
+              : l10n.restSheetKeepListHelper,
           style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
         ),
       ],
@@ -583,18 +597,17 @@ class _RestHelpBlock extends StatelessWidget {
         appliedGain: appliedGain,
       );
     }
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Restaure les PV au maximum, réinitialise les emplacements de '
-          'sorts et recharge toutes les aptitudes rechargeables (repos '
-          'court comme repos long).',
+          l10n.restSheetLongHelpText,
           style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'PV après repos : $maxHp / $maxHp',
+          l10n.restSheetAfterRestHpLabel(maxHp),
           style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
         ),
         // Choix des dés de vie récupérés — seulement quand la récupération
@@ -656,13 +669,17 @@ class _ShortRestHitDiceBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // a. Ligne d'état.
         Text(
-          'Dés de vie disponibles : $remainingHitDice/$hitDiceTotal '
-          '(d$hitDie)',
+          l10n.restSheetHitDiceAvailableLabel(
+            remainingHitDice,
+            hitDiceTotal,
+            hitDie,
+          ),
           style: AppTypography.body(
             fontSize: 12,
             fontWeight: FontWeight.w700,
@@ -677,7 +694,7 @@ class _ShortRestHitDiceBlock extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Dés à dépenser',
+              l10n.restSheetDiceToSpendLabel,
               style: AppTypography.body(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -697,8 +714,7 @@ class _ShortRestHitDiceBlock extends StatelessWidget {
         if (remainingHitDice == 0) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Aucun dé de vie disponible. Le repos court reste gratuit — '
-            'aucune action supplémentaire requise.',
+            l10n.restSheetNoHitDiceAvailable,
             style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
           ),
         ],
@@ -706,14 +722,14 @@ class _ShortRestHitDiceBlock extends StatelessWidget {
         if (diceToSpend > 0) ...[
           const SizedBox(height: AppSpacing.md),
           SegmentedToggle<HitDieMethod>(
-            options: const [
+            options: [
               SegmentedToggleOption(
                 value: HitDieMethod.roll,
-                label: 'Lancer les dés',
+                label: l10n.restSheetRollMethodOption,
               ),
               SegmentedToggleOption(
                 value: HitDieMethod.average,
-                label: 'Valeur moyenne',
+                label: l10n.restSheetAverageMethodOption,
               ),
             ],
             value: method,
@@ -736,7 +752,7 @@ class _ShortRestHitDiceBlock extends StatelessWidget {
                       constraints: const BoxConstraints(minHeight: 44),
                       child: Center(
                         child: Text(
-                          'Relancer les dés',
+                          l10n.restSheetRerollLink,
                           style: AppTypography.body(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -747,7 +763,7 @@ class _ShortRestHitDiceBlock extends StatelessWidget {
                     ),
                   )
                 : Text(
-                    '(moitié du dé arrondie au supérieur, +1, par dé)',
+                    l10n.restSheetAverageFormulaHint,
                     style: AppTypography.body(
                       fontSize: 11,
                       color: AppColors.textMuted,
@@ -763,19 +779,21 @@ class _ShortRestHitDiceBlock extends StatelessWidget {
           // mais n'empêche pas la dépense des dés (RAW : les dés sont
           // dépensés même si le jet est "gaspillé").
           if (currentHp >= maxHp) ...[
-            const InfoBanner(
+            InfoBanner(
               icon: Icons.info_outline,
-              message:
-                  'PV déjà au maximum : ce repos ne restaurera aucun PV '
-                  'supplémentaire.',
+              message: l10n.restSheetAlreadyMaxHpMessage,
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
           GainRow(
             icon: Icons.favorite,
             color: AppColors.accentBrick,
-            title: 'PV restaurés',
-            subtitle: '$currentHp → ${currentHp + appliedGain} (+$appliedGain)',
+            title: l10n.restSheetHpRestoredTitle,
+            subtitle: l10n.restSheetHpRestoredSubtitle(
+              currentHp,
+              currentHp + appliedGain,
+              appliedGain,
+            ),
           ),
         ],
       ],
@@ -822,6 +840,7 @@ class _MulticlassShortRestHitDiceBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -835,14 +854,14 @@ class _MulticlassShortRestHitDiceBlock extends StatelessWidget {
         ],
         if (totalDiceToSpend > 0) ...[
           SegmentedToggle<HitDieMethod>(
-            options: const [
+            options: [
               SegmentedToggleOption(
                 value: HitDieMethod.roll,
-                label: 'Lancer les dés',
+                label: l10n.restSheetRollMethodOption,
               ),
               SegmentedToggleOption(
                 value: HitDieMethod.average,
-                label: 'Valeur moyenne',
+                label: l10n.restSheetAverageMethodOption,
               ),
             ],
             value: method,
@@ -852,7 +871,7 @@ class _MulticlassShortRestHitDiceBlock extends StatelessWidget {
           for (final pool in pools)
             if (diceToSpendOf(pool) > 0) ...[
               Text(
-                '${pool.className} (d${pool.hitDie})',
+                l10n.restSheetPoolRolledLabel(pool.className, pool.hitDie),
                 style: AppTypography.body(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -878,7 +897,7 @@ class _MulticlassShortRestHitDiceBlock extends StatelessWidget {
                       constraints: const BoxConstraints(minHeight: 44),
                       child: Center(
                         child: Text(
-                          'Relancer les dés',
+                          l10n.restSheetRerollLink,
                           style: AppTypography.body(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -889,7 +908,7 @@ class _MulticlassShortRestHitDiceBlock extends StatelessWidget {
                     ),
                   )
                 : Text(
-                    '(moitié du dé arrondie au supérieur, +1, par dé)',
+                    l10n.restSheetAverageFormulaHint,
                     style: AppTypography.body(
                       fontSize: 11,
                       color: AppColors.textMuted,
@@ -902,19 +921,21 @@ class _MulticlassShortRestHitDiceBlock extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           if (currentHp >= maxHp) ...[
-            const InfoBanner(
+            InfoBanner(
               icon: Icons.info_outline,
-              message:
-                  'PV déjà au maximum : ce repos ne restaurera aucun PV '
-                  'supplémentaire.',
+              message: l10n.restSheetAlreadyMaxHpMessage,
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
           GainRow(
             icon: Icons.favorite,
             color: AppColors.accentBrick,
-            title: 'PV restaurés',
-            subtitle: '$currentHp → ${currentHp + appliedGain} (+$appliedGain)',
+            title: l10n.restSheetHpRestoredTitle,
+            subtitle: l10n.restSheetHpRestoredSubtitle(
+              currentHp,
+              currentHp + appliedGain,
+              appliedGain,
+            ),
           ),
         ],
       ],
@@ -939,12 +960,17 @@ class _PoolSpendRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '${pool.className} — dés de vie disponibles : ${pool.available}/'
-          '${pool.total} (d${pool.hitDie})',
+          l10n.restSheetPoolStatusLabel(
+            pool.className,
+            pool.available,
+            pool.total,
+            pool.hitDie,
+          ),
           style: AppTypography.body(
             fontSize: 12,
             fontWeight: FontWeight.w700,
@@ -956,7 +982,7 @@ class _PoolSpendRow extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Dés à dépenser',
+              l10n.restSheetDiceToSpendLabel,
               style: AppTypography.body(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -1004,13 +1030,13 @@ class _LongRestRecoveryChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final remaining = recoveredCount - allocated;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Dés de vie récupérés : $recoveredCount — répartissez-les entre '
-          'vos classes',
+          l10n.restSheetRecoveredAllocationTitle(recoveredCount),
           style: AppTypography.body(
             fontSize: 12,
             fontWeight: FontWeight.w700,
@@ -1024,8 +1050,11 @@ class _LongRestRecoveryChoice extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${pool.className} (d${pool.hitDie}) — ${pool.spent} '
-                  'dépensé(s)',
+                  l10n.restSheetRecoveredPoolLabel(
+                    pool.className,
+                    pool.hitDie,
+                    pool.spent,
+                  ),
                   style: AppTypography.body(fontSize: 13),
                 ),
               ),
@@ -1043,7 +1072,7 @@ class _LongRestRecoveryChoice extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
         ],
         Text(
-          'Reste à répartir : $remaining',
+          l10n.restSheetRemainingToAllocateLabel(remaining),
           style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
         ),
       ],

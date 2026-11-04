@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import 'character_name_tag_chip.dart';
 
 /// Carte compacte "MAÎTRISES D'OUTILS" de l'onglet "Compétences" : le nom
@@ -20,6 +21,7 @@ class CharacterToolProficienciesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -31,7 +33,7 @@ class CharacterToolProficienciesCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "MAÎTRISES D'OUTILS",
+            l10n.characterToolProficienciesCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,

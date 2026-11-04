@@ -99,6 +99,15 @@ class _FakeRepository implements CharacterRepository {
   final restTypes = <RestType>[];
   Object? restError;
 
+  /// Erreur levée uniquement par le second appel (et suivants) à
+  /// [setInnateSpellUsesSpent] — c'est-à-dire la réécriture faite par
+  /// [CharacterDetailScreen]'s `_reassertInnateUsesState` une fois qu'un
+  /// lancer resté en vol résout APRÈS un repos qui a fait avancer
+  /// `_restGeneration` (voir le groupe "course — synchro de l'usage après
+  /// un repos" ci-dessous). Jamais appliquée au premier appel (le lancer
+  /// lui-même) : [innateError]/[innateOutcome] le couvrent déjà.
+  Object? innateReassertError;
+
   /// Laissé non complété pour garder le repos en vol.
   Completer<void>? restGate;
 
@@ -124,8 +133,15 @@ class _FakeRepository implements CharacterRepository {
     required int spellId,
     required int usesSpent,
   }) async {
+    // Capturé avant l'ajout ci-dessous : vrai seulement pour un second appel
+    // (ou suivant), c'est-à-dire une réécriture de `_reassertInnateUsesState`
+    // — voir la doc de [innateReassertError].
+    final isReassert = innateCalls.isNotEmpty;
     innateCalls.add((spellId: spellId, usesSpent: usesSpent));
     await innateGate?.future;
+    if (isReassert && innateReassertError != null) {
+      throw innateReassertError!;
+    }
     if (innateError != null) throw innateError!;
     if (innateOutcome == WriteOutcome.synced) _setSpent(usesSpent);
     return innateOutcome;
@@ -166,8 +182,9 @@ class _FakeRepository implements CharacterRepository {
 
 Future<_FakeRepository> _pumpDetail(
   WidgetTester tester,
-  CharacterDetail detail,
-) async {
+  CharacterDetail detail, {
+  Locale locale = const Locale('fr'),
+}) async {
   final repository = _FakeRepository(detail);
   await tester.binding.setSurfaceSize(const Size(800, 2400));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -180,11 +197,11 @@ Future<_FakeRepository> _pumpDetail(
         // .of(context)!` dès son premier `build()` (chantier "traduction de
         // l'app" Phase B, lot "Characters — fiche
         // (identité/statistiques)") : sans ces delegates, l'appel renverrait
-        // `null` et le `!` planterait. Ce fichier reste en français, aucune
-        // assertion n'est modifiée par ce lot, hors de son périmètre.
+        // `null` et le `!` planterait. `fr` par défaut, `en` passé
+        // explicitement par le groupe "locale anglaise" plus bas.
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('fr'),
+        locale: locale,
         routerConfig: GoRouter(
           initialLocation: '/characters/1',
           routes: [
@@ -203,8 +220,11 @@ Future<_FakeRepository> _pumpDetail(
   return repository;
 }
 
-Future<void> _openSpellsTab(WidgetTester tester) async {
-  await tester.tap(find.text('SORTS'));
+Future<void> _openSpellsTab(
+  WidgetTester tester, {
+  String tabLabel = 'SORTS',
+}) async {
+  await tester.tap(find.text(tabLabel));
   await tester.pumpAndSettle();
 }
 
@@ -216,12 +236,19 @@ Future<void> _openSpellsTab(WidgetTester tester) async {
 /// vérifié par les tests existants reste celui d'après confirmation. Un sort
 /// mineur inné (niveau 0, ex. "Lumières dansantes") n'affiche pas cette
 /// confirmation : le second tap n'a alors rien à trouver.
-Future<void> _cast(WidgetTester tester, String name) async {
+///
+/// [castLabel] : libellé du bouton "Lancer"/"Cast" dans la locale active —
+/// 'LANCER' par défaut (fr), 'CAST' pour le groupe "locale anglaise".
+Future<void> _cast(
+  WidgetTester tester,
+  String name, {
+  String castLabel = 'LANCER',
+}) async {
   await tester.tap(find.text(name));
   await tester.pumpAndSettle();
-  await tester.tap(find.widgetWithText(PrimaryButton, 'LANCER'));
+  await tester.tap(find.widgetWithText(PrimaryButton, castLabel));
   await tester.pumpAndSettle();
-  final confirmButton = find.widgetWithText(PrimaryButton, 'LANCER');
+  final confirmButton = find.widgetWithText(PrimaryButton, castLabel);
   if (tester.any(confirmButton)) {
     await tester.tap(confirmButton);
     await tester.pumpAndSettle();
@@ -587,6 +614,49 @@ void main() {
       expect(find.text('Épuisé'), findsOneWidget);
     });
 
+    // Gap préexistant comblé : `_reassertInnateUsesState` n'avait jusqu'ici
+    // aucun test exerçant sa branche d'erreur générique
+    // (`characterDetailInnateSpellSyncErrorMessage`) — ni en français ni en
+    // anglais. Même scénario de course que le test "COURSE — ... repos
+    // court ..." ci-dessus (seul un repos COURT laisse la surcouche intacte,
+    // donc une valeur à réécrire), mais la RÉÉCRITURE elle-même
+    // (`setInnateSpellUsesSpent`, second appel à ce dépôt) échoue avec une
+    // erreur inattendue plutôt que de réussir.
+    testWidgets(
+      'COURSE — la resynchronisation de l\'usage après un repos court échoue '
+      'avec une erreur inattendue : message dédié affiché',
+      (tester) async {
+        final repository = await _pumpDetail(tester, _detail());
+        repository.innateGate = Completer<void>();
+        repository.innateReassertError = StateError('boom');
+        await _openSpellsTab(tester);
+        await _cast(tester, 'Ténèbres');
+        expect(repository.innateCalls, hasLength(1));
+
+        // Le repos court démarre et résout (sans gate) pendant que le lancer
+        // précédent est toujours en vol — avance `_restGeneration`.
+        await _rest(tester, long: false);
+        expect(repository.restTypes, [RestType.short]);
+
+        // Le lancer resté en vol résout enfin avec succès, déclenchant la
+        // resynchronisation (`_reassertInnateUsesState`) — dont l'écriture
+        // échoue ici avec [repository.innateReassertError].
+        repository.innateGate!.complete();
+        await tester.pumpAndSettle();
+
+        expect(repository.innateCalls, hasLength(2));
+        // La SnackBar du repos court ("Repos court effectué.") occupe
+        // encore l'affichage : laisse-la défiler avant de vérifier la
+        // suivante — même patron que `showNextSnackBar` du groupe plus bas.
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Impossible de synchroniser les sorts innés. Réessayez.'),
+          findsOneWidget,
+        );
+      },
+    );
+
     // Retour QA : un repos court avance le jeton de course mais ne purge pas
     // la surcouche des sorts innés. Un lancer en vol qui échoue (ou n'est
     // pas envoyé) après ce repos doit quand même revenir à « disponible ».
@@ -871,6 +941,27 @@ void main() {
 
         await expectAvailableAgain(tester, repository, 'Accès refusé.');
       });
+    });
+  });
+
+  group('locale anglaise', () {
+    // Message de succès `characterDetailCastInnateSpellSuccessMessage` —
+    // testé en français plus haut (voir le premier `testWidgets` de ce
+    // fichier), jamais en anglais jusqu'ici.
+    testWidgets('lancer : message "cast (innate spell)" affiché en anglais', (
+      tester,
+    ) async {
+      final repository = await _pumpDetail(
+        tester,
+        _detail(),
+        locale: const Locale('en'),
+      );
+      await _openSpellsTab(tester, tabLabel: 'SPELLS');
+
+      await _cast(tester, 'Ténèbres', castLabel: 'CAST');
+
+      expect(repository.innateCalls, [(spellId: _innateSpellId, usesSpent: 1)]);
+      expect(find.text('Ténèbres cast (innate spell).'), findsOneWidget);
     });
   });
 }

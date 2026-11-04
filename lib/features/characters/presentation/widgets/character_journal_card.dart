@@ -8,6 +8,7 @@ import '../../../../core/widgets/dashed_add_tile.dart';
 import '../../../../core/widgets/destructive_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_journal_entry.dart';
 import '../../domain/journal_entry_date_formatter.dart';
@@ -54,6 +55,7 @@ class CharacterJournalCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final entries = detail.journalEntries;
 
     return Container(
@@ -67,7 +69,7 @@ class CharacterJournalCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'JOURNAL DE CAMPAGNE',
+            l10n.characterJournalCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,
@@ -93,7 +95,7 @@ class CharacterJournalCard extends ConsumerWidget {
           if (!actionsDisabled) ...[
             const SizedBox(height: AppSpacing.sm),
             DashedAddTile(
-              label: 'Ajouter une note',
+              label: l10n.characterJournalCardAddButtonLabel,
               onTap: () =>
                   showJournalEntryEditSheet(context, characterId: detail.id),
             ),
@@ -108,10 +110,11 @@ class CharacterJournalCard extends ConsumerWidget {
     WidgetRef ref,
     CharacterJournalEntry entry,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final action = await showModalBottomSheet<_JournalEntryAction>(
       context: context,
       backgroundColor: AppColors.parchmentCard,
-      builder: (sheetContext) => const _JournalEntryActionSheetContent(),
+      builder: (sheetContext) => _JournalEntryActionSheetContent(l10n: l10n),
     );
     if (action == null || !context.mounted) return;
 
@@ -132,6 +135,7 @@ class CharacterJournalCard extends ConsumerWidget {
     WidgetRef ref,
     CharacterJournalEntry entry,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showRemoveJournalEntryConfirmationDialog(context);
     if (confirmed != true || !context.mounted) return;
 
@@ -142,24 +146,20 @@ class CharacterJournalCard extends ConsumerWidget {
       if (outcome == WriteOutcome.queued) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Hors ligne : cette action n'a pas pu être enregistrée. "
-              'Réessayez une fois reconnecté.',
-            ),
-          ),
+          SnackBar(content: Text(l10n.characterOfflineNotPersistedMessage)),
         );
         return;
       }
       ref.invalidate(characterDetailProvider(detail.id));
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Note supprimée.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.characterJournalCardRemovedMessage)),
+      );
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Impossible de supprimer cette note. Réessayez.'),
+        SnackBar(
+          content: Text(l10n.characterJournalCardRemoveGenericErrorMessage),
         ),
       );
     }
@@ -204,7 +204,9 @@ class _JournalEntryRow extends StatelessWidget {
 enum _JournalEntryAction { edit, remove }
 
 class _JournalEntryActionSheetContent extends StatelessWidget {
-  const _JournalEntryActionSheetContent();
+  const _JournalEntryActionSheetContent({required this.l10n});
+
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -214,13 +216,13 @@ class _JournalEntryActionSheetContent extends StatelessWidget {
         children: [
           SheetActionRow(
             icon: Icons.edit_outlined,
-            label: 'Modifier',
+            label: l10n.characterJournalCardEditAction,
             onTap: () => Navigator.of(context).pop(_JournalEntryAction.edit),
           ),
           const SheetActionDivider(),
           SheetActionRow(
             icon: Icons.delete_outline,
-            label: 'Supprimer',
+            label: l10n.characterJournalCardRemoveAction,
             color: AppColors.accentBrick,
             onTap: () => Navigator.of(context).pop(_JournalEntryAction.remove),
           ),
@@ -233,6 +235,7 @@ class _JournalEntryActionSheetContent extends StatelessWidget {
 /// Dialogue de confirmation "Supprimer cette note ?" — calque de
 /// `item_action_sheet.dart::showRemoveInventoryItemConfirmationDialog`.
 Future<bool?> showRemoveJournalEntryConfirmationDialog(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
   return showDialog<bool>(
     context: context,
     builder: (context) => Dialog(
@@ -251,7 +254,7 @@ Future<bool?> showRemoveJournalEntryConfirmationDialog(BuildContext context) {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Supprimer cette note ?',
+              l10n.characterJournalCardRemoveConfirmationTitle,
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -259,7 +262,7 @@ Future<bool?> showRemoveJournalEntryConfirmationDialog(BuildContext context) {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Cette action est définitive.',
+              l10n.characterJournalCardRemoveConfirmationMessage,
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -270,7 +273,8 @@ Future<bool?> showRemoveJournalEntryConfirmationDialog(BuildContext context) {
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label:
+                        l10n.characterJournalCardRemoveConfirmationCancelButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: () => Navigator.of(context).pop(false),
                   ),
@@ -278,7 +282,8 @@ Future<bool?> showRemoveJournalEntryConfirmationDialog(BuildContext context) {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: DestructiveButton(
-                    label: 'Supprimer',
+                    label: l10n
+                        .characterJournalCardRemoveConfirmationConfirmButton,
                     onPressed: () => Navigator.of(context).pop(true),
                   ),
                 ),

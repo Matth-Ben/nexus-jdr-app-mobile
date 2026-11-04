@@ -12,6 +12,7 @@ import '../../../../core/widgets/alert_banner.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/wood_back_header.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_failure.dart';
 import '../providers/character_detail_provider.dart';
 import '../providers/character_providers.dart';
@@ -54,6 +55,7 @@ class _PortraitCropScreenState extends ConsumerState<PortraitCropScreen> {
   String? _errorMessage;
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isUploading = true;
       _errorMessage = null;
@@ -67,9 +69,16 @@ class _PortraitCropScreenState extends ConsumerState<PortraitCropScreen> {
       final image = await boundary.toImage(pixelRatio: pixelRatio);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) {
-        throw const CharacterFailure(
-          "Impossible de préparer l'image. Réessayez.",
-        );
+        // Géré directement ici plutôt que par un `throw CharacterFailure` +
+        // `catch` ci-dessous (chantier "traduction de l'app" Phase B) :
+        // évite d'embarquer un message déjà localisé dans une exception du
+        // domaine, qui n'a normalement accès à aucun `BuildContext`.
+        if (!mounted) return;
+        setState(() {
+          _isUploading = false;
+          _errorMessage = l10n.portraitCropScreenPrepareImageErrorMessage;
+        });
+        return;
       }
 
       final pngBytes = byteData.buffer.asUint8List();
@@ -97,7 +106,7 @@ class _PortraitCropScreenState extends ConsumerState<PortraitCropScreen> {
       if (!mounted) return;
       setState(() {
         _isUploading = false;
-        _errorMessage = "Impossible d'envoyer le portrait. Réessayez.";
+        _errorMessage = l10n.portraitCropScreenGenericErrorMessage;
       });
     }
   }
@@ -113,6 +122,7 @@ class _PortraitCropScreenState extends ConsumerState<PortraitCropScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Même rationale que les sheets de profil
     // (`change_password_sheet.dart`/`change_email_sheet.dart`/
     // `edit_display_name_sheet.dart`) et leur copie
@@ -124,7 +134,10 @@ class _PortraitCropScreenState extends ConsumerState<PortraitCropScreen> {
       child: Scaffold(
         body: Column(
           children: [
-            WoodBackHeader(title: 'RECADRAGE', onBack: _cancel),
+            WoodBackHeader(
+              title: l10n.portraitCropScreenTitle,
+              onBack: _cancel,
+            ),
             Expanded(
               child: ColoredBox(
                 color: AppColors.woodDark.withValues(alpha: 0.55),
@@ -166,7 +179,7 @@ class _PortraitCropScreenState extends ConsumerState<PortraitCropScreen> {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        'Pincez pour zoomer, glissez pour cadrer.',
+                        l10n.portraitCropScreenInstructions,
                         style: AppTypography.body(
                           fontSize: 12,
                           color: AppColors.textOnWoodMuted,
@@ -189,7 +202,7 @@ class _PortraitCropScreenState extends ConsumerState<PortraitCropScreen> {
                     children: [
                       Expanded(
                         child: SecondaryButton(
-                          label: 'Annuler',
+                          label: l10n.portraitCropScreenCancelButton,
                           surface: SecondaryButtonSurface.parchment,
                           onPressed: _isUploading ? null : _cancel,
                         ),
@@ -197,7 +210,7 @@ class _PortraitCropScreenState extends ConsumerState<PortraitCropScreen> {
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: PrimaryButton(
-                          label: 'Valider',
+                          label: l10n.portraitCropScreenSaveButton,
                           isLoading: _isUploading,
                           onPressed: _submit,
                         ),

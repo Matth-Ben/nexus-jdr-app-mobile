@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import 'character_name_tag_chip.dart';
 
 /// Carte compacte "LANGUES CONNUES" de l'onglet "Compétences" — même gabarit
@@ -20,6 +21,7 @@ class CharacterLanguagesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -31,7 +33,7 @@ class CharacterLanguagesCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'LANGUES CONNUES',
+            l10n.characterLanguagesCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,

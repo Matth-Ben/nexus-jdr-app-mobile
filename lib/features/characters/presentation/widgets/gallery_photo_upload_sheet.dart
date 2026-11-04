@@ -10,6 +10,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../data/portrait_url_fetcher.dart';
 import '../providers/character_detail_provider.dart';
 import '../providers/character_providers.dart';
@@ -35,10 +36,11 @@ Future<void> showAddGalleryPhotoSheet(
   required WidgetRef ref,
   required String characterId,
 }) async {
+  final l10n = AppLocalizations.of(context)!;
   final action = await showModalBottomSheet<_AddPhotoAction>(
     context: context,
     backgroundColor: AppColors.parchmentCard,
-    builder: (sheetContext) => const _AddPhotoSheetContent(),
+    builder: (sheetContext) => _AddPhotoSheetContent(l10n: l10n),
   );
   if (action == null || !context.mounted) return;
 
@@ -60,14 +62,13 @@ Future<void> showAddGalleryPhotoSheet(
         .addGalleryPhoto(characterId: characterId, bytes: bytes);
     ref.invalidate(characterDetailProvider(characterId));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Photo ajoutée.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.galleryPhotoUploadSheetAddedMessage)),
+    );
   } catch (_) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Impossible d'ajouter cette photo. Réessayez."),
-      ),
+      SnackBar(content: Text(l10n.galleryPhotoUploadSheetGenericErrorMessage)),
     );
   }
 }
@@ -83,7 +84,9 @@ Future<Uint8List?> _pick(ImageSource source) async {
 }
 
 class _AddPhotoSheetContent extends StatelessWidget {
-  const _AddPhotoSheetContent();
+  const _AddPhotoSheetContent({required this.l10n});
+
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -93,19 +96,19 @@ class _AddPhotoSheetContent extends StatelessWidget {
         children: [
           SheetActionRow(
             icon: Icons.photo_camera_outlined,
-            label: 'Prendre une photo',
+            label: l10n.galleryPhotoUploadSheetCameraAction,
             onTap: () => Navigator.of(context).pop(_AddPhotoAction.camera),
           ),
           const SheetActionDivider(),
           SheetActionRow(
             icon: Icons.image_outlined,
-            label: 'Choisir dans la galerie',
+            label: l10n.galleryPhotoUploadSheetGalleryAction,
             onTap: () => Navigator.of(context).pop(_AddPhotoAction.gallery),
           ),
           const SheetActionDivider(),
           SheetActionRow(
             icon: Icons.link,
-            label: 'Utiliser une URL',
+            label: l10n.galleryPhotoUploadSheetUrlAction,
             onTap: () => Navigator.of(context).pop(_AddPhotoAction.url),
           ),
         ],
@@ -147,6 +150,7 @@ class _GalleryPhotoUrlDialogState extends State<_GalleryPhotoUrlDialog> {
   Future<void> _submit() async {
     final url = _controller.text.trim();
     if (url.isEmpty || _isLoading) return;
+    final l10n = AppLocalizations.of(context)!;
 
     setState(() {
       _isLoading = true;
@@ -167,13 +171,14 @@ class _GalleryPhotoUrlDialogState extends State<_GalleryPhotoUrlDialog> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorText = 'Impossible de charger cette image.';
+        _errorText = l10n.galleryPhotoUploadSheetUrlDialogGenericError;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Dialog(
       backgroundColor: AppColors.parchmentCard,
       shape: RoundedRectangleBorder(
@@ -190,7 +195,7 @@ class _GalleryPhotoUrlDialogState extends State<_GalleryPhotoUrlDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'URL de la photo',
+              l10n.galleryPhotoUploadSheetUrlDialogTitle,
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -204,7 +209,7 @@ class _GalleryPhotoUrlDialogState extends State<_GalleryPhotoUrlDialog> {
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _submit(),
               decoration: InputDecoration(
-                hintText: 'https://...',
+                hintText: l10n.galleryPhotoUploadSheetUrlDialogHint,
                 errorText: _errorText,
               ),
             ),
@@ -213,7 +218,7 @@ class _GalleryPhotoUrlDialogState extends State<_GalleryPhotoUrlDialog> {
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label: l10n.galleryPhotoUploadSheetUrlDialogCancelButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: _isLoading
                         ? null
@@ -223,7 +228,7 @@ class _GalleryPhotoUrlDialogState extends State<_GalleryPhotoUrlDialog> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: PrimaryButton(
-                    label: 'Suivant',
+                    label: l10n.galleryPhotoUploadSheetUrlDialogNextButton,
                     isLoading: _isLoading,
                     onPressed: _submit,
                   ),

@@ -11,6 +11,7 @@ import '../../../../core/widgets/destructive_button.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../data/portrait_url_fetcher.dart';
 import '../providers/character_detail_provider.dart';
 import '../providers/character_providers.dart';
@@ -34,11 +35,14 @@ Future<void> showPortraitUploadSheet(
   required String characterId,
   required String? portraitUrl,
 }) async {
+  final l10n = AppLocalizations.of(context)!;
   final action = await showModalBottomSheet<_PortraitUploadAction>(
     context: context,
     backgroundColor: AppColors.parchmentCard,
-    builder: (sheetContext) =>
-        _PortraitUploadSheetContent(hasPortrait: portraitUrl != null),
+    builder: (sheetContext) => _PortraitUploadSheetContent(
+      l10n: l10n,
+      hasPortrait: portraitUrl != null,
+    ),
   );
   if (action == null || !context.mounted) return;
 
@@ -65,11 +69,12 @@ Future<({Uint8List? bytes})?> pickLocalPortrait(
   BuildContext context, {
   required bool hasPortrait,
 }) async {
+  final l10n = AppLocalizations.of(context)!;
   final action = await showModalBottomSheet<_PortraitUploadAction>(
     context: context,
     backgroundColor: AppColors.parchmentCard,
     builder: (sheetContext) =>
-        _PortraitUploadSheetContent(hasPortrait: hasPortrait),
+        _PortraitUploadSheetContent(l10n: l10n, hasPortrait: hasPortrait),
   );
   if (action == null || !context.mounted) return null;
 
@@ -144,6 +149,7 @@ Future<void> _confirmAndRemove(
   String characterId,
   String portraitUrl,
 ) async {
+  final l10n = AppLocalizations.of(context)!;
   final confirmed = await showRemovePortraitConfirmationDialog(context);
   if (confirmed != true || !context.mounted) return;
 
@@ -153,21 +159,26 @@ Future<void> _confirmAndRemove(
         .removePortrait(characterId: characterId, portraitUrl: portraitUrl);
     ref.invalidate(characterDetailProvider(characterId));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Portrait retiré.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.portraitUploadSheetRemovedMessage)),
+    );
   } catch (_) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Impossible de retirer le portrait. Réessayez.'),
+      SnackBar(
+        content: Text(l10n.portraitUploadSheetRemoveGenericErrorMessage),
       ),
     );
   }
 }
 
 class _PortraitUploadSheetContent extends StatelessWidget {
-  const _PortraitUploadSheetContent({required this.hasPortrait});
+  const _PortraitUploadSheetContent({
+    required this.l10n,
+    required this.hasPortrait,
+  });
 
+  final AppLocalizations l10n;
   final bool hasPortrait;
 
   @override
@@ -178,28 +189,28 @@ class _PortraitUploadSheetContent extends StatelessWidget {
         children: [
           SheetActionRow(
             icon: Icons.photo_camera_outlined,
-            label: 'Prendre une photo',
+            label: l10n.portraitUploadSheetCameraAction,
             onTap: () =>
                 Navigator.of(context).pop(_PortraitUploadAction.camera),
           ),
           const SheetActionDivider(),
           SheetActionRow(
             icon: Icons.image_outlined,
-            label: 'Choisir dans la galerie',
+            label: l10n.portraitUploadSheetGalleryAction,
             onTap: () =>
                 Navigator.of(context).pop(_PortraitUploadAction.gallery),
           ),
           const SheetActionDivider(),
           SheetActionRow(
             icon: Icons.link,
-            label: 'Utiliser une URL',
+            label: l10n.portraitUploadSheetUrlAction,
             onTap: () => Navigator.of(context).pop(_PortraitUploadAction.url),
           ),
           if (hasPortrait) ...[
             const SheetActionDivider(),
             SheetActionRow(
               icon: Icons.delete_outline,
-              label: 'Retirer le portrait',
+              label: l10n.portraitUploadSheetRemoveAction,
               color: AppColors.accentBrick,
               onTap: () =>
                   Navigator.of(context).pop(_PortraitUploadAction.remove),
@@ -242,6 +253,7 @@ class _PortraitUrlDialogState extends State<_PortraitUrlDialog> {
   Future<void> _submit() async {
     final url = _controller.text.trim();
     if (url.isEmpty || _isLoading) return;
+    final l10n = AppLocalizations.of(context)!;
 
     setState(() {
       _isLoading = true;
@@ -262,13 +274,14 @@ class _PortraitUrlDialogState extends State<_PortraitUrlDialog> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorText = 'Impossible de charger cette image.';
+        _errorText = l10n.portraitUploadSheetUrlDialogGenericError;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Dialog(
       backgroundColor: AppColors.parchmentCard,
       shape: RoundedRectangleBorder(
@@ -285,7 +298,7 @@ class _PortraitUrlDialogState extends State<_PortraitUrlDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'URL du portrait',
+              l10n.portraitUploadSheetUrlDialogTitle,
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -299,7 +312,7 @@ class _PortraitUrlDialogState extends State<_PortraitUrlDialog> {
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _submit(),
               decoration: InputDecoration(
-                hintText: 'https://...',
+                hintText: l10n.portraitUploadSheetUrlDialogHint,
                 errorText: _errorText,
               ),
             ),
@@ -308,7 +321,7 @@ class _PortraitUrlDialogState extends State<_PortraitUrlDialog> {
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label: l10n.portraitUploadSheetUrlDialogCancelButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: _isLoading
                         ? null
@@ -318,7 +331,7 @@ class _PortraitUrlDialogState extends State<_PortraitUrlDialog> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: PrimaryButton(
-                    label: 'Suivant',
+                    label: l10n.portraitUploadSheetUrlDialogNextButton,
                     isLoading: _isLoading,
                     onPressed: _submit,
                   ),
@@ -335,6 +348,7 @@ class _PortraitUrlDialogState extends State<_PortraitUrlDialog> {
 /// Dialogue de confirmation "Retirer le portrait ?" — retourne `true` si le
 /// joueur confirme, `false`/`null` sinon.
 Future<bool?> showRemovePortraitConfirmationDialog(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
   return showDialog<bool>(
     context: context,
     builder: (context) => Dialog(
@@ -353,7 +367,7 @@ Future<bool?> showRemovePortraitConfirmationDialog(BuildContext context) {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Retirer le portrait ?',
+              l10n.portraitUploadSheetRemoveConfirmationTitle,
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -364,7 +378,8 @@ Future<bool?> showRemovePortraitConfirmationDialog(BuildContext context) {
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label:
+                        l10n.portraitUploadSheetRemoveConfirmationCancelButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: () => Navigator.of(context).pop(false),
                   ),
@@ -372,7 +387,8 @@ Future<bool?> showRemovePortraitConfirmationDialog(BuildContext context) {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: DestructiveButton(
-                    label: 'Retirer',
+                    label:
+                        l10n.portraitUploadSheetRemoveConfirmationConfirmButton,
                     onPressed: () => Navigator.of(context).pop(true),
                   ),
                 ),

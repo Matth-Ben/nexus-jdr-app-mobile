@@ -10,6 +10,7 @@ import 'package:personnages/core/widgets/selectable_option_tile.dart';
 import 'package:personnages/core/widgets/sheet_header_bar.dart';
 import 'package:personnages/features/characters/domain/inventory_category_filter.dart';
 import 'package:personnages/features/characters/presentation/widgets/inventory_category_filter_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 /// Résultat de la sheet, renseigné quand elle se referme.
 class _SheetResult {
@@ -20,10 +21,14 @@ class _SheetResult {
 Future<_SheetResult> _open(
   WidgetTester tester, {
   InventoryCategoryFilter current = InventoryCategoryFilter.all,
+  Locale locale = const Locale('fr'),
 }) async {
   final result = _SheetResult();
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(
         body: Builder(
           builder: (context) => ElevatedButton(
@@ -132,5 +137,18 @@ void main() {
 
     expect(result.closed, isTrue);
     expect(result.value, InventoryCategoryFilter.values.last);
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement. Les
+    // libellés d'option (`InventoryCategoryFilter.label`, classe domain sans
+    // `BuildContext`) restent en français, hors périmètre de ce lot — voir
+    // le registre de dette technique.
+    testWidgets('titre en anglais', (tester) async {
+      await _open(tester, locale: const Locale('en'));
+
+      expect(find.text('FILTER BY CATEGORY'), findsOneWidget);
+    });
   });
 }

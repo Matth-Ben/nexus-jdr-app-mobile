@@ -59,6 +59,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/portrait_crop_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 final Uint8List _fakePngBytes = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGNgAAAAAgABSK+kc'
@@ -467,12 +468,18 @@ class _FakeCharacterRepository implements CharacterRepository {
   }
 }
 
-Future<_FakeCharacterRepository> _pumpScreen(WidgetTester tester) async {
+Future<_FakeCharacterRepository> _pumpScreen(
+  WidgetTester tester, {
+  Locale locale = const Locale('fr'),
+}) async {
   final repository = _FakeCharacterRepository();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [characterRepositoryProvider.overrideWithValue(repository)],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -522,15 +529,16 @@ const Duration _repositoryCallTimeout = Duration(seconds: 10);
 /// expirerait alors meme si l'appel a bien eu lieu.
 Future<void> _tapValiderAndAwaitCall(
   WidgetTester tester,
-  _FakeCharacterRepository repository,
-) async {
+  _FakeCharacterRepository repository, {
+  String saveLabel = 'VALIDER',
+}) async {
   await tester.runAsync(() async {
     final called = Completer<void>();
     repository.onUploadPortrait = () {
       if (!called.isCompleted) called.complete();
     };
 
-    await tester.tap(find.widgetWithText(PrimaryButton, 'VALIDER'));
+    await tester.tap(find.widgetWithText(PrimaryButton, saveLabel));
     await tester.pump();
     await called.future.timeout(
       _repositoryCallTimeout,
@@ -552,9 +560,10 @@ Future<void> _tapValiderAndAwaitCall(
 
 Future<void> _tapValiderAndSettle(
   WidgetTester tester,
-  _FakeCharacterRepository repository,
-) async {
-  await _tapValiderAndAwaitCall(tester, repository);
+  _FakeCharacterRepository repository, {
+  String saveLabel = 'VALIDER',
+}) async {
+  await _tapValiderAndAwaitCall(tester, repository, saveLabel: saveLabel);
   await tester.pumpAndSettle();
 }
 
@@ -695,6 +704,26 @@ void main() {
       expect(find.text('RECADRAGE'), findsNothing);
     },
   );
+
+  testWidgets('titre, instructions, boutons et erreurs en anglais', (
+    tester,
+  ) async {
+    final repository = await _pumpScreen(tester, locale: const Locale('en'));
+
+    expect(find.text('CROP'), findsOneWidget);
+    expect(find.text('Pinch to zoom, drag to frame.'), findsOneWidget);
+    expect(find.widgetWithText(SecondaryButton, 'CANCEL'), findsOneWidget);
+    expect(find.widgetWithText(PrimaryButton, 'SAVE'), findsOneWidget);
+
+    repository.errorToThrow = Exception('boom');
+    await _tapValiderAndSettle(tester, repository, saveLabel: 'SAVE');
+
+    expect(
+      find.text("Couldn't upload the portrait. Try again."),
+      findsOneWidget,
+    );
+    expect(find.text('CROP'), findsOneWidget);
+  });
 }
 
 void _localModeTests() {
@@ -709,6 +738,9 @@ void _localModeTests() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('fr'),
             home: Builder(
               builder: (context) => Scaffold(
                 body: Center(

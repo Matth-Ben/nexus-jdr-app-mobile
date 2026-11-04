@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/presentation/widgets/add_xp_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 void main() {
   Future<void> pumpSheet(
@@ -15,9 +16,19 @@ void main() {
     required int? nextLevelXpThreshold,
     required ValueChanged<int> onApply,
     VoidCallback? onTapLevelUp,
+    Locale locale = const Locale('fr'),
   }) async {
     await tester.pumpWidget(
       MaterialApp(
+        // `add_xp_sheet.dart` lit `AppLocalizations.of(context)!` (chantier
+        // "traduction de l'app" Phase B, lot "Characters — PV/XP/Repos/
+        // Montée de niveau") : sans ces delegates, l'appel renverrait `null`
+        // et le `!` planterait. `fr` par défaut : les assertions de ce
+        // fichier portent sur le texte français, sauf le groupe "locale
+        // anglaise" plus bas.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -198,5 +209,25 @@ void main() {
         expect(find.text('Monter de niveau manuellement'), findsOneWidget);
       },
     );
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement pour le
+    // titre, les libellés et les boutons.
+    testWidgets('titre, libellés et boutons en anglais', (tester) async {
+      await pumpSheet(
+        tester,
+        currentXp: 900,
+        nextLevelXpThreshold: 2700,
+        onApply: (_) {},
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('Add XP'), findsOneWidget);
+      expect(find.text('Current XP: 900 / 2700'), findsOneWidget);
+      expect(find.text('XP GAINED'), findsOneWidget);
+      expect(find.text('Level up manually'), findsOneWidget);
+    });
   });
 }

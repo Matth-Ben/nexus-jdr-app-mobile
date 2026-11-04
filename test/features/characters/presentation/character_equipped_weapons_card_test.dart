@@ -8,6 +8,7 @@ import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/features/characters/domain/character_inventory_item.dart';
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 const _longbow = CharacterInventoryItem(
   id: 'inv-1',
@@ -47,8 +48,12 @@ Future<void> _pumpCard(
   Map<String, int> abilityScores = const {},
   int proficiencyBonus = 2,
   List<String> weaponProficiencyNames = const [],
+  Locale locale = const Locale('fr'),
 }) => tester.pumpWidget(
   MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: locale,
     home: Scaffold(
       body: SingleChildScrollView(
         child: CharacterEquippedWeaponsCard(
@@ -263,5 +268,39 @@ void main() {
         expect(find.text('Harmoniser cet objet'), findsNothing);
       },
     );
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets('état vide en anglais', (tester) async {
+      await _pumpCard(tester, const [], locale: const Locale('en'));
+
+      expect(find.text('EQUIPPED WEAPONS'), findsOneWidget);
+      expect(find.text('No weapon equipped'), findsOneWidget);
+      expect(
+        find.text(
+          'Equip a weapon from the Inventory tab for it to appear here.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('titres de set, "Attaque" et message vide de set en anglais', (
+      tester,
+    ) async {
+      await _pumpCard(
+        tester,
+        const [_longbow],
+        abilityScores: const {'dex': 16},
+        weaponProficiencyNames: const ['martiales'],
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('PRIMARY SET'), findsOneWidget);
+      expect(find.text('SECONDARY SET'), findsOneWidget);
+      expect(find.text('No weapon in this set.'), findsOneWidget);
+      expect(find.text('Attack'), findsOneWidget);
+    });
   });
 }

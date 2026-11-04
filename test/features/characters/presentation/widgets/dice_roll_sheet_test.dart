@@ -8,15 +8,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/sheet_header_bar.dart';
 import 'package:personnages/features/characters/presentation/widgets/dice_roll_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 Future<void> _open(
   WidgetTester tester, {
   required String label,
   required int modifier,
   Random? random,
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      // `dice_roll_sheet.dart` lit `AppLocalizations.of(context)!` (chantier
+      // "traduction de l'app" Phase B, lot "Characters — PV/XP/Repos/Montée
+      // de niveau") : sans ces delegates, l'appel renverrait `null` et le
+      // `!` planterait. `fr` par défaut : les assertions de ce fichier
+      // portent sur le texte français, sauf le groupe "locale anglaise"
+      // plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(
         body: Builder(
           builder: (context) => ElevatedButton(
@@ -201,6 +212,27 @@ void main() {
       tester.getRect(find.text('RELANCER')).bottom,
       lessThanOrEqualTo(568),
     );
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement pour la
+    // formule et le bouton "Relancer".
+    testWidgets('formule et bouton "Reroll" en anglais', (tester) async {
+      await _open(
+        tester,
+        label: 'Force',
+        modifier: 3,
+        random: Random(1),
+        locale: const Locale('en'),
+      );
+
+      final rolled = _currentDieValue(tester);
+      final total = rolled + 3;
+
+      expect(find.text('d20 ($rolled) +3 = $total'), findsOneWidget);
+      expect(find.text('REROLL'), findsOneWidget);
+    });
   });
 }
 

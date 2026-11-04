@@ -29,6 +29,7 @@ import 'package:personnages/features/characters/presentation/providers/spell_pre
 import 'package:personnages/features/characters/presentation/widgets/character_spells_tab_body.dart';
 import 'package:personnages/features/characters/presentation/widgets/class_feature_action_sheet.dart';
 import 'package:personnages/features/characters/presentation/widgets/spell_action_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Classe de départ par défaut : lanceuse de sorts (Magicien), pour que les
@@ -76,10 +77,20 @@ Future<void> _pump(
   UseClassFeatureCallback? onUseFeature,
   CastSpellCallback? onCastSpell,
   ToggleSpellFlagCallback? onTogglePrepared,
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       child: MaterialApp(
+        // `CharacterClassFeaturesCard`/`class_feature_action_sheet.dart`/
+        // `class_feature_info_panel.dart` lisent `AppLocalizations.of
+        // (context)!` (chantier "traduction de l'app" Phase B, lot
+        // "Characters — classe/race/maîtrises") : sans ces delegates,
+        // l'appel renverrait `null` et le `!` planterait — ricochet trouvé
+        // en lançant la suite complète.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Scaffold(
           body: CharacterSpellsTabBody(
             detail: detail,
@@ -555,6 +566,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('fr'),
             home: Scaffold(
               body: CharacterSpellsTabBody(
                 detail: _detail(
@@ -1528,5 +1542,94 @@ void main() {
       expect(find.text('NON PRÉPARÉ'), findsNWidgets(2));
       expect(opacityOf(tester, 'Charme-personne'), lessThan(1));
     });
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement. Les
+    // libellés de groupe de niveau ("Sorts mineurs"/"Niveau N",
+    // `SpellsByLevelGrouper.labelFor`, domain sans `BuildContext`) restent en
+    // français, hors périmètre de ce lot — voir le registre de dette
+    // technique (D146).
+    testWidgets('état vide en anglais', (tester) async {
+      await _pump(tester, _detail(), locale: const Locale('en'));
+
+      expect(find.text('NO SPELLS'), findsOneWidget);
+      expect(
+        find.textContaining("No spell on this sheet yet."),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('état "classe non lanceuse" en anglais', (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          classes: const [
+            CharacterDetailClassRow(
+              classId: 2,
+              className: 'Guerrier',
+              level: 1,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+              hitDie: 10,
+            ),
+          ],
+        ),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text("This class doesn't cast spells"), findsOneWidget);
+      expect(find.textContaining('Test is Guerrier'), findsOneWidget);
+    });
+
+    testWidgets(
+      'champ de recherche, carte de préparation et carte des aptitudes à '
+      'usage limité en anglais',
+      (tester) async {
+        await _pump(
+          tester,
+          _detail(
+            spells: const [
+              CharacterSpellEntry(
+                id: 1,
+                name: 'Lumière',
+                level: 0,
+                school: 'Évocation',
+                status: SpellStatus.known,
+              ),
+              CharacterSpellEntry(
+                id: 2,
+                name: 'Bouclier',
+                level: 1,
+                school: 'Abjuration',
+                status: SpellStatus.known,
+              ),
+            ],
+            classFeatures: const [
+              CharacterClassFeature(
+                id: 1,
+                name: 'Invocation occulte',
+                level: 1,
+                usesMax: 1,
+                usesRemaining: 1,
+                restType: 'repos_long',
+              ),
+            ],
+          ),
+          onUseFeature: (_) {},
+          locale: const Locale('en'),
+        );
+
+        expect(find.text('Search for a spell'), findsOneWidget);
+        expect(find.text('SPELL PREPARATION'), findsOneWidget);
+        expect(find.text('INVOCATIONS & LIMITED-USE FEATURES'), findsOneWidget);
+
+        await tester.enterText(find.byType(TextField), 'zzzzz');
+        await tester.pumpAndSettle();
+
+        expect(find.text('No spell for “zzzzz”.'), findsOneWidget);
+      },
+    );
   });
 }

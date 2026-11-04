@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_racial_trait.dart';
 import 'racial_trait_info_panel.dart';
 
@@ -38,6 +39,7 @@ class CharacterRacialTraitsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -49,7 +51,7 @@ class CharacterRacialTraitsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'TRAITS RACIAUX',
+            l10n.characterRacialTraitsCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,
@@ -70,6 +72,7 @@ class _RacialTraitRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs / 2),
       child: Row(
@@ -82,7 +85,7 @@ class _RacialTraitRow extends StatelessWidget {
           Text(
             // Toujours "Passive" — voir la documentation de classe de
             // [CharacterRacialTraitsCard], aucune exception.
-            'Passive',
+            l10n.characterRacialTraitsCardPassiveLabel,
             textAlign: TextAlign.right,
             style: AppTypography.body(
               fontSize: 12,

@@ -1509,4 +1509,2132 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get connectionErrorStateContinueOfflineTooltip =>
       'Bientôt disponible : la lecture hors ligne de tes personnages arrive avec une prochaine mise à jour. Pour l\'instant, une connexion est nécessaire pour charger tes personnages.';
+
+  @override
+  String get hpAdjustmentSheetTitle => 'Ajuster les PV';
+
+  @override
+  String get hpAdjustmentSheetDamageOption => 'Dégâts';
+
+  @override
+  String get hpAdjustmentSheetHealOption => 'Soins';
+
+  @override
+  String get hpAdjustmentSheetTemporaryOption => 'PV temp.';
+
+  @override
+  String get hpAdjustmentSheetCancelButton => 'Annuler';
+
+  @override
+  String get hpAdjustmentSheetApplyButton => 'Appliquer';
+
+  @override
+  String get addXpSheetTitle => 'Ajouter de l\'XP';
+
+  @override
+  String addXpSheetCurrentXpLabel(int currentXp, int threshold) {
+    return 'XP actuelle : $currentXp / $threshold';
+  }
+
+  @override
+  String get addXpSheetGainedLabel => 'XP GAGNÉE';
+
+  @override
+  String get addXpSheetAmountHint => 'Ex. 250';
+
+  @override
+  String get addXpSheetAmountHelper =>
+      'Montant remis par le MJ en fin de séance, par exemple.';
+
+  @override
+  String addXpSheetNewTotalLabel(int total) {
+    return 'Nouveau total : $total XP';
+  }
+
+  @override
+  String get addXpSheetCancelButton => 'Annuler';
+
+  @override
+  String get addXpSheetApplyButton => 'Ajouter';
+
+  @override
+  String get addXpSheetManualLevelUpLink => 'Monter de niveau manuellement';
+
+  @override
+  String get addRewardSheetTitle => 'AJOUTER UNE RÉCOMPENSE';
+
+  @override
+  String get addRewardSheetCurrencyLabel => 'MONNAIE';
+
+  @override
+  String get addRewardSheetItemsLabel => 'OBJETS';
+
+  @override
+  String get addRewardSheetAddItemLabel => 'Ajouter un objet';
+
+  @override
+  String get addRewardSheetCancelButton => 'Annuler';
+
+  @override
+  String get addRewardSheetApplyButton => 'Ajouter la récompense';
+
+  @override
+  String addRewardSheetItemQuantityLabel(String name, int quantity) {
+    return '$name × $quantity';
+  }
+
+  @override
+  String get restSheetTitle => 'Repos';
+
+  @override
+  String restSheetCurrentHpLabel(int currentHp, int maxHp) {
+    return 'PV actuels : $currentHp / $maxHp';
+  }
+
+  @override
+  String get restSheetShortOption => 'Repos court';
+
+  @override
+  String get restSheetLongOption => 'Repos long';
+
+  @override
+  String get restSheetCancelButton => 'Annuler';
+
+  @override
+  String get restSheetApplyButton => 'Appliquer';
+
+  @override
+  String get restSheetPreparedSpellsTitle => 'SORTS PRÉPARÉS';
+
+  @override
+  String get restSheetKeepListOption => 'Garder ma liste';
+
+  @override
+  String get restSheetChangeSpellsOption => 'Changer mes sorts';
+
+  @override
+  String get restSheetChangeSpellsHelper =>
+      'Après le repos, la liste de vos sorts s\'ouvre pour choisir ceux à préparer.';
+
+  @override
+  String get restSheetKeepListHelper =>
+      'Vos sorts préparés restent les mêmes après le repos.';
+
+  @override
+  String get restSheetLongHelpText =>
+      'Restaure les PV au maximum, réinitialise les emplacements de sorts et recharge toutes les aptitudes rechargeables (repos court comme repos long).';
+
+  @override
+  String restSheetAfterRestHpLabel(int maxHp) {
+    return 'PV après repos : $maxHp / $maxHp';
+  }
+
+  @override
+  String restSheetHitDiceAvailableLabel(int remaining, int total, int hitDie) {
+    return 'Dés de vie disponibles : $remaining/$total (d$hitDie)';
+  }
+
+  @override
+  String get restSheetDiceToSpendLabel => 'Dés à dépenser';
+
+  @override
+  String get restSheetNoHitDiceAvailable =>
+      'Aucun dé de vie disponible. Le repos court reste gratuit — aucune action supplémentaire requise.';
+
+  @override
+  String get restSheetRollMethodOption => 'Lancer les dés';
+
+  @override
+  String get restSheetAverageMethodOption => 'Valeur moyenne';
+
+  @override
+  String get restSheetRerollLink => 'Relancer les dés';
+
+  @override
+  String get restSheetAverageFormulaHint =>
+      '(moitié du dé arrondie au supérieur, +1, par dé)';
+
+  @override
+  String get restSheetAlreadyMaxHpMessage =>
+      'PV déjà au maximum : ce repos ne restaurera aucun PV supplémentaire.';
+
+  @override
+  String get restSheetHpRestoredTitle => 'PV restaurés';
+
+  @override
+  String restSheetHpRestoredSubtitle(int currentHp, int newHp, int gain) {
+    return '$currentHp → $newHp (+$gain)';
+  }
+
+  @override
+  String restSheetPoolRolledLabel(String className, int hitDie) {
+    return '$className (d$hitDie)';
+  }
+
+  @override
+  String restSheetPoolStatusLabel(
+    String className,
+    int available,
+    int total,
+    int hitDie,
+  ) {
+    return '$className — dés de vie disponibles : $available/$total (d$hitDie)';
+  }
+
+  @override
+  String restSheetRecoveredAllocationTitle(int count) {
+    return 'Dés de vie récupérés : $count — répartissez-les entre vos classes';
+  }
+
+  @override
+  String restSheetRecoveredPoolLabel(String className, int hitDie, int spent) {
+    return '$className (d$hitDie) — $spent dépensé(s)';
+  }
+
+  @override
+  String restSheetRemainingToAllocateLabel(int remaining) {
+    return 'Reste à répartir : $remaining';
+  }
+
+  @override
+  String diceRollSheetFormula(int roll, String modifier, int total) {
+    return 'd20 ($roll) $modifier = $total';
+  }
+
+  @override
+  String get diceRollSheetCriticalSuccess => 'RÉUSSITE CRITIQUE';
+
+  @override
+  String get diceRollSheetCriticalFailure => 'ÉCHEC CRITIQUE';
+
+  @override
+  String get diceRollSheetRerollButton => 'Relancer';
+
+  @override
+  String get armorClassBonusSheetTitle => 'Ajustement de CA';
+
+  @override
+  String get armorClassBonusSheetBonusOption => 'Bonus';
+
+  @override
+  String get armorClassBonusSheetMalusOption => 'Malus';
+
+  @override
+  String get armorClassBonusSheetClearButton => 'Effacer';
+
+  @override
+  String get armorClassBonusSheetValidateButton => 'Valider';
+
+  @override
+  String get levelUpScreenEyebrow => 'MONTÉE DE NIVEAU';
+
+  @override
+  String get levelUpScreenLevelReachedEyebrow => 'NIVEAU ATTEINT';
+
+  @override
+  String levelUpScreenLevelLabel(int level) {
+    return 'NIVEAU $level';
+  }
+
+  @override
+  String levelUpScreenRemainingLevelsLabel(int remaining) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: 'Encore $remaining niveaux à valider ensuite',
+      one: 'Encore 1 niveau à valider ensuite',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get levelUpScreenComingSoonSnackBar => 'Bientôt disponible';
+
+  @override
+  String get levelUpScreenGenericApplyError =>
+      'Impossible d\'enregistrer la montée de niveau. Réessayez.';
+
+  @override
+  String get levelUpScreenGenericLoadError =>
+      'Impossible de charger les données de montée de niveau. Réessayez.';
+
+  @override
+  String get levelUpScreenClassDecisionInstruction =>
+      'Choisissez comment ce niveau s\'applique.';
+
+  @override
+  String levelUpScreenContinueClassOptionTitle(String className) {
+    return 'Continuer en $className';
+  }
+
+  @override
+  String get levelUpScreenContinueClassBlockedSubtitle =>
+      'Ce niveau nécessite un choix pas encore disponible dans l\'app.';
+
+  @override
+  String levelUpScreenContinueClassSubtitle(int currentLevel, int nextLevel) {
+    return 'Vous progressez dans votre voie actuelle (niveau $currentLevel → $nextLevel).';
+  }
+
+  @override
+  String levelUpScreenMulticlassOptionTitle(String className) {
+    return 'Se multiclasser en $className';
+  }
+
+  @override
+  String levelUpScreenMulticlassOptionSubtitle(String abilities) {
+    return 'Vous débutez au niveau 1 dans cette classe. Prérequis rempli : $abilities.';
+  }
+
+  @override
+  String levelUpScreenMulticlassInfoBanner(String className) {
+    return 'Nouvelle classe : $className (niveau 1)';
+  }
+
+  @override
+  String get levelUpScreenUpcomingStepsTitle =>
+      'À venir dans les prochaines étapes';
+
+  @override
+  String levelUpScreenUpcomingChoiceStep(String choiceLabel) {
+    return 'Un choix de $choiceLabel vous attendra';
+  }
+
+  @override
+  String get levelUpScreenUpcomingSpellsStep =>
+      'Vos emplacements de sorts vont évoluer';
+
+  @override
+  String get levelUpScreenUpcomingInvocationsStep =>
+      'De nouvelles invocations vous attendront';
+
+  @override
+  String get levelUpScreenUpcomingElementalDisciplinesStep =>
+      'De nouvelles disciplines élémentaires vous attendront';
+
+  @override
+  String get levelUpScreenUpcomingManeuversStep =>
+      'De nouvelles manœuvres vous attendront';
+
+  @override
+  String get levelUpScreenUpcomingArcaneShotsStep =>
+      'De nouveaux tirs arcaniques vous attendront';
+
+  @override
+  String get levelUpScreenUpcomingRunesStep =>
+      'De nouvelles runes vous attendront';
+
+  @override
+  String get levelUpScreenUpcomingInfusionsStep => 'Vos infusions vont évoluer';
+
+  @override
+  String get levelUpScreenContinueButton => 'Continuer';
+
+  @override
+  String get levelUpScreenBackButton => 'Retour';
+
+  @override
+  String get levelUpScreenNewFeatureTitle => 'Nouvelle aptitude';
+
+  @override
+  String get levelUpScreenNewProficiencyTitle => 'Nouvelle maîtrise';
+
+  @override
+  String levelUpScreenHpStepLabel(int totalSteps) {
+    return 'Étape 1 sur $totalSteps · Points de vie';
+  }
+
+  @override
+  String get levelUpScreenMaxHpTitle => 'Points de vie maximum';
+
+  @override
+  String levelUpScreenMaxHpDelta(int oldHp, int newHp, int gain) {
+    return '$oldHp → $newHp (+$gain)';
+  }
+
+  @override
+  String levelUpScreenHitDieMulticlassLabel(String className, int hitDie) {
+    return 'Dé de vie de $className (niveau 1) : d$hitDie';
+  }
+
+  @override
+  String levelUpScreenHitDieClassLabel(int hitDie) {
+    return 'Dé de vie de la classe : d$hitDie';
+  }
+
+  @override
+  String levelUpScreenRollHitDieOption(int hitDie) {
+    return 'Lancer le dé (d$hitDie)';
+  }
+
+  @override
+  String levelUpScreenAverageHitDieOption(int average) {
+    return 'Valeur moyenne ($average)';
+  }
+
+  @override
+  String levelUpScreenConstitutionModifierLabel(String modifier) {
+    return '$modifier modificateur de Constitution';
+  }
+
+  @override
+  String get levelUpScreenRerollDieLink => 'Relancer le dé';
+
+  @override
+  String get levelUpScreenAverageDieFormulaHint =>
+      '(moitié du dé arrondie au supérieur, +1)';
+
+  @override
+  String get levelUpScreenLevelHistoryLink => 'Voir l\'historique des niveaux';
+
+  @override
+  String levelUpScreenAbilitiesStepLabel(int totalSteps) {
+    return 'Étape 2 sur $totalSteps · Aptitudes de classe';
+  }
+
+  @override
+  String levelUpScreenAbilitiesStepLabelWithProficiencies(int totalSteps) {
+    return 'Étape 2 sur $totalSteps · Aptitudes & maîtrises';
+  }
+
+  @override
+  String get levelUpScreenAutomaticFeaturesLabel =>
+      'Vous obtenez automatiquement :';
+
+  @override
+  String get levelUpScreenMulticlassProficienciesLabel =>
+      'Maîtrises de multiclassage :';
+
+  @override
+  String levelUpScreenChoiceStepLabel(int totalSteps, String choiceLabel) {
+    return 'Étape 3 sur $totalSteps · $choiceLabel';
+  }
+
+  @override
+  String get levelUpScreenChoiceKindAbilityScoreImprovement =>
+      'Amélioration ou don';
+
+  @override
+  String get levelUpScreenChoiceKindSubclass => 'Sous-classe';
+
+  @override
+  String get levelUpScreenChoiceKindFightingStyle => 'Style de combat';
+
+  @override
+  String get levelUpScreenChoiceKindFavoredEnemy => 'Ennemi juré';
+
+  @override
+  String get levelUpScreenChoiceKindPact => 'Faveur de pacte';
+
+  @override
+  String get levelUpScreenChooseSubclassInstruction =>
+      'Choisissez une sous-classe.';
+
+  @override
+  String get levelUpScreenChooseFightingStyleInstruction =>
+      'Choisissez un style de combat.';
+
+  @override
+  String get levelUpScreenChooseFavoredEnemyInstruction =>
+      'Choisissez un ennemi juré.';
+
+  @override
+  String get levelUpScreenChoosePactInstruction =>
+      'Choisissez votre Faveur de pacte.';
+
+  @override
+  String get levelUpScreenChooseProgressionInstruction =>
+      'Choisissez comment progresser.';
+
+  @override
+  String get levelUpScreenAllocateAbilityOption => 'Répartir +2';
+
+  @override
+  String get levelUpScreenChooseFeatOption => 'Choisir un don';
+
+  @override
+  String get levelUpScreenChooseFeatInstruction => 'Choisissez un don.';
+
+  @override
+  String levelUpScreenFeatAbilityIncreaseLabel(String featName) {
+    return 'Caractéristique augmentée par $featName (+1) :';
+  }
+
+  @override
+  String levelUpScreenAllocateBudgetInstruction(int budget) {
+    return 'Répartissez $budget points entre vos caractéristiques.';
+  }
+
+  @override
+  String levelUpScreenPointsRemainingLabel(int remaining, int budget) {
+    return 'Points restants : $remaining/$budget';
+  }
+
+  @override
+  String get levelUpScreenAllPointsAllocatedLabel =>
+      'Tous les points sont répartis.';
+
+  @override
+  String levelUpScreenAbilityScoreDelta(int oldScore, int newScore, int alloc) {
+    return '$oldScore → $newScore (+$alloc)';
+  }
+
+  @override
+  String levelUpScreenSpellSlotsStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Emplacements de sorts';
+  }
+
+  @override
+  String get levelUpScreenSpellSlotsRecalculatedLabel =>
+      'Vos emplacements de sorts sont recalculés :';
+
+  @override
+  String get levelUpScreenNoSpellSlotsAtThisLevel =>
+      'Aucun emplacement de sorts à ce niveau.';
+
+  @override
+  String levelUpScreenSpellsStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Sorts';
+  }
+
+  @override
+  String get levelUpScreenCantripTab => 'Mineurs';
+
+  @override
+  String get levelUpScreenSpellsTab => 'Sorts';
+
+  @override
+  String get levelUpScreenPactTab => 'Grimoire';
+
+  @override
+  String get levelUpScreenKnownCantripsTitle => 'SORTS MINEURS CONNUS';
+
+  @override
+  String get levelUpScreenShadowBookTitle => 'LIVRE DES OMBRES';
+
+  @override
+  String get levelUpScreenKnownSpellsTitle => 'NOUVEAUX SORTS CONNUS';
+
+  @override
+  String levelUpScreenQuotaBadge(int selected, int quota) {
+    return '$selected / $quota';
+  }
+
+  @override
+  String levelUpScreenSpellMetaLineWithLevel(String metaLine, int level) {
+    return '$metaLine (niveau $level)';
+  }
+
+  @override
+  String levelUpScreenPatronSpellSubtitle(String baseSubtitle) {
+    return '$baseSubtitle · Patron';
+  }
+
+  @override
+  String levelUpScreenInvocationsStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Invocations';
+  }
+
+  @override
+  String get levelUpScreenKnownInvocationsTitle => 'INVOCATIONS CONNUES';
+
+  @override
+  String get levelUpScreenNoMoreInvocationsMessage =>
+      'Vous connaissez déjà toutes les invocations occultistes disponibles.';
+
+  @override
+  String levelUpScreenElementalDisciplinesStepLabel(
+    int stepNumber,
+    int totalSteps,
+  ) {
+    return 'Étape $stepNumber sur $totalSteps · Disciplines élémentaires';
+  }
+
+  @override
+  String get levelUpScreenKnownElementalDisciplinesTitle =>
+      'DISCIPLINES ÉLÉMENTAIRES CONNUES';
+
+  @override
+  String get levelUpScreenNoMoreElementalDisciplinesMessage =>
+      'Vous connaissez déjà toutes les disciplines élémentaires disponibles à ce niveau.';
+
+  @override
+  String levelUpScreenManeuversStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Manœuvres';
+  }
+
+  @override
+  String get levelUpScreenKnownManeuversTitle => 'MANŒUVRES CONNUES';
+
+  @override
+  String get levelUpScreenNoMoreManeuversMessage =>
+      'Vous connaissez déjà toutes les manœuvres disponibles.';
+
+  @override
+  String levelUpScreenArcaneShotsStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Tirs arcaniques';
+  }
+
+  @override
+  String get levelUpScreenKnownArcaneShotsTitle => 'TIRS ARCANIQUES CONNUS';
+
+  @override
+  String get levelUpScreenNoMoreArcaneShotsMessage =>
+      'Vous connaissez déjà tous les tirs arcaniques disponibles.';
+
+  @override
+  String levelUpScreenRunesStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Runes';
+  }
+
+  @override
+  String get levelUpScreenKnownRunesTitle => 'RUNES CONNUES';
+
+  @override
+  String get levelUpScreenNoMoreRunesMessage =>
+      'Vous connaissez déjà toutes les runes disponibles.';
+
+  @override
+  String levelUpScreenInfusionsStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Infusions';
+  }
+
+  @override
+  String get levelUpScreenNewInfusionsTitle => 'NOUVELLES INFUSIONS';
+
+  @override
+  String get levelUpScreenNoMoreInfusionsMessage =>
+      'Vous connaissez déjà toutes les infusions disponibles.';
+
+  @override
+  String get levelUpScreenReplaceInfusionOptionalTitle =>
+      'REMPLACER UNE INFUSION (OPTIONNEL)';
+
+  @override
+  String get levelUpScreenReplacedByLabel => 'REMPLACÉE PAR';
+
+  @override
+  String levelUpScreenMetamagicStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Métamagie';
+  }
+
+  @override
+  String get levelUpScreenNewMetamagicOptionsTitle =>
+      'NOUVELLES OPTIONS DE MÉTAMAGIE';
+
+  @override
+  String get levelUpScreenNoMoreMetamagicMessage =>
+      'Vous connaissez déjà toutes les options de Métamagie disponibles.';
+
+  @override
+  String get levelUpScreenReplaceMetamagicOptionalTitle =>
+      'REMPLACER UNE OPTION (OPTIONNEL)';
+
+  @override
+  String levelUpScreenExpertiseStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Expertise';
+  }
+
+  @override
+  String get levelUpScreenExpertiseSkillsTitle => 'COMPÉTENCES EN EXPERTISE';
+
+  @override
+  String get levelUpScreenThievesToolsLabel => 'Outils de voleur';
+
+  @override
+  String get levelUpScreenThievesToolsSubstitutionHint =>
+      'Substitue une des places d\'Expertise à la maîtrise des outils de voleur.';
+
+  @override
+  String get levelUpScreenNoExpertiseCandidatesMessage =>
+      'Aucune compétence déjà maîtrisée à faire passer en Expertise.';
+
+  @override
+  String levelUpScreenDraconicAncestryStepLabel(
+    int stepNumber,
+    int totalSteps,
+  ) {
+    return 'Étape $stepNumber sur $totalSteps · Ascendance draconique';
+  }
+
+  @override
+  String get levelUpScreenDamageTypeTitle => 'TYPE DE DÉGÂTS';
+
+  @override
+  String get levelUpScreenNewSpellSlotsTitle =>
+      'Nouveaux emplacements de sorts';
+
+  @override
+  String get levelUpScreenReinforcedSpellSlotsTitle =>
+      'Emplacements de sorts renforcés';
+
+  @override
+  String levelUpScreenSpellSlotUnlockedSubtitle(int spellLevel) {
+    return 'Niveau $spellLevel débloqué';
+  }
+
+  @override
+  String levelUpScreenSpellSlotReinforcedSubtitle(
+    int spellLevel,
+    int oldTotal,
+    int newTotal,
+    int delta,
+  ) {
+    return 'Niveau $spellLevel : $oldTotal → $newTotal (+$delta)';
+  }
+
+  @override
+  String get levelUpScreenPactMagicUnlockedTitle => 'Magie de pacte débloquée';
+
+  @override
+  String levelUpScreenPactMagicUnlockedSubtitle(int slotLevel, int charges) {
+    return 'Niveau $slotLevel · $charges charge(s)';
+  }
+
+  @override
+  String get levelUpScreenPactChargesReinforcedTitle =>
+      'Charges de pacte renforcées';
+
+  @override
+  String levelUpScreenPactChargesReinforcedSubtitle(
+    int oldCharges,
+    int newCharges,
+    int slotLevel,
+  ) {
+    return '$oldCharges → $newCharges charges (niveau $slotLevel)';
+  }
+
+  @override
+  String get levelUpScreenPactChargesImprovedTitle =>
+      'Charges de pacte améliorées';
+
+  @override
+  String levelUpScreenPactChargesImprovedSubtitle(
+    int oldSlotLevel,
+    int newSlotLevel,
+    int newCharges,
+  ) {
+    return 'Niveau $oldSlotLevel → $newSlotLevel ($newCharges charges)';
+  }
+
+  @override
+  String levelUpScreenPactChargesBothSubtitle(
+    int oldCharges,
+    int newCharges,
+    int oldSlotLevel,
+    int newSlotLevel,
+  ) {
+    return '$oldCharges → $newCharges charges, niveau $oldSlotLevel → $newSlotLevel';
+  }
+
+  @override
+  String get levelUpScreenFeatSummaryTitle => 'Don';
+
+  @override
+  String levelUpScreenFeatAbilityBonusSubtitle(
+    String featName,
+    String abilityLabel,
+  ) {
+    return '$featName ($abilityLabel +1)';
+  }
+
+  @override
+  String levelUpScreenAbilityAllocationSummaryItem(String label, int amount) {
+    return '$label +$amount';
+  }
+
+  @override
+  String get levelUpScreenAbilityScoreImprovementTitle =>
+      'Amélioration de caractéristique';
+
+  @override
+  String get levelUpScreenNewCantripsTitle => 'Nouveaux sorts mineurs';
+
+  @override
+  String get levelUpScreenNewSpellsLearnedTitle => 'Nouveaux sorts appris';
+
+  @override
+  String get levelUpScreenShadowBookGainTitle => 'Livre des ombres';
+
+  @override
+  String get levelUpScreenFamiliarAddedTitle => 'Appel de familier ajouté';
+
+  @override
+  String get levelUpScreenChainPactSubtitle => 'Pacte de la chaîne';
+
+  @override
+  String get levelUpScreenRacialInnateSpellTitle => 'Sort inné racial';
+
+  @override
+  String levelUpScreenNewInvocationsSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouvelles invocations occultistes',
+      one: 'Nouvelle invocation occultiste',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String levelUpScreenNewElementalDisciplinesSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouvelles disciplines élémentaires',
+      one: 'Nouvelle discipline élémentaire',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String levelUpScreenNewManeuversSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouvelles manœuvres',
+      one: 'Nouvelle manœuvre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String levelUpScreenNewArcaneShotsSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouveaux tirs arcaniques',
+      one: 'Nouveau tir arcanique',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String levelUpScreenNewRunesSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouvelles runes',
+      one: 'Nouvelle rune',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String levelUpScreenNewInfusionsSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouvelles infusions',
+      one: 'Nouvelle infusion',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get levelUpScreenInfusionSwapTitle => 'Infusion remplacée';
+
+  @override
+  String levelUpScreenSwapSubtitle(String removedName, String addedName) {
+    return '$removedName → $addedName';
+  }
+
+  @override
+  String levelUpScreenNewMetamagicOptionsSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouvelles options de Métamagie',
+      one: 'Nouvelle option de Métamagie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get levelUpScreenMetamagicSwapTitle => 'Métamagie remplacée';
+
+  @override
+  String levelUpScreenExpertiseSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Expertises',
+      one: 'Expertise',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get levelUpScreenDraconicAncestryTitle => 'Ascendance draconique';
+
+  @override
+  String get levelUpScreenNoNewFeaturesMessage =>
+      'Aucune nouvelle aptitude de classe à ce niveau.';
+
+  @override
+  String get levelUpScreenNoOptionAvailableMessage =>
+      'Aucune option disponible pour ce choix.';
+
+  @override
+  String levelUpScreenBlockedLevelTitle(int level) {
+    return 'Niveau $level : choix requis';
+  }
+
+  @override
+  String get levelUpScreenBackToSheetButton => 'Retour à la fiche';
+
+  @override
+  String get levelUpScreenRetryButton => 'Réessayer';
+
+  @override
+  String get characterClassChoicesCardTitle => 'CHOIX DE CLASSE';
+
+  @override
+  String get characterClassChoicesCardSubclassLabel => 'Sous-classe';
+
+  @override
+  String characterClassChoicesCardSubclassLabelWithClass(String className) {
+    return 'Sous-classe ($className)';
+  }
+
+  @override
+  String get characterClassFeaturesCardTitle => 'APTITUDES DE CLASSE';
+
+  @override
+  String get characterClassFeaturesCardPassiveLabel => 'Passive';
+
+  @override
+  String get characterFeatsCardTitle => 'DONS';
+
+  @override
+  String get characterRacialTraitsCardTitle => 'TRAITS RACIAUX';
+
+  @override
+  String get characterRacialTraitsCardPassiveLabel => 'Passive';
+
+  @override
+  String get characterRaceChoicesCardTitle => 'CHOIX DE RACE';
+
+  @override
+  String get characterRaceChoicesCardSkillLabel => 'Compétence';
+
+  @override
+  String get characterRaceChoicesCardToolLabel => 'Outil';
+
+  @override
+  String get characterArmorProficienciesCardTitle => 'MAÎTRISES D\'ARMURES';
+
+  @override
+  String get characterWeaponProficienciesCardTitle => 'MAÎTRISES D\'ARMES';
+
+  @override
+  String get characterToolProficienciesCardTitle => 'MAÎTRISES D\'OUTILS';
+
+  @override
+  String get characterLanguagesCardTitle => 'LANGUES CONNUES';
+
+  @override
+  String get characterInvocationsCardTitle => 'INVOCATIONS CONNUES';
+
+  @override
+  String get characterPactWeaponCardTitle => 'ARME DE PACTE';
+
+  @override
+  String get characterPactWeaponCardCursedBladeText =>
+      'Lame maudite : vous pouvez utiliser le Charisme à la place de la Force ou de la Dextérité pour l\'attaque et les dégâts.';
+
+  @override
+  String get characterPactWeaponCardReminderText =>
+      'Invoquée par une action. Disparaît si elle reste à plus de 1,50 m de vous pendant 1 minute, ou si vous l\'invoquez à nouveau.';
+
+  @override
+  String get characterPactWeaponCardMagicWeaponChip => 'Arme magique';
+
+  @override
+  String get characterPactWeaponCardProficientChip => 'Maîtrisée';
+
+  @override
+  String get characterPactWeaponCardEmptyTitle => 'Aucune forme choisie';
+
+  @override
+  String get characterPactWeaponCardEmptyDescription =>
+      'Choisissez la forme que prend votre arme lorsque vous l\'invoquez.';
+
+  @override
+  String get characterPactWeaponCardChooseFormButton => 'Choisir une forme';
+
+  @override
+  String get characterPactWeaponCardChangeFormButton => 'Changer de forme';
+
+  @override
+  String characterPactWeaponCardSemanticLabel(String name) {
+    return 'Arme de pacte : $name';
+  }
+
+  @override
+  String characterPactWeaponCardSemanticLabelWithDamage(
+    String name,
+    String damage,
+  ) {
+    return 'Arme de pacte : $name, $damage';
+  }
+
+  @override
+  String get classFeatureActionSheetInfoLabel => 'Infos';
+
+  @override
+  String get classFeatureActionSheetUseLabel => 'Utiliser';
+
+  @override
+  String get classFeatureActionSheetExhaustedLabel => 'Épuisée';
+
+  @override
+  String classFeatureInfoPanelObtainedAtLevel(int level) {
+    return 'Obtenue au niveau $level.';
+  }
+
+  @override
+  String get classFeatureInfoPanelUsesLabel => 'Utilisations';
+
+  @override
+  String get classFeatureInfoPanelPassiveLabel => 'Passive';
+
+  @override
+  String get classFeatureInfoPanelDescriptionLabel => 'DESCRIPTION';
+
+  @override
+  String get classFeatureInfoPanelDescriptionUnavailable =>
+      'Description indisponible.';
+
+  @override
+  String get classFeatureInfoPanelUseButton => 'Utiliser';
+
+  @override
+  String featInfoPanelPrerequisiteLabel(String prerequisite) {
+    return 'Prérequis : $prerequisite';
+  }
+
+  @override
+  String get featInfoPanelDescriptionLabel => 'DESCRIPTION';
+
+  @override
+  String get racialTraitInfoPanelDescriptionLabel => 'DESCRIPTION';
+
+  @override
+  String get racialTraitInfoPanelDescriptionUnavailable =>
+      'Description indisponible.';
+
+  @override
+  String get proficiencyDetailPanelLoadErrorMessage =>
+      'Impossible de charger le catalogue. Réessayez.';
+
+  @override
+  String get proficiencyDetailPanelNoNonMetallicShieldMessage =>
+      'Aucun bouclier non métallique disponible dans le catalogue actuel.';
+
+  @override
+  String get proficiencyDetailPanelNoMatchingItemMessage =>
+      'Aucun objet correspondant disponible dans le catalogue actuel.';
+
+  @override
+  String get proficiencyDetailPanelPropertiesLabel => 'Propriétés : ';
+
+  @override
+  String get proficiencyDetailPanelAcLabel => 'CA';
+
+  @override
+  String get proficiencyDetailPanelAcBaseLabel => 'CA de base';
+
+  @override
+  String get proficiencyDetailPanelDexBonusLabel => 'Bonus Dex';
+
+  @override
+  String get proficiencyDetailPanelStrengthRequirementLabel => 'Force requise';
+
+  @override
+  String get proficiencyDetailPanelStealthDisadvantageLabel =>
+      'Désavantage discrétion';
+
+  @override
+  String get proficiencyDetailPanelYesLabel => 'Oui';
+
+  @override
+  String get pactWeaponPickerSheetTitle => 'FORME DE L\'ARME';
+
+  @override
+  String get pactWeaponPickerSheetSearchHint => 'Rechercher une arme...';
+
+  @override
+  String get pactWeaponPickerSheetLoadErrorMessage =>
+      'Impossible de charger les armes. Réessayez.';
+
+  @override
+  String get pactWeaponPickerSheetEmptyMessage => 'Aucune arme disponible.';
+
+  @override
+  String get pactWeaponPickerSheetNoResultsMessage => 'Aucune arme trouvée.';
+
+  @override
+  String get weaponSlotPickerSheetTitle => 'CHOISIR UN SET';
+
+  @override
+  String get weaponSlotPickerSheetEmptyLabel => 'Vide';
+
+  @override
+  String characterInventoryTabBodyFilterButtonLabel(String filterLabel) {
+    return 'Filtre : $filterLabel';
+  }
+
+  @override
+  String get characterInventoryTabBodyAddItemButtonLabel => 'Objet';
+
+  @override
+  String get characterInventoryTabBodyRewardButtonLabel => 'RÉCOMPENSE';
+
+  @override
+  String get characterInventoryTabBodyNoFilterMatchMessage =>
+      'Aucun objet dans cette catégorie.';
+
+  @override
+  String get characterInventoryTabBodyEmptyTitle => 'INVENTAIRE VIDE';
+
+  @override
+  String get characterInventoryTabBodyEmptyMessage =>
+      'Aucun objet dans cet inventaire pour l\'instant.';
+
+  @override
+  String characterInventoryItemCardSubtitle(String category, int quantity) {
+    return '$category · x$quantity';
+  }
+
+  @override
+  String get characterInventoryItemCardEquippedBadge => 'ÉQUIPÉ';
+
+  @override
+  String characterInventoryItemCardWeightValue(String weight) {
+    return '$weight kg';
+  }
+
+  @override
+  String get characterInventoryCapacityGaugeTitle => 'CHARGE';
+
+  @override
+  String characterInventoryCapacityGaugeValueLabel(
+    String weight,
+    String capacity,
+  ) {
+    return '$weight / $capacity kg';
+  }
+
+  @override
+  String get characterInventoryCapacityGaugeOverloadedWarning =>
+      'Surchargé — poids supérieur à la capacité de transport.';
+
+  @override
+  String characterInventoryCapacityGaugeSemanticsLabel(
+    String weight,
+    String capacity,
+  ) {
+    return 'Charge : $weight kilogrammes sur $capacity kilogrammes';
+  }
+
+  @override
+  String characterInventoryCapacityGaugeSemanticsLabelOverloaded(
+    String weight,
+    String capacity,
+  ) {
+    return 'Charge : $weight kilogrammes sur $capacity kilogrammes, surchargé';
+  }
+
+  @override
+  String get characterEquippedWeaponsCardTitle => 'ARMES ÉQUIPÉES';
+
+  @override
+  String get characterEquippedWeaponsCardPrimarySetTitle => 'SET PRINCIPAL';
+
+  @override
+  String get characterEquippedWeaponsCardSecondarySetTitle => 'SET SECONDAIRE';
+
+  @override
+  String get characterEquippedWeaponsCardEmptySetMessage =>
+      'Aucune arme dans ce set.';
+
+  @override
+  String get characterEquippedWeaponsCardAttackLabel => 'Attaque';
+
+  @override
+  String get characterEquippedWeaponsCardEmptyTitle => 'Aucune arme équipée';
+
+  @override
+  String get characterEquippedWeaponsCardEmptyDescription =>
+      'Équipez une arme depuis l\'onglet Inventaire pour qu\'elle apparaisse ici.';
+
+  @override
+  String characterEquippedWeaponsCardSemanticsLabel(String name) {
+    return 'Arme équipée : $name';
+  }
+
+  @override
+  String characterEquippedWeaponsCardSemanticsAttackSuffix(String attackBonus) {
+    return ', Attaque : $attackBonus';
+  }
+
+  @override
+  String characterEquippedWeaponsCardSemanticsRangeSuffix(String range) {
+    return ', Portée : $range';
+  }
+
+  @override
+  String characterEquippedWeaponsCardRangeValue(String rangeNormal) {
+    return '$rangeNormal m';
+  }
+
+  @override
+  String characterEquippedWeaponsCardRangeValueWithMax(
+    String rangeNormal,
+    String rangeMax,
+  ) {
+    return '$rangeNormal m (max $rangeMax m)';
+  }
+
+  @override
+  String get addItemFlowCatalogEntryLabel => 'Depuis le catalogue';
+
+  @override
+  String get addItemFlowCustomEntryLabel => 'Objet personnalisé';
+
+  @override
+  String get addItemFlowCatalogTitleSingle => 'AJOUTER UN OBJET';
+
+  @override
+  String get addItemFlowCatalogTitleMulti => 'AJOUTER DES OBJETS';
+
+  @override
+  String get addItemFlowSearchHint => 'Rechercher un objet...';
+
+  @override
+  String get addItemFlowCatalogLoadErrorMessage =>
+      'Impossible de charger le catalogue d\'objets. Réessayez.';
+
+  @override
+  String get addItemFlowAddButtonLabel => 'Ajouter';
+
+  @override
+  String addItemFlowAddButtonLabelWithCount(int count) {
+    return 'Ajouter ($count)';
+  }
+
+  @override
+  String get addItemFlowNoResultsMessage => 'Aucun objet trouvé.';
+
+  @override
+  String addItemFlowCatalogItemSubtitleWithWeight(String cost, String weight) {
+    return '$cost po · $weight kg';
+  }
+
+  @override
+  String addItemFlowCatalogItemSubtitleNoWeight(String cost) {
+    return '$cost po';
+  }
+
+  @override
+  String addItemFlowQuantitySheetTitle(String itemName) {
+    return 'Ajouter $itemName';
+  }
+
+  @override
+  String get addItemFlowQuantitySheetAddButton => 'Ajouter';
+
+  @override
+  String get addItemFlowCustomSheetTitle => 'OBJET PERSONNALISÉ';
+
+  @override
+  String get addItemFlowCustomNameSectionLabel => 'NOM DE L\'OBJET';
+
+  @override
+  String get addItemFlowCustomNameHint => 'Ex. Amulette de famille';
+
+  @override
+  String get addItemFlowCustomDescriptionSectionLabel => 'DESCRIPTION';
+
+  @override
+  String get addItemFlowCustomDescriptionHint =>
+      'Ex. Un médaillon gravé aux armes de votre famille.';
+
+  @override
+  String get addItemFlowCustomTypeSectionLabel => 'TYPE D\'OBJET';
+
+  @override
+  String get addItemFlowCustomTypeSimpleOption => 'Objet simple';
+
+  @override
+  String get addItemFlowCustomTypeWeaponOption => 'Arme';
+
+  @override
+  String get addItemFlowCustomDiceSectionLabel => 'DÉ DE DÉGÂTS';
+
+  @override
+  String get addItemFlowCustomDiceNotationSeparator => 'd';
+
+  @override
+  String get addItemFlowCustomDamageTypeSectionLabel => 'TYPE DE DÉGÂTS';
+
+  @override
+  String get addItemFlowCustomDamageTypeHint => 'Sélectionner';
+
+  @override
+  String get addItemFlowDamageTypeSlashingLabel => 'Tranchant';
+
+  @override
+  String get addItemFlowDamageTypePiercingLabel => 'Perforant';
+
+  @override
+  String get addItemFlowDamageTypeBludgeoningLabel => 'Contondant';
+
+  @override
+  String get addItemFlowCustomPropertiesSectionLabel => 'PROPRIÉTÉS';
+
+  @override
+  String get addItemFlowCustomPropertiesHint => 'Ex. légère, finesse';
+
+  @override
+  String get addItemFlowCustomPropertiesCaption =>
+      'Séparez plusieurs propriétés par une virgule.';
+
+  @override
+  String get addItemFlowCustomQuantitySectionLabel => 'QUANTITÉ';
+
+  @override
+  String get addItemFlowCustomCancelButton => 'Annuler';
+
+  @override
+  String get addItemFlowCustomAddButton => 'Ajouter';
+
+  @override
+  String get itemActionSheetInfoLabel => 'Infos';
+
+  @override
+  String get itemActionSheetUseLabel => 'Utiliser';
+
+  @override
+  String get itemActionSheetEquipLabel => 'Équiper';
+
+  @override
+  String get itemActionSheetChangeSetLabel => 'Changer de set';
+
+  @override
+  String get itemActionSheetUnequipLabel => 'Déséquiper';
+
+  @override
+  String get itemActionSheetAttuneLabel => 'Harmoniser cet objet';
+
+  @override
+  String get itemActionSheetStopAttuneLabel => 'Ne plus harmoniser';
+
+  @override
+  String itemActionSheetAttunementCapReachedLabel(int cap) {
+    return 'Limite ($cap) atteinte';
+  }
+
+  @override
+  String get itemActionSheetRemoveLabel => 'Retirer';
+
+  @override
+  String itemActionSheetSubtitle(String category, int quantity) {
+    return '$category · x$quantity';
+  }
+
+  @override
+  String itemActionSheetRemoveConfirmationTitle(String itemName) {
+    return 'Retirer $itemName ?';
+  }
+
+  @override
+  String get itemActionSheetRemoveConfirmationBody =>
+      'Cette action est définitive.';
+
+  @override
+  String get itemActionSheetRemoveConfirmationCancelButton => 'Annuler';
+
+  @override
+  String get itemActionSheetRemoveConfirmationConfirmButton => 'Retirer';
+
+  @override
+  String get itemInfoPanelWeightLabel => 'Poids unitaire';
+
+  @override
+  String itemInfoPanelWeightValue(String weight) {
+    return '$weight kg';
+  }
+
+  @override
+  String get itemInfoPanelCostLabel => 'Coût';
+
+  @override
+  String itemInfoPanelCostValue(String cost) {
+    return '$cost po';
+  }
+
+  @override
+  String get itemInfoPanelSetLabel => 'Set';
+
+  @override
+  String get itemInfoPanelAttackLabel => 'Attaque';
+
+  @override
+  String get itemInfoPanelDamageLabel => 'Dégâts';
+
+  @override
+  String get itemInfoPanelPropertiesLabel => 'Propriétés';
+
+  @override
+  String get itemInfoPanelRangeLabel => 'Portée';
+
+  @override
+  String itemInfoPanelRangeValue(String rangeNormal) {
+    return '$rangeNormal m';
+  }
+
+  @override
+  String itemInfoPanelRangeValueWithMax(String rangeNormal, String rangeMax) {
+    return '$rangeNormal m (max $rangeMax m)';
+  }
+
+  @override
+  String get itemInfoPanelArmorClassLabel => 'CA de base';
+
+  @override
+  String get itemInfoPanelDexBonusLabel => 'Bonus Dex';
+
+  @override
+  String get itemInfoPanelStrengthRequirementLabel => 'Force requise';
+
+  @override
+  String get itemInfoPanelStealthDisadvantageLabel => 'Désavantage discrétion';
+
+  @override
+  String get itemInfoPanelYesLabel => 'Oui';
+
+  @override
+  String get itemInfoPanelNoLabel => 'Non';
+
+  @override
+  String get itemInfoPanelRarityLabel => 'Rareté';
+
+  @override
+  String get itemInfoPanelDescriptionSectionLabel => 'DESCRIPTION';
+
+  @override
+  String get itemInfoPanelDescriptionUnavailable =>
+      'Aucune description disponible.';
+
+  @override
+  String get itemInfoPanelUseButton => 'Utiliser';
+
+  @override
+  String get itemInfoPanelEquipButton => 'Équiper';
+
+  @override
+  String get itemInfoPanelUnequipButton => 'Déséquiper';
+
+  @override
+  String get itemInfoPanelAttuneLabel => 'Harmoniser cet objet';
+
+  @override
+  String get itemInfoPanelStopAttuneLabel => 'Ne plus harmoniser';
+
+  @override
+  String itemInfoPanelAttunementCapReachedCaption(int cap) {
+    String _temp0 = intl.Intl.pluralLogic(
+      cap,
+      locale: localeName,
+      other: 'Limite de $cap objets harmonisés atteinte.',
+      one: 'Limite de 1 objet harmonisé atteinte.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String currencyAdjustmentSheetTitle(String currencyLabel) {
+    return 'Ajuster les $currencyLabel';
+  }
+
+  @override
+  String get currencyAdjustmentSheetAddOption => 'Ajouter';
+
+  @override
+  String get currencyAdjustmentSheetRemoveOption => 'Retirer';
+
+  @override
+  String get currencyAdjustmentSheetCancelButton => 'Annuler';
+
+  @override
+  String get currencyAdjustmentSheetApplyButton => 'Appliquer';
+
+  @override
+  String get inventoryCategoryFilterSheetTitle => 'FILTRER PAR CATÉGORIE';
+
+  @override
+  String get characterSpellsSectionTitle => 'SORTS';
+
+  @override
+  String characterSpellsSectionPactLabel(int level) {
+    return 'Magie de pacte — Niveau $level';
+  }
+
+  @override
+  String characterSpellsSectionPactSlotsSemanticLabel(
+    int remaining,
+    int total,
+    int level,
+  ) {
+    return 'Emplacements de pacte : $remaining restants sur $total (niveau $level)';
+  }
+
+  @override
+  String characterSpellsSectionSlotsSemanticLabel(int remaining, int total) {
+    return 'Emplacements de sorts : $remaining restants sur $total';
+  }
+
+  @override
+  String characterSpellsSectionGrantBadgeSemanticLabel(String sourceLabel) {
+    return 'Toujours préparé, accordé par : $sourceLabel';
+  }
+
+  @override
+  String get characterSpellsSectionInnateBadgeLabel => 'INNÉ';
+
+  @override
+  String get characterSpellsSectionInnateExhaustedLabel => 'Épuisé';
+
+  @override
+  String characterSpellsSectionInnateAvailableSemanticLabel(
+    int remaining,
+    int max,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '$remaining utilisations restantes',
+      one: '1 utilisation restante',
+    );
+    return 'Sort inné, sans emplacement, $_temp0 sur $max, repos long';
+  }
+
+  @override
+  String get characterSpellsSectionInnateExhaustedSemanticLabel =>
+      'Sort inné, épuisé, disponible après un repos long';
+
+  @override
+  String get characterSpellsTabBodyLimitedUseFeaturesCardTitle =>
+      'INVOCATIONS & APTITUDES À USAGE LIMITÉ';
+
+  @override
+  String get characterSpellsTabBodySearchHint => 'Rechercher un sort';
+
+  @override
+  String get characterSpellsTabBodySearchClearTooltip => 'Effacer';
+
+  @override
+  String get characterSpellsTabBodyNoMatchAllLabel => 'Aucun sort';
+
+  @override
+  String get characterSpellsTabBodyNoMatchPreparedLabel => 'Aucun sort préparé';
+
+  @override
+  String get characterSpellsTabBodyNoMatchUnpreparedLabel =>
+      'Aucun sort non préparé';
+
+  @override
+  String characterSpellsTabBodyNoMatchMessageEmpty(String kind) {
+    return '$kind.';
+  }
+
+  @override
+  String characterSpellsTabBodyNoMatchMessageQuery(String kind, String query) {
+    return '$kind pour « $query ».';
+  }
+
+  @override
+  String get characterSpellsTabBodyEmptyStateTitle => 'AUCUN SORT';
+
+  @override
+  String get characterSpellsTabBodyEmptyStateBody =>
+      'Aucun sort sur cette fiche pour l\'instant. Pour les classes qui lancent des sorts, ils se choisissent depuis l\'assistant de création ou à la montée de niveau.';
+
+  @override
+  String get characterSpellsTabBodyNonCasterTitle =>
+      'Cette classe ne lance pas de sorts';
+
+  @override
+  String get characterSpellsTabBodyNonCasterDefaultClassName => 'cette classe';
+
+  @override
+  String characterSpellsTabBodyNonCasterBody(
+    String characterName,
+    String className,
+  ) {
+    return '$characterName est $className — hors archétype dédié (ex. Chevalier occulte), cette classe ne dispose pas d\'emplacements de sorts. Cet onglet reste accessible par cohérence de navigation, mais restera vide pour ce personnage.';
+  }
+
+  @override
+  String spellActionSheetTitle(String spellName) {
+    return 'Lancer $spellName';
+  }
+
+  @override
+  String get spellActionSheetSubtitle =>
+      'Choisissez le niveau d\'emplacement à utiliser.';
+
+  @override
+  String get spellActionSheetCancelButton => 'Annuler';
+
+  @override
+  String get spellActionSheetCastButton => 'Lancer';
+
+  @override
+  String get spellActionSheetSlotExhaustedLabel => 'Épuisé';
+
+  @override
+  String spellActionSheetSlotRemainingLabel(int remaining, int total) {
+    return '$remaining/$total restants';
+  }
+
+  @override
+  String spellActionSheetPactSlotLevelLabel(int level) {
+    return 'Niveau $level (pacte)';
+  }
+
+  @override
+  String spellActionSheetSlotLevelLabel(int level) {
+    return 'Niveau $level';
+  }
+
+  @override
+  String get spellInfoPanelUsagesLabel => 'Utilisations';
+
+  @override
+  String get spellInfoPanelCastingTimeLabel => 'Temps d\'incantation';
+
+  @override
+  String get spellInfoPanelRangeLabel => 'Portée';
+
+  @override
+  String get spellInfoPanelDurationLabel => 'Durée';
+
+  @override
+  String get spellInfoPanelConcentrationLabel => 'Concentration';
+
+  @override
+  String get spellInfoPanelConcentrationYes => 'Oui';
+
+  @override
+  String get spellInfoPanelConcentrationNo => 'Non';
+
+  @override
+  String spellInfoPanelGrantSourceNote(String sourceLabel) {
+    return 'Toujours préparé — sort de $sourceLabel (ne compte pas dans la limite de sorts préparés)';
+  }
+
+  @override
+  String spellInfoPanelInnateNote(int usesPerLongRest) {
+    return 'Sort inné — se lance sans emplacement, $usesPerLongRest fois par repos long';
+  }
+
+  @override
+  String get spellInfoPanelDescriptionTitle => 'DESCRIPTION';
+
+  @override
+  String get spellInfoPanelCastButton => 'Lancer';
+
+  @override
+  String get spellInfoPanelCastInnateButton => 'Lancer (sort inné)';
+
+  @override
+  String get spellInfoPanelUnprepareLink => 'Ne plus préparer';
+
+  @override
+  String get spellInfoPanelPrepareLink => 'Préparer ce sort';
+
+  @override
+  String get spellInfoPanelComponentsLabel => 'Composantes';
+
+  @override
+  String get spellPreparationCardTitle => 'PRÉPARATION DES SORTS';
+
+  @override
+  String get spellPreparationCardInfoTooltip =>
+      'Comment fonctionne la préparation des sorts ?';
+
+  @override
+  String spellPreparationCardClassLabel(String className) {
+    return 'SORTS PRÉPARÉS — $className';
+  }
+
+  @override
+  String get spellPreparationCardDefaultLabel => 'SORTS PRÉPARÉS';
+
+  @override
+  String spellPreparationCardOverLimitStatus(int overBy) {
+    return 'Limite dépassée de $overBy';
+  }
+
+  @override
+  String get spellPreparationCardLimitReachedStatus => 'Limite atteinte';
+
+  @override
+  String spellPreparationCardRemainingToPrepareStatus(int remaining) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: 'Encore $remaining sorts à préparer',
+      one: 'Encore 1 sort à préparer',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String spellPreparationCardCounterSemanticLabel(
+    String label,
+    int count,
+    int limit,
+  ) {
+    return '$label : $count sur $limit';
+  }
+
+  @override
+  String get spellPreparationCardCounterOverLimitSuffix => ', limite dépassée';
+
+  @override
+  String get spellPreparationCardInfoEntryPrepareTitle =>
+      'Préparer pour lancer';
+
+  @override
+  String get spellPreparationCardInfoEntryPrepareBody =>
+      'Seuls les sorts préparés peuvent être lancés. Les sorts non préparés restent dans la liste, grisés, après les sorts préparés. Touchez un sort puis « Préparer ce sort » ou « Ne plus préparer ».';
+
+  @override
+  String get spellPreparationCardInfoEntryHowManyTitle => 'Combien de sorts ?';
+
+  @override
+  String spellPreparationCardInfoEntryHowManyBody(String limitsSentence) {
+    return 'Clerc, Druide et Magicien : modificateur de caractéristique d\'incantation + niveau de classe. Paladin et Artificier (demi-lanceurs) : modificateur + moitié du niveau. Minimum 1. Multiclassé avec plusieurs classes qui préparent : chaque classe a sa propre limite, jamais un total commun.$limitsSentence Une fois la limite atteinte, impossible de préparer un nouveau sort de cette classe sans en dé-préparer un autre d\'abord.';
+  }
+
+  @override
+  String spellPreparationCardSingleLimitSentence(int limit) {
+    return ' Votre limite actuelle : $limit.';
+  }
+
+  @override
+  String spellPreparationCardMultipleLimitsSentence(String limitsList) {
+    return ' Vos limites actuelles : $limitsList.';
+  }
+
+  @override
+  String get spellPreparationCardInfoEntryNoPreparationTitle =>
+      'Sans préparation';
+
+  @override
+  String get spellPreparationCardInfoEntryNoPreparationBody =>
+      'Les sorts mineurs, les sorts innés et les sorts de domaine ou de serment n\'ont jamais à être préparés et ne comptent pas dans la limite. Un sort inné de niveau 1 ou plus se lance sans emplacement, une fois par repos long.';
+
+  @override
+  String get spellPreparationCardInfoEntryCastDoesNotUnprepareTitle =>
+      'Lancer ne dé-prépare pas';
+
+  @override
+  String get spellPreparationCardInfoEntryCastDoesNotUnprepareBody =>
+      'Lancer un sort consomme un emplacement, mais le sort reste préparé : vous pouvez le relancer tant qu\'il vous reste des emplacements.';
+
+  @override
+  String get spellPreparationCardInfoEntryChangeListTitle => 'Changer sa liste';
+
+  @override
+  String get spellPreparationCardInfoEntryChangeListBody =>
+      'La liste de sorts préparés se change après un repos long : le repos long vous propose de garder votre liste ou de la modifier.';
+
+  @override
+  String get prepareSpellsSheetTitle => 'PRÉPARER MES SORTS';
+
+  @override
+  String prepareSpellsSheetClassLabel(String className) {
+    return 'SORTS PRÉPARÉS — $className';
+  }
+
+  @override
+  String get prepareSpellsSheetSearchHint => 'Rechercher un sort';
+
+  @override
+  String get prepareSpellsSheetSearchClearTooltip => 'Effacer';
+
+  @override
+  String get prepareSpellsSheetNoMatchEmptyMessage => 'Aucun sort disponible.';
+
+  @override
+  String prepareSpellsSheetNoMatchQueryMessage(String query) {
+    return 'Aucun sort pour « $query ».';
+  }
+
+  @override
+  String prepareSpellsSheetInfoTooltip(String spellName) {
+    return 'Description de $spellName';
+  }
+
+  @override
+  String castInnateSpellConfirmationDialogTitle(String spellName) {
+    return 'Lancer $spellName ?';
+  }
+
+  @override
+  String get castInnateSpellConfirmationDialogMessage =>
+      'Cette action consomme un usage de ce sort inné, récupéré seulement au prochain repos long.';
+
+  @override
+  String get castInnateSpellConfirmationDialogCancelButton => 'Annuler';
+
+  @override
+  String get castInnateSpellConfirmationDialogCastButton => 'Lancer';
+
+  @override
+  String characterDetailCastSpellSuccessMessage(String spellName) {
+    return '$spellName lancé.';
+  }
+
+  @override
+  String characterDetailCastSpellWithSlotSuccessMessage(
+    String spellName,
+    int slotLevel,
+  ) {
+    return '$spellName lancé (emplacement niveau $slotLevel).';
+  }
+
+  @override
+  String get characterDetailCastSpellErrorMessage =>
+      'Impossible de lancer ce sort. Réessayez.';
+
+  @override
+  String characterDetailCastPactSpellSuccessMessage(
+    String spellName,
+    int pactLevel,
+  ) {
+    return '$spellName lancé (emplacement de pacte niveau $pactLevel).';
+  }
+
+  @override
+  String characterDetailCastInnateSpellSuccessMessage(String spellName) {
+    return '$spellName lancé (sort inné).';
+  }
+
+  @override
+  String get characterDetailInnateSpellSyncErrorMessage =>
+      'Impossible de synchroniser les sorts innés. Réessayez.';
+
+  @override
+  String get characterStoryTabBodyEmptyStateTitle =>
+      'AUCUNE HISTOIRE RENSEIGNÉE';
+
+  @override
+  String get characterStoryTabBodyEmptyStateSubtitle =>
+      'Apparence, traits, idéaux... raconte l\'histoire de ton personnage quand tu veux.';
+
+  @override
+  String get characterStoryTabBodyEmptyStateButtonLabel =>
+      'Renseigner mon histoire';
+
+  @override
+  String get characterStoryEditSheetTitle => 'MODIFIER L\'HISTOIRE';
+
+  @override
+  String get characterStoryEditSheetCancelButton => 'Annuler';
+
+  @override
+  String get characterStoryEditSheetSaveButton => 'Enregistrer';
+
+  @override
+  String get characterStoryEditSheetAppearanceLabel => 'APPARENCE PHYSIQUE';
+
+  @override
+  String get characterStoryEditSheetAppearanceHint =>
+      'Décris l\'apparence physique de ton personnage…';
+
+  @override
+  String get characterStoryEditSheetTraitsLabel => 'TRAITS DE PERSONNALITÉ';
+
+  @override
+  String get characterStoryEditSheetTraitsHint =>
+      'Décris les traits de personnalité de ton personnage…';
+
+  @override
+  String get characterStoryEditSheetIdealsLabel => 'IDÉAUX';
+
+  @override
+  String get characterStoryEditSheetIdealsHint =>
+      'Quels idéaux guident ton personnage ?';
+
+  @override
+  String get characterStoryEditSheetBondsLabel => 'LIENS';
+
+  @override
+  String get characterStoryEditSheetBondsHint =>
+      'Quels liens unissent ton personnage à d\'autres ?';
+
+  @override
+  String get characterStoryEditSheetFlawsLabel => 'DÉFAUTS';
+
+  @override
+  String get characterStoryEditSheetFlawsHint =>
+      'Quels défauts ou faiblesses a ton personnage ?';
+
+  @override
+  String get characterStoryEditSheetBackstoryLabel => 'HISTOIRE PERSONNELLE';
+
+  @override
+  String get characterStoryEditSheetBackstoryHint =>
+      'Raconte l\'histoire personnelle de ton personnage…';
+
+  @override
+  String get characterStoryEditSheetAlliesLabel => 'ALLIÉS';
+
+  @override
+  String get characterStoryEditSheetAlliesHint =>
+      'Quels alliés ou organisations soutiennent ton personnage ?';
+
+  @override
+  String get characterStoryEditSheetFeaturesLabel => 'PARTICULARITÉS';
+
+  @override
+  String get characterStoryEditSheetFeaturesHint =>
+      'Décris les particularités de ton personnage…';
+
+  @override
+  String get characterStoryEditSheetTreasureLabel => 'TRÉSOR';
+
+  @override
+  String get characterStoryEditSheetTreasureHint =>
+      'Quels trésors ou objets précieux possède ton personnage ?';
+
+  @override
+  String get characterStoryEditSheetGenericErrorMessage =>
+      'Impossible d\'enregistrer les modifications. Réessayez.';
+
+  @override
+  String get characterStoryEditSheetUpdatedMessage => 'Histoire mise à jour.';
+
+  @override
+  String get characterJournalCardTitle => 'JOURNAL DE CAMPAGNE';
+
+  @override
+  String get characterJournalCardAddButtonLabel => 'Ajouter une note';
+
+  @override
+  String get characterJournalCardEditAction => 'Modifier';
+
+  @override
+  String get characterJournalCardRemoveAction => 'Supprimer';
+
+  @override
+  String get characterJournalCardRemoveConfirmationTitle =>
+      'Supprimer cette note ?';
+
+  @override
+  String get characterJournalCardRemoveConfirmationMessage =>
+      'Cette action est définitive.';
+
+  @override
+  String get characterJournalCardRemoveConfirmationCancelButton => 'Annuler';
+
+  @override
+  String get characterJournalCardRemoveConfirmationConfirmButton => 'Supprimer';
+
+  @override
+  String get characterJournalCardRemovedMessage => 'Note supprimée.';
+
+  @override
+  String get characterJournalCardRemoveGenericErrorMessage =>
+      'Impossible de supprimer cette note. Réessayez.';
+
+  @override
+  String get characterJournalEntryEditSheetAddTitle => 'AJOUTER UNE NOTE';
+
+  @override
+  String get characterJournalEntryEditSheetEditTitle => 'MODIFIER LA NOTE';
+
+  @override
+  String get characterJournalEntryEditSheetHint =>
+      'Note de séance, événement marquant…';
+
+  @override
+  String get characterJournalEntryEditSheetCancelButton => 'Annuler';
+
+  @override
+  String get characterJournalEntryEditSheetSaveButton => 'Enregistrer';
+
+  @override
+  String get characterJournalEntryEditSheetGenericErrorMessage =>
+      'Impossible d\'enregistrer cette note. Réessayez.';
+
+  @override
+  String get characterJournalEntryEditSheetAddedMessage => 'Note ajoutée.';
+
+  @override
+  String get characterJournalEntryEditSheetUpdatedMessage => 'Note modifiée.';
+
+  @override
+  String get characterGalleryCardTitle => 'GALERIE';
+
+  @override
+  String get galleryPhotoUploadSheetCameraAction => 'Prendre une photo';
+
+  @override
+  String get galleryPhotoUploadSheetGalleryAction => 'Choisir dans la galerie';
+
+  @override
+  String get galleryPhotoUploadSheetUrlAction => 'Utiliser une URL';
+
+  @override
+  String get galleryPhotoUploadSheetAddedMessage => 'Photo ajoutée.';
+
+  @override
+  String get galleryPhotoUploadSheetGenericErrorMessage =>
+      'Impossible d\'ajouter cette photo. Réessayez.';
+
+  @override
+  String get galleryPhotoUploadSheetUrlDialogTitle => 'URL de la photo';
+
+  @override
+  String get galleryPhotoUploadSheetUrlDialogHint => 'https://...';
+
+  @override
+  String get galleryPhotoUploadSheetUrlDialogGenericError =>
+      'Impossible de charger cette image.';
+
+  @override
+  String get galleryPhotoUploadSheetUrlDialogCancelButton => 'Annuler';
+
+  @override
+  String get galleryPhotoUploadSheetUrlDialogNextButton => 'Suivant';
+
+  @override
+  String get galleryPhotoViewerScreenRemoveButtonLabel => 'Retirer cette photo';
+
+  @override
+  String get galleryPhotoViewerScreenRemovedMessage => 'Photo retirée.';
+
+  @override
+  String get galleryPhotoViewerScreenRemoveGenericErrorMessage =>
+      'Impossible de retirer cette photo. Réessayez.';
+
+  @override
+  String get galleryPhotoViewerScreenRemoveConfirmationTitle =>
+      'Retirer cette photo ?';
+
+  @override
+  String get galleryPhotoViewerScreenRemoveConfirmationCancelButton =>
+      'Annuler';
+
+  @override
+  String get galleryPhotoViewerScreenRemoveConfirmationConfirmButton =>
+      'Retirer';
+
+  @override
+  String get portraitUploadSheetCameraAction => 'Prendre une photo';
+
+  @override
+  String get portraitUploadSheetGalleryAction => 'Choisir dans la galerie';
+
+  @override
+  String get portraitUploadSheetUrlAction => 'Utiliser une URL';
+
+  @override
+  String get portraitUploadSheetRemoveAction => 'Retirer le portrait';
+
+  @override
+  String get portraitUploadSheetRemovedMessage => 'Portrait retiré.';
+
+  @override
+  String get portraitUploadSheetRemoveGenericErrorMessage =>
+      'Impossible de retirer le portrait. Réessayez.';
+
+  @override
+  String get portraitUploadSheetUrlDialogTitle => 'URL du portrait';
+
+  @override
+  String get portraitUploadSheetUrlDialogHint => 'https://...';
+
+  @override
+  String get portraitUploadSheetUrlDialogGenericError =>
+      'Impossible de charger cette image.';
+
+  @override
+  String get portraitUploadSheetUrlDialogCancelButton => 'Annuler';
+
+  @override
+  String get portraitUploadSheetUrlDialogNextButton => 'Suivant';
+
+  @override
+  String get portraitUploadSheetRemoveConfirmationTitle =>
+      'Retirer le portrait ?';
+
+  @override
+  String get portraitUploadSheetRemoveConfirmationCancelButton => 'Annuler';
+
+  @override
+  String get portraitUploadSheetRemoveConfirmationConfirmButton => 'Retirer';
+
+  @override
+  String get portraitCropScreenTitle => 'RECADRAGE';
+
+  @override
+  String get portraitCropScreenInstructions =>
+      'Pincez pour zoomer, glissez pour cadrer.';
+
+  @override
+  String get portraitCropScreenCancelButton => 'Annuler';
+
+  @override
+  String get portraitCropScreenSaveButton => 'Valider';
+
+  @override
+  String get portraitCropScreenPrepareImageErrorMessage =>
+      'Impossible de préparer l\'image. Réessayez.';
+
+  @override
+  String get portraitCropScreenGenericErrorMessage =>
+      'Impossible d\'envoyer le portrait. Réessayez.';
+
+  @override
+  String get characterAdventuresCardTitle => 'AVENTURES';
+
+  @override
+  String characterAdventuresCardGmLabel(String gmName) {
+    return 'MJ : $gmName';
+  }
+
+  @override
+  String get characterAdventuresCardLeaveTooltip => 'Quitter l\'histoire';
+
+  @override
+  String characterAdventuresCardLeftMessage(String storyTitle) {
+    return 'Tu as quitté $storyTitle.';
+  }
+
+  @override
+  String get characterAdventuresCardLeaveGenericErrorMessage =>
+      'Impossible de quitter cette histoire. Réessayez.';
+
+  @override
+  String characterAdventuresCardLeaveConfirmationTitle(String storyTitle) {
+    return 'Quitter « $storyTitle » ?';
+  }
+
+  @override
+  String get characterAdventuresCardLeaveConfirmationMessage =>
+      'Ton personnage garde toutes ses données. Seul le lien avec cette histoire disparaît.';
+
+  @override
+  String get characterAdventuresCardLeaveConfirmationCancelButton => 'Annuler';
+
+  @override
+  String get characterAdventuresCardLeaveConfirmationConfirmButton => 'Quitter';
 }

@@ -39,6 +39,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_journal_card.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   int addJournalEntryCallCount = 0;
@@ -420,11 +421,15 @@ Future<void> _pump(
   CharacterDetail detail,
   _FakeCharacterRepository repository, {
   bool actionsDisabled = false,
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [characterRepositoryProvider.overrideWithValue(repository)],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Scaffold(
           body: CharacterJournalCard(
             detail: detail,
@@ -585,6 +590,42 @@ void main() {
 
       expect(find.text('Modifier'), findsNothing);
       expect(find.text('Supprimer'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'titre, tuile "Add a note", actions "Edit"/"Delete" et confirmation en '
+    'anglais',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(journalEntries: [entry1]),
+        fakeRepository,
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('CAMPAIGN JOURNAL'), findsOneWidget);
+      expect(find.text('Add a note'), findsOneWidget);
+
+      await tester.tap(
+        find.text('Première séance : rencontre au Chaudron fumant.'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit'), findsOneWidget);
+      expect(find.text('Delete'), findsOneWidget);
+
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Delete this note?'), findsOneWidget);
+      expect(find.text('This action is permanent.'), findsOneWidget);
+
+      await tester.tap(find.text('Delete').last);
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.removeJournalEntryCallCount, 1);
+      expect(find.text('Note deleted.'), findsOneWidget);
     },
   );
 

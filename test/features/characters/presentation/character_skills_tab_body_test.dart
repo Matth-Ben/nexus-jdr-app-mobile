@@ -389,6 +389,12 @@ void main() {
         MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          // Explicite (plutôt que de compter sur le repli de résolution de
+          // locale) depuis que le bouton "UTILISER" du panneau "Infos" lit
+          // aussi `AppLocalizations.of(context)!` (chantier "traduction de
+          // l'app" Phase B, lot "Characters — classe/race/maîtrises") —
+          // régression trouvée en lançant la suite complète.
+          locale: const Locale('fr'),
           home: Scaffold(
             body: CharacterSkillsTabBody(
               detail: _detail(

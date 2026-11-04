@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/class_feature_usage_formatter.dart';
 import 'class_feature_action_sheet.dart';
@@ -20,24 +21,30 @@ import 'class_feature_info_panel.dart';
 /// N'affiche rien tant que [features] est vide — appelant responsable de ne
 /// pas monter cette carte dans ce cas (voir `character_skills_tab_body.dart`).
 ///
-/// [title] surchargeable (par défaut "APTITUDES DE CLASSE") — réutilisé tel
-/// quel par `character_spells_tab_body.dart` pour sa carte de pied
-/// "INVOCATIONS & APTITUDES À USAGE LIMITÉ" (recettage direction-artistique
-/// du 13/09), filtrée aux seules aptitudes non passives : même formatage de
-/// ligne que la carte "Aptitudes de classe" de l'onglet "Compétences", sans
-/// dupliquer [_FeatureRow].
+/// [title] surchargeable (par défaut
+/// [AppLocalizations.characterClassFeaturesCardTitle] — valeur par défaut de
+/// paramètre non constante, car dépendante du contexte, voir [build]) —
+/// réutilisé tel quel par `character_spells_tab_body.dart` pour sa carte de
+/// pied "INVOCATIONS & APTITUDES À USAGE LIMITÉ" (recettage
+/// direction-artistique du 13/09), filtrée aux seules aptitudes non
+/// passives : même formatage de ligne que la carte "Aptitudes de classe" de
+/// l'onglet "Compétences", sans dupliquer [_FeatureRow].
 class CharacterClassFeaturesCard extends StatelessWidget {
   const CharacterClassFeaturesCard({
     required this.features,
     required this.onUseFeature,
     this.actionsDisabled = false,
-    this.title = 'APTITUDES DE CLASSE',
+    this.title,
     super.key,
   });
 
   final List<CharacterClassFeature> features;
   final UseClassFeatureCallback onUseFeature;
-  final String title;
+
+  /// `null` : résolu vers [AppLocalizations.characterClassFeaturesCardTitle]
+  /// dans [build] — un paramètre de constructeur `const` ne peut pas appeler
+  /// `AppLocalizations.of(context)!`, voir la doc de classe.
+  final String? title;
 
   /// `true` pendant qu'un repos (court ou long) est en cours d'application —
   /// voir `character_detail_screen.dart::_isApplyingRest` et la
@@ -47,6 +54,7 @@ class CharacterClassFeaturesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -58,7 +66,7 @@ class CharacterClassFeaturesCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title,
+            title ?? l10n.characterClassFeaturesCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,
@@ -90,6 +98,7 @@ class _FeatureRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final usageLabel = ClassFeatureUsageFormatter.format(feature);
 
     final row = Padding(
@@ -102,7 +111,7 @@ class _FeatureRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           Text(
-            usageLabel ?? 'Passive',
+            usageLabel ?? l10n.characterClassFeaturesCardPassiveLabel,
             textAlign: TextAlign.right,
             style: AppTypography.body(
               fontSize: 12,

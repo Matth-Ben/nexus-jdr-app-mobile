@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_class_feature.dart';
 import '../../domain/class_feature_usage_formatter.dart';
 import 'class_feature_action_sheet.dart';
@@ -48,6 +49,7 @@ class _ClassFeatureInfoPanelContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Aptitude passive : pas de compteur ni de bouton "Utiliser".
     final isPassive = feature.isPassive;
     final remaining = isPassive ? 0 : feature.usesRemaining ?? feature.usesMax!;
@@ -69,7 +71,9 @@ class _ClassFeatureInfoPanelContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Obtenue au niveau ${feature.level}.',
+                        l10n.classFeatureInfoPanelObtainedAtLevel(
+                          feature.level,
+                        ),
                         style: AppTypography.body(
                           fontSize: 13,
                           color: AppColors.textSecondary,
@@ -77,14 +81,14 @@ class _ClassFeatureInfoPanelContent extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.md),
                       _FeatureInfoRow(
-                        label: 'Utilisations',
+                        label: l10n.classFeatureInfoPanelUsesLabel,
                         value:
                             ClassFeatureUsageFormatter.format(feature) ??
-                            'Passive',
+                            l10n.classFeatureInfoPanelPassiveLabel,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        'DESCRIPTION',
+                        l10n.classFeatureInfoPanelDescriptionLabel,
                         style: AppTypography.display(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -93,7 +97,7 @@ class _ClassFeatureInfoPanelContent extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         feature.description.isEmpty
-                            ? 'Description indisponible.'
+                            ? l10n.classFeatureInfoPanelDescriptionUnavailable
                             : feature.description,
                         style: AppTypography.body(fontSize: 14, height: 1.4),
                       ),
@@ -110,7 +114,7 @@ class _ClassFeatureInfoPanelContent extends StatelessWidget {
                     AppSpacing.lg,
                   ),
                   child: PrimaryButton(
-                    label: 'Utiliser',
+                    label: l10n.classFeatureInfoPanelUseButton,
                     onPressed: exhausted || !canUse
                         ? null
                         : () => Navigator.of(context).pop(true),

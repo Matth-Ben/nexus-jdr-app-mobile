@@ -34,6 +34,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/add_item_flow.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class FakeRepository implements CharacterRepository {
   FakeRepository({this.catalog = const [], this.throwOnFetch = false});
@@ -413,11 +414,15 @@ const _zanbato = InventoryCatalogItem(
 Future<void> _pumpAndPick(
   WidgetTester tester, {
   required FakeRepository repository,
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [characterRepositoryProvider.overrideWithValue(repository)],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -511,6 +516,9 @@ void main() {
             ),
           ],
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('fr'),
             home: Builder(
               builder: (context) => Scaffold(
                 body: Center(
@@ -601,6 +609,9 @@ void main() {
             characterRepositoryProvider.overrideWithValue(FakeRepository()),
           ],
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('fr'),
             home: Builder(
               builder: (context) => Scaffold(
                 body: Center(
@@ -676,6 +687,9 @@ void main() {
               characterRepositoryProvider.overrideWithValue(FakeRepository()),
             ],
             child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              locale: const Locale('fr'),
               home: Builder(
                 builder: (context) => Scaffold(
                   body: Center(
@@ -776,6 +790,9 @@ void main() {
               ),
             ],
             child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              locale: const Locale('fr'),
               home: Builder(
                 builder: (context) => Scaffold(
                   body: Center(
@@ -810,6 +827,9 @@ void main() {
             ),
           ],
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('fr'),
             home: Builder(
               builder: (context) => Scaffold(
                 body: Center(
@@ -889,6 +909,9 @@ void main() {
             ),
           ],
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('fr'),
             home: Builder(
               builder: (context) => Scaffold(
                 body: Center(
@@ -914,6 +937,155 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(result, isEmpty);
+    });
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets('sheet d\'entrée en anglais', (tester) async {
+      await _pumpAndPick(
+        tester,
+        repository: FakeRepository(),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('From the catalog'), findsOneWidget);
+      expect(find.text('Custom item'), findsOneWidget);
+    });
+
+    testWidgets(
+      'sheet "Depuis le catalogue" : titre, sous-titre et état vide en '
+      'anglais',
+      (tester) async {
+        await _pumpAndPick(
+          tester,
+          repository: FakeRepository(catalog: const [_dagger]),
+          locale: const Locale('en'),
+        );
+        await tester.tap(find.text('From the catalog'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('ADD AN ITEM'), findsOneWidget);
+        expect(find.text('2 po · 0,5 kg'), findsOneWidget);
+
+        await tester.enterText(find.byType(TextFormField), 'zzz');
+        await tester.pump();
+
+        expect(find.text('No item found.'), findsOneWidget);
+      },
+    );
+
+    testWidgets('sheet de quantité en anglais', (tester) async {
+      await _pumpAndPick(
+        tester,
+        repository: FakeRepository(catalog: const [_dagger]),
+        locale: const Locale('en'),
+      );
+      await tester.tap(find.text('From the catalog'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dague'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add Dague'), findsOneWidget);
+      await tester.tap(find.widgetWithText(PrimaryButton, 'ADD'));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets(
+      'sheet "Objet personnalisé" : titre, sections, options et types de '
+      'dégâts en anglais',
+      (tester) async {
+        await _pumpAndPick(
+          tester,
+          repository: FakeRepository(),
+          locale: const Locale('en'),
+        );
+        await tester.tap(find.text('Custom item'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('CUSTOM ITEM'), findsOneWidget);
+        expect(find.text('ITEM NAME'), findsOneWidget);
+        expect(find.text('DESCRIPTION'), findsOneWidget);
+        expect(find.text("ITEM TYPE"), findsOneWidget);
+        // `SegmentedToggle` met ses libellés en majuscules.
+        expect(find.text('SIMPLE ITEM'), findsOneWidget);
+        expect(find.text('WEAPON'), findsOneWidget);
+
+        await tester.tap(find.text('WEAPON'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('DAMAGE DIE'), findsOneWidget);
+        expect(find.text('d'), findsOneWidget);
+        expect(find.text('DAMAGE TYPE'), findsOneWidget);
+
+        await tester.ensureVisible(
+          find.byKey(const Key('customItemDamageTypeField')),
+        );
+        await tester.tap(find.byKey(const Key('customItemDamageTypeField')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Slashing').last, findsOneWidget);
+        expect(find.text('Piercing').last, findsOneWidget);
+        expect(find.text('Bludgeoning').last, findsOneWidget);
+        await tester.tap(find.text('Piercing').last);
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(
+          find.byKey(const Key('customItemPropertiesField')),
+        );
+        expect(
+          find.text('Separate multiple properties with a comma.'),
+          findsOneWidget,
+        );
+        expect(find.text('QUANTITY'), findsOneWidget);
+
+        // `SecondaryButton`/`PrimaryButton` mettent leurs libellés en
+        // majuscules.
+        await tester.ensureVisible(find.text('CANCEL'));
+        expect(find.text('CANCEL'), findsOneWidget);
+        expect(find.widgetWithText(PrimaryButton, 'ADD'), findsOneWidget);
+      },
+    );
+
+    testWidgets('sélection multiple : libellé "Add (N)" du bouton en anglais', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            characterRepositoryProvider.overrideWithValue(
+              FakeRepository(catalog: const [_dagger, _kit]),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () => pickInventoryAdditions(context),
+                    child: const Text('Ouvrir'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Ouvrir'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('From the catalog'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ADD ITEMS'), findsOneWidget);
+
+      await tester.tap(find.text('Dague'));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(PrimaryButton, 'ADD (1)'), findsOneWidget);
     });
   });
 }

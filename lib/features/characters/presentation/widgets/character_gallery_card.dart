@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/dashed_border_painter.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_gallery_photo.dart';
 import 'gallery_photo_upload_sheet.dart';
@@ -54,6 +55,7 @@ class CharacterGalleryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final photos = detail.galleryPhotos;
 
     return Container(
@@ -67,7 +69,7 @@ class CharacterGalleryCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'GALERIE',
+            l10n.characterGalleryCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,
