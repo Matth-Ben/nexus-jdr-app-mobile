@@ -149,7 +149,7 @@ final class LocalePreferenceControllerProvider
 }
 
 String _$localePreferenceControllerHash() =>
-    r'7acd5445ed9eba697bfc26c57412d3e883f1a929';
+    r'be22d05d7b073de67160e4e65d592ed56b99d9c0';
 
 /// Préférence locale de langue forcée (écran "Langue", poussé depuis la
 /// tuile "Langue" de l'écran Profil) — chantier "traduction de l'app" Phase
