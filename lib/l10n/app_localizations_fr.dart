@@ -3329,4 +3329,312 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get characterDetailInnateSpellSyncErrorMessage =>
       'Impossible de synchroniser les sorts innés. Réessayez.';
+
+  @override
+  String get characterStoryTabBodyEmptyStateTitle =>
+      'AUCUNE HISTOIRE RENSEIGNÉE';
+
+  @override
+  String get characterStoryTabBodyEmptyStateSubtitle =>
+      'Apparence, traits, idéaux... raconte l\'histoire de ton personnage quand tu veux.';
+
+  @override
+  String get characterStoryTabBodyEmptyStateButtonLabel =>
+      'Renseigner mon histoire';
+
+  @override
+  String get characterStoryEditSheetTitle => 'MODIFIER L\'HISTOIRE';
+
+  @override
+  String get characterStoryEditSheetCancelButton => 'Annuler';
+
+  @override
+  String get characterStoryEditSheetSaveButton => 'Enregistrer';
+
+  @override
+  String get characterStoryEditSheetAppearanceLabel => 'APPARENCE PHYSIQUE';
+
+  @override
+  String get characterStoryEditSheetAppearanceHint =>
+      'Décris l\'apparence physique de ton personnage…';
+
+  @override
+  String get characterStoryEditSheetTraitsLabel => 'TRAITS DE PERSONNALITÉ';
+
+  @override
+  String get characterStoryEditSheetTraitsHint =>
+      'Décris les traits de personnalité de ton personnage…';
+
+  @override
+  String get characterStoryEditSheetIdealsLabel => 'IDÉAUX';
+
+  @override
+  String get characterStoryEditSheetIdealsHint =>
+      'Quels idéaux guident ton personnage ?';
+
+  @override
+  String get characterStoryEditSheetBondsLabel => 'LIENS';
+
+  @override
+  String get characterStoryEditSheetBondsHint =>
+      'Quels liens unissent ton personnage à d\'autres ?';
+
+  @override
+  String get characterStoryEditSheetFlawsLabel => 'DÉFAUTS';
+
+  @override
+  String get characterStoryEditSheetFlawsHint =>
+      'Quels défauts ou faiblesses a ton personnage ?';
+
+  @override
+  String get characterStoryEditSheetBackstoryLabel => 'HISTOIRE PERSONNELLE';
+
+  @override
+  String get characterStoryEditSheetBackstoryHint =>
+      'Raconte l\'histoire personnelle de ton personnage…';
+
+  @override
+  String get characterStoryEditSheetAlliesLabel => 'ALLIÉS';
+
+  @override
+  String get characterStoryEditSheetAlliesHint =>
+      'Quels alliés ou organisations soutiennent ton personnage ?';
+
+  @override
+  String get characterStoryEditSheetFeaturesLabel => 'PARTICULARITÉS';
+
+  @override
+  String get characterStoryEditSheetFeaturesHint =>
+      'Décris les particularités de ton personnage…';
+
+  @override
+  String get characterStoryEditSheetTreasureLabel => 'TRÉSOR';
+
+  @override
+  String get characterStoryEditSheetTreasureHint =>
+      'Quels trésors ou objets précieux possède ton personnage ?';
+
+  @override
+  String get characterStoryEditSheetGenericErrorMessage =>
+      'Impossible d\'enregistrer les modifications. Réessayez.';
+
+  @override
+  String get characterStoryEditSheetUpdatedMessage => 'Histoire mise à jour.';
+
+  @override
+  String get characterJournalCardTitle => 'JOURNAL DE CAMPAGNE';
+
+  @override
+  String get characterJournalCardAddButtonLabel => 'Ajouter une note';
+
+  @override
+  String get characterJournalCardEditAction => 'Modifier';
+
+  @override
+  String get characterJournalCardRemoveAction => 'Supprimer';
+
+  @override
+  String get characterJournalCardRemoveConfirmationTitle =>
+      'Supprimer cette note ?';
+
+  @override
+  String get characterJournalCardRemoveConfirmationMessage =>
+      'Cette action est définitive.';
+
+  @override
+  String get characterJournalCardRemoveConfirmationCancelButton => 'Annuler';
+
+  @override
+  String get characterJournalCardRemoveConfirmationConfirmButton => 'Supprimer';
+
+  @override
+  String get characterJournalCardRemovedMessage => 'Note supprimée.';
+
+  @override
+  String get characterJournalCardRemoveGenericErrorMessage =>
+      'Impossible de supprimer cette note. Réessayez.';
+
+  @override
+  String get characterJournalEntryEditSheetAddTitle => 'AJOUTER UNE NOTE';
+
+  @override
+  String get characterJournalEntryEditSheetEditTitle => 'MODIFIER LA NOTE';
+
+  @override
+  String get characterJournalEntryEditSheetHint =>
+      'Note de séance, événement marquant…';
+
+  @override
+  String get characterJournalEntryEditSheetCancelButton => 'Annuler';
+
+  @override
+  String get characterJournalEntryEditSheetSaveButton => 'Enregistrer';
+
+  @override
+  String get characterJournalEntryEditSheetGenericErrorMessage =>
+      'Impossible d\'enregistrer cette note. Réessayez.';
+
+  @override
+  String get characterJournalEntryEditSheetAddedMessage => 'Note ajoutée.';
+
+  @override
+  String get characterJournalEntryEditSheetUpdatedMessage => 'Note modifiée.';
+
+  @override
+  String get characterGalleryCardTitle => 'GALERIE';
+
+  @override
+  String get galleryPhotoUploadSheetCameraAction => 'Prendre une photo';
+
+  @override
+  String get galleryPhotoUploadSheetGalleryAction => 'Choisir dans la galerie';
+
+  @override
+  String get galleryPhotoUploadSheetUrlAction => 'Utiliser une URL';
+
+  @override
+  String get galleryPhotoUploadSheetAddedMessage => 'Photo ajoutée.';
+
+  @override
+  String get galleryPhotoUploadSheetGenericErrorMessage =>
+      'Impossible d\'ajouter cette photo. Réessayez.';
+
+  @override
+  String get galleryPhotoUploadSheetUrlDialogTitle => 'URL de la photo';
+
+  @override
+  String get galleryPhotoUploadSheetUrlDialogHint => 'https://...';
+
+  @override
+  String get galleryPhotoUploadSheetUrlDialogGenericError =>
+      'Impossible de charger cette image.';
+
+  @override
+  String get galleryPhotoUploadSheetUrlDialogCancelButton => 'Annuler';
+
+  @override
+  String get galleryPhotoUploadSheetUrlDialogNextButton => 'Suivant';
+
+  @override
+  String get galleryPhotoViewerScreenRemoveButtonLabel => 'Retirer cette photo';
+
+  @override
+  String get galleryPhotoViewerScreenRemovedMessage => 'Photo retirée.';
+
+  @override
+  String get galleryPhotoViewerScreenRemoveGenericErrorMessage =>
+      'Impossible de retirer cette photo. Réessayez.';
+
+  @override
+  String get galleryPhotoViewerScreenRemoveConfirmationTitle =>
+      'Retirer cette photo ?';
+
+  @override
+  String get galleryPhotoViewerScreenRemoveConfirmationCancelButton =>
+      'Annuler';
+
+  @override
+  String get galleryPhotoViewerScreenRemoveConfirmationConfirmButton =>
+      'Retirer';
+
+  @override
+  String get portraitUploadSheetCameraAction => 'Prendre une photo';
+
+  @override
+  String get portraitUploadSheetGalleryAction => 'Choisir dans la galerie';
+
+  @override
+  String get portraitUploadSheetUrlAction => 'Utiliser une URL';
+
+  @override
+  String get portraitUploadSheetRemoveAction => 'Retirer le portrait';
+
+  @override
+  String get portraitUploadSheetRemovedMessage => 'Portrait retiré.';
+
+  @override
+  String get portraitUploadSheetRemoveGenericErrorMessage =>
+      'Impossible de retirer le portrait. Réessayez.';
+
+  @override
+  String get portraitUploadSheetUrlDialogTitle => 'URL du portrait';
+
+  @override
+  String get portraitUploadSheetUrlDialogHint => 'https://...';
+
+  @override
+  String get portraitUploadSheetUrlDialogGenericError =>
+      'Impossible de charger cette image.';
+
+  @override
+  String get portraitUploadSheetUrlDialogCancelButton => 'Annuler';
+
+  @override
+  String get portraitUploadSheetUrlDialogNextButton => 'Suivant';
+
+  @override
+  String get portraitUploadSheetRemoveConfirmationTitle =>
+      'Retirer le portrait ?';
+
+  @override
+  String get portraitUploadSheetRemoveConfirmationCancelButton => 'Annuler';
+
+  @override
+  String get portraitUploadSheetRemoveConfirmationConfirmButton => 'Retirer';
+
+  @override
+  String get portraitCropScreenTitle => 'RECADRAGE';
+
+  @override
+  String get portraitCropScreenInstructions =>
+      'Pincez pour zoomer, glissez pour cadrer.';
+
+  @override
+  String get portraitCropScreenCancelButton => 'Annuler';
+
+  @override
+  String get portraitCropScreenSaveButton => 'Valider';
+
+  @override
+  String get portraitCropScreenPrepareImageErrorMessage =>
+      'Impossible de préparer l\'image. Réessayez.';
+
+  @override
+  String get portraitCropScreenGenericErrorMessage =>
+      'Impossible d\'envoyer le portrait. Réessayez.';
+
+  @override
+  String get characterAdventuresCardTitle => 'AVENTURES';
+
+  @override
+  String characterAdventuresCardGmLabel(String gmName) {
+    return 'MJ : $gmName';
+  }
+
+  @override
+  String get characterAdventuresCardLeaveTooltip => 'Quitter l\'histoire';
+
+  @override
+  String characterAdventuresCardLeftMessage(String storyTitle) {
+    return 'Tu as quitté $storyTitle.';
+  }
+
+  @override
+  String get characterAdventuresCardLeaveGenericErrorMessage =>
+      'Impossible de quitter cette histoire. Réessayez.';
+
+  @override
+  String characterAdventuresCardLeaveConfirmationTitle(String storyTitle) {
+    return 'Quitter « $storyTitle » ?';
+  }
+
+  @override
+  String get characterAdventuresCardLeaveConfirmationMessage =>
+      'Ton personnage garde toutes ses données. Seul le lien avec cette histoire disparaît.';
+
+  @override
+  String get characterAdventuresCardLeaveConfirmationCancelButton => 'Annuler';
+
+  @override
+  String get characterAdventuresCardLeaveConfirmationConfirmButton => 'Quitter';
 }

@@ -5399,6 +5399,546 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Impossible de synchroniser les sorts innés. Réessayez.'**
   String get characterDetailInnateSpellSyncErrorMessage;
+
+  /// Titre de `_EmptyStoryState` (les 9 champs de texte libre sont tous vides).
+  ///
+  /// In fr, this message translates to:
+  /// **'AUCUNE HISTOIRE RENSEIGNÉE'**
+  String get characterStoryTabBodyEmptyStateTitle;
+
+  /// Sous-titre de `_EmptyStoryState`, absent en lecture seule (`actionsDisabled`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Apparence, traits, idéaux... raconte l\'histoire de ton personnage quand tu veux.'**
+  String get characterStoryTabBodyEmptyStateSubtitle;
+
+  /// `PrimaryButton` de `_EmptyStoryState` (met son libellé en majuscules à l'affichage), absent en lecture seule.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renseigner mon histoire'**
+  String get characterStoryTabBodyEmptyStateButtonLabel;
+
+  /// Titre du `SheetHeaderBar` de la sheet "Modifier l'histoire".
+  ///
+  /// In fr, this message translates to:
+  /// **'MODIFIER L\'HISTOIRE'**
+  String get characterStoryEditSheetTitle;
+
+  /// `SecondaryButton` "Annuler" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterStoryEditSheetCancelButton;
+
+  /// `PrimaryButton` "Enregistrer" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get characterStoryEditSheetSaveButton;
+
+  /// Libellé du 1er des 9 champs (`appearanceText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'APPARENCE PHYSIQUE'**
+  String get characterStoryEditSheetAppearanceLabel;
+
+  /// Placeholder du 1er des 9 champs (`appearanceText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Décris l\'apparence physique de ton personnage…'**
+  String get characterStoryEditSheetAppearanceHint;
+
+  /// Libellé du 2e des 9 champs (`traitsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'TRAITS DE PERSONNALITÉ'**
+  String get characterStoryEditSheetTraitsLabel;
+
+  /// Placeholder du 2e des 9 champs (`traitsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Décris les traits de personnalité de ton personnage…'**
+  String get characterStoryEditSheetTraitsHint;
+
+  /// Libellé du 3e des 9 champs (`idealsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'IDÉAUX'**
+  String get characterStoryEditSheetIdealsLabel;
+
+  /// Placeholder du 3e des 9 champs (`idealsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels idéaux guident ton personnage ?'**
+  String get characterStoryEditSheetIdealsHint;
+
+  /// Libellé du 4e des 9 champs (`bondsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'LIENS'**
+  String get characterStoryEditSheetBondsLabel;
+
+  /// Placeholder du 4e des 9 champs (`bondsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels liens unissent ton personnage à d\'autres ?'**
+  String get characterStoryEditSheetBondsHint;
+
+  /// Libellé du 5e des 9 champs (`flawsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'DÉFAUTS'**
+  String get characterStoryEditSheetFlawsLabel;
+
+  /// Placeholder du 5e des 9 champs (`flawsText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels défauts ou faiblesses a ton personnage ?'**
+  String get characterStoryEditSheetFlawsHint;
+
+  /// Libellé du 6e des 9 champs (`backstoryText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'HISTOIRE PERSONNELLE'**
+  String get characterStoryEditSheetBackstoryLabel;
+
+  /// Placeholder du 6e des 9 champs (`backstoryText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Raconte l\'histoire personnelle de ton personnage…'**
+  String get characterStoryEditSheetBackstoryHint;
+
+  /// Libellé du 7e des 9 champs (`alliesText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'ALLIÉS'**
+  String get characterStoryEditSheetAlliesLabel;
+
+  /// Placeholder du 7e des 9 champs (`alliesText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels alliés ou organisations soutiennent ton personnage ?'**
+  String get characterStoryEditSheetAlliesHint;
+
+  /// Libellé du 8e des 9 champs (`featuresText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'PARTICULARITÉS'**
+  String get characterStoryEditSheetFeaturesLabel;
+
+  /// Placeholder du 8e des 9 champs (`featuresText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Décris les particularités de ton personnage…'**
+  String get characterStoryEditSheetFeaturesHint;
+
+  /// Libellé du 9e des 9 champs (`treasureText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'TRÉSOR'**
+  String get characterStoryEditSheetTreasureLabel;
+
+  /// Placeholder du 9e des 9 champs (`treasureText`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quels trésors ou objets précieux possède ton personnage ?'**
+  String get characterStoryEditSheetTreasureHint;
+
+  /// Bandeau d'alerte inline sur échec inattendu (pas une `CharacterFailure`) de `_submit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer les modifications. Réessayez.'**
+  String get characterStoryEditSheetGenericErrorMessage;
+
+  /// SnackBar de confirmation affiché par `showCharacterStoryEditSheet` une fois la sheet refermée avec succès.
+  ///
+  /// In fr, this message translates to:
+  /// **'Histoire mise à jour.'**
+  String get characterStoryEditSheetUpdatedMessage;
+
+  /// Titre de la carte "Journal de campagne" de l'onglet "Histoire".
+  ///
+  /// In fr, this message translates to:
+  /// **'JOURNAL DE CAMPAGNE'**
+  String get characterJournalCardTitle;
+
+  /// `DashedAddTile` de `CharacterJournalCard`, absente en lecture seule (`actionsDisabled`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter une note'**
+  String get characterJournalCardAddButtonLabel;
+
+  /// Ligne "Modifier" de la sheet d'actions ouverte au tap sur une entrée de journal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier'**
+  String get characterJournalCardEditAction;
+
+  /// Ligne "Supprimer" de la sheet d'actions ouverte au tap sur une entrée de journal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer'**
+  String get characterJournalCardRemoveAction;
+
+  /// Titre de `showRemoveJournalEntryConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer cette note ?'**
+  String get characterJournalCardRemoveConfirmationTitle;
+
+  /// Sous-titre de `showRemoveJournalEntryConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action est définitive.'**
+  String get characterJournalCardRemoveConfirmationMessage;
+
+  /// `SecondaryButton` "Annuler" de `showRemoveJournalEntryConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterJournalCardRemoveConfirmationCancelButton;
+
+  /// `DestructiveButton` "Supprimer" de `showRemoveJournalEntryConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer'**
+  String get characterJournalCardRemoveConfirmationConfirmButton;
+
+  /// SnackBar de confirmation de `_confirmAndRemove`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note supprimée.'**
+  String get characterJournalCardRemovedMessage;
+
+  /// SnackBar d'échec inattendu de `_confirmAndRemove`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de supprimer cette note. Réessayez.'**
+  String get characterJournalCardRemoveGenericErrorMessage;
+
+  /// Titre du `SheetHeaderBar` en mode ajout (`entry` null).
+  ///
+  /// In fr, this message translates to:
+  /// **'AJOUTER UNE NOTE'**
+  String get characterJournalEntryEditSheetAddTitle;
+
+  /// Titre du `SheetHeaderBar` en mode édition (`entry` non null).
+  ///
+  /// In fr, this message translates to:
+  /// **'MODIFIER LA NOTE'**
+  String get characterJournalEntryEditSheetEditTitle;
+
+  /// Placeholder du champ de texte de la note.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note de séance, événement marquant…'**
+  String get characterJournalEntryEditSheetHint;
+
+  /// `SecondaryButton` "Annuler".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterJournalEntryEditSheetCancelButton;
+
+  /// `PrimaryButton` "Enregistrer".
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get characterJournalEntryEditSheetSaveButton;
+
+  /// Bandeau d'alerte inline sur échec inattendu (pas une `CharacterFailure`) de `_submit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer cette note. Réessayez.'**
+  String get characterJournalEntryEditSheetGenericErrorMessage;
+
+  /// SnackBar de confirmation affiché par `showJournalEntryEditSheet` en mode ajout.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note ajoutée.'**
+  String get characterJournalEntryEditSheetAddedMessage;
+
+  /// SnackBar de confirmation affiché par `showJournalEntryEditSheet` en mode édition.
+  ///
+  /// In fr, this message translates to:
+  /// **'Note modifiée.'**
+  String get characterJournalEntryEditSheetUpdatedMessage;
+
+  /// Titre de la carte "Galerie" de l'onglet "Histoire".
+  ///
+  /// In fr, this message translates to:
+  /// **'GALERIE'**
+  String get characterGalleryCardTitle;
+
+  /// Ligne "Prendre une photo" du bottom sheet "Ajouter une photo".
+  ///
+  /// In fr, this message translates to:
+  /// **'Prendre une photo'**
+  String get galleryPhotoUploadSheetCameraAction;
+
+  /// Ligne "Choisir dans la galerie" du bottom sheet "Ajouter une photo".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir dans la galerie'**
+  String get galleryPhotoUploadSheetGalleryAction;
+
+  /// Ligne "Utiliser une URL" du bottom sheet "Ajouter une photo".
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser une URL'**
+  String get galleryPhotoUploadSheetUrlAction;
+
+  /// SnackBar de confirmation de `showAddGalleryPhotoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photo ajoutée.'**
+  String get galleryPhotoUploadSheetAddedMessage;
+
+  /// SnackBar d'échec de `showAddGalleryPhotoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ajouter cette photo. Réessayez.'**
+  String get galleryPhotoUploadSheetGenericErrorMessage;
+
+  /// Titre du dialogue "Utiliser une URL".
+  ///
+  /// In fr, this message translates to:
+  /// **'URL de la photo'**
+  String get galleryPhotoUploadSheetUrlDialogTitle;
+
+  /// Placeholder du champ URL — identique quelle que soit la langue (syntaxe d'URL, pas du texte naturel).
+  ///
+  /// In fr, this message translates to:
+  /// **'https://...'**
+  String get galleryPhotoUploadSheetUrlDialogHint;
+
+  /// Repli affiché quand l'échec n'est pas une `PortraitUrlFetchFailure` (message déjà localisé par l'appelant) — voir D147 du registre de dette technique pour `PortraitUrlFetchFailure.message` elle-même, qui reste figée en français.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger cette image.'**
+  String get galleryPhotoUploadSheetUrlDialogGenericError;
+
+  /// `SecondaryButton` "Annuler" du dialogue "Utiliser une URL".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get galleryPhotoUploadSheetUrlDialogCancelButton;
+
+  /// `PrimaryButton` "Suivant" du dialogue "Utiliser une URL".
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get galleryPhotoUploadSheetUrlDialogNextButton;
+
+  /// `DestructiveButton` de la visionneuse plein écran, absent en lecture seule (`actionsDisabled`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer cette photo'**
+  String get galleryPhotoViewerScreenRemoveButtonLabel;
+
+  /// SnackBar de confirmation de `_confirmAndRemove`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photo retirée.'**
+  String get galleryPhotoViewerScreenRemovedMessage;
+
+  /// SnackBar d'échec de `_confirmAndRemove`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de retirer cette photo. Réessayez.'**
+  String get galleryPhotoViewerScreenRemoveGenericErrorMessage;
+
+  /// Titre de `showRemoveGalleryPhotoConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer cette photo ?'**
+  String get galleryPhotoViewerScreenRemoveConfirmationTitle;
+
+  /// `SecondaryButton` "Annuler" de `showRemoveGalleryPhotoConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get galleryPhotoViewerScreenRemoveConfirmationCancelButton;
+
+  /// `DestructiveButton` "Retirer" de `showRemoveGalleryPhotoConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get galleryPhotoViewerScreenRemoveConfirmationConfirmButton;
+
+  /// Ligne "Prendre une photo" du bottom sheet "changer le portrait".
+  ///
+  /// In fr, this message translates to:
+  /// **'Prendre une photo'**
+  String get portraitUploadSheetCameraAction;
+
+  /// Ligne "Choisir dans la galerie" du bottom sheet "changer le portrait".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir dans la galerie'**
+  String get portraitUploadSheetGalleryAction;
+
+  /// Ligne "Utiliser une URL" du bottom sheet "changer le portrait".
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser une URL'**
+  String get portraitUploadSheetUrlAction;
+
+  /// Ligne "Retirer le portrait" du bottom sheet "changer le portrait", proposée seulement si `hasPortrait`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer le portrait'**
+  String get portraitUploadSheetRemoveAction;
+
+  /// SnackBar de confirmation de `_confirmAndRemove`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Portrait retiré.'**
+  String get portraitUploadSheetRemovedMessage;
+
+  /// SnackBar d'échec de `_confirmAndRemove`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de retirer le portrait. Réessayez.'**
+  String get portraitUploadSheetRemoveGenericErrorMessage;
+
+  /// Titre du dialogue "Utiliser une URL" de `showPortraitUrlDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'URL du portrait'**
+  String get portraitUploadSheetUrlDialogTitle;
+
+  /// Placeholder du champ URL — identique quelle que soit la langue (syntaxe d'URL, pas du texte naturel).
+  ///
+  /// In fr, this message translates to:
+  /// **'https://...'**
+  String get portraitUploadSheetUrlDialogHint;
+
+  /// Repli affiché quand l'échec n'est pas une `PortraitUrlFetchFailure` (message déjà localisé par l'appelant) — voir D147 du registre de dette technique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger cette image.'**
+  String get portraitUploadSheetUrlDialogGenericError;
+
+  /// `SecondaryButton` "Annuler" du dialogue "Utiliser une URL".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get portraitUploadSheetUrlDialogCancelButton;
+
+  /// `PrimaryButton` "Suivant" du dialogue "Utiliser une URL".
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get portraitUploadSheetUrlDialogNextButton;
+
+  /// Titre de `showRemovePortraitConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer le portrait ?'**
+  String get portraitUploadSheetRemoveConfirmationTitle;
+
+  /// `SecondaryButton` "Annuler" de `showRemovePortraitConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get portraitUploadSheetRemoveConfirmationCancelButton;
+
+  /// `DestructiveButton` "Retirer" de `showRemovePortraitConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer'**
+  String get portraitUploadSheetRemoveConfirmationConfirmButton;
+
+  /// Titre du `WoodBackHeader` de l'écran de recadrage.
+  ///
+  /// In fr, this message translates to:
+  /// **'RECADRAGE'**
+  String get portraitCropScreenTitle;
+
+  /// Texte d'aide sous le cadre de recadrage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pincez pour zoomer, glissez pour cadrer.'**
+  String get portraitCropScreenInstructions;
+
+  /// `SecondaryButton` "Annuler".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get portraitCropScreenCancelButton;
+
+  /// `PrimaryButton` "Valider".
+  ///
+  /// In fr, this message translates to:
+  /// **'Valider'**
+  String get portraitCropScreenSaveButton;
+
+  /// Bandeau d'alerte inline quand la capture du cadre recadré échoue (`byteData == null`) — géré directement, sans passer par une `CharacterFailure` (évite d'embarquer un message figé en français dans une exception du domaine).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de préparer l\'image. Réessayez.'**
+  String get portraitCropScreenPrepareImageErrorMessage;
+
+  /// Bandeau d'alerte inline sur échec inattendu (pas une `CharacterFailure`) de `_submit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'envoyer le portrait. Réessayez.'**
+  String get portraitCropScreenGenericErrorMessage;
+
+  /// Titre de la carte "Aventures" de l'onglet "Personnage".
+  ///
+  /// In fr, this message translates to:
+  /// **'AVENTURES'**
+  String get characterAdventuresCardTitle;
+
+  /// Sous-titre de `_AdventureRow` affiché quand `gmDisplayName` est renseigné (`gmName` est une donnée joueur, jamais traduite).
+  ///
+  /// In fr, this message translates to:
+  /// **'MJ : {gmName}'**
+  String characterAdventuresCardGmLabel(String gmName);
+
+  /// Tooltip de l'`IconButton` "Quitter" (`Icons.logout`) de `_AdventureRow`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter l\'histoire'**
+  String get characterAdventuresCardLeaveTooltip;
+
+  /// SnackBar de confirmation de `_confirmAndLeave` (`storyTitle` est une donnée joueur, jamais traduite).
+  ///
+  /// In fr, this message translates to:
+  /// **'Tu as quitté {storyTitle}.'**
+  String characterAdventuresCardLeftMessage(String storyTitle);
+
+  /// SnackBar d'échec de `_confirmAndLeave`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de quitter cette histoire. Réessayez.'**
+  String get characterAdventuresCardLeaveGenericErrorMessage;
+
+  /// Titre de `showLeaveAdventureConfirmationDialog` (`storyTitle` est une donnée joueur, jamais traduite).
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter « {storyTitle} » ?'**
+  String characterAdventuresCardLeaveConfirmationTitle(String storyTitle);
+
+  /// Sous-titre de `showLeaveAdventureConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ton personnage garde toutes ses données. Seul le lien avec cette histoire disparaît.'**
+  String get characterAdventuresCardLeaveConfirmationMessage;
+
+  /// `SecondaryButton` "Annuler" de `showLeaveAdventureConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterAdventuresCardLeaveConfirmationCancelButton;
+
+  /// `DestructiveButton` "Quitter" de `showLeaveAdventureConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter'**
+  String get characterAdventuresCardLeaveConfirmationConfirmButton;
 }
 
 class _AppLocalizationsDelegate

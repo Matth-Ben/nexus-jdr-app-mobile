@@ -42,6 +42,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_gallery_card.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   int removeGalleryPhotoCallCount = 0;
@@ -407,11 +408,15 @@ Future<void> _pump(
   CharacterDetail detail,
   _FakeCharacterRepository repository, {
   bool actionsDisabled = false,
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [characterRepositoryProvider.overrideWithValue(repository)],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Scaffold(
           body: CharacterGalleryCard(
             detail: detail,
@@ -530,6 +535,37 @@ void main() {
     // La visionneuse s'est refermée : la croix n'est plus là.
     expect(find.byIcon(Icons.close), findsNothing);
   });
+
+  testWidgets(
+    'titre et visionneuse ("Remove this photo", confirmation, SnackBar) en '
+    'anglais',
+    (tester) async {
+      await _pump(
+        tester,
+        _detail(galleryPhotos: [photo1]),
+        fakeRepository,
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('GALLERY'), findsOneWidget);
+
+      await tester.tap(find.byType(Image).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Remove this photo'), findsOneWidget);
+
+      await tester.tap(find.text('Remove this photo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Remove this photo?'), findsOneWidget);
+
+      await tester.tap(find.text('Remove').last);
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.removeGalleryPhotoCallCount, 1);
+      expect(find.text('Photo removed.'), findsOneWidget);
+    },
+  );
 
   group('CharacterGalleryCard.hasVisibleContent', () {
     test('true avec au moins une photo, même en lecture seule', () {

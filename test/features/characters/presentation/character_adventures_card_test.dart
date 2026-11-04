@@ -38,6 +38,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_adventures_card.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   String? lastLeftCharacterCampaignId;
@@ -434,12 +435,16 @@ CharacterDetail _detail({List<CharacterAdventure> adventures = const []}) {
 Future<void> _pump(
   WidgetTester tester,
   CharacterDetail detail,
-  _FakeCharacterRepository repository,
-) async {
+  _FakeCharacterRepository repository, {
+  Locale locale = const Locale('fr'),
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [characterRepositoryProvider.overrideWithValue(repository)],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Scaffold(body: CharacterAdventuresCard(detail: detail)),
       ),
     ),
@@ -598,6 +603,51 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'titre, libellé MJ, tooltip, confirmation et SnackBar en anglais',
+    (tester) async {
+      const adventures = [
+        CharacterAdventure(
+          characterCampaignId: 'cc-1',
+          storyId: 'story-1',
+          storyTitle: 'The Curse of the North',
+          gmDisplayName: 'Alarik',
+        ),
+      ];
+      await _pump(
+        tester,
+        _detail(adventures: adventures),
+        fakeRepository,
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('ADVENTURES'), findsOneWidget);
+      expect(find.text('GM: Alarik'), findsOneWidget);
+      expect(
+        tester.widget<IconButton>(find.byType(IconButton)).tooltip,
+        'Leave the story',
+      );
+
+      await tester.tap(find.byIcon(Icons.logout));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Leave “The Curse of the North”?'), findsOneWidget);
+      expect(
+        find.text(
+          'Your character keeps all its data. Only the link with this '
+          'story disappears.',
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Leave').last);
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.leaveStoryCallCount, 1);
+      expect(find.text('You left The Curse of the North.'), findsOneWidget);
+    },
+  );
 
   group('CharacterAdventuresCard.hasContent', () {
     test('true si au moins une aventure est rattachée', () {

@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/character_story_field.dart';
 import '../../domain/character_story_fields_resolver.dart';
@@ -244,6 +245,7 @@ class _EmptyStoryState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -257,7 +259,7 @@ class _EmptyStoryState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'AUCUNE HISTOIRE RENSEIGNÉE',
+              l10n.characterStoryTabBodyEmptyStateTitle,
               textAlign: TextAlign.center,
               style: AppTypography.display(
                 fontSize: 11,
@@ -267,14 +269,13 @@ class _EmptyStoryState extends StatelessWidget {
             if (!actionsDisabled) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
-                "Apparence, traits, idéaux... raconte l'histoire de ton "
-                'personnage quand tu veux.',
+                l10n.characterStoryTabBodyEmptyStateSubtitle,
                 textAlign: TextAlign.center,
                 style: AppTypography.body(color: AppColors.textMuted),
               ),
               const SizedBox(height: AppSpacing.md),
               PrimaryButton(
-                label: 'Renseigner mon histoire',
+                label: l10n.characterStoryTabBodyEmptyStateButtonLabel,
                 onPressed: onEdit,
               ),
             ],

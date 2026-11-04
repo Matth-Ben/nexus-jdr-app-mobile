@@ -4473,5 +4473,380 @@
   "characterDetailInnateSpellSyncErrorMessage": "Impossible de synchroniser les sorts innés. Réessayez.",
   "@characterDetailInnateSpellSyncErrorMessage": {
     "description": "SnackBar d'échec de `_reassertInnateUsesState`."
+  },
+  "characterStoryTabBodyEmptyStateTitle": "AUCUNE HISTOIRE RENSEIGNÉE",
+  "@characterStoryTabBodyEmptyStateTitle": {
+    "description": "Titre de `_EmptyStoryState` (les 9 champs de texte libre sont tous vides)."
+  },
+  "characterStoryTabBodyEmptyStateSubtitle": "Apparence, traits, idéaux... raconte l'histoire de ton personnage quand tu veux.",
+  "@characterStoryTabBodyEmptyStateSubtitle": {
+    "description": "Sous-titre de `_EmptyStoryState`, absent en lecture seule (`actionsDisabled`)."
+  },
+  "characterStoryTabBodyEmptyStateButtonLabel": "Renseigner mon histoire",
+  "@characterStoryTabBodyEmptyStateButtonLabel": {
+    "description": "`PrimaryButton` de `_EmptyStoryState` (met son libellé en majuscules à l'affichage), absent en lecture seule."
+  },
+  "characterStoryEditSheetTitle": "MODIFIER L'HISTOIRE",
+  "@characterStoryEditSheetTitle": {
+    "description": "Titre du `SheetHeaderBar` de la sheet \"Modifier l'histoire\"."
+  },
+  "characterStoryEditSheetCancelButton": "Annuler",
+  "@characterStoryEditSheetCancelButton": {
+    "description": "`SecondaryButton` \"Annuler\" (met son libellé en majuscules à l'affichage)."
+  },
+  "characterStoryEditSheetSaveButton": "Enregistrer",
+  "@characterStoryEditSheetSaveButton": {
+    "description": "`PrimaryButton` \"Enregistrer\" (met son libellé en majuscules à l'affichage)."
+  },
+  "characterStoryEditSheetAppearanceLabel": "APPARENCE PHYSIQUE",
+  "@characterStoryEditSheetAppearanceLabel": {
+    "description": "Libellé du 1er des 9 champs (`appearanceText`)."
+  },
+  "characterStoryEditSheetAppearanceHint": "Décris l'apparence physique de ton personnage…",
+  "@characterStoryEditSheetAppearanceHint": {
+    "description": "Placeholder du 1er des 9 champs (`appearanceText`)."
+  },
+  "characterStoryEditSheetTraitsLabel": "TRAITS DE PERSONNALITÉ",
+  "@characterStoryEditSheetTraitsLabel": {
+    "description": "Libellé du 2e des 9 champs (`traitsText`)."
+  },
+  "characterStoryEditSheetTraitsHint": "Décris les traits de personnalité de ton personnage…",
+  "@characterStoryEditSheetTraitsHint": {
+    "description": "Placeholder du 2e des 9 champs (`traitsText`)."
+  },
+  "characterStoryEditSheetIdealsLabel": "IDÉAUX",
+  "@characterStoryEditSheetIdealsLabel": {
+    "description": "Libellé du 3e des 9 champs (`idealsText`)."
+  },
+  "characterStoryEditSheetIdealsHint": "Quels idéaux guident ton personnage ?",
+  "@characterStoryEditSheetIdealsHint": {
+    "description": "Placeholder du 3e des 9 champs (`idealsText`)."
+  },
+  "characterStoryEditSheetBondsLabel": "LIENS",
+  "@characterStoryEditSheetBondsLabel": {
+    "description": "Libellé du 4e des 9 champs (`bondsText`)."
+  },
+  "characterStoryEditSheetBondsHint": "Quels liens unissent ton personnage à d'autres ?",
+  "@characterStoryEditSheetBondsHint": {
+    "description": "Placeholder du 4e des 9 champs (`bondsText`)."
+  },
+  "characterStoryEditSheetFlawsLabel": "DÉFAUTS",
+  "@characterStoryEditSheetFlawsLabel": {
+    "description": "Libellé du 5e des 9 champs (`flawsText`)."
+  },
+  "characterStoryEditSheetFlawsHint": "Quels défauts ou faiblesses a ton personnage ?",
+  "@characterStoryEditSheetFlawsHint": {
+    "description": "Placeholder du 5e des 9 champs (`flawsText`)."
+  },
+  "characterStoryEditSheetBackstoryLabel": "HISTOIRE PERSONNELLE",
+  "@characterStoryEditSheetBackstoryLabel": {
+    "description": "Libellé du 6e des 9 champs (`backstoryText`)."
+  },
+  "characterStoryEditSheetBackstoryHint": "Raconte l'histoire personnelle de ton personnage…",
+  "@characterStoryEditSheetBackstoryHint": {
+    "description": "Placeholder du 6e des 9 champs (`backstoryText`)."
+  },
+  "characterStoryEditSheetAlliesLabel": "ALLIÉS",
+  "@characterStoryEditSheetAlliesLabel": {
+    "description": "Libellé du 7e des 9 champs (`alliesText`)."
+  },
+  "characterStoryEditSheetAlliesHint": "Quels alliés ou organisations soutiennent ton personnage ?",
+  "@characterStoryEditSheetAlliesHint": {
+    "description": "Placeholder du 7e des 9 champs (`alliesText`)."
+  },
+  "characterStoryEditSheetFeaturesLabel": "PARTICULARITÉS",
+  "@characterStoryEditSheetFeaturesLabel": {
+    "description": "Libellé du 8e des 9 champs (`featuresText`)."
+  },
+  "characterStoryEditSheetFeaturesHint": "Décris les particularités de ton personnage…",
+  "@characterStoryEditSheetFeaturesHint": {
+    "description": "Placeholder du 8e des 9 champs (`featuresText`)."
+  },
+  "characterStoryEditSheetTreasureLabel": "TRÉSOR",
+  "@characterStoryEditSheetTreasureLabel": {
+    "description": "Libellé du 9e des 9 champs (`treasureText`)."
+  },
+  "characterStoryEditSheetTreasureHint": "Quels trésors ou objets précieux possède ton personnage ?",
+  "@characterStoryEditSheetTreasureHint": {
+    "description": "Placeholder du 9e des 9 champs (`treasureText`)."
+  },
+  "characterStoryEditSheetGenericErrorMessage": "Impossible d'enregistrer les modifications. Réessayez.",
+  "@characterStoryEditSheetGenericErrorMessage": {
+    "description": "Bandeau d'alerte inline sur échec inattendu (pas une `CharacterFailure`) de `_submit`."
+  },
+  "characterStoryEditSheetUpdatedMessage": "Histoire mise à jour.",
+  "@characterStoryEditSheetUpdatedMessage": {
+    "description": "SnackBar de confirmation affiché par `showCharacterStoryEditSheet` une fois la sheet refermée avec succès."
+  },
+  "characterJournalCardTitle": "JOURNAL DE CAMPAGNE",
+  "@characterJournalCardTitle": {
+    "description": "Titre de la carte \"Journal de campagne\" de l'onglet \"Histoire\"."
+  },
+  "characterJournalCardAddButtonLabel": "Ajouter une note",
+  "@characterJournalCardAddButtonLabel": {
+    "description": "`DashedAddTile` de `CharacterJournalCard`, absente en lecture seule (`actionsDisabled`)."
+  },
+  "characterJournalCardEditAction": "Modifier",
+  "@characterJournalCardEditAction": {
+    "description": "Ligne \"Modifier\" de la sheet d'actions ouverte au tap sur une entrée de journal."
+  },
+  "characterJournalCardRemoveAction": "Supprimer",
+  "@characterJournalCardRemoveAction": {
+    "description": "Ligne \"Supprimer\" de la sheet d'actions ouverte au tap sur une entrée de journal."
+  },
+  "characterJournalCardRemoveConfirmationTitle": "Supprimer cette note ?",
+  "@characterJournalCardRemoveConfirmationTitle": {
+    "description": "Titre de `showRemoveJournalEntryConfirmationDialog`."
+  },
+  "characterJournalCardRemoveConfirmationMessage": "Cette action est définitive.",
+  "@characterJournalCardRemoveConfirmationMessage": {
+    "description": "Sous-titre de `showRemoveJournalEntryConfirmationDialog`."
+  },
+  "characterJournalCardRemoveConfirmationCancelButton": "Annuler",
+  "@characterJournalCardRemoveConfirmationCancelButton": {
+    "description": "`SecondaryButton` \"Annuler\" de `showRemoveJournalEntryConfirmationDialog`."
+  },
+  "characterJournalCardRemoveConfirmationConfirmButton": "Supprimer",
+  "@characterJournalCardRemoveConfirmationConfirmButton": {
+    "description": "`DestructiveButton` \"Supprimer\" de `showRemoveJournalEntryConfirmationDialog`."
+  },
+  "characterJournalCardRemovedMessage": "Note supprimée.",
+  "@characterJournalCardRemovedMessage": {
+    "description": "SnackBar de confirmation de `_confirmAndRemove`."
+  },
+  "characterJournalCardRemoveGenericErrorMessage": "Impossible de supprimer cette note. Réessayez.",
+  "@characterJournalCardRemoveGenericErrorMessage": {
+    "description": "SnackBar d'échec inattendu de `_confirmAndRemove`."
+  },
+  "characterJournalEntryEditSheetAddTitle": "AJOUTER UNE NOTE",
+  "@characterJournalEntryEditSheetAddTitle": {
+    "description": "Titre du `SheetHeaderBar` en mode ajout (`entry` null)."
+  },
+  "characterJournalEntryEditSheetEditTitle": "MODIFIER LA NOTE",
+  "@characterJournalEntryEditSheetEditTitle": {
+    "description": "Titre du `SheetHeaderBar` en mode édition (`entry` non null)."
+  },
+  "characterJournalEntryEditSheetHint": "Note de séance, événement marquant…",
+  "@characterJournalEntryEditSheetHint": {
+    "description": "Placeholder du champ de texte de la note."
+  },
+  "characterJournalEntryEditSheetCancelButton": "Annuler",
+  "@characterJournalEntryEditSheetCancelButton": {
+    "description": "`SecondaryButton` \"Annuler\"."
+  },
+  "characterJournalEntryEditSheetSaveButton": "Enregistrer",
+  "@characterJournalEntryEditSheetSaveButton": {
+    "description": "`PrimaryButton` \"Enregistrer\"."
+  },
+  "characterJournalEntryEditSheetGenericErrorMessage": "Impossible d'enregistrer cette note. Réessayez.",
+  "@characterJournalEntryEditSheetGenericErrorMessage": {
+    "description": "Bandeau d'alerte inline sur échec inattendu (pas une `CharacterFailure`) de `_submit`."
+  },
+  "characterJournalEntryEditSheetAddedMessage": "Note ajoutée.",
+  "@characterJournalEntryEditSheetAddedMessage": {
+    "description": "SnackBar de confirmation affiché par `showJournalEntryEditSheet` en mode ajout."
+  },
+  "characterJournalEntryEditSheetUpdatedMessage": "Note modifiée.",
+  "@characterJournalEntryEditSheetUpdatedMessage": {
+    "description": "SnackBar de confirmation affiché par `showJournalEntryEditSheet` en mode édition."
+  },
+  "characterGalleryCardTitle": "GALERIE",
+  "@characterGalleryCardTitle": {
+    "description": "Titre de la carte \"Galerie\" de l'onglet \"Histoire\"."
+  },
+  "galleryPhotoUploadSheetCameraAction": "Prendre une photo",
+  "@galleryPhotoUploadSheetCameraAction": {
+    "description": "Ligne \"Prendre une photo\" du bottom sheet \"Ajouter une photo\"."
+  },
+  "galleryPhotoUploadSheetGalleryAction": "Choisir dans la galerie",
+  "@galleryPhotoUploadSheetGalleryAction": {
+    "description": "Ligne \"Choisir dans la galerie\" du bottom sheet \"Ajouter une photo\"."
+  },
+  "galleryPhotoUploadSheetUrlAction": "Utiliser une URL",
+  "@galleryPhotoUploadSheetUrlAction": {
+    "description": "Ligne \"Utiliser une URL\" du bottom sheet \"Ajouter une photo\"."
+  },
+  "galleryPhotoUploadSheetAddedMessage": "Photo ajoutée.",
+  "@galleryPhotoUploadSheetAddedMessage": {
+    "description": "SnackBar de confirmation de `showAddGalleryPhotoSheet`."
+  },
+  "galleryPhotoUploadSheetGenericErrorMessage": "Impossible d'ajouter cette photo. Réessayez.",
+  "@galleryPhotoUploadSheetGenericErrorMessage": {
+    "description": "SnackBar d'échec de `showAddGalleryPhotoSheet`."
+  },
+  "galleryPhotoUploadSheetUrlDialogTitle": "URL de la photo",
+  "@galleryPhotoUploadSheetUrlDialogTitle": {
+    "description": "Titre du dialogue \"Utiliser une URL\"."
+  },
+  "galleryPhotoUploadSheetUrlDialogHint": "https://...",
+  "@galleryPhotoUploadSheetUrlDialogHint": {
+    "description": "Placeholder du champ URL — identique quelle que soit la langue (syntaxe d'URL, pas du texte naturel)."
+  },
+  "galleryPhotoUploadSheetUrlDialogGenericError": "Impossible de charger cette image.",
+  "@galleryPhotoUploadSheetUrlDialogGenericError": {
+    "description": "Repli affiché quand l'échec n'est pas une `PortraitUrlFetchFailure` (message déjà localisé par l'appelant) — voir D147 du registre de dette technique pour `PortraitUrlFetchFailure.message` elle-même, qui reste figée en français."
+  },
+  "galleryPhotoUploadSheetUrlDialogCancelButton": "Annuler",
+  "@galleryPhotoUploadSheetUrlDialogCancelButton": {
+    "description": "`SecondaryButton` \"Annuler\" du dialogue \"Utiliser une URL\"."
+  },
+  "galleryPhotoUploadSheetUrlDialogNextButton": "Suivant",
+  "@galleryPhotoUploadSheetUrlDialogNextButton": {
+    "description": "`PrimaryButton` \"Suivant\" du dialogue \"Utiliser une URL\"."
+  },
+  "galleryPhotoViewerScreenRemoveButtonLabel": "Retirer cette photo",
+  "@galleryPhotoViewerScreenRemoveButtonLabel": {
+    "description": "`DestructiveButton` de la visionneuse plein écran, absent en lecture seule (`actionsDisabled`)."
+  },
+  "galleryPhotoViewerScreenRemovedMessage": "Photo retirée.",
+  "@galleryPhotoViewerScreenRemovedMessage": {
+    "description": "SnackBar de confirmation de `_confirmAndRemove`."
+  },
+  "galleryPhotoViewerScreenRemoveGenericErrorMessage": "Impossible de retirer cette photo. Réessayez.",
+  "@galleryPhotoViewerScreenRemoveGenericErrorMessage": {
+    "description": "SnackBar d'échec de `_confirmAndRemove`."
+  },
+  "galleryPhotoViewerScreenRemoveConfirmationTitle": "Retirer cette photo ?",
+  "@galleryPhotoViewerScreenRemoveConfirmationTitle": {
+    "description": "Titre de `showRemoveGalleryPhotoConfirmationDialog`."
+  },
+  "galleryPhotoViewerScreenRemoveConfirmationCancelButton": "Annuler",
+  "@galleryPhotoViewerScreenRemoveConfirmationCancelButton": {
+    "description": "`SecondaryButton` \"Annuler\" de `showRemoveGalleryPhotoConfirmationDialog`."
+  },
+  "galleryPhotoViewerScreenRemoveConfirmationConfirmButton": "Retirer",
+  "@galleryPhotoViewerScreenRemoveConfirmationConfirmButton": {
+    "description": "`DestructiveButton` \"Retirer\" de `showRemoveGalleryPhotoConfirmationDialog`."
+  },
+  "portraitUploadSheetCameraAction": "Prendre une photo",
+  "@portraitUploadSheetCameraAction": {
+    "description": "Ligne \"Prendre une photo\" du bottom sheet \"changer le portrait\"."
+  },
+  "portraitUploadSheetGalleryAction": "Choisir dans la galerie",
+  "@portraitUploadSheetGalleryAction": {
+    "description": "Ligne \"Choisir dans la galerie\" du bottom sheet \"changer le portrait\"."
+  },
+  "portraitUploadSheetUrlAction": "Utiliser une URL",
+  "@portraitUploadSheetUrlAction": {
+    "description": "Ligne \"Utiliser une URL\" du bottom sheet \"changer le portrait\"."
+  },
+  "portraitUploadSheetRemoveAction": "Retirer le portrait",
+  "@portraitUploadSheetRemoveAction": {
+    "description": "Ligne \"Retirer le portrait\" du bottom sheet \"changer le portrait\", proposée seulement si `hasPortrait`."
+  },
+  "portraitUploadSheetRemovedMessage": "Portrait retiré.",
+  "@portraitUploadSheetRemovedMessage": {
+    "description": "SnackBar de confirmation de `_confirmAndRemove`."
+  },
+  "portraitUploadSheetRemoveGenericErrorMessage": "Impossible de retirer le portrait. Réessayez.",
+  "@portraitUploadSheetRemoveGenericErrorMessage": {
+    "description": "SnackBar d'échec de `_confirmAndRemove`."
+  },
+  "portraitUploadSheetUrlDialogTitle": "URL du portrait",
+  "@portraitUploadSheetUrlDialogTitle": {
+    "description": "Titre du dialogue \"Utiliser une URL\" de `showPortraitUrlDialog`."
+  },
+  "portraitUploadSheetUrlDialogHint": "https://...",
+  "@portraitUploadSheetUrlDialogHint": {
+    "description": "Placeholder du champ URL — identique quelle que soit la langue (syntaxe d'URL, pas du texte naturel)."
+  },
+  "portraitUploadSheetUrlDialogGenericError": "Impossible de charger cette image.",
+  "@portraitUploadSheetUrlDialogGenericError": {
+    "description": "Repli affiché quand l'échec n'est pas une `PortraitUrlFetchFailure` (message déjà localisé par l'appelant) — voir D147 du registre de dette technique."
+  },
+  "portraitUploadSheetUrlDialogCancelButton": "Annuler",
+  "@portraitUploadSheetUrlDialogCancelButton": {
+    "description": "`SecondaryButton` \"Annuler\" du dialogue \"Utiliser une URL\"."
+  },
+  "portraitUploadSheetUrlDialogNextButton": "Suivant",
+  "@portraitUploadSheetUrlDialogNextButton": {
+    "description": "`PrimaryButton` \"Suivant\" du dialogue \"Utiliser une URL\"."
+  },
+  "portraitUploadSheetRemoveConfirmationTitle": "Retirer le portrait ?",
+  "@portraitUploadSheetRemoveConfirmationTitle": {
+    "description": "Titre de `showRemovePortraitConfirmationDialog`."
+  },
+  "portraitUploadSheetRemoveConfirmationCancelButton": "Annuler",
+  "@portraitUploadSheetRemoveConfirmationCancelButton": {
+    "description": "`SecondaryButton` \"Annuler\" de `showRemovePortraitConfirmationDialog`."
+  },
+  "portraitUploadSheetRemoveConfirmationConfirmButton": "Retirer",
+  "@portraitUploadSheetRemoveConfirmationConfirmButton": {
+    "description": "`DestructiveButton` \"Retirer\" de `showRemovePortraitConfirmationDialog`."
+  },
+  "portraitCropScreenTitle": "RECADRAGE",
+  "@portraitCropScreenTitle": {
+    "description": "Titre du `WoodBackHeader` de l'écran de recadrage."
+  },
+  "portraitCropScreenInstructions": "Pincez pour zoomer, glissez pour cadrer.",
+  "@portraitCropScreenInstructions": {
+    "description": "Texte d'aide sous le cadre de recadrage."
+  },
+  "portraitCropScreenCancelButton": "Annuler",
+  "@portraitCropScreenCancelButton": {
+    "description": "`SecondaryButton` \"Annuler\"."
+  },
+  "portraitCropScreenSaveButton": "Valider",
+  "@portraitCropScreenSaveButton": {
+    "description": "`PrimaryButton` \"Valider\"."
+  },
+  "portraitCropScreenPrepareImageErrorMessage": "Impossible de préparer l'image. Réessayez.",
+  "@portraitCropScreenPrepareImageErrorMessage": {
+    "description": "Bandeau d'alerte inline quand la capture du cadre recadré échoue (`byteData == null`) — géré directement, sans passer par une `CharacterFailure` (évite d'embarquer un message figé en français dans une exception du domaine)."
+  },
+  "portraitCropScreenGenericErrorMessage": "Impossible d'envoyer le portrait. Réessayez.",
+  "@portraitCropScreenGenericErrorMessage": {
+    "description": "Bandeau d'alerte inline sur échec inattendu (pas une `CharacterFailure`) de `_submit`."
+  },
+  "characterAdventuresCardTitle": "AVENTURES",
+  "@characterAdventuresCardTitle": {
+    "description": "Titre de la carte \"Aventures\" de l'onglet \"Personnage\"."
+  },
+  "characterAdventuresCardGmLabel": "MJ : {gmName}",
+  "@characterAdventuresCardGmLabel": {
+    "description": "Sous-titre de `_AdventureRow` affiché quand `gmDisplayName` est renseigné (`gmName` est une donnée joueur, jamais traduite).",
+    "placeholders": {
+      "gmName": {
+        "type": "String"
+      }
+    }
+  },
+  "characterAdventuresCardLeaveTooltip": "Quitter l'histoire",
+  "@characterAdventuresCardLeaveTooltip": {
+    "description": "Tooltip de l'`IconButton` \"Quitter\" (`Icons.logout`) de `_AdventureRow`."
+  },
+  "characterAdventuresCardLeftMessage": "Tu as quitté {storyTitle}.",
+  "@characterAdventuresCardLeftMessage": {
+    "description": "SnackBar de confirmation de `_confirmAndLeave` (`storyTitle` est une donnée joueur, jamais traduite).",
+    "placeholders": {
+      "storyTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "characterAdventuresCardLeaveGenericErrorMessage": "Impossible de quitter cette histoire. Réessayez.",
+  "@characterAdventuresCardLeaveGenericErrorMessage": {
+    "description": "SnackBar d'échec de `_confirmAndLeave`."
+  },
+  "characterAdventuresCardLeaveConfirmationTitle": "Quitter « {storyTitle} » ?",
+  "@characterAdventuresCardLeaveConfirmationTitle": {
+    "description": "Titre de `showLeaveAdventureConfirmationDialog` (`storyTitle` est une donnée joueur, jamais traduite).",
+    "placeholders": {
+      "storyTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "characterAdventuresCardLeaveConfirmationMessage": "Ton personnage garde toutes ses données. Seul le lien avec cette histoire disparaît.",
+  "@characterAdventuresCardLeaveConfirmationMessage": {
+    "description": "Sous-titre de `showLeaveAdventureConfirmationDialog`."
+  },
+  "characterAdventuresCardLeaveConfirmationCancelButton": "Annuler",
+  "@characterAdventuresCardLeaveConfirmationCancelButton": {
+    "description": "`SecondaryButton` \"Annuler\" de `showLeaveAdventureConfirmationDialog`."
+  },
+  "characterAdventuresCardLeaveConfirmationConfirmButton": "Quitter",
+  "@characterAdventuresCardLeaveConfirmationConfirmButton": {
+    "description": "`DestructiveButton` \"Quitter\" de `showLeaveAdventureConfirmationDialog`."
   }
 }

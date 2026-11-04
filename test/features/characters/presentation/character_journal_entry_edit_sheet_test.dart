@@ -43,6 +43,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_journal_entry_edit_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class FakeRepository implements CharacterRepository {
   final Completer<void> gate = Completer<void>();
@@ -391,12 +392,18 @@ class FakeRepository implements CharacterRepository {
   }) => throw UnimplementedError();
 }
 
-Future<FakeRepository> _pumpSheet(WidgetTester tester) async {
+Future<FakeRepository> _pumpSheet(
+  WidgetTester tester, {
+  Locale locale = const Locale('fr'),
+}) async {
   final repository = FakeRepository();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [characterRepositoryProvider.overrideWithValue(repository)],
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -543,6 +550,9 @@ void main() {
       ProviderScope(
         overrides: [characterRepositoryProvider.overrideWithValue(repository)],
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('fr'),
           home: Builder(
             builder: (context) => Scaffold(
               body: Center(
@@ -570,4 +580,29 @@ void main() {
     expect(find.text('MODIFIER LA NOTE'), findsOneWidget);
     expect(find.text('Note existante.'), findsOneWidget);
   });
+
+  testWidgets(
+    'mode ajout : titre, placeholder, boutons et SnackBar de succès en '
+    'anglais',
+    (tester) async {
+      final repository = await _pumpSheet(tester, locale: const Locale('en'));
+
+      expect(find.text('ADD A NOTE'), findsOneWidget);
+      expect(find.text('Session note, notable event…'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextFormField), 'Loot found.');
+      await tester.tap(find.widgetWithText(SecondaryButton, 'CANCEL'));
+      await tester.pumpAndSettle();
+
+      expect(repository.addJournalEntryCallCount, 0);
+
+      final repository2 = await _pumpSheet(tester, locale: const Locale('en'));
+      await tester.enterText(find.byType(TextFormField), 'Loot found.');
+      await tester.tap(find.widgetWithText(PrimaryButton, 'SAVE'));
+      await tester.pumpAndSettle();
+
+      expect(repository2.addJournalEntryCallCount, 1);
+      expect(find.text('Note added.'), findsOneWidget);
+    },
+  );
 }
