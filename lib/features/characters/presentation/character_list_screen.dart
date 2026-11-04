@@ -14,6 +14,7 @@ import '../../../core/widgets/dashed_border_painter.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/secondary_button.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../app_update/presentation/widgets/update_suggested_banner.dart';
 import '../../character_creation/presentation/providers/character_creation_draft_provider.dart';
 import '../../character_creation/presentation/providers/character_edit_session_provider.dart';
@@ -29,7 +30,6 @@ import 'widgets/character_card_action_sheet.dart';
 import 'widgets/character_delete_confirmation.dart';
 import 'widgets/character_list_filter_sheet.dart';
 import 'widgets/character_selection_action_bar.dart';
-import 'widgets/character_write_feedback.dart';
 import 'widgets/connection_error_state.dart';
 
 /// Écran d'accueil listant les personnages du joueur connecté
@@ -192,6 +192,7 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   Future<void> _deleteSelectedCharacters(
     List<CharacterSummary> allCharacters,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final selected = allCharacters
         .where((character) => _selectedCharacterIds.contains(character.id))
         .toList();
@@ -259,33 +260,40 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
       // message plutôt qu'avec la promesse d'une synchronisation future.
       _showSnackBar(
         offlineFailureCount == failedIds.length
-            ? offlineNotPersistedMessage
-            : 'Impossible de supprimer les personnages sélectionnés. '
-                  'Réessayez.',
+            ? l10n.characterOfflineNotPersistedMessage
+            : l10n.characterListDeleteSelectionGenericError,
       );
       return;
     }
 
-    _showSnackBar(_partialDeleteMessage(succeededCount, failedIds.length));
+    _showSnackBar(
+      _partialDeleteMessage(l10n, succeededCount, failedIds.length),
+    );
   }
 
   /// "X personnage(s) supprimé(s), Y n'a/n'ont pas pu être supprimé(s)."
-  /// (spec de la tâche) — accords au singulier/pluriel plutôt qu'un gabarit
-  /// littéral "(s)", cohérent avec le reste de la copie de cet écran (voir
-  /// `CharacterSelectionActionBar._selectionCountLabel`, même principe à
-  /// trois formes).
-  String _partialDeleteMessage(int succeededCount, int failedCount) {
-    final succeededLabel = succeededCount == 1
-        ? '1 personnage supprimé'
-        : '$succeededCount personnages supprimés';
-    final failedLabel = failedCount == 1
-        ? "1 personnage n'a pas pu être supprimé"
-        : "$failedCount personnages n'ont pas pu être supprimés";
+  /// (spec de la tâche) — accords au singulier/pluriel via les messages ICU
+  /// `characterListDeleteSelectionSucceededLabel`/`...FailedLabel` plutôt
+  /// qu'un gabarit littéral "(s)", cohérent avec le reste de la copie de cet
+  /// écran (voir `CharacterSelectionActionBar`, même principe à plusieurs
+  /// formes).
+  String _partialDeleteMessage(
+    AppLocalizations l10n,
+    int succeededCount,
+    int failedCount,
+  ) {
+    final succeededLabel = l10n.characterListDeleteSelectionSucceededLabel(
+      succeededCount,
+    );
+    final failedLabel = l10n.characterListDeleteSelectionFailedLabel(
+      failedCount,
+    );
     return '$succeededLabel, $failedLabel.';
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final charactersAsync = ref.watch(charactersProvider);
 
     // Échec du chargement initial : écran dédié plein écran ("Connexion
@@ -418,14 +426,14 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
                       children: [
                         Expanded(
                           child: PrimaryButton(
-                            label: '+ Créer',
+                            label: l10n.characterListCreateButton,
                             onPressed: () => _startCreation(context, ref),
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: SecondaryButton(
-                            label: 'Importer XML',
+                            label: l10n.characterListImportXmlButton,
                             onPressed: () => _startXmlImport(context),
                           ),
                         ),
@@ -509,13 +517,9 @@ class _CharacterListScreenState extends ConsumerState<CharacterListScreen>
   }
 
   void _showImportError(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          "Impossible de lire ce fichier. Vérifiez qu'il s'agit bien d'un "
-          'export XML aidedd.org.',
-        ),
-      ),
+      SnackBar(content: Text(l10n.characterListImportErrorMessage)),
     );
   }
 }
@@ -525,11 +529,12 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'TES AVENTURIERS',
+          l10n.characterListHeaderTitle,
           style: AppTypography.display(
             fontSize: 15,
             color: AppColors.textOnWood,
@@ -586,6 +591,7 @@ class _SearchRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         Expanded(
@@ -593,12 +599,12 @@ class _SearchRow extends StatelessWidget {
             controller: controller,
             style: AppTypography.body(color: AppColors.textPrimary),
             decoration: InputDecoration(
-              hintText: 'Rechercher un personnage',
+              hintText: l10n.characterListSearchHint,
               prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
               suffixIcon: controller.text.isEmpty
                   ? null
                   : IconButton(
-                      tooltip: 'Effacer',
+                      tooltip: l10n.characterListSearchClearTooltip,
                       icon: const Icon(Icons.close, color: AppColors.textMuted),
                       onPressed: controller.clear,
                     ),
@@ -632,11 +638,12 @@ class _FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
       button: true,
       enabled: onTap != null,
-      label: 'Filtrer les personnages',
-      value: active ? 'Filtre actif' : null,
+      label: l10n.characterListFilterButtonLabel,
+      value: active ? l10n.characterListFilterButtonActiveValue : null,
       child: Material(
         color: AppColors.parchmentCard,
         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -712,10 +719,11 @@ class _SelectionModeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
       button: true,
       enabled: onTap != null,
-      label: 'Sélectionner plusieurs personnages',
+      label: l10n.characterListSelectionModeButtonLabel,
       child: Material(
         color: AppColors.parchmentCard,
         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -912,6 +920,7 @@ class _SearchEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -934,8 +943,10 @@ class _SearchEmptyState extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               query.isEmpty
-                  ? 'AUCUN RÉSULTAT'
-                  : 'AUCUN RÉSULTAT POUR « ${query.toUpperCase()} »',
+                  ? l10n.characterListSearchEmptyTitleNoQuery
+                  : l10n.characterListSearchEmptyTitleWithQuery(
+                      query.toUpperCase(),
+                    ),
               textAlign: TextAlign.center,
               style: AppTypography.display(
                 fontSize: 11,
@@ -945,10 +956,8 @@ class _SearchEmptyState extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               query.isEmpty
-                  ? "Aucun personnage ne correspond à ce filtre. Réinitialise "
-                        'pour retrouver tous tes personnages.'
-                  : "Vérifie l'orthographe, ou réinitialise la recherche pour "
-                        'retrouver tous tes personnages.',
+                  ? l10n.characterListSearchEmptyBodyNoQuery
+                  : l10n.characterListSearchEmptyBodyWithQuery,
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textOnWoodMuted),
             ),
@@ -956,7 +965,7 @@ class _SearchEmptyState extends StatelessWidget {
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 220),
               child: SecondaryButton(
-                label: 'Réinitialiser',
+                label: l10n.characterListSearchEmptyResetButton,
                 onPressed: onReset,
               ),
             ),
@@ -983,6 +992,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -1008,7 +1018,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'AUCUN AVENTURIER POUR L\'INSTANT',
+              l10n.characterListEmptyTitle,
               textAlign: TextAlign.center,
               style: AppTypography.display(
                 fontSize: 11,
@@ -1020,8 +1030,7 @@ class _EmptyState extends StatelessWidget {
               // "ou rejoins l'histoire d'un ami" volontairement retiré :
               // voir le commentaire sur le masquage du bouton "Rejoindre
               // une histoire" plus haut dans ce fichier (`build`).
-              'Crée ton premier personnage, ou importe-le depuis aidedd.org, '
-              'pour commencer l\'aventure.',
+              l10n.characterListEmptyBody,
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textOnWoodMuted),
             ),

@@ -9,11 +9,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_delete_confirmation.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
-Future<bool?> _openSingle(WidgetTester tester, {required String name}) async {
+Future<bool?> _openSingle(
+  WidgetTester tester, {
+  required String name,
+  Locale locale = const Locale('fr'),
+}) async {
   bool? result;
   await tester.pumpWidget(
     MaterialApp(
+      // Les deux dialogues lisent `AppLocalizations.of(context)!` (chantier
+      // "traduction de l'app" Phase B, lot "Characters — liste") : sans ces
+      // delegates, l'appel renverrait `null` et le `!` planterait. `fr` par
+      // défaut, `en` passé explicitement par le groupe "locale anglaise"
+      // plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(
         body: Builder(
           builder: (context) => ElevatedButton(
@@ -34,10 +47,17 @@ Future<bool?> _openSingle(WidgetTester tester, {required String name}) async {
   return result;
 }
 
-Future<bool?> _openMultiple(WidgetTester tester, {required int count}) async {
+Future<bool?> _openMultiple(
+  WidgetTester tester, {
+  required int count,
+  Locale locale = const Locale('fr'),
+}) async {
   bool? result;
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(
         body: Builder(
           builder: (context) => ElevatedButton(
@@ -86,6 +106,9 @@ void main() {
     testWidgets('"Supprimer" confirme en retournant true', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('fr'),
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -150,6 +173,9 @@ void main() {
     testWidgets('confirmer retourne true', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('fr'),
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -178,6 +204,34 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Confirmé'), findsOneWidget);
+    });
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que `login_screen_test.dart`/`profile_screen_test.dart`
+    // (chantier "traduction de l'app" Phase B) : vérifie qu'un texte anglais
+    // s'affiche réellement, pas seulement que le dialogue ne plante pas.
+    testWidgets('dialogue singulier en anglais', (tester) async {
+      await _openSingle(
+        tester,
+        name: 'Halltesse Ambrelune',
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('Delete Halltesse Ambrelune?'), findsOneWidget);
+      expect(find.textContaining('This action is permanent'), findsOneWidget);
+      // `SecondaryButton` met son libellé en majuscules à l'affichage
+      // (`core/widgets/secondary_button.dart`), contrairement à
+      // `DestructiveButton` (variant par défaut non `filled`).
+      expect(find.text('CANCEL'), findsOneWidget);
+      expect(find.text('Delete'), findsOneWidget);
+    });
+
+    testWidgets('dialogue pluriel en anglais', (tester) async {
+      await _openMultiple(tester, count: 4, locale: const Locale('en'));
+
+      expect(find.text('Delete these 4 characters?'), findsOneWidget);
+      expect(find.text('Delete (4)'), findsOneWidget);
     });
   });
 }

@@ -51,6 +51,7 @@ import 'package:personnages/features/characters/presentation/character_list_scre
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_card.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterRepository implements CharacterRepository {
   int fetchCallCount = 0;
@@ -661,6 +662,7 @@ void main() {
   Widget buildTestWidget({
     RouteObserver<PageRoute<dynamic>>? routeObserver,
     AppVersionRepository? appVersionRepository,
+    Locale locale = const Locale('fr'),
   }) {
     final observer = routeObserver ?? RouteObserver<PageRoute<dynamic>>();
     return ProviderScope(
@@ -673,6 +675,14 @@ void main() {
         ),
       ],
       child: MaterialApp.router(
+        // `CharacterListScreen` et ses widgets de liste lisent
+        // `AppLocalizations.of(context)!` (chantier "traduction de l'app"
+        // Phase B, lot "Characters — liste") : sans ces delegates, l'appel
+        // renverrait `null` et le `!` planterait. `fr` par défaut, `en`
+        // passé explicitement par le groupe "locale anglaise" plus bas.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         routerConfig: buildTestRouter(observers: [observer]),
       ),
     );
@@ -1082,7 +1092,12 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(routerConfig: buildTestRouter()),
+          child: MaterialApp.router(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('fr'),
+            routerConfig: buildTestRouter(),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -2189,5 +2204,87 @@ void main() {
         expect(find.text('1 personnage sélectionné'), findsOneWidget);
       },
     );
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que `login_screen_test.dart`/`profile_screen_test.dart`
+    // (chantier "traduction de l'app" Phase B) : vérifie qu'un texte anglais
+    // s'affiche réellement, pas seulement que l'écran ne plante pas.
+    // Échantillon représentatif plutôt qu'exhaustif (en-tête, recherche,
+    // état vide, carte, sheet de filtre) — chaque widget a déjà sa propre
+    // couverture anglaise dédiée dans son fichier de test.
+    testWidgets('en-tête, barre de recherche et carte personnage en anglais', (
+      tester,
+    ) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(
+          id: '1',
+          name: 'Halltesse Ambrelune',
+          className: 'Magicienne',
+          level: 5,
+          xp: 7000,
+        ),
+      ];
+
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('YOUR ADVENTURERS'), findsOneWidget);
+      expect(
+        find.widgetWithText(TextField, 'Search for a character'),
+        findsOneWidget,
+      );
+      expect(find.text('Magicienne · Lvl. 5'), findsOneWidget);
+    });
+
+    testWidgets('état vide "aucun personnage" en anglais', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [];
+
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('NO ADVENTURERS YET'), findsOneWidget);
+      expect(
+        find.textContaining('Create your first character'),
+        findsOneWidget,
+      );
+      expect(find.text('+ CREATE'), findsOneWidget);
+      expect(find.text('IMPORT XML'), findsOneWidget);
+    });
+
+    testWidgets('sheet de filtre en anglais', (tester) async {
+      fakeCharacterRepository.charactersToReturn = const [
+        CharacterSummary(
+          id: '1',
+          name: 'Halltesse Ambrelune',
+          className: 'Magicien',
+          level: 5,
+          xp: 7000,
+        ),
+      ];
+
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(_filterButton());
+      await tester.pumpAndSettle();
+
+      expect(find.text('FILTER'), findsOneWidget);
+      expect(find.text('STATUS'), findsOneWidget);
+      expect(find.text('Alive'), findsOneWidget);
+      expect(find.text('Archived'), findsOneWidget);
+      expect(find.text('Dead'), findsOneWidget);
+    });
+
+    testWidgets('écran "Connexion impossible" en anglais', (tester) async {
+      fakeCharacterRepository.errorToThrow = const CharacterFailure('boom');
+
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('CONNECTION'), findsOneWidget);
+      expect(find.text('Connection failed'), findsOneWidget);
+      expect(find.text('Continue offline'), findsOneWidget);
+    });
   });
 }

@@ -10,6 +10,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/rules/spell_status.dart';
@@ -670,7 +671,20 @@ void main() {
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeRepository),
       ],
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        // `showDeleteCharacterConfirmationDialog`
+        // (`widgets/character_delete_confirmation.dart`) lit désormais
+        // `AppLocalizations.of(context)!` (chantier "traduction de l'app"
+        // Phase B, lot "Characters — liste") : sans ces delegates, l'appel
+        // renverrait `null` et le `!` planterait. Reste en français (langue
+        // par défaut de l'environnement `flutter test` non forcée ici) :
+        // ce fichier ne couvre pas lui-même la locale anglaise, cette
+        // responsabilité reste à `character_delete_confirmation_test.dart`.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 

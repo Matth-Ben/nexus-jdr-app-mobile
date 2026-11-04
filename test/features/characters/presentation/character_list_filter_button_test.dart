@@ -24,6 +24,7 @@ import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/presentation/character_list_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 /// Seule `fetchCharacters` est utilisée ici ; toute autre méthode échoue
 /// bruyamment via `noSuchMethod`.
@@ -127,6 +128,13 @@ void main() {
         ),
       ],
       child: MaterialApp.router(
+        // `CharacterListScreen` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B, lot "Characters —
+        // liste") : sans ces delegates, l'appel renverrait `null` et le
+        // `!` planterait.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         routerConfig: GoRouter(
           observers: [observer],
           routes: [

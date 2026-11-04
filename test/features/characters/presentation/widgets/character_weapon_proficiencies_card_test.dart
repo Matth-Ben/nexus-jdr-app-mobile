@@ -4,11 +4,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_weapon_proficiencies_card.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('affiche un chip par token', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        // `CharacterNameTagChip` (chaque token) lit
+        // `AppLocalizations.of(context)!` quand `onTap` est fourni
+        // (chantier "traduction de l'app" Phase B, lot "Characters —
+        // liste") : sans ces delegates, l'appel renverrait `null` et le
+        // `!` planterait.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: CharacterWeaponProficienciesCard(
             names: const ['courantes', 'martiales'],
@@ -29,6 +37,8 @@ void main() {
     final tapped = <String>[];
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: CharacterWeaponProficienciesCard(
             names: const ['courantes', 'dagues'],
@@ -52,6 +62,8 @@ void main() {
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: CharacterWeaponProficienciesCard(
               names: const ['courantes', 'martiales'],

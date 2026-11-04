@@ -19,6 +19,7 @@ import 'package:personnages/features/characters/domain/character_skill_row.dart'
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_skills_tab_body.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 CharacterDetail _detail({
   List<CharacterDetailClassRow> classes = const [],
@@ -64,6 +65,13 @@ CharacterDetail _detail({
 Future<void> _pump(WidgetTester tester, CharacterDetail detail) async {
   await tester.pumpWidget(
     MaterialApp(
+      // `CharacterNameTagChip` (via les cartes "Outils"/"Langues", voir
+      // `character_skills_tab_body.dart`) lit `AppLocalizations.of(context)!`
+      // quand `onTap` est fourni (chantier "traduction de l'app" Phase B,
+      // lot "Characters — liste") : sans ces delegates, l'appel renverrait
+      // `null` et le `!` planterait.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: CharacterSkillsTabBody(detail: detail, onUseFeature: (_) {}),
       ),
@@ -372,6 +380,8 @@ void main() {
       var used = false;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: CharacterSkillsTabBody(
               detail: _detail(

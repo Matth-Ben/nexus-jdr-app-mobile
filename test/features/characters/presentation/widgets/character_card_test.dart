@@ -11,6 +11,7 @@ import 'package:personnages/core/widgets/portrait_frame.dart';
 import 'package:personnages/core/widgets/selection_checkbox.dart';
 import 'package:personnages/features/characters/domain/character_summary.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_card.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 const _baseSummary = CharacterSummary(
   id: '1',
@@ -28,9 +29,18 @@ Future<void> _pump(
   bool selected = false,
   VoidCallback? onTap,
   VoidCallback? onLongPress,
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      // `CharacterCard` lit `AppLocalizations.of(context)!` (chantier
+      // "traduction de l'app" Phase B, lot "Characters — liste") : sans ces
+      // delegates, l'appel renverrait `null` et le `!` planterait. `fr` par
+      // défaut, `en` passé explicitement par le groupe "locale anglaise"
+      // plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(
         body: CharacterCard(
           character: character,
@@ -416,5 +426,31 @@ void main() {
         expect(toggleCount, 2);
       },
     );
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que `login_screen_test.dart`/`profile_screen_test.dart`
+    // (chantier "traduction de l'app" Phase B) : vérifie qu'un texte anglais
+    // s'affiche réellement, pas seulement que le widget ne plante pas.
+    testWidgets(
+      'affiche le résumé ("Lvl. X"), les badges et le libellé XP en anglais',
+      (tester) async {
+        await _pump(
+          tester,
+          _baseSummary.copyWith(isArchived: true, isDead: true),
+          locale: const Locale('en'),
+        );
+
+        expect(find.text('Elfe · Magicienne · Lvl. 5'), findsOneWidget);
+        expect(find.text('ARCHIVED'), findsOneWidget);
+        expect(find.text('DEAD'), findsOneWidget);
+      },
+    );
+
+    testWidgets('jauge XP : libellé "XP" identique en anglais', (tester) async {
+      await _pump(tester, _baseSummary, locale: const Locale('en'));
+
+      expect(find.text('XP'), findsOneWidget);
+    });
   });
 }

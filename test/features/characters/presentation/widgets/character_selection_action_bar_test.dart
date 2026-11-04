@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_selection_action_bar.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 Future<void> _pump(
   WidgetTester tester, {
@@ -11,9 +12,18 @@ Future<void> _pump(
   VoidCallback? onCancel,
   VoidCallback? onDelete,
   bool isDeleting = false,
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.pumpWidget(
     MaterialApp(
+      // `CharacterSelectionActionBar` lit `AppLocalizations.of(context)!`
+      // (chantier "traduction de l'app" Phase B, lot "Characters — liste")
+      // : sans ces delegates, l'appel renverrait `null` et le `!`
+      // planterait. `fr` par défaut, `en` passé explicitement par le
+      // groupe "locale anglaise" plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(
         body: Align(
           alignment: Alignment.bottomCenter,
@@ -107,4 +117,40 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     },
   );
+
+  group('locale anglaise', () {
+    // Même rationale que `login_screen_test.dart`/`profile_screen_test.dart`
+    // (chantier "traduction de l'app" Phase B) : vérifie qu'un texte anglais
+    // s'affiche réellement, pas seulement que le widget ne plante pas.
+    testWidgets('libellé central et boutons "Cancel"/"DELETE" en anglais', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        selectedCount: 3,
+        onDelete: () {},
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('3 characters selected'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.text('DELETE'), findsOneWidget);
+    });
+
+    testWidgets('0 sélection en anglais : "No character selected"', (
+      tester,
+    ) async {
+      await _pump(tester, selectedCount: 0, locale: const Locale('en'));
+
+      expect(find.text('No character selected'), findsOneWidget);
+    });
+
+    testWidgets('1 sélection en anglais : singulier "1 character selected"', (
+      tester,
+    ) async {
+      await _pump(tester, selectedCount: 1, locale: const Locale('en'));
+
+      expect(find.text('1 character selected'), findsOneWidget);
+    });
+  });
 }

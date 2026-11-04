@@ -6,9 +6,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_name_tag_chip.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
-Future<void> _pump(WidgetTester tester, Widget chip) {
-  return tester.pumpWidget(MaterialApp(home: Scaffold(body: chip)));
+Future<void> _pump(
+  WidgetTester tester,
+  Widget chip, {
+  Locale locale = const Locale('fr'),
+}) {
+  return tester.pumpWidget(
+    MaterialApp(
+      // `CharacterNameTagChip` lit `AppLocalizations.of(context)!` quand
+      // `onTap` est fourni (chantier "traduction de l'app" Phase B, lot
+      // "Characters — liste") : sans ces delegates, l'appel renverrait
+      // `null` et le `!` planterait. `fr` par défaut, `en` passé
+      // explicitement par le groupe "locale anglaise" plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
+      home: Scaffold(body: chip),
+    ),
+  );
 }
 
 void main() {
@@ -59,5 +76,31 @@ void main() {
       ),
     );
     handle.dispose();
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que `login_screen_test.dart`/`profile_screen_test.dart`
+    // (chantier "traduction de l'app" Phase B) : vérifie qu'un texte anglais
+    // s'affiche réellement, pas seulement que le widget ne plante pas.
+    testWidgets('sémantique bouton avec le libellé attendu en anglais', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pump(
+        tester,
+        CharacterNameTagChip(name: 'boucliers', onTap: () {}),
+        locale: const Locale('en'),
+      );
+
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('boucliers, view details')),
+        matchesSemantics(
+          isButton: true,
+          hasTapAction: true,
+          label: 'boucliers, view details',
+        ),
+      );
+      handle.dispose();
+    });
   });
 }

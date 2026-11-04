@@ -1074,4 +1074,236 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get profileReportBugAttachedImageSemanticLabel =>
       'Attached screenshot';
+
+  @override
+  String characterLevelAbbreviation(int level) {
+    return 'Lvl. $level';
+  }
+
+  @override
+  String get characterOfflineNotPersistedMessage =>
+      'Offline: this action couldn\'t be saved. Try again once you\'re back online.';
+
+  @override
+  String get characterAccessDeniedErrorMessage =>
+      'You don\'t have access to these characters.';
+
+  @override
+  String get characterNetworkErrorMessage =>
+      'Couldn\'t reach the server. Check your internet connection and try again.';
+
+  @override
+  String get characterListHeaderTitle => 'YOUR ADVENTURERS';
+
+  @override
+  String get characterListSearchHint => 'Search for a character';
+
+  @override
+  String get characterListSearchClearTooltip => 'Clear';
+
+  @override
+  String get characterListFilterButtonLabel => 'Filter characters';
+
+  @override
+  String get characterListFilterButtonActiveValue => 'Filter active';
+
+  @override
+  String get characterListSelectionModeButtonLabel =>
+      'Select multiple characters';
+
+  @override
+  String get characterListCreateButton => '+ Create';
+
+  @override
+  String get characterListImportXmlButton => 'Import XML';
+
+  @override
+  String get characterListImportErrorMessage =>
+      'Couldn\'t read this file. Make sure it\'s really an aidedd.org XML export.';
+
+  @override
+  String get characterListSearchEmptyTitleNoQuery => 'NO RESULTS';
+
+  @override
+  String characterListSearchEmptyTitleWithQuery(String query) {
+    return 'NO RESULTS FOR “$query”';
+  }
+
+  @override
+  String get characterListSearchEmptyBodyNoQuery =>
+      'No character matches this filter. Reset it to see all your characters again.';
+
+  @override
+  String get characterListSearchEmptyBodyWithQuery =>
+      'Check the spelling, or reset the search to see all your characters again.';
+
+  @override
+  String get characterListSearchEmptyResetButton => 'Reset';
+
+  @override
+  String get characterListEmptyTitle => 'NO ADVENTURERS YET';
+
+  @override
+  String get characterListEmptyBody =>
+      'Create your first character, or import one from aidedd.org, to start the adventure.';
+
+  @override
+  String get characterListDeleteSelectionGenericError =>
+      'Couldn\'t delete the selected characters. Try again.';
+
+  @override
+  String characterListDeleteSelectionSucceededLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count characters deleted',
+      one: '1 character deleted',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String characterListDeleteSelectionFailedLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count characters couldn\'t be deleted',
+      one: '1 character couldn\'t be deleted',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get characterListFilterSheetTitle => 'FILTER';
+
+  @override
+  String get characterListFilterSheetStatusSection => 'STATUS';
+
+  @override
+  String get characterListFilterSheetClassSection => 'CLASS';
+
+  @override
+  String get characterListFilterSheetResetButton => 'Reset';
+
+  @override
+  String get characterListFilterSheetApplyButton => 'Apply';
+
+  @override
+  String get characterListFilterSheetStatusAlive => 'Alive';
+
+  @override
+  String get characterListFilterSheetStatusArchived => 'Archived';
+
+  @override
+  String get characterListFilterSheetStatusDead => 'Dead';
+
+  @override
+  String get characterCardArchivedBadge => 'ARCHIVED';
+
+  @override
+  String get characterCardDeadBadge => 'DEAD';
+
+  @override
+  String get characterCardXpLabel => 'XP';
+
+  @override
+  String get characterCardActionSheetEdit => 'Edit';
+
+  @override
+  String get characterCardActionSheetShare => 'Share';
+
+  @override
+  String get characterCardActionSheetArchive => 'Archive this character';
+
+  @override
+  String get characterCardActionSheetUnarchive => 'Unarchive';
+
+  @override
+  String get characterCardActionSheetMarkDead => 'Mark as dead';
+
+  @override
+  String get characterCardActionSheetRevive => 'Revive';
+
+  @override
+  String get characterCardActionSheetDelete => 'Delete character';
+
+  @override
+  String get characterCardActionSheetUpdateStatusGenericError =>
+      'Couldn\'t update the status. Try again.';
+
+  @override
+  String get characterCardActionSheetDeleteGenericError =>
+      'Couldn\'t delete the character. Try again.';
+
+  @override
+  String characterDeleteConfirmationSingleTitle(String characterName) {
+    return 'Delete $characterName?';
+  }
+
+  @override
+  String get characterDeleteConfirmationBody =>
+      'This action is permanent: the character and all their data (spells, inventory, history...) will be permanently deleted.';
+
+  @override
+  String characterDeleteConfirmationMultipleTitle(int count) {
+    return 'Delete these $count characters?';
+  }
+
+  @override
+  String get characterDeleteConfirmationMultipleBody =>
+      'This action is permanent: the characters and all their data (spells, inventory, history...) will be permanently deleted.';
+
+  @override
+  String get characterDeleteConfirmationCancelButton => 'Cancel';
+
+  @override
+  String get characterDeleteConfirmationConfirmButton => 'Delete';
+
+  @override
+  String characterDeleteConfirmationMultipleConfirmButton(int count) {
+    return 'Delete ($count)';
+  }
+
+  @override
+  String characterSelectionActionBarSelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count characters selected',
+      one: '1 character selected',
+      zero: 'No character selected',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get characterSelectionActionBarCancelButton => 'Cancel';
+
+  @override
+  String get characterSelectionActionBarDeleteButton => 'Delete';
+
+  @override
+  String characterNameTagChipSemanticLabel(String name) {
+    return '$name, view details';
+  }
+
+  @override
+  String get connectionErrorStateBannerTitle => 'CONNECTION';
+
+  @override
+  String get connectionErrorStateTitle => 'Connection failed';
+
+  @override
+  String get connectionErrorStateBody =>
+      'Check your internet connection and try again. Your characters remain available offline — changes will sync automatically once you\'re back online.';
+
+  @override
+  String get connectionErrorStateRetryButton => 'Retry';
+
+  @override
+  String get connectionErrorStateContinueOfflineLabel => 'Continue offline';
+
+  @override
+  String get connectionErrorStateContinueOfflineTooltip =>
+      'Coming soon: offline reading of your characters is coming in an upcoming update. For now, a connection is required to load your characters.';
 }

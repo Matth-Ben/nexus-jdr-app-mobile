@@ -1091,4 +1091,236 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get profileReportBugAttachedImageSemanticLabel =>
       'Capture d\'écran jointe';
+
+  @override
+  String characterLevelAbbreviation(int level) {
+    return 'Niv. $level';
+  }
+
+  @override
+  String get characterOfflineNotPersistedMessage =>
+      'Hors ligne : cette action n\'a pas pu être enregistrée. Réessayez une fois reconnecté.';
+
+  @override
+  String get characterAccessDeniedErrorMessage =>
+      'Vous n\'avez pas accès à ces personnages.';
+
+  @override
+  String get characterNetworkErrorMessage =>
+      'Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.';
+
+  @override
+  String get characterListHeaderTitle => 'TES AVENTURIERS';
+
+  @override
+  String get characterListSearchHint => 'Rechercher un personnage';
+
+  @override
+  String get characterListSearchClearTooltip => 'Effacer';
+
+  @override
+  String get characterListFilterButtonLabel => 'Filtrer les personnages';
+
+  @override
+  String get characterListFilterButtonActiveValue => 'Filtre actif';
+
+  @override
+  String get characterListSelectionModeButtonLabel =>
+      'Sélectionner plusieurs personnages';
+
+  @override
+  String get characterListCreateButton => '+ Créer';
+
+  @override
+  String get characterListImportXmlButton => 'Importer XML';
+
+  @override
+  String get characterListImportErrorMessage =>
+      'Impossible de lire ce fichier. Vérifiez qu\'il s\'agit bien d\'un export XML aidedd.org.';
+
+  @override
+  String get characterListSearchEmptyTitleNoQuery => 'AUCUN RÉSULTAT';
+
+  @override
+  String characterListSearchEmptyTitleWithQuery(String query) {
+    return 'AUCUN RÉSULTAT POUR « $query »';
+  }
+
+  @override
+  String get characterListSearchEmptyBodyNoQuery =>
+      'Aucun personnage ne correspond à ce filtre. Réinitialise pour retrouver tous tes personnages.';
+
+  @override
+  String get characterListSearchEmptyBodyWithQuery =>
+      'Vérifie l\'orthographe, ou réinitialise la recherche pour retrouver tous tes personnages.';
+
+  @override
+  String get characterListSearchEmptyResetButton => 'Réinitialiser';
+
+  @override
+  String get characterListEmptyTitle => 'AUCUN AVENTURIER POUR L\'INSTANT';
+
+  @override
+  String get characterListEmptyBody =>
+      'Crée ton premier personnage, ou importe-le depuis aidedd.org, pour commencer l\'aventure.';
+
+  @override
+  String get characterListDeleteSelectionGenericError =>
+      'Impossible de supprimer les personnages sélectionnés. Réessayez.';
+
+  @override
+  String characterListDeleteSelectionSucceededLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnages supprimés',
+      one: '1 personnage supprimé',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String characterListDeleteSelectionFailedLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnages n\'ont pas pu être supprimés',
+      one: '1 personnage n\'a pas pu être supprimé',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get characterListFilterSheetTitle => 'FILTRER';
+
+  @override
+  String get characterListFilterSheetStatusSection => 'STATUT';
+
+  @override
+  String get characterListFilterSheetClassSection => 'CLASSE';
+
+  @override
+  String get characterListFilterSheetResetButton => 'Réinitialiser';
+
+  @override
+  String get characterListFilterSheetApplyButton => 'Appliquer';
+
+  @override
+  String get characterListFilterSheetStatusAlive => 'Vivants';
+
+  @override
+  String get characterListFilterSheetStatusArchived => 'Archivé';
+
+  @override
+  String get characterListFilterSheetStatusDead => 'Mort';
+
+  @override
+  String get characterCardArchivedBadge => 'ARCHIVÉ';
+
+  @override
+  String get characterCardDeadBadge => 'MORT';
+
+  @override
+  String get characterCardXpLabel => 'XP';
+
+  @override
+  String get characterCardActionSheetEdit => 'Modifier';
+
+  @override
+  String get characterCardActionSheetShare => 'Partager';
+
+  @override
+  String get characterCardActionSheetArchive => 'Archiver ce personnage';
+
+  @override
+  String get characterCardActionSheetUnarchive => 'Désarchiver';
+
+  @override
+  String get characterCardActionSheetMarkDead => 'Marquer comme mort';
+
+  @override
+  String get characterCardActionSheetRevive => 'Ressusciter';
+
+  @override
+  String get characterCardActionSheetDelete => 'Supprimer le personnage';
+
+  @override
+  String get characterCardActionSheetUpdateStatusGenericError =>
+      'Impossible de mettre à jour le statut. Réessayez.';
+
+  @override
+  String get characterCardActionSheetDeleteGenericError =>
+      'Impossible de supprimer le personnage. Réessayez.';
+
+  @override
+  String characterDeleteConfirmationSingleTitle(String characterName) {
+    return 'Supprimer $characterName ?';
+  }
+
+  @override
+  String get characterDeleteConfirmationBody =>
+      'Cette action est définitive : le personnage et toutes ses données (sorts, inventaire, historique...) seront irrémédiablement supprimés.';
+
+  @override
+  String characterDeleteConfirmationMultipleTitle(int count) {
+    return 'Supprimer ces $count personnages ?';
+  }
+
+  @override
+  String get characterDeleteConfirmationMultipleBody =>
+      'Cette action est définitive : les personnages et toutes leurs données (sorts, inventaire, historique...) seront irrémédiablement supprimés.';
+
+  @override
+  String get characterDeleteConfirmationCancelButton => 'Annuler';
+
+  @override
+  String get characterDeleteConfirmationConfirmButton => 'Supprimer';
+
+  @override
+  String characterDeleteConfirmationMultipleConfirmButton(int count) {
+    return 'Supprimer ($count)';
+  }
+
+  @override
+  String characterSelectionActionBarSelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count personnages sélectionnés',
+      one: '1 personnage sélectionné',
+      zero: 'Aucun personnage sélectionné',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get characterSelectionActionBarCancelButton => 'Annuler';
+
+  @override
+  String get characterSelectionActionBarDeleteButton => 'Supprimer';
+
+  @override
+  String characterNameTagChipSemanticLabel(String name) {
+    return '$name, voir le détail';
+  }
+
+  @override
+  String get connectionErrorStateBannerTitle => 'CONNEXION';
+
+  @override
+  String get connectionErrorStateTitle => 'Connexion impossible';
+
+  @override
+  String get connectionErrorStateBody =>
+      'Vérifie ta connexion internet et réessaie. Tes personnages restent disponibles hors ligne — les modifications se synchroniseront automatiquement dès le retour du réseau.';
+
+  @override
+  String get connectionErrorStateRetryButton => 'Réessayer';
+
+  @override
+  String get connectionErrorStateContinueOfflineLabel => 'Continuer hors ligne';
+
+  @override
+  String get connectionErrorStateContinueOfflineTooltip =>
+      'Bientôt disponible : la lecture hors ligne de tes personnages arrive avec une prochaine mise à jour. Pour l\'instant, une connexion est nécessaire pour charger tes personnages.';
 }
