@@ -10,10 +10,44 @@ import '../../../core/widgets/google_g_logo.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/scene_scaffold.dart';
 import '../../../core/widgets/social_auth_button.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/auth_failure.dart';
 import '../domain/auth_validators.dart';
 import 'providers/auth_providers.dart';
 import 'widgets/forgot_password_dialog.dart';
+
+/// Résout le texte final d'une [AuthFailure] à afficher à l'écran.
+///
+/// Voir la doc de classe d'[AuthErrorCode] (`domain/auth_failure.dart`) pour
+/// le choix architectural : [AuthFailure.code] est résolu ici via
+/// [AppLocalizations] pour les codes connus, [AuthFailure.message] (déjà
+/// construit par `data/auth_error_mapper.dart`, ou fourni directement par
+/// `AuthRepository`/les tests) reste utilisé tel quel pour
+/// [AuthErrorCode.generic] — notamment le repli volontaire sur le message
+/// brut de Supabase quand aucun code stable n'est exploitable (voir
+/// `mapAuthException`).
+String _resolveAuthFailureMessage(AppLocalizations l10n, AuthFailure failure) {
+  switch (failure.code) {
+    case AuthErrorCode.invalidCredentials:
+      return l10n.authErrorInvalidCredentials;
+    case AuthErrorCode.emailAlreadyExists:
+      return l10n.authErrorEmailAlreadyExists;
+    case AuthErrorCode.weakPassword:
+      return l10n.authErrorWeakPassword(AuthValidators.minPasswordLength);
+    case AuthErrorCode.emailNotConfirmed:
+      return l10n.authErrorEmailNotConfirmed;
+    case AuthErrorCode.invalidEmail:
+      return l10n.authErrorInvalidEmail;
+    case AuthErrorCode.tooManyRequests:
+      return l10n.authErrorTooManyRequests;
+    case AuthErrorCode.network:
+      return l10n.authErrorNetwork;
+    case AuthErrorCode.browserLaunchFailed:
+      return l10n.authErrorBrowserLaunchFailed;
+    case AuthErrorCode.generic:
+      return failure.message;
+  }
+}
 
 /// Mode du formulaire : connexion ou inscription, basculés sur un même
 /// écran (voir maquette `00_connexion.png`) plutôt que deux écrans séparés.
@@ -141,12 +175,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } on AuthFailure catch (failure) {
       if (!mounted) return;
-      setState(() => _errorMessage = failure.message);
+      final l10n = AppLocalizations.of(context)!;
+      setState(() => _errorMessage = _resolveAuthFailureMessage(l10n, failure));
     } catch (_) {
       if (!mounted) return;
-      setState(
-        () => _errorMessage = 'Une erreur inattendue est survenue. Réessayez.',
-      );
+      final l10n = AppLocalizations.of(context)!;
+      setState(() => _errorMessage = l10n.authErrorUnexpected);
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -169,12 +203,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref.read(authRepositoryProvider).signInWithGoogle();
     } on AuthFailure catch (failure) {
       if (!mounted) return;
-      setState(() => _errorMessage = failure.message);
+      final l10n = AppLocalizations.of(context)!;
+      setState(() => _errorMessage = _resolveAuthFailureMessage(l10n, failure));
     } catch (_) {
       if (!mounted) return;
-      setState(
-        () => _errorMessage = 'Une erreur inattendue est survenue. Réessayez.',
-      );
+      final l10n = AppLocalizations.of(context)!;
+      setState(() => _errorMessage = l10n.authErrorUnexpected);
     } finally {
       if (mounted) {
         setState(() => _isGoogleSubmitting = false);
@@ -201,12 +235,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref.read(authRepositoryProvider).signInWithApple();
     } on AuthFailure catch (failure) {
       if (!mounted) return;
-      setState(() => _errorMessage = failure.message);
+      final l10n = AppLocalizations.of(context)!;
+      setState(() => _errorMessage = _resolveAuthFailureMessage(l10n, failure));
     } catch (_) {
       if (!mounted) return;
-      setState(
-        () => _errorMessage = 'Une erreur inattendue est survenue. Réessayez.',
-      );
+      final l10n = AppLocalizations.of(context)!;
+      setState(() => _errorMessage = l10n.authErrorUnexpected);
     } finally {
       if (mounted) {
         setState(() => _isAppleSubmitting = false);
@@ -217,6 +251,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final showAppleButton = ref.watch(appleSignInSupportedProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return SceneScaffold(
       body: SafeArea(
@@ -235,7 +270,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const AppBrandBadge(size: 72),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'NEXUS JDR',
+                    l10n.authLoginBrandTitle,
                     style: AppTypography.display(
                       fontSize: 15,
                       color: AppColors.textOnWood,
@@ -243,11 +278,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Le registre des aventuriers',
+                    l10n.authLoginTagline,
                     style: AppTypography.body(color: AppColors.textOnWoodMuted),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _AuthCard(
+                    l10n: l10n,
                     formKey: _formKey,
                     isSignUp: _isSignUp,
                     isSubmitting: _isSubmitting,
@@ -269,7 +305,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
-                    "Même compte que l'app Histoires",
+                    l10n.authLoginSharedAccountNotice,
                     style: AppTypography.body(
                       fontSize: 12,
                       color: AppColors.textOnWoodMuted,
@@ -292,6 +328,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 /// [PrimaryButton]/[SceneScaffold]).
 class _AuthCard extends StatelessWidget {
   const _AuthCard({
+    required this.l10n,
     required this.formKey,
     required this.isSignUp,
     required this.isSubmitting,
@@ -312,6 +349,7 @@ class _AuthCard extends StatelessWidget {
     required this.onBackToLogin,
   });
 
+  final AppLocalizations l10n;
   final GlobalKey<FormState> formKey;
   final bool isSignUp;
   final bool isSubmitting;
@@ -396,6 +434,7 @@ class _AuthCard extends StatelessWidget {
           ),
           child: signUpConfirmationEmail != null
               ? _SignUpConfirmationView(
+                  l10n: l10n,
                   email: signUpConfirmationEmail!,
                   onBackToLogin: onBackToLogin,
                 )
@@ -407,7 +446,9 @@ class _AuthCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        isSignUp ? 'CRÉER UN COMPTE' : 'ENTRER DANS LA TAVERNE',
+                        isSignUp
+                            ? l10n.authLoginCardTitleSignUp
+                            : l10n.authLoginCardTitleLogin,
                         textAlign: TextAlign.center,
                         style: AppTypography.display(
                           fontSize: 11,
@@ -415,7 +456,7 @@ class _AuthCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      _FieldLabel('Adresse e-mail'),
+                      _FieldLabel(l10n.authLoginEmailLabel),
                       const SizedBox(height: AppSpacing.xs),
                       TextFormField(
                         controller: emailController,
@@ -423,13 +464,13 @@ class _AuthCard extends StatelessWidget {
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
                         autocorrect: false,
-                        decoration: const InputDecoration(
-                          hintText: 'nom@exemple.com',
+                        decoration: InputDecoration(
+                          hintText: l10n.authLoginEmailHint,
                         ),
-                        validator: AuthValidators.email,
+                        validator: (value) => AuthValidators.email(value, l10n),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      _FieldLabel('Mot de passe'),
+                      _FieldLabel(l10n.authLoginPasswordLabel),
                       const SizedBox(height: AppSpacing.xs),
                       TextFormField(
                         controller: passwordController,
@@ -438,8 +479,11 @@ class _AuthCard extends StatelessWidget {
                         textInputAction: isSignUp
                             ? TextInputAction.next
                             : TextInputAction.done,
-                        decoration: const InputDecoration(hintText: '••••••••'),
-                        validator: AuthValidators.password,
+                        decoration: InputDecoration(
+                          hintText: l10n.authLoginPasswordHint,
+                        ),
+                        validator: (value) =>
+                            AuthValidators.password(value, l10n),
                         onFieldSubmitted: isSignUp ? null : (_) => onSubmit(),
                       ),
                       if (!isSignUp) ...[
@@ -459,7 +503,7 @@ class _AuthCard extends StatelessWidget {
                                 vertical: 14,
                               ),
                               child: Text(
-                                'Mot de passe oublié ?',
+                                l10n.authLoginForgotPasswordLink,
                                 style: AppTypography.body(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -472,7 +516,7 @@ class _AuthCard extends StatelessWidget {
                       ],
                       if (isSignUp) ...[
                         const SizedBox(height: AppSpacing.md),
-                        _FieldLabel('Confirmer le mot de passe'),
+                        _FieldLabel(l10n.authLoginConfirmPasswordLabel),
                         const SizedBox(height: AppSpacing.xs),
                         TextFormField(
                           controller: confirmPasswordController,
@@ -482,31 +526,31 @@ class _AuthCard extends StatelessWidget {
                           // dernier du formulaire en mode inscription depuis
                           // l'ajout du champ "Pseudo" ci-dessous.
                           textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(
-                            hintText: '••••••••',
+                          decoration: InputDecoration(
+                            hintText: l10n.authLoginPasswordHint,
                           ),
                           validator: (value) =>
                               AuthValidators.passwordConfirmation(
                                 value,
                                 passwordController.text,
+                                l10n,
                               ),
                         ),
                         const SizedBox(height: AppSpacing.md),
-                        _FieldLabel('Pseudo'),
+                        _FieldLabel(l10n.authLoginPseudoLabel),
                         const SizedBox(height: AppSpacing.xs),
                         TextFormField(
                           controller: pseudoController,
                           enabled: !isBusy,
                           textInputAction: TextInputAction.done,
-                          decoration: const InputDecoration(
-                            hintText: "Comment veux-tu qu'on t'appelle ?",
+                          decoration: InputDecoration(
+                            hintText: l10n.authLoginPseudoHint,
                           ),
                           onFieldSubmitted: (_) => onSubmit(),
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
-                          'Facultatif — tu pourras le changer plus tard dans '
-                          'ton profil.',
+                          l10n.authLoginPseudoHelper,
                           style: AppTypography.body(
                             fontSize: 12,
                             color: AppColors.textMuted,
@@ -515,7 +559,9 @@ class _AuthCard extends StatelessWidget {
                       ],
                       const SizedBox(height: AppSpacing.md),
                       PrimaryButton(
-                        label: isSignUp ? 'Créer le compte' : 'Entrer',
+                        label: isSignUp
+                            ? l10n.authLoginSubmitSignUp
+                            : l10n.authLoginSubmitLogin,
                         isLoading: isSubmitting,
                         onPressed: isBusy ? null : onSubmit,
                       ),
@@ -541,7 +587,7 @@ class _AuthCard extends StatelessWidget {
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           Text(
-                            'OU',
+                            l10n.authLoginOrDivider,
                             style: AppTypography.body(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -560,7 +606,7 @@ class _AuthCard extends StatelessWidget {
                       if (showAppleButton) ...[
                         const SizedBox(height: AppSpacing.md),
                         SocialAuthButton(
-                          label: 'Continuer avec Apple',
+                          label: l10n.authLoginContinueWithApple,
                           icon: const AppleLogo(),
                           isLoading: isAppleSubmitting,
                           onPressed: isBusy ? null : onSubmitApple,
@@ -568,7 +614,7 @@ class _AuthCard extends StatelessWidget {
                       ],
                       const SizedBox(height: AppSpacing.md),
                       SocialAuthButton(
-                        label: 'Continuer avec Google',
+                        label: l10n.authLoginContinueWithGoogle,
                         icon: const GoogleGLogo(),
                         isLoading: isGoogleSubmitting,
                         onPressed: isBusy ? null : onSubmitGoogle,
@@ -585,8 +631,8 @@ class _AuthCard extends StatelessWidget {
                           children: [
                             Text(
                               isSignUp
-                                  ? 'Déjà un compte ? '
-                                  : 'Pas encore de compte ? ',
+                                  ? l10n.authLoginSwitchModePromptLogin
+                                  : l10n.authLoginSwitchModePromptSignUp,
                               style: AppTypography.body(
                                 fontSize: 13,
                                 color: AppColors.textSecondary,
@@ -604,7 +650,9 @@ class _AuthCard extends StatelessWidget {
                                   vertical: 14,
                                 ),
                                 child: Text(
-                                  isSignUp ? 'Se connecter' : 'Créer un compte',
+                                  isSignUp
+                                      ? l10n.authLoginSwitchModeActionLogin
+                                      : l10n.authLoginSwitchModeActionSignUp,
                                   style: AppTypography.body(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
@@ -636,10 +684,12 @@ class _AuthCard extends StatelessWidget {
 /// confirmation vient de t'être envoyé...".
 class _SignUpConfirmationView extends StatelessWidget {
   const _SignUpConfirmationView({
+    required this.l10n,
     required this.email,
     required this.onBackToLogin,
   });
 
+  final AppLocalizations l10n;
   final String email;
   final VoidCallback onBackToLogin;
 
@@ -650,7 +700,7 @@ class _SignUpConfirmationView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'VÉRIFIEZ VOS E-MAILS',
+          l10n.authLoginSignUpConfirmationTitle,
           textAlign: TextAlign.center,
           style: AppTypography.display(
             fontSize: 11,
@@ -659,13 +709,15 @@ class _SignUpConfirmationView extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          "Un e-mail de confirmation vient d'être envoyé à $email. "
-          "Cliquez sur le lien qu'il contient pour activer votre compte.",
+          l10n.authLoginSignUpConfirmationBody(email),
           textAlign: TextAlign.center,
           style: AppTypography.body(color: AppColors.textSecondary),
         ),
         const SizedBox(height: AppSpacing.md),
-        PrimaryButton(label: 'Retour à la connexion', onPressed: onBackToLogin),
+        PrimaryButton(
+          label: l10n.authLoginBackToLogin,
+          onPressed: onBackToLogin,
+        ),
       ],
     );
   }

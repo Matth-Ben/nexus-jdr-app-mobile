@@ -421,6 +421,7 @@ class SupabaseAuthRepository implements AuthRepository {
         throw const AuthFailure(
           "Impossible d'ouvrir le navigateur pour continuer avec Google. "
           'Réessayez.',
+          code: AuthErrorCode.browserLaunchFailed,
         );
       }
     } on AuthException catch (error) {

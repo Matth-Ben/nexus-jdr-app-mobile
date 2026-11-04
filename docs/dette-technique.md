@@ -721,6 +721,16 @@ comme un comportement déjà présent ailleurs dans ce fichier, pas introduit pa
 |---|---|---|---|---|
 | D139 | Un cache (`CharacterListCache`/`CharacterDetailCache`) dont le payload est structurellement valide mais vide (clés absentes plutôt que mal typées) ne lève jamais d'exception : `fetchCharacters()`/`fetchCharacterDetail()` retombent alors silencieusement sur « aucun personnage »/une fiche vide plutôt que sur l'erreur réseau d'origine. | basse (cas très improbable en pratique — le payload vient toujours d'un succès réseau antérieur déjà validé — mais l'utilisateur hors ligne verrait un faux « vide » plutôt qu'un message d'erreur réseau) | Si le sujet revient : distinguer « payload absent/mal typé » (déjà bien géré) de « payload présent mais structurellement vide » dans `_rowsOf`/`_namesOf`, et ne retomber sur ce dernier qu'après confirmation qu'il reflète un vrai état serveur | Ouvert, non traité |
 
+## Ajouts liés au lot "Auth" de la Phase B traduction (04/11/2026)
+
+Constats relevés par `code-reviewer` pendant la revue du premier lot de migration de texte
+brut vers `.arb` (connexion, mot de passe oublié) — à garder en tête pendant les lots
+suivants (Profile, Characters, Character creation...), pas des défauts bloquants de ce lot.
+
+| ID | Constat | Gravité | Correction | État |
+|---|---|---|---|---|
+| D140 | `AuthFailure.message` reste un texte français en dur, dupliqué manuellement par rapport à la clé `.arb` équivalente (`AuthErrorCode`/`app_fr.arb`), pour que les appelants pas encore migrés (`change_password_sheet.dart`, `change_email_sheet.dart`, `profile_delete_account_screen.dart`...) continuent de fonctionner sans modification. Idem pour `AuthValidators` : le paramètre `AppLocalizations?` optionnel retombe silencieusement sur un message français en dur si omis — rien ne détecte un appel qui l'oublierait une fois l'écran appelant "migré". | basse pendant la transition (comportement voulu), mais risque de dérive texte dupliqué/appel oublié à mesure que les lots suivants s'accumulent | Chaque lot qui migre un nouvel écran consommant `AuthFailure`/`AuthValidators` doit : (1) vérifier que le texte français en dur reste identique à la clé `.arb`, (2) vérifier par grep/test qu'aucun appel à `AuthValidators.*` n'omet `l10n`. Une fois tous les appelants migrés, retirer `AuthFailure.message`/rendre `l10n` obligatoire. | Ouvert, non traité |
+
 ## Ce que l'audit n'a pas couvert
 
 - **Comportement réel.** Aucun test ni build lancé pendant l'audit. D02, D09 et D10 sont

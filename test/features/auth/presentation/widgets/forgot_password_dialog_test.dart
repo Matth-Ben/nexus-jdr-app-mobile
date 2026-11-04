@@ -8,9 +8,10 @@
 //
 // Point central de ces tests : que l'appel réussisse ou échoue, la boîte de
 // dialogue se ferme et affiche toujours le même message neutre
-// ([forgotPasswordNeutralMessage]) — jamais un message qui confirmerait ou
-// infirmerait l'existence d'un compte pour l'e-mail saisi (voir la doc de
-// classe de `showForgotPasswordDialog`).
+// (`forgotPasswordNeutralMessage` ci-dessous, texte français résolu via
+// `AppLocalizations` — chantier "traduction de l'app" Phase B) — jamais un
+// message qui confirmerait ou infirmerait l'existence d'un compte pour
+// l'e-mail saisi (voir la doc de classe de `showForgotPasswordDialog`).
 
 import 'dart:async';
 import 'dart:typed_data';
@@ -23,6 +24,22 @@ import 'package:personnages/core/widgets/secondary_button.dart';
 import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/auth/presentation/widgets/forgot_password_dialog.dart';
+import 'package:personnages/l10n/app_localizations.dart';
+
+/// Texte français du message neutre (`app_fr.arb::authForgotPasswordNeutralMessage`),
+/// dupliqué ici plutôt que résolu via `AppLocalizations` (voir
+/// `profile_language_screen_test.dart` pour le même principe) : ces tests
+/// forcent la locale `fr` ci-dessous, donc ce texte reste la valeur
+/// attendue à l'écran.
+const String forgotPasswordNeutralMessage =
+    'Si un compte existe avec cet email, un lien de réinitialisation vient '
+    "d'être envoyé.";
+
+/// Même principe que [forgotPasswordNeutralMessage], texte anglais
+/// (`app_en.arb::authForgotPasswordNeutralMessage`) — utilisé par le groupe
+/// "locale anglaise" ci-dessous.
+const String forgotPasswordNeutralMessageEn =
+    'If an account exists with this email, a reset link has just been sent.';
 
 class _FakeAuthRepository implements AuthRepository {
   int resetPasswordCallCount = 0;
@@ -93,10 +110,21 @@ void main() {
     fakeRepository = _FakeAuthRepository();
   });
 
-  Widget buildTestWidget({String initialEmail = ''}) {
+  Widget buildTestWidget({
+    String initialEmail = '',
+    Locale locale = const Locale('fr'),
+  }) {
     return ProviderScope(
       overrides: [authRepositoryProvider.overrideWithValue(fakeRepository)],
       child: MaterialApp(
+        // Locale forcée (déterministe, indépendante de l'hôte qui exécute
+        // `flutter test`) : les assertions de ces tests comparent du texte
+        // en dur dans [locale], même principe que
+        // `profile_language_screen_test.dart`. `fr` par défaut, `en` passé
+        // explicitement par le groupe "locale anglaise" ci-dessous.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Scaffold(
           body: Builder(
             builder: (context) => Consumer(
@@ -118,8 +146,11 @@ void main() {
   Future<void> openDialog(
     WidgetTester tester, {
     String initialEmail = '',
+    Locale locale = const Locale('fr'),
   }) async {
-    await tester.pumpWidget(buildTestWidget(initialEmail: initialEmail));
+    await tester.pumpWidget(
+      buildTestWidget(initialEmail: initialEmail, locale: locale),
+    );
     await tester.tap(find.text('Ouvrir'));
     await tester.pumpAndSettle();
   }
@@ -237,4 +268,32 @@ void main() {
       expect(find.text(forgotPasswordNeutralMessage), findsOneWidget);
     },
   );
+
+  group('locale anglaise', () {
+    // Trou de couverture signalé par `qa-testeur` (chantier "traduction de
+    // l'app" Phase B, lot "Auth") : jusqu'ici ce fichier ne pompait jamais
+    // la boîte de dialogue qu'en français (voir `buildTestWidget`) — aucun
+    // test ne garantissait qu'un texte anglais s'affiche réellement quand
+    // la locale de l'app est `en`.
+    testWidgets('affiche le titre, le bouton et le message neutre en anglais', (
+      WidgetTester tester,
+    ) async {
+      await openDialog(
+        tester,
+        initialEmail: 'nom@exemple.com',
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('Forgot your password?'), findsOneWidget);
+      // `SecondaryButton`/`PrimaryButton` affichent leur libellé en
+      // majuscules (`label.toUpperCase()`), même remarque que les tests
+      // français ci-dessus.
+      expect(find.text('CANCEL'), findsOneWidget);
+      await tester.tap(find.byType(PrimaryButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Forgot your password?'), findsNothing);
+      expect(find.text(forgotPasswordNeutralMessageEn), findsOneWidget);
+    });
+  });
 }

@@ -145,6 +145,288 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Impossible d\'enregistrer ce réglage. Réessaie.'**
   String get profileLanguageSaveError;
+
+  /// Nom de marque affiché sous le badge de `login_screen.dart` — identique dans les deux fichiers .arb (nom propre, jamais traduit).
+  ///
+  /// In fr, this message translates to:
+  /// **'NEXUS JDR'**
+  String get authLoginBrandTitle;
+
+  /// Accroche sous le nom de marque, écran de connexion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le registre des aventuriers'**
+  String get authLoginTagline;
+
+  /// Mention sous la carte de connexion, rappelant le compte partagé avec l'app web "Histoires".
+  ///
+  /// In fr, this message translates to:
+  /// **'Même compte que l\'app Histoires'**
+  String get authLoginSharedAccountNotice;
+
+  /// Titre de la carte en mode inscription (`_AuthCard`).
+  ///
+  /// In fr, this message translates to:
+  /// **'CRÉER UN COMPTE'**
+  String get authLoginCardTitleSignUp;
+
+  /// Titre de la carte en mode connexion (`_AuthCard`).
+  ///
+  /// In fr, this message translates to:
+  /// **'ENTRER DANS LA TAVERNE'**
+  String get authLoginCardTitleLogin;
+
+  /// Libellé du champ e-mail du formulaire de connexion/inscription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse e-mail'**
+  String get authLoginEmailLabel;
+
+  /// Placeholder du champ e-mail du formulaire de connexion/inscription.
+  ///
+  /// In fr, this message translates to:
+  /// **'nom@exemple.com'**
+  String get authLoginEmailHint;
+
+  /// Libellé du champ mot de passe du formulaire de connexion/inscription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe'**
+  String get authLoginPasswordLabel;
+
+  /// Placeholder (points masqués) du champ mot de passe.
+  ///
+  /// In fr, this message translates to:
+  /// **'••••••••'**
+  String get authLoginPasswordHint;
+
+  /// Lien sous le champ mot de passe en mode connexion, ouvre `forgot_password_dialog.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe oublié ?'**
+  String get authLoginForgotPasswordLink;
+
+  /// Libellé du champ de confirmation de mot de passe, mode inscription uniquement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmer le mot de passe'**
+  String get authLoginConfirmPasswordLabel;
+
+  /// Libellé du champ pseudo (optionnel), mode inscription uniquement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pseudo'**
+  String get authLoginPseudoLabel;
+
+  /// Placeholder du champ pseudo, mode inscription uniquement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comment veux-tu qu\'on t\'appelle ?'**
+  String get authLoginPseudoHint;
+
+  /// Texte d'aide sous le champ pseudo, mode inscription uniquement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Facultatif — tu pourras le changer plus tard dans ton profil.'**
+  String get authLoginPseudoHelper;
+
+  /// Libellé du `PrimaryButton` de soumission en mode inscription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer le compte'**
+  String get authLoginSubmitSignUp;
+
+  /// Libellé du `PrimaryButton` de soumission en mode connexion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Entrer'**
+  String get authLoginSubmitLogin;
+
+  /// Séparateur entre le formulaire e-mail/mot de passe et les boutons de connexion sociale.
+  ///
+  /// In fr, this message translates to:
+  /// **'OU'**
+  String get authLoginOrDivider;
+
+  /// Libellé du bouton de connexion Apple (iOS/macOS uniquement, voir `appleSignInSupportedProvider`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer avec Apple'**
+  String get authLoginContinueWithApple;
+
+  /// Libellé du bouton de connexion Google.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer avec Google'**
+  String get authLoginContinueWithGoogle;
+
+  /// Texte précédant le lien de bascule, affiché en mode inscription (espace final volontaire avant le lien).
+  ///
+  /// In fr, this message translates to:
+  /// **'Déjà un compte ? '**
+  String get authLoginSwitchModePromptLogin;
+
+  /// Texte précédant le lien de bascule, affiché en mode connexion (espace final volontaire avant le lien).
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas encore de compte ? '**
+  String get authLoginSwitchModePromptSignUp;
+
+  /// Lien de bascule vers le mode connexion, affiché en mode inscription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Se connecter'**
+  String get authLoginSwitchModeActionLogin;
+
+  /// Lien de bascule vers le mode inscription, affiché en mode connexion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer un compte'**
+  String get authLoginSwitchModeActionSignUp;
+
+  /// Titre de l'état "vérifiez vos e-mails" après une inscription nécessitant une confirmation par e-mail.
+  ///
+  /// In fr, this message translates to:
+  /// **'VÉRIFIEZ VOS E-MAILS'**
+  String get authLoginSignUpConfirmationTitle;
+
+  /// Corps de l'état "vérifiez vos e-mails", avec l'adresse saisie à l'inscription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un e-mail de confirmation vient d\'être envoyé à {email}. Cliquez sur le lien qu\'il contient pour activer votre compte.'**
+  String authLoginSignUpConfirmationBody(String email);
+
+  /// Bouton de retour au formulaire depuis l'état "vérifiez vos e-mails".
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour à la connexion'**
+  String get authLoginBackToLogin;
+
+  /// Titre de la boîte de dialogue `forgot_password_dialog.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe oublié ?'**
+  String get authForgotPasswordTitle;
+
+  /// Texte d'explication de la boîte de dialogue "Mot de passe oublié ?".
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez votre adresse e-mail : nous vous enverrons un lien pour définir un nouveau mot de passe.'**
+  String get authForgotPasswordDescription;
+
+  /// Placeholder du champ e-mail de la boîte de dialogue "Mot de passe oublié ?".
+  ///
+  /// In fr, this message translates to:
+  /// **'nom@exemple.com'**
+  String get authForgotPasswordEmailHint;
+
+  /// Bouton d'annulation de la boîte de dialogue "Mot de passe oublié ?".
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get authForgotPasswordCancel;
+
+  /// Bouton de soumission de la boîte de dialogue "Mot de passe oublié ?".
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer le lien'**
+  String get authForgotPasswordSubmit;
+
+  /// SnackBar affiché après toute tentative d'envoi (succès ou échec confondus) — message volontairement neutre, voir la doc de classe de `showForgotPasswordDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Si un compte existe avec cet email, un lien de réinitialisation vient d\'être envoyé.'**
+  String get authForgotPasswordNeutralMessage;
+
+  /// Message résolu depuis `AuthErrorCode.invalidCredentials` (`auth_error_mapper.dart`), affiché par `login_screen.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse e-mail ou mot de passe incorrect.'**
+  String get authErrorInvalidCredentials;
+
+  /// Message résolu depuis `AuthErrorCode.emailAlreadyExists`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un compte existe déjà avec cette adresse e-mail.'**
+  String get authErrorEmailAlreadyExists;
+
+  /// Message résolu depuis `AuthErrorCode.weakPassword` (erreur renvoyée par Supabase, distincte de la validation locale `authValidationPasswordTooShort`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Le mot de passe doit contenir au moins {minLength} caractères.'**
+  String authErrorWeakPassword(int minLength);
+
+  /// Message résolu depuis `AuthErrorCode.emailNotConfirmed`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmez votre adresse e-mail avant de vous connecter (vérifiez votre boîte de réception).'**
+  String get authErrorEmailNotConfirmed;
+
+  /// Message résolu depuis `AuthErrorCode.invalidEmail` (erreur renvoyée par Supabase, distincte de la validation locale `authValidationEmailInvalid`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse e-mail invalide.'**
+  String get authErrorInvalidEmail;
+
+  /// Message résolu depuis `AuthErrorCode.tooManyRequests`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de tentatives. Réessayez dans quelques instants.'**
+  String get authErrorTooManyRequests;
+
+  /// Message résolu depuis `AuthErrorCode.network` (absence de réseau, voir `mapUnknownError`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.'**
+  String get authErrorNetwork;
+
+  /// Message résolu depuis `AuthErrorCode.browserLaunchFailed` (`url_launcher` n'a pas pu ouvrir le navigateur système pour le flux OAuth Google, voir `SupabaseAuthRepository.signInWithGoogle`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ouvrir le navigateur pour continuer avec Google. Réessayez.'**
+  String get authErrorBrowserLaunchFailed;
+
+  /// Repli défensif affiché par `login_screen.dart` pour toute exception qui n'est pas une `AuthFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une erreur inattendue est survenue. Réessayez.'**
+  String get authErrorUnexpected;
+
+  /// Erreur de validation locale, champ e-mail vide (`AuthValidators.email`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez votre adresse e-mail.'**
+  String get authValidationEmailRequired;
+
+  /// Erreur de validation locale, format d'e-mail invalide (`AuthValidators.email`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse e-mail invalide.'**
+  String get authValidationEmailInvalid;
+
+  /// Erreur de validation locale, champ mot de passe vide (`AuthValidators.password`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez votre mot de passe.'**
+  String get authValidationPasswordRequired;
+
+  /// Erreur de validation locale, mot de passe trop court (`AuthValidators.password`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Le mot de passe doit contenir au moins {minLength} caractères.'**
+  String authValidationPasswordTooShort(int minLength);
+
+  /// Erreur de validation locale, champ de confirmation vide (`AuthValidators.passwordConfirmation`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Confirmez votre mot de passe.'**
+  String get authValidationPasswordConfirmationRequired;
+
+  /// Erreur de validation locale, confirmation différente du mot de passe (`AuthValidators.passwordConfirmation`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Les mots de passe ne correspondent pas.'**
+  String get authValidationPasswordConfirmationMismatch;
 }
 
 class _AppLocalizationsDelegate

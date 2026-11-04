@@ -6,25 +6,18 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/auth_validators.dart';
 import '../providers/auth_providers.dart';
-
-/// Message affiché après une tentative d'envoi du lien de réinitialisation,
-/// **toujours identique** que l'adresse corresponde ou non à un compte
-/// existant (même principe que `requestPasswordReset` côté app web
-/// "Histoires", `apps/web/app/(auth)/actions.ts` : "Réponse neutre : on ne
-/// révèle pas si l'email correspond à un compte existant").
-const String forgotPasswordNeutralMessage =
-    'Si un compte existe avec cet email, un lien de réinitialisation vient '
-    "d'être envoyé.";
 
 /// Ouvre la boîte de dialogue "Mot de passe oublié ?" (lien sous le champ
 /// mot de passe de [LoginScreen], visible uniquement en mode connexion).
 ///
-/// Affiche ensuite le [SnackBar] neutre ([forgotPasswordNeutralMessage]) si
-/// l'envoi a été tenté (succès ou échec réseau générique confondus, cf. doc
-/// de classe de [AuthRepository.resetPasswordForEmail]) — rien ne s'affiche
-/// si le joueur annule la boîte de dialogue sans avoir tenté d'envoi.
+/// Affiche ensuite le [SnackBar] neutre (`AppLocalizations
+/// .authForgotPasswordNeutralMessage`) si l'envoi a été tenté (succès ou
+/// échec réseau générique confondus, cf. doc de classe de
+/// [AuthRepository.resetPasswordForEmail]) — rien ne s'affiche si le joueur
+/// annule la boîte de dialogue sans avoir tenté d'envoi.
 Future<void> showForgotPasswordDialog(
   BuildContext context, {
   required WidgetRef ref,
@@ -36,9 +29,10 @@ Future<void> showForgotPasswordDialog(
   );
   if (attempted != true || !context.mounted) return;
 
-  ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(const SnackBar(content: Text(forgotPasswordNeutralMessage)));
+  final l10n = AppLocalizations.of(context)!;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(l10n.authForgotPasswordNeutralMessage)),
+  );
 }
 
 class _ForgotPasswordDialog extends ConsumerStatefulWidget {
@@ -92,6 +86,8 @@ class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Dialog(
       backgroundColor: AppColors.parchmentCard,
       shape: RoundedRectangleBorder(
@@ -111,7 +107,7 @@ class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Mot de passe oublié ?',
+                l10n.authForgotPasswordTitle,
                 style: AppTypography.body(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
@@ -119,8 +115,7 @@ class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Saisissez votre adresse e-mail : nous vous enverrons un '
-                'lien pour définir un nouveau mot de passe.',
+                l10n.authForgotPasswordDescription,
                 style: AppTypography.body(
                   fontSize: 13,
                   color: AppColors.textSecondary,
@@ -133,8 +128,10 @@ class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.done,
                 autocorrect: false,
-                decoration: const InputDecoration(hintText: 'nom@exemple.com'),
-                validator: AuthValidators.email,
+                decoration: InputDecoration(
+                  hintText: l10n.authForgotPasswordEmailHint,
+                ),
+                validator: (value) => AuthValidators.email(value, l10n),
                 onFieldSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -142,7 +139,7 @@ class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
                 children: [
                   Expanded(
                     child: SecondaryButton(
-                      label: 'Annuler',
+                      label: l10n.authForgotPasswordCancel,
                       surface: SecondaryButtonSurface.parchment,
                       onPressed: _isLoading
                           ? null
@@ -152,7 +149,7 @@ class _ForgotPasswordDialogState extends ConsumerState<_ForgotPasswordDialog> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: PrimaryButton(
-                      label: 'Envoyer le lien',
+                      label: l10n.authForgotPasswordSubmit,
                       isLoading: _isLoading,
                       onPressed: _isLoading ? null : _submit,
                     ),
