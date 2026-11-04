@@ -8,6 +8,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/info_banner.dart';
 import '../../../core/widgets/portrait_frame.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../characters/domain/character_detail.dart';
 import '../../characters/domain/character_failure.dart';
 import '../../characters/domain/character_identity_formatter.dart';
@@ -92,6 +93,7 @@ class _SharedCharacterViewScreenState
             ),
           )
         : ref.watch(sharedCharacterProvider(token: widget.token!));
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,
@@ -99,7 +101,7 @@ class _SharedCharacterViewScreenState
         children: [
           WoodBackHeader(
             title: sharedAsync.value != null
-                ? _tab.headerTitle
+                ? _tab.headerTitle(l10n)
                 : widget.isGroupMember
                 ? 'MEMBRE DU GROUPE'
                 : 'PERSONNAGE PARTAGÉ',

@@ -1288,6 +1288,192 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get characterDetailTabCharacterLabel => 'CHAR.';
+
+  @override
+  String get characterDetailTabCharacterTitle => 'SHEET';
+
+  @override
+  String get characterDetailTabSkillsLabel => 'SKILLS';
+
+  @override
+  String get characterDetailTabSkillsTitle => 'SKILLS';
+
+  @override
+  String get characterDetailTabSpellsLabel => 'SPELLS';
+
+  @override
+  String get characterDetailTabSpellsTitle => 'SPELLS';
+
+  @override
+  String get characterDetailTabInventoryLabel => 'BAG';
+
+  @override
+  String get characterDetailTabInventoryTitle => 'INVENTORY';
+
+  @override
+  String get characterDetailTabStoryLabel => 'STORY';
+
+  @override
+  String get characterDetailTabStoryTitle => 'STORY';
+
+  @override
+  String get characterDetailHelpTooltip => 'Help';
+
+  @override
+  String get characterDetailMoreOptionsTooltip => 'More options';
+
+  @override
+  String get characterDetailSearchTooltip => 'Search';
+
+  @override
+  String get characterDetailFilterTooltip => 'Filter';
+
+  @override
+  String get characterDetailMenuExportXml => 'Export as XML';
+
+  @override
+  String get characterDetailLoadErrorMessage =>
+      'Unable to load this character. Please try again.';
+
+  @override
+  String get characterDetailInitiativeLabel => 'Initiative';
+
+  @override
+  String get characterDetailHpUpdateErrorMessage =>
+      'Unable to update HP. Please try again.';
+
+  @override
+  String get characterDetailHpSyncErrorMessage =>
+      'Unable to sync HP. Please try again.';
+
+  @override
+  String characterDetailFeatureUseSuccessMessage(String featureName) {
+    return '$featureName used.';
+  }
+
+  @override
+  String get characterDetailFeatureUseErrorMessage =>
+      'Unable to use this feature. Please try again.';
+
+  @override
+  String get characterDetailFeatureSyncErrorMessage =>
+      'Unable to sync class features. Please try again.';
+
+  @override
+  String get characterDetailXpAddErrorMessage =>
+      'Unable to add XP. Please try again.';
+
+  @override
+  String get characterDetailOfflineQueuedMessage =>
+      'Offline: will sync once you\'re back online.';
+
+  @override
+  String get characterDetailArmorClassAdjustErrorMessage =>
+      'Unable to adjust Armor Class. Please try again.';
+
+  @override
+  String get characterVitalsCardRestButton => 'Rest';
+
+  @override
+  String get characterVitalsCardHpLabel => 'HIT POINTS';
+
+  @override
+  String characterVitalsCardTemporaryHpChip(int amount) {
+    return '+$amount temp. HP';
+  }
+
+  @override
+  String get characterVitalsCardXpLabel => 'EXPERIENCE';
+
+  @override
+  String get characterVitalsCardAddXpButton => '+ XP';
+
+  @override
+  String characterVitalsCardLevelUpBanner(int targetLevel) {
+    return 'LEVEL $targetLevel AVAILABLE';
+  }
+
+  @override
+  String get characterStatPillsSpeedLabel => 'SPD.';
+
+  @override
+  String get characterStatPillsArmorClassLabel => 'AC';
+
+  @override
+  String get characterStatPillsInitiativeLabel => 'INIT.';
+
+  @override
+  String get characterStatPillsInspirationLabel => 'INSP.';
+
+  @override
+  String characterStatPillsSpeedValue(int speed) {
+    return '$speed m';
+  }
+
+  @override
+  String get characterAbilityAbbreviationStr => 'Str';
+
+  @override
+  String get characterAbilityAbbreviationDex => 'Dex';
+
+  @override
+  String get characterAbilityAbbreviationCon => 'Con';
+
+  @override
+  String get characterAbilityAbbreviationInt => 'Int';
+
+  @override
+  String get characterAbilityAbbreviationWis => 'Wis';
+
+  @override
+  String get characterAbilityAbbreviationCha => 'Cha';
+
+  @override
+  String get characterSavingThrowsCardTitle => 'SAVING THROWS';
+
+  @override
+  String get characterSkillsCardTitle => 'ALL 18 SKILLS';
+
+  @override
+  String get characterSkillsCardMasteredLegend => 'proficient';
+
+  @override
+  String get characterSkillsCardD20Chip => 'D20';
+
+  @override
+  String get characterAppearanceCardTitle => 'PHYSICAL APPEARANCE';
+
+  @override
+  String get characterAppearanceCardSexeLabel => 'Sex';
+
+  @override
+  String get characterAppearanceCardAgeLabel => 'Age';
+
+  @override
+  String get characterAppearanceCardHeightLabel => 'Height';
+
+  @override
+  String get characterAppearanceCardWeightLabel => 'Weight';
+
+  @override
+  String get characterAppearanceCardEyesLabel => 'Eyes';
+
+  @override
+  String get characterAppearanceCardSkinLabel => 'Skin';
+
+  @override
+  String get characterAppearanceCardHairLabel => 'Hair';
+
+  @override
+  String get characterSkillsTabBodySearchHint => 'Search for a skill';
+
+  @override
+  String characterSkillsTabBodyNoMatchMessage(String query) {
+    return 'No skill matches “$query”.';
+  }
+
+  @override
   String get connectionErrorStateBannerTitle => 'CONNECTION';
 
   @override

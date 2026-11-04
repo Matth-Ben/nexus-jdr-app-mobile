@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 
 /// Carte "Apparence physique" (données structurées) — voir
@@ -40,17 +41,49 @@ class CharacterAppearanceCard extends StatelessWidget {
   /// `true` si au moins un des 7 champs est renseigné (non vide une fois
   /// `trim`) — à vérifier par l'appelant avant d'insérer cette carte dans la
   /// liste défilante de l'onglet "Personnage" (et son séparateur associé).
-  static bool hasContent(CharacterDetail detail) => _itemsOf(detail).isNotEmpty;
+  ///
+  /// Ne dépend d'aucun libellé localisé (seules les *valeurs* comptent ici) :
+  /// pas besoin d'`AppLocalizations`/`BuildContext`, contrairement à
+  /// [_itemsOf].
+  static bool hasContent(CharacterDetail detail) =>
+      detail.sexe.trim().isNotEmpty ||
+      detail.age.trim().isNotEmpty ||
+      detail.height.trim().isNotEmpty ||
+      detail.weight.trim().isNotEmpty ||
+      detail.eyes.trim().isNotEmpty ||
+      detail.skin.trim().isNotEmpty ||
+      detail.hair.trim().isNotEmpty;
 
-  static List<_AppearanceItem> _itemsOf(CharacterDetail detail) {
+  static List<_AppearanceItem> _itemsOf(
+    AppLocalizations l10n,
+    CharacterDetail detail,
+  ) {
     final candidates = <_AppearanceItem>[
-      _AppearanceItem('Sexe', detail.sexe.trim()),
-      _AppearanceItem('Âge', detail.age.trim()),
-      _AppearanceItem('Taille', detail.height.trim()),
-      _AppearanceItem('Poids', detail.weight.trim()),
-      _AppearanceItem('Yeux', detail.eyes.trim()),
-      _AppearanceItem('Peau', detail.skin.trim()),
-      _AppearanceItem('Cheveux', detail.hair.trim()),
+      _AppearanceItem(
+        l10n.characterAppearanceCardSexeLabel,
+        detail.sexe.trim(),
+      ),
+      _AppearanceItem(l10n.characterAppearanceCardAgeLabel, detail.age.trim()),
+      _AppearanceItem(
+        l10n.characterAppearanceCardHeightLabel,
+        detail.height.trim(),
+      ),
+      _AppearanceItem(
+        l10n.characterAppearanceCardWeightLabel,
+        detail.weight.trim(),
+      ),
+      _AppearanceItem(
+        l10n.characterAppearanceCardEyesLabel,
+        detail.eyes.trim(),
+      ),
+      _AppearanceItem(
+        l10n.characterAppearanceCardSkinLabel,
+        detail.skin.trim(),
+      ),
+      _AppearanceItem(
+        l10n.characterAppearanceCardHairLabel,
+        detail.hair.trim(),
+      ),
     ];
     return candidates
         .where((item) => item.value.isNotEmpty)
@@ -59,7 +92,8 @@ class CharacterAppearanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = _itemsOf(detail);
+    final l10n = AppLocalizations.of(context)!;
+    final items = _itemsOf(l10n, detail);
     if (items.isEmpty) {
       // Ne devrait pas arriver en pratique : l'appelant est censé avoir déjà
       // vérifié [hasContent] avant d'insérer cette carte — filet de sécurité
@@ -78,7 +112,7 @@ class CharacterAppearanceCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'APPARENCE PHYSIQUE',
+            l10n.characterAppearanceCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,

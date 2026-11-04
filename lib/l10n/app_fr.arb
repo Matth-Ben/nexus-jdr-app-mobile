@@ -1300,7 +1300,7 @@
   },
   "characterOfflineNotPersistedMessage": "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une fois reconnecté.",
   "@characterOfflineNotPersistedMessage": {
-    "description": "Voir `presentation/widgets/character_write_feedback.dart::offlineNotPersistedMessage` — texte à garder identique à cette constante, encore utilisée telle quelle par `character_detail_screen.dart` (hors périmètre de ce lot, D141 du registre de dette technique)."
+    "description": "Anciennement `presentation/widgets/character_write_feedback.dart::offlineNotPersistedMessage` (dette technique D88) — ce fichier et sa constante ont été retirés au lot \"Characters — fiche (identité/statistiques)\" une fois `character_detail_screen.dart` (son dernier appelant restant, D141) migré vers cette clé, comme `character_list_screen.dart`/`character_card_action_sheet.dart` avant lui."
   },
   "characterAccessDeniedErrorMessage": "Vous n'avez pas accès à ces personnages.",
   "@characterAccessDeniedErrorMessage": {
@@ -1553,6 +1553,264 @@
     "description": "Libellé d'accessibilité (`Semantics.label`) de `CharacterNameTagChip` quand `onTap` est fourni.",
     "placeholders": {
       "name": {
+        "type": "String"
+      }
+    }
+  },
+
+  "characterDetailTabCharacterLabel": "PERSO",
+  "@characterDetailTabCharacterLabel": {
+    "description": "Libellé (pied de fiche, `CharacterDetailTabBar`) de l'onglet \"Personnage\" — déjà en majuscules."
+  },
+  "characterDetailTabCharacterTitle": "FICHE",
+  "@characterDetailTabCharacterTitle": {
+    "description": "Titre affiché dans `WoodBackHeader` (bandeau bois) quand l'onglet \"Personnage\" est actif — déjà en majuscules."
+  },
+  "characterDetailTabSkillsLabel": "APT.",
+  "@characterDetailTabSkillsLabel": {
+    "description": "Libellé (pied de fiche) de l'onglet \"Aptitudes\" — déjà en majuscules."
+  },
+  "characterDetailTabSkillsTitle": "APTITUDES",
+  "@characterDetailTabSkillsTitle": {
+    "description": "Titre affiché dans `WoodBackHeader` quand l'onglet \"Aptitudes\" est actif — déjà en majuscules."
+  },
+  "characterDetailTabSpellsLabel": "SORTS",
+  "@characterDetailTabSpellsLabel": {
+    "description": "Libellé (pied de fiche) de l'onglet \"Sorts\" — déjà en majuscules."
+  },
+  "characterDetailTabSpellsTitle": "SORTS",
+  "@characterDetailTabSpellsTitle": {
+    "description": "Titre affiché dans `WoodBackHeader` quand l'onglet \"Sorts\" est actif — déjà en majuscules."
+  },
+  "characterDetailTabInventoryLabel": "SAC",
+  "@characterDetailTabInventoryLabel": {
+    "description": "Libellé (pied de fiche) de l'onglet \"Inventaire\" — déjà en majuscules."
+  },
+  "characterDetailTabInventoryTitle": "INVENTAIRE",
+  "@characterDetailTabInventoryTitle": {
+    "description": "Titre affiché dans `WoodBackHeader` quand l'onglet \"Inventaire\" est actif — déjà en majuscules."
+  },
+  "characterDetailTabStoryLabel": "HIST.",
+  "@characterDetailTabStoryLabel": {
+    "description": "Libellé (pied de fiche) de l'onglet \"Histoire\" — déjà en majuscules."
+  },
+  "characterDetailTabStoryTitle": "HISTOIRE",
+  "@characterDetailTabStoryTitle": {
+    "description": "Titre affiché dans `WoodBackHeader` quand l'onglet \"Histoire\" est actif — déjà en majuscules."
+  },
+
+  "characterDetailHelpTooltip": "Aide",
+  "@characterDetailHelpTooltip": {
+    "description": "`tooltip` de l'icône \"?\" du bandeau bois, onglet \"Personnage\" uniquement — ouvre `showStepHelpSheet`."
+  },
+  "characterDetailMoreOptionsTooltip": "Plus d'options",
+  "@characterDetailMoreOptionsTooltip": {
+    "description": "`tooltip` de l'icône \"⋮\" du bandeau bois (menu \"Modifier\"/\"Exporter en XML\"/\"Archiver\"/\"Marquer comme mort\"/\"Supprimer\"), onglet \"Personnage\" uniquement."
+  },
+  "characterDetailSearchTooltip": "Rechercher",
+  "@characterDetailSearchTooltip": {
+    "description": "`tooltip` de l'icône loupe du bandeau bois, partagée par les onglets \"Aptitudes\" et \"Sorts\" (focus le champ de recherche de l'onglet actif)."
+  },
+  "characterDetailFilterTooltip": "Filtrer",
+  "@characterDetailFilterTooltip": {
+    "description": "`tooltip` de l'icône entonnoir du bandeau bois, onglet \"Inventaire\" uniquement (fait défiler jusqu'à la bascule de filtre par catégorie)."
+  },
+  "characterDetailMenuExportXml": "Exporter en XML",
+  "@characterDetailMenuExportXml": {
+    "description": "Item \"Exporter en XML\" du menu \"⋮\" du bandeau bois."
+  },
+  "characterDetailLoadErrorMessage": "Impossible de charger ce personnage. Réessayez.",
+  "@characterDetailLoadErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand `characterDetailProvider` échoue avec une erreur qui n'est pas une `CharacterFailure` (sinon `CharacterFailure.message` est affiché tel quel)."
+  },
+  "characterDetailInitiativeLabel": "Initiative",
+  "@characterDetailInitiativeLabel": {
+    "description": "`label` passé à `showDiceRollSheet` au tap sur la tuile \"INIT.\" de `CharacterStatPillsRow` (titre de la feuille de lancer de dé)."
+  },
+  "characterDetailHpUpdateErrorMessage": "Impossible de mettre à jour les PV. Réessayez.",
+  "@characterDetailHpUpdateErrorMessage": {
+    "description": "SnackBar d'échec générique de `_applyHpState` (ajustement PV depuis la feuille détaillée)."
+  },
+  "characterDetailHpSyncErrorMessage": "Impossible de synchroniser les PV. Réessayez.",
+  "@characterDetailHpSyncErrorMessage": {
+    "description": "SnackBar d'échec de `_reassertCurrentHpState` (réaffirmation PV après un repos, voir sa documentation)."
+  },
+  "characterDetailFeatureUseSuccessMessage": "{featureName} utilisée.",
+  "@characterDetailFeatureUseSuccessMessage": {
+    "description": "SnackBar de succès de `_useClassFeature` (onglet \"Aptitudes\", utilisation d'une aptitude de classe à usage limité).",
+    "placeholders": {
+      "featureName": {
+        "type": "String"
+      }
+    }
+  },
+  "characterDetailFeatureUseErrorMessage": "Impossible d'utiliser cette aptitude. Réessayez.",
+  "@characterDetailFeatureUseErrorMessage": {
+    "description": "SnackBar d'échec de `_useClassFeature`."
+  },
+  "characterDetailFeatureSyncErrorMessage": "Impossible de synchroniser les aptitudes de classe. Réessayez.",
+  "@characterDetailFeatureSyncErrorMessage": {
+    "description": "SnackBar d'échec de `_reassertFeatureUsesState` (réaffirmation après un repos)."
+  },
+  "characterDetailXpAddErrorMessage": "Impossible d'ajouter l'XP. Réessayez.",
+  "@characterDetailXpAddErrorMessage": {
+    "description": "SnackBar d'échec de `_addXp`."
+  },
+  "characterDetailOfflineQueuedMessage": "Hors ligne : sera synchronisé dès que la connexion revient.",
+  "@characterDetailOfflineQueuedMessage": {
+    "description": "Voir `_CharacterDetailScreenState._offlineQueuedMessage` — écriture réellement mise en file (`PendingCharacterWriteQueue`) : promet une synchronisation future réelle, contrairement à `characterOfflineNotPersistedMessage`."
+  },
+  "characterDetailArmorClassAdjustErrorMessage": "Impossible d'ajuster la Classe d'Armure. Réessayez.",
+  "@characterDetailArmorClassAdjustErrorMessage": {
+    "description": "SnackBar d'échec de `_adjustArmorClassBonus` (sheet \"Ajustement de CA\")."
+  },
+
+  "characterVitalsCardRestButton": "Repos",
+  "@characterVitalsCardRestButton": {
+    "description": "Libellé du bouton unique \"Repos\" de `CharacterVitalsCard` (ouvre `RestSheet`)."
+  },
+  "characterVitalsCardHpLabel": "POINTS DE VIE",
+  "@characterVitalsCardHpLabel": {
+    "description": "Libellé du bandeau PV, déjà en majuscules."
+  },
+  "characterVitalsCardTemporaryHpChip": "+{amount} PV temp.",
+  "@characterVitalsCardTemporaryHpChip": {
+    "description": "Puce affichée sous la jauge PV quand `temporaryHp > 0`.",
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "characterVitalsCardXpLabel": "EXPÉRIENCE",
+  "@characterVitalsCardXpLabel": {
+    "description": "Libellé du bandeau XP, déjà en majuscules."
+  },
+  "characterVitalsCardAddXpButton": "+ XP",
+  "@characterVitalsCardAddXpButton": {
+    "description": "Libellé du `PrimaryButton` pleine largeur sous la jauge XP (ouvre `AddXpSheet`)."
+  },
+  "characterVitalsCardLevelUpBanner": "NIVEAU {targetLevel} DISPONIBLE",
+  "@characterVitalsCardLevelUpBanner": {
+    "description": "Bandeau affiché sous la jauge XP une fois le seuil du niveau suivant franchi, déjà en majuscules.",
+    "placeholders": {
+      "targetLevel": {
+        "type": "int"
+      }
+    }
+  },
+
+  "characterStatPillsSpeedLabel": "VIT.",
+  "@characterStatPillsSpeedLabel": {
+    "description": "Libellé de la tuile \"Vitesse\" de `CharacterStatPillsRow`, déjà en majuscules."
+  },
+  "characterStatPillsArmorClassLabel": "CA",
+  "@characterStatPillsArmorClassLabel": {
+    "description": "Libellé de la tuile \"Classe d'Armure\" de `CharacterStatPillsRow`, déjà en majuscules."
+  },
+  "characterStatPillsInitiativeLabel": "INIT.",
+  "@characterStatPillsInitiativeLabel": {
+    "description": "Libellé de la tuile \"Initiative\" de `CharacterStatPillsRow`, déjà en majuscules."
+  },
+  "characterStatPillsInspirationLabel": "INSP.",
+  "@characterStatPillsInspirationLabel": {
+    "description": "Libellé de la tuile \"Inspiration\" de `CharacterStatPillsRow`, déjà en majuscules."
+  },
+  "characterStatPillsSpeedValue": "{speed} m",
+  "@characterStatPillsSpeedValue": {
+    "description": "Valeur de la tuile \"Vitesse\" quand `speed` est résolu — unité métrique (mètres) volontairement gardée telle quelle en anglais aussi (même unité conservée dans app_en.arb, qui ne porte pas sa propre description de clé : ce fichier app_fr.arb est le template) : les données de vitesse de ce dépôt sont stockées en mètres, jamais converties en pieds.",
+    "placeholders": {
+      "speed": {
+        "type": "int"
+      }
+    }
+  },
+
+  "characterAbilityAbbreviationStr": "For",
+  "@characterAbilityAbbreviationStr": {
+    "description": "Abréviation de la caractéristique Force, partagée par `character_saving_throws_card.dart` et `character_skills_card.dart` (chacun garde sa propre table de correspondance `Dart`, intentionnellement dupliquée — voir leur doc de classe respective — mais réutilise ces mêmes clés `.arb`, même principe que `characterLevelAbbreviation`)."
+  },
+  "characterAbilityAbbreviationDex": "Dex",
+  "@characterAbilityAbbreviationDex": {
+    "description": "Abréviation de la caractéristique Dextérité — voir `characterAbilityAbbreviationStr`."
+  },
+  "characterAbilityAbbreviationCon": "Con",
+  "@characterAbilityAbbreviationCon": {
+    "description": "Abréviation de la caractéristique Constitution — voir `characterAbilityAbbreviationStr`."
+  },
+  "characterAbilityAbbreviationInt": "Int",
+  "@characterAbilityAbbreviationInt": {
+    "description": "Abréviation de la caractéristique Intelligence — voir `characterAbilityAbbreviationStr`."
+  },
+  "characterAbilityAbbreviationWis": "Sag",
+  "@characterAbilityAbbreviationWis": {
+    "description": "Abréviation de la caractéristique Sagesse — voir `characterAbilityAbbreviationStr`."
+  },
+  "characterAbilityAbbreviationCha": "Cha",
+  "@characterAbilityAbbreviationCha": {
+    "description": "Abréviation de la caractéristique Charisme — voir `characterAbilityAbbreviationStr`."
+  },
+
+  "characterSavingThrowsCardTitle": "JETS DE SAUVEGARDE",
+  "@characterSavingThrowsCardTitle": {
+    "description": "Titre de `CharacterSavingThrowsCard`, déjà en majuscules."
+  },
+
+  "characterSkillsCardTitle": "LES 18 COMPÉTENCES",
+  "@characterSkillsCardTitle": {
+    "description": "Titre de `CharacterSkillsCard`, déjà en majuscules."
+  },
+  "characterSkillsCardMasteredLegend": "maîtrisée",
+  "@characterSkillsCardMasteredLegend": {
+    "description": "Légende \"● maîtrisée\" en tête de `CharacterSkillsCard`."
+  },
+  "characterSkillsCardD20Chip": "D20",
+  "@characterSkillsCardD20Chip": {
+    "description": "Texte de la puce \"D20\" en bout de ligne de compétence — notation de dé, identique dans les deux langues."
+  },
+
+  "characterAppearanceCardTitle": "APPARENCE PHYSIQUE",
+  "@characterAppearanceCardTitle": {
+    "description": "Titre de `CharacterAppearanceCard`, déjà en majuscules."
+  },
+  "characterAppearanceCardSexeLabel": "Sexe",
+  "@characterAppearanceCardSexeLabel": {
+    "description": "Libellé du champ \"Sexe\" de `CharacterAppearanceCard`."
+  },
+  "characterAppearanceCardAgeLabel": "Âge",
+  "@characterAppearanceCardAgeLabel": {
+    "description": "Libellé du champ \"Âge\" de `CharacterAppearanceCard`."
+  },
+  "characterAppearanceCardHeightLabel": "Taille",
+  "@characterAppearanceCardHeightLabel": {
+    "description": "Libellé du champ \"Taille\" de `CharacterAppearanceCard`."
+  },
+  "characterAppearanceCardWeightLabel": "Poids",
+  "@characterAppearanceCardWeightLabel": {
+    "description": "Libellé du champ \"Poids\" de `CharacterAppearanceCard`."
+  },
+  "characterAppearanceCardEyesLabel": "Yeux",
+  "@characterAppearanceCardEyesLabel": {
+    "description": "Libellé du champ \"Yeux\" de `CharacterAppearanceCard`."
+  },
+  "characterAppearanceCardSkinLabel": "Peau",
+  "@characterAppearanceCardSkinLabel": {
+    "description": "Libellé du champ \"Peau\" de `CharacterAppearanceCard`."
+  },
+  "characterAppearanceCardHairLabel": "Cheveux",
+  "@characterAppearanceCardHairLabel": {
+    "description": "Libellé du champ \"Cheveux\" de `CharacterAppearanceCard`."
+  },
+
+  "characterSkillsTabBodySearchHint": "Rechercher une compétence",
+  "@characterSkillsTabBodySearchHint": {
+    "description": "`hintText` du champ de recherche \"LES 18 COMPÉTENCES\" de l'onglet \"Aptitudes\" (`_SkillSearchField`)."
+  },
+  "characterSkillsTabBodyNoMatchMessage": "Aucune compétence pour « {query} ».",
+  "@characterSkillsTabBodyNoMatchMessage": {
+    "description": "Message de `_NoSkillMatchState` quand la recherche ne donne aucun résultat.",
+    "placeholders": {
+      "query": {
         "type": "String"
       }
     }

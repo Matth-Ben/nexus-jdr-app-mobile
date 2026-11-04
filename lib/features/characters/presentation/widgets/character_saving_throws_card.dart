@@ -3,20 +3,26 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/saving_throw_calculator.dart';
 import '../../domain/signed_modifier_formatter.dart';
 
 /// "For"/"Dex"/"Con"/"Int"/"Sag"/"Cha" — dupliqué depuis
 /// `character_creation/domain/race_summary_formatter.dart`
 /// (`_abilityAbbreviations`, privée, non réutilisable telle quelle), même
-/// rationale de duplication que `summary_step_screen.dart`.
-const Map<String, String> _abilityAbbreviations = {
-  'str': 'For',
-  'dex': 'Dex',
-  'con': 'Con',
-  'int': 'Int',
-  'wis': 'Sag',
-  'cha': 'Cha',
+/// rationale de duplication que `summary_step_screen.dart`. Résolution
+/// localisée via les clés `.arb` partagées `characterAbilityAbbreviationXxx`
+/// (chantier "traduction de l'app" Phase B, lot "Characters — fiche
+/// (identité/statistiques)") — mêmes clés que `character_skills_card.dart`,
+/// même principe que `characterLevelAbbreviation` (clé `.arb` réutilisée,
+/// code Dart dupliqué).
+Map<String, String> _abilityAbbreviations(AppLocalizations l10n) => {
+  'str': l10n.characterAbilityAbbreviationStr,
+  'dex': l10n.characterAbilityAbbreviationDex,
+  'con': l10n.characterAbilityAbbreviationCon,
+  'int': l10n.characterAbilityAbbreviationInt,
+  'wis': l10n.characterAbilityAbbreviationWis,
+  'cha': l10n.characterAbilityAbbreviationCha,
 };
 
 /// Carte "Jets de sauvegarde" de l'onglet "Personnage" : les 6
@@ -42,7 +48,7 @@ class CharacterSavingThrowsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'JETS DE SAUVEGARDE',
+            AppLocalizations.of(context)!.characterSavingThrowsCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,
@@ -75,7 +81,10 @@ class _SavingThrowItem extends StatelessWidget {
         _ProficiencyDot(isProficient: result.isProficient),
         const SizedBox(width: AppSpacing.xs),
         Text(
-          _abilityAbbreviations[result.abilityKey] ?? result.abilityKey,
+          _abilityAbbreviations(
+                AppLocalizations.of(context)!,
+              )[result.abilityKey] ??
+              result.abilityKey,
           style: AppTypography.body(fontSize: 13, fontWeight: FontWeight.w700),
         ),
         const SizedBox(width: AppSpacing.xs / 2),
