@@ -7,6 +7,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/checkable_option_tile.dart';
 import '../../../../core/widgets/dice_type_badge.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/prepared_spells_limit.dart';
@@ -265,6 +266,7 @@ class _PrepareSpellsSheetContentState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Sorts mineurs exclus (voir la doc de la fonction) : jamais rien à
     // cocher d'utile pour eux (toujours visibles ailleurs, sans notion de
     // préparation). Même raison pour les sorts d'une classe à sorts connus
@@ -288,7 +290,7 @@ class _PrepareSpellsSheetContentState
           decoration: const BoxDecoration(color: AppColors.parchmentBg),
           child: Column(
             children: [
-              const SheetHeaderBar(title: 'PRÉPARER MES SORTS'),
+              SheetHeaderBar(title: l10n.prepareSpellsSheetTitle),
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 child: _SpellSearchField(controller: _searchController),
@@ -325,9 +327,9 @@ class _PrepareSpellsSheetContentState
                         PreparedSpellsCounter(
                           count: _preparedCountForClass(classLimit.classId),
                           limit: classLimit.limit,
-                          label:
-                              'SORTS PRÉPARÉS — '
-                              '${classLimit.className.toUpperCase()}',
+                          label: l10n.prepareSpellsSheetClassLabel(
+                            classLimit.className.toUpperCase(),
+                          ),
                         ),
                         if (classLimit != widget.classLimits.last)
                           const SizedBox(height: AppSpacing.md),
@@ -381,16 +383,17 @@ class _SpellSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return TextField(
       controller: controller,
       style: AppTypography.body(color: AppColors.textPrimary),
       decoration: InputDecoration(
-        hintText: 'Rechercher un sort',
+        hintText: l10n.prepareSpellsSheetSearchHint,
         prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
         suffixIcon: controller.text.isEmpty
             ? null
             : IconButton(
-                tooltip: 'Effacer',
+                tooltip: l10n.prepareSpellsSheetSearchClearTooltip,
                 icon: const Icon(Icons.close, color: AppColors.textMuted),
                 onPressed: controller.clear,
               ),
@@ -415,6 +418,7 @@ class _NoMatchState extends StatelessWidget {
     // au lieu de déborder silencieusement (voir `10-design-system.md`
     // section 7). `ConstrainedBox(minHeight: ...)` conserve le centrage
     // vertical du cas courant (contenu plus petit que l'espace disponible).
+    final l10n = AppLocalizations.of(context)!;
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
@@ -434,8 +438,8 @@ class _NoMatchState extends StatelessWidget {
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       query.isEmpty
-                          ? 'Aucun sort disponible.'
-                          : 'Aucun sort pour « $query ».',
+                          ? l10n.prepareSpellsSheetNoMatchEmptyMessage
+                          : l10n.prepareSpellsSheetNoMatchQueryMessage(query),
                       textAlign: TextAlign.center,
                       style: AppTypography.body(color: AppColors.textMuted),
                     ),
@@ -544,6 +548,7 @@ class _SpellCheckRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Un sort accordé par une sous-classe est toujours préparé, jamais
     // retirable — voir `CharacterSpellEntry.isAlwaysPrepared` et
     // `SpellStatusFormatter.canTogglePrepared`.
@@ -576,7 +581,7 @@ class _SpellCheckRow extends StatelessWidget {
         children: [
           Expanded(child: tile),
           IconButton(
-            tooltip: 'Description de ${spell.name}',
+            tooltip: l10n.prepareSpellsSheetInfoTooltip(spell.name),
             icon: const Icon(
               Icons.info_outline_rounded,
               color: AppColors.textSecondary,

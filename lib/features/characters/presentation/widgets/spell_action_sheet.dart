@@ -7,6 +7,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/selectable_option_tile.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/innate_spell_usage.dart';
@@ -162,6 +163,7 @@ class _SpellSlotChoiceSheetContentState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -175,7 +177,7 @@ class _SpellSlotChoiceSheetContentState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Lancer ${widget.spell.name}',
+              l10n.spellActionSheetTitle(widget.spell.name),
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -183,7 +185,7 @@ class _SpellSlotChoiceSheetContentState
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              "Choisissez le niveau d'emplacement à utiliser.",
+              l10n.spellActionSheetSubtitle,
               style: AppTypography.body(
                 fontSize: 13,
                 color: AppColors.textSecondary,
@@ -210,7 +212,7 @@ class _SpellSlotChoiceSheetContentState
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label: l10n.spellActionSheetCancelButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -218,7 +220,7 @@ class _SpellSlotChoiceSheetContentState
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: PrimaryButton(
-                    label: 'Lancer',
+                    label: l10n.spellActionSheetCastButton,
                     onPressed: _selectedSlot != null
                         ? () => Navigator.of(context).pop(_selectedSlot)
                         : null,
@@ -253,19 +255,20 @@ class _SpellSlotOptionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final exhausted = slot.remaining == 0;
 
     final Widget? leading;
     if (exhausted) {
       leading = Text(
-        'Épuisé',
+        l10n.spellActionSheetSlotExhaustedLabel,
         style: AppTypography.body(fontSize: 11, color: AppColors.accentBrick),
       );
     } else if (slot.total > 0) {
       leading = SpellSlotDots(slot: slot);
     } else {
       leading = Text(
-        '${slot.remaining}/${slot.total} restants',
+        l10n.spellActionSheetSlotRemainingLabel(slot.remaining, slot.total),
         style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
       );
     }
@@ -277,8 +280,8 @@ class _SpellSlotOptionRow extends StatelessWidget {
         // emplacement classique quand les deux partagent le même niveau
         // numérique (voir la doc de [CastSpellCallback]).
         title: slot.isPact
-            ? 'Niveau ${slot.level} (pacte)'
-            : 'Niveau ${slot.level}',
+            ? l10n.spellActionSheetPactSlotLevelLabel(slot.level)
+            : l10n.spellActionSheetSlotLevelLabel(slot.level),
         selected: selected,
         leading: leading,
         // No-op explicite (pas `null`) pour un niveau épuisé : voir la spec

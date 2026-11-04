@@ -2945,4 +2945,359 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inventoryCategoryFilterSheetTitle => 'FILTER BY CATEGORY';
+
+  @override
+  String get characterSpellsSectionTitle => 'SPELLS';
+
+  @override
+  String characterSpellsSectionPactLabel(int level) {
+    return 'Pact magic — Level $level';
+  }
+
+  @override
+  String characterSpellsSectionPactSlotsSemanticLabel(
+    int remaining,
+    int total,
+    int level,
+  ) {
+    return 'Pact slots: $remaining remaining out of $total (level $level)';
+  }
+
+  @override
+  String characterSpellsSectionSlotsSemanticLabel(int remaining, int total) {
+    return 'Spell slots: $remaining remaining out of $total';
+  }
+
+  @override
+  String characterSpellsSectionGrantBadgeSemanticLabel(String sourceLabel) {
+    return 'Always prepared, granted by: $sourceLabel';
+  }
+
+  @override
+  String get characterSpellsSectionInnateBadgeLabel => 'INNATE';
+
+  @override
+  String get characterSpellsSectionInnateExhaustedLabel => 'Spent';
+
+  @override
+  String characterSpellsSectionInnateAvailableSemanticLabel(
+    int remaining,
+    int max,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '$remaining uses remaining',
+      one: '1 use remaining',
+    );
+    return 'Innate spell, no slot required, $_temp0 out of $max, long rest';
+  }
+
+  @override
+  String get characterSpellsSectionInnateExhaustedSemanticLabel =>
+      'Innate spell, spent, available after a long rest';
+
+  @override
+  String get characterSpellsTabBodyLimitedUseFeaturesCardTitle =>
+      'INVOCATIONS & LIMITED-USE FEATURES';
+
+  @override
+  String get characterSpellsTabBodySearchHint => 'Search for a spell';
+
+  @override
+  String get characterSpellsTabBodySearchClearTooltip => 'Clear';
+
+  @override
+  String get characterSpellsTabBodyNoMatchAllLabel => 'No spell';
+
+  @override
+  String get characterSpellsTabBodyNoMatchPreparedLabel => 'No prepared spell';
+
+  @override
+  String get characterSpellsTabBodyNoMatchUnpreparedLabel =>
+      'No unprepared spell';
+
+  @override
+  String characterSpellsTabBodyNoMatchMessageEmpty(String kind) {
+    return '$kind.';
+  }
+
+  @override
+  String characterSpellsTabBodyNoMatchMessageQuery(String kind, String query) {
+    return '$kind for “$query”.';
+  }
+
+  @override
+  String get characterSpellsTabBodyEmptyStateTitle => 'NO SPELLS';
+
+  @override
+  String get characterSpellsTabBodyEmptyStateBody =>
+      'No spell on this sheet yet. For classes that cast spells, they\'re chosen from the creation wizard or when leveling up.';
+
+  @override
+  String get characterSpellsTabBodyNonCasterTitle =>
+      'This class doesn\'t cast spells';
+
+  @override
+  String get characterSpellsTabBodyNonCasterDefaultClassName => 'this class';
+
+  @override
+  String characterSpellsTabBodyNonCasterBody(
+    String characterName,
+    String className,
+  ) {
+    return '$characterName is $className — outside a dedicated archetype (e.g. Eldritch Knight), this class has no spell slots. This tab stays accessible for navigation consistency, but will remain empty for this character.';
+  }
+
+  @override
+  String spellActionSheetTitle(String spellName) {
+    return 'Cast $spellName';
+  }
+
+  @override
+  String get spellActionSheetSubtitle => 'Choose the slot level to use.';
+
+  @override
+  String get spellActionSheetCancelButton => 'Cancel';
+
+  @override
+  String get spellActionSheetCastButton => 'Cast';
+
+  @override
+  String get spellActionSheetSlotExhaustedLabel => 'Spent';
+
+  @override
+  String spellActionSheetSlotRemainingLabel(int remaining, int total) {
+    return '$remaining/$total remaining';
+  }
+
+  @override
+  String spellActionSheetPactSlotLevelLabel(int level) {
+    return 'Level $level (pact)';
+  }
+
+  @override
+  String spellActionSheetSlotLevelLabel(int level) {
+    return 'Level $level';
+  }
+
+  @override
+  String get spellInfoPanelUsagesLabel => 'Uses';
+
+  @override
+  String get spellInfoPanelCastingTimeLabel => 'Casting time';
+
+  @override
+  String get spellInfoPanelRangeLabel => 'Range';
+
+  @override
+  String get spellInfoPanelDurationLabel => 'Duration';
+
+  @override
+  String get spellInfoPanelConcentrationLabel => 'Concentration';
+
+  @override
+  String get spellInfoPanelConcentrationYes => 'Yes';
+
+  @override
+  String get spellInfoPanelConcentrationNo => 'No';
+
+  @override
+  String spellInfoPanelGrantSourceNote(String sourceLabel) {
+    return 'Always prepared — $sourceLabel spell (doesn\'t count toward the prepared spells limit)';
+  }
+
+  @override
+  String spellInfoPanelInnateNote(int usesPerLongRest) {
+    return 'Innate spell — cast without a slot, $usesPerLongRest time(s) per long rest';
+  }
+
+  @override
+  String get spellInfoPanelDescriptionTitle => 'DESCRIPTION';
+
+  @override
+  String get spellInfoPanelCastButton => 'Cast';
+
+  @override
+  String get spellInfoPanelCastInnateButton => 'Cast (innate spell)';
+
+  @override
+  String get spellInfoPanelUnprepareLink => 'Stop preparing';
+
+  @override
+  String get spellInfoPanelPrepareLink => 'Prepare this spell';
+
+  @override
+  String get spellInfoPanelComponentsLabel => 'Components';
+
+  @override
+  String get spellPreparationCardTitle => 'SPELL PREPARATION';
+
+  @override
+  String get spellPreparationCardInfoTooltip =>
+      'How does spell preparation work?';
+
+  @override
+  String spellPreparationCardClassLabel(String className) {
+    return 'PREPARED SPELLS — $className';
+  }
+
+  @override
+  String get spellPreparationCardDefaultLabel => 'PREPARED SPELLS';
+
+  @override
+  String spellPreparationCardOverLimitStatus(int overBy) {
+    return 'Limit exceeded by $overBy';
+  }
+
+  @override
+  String get spellPreparationCardLimitReachedStatus => 'Limit reached';
+
+  @override
+  String spellPreparationCardRemainingToPrepareStatus(int remaining) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '$remaining more spells to prepare',
+      one: '1 more spell to prepare',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String spellPreparationCardCounterSemanticLabel(
+    String label,
+    int count,
+    int limit,
+  ) {
+    return '$label: $count out of $limit';
+  }
+
+  @override
+  String get spellPreparationCardCounterOverLimitSuffix => ', limit exceeded';
+
+  @override
+  String get spellPreparationCardInfoEntryPrepareTitle => 'Prepare to cast';
+
+  @override
+  String get spellPreparationCardInfoEntryPrepareBody =>
+      'Only prepared spells can be cast. Unprepared spells stay in the list, greyed out, after the prepared spells. Tap a spell, then “Prepare this spell” or “Stop preparing”.';
+
+  @override
+  String get spellPreparationCardInfoEntryHowManyTitle => 'How many spells?';
+
+  @override
+  String spellPreparationCardInfoEntryHowManyBody(String limitsSentence) {
+    return 'Cleric, Druid and Wizard: spellcasting ability modifier + class level. Paladin and Artificer (half-casters): modifier + half the level. Minimum 1. Multiclassed with several classes that prepare: each class has its own limit, never a shared total.$limitsSentence Once the limit is reached, you can\'t prepare a new spell of that class without unpreparing another one first.';
+  }
+
+  @override
+  String spellPreparationCardSingleLimitSentence(int limit) {
+    return ' Your current limit: $limit.';
+  }
+
+  @override
+  String spellPreparationCardMultipleLimitsSentence(String limitsList) {
+    return ' Your current limits: $limitsList.';
+  }
+
+  @override
+  String get spellPreparationCardInfoEntryNoPreparationTitle =>
+      'No preparation needed';
+
+  @override
+  String get spellPreparationCardInfoEntryNoPreparationBody =>
+      'Cantrips, innate spells, and domain or oath spells never need to be prepared and don\'t count toward the limit. An innate spell of level 1 or higher is cast without a slot, once per long rest.';
+
+  @override
+  String get spellPreparationCardInfoEntryCastDoesNotUnprepareTitle =>
+      'Casting doesn\'t unprepare';
+
+  @override
+  String get spellPreparationCardInfoEntryCastDoesNotUnprepareBody =>
+      'Casting a spell uses up a slot, but the spell stays prepared: you can cast it again as long as you have slots left.';
+
+  @override
+  String get spellPreparationCardInfoEntryChangeListTitle =>
+      'Changing your list';
+
+  @override
+  String get spellPreparationCardInfoEntryChangeListBody =>
+      'The list of prepared spells changes after a long rest: the long rest offers to keep your list or change it.';
+
+  @override
+  String get prepareSpellsSheetTitle => 'PREPARE MY SPELLS';
+
+  @override
+  String prepareSpellsSheetClassLabel(String className) {
+    return 'PREPARED SPELLS — $className';
+  }
+
+  @override
+  String get prepareSpellsSheetSearchHint => 'Search for a spell';
+
+  @override
+  String get prepareSpellsSheetSearchClearTooltip => 'Clear';
+
+  @override
+  String get prepareSpellsSheetNoMatchEmptyMessage => 'No spell available.';
+
+  @override
+  String prepareSpellsSheetNoMatchQueryMessage(String query) {
+    return 'No spell for “$query”.';
+  }
+
+  @override
+  String prepareSpellsSheetInfoTooltip(String spellName) {
+    return 'Description of $spellName';
+  }
+
+  @override
+  String castInnateSpellConfirmationDialogTitle(String spellName) {
+    return 'Cast $spellName?';
+  }
+
+  @override
+  String get castInnateSpellConfirmationDialogMessage =>
+      'This uses up one use of this innate spell, recovered only on your next long rest.';
+
+  @override
+  String get castInnateSpellConfirmationDialogCancelButton => 'Cancel';
+
+  @override
+  String get castInnateSpellConfirmationDialogCastButton => 'Cast';
+
+  @override
+  String characterDetailCastSpellSuccessMessage(String spellName) {
+    return '$spellName cast.';
+  }
+
+  @override
+  String characterDetailCastSpellWithSlotSuccessMessage(
+    String spellName,
+    int slotLevel,
+  ) {
+    return '$spellName cast (level $slotLevel slot).';
+  }
+
+  @override
+  String get characterDetailCastSpellErrorMessage =>
+      'Couldn\'t cast this spell. Try again.';
+
+  @override
+  String characterDetailCastPactSpellSuccessMessage(
+    String spellName,
+    int pactLevel,
+  ) {
+    return '$spellName cast (level $pactLevel pact slot).';
+  }
+
+  @override
+  String characterDetailCastInnateSpellSuccessMessage(String spellName) {
+    return '$spellName cast (innate spell).';
+  }
+
+  @override
+  String get characterDetailInnateSpellSyncErrorMessage =>
+      'Couldn\'t sync innate spells. Try again.';
 }

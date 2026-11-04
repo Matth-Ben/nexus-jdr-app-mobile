@@ -7,6 +7,7 @@ import '../../../../core/rules/class_spellcasting_rule.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/spell_name_filter.dart';
 import '../../domain/spell_preparation_filter.dart';
@@ -141,6 +142,7 @@ class _CharacterSpellsTabBodyState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final detail = widget.detail;
 
     // Carte de pied "INVOCATIONS & APTITUDES À USAGE LIMITÉ" (recettage
@@ -169,7 +171,9 @@ class _CharacterSpellsTabBodyState
               ? const _EmptySpellsState()
               : _NonCasterEmptyState(
                   characterName: detail.name,
-                  className: detail.primaryClass?.className ?? 'cette classe',
+                  className:
+                      detail.primaryClass?.className ??
+                      l10n.characterSpellsTabBodyNonCasterDefaultClassName,
                 ),
           if (showLimitedUseCard) ...[
             const SizedBox(height: AppSpacing.md),
@@ -177,7 +181,7 @@ class _CharacterSpellsTabBodyState
               features: limitedUseFeatures,
               onUseFeature: onUseFeature,
               actionsDisabled: widget.actionsDisabled,
-              title: 'INVOCATIONS & APTITUDES À USAGE LIMITÉ',
+              title: l10n.characterSpellsTabBodyLimitedUseFeaturesCardTitle,
             ),
           ],
         ],
@@ -252,7 +256,7 @@ class _CharacterSpellsTabBodyState
             features: limitedUseFeatures,
             onUseFeature: onUseFeature,
             actionsDisabled: widget.actionsDisabled,
-            title: 'INVOCATIONS & APTITUDES À USAGE LIMITÉ',
+            title: l10n.characterSpellsTabBodyLimitedUseFeaturesCardTitle,
           ),
         ],
       ],
@@ -272,17 +276,18 @@ class _SpellSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return TextField(
       controller: controller,
       focusNode: focusNode,
       style: AppTypography.body(color: AppColors.textPrimary),
       decoration: InputDecoration(
-        hintText: 'Rechercher un sort',
+        hintText: l10n.characterSpellsTabBodySearchHint,
         prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
         suffixIcon: controller.text.isEmpty
             ? null
             : IconButton(
-                tooltip: 'Effacer',
+                tooltip: l10n.characterSpellsTabBodySearchClearTooltip,
                 icon: const Icon(Icons.close, color: AppColors.textMuted),
                 onPressed: controller.clear,
               ),
@@ -306,10 +311,13 @@ class _NoMatchState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final kind = switch (filter) {
-      SpellPreparationFilter.all => 'Aucun sort',
-      SpellPreparationFilter.prepared => 'Aucun sort préparé',
-      SpellPreparationFilter.unprepared => 'Aucun sort non préparé',
+      SpellPreparationFilter.all => l10n.characterSpellsTabBodyNoMatchAllLabel,
+      SpellPreparationFilter.prepared =>
+        l10n.characterSpellsTabBodyNoMatchPreparedLabel,
+      SpellPreparationFilter.unprepared =>
+        l10n.characterSpellsTabBodyNoMatchUnpreparedLabel,
     };
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
@@ -324,7 +332,9 @@ class _NoMatchState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              query.isEmpty ? '$kind.' : '$kind pour « $query ».',
+              query.isEmpty
+                  ? l10n.characterSpellsTabBodyNoMatchMessageEmpty(kind)
+                  : l10n.characterSpellsTabBodyNoMatchMessageQuery(kind, query),
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textMuted),
             ),
@@ -343,6 +353,7 @@ class _EmptySpellsState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -356,7 +367,7 @@ class _EmptySpellsState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'AUCUN SORT',
+              l10n.characterSpellsTabBodyEmptyStateTitle,
               textAlign: TextAlign.center,
               style: AppTypography.display(
                 fontSize: 11,
@@ -365,9 +376,7 @@ class _EmptySpellsState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Aucun sort sur cette fiche pour l\'instant. Pour les classes '
-              'qui lancent des sorts, ils se choisissent depuis l\'assistant '
-              'de création ou à la montée de niveau.',
+              l10n.characterSpellsTabBodyEmptyStateBody,
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textMuted),
             ),
@@ -395,6 +404,7 @@ class _NonCasterEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -408,7 +418,7 @@ class _NonCasterEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Cette classe ne lance pas de sorts',
+              l10n.characterSpellsTabBodyNonCasterTitle,
               textAlign: TextAlign.center,
               style: AppTypography.body(
                 fontSize: 15,
@@ -417,11 +427,10 @@ class _NonCasterEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              '$characterName est $className — hors archétype dédié (ex. '
-              'Chevalier occulte), cette classe ne dispose pas '
-              'd\'emplacements de sorts. Cet onglet reste accessible par '
-              'cohérence de navigation, mais restera vide pour ce '
-              'personnage.',
+              l10n.characterSpellsTabBodyNonCasterBody(
+                characterName,
+                className,
+              ),
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textMuted),
             ),

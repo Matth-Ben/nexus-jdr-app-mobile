@@ -606,7 +606,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         return;
       }
       // Sort niveau 0 : rien à persister (spec de la tâche).
-      _showSnackBar('${spell.name} lancé.');
+      _showSnackBar(l10n.characterDetailCastSpellSuccessMessage(spell.name));
       return;
     }
 
@@ -662,7 +662,12 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar('${spell.name} lancé (emplacement niveau $slotLevel).');
+      _showSnackBar(
+        l10n.characterDetailCastSpellWithSlotSuccessMessage(
+          spell.name,
+          slotLevel,
+        ),
+      );
     } on CharacterFailure catch (failure) {
       if (mounted && _restGeneration == myRestGeneration) {
         setState(
@@ -684,7 +689,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           ),
         );
       }
-      _showSnackBar('Impossible de lancer ce sort. Réessayez.');
+      _showSnackBar(l10n.characterDetailCastSpellErrorMessage);
     } finally {
       if (mounted) setState(() => _isCastingSpell = false);
     }
@@ -738,7 +743,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
       _showSnackBar(
-        '${spell.name} lancé (emplacement de pacte niveau ${pact.level}).',
+        l10n.characterDetailCastPactSpellSuccessMessage(spell.name, pact.level),
       );
     } on CharacterFailure catch (failure) {
       if (mounted && _restGeneration == myRestGeneration) {
@@ -749,7 +754,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       if (mounted && _restGeneration == myRestGeneration) {
         setState(() => _localPactSlotUsed = previousOverride);
       }
-      _showSnackBar('Impossible de lancer ce sort. Réessayez.');
+      _showSnackBar(l10n.characterDetailCastSpellErrorMessage);
     } finally {
       if (mounted) setState(() => _isCastingSpell = false);
     }
@@ -866,13 +871,15 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar('${spell.name} lancé (sort inné).');
+      _showSnackBar(
+        l10n.characterDetailCastInnateSpellSuccessMessage(spell.name),
+      );
     } on CharacterFailure catch (failure) {
       revertOverride();
       _showSnackBar(failure.message);
     } catch (_) {
       revertOverride();
-      _showSnackBar('Impossible de lancer ce sort. Réessayez.');
+      _showSnackBar(l10n.characterDetailCastSpellErrorMessage);
     } finally {
       if (mounted) setState(() => _isCastingSpell = false);
     }
@@ -889,6 +896,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// intacte et la même valeur est simplement réécrite.
   Future<void> _reassertInnateUsesState(int spellId) async {
     if (!mounted) return;
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     final latest = ref.read(characterDetailProvider(widget.characterId)).value;
     if (latest == null) return;
     final effective = _effectiveDetail(latest);
@@ -915,7 +925,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       _showSnackBar(failure.message);
     } catch (_) {
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar('Impossible de synchroniser les sorts innés. Réessayez.');
+      _showSnackBar(l10n.characterDetailInnateSpellSyncErrorMessage);
     } finally {
       if (mounted) setState(() => _isApplyingRest = false);
     }

@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/dice_type_badge.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_spell_entry.dart';
 import '../../domain/character_spell_slot.dart';
 import '../../domain/innate_spell_usage.dart';
@@ -85,6 +86,7 @@ class CharacterSpellsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final slotsByLevel = {for (final slot in spellSlots) slot.level: slot};
     final hasPact = pactSlot != null && pactSlot!.total > 0;
     // La carte "SORTS" ne porte plus que le bloc "Magie de pacte" (le
@@ -111,7 +113,7 @@ class CharacterSpellsSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'SORTS',
+                  l10n.characterSpellsSectionTitle,
                   style: AppTypography.display(
                     fontSize: 11,
                     color: AppColors.textSecondary,
@@ -165,6 +167,7 @@ class _PactSlotBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         const Icon(
@@ -174,7 +177,7 @@ class _PactSlotBanner extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.xs / 2),
         Text(
-          'Magie de pacte — Niveau ${slot.level}',
+          l10n.characterSpellsSectionPactLabel(slot.level),
           style: AppTypography.body(fontSize: 13, fontWeight: FontWeight.w700),
         ),
         const SizedBox(width: AppSpacing.xs),
@@ -281,12 +284,16 @@ class SpellSlotDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final total = slot.total < 0 ? 0 : slot.total;
     final remaining = slot.remaining;
     final label = slot.isPact
-        ? 'Emplacements de pacte : $remaining restants sur $total '
-              '(niveau ${slot.level})'
-        : 'Emplacements de sorts : $remaining restants sur $total';
+        ? l10n.characterSpellsSectionPactSlotsSemanticLabel(
+            remaining,
+            total,
+            slot.level,
+          )
+        : l10n.characterSpellsSectionSlotsSemanticLabel(remaining, total);
 
     return Semantics(
       label: label,
@@ -538,8 +545,9 @@ class _GrantBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
-      label: 'Toujours préparé, accordé par : ${source.label}',
+      label: l10n.characterSpellsSectionGrantBadgeSemanticLabel(source.label),
       excludeSemantics: true,
       child: _RowBadge(
         label: source.label.toUpperCase(),
@@ -605,29 +613,31 @@ class _InnateUsage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final remaining = InnateSpellUsage.usesRemaining(spell);
     const max = InnateSpellUsage.usesPerLongRest;
     final available = remaining > 0;
 
     return Semantics(
       label: available
-          ? 'Sort inné, sans emplacement, $remaining '
-                '${remaining > 1 ? 'utilisations restantes' : 'utilisation restante'} '
-                'sur $max, repos long'
-          : 'Sort inné, épuisé, disponible après un repos long',
+          ? l10n.characterSpellsSectionInnateAvailableSemanticLabel(
+              remaining,
+              max,
+            )
+          : l10n.characterSpellsSectionInnateExhaustedSemanticLabel,
       excludeSemantics: true,
       child: MediaQuery.withClampedTextScaling(
         maxScaleFactor: AppTypography.maxTextScaleFactor,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const _RowBadge(label: 'INNÉ'),
+            _RowBadge(label: l10n.characterSpellsSectionInnateBadgeLabel),
             const SizedBox(width: AppSpacing.xs),
             if (available)
               const _SpellSlotDot(filled: true, filledColor: AppColors.goldEnd)
             else
               Text(
-                'Épuisé',
+                l10n.characterSpellsSectionInnateExhaustedLabel,
                 style: AppTypography.body(
                   fontSize: _innateSpentFontSize,
                   fontWeight: FontWeight.w600,

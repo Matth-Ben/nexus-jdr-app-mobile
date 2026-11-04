@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/segmented_toggle.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/prepared_spells_limit.dart';
 import '../../domain/spell_preparation_filter.dart';
 
@@ -43,6 +44,7 @@ class SpellPreparationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -62,7 +64,7 @@ class SpellPreparationCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'PRÉPARATION DES SORTS',
+                  l10n.spellPreparationCardTitle,
                   style: AppTypography.display(
                     fontSize: 11,
                     color: AppColors.textSecondary,
@@ -70,7 +72,7 @@ class SpellPreparationCard extends StatelessWidget {
                 ),
               ),
               IconButton(
-                tooltip: 'Comment fonctionne la préparation des sorts ?',
+                tooltip: l10n.spellPreparationCardInfoTooltip,
                 icon: const Icon(
                   Icons.info_outline_rounded,
                   color: AppColors.accentTeal,
@@ -105,9 +107,9 @@ class SpellPreparationCard extends StatelessWidget {
                     PreparedSpellsCounter(
                       count: classLimit.preparedCount,
                       limit: classLimit.limit,
-                      label:
-                          'SORTS PRÉPARÉS — '
-                          '${classLimit.className.toUpperCase()}',
+                      label: l10n.spellPreparationCardClassLabel(
+                        classLimit.className.toUpperCase(),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],
@@ -137,37 +139,44 @@ class PreparedSpellsCounter extends StatelessWidget {
   const PreparedSpellsCounter({
     required this.count,
     required this.limit,
-    this.label = 'SORTS PRÉPARÉS',
+    this.label,
     super.key,
   });
 
   final int count;
   final int limit;
 
-  /// Libellé affiché au-dessus du décompte — `'SORTS PRÉPARÉS'` par défaut
-  /// (rendu mono-classe historique, strictement inchangé). Un personnage
-  /// multiclassé avec plusieurs classes qui préparent (voir
-  /// `SpellPreparationCard.classLimits`) fournit un libellé par classe (ex.
-  /// `'SORTS PRÉPARÉS — CLERC'`) pour distinguer les compteurs empilés.
-  final String label;
+  /// Libellé affiché au-dessus du décompte — `null` retombe sur
+  /// `l10n.spellPreparationCardDefaultLabel` (rendu mono-classe historique,
+  /// strictement inchangé). Un personnage multiclassé avec plusieurs classes
+  /// qui préparent (voir `SpellPreparationCard.classLimits`) fournit un
+  /// libellé par classe (ex. `l10n.spellPreparationCardClassLabel('CLERC')`)
+  /// pour distinguer les compteurs empilés.
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final resolvedLabel = label ?? l10n.spellPreparationCardDefaultLabel;
     final over = count > limit;
     final remaining = limit - count;
     final status = over
-        ? 'Limite dépassée de ${-remaining}'
+        ? l10n.spellPreparationCardOverLimitStatus(-remaining)
         : remaining == 0
-        ? 'Limite atteinte'
-        : 'Encore $remaining sort${remaining > 1 ? 's' : ''} à préparer';
+        ? l10n.spellPreparationCardLimitReachedStatus
+        : l10n.spellPreparationCardRemainingToPrepareStatus(remaining);
     final accent = over ? AppColors.accentBrick : AppColors.textSecondary;
 
     return Semantics(
       container: true,
       excludeSemantics: true,
       label:
-          '$label : $count sur $limit'
-          '${over ? ', limite dépassée' : ''}',
+          l10n.spellPreparationCardCounterSemanticLabel(
+            resolvedLabel,
+            count,
+            limit,
+          ) +
+          (over ? l10n.spellPreparationCardCounterOverLimitSuffix : ''),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -177,7 +186,7 @@ class PreparedSpellsCounter extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
               Expanded(
                 child: Text(
-                  label,
+                  resolvedLabel,
                   style: AppTypography.display(
                     fontSize: 11,
                     color: AppColors.textSecondary,
@@ -240,12 +249,13 @@ Future<void> showSpellPreparationInfoSheet(
   BuildContext context, {
   List<ClassPreparedSpells> classLimits = const [],
 }) {
+  final l10n = AppLocalizations.of(context)!;
   final limitsSentence = switch (classLimits) {
     [] => '',
-    [final only] => ' Votre limite actuelle : ${only.limit}.',
-    _ =>
-      ' Vos limites actuelles : '
-          '${classLimits.map((c) => '${c.className} ${c.limit}').join(', ')}.',
+    [final only] => l10n.spellPreparationCardSingleLimitSentence(only.limit),
+    _ => l10n.spellPreparationCardMultipleLimitsSentence(
+      classLimits.map((c) => '${c.className} ${c.limit}').join(', '),
+    ),
   };
   return showModalBottomSheet<void>(
     context: context,
@@ -259,64 +269,44 @@ Future<void> showSpellPreparationInfoSheet(
           decoration: const BoxDecoration(color: AppColors.parchmentBg),
           child: Column(
             children: [
-              const SheetHeaderBar(title: 'PRÉPARATION DES SORTS'),
+              SheetHeaderBar(title: l10n.spellPreparationCardTitle),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _InfoEntry(
+                      _InfoEntry(
                         icon: Icons.bookmark,
-                        title: 'Préparer pour lancer',
-                        body:
-                            'Seuls les sorts préparés peuvent être lancés. '
-                            'Les sorts non préparés restent dans la liste, '
-                            'grisés, après les sorts préparés. Touchez un '
-                            'sort puis « Préparer ce sort » ou « Ne plus '
-                            'préparer ».',
+                        title: l10n.spellPreparationCardInfoEntryPrepareTitle,
+                        body: l10n.spellPreparationCardInfoEntryPrepareBody,
                       ),
                       _InfoEntry(
                         icon: Icons.format_list_numbered,
-                        title: 'Combien de sorts ?',
-                        body:
-                            'Clerc, Druide et Magicien : modificateur de '
-                            'caractéristique d\'incantation + niveau de '
-                            'classe. Paladin et Artificier (demi-lanceurs) : '
-                            'modificateur + moitié du niveau. Minimum 1. '
-                            'Multiclassé avec plusieurs classes qui '
-                            'préparent : chaque classe a sa propre limite, '
-                            'jamais un total commun.'
-                            '$limitsSentence Une fois la limite atteinte, '
-                            'impossible de préparer un nouveau sort de '
-                            'cette classe sans en dé-préparer un autre '
-                            'd\'abord.',
+                        title: l10n.spellPreparationCardInfoEntryHowManyTitle,
+                        body: l10n.spellPreparationCardInfoEntryHowManyBody(
+                          limitsSentence,
+                        ),
                       ),
-                      const _InfoEntry(
+                      _InfoEntry(
                         icon: Icons.auto_awesome,
-                        title: 'Sans préparation',
+                        title: l10n
+                            .spellPreparationCardInfoEntryNoPreparationTitle,
                         body:
-                            'Les sorts mineurs, les sorts innés et les sorts '
-                            'de domaine ou de serment n\'ont jamais à être '
-                            'préparés et ne comptent pas dans la limite. Un '
-                            'sort inné de niveau 1 ou plus se lance sans '
-                            'emplacement, une fois par repos long.',
+                            l10n.spellPreparationCardInfoEntryNoPreparationBody,
                       ),
-                      const _InfoEntry(
+                      _InfoEntry(
                         icon: Icons.local_fire_department,
-                        title: 'Lancer ne dé-prépare pas',
-                        body:
-                            'Lancer un sort consomme un emplacement, mais le '
-                            'sort reste préparé : vous pouvez le relancer '
-                            'tant qu\'il vous reste des emplacements.',
+                        title: l10n
+                            .spellPreparationCardInfoEntryCastDoesNotUnprepareTitle,
+                        body: l10n
+                            .spellPreparationCardInfoEntryCastDoesNotUnprepareBody,
                       ),
-                      const _InfoEntry(
+                      _InfoEntry(
                         icon: Icons.hotel,
-                        title: 'Changer sa liste',
-                        body:
-                            'La liste de sorts préparés se change après un '
-                            'repos long : le repos long vous propose de '
-                            'garder votre liste ou de la modifier.',
+                        title:
+                            l10n.spellPreparationCardInfoEntryChangeListTitle,
+                        body: l10n.spellPreparationCardInfoEntryChangeListBody,
                         isLast: true,
                       ),
                     ],

@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/domain/prepared_spells_limit.dart';
 import 'package:personnages/features/characters/domain/spell_preparation_filter.dart';
 import 'package:personnages/features/characters/presentation/widgets/spell_preparation_card.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 ClassPreparedSpells _classLimit(
   String className, {
@@ -27,9 +28,13 @@ void main() {
   Future<void> pumpCard(
     WidgetTester tester, {
     List<ClassPreparedSpells> classLimits = const [],
+    Locale locale = const Locale('fr'),
   }) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Scaffold(
           body: SpellPreparationCard(
             filter: SpellPreparationFilter.all,
@@ -111,6 +116,29 @@ void main() {
       },
     );
 
+    testWidgets('phrase d\'état "Encore à préparer" : singulier (1 restant)', (
+      tester,
+    ) async {
+      await pumpCard(
+        tester,
+        classLimits: [_classLimit('Clerc', limit: 5, preparedCount: 4)],
+      );
+
+      expect(find.text('Encore 1 sort à préparer'), findsOneWidget);
+    });
+
+    testWidgets(
+      'phrase d\'état "Encore à préparer" : pluriel (plusieurs restants)',
+      (tester) async {
+        await pumpCard(
+          tester,
+          classLimits: [_classLimit('Clerc', limit: 5, preparedCount: 2)],
+        );
+
+        expect(find.text('Encore 3 sorts à préparer'), findsOneWidget);
+      },
+    );
+
     testWidgets(
       'icône ⓘ : ouvre la note d\'aide avec la bascule tous/préparés/non '
       'préparés toujours présente',
@@ -164,5 +192,47 @@ void main() {
         );
       },
     );
+
+    group('locale anglaise', () {
+      // Même rationale que les autres lots du chantier "traduction de
+      // l'app" Phase B : vérifie qu'un texte anglais s'affiche réellement.
+      testWidgets('titre, compteur et note en anglais', (tester) async {
+        await pumpCard(
+          tester,
+          classLimits: [_classLimit('Clerc', limit: 5, preparedCount: 3)],
+          locale: const Locale('en'),
+        );
+
+        expect(find.text('PREPARED SPELLS'), findsOneWidget);
+        expect(find.text('3 / 5'), findsOneWidget);
+
+        await tester.tap(find.byIcon(Icons.info_outline_rounded));
+        await tester.pumpAndSettle();
+
+        expect(find.text('SPELL PREPARATION'), findsWidgets);
+        expect(find.textContaining('Your current limit: 5.'), findsOneWidget);
+      });
+
+      testWidgets(
+        'plusieurs classes : libellé par classe et phrase de dépassement '
+        'en anglais',
+        (tester) async {
+          await pumpCard(
+            tester,
+            classLimits: [
+              _classLimit('Clerc', limit: 5, preparedCount: 2, classId: 10),
+              _classLimit('Druide', limit: 4, preparedCount: 1, classId: 20),
+              _classLimit('Paladin', limit: 2, preparedCount: 3, classId: 30),
+            ],
+            locale: const Locale('en'),
+          );
+
+          expect(find.text('PREPARED SPELLS — CLERC'), findsOneWidget);
+          expect(find.text('PREPARED SPELLS — DRUIDE'), findsOneWidget);
+          expect(find.text('PREPARED SPELLS — PALADIN'), findsOneWidget);
+          expect(find.text('Limit exceeded by 1'), findsOneWidget);
+        },
+      );
+    });
   });
 }

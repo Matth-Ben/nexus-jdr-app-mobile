@@ -3237,5 +3237,33 @@ void main() {
       );
       expect(find.text('RETRY'), findsOneWidget);
     });
+
+    testWidgets('confirmation de lancer de sort (onglet "Sorts") en anglais', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        spells: const [
+          CharacterSpellEntry(
+            id: 1,
+            name: 'Bouclier',
+            level: 1,
+            school: 'Abjuration',
+            status: SpellStatus.prepared,
+          ),
+        ],
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 3, used: 1)],
+      );
+
+      await pumpDetail(tester, locale: const Locale('en'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SPELLS'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bouclier'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'CAST'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Bouclier cast (level 1 slot).'), findsOneWidget);
+    });
   });
 }

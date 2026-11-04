@@ -11,11 +11,15 @@ import 'package:personnages/core/widgets/dice_type_badge.dart';
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_spells_section.dart';
 import 'package:personnages/features/characters/domain/spells_by_level_grouper.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 void main() {
   Future<void> pump(WidgetTester tester, List<CharacterSpellEntry> spells) {
     return tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         home: Scaffold(
           body: CharacterSpellsSection(
             groups: SpellsByLevelGrouper.group(spells),
