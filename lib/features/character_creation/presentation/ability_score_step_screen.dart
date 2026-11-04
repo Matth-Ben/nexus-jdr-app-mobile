@@ -12,6 +12,7 @@ import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/segmented_toggle.dart';
 import '../../../core/widgets/step_progress_bar.dart';
 import '../../../core/widgets/stepper_counter.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/ability_score_definitions.dart';
 import '../domain/ability_score_method.dart';
 import '../domain/ability_score_modifier_calculator.dart';
@@ -278,15 +279,17 @@ class _AbilityScoreStepScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final catalogAsync = ref.watch(raceCatalogProvider);
 
     return Scaffold(
       body: catalogAsync.when(
-        data: _buildContent,
+        data: (catalog) => _buildContent(catalog, l10n),
         loading: () => Column(
           children: [
             _MinimalHeader(
               onBack: _goBack,
+              helpTooltip: l10n.abilityScoreStepScreenHelpTooltip,
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.abilityScore),
             ),
@@ -307,6 +310,7 @@ class _AbilityScoreStepScreenState
           children: [
             _MinimalHeader(
               onBack: _goBack,
+              helpTooltip: l10n.abilityScoreStepScreenHelpTooltip,
               onHelp: () =>
                   showStepHelpSheet(context, CreationStepHelp.abilityScore),
             ),
@@ -314,7 +318,8 @@ class _AbilityScoreStepScreenState
               child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
-                    : 'Impossible de charger les bonus raciaux. Réessayez.',
+                    : l10n.abilityScoreStepScreenGenericErrorMessage,
+                retryLabel: l10n.abilityScoreStepScreenRetryButton,
                 onRetry: () => ref.invalidate(raceCatalogProvider),
               ),
             ),
@@ -332,6 +337,7 @@ class _AbilityScoreStepScreenState
 
   /// Bonus raciaux (race + sous-race) de [raceId]/[subraceId], formatés.
   static String _racialBonusesLabel(
+    AppLocalizations l10n,
     RaceCatalog catalog,
     int? raceId,
     int? subraceId,
@@ -344,34 +350,33 @@ class _AbilityScoreStepScreenState
         if (subrace.id == subraceId)
           RaceSummaryFormatter.formatAbilityBonuses(subrace.abilityBonuses),
     ].where((part) => part.isNotEmpty);
-    return parts.isEmpty ? 'aucun' : parts.join(', ');
+    return parts.isEmpty
+        ? l10n.abilityScoreStepScreenNoRacialBonusLabel
+        : parts.join(', ');
   }
 
-  Widget _buildEditIntro(RaceCatalog catalog) {
+  Widget _buildEditIntro(RaceCatalog catalog, AppLocalizations l10n) {
     final original = _editSession!.originalDraft;
     final raceChanged =
         original.raceId != _raceId || original.subraceId != _subraceId;
     final before = _racialBonusesLabel(
+      l10n,
       catalog,
       original.raceId,
       original.subraceId,
     );
-    final after = _racialBonusesLabel(catalog, _raceId, _subraceId);
+    final after = _racialBonusesLabel(l10n, catalog, _raceId, _subraceId);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const InfoBanner(
-          message:
-              'Scores finaux : bonus de race et améliorations déjà inclus. '
-              'Ajuste-les librement (1 à 30).',
+        InfoBanner(
+          message: l10n.abilityScoreStepScreenEditIntroMessage,
           icon: Icons.edit_outlined,
         ),
         if (raceChanged) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Race modifiée — reporte toi-même la différence de bonus :\n'
-            'avant : $before\n'
-            'maintenant : $after',
+            l10n.abilityScoreStepScreenRaceChangedMessage(before, after),
             style: AppTypography.body(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -383,7 +388,7 @@ class _AbilityScoreStepScreenState
     );
   }
 
-  Widget _buildContent(RaceCatalog catalog) {
+  Widget _buildContent(RaceCatalog catalog, AppLocalizations l10n) {
     final racialChoiceSpec = _racialChoiceSpec(catalog);
     final racialChoicesComplete =
         racialChoiceSpec?.isComplete(_racialChoices) ?? true;
@@ -393,6 +398,12 @@ class _AbilityScoreStepScreenState
           onBack: _goBack,
           currentStep: 5,
           totalSteps: _totalSteps,
+          headerTitle: l10n.abilityScoreStepScreenHeaderTitle,
+          stepCounterLabel: l10n.abilityScoreStepScreenStepCounter(
+            5,
+            _totalSteps,
+          ),
+          helpTooltip: l10n.abilityScoreStepScreenHelpTooltip,
           onHelp: () =>
               showStepHelpSheet(context, CreationStepHelp.abilityScore),
         ),
@@ -409,23 +420,26 @@ class _AbilityScoreStepScreenState
                     0,
                   ),
                   child: _editSession != null
-                      ? _buildEditIntro(catalog)
+                      ? _buildEditIntro(catalog, l10n)
                       : Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             SegmentedToggle<AbilityScoreMethod>(
-                              options: const [
+                              options: [
                                 SegmentedToggleOption(
                                   value: AbilityScoreMethod.standardArray,
-                                  label: 'Tableau',
+                                  label: l10n
+                                      .abilityScoreStepScreenMethodStandardLabel,
                                 ),
                                 SegmentedToggleOption(
                                   value: AbilityScoreMethod.pointBuy,
-                                  label: 'Points',
+                                  label: l10n
+                                      .abilityScoreStepScreenMethodPointBuyLabel,
                                 ),
                                 SegmentedToggleOption(
                                   value: AbilityScoreMethod.diceRoll,
-                                  label: 'Dés',
+                                  label: l10n
+                                      .abilityScoreStepScreenMethodDiceRollLabel,
                                 ),
                               ],
                               value: _method,
@@ -434,9 +448,10 @@ class _AbilityScoreStepScreenState
                             if (_method == AbilityScoreMethod.pointBuy) ...[
                               const SizedBox(height: AppSpacing.sm),
                               Text(
-                                'Points restants : '
-                                '${AbilityScoreRules.pointBuyRemaining(_scores)}'
-                                '/${AbilityScoreRules.pointBuyBudget}',
+                                l10n.abilityScoreStepScreenPointsRemainingLabel(
+                                  AbilityScoreRules.pointBuyRemaining(_scores),
+                                  AbilityScoreRules.pointBuyBudget,
+                                ),
                                 style: AppTypography.body(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -451,7 +466,7 @@ class _AbilityScoreStepScreenState
                                 child: TextButton(
                                   onPressed: _rerollDice,
                                   child: Text(
-                                    'Relancer les dés',
+                                    l10n.abilityScoreStepScreenRerollDiceButton,
                                     style: AppTypography.body(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
@@ -482,6 +497,8 @@ class _AbilityScoreStepScreenState
                         _AbilityRow(
                           definition: abilityScoreDefinitions[i],
                           score: _scores[abilityScoreDefinitions[i].key]!,
+                          modifierLabel:
+                              l10n.abilityScoreStepScreenModifierLabel,
                           modifier: _editSession != null
                               ? AbilityScoreRules.abilityModifier(
                                   _scores[abilityScoreDefinitions[i].key]!,
@@ -530,7 +547,7 @@ class _AbilityScoreStepScreenState
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Retour',
+                              label: l10n.abilityScoreStepScreenBackButton,
                               surface: SecondaryButtonSurface.parchment,
                               onPressed: _goBack,
                             ),
@@ -538,7 +555,7 @@ class _AbilityScoreStepScreenState
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Suivant',
+                              label: l10n.abilityScoreStepScreenNextButton,
                               // Bloqué tant que les bonus raciaux au choix
                               // ne sont pas entièrement répartis.
                               onPressed: racialChoicesComplete ? _submit : null,
@@ -568,6 +585,7 @@ class _AbilityRow extends StatelessWidget {
   const _AbilityRow({
     required this.definition,
     required this.score,
+    required this.modifierLabel,
     required this.modifier,
     required this.canIncrement,
     required this.canDecrement,
@@ -577,6 +595,10 @@ class _AbilityRow extends StatelessWidget {
 
   final AbilityScoreDefinition definition;
   final int score;
+
+  /// Vient de `abilityScoreStepScreenModifierLabel` (ex. "Modificateur
+  /// {modifier}"), à combiner avec [modifier] déjà formaté avec son signe.
+  final String Function(String modifier) modifierLabel;
   final int modifier;
   final bool canIncrement;
   final bool canDecrement;
@@ -611,7 +633,7 @@ class _AbilityRow extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Modificateur $modifierText',
+                  modifierLabel(modifierText),
                   style: AppTypography.body(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -641,12 +663,18 @@ class _Header extends StatelessWidget {
     required this.onBack,
     required this.currentStep,
     required this.totalSteps,
+    required this.headerTitle,
+    required this.stepCounterLabel,
+    required this.helpTooltip,
     required this.onHelp,
   });
 
   final VoidCallback onBack;
   final int currentStep;
   final int totalSteps;
+  final String headerTitle;
+  final String stepCounterLabel;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -683,7 +711,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: helpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -701,7 +729,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '5. Caractéristiques',
+                          headerTitle,
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -709,7 +737,7 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          stepCounterLabel,
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,
@@ -736,9 +764,14 @@ class _Header extends StatelessWidget {
 /// Bandeau bois minimal (retour + "CRÉATION" uniquement), affiché pendant le
 /// chargement/l'erreur — copie exacte du pattern des étapes 6/7/9.
 class _MinimalHeader extends StatelessWidget {
-  const _MinimalHeader({required this.onBack, required this.onHelp});
+  const _MinimalHeader({
+    required this.onBack,
+    required this.helpTooltip,
+    required this.onHelp,
+  });
 
   final VoidCallback onBack;
+  final String helpTooltip;
   final VoidCallback onHelp;
 
   @override
@@ -770,7 +803,7 @@ class _MinimalHeader extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: onHelp,
-                tooltip: 'Aide',
+                tooltip: helpTooltip,
                 icon: const Icon(
                   Icons.help_outline,
                   color: AppColors.textOnWood,
@@ -785,9 +818,14 @@ class _MinimalHeader extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
+  const _ErrorState({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
 
   final String message;
+  final String retryLabel;
   final VoidCallback onRetry;
 
   @override
@@ -810,7 +848,7 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(label: retryLabel, onPressed: onRetry),
           ],
         ),
       ),

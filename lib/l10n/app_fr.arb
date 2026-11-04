@@ -5369,5 +5369,172 @@
   "subclassFeatureChoiceBlockRetryButton": "Réessayer",
   "@subclassFeatureChoiceBlockRetryButton": {
     "description": "`SecondaryButton` \"Réessayer\" affiché sous le message d'erreur (met son libellé en majuscules à l'affichage)."
+  },
+
+  "abilityScoreStepScreenHelpTooltip": "Aide",
+  "@abilityScoreStepScreenHelpTooltip": {
+    "description": "Tooltip de l'icône \"?\" du bandeau, ouvrant l'aide contextuelle de l'étape."
+  },
+  "abilityScoreStepScreenHeaderTitle": "5. Caractéristiques",
+  "@abilityScoreStepScreenHeaderTitle": {
+    "description": "Titre d'étape affiché sur le bandeau bois."
+  },
+  "abilityScoreStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@abilityScoreStepScreenStepCounter": {
+    "description": "Compteur d'étape affiché sur le bandeau bois.",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "abilityScoreStepScreenGenericErrorMessage": "Impossible de charger les bonus raciaux. Réessayez.",
+  "@abilityScoreStepScreenGenericErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`."
+  },
+  "abilityScoreStepScreenRetryButton": "Réessayer",
+  "@abilityScoreStepScreenRetryButton": {
+    "description": "`SecondaryButton` \"Réessayer\" de `_ErrorState` (met son libellé en majuscules à l'affichage)."
+  },
+  "abilityScoreStepScreenMethodStandardLabel": "Tableau",
+  "@abilityScoreStepScreenMethodStandardLabel": {
+    "description": "Libellé du segment \"Tableau standard\" de la bascule de méthode (`SegmentedToggle`, met son libellé en majuscules à l'affichage)."
+  },
+  "abilityScoreStepScreenMethodPointBuyLabel": "Points",
+  "@abilityScoreStepScreenMethodPointBuyLabel": {
+    "description": "Libellé du segment \"Achat par points\" de la bascule de méthode (`SegmentedToggle`, met son libellé en majuscules à l'affichage)."
+  },
+  "abilityScoreStepScreenMethodDiceRollLabel": "Dés",
+  "@abilityScoreStepScreenMethodDiceRollLabel": {
+    "description": "Libellé du segment \"Dés\" de la bascule de méthode (`SegmentedToggle`, met son libellé en majuscules à l'affichage)."
+  },
+  "abilityScoreStepScreenPointsRemainingLabel": "Points restants : {remaining}/{budget}",
+  "@abilityScoreStepScreenPointsRemainingLabel": {
+    "description": "Points restants affichés pour la méthode \"Achat par points\" — pas de forme plurielle : \"Points\" reste invariable quel que soit le nombre restant (0 à 27), même convention que `classChoiceStepScreenQuotaBadge`.",
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "budget": {
+        "type": "int"
+      }
+    }
+  },
+  "abilityScoreStepScreenRerollDiceButton": "Relancer les dés",
+  "@abilityScoreStepScreenRerollDiceButton": {
+    "description": "Bouton texte affiché pour la méthode \"Dés\", relance les 6 dés."
+  },
+  "abilityScoreStepScreenBackButton": "Retour",
+  "@abilityScoreStepScreenBackButton": {
+    "description": "`SecondaryButton` \"Retour\" (met son libellé en majuscules à l'affichage)."
+  },
+  "abilityScoreStepScreenNextButton": "Suivant",
+  "@abilityScoreStepScreenNextButton": {
+    "description": "`PrimaryButton` \"Suivant\" (met son libellé en majuscules à l'affichage)."
+  },
+  "abilityScoreStepScreenModifierLabel": "Modificateur {modifier}",
+  "@abilityScoreStepScreenModifierLabel": {
+    "description": "Modificateur affiché sous le nom de chaque caractéristique (`_AbilityRow`), {modifier} déjà formaté avec son signe (ex. \"+2\", \"-1\") par l'écran.",
+    "placeholders": {
+      "modifier": {
+        "type": "String"
+      }
+    }
+  },
+  "abilityScoreStepScreenEditIntroMessage": "Scores finaux : bonus de race et améliorations déjà inclus. Ajuste-les librement (1 à 30).",
+  "@abilityScoreStepScreenEditIntroMessage": {
+    "description": "Message de `InfoBanner` affiché en mode modification (saisie directe des 6 scores finaux)."
+  },
+  "abilityScoreStepScreenRaceChangedMessage": "Race modifiée — reporte toi-même la différence de bonus :\navant : {before}\nmaintenant : {after}",
+  "@abilityScoreStepScreenRaceChangedMessage": {
+    "description": "Rappel affiché en mode modification quand la race a changé depuis l'original, {before}/{after} viennent de `_racialBonusesLabel` (bonus de race/sous-race formatés par `RaceSummaryFormatter.formatAbilityBonuses`, domaine, non traduit — D148/D149 de docs/dette-technique.md).",
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "abilityScoreStepScreenNoRacialBonusLabel": "aucun",
+  "@abilityScoreStepScreenNoRacialBonusLabel": {
+    "description": "Valeur de repli de `_racialBonusesLabel` quand la race/sous-race ne porte aucun bonus de caractéristique fixe (ex. race 2024)."
+  },
+
+  "skillsAndToolsStepScreenHelpTooltip": "Aide",
+  "@skillsAndToolsStepScreenHelpTooltip": {
+    "description": "Tooltip de l'icône \"?\" du bandeau, ouvrant l'aide contextuelle de l'étape."
+  },
+  "skillsAndToolsStepScreenHeaderTitle": "6. Compétences",
+  "@skillsAndToolsStepScreenHeaderTitle": {
+    "description": "Titre d'étape affiché sur le bandeau bois."
+  },
+  "skillsAndToolsStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@skillsAndToolsStepScreenStepCounter": {
+    "description": "Compteur d'étape affiché sur le bandeau bois.",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "skillsAndToolsStepScreenGenericErrorMessage": "Impossible de charger les compétences et outils disponibles. Réessayez.",
+  "@skillsAndToolsStepScreenGenericErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`."
+  },
+  "skillsAndToolsStepScreenRetryButton": "Réessayer",
+  "@skillsAndToolsStepScreenRetryButton": {
+    "description": "`SecondaryButton` \"Réessayer\" de `_ErrorState` (met son libellé en majuscules à l'affichage)."
+  },
+  "skillsAndToolsStepScreenBackButton": "Retour",
+  "@skillsAndToolsStepScreenBackButton": {
+    "description": "`SecondaryButton` \"Retour\" (met son libellé en majuscules à l'affichage)."
+  },
+  "skillsAndToolsStepScreenNextButton": "Suivant",
+  "@skillsAndToolsStepScreenNextButton": {
+    "description": "`PrimaryButton` \"Suivant\" (met son libellé en majuscules à l'affichage)."
+  },
+  "skillsAndToolsStepScreenClassSkillsSectionTitle": "COMPÉTENCES DE CLASSE",
+  "@skillsAndToolsStepScreenClassSkillsSectionTitle": {
+    "description": "Titre de la section 1 (toujours affichée), déjà en majuscules dans le code (pas de transformation automatique)."
+  },
+  "skillsAndToolsStepScreenClassToolsSectionTitle": "OUTILS (CLASSE)",
+  "@skillsAndToolsStepScreenClassToolsSectionTitle": {
+    "description": "Titre de la section 2, affichée si la classe propose un choix ou un octroi automatique d'outils, déjà en majuscules dans le code."
+  },
+  "skillsAndToolsStepScreenBackgroundToolsSectionTitle": "OUTILS (HISTORIQUE)",
+  "@skillsAndToolsStepScreenBackgroundToolsSectionTitle": {
+    "description": "Titre de la section 3 (jamais interactive, octroi automatique), déjà en majuscules dans le code."
+  },
+  "skillsAndToolsStepScreenLanguagesSectionTitle": "LANGUES (HISTORIQUE)",
+  "@skillsAndToolsStepScreenLanguagesSectionTitle": {
+    "description": "Titre de la section 4, affichée si l'historique propose un choix de langues, déjà en majuscules dans le code."
+  },
+  "skillsAndToolsStepScreenRaceSkillsSectionTitle": "COMPÉTENCES (RACE)",
+  "@skillsAndToolsStepScreenRaceSkillsSectionTitle": {
+    "description": "Titre de la section 5, affichée si la race propose un choix et/ou un octroi automatique de compétences, déjà en majuscules dans le code."
+  },
+  "skillsAndToolsStepScreenRaceToolsSectionTitle": "OUTILS (RACE)",
+  "@skillsAndToolsStepScreenRaceToolsSectionTitle": {
+    "description": "Titre de la section 6, affichée si la race propose un choix d'outils, déjà en majuscules dans le code."
+  },
+  "skillsAndToolsStepScreenQuotaBadge": "{selectedCount} / {quota} choisies",
+  "@skillsAndToolsStepScreenQuotaBadge": {
+    "description": "Badge de quota partagé par les 5 sections à choix interactif (compétences de classe, outils de classe, langues, compétences de race, outils de race) — pas de forme plurielle : \"choisies\" reste invariable quel que soit le quota (accord implicite avec \"compétences\"/\"outils\"/\"langues\", jamais énoncé littéralement), même convention que `classChoiceStepScreenQuotaBadge`.",
+    "placeholders": {
+      "selectedCount": {
+        "type": "int"
+      },
+      "quota": {
+        "type": "int"
+      }
+    }
   }
 }
