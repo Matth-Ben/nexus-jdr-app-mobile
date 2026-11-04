@@ -10,6 +10,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/creation_step_help.dart';
 import 'providers/character_creation_draft_provider.dart';
 import 'widgets/abandon_creation_flow.dart';
@@ -99,6 +100,7 @@ class _EditionStepScreenState extends ConsumerState<EditionStepScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: Column(
         children: [
@@ -123,8 +125,7 @@ class _EditionStepScreenState extends ConsumerState<EditionStepScreen> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Choisis l'édition des règles D&D 5e pour ce "
-                        'personnage. Ce choix est définitif.',
+                        l10n.editionStepScreenIntroText,
                         style: AppTypography.body(fontSize: 14),
                       ),
                     ),
@@ -139,10 +140,8 @@ class _EditionStepScreenState extends ConsumerState<EditionStepScreen> {
                       ),
                       children: [
                         SelectableOptionTile(
-                          title: '2014 — Manuel des Joueurs',
-                          subtitle:
-                              "L'édition originale des règles D&D 5e, "
-                              'publiée en 2014.',
+                          title: l10n.editionStepScreenOption2014Title,
+                          subtitle: l10n.editionStepScreenOption2014Subtitle,
                           selected: _selectedEdition == '2014',
                           leading: const AccentIconBadge(
                             index: 0,
@@ -152,11 +151,8 @@ class _EditionStepScreenState extends ConsumerState<EditionStepScreen> {
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         SelectableOptionTile(
-                          title: '2024 — Manuel des Joueurs revu',
-                          subtitle:
-                              "L'édition révisée des règles D&D 5e, "
-                              'publiée en 2024, avec certains '
-                              'ajustements de règles.',
+                          title: l10n.editionStepScreenOption2024Title,
+                          subtitle: l10n.editionStepScreenOption2024Subtitle,
                           selected: _selectedEdition == '2024',
                           leading: const AccentIconBadge(
                             index: 1,
@@ -175,7 +171,7 @@ class _EditionStepScreenState extends ConsumerState<EditionStepScreen> {
                           children: [
                             Expanded(
                               child: SecondaryButton(
-                                label: 'Retour',
+                                label: l10n.editionStepScreenBackButton,
                                 surface: SecondaryButtonSurface.parchment,
                                 onPressed: _goToCharacterList,
                               ),
@@ -183,7 +179,7 @@ class _EditionStepScreenState extends ConsumerState<EditionStepScreen> {
                             const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: PrimaryButton(
-                                label: 'Suivant',
+                                label: l10n.editionStepScreenNextButton,
                                 onPressed: _submit,
                               ),
                             ),
@@ -225,6 +221,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ColoredBox(
       color: AppColors.woodMedium,
       child: SafeArea(
@@ -257,7 +254,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: l10n.editionStepScreenHelpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -275,7 +272,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '1. Édition',
+                          l10n.editionStepScreenHeaderTitle,
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -283,7 +280,10 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          l10n.editionStepScreenStepCounter(
+                            currentStep,
+                            totalSteps,
+                          ),
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,

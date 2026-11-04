@@ -32,13 +32,17 @@ import 'package:personnages/features/character_creation/domain/tool_catalog.dart
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/subrace_step_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   RaceCatalog? catalogToReturn;
+  Object? catalogErrorToThrow;
 
   @override
-  Future<RaceCatalog> fetchRaceCatalog() async =>
-      catalogToReturn ?? const RaceCatalog(races: [], subraces: []);
+  Future<RaceCatalog> fetchRaceCatalog() async {
+    if (catalogErrorToThrow != null) throw catalogErrorToThrow!;
+    return catalogToReturn ?? const RaceCatalog(races: [], subraces: []);
+  }
 
   @override
   Future<ClassCatalog> fetchClassCatalog() async =>
@@ -235,21 +239,29 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
   CharacterCreationDraft readDraft() =>
       container.read(characterCreationDraftControllerProvider);
 
-  Future<void> pumpSubraceStep(WidgetTester tester) async {
+  Future<void> pumpSubraceStep(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     container
         .read(characterCreationDraftControllerProvider.notifier)
         .setRace(raceId: 1, subraceId: null);
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/new/subrace');
     await tester.pumpAndSettle();
@@ -511,5 +523,57 @@ void main() {
         expect(find.text('Gnome des roches'), findsOneWidget);
       },
     );
+  });
+
+  testWidgets(
+    'en-tête, compteur, intro, boutons et tooltip d\'aide en anglais, '
+    '"NEXT" écrit toujours le brouillon',
+    (WidgetTester tester) async {
+      await pumpSubraceStep(tester, locale: const Locale('en'));
+
+      expect(find.text('2. Subrace'), findsOneWidget);
+      expect(find.text('Step 2 / 10'), findsOneWidget);
+      expect(find.text('Choose a subrace for Elfe.'), findsOneWidget);
+      expect(find.text('BACK'), findsOneWidget);
+      expect(find.text('NEXT'), findsOneWidget);
+      expect(find.byTooltip('Help'), findsOneWidget);
+
+      await tester.tap(find.text('Haut-elfe'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('NEXT'));
+      await tester.pumpAndSettle();
+
+      expect(
+        readDraft(),
+        const CharacterCreationDraft(raceId: 1, subraceId: 10),
+      );
+    },
+  );
+
+  testWidgets('message d\'erreur de repli (erreur générique, pas une '
+      '`CharacterCreationFailure`) et bouton "RETRY" en anglais', (
+    WidgetTester tester,
+  ) async {
+    fakeRepository.catalogErrorToThrow = Exception('boom');
+    container
+        .read(characterCreationDraftControllerProvider.notifier)
+        .setRace(raceId: 1, subraceId: null);
+
+    await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+    await tester.pumpAndSettle();
+    router.push('/characters/new/subrace');
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text("Couldn't load the available races. Try again."),
+      findsOneWidget,
+    );
+
+    fakeRepository.catalogErrorToThrow = null;
+
+    await tester.tap(find.text('RETRY'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Haut-elfe'), findsOneWidget);
   });
 }

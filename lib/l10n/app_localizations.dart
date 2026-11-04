@@ -5939,6 +5939,336 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Quitter'**
   String get characterAdventuresCardLeaveConfirmationConfirmButton;
+
+  /// Tooltip de l'icône "?" du bandeau bois (`_Header`), ouvre l'aide contextuelle de l'étape.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get editionStepScreenHelpTooltip;
+
+  /// Titre d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'1. Édition'**
+  String get editionStepScreenHeaderTitle;
+
+  /// Compteur d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String editionStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Phrase d'intro affichée au-dessus des deux options d'édition.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis l\'édition des règles D&D 5e pour ce personnage. Ce choix est définitif.'**
+  String get editionStepScreenIntroText;
+
+  /// Titre de la tuile d'option "2014".
+  ///
+  /// In fr, this message translates to:
+  /// **'2014 — Manuel des Joueurs'**
+  String get editionStepScreenOption2014Title;
+
+  /// Sous-titre de la tuile d'option "2014".
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'édition originale des règles D&D 5e, publiée en 2014.'**
+  String get editionStepScreenOption2014Subtitle;
+
+  /// Titre de la tuile d'option "2024".
+  ///
+  /// In fr, this message translates to:
+  /// **'2024 — Manuel des Joueurs revu'**
+  String get editionStepScreenOption2024Title;
+
+  /// Sous-titre de la tuile d'option "2024".
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'édition révisée des règles D&D 5e, publiée en 2024, avec certains ajustements de règles.'**
+  String get editionStepScreenOption2024Subtitle;
+
+  /// `SecondaryButton` "Retour" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get editionStepScreenBackButton;
+
+  /// `PrimaryButton` "Suivant" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get editionStepScreenNextButton;
+
+  /// Tooltip de l'icône "?" du bandeau bois (`_Header`/`_MinimalHeader`), ouvre l'aide contextuelle de l'étape.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get raceStepScreenHelpTooltip;
+
+  /// Titre d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'2. Race'**
+  String get raceStepScreenHeaderTitle;
+
+  /// Compteur d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String raceStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les races disponibles. Réessayez.'**
+  String get raceStepScreenGenericErrorMessage;
+
+  /// `SecondaryButton` "Réessayer" de `_ErrorState` (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get raceStepScreenRetryButton;
+
+  /// Phrase d'intro affichée au-dessus de la liste des races.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis l\'ascendance de ton personnage.'**
+  String get raceStepScreenIntroText;
+
+  /// Placeholder du champ de recherche, masqué en mode modification (race verrouillée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher une race...'**
+  String get raceStepScreenSearchHint;
+
+  /// `InfoBanner` affiché en mode modification (race verrouillée).
+  ///
+  /// In fr, this message translates to:
+  /// **'La race ne peut pas être modifiée après la création du personnage : elle est liée aux sorts innés déjà acquis.'**
+  String get raceStepScreenLockedBannerMessage;
+
+  /// En-tête de section (`_SectionHeader`) des races du Manuel des Joueurs.
+  ///
+  /// In fr, this message translates to:
+  /// **'RACES DE BASE'**
+  String get raceStepScreenCoreRacesSectionTitle;
+
+  /// En-tête de section (`_SectionHeader`) des races hors Manuel des Joueurs.
+  ///
+  /// In fr, this message translates to:
+  /// **'RACES D\'EXTENSION'**
+  String get raceStepScreenExtensionRacesSectionTitle;
+
+  /// Titre de la tuile "Race personnalisée", toujours affichée en dernier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Race personnalisée'**
+  String get raceStepScreenCustomRaceTileTitle;
+
+  /// Placeholder du `TextField` de saisie libre de la race personnalisée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom de la race personnalisée'**
+  String get raceStepScreenCustomRaceHint;
+
+  /// `SecondaryButton` "Retour" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get raceStepScreenBackButton;
+
+  /// `PrimaryButton` "Suivant" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get raceStepScreenNextButton;
+
+  /// Message de `_EmptySearchState`, affiché quand la recherche ne trouve aucune race.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune race trouvée.'**
+  String get raceStepScreenEmptySearchMessage;
+
+  /// Libellé de sémantique (`Semantics.label`) d'un `_SuggestionChip` sous "Race personnalisée" (`raceName` est le nom d'une race indisponible dans l'édition courante, donnée du jeu jamais traduite ici).
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser \"{raceName}\" comme race personnalisée'**
+  String raceStepScreenSuggestionChipSemanticsLabel(String raceName);
+
+  /// Tooltip de l'icône "?" du bandeau bois (`_Header`/`_MinimalHeader`), ouvre l'aide contextuelle de l'étape.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get subraceStepScreenHelpTooltip;
+
+  /// Titre d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'2. Sous-race'**
+  String get subraceStepScreenHeaderTitle;
+
+  /// Compteur d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String subraceStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les races disponibles. Réessayez.'**
+  String get subraceStepScreenGenericErrorMessage;
+
+  /// `SecondaryButton` "Réessayer" de `_ErrorState` (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get subraceStepScreenRetryButton;
+
+  /// Phrase d'intro affichée au-dessus de la liste des sous-races (`raceName` est le nom de la race choisie à l'étape précédente, donnée du jeu jamais traduite ici — ou le repli `subraceStepScreenFallbackRaceName`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis une sous-race pour {raceName}.'**
+  String subraceStepScreenIntroText(String raceName);
+
+  /// `SecondaryButton` "Retour" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get subraceStepScreenBackButton;
+
+  /// `PrimaryButton` "Suivant" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get subraceStepScreenNextButton;
+
+  /// Repli de `_buildContent` quand `raceId` ne correspond à aucune race du catalogue (ne devrait pas arriver, race supprimée entre deux sessions) — injecté dans `subraceStepScreenIntroText`.
+  ///
+  /// In fr, this message translates to:
+  /// **'cette race'**
+  String get subraceStepScreenFallbackRaceName;
+
+  /// Tooltip de l'icône "?" du bandeau bois (`_Header`/`_MinimalHeader`), ouvre l'aide contextuelle de l'étape.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get lineageStepScreenHelpTooltip;
+
+  /// Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les ascendances/lignées disponibles. Réessayez.'**
+  String get lineageStepScreenGenericErrorMessage;
+
+  /// `SecondaryButton` "Réessayer" de `_ErrorState` (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get lineageStepScreenRetryButton;
+
+  /// `SecondaryButton` "Retour" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get lineageStepScreenBackButton;
+
+  /// `PrimaryButton` "Suivant" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get lineageStepScreenNextButton;
+
+  /// Compteur d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String lineageStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Titre de bandeau de `_LineageStepCopy.forRaceId` pour le Tieffelin.
+  ///
+  /// In fr, this message translates to:
+  /// **'2. Lignée'**
+  String get lineageStepScreenTieffelinBannerTitle;
+
+  /// Phrase d'intro de `_LineageStepCopy.forRaceId` pour le Tieffelin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis ta lignée fiélonne.'**
+  String get lineageStepScreenTieffelinIntroText;
+
+  /// Titre de bandeau de `_LineageStepCopy.forRaceId` pour le Goliath.
+  ///
+  /// In fr, this message translates to:
+  /// **'2. Ascendance'**
+  String get lineageStepScreenGoliathBannerTitle;
+
+  /// Phrase d'intro de `_LineageStepCopy.forRaceId` pour le Goliath.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis ton ascendance géante.'**
+  String get lineageStepScreenGoliathIntroText;
+
+  /// Titre de bandeau de `_LineageStepCopy.forRaceId` pour le Drakéide (valeur identique au Goliath, voir la doc de classe de `_LineageStepCopy`).
+  ///
+  /// In fr, this message translates to:
+  /// **'2. Ascendance'**
+  String get lineageStepScreenDrakeideBannerTitle;
+
+  /// Phrase d'intro de `_LineageStepCopy.forRaceId` pour le Drakéide (repli par défaut du `switch`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisis ton ascendance draconique.'**
+  String get lineageStepScreenDrakeideIntroText;
+
+  /// Tooltip de l'icône "?" du bandeau bois (`_Header`/`_MinimalHeader`), ouvre l'aide contextuelle de l'étape.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get backgroundStepScreenHelpTooltip;
+
+  /// Titre d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'4. Historique'**
+  String get backgroundStepScreenHeaderTitle;
+
+  /// Compteur d'étape du bandeau bois (`_Header`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {currentStep} / {totalSteps}'**
+  String backgroundStepScreenStepCounter(int currentStep, int totalSteps);
+
+  /// Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les historiques disponibles. Réessayez.'**
+  String get backgroundStepScreenGenericErrorMessage;
+
+  /// `SecondaryButton` "Réessayer" de `_ErrorState` (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get backgroundStepScreenRetryButton;
+
+  /// Phrase d'intro affichée au-dessus de la liste des historiques.
+  ///
+  /// In fr, this message translates to:
+  /// **'D\'où vient ton personnage avant l\'aventure ?'**
+  String get backgroundStepScreenIntroText;
+
+  /// `SecondaryButton` "Retour" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get backgroundStepScreenBackButton;
+
+  /// `PrimaryButton` "Suivant" (met son libellé en majuscules à l'affichage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get backgroundStepScreenNextButton;
 }
 
 class _AppLocalizationsDelegate

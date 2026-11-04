@@ -3603,4 +3603,195 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get characterAdventuresCardLeaveConfirmationConfirmButton => 'Leave';
+
+  @override
+  String get editionStepScreenHelpTooltip => 'Help';
+
+  @override
+  String get editionStepScreenHeaderTitle => '1. Edition';
+
+  @override
+  String editionStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String get editionStepScreenIntroText =>
+      'Choose the D&D 5e rules edition for this character. This choice is final.';
+
+  @override
+  String get editionStepScreenOption2014Title => '2014 — Player\'s Handbook';
+
+  @override
+  String get editionStepScreenOption2014Subtitle =>
+      'The original D&D 5e rules, published in 2014.';
+
+  @override
+  String get editionStepScreenOption2024Title =>
+      '2024 — Revised Player\'s Handbook';
+
+  @override
+  String get editionStepScreenOption2024Subtitle =>
+      'The revised D&D 5e rules, published in 2024, with some rule adjustments.';
+
+  @override
+  String get editionStepScreenBackButton => 'Back';
+
+  @override
+  String get editionStepScreenNextButton => 'Next';
+
+  @override
+  String get raceStepScreenHelpTooltip => 'Help';
+
+  @override
+  String get raceStepScreenHeaderTitle => '2. Race';
+
+  @override
+  String raceStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String get raceStepScreenGenericErrorMessage =>
+      'Couldn\'t load the available races. Try again.';
+
+  @override
+  String get raceStepScreenRetryButton => 'Retry';
+
+  @override
+  String get raceStepScreenIntroText => 'Choose your character\'s ancestry.';
+
+  @override
+  String get raceStepScreenSearchHint => 'Search for a race...';
+
+  @override
+  String get raceStepScreenLockedBannerMessage =>
+      'Race can\'t be changed after the character is created: it\'s tied to innate spells already acquired.';
+
+  @override
+  String get raceStepScreenCoreRacesSectionTitle => 'CORE RACES';
+
+  @override
+  String get raceStepScreenExtensionRacesSectionTitle => 'EXPANSION RACES';
+
+  @override
+  String get raceStepScreenCustomRaceTileTitle => 'Custom race';
+
+  @override
+  String get raceStepScreenCustomRaceHint => 'Custom race name';
+
+  @override
+  String get raceStepScreenBackButton => 'Back';
+
+  @override
+  String get raceStepScreenNextButton => 'Next';
+
+  @override
+  String get raceStepScreenEmptySearchMessage => 'No race found.';
+
+  @override
+  String raceStepScreenSuggestionChipSemanticsLabel(String raceName) {
+    return 'Use \"$raceName\" as a custom race';
+  }
+
+  @override
+  String get subraceStepScreenHelpTooltip => 'Help';
+
+  @override
+  String get subraceStepScreenHeaderTitle => '2. Subrace';
+
+  @override
+  String subraceStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String get subraceStepScreenGenericErrorMessage =>
+      'Couldn\'t load the available races. Try again.';
+
+  @override
+  String get subraceStepScreenRetryButton => 'Retry';
+
+  @override
+  String subraceStepScreenIntroText(String raceName) {
+    return 'Choose a subrace for $raceName.';
+  }
+
+  @override
+  String get subraceStepScreenBackButton => 'Back';
+
+  @override
+  String get subraceStepScreenNextButton => 'Next';
+
+  @override
+  String get subraceStepScreenFallbackRaceName => 'this race';
+
+  @override
+  String get lineageStepScreenHelpTooltip => 'Help';
+
+  @override
+  String get lineageStepScreenGenericErrorMessage =>
+      'Couldn\'t load the available ancestries/lineages. Try again.';
+
+  @override
+  String get lineageStepScreenRetryButton => 'Retry';
+
+  @override
+  String get lineageStepScreenBackButton => 'Back';
+
+  @override
+  String get lineageStepScreenNextButton => 'Next';
+
+  @override
+  String lineageStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String get lineageStepScreenTieffelinBannerTitle => '2. Lineage';
+
+  @override
+  String get lineageStepScreenTieffelinIntroText =>
+      'Choose your fiendish lineage.';
+
+  @override
+  String get lineageStepScreenGoliathBannerTitle => '2. Ancestry';
+
+  @override
+  String get lineageStepScreenGoliathIntroText => 'Choose your giant ancestry.';
+
+  @override
+  String get lineageStepScreenDrakeideBannerTitle => '2. Ancestry';
+
+  @override
+  String get lineageStepScreenDrakeideIntroText =>
+      'Choose your draconic ancestry.';
+
+  @override
+  String get backgroundStepScreenHelpTooltip => 'Help';
+
+  @override
+  String get backgroundStepScreenHeaderTitle => '4. Background';
+
+  @override
+  String backgroundStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Step $currentStep / $totalSteps';
+  }
+
+  @override
+  String get backgroundStepScreenGenericErrorMessage =>
+      'Couldn\'t load the available backgrounds. Try again.';
+
+  @override
+  String get backgroundStepScreenRetryButton => 'Retry';
+
+  @override
+  String get backgroundStepScreenIntroText =>
+      'Where did your character come from before the adventure?';
+
+  @override
+  String get backgroundStepScreenBackButton => 'Back';
+
+  @override
+  String get backgroundStepScreenNextButton => 'Next';
 }

@@ -43,6 +43,7 @@ import 'package:personnages/features/character_creation/presentation/providers/c
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_providers.dart';
 import 'package:personnages/features/character_creation/presentation/providers/lineage_choice_providers.dart';
 import 'package:personnages/features/character_creation/presentation/race_step_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   RaceCatalog catalogToReturn = const RaceCatalog(races: [], subraces: []);
@@ -192,7 +193,12 @@ void main() {
   Widget buildTestWidget() {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: const Locale('fr'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 

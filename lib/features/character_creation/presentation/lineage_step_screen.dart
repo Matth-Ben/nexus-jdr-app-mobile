@@ -10,6 +10,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/creation_step_help.dart';
 import '../domain/lineage_choice_catalog.dart';
@@ -112,7 +113,8 @@ class _LineageStepScreenState extends ConsumerState<LineageStepScreen> {
       return const Scaffold(body: SizedBox.shrink());
     }
 
-    final copy = _LineageStepCopy.forRaceId(raceId);
+    final l10n = AppLocalizations.of(context)!;
+    final copy = _LineageStepCopy.forRaceId(raceId, l10n);
     final catalogAsync = ref.watch(
       lineageChoiceCatalogProvider(edition: _edition),
     );
@@ -149,8 +151,7 @@ class _LineageStepScreenState extends ConsumerState<LineageStepScreen> {
               child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
-                    : 'Impossible de charger les ascendances/lignées '
-                          'disponibles. Réessayez.',
+                    : l10n.lineageStepScreenGenericErrorMessage,
                 onRetry: () => ref.invalidate(
                   lineageChoiceCatalogProvider(edition: _edition),
                 ),
@@ -173,6 +174,7 @@ class _LineageStepScreenState extends ConsumerState<LineageStepScreen> {
     int raceId,
     _LineageStepCopy copy,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     final options = catalog.optionsFor(raceId);
     // Défense en profondeur (retour QA, chantier "différenciation 2014/2024
     // pour les races", 24/10/2026) : `CharacterCreationDraftController
@@ -253,7 +255,7 @@ class _LineageStepScreenState extends ConsumerState<LineageStepScreen> {
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Retour',
+                              label: l10n.lineageStepScreenBackButton,
                               surface: SecondaryButtonSurface.parchment,
                               onPressed: _goBack,
                             ),
@@ -261,7 +263,7 @@ class _LineageStepScreenState extends ConsumerState<LineageStepScreen> {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Suivant',
+                              label: l10n.lineageStepScreenNextButton,
                               onPressed: canProceed ? _submit : null,
                             ),
                           ),
@@ -301,23 +303,23 @@ class _LineageStepCopy {
   static const int _tieffelinRaceId = 9;
   static const int _goliathRaceId = 24;
 
-  factory _LineageStepCopy.forRaceId(int raceId) {
+  factory _LineageStepCopy.forRaceId(int raceId, AppLocalizations l10n) {
     switch (raceId) {
       case _tieffelinRaceId:
-        return const _LineageStepCopy(
-          bannerTitle: '2. Lignée',
-          introText: 'Choisis ta lignée fiélonne.',
+        return _LineageStepCopy(
+          bannerTitle: l10n.lineageStepScreenTieffelinBannerTitle,
+          introText: l10n.lineageStepScreenTieffelinIntroText,
         );
       case _goliathRaceId:
-        return const _LineageStepCopy(
-          bannerTitle: '2. Ascendance',
-          introText: 'Choisis ton ascendance géante.',
+        return _LineageStepCopy(
+          bannerTitle: l10n.lineageStepScreenGoliathBannerTitle,
+          introText: l10n.lineageStepScreenGoliathIntroText,
         );
       case _drakeideRaceId:
       default:
-        return const _LineageStepCopy(
-          bannerTitle: '2. Ascendance',
-          introText: 'Choisis ton ascendance draconique.',
+        return _LineageStepCopy(
+          bannerTitle: l10n.lineageStepScreenDrakeideBannerTitle,
+          introText: l10n.lineageStepScreenDrakeideIntroText,
         );
     }
   }
@@ -345,6 +347,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ColoredBox(
       color: AppColors.woodMedium,
       child: SafeArea(
@@ -377,7 +380,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: l10n.lineageStepScreenHelpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -403,7 +406,10 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          l10n.lineageStepScreenStepCounter(
+                            currentStep,
+                            totalSteps,
+                          ),
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,
@@ -464,7 +470,8 @@ class _MinimalHeader extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: onHelp,
-                tooltip: 'Aide',
+                tooltip: AppLocalizations.of(context)!
+                    .lineageStepScreenHelpTooltip,
                 icon: const Icon(
                   Icons.help_outline,
                   color: AppColors.textOnWood,
@@ -504,7 +511,10 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(
+              label: AppLocalizations.of(context)!.lineageStepScreenRetryButton,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),

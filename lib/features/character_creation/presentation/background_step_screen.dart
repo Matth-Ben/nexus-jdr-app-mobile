@@ -9,6 +9,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/selectable_option_tile.dart';
 import '../../../core/widgets/step_progress_bar.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/background_catalog.dart';
 import '../domain/character_creation_failure.dart';
 import '../domain/creation_step_help.dart';
@@ -92,6 +93,7 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final catalogAsync = ref.watch(backgroundCatalogProvider);
 
     return Scaffold(
@@ -128,8 +130,7 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
               child: _ErrorState(
                 message: error is CharacterCreationFailure
                     ? error.message
-                    : 'Impossible de charger les historiques disponibles. '
-                          'Réessayez.',
+                    : l10n.backgroundStepScreenGenericErrorMessage,
                 onRetry: () => ref.invalidate(backgroundCatalogProvider),
               ),
             ),
@@ -146,6 +147,7 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
   }
 
   Widget _buildContent(BackgroundCatalog catalog) {
+    final l10n = AppLocalizations.of(context)!;
     final canProceed = _selectedBackgroundId != null;
 
     return Column(
@@ -171,7 +173,7 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      "D'où vient ton personnage avant l'aventure ?",
+                      l10n.backgroundStepScreenIntroText,
                       style: AppTypography.body(fontSize: 14),
                     ),
                   ),
@@ -215,7 +217,7 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Retour',
+                              label: l10n.backgroundStepScreenBackButton,
                               surface: SecondaryButtonSurface.parchment,
                               onPressed: _goBack,
                             ),
@@ -223,7 +225,7 @@ class _BackgroundStepScreenState extends ConsumerState<BackgroundStepScreen> {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Suivant',
+                              label: l10n.backgroundStepScreenNextButton,
                               onPressed: canProceed ? _submit : null,
                             ),
                           ),
@@ -264,6 +266,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ColoredBox(
       color: AppColors.woodMedium,
       child: SafeArea(
@@ -296,7 +299,7 @@ class _Header extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: onHelp,
-                      tooltip: 'Aide',
+                      tooltip: l10n.backgroundStepScreenHelpTooltip,
                       icon: const Icon(
                         Icons.help_outline,
                         color: AppColors.textOnWood,
@@ -314,7 +317,7 @@ class _Header extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '4. Historique',
+                          l10n.backgroundStepScreenHeaderTitle,
                           style: AppTypography.body(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -322,7 +325,10 @@ class _Header extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Étape $currentStep / $totalSteps',
+                          l10n.backgroundStepScreenStepCounter(
+                            currentStep,
+                            totalSteps,
+                          ),
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textOnWoodMuted,
@@ -383,7 +389,8 @@ class _MinimalHeader extends StatelessWidget {
               const Spacer(),
               IconButton(
                 onPressed: onHelp,
-                tooltip: 'Aide',
+                tooltip: AppLocalizations.of(context)!
+                    .backgroundStepScreenHelpTooltip,
                 icon: const Icon(
                   Icons.help_outline,
                   color: AppColors.textOnWood,
@@ -423,7 +430,11 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(
+              label: AppLocalizations.of(context)!
+                  .backgroundStepScreenRetryButton,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),

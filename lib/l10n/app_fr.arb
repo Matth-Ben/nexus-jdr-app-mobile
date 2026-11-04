@@ -4848,5 +4848,275 @@
   "characterAdventuresCardLeaveConfirmationConfirmButton": "Quitter",
   "@characterAdventuresCardLeaveConfirmationConfirmButton": {
     "description": "`DestructiveButton` \"Quitter\" de `showLeaveAdventureConfirmationDialog`."
+  },
+  "editionStepScreenHelpTooltip": "Aide",
+  "@editionStepScreenHelpTooltip": {
+    "description": "Tooltip de l'icône \"?\" du bandeau bois (`_Header`), ouvre l'aide contextuelle de l'étape."
+  },
+  "editionStepScreenHeaderTitle": "1. Édition",
+  "@editionStepScreenHeaderTitle": {
+    "description": "Titre d'étape du bandeau bois (`_Header`)."
+  },
+  "editionStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@editionStepScreenStepCounter": {
+    "description": "Compteur d'étape du bandeau bois (`_Header`).",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "editionStepScreenIntroText": "Choisis l'édition des règles D&D 5e pour ce personnage. Ce choix est définitif.",
+  "@editionStepScreenIntroText": {
+    "description": "Phrase d'intro affichée au-dessus des deux options d'édition."
+  },
+  "editionStepScreenOption2014Title": "2014 — Manuel des Joueurs",
+  "@editionStepScreenOption2014Title": {
+    "description": "Titre de la tuile d'option \"2014\"."
+  },
+  "editionStepScreenOption2014Subtitle": "L'édition originale des règles D&D 5e, publiée en 2014.",
+  "@editionStepScreenOption2014Subtitle": {
+    "description": "Sous-titre de la tuile d'option \"2014\"."
+  },
+  "editionStepScreenOption2024Title": "2024 — Manuel des Joueurs revu",
+  "@editionStepScreenOption2024Title": {
+    "description": "Titre de la tuile d'option \"2024\"."
+  },
+  "editionStepScreenOption2024Subtitle": "L'édition révisée des règles D&D 5e, publiée en 2024, avec certains ajustements de règles.",
+  "@editionStepScreenOption2024Subtitle": {
+    "description": "Sous-titre de la tuile d'option \"2024\"."
+  },
+  "editionStepScreenBackButton": "Retour",
+  "@editionStepScreenBackButton": {
+    "description": "`SecondaryButton` \"Retour\" (met son libellé en majuscules à l'affichage)."
+  },
+  "editionStepScreenNextButton": "Suivant",
+  "@editionStepScreenNextButton": {
+    "description": "`PrimaryButton` \"Suivant\" (met son libellé en majuscules à l'affichage)."
+  },
+  "raceStepScreenHelpTooltip": "Aide",
+  "@raceStepScreenHelpTooltip": {
+    "description": "Tooltip de l'icône \"?\" du bandeau bois (`_Header`/`_MinimalHeader`), ouvre l'aide contextuelle de l'étape."
+  },
+  "raceStepScreenHeaderTitle": "2. Race",
+  "@raceStepScreenHeaderTitle": {
+    "description": "Titre d'étape du bandeau bois (`_Header`)."
+  },
+  "raceStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@raceStepScreenStepCounter": {
+    "description": "Compteur d'étape du bandeau bois (`_Header`).",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "raceStepScreenGenericErrorMessage": "Impossible de charger les races disponibles. Réessayez.",
+  "@raceStepScreenGenericErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`."
+  },
+  "raceStepScreenRetryButton": "Réessayer",
+  "@raceStepScreenRetryButton": {
+    "description": "`SecondaryButton` \"Réessayer\" de `_ErrorState` (met son libellé en majuscules à l'affichage)."
+  },
+  "raceStepScreenIntroText": "Choisis l'ascendance de ton personnage.",
+  "@raceStepScreenIntroText": {
+    "description": "Phrase d'intro affichée au-dessus de la liste des races."
+  },
+  "raceStepScreenSearchHint": "Rechercher une race...",
+  "@raceStepScreenSearchHint": {
+    "description": "Placeholder du champ de recherche, masqué en mode modification (race verrouillée)."
+  },
+  "raceStepScreenLockedBannerMessage": "La race ne peut pas être modifiée après la création du personnage : elle est liée aux sorts innés déjà acquis.",
+  "@raceStepScreenLockedBannerMessage": {
+    "description": "`InfoBanner` affiché en mode modification (race verrouillée)."
+  },
+  "raceStepScreenCoreRacesSectionTitle": "RACES DE BASE",
+  "@raceStepScreenCoreRacesSectionTitle": {
+    "description": "En-tête de section (`_SectionHeader`) des races du Manuel des Joueurs."
+  },
+  "raceStepScreenExtensionRacesSectionTitle": "RACES D'EXTENSION",
+  "@raceStepScreenExtensionRacesSectionTitle": {
+    "description": "En-tête de section (`_SectionHeader`) des races hors Manuel des Joueurs."
+  },
+  "raceStepScreenCustomRaceTileTitle": "Race personnalisée",
+  "@raceStepScreenCustomRaceTileTitle": {
+    "description": "Titre de la tuile \"Race personnalisée\", toujours affichée en dernier."
+  },
+  "raceStepScreenCustomRaceHint": "Nom de la race personnalisée",
+  "@raceStepScreenCustomRaceHint": {
+    "description": "Placeholder du `TextField` de saisie libre de la race personnalisée."
+  },
+  "raceStepScreenBackButton": "Retour",
+  "@raceStepScreenBackButton": {
+    "description": "`SecondaryButton` \"Retour\" (met son libellé en majuscules à l'affichage)."
+  },
+  "raceStepScreenNextButton": "Suivant",
+  "@raceStepScreenNextButton": {
+    "description": "`PrimaryButton` \"Suivant\" (met son libellé en majuscules à l'affichage)."
+  },
+  "raceStepScreenEmptySearchMessage": "Aucune race trouvée.",
+  "@raceStepScreenEmptySearchMessage": {
+    "description": "Message de `_EmptySearchState`, affiché quand la recherche ne trouve aucune race."
+  },
+  "raceStepScreenSuggestionChipSemanticsLabel": "Utiliser \"{raceName}\" comme race personnalisée",
+  "@raceStepScreenSuggestionChipSemanticsLabel": {
+    "description": "Libellé de sémantique (`Semantics.label`) d'un `_SuggestionChip` sous \"Race personnalisée\" (`raceName` est le nom d'une race indisponible dans l'édition courante, donnée du jeu jamais traduite ici).",
+    "placeholders": {
+      "raceName": {
+        "type": "String"
+      }
+    }
+  },
+  "subraceStepScreenHelpTooltip": "Aide",
+  "@subraceStepScreenHelpTooltip": {
+    "description": "Tooltip de l'icône \"?\" du bandeau bois (`_Header`/`_MinimalHeader`), ouvre l'aide contextuelle de l'étape."
+  },
+  "subraceStepScreenHeaderTitle": "2. Sous-race",
+  "@subraceStepScreenHeaderTitle": {
+    "description": "Titre d'étape du bandeau bois (`_Header`)."
+  },
+  "subraceStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@subraceStepScreenStepCounter": {
+    "description": "Compteur d'étape du bandeau bois (`_Header`).",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "subraceStepScreenGenericErrorMessage": "Impossible de charger les races disponibles. Réessayez.",
+  "@subraceStepScreenGenericErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`."
+  },
+  "subraceStepScreenRetryButton": "Réessayer",
+  "@subraceStepScreenRetryButton": {
+    "description": "`SecondaryButton` \"Réessayer\" de `_ErrorState` (met son libellé en majuscules à l'affichage)."
+  },
+  "subraceStepScreenIntroText": "Choisis une sous-race pour {raceName}.",
+  "@subraceStepScreenIntroText": {
+    "description": "Phrase d'intro affichée au-dessus de la liste des sous-races (`raceName` est le nom de la race choisie à l'étape précédente, donnée du jeu jamais traduite ici — ou le repli `subraceStepScreenFallbackRaceName`).",
+    "placeholders": {
+      "raceName": {
+        "type": "String"
+      }
+    }
+  },
+  "subraceStepScreenBackButton": "Retour",
+  "@subraceStepScreenBackButton": {
+    "description": "`SecondaryButton` \"Retour\" (met son libellé en majuscules à l'affichage)."
+  },
+  "subraceStepScreenNextButton": "Suivant",
+  "@subraceStepScreenNextButton": {
+    "description": "`PrimaryButton` \"Suivant\" (met son libellé en majuscules à l'affichage)."
+  },
+  "subraceStepScreenFallbackRaceName": "cette race",
+  "@subraceStepScreenFallbackRaceName": {
+    "description": "Repli de `_buildContent` quand `raceId` ne correspond à aucune race du catalogue (ne devrait pas arriver, race supprimée entre deux sessions) — injecté dans `subraceStepScreenIntroText`."
+  },
+  "lineageStepScreenHelpTooltip": "Aide",
+  "@lineageStepScreenHelpTooltip": {
+    "description": "Tooltip de l'icône \"?\" du bandeau bois (`_Header`/`_MinimalHeader`), ouvre l'aide contextuelle de l'étape."
+  },
+  "lineageStepScreenGenericErrorMessage": "Impossible de charger les ascendances/lignées disponibles. Réessayez.",
+  "@lineageStepScreenGenericErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`."
+  },
+  "lineageStepScreenRetryButton": "Réessayer",
+  "@lineageStepScreenRetryButton": {
+    "description": "`SecondaryButton` \"Réessayer\" de `_ErrorState` (met son libellé en majuscules à l'affichage)."
+  },
+  "lineageStepScreenBackButton": "Retour",
+  "@lineageStepScreenBackButton": {
+    "description": "`SecondaryButton` \"Retour\" (met son libellé en majuscules à l'affichage)."
+  },
+  "lineageStepScreenNextButton": "Suivant",
+  "@lineageStepScreenNextButton": {
+    "description": "`PrimaryButton` \"Suivant\" (met son libellé en majuscules à l'affichage)."
+  },
+  "lineageStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@lineageStepScreenStepCounter": {
+    "description": "Compteur d'étape du bandeau bois (`_Header`).",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "lineageStepScreenTieffelinBannerTitle": "2. Lignée",
+  "@lineageStepScreenTieffelinBannerTitle": {
+    "description": "Titre de bandeau de `_LineageStepCopy.forRaceId` pour le Tieffelin."
+  },
+  "lineageStepScreenTieffelinIntroText": "Choisis ta lignée fiélonne.",
+  "@lineageStepScreenTieffelinIntroText": {
+    "description": "Phrase d'intro de `_LineageStepCopy.forRaceId` pour le Tieffelin."
+  },
+  "lineageStepScreenGoliathBannerTitle": "2. Ascendance",
+  "@lineageStepScreenGoliathBannerTitle": {
+    "description": "Titre de bandeau de `_LineageStepCopy.forRaceId` pour le Goliath."
+  },
+  "lineageStepScreenGoliathIntroText": "Choisis ton ascendance géante.",
+  "@lineageStepScreenGoliathIntroText": {
+    "description": "Phrase d'intro de `_LineageStepCopy.forRaceId` pour le Goliath."
+  },
+  "lineageStepScreenDrakeideBannerTitle": "2. Ascendance",
+  "@lineageStepScreenDrakeideBannerTitle": {
+    "description": "Titre de bandeau de `_LineageStepCopy.forRaceId` pour le Drakéide (valeur identique au Goliath, voir la doc de classe de `_LineageStepCopy`)."
+  },
+  "lineageStepScreenDrakeideIntroText": "Choisis ton ascendance draconique.",
+  "@lineageStepScreenDrakeideIntroText": {
+    "description": "Phrase d'intro de `_LineageStepCopy.forRaceId` pour le Drakéide (repli par défaut du `switch`)."
+  },
+  "backgroundStepScreenHelpTooltip": "Aide",
+  "@backgroundStepScreenHelpTooltip": {
+    "description": "Tooltip de l'icône \"?\" du bandeau bois (`_Header`/`_MinimalHeader`), ouvre l'aide contextuelle de l'étape."
+  },
+  "backgroundStepScreenHeaderTitle": "4. Historique",
+  "@backgroundStepScreenHeaderTitle": {
+    "description": "Titre d'étape du bandeau bois (`_Header`)."
+  },
+  "backgroundStepScreenStepCounter": "Étape {currentStep} / {totalSteps}",
+  "@backgroundStepScreenStepCounter": {
+    "description": "Compteur d'étape du bandeau bois (`_Header`).",
+    "placeholders": {
+      "currentStep": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "backgroundStepScreenGenericErrorMessage": "Impossible de charger les historiques disponibles. Réessayez.",
+  "@backgroundStepScreenGenericErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur n'est pas une `CharacterCreationFailure`."
+  },
+  "backgroundStepScreenRetryButton": "Réessayer",
+  "@backgroundStepScreenRetryButton": {
+    "description": "`SecondaryButton` \"Réessayer\" de `_ErrorState` (met son libellé en majuscules à l'affichage)."
+  },
+  "backgroundStepScreenIntroText": "D'où vient ton personnage avant l'aventure ?",
+  "@backgroundStepScreenIntroText": {
+    "description": "Phrase d'intro affichée au-dessus de la liste des historiques."
+  },
+  "backgroundStepScreenBackButton": "Retour",
+  "@backgroundStepScreenBackButton": {
+    "description": "`SecondaryButton` \"Retour\" (met son libellé en majuscules à l'affichage)."
+  },
+  "backgroundStepScreenNextButton": "Suivant",
+  "@backgroundStepScreenNextButton": {
+    "description": "`PrimaryButton` \"Suivant\" (met son libellé en majuscules à l'affichage)."
   }
 }

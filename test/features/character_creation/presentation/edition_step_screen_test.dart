@@ -12,6 +12,7 @@ import 'package:personnages/core/widgets/step_progress_bar.dart';
 import 'package:personnages/features/character_creation/domain/character_creation_draft.dart';
 import 'package:personnages/features/character_creation/presentation/edition_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 void main() {
   late ProviderContainer container;
@@ -49,10 +50,15 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
@@ -141,5 +147,36 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Liste des personnages'), findsOneWidget);
+  });
+
+  testWidgets('titre, intro, options, boutons et tooltip d\'aide en anglais', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildTestWidget(locale: const Locale('en')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1. Edition'), findsOneWidget);
+    expect(find.text('Step 1 / 10'), findsOneWidget);
+    expect(
+      find.text(
+        'Choose the D&D 5e rules edition for this character. This '
+        'choice is final.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text("2014 — Player's Handbook"), findsOneWidget);
+    expect(
+      find.text('The original D&D 5e rules, published in 2014.'),
+      findsOneWidget,
+    );
+    expect(find.text("2024 — Revised Player's Handbook"), findsOneWidget);
+    expect(find.text('BACK'), findsOneWidget);
+    expect(find.text('NEXT'), findsOneWidget);
+    expect(find.byTooltip('Help'), findsOneWidget);
+
+    await tester.tap(find.text('NEXT'));
+    await tester.pumpAndSettle();
+
+    expect(readDraft().edition, '2014');
   });
 }

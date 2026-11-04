@@ -19,6 +19,7 @@ import 'package:personnages/features/character_creation/domain/lineage_option.da
 import 'package:personnages/features/character_creation/presentation/lineage_step_screen.dart';
 import 'package:personnages/features/character_creation/presentation/providers/character_creation_draft_provider.dart';
 import 'package:personnages/features/character_creation/presentation/providers/lineage_choice_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeLineageChoiceRepository implements LineageChoiceRepository {
   LineageChoiceCatalog catalog = const LineageChoiceCatalog(
@@ -103,10 +104,15 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
@@ -117,6 +123,7 @@ void main() {
     WidgetTester tester, {
     int raceId = 9,
     String? edition,
+    Locale locale = const Locale('fr'),
   }) async {
     if (edition != null) {
       container
@@ -126,7 +133,7 @@ void main() {
     container
         .read(characterCreationDraftControllerProvider.notifier)
         .setRace(raceId: raceId, subraceId: null);
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/new/lineage');
     await tester.pumpAndSettle();
@@ -316,6 +323,71 @@ void main() {
       expect(find.text('Dragon noir (2024)'), findsOneWidget);
       expect(find.text('Dragon noir (2014)'), findsNothing);
       expect(fakeRepository.requestedEditions, contains('2024'));
+    });
+  });
+
+  group('traduction anglaise', () {
+    testWidgets(
+      'bandeau "2. Lineage", intro, boutons et tooltip d\'aide en anglais '
+      'pour le Tieffelin, "NEXT" écrit toujours le brouillon',
+      (WidgetTester tester) async {
+        await pumpLineageStep(tester, locale: const Locale('en'));
+
+        expect(find.text('2. Lineage'), findsOneWidget);
+        expect(find.text('Step 2 / 10'), findsOneWidget);
+        expect(find.text('Choose your fiendish lineage.'), findsOneWidget);
+        expect(find.text('BACK'), findsOneWidget);
+        expect(find.text('NEXT'), findsOneWidget);
+        expect(find.byTooltip('Help'), findsOneWidget);
+
+        await tester.tap(find.text('Infernal'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('NEXT'));
+        await tester.pumpAndSettle();
+
+        expect(
+          readDraft(),
+          const CharacterCreationDraft(raceId: 9, lineageId: 33),
+        );
+      },
+    );
+
+    testWidgets('bandeau "2. Ancestry" et intro en anglais pour le Goliath', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.catalog = const LineageChoiceCatalog(
+        optionsByRaceId: {
+          24: [LineageOption(id: 25, name: 'Cloud giant')],
+        },
+      );
+
+      await pumpLineageStep(tester, raceId: 24, locale: const Locale('en'));
+
+      expect(find.text('2. Ancestry'), findsOneWidget);
+      expect(find.text('Choose your giant ancestry.'), findsOneWidget);
+    });
+
+    testWidgets('message d\'erreur de repli (erreur générique, pas une '
+        '`CharacterCreationFailure`) et bouton "RETRY" en anglais', (
+      WidgetTester tester,
+    ) async {
+      fakeRepository.errorToThrow = Exception('boom');
+
+      await pumpLineageStep(tester, locale: const Locale('en'));
+
+      expect(
+        find.text(
+          "Couldn't load the available ancestries/lineages. Try again.",
+        ),
+        findsOneWidget,
+      );
+
+      fakeRepository.errorToThrow = null;
+
+      await tester.tap(find.text('RETRY'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Infernal'), findsOneWidget);
     });
   });
 }

@@ -3637,4 +3637,197 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get characterAdventuresCardLeaveConfirmationConfirmButton => 'Quitter';
+
+  @override
+  String get editionStepScreenHelpTooltip => 'Aide';
+
+  @override
+  String get editionStepScreenHeaderTitle => '1. Édition';
+
+  @override
+  String editionStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Étape $currentStep / $totalSteps';
+  }
+
+  @override
+  String get editionStepScreenIntroText =>
+      'Choisis l\'édition des règles D&D 5e pour ce personnage. Ce choix est définitif.';
+
+  @override
+  String get editionStepScreenOption2014Title => '2014 — Manuel des Joueurs';
+
+  @override
+  String get editionStepScreenOption2014Subtitle =>
+      'L\'édition originale des règles D&D 5e, publiée en 2014.';
+
+  @override
+  String get editionStepScreenOption2024Title =>
+      '2024 — Manuel des Joueurs revu';
+
+  @override
+  String get editionStepScreenOption2024Subtitle =>
+      'L\'édition révisée des règles D&D 5e, publiée en 2024, avec certains ajustements de règles.';
+
+  @override
+  String get editionStepScreenBackButton => 'Retour';
+
+  @override
+  String get editionStepScreenNextButton => 'Suivant';
+
+  @override
+  String get raceStepScreenHelpTooltip => 'Aide';
+
+  @override
+  String get raceStepScreenHeaderTitle => '2. Race';
+
+  @override
+  String raceStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Étape $currentStep / $totalSteps';
+  }
+
+  @override
+  String get raceStepScreenGenericErrorMessage =>
+      'Impossible de charger les races disponibles. Réessayez.';
+
+  @override
+  String get raceStepScreenRetryButton => 'Réessayer';
+
+  @override
+  String get raceStepScreenIntroText =>
+      'Choisis l\'ascendance de ton personnage.';
+
+  @override
+  String get raceStepScreenSearchHint => 'Rechercher une race...';
+
+  @override
+  String get raceStepScreenLockedBannerMessage =>
+      'La race ne peut pas être modifiée après la création du personnage : elle est liée aux sorts innés déjà acquis.';
+
+  @override
+  String get raceStepScreenCoreRacesSectionTitle => 'RACES DE BASE';
+
+  @override
+  String get raceStepScreenExtensionRacesSectionTitle => 'RACES D\'EXTENSION';
+
+  @override
+  String get raceStepScreenCustomRaceTileTitle => 'Race personnalisée';
+
+  @override
+  String get raceStepScreenCustomRaceHint => 'Nom de la race personnalisée';
+
+  @override
+  String get raceStepScreenBackButton => 'Retour';
+
+  @override
+  String get raceStepScreenNextButton => 'Suivant';
+
+  @override
+  String get raceStepScreenEmptySearchMessage => 'Aucune race trouvée.';
+
+  @override
+  String raceStepScreenSuggestionChipSemanticsLabel(String raceName) {
+    return 'Utiliser \"$raceName\" comme race personnalisée';
+  }
+
+  @override
+  String get subraceStepScreenHelpTooltip => 'Aide';
+
+  @override
+  String get subraceStepScreenHeaderTitle => '2. Sous-race';
+
+  @override
+  String subraceStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Étape $currentStep / $totalSteps';
+  }
+
+  @override
+  String get subraceStepScreenGenericErrorMessage =>
+      'Impossible de charger les races disponibles. Réessayez.';
+
+  @override
+  String get subraceStepScreenRetryButton => 'Réessayer';
+
+  @override
+  String subraceStepScreenIntroText(String raceName) {
+    return 'Choisis une sous-race pour $raceName.';
+  }
+
+  @override
+  String get subraceStepScreenBackButton => 'Retour';
+
+  @override
+  String get subraceStepScreenNextButton => 'Suivant';
+
+  @override
+  String get subraceStepScreenFallbackRaceName => 'cette race';
+
+  @override
+  String get lineageStepScreenHelpTooltip => 'Aide';
+
+  @override
+  String get lineageStepScreenGenericErrorMessage =>
+      'Impossible de charger les ascendances/lignées disponibles. Réessayez.';
+
+  @override
+  String get lineageStepScreenRetryButton => 'Réessayer';
+
+  @override
+  String get lineageStepScreenBackButton => 'Retour';
+
+  @override
+  String get lineageStepScreenNextButton => 'Suivant';
+
+  @override
+  String lineageStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Étape $currentStep / $totalSteps';
+  }
+
+  @override
+  String get lineageStepScreenTieffelinBannerTitle => '2. Lignée';
+
+  @override
+  String get lineageStepScreenTieffelinIntroText =>
+      'Choisis ta lignée fiélonne.';
+
+  @override
+  String get lineageStepScreenGoliathBannerTitle => '2. Ascendance';
+
+  @override
+  String get lineageStepScreenGoliathIntroText =>
+      'Choisis ton ascendance géante.';
+
+  @override
+  String get lineageStepScreenDrakeideBannerTitle => '2. Ascendance';
+
+  @override
+  String get lineageStepScreenDrakeideIntroText =>
+      'Choisis ton ascendance draconique.';
+
+  @override
+  String get backgroundStepScreenHelpTooltip => 'Aide';
+
+  @override
+  String get backgroundStepScreenHeaderTitle => '4. Historique';
+
+  @override
+  String backgroundStepScreenStepCounter(int currentStep, int totalSteps) {
+    return 'Étape $currentStep / $totalSteps';
+  }
+
+  @override
+  String get backgroundStepScreenGenericErrorMessage =>
+      'Impossible de charger les historiques disponibles. Réessayez.';
+
+  @override
+  String get backgroundStepScreenRetryButton => 'Réessayer';
+
+  @override
+  String get backgroundStepScreenIntroText =>
+      'D\'où vient ton personnage avant l\'aventure ?';
+
+  @override
+  String get backgroundStepScreenBackButton => 'Retour';
+
+  @override
+  String get backgroundStepScreenNextButton => 'Suivant';
 }
