@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/dashed_border_painter.dart';
 import '../../../../core/widgets/portrait_frame.dart';
 import '../../../../core/widgets/selection_checkbox.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_summary.dart';
 
 /// Carte d'un personnage dans la liste d'accueil (`character_list_screen.dart`),
@@ -60,6 +61,7 @@ class CharacterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDead = character.isDead;
     final isArchived = character.isArchived;
 
@@ -147,7 +149,7 @@ class CharacterCard extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  _summaryLine(character),
+                  _summaryLine(l10n, character),
                   style: AppTypography.body(fontSize: 13, color: summaryColor),
                 ),
                 if (isArchived || isDead) ...[
@@ -156,8 +158,8 @@ class CharacterCard extends StatelessWidget {
                     spacing: AppSpacing.xs,
                     runSpacing: AppSpacing.xs,
                     children: [
-                      if (isArchived) const _StatusBadge.archived(),
-                      if (isDead) const _StatusBadge.dead(),
+                      if (isArchived) _StatusBadge.archived(l10n),
+                      if (isDead) _StatusBadge.dead(l10n),
                     ],
                   ),
                 ],
@@ -166,7 +168,10 @@ class CharacterCard extends StatelessWidget {
                 // personnage qui ne joue plus.
                 if (!isDead && !isArchived) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  _XpGauge(progress: character.xpProgress),
+                  _XpGauge(
+                    progress: character.xpProgress,
+                    label: l10n.characterCardXpLabel,
+                  ),
                 ],
               ],
             ),
@@ -206,11 +211,11 @@ class CharacterCard extends StatelessWidget {
   /// "Race · Classe · Niv. X", en omettant les segments non résolus (race
   /// personnalisée ou personnage sans classe enregistrée) plutôt que
   /// d'afficher "null".
-  String _summaryLine(CharacterSummary character) {
+  String _summaryLine(AppLocalizations l10n, CharacterSummary character) {
     final segments = [
       if (character.raceName != null) character.raceName!,
       if (character.className != null) character.className!,
-      'Niv. ${character.level}',
+      l10n.characterLevelAbbreviation(character.level),
     ];
     return segments.join(' · ');
   }
@@ -247,13 +252,13 @@ class CharacterCard extends StatelessWidget {
 /// (même couleur que le "Bandeau d'alerte inline"/bouton destructif) avec un
 /// texte clair pour rester lisible sur ce fond saturé.
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge.archived()
-    : _label = 'ARCHIVÉ',
+  _StatusBadge.archived(AppLocalizations l10n)
+    : _label = l10n.characterCardArchivedBadge,
       _background = AppColors.parchmentCardAlt,
       _foreground = AppColors.textSecondary;
 
-  const _StatusBadge.dead()
-    : _label = 'MORT',
+  _StatusBadge.dead(AppLocalizations l10n)
+    : _label = l10n.characterCardDeadBadge,
       _background = AppColors.accentBrick,
       _foreground = AppColors.textOnWood;
 
@@ -285,10 +290,13 @@ class _StatusBadge extends StatelessWidget {
 /// `gaugeTrack` bordée de `gaugeTrackBorder`, remplissage en dégradé
 /// `gold-start` → `gold-end`, hauteur 8px, avec le label "XP" à droite.
 class _XpGauge extends StatelessWidget {
-  const _XpGauge({required this.progress});
+  const _XpGauge({required this.progress, required this.label});
 
   /// Ratio de remplissage entre 0 et 1.
   final double progress;
+
+  /// Libellé affiché à droite de la jauge ("XP", localisé par l'appelant).
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -317,7 +325,7 @@ class _XpGauge extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.xs),
         Text(
-          'XP',
+          label,
           style: AppTypography.body(
             fontSize: 11,
             fontWeight: FontWeight.w700,

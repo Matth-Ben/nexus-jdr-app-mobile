@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_story_tab_body.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 CharacterDetail _detail({
   String appearanceText = '',
@@ -81,6 +82,14 @@ Future<void> _pump(
     // `character_journal_card_test.dart`).
     ProviderScope(
       child: MaterialApp(
+        // `CharacterAppearanceCard` (carte "Apparence physique" structurée,
+        // réintégrée dans cet onglet) lit désormais `AppLocalizations
+        // .of(context)!` (chantier "traduction de l'app" Phase B, lot
+        // "Characters — fiche (identité/statistiques)") : sans ces
+        // delegates, l'appel renverrait `null` et le `!` planterait.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         home: Scaffold(
           body: CharacterStoryTabBody(
             detail: detail,

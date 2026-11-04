@@ -7,6 +7,7 @@ import '../../../../core/widgets/checkable_option_tile.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_status_filter.dart';
 
 /// Sélection courante des deux filtres de la liste des personnages — voir
@@ -89,6 +90,7 @@ class _CharacterListFilterSheetContentState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: FractionallySizedBox(
@@ -97,7 +99,7 @@ class _CharacterListFilterSheetContentState
           decoration: const BoxDecoration(color: AppColors.parchmentBg),
           child: Column(
             children: [
-              const SheetHeaderBar(title: 'FILTRER'),
+              SheetHeaderBar(title: l10n.characterListFilterSheetTitle),
               Expanded(
                 child: ListView(
                   // Clé stable pour les tests (`character_list_screen_test.dart`,
@@ -107,11 +109,11 @@ class _CharacterListFilterSheetContentState
                   key: const Key('characterListFilterOptions'),
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   children: [
-                    const _SectionLabel('STATUT'),
+                    _SectionLabel(l10n.characterListFilterSheetStatusSection),
                     const SizedBox(height: AppSpacing.sm),
                     for (final status in CharacterStatusFilter.values) ...[
                       CheckableOptionTile(
-                        title: status.label,
+                        title: _statusLabel(l10n, status),
                         checked: _statusSelection.contains(status),
                         onTap: () => _toggleStatus(status),
                       ),
@@ -119,7 +121,7 @@ class _CharacterListFilterSheetContentState
                     ],
                     if (widget.availableClassNames.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.sm),
-                      const _SectionLabel('CLASSE'),
+                      _SectionLabel(l10n.characterListFilterSheetClassSection),
                       const SizedBox(height: AppSpacing.sm),
                       for (final className in widget.availableClassNames) ...[
                         CheckableOptionTile(
@@ -144,7 +146,7 @@ class _CharacterListFilterSheetContentState
                   children: [
                     Expanded(
                       child: SecondaryButton(
-                        label: 'Réinitialiser',
+                        label: l10n.characterListFilterSheetResetButton,
                         surface: SecondaryButtonSurface.parchment,
                         onPressed: _hasSelection
                             ? () => setState(() {
@@ -157,7 +159,7 @@ class _CharacterListFilterSheetContentState
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: PrimaryButton(
-                        label: 'Appliquer',
+                        label: l10n.characterListFilterSheetApplyButton,
                         onPressed: () => Navigator.of(context).pop((
                           statuses: _statusSelection,
                           classNames: _classSelection,
@@ -172,6 +174,20 @@ class _CharacterListFilterSheetContentState
         ),
       ),
     );
+  }
+
+  /// Résout le libellé localisé d'un [CharacterStatusFilter] — voir la doc de
+  /// classe de l'enum (`domain/character_status_filter.dart`), qui ne porte
+  /// plus lui-même de texte depuis le chantier "traduction de l'app".
+  String _statusLabel(AppLocalizations l10n, CharacterStatusFilter status) {
+    switch (status) {
+      case CharacterStatusFilter.alive:
+        return l10n.characterListFilterSheetStatusAlive;
+      case CharacterStatusFilter.archived:
+        return l10n.characterListFilterSheetStatusArchived;
+      case CharacterStatusFilter.dead:
+        return l10n.characterListFilterSheetStatusDead;
+    }
   }
 }
 

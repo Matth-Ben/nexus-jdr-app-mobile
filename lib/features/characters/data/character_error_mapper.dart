@@ -19,7 +19,10 @@ CharacterFailure mapCharacterError(PostgrestException error) {
   // reste plus clair qu'un message Postgrest brut si la policy RLS venait à
   // changer côté serveur.
   if (error.code == '42501') {
-    return const CharacterFailure("Vous n'avez pas accès à ces personnages.");
+    return const CharacterFailure(
+      "Vous n'avez pas accès à ces personnages.",
+      code: CharacterErrorCode.accessDenied,
+    );
   }
 
   return CharacterFailure(
@@ -29,5 +32,7 @@ CharacterFailure mapCharacterError(PostgrestException error) {
 
 /// Message générique pour toute erreur qui n'est pas une [PostgrestException]
 /// (ex. absence de réseau).
-CharacterFailure mapUnknownCharacterError() =>
-    const CharacterFailure(_networkErrorMessage);
+CharacterFailure mapUnknownCharacterError() => const CharacterFailure(
+  _networkErrorMessage,
+  code: CharacterErrorCode.network,
+);

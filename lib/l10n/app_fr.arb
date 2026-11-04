@@ -1287,5 +1287,557 @@
   "profileReportBugAttachedImageSemanticLabel": "Capture d'écran jointe",
   "@profileReportBugAttachedImageSemanticLabel": {
     "description": "Libellé d'accessibilité (`Semantics.label`) de la vignette de capture jointe."
+  },
+
+  "characterLevelAbbreviation": "Niv. {level}",
+  "@characterLevelAbbreviation": {
+    "description": "Segment \"Niv. X\" du résumé \"Race · Classe · Niv. X\" d'un personnage — partagé entre `character_card.dart::_summaryLine` et `character_card_action_sheet.dart::_CardActionSheetContent._summaryLine` (copie intentionnellement dupliquée entre ces deux fichiers, voir leur doc respective, mais la clé `.arb` elle-même est réutilisée).",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "characterOfflineNotPersistedMessage": "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une fois reconnecté.",
+  "@characterOfflineNotPersistedMessage": {
+    "description": "Anciennement `presentation/widgets/character_write_feedback.dart::offlineNotPersistedMessage` (dette technique D88) — ce fichier et sa constante ont été retirés au lot \"Characters — fiche (identité/statistiques)\" une fois `character_detail_screen.dart` (son dernier appelant restant, D141) migré vers cette clé, comme `character_list_screen.dart`/`character_card_action_sheet.dart` avant lui."
+  },
+  "characterAccessDeniedErrorMessage": "Vous n'avez pas accès à ces personnages.",
+  "@characterAccessDeniedErrorMessage": {
+    "description": "`CharacterErrorCode.accessDenied` (`domain/character_failure.dart`) — texte à garder identique à `data/character_error_mapper.dart::mapCharacterError`, encore utilisé tel quel par les appelants pas encore migrés (D141)."
+  },
+  "characterNetworkErrorMessage": "Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.",
+  "@characterNetworkErrorMessage": {
+    "description": "`CharacterErrorCode.network` (`domain/character_failure.dart`) — texte à garder identique à `data/character_error_mapper.dart::mapUnknownCharacterError` (D141)."
+  },
+
+  "characterListHeaderTitle": "TES AVENTURIERS",
+  "@characterListHeaderTitle": {
+    "description": "Titre de l'en-tête de `character_list_screen.dart` (écran d'accueil), déjà en majuscules (`font.display` ne transforme pas la casse)."
+  },
+  "characterListSearchHint": "Rechercher un personnage",
+  "@characterListSearchHint": {
+    "description": "`hintText` du champ de recherche de la barre `_SearchRow`."
+  },
+  "characterListSearchClearTooltip": "Effacer",
+  "@characterListSearchClearTooltip": {
+    "description": "`tooltip` du bouton \"×\" qui vide le champ de recherche."
+  },
+  "characterListFilterButtonLabel": "Filtrer les personnages",
+  "@characterListFilterButtonLabel": {
+    "description": "Libellé d'accessibilité (`Semantics.label`) du bouton entonnoir de `_SearchRow`."
+  },
+  "characterListFilterButtonActiveValue": "Filtre actif",
+  "@characterListFilterButtonActiveValue": {
+    "description": "Valeur sémantique (`Semantics.value`) du bouton entonnoir quand au moins un filtre est actif."
+  },
+  "characterListSelectionModeButtonLabel": "Sélectionner plusieurs personnages",
+  "@characterListSelectionModeButtonLabel": {
+    "description": "Libellé d'accessibilité (`Semantics.label`) du bouton d'entrée en mode sélection multiple."
+  },
+  "characterListCreateButton": "+ Créer",
+  "@characterListCreateButton": {
+    "description": "Libellé du bouton primaire \"+ Créer\" en pied d'écran (hors mode sélection)."
+  },
+  "characterListImportXmlButton": "Importer XML",
+  "@characterListImportXmlButton": {
+    "description": "Libellé du bouton secondaire \"Importer XML\" en pied d'écran (hors mode sélection)."
+  },
+  "characterListImportErrorMessage": "Impossible de lire ce fichier. Vérifiez qu'il s'agit bien d'un export XML aidedd.org.",
+  "@characterListImportErrorMessage": {
+    "description": "SnackBar affiché si la lecture du fichier sélectionné par `file_picker` échoue (`_startXmlImport`)."
+  },
+  "characterListSearchEmptyTitleNoQuery": "AUCUN RÉSULTAT",
+  "@characterListSearchEmptyTitleNoQuery": {
+    "description": "Titre de `_SearchEmptyState` quand un filtre de classe/statut (sans recherche textuelle) ne laisse aucun résultat, déjà en majuscules."
+  },
+  "characterListSearchEmptyTitleWithQuery": "AUCUN RÉSULTAT POUR « {query} »",
+  "@characterListSearchEmptyTitleWithQuery": {
+    "description": "Titre de `_SearchEmptyState` quand la recherche textuelle ne donne aucun résultat — {query} est déjà mis en majuscules par l'appelant (`query.toUpperCase()`), déjà en majuscules pour le reste du texte.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "characterListSearchEmptyBodyNoQuery": "Aucun personnage ne correspond à ce filtre. Réinitialise pour retrouver tous tes personnages.",
+  "@characterListSearchEmptyBodyNoQuery": {
+    "description": "Corps de `_SearchEmptyState` quand seul un filtre de classe/statut est actif (pas de copie dédiée au cahier des charges pour ce sous-cas)."
+  },
+  "characterListSearchEmptyBodyWithQuery": "Vérifie l'orthographe, ou réinitialise la recherche pour retrouver tous tes personnages.",
+  "@characterListSearchEmptyBodyWithQuery": {
+    "description": "Corps de `_SearchEmptyState` quand une recherche textuelle est active — copie exacte de `docs/cahier-des-charges/16-textes-a-rediger.md` section 5."
+  },
+  "characterListSearchEmptyResetButton": "Réinitialiser",
+  "@characterListSearchEmptyResetButton": {
+    "description": "Libellé du bouton secondaire \"Réinitialiser\" de `_SearchEmptyState`."
+  },
+  "characterListEmptyTitle": "AUCUN AVENTURIER POUR L'INSTANT",
+  "@characterListEmptyTitle": {
+    "description": "Titre de `_EmptyState` (aucun personnage côté serveur), déjà en majuscules — voir la maquette \"État vide — Liste de personnages\"."
+  },
+  "characterListEmptyBody": "Crée ton premier personnage, ou importe-le depuis aidedd.org, pour commencer l'aventure.",
+  "@characterListEmptyBody": {
+    "description": "Corps de `_EmptyState` — \"ou rejoins l'histoire d'un ami\" volontairement omis, voir la doc de classe de `_EmptyState`."
+  },
+  "characterListDeleteSelectionGenericError": "Impossible de supprimer les personnages sélectionnés. Réessayez.",
+  "@characterListDeleteSelectionGenericError": {
+    "description": "SnackBar affiché quand une suppression groupée échoue entièrement pour une raison autre qu'une absence de réseau (`_deleteSelectedCharacters`)."
+  },
+  "characterListDeleteSelectionSucceededLabel": "{count, plural, =1{1 personnage supprimé} other{{count} personnages supprimés}}",
+  "@characterListDeleteSelectionSucceededLabel": {
+    "description": "Premier segment du SnackBar récapitulatif d'une suppression groupée partiellement réussie (`_partialDeleteMessage`), concaténé avec `characterListDeleteSelectionFailedLabel`.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "characterListDeleteSelectionFailedLabel": "{count, plural, =1{1 personnage n'a pas pu être supprimé} other{{count} personnages n'ont pas pu être supprimés}}",
+  "@characterListDeleteSelectionFailedLabel": {
+    "description": "Second segment du SnackBar récapitulatif d'une suppression groupée partiellement réussie (`_partialDeleteMessage`), concaténé après `characterListDeleteSelectionSucceededLabel`.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "characterListFilterSheetTitle": "FILTRER",
+  "@characterListFilterSheetTitle": {
+    "description": "Titre de la sheet \"Filtrer\" (`SheetHeaderBar`, `character_list_filter_sheet.dart`), déjà en majuscules."
+  },
+  "characterListFilterSheetStatusSection": "STATUT",
+  "@characterListFilterSheetStatusSection": {
+    "description": "Libellé de la section \"STATUT\" de la sheet \"Filtrer\", déjà en majuscules."
+  },
+  "characterListFilterSheetClassSection": "CLASSE",
+  "@characterListFilterSheetClassSection": {
+    "description": "Libellé de la section \"CLASSE\" de la sheet \"Filtrer\", déjà en majuscules."
+  },
+  "characterListFilterSheetResetButton": "Réinitialiser",
+  "@characterListFilterSheetResetButton": {
+    "description": "Libellé du bouton secondaire \"Réinitialiser\" de la sheet \"Filtrer\"."
+  },
+  "characterListFilterSheetApplyButton": "Appliquer",
+  "@characterListFilterSheetApplyButton": {
+    "description": "Libellé du bouton primaire \"Appliquer\" de la sheet \"Filtrer\"."
+  },
+  "characterListFilterSheetStatusAlive": "Vivants",
+  "@characterListFilterSheetStatusAlive": {
+    "description": "Libellé de l'option de statut `CharacterStatusFilter.alive` (`domain/character_status_filter.dart`)."
+  },
+  "characterListFilterSheetStatusArchived": "Archivé",
+  "@characterListFilterSheetStatusArchived": {
+    "description": "Libellé de l'option de statut `CharacterStatusFilter.archived`."
+  },
+  "characterListFilterSheetStatusDead": "Mort",
+  "@characterListFilterSheetStatusDead": {
+    "description": "Libellé de l'option de statut `CharacterStatusFilter.dead`."
+  },
+
+  "characterCardArchivedBadge": "ARCHIVÉ",
+  "@characterCardArchivedBadge": {
+    "description": "Badge pill \"ARCHIVÉ\" de `character_card.dart::_StatusBadge.archived`, déjà en majuscules."
+  },
+  "characterCardDeadBadge": "MORT",
+  "@characterCardDeadBadge": {
+    "description": "Badge pill \"MORT\" de `character_card.dart::_StatusBadge.dead`, déjà en majuscules."
+  },
+  "characterCardXpLabel": "XP",
+  "@characterCardXpLabel": {
+    "description": "Libellé \"XP\" à droite de la jauge `character_card.dart::_XpGauge` — identique dans les deux fichiers .arb (abréviation déjà internationale)."
+  },
+
+  "characterCardActionSheetEdit": "Modifier",
+  "@characterCardActionSheetEdit": {
+    "description": "Libellé de l'action \"Modifier\" de la sheet \"Actions de personnage\" (`character_card_action_sheet.dart`)."
+  },
+  "characterCardActionSheetShare": "Partager",
+  "@characterCardActionSheetShare": {
+    "description": "Libellé de l'action \"Partager\"."
+  },
+  "characterCardActionSheetArchive": "Archiver ce personnage",
+  "@characterCardActionSheetArchive": {
+    "description": "Libellé de l'action \"Archiver\" pour un personnage actif (non archivé)."
+  },
+  "characterCardActionSheetUnarchive": "Désarchiver",
+  "@characterCardActionSheetUnarchive": {
+    "description": "Libellé de l'action \"Archiver\" pour un personnage déjà archivé."
+  },
+  "characterCardActionSheetMarkDead": "Marquer comme mort",
+  "@characterCardActionSheetMarkDead": {
+    "description": "Libellé de l'action \"Marquer comme mort\" pour un personnage vivant."
+  },
+  "characterCardActionSheetRevive": "Ressusciter",
+  "@characterCardActionSheetRevive": {
+    "description": "Libellé de l'action \"Marquer comme mort\" pour un personnage déjà mort."
+  },
+  "characterCardActionSheetDelete": "Supprimer le personnage",
+  "@characterCardActionSheetDelete": {
+    "description": "Libellé de l'action \"Supprimer\" (en rouge, `accentBrick`)."
+  },
+  "characterCardActionSheetUpdateStatusGenericError": "Impossible de mettre à jour le statut. Réessayez.",
+  "@characterCardActionSheetUpdateStatusGenericError": {
+    "description": "SnackBar affiché quand `setArchived`/`setDead` échouent avec une erreur générique (pas une `CharacterFailure`)."
+  },
+  "characterCardActionSheetDeleteGenericError": "Impossible de supprimer le personnage. Réessayez.",
+  "@characterCardActionSheetDeleteGenericError": {
+    "description": "SnackBar affiché quand `deleteCharacter` échoue avec une erreur générique (pas une `CharacterFailure`)."
+  },
+
+  "characterDeleteConfirmationSingleTitle": "Supprimer {characterName} ?",
+  "@characterDeleteConfirmationSingleTitle": {
+    "description": "Titre du dialogue `showDeleteCharacterConfirmationDialog` (suppression d'un unique personnage).",
+    "placeholders": {
+      "characterName": {
+        "type": "String"
+      }
+    }
+  },
+  "characterDeleteConfirmationBody": "Cette action est définitive : le personnage et toutes ses données (sorts, inventaire, historique...) seront irrémédiablement supprimés.",
+  "@characterDeleteConfirmationBody": {
+    "description": "Corps du dialogue `showDeleteCharacterConfirmationDialog` (suppression d'un unique personnage)."
+  },
+  "characterDeleteConfirmationMultipleTitle": "Supprimer ces {count} personnages ?",
+  "@characterDeleteConfirmationMultipleTitle": {
+    "description": "Titre du dialogue `showDeleteCharactersConfirmationDialog` (suppression groupée, n > 1 toujours — voir sa doc de classe).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "characterDeleteConfirmationMultipleBody": "Cette action est définitive : les personnages et toutes leurs données (sorts, inventaire, historique...) seront irrémédiablement supprimés.",
+  "@characterDeleteConfirmationMultipleBody": {
+    "description": "Corps du dialogue `showDeleteCharactersConfirmationDialog` (suppression groupée)."
+  },
+  "characterDeleteConfirmationCancelButton": "Annuler",
+  "@characterDeleteConfirmationCancelButton": {
+    "description": "Libellé du bouton secondaire \"Annuler\", partagé par les deux dialogues de `character_delete_confirmation.dart`."
+  },
+  "characterDeleteConfirmationConfirmButton": "Supprimer",
+  "@characterDeleteConfirmationConfirmButton": {
+    "description": "Libellé du bouton destructif de confirmation du dialogue singulier."
+  },
+  "characterDeleteConfirmationMultipleConfirmButton": "Supprimer ({count})",
+  "@characterDeleteConfirmationMultipleConfirmButton": {
+    "description": "Libellé du bouton destructif de confirmation du dialogue pluriel, avec le compte entre parenthèses.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "characterSelectionActionBarSelectedCount": "{count, plural, =0{Aucun personnage sélectionné} =1{1 personnage sélectionné} other{{count} personnages sélectionnés}}",
+  "@characterSelectionActionBarSelectedCount": {
+    "description": "Libellé central de `CharacterSelectionActionBar` (nombre de personnages cochés en mode sélection multiple).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "characterSelectionActionBarCancelButton": "Annuler",
+  "@characterSelectionActionBarCancelButton": {
+    "description": "Libellé du lien \"Annuler\" de `CharacterSelectionActionBar`."
+  },
+  "characterSelectionActionBarDeleteButton": "Supprimer",
+  "@characterSelectionActionBarDeleteButton": {
+    "description": "Libellé du bouton destructif \"Supprimer\" de `CharacterSelectionActionBar`."
+  },
+
+  "characterNameTagChipSemanticLabel": "{name}, voir le détail",
+  "@characterNameTagChipSemanticLabel": {
+    "description": "Libellé d'accessibilité (`Semantics.label`) de `CharacterNameTagChip` quand `onTap` est fourni.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+
+  "characterDetailTabCharacterLabel": "PERSO",
+  "@characterDetailTabCharacterLabel": {
+    "description": "Libellé (pied de fiche, `CharacterDetailTabBar`) de l'onglet \"Personnage\" — déjà en majuscules."
+  },
+  "characterDetailTabCharacterTitle": "FICHE",
+  "@characterDetailTabCharacterTitle": {
+    "description": "Titre affiché dans `WoodBackHeader` (bandeau bois) quand l'onglet \"Personnage\" est actif — déjà en majuscules."
+  },
+  "characterDetailTabSkillsLabel": "APT.",
+  "@characterDetailTabSkillsLabel": {
+    "description": "Libellé (pied de fiche) de l'onglet \"Aptitudes\" — déjà en majuscules."
+  },
+  "characterDetailTabSkillsTitle": "APTITUDES",
+  "@characterDetailTabSkillsTitle": {
+    "description": "Titre affiché dans `WoodBackHeader` quand l'onglet \"Aptitudes\" est actif — déjà en majuscules."
+  },
+  "characterDetailTabSpellsLabel": "SORTS",
+  "@characterDetailTabSpellsLabel": {
+    "description": "Libellé (pied de fiche) de l'onglet \"Sorts\" — déjà en majuscules."
+  },
+  "characterDetailTabSpellsTitle": "SORTS",
+  "@characterDetailTabSpellsTitle": {
+    "description": "Titre affiché dans `WoodBackHeader` quand l'onglet \"Sorts\" est actif — déjà en majuscules."
+  },
+  "characterDetailTabInventoryLabel": "SAC",
+  "@characterDetailTabInventoryLabel": {
+    "description": "Libellé (pied de fiche) de l'onglet \"Inventaire\" — déjà en majuscules."
+  },
+  "characterDetailTabInventoryTitle": "INVENTAIRE",
+  "@characterDetailTabInventoryTitle": {
+    "description": "Titre affiché dans `WoodBackHeader` quand l'onglet \"Inventaire\" est actif — déjà en majuscules."
+  },
+  "characterDetailTabStoryLabel": "HIST.",
+  "@characterDetailTabStoryLabel": {
+    "description": "Libellé (pied de fiche) de l'onglet \"Histoire\" — déjà en majuscules."
+  },
+  "characterDetailTabStoryTitle": "HISTOIRE",
+  "@characterDetailTabStoryTitle": {
+    "description": "Titre affiché dans `WoodBackHeader` quand l'onglet \"Histoire\" est actif — déjà en majuscules."
+  },
+
+  "characterDetailHelpTooltip": "Aide",
+  "@characterDetailHelpTooltip": {
+    "description": "`tooltip` de l'icône \"?\" du bandeau bois, onglet \"Personnage\" uniquement — ouvre `showStepHelpSheet`."
+  },
+  "characterDetailMoreOptionsTooltip": "Plus d'options",
+  "@characterDetailMoreOptionsTooltip": {
+    "description": "`tooltip` de l'icône \"⋮\" du bandeau bois (menu \"Modifier\"/\"Exporter en XML\"/\"Archiver\"/\"Marquer comme mort\"/\"Supprimer\"), onglet \"Personnage\" uniquement."
+  },
+  "characterDetailSearchTooltip": "Rechercher",
+  "@characterDetailSearchTooltip": {
+    "description": "`tooltip` de l'icône loupe du bandeau bois, partagée par les onglets \"Aptitudes\" et \"Sorts\" (focus le champ de recherche de l'onglet actif)."
+  },
+  "characterDetailFilterTooltip": "Filtrer",
+  "@characterDetailFilterTooltip": {
+    "description": "`tooltip` de l'icône entonnoir du bandeau bois, onglet \"Inventaire\" uniquement (fait défiler jusqu'à la bascule de filtre par catégorie)."
+  },
+  "characterDetailMenuExportXml": "Exporter en XML",
+  "@characterDetailMenuExportXml": {
+    "description": "Item \"Exporter en XML\" du menu \"⋮\" du bandeau bois."
+  },
+  "characterDetailLoadErrorMessage": "Impossible de charger ce personnage. Réessayez.",
+  "@characterDetailLoadErrorMessage": {
+    "description": "Message de repli de `_ErrorState` quand `characterDetailProvider` échoue avec une erreur qui n'est pas une `CharacterFailure` (sinon `CharacterFailure.message` est affiché tel quel)."
+  },
+  "characterDetailInitiativeLabel": "Initiative",
+  "@characterDetailInitiativeLabel": {
+    "description": "`label` passé à `showDiceRollSheet` au tap sur la tuile \"INIT.\" de `CharacterStatPillsRow` (titre de la feuille de lancer de dé)."
+  },
+  "characterDetailHpUpdateErrorMessage": "Impossible de mettre à jour les PV. Réessayez.",
+  "@characterDetailHpUpdateErrorMessage": {
+    "description": "SnackBar d'échec générique de `_applyHpState` (ajustement PV depuis la feuille détaillée)."
+  },
+  "characterDetailHpSyncErrorMessage": "Impossible de synchroniser les PV. Réessayez.",
+  "@characterDetailHpSyncErrorMessage": {
+    "description": "SnackBar d'échec de `_reassertCurrentHpState` (réaffirmation PV après un repos, voir sa documentation)."
+  },
+  "characterDetailFeatureUseSuccessMessage": "{featureName} utilisée.",
+  "@characterDetailFeatureUseSuccessMessage": {
+    "description": "SnackBar de succès de `_useClassFeature` (onglet \"Aptitudes\", utilisation d'une aptitude de classe à usage limité).",
+    "placeholders": {
+      "featureName": {
+        "type": "String"
+      }
+    }
+  },
+  "characterDetailFeatureUseErrorMessage": "Impossible d'utiliser cette aptitude. Réessayez.",
+  "@characterDetailFeatureUseErrorMessage": {
+    "description": "SnackBar d'échec de `_useClassFeature`."
+  },
+  "characterDetailFeatureSyncErrorMessage": "Impossible de synchroniser les aptitudes de classe. Réessayez.",
+  "@characterDetailFeatureSyncErrorMessage": {
+    "description": "SnackBar d'échec de `_reassertFeatureUsesState` (réaffirmation après un repos)."
+  },
+  "characterDetailXpAddErrorMessage": "Impossible d'ajouter l'XP. Réessayez.",
+  "@characterDetailXpAddErrorMessage": {
+    "description": "SnackBar d'échec de `_addXp`."
+  },
+  "characterDetailOfflineQueuedMessage": "Hors ligne : sera synchronisé dès que la connexion revient.",
+  "@characterDetailOfflineQueuedMessage": {
+    "description": "Voir `_CharacterDetailScreenState._offlineQueuedMessage` — écriture réellement mise en file (`PendingCharacterWriteQueue`) : promet une synchronisation future réelle, contrairement à `characterOfflineNotPersistedMessage`."
+  },
+  "characterDetailArmorClassAdjustErrorMessage": "Impossible d'ajuster la Classe d'Armure. Réessayez.",
+  "@characterDetailArmorClassAdjustErrorMessage": {
+    "description": "SnackBar d'échec de `_adjustArmorClassBonus` (sheet \"Ajustement de CA\")."
+  },
+
+  "characterVitalsCardRestButton": "Repos",
+  "@characterVitalsCardRestButton": {
+    "description": "Libellé du bouton unique \"Repos\" de `CharacterVitalsCard` (ouvre `RestSheet`)."
+  },
+  "characterVitalsCardHpLabel": "POINTS DE VIE",
+  "@characterVitalsCardHpLabel": {
+    "description": "Libellé du bandeau PV, déjà en majuscules."
+  },
+  "characterVitalsCardTemporaryHpChip": "+{amount} PV temp.",
+  "@characterVitalsCardTemporaryHpChip": {
+    "description": "Puce affichée sous la jauge PV quand `temporaryHp > 0`.",
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "characterVitalsCardXpLabel": "EXPÉRIENCE",
+  "@characterVitalsCardXpLabel": {
+    "description": "Libellé du bandeau XP, déjà en majuscules."
+  },
+  "characterVitalsCardAddXpButton": "+ XP",
+  "@characterVitalsCardAddXpButton": {
+    "description": "Libellé du `PrimaryButton` pleine largeur sous la jauge XP (ouvre `AddXpSheet`)."
+  },
+  "characterVitalsCardLevelUpBanner": "NIVEAU {targetLevel} DISPONIBLE",
+  "@characterVitalsCardLevelUpBanner": {
+    "description": "Bandeau affiché sous la jauge XP une fois le seuil du niveau suivant franchi, déjà en majuscules.",
+    "placeholders": {
+      "targetLevel": {
+        "type": "int"
+      }
+    }
+  },
+
+  "characterStatPillsSpeedLabel": "VIT.",
+  "@characterStatPillsSpeedLabel": {
+    "description": "Libellé de la tuile \"Vitesse\" de `CharacterStatPillsRow`, déjà en majuscules."
+  },
+  "characterStatPillsArmorClassLabel": "CA",
+  "@characterStatPillsArmorClassLabel": {
+    "description": "Libellé de la tuile \"Classe d'Armure\" de `CharacterStatPillsRow`, déjà en majuscules."
+  },
+  "characterStatPillsInitiativeLabel": "INIT.",
+  "@characterStatPillsInitiativeLabel": {
+    "description": "Libellé de la tuile \"Initiative\" de `CharacterStatPillsRow`, déjà en majuscules."
+  },
+  "characterStatPillsInspirationLabel": "INSP.",
+  "@characterStatPillsInspirationLabel": {
+    "description": "Libellé de la tuile \"Inspiration\" de `CharacterStatPillsRow`, déjà en majuscules."
+  },
+  "characterStatPillsSpeedValue": "{speed} m",
+  "@characterStatPillsSpeedValue": {
+    "description": "Valeur de la tuile \"Vitesse\" quand `speed` est résolu — unité métrique (mètres) volontairement gardée telle quelle en anglais aussi (même unité conservée dans app_en.arb, qui ne porte pas sa propre description de clé : ce fichier app_fr.arb est le template) : les données de vitesse de ce dépôt sont stockées en mètres, jamais converties en pieds.",
+    "placeholders": {
+      "speed": {
+        "type": "int"
+      }
+    }
+  },
+
+  "characterAbilityAbbreviationStr": "For",
+  "@characterAbilityAbbreviationStr": {
+    "description": "Abréviation de la caractéristique Force, partagée par `character_saving_throws_card.dart` et `character_skills_card.dart` (chacun garde sa propre table de correspondance `Dart`, intentionnellement dupliquée — voir leur doc de classe respective — mais réutilise ces mêmes clés `.arb`, même principe que `characterLevelAbbreviation`)."
+  },
+  "characterAbilityAbbreviationDex": "Dex",
+  "@characterAbilityAbbreviationDex": {
+    "description": "Abréviation de la caractéristique Dextérité — voir `characterAbilityAbbreviationStr`."
+  },
+  "characterAbilityAbbreviationCon": "Con",
+  "@characterAbilityAbbreviationCon": {
+    "description": "Abréviation de la caractéristique Constitution — voir `characterAbilityAbbreviationStr`."
+  },
+  "characterAbilityAbbreviationInt": "Int",
+  "@characterAbilityAbbreviationInt": {
+    "description": "Abréviation de la caractéristique Intelligence — voir `characterAbilityAbbreviationStr`."
+  },
+  "characterAbilityAbbreviationWis": "Sag",
+  "@characterAbilityAbbreviationWis": {
+    "description": "Abréviation de la caractéristique Sagesse — voir `characterAbilityAbbreviationStr`."
+  },
+  "characterAbilityAbbreviationCha": "Cha",
+  "@characterAbilityAbbreviationCha": {
+    "description": "Abréviation de la caractéristique Charisme — voir `characterAbilityAbbreviationStr`."
+  },
+
+  "characterSavingThrowsCardTitle": "JETS DE SAUVEGARDE",
+  "@characterSavingThrowsCardTitle": {
+    "description": "Titre de `CharacterSavingThrowsCard`, déjà en majuscules."
+  },
+
+  "characterSkillsCardTitle": "LES 18 COMPÉTENCES",
+  "@characterSkillsCardTitle": {
+    "description": "Titre de `CharacterSkillsCard`, déjà en majuscules."
+  },
+  "characterSkillsCardMasteredLegend": "maîtrisée",
+  "@characterSkillsCardMasteredLegend": {
+    "description": "Légende \"● maîtrisée\" en tête de `CharacterSkillsCard`."
+  },
+  "characterSkillsCardD20Chip": "D20",
+  "@characterSkillsCardD20Chip": {
+    "description": "Texte de la puce \"D20\" en bout de ligne de compétence — notation de dé, identique dans les deux langues."
+  },
+
+  "characterAppearanceCardTitle": "APPARENCE PHYSIQUE",
+  "@characterAppearanceCardTitle": {
+    "description": "Titre de `CharacterAppearanceCard`, déjà en majuscules."
+  },
+  "characterAppearanceCardSexeLabel": "Sexe",
+  "@characterAppearanceCardSexeLabel": {
+    "description": "Libellé du champ \"Sexe\" de `CharacterAppearanceCard`."
+  },
+  "characterAppearanceCardAgeLabel": "Âge",
+  "@characterAppearanceCardAgeLabel": {
+    "description": "Libellé du champ \"Âge\" de `CharacterAppearanceCard`."
+  },
+  "characterAppearanceCardHeightLabel": "Taille",
+  "@characterAppearanceCardHeightLabel": {
+    "description": "Libellé du champ \"Taille\" de `CharacterAppearanceCard`."
+  },
+  "characterAppearanceCardWeightLabel": "Poids",
+  "@characterAppearanceCardWeightLabel": {
+    "description": "Libellé du champ \"Poids\" de `CharacterAppearanceCard`."
+  },
+  "characterAppearanceCardEyesLabel": "Yeux",
+  "@characterAppearanceCardEyesLabel": {
+    "description": "Libellé du champ \"Yeux\" de `CharacterAppearanceCard`."
+  },
+  "characterAppearanceCardSkinLabel": "Peau",
+  "@characterAppearanceCardSkinLabel": {
+    "description": "Libellé du champ \"Peau\" de `CharacterAppearanceCard`."
+  },
+  "characterAppearanceCardHairLabel": "Cheveux",
+  "@characterAppearanceCardHairLabel": {
+    "description": "Libellé du champ \"Cheveux\" de `CharacterAppearanceCard`."
+  },
+
+  "characterSkillsTabBodySearchHint": "Rechercher une compétence",
+  "@characterSkillsTabBodySearchHint": {
+    "description": "`hintText` du champ de recherche \"LES 18 COMPÉTENCES\" de l'onglet \"Aptitudes\" (`_SkillSearchField`)."
+  },
+  "characterSkillsTabBodyNoMatchMessage": "Aucune compétence pour « {query} ».",
+  "@characterSkillsTabBodyNoMatchMessage": {
+    "description": "Message de `_NoSkillMatchState` quand la recherche ne donne aucun résultat.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+
+  "connectionErrorStateBannerTitle": "CONNEXION",
+  "@connectionErrorStateBannerTitle": {
+    "description": "Titre du bandeau bois de `ConnectionErrorState._Banner`, déjà en majuscules."
+  },
+  "connectionErrorStateTitle": "Connexion impossible",
+  "@connectionErrorStateTitle": {
+    "description": "Titre de l'écran \"Connexion impossible\" — copie exacte de `docs/cahier-des-charges/16-textes-a-rediger.md` section 4."
+  },
+  "connectionErrorStateBody": "Vérifie ta connexion internet et réessaie. Tes personnages restent disponibles hors ligne — les modifications se synchroniseront automatiquement dès le retour du réseau.",
+  "@connectionErrorStateBody": {
+    "description": "Corps de l'écran \"Connexion impossible\" — copie exacte de `docs/cahier-des-charges/16-textes-a-rediger.md` section 4."
+  },
+  "connectionErrorStateRetryButton": "Réessayer",
+  "@connectionErrorStateRetryButton": {
+    "description": "Libellé du bouton primaire \"Réessayer\"."
+  },
+  "connectionErrorStateContinueOfflineLabel": "Continuer hors ligne",
+  "@connectionErrorStateContinueOfflineLabel": {
+    "description": "Libellé du lien visuellement neutre \"Continuer hors ligne\" — voir la doc de classe de `_ContinueOfflineLink` pour le rationale de sa désactivation."
+  },
+  "connectionErrorStateContinueOfflineTooltip": "Bientôt disponible : la lecture hors ligne de tes personnages arrive avec une prochaine mise à jour. Pour l'instant, une connexion est nécessaire pour charger tes personnages.",
+  "@connectionErrorStateContinueOfflineTooltip": {
+    "description": "`Tooltip.message` du lien \"Continuer hors ligne\"."
   }
 }

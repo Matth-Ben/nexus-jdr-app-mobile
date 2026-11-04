@@ -1951,6 +1951,702 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Capture d\'écran jointe'**
   String get profileReportBugAttachedImageSemanticLabel;
+
+  /// Segment "Niv. X" du résumé "Race · Classe · Niv. X" d'un personnage — partagé entre `character_card.dart::_summaryLine` et `character_card_action_sheet.dart::_CardActionSheetContent._summaryLine` (copie intentionnellement dupliquée entre ces deux fichiers, voir leur doc respective, mais la clé `.arb` elle-même est réutilisée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Niv. {level}'**
+  String characterLevelAbbreviation(int level);
+
+  /// Anciennement `presentation/widgets/character_write_feedback.dart::offlineNotPersistedMessage` (dette technique D88) — ce fichier et sa constante ont été retirés au lot "Characters — fiche (identité/statistiques)" une fois `character_detail_screen.dart` (son dernier appelant restant, D141) migré vers cette clé, comme `character_list_screen.dart`/`character_card_action_sheet.dart` avant lui.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne : cette action n\'a pas pu être enregistrée. Réessayez une fois reconnecté.'**
+  String get characterOfflineNotPersistedMessage;
+
+  /// `CharacterErrorCode.accessDenied` (`domain/character_failure.dart`) — texte à garder identique à `data/character_error_mapper.dart::mapCharacterError`, encore utilisé tel quel par les appelants pas encore migrés (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous n\'avez pas accès à ces personnages.'**
+  String get characterAccessDeniedErrorMessage;
+
+  /// `CharacterErrorCode.network` (`domain/character_failure.dart`) — texte à garder identique à `data/character_error_mapper.dart::mapUnknownCharacterError` (D141).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de contacter le serveur. Vérifiez votre connexion internet et réessayez.'**
+  String get characterNetworkErrorMessage;
+
+  /// Titre de l'en-tête de `character_list_screen.dart` (écran d'accueil), déjà en majuscules (`font.display` ne transforme pas la casse).
+  ///
+  /// In fr, this message translates to:
+  /// **'TES AVENTURIERS'**
+  String get characterListHeaderTitle;
+
+  /// `hintText` du champ de recherche de la barre `_SearchRow`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher un personnage'**
+  String get characterListSearchHint;
+
+  /// `tooltip` du bouton "×" qui vide le champ de recherche.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer'**
+  String get characterListSearchClearTooltip;
+
+  /// Libellé d'accessibilité (`Semantics.label`) du bouton entonnoir de `_SearchRow`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtrer les personnages'**
+  String get characterListFilterButtonLabel;
+
+  /// Valeur sémantique (`Semantics.value`) du bouton entonnoir quand au moins un filtre est actif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtre actif'**
+  String get characterListFilterButtonActiveValue;
+
+  /// Libellé d'accessibilité (`Semantics.label`) du bouton d'entrée en mode sélection multiple.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sélectionner plusieurs personnages'**
+  String get characterListSelectionModeButtonLabel;
+
+  /// Libellé du bouton primaire "+ Créer" en pied d'écran (hors mode sélection).
+  ///
+  /// In fr, this message translates to:
+  /// **'+ Créer'**
+  String get characterListCreateButton;
+
+  /// Libellé du bouton secondaire "Importer XML" en pied d'écran (hors mode sélection).
+  ///
+  /// In fr, this message translates to:
+  /// **'Importer XML'**
+  String get characterListImportXmlButton;
+
+  /// SnackBar affiché si la lecture du fichier sélectionné par `file_picker` échoue (`_startXmlImport`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lire ce fichier. Vérifiez qu\'il s\'agit bien d\'un export XML aidedd.org.'**
+  String get characterListImportErrorMessage;
+
+  /// Titre de `_SearchEmptyState` quand un filtre de classe/statut (sans recherche textuelle) ne laisse aucun résultat, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'AUCUN RÉSULTAT'**
+  String get characterListSearchEmptyTitleNoQuery;
+
+  /// Titre de `_SearchEmptyState` quand la recherche textuelle ne donne aucun résultat — {query} est déjà mis en majuscules par l'appelant (`query.toUpperCase()`), déjà en majuscules pour le reste du texte.
+  ///
+  /// In fr, this message translates to:
+  /// **'AUCUN RÉSULTAT POUR « {query} »'**
+  String characterListSearchEmptyTitleWithQuery(String query);
+
+  /// Corps de `_SearchEmptyState` quand seul un filtre de classe/statut est actif (pas de copie dédiée au cahier des charges pour ce sous-cas).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun personnage ne correspond à ce filtre. Réinitialise pour retrouver tous tes personnages.'**
+  String get characterListSearchEmptyBodyNoQuery;
+
+  /// Corps de `_SearchEmptyState` quand une recherche textuelle est active — copie exacte de `docs/cahier-des-charges/16-textes-a-rediger.md` section 5.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifie l\'orthographe, ou réinitialise la recherche pour retrouver tous tes personnages.'**
+  String get characterListSearchEmptyBodyWithQuery;
+
+  /// Libellé du bouton secondaire "Réinitialiser" de `_SearchEmptyState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser'**
+  String get characterListSearchEmptyResetButton;
+
+  /// Titre de `_EmptyState` (aucun personnage côté serveur), déjà en majuscules — voir la maquette "État vide — Liste de personnages".
+  ///
+  /// In fr, this message translates to:
+  /// **'AUCUN AVENTURIER POUR L\'INSTANT'**
+  String get characterListEmptyTitle;
+
+  /// Corps de `_EmptyState` — "ou rejoins l'histoire d'un ami" volontairement omis, voir la doc de classe de `_EmptyState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Crée ton premier personnage, ou importe-le depuis aidedd.org, pour commencer l\'aventure.'**
+  String get characterListEmptyBody;
+
+  /// SnackBar affiché quand une suppression groupée échoue entièrement pour une raison autre qu'une absence de réseau (`_deleteSelectedCharacters`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de supprimer les personnages sélectionnés. Réessayez.'**
+  String get characterListDeleteSelectionGenericError;
+
+  /// Premier segment du SnackBar récapitulatif d'une suppression groupée partiellement réussie (`_partialDeleteMessage`), concaténé avec `characterListDeleteSelectionFailedLabel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 personnage supprimé} other{{count} personnages supprimés}}'**
+  String characterListDeleteSelectionSucceededLabel(int count);
+
+  /// Second segment du SnackBar récapitulatif d'une suppression groupée partiellement réussie (`_partialDeleteMessage`), concaténé après `characterListDeleteSelectionSucceededLabel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 personnage n\'a pas pu être supprimé} other{{count} personnages n\'ont pas pu être supprimés}}'**
+  String characterListDeleteSelectionFailedLabel(int count);
+
+  /// Titre de la sheet "Filtrer" (`SheetHeaderBar`, `character_list_filter_sheet.dart`), déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'FILTRER'**
+  String get characterListFilterSheetTitle;
+
+  /// Libellé de la section "STATUT" de la sheet "Filtrer", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'STATUT'**
+  String get characterListFilterSheetStatusSection;
+
+  /// Libellé de la section "CLASSE" de la sheet "Filtrer", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'CLASSE'**
+  String get characterListFilterSheetClassSection;
+
+  /// Libellé du bouton secondaire "Réinitialiser" de la sheet "Filtrer".
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser'**
+  String get characterListFilterSheetResetButton;
+
+  /// Libellé du bouton primaire "Appliquer" de la sheet "Filtrer".
+  ///
+  /// In fr, this message translates to:
+  /// **'Appliquer'**
+  String get characterListFilterSheetApplyButton;
+
+  /// Libellé de l'option de statut `CharacterStatusFilter.alive` (`domain/character_status_filter.dart`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vivants'**
+  String get characterListFilterSheetStatusAlive;
+
+  /// Libellé de l'option de statut `CharacterStatusFilter.archived`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Archivé'**
+  String get characterListFilterSheetStatusArchived;
+
+  /// Libellé de l'option de statut `CharacterStatusFilter.dead`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mort'**
+  String get characterListFilterSheetStatusDead;
+
+  /// Badge pill "ARCHIVÉ" de `character_card.dart::_StatusBadge.archived`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'ARCHIVÉ'**
+  String get characterCardArchivedBadge;
+
+  /// Badge pill "MORT" de `character_card.dart::_StatusBadge.dead`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'MORT'**
+  String get characterCardDeadBadge;
+
+  /// Libellé "XP" à droite de la jauge `character_card.dart::_XpGauge` — identique dans les deux fichiers .arb (abréviation déjà internationale).
+  ///
+  /// In fr, this message translates to:
+  /// **'XP'**
+  String get characterCardXpLabel;
+
+  /// Libellé de l'action "Modifier" de la sheet "Actions de personnage" (`character_card_action_sheet.dart`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier'**
+  String get characterCardActionSheetEdit;
+
+  /// Libellé de l'action "Partager".
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager'**
+  String get characterCardActionSheetShare;
+
+  /// Libellé de l'action "Archiver" pour un personnage actif (non archivé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Archiver ce personnage'**
+  String get characterCardActionSheetArchive;
+
+  /// Libellé de l'action "Archiver" pour un personnage déjà archivé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désarchiver'**
+  String get characterCardActionSheetUnarchive;
+
+  /// Libellé de l'action "Marquer comme mort" pour un personnage vivant.
+  ///
+  /// In fr, this message translates to:
+  /// **'Marquer comme mort'**
+  String get characterCardActionSheetMarkDead;
+
+  /// Libellé de l'action "Marquer comme mort" pour un personnage déjà mort.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ressusciter'**
+  String get characterCardActionSheetRevive;
+
+  /// Libellé de l'action "Supprimer" (en rouge, `accentBrick`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer le personnage'**
+  String get characterCardActionSheetDelete;
+
+  /// SnackBar affiché quand `setArchived`/`setDead` échouent avec une erreur générique (pas une `CharacterFailure`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de mettre à jour le statut. Réessayez.'**
+  String get characterCardActionSheetUpdateStatusGenericError;
+
+  /// SnackBar affiché quand `deleteCharacter` échoue avec une erreur générique (pas une `CharacterFailure`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de supprimer le personnage. Réessayez.'**
+  String get characterCardActionSheetDeleteGenericError;
+
+  /// Titre du dialogue `showDeleteCharacterConfirmationDialog` (suppression d'un unique personnage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer {characterName} ?'**
+  String characterDeleteConfirmationSingleTitle(String characterName);
+
+  /// Corps du dialogue `showDeleteCharacterConfirmationDialog` (suppression d'un unique personnage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action est définitive : le personnage et toutes ses données (sorts, inventaire, historique...) seront irrémédiablement supprimés.'**
+  String get characterDeleteConfirmationBody;
+
+  /// Titre du dialogue `showDeleteCharactersConfirmationDialog` (suppression groupée, n > 1 toujours — voir sa doc de classe).
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer ces {count} personnages ?'**
+  String characterDeleteConfirmationMultipleTitle(int count);
+
+  /// Corps du dialogue `showDeleteCharactersConfirmationDialog` (suppression groupée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action est définitive : les personnages et toutes leurs données (sorts, inventaire, historique...) seront irrémédiablement supprimés.'**
+  String get characterDeleteConfirmationMultipleBody;
+
+  /// Libellé du bouton secondaire "Annuler", partagé par les deux dialogues de `character_delete_confirmation.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterDeleteConfirmationCancelButton;
+
+  /// Libellé du bouton destructif de confirmation du dialogue singulier.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer'**
+  String get characterDeleteConfirmationConfirmButton;
+
+  /// Libellé du bouton destructif de confirmation du dialogue pluriel, avec le compte entre parenthèses.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer ({count})'**
+  String characterDeleteConfirmationMultipleConfirmButton(int count);
+
+  /// Libellé central de `CharacterSelectionActionBar` (nombre de personnages cochés en mode sélection multiple).
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun personnage sélectionné} =1{1 personnage sélectionné} other{{count} personnages sélectionnés}}'**
+  String characterSelectionActionBarSelectedCount(int count);
+
+  /// Libellé du lien "Annuler" de `CharacterSelectionActionBar`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get characterSelectionActionBarCancelButton;
+
+  /// Libellé du bouton destructif "Supprimer" de `CharacterSelectionActionBar`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer'**
+  String get characterSelectionActionBarDeleteButton;
+
+  /// Libellé d'accessibilité (`Semantics.label`) de `CharacterNameTagChip` quand `onTap` est fourni.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name}, voir le détail'**
+  String characterNameTagChipSemanticLabel(String name);
+
+  /// Libellé (pied de fiche, `CharacterDetailTabBar`) de l'onglet "Personnage" — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'PERSO'**
+  String get characterDetailTabCharacterLabel;
+
+  /// Titre affiché dans `WoodBackHeader` (bandeau bois) quand l'onglet "Personnage" est actif — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'FICHE'**
+  String get characterDetailTabCharacterTitle;
+
+  /// Libellé (pied de fiche) de l'onglet "Aptitudes" — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'APT.'**
+  String get characterDetailTabSkillsLabel;
+
+  /// Titre affiché dans `WoodBackHeader` quand l'onglet "Aptitudes" est actif — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'APTITUDES'**
+  String get characterDetailTabSkillsTitle;
+
+  /// Libellé (pied de fiche) de l'onglet "Sorts" — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS'**
+  String get characterDetailTabSpellsLabel;
+
+  /// Titre affiché dans `WoodBackHeader` quand l'onglet "Sorts" est actif — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS'**
+  String get characterDetailTabSpellsTitle;
+
+  /// Libellé (pied de fiche) de l'onglet "Inventaire" — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'SAC'**
+  String get characterDetailTabInventoryLabel;
+
+  /// Titre affiché dans `WoodBackHeader` quand l'onglet "Inventaire" est actif — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'INVENTAIRE'**
+  String get characterDetailTabInventoryTitle;
+
+  /// Libellé (pied de fiche) de l'onglet "Histoire" — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'HIST.'**
+  String get characterDetailTabStoryLabel;
+
+  /// Titre affiché dans `WoodBackHeader` quand l'onglet "Histoire" est actif — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'HISTOIRE'**
+  String get characterDetailTabStoryTitle;
+
+  /// `tooltip` de l'icône "?" du bandeau bois, onglet "Personnage" uniquement — ouvre `showStepHelpSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get characterDetailHelpTooltip;
+
+  /// `tooltip` de l'icône "⋮" du bandeau bois (menu "Modifier"/"Exporter en XML"/"Archiver"/"Marquer comme mort"/"Supprimer"), onglet "Personnage" uniquement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus d\'options'**
+  String get characterDetailMoreOptionsTooltip;
+
+  /// `tooltip` de l'icône loupe du bandeau bois, partagée par les onglets "Aptitudes" et "Sorts" (focus le champ de recherche de l'onglet actif).
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher'**
+  String get characterDetailSearchTooltip;
+
+  /// `tooltip` de l'icône entonnoir du bandeau bois, onglet "Inventaire" uniquement (fait défiler jusqu'à la bascule de filtre par catégorie).
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtrer'**
+  String get characterDetailFilterTooltip;
+
+  /// Item "Exporter en XML" du menu "⋮" du bandeau bois.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exporter en XML'**
+  String get characterDetailMenuExportXml;
+
+  /// Message de repli de `_ErrorState` quand `characterDetailProvider` échoue avec une erreur qui n'est pas une `CharacterFailure` (sinon `CharacterFailure.message` est affiché tel quel).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger ce personnage. Réessayez.'**
+  String get characterDetailLoadErrorMessage;
+
+  /// `label` passé à `showDiceRollSheet` au tap sur la tuile "INIT." de `CharacterStatPillsRow` (titre de la feuille de lancer de dé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Initiative'**
+  String get characterDetailInitiativeLabel;
+
+  /// SnackBar d'échec générique de `_applyHpState` (ajustement PV depuis la feuille détaillée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de mettre à jour les PV. Réessayez.'**
+  String get characterDetailHpUpdateErrorMessage;
+
+  /// SnackBar d'échec de `_reassertCurrentHpState` (réaffirmation PV après un repos, voir sa documentation).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de synchroniser les PV. Réessayez.'**
+  String get characterDetailHpSyncErrorMessage;
+
+  /// SnackBar de succès de `_useClassFeature` (onglet "Aptitudes", utilisation d'une aptitude de classe à usage limité).
+  ///
+  /// In fr, this message translates to:
+  /// **'{featureName} utilisée.'**
+  String characterDetailFeatureUseSuccessMessage(String featureName);
+
+  /// SnackBar d'échec de `_useClassFeature`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'utiliser cette aptitude. Réessayez.'**
+  String get characterDetailFeatureUseErrorMessage;
+
+  /// SnackBar d'échec de `_reassertFeatureUsesState` (réaffirmation après un repos).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de synchroniser les aptitudes de classe. Réessayez.'**
+  String get characterDetailFeatureSyncErrorMessage;
+
+  /// SnackBar d'échec de `_addXp`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ajouter l\'XP. Réessayez.'**
+  String get characterDetailXpAddErrorMessage;
+
+  /// Voir `_CharacterDetailScreenState._offlineQueuedMessage` — écriture réellement mise en file (`PendingCharacterWriteQueue`) : promet une synchronisation future réelle, contrairement à `characterOfflineNotPersistedMessage`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne : sera synchronisé dès que la connexion revient.'**
+  String get characterDetailOfflineQueuedMessage;
+
+  /// SnackBar d'échec de `_adjustArmorClassBonus` (sheet "Ajustement de CA").
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ajuster la Classe d\'Armure. Réessayez.'**
+  String get characterDetailArmorClassAdjustErrorMessage;
+
+  /// Libellé du bouton unique "Repos" de `CharacterVitalsCard` (ouvre `RestSheet`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Repos'**
+  String get characterVitalsCardRestButton;
+
+  /// Libellé du bandeau PV, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'POINTS DE VIE'**
+  String get characterVitalsCardHpLabel;
+
+  /// Puce affichée sous la jauge PV quand `temporaryHp > 0`.
+  ///
+  /// In fr, this message translates to:
+  /// **'+{amount} PV temp.'**
+  String characterVitalsCardTemporaryHpChip(int amount);
+
+  /// Libellé du bandeau XP, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'EXPÉRIENCE'**
+  String get characterVitalsCardXpLabel;
+
+  /// Libellé du `PrimaryButton` pleine largeur sous la jauge XP (ouvre `AddXpSheet`).
+  ///
+  /// In fr, this message translates to:
+  /// **'+ XP'**
+  String get characterVitalsCardAddXpButton;
+
+  /// Bandeau affiché sous la jauge XP une fois le seuil du niveau suivant franchi, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'NIVEAU {targetLevel} DISPONIBLE'**
+  String characterVitalsCardLevelUpBanner(int targetLevel);
+
+  /// Libellé de la tuile "Vitesse" de `CharacterStatPillsRow`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'VIT.'**
+  String get characterStatPillsSpeedLabel;
+
+  /// Libellé de la tuile "Classe d'Armure" de `CharacterStatPillsRow`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'CA'**
+  String get characterStatPillsArmorClassLabel;
+
+  /// Libellé de la tuile "Initiative" de `CharacterStatPillsRow`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'INIT.'**
+  String get characterStatPillsInitiativeLabel;
+
+  /// Libellé de la tuile "Inspiration" de `CharacterStatPillsRow`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'INSP.'**
+  String get characterStatPillsInspirationLabel;
+
+  /// Valeur de la tuile "Vitesse" quand `speed` est résolu — unité métrique (mètres) volontairement gardée telle quelle en anglais aussi (même unité conservée dans app_en.arb, qui ne porte pas sa propre description de clé : ce fichier app_fr.arb est le template) : les données de vitesse de ce dépôt sont stockées en mètres, jamais converties en pieds.
+  ///
+  /// In fr, this message translates to:
+  /// **'{speed} m'**
+  String characterStatPillsSpeedValue(int speed);
+
+  /// Abréviation de la caractéristique Force, partagée par `character_saving_throws_card.dart` et `character_skills_card.dart` (chacun garde sa propre table de correspondance `Dart`, intentionnellement dupliquée — voir leur doc de classe respective — mais réutilise ces mêmes clés `.arb`, même principe que `characterLevelAbbreviation`).
+  ///
+  /// In fr, this message translates to:
+  /// **'For'**
+  String get characterAbilityAbbreviationStr;
+
+  /// Abréviation de la caractéristique Dextérité — voir `characterAbilityAbbreviationStr`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dex'**
+  String get characterAbilityAbbreviationDex;
+
+  /// Abréviation de la caractéristique Constitution — voir `characterAbilityAbbreviationStr`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Con'**
+  String get characterAbilityAbbreviationCon;
+
+  /// Abréviation de la caractéristique Intelligence — voir `characterAbilityAbbreviationStr`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Int'**
+  String get characterAbilityAbbreviationInt;
+
+  /// Abréviation de la caractéristique Sagesse — voir `characterAbilityAbbreviationStr`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sag'**
+  String get characterAbilityAbbreviationWis;
+
+  /// Abréviation de la caractéristique Charisme — voir `characterAbilityAbbreviationStr`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cha'**
+  String get characterAbilityAbbreviationCha;
+
+  /// Titre de `CharacterSavingThrowsCard`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'JETS DE SAUVEGARDE'**
+  String get characterSavingThrowsCardTitle;
+
+  /// Titre de `CharacterSkillsCard`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'LES 18 COMPÉTENCES'**
+  String get characterSkillsCardTitle;
+
+  /// Légende "● maîtrisée" en tête de `CharacterSkillsCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'maîtrisée'**
+  String get characterSkillsCardMasteredLegend;
+
+  /// Texte de la puce "D20" en bout de ligne de compétence — notation de dé, identique dans les deux langues.
+  ///
+  /// In fr, this message translates to:
+  /// **'D20'**
+  String get characterSkillsCardD20Chip;
+
+  /// Titre de `CharacterAppearanceCard`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'APPARENCE PHYSIQUE'**
+  String get characterAppearanceCardTitle;
+
+  /// Libellé du champ "Sexe" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sexe'**
+  String get characterAppearanceCardSexeLabel;
+
+  /// Libellé du champ "Âge" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Âge'**
+  String get characterAppearanceCardAgeLabel;
+
+  /// Libellé du champ "Taille" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Taille'**
+  String get characterAppearanceCardHeightLabel;
+
+  /// Libellé du champ "Poids" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Poids'**
+  String get characterAppearanceCardWeightLabel;
+
+  /// Libellé du champ "Yeux" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Yeux'**
+  String get characterAppearanceCardEyesLabel;
+
+  /// Libellé du champ "Peau" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Peau'**
+  String get characterAppearanceCardSkinLabel;
+
+  /// Libellé du champ "Cheveux" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cheveux'**
+  String get characterAppearanceCardHairLabel;
+
+  /// `hintText` du champ de recherche "LES 18 COMPÉTENCES" de l'onglet "Aptitudes" (`_SkillSearchField`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher une compétence'**
+  String get characterSkillsTabBodySearchHint;
+
+  /// Message de `_NoSkillMatchState` quand la recherche ne donne aucun résultat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune compétence pour « {query} ».'**
+  String characterSkillsTabBodyNoMatchMessage(String query);
+
+  /// Titre du bandeau bois de `ConnectionErrorState._Banner`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'CONNEXION'**
+  String get connectionErrorStateBannerTitle;
+
+  /// Titre de l'écran "Connexion impossible" — copie exacte de `docs/cahier-des-charges/16-textes-a-rediger.md` section 4.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion impossible'**
+  String get connectionErrorStateTitle;
+
+  /// Corps de l'écran "Connexion impossible" — copie exacte de `docs/cahier-des-charges/16-textes-a-rediger.md` section 4.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifie ta connexion internet et réessaie. Tes personnages restent disponibles hors ligne — les modifications se synchroniseront automatiquement dès le retour du réseau.'**
+  String get connectionErrorStateBody;
+
+  /// Libellé du bouton primaire "Réessayer".
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get connectionErrorStateRetryButton;
+
+  /// Libellé du lien visuellement neutre "Continuer hors ligne" — voir la doc de classe de `_ContinueOfflineLink` pour le rationale de sa désactivation.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer hors ligne'**
+  String get connectionErrorStateContinueOfflineLabel;
+
+  /// `Tooltip.message` du lien "Continuer hors ligne".
+  ///
+  /// In fr, this message translates to:
+  /// **'Bientôt disponible : la lecture hors ligne de tes personnages arrive avec une prochaine mise à jour. Pour l\'instant, une connexion est nécessaire pour charger tes personnages.'**
+  String get connectionErrorStateContinueOfflineTooltip;
 }
 
 class _AppLocalizationsDelegate

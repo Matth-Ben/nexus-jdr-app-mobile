@@ -7,12 +7,10 @@
 /// `CharacterSummary.isArchived`/`isDead` sont indépendants, voir
 /// `character_card.dart`, qui affiche alors les deux badges). Voir
 /// `CharacterListFilter.statusesOf` pour la résolution exacte.
-enum CharacterStatusFilter {
-  alive(label: 'Vivants'),
-  archived(label: 'Archivé'),
-  dead(label: 'Mort');
-
-  const CharacterStatusFilter({required this.label});
-
-  final String label;
-}
+///
+/// Ne porte plus de libellé affichable (`label`, retiré au chantier
+/// "traduction de l'app" Phase B, lot "Characters — liste") : ce `domain/`
+/// n'a jamais accès à `AppLocalizations`/`BuildContext` — voir
+/// `presentation/widgets/character_list_filter_sheet.dart::_statusLabel`,
+/// seul appelant de cet enum, pour la résolution localisée du texte.
+enum CharacterStatusFilter { alive, archived, dead }

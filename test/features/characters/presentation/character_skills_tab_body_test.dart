@@ -19,6 +19,7 @@ import 'package:personnages/features/characters/domain/character_skill_row.dart'
 import 'package:personnages/features/characters/domain/character_spell_entry.dart';
 import 'package:personnages/features/characters/domain/character_spell_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_skills_tab_body.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 CharacterDetail _detail({
   List<CharacterDetailClassRow> classes = const [],
@@ -61,9 +62,23 @@ CharacterDetail _detail({
   );
 }
 
-Future<void> _pump(WidgetTester tester, CharacterDetail detail) async {
+Future<void> _pump(
+  WidgetTester tester,
+  CharacterDetail detail, {
+  Locale locale = const Locale('fr'),
+}) async {
   await tester.pumpWidget(
     MaterialApp(
+      // `CharacterSkillsTabBody` lit désormais `AppLocalizations.of(context)!`
+      // elle-même (chantier "traduction de l'app" Phase B, lot "Characters —
+      // fiche (identité/statistiques)"), en plus de `CharacterNameTagChip`
+      // (via les cartes "Outils"/"Langues") qui le faisait déjà quand `onTap`
+      // est fourni (lot "Characters — liste") : sans ces delegates, l'appel
+      // renverrait `null` et le `!` planterait. `fr` par défaut, `en` passé
+      // explicitement par le groupe "locale anglaise" plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(
         body: CharacterSkillsTabBody(detail: detail, onUseFeature: (_) {}),
       ),
@@ -372,6 +387,8 @@ void main() {
       var used = false;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: CharacterSkillsTabBody(
               detail: _detail(
@@ -661,5 +678,57 @@ void main() {
 
     expect(find.text('LANGUES CONNUES'), findsOneWidget);
     expect(find.text('Nain'), findsOneWidget);
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que `character_card_test.dart` (chantier "traduction
+    // de l'app" Phase B) : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets('titre de la carte, abréviation de caractéristique et champ de '
+        'recherche en anglais', (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          skills: const [
+            CharacterSkillRow(
+              id: 1,
+              name: 'Acrobaties',
+              abilityId: 'dex',
+              proficiency: 'competente',
+            ),
+          ],
+        ),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('ALL 18 SKILLS'), findsOneWidget);
+      expect(find.text('Dex'), findsOneWidget);
+      expect(find.text('proficient'), findsOneWidget);
+      expect(
+        find.widgetWithText(TextField, 'Search for a skill'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('message "aucune compétence" en anglais', (tester) async {
+      await _pump(
+        tester,
+        _detail(
+          skills: const [
+            CharacterSkillRow(
+              id: 1,
+              name: 'Acrobaties',
+              abilityId: 'dex',
+              proficiency: 'competente',
+            ),
+          ],
+        ),
+        locale: const Locale('en'),
+      );
+
+      await tester.enterText(find.byType(TextField), 'zzz');
+      await tester.pumpAndSettle();
+
+      expect(find.text('No skill matches “zzz”.'), findsOneWidget);
+    });
   });
 }

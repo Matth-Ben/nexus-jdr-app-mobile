@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/rules/spell_status.dart';
 import 'package:go_router/go_router.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/features/characters/data/character_repository.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
@@ -465,6 +466,15 @@ Future<FakeRepository> pumpDetail(WidgetTester tester) async {
     ProviderScope(
       overrides: [characterRepositoryProvider.overrideWithValue(repository)],
       child: MaterialApp.router(
+        // `CharacterDetailScreen` lit désormais `AppLocalizations
+        // .of(context)!` dès son premier `build()` (chantier "traduction de
+        // l'app" Phase B, lot "Characters — fiche
+        // (identité/statistiques)") : sans ces delegates, l'appel renverrait
+        // `null` et le `!` planterait. Ce fichier reste en français, aucune
+        // assertion n'est modifiée par ce lot, hors de son périmètre.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         routerConfig: GoRouter(
           initialLocation: '/characters/1',
           routes: [

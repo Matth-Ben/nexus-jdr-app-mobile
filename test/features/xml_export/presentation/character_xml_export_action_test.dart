@@ -34,6 +34,7 @@ import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/domain/character_detail_class_row.dart';
 import 'package:personnages/features/characters/presentation/character_detail_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
   _FakePathProviderPlatform(this.tempPath);
@@ -162,6 +163,15 @@ void main() {
         characterRepositoryProvider.overrideWithValue(fakeRepository),
       ],
       child: MaterialApp.router(
+        // `CharacterDetailScreen` lit désormais `AppLocalizations
+        // .of(context)!` dès son premier `build()` (chantier "traduction de
+        // l'app" Phase B, lot "Characters — fiche
+        // (identité/statistiques)") : sans ces delegates, l'appel renverrait
+        // `null` et le `!` planterait. Ce fichier reste en français, aucune
+        // assertion n'est modifiée par ce lot, hors de son périmètre.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         routerConfig: GoRouter(
           initialLocation: '/characters/$characterId',
           routes: [

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/domain/character_detail.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_appearance_card.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 CharacterDetail _detail({
   String sexe = '',
@@ -38,9 +39,21 @@ CharacterDetail _detail({
   );
 }
 
-Future<void> _pump(WidgetTester tester, CharacterDetail detail) async {
+Future<void> _pump(
+  WidgetTester tester,
+  CharacterDetail detail, {
+  Locale locale = const Locale('fr'),
+}) async {
   await tester.pumpWidget(
     MaterialApp(
+      // `CharacterAppearanceCard` lit `AppLocalizations.of(context)!`
+      // (chantier "traduction de l'app" Phase B, lot "Characters — fiche
+      // (identité/statistiques)") : sans ces delegates, l'appel renverrait
+      // `null` et le `!` planterait. `fr` par défaut, `en` passé
+      // explicitement par le groupe "locale anglaise" plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(body: CharacterAppearanceCard(detail: detail)),
     ),
   );
@@ -126,6 +139,26 @@ void main() {
         CharacterAppearanceCard.hasContent(_detail(sexe: '   ', age: '')),
         isFalse,
       );
+    });
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que `character_card_test.dart` (chantier "traduction
+    // de l'app" Phase B) : vérifie qu'un texte anglais s'affiche réellement
+    // pour les 7 libellés (les valeurs elles-mêmes, saisies en français par
+    // le joueur ou importées depuis aidedd.org, ne sont jamais traduites).
+    testWidgets('titre et les 7 libellés de champ en anglais', (tester) async {
+      await _pump(
+        tester,
+        _detail(sexe: 'Femme', age: '124 ans'),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('PHYSICAL APPEARANCE'), findsOneWidget);
+      expect(find.text('Sex'), findsOneWidget);
+      expect(find.text('Age'), findsOneWidget);
+      expect(find.text('Femme'), findsOneWidget);
+      expect(find.text('124 ans'), findsOneWidget);
     });
   });
 }

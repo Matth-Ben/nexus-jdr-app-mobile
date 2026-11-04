@@ -11,6 +11,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -512,7 +513,16 @@ Widget _buildTestWidget({
       characterRepositoryProvider.overrideWithValue(characterRepository),
       storyInviteRepositoryProvider.overrideWithValue(storyInviteRepository),
     ],
-    child: MaterialApp.router(routerConfig: _buildTestRouter()),
+    child: MaterialApp.router(
+      // `CharacterCard` (liste de personnages à rattacher) lit
+      // `AppLocalizations.of(context)!` (chantier "traduction de l'app"
+      // Phase B, lot "Characters — liste") : sans ces delegates, l'appel
+      // renverrait `null` et le `!` planterait.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('fr'),
+      routerConfig: _buildTestRouter(),
+    ),
   );
 }
 
@@ -795,7 +805,12 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(routerConfig: _buildTestRouter()),
+          child: MaterialApp.router(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('fr'),
+            routerConfig: _buildTestRouter(),
+          ),
         ),
       );
       await tester.pumpAndSettle();

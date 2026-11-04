@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/signed_modifier_formatter.dart';
 import '../../domain/skill_bonus_calculator.dart';
 import 'dice_roll_sheet.dart';
@@ -10,14 +11,16 @@ import 'dice_roll_sheet.dart';
 /// "For"/"Dex"/"Con"/"Int"/"Sag"/"Cha" — dupliqué depuis
 /// `character_saving_throws_card.dart` (`_abilityAbbreviations`, privée, non
 /// réutilisable telle quelle), même rationale de duplication que partout
-/// ailleurs dans ce dépôt.
-const Map<String, String> _abilityAbbreviations = {
-  'str': 'For',
-  'dex': 'Dex',
-  'con': 'Con',
-  'int': 'Int',
-  'wis': 'Sag',
-  'cha': 'Cha',
+/// ailleurs dans ce dépôt. Résolution localisée via les clés `.arb`
+/// partagées `characterAbilityAbbreviationXxx` — voir la doc de classe de
+/// `character_saving_throws_card.dart::_abilityAbbreviations`.
+Map<String, String> _abilityAbbreviations(AppLocalizations l10n) => {
+  'str': l10n.characterAbilityAbbreviationStr,
+  'dex': l10n.characterAbilityAbbreviationDex,
+  'con': l10n.characterAbilityAbbreviationCon,
+  'int': l10n.characterAbilityAbbreviationInt,
+  'wis': l10n.characterAbilityAbbreviationWis,
+  'cha': l10n.characterAbilityAbbreviationCha,
 };
 
 /// Carte "LES 18 COMPÉTENCES" de l'onglet "Compétences" : une ligne par
@@ -55,7 +58,7 @@ class CharacterSkillsCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'LES 18 COMPÉTENCES',
+                AppLocalizations.of(context)!.characterSkillsCardTitle,
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textSecondary,
@@ -83,7 +86,7 @@ class _MasteredLegend extends StatelessWidget {
         const _SkillDot(filled: true),
         const SizedBox(width: AppSpacing.xs),
         Text(
-          'maîtrisée',
+          AppLocalizations.of(context)!.characterSkillsCardMasteredLegend,
           style: AppTypography.body(fontSize: 11, color: AppColors.textMuted),
         ),
       ],
@@ -123,7 +126,10 @@ class _SkillRow extends StatelessWidget {
                 ),
               ),
               Text(
-                _abilityAbbreviations[result.abilityId] ?? result.abilityId,
+                _abilityAbbreviations(
+                      AppLocalizations.of(context)!,
+                    )[result.abilityId] ??
+                    result.abilityId,
                 style: AppTypography.body(
                   fontSize: 12,
                   color: AppColors.textMuted,
@@ -173,7 +179,7 @@ class _D20Chip extends StatelessWidget {
         border: Border.all(color: AppColors.woodLight, width: 1),
       ),
       child: Text(
-        'D20',
+        AppLocalizations.of(context)!.characterSkillsCardD20Chip,
         style: AppTypography.display(fontSize: 9, color: AppColors.textMuted),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 import '../../domain/proficiency_bonus.dart';
 import '../../domain/proficiency_token_resolver.dart';
@@ -203,17 +204,18 @@ class _SkillSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return TextField(
       controller: controller,
       focusNode: focusNode,
       style: AppTypography.body(color: AppColors.textPrimary),
       decoration: InputDecoration(
-        hintText: 'Rechercher une compétence',
+        hintText: l10n.characterSkillsTabBodySearchHint,
         prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
         suffixIcon: controller.text.isEmpty
             ? null
             : IconButton(
-                tooltip: 'Effacer',
+                tooltip: l10n.characterListSearchClearTooltip,
                 icon: const Icon(Icons.close, color: AppColors.textMuted),
                 onPressed: controller.clear,
               ),
@@ -242,7 +244,8 @@ class _NoSkillMatchState extends StatelessWidget {
             const Icon(Icons.search_off, size: 40, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Aucune compétence pour « $query ».',
+              AppLocalizations.of(context)!
+                  .characterSkillsTabBodyNoMatchMessage(query),
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textMuted),
             ),

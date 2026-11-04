@@ -42,6 +42,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_card_action_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 const _character = CharacterSummary(
   id: '42',
@@ -471,7 +472,10 @@ void main() {
     );
   }
 
-  Widget buildTestWidget({CharacterSummary? character}) {
+  Widget buildTestWidget({
+    CharacterSummary? character,
+    Locale locale = const Locale('fr'),
+  }) {
     return ProviderScope(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeRepository),
@@ -480,6 +484,14 @@ void main() {
         ),
       ],
       child: MaterialApp.router(
+        // `showCharacterCardActionSheet` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B, lot "Characters — liste")
+        // : sans ces delegates, l'appel renverrait `null` et le `!`
+        // planterait. `fr` par défaut, `en` passé explicitement par le
+        // groupe "locale anglaise" plus bas.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         routerConfig: buildTestRouter(character ?? _character),
       ),
     );
@@ -488,8 +500,11 @@ void main() {
   Future<void> openSheet(
     WidgetTester tester, {
     CharacterSummary? character,
+    Locale locale = const Locale('fr'),
   }) async {
-    await tester.pumpWidget(buildTestWidget(character: character));
+    await tester.pumpWidget(
+      buildTestWidget(character: character, locale: locale),
+    );
     await tester.tap(find.text('Ouvrir'));
     await tester.pumpAndSettle();
   }
@@ -591,9 +606,8 @@ void main() {
       );
     });
 
-    testWidgets('CharacterFailure : affiche le message du dépôt', (
-      tester,
-    ) async {
+    testWidgets('CharacterFailure code générique : affiche le message du '
+        'dépôt tel quel', (tester) async {
       fakeRepository.setArchivedError = const CharacterFailure(
         'Erreur spécifique archivage.',
       );
@@ -603,6 +617,48 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Erreur spécifique archivage.'), findsOneWidget);
+    });
+
+    testWidgets(
+      'CharacterFailure code accessDenied : résolu via AppLocalizations, '
+      'pas le message brut du dépôt (chantier "traduction de l\'app")',
+      (tester) async {
+        fakeRepository.setArchivedError = const CharacterFailure(
+          'message brut non affiché',
+          code: CharacterErrorCode.accessDenied,
+        );
+        await openSheet(tester);
+
+        await tester.tap(find.text('Archiver ce personnage'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text("Vous n'avez pas accès à ces personnages."),
+          findsOneWidget,
+        );
+        expect(find.text('message brut non affiché'), findsNothing);
+      },
+    );
+
+    testWidgets('CharacterFailure code network : résolu via AppLocalizations', (
+      tester,
+    ) async {
+      fakeRepository.setArchivedError = const CharacterFailure(
+        'message brut non affiché',
+        code: CharacterErrorCode.network,
+      );
+      await openSheet(tester);
+
+      await tester.tap(find.text('Archiver ce personnage'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Impossible de contacter le serveur. Vérifiez votre connexion '
+          'internet et réessayez.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('échec générique : message générique', (tester) async {
@@ -751,4 +807,36 @@ void main() {
       );
     },
   );
+
+  group('locale anglaise', () {
+    // Même rationale que `login_screen_test.dart`/`profile_screen_test.dart`
+    // (chantier "traduction de l'app" Phase B) : vérifie qu'un texte anglais
+    // s'affiche réellement, pas seulement que la sheet ne plante pas.
+    testWidgets('affiche le résumé et les 5 actions en anglais', (
+      tester,
+    ) async {
+      await openSheet(tester, locale: const Locale('en'));
+
+      expect(find.text('Elfe · Magicienne · Lvl. 5'), findsOneWidget);
+      expect(find.text('Edit'), findsOneWidget);
+      expect(find.text('Share'), findsOneWidget);
+      expect(find.text('Archive this character'), findsOneWidget);
+      expect(find.text('Mark as dead'), findsOneWidget);
+      expect(find.text('Delete character'), findsOneWidget);
+    });
+
+    testWidgets('échec générique de "Archiver" : message générique en '
+        'anglais', (tester) async {
+      fakeRepository.setArchivedError = StateError('boom');
+      await openSheet(tester, locale: const Locale('en'));
+
+      await tester.tap(find.text('Archive this character'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text("Couldn't update the status. Try again."),
+        findsOneWidget,
+      );
+    });
+  });
 }

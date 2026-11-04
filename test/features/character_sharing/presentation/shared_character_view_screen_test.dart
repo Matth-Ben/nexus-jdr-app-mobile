@@ -33,6 +33,7 @@ import 'package:personnages/features/characters/domain/pact_weapon_option.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_equipped_weapons_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_pact_weapon_card.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_stat_pills_row.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeCharacterSharingRepository implements CharacterSharingRepository {
@@ -108,6 +109,18 @@ void main() {
         characterSharingRepositoryProvider.overrideWithValue(fakeRepository),
       ],
       child: MaterialApp.router(
+        // `SharedCharacterViewScreen` lit désormais `AppLocalizations
+        // .of(context)!` (ricochet du chantier "traduction de l'app" Phase
+        // B, lot "Characters — fiche (identité/statistiques)" :
+        // `CharacterDetailTab.headerTitle` a besoin d'un `AppLocalizations`
+        // depuis ce lot) : sans ces delegates, l'appel renverrait `null` et
+        // le `!` planterait. Ce fichier reste en français (langue par
+        // défaut de l'environnement `flutter test` non forcée auparavant,
+        // désormais fixée explicitement) : aucune assertion de ce fichier
+        // n'est modifiée par ce lot, hors de son périmètre.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         routerConfig: GoRouter(
           initialLocation: '/p/tok-abc',
           routes: [
@@ -754,6 +767,10 @@ void main() {
               ),
             ],
             child: MaterialApp.router(
+              // Voir le commentaire équivalent de `buildTestWidget` ci-dessus.
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              locale: const Locale('fr'),
               routerConfig: GoRouter(
                 initialLocation: '/groups/g-1/members/c-9',
                 routes: [

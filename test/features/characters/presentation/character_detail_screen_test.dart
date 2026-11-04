@@ -10,6 +10,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/rules/spell_status.dart';
@@ -665,12 +666,23 @@ void main() {
     );
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return ProviderScope(
       overrides: [
         characterRepositoryProvider.overrideWithValue(fakeRepository),
       ],
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      child: MaterialApp.router(
+        // `CharacterDetailScreen` et ses widgets lisent désormais
+        // `AppLocalizations.of(context)!` (chantier "traduction de l'app"
+        // Phase B, lot "Characters — fiche (identité/statistiques)") : sans
+        // ces delegates, l'appel renverrait `null` et le `!` planterait.
+        // `fr` par défaut, `en` passé explicitement par le groupe "locale
+        // anglaise" plus bas.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
+        routerConfig: buildTestRouter(),
+      ),
     );
   }
 
@@ -679,10 +691,13 @@ void main() {
   // `cacheExtent` par défaut d'un `ListView` sur la taille d'écran de test
   // standard (800×600) — ses widgets ne seraient alors jamais matérialisés
   // dans l'arbre, et introuvables par `find.text(...)`.
-  Future<void> pumpDetail(WidgetTester tester) async {
+  Future<void> pumpDetail(
+    WidgetTester tester, {
+    Locale locale = const Locale('fr'),
+  }) async {
     await tester.binding.setSurfaceSize(const Size(800, 2400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpWidget(buildTestWidget(locale: locale));
   }
 
   /// Ouvre la feuille "+ XP", saisit [amount] et valide.
@@ -3149,5 +3164,78 @@ void main() {
         expect(find.text('0 / 2 · repos long'), findsNothing);
       },
     );
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que `character_list_screen_test.dart` (chantier
+    // "traduction de l'app" Phase B) : vérifie qu'un texte anglais s'affiche
+    // réellement, pas seulement que l'écran ne plante pas. Échantillon
+    // représentatif (en-tête/tuiles de stats/bandeaux PV-XP/jets de
+    // sauvegarde/menu "..."/onglet "Aptitudes"/état d'erreur), pas
+    // exhaustif — chaque widget migré a par ailleurs sa propre couverture
+    // anglaise dédiée dans son fichier de test quand il en a un.
+    testWidgets(
+      'en-tête, tuiles de stats, bandeaux PV/XP et jets de sauvegarde en '
+      'anglais',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail;
+
+        await pumpDetail(tester, locale: const Locale('en'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('SHEET'), findsOneWidget);
+        expect(find.text('SPD.'), findsOneWidget);
+        expect(find.text('AC'), findsOneWidget);
+        expect(find.text('INIT.'), findsOneWidget);
+        expect(find.text('INSP.'), findsOneWidget);
+        expect(find.text('HIT POINTS'), findsOneWidget);
+        expect(find.text('EXPERIENCE'), findsOneWidget);
+        expect(find.widgetWithText(PrimaryButton, '+ XP'), findsOneWidget);
+        expect(find.text('REST'), findsOneWidget);
+        expect(find.text('SAVING THROWS'), findsOneWidget);
+      },
+    );
+
+    testWidgets('menu "..." en anglais', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpDetail(tester, locale: const Locale('en'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('More options'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit'), findsOneWidget);
+      expect(find.text('Export as XML'), findsOneWidget);
+      expect(find.text('Archive this character'), findsOneWidget);
+      expect(find.text('Mark as dead'), findsOneWidget);
+      expect(find.text('Delete character'), findsOneWidget);
+    });
+
+    testWidgets('onglet "Aptitudes" (libellé de pied, titre et carte) en '
+        'anglais', (tester) async {
+      fakeRepository.detailToReturn = _baseDetail;
+
+      await pumpDetail(tester, locale: const Locale('en'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('SKILLS'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ALL 18 SKILLS'), findsOneWidget);
+    });
+
+    testWidgets('état d\'erreur générique en anglais', (tester) async {
+      fakeRepository.detailErrorToThrow = Exception('boom');
+
+      await pumpDetail(tester, locale: const Locale('en'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Unable to load this character. Please try again.'),
+        findsOneWidget,
+      );
+      expect(find.text('RETRY'), findsOneWidget);
+    });
   });
 }

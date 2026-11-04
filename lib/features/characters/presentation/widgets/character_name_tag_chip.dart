@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Chip "nom seul" utilisé par les cartes compactes de l'onglet
 /// "Compétences" (`CharacterToolProficienciesCard`/`CharacterLanguagesCard`).
@@ -81,9 +82,10 @@ class CharacterNameTagChip extends StatelessWidget {
     // fait qu'imposer un minimum). Résultat observé : chaque chip
     // s'étirait sur toute la largeur du `Wrap`, forçant les chips suivants
     // chacun sur leur propre ligne plutôt que côte à côte.
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
       button: true,
-      label: '$name, voir le détail',
+      label: l10n.characterNameTagChipSemanticLabel(name),
       onTap: handler,
       container: true,
       excludeSemantics: true,

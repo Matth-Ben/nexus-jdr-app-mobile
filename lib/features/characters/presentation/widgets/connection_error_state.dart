@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Écran plein écran "Connexion impossible" — recettage direction
 /// artistique du 13/09/2026 (`docs/cahier-des-charges/09-maquettes-captures.md`,
@@ -46,6 +47,7 @@ class ConnectionErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: Column(
         children: [
@@ -80,7 +82,7 @@ class ConnectionErrorState extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        'Connexion impossible',
+                        l10n.connectionErrorStateTitle,
                         textAlign: TextAlign.center,
                         style: AppTypography.body(
                           fontSize: 18,
@@ -90,10 +92,7 @@ class ConnectionErrorState extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        'Vérifie ta connexion internet et réessaie. Tes '
-                        'personnages restent disponibles hors ligne — les '
-                        'modifications se synchroniseront automatiquement '
-                        'dès le retour du réseau.',
+                        l10n.connectionErrorStateBody,
                         textAlign: TextAlign.center,
                         style: AppTypography.body(
                           color: AppColors.textSecondary,
@@ -103,7 +102,7 @@ class ConnectionErrorState extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: PrimaryButton(
-                          label: 'Réessayer',
+                          label: l10n.connectionErrorStateRetryButton,
                           onPressed: onRetry,
                         ),
                       ),
@@ -130,6 +129,7 @@ class _Banner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ColoredBox(
       color: AppColors.woodMedium,
       child: SafeArea(
@@ -140,7 +140,7 @@ class _Banner extends StatelessWidget {
             vertical: AppSpacing.sm + AppSpacing.xs,
           ),
           child: Text(
-            'CONNEXION',
+            l10n.connectionErrorStateBannerTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textOnWood,
@@ -168,13 +168,11 @@ class _ContinueOfflineLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Tooltip(
-      message:
-          'Bientôt disponible : la lecture hors ligne de tes personnages '
-          "arrive avec une prochaine mise à jour. Pour l'instant, une "
-          'connexion est nécessaire pour charger tes personnages.',
+      message: l10n.connectionErrorStateContinueOfflineTooltip,
       child: Text(
-        'Continuer hors ligne',
+        l10n.connectionErrorStateContinueOfflineLabel,
         style: AppTypography.body(fontSize: 13, color: AppColors.textMuted),
       ),
     );
