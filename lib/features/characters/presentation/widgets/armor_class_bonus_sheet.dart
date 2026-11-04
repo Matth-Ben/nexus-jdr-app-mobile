@@ -7,6 +7,7 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/segmented_toggle.dart';
 import '../../../../core/widgets/stepper_counter.dart';
+import '../../../../l10n/app_localizations.dart';
 
 enum _ArmorClassAdjustmentSign { bonus, malus }
 
@@ -93,6 +94,7 @@ class _ArmorClassBonusSheetContentState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -106,7 +108,7 @@ class _ArmorClassBonusSheetContentState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Ajustement de CA',
+              l10n.armorClassBonusSheetTitle,
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -114,14 +116,14 @@ class _ArmorClassBonusSheetContentState
             ),
             const SizedBox(height: AppSpacing.md),
             SegmentedToggle<_ArmorClassAdjustmentSign>(
-              options: const [
+              options: [
                 SegmentedToggleOption(
                   value: _ArmorClassAdjustmentSign.bonus,
-                  label: 'Bonus',
+                  label: l10n.armorClassBonusSheetBonusOption,
                 ),
                 SegmentedToggleOption(
                   value: _ArmorClassAdjustmentSign.malus,
-                  label: 'Malus',
+                  label: l10n.armorClassBonusSheetMalusOption,
                 ),
               ],
               value: _sign,
@@ -142,14 +144,17 @@ class _ArmorClassBonusSheetContentState
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Effacer',
+                    label: l10n.armorClassBonusSheetClearButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: _clear,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  child: PrimaryButton(label: 'Valider', onPressed: _apply),
+                  child: PrimaryButton(
+                    label: l10n.armorClassBonusSheetValidateButton,
+                    onPressed: _apply,
+                  ),
                 ),
               ],
             ),

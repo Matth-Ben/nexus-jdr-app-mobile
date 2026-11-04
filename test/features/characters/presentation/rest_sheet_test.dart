@@ -16,6 +16,7 @@ import 'package:personnages/core/widgets/stepper_counter.dart';
 import 'package:personnages/features/characters/domain/hit_dice_pool.dart';
 import 'package:personnages/features/characters/domain/rest_type.dart';
 import 'package:personnages/features/characters/presentation/widgets/rest_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 void main() {
   // Pool mono-classe, construit depuis les mêmes paramètres plats
@@ -52,6 +53,7 @@ void main() {
     RestType initialType = RestType.long,
     bool canChangePreparedSpells = false,
     required ValueChanged<RestSheetResult> onApply,
+    Locale locale = const Locale('fr'),
   }) async {
     final pools =
         hitDicePools ??
@@ -62,6 +64,15 @@ void main() {
         );
     await tester.pumpWidget(
       MaterialApp(
+        // `rest_sheet.dart` lit `AppLocalizations.of(context)!` (chantier
+        // "traduction de l'app" Phase B, lot "Characters — PV/XP/Repos/
+        // Montée de niveau") : sans ces delegates, l'appel renverrait `null`
+        // et le `!` planterait. `fr` par défaut : les assertions de ce
+        // fichier portent sur le texte français, sauf le groupe "locale
+        // anglaise" plus bas.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -938,6 +949,26 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(applied?.hitDiceRecoveredByClassId, {'10': 4});
+    });
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement pour le
+    // titre, la bascule et les PV actuels.
+    testWidgets('titre, bascule et PV actuels en anglais', (tester) async {
+      await pumpSheet(
+        tester,
+        currentHp: 12,
+        maxHp: 30,
+        onApply: (_) {},
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('Rest'), findsOneWidget);
+      expect(find.text('Current HP: 12 / 30'), findsOneWidget);
+      expect(find.text('SHORT REST'), findsOneWidget);
+      expect(find.text('LONG REST'), findsOneWidget);
     });
   });
 }

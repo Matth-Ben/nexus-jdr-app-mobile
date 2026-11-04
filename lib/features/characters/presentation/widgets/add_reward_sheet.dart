@@ -8,6 +8,7 @@ import '../../../../core/widgets/dashed_add_tile.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/currency_kind.dart';
 import '../../domain/reward_item_draft.dart';
 import 'add_item_flow.dart';
@@ -138,6 +139,7 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: FractionallySizedBox(
@@ -146,7 +148,7 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
           decoration: const BoxDecoration(color: AppColors.parchmentBg),
           child: Column(
             children: [
-              const SheetHeaderBar(title: 'AJOUTER UNE RÉCOMPENSE'),
+              SheetHeaderBar(title: l10n.addRewardSheetTitle),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(AppSpacing.lg),
@@ -154,7 +156,7 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'MONNAIE',
+                        l10n.addRewardSheetCurrencyLabel,
                         style: AppTypography.display(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -192,7 +194,7 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        'OBJETS',
+                        l10n.addRewardSheetItemsLabel,
                         style: AppTypography.display(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -206,7 +208,10 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
                         ),
                         const SizedBox(height: AppSpacing.xs),
                       ],
-                      DashedAddTile(label: 'Ajouter un objet', onTap: _addItem),
+                      DashedAddTile(
+                        label: l10n.addRewardSheetAddItemLabel,
+                        onTap: _addItem,
+                      ),
                     ],
                   ),
                 ),
@@ -222,7 +227,7 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
                   children: [
                     Expanded(
                       child: SecondaryButton(
-                        label: 'Annuler',
+                        label: l10n.addRewardSheetCancelButton,
                         surface: SecondaryButtonSurface.parchment,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
@@ -230,7 +235,7 @@ class _AddRewardSheetContentState extends State<_AddRewardSheetContent> {
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: PrimaryButton(
-                        label: 'Ajouter la récompense',
+                        label: l10n.addRewardSheetApplyButton,
                         onPressed: _canApply ? _submit : null,
                       ),
                     ),
@@ -285,6 +290,7 @@ class _RewardItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.only(left: AppSpacing.sm),
       decoration: BoxDecoration(
@@ -296,7 +302,10 @@ class _RewardItemRow extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              '${item.displayName} × ${item.quantity}',
+              l10n.addRewardSheetItemQuantityLabel(
+                item.displayName,
+                item.quantity,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.body(

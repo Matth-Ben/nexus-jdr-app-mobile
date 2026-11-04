@@ -7,6 +7,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/dice_roller.dart';
 import '../../domain/signed_modifier_formatter.dart';
 
@@ -64,6 +65,7 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final total = _rollResult + widget.modifier;
     final isCriticalSuccess = _rollResult == 20;
     final isCriticalFailure = _rollResult == 1;
@@ -88,8 +90,11 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent> {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
-                    'd20 ($_rollResult) '
-                    '${SignedModifierFormatter.format(widget.modifier)} = $total',
+                    l10n.diceRollSheetFormula(
+                      _rollResult,
+                      SignedModifierFormatter.format(widget.modifier),
+                      total,
+                    ),
                     style: AppTypography.body(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -99,8 +104,8 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent> {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       isCriticalSuccess
-                          ? 'RÉUSSITE CRITIQUE'
-                          : 'ÉCHEC CRITIQUE',
+                          ? l10n.diceRollSheetCriticalSuccess
+                          : l10n.diceRollSheetCriticalFailure,
                       style: AppTypography.display(
                         fontSize: 11,
                         color: isCriticalSuccess
@@ -111,7 +116,7 @@ class _DiceRollSheetContentState extends State<_DiceRollSheetContent> {
                   ],
                   const SizedBox(height: AppSpacing.lg),
                   SecondaryButton(
-                    label: 'Relancer',
+                    label: l10n.diceRollSheetRerollButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: _reroll,
                   ),

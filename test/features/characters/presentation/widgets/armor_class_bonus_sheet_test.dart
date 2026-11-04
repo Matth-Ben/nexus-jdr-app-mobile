@@ -5,11 +5,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/presentation/widgets/armor_class_bonus_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
-Future<int?> _open(WidgetTester tester, {required int currentBonus}) async {
+Future<int?> _open(
+  WidgetTester tester, {
+  required int currentBonus,
+  Locale locale = const Locale('fr'),
+}) async {
   int? applied;
   await tester.pumpWidget(
     MaterialApp(
+      // `armor_class_bonus_sheet.dart` lit `AppLocalizations.of(context)!`
+      // (chantier "traduction de l'app" Phase B, lot "Characters — PV/XP/
+      // Repos/Montée de niveau") : sans ces delegates, l'appel renverrait
+      // `null` et le `!` planterait. `fr` par défaut : les assertions de ce
+      // fichier portent sur le texte français, sauf le groupe "locale
+      // anglaise" plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(
         body: Builder(
           builder: (context) => ElevatedButton(
@@ -72,6 +86,9 @@ void main() {
     int? applied;
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         home: Scaffold(
           body: Builder(
             builder: (context) => ElevatedButton(
@@ -103,6 +120,9 @@ void main() {
       int? applied;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('fr'),
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -140,6 +160,9 @@ void main() {
       int? applied;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('fr'),
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -176,6 +199,9 @@ void main() {
       int? applied;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('fr'),
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -207,6 +233,9 @@ void main() {
       int? applied;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('fr'),
           home: Scaffold(
             body: Builder(
               builder: (context) => ElevatedButton(
@@ -230,4 +259,17 @@ void main() {
       expect(applied, 0);
     },
   );
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement pour le
+    // titre et la bascule Bonus/Malus.
+    testWidgets('titre et bascule en anglais', (tester) async {
+      await _open(tester, currentBonus: 0, locale: const Locale('en'));
+
+      expect(find.text('AC Adjustment'), findsOneWidget);
+      expect(find.text('BONUS'), findsOneWidget);
+      expect(find.text('PENALTY'), findsOneWidget);
+    });
+  });
 }

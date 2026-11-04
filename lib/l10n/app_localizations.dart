@@ -2647,6 +2647,1247 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Bientôt disponible : la lecture hors ligne de tes personnages arrive avec une prochaine mise à jour. Pour l\'instant, une connexion est nécessaire pour charger tes personnages.'**
   String get connectionErrorStateContinueOfflineTooltip;
+
+  /// Titre de `hp_adjustment_sheet.dart` (bouton crayon du bandeau PV).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajuster les PV'**
+  String get hpAdjustmentSheetTitle;
+
+  /// Segment "Dégâts" du `SegmentedToggle` de `hp_adjustment_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dégâts'**
+  String get hpAdjustmentSheetDamageOption;
+
+  /// Segment "Soins" du `SegmentedToggle` de `hp_adjustment_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Soins'**
+  String get hpAdjustmentSheetHealOption;
+
+  /// Segment "PV temp." du `SegmentedToggle` de `hp_adjustment_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'PV temp.'**
+  String get hpAdjustmentSheetTemporaryOption;
+
+  /// Bouton secondaire "Annuler" de `hp_adjustment_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get hpAdjustmentSheetCancelButton;
+
+  /// Bouton primaire "Appliquer" de `hp_adjustment_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appliquer'**
+  String get hpAdjustmentSheetApplyButton;
+
+  /// Titre de `add_xp_sheet.dart` (bouton "+" du bandeau XP).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter de l\'XP'**
+  String get addXpSheetTitle;
+
+  /// Ligne "XP actuelle : X / Y" de `add_xp_sheet.dart` — `threshold` retombe sur `currentXp` au niveau maximum (voir `_AddXpSheetContent.build`).
+  ///
+  /// In fr, this message translates to:
+  /// **'XP actuelle : {currentXp} / {threshold}'**
+  String addXpSheetCurrentXpLabel(int currentXp, int threshold);
+
+  /// Libellé du champ de saisie du montant d'XP de `add_xp_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'XP GAGNÉE'**
+  String get addXpSheetGainedLabel;
+
+  /// `hintText` du champ de saisie du montant d'XP de `add_xp_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ex. 250'**
+  String get addXpSheetAmountHint;
+
+  /// Texte d'aide sous le champ de saisie du montant d'XP de `add_xp_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Montant remis par le MJ en fin de séance, par exemple.'**
+  String get addXpSheetAmountHelper;
+
+  /// Ligne "Nouveau total" de `add_xp_sheet.dart`, affichée dès qu'un montant valide est saisi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau total : {total} XP'**
+  String addXpSheetNewTotalLabel(int total);
+
+  /// Bouton secondaire "Annuler" de `add_xp_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get addXpSheetCancelButton;
+
+  /// Bouton primaire "Ajouter" de `add_xp_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get addXpSheetApplyButton;
+
+  /// Lien "Monter de niveau manuellement" de `add_xp_sheet.dart`, affiché tant que le seuil du niveau suivant n'est pas déjà franchi.
+  ///
+  /// In fr, this message translates to:
+  /// **'Monter de niveau manuellement'**
+  String get addXpSheetManualLevelUpLink;
+
+  /// Titre (`SheetHeaderBar`) de `add_reward_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'AJOUTER UNE RÉCOMPENSE'**
+  String get addRewardSheetTitle;
+
+  /// Titre de la section "MONNAIE" de `add_reward_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'MONNAIE'**
+  String get addRewardSheetCurrencyLabel;
+
+  /// Titre de la section "OBJETS" de `add_reward_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'OBJETS'**
+  String get addRewardSheetItemsLabel;
+
+  /// Libellé de la `DashedAddTile` "Ajouter un objet" de `add_reward_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un objet'**
+  String get addRewardSheetAddItemLabel;
+
+  /// Bouton secondaire "Annuler" de `add_reward_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get addRewardSheetCancelButton;
+
+  /// Bouton primaire "Ajouter la récompense" de `add_reward_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter la récompense'**
+  String get addRewardSheetApplyButton;
+
+  /// Ligne d'objet composé localement de `add_reward_sheet.dart::_RewardItemRow` — `name` est déjà le nom d'affichage résolu (catalogue ou objet personnalisé).
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} × {quantity}'**
+  String addRewardSheetItemQuantityLabel(String name, int quantity);
+
+  /// Titre de `rest_sheet.dart` (lien "Prendre un repos").
+  ///
+  /// In fr, this message translates to:
+  /// **'Repos'**
+  String get restSheetTitle;
+
+  /// Ligne "PV actuels" de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'PV actuels : {currentHp} / {maxHp}'**
+  String restSheetCurrentHpLabel(int currentHp, int maxHp);
+
+  /// Segment "Repos court" du `SegmentedToggle` de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Repos court'**
+  String get restSheetShortOption;
+
+  /// Segment "Repos long" du `SegmentedToggle` de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Repos long'**
+  String get restSheetLongOption;
+
+  /// Bouton secondaire "Annuler" de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get restSheetCancelButton;
+
+  /// Bouton primaire "Appliquer" de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appliquer'**
+  String get restSheetApplyButton;
+
+  /// Titre de la section "Sorts préparés" du repos long de `rest_sheet.dart::_PreparedSpellsChoice`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS PRÉPARÉS'**
+  String get restSheetPreparedSpellsTitle;
+
+  /// Segment "Garder ma liste" du `SegmentedToggle` de `rest_sheet.dart::_PreparedSpellsChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garder ma liste'**
+  String get restSheetKeepListOption;
+
+  /// Segment "Changer mes sorts" du `SegmentedToggle` de `rest_sheet.dart::_PreparedSpellsChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer mes sorts'**
+  String get restSheetChangeSpellsOption;
+
+  /// Texte d'aide affiché quand "Changer mes sorts" est sélectionné dans `rest_sheet.dart::_PreparedSpellsChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Après le repos, la liste de vos sorts s\'ouvre pour choisir ceux à préparer.'**
+  String get restSheetChangeSpellsHelper;
+
+  /// Texte d'aide affiché quand "Garder ma liste" est sélectionné dans `rest_sheet.dart::_PreparedSpellsChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos sorts préparés restent les mêmes après le repos.'**
+  String get restSheetKeepListHelper;
+
+  /// Texte d'aide du repos long dans `rest_sheet.dart::_RestHelpBlock`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restaure les PV au maximum, réinitialise les emplacements de sorts et recharge toutes les aptitudes rechargeables (repos court comme repos long).'**
+  String get restSheetLongHelpText;
+
+  /// Ligne "PV après repos" du repos long dans `rest_sheet.dart::_RestHelpBlock` — `maxHp` répété volontairement (le repos long restaure toujours au maximum).
+  ///
+  /// In fr, this message translates to:
+  /// **'PV après repos : {maxHp} / {maxHp}'**
+  String restSheetAfterRestHpLabel(int maxHp);
+
+  /// Ligne d'état des dés de vie du repos court mono-classe dans `rest_sheet.dart::_ShortRestHitDiceBlock`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dés de vie disponibles : {remaining}/{total} (d{hitDie})'**
+  String restSheetHitDiceAvailableLabel(int remaining, int total, int hitDie);
+
+  /// Libellé "Dés à dépenser" du stepper de `rest_sheet.dart` (mono-classe et multiclasse).
+  ///
+  /// In fr, this message translates to:
+  /// **'Dés à dépenser'**
+  String get restSheetDiceToSpendLabel;
+
+  /// Message affiché quand aucun dé de vie n'est disponible, dans `rest_sheet.dart::_ShortRestHitDiceBlock`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun dé de vie disponible. Le repos court reste gratuit — aucune action supplémentaire requise.'**
+  String get restSheetNoHitDiceAvailable;
+
+  /// Segment "Lancer les dés" du `SegmentedToggle` de méthode de jet de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer les dés'**
+  String get restSheetRollMethodOption;
+
+  /// Segment "Valeur moyenne" du `SegmentedToggle` de méthode de jet de `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Valeur moyenne'**
+  String get restSheetAverageMethodOption;
+
+  /// Lien "Relancer les dés" de `rest_sheet.dart`, affiché en méthode "Lancer les dés".
+  ///
+  /// In fr, this message translates to:
+  /// **'Relancer les dés'**
+  String get restSheetRerollLink;
+
+  /// Rappel de la formule de valeur moyenne, affiché en méthode "Valeur moyenne" dans `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'(moitié du dé arrondie au supérieur, +1, par dé)'**
+  String get restSheetAverageFormulaHint;
+
+  /// `InfoBanner` affichée quand les PV sont déjà au maximum lors d'un repos court, dans `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'PV déjà au maximum : ce repos ne restaurera aucun PV supplémentaire.'**
+  String get restSheetAlreadyMaxHpMessage;
+
+  /// Titre de la `GainRow` "PV restaurés" du repos court dans `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'PV restaurés'**
+  String get restSheetHpRestoredTitle;
+
+  /// Sous-titre de la `GainRow` "PV restaurés" du repos court dans `rest_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{currentHp} → {newHp} (+{gain})'**
+  String restSheetHpRestoredSubtitle(int currentHp, int newHp, int gain);
+
+  /// En-tête du bloc de jet par classe, repos court multiclassé, dans `rest_sheet.dart::_MulticlassShortRestHitDiceBlock`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{className} (d{hitDie})'**
+  String restSheetPoolRolledLabel(String className, int hitDie);
+
+  /// Ligne d'état des dés de vie d'UN pool, repos court multiclassé, dans `rest_sheet.dart::_PoolSpendRow`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{className} — dés de vie disponibles : {available}/{total} (d{hitDie})'**
+  String restSheetPoolStatusLabel(
+    String className,
+    int available,
+    int total,
+    int hitDie,
+  );
+
+  /// Titre de la répartition des dés de vie récupérés, repos long multiclassé, dans `rest_sheet.dart::_LongRestRecoveryChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dés de vie récupérés : {count} — répartissez-les entre vos classes'**
+  String restSheetRecoveredAllocationTitle(int count);
+
+  /// Ligne d'UN pool de la répartition des dés de vie récupérés, dans `rest_sheet.dart::_LongRestRecoveryChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{className} (d{hitDie}) — {spent} dépensé(s)'**
+  String restSheetRecoveredPoolLabel(String className, int hitDie, int spent);
+
+  /// Ligne "Reste à répartir" de `rest_sheet.dart::_LongRestRecoveryChoice`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reste à répartir : {remaining}'**
+  String restSheetRemainingToAllocateLabel(int remaining);
+
+  /// Formule du résultat de `dice_roll_sheet.dart` — `modifier` est déjà formaté avec son signe (`SignedModifierFormatter`).
+  ///
+  /// In fr, this message translates to:
+  /// **'d20 ({roll}) {modifier} = {total}'**
+  String diceRollSheetFormula(int roll, String modifier, int total);
+
+  /// Mention affichée sur un 20 naturel dans `dice_roll_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'RÉUSSITE CRITIQUE'**
+  String get diceRollSheetCriticalSuccess;
+
+  /// Mention affichée sur un 1 naturel dans `dice_roll_sheet.dart`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'ÉCHEC CRITIQUE'**
+  String get diceRollSheetCriticalFailure;
+
+  /// Bouton "Relancer" de `dice_roll_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Relancer'**
+  String get diceRollSheetRerollButton;
+
+  /// Titre de `armor_class_bonus_sheet.dart` (tap sur la tuile "CA").
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajustement de CA'**
+  String get armorClassBonusSheetTitle;
+
+  /// Segment "Bonus" du `SegmentedToggle` de `armor_class_bonus_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus'**
+  String get armorClassBonusSheetBonusOption;
+
+  /// Segment "Malus" du `SegmentedToggle` de `armor_class_bonus_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Malus'**
+  String get armorClassBonusSheetMalusOption;
+
+  /// Bouton secondaire "Effacer" de `armor_class_bonus_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer'**
+  String get armorClassBonusSheetClearButton;
+
+  /// Bouton primaire "Valider" de `armor_class_bonus_sheet.dart`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Valider'**
+  String get armorClassBonusSheetValidateButton;
+
+  /// Eyebrow commun à tout le flux "Montée de niveau" (`LevelUpHeader.eyebrow`), déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'MONTÉE DE NIVEAU'**
+  String get levelUpScreenEyebrow;
+
+  /// Eyebrow de l'écran de blocage quand un ou plusieurs niveaux du chaînage ont déjà été validés cette session (`_buildBlocked`), déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'NIVEAU ATTEINT'**
+  String get levelUpScreenLevelReachedEyebrow;
+
+  /// `LevelUpHeader.levelLabel`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'NIVEAU {level}'**
+  String levelUpScreenLevelLabel(int level);
+
+  /// `LevelUpHeader.remainingLevelsLabel`, affiché en cas de chaînage multi-niveaux.
+  ///
+  /// In fr, this message translates to:
+  /// **'{remaining, plural, =1{Encore 1 niveau à valider ensuite} other{Encore {remaining} niveaux à valider ensuite}}'**
+  String levelUpScreenRemainingLevelsLabel(int remaining);
+
+  /// `SnackBar` du lien "Voir l'historique des niveaux" (aucun écran dédié n'existe encore).
+  ///
+  /// In fr, this message translates to:
+  /// **'Bientôt disponible'**
+  String get levelUpScreenComingSoonSnackBar;
+
+  /// `_applyError` générique du récapitulatif, erreur non `CharacterFailure` interceptée par `_continueFromSummary`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer la montée de niveau. Réessayez.'**
+  String get levelUpScreenGenericApplyError;
+
+  /// Message de repli de `_ErrorState` quand l'erreur de chargement n'est pas une `CharacterFailure`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les données de montée de niveau. Réessayez.'**
+  String get levelUpScreenGenericLoadError;
+
+  /// Instruction de l'étape `classDecision` (multiclassage/choix de la classe continuée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez comment ce niveau s\'applique.'**
+  String get levelUpScreenClassDecisionInstruction;
+
+  /// Titre d'une tuile "Continuer en {classe}" de l'étape `classDecision`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer en {className}'**
+  String levelUpScreenContinueClassOptionTitle(String className);
+
+  /// Sous-titre de la tuile "Continuer" primaire quand ce niveau est bloqué — réutilisé aussi comme corps de l'écran de blocage (`_buildBlocked`), texte identique dans les deux cas.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce niveau nécessite un choix pas encore disponible dans l\'app.'**
+  String get levelUpScreenContinueClassBlockedSubtitle;
+
+  /// Sous-titre par défaut (non bloqué) d'une tuile "Continuer en {classe}".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous progressez dans votre voie actuelle (niveau {currentLevel} → {nextLevel}).'**
+  String levelUpScreenContinueClassSubtitle(int currentLevel, int nextLevel);
+
+  /// Titre d'une tuile "Se multiclasser en {classe}" de l'étape `classDecision`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Se multiclasser en {className}'**
+  String levelUpScreenMulticlassOptionTitle(String className);
+
+  /// Sous-titre d'une tuile "Se multiclasser en {classe}" — `abilities` est déjà la liste jointe des caractéristiques qui satisfont le prérequis.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous débutez au niveau 1 dans cette classe. Prérequis rempli : {abilities}.'**
+  String levelUpScreenMulticlassOptionSubtitle(String abilities);
+
+  /// `InfoBanner` de contexte affichée en tête de toute étape concernant la nouvelle classe tant que le multiclassage est en cours.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle classe : {className} (niveau 1)'**
+  String levelUpScreenMulticlassInfoBanner(String className);
+
+  /// Titre du bloc teaser de l'annonce de niveau (`_buildAnnouncement`).
+  ///
+  /// In fr, this message translates to:
+  /// **'À venir dans les prochaines étapes'**
+  String get levelUpScreenUpcomingStepsTitle;
+
+  /// Ligne teaser "Choix à faire" de l'annonce de niveau — `choiceLabel` est déjà résolu (voir `_choiceStepLabel`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Un choix de {choiceLabel} vous attendra'**
+  String levelUpScreenUpcomingChoiceStep(String choiceLabel);
+
+  /// Ligne teaser "Sorts" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos emplacements de sorts vont évoluer'**
+  String get levelUpScreenUpcomingSpellsStep;
+
+  /// Ligne teaser "Invocations" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'De nouvelles invocations vous attendront'**
+  String get levelUpScreenUpcomingInvocationsStep;
+
+  /// Ligne teaser "Disciplines élémentaires" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'De nouvelles disciplines élémentaires vous attendront'**
+  String get levelUpScreenUpcomingElementalDisciplinesStep;
+
+  /// Ligne teaser "Manœuvres" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'De nouvelles manœuvres vous attendront'**
+  String get levelUpScreenUpcomingManeuversStep;
+
+  /// Ligne teaser "Tirs arcaniques" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'De nouveaux tirs arcaniques vous attendront'**
+  String get levelUpScreenUpcomingArcaneShotsStep;
+
+  /// Ligne teaser "Runes" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'De nouvelles runes vous attendront'**
+  String get levelUpScreenUpcomingRunesStep;
+
+  /// Ligne teaser "Infusions" de l'annonce de niveau.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos infusions vont évoluer'**
+  String get levelUpScreenUpcomingInfusionsStep;
+
+  /// Bouton primaire "Continuer" partagé par l'annonce, le récapitulatif et `_StepFooter` (étapes 1 à 3 et dédiées).
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get levelUpScreenContinueButton;
+
+  /// Bouton secondaire "Retour" de `_StepFooter`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour'**
+  String get levelUpScreenBackButton;
+
+  /// Titre de `GainRow` "Nouvelle aptitude" — annonce, étape "Aptitudes" et récapitulatif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle aptitude'**
+  String get levelUpScreenNewFeatureTitle;
+
+  /// Titre de `GainRow` "Nouvelle maîtrise" du bloc "Maîtrises de multiclassage" de l'étape "Aptitudes".
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle maîtrise'**
+  String get levelUpScreenNewProficiencyTitle;
+
+  /// `stepLabel` de l'étape "Points de vie" (toujours étape 1).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape 1 sur {totalSteps} · Points de vie'**
+  String levelUpScreenHpStepLabel(int totalSteps);
+
+  /// Titre "Points de vie maximum" — étape "Points de vie" et récapitulatif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Points de vie maximum'**
+  String get levelUpScreenMaxHpTitle;
+
+  /// Formule de delta des PV maximum (étape "Points de vie" et récapitulatif).
+  ///
+  /// In fr, this message translates to:
+  /// **'{oldHp} → {newHp} (+{gain})'**
+  String levelUpScreenMaxHpDelta(int oldHp, int newHp, int gain);
+
+  /// Libellé du dé de vie, branche multiclassage, étape "Points de vie".
+  ///
+  /// In fr, this message translates to:
+  /// **'Dé de vie de {className} (niveau 1) : d{hitDie}'**
+  String levelUpScreenHitDieMulticlassLabel(String className, int hitDie);
+
+  /// Libellé du dé de vie, branche classe continuée, étape "Points de vie".
+  ///
+  /// In fr, this message translates to:
+  /// **'Dé de vie de la classe : d{hitDie}'**
+  String levelUpScreenHitDieClassLabel(int hitDie);
+
+  /// Segment "Lancer le dé" du `SegmentedToggle` de méthode PV de l'étape "Points de vie".
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer le dé (d{hitDie})'**
+  String levelUpScreenRollHitDieOption(int hitDie);
+
+  /// Segment "Valeur moyenne" du `SegmentedToggle` de méthode PV de l'étape "Points de vie".
+  ///
+  /// In fr, this message translates to:
+  /// **'Valeur moyenne ({average})'**
+  String levelUpScreenAverageHitDieOption(int average);
+
+  /// Ligne "{modificateur} modificateur de Constitution" de l'étape "Points de vie" — `modifier` est déjà formaté avec son signe (`SignedModifierFormatter`).
+  ///
+  /// In fr, this message translates to:
+  /// **'{modifier} modificateur de Constitution'**
+  String levelUpScreenConstitutionModifierLabel(String modifier);
+
+  /// Lien "Relancer le dé" de l'étape "Points de vie" (méthode "Lancer le dé").
+  ///
+  /// In fr, this message translates to:
+  /// **'Relancer le dé'**
+  String get levelUpScreenRerollDieLink;
+
+  /// Rappel de la formule de valeur moyenne de l'étape "Points de vie" (méthode "Valeur moyenne").
+  ///
+  /// In fr, this message translates to:
+  /// **'(moitié du dé arrondie au supérieur, +1)'**
+  String get levelUpScreenAverageDieFormulaHint;
+
+  /// Lien sous le bouton "Continuer" de l'étape "Points de vie" (aucun écran dédié n'existe encore, voir `_showLevelHistoryComingSoon`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir l\'historique des niveaux'**
+  String get levelUpScreenLevelHistoryLink;
+
+  /// `stepLabel` de l'étape "Aptitudes" sans maîtrises de multiclassage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape 2 sur {totalSteps} · Aptitudes de classe'**
+  String levelUpScreenAbilitiesStepLabel(int totalSteps);
+
+  /// `stepLabel` de l'étape "Aptitudes" avec maîtrises de multiclassage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape 2 sur {totalSteps} · Aptitudes & maîtrises'**
+  String levelUpScreenAbilitiesStepLabelWithProficiencies(int totalSteps);
+
+  /// Titre du bloc d'aptitudes automatiques de l'étape "Aptitudes".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous obtenez automatiquement :'**
+  String get levelUpScreenAutomaticFeaturesLabel;
+
+  /// Titre du bloc "Maîtrises de multiclassage" de l'étape "Aptitudes".
+  ///
+  /// In fr, this message translates to:
+  /// **'Maîtrises de multiclassage :'**
+  String get levelUpScreenMulticlassProficienciesLabel;
+
+  /// `stepLabel` de l'étape "Choix à faire" — `choiceLabel` est déjà résolu (voir `_choiceStepLabel`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape 3 sur {totalSteps} · {choiceLabel}'**
+  String levelUpScreenChoiceStepLabel(int totalSteps, String choiceLabel);
+
+  /// Libellé court de `LevelUpChoiceKind.abilityScoreImprovement` pour le `stepLabel`/récapitulatif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Amélioration ou don'**
+  String get levelUpScreenChoiceKindAbilityScoreImprovement;
+
+  /// Libellé court de `LevelUpChoiceKind.subclass`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sous-classe'**
+  String get levelUpScreenChoiceKindSubclass;
+
+  /// Libellé court de `LevelUpChoiceKind.fightingStyle`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Style de combat'**
+  String get levelUpScreenChoiceKindFightingStyle;
+
+  /// Libellé court de `LevelUpChoiceKind.favoredEnemy`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ennemi juré'**
+  String get levelUpScreenChoiceKindFavoredEnemy;
+
+  /// Libellé court de `LevelUpChoiceKind.pact`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Faveur de pacte'**
+  String get levelUpScreenChoiceKindPact;
+
+  /// Instruction de la variante liste "Sous-classe" de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez une sous-classe.'**
+  String get levelUpScreenChooseSubclassInstruction;
+
+  /// Instruction de la variante liste "Style de combat" de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez un style de combat.'**
+  String get levelUpScreenChooseFightingStyleInstruction;
+
+  /// Instruction de la variante liste "Ennemi juré" de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez un ennemi juré.'**
+  String get levelUpScreenChooseFavoredEnemyInstruction;
+
+  /// Instruction de la variante liste "Faveur de pacte" de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez votre Faveur de pacte.'**
+  String get levelUpScreenChoosePactInstruction;
+
+  /// Instruction du sous-état ASI-ou-don de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez comment progresser.'**
+  String get levelUpScreenChooseProgressionInstruction;
+
+  /// Segment "Répartir +2" du `SegmentedToggle` ASI-ou-don de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Répartir +2'**
+  String get levelUpScreenAllocateAbilityOption;
+
+  /// Segment "Choisir un don" du `SegmentedToggle` ASI-ou-don de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir un don'**
+  String get levelUpScreenChooseFeatOption;
+
+  /// Instruction de la variante liste "Don" de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez un don.'**
+  String get levelUpScreenChooseFeatInstruction;
+
+  /// Titre du sélecteur de caractéristique d'un demi-don à plusieurs choix, étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Caractéristique augmentée par {featName} (+1) :'**
+  String levelUpScreenFeatAbilityIncreaseLabel(String featName);
+
+  /// Instruction de la variante allocation ASI de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Répartissez {budget} points entre vos caractéristiques.'**
+  String levelUpScreenAllocateBudgetInstruction(int budget);
+
+  /// Ligne "Points restants" de la variante allocation ASI de l'étape "Choix à faire".
+  ///
+  /// In fr, this message translates to:
+  /// **'Points restants : {remaining}/{budget}'**
+  String levelUpScreenPointsRemainingLabel(int remaining, int budget);
+
+  /// Ligne affichée une fois le budget ASI entièrement réparti.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les points sont répartis.'**
+  String get levelUpScreenAllPointsAllocatedLabel;
+
+  /// Formule de delta de caractéristique de `_AllocationRow` (variante allocation ASI).
+  ///
+  /// In fr, this message translates to:
+  /// **'{oldScore} → {newScore} (+{alloc})'**
+  String levelUpScreenAbilityScoreDelta(int oldScore, int newScore, int alloc);
+
+  /// `stepLabel` de l'étape "Sorts" quand seul un recalcul automatique d'emplacements est proposé (pas de sélection de sorts connus).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Emplacements de sorts'**
+  String levelUpScreenSpellSlotsStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre du bloc de recalcul des emplacements de sorts de l'étape "Sorts" (les deux variantes).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos emplacements de sorts sont recalculés :'**
+  String get levelUpScreenSpellSlotsRecalculatedLabel;
+
+  /// Message affiché quand aucun changement d'emplacement de sorts n'est calculé pour ce niveau, étape "Sorts" (variante sélection de sorts connus).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun emplacement de sorts à ce niveau.'**
+  String get levelUpScreenNoSpellSlotsAtThisLevel;
+
+  /// `stepLabel` de l'étape "Sorts" quand une sélection de nouveaux sorts/cantrips connus est proposée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Sorts'**
+  String levelUpScreenSpellsStepLabel(int stepNumber, int totalSteps);
+
+  /// Onglet "Mineurs" (sorts mineurs) du sélecteur de l'étape "Sorts".
+  ///
+  /// In fr, this message translates to:
+  /// **'Mineurs'**
+  String get levelUpScreenCantripTab;
+
+  /// Onglet "Sorts" (niveau 1+) du sélecteur de l'étape "Sorts".
+  ///
+  /// In fr, this message translates to:
+  /// **'Sorts'**
+  String get levelUpScreenSpellsTab;
+
+  /// Onglet "Grimoire" (Livre des ombres, Pacte du grimoire) du sélecteur de l'étape "Sorts".
+  ///
+  /// In fr, this message translates to:
+  /// **'Grimoire'**
+  String get levelUpScreenPactTab;
+
+  /// Titre de section de l'onglet "Mineurs" de l'étape "Sorts", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS MINEURS CONNUS'**
+  String get levelUpScreenKnownCantripsTitle;
+
+  /// Titre de section de l'onglet "Grimoire" de l'étape "Sorts", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'LIVRE DES OMBRES'**
+  String get levelUpScreenShadowBookTitle;
+
+  /// Titre de section de l'onglet "Sorts" de l'étape "Sorts", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'NOUVEAUX SORTS CONNUS'**
+  String get levelUpScreenKnownSpellsTitle;
+
+  /// Badge "X / Y" de `_QuotaBadge`, partagé par toutes les étapes à quota (Sorts, Invocations, Disciplines élémentaires, Manœuvres, Tirs arcaniques, Runes, Infusions, Métamagie, Expertise).
+  ///
+  /// In fr, this message translates to:
+  /// **'{selected} / {quota}'**
+  String levelUpScreenQuotaBadge(int selected, int quota);
+
+  /// Sous-titre d'une tuile de sort candidat de la section "NOUVEAUX SORTS CONNUS" — `metaLine` est déjà résolu (`SpellOption.metaLine`).
+  ///
+  /// In fr, this message translates to:
+  /// **'{metaLine} (niveau {level})'**
+  String levelUpScreenSpellMetaLineWithLevel(String metaLine, int level);
+
+  /// Sous-titre d'un sort de la liste étendue du patron (Occultiste) — `baseSubtitle` est déjà résolu.
+  ///
+  /// In fr, this message translates to:
+  /// **'{baseSubtitle} · Patron'**
+  String levelUpScreenPatronSpellSubtitle(String baseSubtitle);
+
+  /// `stepLabel` de l'étape "Invocations" (Occultiste).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Invocations'**
+  String levelUpScreenInvocationsStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section de l'étape "Invocations", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'INVOCATIONS CONNUES'**
+  String get levelUpScreenKnownInvocationsTitle;
+
+  /// Message d'état vide de l'étape "Invocations" (cas attendu, pas seulement défensif).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà toutes les invocations occultistes disponibles.'**
+  String get levelUpScreenNoMoreInvocationsMessage;
+
+  /// `stepLabel` de l'étape "Disciplines élémentaires" (Moine, Voie des quatre éléments).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Disciplines élémentaires'**
+  String levelUpScreenElementalDisciplinesStepLabel(
+    int stepNumber,
+    int totalSteps,
+  );
+
+  /// Titre de section de l'étape "Disciplines élémentaires", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'DISCIPLINES ÉLÉMENTAIRES CONNUES'**
+  String get levelUpScreenKnownElementalDisciplinesTitle;
+
+  /// Message d'état vide de l'étape "Disciplines élémentaires".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà toutes les disciplines élémentaires disponibles à ce niveau.'**
+  String get levelUpScreenNoMoreElementalDisciplinesMessage;
+
+  /// `stepLabel` de l'étape "Manœuvres" (Guerrier, Maître de guerre).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Manœuvres'**
+  String levelUpScreenManeuversStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section de l'étape "Manœuvres", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'MANŒUVRES CONNUES'**
+  String get levelUpScreenKnownManeuversTitle;
+
+  /// Message d'état vide de l'étape "Manœuvres".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà toutes les manœuvres disponibles.'**
+  String get levelUpScreenNoMoreManeuversMessage;
+
+  /// `stepLabel` de l'étape "Tirs arcaniques" (Guerrier, Archer arcanique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Tirs arcaniques'**
+  String levelUpScreenArcaneShotsStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section de l'étape "Tirs arcaniques", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'TIRS ARCANIQUES CONNUS'**
+  String get levelUpScreenKnownArcaneShotsTitle;
+
+  /// Message d'état vide de l'étape "Tirs arcaniques".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà tous les tirs arcaniques disponibles.'**
+  String get levelUpScreenNoMoreArcaneShotsMessage;
+
+  /// `stepLabel` de l'étape "Runes" (Guerrier, Chevalier runique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Runes'**
+  String levelUpScreenRunesStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section de l'étape "Runes", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'RUNES CONNUES'**
+  String get levelUpScreenKnownRunesTitle;
+
+  /// Message d'état vide de l'étape "Runes".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà toutes les runes disponibles.'**
+  String get levelUpScreenNoMoreRunesMessage;
+
+  /// `stepLabel` de l'étape "Infusions" (Artificier).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Infusions'**
+  String levelUpScreenInfusionsStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section "Nouvelles infusions" de l'étape "Infusions", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'NOUVELLES INFUSIONS'**
+  String get levelUpScreenNewInfusionsTitle;
+
+  /// Message d'état vide de la section "Nouvelles infusions" de l'étape "Infusions".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà toutes les infusions disponibles.'**
+  String get levelUpScreenNoMoreInfusionsMessage;
+
+  /// Titre de section "Remplacer une infusion" de l'étape "Infusions", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'REMPLACER UNE INFUSION (OPTIONNEL)'**
+  String get levelUpScreenReplaceInfusionOptionalTitle;
+
+  /// Titre "REMPLACÉE PAR" de la sous-section échange, étapes "Infusions" et "Métamagie", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'REMPLACÉE PAR'**
+  String get levelUpScreenReplacedByLabel;
+
+  /// `stepLabel` de l'étape "Métamagie" (Ensorceleur).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Métamagie'**
+  String levelUpScreenMetamagicStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section "Nouvelles options" de l'étape "Métamagie", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'NOUVELLES OPTIONS DE MÉTAMAGIE'**
+  String get levelUpScreenNewMetamagicOptionsTitle;
+
+  /// Message d'état vide de la section "Nouvelles options" de l'étape "Métamagie".
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous connaissez déjà toutes les options de Métamagie disponibles.'**
+  String get levelUpScreenNoMoreMetamagicMessage;
+
+  /// Titre de section "Remplacer une option" de l'étape "Métamagie", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'REMPLACER UNE OPTION (OPTIONNEL)'**
+  String get levelUpScreenReplaceMetamagicOptionalTitle;
+
+  /// `stepLabel` de l'étape "Expertise" (Barde/Roublard).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Expertise'**
+  String levelUpScreenExpertiseStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section de l'étape "Expertise", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'COMPÉTENCES EN EXPERTISE'**
+  String get levelUpScreenExpertiseSkillsTitle;
+
+  /// Libellé "Outils de voleur" — tuile de substitution de l'étape "Expertise" et récapitulatif (Roublard, édition 2014).
+  ///
+  /// In fr, this message translates to:
+  /// **'Outils de voleur'**
+  String get levelUpScreenThievesToolsLabel;
+
+  /// Sous-titre de la tuile de substitution "Outils de voleur" de l'étape "Expertise".
+  ///
+  /// In fr, this message translates to:
+  /// **'Substitue une des places d\'Expertise à la maîtrise des outils de voleur.'**
+  String get levelUpScreenThievesToolsSubstitutionHint;
+
+  /// Message d'état vide de l'étape "Expertise" (aucune compétence candidate).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune compétence déjà maîtrisée à faire passer en Expertise.'**
+  String get levelUpScreenNoExpertiseCandidatesMessage;
+
+  /// `stepLabel` de l'étape "Ascendance draconique" (Ensorceleur, Lignage draconique, niveau 1 de sous-classe).
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape {stepNumber} sur {totalSteps} · Ascendance draconique'**
+  String levelUpScreenDraconicAncestryStepLabel(int stepNumber, int totalSteps);
+
+  /// Titre de section de l'étape "Ascendance draconique", déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'TYPE DE DÉGÂTS'**
+  String get levelUpScreenDamageTypeTitle;
+
+  /// Titre de `GainRow` "Nouveaux emplacements de sorts" (déblocage net d'un palier) — étape "Sorts" et récapitulatif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveaux emplacements de sorts'**
+  String get levelUpScreenNewSpellSlotsTitle;
+
+  /// Titre de `GainRow` "Emplacements de sorts renforcés" (renfort d'un palier déjà actif) — étape "Sorts" et récapitulatif.
+  ///
+  /// In fr, this message translates to:
+  /// **'Emplacements de sorts renforcés'**
+  String get levelUpScreenReinforcedSpellSlotsTitle;
+
+  /// Sous-titre de `GainRow` d'un palier d'emplacements nouvellement débloqué.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {spellLevel} débloqué'**
+  String levelUpScreenSpellSlotUnlockedSubtitle(int spellLevel);
+
+  /// Sous-titre de `GainRow` d'un palier d'emplacements renforcé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {spellLevel} : {oldTotal} → {newTotal} (+{delta})'**
+  String levelUpScreenSpellSlotReinforcedSubtitle(
+    int spellLevel,
+    int oldTotal,
+    int newTotal,
+    int delta,
+  );
+
+  /// Titre de `GainRow` de magie de pacte (Occultiste), premier dip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Magie de pacte débloquée'**
+  String get levelUpScreenPactMagicUnlockedTitle;
+
+  /// Sous-titre de `GainRow` de magie de pacte, premier dip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {slotLevel} · {charges} charge(s)'**
+  String levelUpScreenPactMagicUnlockedSubtitle(int slotLevel, int charges);
+
+  /// Titre de `GainRow` de magie de pacte, charges renforcées (niveau de charge inchangé, ou les deux changent).
+  ///
+  /// In fr, this message translates to:
+  /// **'Charges de pacte renforcées'**
+  String get levelUpScreenPactChargesReinforcedTitle;
+
+  /// Sous-titre de `GainRow` de magie de pacte, charges renforcées à niveau de charge inchangé.
+  ///
+  /// In fr, this message translates to:
+  /// **'{oldCharges} → {newCharges} charges (niveau {slotLevel})'**
+  String levelUpScreenPactChargesReinforcedSubtitle(
+    int oldCharges,
+    int newCharges,
+    int slotLevel,
+  );
+
+  /// Titre de `GainRow` de magie de pacte, niveau de charge amélioré à charges inchangées.
+  ///
+  /// In fr, this message translates to:
+  /// **'Charges de pacte améliorées'**
+  String get levelUpScreenPactChargesImprovedTitle;
+
+  /// Sous-titre de `GainRow` de magie de pacte, niveau de charge amélioré à charges inchangées.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {oldSlotLevel} → {newSlotLevel} ({newCharges} charges)'**
+  String levelUpScreenPactChargesImprovedSubtitle(
+    int oldSlotLevel,
+    int newSlotLevel,
+    int newCharges,
+  );
+
+  /// Sous-titre de `GainRow` de magie de pacte, charges ET niveau de charge changent à la fois.
+  ///
+  /// In fr, this message translates to:
+  /// **'{oldCharges} → {newCharges} charges, niveau {oldSlotLevel} → {newSlotLevel}'**
+  String levelUpScreenPactChargesBothSubtitle(
+    int oldCharges,
+    int newCharges,
+    int oldSlotLevel,
+    int newSlotLevel,
+  );
+
+  /// Titre de `GainRow` du récapitulatif, étape "Choix à faire" en mode don (ASI).
+  ///
+  /// In fr, this message translates to:
+  /// **'Don'**
+  String get levelUpScreenFeatSummaryTitle;
+
+  /// Sous-titre de `GainRow` du récapitulatif, don avec augmentation de caractéristique choisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'{featName} ({abilityLabel} +1)'**
+  String levelUpScreenFeatAbilityBonusSubtitle(
+    String featName,
+    String abilityLabel,
+  );
+
+  /// Un élément de la liste jointe du sous-titre de `GainRow` du récapitulatif, mode allocation ASI.
+  ///
+  /// In fr, this message translates to:
+  /// **'{label} +{amount}'**
+  String levelUpScreenAbilityAllocationSummaryItem(String label, int amount);
+
+  /// Titre de `GainRow` du récapitulatif, étape "Choix à faire" en mode allocation ASI.
+  ///
+  /// In fr, this message translates to:
+  /// **'Amélioration de caractéristique'**
+  String get levelUpScreenAbilityScoreImprovementTitle;
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Sorts appris" (sorts mineurs).
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveaux sorts mineurs'**
+  String get levelUpScreenNewCantripsTitle;
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Sorts appris" (niveau 1+).
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveaux sorts appris'**
+  String get levelUpScreenNewSpellsLearnedTitle;
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Sorts appris" (Livre des ombres).
+  ///
+  /// In fr, this message translates to:
+  /// **'Livre des ombres'**
+  String get levelUpScreenShadowBookGainTitle;
+
+  /// Titre de `GainRow` du récapitulatif, ajout du sort "Appel de familier" (Pacte de la chaîne).
+  ///
+  /// In fr, this message translates to:
+  /// **'Appel de familier ajouté'**
+  String get levelUpScreenFamiliarAddedTitle;
+
+  /// Sous-titre de `GainRow` "Appel de familier ajouté".
+  ///
+  /// In fr, this message translates to:
+  /// **'Pacte de la chaîne'**
+  String get levelUpScreenChainPactSubtitle;
+
+  /// Titre de `GainRow` du récapitulatif, un sort inné racial nouvellement accordé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sort inné racial'**
+  String get levelUpScreenRacialInnateSpellTitle;
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Invocation(s)".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouvelle invocation occultiste} other{Nouvelles invocations occultistes}}'**
+  String levelUpScreenNewInvocationsSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Discipline(s) élémentaire(s)".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouvelle discipline élémentaire} other{Nouvelles disciplines élémentaires}}'**
+  String levelUpScreenNewElementalDisciplinesSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Manœuvre(s)".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouvelle manœuvre} other{Nouvelles manœuvres}}'**
+  String levelUpScreenNewManeuversSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Tir(s) arcanique(s)".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouveau tir arcanique} other{Nouveaux tirs arcaniques}}'**
+  String levelUpScreenNewArcaneShotsSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Rune(s)".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouvelle rune} other{Nouvelles runes}}'**
+  String levelUpScreenNewRunesSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Infusion(s)".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouvelle infusion} other{Nouvelles infusions}}'**
+  String levelUpScreenNewInfusionsSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, échange d'infusion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Infusion remplacée'**
+  String get levelUpScreenInfusionSwapTitle;
+
+  /// Sous-titre de `GainRow` du récapitulatif, échange d'infusion ou de Métamagie.
+  ///
+  /// In fr, this message translates to:
+  /// **'{removedName} → {addedName}'**
+  String levelUpScreenSwapSubtitle(String removedName, String addedName);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Métamagie".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Nouvelle option de Métamagie} other{Nouvelles options de Métamagie}}'**
+  String levelUpScreenNewMetamagicOptionsSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, échange de Métamagie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Métamagie remplacée'**
+  String get levelUpScreenMetamagicSwapTitle;
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Expertise".
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Expertise} other{Expertises}}'**
+  String levelUpScreenExpertiseSummaryTitle(int count);
+
+  /// Titre de `GainRow` du récapitulatif, bloc "Ascendance draconique".
+  ///
+  /// In fr, this message translates to:
+  /// **'Ascendance draconique'**
+  String get levelUpScreenDraconicAncestryTitle;
+
+  /// Message de `_EmptyFeaturesState` (état vide de l'étape "Aptitudes").
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune nouvelle aptitude de classe à ce niveau.'**
+  String get levelUpScreenNoNewFeaturesMessage;
+
+  /// Message générique de repli de `_EmptyChoiceState` (étape "Choix à faire", cas défensif).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune option disponible pour ce choix.'**
+  String get levelUpScreenNoOptionAvailableMessage;
+
+  /// Titre de l'écran de blocage (`_buildBlocked`) — `level` est le niveau DANS la classe concernée, jamais le niveau total.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {level} : choix requis'**
+  String levelUpScreenBlockedLevelTitle(int level);
+
+  /// Bouton primaire de l'écran de blocage (`_buildBlocked`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retour à la fiche'**
+  String get levelUpScreenBackToSheetButton;
+
+  /// Bouton secondaire "Réessayer" de `_ErrorState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get levelUpScreenRetryButton;
 }
 
 class _AppLocalizationsDelegate

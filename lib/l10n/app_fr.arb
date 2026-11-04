@@ -1839,5 +1839,1305 @@
   "connectionErrorStateContinueOfflineTooltip": "Bientôt disponible : la lecture hors ligne de tes personnages arrive avec une prochaine mise à jour. Pour l'instant, une connexion est nécessaire pour charger tes personnages.",
   "@connectionErrorStateContinueOfflineTooltip": {
     "description": "`Tooltip.message` du lien \"Continuer hors ligne\"."
+  },
+
+  "hpAdjustmentSheetTitle": "Ajuster les PV",
+  "@hpAdjustmentSheetTitle": {
+    "description": "Titre de `hp_adjustment_sheet.dart` (bouton crayon du bandeau PV)."
+  },
+  "hpAdjustmentSheetDamageOption": "Dégâts",
+  "@hpAdjustmentSheetDamageOption": {
+    "description": "Segment \"Dégâts\" du `SegmentedToggle` de `hp_adjustment_sheet.dart`."
+  },
+  "hpAdjustmentSheetHealOption": "Soins",
+  "@hpAdjustmentSheetHealOption": {
+    "description": "Segment \"Soins\" du `SegmentedToggle` de `hp_adjustment_sheet.dart`."
+  },
+  "hpAdjustmentSheetTemporaryOption": "PV temp.",
+  "@hpAdjustmentSheetTemporaryOption": {
+    "description": "Segment \"PV temp.\" du `SegmentedToggle` de `hp_adjustment_sheet.dart`."
+  },
+  "hpAdjustmentSheetCancelButton": "Annuler",
+  "@hpAdjustmentSheetCancelButton": {
+    "description": "Bouton secondaire \"Annuler\" de `hp_adjustment_sheet.dart`."
+  },
+  "hpAdjustmentSheetApplyButton": "Appliquer",
+  "@hpAdjustmentSheetApplyButton": {
+    "description": "Bouton primaire \"Appliquer\" de `hp_adjustment_sheet.dart`."
+  },
+
+  "addXpSheetTitle": "Ajouter de l'XP",
+  "@addXpSheetTitle": {
+    "description": "Titre de `add_xp_sheet.dart` (bouton \"+\" du bandeau XP)."
+  },
+  "addXpSheetCurrentXpLabel": "XP actuelle : {currentXp} / {threshold}",
+  "@addXpSheetCurrentXpLabel": {
+    "description": "Ligne \"XP actuelle : X / Y\" de `add_xp_sheet.dart` — `threshold` retombe sur `currentXp` au niveau maximum (voir `_AddXpSheetContent.build`).",
+    "placeholders": {
+      "currentXp": {
+        "type": "int"
+      },
+      "threshold": {
+        "type": "int"
+      }
+    }
+  },
+  "addXpSheetGainedLabel": "XP GAGNÉE",
+  "@addXpSheetGainedLabel": {
+    "description": "Libellé du champ de saisie du montant d'XP de `add_xp_sheet.dart`, déjà en majuscules."
+  },
+  "addXpSheetAmountHint": "Ex. 250",
+  "@addXpSheetAmountHint": {
+    "description": "`hintText` du champ de saisie du montant d'XP de `add_xp_sheet.dart`."
+  },
+  "addXpSheetAmountHelper": "Montant remis par le MJ en fin de séance, par exemple.",
+  "@addXpSheetAmountHelper": {
+    "description": "Texte d'aide sous le champ de saisie du montant d'XP de `add_xp_sheet.dart`."
+  },
+  "addXpSheetNewTotalLabel": "Nouveau total : {total} XP",
+  "@addXpSheetNewTotalLabel": {
+    "description": "Ligne \"Nouveau total\" de `add_xp_sheet.dart`, affichée dès qu'un montant valide est saisi.",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "addXpSheetCancelButton": "Annuler",
+  "@addXpSheetCancelButton": {
+    "description": "Bouton secondaire \"Annuler\" de `add_xp_sheet.dart`."
+  },
+  "addXpSheetApplyButton": "Ajouter",
+  "@addXpSheetApplyButton": {
+    "description": "Bouton primaire \"Ajouter\" de `add_xp_sheet.dart`."
+  },
+  "addXpSheetManualLevelUpLink": "Monter de niveau manuellement",
+  "@addXpSheetManualLevelUpLink": {
+    "description": "Lien \"Monter de niveau manuellement\" de `add_xp_sheet.dart`, affiché tant que le seuil du niveau suivant n'est pas déjà franchi."
+  },
+
+  "addRewardSheetTitle": "AJOUTER UNE RÉCOMPENSE",
+  "@addRewardSheetTitle": {
+    "description": "Titre (`SheetHeaderBar`) de `add_reward_sheet.dart`, déjà en majuscules."
+  },
+  "addRewardSheetCurrencyLabel": "MONNAIE",
+  "@addRewardSheetCurrencyLabel": {
+    "description": "Titre de la section \"MONNAIE\" de `add_reward_sheet.dart`, déjà en majuscules."
+  },
+  "addRewardSheetItemsLabel": "OBJETS",
+  "@addRewardSheetItemsLabel": {
+    "description": "Titre de la section \"OBJETS\" de `add_reward_sheet.dart`, déjà en majuscules."
+  },
+  "addRewardSheetAddItemLabel": "Ajouter un objet",
+  "@addRewardSheetAddItemLabel": {
+    "description": "Libellé de la `DashedAddTile` \"Ajouter un objet\" de `add_reward_sheet.dart`."
+  },
+  "addRewardSheetCancelButton": "Annuler",
+  "@addRewardSheetCancelButton": {
+    "description": "Bouton secondaire \"Annuler\" de `add_reward_sheet.dart`."
+  },
+  "addRewardSheetApplyButton": "Ajouter la récompense",
+  "@addRewardSheetApplyButton": {
+    "description": "Bouton primaire \"Ajouter la récompense\" de `add_reward_sheet.dart`."
+  },
+  "addRewardSheetItemQuantityLabel": "{name} × {quantity}",
+  "@addRewardSheetItemQuantityLabel": {
+    "description": "Ligne d'objet composé localement de `add_reward_sheet.dart::_RewardItemRow` — `name` est déjà le nom d'affichage résolu (catalogue ou objet personnalisé).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+
+  "restSheetTitle": "Repos",
+  "@restSheetTitle": {
+    "description": "Titre de `rest_sheet.dart` (lien \"Prendre un repos\")."
+  },
+  "restSheetCurrentHpLabel": "PV actuels : {currentHp} / {maxHp}",
+  "@restSheetCurrentHpLabel": {
+    "description": "Ligne \"PV actuels\" de `rest_sheet.dart`.",
+    "placeholders": {
+      "currentHp": {
+        "type": "int"
+      },
+      "maxHp": {
+        "type": "int"
+      }
+    }
+  },
+  "restSheetShortOption": "Repos court",
+  "@restSheetShortOption": {
+    "description": "Segment \"Repos court\" du `SegmentedToggle` de `rest_sheet.dart`."
+  },
+  "restSheetLongOption": "Repos long",
+  "@restSheetLongOption": {
+    "description": "Segment \"Repos long\" du `SegmentedToggle` de `rest_sheet.dart`."
+  },
+  "restSheetCancelButton": "Annuler",
+  "@restSheetCancelButton": {
+    "description": "Bouton secondaire \"Annuler\" de `rest_sheet.dart`."
+  },
+  "restSheetApplyButton": "Appliquer",
+  "@restSheetApplyButton": {
+    "description": "Bouton primaire \"Appliquer\" de `rest_sheet.dart`."
+  },
+  "restSheetPreparedSpellsTitle": "SORTS PRÉPARÉS",
+  "@restSheetPreparedSpellsTitle": {
+    "description": "Titre de la section \"Sorts préparés\" du repos long de `rest_sheet.dart::_PreparedSpellsChoice`, déjà en majuscules."
+  },
+  "restSheetKeepListOption": "Garder ma liste",
+  "@restSheetKeepListOption": {
+    "description": "Segment \"Garder ma liste\" du `SegmentedToggle` de `rest_sheet.dart::_PreparedSpellsChoice`."
+  },
+  "restSheetChangeSpellsOption": "Changer mes sorts",
+  "@restSheetChangeSpellsOption": {
+    "description": "Segment \"Changer mes sorts\" du `SegmentedToggle` de `rest_sheet.dart::_PreparedSpellsChoice`."
+  },
+  "restSheetChangeSpellsHelper": "Après le repos, la liste de vos sorts s'ouvre pour choisir ceux à préparer.",
+  "@restSheetChangeSpellsHelper": {
+    "description": "Texte d'aide affiché quand \"Changer mes sorts\" est sélectionné dans `rest_sheet.dart::_PreparedSpellsChoice`."
+  },
+  "restSheetKeepListHelper": "Vos sorts préparés restent les mêmes après le repos.",
+  "@restSheetKeepListHelper": {
+    "description": "Texte d'aide affiché quand \"Garder ma liste\" est sélectionné dans `rest_sheet.dart::_PreparedSpellsChoice`."
+  },
+  "restSheetLongHelpText": "Restaure les PV au maximum, réinitialise les emplacements de sorts et recharge toutes les aptitudes rechargeables (repos court comme repos long).",
+  "@restSheetLongHelpText": {
+    "description": "Texte d'aide du repos long dans `rest_sheet.dart::_RestHelpBlock`."
+  },
+  "restSheetAfterRestHpLabel": "PV après repos : {maxHp} / {maxHp}",
+  "@restSheetAfterRestHpLabel": {
+    "description": "Ligne \"PV après repos\" du repos long dans `rest_sheet.dart::_RestHelpBlock` — `maxHp` répété volontairement (le repos long restaure toujours au maximum).",
+    "placeholders": {
+      "maxHp": {
+        "type": "int"
+      }
+    }
+  },
+  "restSheetHitDiceAvailableLabel": "Dés de vie disponibles : {remaining}/{total} (d{hitDie})",
+  "@restSheetHitDiceAvailableLabel": {
+    "description": "Ligne d'état des dés de vie du repos court mono-classe dans `rest_sheet.dart::_ShortRestHitDiceBlock`.",
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "hitDie": {
+        "type": "int"
+      }
+    }
+  },
+  "restSheetDiceToSpendLabel": "Dés à dépenser",
+  "@restSheetDiceToSpendLabel": {
+    "description": "Libellé \"Dés à dépenser\" du stepper de `rest_sheet.dart` (mono-classe et multiclasse)."
+  },
+  "restSheetNoHitDiceAvailable": "Aucun dé de vie disponible. Le repos court reste gratuit — aucune action supplémentaire requise.",
+  "@restSheetNoHitDiceAvailable": {
+    "description": "Message affiché quand aucun dé de vie n'est disponible, dans `rest_sheet.dart::_ShortRestHitDiceBlock`."
+  },
+  "restSheetRollMethodOption": "Lancer les dés",
+  "@restSheetRollMethodOption": {
+    "description": "Segment \"Lancer les dés\" du `SegmentedToggle` de méthode de jet de `rest_sheet.dart`."
+  },
+  "restSheetAverageMethodOption": "Valeur moyenne",
+  "@restSheetAverageMethodOption": {
+    "description": "Segment \"Valeur moyenne\" du `SegmentedToggle` de méthode de jet de `rest_sheet.dart`."
+  },
+  "restSheetRerollLink": "Relancer les dés",
+  "@restSheetRerollLink": {
+    "description": "Lien \"Relancer les dés\" de `rest_sheet.dart`, affiché en méthode \"Lancer les dés\"."
+  },
+  "restSheetAverageFormulaHint": "(moitié du dé arrondie au supérieur, +1, par dé)",
+  "@restSheetAverageFormulaHint": {
+    "description": "Rappel de la formule de valeur moyenne, affiché en méthode \"Valeur moyenne\" dans `rest_sheet.dart`."
+  },
+  "restSheetAlreadyMaxHpMessage": "PV déjà au maximum : ce repos ne restaurera aucun PV supplémentaire.",
+  "@restSheetAlreadyMaxHpMessage": {
+    "description": "`InfoBanner` affichée quand les PV sont déjà au maximum lors d'un repos court, dans `rest_sheet.dart`."
+  },
+  "restSheetHpRestoredTitle": "PV restaurés",
+  "@restSheetHpRestoredTitle": {
+    "description": "Titre de la `GainRow` \"PV restaurés\" du repos court dans `rest_sheet.dart`."
+  },
+  "restSheetHpRestoredSubtitle": "{currentHp} → {newHp} (+{gain})",
+  "@restSheetHpRestoredSubtitle": {
+    "description": "Sous-titre de la `GainRow` \"PV restaurés\" du repos court dans `rest_sheet.dart`.",
+    "placeholders": {
+      "currentHp": {
+        "type": "int"
+      },
+      "newHp": {
+        "type": "int"
+      },
+      "gain": {
+        "type": "int"
+      }
+    }
+  },
+  "restSheetPoolRolledLabel": "{className} (d{hitDie})",
+  "@restSheetPoolRolledLabel": {
+    "description": "En-tête du bloc de jet par classe, repos court multiclassé, dans `rest_sheet.dart::_MulticlassShortRestHitDiceBlock`.",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      },
+      "hitDie": {
+        "type": "int"
+      }
+    }
+  },
+  "restSheetPoolStatusLabel": "{className} — dés de vie disponibles : {available}/{total} (d{hitDie})",
+  "@restSheetPoolStatusLabel": {
+    "description": "Ligne d'état des dés de vie d'UN pool, repos court multiclassé, dans `rest_sheet.dart::_PoolSpendRow`.",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      },
+      "available": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "hitDie": {
+        "type": "int"
+      }
+    }
+  },
+  "restSheetRecoveredAllocationTitle": "Dés de vie récupérés : {count} — répartissez-les entre vos classes",
+  "@restSheetRecoveredAllocationTitle": {
+    "description": "Titre de la répartition des dés de vie récupérés, repos long multiclassé, dans `rest_sheet.dart::_LongRestRecoveryChoice`.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "restSheetRecoveredPoolLabel": "{className} (d{hitDie}) — {spent} dépensé(s)",
+  "@restSheetRecoveredPoolLabel": {
+    "description": "Ligne d'UN pool de la répartition des dés de vie récupérés, dans `rest_sheet.dart::_LongRestRecoveryChoice`.",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      },
+      "hitDie": {
+        "type": "int"
+      },
+      "spent": {
+        "type": "int"
+      }
+    }
+  },
+  "restSheetRemainingToAllocateLabel": "Reste à répartir : {remaining}",
+  "@restSheetRemainingToAllocateLabel": {
+    "description": "Ligne \"Reste à répartir\" de `rest_sheet.dart::_LongRestRecoveryChoice`.",
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+
+  "diceRollSheetFormula": "d20 ({roll}) {modifier} = {total}",
+  "@diceRollSheetFormula": {
+    "description": "Formule du résultat de `dice_roll_sheet.dart` — `modifier` est déjà formaté avec son signe (`SignedModifierFormatter`).",
+    "placeholders": {
+      "roll": {
+        "type": "int"
+      },
+      "modifier": {
+        "type": "String"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "diceRollSheetCriticalSuccess": "RÉUSSITE CRITIQUE",
+  "@diceRollSheetCriticalSuccess": {
+    "description": "Mention affichée sur un 20 naturel dans `dice_roll_sheet.dart`, déjà en majuscules."
+  },
+  "diceRollSheetCriticalFailure": "ÉCHEC CRITIQUE",
+  "@diceRollSheetCriticalFailure": {
+    "description": "Mention affichée sur un 1 naturel dans `dice_roll_sheet.dart`, déjà en majuscules."
+  },
+  "diceRollSheetRerollButton": "Relancer",
+  "@diceRollSheetRerollButton": {
+    "description": "Bouton \"Relancer\" de `dice_roll_sheet.dart`."
+  },
+
+  "armorClassBonusSheetTitle": "Ajustement de CA",
+  "@armorClassBonusSheetTitle": {
+    "description": "Titre de `armor_class_bonus_sheet.dart` (tap sur la tuile \"CA\")."
+  },
+  "armorClassBonusSheetBonusOption": "Bonus",
+  "@armorClassBonusSheetBonusOption": {
+    "description": "Segment \"Bonus\" du `SegmentedToggle` de `armor_class_bonus_sheet.dart`."
+  },
+  "armorClassBonusSheetMalusOption": "Malus",
+  "@armorClassBonusSheetMalusOption": {
+    "description": "Segment \"Malus\" du `SegmentedToggle` de `armor_class_bonus_sheet.dart`."
+  },
+  "armorClassBonusSheetClearButton": "Effacer",
+  "@armorClassBonusSheetClearButton": {
+    "description": "Bouton secondaire \"Effacer\" de `armor_class_bonus_sheet.dart`."
+  },
+  "armorClassBonusSheetValidateButton": "Valider",
+  "@armorClassBonusSheetValidateButton": {
+    "description": "Bouton primaire \"Valider\" de `armor_class_bonus_sheet.dart`."
+  },
+
+  "levelUpScreenEyebrow": "MONTÉE DE NIVEAU",
+  "@levelUpScreenEyebrow": {
+    "description": "Eyebrow commun à tout le flux \"Montée de niveau\" (`LevelUpHeader.eyebrow`), déjà en majuscules."
+  },
+  "levelUpScreenLevelReachedEyebrow": "NIVEAU ATTEINT",
+  "@levelUpScreenLevelReachedEyebrow": {
+    "description": "Eyebrow de l'écran de blocage quand un ou plusieurs niveaux du chaînage ont déjà été validés cette session (`_buildBlocked`), déjà en majuscules."
+  },
+  "levelUpScreenLevelLabel": "NIVEAU {level}",
+  "@levelUpScreenLevelLabel": {
+    "description": "`LevelUpHeader.levelLabel`, déjà en majuscules.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenRemainingLevelsLabel": "{remaining, plural, =1{Encore 1 niveau à valider ensuite} other{Encore {remaining} niveaux à valider ensuite}}",
+  "@levelUpScreenRemainingLevelsLabel": {
+    "description": "`LevelUpHeader.remainingLevelsLabel`, affiché en cas de chaînage multi-niveaux.",
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenComingSoonSnackBar": "Bientôt disponible",
+  "@levelUpScreenComingSoonSnackBar": {
+    "description": "`SnackBar` du lien \"Voir l'historique des niveaux\" (aucun écran dédié n'existe encore)."
+  },
+  "levelUpScreenGenericApplyError": "Impossible d'enregistrer la montée de niveau. Réessayez.",
+  "@levelUpScreenGenericApplyError": {
+    "description": "`_applyError` générique du récapitulatif, erreur non `CharacterFailure` interceptée par `_continueFromSummary`."
+  },
+  "levelUpScreenGenericLoadError": "Impossible de charger les données de montée de niveau. Réessayez.",
+  "@levelUpScreenGenericLoadError": {
+    "description": "Message de repli de `_ErrorState` quand l'erreur de chargement n'est pas une `CharacterFailure`."
+  },
+  "levelUpScreenClassDecisionInstruction": "Choisissez comment ce niveau s'applique.",
+  "@levelUpScreenClassDecisionInstruction": {
+    "description": "Instruction de l'étape `classDecision` (multiclassage/choix de la classe continuée)."
+  },
+  "levelUpScreenContinueClassOptionTitle": "Continuer en {className}",
+  "@levelUpScreenContinueClassOptionTitle": {
+    "description": "Titre d'une tuile \"Continuer en {classe}\" de l'étape `classDecision`.",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "levelUpScreenContinueClassBlockedSubtitle": "Ce niveau nécessite un choix pas encore disponible dans l'app.",
+  "@levelUpScreenContinueClassBlockedSubtitle": {
+    "description": "Sous-titre de la tuile \"Continuer\" primaire quand ce niveau est bloqué — réutilisé aussi comme corps de l'écran de blocage (`_buildBlocked`), texte identique dans les deux cas."
+  },
+  "levelUpScreenContinueClassSubtitle": "Vous progressez dans votre voie actuelle (niveau {currentLevel} → {nextLevel}).",
+  "@levelUpScreenContinueClassSubtitle": {
+    "description": "Sous-titre par défaut (non bloqué) d'une tuile \"Continuer en {classe}\".",
+    "placeholders": {
+      "currentLevel": {
+        "type": "int"
+      },
+      "nextLevel": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenMulticlassOptionTitle": "Se multiclasser en {className}",
+  "@levelUpScreenMulticlassOptionTitle": {
+    "description": "Titre d'une tuile \"Se multiclasser en {classe}\" de l'étape `classDecision`.",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "levelUpScreenMulticlassOptionSubtitle": "Vous débutez au niveau 1 dans cette classe. Prérequis rempli : {abilities}.",
+  "@levelUpScreenMulticlassOptionSubtitle": {
+    "description": "Sous-titre d'une tuile \"Se multiclasser en {classe}\" — `abilities` est déjà la liste jointe des caractéristiques qui satisfont le prérequis.",
+    "placeholders": {
+      "abilities": {
+        "type": "String"
+      }
+    }
+  },
+  "levelUpScreenMulticlassInfoBanner": "Nouvelle classe : {className} (niveau 1)",
+  "@levelUpScreenMulticlassInfoBanner": {
+    "description": "`InfoBanner` de contexte affichée en tête de toute étape concernant la nouvelle classe tant que le multiclassage est en cours.",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "levelUpScreenUpcomingStepsTitle": "À venir dans les prochaines étapes",
+  "@levelUpScreenUpcomingStepsTitle": {
+    "description": "Titre du bloc teaser de l'annonce de niveau (`_buildAnnouncement`)."
+  },
+  "levelUpScreenUpcomingChoiceStep": "Un choix de {choiceLabel} vous attendra",
+  "@levelUpScreenUpcomingChoiceStep": {
+    "description": "Ligne teaser \"Choix à faire\" de l'annonce de niveau — `choiceLabel` est déjà résolu (voir `_choiceStepLabel`).",
+    "placeholders": {
+      "choiceLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "levelUpScreenUpcomingSpellsStep": "Vos emplacements de sorts vont évoluer",
+  "@levelUpScreenUpcomingSpellsStep": {
+    "description": "Ligne teaser \"Sorts\" de l'annonce de niveau."
+  },
+  "levelUpScreenUpcomingInvocationsStep": "De nouvelles invocations vous attendront",
+  "@levelUpScreenUpcomingInvocationsStep": {
+    "description": "Ligne teaser \"Invocations\" de l'annonce de niveau."
+  },
+  "levelUpScreenUpcomingElementalDisciplinesStep": "De nouvelles disciplines élémentaires vous attendront",
+  "@levelUpScreenUpcomingElementalDisciplinesStep": {
+    "description": "Ligne teaser \"Disciplines élémentaires\" de l'annonce de niveau."
+  },
+  "levelUpScreenUpcomingManeuversStep": "De nouvelles manœuvres vous attendront",
+  "@levelUpScreenUpcomingManeuversStep": {
+    "description": "Ligne teaser \"Manœuvres\" de l'annonce de niveau."
+  },
+  "levelUpScreenUpcomingArcaneShotsStep": "De nouveaux tirs arcaniques vous attendront",
+  "@levelUpScreenUpcomingArcaneShotsStep": {
+    "description": "Ligne teaser \"Tirs arcaniques\" de l'annonce de niveau."
+  },
+  "levelUpScreenUpcomingRunesStep": "De nouvelles runes vous attendront",
+  "@levelUpScreenUpcomingRunesStep": {
+    "description": "Ligne teaser \"Runes\" de l'annonce de niveau."
+  },
+  "levelUpScreenUpcomingInfusionsStep": "Vos infusions vont évoluer",
+  "@levelUpScreenUpcomingInfusionsStep": {
+    "description": "Ligne teaser \"Infusions\" de l'annonce de niveau."
+  },
+  "levelUpScreenContinueButton": "Continuer",
+  "@levelUpScreenContinueButton": {
+    "description": "Bouton primaire \"Continuer\" partagé par l'annonce, le récapitulatif et `_StepFooter` (étapes 1 à 3 et dédiées)."
+  },
+  "levelUpScreenBackButton": "Retour",
+  "@levelUpScreenBackButton": {
+    "description": "Bouton secondaire \"Retour\" de `_StepFooter`."
+  },
+  "levelUpScreenNewFeatureTitle": "Nouvelle aptitude",
+  "@levelUpScreenNewFeatureTitle": {
+    "description": "Titre de `GainRow` \"Nouvelle aptitude\" — annonce, étape \"Aptitudes\" et récapitulatif."
+  },
+  "levelUpScreenNewProficiencyTitle": "Nouvelle maîtrise",
+  "@levelUpScreenNewProficiencyTitle": {
+    "description": "Titre de `GainRow` \"Nouvelle maîtrise\" du bloc \"Maîtrises de multiclassage\" de l'étape \"Aptitudes\"."
+  },
+  "levelUpScreenHpStepLabel": "Étape 1 sur {totalSteps} · Points de vie",
+  "@levelUpScreenHpStepLabel": {
+    "description": "`stepLabel` de l'étape \"Points de vie\" (toujours étape 1).",
+    "placeholders": {
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenMaxHpTitle": "Points de vie maximum",
+  "@levelUpScreenMaxHpTitle": {
+    "description": "Titre \"Points de vie maximum\" — étape \"Points de vie\" et récapitulatif."
+  },
+  "levelUpScreenMaxHpDelta": "{oldHp} → {newHp} (+{gain})",
+  "@levelUpScreenMaxHpDelta": {
+    "description": "Formule de delta des PV maximum (étape \"Points de vie\" et récapitulatif).",
+    "placeholders": {
+      "oldHp": {
+        "type": "int"
+      },
+      "newHp": {
+        "type": "int"
+      },
+      "gain": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenHitDieMulticlassLabel": "Dé de vie de {className} (niveau 1) : d{hitDie}",
+  "@levelUpScreenHitDieMulticlassLabel": {
+    "description": "Libellé du dé de vie, branche multiclassage, étape \"Points de vie\".",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      },
+      "hitDie": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenHitDieClassLabel": "Dé de vie de la classe : d{hitDie}",
+  "@levelUpScreenHitDieClassLabel": {
+    "description": "Libellé du dé de vie, branche classe continuée, étape \"Points de vie\".",
+    "placeholders": {
+      "hitDie": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenRollHitDieOption": "Lancer le dé (d{hitDie})",
+  "@levelUpScreenRollHitDieOption": {
+    "description": "Segment \"Lancer le dé\" du `SegmentedToggle` de méthode PV de l'étape \"Points de vie\".",
+    "placeholders": {
+      "hitDie": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenAverageHitDieOption": "Valeur moyenne ({average})",
+  "@levelUpScreenAverageHitDieOption": {
+    "description": "Segment \"Valeur moyenne\" du `SegmentedToggle` de méthode PV de l'étape \"Points de vie\".",
+    "placeholders": {
+      "average": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenConstitutionModifierLabel": "{modifier} modificateur de Constitution",
+  "@levelUpScreenConstitutionModifierLabel": {
+    "description": "Ligne \"{modificateur} modificateur de Constitution\" de l'étape \"Points de vie\" — `modifier` est déjà formaté avec son signe (`SignedModifierFormatter`).",
+    "placeholders": {
+      "modifier": {
+        "type": "String"
+      }
+    }
+  },
+  "levelUpScreenRerollDieLink": "Relancer le dé",
+  "@levelUpScreenRerollDieLink": {
+    "description": "Lien \"Relancer le dé\" de l'étape \"Points de vie\" (méthode \"Lancer le dé\")."
+  },
+  "levelUpScreenAverageDieFormulaHint": "(moitié du dé arrondie au supérieur, +1)",
+  "@levelUpScreenAverageDieFormulaHint": {
+    "description": "Rappel de la formule de valeur moyenne de l'étape \"Points de vie\" (méthode \"Valeur moyenne\")."
+  },
+  "levelUpScreenLevelHistoryLink": "Voir l'historique des niveaux",
+  "@levelUpScreenLevelHistoryLink": {
+    "description": "Lien sous le bouton \"Continuer\" de l'étape \"Points de vie\" (aucun écran dédié n'existe encore, voir `_showLevelHistoryComingSoon`)."
+  },
+  "levelUpScreenAbilitiesStepLabel": "Étape 2 sur {totalSteps} · Aptitudes de classe",
+  "@levelUpScreenAbilitiesStepLabel": {
+    "description": "`stepLabel` de l'étape \"Aptitudes\" sans maîtrises de multiclassage.",
+    "placeholders": {
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenAbilitiesStepLabelWithProficiencies": "Étape 2 sur {totalSteps} · Aptitudes & maîtrises",
+  "@levelUpScreenAbilitiesStepLabelWithProficiencies": {
+    "description": "`stepLabel` de l'étape \"Aptitudes\" avec maîtrises de multiclassage.",
+    "placeholders": {
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenAutomaticFeaturesLabel": "Vous obtenez automatiquement :",
+  "@levelUpScreenAutomaticFeaturesLabel": {
+    "description": "Titre du bloc d'aptitudes automatiques de l'étape \"Aptitudes\"."
+  },
+  "levelUpScreenMulticlassProficienciesLabel": "Maîtrises de multiclassage :",
+  "@levelUpScreenMulticlassProficienciesLabel": {
+    "description": "Titre du bloc \"Maîtrises de multiclassage\" de l'étape \"Aptitudes\"."
+  },
+  "levelUpScreenChoiceStepLabel": "Étape 3 sur {totalSteps} · {choiceLabel}",
+  "@levelUpScreenChoiceStepLabel": {
+    "description": "`stepLabel` de l'étape \"Choix à faire\" — `choiceLabel` est déjà résolu (voir `_choiceStepLabel`).",
+    "placeholders": {
+      "totalSteps": {
+        "type": "int"
+      },
+      "choiceLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "levelUpScreenChoiceKindAbilityScoreImprovement": "Amélioration ou don",
+  "@levelUpScreenChoiceKindAbilityScoreImprovement": {
+    "description": "Libellé court de `LevelUpChoiceKind.abilityScoreImprovement` pour le `stepLabel`/récapitulatif."
+  },
+  "levelUpScreenChoiceKindSubclass": "Sous-classe",
+  "@levelUpScreenChoiceKindSubclass": {
+    "description": "Libellé court de `LevelUpChoiceKind.subclass`."
+  },
+  "levelUpScreenChoiceKindFightingStyle": "Style de combat",
+  "@levelUpScreenChoiceKindFightingStyle": {
+    "description": "Libellé court de `LevelUpChoiceKind.fightingStyle`."
+  },
+  "levelUpScreenChoiceKindFavoredEnemy": "Ennemi juré",
+  "@levelUpScreenChoiceKindFavoredEnemy": {
+    "description": "Libellé court de `LevelUpChoiceKind.favoredEnemy`."
+  },
+  "levelUpScreenChoiceKindPact": "Faveur de pacte",
+  "@levelUpScreenChoiceKindPact": {
+    "description": "Libellé court de `LevelUpChoiceKind.pact`."
+  },
+  "levelUpScreenChooseSubclassInstruction": "Choisissez une sous-classe.",
+  "@levelUpScreenChooseSubclassInstruction": {
+    "description": "Instruction de la variante liste \"Sous-classe\" de l'étape \"Choix à faire\"."
+  },
+  "levelUpScreenChooseFightingStyleInstruction": "Choisissez un style de combat.",
+  "@levelUpScreenChooseFightingStyleInstruction": {
+    "description": "Instruction de la variante liste \"Style de combat\" de l'étape \"Choix à faire\"."
+  },
+  "levelUpScreenChooseFavoredEnemyInstruction": "Choisissez un ennemi juré.",
+  "@levelUpScreenChooseFavoredEnemyInstruction": {
+    "description": "Instruction de la variante liste \"Ennemi juré\" de l'étape \"Choix à faire\"."
+  },
+  "levelUpScreenChoosePactInstruction": "Choisissez votre Faveur de pacte.",
+  "@levelUpScreenChoosePactInstruction": {
+    "description": "Instruction de la variante liste \"Faveur de pacte\" de l'étape \"Choix à faire\"."
+  },
+  "levelUpScreenChooseProgressionInstruction": "Choisissez comment progresser.",
+  "@levelUpScreenChooseProgressionInstruction": {
+    "description": "Instruction du sous-état ASI-ou-don de l'étape \"Choix à faire\"."
+  },
+  "levelUpScreenAllocateAbilityOption": "Répartir +2",
+  "@levelUpScreenAllocateAbilityOption": {
+    "description": "Segment \"Répartir +2\" du `SegmentedToggle` ASI-ou-don de l'étape \"Choix à faire\"."
+  },
+  "levelUpScreenChooseFeatOption": "Choisir un don",
+  "@levelUpScreenChooseFeatOption": {
+    "description": "Segment \"Choisir un don\" du `SegmentedToggle` ASI-ou-don de l'étape \"Choix à faire\"."
+  },
+  "levelUpScreenChooseFeatInstruction": "Choisissez un don.",
+  "@levelUpScreenChooseFeatInstruction": {
+    "description": "Instruction de la variante liste \"Don\" de l'étape \"Choix à faire\"."
+  },
+  "levelUpScreenFeatAbilityIncreaseLabel": "Caractéristique augmentée par {featName} (+1) :",
+  "@levelUpScreenFeatAbilityIncreaseLabel": {
+    "description": "Titre du sélecteur de caractéristique d'un demi-don à plusieurs choix, étape \"Choix à faire\".",
+    "placeholders": {
+      "featName": {
+        "type": "String"
+      }
+    }
+  },
+  "levelUpScreenAllocateBudgetInstruction": "Répartissez {budget} points entre vos caractéristiques.",
+  "@levelUpScreenAllocateBudgetInstruction": {
+    "description": "Instruction de la variante allocation ASI de l'étape \"Choix à faire\".",
+    "placeholders": {
+      "budget": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenPointsRemainingLabel": "Points restants : {remaining}/{budget}",
+  "@levelUpScreenPointsRemainingLabel": {
+    "description": "Ligne \"Points restants\" de la variante allocation ASI de l'étape \"Choix à faire\".",
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "budget": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenAllPointsAllocatedLabel": "Tous les points sont répartis.",
+  "@levelUpScreenAllPointsAllocatedLabel": {
+    "description": "Ligne affichée une fois le budget ASI entièrement réparti."
+  },
+  "levelUpScreenAbilityScoreDelta": "{oldScore} → {newScore} (+{alloc})",
+  "@levelUpScreenAbilityScoreDelta": {
+    "description": "Formule de delta de caractéristique de `_AllocationRow` (variante allocation ASI).",
+    "placeholders": {
+      "oldScore": {
+        "type": "int"
+      },
+      "newScore": {
+        "type": "int"
+      },
+      "alloc": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenSpellSlotsStepLabel": "Étape {stepNumber} sur {totalSteps} · Emplacements de sorts",
+  "@levelUpScreenSpellSlotsStepLabel": {
+    "description": "`stepLabel` de l'étape \"Sorts\" quand seul un recalcul automatique d'emplacements est proposé (pas de sélection de sorts connus).",
+    "placeholders": {
+      "stepNumber": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenSpellSlotsRecalculatedLabel": "Vos emplacements de sorts sont recalculés :",
+  "@levelUpScreenSpellSlotsRecalculatedLabel": {
+    "description": "Titre du bloc de recalcul des emplacements de sorts de l'étape \"Sorts\" (les deux variantes)."
+  },
+  "levelUpScreenNoSpellSlotsAtThisLevel": "Aucun emplacement de sorts à ce niveau.",
+  "@levelUpScreenNoSpellSlotsAtThisLevel": {
+    "description": "Message affiché quand aucun changement d'emplacement de sorts n'est calculé pour ce niveau, étape \"Sorts\" (variante sélection de sorts connus)."
+  },
+  "levelUpScreenSpellsStepLabel": "Étape {stepNumber} sur {totalSteps} · Sorts",
+  "@levelUpScreenSpellsStepLabel": {
+    "description": "`stepLabel` de l'étape \"Sorts\" quand une sélection de nouveaux sorts/cantrips connus est proposée.",
+    "placeholders": {
+      "stepNumber": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenCantripTab": "Mineurs",
+  "@levelUpScreenCantripTab": {
+    "description": "Onglet \"Mineurs\" (sorts mineurs) du sélecteur de l'étape \"Sorts\"."
+  },
+  "levelUpScreenSpellsTab": "Sorts",
+  "@levelUpScreenSpellsTab": {
+    "description": "Onglet \"Sorts\" (niveau 1+) du sélecteur de l'étape \"Sorts\"."
+  },
+  "levelUpScreenPactTab": "Grimoire",
+  "@levelUpScreenPactTab": {
+    "description": "Onglet \"Grimoire\" (Livre des ombres, Pacte du grimoire) du sélecteur de l'étape \"Sorts\"."
+  },
+  "levelUpScreenKnownCantripsTitle": "SORTS MINEURS CONNUS",
+  "@levelUpScreenKnownCantripsTitle": {
+    "description": "Titre de section de l'onglet \"Mineurs\" de l'étape \"Sorts\", déjà en majuscules."
+  },
+  "levelUpScreenShadowBookTitle": "LIVRE DES OMBRES",
+  "@levelUpScreenShadowBookTitle": {
+    "description": "Titre de section de l'onglet \"Grimoire\" de l'étape \"Sorts\", déjà en majuscules."
+  },
+  "levelUpScreenKnownSpellsTitle": "NOUVEAUX SORTS CONNUS",
+  "@levelUpScreenKnownSpellsTitle": {
+    "description": "Titre de section de l'onglet \"Sorts\" de l'étape \"Sorts\", déjà en majuscules."
+  },
+  "levelUpScreenQuotaBadge": "{selected} / {quota}",
+  "@levelUpScreenQuotaBadge": {
+    "description": "Badge \"X / Y\" de `_QuotaBadge`, partagé par toutes les étapes à quota (Sorts, Invocations, Disciplines élémentaires, Manœuvres, Tirs arcaniques, Runes, Infusions, Métamagie, Expertise).",
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "quota": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenSpellMetaLineWithLevel": "{metaLine} (niveau {level})",
+  "@levelUpScreenSpellMetaLineWithLevel": {
+    "description": "Sous-titre d'une tuile de sort candidat de la section \"NOUVEAUX SORTS CONNUS\" — `metaLine` est déjà résolu (`SpellOption.metaLine`).",
+    "placeholders": {
+      "metaLine": {
+        "type": "String"
+      },
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenPatronSpellSubtitle": "{baseSubtitle} · Patron",
+  "@levelUpScreenPatronSpellSubtitle": {
+    "description": "Sous-titre d'un sort de la liste étendue du patron (Occultiste) — `baseSubtitle` est déjà résolu.",
+    "placeholders": {
+      "baseSubtitle": {
+        "type": "String"
+      }
+    }
+  },
+  "levelUpScreenInvocationsStepLabel": "Étape {stepNumber} sur {totalSteps} · Invocations",
+  "@levelUpScreenInvocationsStepLabel": {
+    "description": "`stepLabel` de l'étape \"Invocations\" (Occultiste).",
+    "placeholders": {
+      "stepNumber": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenKnownInvocationsTitle": "INVOCATIONS CONNUES",
+  "@levelUpScreenKnownInvocationsTitle": {
+    "description": "Titre de section de l'étape \"Invocations\", déjà en majuscules."
+  },
+  "levelUpScreenNoMoreInvocationsMessage": "Vous connaissez déjà toutes les invocations occultistes disponibles.",
+  "@levelUpScreenNoMoreInvocationsMessage": {
+    "description": "Message d'état vide de l'étape \"Invocations\" (cas attendu, pas seulement défensif)."
+  },
+  "levelUpScreenElementalDisciplinesStepLabel": "Étape {stepNumber} sur {totalSteps} · Disciplines élémentaires",
+  "@levelUpScreenElementalDisciplinesStepLabel": {
+    "description": "`stepLabel` de l'étape \"Disciplines élémentaires\" (Moine, Voie des quatre éléments).",
+    "placeholders": {
+      "stepNumber": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenKnownElementalDisciplinesTitle": "DISCIPLINES ÉLÉMENTAIRES CONNUES",
+  "@levelUpScreenKnownElementalDisciplinesTitle": {
+    "description": "Titre de section de l'étape \"Disciplines élémentaires\", déjà en majuscules."
+  },
+  "levelUpScreenNoMoreElementalDisciplinesMessage": "Vous connaissez déjà toutes les disciplines élémentaires disponibles à ce niveau.",
+  "@levelUpScreenNoMoreElementalDisciplinesMessage": {
+    "description": "Message d'état vide de l'étape \"Disciplines élémentaires\"."
+  },
+  "levelUpScreenManeuversStepLabel": "Étape {stepNumber} sur {totalSteps} · Manœuvres",
+  "@levelUpScreenManeuversStepLabel": {
+    "description": "`stepLabel` de l'étape \"Manœuvres\" (Guerrier, Maître de guerre).",
+    "placeholders": {
+      "stepNumber": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenKnownManeuversTitle": "MANŒUVRES CONNUES",
+  "@levelUpScreenKnownManeuversTitle": {
+    "description": "Titre de section de l'étape \"Manœuvres\", déjà en majuscules."
+  },
+  "levelUpScreenNoMoreManeuversMessage": "Vous connaissez déjà toutes les manœuvres disponibles.",
+  "@levelUpScreenNoMoreManeuversMessage": {
+    "description": "Message d'état vide de l'étape \"Manœuvres\"."
+  },
+  "levelUpScreenArcaneShotsStepLabel": "Étape {stepNumber} sur {totalSteps} · Tirs arcaniques",
+  "@levelUpScreenArcaneShotsStepLabel": {
+    "description": "`stepLabel` de l'étape \"Tirs arcaniques\" (Guerrier, Archer arcanique).",
+    "placeholders": {
+      "stepNumber": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenKnownArcaneShotsTitle": "TIRS ARCANIQUES CONNUS",
+  "@levelUpScreenKnownArcaneShotsTitle": {
+    "description": "Titre de section de l'étape \"Tirs arcaniques\", déjà en majuscules."
+  },
+  "levelUpScreenNoMoreArcaneShotsMessage": "Vous connaissez déjà tous les tirs arcaniques disponibles.",
+  "@levelUpScreenNoMoreArcaneShotsMessage": {
+    "description": "Message d'état vide de l'étape \"Tirs arcaniques\"."
+  },
+  "levelUpScreenRunesStepLabel": "Étape {stepNumber} sur {totalSteps} · Runes",
+  "@levelUpScreenRunesStepLabel": {
+    "description": "`stepLabel` de l'étape \"Runes\" (Guerrier, Chevalier runique).",
+    "placeholders": {
+      "stepNumber": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenKnownRunesTitle": "RUNES CONNUES",
+  "@levelUpScreenKnownRunesTitle": {
+    "description": "Titre de section de l'étape \"Runes\", déjà en majuscules."
+  },
+  "levelUpScreenNoMoreRunesMessage": "Vous connaissez déjà toutes les runes disponibles.",
+  "@levelUpScreenNoMoreRunesMessage": {
+    "description": "Message d'état vide de l'étape \"Runes\"."
+  },
+  "levelUpScreenInfusionsStepLabel": "Étape {stepNumber} sur {totalSteps} · Infusions",
+  "@levelUpScreenInfusionsStepLabel": {
+    "description": "`stepLabel` de l'étape \"Infusions\" (Artificier).",
+    "placeholders": {
+      "stepNumber": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenNewInfusionsTitle": "NOUVELLES INFUSIONS",
+  "@levelUpScreenNewInfusionsTitle": {
+    "description": "Titre de section \"Nouvelles infusions\" de l'étape \"Infusions\", déjà en majuscules."
+  },
+  "levelUpScreenNoMoreInfusionsMessage": "Vous connaissez déjà toutes les infusions disponibles.",
+  "@levelUpScreenNoMoreInfusionsMessage": {
+    "description": "Message d'état vide de la section \"Nouvelles infusions\" de l'étape \"Infusions\"."
+  },
+  "levelUpScreenReplaceInfusionOptionalTitle": "REMPLACER UNE INFUSION (OPTIONNEL)",
+  "@levelUpScreenReplaceInfusionOptionalTitle": {
+    "description": "Titre de section \"Remplacer une infusion\" de l'étape \"Infusions\", déjà en majuscules."
+  },
+  "levelUpScreenReplacedByLabel": "REMPLACÉE PAR",
+  "@levelUpScreenReplacedByLabel": {
+    "description": "Titre \"REMPLACÉE PAR\" de la sous-section échange, étapes \"Infusions\" et \"Métamagie\", déjà en majuscules."
+  },
+  "levelUpScreenMetamagicStepLabel": "Étape {stepNumber} sur {totalSteps} · Métamagie",
+  "@levelUpScreenMetamagicStepLabel": {
+    "description": "`stepLabel` de l'étape \"Métamagie\" (Ensorceleur).",
+    "placeholders": {
+      "stepNumber": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenNewMetamagicOptionsTitle": "NOUVELLES OPTIONS DE MÉTAMAGIE",
+  "@levelUpScreenNewMetamagicOptionsTitle": {
+    "description": "Titre de section \"Nouvelles options\" de l'étape \"Métamagie\", déjà en majuscules."
+  },
+  "levelUpScreenNoMoreMetamagicMessage": "Vous connaissez déjà toutes les options de Métamagie disponibles.",
+  "@levelUpScreenNoMoreMetamagicMessage": {
+    "description": "Message d'état vide de la section \"Nouvelles options\" de l'étape \"Métamagie\"."
+  },
+  "levelUpScreenReplaceMetamagicOptionalTitle": "REMPLACER UNE OPTION (OPTIONNEL)",
+  "@levelUpScreenReplaceMetamagicOptionalTitle": {
+    "description": "Titre de section \"Remplacer une option\" de l'étape \"Métamagie\", déjà en majuscules."
+  },
+  "levelUpScreenExpertiseStepLabel": "Étape {stepNumber} sur {totalSteps} · Expertise",
+  "@levelUpScreenExpertiseStepLabel": {
+    "description": "`stepLabel` de l'étape \"Expertise\" (Barde/Roublard).",
+    "placeholders": {
+      "stepNumber": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenExpertiseSkillsTitle": "COMPÉTENCES EN EXPERTISE",
+  "@levelUpScreenExpertiseSkillsTitle": {
+    "description": "Titre de section de l'étape \"Expertise\", déjà en majuscules."
+  },
+  "levelUpScreenThievesToolsLabel": "Outils de voleur",
+  "@levelUpScreenThievesToolsLabel": {
+    "description": "Libellé \"Outils de voleur\" — tuile de substitution de l'étape \"Expertise\" et récapitulatif (Roublard, édition 2014)."
+  },
+  "levelUpScreenThievesToolsSubstitutionHint": "Substitue une des places d'Expertise à la maîtrise des outils de voleur.",
+  "@levelUpScreenThievesToolsSubstitutionHint": {
+    "description": "Sous-titre de la tuile de substitution \"Outils de voleur\" de l'étape \"Expertise\"."
+  },
+  "levelUpScreenNoExpertiseCandidatesMessage": "Aucune compétence déjà maîtrisée à faire passer en Expertise.",
+  "@levelUpScreenNoExpertiseCandidatesMessage": {
+    "description": "Message d'état vide de l'étape \"Expertise\" (aucune compétence candidate)."
+  },
+  "levelUpScreenDraconicAncestryStepLabel": "Étape {stepNumber} sur {totalSteps} · Ascendance draconique",
+  "@levelUpScreenDraconicAncestryStepLabel": {
+    "description": "`stepLabel` de l'étape \"Ascendance draconique\" (Ensorceleur, Lignage draconique, niveau 1 de sous-classe).",
+    "placeholders": {
+      "stepNumber": {
+        "type": "int"
+      },
+      "totalSteps": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenDamageTypeTitle": "TYPE DE DÉGÂTS",
+  "@levelUpScreenDamageTypeTitle": {
+    "description": "Titre de section de l'étape \"Ascendance draconique\", déjà en majuscules."
+  },
+  "levelUpScreenNewSpellSlotsTitle": "Nouveaux emplacements de sorts",
+  "@levelUpScreenNewSpellSlotsTitle": {
+    "description": "Titre de `GainRow` \"Nouveaux emplacements de sorts\" (déblocage net d'un palier) — étape \"Sorts\" et récapitulatif."
+  },
+  "levelUpScreenReinforcedSpellSlotsTitle": "Emplacements de sorts renforcés",
+  "@levelUpScreenReinforcedSpellSlotsTitle": {
+    "description": "Titre de `GainRow` \"Emplacements de sorts renforcés\" (renfort d'un palier déjà actif) — étape \"Sorts\" et récapitulatif."
+  },
+  "levelUpScreenSpellSlotUnlockedSubtitle": "Niveau {spellLevel} débloqué",
+  "@levelUpScreenSpellSlotUnlockedSubtitle": {
+    "description": "Sous-titre de `GainRow` d'un palier d'emplacements nouvellement débloqué.",
+    "placeholders": {
+      "spellLevel": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenSpellSlotReinforcedSubtitle": "Niveau {spellLevel} : {oldTotal} → {newTotal} (+{delta})",
+  "@levelUpScreenSpellSlotReinforcedSubtitle": {
+    "description": "Sous-titre de `GainRow` d'un palier d'emplacements renforcé.",
+    "placeholders": {
+      "spellLevel": {
+        "type": "int"
+      },
+      "oldTotal": {
+        "type": "int"
+      },
+      "newTotal": {
+        "type": "int"
+      },
+      "delta": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenPactMagicUnlockedTitle": "Magie de pacte débloquée",
+  "@levelUpScreenPactMagicUnlockedTitle": {
+    "description": "Titre de `GainRow` de magie de pacte (Occultiste), premier dip."
+  },
+  "levelUpScreenPactMagicUnlockedSubtitle": "Niveau {slotLevel} · {charges} charge(s)",
+  "@levelUpScreenPactMagicUnlockedSubtitle": {
+    "description": "Sous-titre de `GainRow` de magie de pacte, premier dip.",
+    "placeholders": {
+      "slotLevel": {
+        "type": "int"
+      },
+      "charges": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenPactChargesReinforcedTitle": "Charges de pacte renforcées",
+  "@levelUpScreenPactChargesReinforcedTitle": {
+    "description": "Titre de `GainRow` de magie de pacte, charges renforcées (niveau de charge inchangé, ou les deux changent)."
+  },
+  "levelUpScreenPactChargesReinforcedSubtitle": "{oldCharges} → {newCharges} charges (niveau {slotLevel})",
+  "@levelUpScreenPactChargesReinforcedSubtitle": {
+    "description": "Sous-titre de `GainRow` de magie de pacte, charges renforcées à niveau de charge inchangé.",
+    "placeholders": {
+      "oldCharges": {
+        "type": "int"
+      },
+      "newCharges": {
+        "type": "int"
+      },
+      "slotLevel": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenPactChargesImprovedTitle": "Charges de pacte améliorées",
+  "@levelUpScreenPactChargesImprovedTitle": {
+    "description": "Titre de `GainRow` de magie de pacte, niveau de charge amélioré à charges inchangées."
+  },
+  "levelUpScreenPactChargesImprovedSubtitle": "Niveau {oldSlotLevel} → {newSlotLevel} ({newCharges} charges)",
+  "@levelUpScreenPactChargesImprovedSubtitle": {
+    "description": "Sous-titre de `GainRow` de magie de pacte, niveau de charge amélioré à charges inchangées.",
+    "placeholders": {
+      "oldSlotLevel": {
+        "type": "int"
+      },
+      "newSlotLevel": {
+        "type": "int"
+      },
+      "newCharges": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenPactChargesBothSubtitle": "{oldCharges} → {newCharges} charges, niveau {oldSlotLevel} → {newSlotLevel}",
+  "@levelUpScreenPactChargesBothSubtitle": {
+    "description": "Sous-titre de `GainRow` de magie de pacte, charges ET niveau de charge changent à la fois.",
+    "placeholders": {
+      "oldCharges": {
+        "type": "int"
+      },
+      "newCharges": {
+        "type": "int"
+      },
+      "oldSlotLevel": {
+        "type": "int"
+      },
+      "newSlotLevel": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenFeatSummaryTitle": "Don",
+  "@levelUpScreenFeatSummaryTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, étape \"Choix à faire\" en mode don (ASI)."
+  },
+  "levelUpScreenFeatAbilityBonusSubtitle": "{featName} ({abilityLabel} +1)",
+  "@levelUpScreenFeatAbilityBonusSubtitle": {
+    "description": "Sous-titre de `GainRow` du récapitulatif, don avec augmentation de caractéristique choisie.",
+    "placeholders": {
+      "featName": {
+        "type": "String"
+      },
+      "abilityLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "levelUpScreenAbilityAllocationSummaryItem": "{label} +{amount}",
+  "@levelUpScreenAbilityAllocationSummaryItem": {
+    "description": "Un élément de la liste jointe du sous-titre de `GainRow` du récapitulatif, mode allocation ASI.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenAbilityScoreImprovementTitle": "Amélioration de caractéristique",
+  "@levelUpScreenAbilityScoreImprovementTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, étape \"Choix à faire\" en mode allocation ASI."
+  },
+  "levelUpScreenNewCantripsTitle": "Nouveaux sorts mineurs",
+  "@levelUpScreenNewCantripsTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, bloc \"Sorts appris\" (sorts mineurs)."
+  },
+  "levelUpScreenNewSpellsLearnedTitle": "Nouveaux sorts appris",
+  "@levelUpScreenNewSpellsLearnedTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, bloc \"Sorts appris\" (niveau 1+)."
+  },
+  "levelUpScreenShadowBookGainTitle": "Livre des ombres",
+  "@levelUpScreenShadowBookGainTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, bloc \"Sorts appris\" (Livre des ombres)."
+  },
+  "levelUpScreenFamiliarAddedTitle": "Appel de familier ajouté",
+  "@levelUpScreenFamiliarAddedTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, ajout du sort \"Appel de familier\" (Pacte de la chaîne)."
+  },
+  "levelUpScreenChainPactSubtitle": "Pacte de la chaîne",
+  "@levelUpScreenChainPactSubtitle": {
+    "description": "Sous-titre de `GainRow` \"Appel de familier ajouté\"."
+  },
+  "levelUpScreenRacialInnateSpellTitle": "Sort inné racial",
+  "@levelUpScreenRacialInnateSpellTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, un sort inné racial nouvellement accordé."
+  },
+  "levelUpScreenNewInvocationsSummaryTitle": "{count, plural, =1{Nouvelle invocation occultiste} other{Nouvelles invocations occultistes}}",
+  "@levelUpScreenNewInvocationsSummaryTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, bloc \"Invocation(s)\".",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenNewElementalDisciplinesSummaryTitle": "{count, plural, =1{Nouvelle discipline élémentaire} other{Nouvelles disciplines élémentaires}}",
+  "@levelUpScreenNewElementalDisciplinesSummaryTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, bloc \"Discipline(s) élémentaire(s)\".",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenNewManeuversSummaryTitle": "{count, plural, =1{Nouvelle manœuvre} other{Nouvelles manœuvres}}",
+  "@levelUpScreenNewManeuversSummaryTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, bloc \"Manœuvre(s)\".",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenNewArcaneShotsSummaryTitle": "{count, plural, =1{Nouveau tir arcanique} other{Nouveaux tirs arcaniques}}",
+  "@levelUpScreenNewArcaneShotsSummaryTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, bloc \"Tir(s) arcanique(s)\".",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenNewRunesSummaryTitle": "{count, plural, =1{Nouvelle rune} other{Nouvelles runes}}",
+  "@levelUpScreenNewRunesSummaryTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, bloc \"Rune(s)\".",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenNewInfusionsSummaryTitle": "{count, plural, =1{Nouvelle infusion} other{Nouvelles infusions}}",
+  "@levelUpScreenNewInfusionsSummaryTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, bloc \"Infusion(s)\".",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenInfusionSwapTitle": "Infusion remplacée",
+  "@levelUpScreenInfusionSwapTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, échange d'infusion."
+  },
+  "levelUpScreenSwapSubtitle": "{removedName} → {addedName}",
+  "@levelUpScreenSwapSubtitle": {
+    "description": "Sous-titre de `GainRow` du récapitulatif, échange d'infusion ou de Métamagie.",
+    "placeholders": {
+      "removedName": {
+        "type": "String"
+      },
+      "addedName": {
+        "type": "String"
+      }
+    }
+  },
+  "levelUpScreenNewMetamagicOptionsSummaryTitle": "{count, plural, =1{Nouvelle option de Métamagie} other{Nouvelles options de Métamagie}}",
+  "@levelUpScreenNewMetamagicOptionsSummaryTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, bloc \"Métamagie\".",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenMetamagicSwapTitle": "Métamagie remplacée",
+  "@levelUpScreenMetamagicSwapTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, échange de Métamagie."
+  },
+  "levelUpScreenExpertiseSummaryTitle": "{count, plural, =1{Expertise} other{Expertises}}",
+  "@levelUpScreenExpertiseSummaryTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, bloc \"Expertise\".",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenDraconicAncestryTitle": "Ascendance draconique",
+  "@levelUpScreenDraconicAncestryTitle": {
+    "description": "Titre de `GainRow` du récapitulatif, bloc \"Ascendance draconique\"."
+  },
+  "levelUpScreenNoNewFeaturesMessage": "Aucune nouvelle aptitude de classe à ce niveau.",
+  "@levelUpScreenNoNewFeaturesMessage": {
+    "description": "Message de `_EmptyFeaturesState` (état vide de l'étape \"Aptitudes\")."
+  },
+  "levelUpScreenNoOptionAvailableMessage": "Aucune option disponible pour ce choix.",
+  "@levelUpScreenNoOptionAvailableMessage": {
+    "description": "Message générique de repli de `_EmptyChoiceState` (étape \"Choix à faire\", cas défensif)."
+  },
+  "levelUpScreenBlockedLevelTitle": "Niveau {level} : choix requis",
+  "@levelUpScreenBlockedLevelTitle": {
+    "description": "Titre de l'écran de blocage (`_buildBlocked`) — `level` est le niveau DANS la classe concernée, jamais le niveau total.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "levelUpScreenBackToSheetButton": "Retour à la fiche",
+  "@levelUpScreenBackToSheetButton": {
+    "description": "Bouton primaire de l'écran de blocage (`_buildBlocked`)."
+  },
+  "levelUpScreenRetryButton": "Réessayer",
+  "@levelUpScreenRetryButton": {
+    "description": "Bouton secondaire \"Réessayer\" de `_ErrorState`."
   }
 }

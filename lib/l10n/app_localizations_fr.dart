@@ -1509,4 +1509,880 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get connectionErrorStateContinueOfflineTooltip =>
       'Bientôt disponible : la lecture hors ligne de tes personnages arrive avec une prochaine mise à jour. Pour l\'instant, une connexion est nécessaire pour charger tes personnages.';
+
+  @override
+  String get hpAdjustmentSheetTitle => 'Ajuster les PV';
+
+  @override
+  String get hpAdjustmentSheetDamageOption => 'Dégâts';
+
+  @override
+  String get hpAdjustmentSheetHealOption => 'Soins';
+
+  @override
+  String get hpAdjustmentSheetTemporaryOption => 'PV temp.';
+
+  @override
+  String get hpAdjustmentSheetCancelButton => 'Annuler';
+
+  @override
+  String get hpAdjustmentSheetApplyButton => 'Appliquer';
+
+  @override
+  String get addXpSheetTitle => 'Ajouter de l\'XP';
+
+  @override
+  String addXpSheetCurrentXpLabel(int currentXp, int threshold) {
+    return 'XP actuelle : $currentXp / $threshold';
+  }
+
+  @override
+  String get addXpSheetGainedLabel => 'XP GAGNÉE';
+
+  @override
+  String get addXpSheetAmountHint => 'Ex. 250';
+
+  @override
+  String get addXpSheetAmountHelper =>
+      'Montant remis par le MJ en fin de séance, par exemple.';
+
+  @override
+  String addXpSheetNewTotalLabel(int total) {
+    return 'Nouveau total : $total XP';
+  }
+
+  @override
+  String get addXpSheetCancelButton => 'Annuler';
+
+  @override
+  String get addXpSheetApplyButton => 'Ajouter';
+
+  @override
+  String get addXpSheetManualLevelUpLink => 'Monter de niveau manuellement';
+
+  @override
+  String get addRewardSheetTitle => 'AJOUTER UNE RÉCOMPENSE';
+
+  @override
+  String get addRewardSheetCurrencyLabel => 'MONNAIE';
+
+  @override
+  String get addRewardSheetItemsLabel => 'OBJETS';
+
+  @override
+  String get addRewardSheetAddItemLabel => 'Ajouter un objet';
+
+  @override
+  String get addRewardSheetCancelButton => 'Annuler';
+
+  @override
+  String get addRewardSheetApplyButton => 'Ajouter la récompense';
+
+  @override
+  String addRewardSheetItemQuantityLabel(String name, int quantity) {
+    return '$name × $quantity';
+  }
+
+  @override
+  String get restSheetTitle => 'Repos';
+
+  @override
+  String restSheetCurrentHpLabel(int currentHp, int maxHp) {
+    return 'PV actuels : $currentHp / $maxHp';
+  }
+
+  @override
+  String get restSheetShortOption => 'Repos court';
+
+  @override
+  String get restSheetLongOption => 'Repos long';
+
+  @override
+  String get restSheetCancelButton => 'Annuler';
+
+  @override
+  String get restSheetApplyButton => 'Appliquer';
+
+  @override
+  String get restSheetPreparedSpellsTitle => 'SORTS PRÉPARÉS';
+
+  @override
+  String get restSheetKeepListOption => 'Garder ma liste';
+
+  @override
+  String get restSheetChangeSpellsOption => 'Changer mes sorts';
+
+  @override
+  String get restSheetChangeSpellsHelper =>
+      'Après le repos, la liste de vos sorts s\'ouvre pour choisir ceux à préparer.';
+
+  @override
+  String get restSheetKeepListHelper =>
+      'Vos sorts préparés restent les mêmes après le repos.';
+
+  @override
+  String get restSheetLongHelpText =>
+      'Restaure les PV au maximum, réinitialise les emplacements de sorts et recharge toutes les aptitudes rechargeables (repos court comme repos long).';
+
+  @override
+  String restSheetAfterRestHpLabel(int maxHp) {
+    return 'PV après repos : $maxHp / $maxHp';
+  }
+
+  @override
+  String restSheetHitDiceAvailableLabel(int remaining, int total, int hitDie) {
+    return 'Dés de vie disponibles : $remaining/$total (d$hitDie)';
+  }
+
+  @override
+  String get restSheetDiceToSpendLabel => 'Dés à dépenser';
+
+  @override
+  String get restSheetNoHitDiceAvailable =>
+      'Aucun dé de vie disponible. Le repos court reste gratuit — aucune action supplémentaire requise.';
+
+  @override
+  String get restSheetRollMethodOption => 'Lancer les dés';
+
+  @override
+  String get restSheetAverageMethodOption => 'Valeur moyenne';
+
+  @override
+  String get restSheetRerollLink => 'Relancer les dés';
+
+  @override
+  String get restSheetAverageFormulaHint =>
+      '(moitié du dé arrondie au supérieur, +1, par dé)';
+
+  @override
+  String get restSheetAlreadyMaxHpMessage =>
+      'PV déjà au maximum : ce repos ne restaurera aucun PV supplémentaire.';
+
+  @override
+  String get restSheetHpRestoredTitle => 'PV restaurés';
+
+  @override
+  String restSheetHpRestoredSubtitle(int currentHp, int newHp, int gain) {
+    return '$currentHp → $newHp (+$gain)';
+  }
+
+  @override
+  String restSheetPoolRolledLabel(String className, int hitDie) {
+    return '$className (d$hitDie)';
+  }
+
+  @override
+  String restSheetPoolStatusLabel(
+    String className,
+    int available,
+    int total,
+    int hitDie,
+  ) {
+    return '$className — dés de vie disponibles : $available/$total (d$hitDie)';
+  }
+
+  @override
+  String restSheetRecoveredAllocationTitle(int count) {
+    return 'Dés de vie récupérés : $count — répartissez-les entre vos classes';
+  }
+
+  @override
+  String restSheetRecoveredPoolLabel(String className, int hitDie, int spent) {
+    return '$className (d$hitDie) — $spent dépensé(s)';
+  }
+
+  @override
+  String restSheetRemainingToAllocateLabel(int remaining) {
+    return 'Reste à répartir : $remaining';
+  }
+
+  @override
+  String diceRollSheetFormula(int roll, String modifier, int total) {
+    return 'd20 ($roll) $modifier = $total';
+  }
+
+  @override
+  String get diceRollSheetCriticalSuccess => 'RÉUSSITE CRITIQUE';
+
+  @override
+  String get diceRollSheetCriticalFailure => 'ÉCHEC CRITIQUE';
+
+  @override
+  String get diceRollSheetRerollButton => 'Relancer';
+
+  @override
+  String get armorClassBonusSheetTitle => 'Ajustement de CA';
+
+  @override
+  String get armorClassBonusSheetBonusOption => 'Bonus';
+
+  @override
+  String get armorClassBonusSheetMalusOption => 'Malus';
+
+  @override
+  String get armorClassBonusSheetClearButton => 'Effacer';
+
+  @override
+  String get armorClassBonusSheetValidateButton => 'Valider';
+
+  @override
+  String get levelUpScreenEyebrow => 'MONTÉE DE NIVEAU';
+
+  @override
+  String get levelUpScreenLevelReachedEyebrow => 'NIVEAU ATTEINT';
+
+  @override
+  String levelUpScreenLevelLabel(int level) {
+    return 'NIVEAU $level';
+  }
+
+  @override
+  String levelUpScreenRemainingLevelsLabel(int remaining) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: 'Encore $remaining niveaux à valider ensuite',
+      one: 'Encore 1 niveau à valider ensuite',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get levelUpScreenComingSoonSnackBar => 'Bientôt disponible';
+
+  @override
+  String get levelUpScreenGenericApplyError =>
+      'Impossible d\'enregistrer la montée de niveau. Réessayez.';
+
+  @override
+  String get levelUpScreenGenericLoadError =>
+      'Impossible de charger les données de montée de niveau. Réessayez.';
+
+  @override
+  String get levelUpScreenClassDecisionInstruction =>
+      'Choisissez comment ce niveau s\'applique.';
+
+  @override
+  String levelUpScreenContinueClassOptionTitle(String className) {
+    return 'Continuer en $className';
+  }
+
+  @override
+  String get levelUpScreenContinueClassBlockedSubtitle =>
+      'Ce niveau nécessite un choix pas encore disponible dans l\'app.';
+
+  @override
+  String levelUpScreenContinueClassSubtitle(int currentLevel, int nextLevel) {
+    return 'Vous progressez dans votre voie actuelle (niveau $currentLevel → $nextLevel).';
+  }
+
+  @override
+  String levelUpScreenMulticlassOptionTitle(String className) {
+    return 'Se multiclasser en $className';
+  }
+
+  @override
+  String levelUpScreenMulticlassOptionSubtitle(String abilities) {
+    return 'Vous débutez au niveau 1 dans cette classe. Prérequis rempli : $abilities.';
+  }
+
+  @override
+  String levelUpScreenMulticlassInfoBanner(String className) {
+    return 'Nouvelle classe : $className (niveau 1)';
+  }
+
+  @override
+  String get levelUpScreenUpcomingStepsTitle =>
+      'À venir dans les prochaines étapes';
+
+  @override
+  String levelUpScreenUpcomingChoiceStep(String choiceLabel) {
+    return 'Un choix de $choiceLabel vous attendra';
+  }
+
+  @override
+  String get levelUpScreenUpcomingSpellsStep =>
+      'Vos emplacements de sorts vont évoluer';
+
+  @override
+  String get levelUpScreenUpcomingInvocationsStep =>
+      'De nouvelles invocations vous attendront';
+
+  @override
+  String get levelUpScreenUpcomingElementalDisciplinesStep =>
+      'De nouvelles disciplines élémentaires vous attendront';
+
+  @override
+  String get levelUpScreenUpcomingManeuversStep =>
+      'De nouvelles manœuvres vous attendront';
+
+  @override
+  String get levelUpScreenUpcomingArcaneShotsStep =>
+      'De nouveaux tirs arcaniques vous attendront';
+
+  @override
+  String get levelUpScreenUpcomingRunesStep =>
+      'De nouvelles runes vous attendront';
+
+  @override
+  String get levelUpScreenUpcomingInfusionsStep => 'Vos infusions vont évoluer';
+
+  @override
+  String get levelUpScreenContinueButton => 'Continuer';
+
+  @override
+  String get levelUpScreenBackButton => 'Retour';
+
+  @override
+  String get levelUpScreenNewFeatureTitle => 'Nouvelle aptitude';
+
+  @override
+  String get levelUpScreenNewProficiencyTitle => 'Nouvelle maîtrise';
+
+  @override
+  String levelUpScreenHpStepLabel(int totalSteps) {
+    return 'Étape 1 sur $totalSteps · Points de vie';
+  }
+
+  @override
+  String get levelUpScreenMaxHpTitle => 'Points de vie maximum';
+
+  @override
+  String levelUpScreenMaxHpDelta(int oldHp, int newHp, int gain) {
+    return '$oldHp → $newHp (+$gain)';
+  }
+
+  @override
+  String levelUpScreenHitDieMulticlassLabel(String className, int hitDie) {
+    return 'Dé de vie de $className (niveau 1) : d$hitDie';
+  }
+
+  @override
+  String levelUpScreenHitDieClassLabel(int hitDie) {
+    return 'Dé de vie de la classe : d$hitDie';
+  }
+
+  @override
+  String levelUpScreenRollHitDieOption(int hitDie) {
+    return 'Lancer le dé (d$hitDie)';
+  }
+
+  @override
+  String levelUpScreenAverageHitDieOption(int average) {
+    return 'Valeur moyenne ($average)';
+  }
+
+  @override
+  String levelUpScreenConstitutionModifierLabel(String modifier) {
+    return '$modifier modificateur de Constitution';
+  }
+
+  @override
+  String get levelUpScreenRerollDieLink => 'Relancer le dé';
+
+  @override
+  String get levelUpScreenAverageDieFormulaHint =>
+      '(moitié du dé arrondie au supérieur, +1)';
+
+  @override
+  String get levelUpScreenLevelHistoryLink => 'Voir l\'historique des niveaux';
+
+  @override
+  String levelUpScreenAbilitiesStepLabel(int totalSteps) {
+    return 'Étape 2 sur $totalSteps · Aptitudes de classe';
+  }
+
+  @override
+  String levelUpScreenAbilitiesStepLabelWithProficiencies(int totalSteps) {
+    return 'Étape 2 sur $totalSteps · Aptitudes & maîtrises';
+  }
+
+  @override
+  String get levelUpScreenAutomaticFeaturesLabel =>
+      'Vous obtenez automatiquement :';
+
+  @override
+  String get levelUpScreenMulticlassProficienciesLabel =>
+      'Maîtrises de multiclassage :';
+
+  @override
+  String levelUpScreenChoiceStepLabel(int totalSteps, String choiceLabel) {
+    return 'Étape 3 sur $totalSteps · $choiceLabel';
+  }
+
+  @override
+  String get levelUpScreenChoiceKindAbilityScoreImprovement =>
+      'Amélioration ou don';
+
+  @override
+  String get levelUpScreenChoiceKindSubclass => 'Sous-classe';
+
+  @override
+  String get levelUpScreenChoiceKindFightingStyle => 'Style de combat';
+
+  @override
+  String get levelUpScreenChoiceKindFavoredEnemy => 'Ennemi juré';
+
+  @override
+  String get levelUpScreenChoiceKindPact => 'Faveur de pacte';
+
+  @override
+  String get levelUpScreenChooseSubclassInstruction =>
+      'Choisissez une sous-classe.';
+
+  @override
+  String get levelUpScreenChooseFightingStyleInstruction =>
+      'Choisissez un style de combat.';
+
+  @override
+  String get levelUpScreenChooseFavoredEnemyInstruction =>
+      'Choisissez un ennemi juré.';
+
+  @override
+  String get levelUpScreenChoosePactInstruction =>
+      'Choisissez votre Faveur de pacte.';
+
+  @override
+  String get levelUpScreenChooseProgressionInstruction =>
+      'Choisissez comment progresser.';
+
+  @override
+  String get levelUpScreenAllocateAbilityOption => 'Répartir +2';
+
+  @override
+  String get levelUpScreenChooseFeatOption => 'Choisir un don';
+
+  @override
+  String get levelUpScreenChooseFeatInstruction => 'Choisissez un don.';
+
+  @override
+  String levelUpScreenFeatAbilityIncreaseLabel(String featName) {
+    return 'Caractéristique augmentée par $featName (+1) :';
+  }
+
+  @override
+  String levelUpScreenAllocateBudgetInstruction(int budget) {
+    return 'Répartissez $budget points entre vos caractéristiques.';
+  }
+
+  @override
+  String levelUpScreenPointsRemainingLabel(int remaining, int budget) {
+    return 'Points restants : $remaining/$budget';
+  }
+
+  @override
+  String get levelUpScreenAllPointsAllocatedLabel =>
+      'Tous les points sont répartis.';
+
+  @override
+  String levelUpScreenAbilityScoreDelta(int oldScore, int newScore, int alloc) {
+    return '$oldScore → $newScore (+$alloc)';
+  }
+
+  @override
+  String levelUpScreenSpellSlotsStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Emplacements de sorts';
+  }
+
+  @override
+  String get levelUpScreenSpellSlotsRecalculatedLabel =>
+      'Vos emplacements de sorts sont recalculés :';
+
+  @override
+  String get levelUpScreenNoSpellSlotsAtThisLevel =>
+      'Aucun emplacement de sorts à ce niveau.';
+
+  @override
+  String levelUpScreenSpellsStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Sorts';
+  }
+
+  @override
+  String get levelUpScreenCantripTab => 'Mineurs';
+
+  @override
+  String get levelUpScreenSpellsTab => 'Sorts';
+
+  @override
+  String get levelUpScreenPactTab => 'Grimoire';
+
+  @override
+  String get levelUpScreenKnownCantripsTitle => 'SORTS MINEURS CONNUS';
+
+  @override
+  String get levelUpScreenShadowBookTitle => 'LIVRE DES OMBRES';
+
+  @override
+  String get levelUpScreenKnownSpellsTitle => 'NOUVEAUX SORTS CONNUS';
+
+  @override
+  String levelUpScreenQuotaBadge(int selected, int quota) {
+    return '$selected / $quota';
+  }
+
+  @override
+  String levelUpScreenSpellMetaLineWithLevel(String metaLine, int level) {
+    return '$metaLine (niveau $level)';
+  }
+
+  @override
+  String levelUpScreenPatronSpellSubtitle(String baseSubtitle) {
+    return '$baseSubtitle · Patron';
+  }
+
+  @override
+  String levelUpScreenInvocationsStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Invocations';
+  }
+
+  @override
+  String get levelUpScreenKnownInvocationsTitle => 'INVOCATIONS CONNUES';
+
+  @override
+  String get levelUpScreenNoMoreInvocationsMessage =>
+      'Vous connaissez déjà toutes les invocations occultistes disponibles.';
+
+  @override
+  String levelUpScreenElementalDisciplinesStepLabel(
+    int stepNumber,
+    int totalSteps,
+  ) {
+    return 'Étape $stepNumber sur $totalSteps · Disciplines élémentaires';
+  }
+
+  @override
+  String get levelUpScreenKnownElementalDisciplinesTitle =>
+      'DISCIPLINES ÉLÉMENTAIRES CONNUES';
+
+  @override
+  String get levelUpScreenNoMoreElementalDisciplinesMessage =>
+      'Vous connaissez déjà toutes les disciplines élémentaires disponibles à ce niveau.';
+
+  @override
+  String levelUpScreenManeuversStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Manœuvres';
+  }
+
+  @override
+  String get levelUpScreenKnownManeuversTitle => 'MANŒUVRES CONNUES';
+
+  @override
+  String get levelUpScreenNoMoreManeuversMessage =>
+      'Vous connaissez déjà toutes les manœuvres disponibles.';
+
+  @override
+  String levelUpScreenArcaneShotsStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Tirs arcaniques';
+  }
+
+  @override
+  String get levelUpScreenKnownArcaneShotsTitle => 'TIRS ARCANIQUES CONNUS';
+
+  @override
+  String get levelUpScreenNoMoreArcaneShotsMessage =>
+      'Vous connaissez déjà tous les tirs arcaniques disponibles.';
+
+  @override
+  String levelUpScreenRunesStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Runes';
+  }
+
+  @override
+  String get levelUpScreenKnownRunesTitle => 'RUNES CONNUES';
+
+  @override
+  String get levelUpScreenNoMoreRunesMessage =>
+      'Vous connaissez déjà toutes les runes disponibles.';
+
+  @override
+  String levelUpScreenInfusionsStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Infusions';
+  }
+
+  @override
+  String get levelUpScreenNewInfusionsTitle => 'NOUVELLES INFUSIONS';
+
+  @override
+  String get levelUpScreenNoMoreInfusionsMessage =>
+      'Vous connaissez déjà toutes les infusions disponibles.';
+
+  @override
+  String get levelUpScreenReplaceInfusionOptionalTitle =>
+      'REMPLACER UNE INFUSION (OPTIONNEL)';
+
+  @override
+  String get levelUpScreenReplacedByLabel => 'REMPLACÉE PAR';
+
+  @override
+  String levelUpScreenMetamagicStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Métamagie';
+  }
+
+  @override
+  String get levelUpScreenNewMetamagicOptionsTitle =>
+      'NOUVELLES OPTIONS DE MÉTAMAGIE';
+
+  @override
+  String get levelUpScreenNoMoreMetamagicMessage =>
+      'Vous connaissez déjà toutes les options de Métamagie disponibles.';
+
+  @override
+  String get levelUpScreenReplaceMetamagicOptionalTitle =>
+      'REMPLACER UNE OPTION (OPTIONNEL)';
+
+  @override
+  String levelUpScreenExpertiseStepLabel(int stepNumber, int totalSteps) {
+    return 'Étape $stepNumber sur $totalSteps · Expertise';
+  }
+
+  @override
+  String get levelUpScreenExpertiseSkillsTitle => 'COMPÉTENCES EN EXPERTISE';
+
+  @override
+  String get levelUpScreenThievesToolsLabel => 'Outils de voleur';
+
+  @override
+  String get levelUpScreenThievesToolsSubstitutionHint =>
+      'Substitue une des places d\'Expertise à la maîtrise des outils de voleur.';
+
+  @override
+  String get levelUpScreenNoExpertiseCandidatesMessage =>
+      'Aucune compétence déjà maîtrisée à faire passer en Expertise.';
+
+  @override
+  String levelUpScreenDraconicAncestryStepLabel(
+    int stepNumber,
+    int totalSteps,
+  ) {
+    return 'Étape $stepNumber sur $totalSteps · Ascendance draconique';
+  }
+
+  @override
+  String get levelUpScreenDamageTypeTitle => 'TYPE DE DÉGÂTS';
+
+  @override
+  String get levelUpScreenNewSpellSlotsTitle =>
+      'Nouveaux emplacements de sorts';
+
+  @override
+  String get levelUpScreenReinforcedSpellSlotsTitle =>
+      'Emplacements de sorts renforcés';
+
+  @override
+  String levelUpScreenSpellSlotUnlockedSubtitle(int spellLevel) {
+    return 'Niveau $spellLevel débloqué';
+  }
+
+  @override
+  String levelUpScreenSpellSlotReinforcedSubtitle(
+    int spellLevel,
+    int oldTotal,
+    int newTotal,
+    int delta,
+  ) {
+    return 'Niveau $spellLevel : $oldTotal → $newTotal (+$delta)';
+  }
+
+  @override
+  String get levelUpScreenPactMagicUnlockedTitle => 'Magie de pacte débloquée';
+
+  @override
+  String levelUpScreenPactMagicUnlockedSubtitle(int slotLevel, int charges) {
+    return 'Niveau $slotLevel · $charges charge(s)';
+  }
+
+  @override
+  String get levelUpScreenPactChargesReinforcedTitle =>
+      'Charges de pacte renforcées';
+
+  @override
+  String levelUpScreenPactChargesReinforcedSubtitle(
+    int oldCharges,
+    int newCharges,
+    int slotLevel,
+  ) {
+    return '$oldCharges → $newCharges charges (niveau $slotLevel)';
+  }
+
+  @override
+  String get levelUpScreenPactChargesImprovedTitle =>
+      'Charges de pacte améliorées';
+
+  @override
+  String levelUpScreenPactChargesImprovedSubtitle(
+    int oldSlotLevel,
+    int newSlotLevel,
+    int newCharges,
+  ) {
+    return 'Niveau $oldSlotLevel → $newSlotLevel ($newCharges charges)';
+  }
+
+  @override
+  String levelUpScreenPactChargesBothSubtitle(
+    int oldCharges,
+    int newCharges,
+    int oldSlotLevel,
+    int newSlotLevel,
+  ) {
+    return '$oldCharges → $newCharges charges, niveau $oldSlotLevel → $newSlotLevel';
+  }
+
+  @override
+  String get levelUpScreenFeatSummaryTitle => 'Don';
+
+  @override
+  String levelUpScreenFeatAbilityBonusSubtitle(
+    String featName,
+    String abilityLabel,
+  ) {
+    return '$featName ($abilityLabel +1)';
+  }
+
+  @override
+  String levelUpScreenAbilityAllocationSummaryItem(String label, int amount) {
+    return '$label +$amount';
+  }
+
+  @override
+  String get levelUpScreenAbilityScoreImprovementTitle =>
+      'Amélioration de caractéristique';
+
+  @override
+  String get levelUpScreenNewCantripsTitle => 'Nouveaux sorts mineurs';
+
+  @override
+  String get levelUpScreenNewSpellsLearnedTitle => 'Nouveaux sorts appris';
+
+  @override
+  String get levelUpScreenShadowBookGainTitle => 'Livre des ombres';
+
+  @override
+  String get levelUpScreenFamiliarAddedTitle => 'Appel de familier ajouté';
+
+  @override
+  String get levelUpScreenChainPactSubtitle => 'Pacte de la chaîne';
+
+  @override
+  String get levelUpScreenRacialInnateSpellTitle => 'Sort inné racial';
+
+  @override
+  String levelUpScreenNewInvocationsSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouvelles invocations occultistes',
+      one: 'Nouvelle invocation occultiste',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String levelUpScreenNewElementalDisciplinesSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouvelles disciplines élémentaires',
+      one: 'Nouvelle discipline élémentaire',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String levelUpScreenNewManeuversSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouvelles manœuvres',
+      one: 'Nouvelle manœuvre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String levelUpScreenNewArcaneShotsSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouveaux tirs arcaniques',
+      one: 'Nouveau tir arcanique',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String levelUpScreenNewRunesSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouvelles runes',
+      one: 'Nouvelle rune',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String levelUpScreenNewInfusionsSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouvelles infusions',
+      one: 'Nouvelle infusion',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get levelUpScreenInfusionSwapTitle => 'Infusion remplacée';
+
+  @override
+  String levelUpScreenSwapSubtitle(String removedName, String addedName) {
+    return '$removedName → $addedName';
+  }
+
+  @override
+  String levelUpScreenNewMetamagicOptionsSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nouvelles options de Métamagie',
+      one: 'Nouvelle option de Métamagie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get levelUpScreenMetamagicSwapTitle => 'Métamagie remplacée';
+
+  @override
+  String levelUpScreenExpertiseSummaryTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Expertises',
+      one: 'Expertise',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get levelUpScreenDraconicAncestryTitle => 'Ascendance draconique';
+
+  @override
+  String get levelUpScreenNoNewFeaturesMessage =>
+      'Aucune nouvelle aptitude de classe à ce niveau.';
+
+  @override
+  String get levelUpScreenNoOptionAvailableMessage =>
+      'Aucune option disponible pour ce choix.';
+
+  @override
+  String levelUpScreenBlockedLevelTitle(int level) {
+    return 'Niveau $level : choix requis';
+  }
+
+  @override
+  String get levelUpScreenBackToSheetButton => 'Retour à la fiche';
+
+  @override
+  String get levelUpScreenRetryButton => 'Réessayer';
 }
