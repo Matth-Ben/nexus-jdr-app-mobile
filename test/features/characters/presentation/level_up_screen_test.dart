@@ -66,6 +66,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/level_up_screen.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _AppliedLevelUp {
   const _AppliedLevelUp({
@@ -849,10 +850,21 @@ void main() {
     return router;
   }
 
-  Widget buildTestWidget() {
+  Widget buildTestWidget({Locale locale = const Locale('fr')}) {
     return UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(routerConfig: buildTestRouter()),
+      // `level_up_screen.dart` lit `AppLocalizations.of(context)!` (chantier
+      // "traduction de l'app" Phase B, lot "Characters — PV/XP/Repos/Montée
+      // de niveau") : sans ces delegates, l'appel renverrait `null` et le
+      // `!` planterait. `fr` par défaut : les assertions de ce fichier
+      // portent sur le texte français, sauf le groupe "locale anglaise"
+      // plus bas.
+      child: MaterialApp.router(
+        routerConfig: buildTestRouter(),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
+      ),
     );
   }
 
@@ -860,8 +872,12 @@ void main() {
   /// [_LevelUpScreenState._buildClassDecision] côté écran.
   const classDecisionInstruction = "Choisissez comment ce niveau s'applique.";
 
-  Future<void> pushLevelUp(WidgetTester tester, int level) async {
-    await tester.pumpWidget(buildTestWidget());
+  Future<void> pushLevelUp(
+    WidgetTester tester,
+    int level, {
+    Locale locale = const Locale('fr'),
+  }) async {
+    await tester.pumpWidget(buildTestWidget(locale: locale));
     await tester.pumpAndSettle();
     router.push('/characters/char-1/level-up?level=$level');
     await tester.pumpAndSettle();
@@ -1184,6 +1200,22 @@ void main() {
       expect(find.text('NIVEAU 6'), findsOneWidget);
       expect(find.text('Étape 1 sur 3 · Points de vie'), findsOneWidget);
     });
+
+    testWidgets(
+      'pluriel du remainingLevelsLabel : au moins 2 niveaux supplementaires '
+      'deja deverrouilles affiche "Encore N niveaux..." (pas "niveau"), '
+      'visible sur l\'annonce du niveau en cours',
+      (tester) async {
+        // Seuil du niveau 7 (23000 XP) déjà franchi depuis le niveau cible
+        // 5 : 2 niveaux (6 et 7) restent à valider ensuite, voir
+        // `LevelUpChainResolver.remainingLevelsAfter`.
+        fakeRepository.detailToReturn = _baseDetail.copyWith(xp: 23000);
+
+        await pushLevelUp(tester, 5);
+
+        expect(find.text('Encore 2 niveaux à valider ensuite'), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'chaînage : si le niveau suivant déjà déverrouillé reste bloqué (ex. '
@@ -4544,6 +4576,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Décharge foudroyante, Tir perçant'), findsOneWidget);
+        expect(find.text('Nouveaux tirs arcaniques'), findsOneWidget);
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
@@ -4554,6 +4587,62 @@ void main() {
           'Décharge foudroyante',
           'Tir perçant',
         });
+      },
+    );
+    testWidgets(
+      'niveau 7 (sous-classe deja connue, pas de choix simultane) mais '
+      'catalogue epuise a 1 tir arcanique restant : quota effectif 1, '
+      'singulier au recapitulatif',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 6,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+              subclassId: 50,
+              subclassName: 'Archer arcanique',
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          7: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.arcaneShotsToReturn = const [
+          LevelUpArcaneShotOption(
+            id: 2,
+            name: 'Décharge foudroyante',
+            description: '',
+          ),
+        ];
+
+        await pushPastAnnouncement(tester, 7);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 3 sur 4 · Tirs arcaniques'), findsOneWidget);
+        expect(find.text('0 / 1'), findsOneWidget);
+        await tester.tap(find.text('Décharge foudroyante'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nouveau tir arcanique'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.arcaneShotNames, [
+          'Décharge foudroyante',
+        ]);
       },
     );
     testWidgets(
@@ -4726,6 +4815,7 @@ void main() {
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
+        expect(find.text('Nouvelles runes'), findsOneWidget);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -4853,6 +4943,55 @@ void main() {
         expect(find.text('1 / 1'), findsOneWidget);
       },
     );
+    testWidgets('niveau 18 ("Maître des runes") mais catalogue epuise a 1 rune '
+        'restante : quota effectif 1, singulier au recapitulatif', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [
+          const CharacterDetailClassRow(
+            classId: 1,
+            hitDie: 10,
+            className: 'Guerrier',
+            level: 17,
+            isPrimary: true,
+            savingThrowProficiencies: [],
+            subclassId: 52,
+            subclassName: 'Chevalier runique',
+          ),
+        ],
+        xp: 0,
+      );
+      fakeRepository.levelDataByLevel = {
+        18: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+      fakeRepository.runesToReturn = const [
+        LevelUpRuneOption(id: 3, name: 'Rune de Géant', description: ''),
+      ];
+
+      await pushPastAnnouncement(tester, 18);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('0 / 1'), findsOneWidget);
+      await tester.tap(find.text('Rune de Géant'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 1'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nouvelle rune'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyLevelUpCalls.single.runeNames, [
+        'Rune de Géant',
+      ]);
+    });
   });
 
   group('etape "Runes" — regression : un Guerrier d\'un AUTRE archetype '
@@ -4970,6 +5109,7 @@ void main() {
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
+        expect(find.text('Nouvelles infusions'), findsOneWidget);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -5122,6 +5262,59 @@ void main() {
         expect(find.text('1 / 1'), findsOneWidget);
       },
     );
+    testWidgets('niveau 2 (premier palier) mais catalogue epuise a 1 infusion '
+        'restante : quota effectif 1, singulier au recapitulatif', (
+      tester,
+    ) async {
+      fakeRepository.detailToReturn = _baseDetail.copyWith(
+        classes: [
+          const CharacterDetailClassRow(
+            classId: 13,
+            hitDie: 8,
+            className: 'Artificier',
+            level: 1,
+            isPrimary: true,
+            savingThrowProficiencies: [],
+          ),
+        ],
+        xp: 0,
+      );
+      fakeRepository.levelDataByLevel = {
+        2: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+      };
+      fakeRepository.knownInfusionNamesToReturn = const [];
+      fakeRepository.infusionsToReturn = const [
+        LevelUpInfusionOption(id: 1, name: 'Armure renforcée', description: ''),
+      ];
+
+      await pushPastAnnouncement(tester, 2);
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+      // Étape "Sorts" intercalée (même rationale que les autres tests de
+      // ce groupe).
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Étape 4 sur 5 · Infusions'), findsOneWidget);
+      expect(find.text('0 / 1'), findsOneWidget);
+      await tester.tap(find.text('Armure renforcée'));
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 1'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nouvelle infusion'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUER'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepository.applyLevelUpCalls.single.infusionNames, [
+        'Armure renforcée',
+      ]);
+    });
   });
 
   group('etape "Metamagie" (Ensorceleur)', () {
@@ -5189,6 +5382,7 @@ void main() {
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
+        expect(find.text('Nouvelles options de Métamagie'), findsOneWidget);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -5423,6 +5617,76 @@ void main() {
         expect(find.textContaining('NOUVELLES OPTIONS'), findsNothing);
       },
     );
+    testWidgets(
+      'niveau 3 (premier palier) mais catalogue epuise a 1 option restante : '
+      'quota effectif 1, singulier au recapitulatif',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 12,
+              hitDie: 6,
+              className: 'Ensorceleur',
+              level: 2,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          3: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.knownMetamagicNamesToReturn = const [];
+        fakeRepository.metamagicOptionsToReturn = const [
+          LevelUpMetamagicOption(id: 1, name: 'Sort discret', description: ''),
+        ];
+        fakeCreationRepository.spellCatalogByClassId = {
+          12: const SpellCatalog(
+            spells: [
+              SpellOption(
+                id: 500,
+                name: 'Projectile magique',
+                level: 1,
+                school: 'Évocation',
+                castingTime: '1 action',
+              ),
+            ],
+          ),
+        };
+
+        await pushPastAnnouncement(tester, 3);
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        // Étape "Sorts" intercalée (même rationale que les autres tests de
+        // ce groupe).
+        await tester.tap(find.text('Projectile magique'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Étape 4 sur 5 · Métamagie'), findsOneWidget);
+        expect(find.text('0 / 1'), findsOneWidget);
+        await tester.tap(find.text('Sort discret'));
+        await tester.pumpAndSettle();
+        expect(find.text('1 / 1'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Nouvelle option de Métamagie'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUER'));
+        await tester.pumpAndSettle();
+
+        expect(fakeRepository.applyLevelUpCalls.single.metamagicNames, [
+          'Sort discret',
+        ]);
+      },
+    );
   });
 
   group('etape "Expertise" (Barde/Roublard)', () {
@@ -5505,6 +5769,7 @@ void main() {
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
+        expect(find.text('Expertises'), findsOneWidget);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -5597,6 +5862,7 @@ void main() {
 
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
+        expect(find.text('Expertise'), findsOneWidget);
         await tester.tap(find.text('CONTINUER'));
         await tester.pumpAndSettle();
 
@@ -6967,6 +7233,104 @@ void main() {
           lineageId: 32,
           maxCharacterLevel: 3,
         ));
+      },
+    );
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement pour
+    // l'eyebrow, l'annonce et l'étape "Points de vie" — pas une reprise
+    // intégrale des assertions françaises ci-dessus.
+    setUp(() {
+      fakeRepository.detailToReturn = _baseDetail;
+      fakeRepository.levelDataByLevel = {
+        5: const LevelUpLevelData(
+          choiceType: null,
+          automaticFeatures: [
+            CharacterClassFeature(
+              id: 10,
+              name: 'Attaque supplémentaire',
+              level: 5,
+            ),
+          ],
+        ),
+      };
+    });
+
+    testWidgets('eyebrow, annonce et étape "Points de vie" en anglais', (
+      tester,
+    ) async {
+      await pushLevelUp(tester, 5, locale: const Locale('en'));
+
+      expect(find.text('LEVEL UP'), findsOneWidget);
+      expect(find.text('LEVEL 5'), findsOneWidget);
+      expect(find.text('New feature'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUE'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Step 1 of 3 · Hit points'), findsOneWidget);
+      expect(find.text('Maximum hit points'), findsNWidgets(2));
+      expect(find.text('Hit die of the class: d10'), findsOneWidget);
+
+      await tester.tap(find.text('CONTINUE'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Step 2 of 3 · Class features'), findsOneWidget);
+      expect(find.text('You automatically gain:'), findsOneWidget);
+      expect(find.text('Attaque supplémentaire'), findsOneWidget);
+    });
+
+    testWidgets(
+      'étape "Tirs arcaniques" et son récapitulatif en anglais (renfort '
+      'traduction au-delà de l\'annonce et de l\'étape "Points de vie")',
+      (tester) async {
+        fakeRepository.detailToReturn = _baseDetail.copyWith(
+          classes: [
+            const CharacterDetailClassRow(
+              classId: 1,
+              hitDie: 10,
+              className: 'Guerrier',
+              level: 6,
+              isPrimary: true,
+              savingThrowProficiencies: [],
+              subclassId: 50,
+              subclassName: 'Archer arcanique',
+            ),
+          ],
+          xp: 0,
+        );
+        fakeRepository.levelDataByLevel = {
+          7: const LevelUpLevelData(choiceType: null, automaticFeatures: []),
+        };
+        fakeRepository.arcaneShotsToReturn = const [
+          LevelUpArcaneShotOption(
+            id: 2,
+            name: 'Décharge foudroyante',
+            description: '',
+          ),
+        ];
+
+        await pushLevelUp(tester, 7, locale: const Locale('en'));
+        await tester.tap(find.text('CONTINUE'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('CONTINUE'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Step 2 of 4 · Class features'), findsOneWidget);
+
+        await tester.tap(find.text('CONTINUE'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Step 3 of 4 · Arcane shots'), findsOneWidget);
+        await tester.tap(find.text('Décharge foudroyante'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('CONTINUE'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('New arcane shot'), findsOneWidget);
       },
     );
   });

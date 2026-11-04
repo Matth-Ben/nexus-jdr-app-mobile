@@ -7,6 +7,7 @@ import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/segmented_toggle.dart';
 import '../../../../core/widgets/stepper_counter.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/hp_adjustment.dart';
 
 enum _HpAdjustmentMode { damage, heal, temporary }
@@ -66,6 +67,7 @@ class _HpAdjustmentSheetContentState extends State<_HpAdjustmentSheetContent> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -79,7 +81,7 @@ class _HpAdjustmentSheetContentState extends State<_HpAdjustmentSheetContent> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Ajuster les PV',
+              l10n.hpAdjustmentSheetTitle,
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -87,18 +89,18 @@ class _HpAdjustmentSheetContentState extends State<_HpAdjustmentSheetContent> {
             ),
             const SizedBox(height: AppSpacing.md),
             SegmentedToggle<_HpAdjustmentMode>(
-              options: const [
+              options: [
                 SegmentedToggleOption(
                   value: _HpAdjustmentMode.damage,
-                  label: 'Dégâts',
+                  label: l10n.hpAdjustmentSheetDamageOption,
                 ),
                 SegmentedToggleOption(
                   value: _HpAdjustmentMode.heal,
-                  label: 'Soins',
+                  label: l10n.hpAdjustmentSheetHealOption,
                 ),
                 SegmentedToggleOption(
                   value: _HpAdjustmentMode.temporary,
-                  label: 'PV temp.',
+                  label: l10n.hpAdjustmentSheetTemporaryOption,
                 ),
               ],
               value: _mode,
@@ -119,7 +121,7 @@ class _HpAdjustmentSheetContentState extends State<_HpAdjustmentSheetContent> {
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label: l10n.hpAdjustmentSheetCancelButton,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -127,7 +129,7 @@ class _HpAdjustmentSheetContentState extends State<_HpAdjustmentSheetContent> {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: PrimaryButton(
-                    label: 'Appliquer',
+                    label: l10n.hpAdjustmentSheetApplyButton,
                     onPressed: _amount > 0 ? _apply : null,
                   ),
                 ),

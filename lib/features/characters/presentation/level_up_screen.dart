@@ -27,6 +27,7 @@ import '../../character_creation/domain/spell_option.dart';
 import '../../character_creation/domain/spell_selection_resolver.dart';
 import '../../character_creation/domain/spells_step_selection.dart';
 import '../../character_creation/presentation/widgets/spell_option_info_sheet.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/character_failure.dart';
 import '../domain/invocation_selection_rules.dart';
 import '../domain/level_up_arcane_shot_option.dart';
@@ -232,6 +233,13 @@ class LevelUpScreen extends ConsumerStatefulWidget {
 }
 
 class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
+  /// Raccourci vers les textes localisés de cet écran — tous les
+  /// `_buildXxx` de cette classe sont des méthodes d'instance (pas des
+  /// `build(BuildContext context)` de widget), `context` est donc déjà
+  /// accessible comme propriété de ce `State` ; ce getter évite de répéter
+  /// `AppLocalizations.of(context)!` dans chacune d'elles.
+  AppLocalizations get _l10n => AppLocalizations.of(context)!;
+
   late int _targetLevel;
   _LevelUpPhase _phase = _LevelUpPhase.classDecision;
 
@@ -1403,8 +1411,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// `AppearanceAndBackstoryStepScreen` pour les fonctionnalités pas encore
   /// prêtes. À recâbler vers le vrai écran une fois qu'il existera.
   void _showLevelHistoryComingSoon() {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Bientôt disponible')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_l10n.levelUpScreenComingSoonSnackBar)),
+    );
   }
 
   /// Résultat du jet de dé pour [_targetLevel], calculé une seule fois par
@@ -1453,8 +1462,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       currentXp: currentXp,
     );
     if (remaining <= 0) return null;
-    return 'Encore $remaining niveau${remaining > 1 ? 'x' : ''} à valider '
-        'ensuite';
+    return _l10n.levelUpScreenRemainingLevelsLabel(remaining);
   }
 
   /// Construit le [LevelUpChoiceSelection] à envoyer à `applyLevelUp` depuis
@@ -1498,6 +1506,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
 
   Future<void> _continueFromSummary(LevelUpStepData data) async {
     if (_isApplying) return;
+    // Capturé avant le premier `await` (lint `use_build_context_synchronously`
+    // — même convention que les lots précédents) : `context` reste valide
+    // ici (appel synchrone), mais ne doit plus être relu après l'`await`
+    // ci-dessous.
+    final l10n = _l10n;
     setState(() {
       _isApplying = true;
       _applyError = null;
@@ -1589,8 +1602,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       if (!mounted) return;
       setState(() {
         _isApplying = false;
-        _applyError =
-            "Impossible d'enregistrer la montée de niveau. Réessayez.";
+        _applyError = l10n.levelUpScreenGenericApplyError;
       });
     }
   }
@@ -1612,7 +1624,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           data: _buildData,
           loading: () => Column(
             children: [
-              const LevelUpHeader(eyebrow: 'MONTÉE DE NIVEAU'),
+              LevelUpHeader(eyebrow: _l10n.levelUpScreenEyebrow),
               const Expanded(
                 child: Center(
                   child: CircularProgressIndicator(color: AppColors.goldEnd),
@@ -1622,13 +1634,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           ),
           error: (error, stackTrace) => Column(
             children: [
-              const LevelUpHeader(eyebrow: 'MONTÉE DE NIVEAU'),
+              LevelUpHeader(eyebrow: _l10n.levelUpScreenEyebrow),
               Expanded(
                 child: _ErrorState(
                   message: error is CharacterFailure
                       ? error.message
-                      : 'Impossible de charger les données de montée de '
-                            'niveau. Réessayez.',
+                      : _l10n.levelUpScreenGenericLoadError,
                   // Invalide `characterDetailProvider` *aussi*, pas
                   // seulement `levelUpStepDataProvider` — même bug déjà
                   // corrigé sur les écrans combinateurs de l'assistant de
@@ -1747,8 +1758,8 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -1758,7 +1769,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Choisissez comment ce niveau s'applique.",
+                  _l10n.levelUpScreenClassDecisionInstruction,
                   style: AppTypography.body(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -1844,12 +1855,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     final isBlocked =
         option.isPrimary && !data.isMulticlassing && data.blockReason != null;
     return SelectableOptionTile(
-      title: 'Continuer en ${option.className}',
+      title: _l10n.levelUpScreenContinueClassOptionTitle(option.className),
       subtitle: isBlocked
-          ? 'Ce niveau nécessite un choix pas encore disponible dans '
-                "l'app."
-          : 'Vous progressez dans votre voie actuelle (niveau '
-                '${option.currentLevel} → ${option.currentLevel + 1}).',
+          ? _l10n.levelUpScreenContinueClassBlockedSubtitle
+          : _l10n.levelUpScreenContinueClassSubtitle(
+              option.currentLevel,
+              option.currentLevel + 1,
+            ),
       selected:
           !_classDecisionSelection!.isMulticlass &&
           _classDecisionSelection!.classId == option.classId,
@@ -1873,10 +1885,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     required int index,
   }) {
     return SelectableOptionTile(
-      title: 'Se multiclasser en ${option.className}',
-      subtitle:
-          'Vous débutez au niveau 1 dans cette classe. Prérequis rempli : '
-          '${option.satisfiedAbilityLabels.join(', ')}.',
+      title: _l10n.levelUpScreenMulticlassOptionTitle(option.className),
+      subtitle: _l10n.levelUpScreenMulticlassOptionSubtitle(
+        option.satisfiedAbilityLabels.join(', '),
+      ),
       selected:
           _classDecisionSelection!.isMulticlass &&
           _classDecisionSelection!.classId == option.classId,
@@ -1898,7 +1910,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   Widget _multiclassInfoBanner(LevelUpStepData data) {
     return InfoBanner(
       icon: Icons.call_split,
-      message: 'Nouvelle classe : ${data.multiclassClassName} (niveau 1)',
+      message: _l10n.levelUpScreenMulticlassInfoBanner(
+        data.multiclassClassName!,
+      ),
     );
   }
 
@@ -1937,8 +1951,8 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -1956,14 +1970,14 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                       GainRow(
                         icon: Icons.star,
                         color: AppColors.accentTeal,
-                        title: 'Nouvelle aptitude',
+                        title: _l10n.levelUpScreenNewFeatureTitle,
                         subtitle: data.automaticFeatures[i].name,
                       ),
                     ],
                   if (hasUpcoming) ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'À venir dans les prochaines étapes',
+                      _l10n.levelUpScreenUpcomingStepsTitle,
                       style: AppTypography.body(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -1975,19 +1989,18 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                       _UpcomingStepRow(
                         icon: Icons.checklist,
                         color: AppColors.accentBlue,
-                        label:
-                            'Un choix de '
-                            '${_choiceStepLabel(data.choiceKind!)} '
-                            'vous attendra',
+                        label: _l10n.levelUpScreenUpcomingChoiceStep(
+                          _choiceStepLabel(data.choiceKind!),
+                        ),
                       ),
                       if (_hasSpellsStep(data))
                         const SizedBox(height: AppSpacing.sm),
                     ],
                     if (_hasSpellsStep(data)) ...[
-                      const _UpcomingStepRow(
+                      _UpcomingStepRow(
                         icon: Icons.auto_awesome,
                         color: AppColors.accentViolet,
-                        label: 'Vos emplacements de sorts vont évoluer',
+                        label: _l10n.levelUpScreenUpcomingSpellsStep,
                       ),
                       if (_hasInvocationsStep(data) ||
                           _hasElementalDisciplinesStep(data) ||
@@ -2005,10 +2018,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                     // cohérence avec les autres — à valider par le chef de
                     // projet si un désaccord existe sur ce point.
                     if (_hasInvocationsStep(data)) ...[
-                      const _UpcomingStepRow(
+                      _UpcomingStepRow(
                         icon: Icons.remove_red_eye,
                         color: AppColors.accentViolet,
-                        label: 'De nouvelles invocations vous attendront',
+                        label: _l10n.levelUpScreenUpcomingInvocationsStep,
                       ),
                       if (_hasElementalDisciplinesStep(data) ||
                           _hasManeuversStep(data) ||
@@ -2018,12 +2031,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         const SizedBox(height: AppSpacing.sm),
                     ],
                     if (_hasElementalDisciplinesStep(data)) ...[
-                      const _UpcomingStepRow(
+                      _UpcomingStepRow(
                         icon: Icons.whatshot,
                         color: AppColors.accentBrick,
                         label:
-                            'De nouvelles disciplines élémentaires vous '
-                            'attendront',
+                            _l10n.levelUpScreenUpcomingElementalDisciplinesStep,
                       ),
                       if (_hasManeuversStep(data) ||
                           _hasArcaneShotsStep(data) ||
@@ -2032,10 +2044,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         const SizedBox(height: AppSpacing.sm),
                     ],
                     if (_hasManeuversStep(data)) ...[
-                      const _UpcomingStepRow(
+                      _UpcomingStepRow(
                         icon: Icons.shield_moon,
                         color: AppColors.accentBlue,
-                        label: 'De nouvelles manœuvres vous attendront',
+                        label: _l10n.levelUpScreenUpcomingManeuversStep,
                       ),
                       if (_hasArcaneShotsStep(data) ||
                           _hasRunesStep(data) ||
@@ -2043,28 +2055,28 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         const SizedBox(height: AppSpacing.sm),
                     ],
                     if (_hasArcaneShotsStep(data)) ...[
-                      const _UpcomingStepRow(
+                      _UpcomingStepRow(
                         icon: Icons.gps_fixed,
                         color: AppColors.accentBrick,
-                        label: 'De nouveaux tirs arcaniques vous attendront',
+                        label: _l10n.levelUpScreenUpcomingArcaneShotsStep,
                       ),
                       if (_hasRunesStep(data) || _hasInfusionsStep(data))
                         const SizedBox(height: AppSpacing.sm),
                     ],
                     if (_hasRunesStep(data)) ...[
-                      const _UpcomingStepRow(
+                      _UpcomingStepRow(
                         icon: Icons.font_download,
                         color: AppColors.accentTeal,
-                        label: 'De nouvelles runes vous attendront',
+                        label: _l10n.levelUpScreenUpcomingRunesStep,
                       ),
                       if (_hasInfusionsStep(data))
                         const SizedBox(height: AppSpacing.sm),
                     ],
                     if (_hasInfusionsStep(data))
-                      const _UpcomingStepRow(
+                      _UpcomingStepRow(
                         icon: Icons.science,
                         color: AppColors.accentViolet,
-                        label: 'Vos infusions vont évoluer',
+                        label: _l10n.levelUpScreenUpcomingInfusionsStep,
                       ),
                   ],
                 ],
@@ -2075,7 +2087,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: PrimaryButton(
-            label: 'Continuer',
+            label: _l10n.levelUpScreenContinueButton,
             // `blockReason` n'est volontairement pas testé ici : le
             // prochain `_buildData` s'en charge une fois `_phase` sorti de
             // `announcement` (voir la documentation ci-dessus).
@@ -2472,9 +2484,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel: 'Étape 1 sur ${_totalSteps(data)} · Points de vie',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenHpStepLabel(_totalSteps(data)),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -2504,7 +2516,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'Points de vie maximum',
+                                  _l10n.levelUpScreenMaxHpTitle,
                                   style: AppTypography.body(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
@@ -2517,7 +2529,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                                 // l'étape "Caractéristiques", valeurs déjà
                                 // calculées en tête de [_buildHpStep].
                                 Text(
-                                  '${data.currentMaxHp} → $newMaxHp (+$gain)',
+                                  _l10n.levelUpScreenMaxHpDelta(
+                                    data.currentMaxHp,
+                                    newMaxHp,
+                                    gain,
+                                  ),
                                   style: AppTypography.body(
                                     fontSize: 12,
                                     color: AppColors.textSecondary,
@@ -2530,9 +2546,14 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                                   // désambiguïsé explicitement (spec visuelle
                                   // direction-artistique section 4b).
                                   data.isMulticlassing
-                                      ? 'Dé de vie de ${data.className} (niveau '
-                                            '1) : d${data.hitDie}'
-                                      : 'Dé de vie de la classe : d${data.hitDie}',
+                                      ? _l10n
+                                            .levelUpScreenHitDieMulticlassLabel(
+                                              data.className,
+                                              data.hitDie,
+                                            )
+                                      : _l10n.levelUpScreenHitDieClassLabel(
+                                          data.hitDie,
+                                        ),
                                   style: AppTypography.body(
                                     fontSize: 12,
                                     color: AppColors.textSecondary,
@@ -2548,13 +2569,17 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         options: [
                           SegmentedToggleOption(
                             value: _HpMethod.roll,
-                            label: 'Lancer le dé (d${data.hitDie})',
+                            label: _l10n.levelUpScreenRollHitDieOption(
+                              data.hitDie,
+                            ),
                           ),
                           SegmentedToggleOption(
                             value: _HpMethod.average,
-                            label:
-                                'Valeur moyenne '
-                                '(${LevelUpHitPointsCalculator.averageValue(data.hitDie)})',
+                            label: _l10n.levelUpScreenAverageHitDieOption(
+                              LevelUpHitPointsCalculator.averageValue(
+                                data.hitDie,
+                              ),
+                            ),
                           ),
                         ],
                         value: _hpMethod,
@@ -2574,7 +2599,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                             ),
                             const SizedBox(height: AppSpacing.xs),
                             Text(
-                              '$modText modificateur de Constitution',
+                              _l10n.levelUpScreenConstitutionModifierLabel(
+                                modText,
+                              ),
                               style: AppTypography.body(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,
@@ -2590,7 +2617,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                                   ),
                                   child: Center(
                                     child: Text(
-                                      'Relancer le dé',
+                                      _l10n.levelUpScreenRerollDieLink,
                                       style: AppTypography.body(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
@@ -2602,7 +2629,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                               )
                             else
                               Text(
-                                '(moitié du dé arrondie au supérieur, +1)',
+                                _l10n.levelUpScreenAverageDieFormulaHint,
                                 style: AppTypography.body(
                                   fontSize: 11,
                                   color: AppColors.textMuted,
@@ -2620,8 +2647,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                       GainRow(
                         icon: Icons.favorite,
                         color: AppColors.accentBrick,
-                        title: 'Points de vie maximum',
-                        subtitle: '${data.currentMaxHp} → $newMaxHp (+$gain)',
+                        title: _l10n.levelUpScreenMaxHpTitle,
+                        subtitle: _l10n.levelUpScreenMaxHpDelta(
+                          data.currentMaxHp,
+                          newMaxHp,
+                          gain,
+                        ),
                       ),
                     ],
                   ),
@@ -2651,7 +2682,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
               constraints: const BoxConstraints(minHeight: 44),
               child: Center(
                 child: Text(
-                  "Voir l'historique des niveaux",
+                  _l10n.levelUpScreenLevelHistoryLink,
                   style: AppTypography.body(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -2677,11 +2708,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel:
-              'Étape 2 sur ${_totalSteps(data)} · '
-              '${hasMulticlassProficiencies ? 'Aptitudes & maîtrises' : 'Aptitudes de classe'}',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: hasMulticlassProficiencies
+              ? _l10n.levelUpScreenAbilitiesStepLabelWithProficiencies(
+                  _totalSteps(data),
+                )
+              : _l10n.levelUpScreenAbilitiesStepLabel(_totalSteps(data)),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -2699,7 +2732,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Vous obtenez automatiquement :',
+                        _l10n.levelUpScreenAutomaticFeaturesLabel,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -2719,7 +2752,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                           GainRow(
                             icon: Icons.star,
                             color: AppColors.accentTeal,
-                            title: 'Nouvelle aptitude',
+                            title: _l10n.levelUpScreenNewFeatureTitle,
                             subtitle: data.automaticFeatures[i].name,
                           ),
                         ],
@@ -2728,7 +2761,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                         Container(height: 1, color: AppColors.gaugeTrack),
                         const SizedBox(height: AppSpacing.md),
                         Text(
-                          'Maîtrises de multiclassage :',
+                          _l10n.levelUpScreenMulticlassProficienciesLabel,
                           style: AppTypography.body(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -2745,7 +2778,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                           GainRow(
                             icon: Icons.construction,
                             color: AppColors.accentTeal,
-                            title: 'Nouvelle maîtrise',
+                            title: _l10n.levelUpScreenNewProficiencyTitle,
                             subtitle: data.multiclassProficiencies[i],
                           ),
                         ],
@@ -2777,10 +2810,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel:
-              'Étape 3 sur ${_totalSteps(data)} · ${_choiceStepLabel(kind)}',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenChoiceStepLabel(
+            _totalSteps(data),
+            _choiceStepLabel(kind),
+          ),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -2816,11 +2851,14 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   /// pour le contexte de blocage, voir sa documentation).
   String _choiceStepLabel(LevelUpChoiceKind kind) {
     return switch (kind) {
-      LevelUpChoiceKind.abilityScoreImprovement => 'Amélioration ou don',
-      LevelUpChoiceKind.subclass => 'Sous-classe',
-      LevelUpChoiceKind.fightingStyle => 'Style de combat',
-      LevelUpChoiceKind.favoredEnemy => 'Ennemi juré',
-      LevelUpChoiceKind.pact => 'Faveur de pacte',
+      LevelUpChoiceKind.abilityScoreImprovement =>
+        _l10n.levelUpScreenChoiceKindAbilityScoreImprovement,
+      LevelUpChoiceKind.subclass => _l10n.levelUpScreenChoiceKindSubclass,
+      LevelUpChoiceKind.fightingStyle =>
+        _l10n.levelUpScreenChoiceKindFightingStyle,
+      LevelUpChoiceKind.favoredEnemy =>
+        _l10n.levelUpScreenChoiceKindFavoredEnemy,
+      LevelUpChoiceKind.pact => _l10n.levelUpScreenChoiceKindPact,
     };
   }
 
@@ -2848,7 +2886,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return switch (kind) {
       LevelUpChoiceKind.abilityScoreImprovement => _buildAsiOrFeatBody(data),
       LevelUpChoiceKind.subclass => _buildOptionListBody(
-        instruction: 'Choisissez une sous-classe.',
+        instruction: _l10n.levelUpScreenChooseSubclassInstruction,
         icon: Icons.auto_awesome,
         options: [
           for (final subclass in data.availableSubclasses)
@@ -2869,7 +2907,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         ],
       ),
       LevelUpChoiceKind.fightingStyle => _buildOptionListBody(
-        instruction: 'Choisissez un style de combat.',
+        instruction: _l10n.levelUpScreenChooseFightingStyleInstruction,
         icon: Icons.security,
         options: [
           for (final style in LevelUpChoiceOptions.fightingStyles)
@@ -2877,7 +2915,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         ],
       ),
       LevelUpChoiceKind.favoredEnemy => _buildOptionListBody(
-        instruction: 'Choisissez un ennemi juré.',
+        instruction: _l10n.levelUpScreenChooseFavoredEnemyInstruction,
         icon: Icons.gps_fixed,
         options: [
           for (final enemy in LevelUpChoiceOptions.favoredEnemies)
@@ -2885,7 +2923,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         ],
       ),
       LevelUpChoiceKind.pact => _buildOptionListBody(
-        instruction: 'Choisissez votre Faveur de pacte.',
+        instruction: _l10n.levelUpScreenChoosePactInstruction,
         icon: Icons.menu_book,
         options: [
           for (final pact in WarlockPact.values)
@@ -2925,7 +2963,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Choisissez comment progresser.',
+                _l10n.levelUpScreenChooseProgressionInstruction,
                 style: AppTypography.body(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -2934,14 +2972,14 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
               ),
               const SizedBox(height: AppSpacing.sm),
               SegmentedToggle<_AsiMethod>(
-                options: const [
+                options: [
                   SegmentedToggleOption(
                     value: _AsiMethod.allocate,
-                    label: 'Répartir +2',
+                    label: _l10n.levelUpScreenAllocateAbilityOption,
                   ),
                   SegmentedToggleOption(
                     value: _AsiMethod.feat,
-                    label: 'Choisir un don',
+                    label: _l10n.levelUpScreenChooseFeatOption,
                   ),
                 ],
                 value: _asiMethod,
@@ -2957,7 +2995,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           child: _asiMethod == _AsiMethod.allocate
               ? _buildAbilityAllocationBody(data)
               : _buildOptionListBody(
-                  instruction: 'Choisissez un don.',
+                  instruction: _l10n.levelUpScreenChooseFeatInstruction,
                   icon: Icons.military_tech,
                   options: [
                     for (final feat in data.availableFeats)
@@ -2987,7 +3025,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     final selected = _featAbilityFor(feat);
     return [
       Text(
-        'Caractéristique augmentée par ${feat.name} (+1) :',
+        _l10n.levelUpScreenFeatAbilityIncreaseLabel(feat.name),
         style: AppTypography.body(
           fontSize: 13,
           fontWeight: FontWeight.w700,
@@ -3095,8 +3133,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Répartissez $_abilityScoreImprovementBudget points entre vos '
-            'caractéristiques.',
+            _l10n.levelUpScreenAllocateBudgetInstruction(
+              _abilityScoreImprovementBudget,
+            ),
             style: AppTypography.body(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -3106,8 +3145,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           const SizedBox(height: AppSpacing.sm),
           Text(
             remaining > 0
-                ? 'Points restants : $remaining/$_abilityScoreImprovementBudget'
-                : 'Tous les points sont répartis.',
+                ? _l10n.levelUpScreenPointsRemainingLabel(
+                    remaining,
+                    _abilityScoreImprovementBudget,
+                  )
+                : _l10n.levelUpScreenAllPointsAllocatedLabel,
             style: AppTypography.body(
               fontSize: 13,
               fontWeight: FontWeight.w700,
@@ -3183,11 +3225,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel:
-              'Étape $stepNumber sur ${_totalSteps(data)} · '
-              'Emplacements de sorts',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenSpellSlotsStepLabel(
+            stepNumber,
+            _totalSteps(data),
+          ),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -3205,7 +3248,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Vos emplacements de sorts sont recalculés :',
+                        _l10n.levelUpScreenSpellSlotsRecalculatedLabel,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -3340,9 +3383,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Sorts',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenSpellsStepLabel(
+            stepNumber,
+            _totalSteps(data),
+          ),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         if (showTabSelector) ...[
@@ -3350,19 +3396,19 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
           SpellLevelTabSelector<_SpellSelectionTab>(
             options: [
               if (showCantripTab)
-                const SpellLevelTabOption(
+                SpellLevelTabOption(
                   value: _SpellSelectionTab.cantrip,
-                  label: 'Mineurs',
+                  label: _l10n.levelUpScreenCantripTab,
                 ),
               if (showSpellsTab)
-                const SpellLevelTabOption(
+                SpellLevelTabOption(
                   value: _SpellSelectionTab.spells,
-                  label: 'Sorts',
+                  label: _l10n.levelUpScreenSpellsTab,
                 ),
               if (showPactTab)
-                const SpellLevelTabOption(
+                SpellLevelTabOption(
                   value: _SpellSelectionTab.pact,
-                  label: 'Grimoire',
+                  label: _l10n.levelUpScreenPactTab,
                 ),
             ],
             value: activeTab,
@@ -3387,7 +3433,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                 ],
                 if (activeTab == _SpellSelectionTab.cantrip)
                   _spellSelectionSection(
-                    title: 'SORTS MINEURS CONNUS',
+                    title: _l10n.levelUpScreenKnownCantripsTitle,
                     quota: cantripQuota,
                     selected: _selectedNewCantrips,
                     candidates: cantrips,
@@ -3398,7 +3444,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   // Livre des ombres : sorts mineurs de N'IMPORTE QUELLE
                   // classe (catalogue complet, déjà connus exclus).
                   _spellSelectionSection(
-                    title: 'LIVRE DES OMBRES',
+                    title: _l10n.levelUpScreenShadowBookTitle,
                     quota: pactQuota,
                     selected: pactSelected,
                     candidates: data.pactCantripCandidates,
@@ -3407,7 +3453,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   )
                 else
                   _spellSelectionSection(
-                    title: 'NOUVEAUX SORTS CONNUS',
+                    title: _l10n.levelUpScreenKnownSpellsTitle,
                     quota: spellQuota,
                     selected: _selectedNewSpells,
                     candidates: spells,
@@ -3421,7 +3467,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Vos emplacements de sorts sont recalculés :',
+                        _l10n.levelUpScreenSpellSlotsRecalculatedLabel,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -3432,7 +3478,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                       if (data.spellSlotChanges.isEmpty &&
                           data.pactSlotChange == null)
                         Text(
-                          'Aucun emplacement de sorts à ce niveau.',
+                          _l10n.levelUpScreenNoSpellSlotsAtThisLevel,
                           style: AppTypography.body(
                             fontSize: 13,
                             color: AppColors.textMuted,
@@ -3504,7 +3550,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                 color: AppColors.textSecondary,
               ),
             ),
-            _QuotaBadge(text: '${selected.length} / $quota'),
+            _QuotaBadge(
+              text: _l10n.levelUpScreenQuotaBadge(selected.length, quota),
+            ),
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -3543,11 +3591,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     // "Patron" : simple indication d'origine (liste étendue du patron), pas
     // un sort accordé — une fois choisi, c'est un sort connu ordinaire.
     final baseSubtitle = showLevelSuffix
-        ? '${spell.metaLine} (niveau ${spell.level})'
+        ? _l10n.levelUpScreenSpellMetaLineWithLevel(spell.metaLine, spell.level)
         : spell.metaLine;
     return CheckableOptionTile(
       title: spell.name,
-      subtitle: isPatronSpell ? '$baseSubtitle · Patron' : baseSubtitle,
+      subtitle: isPatronSpell
+          ? _l10n.levelUpScreenPatronSpellSubtitle(baseSubtitle)
+          : baseSubtitle,
       leading: AccentIconBadge(index: index, icon: Icons.auto_awesome),
       checked: isSelected,
       onInfo: () => showSpellOptionInfoSheet(context, spell: spell),
@@ -3583,9 +3633,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Invocations',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenInvocationsStepLabel(
+            stepNumber,
+            _totalSteps(data),
+          ),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -3599,23 +3652,26 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'INVOCATIONS CONNUES',
+                      _l10n.levelUpScreenKnownInvocationsTitle,
                       style: AppTypography.body(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    _QuotaBadge(text: '${selected.length} / $quota'),
+                    _QuotaBadge(
+                      text: _l10n.levelUpScreenQuotaBadge(
+                        selected.length,
+                        quota,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 if (data.availableInvocations.isEmpty)
-                  const _ParchmentCard(
+                  _ParchmentCard(
                     child: _EmptyChoiceState(
-                      message:
-                          'Vous connaissez déjà toutes les invocations '
-                          'occultistes disponibles.',
+                      message: _l10n.levelUpScreenNoMoreInvocationsMessage,
                     ),
                   )
                 else
@@ -3725,11 +3781,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel:
-              'Étape $stepNumber sur ${_totalSteps(data)} · '
-              'Disciplines élémentaires',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenElementalDisciplinesStepLabel(
+            stepNumber,
+            _totalSteps(data),
+          ),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -3743,23 +3800,27 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'DISCIPLINES ÉLÉMENTAIRES CONNUES',
+                      _l10n.levelUpScreenKnownElementalDisciplinesTitle,
                       style: AppTypography.body(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    _QuotaBadge(text: '${selected.length} / $quota'),
+                    _QuotaBadge(
+                      text: _l10n.levelUpScreenQuotaBadge(
+                        selected.length,
+                        quota,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 if (available.isEmpty)
-                  const _ParchmentCard(
+                  _ParchmentCard(
                     child: _EmptyChoiceState(
                       message:
-                          'Vous connaissez déjà toutes les disciplines '
-                          'élémentaires disponibles à ce niveau.',
+                          _l10n.levelUpScreenNoMoreElementalDisciplinesMessage,
                     ),
                   )
                 else
@@ -3861,9 +3922,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Manœuvres',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenManeuversStepLabel(
+            stepNumber,
+            _totalSteps(data),
+          ),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -3877,23 +3941,26 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'MANŒUVRES CONNUES',
+                      _l10n.levelUpScreenKnownManeuversTitle,
                       style: AppTypography.body(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    _QuotaBadge(text: '${selected.length} / $quota'),
+                    _QuotaBadge(
+                      text: _l10n.levelUpScreenQuotaBadge(
+                        selected.length,
+                        quota,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 if (available.isEmpty)
-                  const _ParchmentCard(
+                  _ParchmentCard(
                     child: _EmptyChoiceState(
-                      message:
-                          'Vous connaissez déjà toutes les manœuvres '
-                          'disponibles.',
+                      message: _l10n.levelUpScreenNoMoreManeuversMessage,
                     ),
                   )
                 else
@@ -3989,10 +4056,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel:
-              'Étape $stepNumber sur ${_totalSteps(data)} · Tirs arcaniques',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenArcaneShotsStepLabel(
+            stepNumber,
+            _totalSteps(data),
+          ),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -4006,23 +4075,26 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'TIRS ARCANIQUES CONNUS',
+                      _l10n.levelUpScreenKnownArcaneShotsTitle,
                       style: AppTypography.body(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    _QuotaBadge(text: '${selected.length} / $quota'),
+                    _QuotaBadge(
+                      text: _l10n.levelUpScreenQuotaBadge(
+                        selected.length,
+                        quota,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 if (available.isEmpty)
-                  const _ParchmentCard(
+                  _ParchmentCard(
                     child: _EmptyChoiceState(
-                      message:
-                          'Vous connaissez déjà tous les tirs arcaniques '
-                          'disponibles.',
+                      message: _l10n.levelUpScreenNoMoreArcaneShotsMessage,
                     ),
                   )
                 else
@@ -4105,9 +4177,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Runes',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenRunesStepLabel(
+            stepNumber,
+            _totalSteps(data),
+          ),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -4121,23 +4196,26 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'RUNES CONNUES',
+                      _l10n.levelUpScreenKnownRunesTitle,
                       style: AppTypography.body(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    _QuotaBadge(text: '${selected.length} / $quota'),
+                    _QuotaBadge(
+                      text: _l10n.levelUpScreenQuotaBadge(
+                        selected.length,
+                        quota,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 if (available.isEmpty)
-                  const _ParchmentCard(
+                  _ParchmentCard(
                     child: _EmptyChoiceState(
-                      message:
-                          'Vous connaissez déjà toutes les runes '
-                          'disponibles.',
+                      message: _l10n.levelUpScreenNoMoreRunesMessage,
                     ),
                   )
                 else
@@ -4234,9 +4312,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Infusions',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenInfusionsStepLabel(
+            stepNumber,
+            _totalSteps(data),
+          ),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -4251,23 +4332,26 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'NOUVELLES INFUSIONS',
+                        _l10n.levelUpScreenNewInfusionsTitle,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      _QuotaBadge(text: '${selected.length} / $quota'),
+                      _QuotaBadge(
+                        text: _l10n.levelUpScreenQuotaBadge(
+                          selected.length,
+                          quota,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   if (available.isEmpty)
-                    const _ParchmentCard(
+                    _ParchmentCard(
                       child: _EmptyChoiceState(
-                        message:
-                            'Vous connaissez déjà toutes les infusions '
-                            'disponibles.',
+                        message: _l10n.levelUpScreenNoMoreInfusionsMessage,
                       ),
                     )
                   else
@@ -4285,7 +4369,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                 ],
                 if (data.canSwapInfusion) ...[
                   Text(
-                    'REMPLACER UNE INFUSION (OPTIONNEL)',
+                    _l10n.levelUpScreenReplaceInfusionOptionalTitle,
                     style: AppTypography.body(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
@@ -4308,7 +4392,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   if (_infusionSwapRemovedName != null) ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'REMPLACÉE PAR',
+                      _l10n.levelUpScreenReplacedByLabel,
                       style: AppTypography.body(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -4437,9 +4521,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Métamagie',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenMetamagicStepLabel(
+            stepNumber,
+            _totalSteps(data),
+          ),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -4454,23 +4541,26 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'NOUVELLES OPTIONS DE MÉTAMAGIE',
+                        _l10n.levelUpScreenNewMetamagicOptionsTitle,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      _QuotaBadge(text: '${selected.length} / $quota'),
+                      _QuotaBadge(
+                        text: _l10n.levelUpScreenQuotaBadge(
+                          selected.length,
+                          quota,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   if (available.isEmpty)
-                    const _ParchmentCard(
+                    _ParchmentCard(
                       child: _EmptyChoiceState(
-                        message:
-                            'Vous connaissez déjà toutes les options de '
-                            'Métamagie disponibles.',
+                        message: _l10n.levelUpScreenNoMoreMetamagicMessage,
                       ),
                     )
                   else
@@ -4488,7 +4578,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                 ],
                 if (data.canSwapMetamagic) ...[
                   Text(
-                    'REMPLACER UNE OPTION (OPTIONNEL)',
+                    _l10n.levelUpScreenReplaceMetamagicOptionalTitle,
                     style: AppTypography.body(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
@@ -4511,7 +4601,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   if (_metamagicSwapRemovedName != null) ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'REMPLACÉE PAR',
+                      _l10n.levelUpScreenReplacedByLabel,
                       style: AppTypography.body(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -4618,9 +4708,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel: 'Étape $stepNumber sur ${_totalSteps(data)} · Expertise',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenExpertiseStepLabel(
+            stepNumber,
+            _totalSteps(data),
+          ),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -4634,23 +4727,26 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'COMPÉTENCES EN EXPERTISE',
+                      _l10n.levelUpScreenExpertiseSkillsTitle,
                       style: AppTypography.body(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textSecondary,
                       ),
                     ),
-                    _QuotaBadge(text: '$totalSelected / $effectiveTotalQuota'),
+                    _QuotaBadge(
+                      text: _l10n.levelUpScreenQuotaBadge(
+                        totalSelected,
+                        effectiveTotalQuota,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 if (data.allowsThievesToolsSubstitution) ...[
                   CheckableOptionTile(
-                    title: 'Outils de voleur',
-                    subtitle:
-                        'Substitue une des places d\'Expertise à la '
-                        'maîtrise des outils de voleur.',
+                    title: _l10n.levelUpScreenThievesToolsLabel,
+                    subtitle: _l10n.levelUpScreenThievesToolsSubstitutionHint,
                     leading: const AccentIconBadge(
                       index: 0,
                       icon: Icons.construction,
@@ -4665,11 +4761,9 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                   const SizedBox(height: AppSpacing.xs),
                 ],
                 if (available.isEmpty)
-                  const _ParchmentCard(
+                  _ParchmentCard(
                     child: _EmptyChoiceState(
-                      message:
-                          'Aucune compétence déjà maîtrisée à faire passer '
-                          'en Expertise.',
+                      message: _l10n.levelUpScreenNoExpertiseCandidatesMessage,
                     ),
                   )
                 else
@@ -4737,11 +4831,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
-          stepLabel:
-              'Étape $stepNumber sur ${_totalSteps(data)} · '
-              'Ascendance draconique',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
+          stepLabel: _l10n.levelUpScreenDraconicAncestryStepLabel(
+            stepNumber,
+            _totalSteps(data),
+          ),
           remainingLevelsLabel: _remainingLevelsLabel(data.currentXp),
         ),
         Expanded(
@@ -4752,7 +4847,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
               children: [
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'TYPE DE DÉGÂTS',
+                  _l10n.levelUpScreenDamageTypeTitle,
                   style: AppTypography.body(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -4799,12 +4894,16 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
       icon: Icons.auto_awesome,
       color: AppColors.accentViolet,
       title: change.isNewlyUnlocked
-          ? 'Nouveaux emplacements de sorts'
-          : 'Emplacements de sorts renforcés',
+          ? _l10n.levelUpScreenNewSpellSlotsTitle
+          : _l10n.levelUpScreenReinforcedSpellSlotsTitle,
       subtitle: change.isNewlyUnlocked
-          ? 'Niveau ${change.spellLevel} débloqué'
-          : 'Niveau ${change.spellLevel} : ${change.oldTotal} → '
-                '${change.newTotal} (+${change.delta})',
+          ? _l10n.levelUpScreenSpellSlotUnlockedSubtitle(change.spellLevel)
+          : _l10n.levelUpScreenSpellSlotReinforcedSubtitle(
+              change.spellLevel,
+              change.oldTotal,
+              change.newTotal,
+              change.delta,
+            ),
     );
   }
 
@@ -4831,27 +4930,35 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     final String title;
     final String subtitle;
     if (change.oldCharges == 0) {
-      title = 'Magie de pacte débloquée';
-      subtitle =
-          'Niveau ${change.newSlotLevel} · ${change.newCharges} '
-          'charge(s)';
+      title = _l10n.levelUpScreenPactMagicUnlockedTitle;
+      subtitle = _l10n.levelUpScreenPactMagicUnlockedSubtitle(
+        change.newSlotLevel,
+        change.newCharges,
+      );
     } else if (change.oldSlotLevel == change.newSlotLevel &&
         change.oldCharges != change.newCharges) {
-      title = 'Charges de pacte renforcées';
-      subtitle =
-          '${change.oldCharges} → ${change.newCharges} charges '
-          '(niveau ${change.newSlotLevel})';
+      title = _l10n.levelUpScreenPactChargesReinforcedTitle;
+      subtitle = _l10n.levelUpScreenPactChargesReinforcedSubtitle(
+        change.oldCharges,
+        change.newCharges,
+        change.newSlotLevel,
+      );
     } else if (change.oldCharges == change.newCharges &&
         change.oldSlotLevel != change.newSlotLevel) {
-      title = 'Charges de pacte améliorées';
-      subtitle =
-          'Niveau ${change.oldSlotLevel} → ${change.newSlotLevel} '
-          '(${change.newCharges} charges)';
+      title = _l10n.levelUpScreenPactChargesImprovedTitle;
+      subtitle = _l10n.levelUpScreenPactChargesImprovedSubtitle(
+        change.oldSlotLevel,
+        change.newSlotLevel,
+        change.newCharges,
+      );
     } else {
-      title = 'Charges de pacte renforcées';
-      subtitle =
-          '${change.oldCharges} → ${change.newCharges} charges, '
-          'niveau ${change.oldSlotLevel} → ${change.newSlotLevel}';
+      title = _l10n.levelUpScreenPactChargesReinforcedTitle;
+      subtitle = _l10n.levelUpScreenPactChargesBothSubtitle(
+        change.oldCharges,
+        change.newCharges,
+        change.oldSlotLevel,
+        change.newSlotLevel,
+      );
     }
 
     return GainRow(
@@ -4888,21 +4995,27 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         return GainRow(
           icon: Icons.checklist,
           color: AppColors.accentBlue,
-          title: 'Don',
+          title: _l10n.levelUpScreenFeatSummaryTitle,
           subtitle: abilityLabel == null
               ? feat.name
-              : '${feat.name} ($abilityLabel +1)',
+              : _l10n.levelUpScreenFeatAbilityBonusSubtitle(
+                  feat.name,
+                  abilityLabel,
+                ),
         );
       }
       final subtitle = [
         for (final definition in abilityScoreDefinitions)
           if ((_abilityAllocations?[definition.key] ?? 0) > 0)
-            '${definition.label} +${_abilityAllocations![definition.key]}',
+            _l10n.levelUpScreenAbilityAllocationSummaryItem(
+              definition.label,
+              _abilityAllocations![definition.key]!,
+            ),
       ].join(', ');
       return GainRow(
         icon: Icons.checklist,
         color: AppColors.accentBlue,
-        title: 'Amélioration de caractéristique',
+        title: _l10n.levelUpScreenAbilityScoreImprovementTitle,
         subtitle: subtitle,
       );
     }
@@ -4942,21 +5055,21 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         GainRow(
           icon: Icons.auto_awesome,
           color: AppColors.accentViolet,
-          title: 'Nouveaux sorts mineurs',
+          title: _l10n.levelUpScreenNewCantripsTitle,
           subtitle: _selectedNewCantrips.join(', '),
         ),
       if (_selectedNewSpells.isNotEmpty)
         GainRow(
           icon: Icons.auto_awesome,
           color: AppColors.accentViolet,
-          title: 'Nouveaux sorts appris',
+          title: _l10n.levelUpScreenNewSpellsLearnedTitle,
           subtitle: _selectedNewSpells.join(', '),
         ),
       if (_effectivePactCantrips(data).isNotEmpty)
         GainRow(
           icon: Icons.menu_book,
           color: AppColors.accentTeal,
-          title: 'Livre des ombres',
+          title: _l10n.levelUpScreenShadowBookGainTitle,
           subtitle: _effectivePactCantrips(data).join(', '),
         ),
       if (WarlockPactRewards.willAddFamiliar(
@@ -4964,17 +5077,17 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         familiarSpellId: data.familiarSpellId,
         knownSpellIds: data.knownSpellIds,
       ))
-        const GainRow(
+        GainRow(
           icon: Icons.pets,
           color: AppColors.accentTeal,
-          title: 'Appel de familier ajouté',
-          subtitle: 'Pacte de la chaîne',
+          title: _l10n.levelUpScreenFamiliarAddedTitle,
+          subtitle: _l10n.levelUpScreenChainPactSubtitle,
         ),
       for (final grant in data.newRacialInnateSpells)
         GainRow(
           icon: Icons.auto_awesome,
           color: AppColors.accentTeal,
-          title: 'Sort inné racial',
+          title: _l10n.levelUpScreenRacialInnateSpellTitle,
           subtitle: grant.spellName,
         ),
     ];
@@ -4994,11 +5107,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
             .firstWhere((option) => option.id.toString() == id)
             .name,
     ];
-    final plural = names.length > 1 ? 's' : '';
     return GainRow(
       icon: Icons.remove_red_eye,
       color: AppColors.accentViolet,
-      title: 'Nouvelle$plural invocation$plural occultiste$plural',
+      title: _l10n.levelUpScreenNewInvocationsSummaryTitle(names.length),
       subtitle: names.join(', '),
     );
   }
@@ -5011,11 +5123,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   GainRow? _elementalDisciplineSummaryGainRow(LevelUpStepData data) {
     final names = _buildElementalDisciplineNames(data);
     if (names.isEmpty) return null;
-    final plural = names.length > 1 ? 's' : '';
     return GainRow(
       icon: Icons.whatshot,
       color: AppColors.accentBrick,
-      title: 'Nouvelle$plural discipline$plural élémentaire$plural',
+      title: _l10n.levelUpScreenNewElementalDisciplinesSummaryTitle(
+        names.length,
+      ),
       subtitle: names.join(', '),
     );
   }
@@ -5028,11 +5141,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   GainRow? _maneuverSummaryGainRow(LevelUpStepData data) {
     final names = _buildManeuverNames(data);
     if (names.isEmpty) return null;
-    final plural = names.length > 1 ? 's' : '';
     return GainRow(
       icon: Icons.shield_moon,
       color: AppColors.accentBlue,
-      title: 'Nouvelle$plural manœuvre$plural',
+      title: _l10n.levelUpScreenNewManeuversSummaryTitle(names.length),
       subtitle: names.join(', '),
     );
   }
@@ -5043,11 +5155,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   GainRow? _arcaneShotSummaryGainRow(LevelUpStepData data) {
     final names = _buildArcaneShotNames(data);
     if (names.isEmpty) return null;
-    final plural = names.length > 1 ? 's' : '';
     return GainRow(
       icon: Icons.gps_fixed,
       color: AppColors.accentBrick,
-      title: 'Nouveau$plural tir$plural arcanique$plural',
+      title: _l10n.levelUpScreenNewArcaneShotsSummaryTitle(names.length),
       subtitle: names.join(', '),
     );
   }
@@ -5058,11 +5169,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   GainRow? _runeSummaryGainRow(LevelUpStepData data) {
     final names = _buildRuneNames(data);
     if (names.isEmpty) return null;
-    final plural = names.length > 1 ? 's' : '';
     return GainRow(
       icon: Icons.font_download,
       color: AppColors.accentTeal,
-      title: 'Nouvelle$plural rune$plural',
+      title: _l10n.levelUpScreenNewRunesSummaryTitle(names.length),
       subtitle: names.join(', '),
     );
   }
@@ -5076,11 +5186,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   GainRow? _infusionSummaryGainRow(LevelUpStepData data) {
     final names = _buildInfusionNames(data);
     if (names.isEmpty) return null;
-    final plural = names.length > 1 ? 's' : '';
     return GainRow(
       icon: Icons.science,
       color: AppColors.accentViolet,
-      title: 'Nouvelle$plural infusion$plural',
+      title: _l10n.levelUpScreenNewInfusionsSummaryTitle(names.length),
       subtitle: names.join(', '),
     );
   }
@@ -5094,8 +5203,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return GainRow(
       icon: Icons.sync_alt,
       color: AppColors.accentViolet,
-      title: 'Infusion remplacée',
-      subtitle: '${swap.removedName} → ${swap.addedName}',
+      title: _l10n.levelUpScreenInfusionSwapTitle,
+      subtitle: _l10n.levelUpScreenSwapSubtitle(
+        swap.removedName,
+        swap.addedName,
+      ),
     );
   }
 
@@ -5105,11 +5217,10 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
   GainRow? _metamagicSummaryGainRow(LevelUpStepData data) {
     final names = _buildMetamagicNames(data);
     if (names.isEmpty) return null;
-    final plural = names.length > 1 ? 's' : '';
     return GainRow(
       icon: Icons.auto_fix_high,
       color: AppColors.accentViolet,
-      title: 'Nouvelle$plural option$plural de Métamagie',
+      title: _l10n.levelUpScreenNewMetamagicOptionsSummaryTitle(names.length),
       subtitle: names.join(', '),
     );
   }
@@ -5122,8 +5233,11 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return GainRow(
       icon: Icons.sync_alt,
       color: AppColors.accentViolet,
-      title: 'Métamagie remplacée',
-      subtitle: '${swap.removedName} → ${swap.addedName}',
+      title: _l10n.levelUpScreenMetamagicSwapTitle,
+      subtitle: _l10n.levelUpScreenSwapSubtitle(
+        swap.removedName,
+        swap.addedName,
+      ),
     );
   }
 
@@ -5134,14 +5248,13 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     final names = [
       for (final option in data.availableExpertiseSkills)
         if (skillIds.contains(option.skillId.toString())) option.name,
-      if (_expertiseThievesToolsSelected) 'Outils de voleur',
+      if (_expertiseThievesToolsSelected) _l10n.levelUpScreenThievesToolsLabel,
     ];
     if (names.isEmpty) return null;
-    final plural = names.length > 1 ? 's' : '';
     return GainRow(
       icon: Icons.star,
       color: AppColors.accentViolet,
-      title: 'Expertise$plural',
+      title: _l10n.levelUpScreenExpertiseSummaryTitle(names.length),
       subtitle: names.join(', '),
     );
   }
@@ -5154,7 +5267,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return GainRow(
       icon: Icons.whatshot,
       color: AppColors.accentViolet,
-      title: 'Ascendance draconique',
+      title: _l10n.levelUpScreenDraconicAncestryTitle,
       subtitle: damageType,
     );
   }
@@ -5170,8 +5283,8 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: 'MONTÉE DE NIVEAU',
-          levelLabel: 'NIVEAU $_targetLevel',
+          eyebrow: _l10n.levelUpScreenEyebrow,
+          levelLabel: _l10n.levelUpScreenLevelLabel(_targetLevel),
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -5189,15 +5302,19 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                       GainRow(
                         icon: Icons.favorite,
                         color: AppColors.accentBrick,
-                        title: 'Points de vie maximum',
-                        subtitle: '${data.currentMaxHp} → $newMaxHp (+$gain)',
+                        title: _l10n.levelUpScreenMaxHpTitle,
+                        subtitle: _l10n.levelUpScreenMaxHpDelta(
+                          data.currentMaxHp,
+                          newMaxHp,
+                          gain,
+                        ),
                       ),
                       for (final feature in data.automaticFeatures) ...[
                         const SizedBox(height: AppSpacing.md),
                         GainRow(
                           icon: Icons.star,
                           color: AppColors.accentTeal,
-                          title: 'Nouvelle aptitude',
+                          title: _l10n.levelUpScreenNewFeatureTitle,
                           subtitle: feature.name,
                         ),
                       ],
@@ -5285,7 +5402,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: PrimaryButton(
-            label: 'Continuer',
+            label: _l10n.levelUpScreenContinueButton,
             isLoading: _isApplying,
             onPressed: _isApplying ? null : () => _continueFromSummary(data),
           ),
@@ -5320,8 +5437,12 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
     return Column(
       children: [
         LevelUpHeader(
-          eyebrow: isImmediate ? 'MONTÉE DE NIVEAU' : 'NIVEAU ATTEINT',
-          levelLabel: isImmediate ? null : 'NIVEAU ${_targetLevel - 1}',
+          eyebrow: isImmediate
+              ? _l10n.levelUpScreenEyebrow
+              : _l10n.levelUpScreenLevelReachedEyebrow,
+          levelLabel: isImmediate
+              ? null
+              : _l10n.levelUpScreenLevelLabel(_targetLevel - 1),
         ),
         Expanded(
           child: Center(
@@ -5338,7 +5459,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      'Niveau $blockedClassLevel : choix requis',
+                      _l10n.levelUpScreenBlockedLevelTitle(blockedClassLevel),
                       textAlign: TextAlign.center,
                       style: AppTypography.body(
                         fontSize: 16,
@@ -5347,8 +5468,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      'Ce niveau nécessite un choix pas encore disponible '
-                      "dans l'app.",
+                      _l10n.levelUpScreenContinueClassBlockedSubtitle,
                       textAlign: TextAlign.center,
                       style: AppTypography.body(
                         fontSize: 14,
@@ -5373,7 +5493,7 @@ class _LevelUpScreenState extends ConsumerState<LevelUpScreen> {
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: PrimaryButton(
-            label: 'Retour à la fiche',
+            label: _l10n.levelUpScreenBackToSheetButton,
             onPressed: _goBackToSheet,
           ),
         ),
@@ -5417,6 +5537,7 @@ class _EmptyFeaturesState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Column(
@@ -5424,7 +5545,7 @@ class _EmptyFeaturesState extends StatelessWidget {
           const Icon(Icons.star_border, size: 40, color: AppColors.textMuted),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Aucune nouvelle aptitude de classe à ce niveau.',
+            l10n.levelUpScreenNoNewFeaturesMessage,
             textAlign: TextAlign.center,
             style: AppTypography.body(fontSize: 13, color: AppColors.textMuted),
           ),
@@ -5484,21 +5605,23 @@ class _UpcomingStepRow extends StatelessWidget {
 /// étape précise, contrairement aux 3 autres usages de ce widget). Retombe
 /// sur le texte générique historique si non fourni.
 class _EmptyChoiceState extends StatelessWidget {
-  const _EmptyChoiceState({
-    this.message = 'Aucune option disponible pour ce choix.',
-  });
+  const _EmptyChoiceState({this.message});
 
-  final String message;
+  /// `null` retombe sur [AppLocalizations.levelUpScreenNoOptionAvailableMessage]
+  /// (texte générique historique) — voir la documentation de classe pour le
+  /// détail des 2 cas, générique et spécifique (étape "Invocations").
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         const Icon(Icons.info_outline, size: 40, color: AppColors.textMuted),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          message,
+          message ?? l10n.levelUpScreenNoOptionAvailableMessage,
           textAlign: TextAlign.center,
           style: AppTypography.body(fontSize: 13, color: AppColors.textMuted),
         ),
@@ -5532,6 +5655,7 @@ class _AllocationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final newScore = currentScore + alloc;
 
     return Container(
@@ -5560,7 +5684,11 @@ class _AllocationRow extends StatelessWidget {
                 Text(
                   alloc == 0
                       ? '$currentScore'
-                      : '$currentScore → $newScore (+$alloc)',
+                      : l10n.levelUpScreenAbilityScoreDelta(
+                          currentScore,
+                          newScore,
+                          alloc,
+                        ),
                   style: AppTypography.body(
                     fontSize: 12,
                     color: AppColors.textSecondary,
@@ -5594,16 +5722,23 @@ class _StepFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Row(
         children: [
           Expanded(
-            child: SecondaryButton(label: 'Retour', onPressed: onBack),
+            child: SecondaryButton(
+              label: l10n.levelUpScreenBackButton,
+              onPressed: onBack,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: PrimaryButton(label: 'Continuer', onPressed: onContinue),
+            child: PrimaryButton(
+              label: l10n.levelUpScreenContinueButton,
+              onPressed: onContinue,
+            ),
           ),
         ],
       ),
@@ -5657,6 +5792,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -5677,7 +5813,7 @@ class _ErrorState extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               SecondaryButton(
-                label: 'Réessayer',
+                label: l10n.levelUpScreenRetryButton,
                 surface: SecondaryButtonSurface.parchment,
                 onPressed: onRetry,
               ),

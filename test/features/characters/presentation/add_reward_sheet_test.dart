@@ -36,6 +36,7 @@ import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/domain/write_outcome.dart';
 import 'package:personnages/features/characters/presentation/providers/character_providers.dart';
 import 'package:personnages/features/characters/presentation/widgets/add_reward_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 Map<CurrencyKind, int>? lastCurrencyDeltas;
 List<RewardItemDraft>? lastItems;
@@ -390,11 +391,23 @@ const _dagger = InventoryCatalogItem(
   weight: 0.5,
 );
 
-Future<void> _pumpSheet(WidgetTester tester) async {
+Future<void> _pumpSheet(
+  WidgetTester tester, {
+  Locale locale = const Locale('fr'),
+}) async {
   lastCurrencyDeltas = null;
   lastItems = null;
   await tester.pumpWidget(
     MaterialApp(
+      // `add_reward_sheet.dart` lit `AppLocalizations.of(context)!`
+      // (chantier "traduction de l'app" Phase B, lot "Characters — PV/XP/
+      // Repos/Montée de niveau") : sans ces delegates, l'appel renverrait
+      // `null` et le `!` planterait. `fr` par défaut : les assertions de ce
+      // fichier portent sur le texte français, sauf le groupe "locale
+      // anglaise" plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Builder(
         builder: (context) => Scaffold(
           body: Center(
@@ -584,6 +597,9 @@ void main() {
             ),
           ],
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('fr'),
             home: Builder(
               builder: (context) => Scaffold(
                 body: Center(
@@ -630,4 +646,18 @@ void main() {
       expect(lastItems!.single.isCustom, isFalse);
     },
   );
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement pour le
+    // titre et les sections.
+    testWidgets('titre et sections en anglais', (tester) async {
+      await _pumpSheet(tester, locale: const Locale('en'));
+
+      expect(find.text('ADD A REWARD'), findsOneWidget);
+      expect(find.text('CURRENCY'), findsOneWidget);
+      expect(find.text('ITEMS'), findsOneWidget);
+      expect(find.text('Add an item'), findsOneWidget);
+    });
+  });
 }
