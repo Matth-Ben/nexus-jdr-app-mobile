@@ -7,6 +7,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/destructive_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../providers/character_creation_draft_provider.dart';
 import '../providers/character_creation_return_route_provider.dart';
 import '../providers/character_edit_session_provider.dart';
@@ -66,64 +67,67 @@ Future<bool?> showAbandonCreationConfirmationDialog(
 }) {
   return showDialog<bool>(
     context: context,
-    builder: (context) => Dialog(
-      backgroundColor: AppColors.parchmentCard,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        side: const BorderSide(
-          color: AppColors.woodLight,
-          width: AppBorders.card,
+    builder: (context) {
+      final l10n = AppLocalizations.of(context)!;
+      return Dialog(
+        backgroundColor: AppColors.parchmentCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          side: const BorderSide(
+            color: AppColors.woodLight,
+            width: AppBorders.card,
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              editing
-                  ? 'Annuler les modifications ?'
-                  : 'Abandonner la création ?',
-              style: AppTypography.body(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              editing
-                  ? "Le personnage reste tel qu'il était : rien de ce qui a "
-                        'été changé dans cet assistant ne sera enregistré.'
-                  : 'Les choix déjà faits dans ce brouillon seront perdus. '
-                        'Cette action est définitive.',
-              style: AppTypography.body(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: SecondaryButton(
-                    label: 'Continuer',
-                    surface: SecondaryButtonSurface.parchment,
-                    onPressed: () => Navigator.of(context).pop(false),
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                editing
+                    ? l10n.abandonCreationFlowCancelEditDialogTitle
+                    : l10n.abandonCreationFlowAbandonDialogTitle,
+                style: AppTypography.body(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: DestructiveButton(
-                    label: editing ? 'Annuler' : 'Abandonner',
-                    onPressed: () => Navigator.of(context).pop(true),
-                  ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                editing
+                    ? l10n.abandonCreationFlowCancelEditDialogMessage
+                    : l10n.abandonCreationFlowAbandonDialogMessage,
+                style: AppTypography.body(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: SecondaryButton(
+                      label: l10n.abandonCreationFlowContinueButton,
+                      surface: SecondaryButtonSurface.parchment,
+                      onPressed: () => Navigator.of(context).pop(false),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: DestructiveButton(
+                      label: editing
+                          ? l10n.abandonCreationFlowCancelEditButton
+                          : l10n.abandonCreationFlowAbandonButton,
+                      onPressed: () => Navigator.of(context).pop(true),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-    ),
+      );
+    },
   );
 }

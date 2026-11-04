@@ -62,6 +62,7 @@ import 'package:personnages/features/xml_import/data/xml_import_repository.dart'
 import 'package:personnages/features/xml_import/domain/xml_import_save_data.dart';
 import 'package:personnages/features/xml_import/presentation/providers/xml_import_providers.dart';
 import 'package:personnages/features/xml_import/presentation/xml_import_review_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeCharacterCreationRepository implements CharacterCreationRepository {
   RaceCatalog raceCatalogToReturn = const RaceCatalog(races: [], subraces: []);
@@ -838,6 +839,8 @@ void main() {
     return UncontrolledProviderScope(
       container: container,
       child: MaterialApp.router(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         routerConfig: GoRouter(
           initialLocation: '/import',
           routes: [

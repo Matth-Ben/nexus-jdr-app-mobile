@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../providers/character_edit_session_provider.dart';
 
 /// Texte de pied de page affiché sous la `Row` Retour/Suivant des étapes 1 à
@@ -32,6 +33,7 @@ class DraftAutosaveFooter extends ConsumerWidget {
     // Mode modification : rien n'est enregistré avant « Enregistrer les
     // modifications », d'où un libellé différent.
     final editing = ref.watch(characterEditSessionControllerProvider) != null;
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Wrap(
         alignment: WrapAlignment.center,
@@ -39,8 +41,8 @@ class DraftAutosaveFooter extends ConsumerWidget {
         children: [
           Text(
             editing
-                ? 'Modification en cours · '
-                : '↻ Brouillon sauvegardé automatiquement · ',
+                ? l10n.draftAutosaveFooterModifyingPrefix
+                : l10n.draftAutosaveFooterAutosavedPrefix,
             style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
           ),
           InkWell(
@@ -49,7 +51,9 @@ class DraftAutosaveFooter extends ConsumerWidget {
               constraints: const BoxConstraints(minHeight: 44),
               child: Center(
                 child: Text(
-                  editing ? 'Annuler les modifications' : 'Abandonner',
+                  editing
+                      ? l10n.draftAutosaveFooterCancelModificationsLink
+                      : l10n.draftAutosaveFooterAbandonLink,
                   // `fontWeight.w600` : même convention que le lien tapable
                   // "‹ Retour" de `summary_step_screen.dart` (texte inline
                   // légèrement plus appuyé que le corps de texte qui

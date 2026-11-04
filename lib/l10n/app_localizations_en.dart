@@ -4470,4 +4470,61 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get summaryStepScreenCreateButton => 'Create character';
+
+  @override
+  String get creationModeTitleCreationLabel => 'CREATION';
+
+  @override
+  String get creationModeTitleModificationLabel => 'EDITING';
+
+  @override
+  String get draftAutosaveFooterAutosavedPrefix =>
+      '↻ Draft saved automatically · ';
+
+  @override
+  String get draftAutosaveFooterModifyingPrefix => 'Editing in progress · ';
+
+  @override
+  String get draftAutosaveFooterAbandonLink => 'Abandon';
+
+  @override
+  String get draftAutosaveFooterCancelModificationsLink => 'Cancel changes';
+
+  @override
+  String get abandonCreationFlowAbandonDialogTitle =>
+      'Abandon character creation?';
+
+  @override
+  String get abandonCreationFlowCancelEditDialogTitle => 'Cancel changes?';
+
+  @override
+  String get abandonCreationFlowAbandonDialogMessage =>
+      'The choices already made in this draft will be lost. This action is final.';
+
+  @override
+  String get abandonCreationFlowCancelEditDialogMessage =>
+      'The character stays as it was: nothing changed in this assistant will be saved.';
+
+  @override
+  String get abandonCreationFlowContinueButton => 'Continue';
+
+  @override
+  String get abandonCreationFlowAbandonButton => 'Abandon';
+
+  @override
+  String get abandonCreationFlowCancelEditButton => 'Cancel';
+
+  @override
+  String get racialBonusChoiceCardTitle => 'Racial bonus to assign';
+
+  @override
+  String racialBonusChoiceCardRuleIncomplete(String ruleLabel) {
+    return '$ruleLabel — to assign';
+  }
+
+  @override
+  String get racialBonusChoiceCardTwoOnePatternLabel => '+2 / +1';
+
+  @override
+  String get racialBonusChoiceCardOneOneOnePatternLabel => '+1 / +1 / +1';
 }
