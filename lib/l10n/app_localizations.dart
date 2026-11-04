@@ -2486,7 +2486,7 @@ abstract class AppLocalizations {
   /// **'INSP.'**
   String get characterStatPillsInspirationLabel;
 
-  /// Valeur de la tuile "Vitesse" quand `speed` est résolu — unité métrique (mètres) volontairement gardée telle quelle en anglais aussi (voir la description de la clé anglaise) : les données de vitesse de ce dépôt sont stockées en mètres, jamais converties en pieds.
+  /// Valeur de la tuile "Vitesse" quand `speed` est résolu — unité métrique (mètres) volontairement gardée telle quelle en anglais aussi (même unité conservée dans app_en.arb, qui ne porte pas sa propre description de clé : ce fichier app_fr.arb est le template) : les données de vitesse de ce dépôt sont stockées en mètres, jamais converties en pieds.
   ///
   /// In fr, this message translates to:
   /// **'{speed} m'**
