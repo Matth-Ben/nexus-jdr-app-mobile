@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_spell_entry.dart';
 
 /// Dialogue de confirmation avant de lancer un sort inné à charge limitée
@@ -32,69 +33,72 @@ Future<bool?> showCastInnateSpellConfirmationDialog(
 }) {
   return showDialog<bool>(
     context: context,
-    builder: (context) => Dialog(
-      backgroundColor: AppColors.parchmentCard,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        side: const BorderSide(
-          color: AppColors.woodLight,
-          width: AppBorders.card,
-        ),
-      ),
-      // `SingleChildScrollView` autour de la colonne (absent du calque
-      // dupliqué, `group_confirmation_dialog.dart`) : nécessaire ici parce
-      // que le message, plus long que ceux des usages "Groupe", déborde du
-      // `Dialog` (hauteur non bornée par défaut, pas de défilement intégré)
-      // à grande échelle de texte sur petit écran — détecté par
-      // `spell_info_panel_test.dart` (matrice 320x568/échelle 3.0), voir le
-      // registre de dette technique si ce même défaut doit un jour être
-      // corrigé sur le calque d'origine.
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Lancer ${spell.name} ?',
-                style: AppTypography.body(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Cette action consomme un usage de ce sort inné, récupéré '
-                'seulement au prochain repos long.',
-                style: AppTypography.body(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: SecondaryButton(
-                      label: 'Annuler',
-                      surface: SecondaryButtonSurface.parchment,
-                      onPressed: () => Navigator.of(context).pop(false),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: PrimaryButton(
-                      label: 'Lancer',
-                      onPressed: () => Navigator.of(context).pop(true),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+    builder: (context) {
+      final l10n = AppLocalizations.of(context)!;
+      return Dialog(
+        backgroundColor: AppColors.parchmentCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          side: const BorderSide(
+            color: AppColors.woodLight,
+            width: AppBorders.card,
           ),
         ),
-      ),
-    ),
+        // `SingleChildScrollView` autour de la colonne (absent du calque
+        // dupliqué, `group_confirmation_dialog.dart`) : nécessaire ici parce
+        // que le message, plus long que ceux des usages "Groupe", déborde du
+        // `Dialog` (hauteur non bornée par défaut, pas de défilement intégré)
+        // à grande échelle de texte sur petit écran — détecté par
+        // `spell_info_panel_test.dart` (matrice 320x568/échelle 3.0), voir le
+        // registre de dette technique si ce même défaut doit un jour être
+        // corrigé sur le calque d'origine.
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.castInnateSpellConfirmationDialogTitle(spell.name),
+                  style: AppTypography.body(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  l10n.castInnateSpellConfirmationDialogMessage,
+                  style: AppTypography.body(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SecondaryButton(
+                        label:
+                            l10n.castInnateSpellConfirmationDialogCancelButton,
+                        surface: SecondaryButtonSurface.parchment,
+                        onPressed: () => Navigator.of(context).pop(false),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: PrimaryButton(
+                        label: l10n.castInnateSpellConfirmationDialogCastButton,
+                        onPressed: () => Navigator.of(context).pop(true),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
   );
 }

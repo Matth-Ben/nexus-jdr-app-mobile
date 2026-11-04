@@ -19,6 +19,7 @@ import 'package:personnages/features/characters/domain/prepared_spells_limit.dar
 import 'package:personnages/features/characters/domain/spell_cast_block_reason.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/characters/presentation/widgets/prepare_spells_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 /// Construit un [ClassPreparedSpells] de test — [preparedCount] est
 /// toujours ignoré par la sheet (elle recalcule le décompte localement,
@@ -78,11 +79,15 @@ void main() {
     List<CharacterSpellSlot> spellSlots = const [],
     CharacterSpellSlot? pactSlot,
     List<ClassPreparedSpells> classLimits = const [],
+    Locale locale = const Locale('fr'),
   }) async {
     toggled = [];
     cast = [];
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -759,6 +764,31 @@ void main() {
         find.text(SpellCastBlockReason.innateUseSpent.message),
         findsOneWidget,
       );
+    });
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets('titre, compteur, recherche et tooltip ⓘ en anglais', (
+      tester,
+    ) async {
+      await pumpSheet(
+        tester,
+        spells: const [_cantrip, _prepared, _unprepared, _granted],
+        classLimits: [_classLimit('Clerc', 5)],
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('PREPARE MY SPELLS'), findsOneWidget);
+      expect(find.text('Search for a spell'), findsOneWidget);
+      expect(find.text('PREPARED SPELLS'), findsOneWidget);
+      expect(find.byTooltip('Description of Bénédiction'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'zzzzz');
+      await tester.pumpAndSettle();
+
+      expect(find.text('No spell for “zzzzz”.'), findsOneWidget);
     });
   });
 }

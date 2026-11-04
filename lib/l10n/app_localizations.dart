@@ -4881,6 +4881,524 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'FILTRER PAR CATÉGORIE'**
   String get inventoryCategoryFilterSheetTitle;
+
+  /// Titre "SORTS" affiché au-dessus du bloc "Magie de pacte" dans `CharacterSpellsSection` (uniquement visible si le personnage a de la magie de pacte, voir `hasPact`).
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS'**
+  String get characterSpellsSectionTitle;
+
+  /// Libellé de `_PactSlotBanner`, à côté de l'icône de flamme.
+  ///
+  /// In fr, this message translates to:
+  /// **'Magie de pacte — Niveau {level}'**
+  String characterSpellsSectionPactLabel(int level);
+
+  /// `Semantics.label` de `SpellSlotDots` pour un emplacement de pacte (`slot.isPact`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Emplacements de pacte : {remaining} restants sur {total} (niveau {level})'**
+  String characterSpellsSectionPactSlotsSemanticLabel(
+    int remaining,
+    int total,
+    int level,
+  );
+
+  /// `Semantics.label` de `SpellSlotDots` pour un emplacement classique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Emplacements de sorts : {remaining} restants sur {total}'**
+  String characterSpellsSectionSlotsSemanticLabel(int remaining, int total);
+
+  /// `Semantics.label` de `_GrantBadge` — `sourceLabel` reste `SpellGrantSource.label` (domain, non traduit, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Toujours préparé, accordé par : {sourceLabel}'**
+  String characterSpellsSectionGrantBadgeSemanticLabel(String sourceLabel);
+
+  /// Libellé de la pastille `_RowBadge` d'un sort inné (`_InnateUsage`).
+  ///
+  /// In fr, this message translates to:
+  /// **'INNÉ'**
+  String get characterSpellsSectionInnateBadgeLabel;
+
+  /// Texte affiché à la place de la pastille pleine quand l'usage inné est épuisé (`_InnateUsage`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Épuisé'**
+  String get characterSpellsSectionInnateExhaustedLabel;
+
+  /// `Semantics.label` de `_InnateUsage` quand il reste au moins un usage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sort inné, sans emplacement, {remaining, plural, =1{1 utilisation restante} other{{remaining} utilisations restantes}} sur {max}, repos long'**
+  String characterSpellsSectionInnateAvailableSemanticLabel(
+    int remaining,
+    int max,
+  );
+
+  /// `Semantics.label` de `_InnateUsage` une fois l'usage épuisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sort inné, épuisé, disponible après un repos long'**
+  String get characterSpellsSectionInnateExhaustedSemanticLabel;
+
+  /// Titre de `CharacterClassFeaturesCard` en pied de cet onglet (D142, registre de dette technique : point du titre littéral refermé par ce lot).
+  ///
+  /// In fr, this message translates to:
+  /// **'INVOCATIONS & APTITUDES À USAGE LIMITÉ'**
+  String get characterSpellsTabBodyLimitedUseFeaturesCardTitle;
+
+  /// `hintText` du champ de recherche de l'onglet "Sorts".
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher un sort'**
+  String get characterSpellsTabBodySearchHint;
+
+  /// Tooltip du bouton d'effacement du champ de recherche de l'onglet "Sorts".
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer'**
+  String get characterSpellsTabBodySearchClearTooltip;
+
+  /// Libellé "kind" de `_NoMatchState` pour le filtre `SpellPreparationFilter.all`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort'**
+  String get characterSpellsTabBodyNoMatchAllLabel;
+
+  /// Libellé "kind" de `_NoMatchState` pour le filtre `SpellPreparationFilter.prepared`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort préparé'**
+  String get characterSpellsTabBodyNoMatchPreparedLabel;
+
+  /// Libellé "kind" de `_NoMatchState` pour le filtre `SpellPreparationFilter.unprepared`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort non préparé'**
+  String get characterSpellsTabBodyNoMatchUnpreparedLabel;
+
+  /// Message de `_NoMatchState` quand la recherche est vide (`kind` déjà localisé, ex. `characterSpellsTabBodyNoMatchAllLabel`).
+  ///
+  /// In fr, this message translates to:
+  /// **'{kind}.'**
+  String characterSpellsTabBodyNoMatchMessageEmpty(String kind);
+
+  /// Message de `_NoMatchState` quand la recherche en cours ne donne aucun résultat.
+  ///
+  /// In fr, this message translates to:
+  /// **'{kind} pour « {query} ».'**
+  String characterSpellsTabBodyNoMatchMessageQuery(String kind, String query);
+
+  /// Titre de `_EmptySpellsState` (aucun sort du tout sur la fiche).
+  ///
+  /// In fr, this message translates to:
+  /// **'AUCUN SORT'**
+  String get characterSpellsTabBodyEmptyStateTitle;
+
+  /// Sous-titre de `_EmptySpellsState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort sur cette fiche pour l\'instant. Pour les classes qui lancent des sorts, ils se choisissent depuis l\'assistant de création ou à la montée de niveau.'**
+  String get characterSpellsTabBodyEmptyStateBody;
+
+  /// Titre de `_NonCasterEmptyState` (classe structurellement non lanceuse de sorts).
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette classe ne lance pas de sorts'**
+  String get characterSpellsTabBodyNonCasterTitle;
+
+  /// Repli de `className` quand le personnage n'a aucune classe (`detail.primaryClass?.className`), transmis à `characterSpellsTabBodyNonCasterBody`.
+  ///
+  /// In fr, this message translates to:
+  /// **'cette classe'**
+  String get characterSpellsTabBodyNonCasterDefaultClassName;
+
+  /// Sous-titre de `_NonCasterEmptyState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{characterName} est {className} — hors archétype dédié (ex. Chevalier occulte), cette classe ne dispose pas d\'emplacements de sorts. Cet onglet reste accessible par cohérence de navigation, mais restera vide pour ce personnage.'**
+  String characterSpellsTabBodyNonCasterBody(
+    String characterName,
+    String className,
+  );
+
+  /// Titre de la sheet de choix d'emplacement (`_SpellSlotChoiceSheetContent`), `castSpellFlow`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer {spellName}'**
+  String spellActionSheetTitle(String spellName);
+
+  /// Sous-titre de la sheet de choix d'emplacement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez le niveau d\'emplacement à utiliser.'**
+  String get spellActionSheetSubtitle;
+
+  /// Bouton secondaire "Annuler" de la sheet de choix d'emplacement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get spellActionSheetCancelButton;
+
+  /// Bouton primaire "Lancer" de la sheet de choix d'emplacement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer'**
+  String get spellActionSheetCastButton;
+
+  /// Libellé `leading` de `_SpellSlotOptionRow` pour un emplacement épuisé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Épuisé'**
+  String get spellActionSheetSlotExhaustedLabel;
+
+  /// Libellé `leading` de `_SpellSlotOptionRow` quand `slot.total <= 0` (repli sans pastilles).
+  ///
+  /// In fr, this message translates to:
+  /// **'{remaining}/{total} restants'**
+  String spellActionSheetSlotRemainingLabel(int remaining, int total);
+
+  /// Titre de `_SpellSlotOptionRow` pour un emplacement de pacte.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {level} (pacte)'**
+  String spellActionSheetPactSlotLevelLabel(int level);
+
+  /// Titre de `_SpellSlotOptionRow` pour un emplacement classique.
+  ///
+  /// In fr, this message translates to:
+  /// **'Niveau {level}'**
+  String spellActionSheetSlotLevelLabel(int level);
+
+  /// Libellé de la ligne "Utilisations" du panneau "Infos" (sort inné à charge).
+  ///
+  /// In fr, this message translates to:
+  /// **'Utilisations'**
+  String get spellInfoPanelUsagesLabel;
+
+  /// Libellé de la ligne "Temps d'incantation" du panneau "Infos".
+  ///
+  /// In fr, this message translates to:
+  /// **'Temps d\'incantation'**
+  String get spellInfoPanelCastingTimeLabel;
+
+  /// Libellé de la ligne "Portée" du panneau "Infos".
+  ///
+  /// In fr, this message translates to:
+  /// **'Portée'**
+  String get spellInfoPanelRangeLabel;
+
+  /// Libellé de la ligne "Durée" du panneau "Infos".
+  ///
+  /// In fr, this message translates to:
+  /// **'Durée'**
+  String get spellInfoPanelDurationLabel;
+
+  /// Libellé de la ligne "Concentration" du panneau "Infos".
+  ///
+  /// In fr, this message translates to:
+  /// **'Concentration'**
+  String get spellInfoPanelConcentrationLabel;
+
+  /// Valeur de la ligne "Concentration" quand `spell.concentration` est vrai.
+  ///
+  /// In fr, this message translates to:
+  /// **'Oui'**
+  String get spellInfoPanelConcentrationYes;
+
+  /// Valeur de la ligne "Concentration" quand `spell.concentration` est faux.
+  ///
+  /// In fr, this message translates to:
+  /// **'Non'**
+  String get spellInfoPanelConcentrationNo;
+
+  /// Note affichée pour un sort accordé par une sous-classe — `sourceLabel` reste `SpellGrantSource.label.toLowerCase()` (domain, non traduit, voir le registre de dette technique).
+  ///
+  /// In fr, this message translates to:
+  /// **'Toujours préparé — sort de {sourceLabel} (ne compte pas dans la limite de sorts préparés)'**
+  String spellInfoPanelGrantSourceNote(String sourceLabel);
+
+  /// Note affichée pour un sort inné à charge limitée.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sort inné — se lance sans emplacement, {usesPerLongRest} fois par repos long'**
+  String spellInfoPanelInnateNote(int usesPerLongRest);
+
+  /// Titre de section "DESCRIPTION" du panneau "Infos" (texte de description lui-même non traduit, contenu D&D).
+  ///
+  /// In fr, this message translates to:
+  /// **'DESCRIPTION'**
+  String get spellInfoPanelDescriptionTitle;
+
+  /// Bouton primaire "Lancer" en pied du panneau "Infos" (route ordinaire).
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer'**
+  String get spellInfoPanelCastButton;
+
+  /// Second bouton "Lancer (sort inné)" d'un sort à double route (D43).
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer (sort inné)'**
+  String get spellInfoPanelCastInnateButton;
+
+  /// Lien `_TogglePreparedLink` quand le sort est déjà préparé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne plus préparer'**
+  String get spellInfoPanelUnprepareLink;
+
+  /// Lien `_TogglePreparedLink` quand le sort n'est pas encore préparé.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préparer ce sort'**
+  String get spellInfoPanelPrepareLink;
+
+  /// Libellé de la ligne "Composantes" du panneau "Infos" (`_SpellComponentsInfoRow`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Composantes'**
+  String get spellInfoPanelComponentsLabel;
+
+  /// Titre de `SpellPreparationCard`, réutilisé tel quel pour le titre de `showSpellPreparationInfoSheet` (même texte).
+  ///
+  /// In fr, this message translates to:
+  /// **'PRÉPARATION DES SORTS'**
+  String get spellPreparationCardTitle;
+
+  /// Tooltip de l'icône ⓘ de `SpellPreparationCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comment fonctionne la préparation des sorts ?'**
+  String get spellPreparationCardInfoTooltip;
+
+  /// Libellé de `PreparedSpellsCounter` pour une classe donnée, quand le personnage a plusieurs classes qui préparent — `className` déjà mis en majuscules par l'appelant.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS PRÉPARÉS — {className}'**
+  String spellPreparationCardClassLabel(String className);
+
+  /// Libellé par défaut de `PreparedSpellsCounter` (rendu mono-classe historique).
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS PRÉPARÉS'**
+  String get spellPreparationCardDefaultLabel;
+
+  /// Phrase d'état de `PreparedSpellsCounter` quand `count > limit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Limite dépassée de {overBy}'**
+  String spellPreparationCardOverLimitStatus(int overBy);
+
+  /// Phrase d'état de `PreparedSpellsCounter` quand `count == limit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Limite atteinte'**
+  String get spellPreparationCardLimitReachedStatus;
+
+  /// Phrase d'état de `PreparedSpellsCounter` quand `count < limit`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{remaining, plural, =1{Encore 1 sort à préparer} other{Encore {remaining} sorts à préparer}}'**
+  String spellPreparationCardRemainingToPrepareStatus(int remaining);
+
+  /// Base du `Semantics.label` de `PreparedSpellsCounter` — complété par `spellPreparationCardCounterOverLimitSuffix` si la limite est dépassée.
+  ///
+  /// In fr, this message translates to:
+  /// **'{label} : {count} sur {limit}'**
+  String spellPreparationCardCounterSemanticLabel(
+    String label,
+    int count,
+    int limit,
+  );
+
+  /// Suffixe du `Semantics.label` de `PreparedSpellsCounter` quand la limite est dépassée.
+  ///
+  /// In fr, this message translates to:
+  /// **', limite dépassée'**
+  String get spellPreparationCardCounterOverLimitSuffix;
+
+  /// Titre de la première entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préparer pour lancer'**
+  String get spellPreparationCardInfoEntryPrepareTitle;
+
+  /// Corps de la première entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les sorts préparés peuvent être lancés. Les sorts non préparés restent dans la liste, grisés, après les sorts préparés. Touchez un sort puis « Préparer ce sort » ou « Ne plus préparer ».'**
+  String get spellPreparationCardInfoEntryPrepareBody;
+
+  /// Titre de la deuxième entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Combien de sorts ?'**
+  String get spellPreparationCardInfoEntryHowManyTitle;
+
+  /// Corps de la deuxième entrée de `showSpellPreparationInfoSheet` — `limitsSentence` reste `spellPreparationCardSingleLimitSentence`/`spellPreparationCardMultipleLimitsSentence` (ou chaîne vide si `classLimits` est vide).
+  ///
+  /// In fr, this message translates to:
+  /// **'Clerc, Druide et Magicien : modificateur de caractéristique d\'incantation + niveau de classe. Paladin et Artificier (demi-lanceurs) : modificateur + moitié du niveau. Minimum 1. Multiclassé avec plusieurs classes qui préparent : chaque classe a sa propre limite, jamais un total commun.{limitsSentence} Une fois la limite atteinte, impossible de préparer un nouveau sort de cette classe sans en dé-préparer un autre d\'abord.'**
+  String spellPreparationCardInfoEntryHowManyBody(String limitsSentence);
+
+  /// `limitsSentence` quand `classLimits` compte exactement un élément.
+  ///
+  /// In fr, this message translates to:
+  /// **' Votre limite actuelle : {limit}.'**
+  String spellPreparationCardSingleLimitSentence(int limit);
+
+  /// `limitsSentence` quand `classLimits` compte plusieurs éléments — `limitsList` reste une concaténation "{className} {limit}" (noms de classe déjà traduits), non recomposée via `.arb`.
+  ///
+  /// In fr, this message translates to:
+  /// **' Vos limites actuelles : {limitsList}.'**
+  String spellPreparationCardMultipleLimitsSentence(String limitsList);
+
+  /// Titre de la troisième entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans préparation'**
+  String get spellPreparationCardInfoEntryNoPreparationTitle;
+
+  /// Corps de la troisième entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les sorts mineurs, les sorts innés et les sorts de domaine ou de serment n\'ont jamais à être préparés et ne comptent pas dans la limite. Un sort inné de niveau 1 ou plus se lance sans emplacement, une fois par repos long.'**
+  String get spellPreparationCardInfoEntryNoPreparationBody;
+
+  /// Titre de la quatrième entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer ne dé-prépare pas'**
+  String get spellPreparationCardInfoEntryCastDoesNotUnprepareTitle;
+
+  /// Corps de la quatrième entrée de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer un sort consomme un emplacement, mais le sort reste préparé : vous pouvez le relancer tant qu\'il vous reste des emplacements.'**
+  String get spellPreparationCardInfoEntryCastDoesNotUnprepareBody;
+
+  /// Titre de la cinquième entrée (dernière) de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer sa liste'**
+  String get spellPreparationCardInfoEntryChangeListTitle;
+
+  /// Corps de la cinquième entrée (dernière) de `showSpellPreparationInfoSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'La liste de sorts préparés se change après un repos long : le repos long vous propose de garder votre liste ou de la modifier.'**
+  String get spellPreparationCardInfoEntryChangeListBody;
+
+  /// Titre de `showPrepareSpellsSheet` (`SheetHeaderBar`).
+  ///
+  /// In fr, this message translates to:
+  /// **'PRÉPARER MES SORTS'**
+  String get prepareSpellsSheetTitle;
+
+  /// Libellé de `PreparedSpellsCounter` pour une classe donnée dans `showPrepareSpellsSheet`, quand le personnage a plusieurs classes qui préparent — `className` déjà mis en majuscules par l'appelant.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS PRÉPARÉS — {className}'**
+  String prepareSpellsSheetClassLabel(String className);
+
+  /// `hintText` du champ de recherche de `showPrepareSpellsSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher un sort'**
+  String get prepareSpellsSheetSearchHint;
+
+  /// Tooltip du bouton d'effacement du champ de recherche de `showPrepareSpellsSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer'**
+  String get prepareSpellsSheetSearchClearTooltip;
+
+  /// Message de `_NoMatchState` de `showPrepareSpellsSheet` quand la recherche est vide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort disponible.'**
+  String get prepareSpellsSheetNoMatchEmptyMessage;
+
+  /// Message de `_NoMatchState` de `showPrepareSpellsSheet` quand la recherche en cours ne donne aucun résultat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun sort pour « {query} ».'**
+  String prepareSpellsSheetNoMatchQueryMessage(String query);
+
+  /// Tooltip du bouton ⓘ de `_SpellCheckRow`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Description de {spellName}'**
+  String prepareSpellsSheetInfoTooltip(String spellName);
+
+  /// Titre de `showCastInnateSpellConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer {spellName} ?'**
+  String castInnateSpellConfirmationDialogTitle(String spellName);
+
+  /// Message de `showCastInnateSpellConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette action consomme un usage de ce sort inné, récupéré seulement au prochain repos long.'**
+  String get castInnateSpellConfirmationDialogMessage;
+
+  /// Bouton secondaire "Annuler" de `showCastInnateSpellConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler'**
+  String get castInnateSpellConfirmationDialogCancelButton;
+
+  /// Bouton primaire "Lancer" de `showCastInnateSpellConfirmationDialog`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer'**
+  String get castInnateSpellConfirmationDialogCastButton;
+
+  /// SnackBar de succès de `_castSpell` pour un sort de niveau 0 (rien à persister).
+  ///
+  /// In fr, this message translates to:
+  /// **'{spellName} lancé.'**
+  String characterDetailCastSpellSuccessMessage(String spellName);
+
+  /// SnackBar de succès de `_castSpell` pour un emplacement classique.
+  ///
+  /// In fr, this message translates to:
+  /// **'{spellName} lancé (emplacement niveau {slotLevel}).'**
+  String characterDetailCastSpellWithSlotSuccessMessage(
+    String spellName,
+    int slotLevel,
+  );
+
+  /// SnackBar d'échec générique de `_castSpell`/`_castPactSpell`/`_castInnateSpell`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de lancer ce sort. Réessayez.'**
+  String get characterDetailCastSpellErrorMessage;
+
+  /// SnackBar de succès de `_castPactSpell`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{spellName} lancé (emplacement de pacte niveau {pactLevel}).'**
+  String characterDetailCastPactSpellSuccessMessage(
+    String spellName,
+    int pactLevel,
+  );
+
+  /// SnackBar de succès de `_castInnateSpell`.
+  ///
+  /// In fr, this message translates to:
+  /// **'{spellName} lancé (sort inné).'**
+  String characterDetailCastInnateSpellSuccessMessage(String spellName);
+
+  /// SnackBar d'échec de `_reassertInnateUsesState`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de synchroniser les sorts innés. Réessayez.'**
+  String get characterDetailInnateSpellSyncErrorMessage;
 }
 
 class _AppLocalizationsDelegate

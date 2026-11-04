@@ -3963,5 +3963,515 @@
   "inventoryCategoryFilterSheetTitle": "FILTRER PAR CATÉGORIE",
   "@inventoryCategoryFilterSheetTitle": {
     "description": "Titre de la sheet \"Filtrer par catégorie\" de l'onglet \"Inventaire\"."
+  },
+  "characterSpellsSectionTitle": "SORTS",
+  "@characterSpellsSectionTitle": {
+    "description": "Titre \"SORTS\" affiché au-dessus du bloc \"Magie de pacte\" dans `CharacterSpellsSection` (uniquement visible si le personnage a de la magie de pacte, voir `hasPact`)."
+  },
+  "characterSpellsSectionPactLabel": "Magie de pacte — Niveau {level}",
+  "@characterSpellsSectionPactLabel": {
+    "description": "Libellé de `_PactSlotBanner`, à côté de l'icône de flamme.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "characterSpellsSectionPactSlotsSemanticLabel": "Emplacements de pacte : {remaining} restants sur {total} (niveau {level})",
+  "@characterSpellsSectionPactSlotsSemanticLabel": {
+    "description": "`Semantics.label` de `SpellSlotDots` pour un emplacement de pacte (`slot.isPact`).",
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "characterSpellsSectionSlotsSemanticLabel": "Emplacements de sorts : {remaining} restants sur {total}",
+  "@characterSpellsSectionSlotsSemanticLabel": {
+    "description": "`Semantics.label` de `SpellSlotDots` pour un emplacement classique.",
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "characterSpellsSectionGrantBadgeSemanticLabel": "Toujours préparé, accordé par : {sourceLabel}",
+  "@characterSpellsSectionGrantBadgeSemanticLabel": {
+    "description": "`Semantics.label` de `_GrantBadge` — `sourceLabel` reste `SpellGrantSource.label` (domain, non traduit, voir le registre de dette technique).",
+    "placeholders": {
+      "sourceLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "characterSpellsSectionInnateBadgeLabel": "INNÉ",
+  "@characterSpellsSectionInnateBadgeLabel": {
+    "description": "Libellé de la pastille `_RowBadge` d'un sort inné (`_InnateUsage`)."
+  },
+  "characterSpellsSectionInnateExhaustedLabel": "Épuisé",
+  "@characterSpellsSectionInnateExhaustedLabel": {
+    "description": "Texte affiché à la place de la pastille pleine quand l'usage inné est épuisé (`_InnateUsage`)."
+  },
+  "characterSpellsSectionInnateAvailableSemanticLabel": "Sort inné, sans emplacement, {remaining, plural, =1{1 utilisation restante} other{{remaining} utilisations restantes}} sur {max}, repos long",
+  "@characterSpellsSectionInnateAvailableSemanticLabel": {
+    "description": "`Semantics.label` de `_InnateUsage` quand il reste au moins un usage.",
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "characterSpellsSectionInnateExhaustedSemanticLabel": "Sort inné, épuisé, disponible après un repos long",
+  "@characterSpellsSectionInnateExhaustedSemanticLabel": {
+    "description": "`Semantics.label` de `_InnateUsage` une fois l'usage épuisé."
+  },
+  "characterSpellsTabBodyLimitedUseFeaturesCardTitle": "INVOCATIONS & APTITUDES À USAGE LIMITÉ",
+  "@characterSpellsTabBodyLimitedUseFeaturesCardTitle": {
+    "description": "Titre de `CharacterClassFeaturesCard` en pied de cet onglet (D142, registre de dette technique : point du titre littéral refermé par ce lot)."
+  },
+  "characterSpellsTabBodySearchHint": "Rechercher un sort",
+  "@characterSpellsTabBodySearchHint": {
+    "description": "`hintText` du champ de recherche de l'onglet \"Sorts\"."
+  },
+  "characterSpellsTabBodySearchClearTooltip": "Effacer",
+  "@characterSpellsTabBodySearchClearTooltip": {
+    "description": "Tooltip du bouton d'effacement du champ de recherche de l'onglet \"Sorts\"."
+  },
+  "characterSpellsTabBodyNoMatchAllLabel": "Aucun sort",
+  "@characterSpellsTabBodyNoMatchAllLabel": {
+    "description": "Libellé \"kind\" de `_NoMatchState` pour le filtre `SpellPreparationFilter.all`."
+  },
+  "characterSpellsTabBodyNoMatchPreparedLabel": "Aucun sort préparé",
+  "@characterSpellsTabBodyNoMatchPreparedLabel": {
+    "description": "Libellé \"kind\" de `_NoMatchState` pour le filtre `SpellPreparationFilter.prepared`."
+  },
+  "characterSpellsTabBodyNoMatchUnpreparedLabel": "Aucun sort non préparé",
+  "@characterSpellsTabBodyNoMatchUnpreparedLabel": {
+    "description": "Libellé \"kind\" de `_NoMatchState` pour le filtre `SpellPreparationFilter.unprepared`."
+  },
+  "characterSpellsTabBodyNoMatchMessageEmpty": "{kind}.",
+  "@characterSpellsTabBodyNoMatchMessageEmpty": {
+    "description": "Message de `_NoMatchState` quand la recherche est vide (`kind` déjà localisé, ex. `characterSpellsTabBodyNoMatchAllLabel`).",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "characterSpellsTabBodyNoMatchMessageQuery": "{kind} pour « {query} ».",
+  "@characterSpellsTabBodyNoMatchMessageQuery": {
+    "description": "Message de `_NoMatchState` quand la recherche en cours ne donne aucun résultat.",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "characterSpellsTabBodyEmptyStateTitle": "AUCUN SORT",
+  "@characterSpellsTabBodyEmptyStateTitle": {
+    "description": "Titre de `_EmptySpellsState` (aucun sort du tout sur la fiche)."
+  },
+  "characterSpellsTabBodyEmptyStateBody": "Aucun sort sur cette fiche pour l'instant. Pour les classes qui lancent des sorts, ils se choisissent depuis l'assistant de création ou à la montée de niveau.",
+  "@characterSpellsTabBodyEmptyStateBody": {
+    "description": "Sous-titre de `_EmptySpellsState`."
+  },
+  "characterSpellsTabBodyNonCasterTitle": "Cette classe ne lance pas de sorts",
+  "@characterSpellsTabBodyNonCasterTitle": {
+    "description": "Titre de `_NonCasterEmptyState` (classe structurellement non lanceuse de sorts)."
+  },
+  "characterSpellsTabBodyNonCasterDefaultClassName": "cette classe",
+  "@characterSpellsTabBodyNonCasterDefaultClassName": {
+    "description": "Repli de `className` quand le personnage n'a aucune classe (`detail.primaryClass?.className`), transmis à `characterSpellsTabBodyNonCasterBody`."
+  },
+  "characterSpellsTabBodyNonCasterBody": "{characterName} est {className} — hors archétype dédié (ex. Chevalier occulte), cette classe ne dispose pas d'emplacements de sorts. Cet onglet reste accessible par cohérence de navigation, mais restera vide pour ce personnage.",
+  "@characterSpellsTabBodyNonCasterBody": {
+    "description": "Sous-titre de `_NonCasterEmptyState`.",
+    "placeholders": {
+      "characterName": {
+        "type": "String"
+      },
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "spellActionSheetTitle": "Lancer {spellName}",
+  "@spellActionSheetTitle": {
+    "description": "Titre de la sheet de choix d'emplacement (`_SpellSlotChoiceSheetContent`), `castSpellFlow`.",
+    "placeholders": {
+      "spellName": {
+        "type": "String"
+      }
+    }
+  },
+  "spellActionSheetSubtitle": "Choisissez le niveau d'emplacement à utiliser.",
+  "@spellActionSheetSubtitle": {
+    "description": "Sous-titre de la sheet de choix d'emplacement."
+  },
+  "spellActionSheetCancelButton": "Annuler",
+  "@spellActionSheetCancelButton": {
+    "description": "Bouton secondaire \"Annuler\" de la sheet de choix d'emplacement."
+  },
+  "spellActionSheetCastButton": "Lancer",
+  "@spellActionSheetCastButton": {
+    "description": "Bouton primaire \"Lancer\" de la sheet de choix d'emplacement."
+  },
+  "spellActionSheetSlotExhaustedLabel": "Épuisé",
+  "@spellActionSheetSlotExhaustedLabel": {
+    "description": "Libellé `leading` de `_SpellSlotOptionRow` pour un emplacement épuisé."
+  },
+  "spellActionSheetSlotRemainingLabel": "{remaining}/{total} restants",
+  "@spellActionSheetSlotRemainingLabel": {
+    "description": "Libellé `leading` de `_SpellSlotOptionRow` quand `slot.total <= 0` (repli sans pastilles).",
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "spellActionSheetPactSlotLevelLabel": "Niveau {level} (pacte)",
+  "@spellActionSheetPactSlotLevelLabel": {
+    "description": "Titre de `_SpellSlotOptionRow` pour un emplacement de pacte.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "spellActionSheetSlotLevelLabel": "Niveau {level}",
+  "@spellActionSheetSlotLevelLabel": {
+    "description": "Titre de `_SpellSlotOptionRow` pour un emplacement classique.",
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
+  "spellInfoPanelUsagesLabel": "Utilisations",
+  "@spellInfoPanelUsagesLabel": {
+    "description": "Libellé de la ligne \"Utilisations\" du panneau \"Infos\" (sort inné à charge)."
+  },
+  "spellInfoPanelCastingTimeLabel": "Temps d'incantation",
+  "@spellInfoPanelCastingTimeLabel": {
+    "description": "Libellé de la ligne \"Temps d'incantation\" du panneau \"Infos\"."
+  },
+  "spellInfoPanelRangeLabel": "Portée",
+  "@spellInfoPanelRangeLabel": {
+    "description": "Libellé de la ligne \"Portée\" du panneau \"Infos\"."
+  },
+  "spellInfoPanelDurationLabel": "Durée",
+  "@spellInfoPanelDurationLabel": {
+    "description": "Libellé de la ligne \"Durée\" du panneau \"Infos\"."
+  },
+  "spellInfoPanelConcentrationLabel": "Concentration",
+  "@spellInfoPanelConcentrationLabel": {
+    "description": "Libellé de la ligne \"Concentration\" du panneau \"Infos\"."
+  },
+  "spellInfoPanelConcentrationYes": "Oui",
+  "@spellInfoPanelConcentrationYes": {
+    "description": "Valeur de la ligne \"Concentration\" quand `spell.concentration` est vrai."
+  },
+  "spellInfoPanelConcentrationNo": "Non",
+  "@spellInfoPanelConcentrationNo": {
+    "description": "Valeur de la ligne \"Concentration\" quand `spell.concentration` est faux."
+  },
+  "spellInfoPanelGrantSourceNote": "Toujours préparé — sort de {sourceLabel} (ne compte pas dans la limite de sorts préparés)",
+  "@spellInfoPanelGrantSourceNote": {
+    "description": "Note affichée pour un sort accordé par une sous-classe — `sourceLabel` reste `SpellGrantSource.label.toLowerCase()` (domain, non traduit, voir le registre de dette technique).",
+    "placeholders": {
+      "sourceLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "spellInfoPanelInnateNote": "Sort inné — se lance sans emplacement, {usesPerLongRest} fois par repos long",
+  "@spellInfoPanelInnateNote": {
+    "description": "Note affichée pour un sort inné à charge limitée.",
+    "placeholders": {
+      "usesPerLongRest": {
+        "type": "int"
+      }
+    }
+  },
+  "spellInfoPanelDescriptionTitle": "DESCRIPTION",
+  "@spellInfoPanelDescriptionTitle": {
+    "description": "Titre de section \"DESCRIPTION\" du panneau \"Infos\" (texte de description lui-même non traduit, contenu D&D)."
+  },
+  "spellInfoPanelCastButton": "Lancer",
+  "@spellInfoPanelCastButton": {
+    "description": "Bouton primaire \"Lancer\" en pied du panneau \"Infos\" (route ordinaire)."
+  },
+  "spellInfoPanelCastInnateButton": "Lancer (sort inné)",
+  "@spellInfoPanelCastInnateButton": {
+    "description": "Second bouton \"Lancer (sort inné)\" d'un sort à double route (D43)."
+  },
+  "spellInfoPanelUnprepareLink": "Ne plus préparer",
+  "@spellInfoPanelUnprepareLink": {
+    "description": "Lien `_TogglePreparedLink` quand le sort est déjà préparé."
+  },
+  "spellInfoPanelPrepareLink": "Préparer ce sort",
+  "@spellInfoPanelPrepareLink": {
+    "description": "Lien `_TogglePreparedLink` quand le sort n'est pas encore préparé."
+  },
+  "spellInfoPanelComponentsLabel": "Composantes",
+  "@spellInfoPanelComponentsLabel": {
+    "description": "Libellé de la ligne \"Composantes\" du panneau \"Infos\" (`_SpellComponentsInfoRow`)."
+  },
+  "spellPreparationCardTitle": "PRÉPARATION DES SORTS",
+  "@spellPreparationCardTitle": {
+    "description": "Titre de `SpellPreparationCard`, réutilisé tel quel pour le titre de `showSpellPreparationInfoSheet` (même texte)."
+  },
+  "spellPreparationCardInfoTooltip": "Comment fonctionne la préparation des sorts ?",
+  "@spellPreparationCardInfoTooltip": {
+    "description": "Tooltip de l'icône ⓘ de `SpellPreparationCard`."
+  },
+  "spellPreparationCardClassLabel": "SORTS PRÉPARÉS — {className}",
+  "@spellPreparationCardClassLabel": {
+    "description": "Libellé de `PreparedSpellsCounter` pour une classe donnée, quand le personnage a plusieurs classes qui préparent — `className` déjà mis en majuscules par l'appelant.",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "spellPreparationCardDefaultLabel": "SORTS PRÉPARÉS",
+  "@spellPreparationCardDefaultLabel": {
+    "description": "Libellé par défaut de `PreparedSpellsCounter` (rendu mono-classe historique)."
+  },
+  "spellPreparationCardOverLimitStatus": "Limite dépassée de {overBy}",
+  "@spellPreparationCardOverLimitStatus": {
+    "description": "Phrase d'état de `PreparedSpellsCounter` quand `count > limit`.",
+    "placeholders": {
+      "overBy": {
+        "type": "int"
+      }
+    }
+  },
+  "spellPreparationCardLimitReachedStatus": "Limite atteinte",
+  "@spellPreparationCardLimitReachedStatus": {
+    "description": "Phrase d'état de `PreparedSpellsCounter` quand `count == limit`."
+  },
+  "spellPreparationCardRemainingToPrepareStatus": "{remaining, plural, =1{Encore 1 sort à préparer} other{Encore {remaining} sorts à préparer}}",
+  "@spellPreparationCardRemainingToPrepareStatus": {
+    "description": "Phrase d'état de `PreparedSpellsCounter` quand `count < limit`.",
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "spellPreparationCardCounterSemanticLabel": "{label} : {count} sur {limit}",
+  "@spellPreparationCardCounterSemanticLabel": {
+    "description": "Base du `Semantics.label` de `PreparedSpellsCounter` — complété par `spellPreparationCardCounterOverLimitSuffix` si la limite est dépassée.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "spellPreparationCardCounterOverLimitSuffix": ", limite dépassée",
+  "@spellPreparationCardCounterOverLimitSuffix": {
+    "description": "Suffixe du `Semantics.label` de `PreparedSpellsCounter` quand la limite est dépassée."
+  },
+  "spellPreparationCardInfoEntryPrepareTitle": "Préparer pour lancer",
+  "@spellPreparationCardInfoEntryPrepareTitle": {
+    "description": "Titre de la première entrée de `showSpellPreparationInfoSheet`."
+  },
+  "spellPreparationCardInfoEntryPrepareBody": "Seuls les sorts préparés peuvent être lancés. Les sorts non préparés restent dans la liste, grisés, après les sorts préparés. Touchez un sort puis « Préparer ce sort » ou « Ne plus préparer ».",
+  "@spellPreparationCardInfoEntryPrepareBody": {
+    "description": "Corps de la première entrée de `showSpellPreparationInfoSheet`."
+  },
+  "spellPreparationCardInfoEntryHowManyTitle": "Combien de sorts ?",
+  "@spellPreparationCardInfoEntryHowManyTitle": {
+    "description": "Titre de la deuxième entrée de `showSpellPreparationInfoSheet`."
+  },
+  "spellPreparationCardInfoEntryHowManyBody": "Clerc, Druide et Magicien : modificateur de caractéristique d'incantation + niveau de classe. Paladin et Artificier (demi-lanceurs) : modificateur + moitié du niveau. Minimum 1. Multiclassé avec plusieurs classes qui préparent : chaque classe a sa propre limite, jamais un total commun.{limitsSentence} Une fois la limite atteinte, impossible de préparer un nouveau sort de cette classe sans en dé-préparer un autre d'abord.",
+  "@spellPreparationCardInfoEntryHowManyBody": {
+    "description": "Corps de la deuxième entrée de `showSpellPreparationInfoSheet` — `limitsSentence` reste `spellPreparationCardSingleLimitSentence`/`spellPreparationCardMultipleLimitsSentence` (ou chaîne vide si `classLimits` est vide).",
+    "placeholders": {
+      "limitsSentence": {
+        "type": "String"
+      }
+    }
+  },
+  "spellPreparationCardSingleLimitSentence": " Votre limite actuelle : {limit}.",
+  "@spellPreparationCardSingleLimitSentence": {
+    "description": "`limitsSentence` quand `classLimits` compte exactement un élément.",
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "spellPreparationCardMultipleLimitsSentence": " Vos limites actuelles : {limitsList}.",
+  "@spellPreparationCardMultipleLimitsSentence": {
+    "description": "`limitsSentence` quand `classLimits` compte plusieurs éléments — `limitsList` reste une concaténation \"{className} {limit}\" (noms de classe déjà traduits), non recomposée via `.arb`.",
+    "placeholders": {
+      "limitsList": {
+        "type": "String"
+      }
+    }
+  },
+  "spellPreparationCardInfoEntryNoPreparationTitle": "Sans préparation",
+  "@spellPreparationCardInfoEntryNoPreparationTitle": {
+    "description": "Titre de la troisième entrée de `showSpellPreparationInfoSheet`."
+  },
+  "spellPreparationCardInfoEntryNoPreparationBody": "Les sorts mineurs, les sorts innés et les sorts de domaine ou de serment n'ont jamais à être préparés et ne comptent pas dans la limite. Un sort inné de niveau 1 ou plus se lance sans emplacement, une fois par repos long.",
+  "@spellPreparationCardInfoEntryNoPreparationBody": {
+    "description": "Corps de la troisième entrée de `showSpellPreparationInfoSheet`."
+  },
+  "spellPreparationCardInfoEntryCastDoesNotUnprepareTitle": "Lancer ne dé-prépare pas",
+  "@spellPreparationCardInfoEntryCastDoesNotUnprepareTitle": {
+    "description": "Titre de la quatrième entrée de `showSpellPreparationInfoSheet`."
+  },
+  "spellPreparationCardInfoEntryCastDoesNotUnprepareBody": "Lancer un sort consomme un emplacement, mais le sort reste préparé : vous pouvez le relancer tant qu'il vous reste des emplacements.",
+  "@spellPreparationCardInfoEntryCastDoesNotUnprepareBody": {
+    "description": "Corps de la quatrième entrée de `showSpellPreparationInfoSheet`."
+  },
+  "spellPreparationCardInfoEntryChangeListTitle": "Changer sa liste",
+  "@spellPreparationCardInfoEntryChangeListTitle": {
+    "description": "Titre de la cinquième entrée (dernière) de `showSpellPreparationInfoSheet`."
+  },
+  "spellPreparationCardInfoEntryChangeListBody": "La liste de sorts préparés se change après un repos long : le repos long vous propose de garder votre liste ou de la modifier.",
+  "@spellPreparationCardInfoEntryChangeListBody": {
+    "description": "Corps de la cinquième entrée (dernière) de `showSpellPreparationInfoSheet`."
+  },
+  "prepareSpellsSheetTitle": "PRÉPARER MES SORTS",
+  "@prepareSpellsSheetTitle": {
+    "description": "Titre de `showPrepareSpellsSheet` (`SheetHeaderBar`)."
+  },
+  "prepareSpellsSheetClassLabel": "SORTS PRÉPARÉS — {className}",
+  "@prepareSpellsSheetClassLabel": {
+    "description": "Libellé de `PreparedSpellsCounter` pour une classe donnée dans `showPrepareSpellsSheet`, quand le personnage a plusieurs classes qui préparent — `className` déjà mis en majuscules par l'appelant.",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "prepareSpellsSheetSearchHint": "Rechercher un sort",
+  "@prepareSpellsSheetSearchHint": {
+    "description": "`hintText` du champ de recherche de `showPrepareSpellsSheet`."
+  },
+  "prepareSpellsSheetSearchClearTooltip": "Effacer",
+  "@prepareSpellsSheetSearchClearTooltip": {
+    "description": "Tooltip du bouton d'effacement du champ de recherche de `showPrepareSpellsSheet`."
+  },
+  "prepareSpellsSheetNoMatchEmptyMessage": "Aucun sort disponible.",
+  "@prepareSpellsSheetNoMatchEmptyMessage": {
+    "description": "Message de `_NoMatchState` de `showPrepareSpellsSheet` quand la recherche est vide."
+  },
+  "prepareSpellsSheetNoMatchQueryMessage": "Aucun sort pour « {query} ».",
+  "@prepareSpellsSheetNoMatchQueryMessage": {
+    "description": "Message de `_NoMatchState` de `showPrepareSpellsSheet` quand la recherche en cours ne donne aucun résultat.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "prepareSpellsSheetInfoTooltip": "Description de {spellName}",
+  "@prepareSpellsSheetInfoTooltip": {
+    "description": "Tooltip du bouton ⓘ de `_SpellCheckRow`.",
+    "placeholders": {
+      "spellName": {
+        "type": "String"
+      }
+    }
+  },
+  "castInnateSpellConfirmationDialogTitle": "Lancer {spellName} ?",
+  "@castInnateSpellConfirmationDialogTitle": {
+    "description": "Titre de `showCastInnateSpellConfirmationDialog`.",
+    "placeholders": {
+      "spellName": {
+        "type": "String"
+      }
+    }
+  },
+  "castInnateSpellConfirmationDialogMessage": "Cette action consomme un usage de ce sort inné, récupéré seulement au prochain repos long.",
+  "@castInnateSpellConfirmationDialogMessage": {
+    "description": "Message de `showCastInnateSpellConfirmationDialog`."
+  },
+  "castInnateSpellConfirmationDialogCancelButton": "Annuler",
+  "@castInnateSpellConfirmationDialogCancelButton": {
+    "description": "Bouton secondaire \"Annuler\" de `showCastInnateSpellConfirmationDialog`."
+  },
+  "castInnateSpellConfirmationDialogCastButton": "Lancer",
+  "@castInnateSpellConfirmationDialogCastButton": {
+    "description": "Bouton primaire \"Lancer\" de `showCastInnateSpellConfirmationDialog`."
+  },
+  "characterDetailCastSpellSuccessMessage": "{spellName} lancé.",
+  "@characterDetailCastSpellSuccessMessage": {
+    "description": "SnackBar de succès de `_castSpell` pour un sort de niveau 0 (rien à persister).",
+    "placeholders": {
+      "spellName": {
+        "type": "String"
+      }
+    }
+  },
+  "characterDetailCastSpellWithSlotSuccessMessage": "{spellName} lancé (emplacement niveau {slotLevel}).",
+  "@characterDetailCastSpellWithSlotSuccessMessage": {
+    "description": "SnackBar de succès de `_castSpell` pour un emplacement classique.",
+    "placeholders": {
+      "spellName": {
+        "type": "String"
+      },
+      "slotLevel": {
+        "type": "int"
+      }
+    }
+  },
+  "characterDetailCastSpellErrorMessage": "Impossible de lancer ce sort. Réessayez.",
+  "@characterDetailCastSpellErrorMessage": {
+    "description": "SnackBar d'échec générique de `_castSpell`/`_castPactSpell`/`_castInnateSpell`."
+  },
+  "characterDetailCastPactSpellSuccessMessage": "{spellName} lancé (emplacement de pacte niveau {pactLevel}).",
+  "@characterDetailCastPactSpellSuccessMessage": {
+    "description": "SnackBar de succès de `_castPactSpell`.",
+    "placeholders": {
+      "spellName": {
+        "type": "String"
+      },
+      "pactLevel": {
+        "type": "int"
+      }
+    }
+  },
+  "characterDetailCastInnateSpellSuccessMessage": "{spellName} lancé (sort inné).",
+  "@characterDetailCastInnateSpellSuccessMessage": {
+    "description": "SnackBar de succès de `_castInnateSpell`.",
+    "placeholders": {
+      "spellName": {
+        "type": "String"
+      }
+    }
+  },
+  "characterDetailInnateSpellSyncErrorMessage": "Impossible de synchroniser les sorts innés. Réessayez.",
+  "@characterDetailInnateSpellSyncErrorMessage": {
+    "description": "SnackBar d'échec de `_reassertInnateUsesState`."
   }
 }

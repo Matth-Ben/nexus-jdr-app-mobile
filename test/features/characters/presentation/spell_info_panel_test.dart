@@ -25,6 +25,7 @@ import 'package:personnages/features/characters/domain/character_spell_slot.dart
 import 'package:personnages/features/characters/domain/spell_cast_block_reason.dart';
 import 'package:personnages/features/characters/domain/spell_grant_source.dart';
 import 'package:personnages/features/characters/presentation/widgets/spell_info_panel.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 const _cantrip = CharacterSpellEntry(
   id: 1,
@@ -86,6 +87,7 @@ void main() {
     required List<CharacterSpellSlot> spellSlots,
     CharacterSpellSlot? pactSlot,
     bool readOnly = false,
+    Locale locale = const Locale('fr'),
   }) async {
     castCalls = [];
     castLevels = [];
@@ -93,6 +95,9 @@ void main() {
     preparedToggleCalls = [];
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -1548,6 +1553,86 @@ void main() {
       );
       // La ligne "Utilisations" reste affichée : purement informative.
       expect(find.text('Utilisations'), findsOneWidget);
+    });
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement. Le nom et
+    // la description du sort (contenu D&D, `spell.name`/`spell.description`)
+    // restent en français, hors périmètre de ce lot.
+    testWidgets('détail technique, boutons et liens en anglais', (
+      tester,
+    ) async {
+      await pumpPanel(
+        tester,
+        spell: _fireball,
+        spellSlots: const [CharacterSpellSlot(level: 3, total: 2, used: 0)],
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('Casting time'), findsOneWidget);
+      expect(find.text('Range'), findsOneWidget);
+      expect(find.text('Components'), findsOneWidget);
+      expect(find.text('Duration'), findsOneWidget);
+      expect(find.text('Concentration'), findsOneWidget);
+      expect(find.text('No'), findsOneWidget);
+      expect(find.text('DESCRIPTION'), findsOneWidget);
+      expect(find.widgetWithText(PrimaryButton, 'CAST'), findsOneWidget);
+    });
+
+    testWidgets('lien de préparation en anglais', (tester) async {
+      await pumpPanel(
+        tester,
+        spell: const CharacterSpellEntry(
+          id: 10,
+          name: 'Bouclier',
+          level: 1,
+          school: 'Abjuration',
+          status: SpellStatus.known,
+          requiresPreparation: true,
+        ),
+        spellSlots: const [CharacterSpellSlot(level: 1, total: 2, used: 0)],
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('Prepare this spell'), findsOneWidget);
+
+      await tester.tap(find.text('Prepare this spell'));
+      await tester.pumpAndSettle();
+
+      expect(preparedToggleCalls, hasLength(1));
+    });
+
+    testWidgets('sort inné à double route : note et second bouton en '
+        'anglais', (tester) async {
+      const dualRouteSpell = CharacterSpellEntry(
+        id: 52,
+        name: 'Thaumaturgie',
+        level: 2,
+        school: 'Évocation',
+        status: SpellStatus.prepared,
+        hasInnateRoute: true,
+        castingTime: '1 action',
+      );
+      await pumpPanel(
+        tester,
+        spell: dualRouteSpell,
+        spellSlots: const [CharacterSpellSlot(level: 2, total: 2, used: 0)],
+        locale: const Locale('en'),
+      );
+
+      expect(
+        find.textContaining(
+          'Innate spell — cast without a slot, 1 time(s) '
+          'per long rest',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(SecondaryButton, 'CAST (INNATE SPELL)'),
+        findsOneWidget,
+      );
     });
   });
 }

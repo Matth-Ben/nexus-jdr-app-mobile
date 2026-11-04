@@ -27,6 +27,9 @@ import 'package:personnages/features/characters/domain/character_spell_slot.dart
 import 'package:personnages/features/characters/presentation/widgets/character_spells_section.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_spells_tab_body.dart';
 import 'package:personnages/features/characters/presentation/widgets/spell_action_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
+import 'package:personnages/l10n/app_localizations_en.dart';
+import 'package:personnages/l10n/app_localizations_fr.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _availableLabel =
@@ -108,10 +111,14 @@ Future<void> _pump(
   CharacterDetail detail, {
   CastSpellCallback? onCastSpell,
   bool actionsDisabled = false,
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Scaffold(
           body: CharacterSpellsTabBody(
             detail: detail,
@@ -682,6 +689,79 @@ void main() {
         'fois par repos long.',
       ),
       findsOneWidget,
+    );
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets('pastille « INNATE » et marqueur en anglais', (tester) async {
+      final semanticsHandle = tester.ensureSemantics();
+
+      await _pump(tester, _detail(const [_innate]), locale: const Locale('en'));
+
+      expect(find.text('INNATE'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(
+          RegExp(
+            'Innate spell, no slot required, 1 use remaining out of 1, '
+            'long rest',
+          ),
+        ),
+        findsOneWidget,
+      );
+
+      semanticsHandle.dispose();
+    });
+
+    testWidgets('marqueur « Spent » en anglais', (tester) async {
+      final semanticsHandle = tester.ensureSemantics();
+
+      await _pump(
+        tester,
+        _detail(const [_innateSpent]),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('Spent'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(
+          RegExp('Innate spell, spent, available after a long rest'),
+        ),
+        findsOneWidget,
+      );
+
+      semanticsHandle.dispose();
+    });
+  });
+
+  test('semantic label de disponibilité : forme plurielle (remaining > 1, non '
+      'atteignable en pratique — usesPerLongRest vaut toujours 1 — mais '
+      'vérifiée directement pour couvrir la forme ICU plural manquante)', () {
+    final fr = AppLocalizationsFr();
+    final en = AppLocalizationsEn();
+
+    expect(
+      fr.characterSpellsSectionInnateAvailableSemanticLabel(1, 1),
+      'Sort inné, sans emplacement, 1 utilisation restante sur 1, repos '
+      'long',
+    );
+    expect(
+      en.characterSpellsSectionInnateAvailableSemanticLabel(1, 1),
+      'Innate spell, no slot required, 1 use remaining out of 1, long '
+      'rest',
+    );
+    // Forme plurielle (jamais atteignable via un vrai widget, voir
+    // ci-dessus).
+    expect(
+      fr.characterSpellsSectionInnateAvailableSemanticLabel(3, 3),
+      'Sort inné, sans emplacement, 3 utilisations restantes sur 3, repos '
+      'long',
+    );
+    expect(
+      en.characterSpellsSectionInnateAvailableSemanticLabel(3, 3),
+      'Innate spell, no slot required, 3 uses remaining out of 3, long '
+      'rest',
     );
   });
 }

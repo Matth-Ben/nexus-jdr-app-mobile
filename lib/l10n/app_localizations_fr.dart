@@ -2973,4 +2973,360 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get inventoryCategoryFilterSheetTitle => 'FILTRER PAR CATÉGORIE';
+
+  @override
+  String get characterSpellsSectionTitle => 'SORTS';
+
+  @override
+  String characterSpellsSectionPactLabel(int level) {
+    return 'Magie de pacte — Niveau $level';
+  }
+
+  @override
+  String characterSpellsSectionPactSlotsSemanticLabel(
+    int remaining,
+    int total,
+    int level,
+  ) {
+    return 'Emplacements de pacte : $remaining restants sur $total (niveau $level)';
+  }
+
+  @override
+  String characterSpellsSectionSlotsSemanticLabel(int remaining, int total) {
+    return 'Emplacements de sorts : $remaining restants sur $total';
+  }
+
+  @override
+  String characterSpellsSectionGrantBadgeSemanticLabel(String sourceLabel) {
+    return 'Toujours préparé, accordé par : $sourceLabel';
+  }
+
+  @override
+  String get characterSpellsSectionInnateBadgeLabel => 'INNÉ';
+
+  @override
+  String get characterSpellsSectionInnateExhaustedLabel => 'Épuisé';
+
+  @override
+  String characterSpellsSectionInnateAvailableSemanticLabel(
+    int remaining,
+    int max,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: '$remaining utilisations restantes',
+      one: '1 utilisation restante',
+    );
+    return 'Sort inné, sans emplacement, $_temp0 sur $max, repos long';
+  }
+
+  @override
+  String get characterSpellsSectionInnateExhaustedSemanticLabel =>
+      'Sort inné, épuisé, disponible après un repos long';
+
+  @override
+  String get characterSpellsTabBodyLimitedUseFeaturesCardTitle =>
+      'INVOCATIONS & APTITUDES À USAGE LIMITÉ';
+
+  @override
+  String get characterSpellsTabBodySearchHint => 'Rechercher un sort';
+
+  @override
+  String get characterSpellsTabBodySearchClearTooltip => 'Effacer';
+
+  @override
+  String get characterSpellsTabBodyNoMatchAllLabel => 'Aucun sort';
+
+  @override
+  String get characterSpellsTabBodyNoMatchPreparedLabel => 'Aucun sort préparé';
+
+  @override
+  String get characterSpellsTabBodyNoMatchUnpreparedLabel =>
+      'Aucun sort non préparé';
+
+  @override
+  String characterSpellsTabBodyNoMatchMessageEmpty(String kind) {
+    return '$kind.';
+  }
+
+  @override
+  String characterSpellsTabBodyNoMatchMessageQuery(String kind, String query) {
+    return '$kind pour « $query ».';
+  }
+
+  @override
+  String get characterSpellsTabBodyEmptyStateTitle => 'AUCUN SORT';
+
+  @override
+  String get characterSpellsTabBodyEmptyStateBody =>
+      'Aucun sort sur cette fiche pour l\'instant. Pour les classes qui lancent des sorts, ils se choisissent depuis l\'assistant de création ou à la montée de niveau.';
+
+  @override
+  String get characterSpellsTabBodyNonCasterTitle =>
+      'Cette classe ne lance pas de sorts';
+
+  @override
+  String get characterSpellsTabBodyNonCasterDefaultClassName => 'cette classe';
+
+  @override
+  String characterSpellsTabBodyNonCasterBody(
+    String characterName,
+    String className,
+  ) {
+    return '$characterName est $className — hors archétype dédié (ex. Chevalier occulte), cette classe ne dispose pas d\'emplacements de sorts. Cet onglet reste accessible par cohérence de navigation, mais restera vide pour ce personnage.';
+  }
+
+  @override
+  String spellActionSheetTitle(String spellName) {
+    return 'Lancer $spellName';
+  }
+
+  @override
+  String get spellActionSheetSubtitle =>
+      'Choisissez le niveau d\'emplacement à utiliser.';
+
+  @override
+  String get spellActionSheetCancelButton => 'Annuler';
+
+  @override
+  String get spellActionSheetCastButton => 'Lancer';
+
+  @override
+  String get spellActionSheetSlotExhaustedLabel => 'Épuisé';
+
+  @override
+  String spellActionSheetSlotRemainingLabel(int remaining, int total) {
+    return '$remaining/$total restants';
+  }
+
+  @override
+  String spellActionSheetPactSlotLevelLabel(int level) {
+    return 'Niveau $level (pacte)';
+  }
+
+  @override
+  String spellActionSheetSlotLevelLabel(int level) {
+    return 'Niveau $level';
+  }
+
+  @override
+  String get spellInfoPanelUsagesLabel => 'Utilisations';
+
+  @override
+  String get spellInfoPanelCastingTimeLabel => 'Temps d\'incantation';
+
+  @override
+  String get spellInfoPanelRangeLabel => 'Portée';
+
+  @override
+  String get spellInfoPanelDurationLabel => 'Durée';
+
+  @override
+  String get spellInfoPanelConcentrationLabel => 'Concentration';
+
+  @override
+  String get spellInfoPanelConcentrationYes => 'Oui';
+
+  @override
+  String get spellInfoPanelConcentrationNo => 'Non';
+
+  @override
+  String spellInfoPanelGrantSourceNote(String sourceLabel) {
+    return 'Toujours préparé — sort de $sourceLabel (ne compte pas dans la limite de sorts préparés)';
+  }
+
+  @override
+  String spellInfoPanelInnateNote(int usesPerLongRest) {
+    return 'Sort inné — se lance sans emplacement, $usesPerLongRest fois par repos long';
+  }
+
+  @override
+  String get spellInfoPanelDescriptionTitle => 'DESCRIPTION';
+
+  @override
+  String get spellInfoPanelCastButton => 'Lancer';
+
+  @override
+  String get spellInfoPanelCastInnateButton => 'Lancer (sort inné)';
+
+  @override
+  String get spellInfoPanelUnprepareLink => 'Ne plus préparer';
+
+  @override
+  String get spellInfoPanelPrepareLink => 'Préparer ce sort';
+
+  @override
+  String get spellInfoPanelComponentsLabel => 'Composantes';
+
+  @override
+  String get spellPreparationCardTitle => 'PRÉPARATION DES SORTS';
+
+  @override
+  String get spellPreparationCardInfoTooltip =>
+      'Comment fonctionne la préparation des sorts ?';
+
+  @override
+  String spellPreparationCardClassLabel(String className) {
+    return 'SORTS PRÉPARÉS — $className';
+  }
+
+  @override
+  String get spellPreparationCardDefaultLabel => 'SORTS PRÉPARÉS';
+
+  @override
+  String spellPreparationCardOverLimitStatus(int overBy) {
+    return 'Limite dépassée de $overBy';
+  }
+
+  @override
+  String get spellPreparationCardLimitReachedStatus => 'Limite atteinte';
+
+  @override
+  String spellPreparationCardRemainingToPrepareStatus(int remaining) {
+    String _temp0 = intl.Intl.pluralLogic(
+      remaining,
+      locale: localeName,
+      other: 'Encore $remaining sorts à préparer',
+      one: 'Encore 1 sort à préparer',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String spellPreparationCardCounterSemanticLabel(
+    String label,
+    int count,
+    int limit,
+  ) {
+    return '$label : $count sur $limit';
+  }
+
+  @override
+  String get spellPreparationCardCounterOverLimitSuffix => ', limite dépassée';
+
+  @override
+  String get spellPreparationCardInfoEntryPrepareTitle =>
+      'Préparer pour lancer';
+
+  @override
+  String get spellPreparationCardInfoEntryPrepareBody =>
+      'Seuls les sorts préparés peuvent être lancés. Les sorts non préparés restent dans la liste, grisés, après les sorts préparés. Touchez un sort puis « Préparer ce sort » ou « Ne plus préparer ».';
+
+  @override
+  String get spellPreparationCardInfoEntryHowManyTitle => 'Combien de sorts ?';
+
+  @override
+  String spellPreparationCardInfoEntryHowManyBody(String limitsSentence) {
+    return 'Clerc, Druide et Magicien : modificateur de caractéristique d\'incantation + niveau de classe. Paladin et Artificier (demi-lanceurs) : modificateur + moitié du niveau. Minimum 1. Multiclassé avec plusieurs classes qui préparent : chaque classe a sa propre limite, jamais un total commun.$limitsSentence Une fois la limite atteinte, impossible de préparer un nouveau sort de cette classe sans en dé-préparer un autre d\'abord.';
+  }
+
+  @override
+  String spellPreparationCardSingleLimitSentence(int limit) {
+    return ' Votre limite actuelle : $limit.';
+  }
+
+  @override
+  String spellPreparationCardMultipleLimitsSentence(String limitsList) {
+    return ' Vos limites actuelles : $limitsList.';
+  }
+
+  @override
+  String get spellPreparationCardInfoEntryNoPreparationTitle =>
+      'Sans préparation';
+
+  @override
+  String get spellPreparationCardInfoEntryNoPreparationBody =>
+      'Les sorts mineurs, les sorts innés et les sorts de domaine ou de serment n\'ont jamais à être préparés et ne comptent pas dans la limite. Un sort inné de niveau 1 ou plus se lance sans emplacement, une fois par repos long.';
+
+  @override
+  String get spellPreparationCardInfoEntryCastDoesNotUnprepareTitle =>
+      'Lancer ne dé-prépare pas';
+
+  @override
+  String get spellPreparationCardInfoEntryCastDoesNotUnprepareBody =>
+      'Lancer un sort consomme un emplacement, mais le sort reste préparé : vous pouvez le relancer tant qu\'il vous reste des emplacements.';
+
+  @override
+  String get spellPreparationCardInfoEntryChangeListTitle => 'Changer sa liste';
+
+  @override
+  String get spellPreparationCardInfoEntryChangeListBody =>
+      'La liste de sorts préparés se change après un repos long : le repos long vous propose de garder votre liste ou de la modifier.';
+
+  @override
+  String get prepareSpellsSheetTitle => 'PRÉPARER MES SORTS';
+
+  @override
+  String prepareSpellsSheetClassLabel(String className) {
+    return 'SORTS PRÉPARÉS — $className';
+  }
+
+  @override
+  String get prepareSpellsSheetSearchHint => 'Rechercher un sort';
+
+  @override
+  String get prepareSpellsSheetSearchClearTooltip => 'Effacer';
+
+  @override
+  String get prepareSpellsSheetNoMatchEmptyMessage => 'Aucun sort disponible.';
+
+  @override
+  String prepareSpellsSheetNoMatchQueryMessage(String query) {
+    return 'Aucun sort pour « $query ».';
+  }
+
+  @override
+  String prepareSpellsSheetInfoTooltip(String spellName) {
+    return 'Description de $spellName';
+  }
+
+  @override
+  String castInnateSpellConfirmationDialogTitle(String spellName) {
+    return 'Lancer $spellName ?';
+  }
+
+  @override
+  String get castInnateSpellConfirmationDialogMessage =>
+      'Cette action consomme un usage de ce sort inné, récupéré seulement au prochain repos long.';
+
+  @override
+  String get castInnateSpellConfirmationDialogCancelButton => 'Annuler';
+
+  @override
+  String get castInnateSpellConfirmationDialogCastButton => 'Lancer';
+
+  @override
+  String characterDetailCastSpellSuccessMessage(String spellName) {
+    return '$spellName lancé.';
+  }
+
+  @override
+  String characterDetailCastSpellWithSlotSuccessMessage(
+    String spellName,
+    int slotLevel,
+  ) {
+    return '$spellName lancé (emplacement niveau $slotLevel).';
+  }
+
+  @override
+  String get characterDetailCastSpellErrorMessage =>
+      'Impossible de lancer ce sort. Réessayez.';
+
+  @override
+  String characterDetailCastPactSpellSuccessMessage(
+    String spellName,
+    int pactLevel,
+  ) {
+    return '$spellName lancé (emplacement de pacte niveau $pactLevel).';
+  }
+
+  @override
+  String characterDetailCastInnateSpellSuccessMessage(String spellName) {
+    return '$spellName lancé (sort inné).';
+  }
+
+  @override
+  String get characterDetailInnateSpellSyncErrorMessage =>
+      'Impossible de synchroniser les sorts innés. Réessayez.';
 }
