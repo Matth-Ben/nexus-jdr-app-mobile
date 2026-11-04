@@ -2049,6 +2049,69 @@ void main() {
     );
 
     testWidgets(
+      'échec partiel avec au moins deux succès et deux échecs : SnackBar '
+      'récapitulatif utilisant la forme "other" (pluriel ICU) des deux '
+      'messages `characterListDeleteSelectionSucceededLabel`/'
+      '`...FailedLabel`, jamais exercée par le scénario à 2 personnages '
+      'ci-dessus (singulier des deux côtés)',
+      (tester) async {
+        const fourCharacters = [
+          CharacterSummary(
+            id: '1',
+            name: 'Halltesse Ambrelune',
+            level: 5,
+            xp: 0,
+          ),
+          CharacterSummary(id: '2', name: 'Borgan Pierrefort', level: 3, xp: 0),
+          CharacterSummary(id: '3', name: 'Sylvi Aubefeuille', level: 1, xp: 0),
+          CharacterSummary(id: '4', name: 'Kaeloth', level: 2, xp: 0),
+        ];
+        fakeCharacterRepository.charactersToReturn = fourCharacters;
+        fakeCharacterRepository.deleteErrorByCharacterId['3'] =
+            const CharacterFailure('boom');
+        fakeCharacterRepository.deleteErrorByCharacterId['4'] =
+            const CharacterFailure('boom');
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+        await tester.tap(find.byIcon(Icons.checklist));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Halltesse Ambrelune'));
+        await tester.tap(find.text('Borgan Pierrefort'));
+        await tester.pumpAndSettle();
+        // "Sylvi Aubefeuille" et "Kaeloth" (3e/4e cartes) ne sont pas
+        // forcément visibles sans scroll sur la taille d'écran de test :
+        // `ensureVisible` fait défiler la liste avant de taper, même
+        // principe que `dragUntilVisible` utilisé pour la sheet "FILTRER"
+        // plus haut dans ce fichier.
+        await tester.ensureVisible(find.text('Sylvi Aubefeuille'));
+        await tester.tap(find.text('Sylvi Aubefeuille'));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Kaeloth'));
+        await tester.tap(find.text('Kaeloth'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('SUPPRIMER'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Supprimer (4)'));
+        await tester.pumpAndSettle();
+
+        // Deux succès ("1" et "2") et deux échecs ("3" et "4") : les deux
+        // segments du message récapitulatif passent par la forme "other"
+        // (`{count} personnages supprimés`/`{count} personnages n'ont pas
+        // pu être supprimés`), jamais atteinte par le test "échec partiel"
+        // ci-dessus (1 succès, 1 échec, forme `=1` des deux côtés).
+        expect(
+          find.text(
+            '2 personnages supprimés, 2 personnages n\'ont pas pu être '
+            'supprimés.',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
       'échec partiel : le personnage dont la suppression a réussi disparaît '
       'bien de la liste visible une fois charactersProvider invalidé (pas '
       'seulement le compteur/la sélection, voir le test ci-dessus) — simule '

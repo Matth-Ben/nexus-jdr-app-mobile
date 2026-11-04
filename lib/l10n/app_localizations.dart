@@ -1958,7 +1958,7 @@ abstract class AppLocalizations {
   /// **'Niv. {level}'**
   String characterLevelAbbreviation(int level);
 
-  /// Voir `data/character_write_feedback.dart::offlineNotPersistedMessage` — texte à garder identique à cette constante, encore utilisée telle quelle par `character_detail_screen.dart` (hors périmètre de ce lot, D141 du registre de dette technique).
+  /// Voir `presentation/widgets/character_write_feedback.dart::offlineNotPersistedMessage` — texte à garder identique à cette constante, encore utilisée telle quelle par `character_detail_screen.dart` (hors périmètre de ce lot, D141 du registre de dette technique).
   ///
   /// In fr, this message translates to:
   /// **'Hors ligne : cette action n\'a pas pu être enregistrée. Réessayez une fois reconnecté.'**

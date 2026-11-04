@@ -1300,7 +1300,7 @@
   },
   "characterOfflineNotPersistedMessage": "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une fois reconnecté.",
   "@characterOfflineNotPersistedMessage": {
-    "description": "Voir `data/character_write_feedback.dart::offlineNotPersistedMessage` — texte à garder identique à cette constante, encore utilisée telle quelle par `character_detail_screen.dart` (hors périmètre de ce lot, D141 du registre de dette technique)."
+    "description": "Voir `presentation/widgets/character_write_feedback.dart::offlineNotPersistedMessage` — texte à garder identique à cette constante, encore utilisée telle quelle par `character_detail_screen.dart` (hors périmètre de ce lot, D141 du registre de dette technique)."
   },
   "characterAccessDeniedErrorMessage": "Vous n'avez pas accès à ces personnages.",
   "@characterAccessDeniedErrorMessage": {
