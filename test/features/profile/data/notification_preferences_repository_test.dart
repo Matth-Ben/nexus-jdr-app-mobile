@@ -112,7 +112,13 @@ void main() {
 
       await expectLater(
         SupabaseNotificationPreferencesRepository(client).fetch(),
-        throwsA(isA<ProfileFailure>()),
+        throwsA(
+          isA<ProfileFailure>().having(
+            (failure) => failure.code,
+            'code',
+            ProfileErrorCode.sessionExpired,
+          ),
+        ),
       );
       expect(requests, 0);
     });

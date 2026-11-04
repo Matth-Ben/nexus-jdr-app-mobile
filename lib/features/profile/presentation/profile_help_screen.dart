@@ -12,6 +12,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/menu_tile.dart';
 import '../../../core/widgets/settings_list_card.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import 'providers/package_info_provider.dart';
 import 'widgets/report_bug_sheet.dart';
 
@@ -73,12 +74,13 @@ class ProfileHelpScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,
       body: Column(
         children: [
           WoodBackHeader(
-            title: 'AIDE ET SUPPORT',
+            title: l10n.profileHelpScreenTitle,
             onBack: () => _goBack(context),
           ),
           Expanded(
@@ -87,100 +89,94 @@ class ProfileHelpScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _SectionHeader('QUESTIONS FRÉQUENTES'),
+                  _SectionHeader(l10n.profileHelpSectionFaq),
                   const SizedBox(height: AppSpacing.sm),
                   SettingsListCard(
                     children: [
                       MenuTile(
                         standalone: false,
                         icon: Icons.file_upload_outlined,
-                        label:
-                            'Comment importer un personnage '
-                            'aidedd.org ?',
+                        label: l10n.profileHelpFaqQuestion1,
                         onTap: () =>
                             context.push('/profile/help/faq?question=1'),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.group_add_outlined,
-                        label: 'Comment rejoindre l\'histoire de mon MJ ?',
+                        label: l10n.profileHelpFaqQuestion2,
                         onTap: () =>
                             context.push('/profile/help/faq?question=2'),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.cloud_off_outlined,
-                        label:
-                            'Mes personnages sont-ils sauvegardés hors '
-                            'ligne ?',
+                        label: l10n.profileHelpFaqQuestion3,
                         onTap: () =>
                             context.push('/profile/help/faq?question=3'),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.menu_book_outlined,
-                        label: 'Voir toutes les questions',
+                        label: l10n.profileHelpFaqSeeAll,
                         onTap: () => context.push('/profile/help/faq'),
                       ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  const _SectionHeader('NOUS CONTACTER'),
+                  _SectionHeader(l10n.profileHelpSectionContact),
                   const SizedBox(height: AppSpacing.sm),
                   SettingsListCard(
                     children: [
                       MenuTile(
                         standalone: false,
                         icon: Icons.email_outlined,
-                        label: 'Contacter le support',
+                        label: l10n.profileHelpContactSupport,
                         onTap: () => _contactSupport(context),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.bug_report_outlined,
-                        label: 'Signaler un bug',
+                        label: l10n.profileHelpReportBug,
                         onTap: () => showReportBugSheet(context),
                       ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Réponse sous 48h en semaine. Un aperçu des infos '
-                    "techniques de l'appareil est joint automatiquement.",
+                    l10n.profileHelpContactFooterNote,
                     style: AppTypography.body(
                       fontSize: 12,
                       color: AppColors.textMuted,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  const _SectionHeader('À PROPOS'),
+                  _SectionHeader(l10n.profileHelpSectionAbout),
                   const SizedBox(height: AppSpacing.sm),
                   SettingsListCard(
                     children: [
                       MenuTile(
                         standalone: false,
                         icon: Icons.auto_stories_outlined,
-                        label: 'Revoir la présentation de l\'app',
+                        label: l10n.profileHelpReplayOnboarding,
                         onTap: () => context.push('/onboarding'),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.gavel_outlined,
-                        label: 'Mentions légales / CGU',
+                        label: l10n.profileHelpLegalMentions,
                         onTap: () => context.push('/profile/help/legal'),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.copyright_outlined,
-                        label: 'Crédits & licences',
+                        label: l10n.profileHelpCredits,
                         onTap: () => context.push('/profile/help/credits'),
                       ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Contenu D&D 5e sous licence Open5e / SRD. Voir les '
-                    'crédits complets pour le détail des sources.',
+                    l10n.profileHelpAboutFooterNote,
                     style: AppTypography.body(
                       fontSize: 12,
                       color: AppColors.textMuted,
@@ -222,6 +218,7 @@ class ProfileHelpScreen extends ConsumerWidget {
   /// ([_genericMailErrorMessage] : jamais le détail technique de
   /// l'exception affiché à l'utilisateur, jamais de crash silencieux).
   Future<void> _contactSupport(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final packageInfo = await PackageInfo.fromPlatform();
     final uri = buildSupportEmailUri(packageInfo);
@@ -229,14 +226,14 @@ class ProfileHelpScreen extends ConsumerWidget {
     try {
       if (!await canLaunchUrl(uri)) {
         messenger.showSnackBar(
-          const SnackBar(content: Text(_noMailAppMessage)),
+          SnackBar(content: Text(l10n.profileHelpNoMailApp)),
         );
         return;
       }
       await launchUrl(uri);
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(content: Text(_genericMailErrorMessage)),
+        SnackBar(content: Text(l10n.profileHelpGenericMailError)),
       );
     }
   }
@@ -276,10 +273,11 @@ class _FooterVersion extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final version = ref.watch(packageInfoProvider).value?.version;
     final label = version == null
-        ? 'Nexus JDR — Personnages'
-        : 'Nexus JDR — Personnages · v$version';
+        ? l10n.profileHelpFooterVersionWithoutNumber
+        : l10n.profileHelpFooterVersionWithNumber(version);
 
     return Text(
       label,
@@ -288,19 +286,6 @@ class _FooterVersion extends ConsumerWidget {
     );
   }
 }
-
-/// Aucune application e-mail configurée sur l'appareil (`canLaunchUrl` a
-/// répondu `false`) — distinct de [_genericMailErrorMessage], qui couvre
-/// plutôt une exception plateforme inattendue.
-const String _noMailAppMessage =
-    "Aucune application e-mail n'est configurée sur cet appareil.";
-
-/// Erreur générique/inattendue (exception plateforme pendant
-/// `canLaunchUrl`/`launchUrl`) — même discipline que
-/// `widgets/report_bug_sheet.dart::_genericErrorMessage` : jamais le détail
-/// technique de l'exception affiché à l'utilisateur.
-const String _genericMailErrorMessage =
-    "Impossible d'ouvrir l'application e-mail. Réessayez.";
 
 /// Adresse destinataire de "Contacter le support" — confirmée par le chef de
 /// projet, jamais codée en dur ailleurs que dans ce fichier (voir

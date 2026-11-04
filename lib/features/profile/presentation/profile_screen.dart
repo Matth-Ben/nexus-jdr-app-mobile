@@ -58,7 +58,10 @@ class ProfileScreen extends ConsumerWidget {
       backgroundColor: AppColors.parchmentBg,
       body: Column(
         children: [
-          WoodBackHeader(title: 'PROFIL', onBack: () => _goBack(context)),
+          WoodBackHeader(
+            title: l10n.profileMenuTitle,
+            onBack: () => _goBack(context),
+          ),
           SizedBox(
             width: double.infinity,
             child: ColoredBox(
@@ -105,13 +108,13 @@ class ProfileScreen extends ConsumerWidget {
                       MenuTile(
                         standalone: false,
                         icon: Icons.person_outline,
-                        label: 'Modifier le profil',
+                        label: l10n.profileMenuEditProfile,
                         onTap: () => context.push('/profile/edit'),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.notifications_none,
-                        label: 'Notifications',
+                        label: l10n.profileMenuNotifications,
                         onTap: () => context.push('/profile/notifications'),
                       ),
                       MenuTile(
@@ -123,20 +126,20 @@ class ProfileScreen extends ConsumerWidget {
                       MenuTile(
                         standalone: false,
                         icon: Icons.privacy_tip_outlined,
-                        label: 'Confidentialité et données',
+                        label: l10n.profileMenuPrivacy,
                         onTap: () => context.push('/profile/privacy'),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.help_outline,
-                        label: 'Aide et support',
+                        label: l10n.profileMenuHelp,
                         onTap: () => context.push('/profile/help'),
                       ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   DestructiveButton(
-                    label: 'Se déconnecter',
+                    label: l10n.profileMenuSignOut,
                     onPressed: () => _signOut(context, ref),
                   ),
                   const SizedBox(height: AppSpacing.lg),

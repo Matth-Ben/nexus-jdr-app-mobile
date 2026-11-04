@@ -6,6 +6,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/settings_list_card.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Écran "Questions fréquentes", route `/profile/help/faq` — poussé depuis
 /// `ProfileHelpScreen`, soit par "Voir toutes les questions" (sans
@@ -39,12 +40,13 @@ class ProfileFaqScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,
       body: Column(
         children: [
           WoodBackHeader(
-            title: 'QUESTIONS FRÉQUENTES',
+            title: l10n.profileFaqScreenTitle,
             onBack: () => _goBack(context),
           ),
           Expanded(
@@ -55,7 +57,7 @@ class ProfileFaqScreen extends StatelessWidget {
                 children: [
                   SettingsListCard(
                     children: [
-                      for (final item in _faqItems)
+                      for (final item in _faqItems(l10n))
                         _FaqAccordionTile(
                           key: ValueKey(item.id),
                           icon: item.icon,
@@ -112,77 +114,46 @@ class _FaqItem {
 /// de `ProfileHelpScreen` (voir sa doc de classe) ; les 3 suivantes
 /// choisies dans le même esprit (icône `_outlined`, cohérente avec le reste
 /// du design système).
-const List<_FaqItem> _faqItems = [
+///
+/// Fonction plutôt qu'une constante (depuis la migration `.arb`, chantier
+/// "traduction de l'app" Phase B) : le texte dépend désormais de
+/// [AppLocalizations], qui n'est disponible qu'avec un `BuildContext`.
+List<_FaqItem> _faqItems(AppLocalizations l10n) => [
   _FaqItem(
     id: 1,
     icon: Icons.file_upload_outlined,
-    question: 'Comment importer un personnage depuis aidedd.org ?',
-    answer:
-        'Sur aidedd.org, ouvre la fiche de ton personnage puis utilise son '
-        "export XML (bouton d'export du site). Dans Nexus JDR, va dans "
-        'Personnages > « + » > Importer un fichier XML, puis sélectionne '
-        "ce fichier. L'app pré-remplit automatiquement la fiche "
-        '(caractéristiques, classe, race, sorts, inventaire...) et te '
-        'montre un écran de vérification avant de l\'enregistrer, avec '
-        "les champs qu'elle n'a pas reconnus signalés d'une pastille pour "
-        'que tu les complètes toi-même.',
+    question: l10n.profileFaqQuestion1,
+    answer: l10n.profileFaqAnswer1,
   ),
   _FaqItem(
     id: 2,
     icon: Icons.group_add_outlined,
-    question: "Comment rejoindre l'histoire de mon MJ ?",
-    answer:
-        "Ton MJ te partage un code d'invitation ou un lien depuis l'app "
-        '« Histoires ». Dans Nexus JDR, ouvre ce lien ou saisis le code '
-        'dans l\'écran « Rejoindre une histoire », puis choisis le '
-        'personnage à rattacher (un existant ou un nouveau). Le '
-        'personnage reste ensuite synchronisé avec cette histoire tant '
-        "que le MJ ne retire pas l'accès.",
+    question: l10n.profileFaqQuestion2,
+    answer: l10n.profileFaqAnswer2,
   ),
   _FaqItem(
     id: 3,
     icon: Icons.cloud_off_outlined,
-    question: 'Mes personnages sont-ils sauvegardés hors ligne ?',
-    answer:
-        'Oui. Tous tes personnages restent consultables et modifiables '
-        'sans connexion : les changements (points de vie, XP, '
-        'inventaire...) sont mis en file d\'attente sur ton appareil puis '
-        'synchronisés automatiquement avec le serveur dès que la '
-        "connexion revient. Aucune donnée n'est perdue en cas de coupure "
-        'réseau.',
+    question: l10n.profileFaqQuestion3,
+    answer: l10n.profileFaqAnswer3,
   ),
   _FaqItem(
     id: 4,
     icon: Icons.trending_up,
-    question: 'Comment fonctionne la montée de niveau ?',
-    answer:
-        'Depuis la fiche de personnage, l\'écran « Monter de niveau » te '
-        'guide pas à pas : nouveaux points de vie, capacités de classe '
-        'débloquées, nouveaux emplacements de sorts si ta classe en '
-        "lance, et augmentation de caractéristique si le niveau l'autorise. "
-        "Rien n'est appliqué avant que tu valides l'écran récapitulatif.",
+    question: l10n.profileFaqQuestion4,
+    answer: l10n.profileFaqAnswer4,
   ),
   _FaqItem(
     id: 5,
     icon: Icons.photo_camera_outlined,
-    question: 'Comment changer le portrait de mon personnage ?',
-    answer:
-        'Ouvre la fiche du personnage, appuie sur son portrait puis '
-        'choisis « Prendre une photo » ou « Choisir dans la galerie ». '
-        "Tu peux ensuite recadrer l'image avant de l'enregistrer — elle "
-        'est stockée de façon sécurisée et associée uniquement à ce '
-        'personnage.',
+    question: l10n.profileFaqQuestion5,
+    answer: l10n.profileFaqAnswer5,
   ),
   _FaqItem(
     id: 6,
     icon: Icons.delete_outline,
-    question: 'Comment supprimer mon compte ?',
-    answer:
-        'Depuis Profil > Confidentialité et données > Supprimer mon '
-        'compte, en bas de l\'écran (zone dangereuse). Cette action est '
-        'irréversible : elle supprime définitivement tes personnages, '
-        'leurs portraits et tous les rattachements à des histoires. Tu '
-        'peux exporter tes données avant de confirmer.',
+    question: l10n.profileFaqQuestion6,
+    answer: l10n.profileFaqAnswer6,
   ),
 ];
 

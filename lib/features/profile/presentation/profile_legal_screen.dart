@@ -6,6 +6,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/legal_section_block.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Écran "Mentions légales / CGU", route `/profile/help/legal` — poussé
 /// depuis la tuile éponyme de `ProfileHelpScreen` (qui affichait auparavant
@@ -29,67 +30,51 @@ class ProfileLegalScreen extends StatelessWidget {
 
   /// Contenu de l'écran, dans l'ordre d'affichage — voir la doc de classe
   /// pour le rationale du texte verbatim.
-  static const List<LegalSectionBlock> _sections = [
+  ///
+  /// Fonction plutôt qu'une constante (depuis la migration `.arb`, chantier
+  /// "traduction de l'app" Phase B) : le texte dépend désormais de
+  /// [AppLocalizations], qui n'est disponible qu'avec un `BuildContext`.
+  static List<LegalSectionBlock> _sections(AppLocalizations l10n) => [
     LegalSectionBlock(
-      title: 'Éditeur',
-      paragraphs: ['Matthias Benoit', 'Contact : support@nexus-jdr.app'],
+      title: l10n.profileLegalEditorTitle,
+      paragraphs: [l10n.profileLegalEditorPara1, l10n.profileLegalEditorPara2],
     ),
     LegalSectionBlock(
-      title: 'Hébergement',
-      paragraphs: [
-        "L'application et ses données sont hébergées par Supabase (base "
-            'de données, authentification, stockage des fichiers).',
-      ],
+      title: l10n.profileLegalHostingTitle,
+      paragraphs: [l10n.profileLegalHostingPara1],
     ),
     LegalSectionBlock(
-      title: "Objet de l'application",
-      paragraphs: [
-        'Nexus JDR — Personnages permet de créer, importer et gérer des '
-            'personnages de Donjons & Dragons 5e, seul ou synchronisé avec '
-            "l'app « Histoires » utilisée par ton Maître du Jeu.",
-      ],
+      title: l10n.profileLegalPurposeTitle,
+      paragraphs: [l10n.profileLegalPurposePara1],
     ),
     LegalSectionBlock(
-      title: "Conditions d'utilisation",
-      paragraphs: [
-        "L'usage de l'application nécessite un compte. Tu es responsable "
-            'de l\'exactitude des informations que tu y renseignes et de '
-            'la confidentialité de tes identifiants. L\'éditeur se réserve '
-            "le droit de suspendre un compte en cas d'usage abusif.",
-      ],
+      title: l10n.profileLegalTermsTitle,
+      paragraphs: [l10n.profileLegalTermsPara1],
     ),
     LegalSectionBlock(
-      title: 'Propriété intellectuelle',
-      paragraphs: [
-        'Le contenu de règles Donjons & Dragons 5e (races, classes, '
-            "sorts, objets...) provient d'Open5e et du System Reference "
-            'Document (SRD), sous licence Creative Commons Attribution '
-            '4.0 (CC-BY 4.0) — voir « Crédits & licences » pour le détail. '
-            'Le reste de l\'application (code, design, marque '
-            '« Nexus JDR ») appartient à son éditeur.',
-      ],
+      title: l10n.profileLegalIntellectualPropertyTitle,
+      paragraphs: [l10n.profileLegalIntellectualPropertyPara1],
     ),
     LegalSectionBlock(
-      title: 'Résiliation',
-      paragraphs: [
-        'Tu peux supprimer ton compte à tout moment depuis Profil > '
-            'Confidentialité et données > Supprimer mon compte.',
-      ],
+      title: l10n.profileLegalTerminationTitle,
+      paragraphs: [l10n.profileLegalTerminationPara1],
     ),
     LegalSectionBlock(
-      title: 'Droit applicable',
-      paragraphs: ['Ces mentions sont soumises au droit français.'],
+      title: l10n.profileLegalGoverningLawTitle,
+      paragraphs: [l10n.profileLegalGoverningLawPara1],
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final sections = _sections(l10n);
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,
       body: Column(
         children: [
           WoodBackHeader(
-            title: 'MENTIONS LÉGALES / CGU',
+            title: l10n.profileLegalScreenTitle,
             onBack: () => _goBack(context),
           ),
           Expanded(
@@ -98,13 +83,13 @@ class ProfileLegalScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (var i = 0; i < _sections.length; i++) ...[
-                    _sections[i],
-                    if (i < _sections.length - 1) const _SectionDivider(),
+                  for (var i = 0; i < sections.length; i++) ...[
+                    sections[i],
+                    if (i < sections.length - 1) const _SectionDivider(),
                   ],
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'Dernière mise à jour : 25 septembre 2026',
+                    l10n.profileLegalLastUpdated,
                     style: AppTypography.body(
                       fontSize: 11,
                       color: AppColors.textMuted,

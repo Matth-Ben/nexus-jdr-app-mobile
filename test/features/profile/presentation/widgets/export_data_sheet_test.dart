@@ -29,6 +29,7 @@ import 'package:personnages/core/widgets/sheet_header_bar.dart';
 import 'package:personnages/features/profile/data/data_export_repository.dart';
 import 'package:personnages/features/profile/presentation/providers/data_export_providers.dart';
 import 'package:personnages/features/profile/presentation/widgets/export_data_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeDataExportRepository implements DataExportRepository {
   final Completer<void> gate = Completer<void>();
@@ -63,6 +64,7 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
 Future<_FakeDataExportRepository> _pumpSheet(
   WidgetTester tester, {
   bool connected = true,
+  Locale locale = const Locale('fr'),
 }) async {
   final repository = _FakeDataExportRepository();
   await tester.pumpWidget(
@@ -74,6 +76,14 @@ Future<_FakeDataExportRepository> _pumpSheet(
         ),
       ],
       child: MaterialApp(
+        // `export_data_sheet.dart` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B) — sans ces delegates,
+        // l'appel renverrait `null` et le `!` planterait. `fr` par défaut,
+        // `en` passé explicitement par les tests du groupe "locale
+        // anglaise".
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -327,5 +337,31 @@ void main() {
         expect(find.text('Export généré.'), findsOneWidget);
       },
     );
+  });
+
+  group('locale anglaise', () {
+    testWidgets('affiche le titre et le texte explicatif en anglais', (
+      tester,
+    ) async {
+      await _pumpSheet(tester, locale: const Locale('en'));
+
+      expect(find.text('EXPORT MY DATA'), findsOneWidget);
+      expect(
+        find.textContaining('JSON file containing your profile'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('"Generate export" réussi affiche le SnackBar en anglais', (
+      tester,
+    ) async {
+      final repository = await _pumpSheet(tester, locale: const Locale('en'));
+      repository.pathToReturn = '/tmp/nexus-jdr-export-123.json';
+
+      await tester.tap(find.widgetWithText(PrimaryButton, 'GENERATE EXPORT'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Export generated.'), findsOneWidget);
+    });
   });
 }

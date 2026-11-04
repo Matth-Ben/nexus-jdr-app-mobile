@@ -12,10 +12,21 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/legal_section_block.dart';
 import 'package:personnages/features/profile/presentation/profile_privacy_policy_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
-Future<void> _pumpScreen(WidgetTester tester) async {
+Future<void> _pumpScreen(
+  WidgetTester tester, {
+  Locale locale = const Locale('fr'),
+}) async {
   await tester.pumpWidget(
     MaterialApp.router(
+      // `ProfilePrivacyPolicyScreen` lit `AppLocalizations.of(context)!`
+      // (chantier "traduction de l'app" Phase B) — sans ces delegates,
+      // l'appel renverrait `null` et le `!` planterait. `fr` par défaut,
+      // `en` passé explicitement par les tests du groupe "locale anglaise".
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       routerConfig: GoRouter(
         initialLocation: '/',
         routes: [
@@ -158,5 +169,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ouvrir'), findsOneWidget);
+  });
+
+  group('locale anglaise', () {
+    testWidgets('affiche le bandeau bois et les sections en anglais', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, locale: const Locale('en'));
+
+      expect(find.text('PRIVACY POLICY'), findsOneWidget);
+      expect(find.text('Introduction'), findsOneWidget);
+      expect(find.text('1. Who is responsible for your data'), findsOneWidget);
+      expect(find.text('7. Your rights'), findsOneWidget);
+    });
   });
 }

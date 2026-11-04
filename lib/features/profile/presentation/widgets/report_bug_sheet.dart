@@ -15,6 +15,7 @@ import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/selectable_option_tile.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../bug_report/domain/bug_report_failure.dart';
 import '../../../bug_report/domain/bug_report_screenshot.dart';
 import '../../../bug_report/presentation/providers/bug_report_providers.dart';
@@ -56,9 +57,9 @@ Future<void> showReportBugSheet(
     builder: (sheetContext) => _ReportBugSheetContent(characterId: characterId),
   );
   if (sent != true || !context.mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Merci, ton signalement a bien été envoyé !')),
-  );
+  final l10n = AppLocalizations.of(context)!;
+  ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text(l10n.profileReportBugSentSnackbar)));
 }
 
 /// Une des 4 sévérités proposées (`SelectableOptionTile`, spec
@@ -80,72 +81,53 @@ class _SeverityOption {
 
 /// Ordre d'affichage fixe (spec direction-artistique de la tâche) — la
 /// première entrée (`mineur`) est la sélection par défaut de la sheet.
-const List<_SeverityOption> _severityOptions = [
+///
+/// Fonction plutôt qu'une constante (depuis la migration `.arb`, chantier
+/// "traduction de l'app" Phase B) : [_SeverityOption.title]/`.subtitle`
+/// dépendent désormais de [AppLocalizations], qui n'est disponible qu'avec
+/// un `BuildContext`. [_defaultSeverityValue] (valeur technique seule, pas
+/// de texte) reste une constante utilisable sans `l10n`, pour l'état initial
+/// de [_ReportBugSheetContentState].
+List<_SeverityOption> _severityOptions(AppLocalizations l10n) => [
   _SeverityOption(
     value: 'mineur',
-    title: 'Gênant',
-    subtitle: 'Un désagrément, mais tu peux continuer à jouer',
+    title: l10n.profileReportBugSeverityMinorTitle,
+    subtitle: l10n.profileReportBugSeverityMinorSubtitle,
   ),
   _SeverityOption(
     value: 'majeur',
-    title: 'Problématique',
-    subtitle: 'Ça complique les choses, mais il y a moyen de contourner',
+    title: l10n.profileReportBugSeverityMajorTitle,
+    subtitle: l10n.profileReportBugSeverityMajorSubtitle,
   ),
   _SeverityOption(
     value: 'bloquant',
-    title: 'Ça bloque tout',
-    subtitle: 'Impossible de continuer sans ça',
+    title: l10n.profileReportBugSeverityBlockingTitle,
+    subtitle: l10n.profileReportBugSeverityBlockingSubtitle,
   ),
   _SeverityOption(
     value: 'contenu',
-    title: 'Contenu à corriger',
-    subtitle:
-        'Erreur ou oubli dans un sort, un objet, une règle ou une traduction',
+    title: l10n.profileReportBugSeverityContentTitle,
+    subtitle: l10n.profileReportBugSeverityContentSubtitle,
   ),
 ];
 
-/// Hors-ligne (vérifié *avant* l'appel réseau, voir
-/// [_ReportBugSheetContentState._submit]) — même texte que
-/// `edit_display_name_sheet.dart`/`character_story_edit_sheet.dart`, pas de
-/// file d'attente hors-ligne pour cette écriture (spec de la tâche).
-const String _offlineMessage =
-    "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-    'fois reconnecté.';
+/// Valeur technique de la sévérité sélectionnée par défaut (`mineur`,
+/// toujours la 1ère entrée de [_severityOptions]) — séparée du texte affiché
+/// pour rester disponible sans `l10n` (état initial de
+/// [_ReportBugSheetContentState]).
+const String _defaultSeverityValue = 'mineur';
 
-/// Erreur générique/inattendue (4xx/5xx HTTP, exception) — texte fixe unique
-/// quel que soit le détail de l'échec (spec direction-artistique de la
-/// tâche : contrairement à `edit_display_name_sheet.dart`, jamais
-/// `BugReportFailure.message`, qui n'est porté que pour le diagnostic).
-const String _genericErrorMessage =
-    "Impossible d'envoyer le signalement. Réessayez.";
-
-const String _screenshotUploadErrorMessage =
-    "Impossible d'envoyer la capture. Réessayez, ou retirez-la pour envoyer "
-    'le signalement sans.';
-
-const String _captureTooLargeMessage =
-    'Cette image est trop lourde (plus de 5 Mo), même compressée. '
-    'Choisissez-en une autre.';
-
-const String _captureUnsupportedFormatMessage =
-    "Ce format d'image n'est pas pris en charge. Choisissez une autre image.";
-
-const String _captureAccessDeniedMessage =
-    "L'accès à vos photos ou à l'appareil photo est refusé. Autorisez-le "
-    'dans les réglages du téléphone.';
-
-const String _capturePrivacyNotice =
-    "Facultatif, une seule image. Elle reste privée : seule l'équipe de "
-    "développement la voit, elle n'est jamais publiée avec ton signalement "
-    "et elle est supprimée avec ton compte. Évite quand même d'y laisser "
-    'des infos personnelles.';
-
-String _captureErrorMessageFor(BugReportScreenshotFailureKind kind) {
+String _captureErrorMessageFor(
+  AppLocalizations l10n,
+  BugReportScreenshotFailureKind kind,
+) {
   return switch (kind) {
-    BugReportScreenshotFailureKind.tooLarge => _captureTooLargeMessage,
+    BugReportScreenshotFailureKind.tooLarge =>
+      l10n.profileReportBugCaptureTooLarge,
     BugReportScreenshotFailureKind.unsupportedFormat =>
-      _captureUnsupportedFormatMessage,
-    BugReportScreenshotFailureKind.accessDenied => _captureAccessDeniedMessage,
+      l10n.profileReportBugCaptureUnsupportedFormat,
+    BugReportScreenshotFailureKind.accessDenied =>
+      l10n.profileReportBugCaptureAccessDenied,
   };
 }
 
@@ -184,7 +166,7 @@ class _ReportBugSheetContentState
   /// Ramène le bandeau d'erreur d'envoi (en tête du défilement) dans le
   /// champ quand l'envoi échoue depuis le bas de la sheet.
   final ScrollController _scrollController = ScrollController();
-  String _severity = _severityOptions.first.value;
+  String _severity = _defaultSeverityValue;
   bool _isSaving = false;
   String? _errorMessage;
 
@@ -230,6 +212,10 @@ class _ReportBugSheetContentState
 
   Future<void> _openCaptureSourceSheet() async {
     if (_isSaving || _isPreparingCapture) return;
+    // Capturé avant tout `await` (même précaution que
+    // `avatar_crop_screen.dart`) : les gardes `mounted` ci-dessous couvrent
+    // déjà l'usage de `context`/`l10n` après chaque point d'attente.
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _captureErrorMessage = null);
 
     final source = await showModalBottomSheet<BugReportScreenshotSource>(
@@ -249,7 +235,7 @@ class _ReportBugSheetContentState
       setState(() {
         _capture = prepared;
         _isPreparingCapture = false;
-        if (_errorMessage == _screenshotUploadErrorMessage) {
+        if (_errorMessage == l10n.profileReportBugScreenshotUploadError) {
           _errorMessage = null;
         }
       });
@@ -257,24 +243,25 @@ class _ReportBugSheetContentState
       if (!mounted) return;
       setState(() {
         _isPreparingCapture = false;
-        _captureErrorMessage = _captureErrorMessageFor(failure.kind);
+        _captureErrorMessage = _captureErrorMessageFor(l10n, failure.kind);
       });
     } catch (error) {
       debugPrint('ReportBugSheet._openCaptureSourceSheet: erreur: $error');
       if (!mounted) return;
       setState(() {
         _isPreparingCapture = false;
-        _captureErrorMessage = _captureUnsupportedFormatMessage;
+        _captureErrorMessage = l10n.profileReportBugCaptureUnsupportedFormat;
       });
     }
   }
 
   void _removeCapture() {
     if (_isSaving) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _capture = null;
       _captureErrorMessage = null;
-      if (_errorMessage == _screenshotUploadErrorMessage) {
+      if (_errorMessage == l10n.profileReportBugScreenshotUploadError) {
         _errorMessage = null;
       }
     });
@@ -282,19 +269,20 @@ class _ReportBugSheetContentState
 
   Future<void> _submit() async {
     if (_isSaving || !_canSubmit) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isSaving = true;
       _errorMessage = null;
     });
 
     // Vérifié *avant* toute tentative réseau — voir la documentation de
-    // [_offlineMessage] : pas de file d'attente hors-ligne pour cette
-    // écriture.
+    // `profileReportBugOfflineMessage` : pas de file d'attente hors-ligne
+    // pour cette écriture.
     if (!await ref.read(connectivityCheckerProvider).hasConnection()) {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _offlineMessage;
+        _errorMessage = l10n.profileReportBugOfflineMessage;
       });
       _scrollToErrorBanner();
       return;
@@ -318,19 +306,20 @@ class _ReportBugSheetContentState
       setState(() {
         _isSaving = false;
         _errorMessage = failure.kind == BugReportFailureKind.screenshotUpload
-            ? _screenshotUploadErrorMessage
-            : _genericErrorMessage;
+            ? l10n.profileReportBugScreenshotUploadError
+            : l10n.profileReportBugGenericError;
       });
       _scrollToErrorBanner();
     } catch (error) {
-      // Voir la documentation de [_genericErrorMessage] : le détail de
-      // l'échec (`BugReportFailure.message`, une exception réseau...) n'est
-      // jamais affiché tel quel, seulement journalisé pour le diagnostic.
+      // Voir la documentation de `profileReportBugGenericError` : le détail
+      // de l'échec (`BugReportFailure.message`, une exception réseau...)
+      // n'est jamais affiché tel quel, seulement journalisé pour le
+      // diagnostic.
       debugPrint('ReportBugSheet._submit: erreur inattendue: $error');
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.profileReportBugGenericError;
       });
       _scrollToErrorBanner();
     }
@@ -348,7 +337,7 @@ class _ReportBugSheetContentState
   /// Bloc « Capture d'écran » (spec B.1-B.7) : en-tête et mention de
   /// confidentialité toujours visibles, puis l'état courant (vide,
   /// préparation, image jointe), puis l'éventuelle erreur de choix d'image.
-  Widget _buildCaptureSection() {
+  Widget _buildCaptureSection(AppLocalizations l10n) {
     final capture = _capture;
     final Widget body;
     if (_isPreparingCapture) {
@@ -362,7 +351,7 @@ class _ReportBugSheetContentState
     } else {
       body = Semantics(
         button: true,
-        label: "Ajouter une capture d'écran (facultatif)",
+        label: l10n.profileReportBugAddCaptureSemanticLabel,
         excludeSemantics: true,
         onTap: _openCaptureSourceSheet,
         // Hauteur fixe 48 px : seul endroit de la sheet où le facteur de
@@ -370,7 +359,7 @@ class _ReportBugSheetContentState
         child: MediaQuery.withClampedTextScaling(
           maxScaleFactor: AppTypography.maxTextScaleFactor,
           child: DashedAddTile(
-            label: 'Ajouter une capture',
+            label: l10n.profileReportBugAddCapture,
             onTap: _openCaptureSourceSheet,
           ),
         ),
@@ -382,7 +371,7 @@ class _ReportBugSheetContentState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "CAPTURE D'ÉCRAN",
+          l10n.profileReportBugCaptureSectionTitle,
           style: AppTypography.body(
             fontSize: 13,
             fontWeight: FontWeight.w800,
@@ -403,7 +392,7 @@ class _ReportBugSheetContentState
             const SizedBox(width: AppSpacing.xs),
             Expanded(
               child: Text(
-                _capturePrivacyNotice,
+                l10n.profileReportBugCapturePrivacyNotice,
                 style: AppTypography.body(
                   fontSize: 12,
                   color: AppColors.textSecondary,
@@ -427,6 +416,8 @@ class _ReportBugSheetContentState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final severityOptions = _severityOptions(l10n);
     // Voir `character_story_edit_sheet.dart` pour le rationale complet de ce
     // `PopScope` (seul garde-fou qui couvre le geste retour Android, chemin
     // entièrement distinct du voile/du drag bloqués par
@@ -442,7 +433,7 @@ class _ReportBugSheetContentState
             child: Column(
               children: [
                 SheetHeaderBar(
-                  title: 'SIGNALER UN BUG',
+                  title: l10n.profileReportBugTitle,
                   closeEnabled: !_isSaving,
                 ),
                 Expanded(
@@ -477,7 +468,7 @@ class _ReportBugSheetContentState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'TITRE',
+                                  l10n.profileReportBugFieldTitleLabel,
                                   style: AppTypography.body(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
@@ -489,15 +480,14 @@ class _ReportBugSheetContentState
                                   controller: _titleController,
                                   minLines: 1,
                                   maxLines: 1,
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                     hintText:
-                                        'Résumé en une phrase (ex. « Le '
-                                        'bouton PV ne répond pas »)',
+                                        l10n.profileReportBugFieldTitleHint,
                                   ),
                                 ),
                                 const SizedBox(height: AppSpacing.md),
                                 Text(
-                                  'DESCRIPTION',
+                                  l10n.profileReportBugFieldDescriptionLabel,
                                   style: AppTypography.body(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
@@ -509,15 +499,14 @@ class _ReportBugSheetContentState
                                   controller: _descriptionController,
                                   minLines: 3,
                                   maxLines: null,
-                                  decoration: const InputDecoration(
-                                    hintText:
-                                        "Que s'est-il passé ? Que "
-                                        'faisais-tu au moment du bug ?',
+                                  decoration: InputDecoration(
+                                    hintText: l10n
+                                        .profileReportBugFieldDescriptionHint,
                                   ),
                                 ),
                                 const SizedBox(height: AppSpacing.md),
                                 Text(
-                                  'QUEL GENRE DE SOUCI ?',
+                                  l10n.profileReportBugSeveritySectionTitle,
                                   style: AppTypography.body(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w800,
@@ -527,24 +516,24 @@ class _ReportBugSheetContentState
                                 const SizedBox(height: AppSpacing.xs),
                                 for (
                                   var i = 0;
-                                  i < _severityOptions.length;
+                                  i < severityOptions.length;
                                   i++
                                 ) ...[
                                   if (i > 0)
                                     const SizedBox(height: AppSpacing.sm),
                                   SelectableOptionTile(
-                                    title: _severityOptions[i].title,
-                                    subtitle: _severityOptions[i].subtitle,
+                                    title: severityOptions[i].title,
+                                    subtitle: severityOptions[i].subtitle,
                                     subtitleMaxLines: null,
                                     selected:
-                                        _severity == _severityOptions[i].value,
+                                        _severity == severityOptions[i].value,
                                     onTap: () => _selectSeverity(
-                                      _severityOptions[i].value,
+                                      severityOptions[i].value,
                                     ),
                                   ),
                                 ],
                                 const SizedBox(height: AppSpacing.md),
-                                _buildCaptureSection(),
+                                _buildCaptureSection(l10n),
                               ],
                             ),
                           ),
@@ -564,7 +553,7 @@ class _ReportBugSheetContentState
                     children: [
                       Expanded(
                         child: SecondaryButton(
-                          label: 'Annuler',
+                          label: l10n.profileReportBugCancel,
                           surface: SecondaryButtonSurface.parchment,
                           onPressed: _isSaving
                               ? null
@@ -574,7 +563,7 @@ class _ReportBugSheetContentState
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: PrimaryButton(
-                          label: 'Envoyer',
+                          label: l10n.profileReportBugSend,
                           isLoading: _isSaving,
                           onPressed: _canSubmit ? _submit : null,
                         ),
@@ -600,20 +589,21 @@ class _CaptureSourceSheetContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SheetActionRow(
             icon: Icons.image_outlined,
-            label: 'Choisir dans la galerie',
+            label: l10n.profileReportBugChooseGallery,
             onTap: () =>
                 Navigator.of(context).pop(BugReportScreenshotSource.gallery),
           ),
           const SheetActionDivider(),
           SheetActionRow(
             icon: Icons.photo_camera_outlined,
-            label: 'Prendre une photo',
+            label: l10n.profileReportBugTakePhoto,
             onTap: () =>
                 Navigator.of(context).pop(BugReportScreenshotSource.camera),
           ),
@@ -631,9 +621,10 @@ class _CapturePreparingFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
       liveRegion: true,
-      label: "Préparation de l'image en cours",
+      label: l10n.profileReportBugPreparingImageSemanticLabel,
       excludeSemantics: true,
       child: MediaQuery.withClampedTextScaling(
         maxScaleFactor: AppTypography.maxTextScaleFactor,
@@ -664,7 +655,7 @@ class _CapturePreparingFrame extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 Flexible(
                   child: Text(
-                    "Préparation de l'image…",
+                    l10n.profileReportBugPreparingImage,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.body(
@@ -698,6 +689,7 @@ class _CaptureAttachedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       key: const Key('reportBugCaptureAttached'),
       padding: const EdgeInsets.all(AppSpacing.sm),
@@ -711,7 +703,7 @@ class _CaptureAttachedCard extends StatelessWidget {
         children: [
           Semantics(
             image: true,
-            label: "Capture d'écran jointe",
+            label: l10n.profileReportBugAttachedImageSemanticLabel,
             child: Container(
               width: 80,
               height: 120,
@@ -746,7 +738,7 @@ class _CaptureAttachedCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Capture jointe',
+                  l10n.profileReportBugAttachedLabel,
                   style: AppTypography.body(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -764,24 +756,24 @@ class _CaptureAttachedCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.sm),
                 Semantics(
                   button: true,
-                  label: "Remplacer la capture d'écran",
+                  label: l10n.profileReportBugReplaceSemanticLabel,
                   excludeSemantics: true,
                   onTap: onReplace,
                   child: CompactActionButton(
                     icon: Icons.autorenew,
-                    label: 'Remplacer',
+                    label: l10n.profileReportBugReplace,
                     onTap: onReplace,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Semantics(
                   button: true,
-                  label: "Retirer la capture d'écran",
+                  label: l10n.profileReportBugRemoveSemanticLabel,
                   excludeSemantics: true,
                   onTap: onRemove,
                   child: CompactActionButton(
                     icon: Icons.delete_outline,
-                    label: 'Retirer',
+                    label: l10n.profileReportBugRemove,
                     onTap: onRemove,
                   ),
                 ),

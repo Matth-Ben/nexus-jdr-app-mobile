@@ -163,7 +163,10 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  Widget buildTestWidget({required User? user}) {
+  Widget buildTestWidget({
+    required User? user,
+    Locale locale = const Locale('fr'),
+  }) {
     return ProviderScope(
       overrides: [
         currentUserProvider.overrideWithValue(user),
@@ -177,16 +180,15 @@ void main() {
       ],
       child: MaterialApp.router(
         // `ProfileScreen`/`ProfileLanguageScreen` lisent `AppLocalizations.of
-        // (context)!` (chantier "traduction de l'app" Phase A) — sans ces
-        // delegates, l'appel renverrait `null` et le `!` planterait. `locale`
-        // fixé en dur sur le français (plutôt que `null`, qui suivrait la
-        // langue réelle, non garantie, de l'environnement `flutter test`) :
-        // cette suite vérifie le reste de l'écran (toujours en dur en
-        // français, Phase B), pas la bascule de langue elle-même — voir
-        // `profile_language_screen_test.dart` pour ça.
+        // (context)!` (chantier "traduction de l'app" Phase A, poursuivi en
+        // Phase B pour le reste de cet écran) — sans ces delegates, l'appel
+        // renverrait `null` et le `!` planterait. `fr` par défaut (plutôt que
+        // `null`, qui suivrait la langue réelle, non garantie, de
+        // l'environnement `flutter test`), `en` passé explicitement par le
+        // groupe "locale anglaise" ci-dessous.
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('fr'),
+        locale: locale,
         routerConfig: GoRouter(
           initialLocation: '/',
           routes: [
@@ -231,8 +233,12 @@ void main() {
     );
   }
 
-  Future<void> pumpProfile(WidgetTester tester, {required User? user}) async {
-    await tester.pumpWidget(buildTestWidget(user: user));
+  Future<void> pumpProfile(
+    WidgetTester tester, {
+    required User? user,
+    Locale locale = const Locale('fr'),
+  }) async {
+    await tester.pumpWidget(buildTestWidget(user: user, locale: locale));
     await tester.tap(find.text('Ouvrir le profil'));
     await tester.pumpAndSettle();
   }
@@ -521,5 +527,27 @@ void main() {
 
     await tester.ensureVisible(find.text('Nexus JDR — Personnages · v1.0.0'));
     expect(find.text('Nexus JDR — Personnages · v1.0.0'), findsOneWidget);
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que `login_screen_test.dart`/
+    // `profile_credits_screen_test.dart` (chantier "traduction de l'app"
+    // Phase B) : vérifie qu'un texte anglais s'affiche réellement, pas
+    // seulement que l'écran ne plante pas. Périmètre de ce lot
+    // (profile_screen.dart) : titre du bandeau, 4 entrées de menu encore en
+    // dur, "Se déconnecter" — "Langue" déjà couverte par
+    // `profile_language_screen_test.dart` (Phase A).
+    testWidgets('affiche le bandeau bois et les entrées de menu en anglais', (
+      tester,
+    ) async {
+      await pumpProfile(tester, user: _fakeUser(), locale: const Locale('en'));
+
+      expect(find.text('PROFILE'), findsOneWidget);
+      expect(find.text('Edit profile'), findsOneWidget);
+      expect(find.text('Notifications'), findsOneWidget);
+      expect(find.text('Privacy & data'), findsOneWidget);
+      expect(find.text('Help & support'), findsOneWidget);
+      expect(find.text('Sign out'), findsOneWidget);
+    });
   });
 }

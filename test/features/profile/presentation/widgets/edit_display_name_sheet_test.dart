@@ -20,6 +20,7 @@ import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/presentation/widgets/edit_display_name_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakeAuthRepository implements AuthRepository {
@@ -110,6 +111,7 @@ Future<_FakeAuthRepository> _pumpSheet(
   WidgetTester tester, {
   User? user,
   bool connected = true,
+  Locale locale = const Locale('fr'),
 }) async {
   final repository = _FakeAuthRepository();
   await tester.pumpWidget(
@@ -122,6 +124,14 @@ Future<_FakeAuthRepository> _pumpSheet(
         ),
       ],
       child: MaterialApp(
+        // `edit_display_name_sheet.dart` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B) — sans ces delegates,
+        // l'appel renverrait `null` et le `!` planterait. `fr` par défaut,
+        // `en` passé explicitement par les tests du groupe "locale
+        // anglaise".
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -329,4 +339,31 @@ void main() {
       expect(find.byType(TextFormField), findsNothing);
     },
   );
+
+  group('locale anglaise', () {
+    testWidgets('affiche le titre et le libellé de champ en anglais', (
+      tester,
+    ) async {
+      await _pumpSheet(
+        tester,
+        user: _fakeUser(fullName: 'Aranea'),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('NICKNAME'), findsOneWidget);
+      expect(find.text('DISPLAY NAME'), findsOneWidget);
+    });
+
+    testWidgets('"Enregistrer" affiche le SnackBar de confirmation en '
+        'anglais', (tester) async {
+      await _pumpSheet(tester, locale: const Locale('en'));
+
+      await tester.enterText(find.byType(TextFormField), 'New name');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'SAVE'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nickname updated.'), findsOneWidget);
+    });
+  });
 }

@@ -11,10 +11,21 @@ import 'package:go_router/go_router.dart';
 import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/widgets/legal_section_block.dart';
 import 'package:personnages/features/profile/presentation/profile_legal_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
-Future<void> _pumpScreen(WidgetTester tester) async {
+Future<void> _pumpScreen(
+  WidgetTester tester, {
+  Locale locale = const Locale('fr'),
+}) async {
   await tester.pumpWidget(
     MaterialApp.router(
+      // `ProfileLegalScreen` lit `AppLocalizations.of(context)!` (chantier
+      // "traduction de l'app" Phase B) — sans ces delegates, l'appel
+      // renverrait `null` et le `!` planterait. `fr` par défaut, `en` passé
+      // explicitement par les tests du groupe "locale anglaise" ci-dessous.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       routerConfig: GoRouter(
         initialLocation: '/',
         routes: [
@@ -112,5 +123,21 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ouvrir'), findsOneWidget);
+  });
+
+  group('locale anglaise', () {
+    testWidgets('affiche le bandeau bois et les sections en anglais', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, locale: const Locale('en'));
+
+      expect(find.text('LEGAL NOTICE / TERMS'), findsOneWidget);
+      expect(find.text('Publisher'), findsOneWidget);
+      expect(find.text('Matthias Benoit'), findsOneWidget);
+      expect(
+        find.text('This notice is governed by French law.'),
+        findsOneWidget,
+      );
+    });
   });
 }

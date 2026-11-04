@@ -14,6 +14,7 @@ import '../../../core/widgets/alert_banner.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/settings_list_card.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/notification_preferences.dart';
 import 'providers/notification_preferences_providers.dart';
 
@@ -139,6 +140,10 @@ class _ProfileNotificationsScreenState
     bool? pushNewVersionAvailable,
     bool? emailDigestEnabled,
   }) async {
+    // Capturé avant tout `await` (même précaution que
+    // `avatar_crop_screen.dart`) : la garde `mounted` ci-dessous couvre déjà
+    // l'usage de `context`/`l10n` après le point d'attente.
+    final l10n = AppLocalizations.of(context)!;
     setState(
       () => _optimistic = current.copyWith(
         pushEnabled: pushEnabled,
@@ -161,13 +166,15 @@ class _ProfileNotificationsScreenState
     } catch (_) {
       if (!mounted) return;
       setState(() => _optimistic = current);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text(_genericErrorMessage)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.profileNotificationsGenericError)),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final preferencesAsync = ref.watch(notificationPreferencesProvider);
 
     return Scaffold(
@@ -175,16 +182,17 @@ class _ProfileNotificationsScreenState
       body: Column(
         children: [
           WoodBackHeader(
-            title: 'NOTIFICATIONS',
+            title: l10n.profileNotificationsScreenTitle,
             onBack: () => _goBack(context),
           ),
           Expanded(
             child: preferencesAsync.when(
-              data: (fetched) => _buildBody(_effective(fetched)),
+              data: (fetched) => _buildBody(l10n, _effective(fetched)),
               loading: () => const Center(
                 child: CircularProgressIndicator(color: AppColors.woodMedium),
               ),
               error: (error, stackTrace) => _ErrorState(
+                l10n: l10n,
                 onRetry: () => ref.invalidate(notificationPreferencesProvider),
               ),
             ),
@@ -194,35 +202,30 @@ class _ProfileNotificationsScreenState
     );
   }
 
-  Widget _buildBody(NotificationPreferences prefs) {
+  Widget _buildBody(AppLocalizations l10n, NotificationPreferences prefs) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_osPermissionDenied) ...[
-            const AlertBanner(
-              message:
-                  'Les notifications sont désactivées au niveau du '
-                  "téléphone. Active-les dans les réglages de l'appareil "
-                  'pour les recevoir.',
-            ),
+            AlertBanner(message: l10n.profileNotificationsOsPermissionDenied),
             const SizedBox(height: AppSpacing.sm),
           ],
           _ToggleRow(
-            title: 'Notifications push',
+            title: l10n.profileNotificationsPushToggle,
             value: prefs.pushEnabled,
             onChanged: (value) => _togglePushEnabled(prefs, value),
           ),
           const SizedBox(height: AppSpacing.lg),
-          const _SectionHeader('DÉCLENCHEURS'),
+          _SectionHeader(l10n.profileNotificationsSectionTriggers),
           const SizedBox(height: AppSpacing.sm),
           SettingsListCard(
             children: [
               _ToggleRow(
                 standalone: false,
                 icon: Icons.star_outline,
-                title: 'Repos long non pris depuis longtemps',
+                title: l10n.profileNotificationsRestReminder,
                 value: prefs.pushRestReminder,
                 onChanged: prefs.pushEnabled
                     ? (value) => _toggle(prefs, pushRestReminder: value)
@@ -231,7 +234,7 @@ class _ProfileNotificationsScreenState
               _ToggleRow(
                 standalone: false,
                 icon: Icons.warning_amber_outlined,
-                title: 'Accès retiré ou modifié par le MJ',
+                title: l10n.profileNotificationsAccessRevoked,
                 value: prefs.pushAccessRevoked,
                 onChanged: prefs.pushEnabled
                     ? (value) => _toggle(prefs, pushAccessRevoked: value)
@@ -240,7 +243,7 @@ class _ProfileNotificationsScreenState
               _ToggleRow(
                 standalone: false,
                 icon: Icons.file_download_outlined,
-                title: 'Nouvelle mise à jour disponible',
+                title: l10n.profileNotificationsNewVersion,
                 value: prefs.pushNewVersionAvailable,
                 onChanged: prefs.pushEnabled
                     ? (value) => _toggle(prefs, pushNewVersionAvailable: value)
@@ -249,18 +252,17 @@ class _ProfileNotificationsScreenState
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          const _SectionHeader('E-MAIL'),
+          _SectionHeader(l10n.profileNotificationsSectionEmail),
           const SizedBox(height: AppSpacing.sm),
           _ToggleRow(
-            title: 'Recevoir un résumé par e-mail',
-            subtitle: 'Résumé hebdomadaire des personnages qui ont progressé.',
+            title: l10n.profileNotificationsEmailDigest,
+            subtitle: l10n.profileNotificationsEmailDigestSubtitle,
             value: prefs.emailDigestEnabled,
             onChanged: (value) => _toggle(prefs, emailDigestEnabled: value),
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
-            'Les autorisations système (notifications) se gèrent aussi '
-            'depuis les réglages du téléphone.',
+            l10n.profileNotificationsSystemNote,
             textAlign: TextAlign.center,
             style: AppTypography.body(fontSize: 12, color: AppColors.textMuted),
           ),
@@ -282,12 +284,6 @@ class _ProfileNotificationsScreenState
     }
   }
 }
-
-/// `SnackBar` générique d'échec d'écriture — jamais le détail technique de
-/// l'exception affiché à l'utilisateur, même discipline que
-/// `profile_help_screen.dart::_genericErrorMessage`.
-const String _genericErrorMessage =
-    "Impossible d'enregistrer ce réglage. Réessaie.";
 
 /// Titre de section ("NOTIFICATIONS PUSH"/"EMAIL"), recréé localement plutôt
 /// qu'un composant partagé — même précédent que
@@ -475,8 +471,9 @@ class _AppSwitch extends StatelessWidget {
 /// étant privée à son fichier) : icône `Icons.error_outline` 48px
 /// `accent.brick`, `SecondaryButton` "Réessayer".
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.onRetry});
+  const _ErrorState({required this.l10n, required this.onRetry});
 
+  final AppLocalizations l10n;
   final VoidCallback onRetry;
 
   @override
@@ -494,13 +491,15 @@ class _ErrorState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Impossible de charger tes préférences de notifications. '
-              'Réessaie.',
+              l10n.profileNotificationsLoadError,
               textAlign: TextAlign.center,
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(
+              label: l10n.profileNotificationsRetry,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),

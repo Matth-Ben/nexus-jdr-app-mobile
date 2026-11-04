@@ -13,8 +13,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/core/widgets/primary_button.dart';
 import 'package:personnages/core/widgets/sheet_header_bar.dart';
 import 'package:personnages/features/profile/presentation/widgets/device_permissions_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
-Future<List<MethodCall>> _pumpSheet(WidgetTester tester) async {
+Future<List<MethodCall>> _pumpSheet(
+  WidgetTester tester, {
+  Locale locale = const Locale('fr'),
+}) async {
   final calls = <MethodCall>[];
   const channel = MethodChannel('com.spencerccf.app_settings/methods');
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -25,6 +29,13 @@ Future<List<MethodCall>> _pumpSheet(WidgetTester tester) async {
 
   await tester.pumpWidget(
     MaterialApp(
+      // `device_permissions_sheet.dart` lit `AppLocalizations.of(context)!`
+      // (chantier "traduction de l'app" Phase B) — sans ces delegates,
+      // l'appel renverrait `null` et le `!` planterait. `fr` par défaut,
+      // `en` passé explicitement par les tests du groupe "locale anglaise".
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Builder(
         builder: (context) => Scaffold(
           body: Center(
@@ -136,4 +147,16 @@ void main() {
       expect(calls.single.method, 'openSettings');
     });
   }
+
+  group('locale anglaise', () {
+    testWidgets('affiche le titre et le bouton en anglais', (tester) async {
+      await _pumpSheet(tester, locale: const Locale('en'));
+
+      expect(find.text('DEVICE PERMISSIONS MANAGEMENT'), findsOneWidget);
+      expect(
+        find.widgetWithText(PrimaryButton, 'OPEN SETTINGS'),
+        findsOneWidget,
+      );
+    });
+  });
 }
