@@ -10,6 +10,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../character_creation/domain/ability_score_rules.dart';
 import '../../xml_export/presentation/character_xml_export_action.dart';
 import '../domain/character_class_feature.dart';
@@ -55,7 +56,6 @@ import 'widgets/character_spells_tab_body.dart';
 import 'widgets/character_story_edit_sheet.dart';
 import 'widgets/character_story_tab_body.dart';
 import 'widgets/character_vitals_card.dart';
-import 'widgets/character_write_feedback.dart';
 import 'widgets/dice_roll_sheet.dart';
 import 'widgets/hp_adjustment_sheet.dart';
 import 'widgets/pact_weapon_picker_sheet.dart';
@@ -430,6 +430,10 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   }
 
   Future<void> _applyHpState(CharacterDetail detail, HpState newState) async {
+    // Capturé en tout début de méthode, avant le premier `await` — jamais
+    // après lui, sous peine du lint `use_build_context_synchronously` (voir
+    // la doc de [_offlineQueuedMessage]).
+    final l10n = AppLocalizations.of(context)!;
     final baseState = _hpStateOf(detail);
     if (newState.currentHp == baseState.currentHp &&
         newState.temporaryHp == baseState.temporaryHp) {
@@ -473,7 +477,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // depuis le serveur pour l'instant (voir
         // `character_write_sync_coordinator.dart`, qui invalidera la fiche
         // une fois la synchro effectivement réussie).
-        _showSnackBar(_offlineQueuedMessage);
+        _showSnackBar(_offlineQueuedMessage(l10n));
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -498,7 +502,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       if (mounted && _restGeneration == myRestGeneration) {
         setState(() => _localHpState = previousLocal);
       }
-      _showSnackBar('Impossible de mettre à jour les PV. Réessayez.');
+      _showSnackBar(l10n.characterDetailHpUpdateErrorMessage);
     }
   }
 
@@ -519,6 +523,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// ce qui est réellement en base.
   Future<void> _reassertCurrentHpState() async {
     if (!mounted) return;
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     // `AsyncValue.value` (riverpod 3.x) est déjà nullable ici — équivalent
     // de `valueOrNull` des versions précédentes du package, absent de
     // celle-ci.
@@ -549,7 +556,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       _showSnackBar(failure.message);
     } catch (_) {
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar('Impossible de synchroniser les PV. Réessayez.');
+      _showSnackBar(l10n.characterDetailHpSyncErrorMessage);
     } finally {
       if (mounted) setState(() => _isApplyingRest = false);
     }
@@ -588,6 +595,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     CharacterSpellEntry spell,
     CharacterSpellSlot? slot,
   ) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     if (slot == null) {
       // Sort inné de niveau >= 1 : lancé sans emplacement, mais son usage
       // (une fois par repos long) est dépensé et persisté.
@@ -648,7 +658,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // message honnête que [_applyHpState]/[_addXp]
         // ([_offlineQueuedMessage]). Aucune fiche à relire côté serveur pour
         // l'instant.
-        _showSnackBar(_offlineQueuedMessage);
+        _showSnackBar(_offlineQueuedMessage(l10n));
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -689,6 +699,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     CharacterDetail detail,
     CharacterSpellEntry spell,
   ) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     final pact = detail.pactSpellSlot;
     // Ne devrait pas arriver : `slot.isPact` implique que `detail` porte un
     // `pactSpellSlot` non nul (c'est de là que cet emplacement a été
@@ -720,7 +733,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // D11 : même règle que la branche classique ci-dessus (voir son
         // commentaire) — mise en file réelle désormais, état optimiste
         // conservé tel quel.
-        _showSnackBar(_offlineQueuedMessage);
+        _showSnackBar(_offlineQueuedMessage(l10n));
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -759,6 +772,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     CharacterDetail detail,
     CharacterSpellEntry spell,
   ) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     var current = spell;
     for (final candidate in detail.spells) {
       if (candidate.id == spell.id && InnateSpellUsage.isLimited(candidate)) {
@@ -842,7 +858,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // valeur légèrement périmée vis-à-vis d'un repos entre-temps réussi,
         // limite jugée acceptable (cas rare : repos et lancer hors ligne
         // quasi simultanés).
-        _showSnackBar(_offlineQueuedMessage);
+        _showSnackBar(_offlineQueuedMessage(l10n));
         return;
       }
       if (_restGeneration != myRestGeneration) {
@@ -1007,6 +1023,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     CharacterDetail detail,
     CharacterClassFeature feature,
   ) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     CharacterClassFeature? current;
     for (final candidate in detail.classFeatures) {
       if (candidate.id == feature.id) {
@@ -1046,11 +1065,11 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       if (outcome == WriteOutcome.queued) {
         // D11 : voir le commentaire équivalent de [_castSpell] — mise en
         // file réelle désormais, état optimiste conservé tel quel.
-        _showSnackBar(_offlineQueuedMessage);
+        _showSnackBar(_offlineQueuedMessage(l10n));
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar('${feature.name} utilisée.');
+      _showSnackBar(l10n.characterDetailFeatureUseSuccessMessage(feature.name));
     } on CharacterFailure catch (failure) {
       if (mounted && _restGeneration == myRestGeneration) {
         setState(
@@ -1072,7 +1091,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           ),
         );
       }
-      _showSnackBar("Impossible d'utiliser cette aptitude. Réessayez.");
+      _showSnackBar(l10n.characterDetailFeatureUseErrorMessage);
     } finally {
       if (mounted) setState(() => _isUsingFeature = false);
     }
@@ -1087,6 +1106,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// [_reassertSpellSlotState]/[_reassertCurrentHpState].
   Future<void> _reassertFeatureUsesState(int featureId) async {
     if (!mounted) return;
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     final latest = ref.read(characterDetailProvider(widget.characterId)).value;
     if (latest == null) return;
     final effective = _effectiveDetail(latest);
@@ -1115,9 +1137,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       _showSnackBar(failure.message);
     } catch (_) {
       ref.invalidate(characterDetailProvider(widget.characterId));
-      _showSnackBar(
-        "Impossible de synchroniser les aptitudes de classe. Réessayez.",
-      );
+      _showSnackBar(l10n.characterDetailFeatureSyncErrorMessage);
     } finally {
       if (mounted) setState(() => _isApplyingRest = false);
     }
@@ -1130,6 +1150,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// `CharacterRepository.useInventoryItem`). Verrouille tout l'onglet le
   /// temps de l'appel réseau, refetch inclus (voir [_isWritingInventory]).
   Future<void> _useInventoryItem(CharacterInventoryItem item) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     final newQuantity = item.quantity - 1;
     setState(() => _isWritingInventory = true);
     try {
@@ -1141,7 +1164,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             newQuantity: newQuantity,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1164,6 +1187,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// classe d'armure (n'existe nulle part dans [CharacterDetail], voir la
   /// spec de la tâche).
   Future<void> _toggleInventoryItemEquipped(CharacterInventoryItem item) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     final newEquipped = !item.equipped;
     setState(() => _isWritingInventory = true);
     try {
@@ -1175,7 +1201,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             equipped: newEquipped,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1198,6 +1224,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// même d'atteindre cette méthode (voir `item_action_sheet.dart`/
   /// `item_info_panel.dart`), jamais ici.
   Future<void> _toggleInventoryItemAttuned(CharacterInventoryItem item) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     final newAttuned = !item.isAttuned;
     setState(() => _isWritingInventory = true);
     try {
@@ -1209,7 +1238,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             attuned: newAttuned,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1230,6 +1259,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// Action "Retirer" (déjà confirmée par le dialogue de la sheet d'actions
   /// d'objet, voir `item_action_sheet.dart::removeItemFlow`).
   Future<void> _removeInventoryItem(CharacterInventoryItem item) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isWritingInventory = true);
     try {
       final outcome = await ref
@@ -1239,7 +1271,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             inventoryId: item.id,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1257,6 +1289,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// `currency_adjustment_sheet.dart`) : [newAmount] est déjà le nouveau
   /// montant absolu, calculé par la sheet elle-même.
   Future<void> _adjustCurrency(CurrencyKind currency, int newAmount) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isWritingInventory = true);
     try {
       final outcome = await ref
@@ -1267,7 +1302,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             newAmount: newAmount,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1286,6 +1321,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     InventoryCatalogItem item,
     int quantity,
   ) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isWritingInventory = true);
     try {
       final outcome = await ref
@@ -1296,7 +1334,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             quantity: quantity,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1319,6 +1357,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     String? damageType,
     List<String> properties = const [],
   }) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isWritingInventory = true);
     try {
       final outcome = await ref
@@ -1333,7 +1374,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             properties: properties,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1373,6 +1414,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     Map<CurrencyKind, int> currencyDeltas,
     List<RewardItemDraft> items,
   ) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     final newCurrencyTotals = <CurrencyKind, int>{
       for (final entry in currencyDeltas.entries)
         entry.key: _currentCurrencyAmount(detail, entry.key) + entry.value,
@@ -1388,7 +1432,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
             items: items,
           );
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1427,6 +1471,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   ) async {
     if (item.equipped && item.weaponSlot == slot) return;
 
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     final toUnequip = WeaponSlotRules.itemsToAutoUnequip(
       inventory: detail.inventory,
       slot: slot,
@@ -1444,7 +1491,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         );
         if (outcome == WriteOutcome.queued) {
           await _refreshCharacterDetail();
-          _showSnackBar(offlineNotPersistedMessage);
+          _showSnackBar(l10n.characterOfflineNotPersistedMessage);
           return;
         }
       }
@@ -1455,7 +1502,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       );
       if (outcome == WriteOutcome.queued) {
         await _refreshCharacterDetail();
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1483,6 +1530,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// courante ne déclenche aucune écriture. Verrouille l'onglet le temps de
   /// l'appel, refetch inclus (voir [_isWritingInventory]).
   Future<void> _changePactWeapon(CharacterDetail detail) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     final picked = await showPactWeaponPickerSheet(
       context,
       currentWeaponId: detail.pactWeapon?.id,
@@ -1496,7 +1546,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           .read(pactWeaponRepositoryProvider)
           .setPactWeapon(characterId: widget.characterId, itemId: picked.id);
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       await _refreshCharacterDetail();
@@ -1564,6 +1614,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// [detail] doit être la fiche effective ([_effectiveDetail]) : le nouveau
   /// total part de l'XP réellement affichée, [_localXp] comprise.
   Future<void> _addXp(CharacterDetail detail, int amount) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     final newXp = detail.xp + amount;
     try {
       final outcome = await ref
@@ -1582,7 +1635,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // file : le nouveau total est gardé localement, pour que le bandeau
         // XP l'affiche et qu'un ajout suivant en reparte (voir [_localXp]).
         setState(() => _localXp = newXp);
-        _showSnackBar(_offlineQueuedMessage);
+        _showSnackBar(_offlineQueuedMessage(l10n));
         return;
       }
 
@@ -1599,7 +1652,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
-      _showSnackBar("Impossible d'ajouter l'XP. Réessayez.");
+      _showSnackBar(l10n.characterDetailXpAddErrorMessage);
     }
   }
 
@@ -1608,6 +1661,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// à double étape (spec de la tâche "Système de groupe",
   /// `docs/cahier-des-charges/12-partage-et-groupes.md` section 2.2).
   Future<void> _toggleDead(CharacterDetail detail) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     try {
       final outcome = await ref
           .read(characterRepositoryProvider)
@@ -1619,14 +1675,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // `castSpell`/`useClassFeature`), donc jamais synchronisée plus
         // tard — message honnête distinct de [_offlineQueuedMessage], même
         // convention que `_castSpell`/`_useClassFeature`.
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
-      _showSnackBar('Impossible de mettre à jour le statut. Réessayez.');
+      _showSnackBar(l10n.characterCardActionSheetUpdateStatusGenericError);
     }
   }
 
@@ -1636,6 +1692,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// étape), voir `docs/cahier-des-charges/11-fonctionnalites-a-ajouter.md`
   /// section 2.
   Future<void> _toggleArchived(CharacterDetail detail) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     try {
       final outcome = await ref
           .read(characterRepositoryProvider)
@@ -1647,14 +1706,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
       if (outcome == WriteOutcome.queued) {
         // Voir la documentation de `CharacterRepository.setArchived` : même
         // convention que [_toggleDead] (jamais mis en file d'attente).
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
-      _showSnackBar('Impossible de mettre à jour le statut. Réessayez.');
+      _showSnackBar(l10n.characterCardActionSheetUpdateStatusGenericError);
     }
   }
 
@@ -1667,6 +1726,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// courant n'a plus de fiche à afficher) plutôt que de rafraîchir sur
   /// place.
   Future<void> _deleteCharacter(CharacterDetail detail) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDeleteCharacterConfirmationDialog(
       context,
       characterName: detail.name,
@@ -1682,14 +1744,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // Voir la documentation de `CharacterRepository.deleteCharacter` :
         // même convention que [_toggleDead]/[_toggleArchived] (jamais mis en
         // file), le personnage n'a donc pas été supprimé.
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       _goBack();
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
-      _showSnackBar('Impossible de supprimer le personnage. Réessayez.');
+      _showSnackBar(l10n.characterCardActionSheetDeleteGenericError);
     }
   }
 
@@ -1698,6 +1760,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// [_toggleArchived], voir `docs/cahier-des-charges/`
   /// 11-fonctionnalites-a-ajouter.md, section "Onglet Personnage".
   Future<void> _toggleInspiration(CharacterDetail detail) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     try {
       final outcome = await ref
           .read(characterRepositoryProvider)
@@ -1710,14 +1775,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // Voir la documentation de `CharacterRepository.setInspiration` :
         // même convention que [_toggleDead]/[_toggleArchived] (jamais mis en
         // file).
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
-      _showSnackBar('Impossible de mettre à jour le statut. Réessayez.');
+      _showSnackBar(l10n.characterCardActionSheetUpdateStatusGenericError);
     }
   }
 
@@ -1731,20 +1796,23 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// bouton "Valider" unique (pas de double-tap rapproché possible pendant
   /// qu'elle est ouverte).
   Future<void> _adjustArmorClassBonus(int bonus) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     try {
       final outcome = await ref
           .read(characterRepositoryProvider)
           .setArmorClassBonus(characterId: widget.characterId, bonus: bonus);
       if (!mounted) return;
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
-      _showSnackBar("Impossible d'ajuster la Classe d'Armure. Réessayez.");
+      _showSnackBar(l10n.characterDetailArmorClassAdjustErrorMessage);
     }
   }
 
@@ -1755,6 +1823,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// d'attente hors-ligne), mais sur `character_spells` (identifié par
   /// [CharacterSpellEntry.id], le `spells.id`) plutôt que `characters`.
   Future<void> _toggleSpellPrepared(CharacterSpellEntry spell) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     try {
       final outcome = await ref
           .read(characterRepositoryProvider)
@@ -1765,14 +1836,14 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
           );
       if (!mounted) return;
       if (outcome == WriteOutcome.queued) {
-        _showSnackBar(offlineNotPersistedMessage);
+        _showSnackBar(l10n.characterOfflineNotPersistedMessage);
         return;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
     } on CharacterFailure catch (failure) {
       _showSnackBar(failure.message);
     } catch (_) {
-      _showSnackBar('Impossible de mettre à jour le statut. Réessayez.');
+      _showSnackBar(l10n.characterCardActionSheetUpdateStatusGenericError);
     }
   }
 
@@ -1824,6 +1895,9 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     int appliedGain = 0,
     Map<String, int> hitDiceRecoveredByClassId = const {},
   }) async {
+    // Capturé avant le premier `await` — voir la doc de
+    // [_offlineQueuedMessage].
+    final l10n = AppLocalizations.of(context)!;
     final diceSpent = hitDiceSpentByClassId.values.fold(
       0,
       (sum, count) => sum + count,
@@ -1918,7 +1992,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
         // affiché tel quel, rien à annuler ; aucune fiche à relire côté
         // serveur pour l'instant (même principe que [_applyHpState]).
         if (!mounted) return true;
-        _showSnackBar(_offlineQueuedMessage);
+        _showSnackBar(_offlineQueuedMessage(l10n));
         return true;
       }
       ref.invalidate(characterDetailProvider(widget.characterId));
@@ -2038,12 +2112,20 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
   /// `_useClassFeature`/`_applyRest`). Même registre que le reste des
   /// messages de cet écran (ex. "Impossible d'ajouter l'XP. Réessayez."),
   /// honnête sur le fait que le changement n'est pas encore confirmé côté
-  /// serveur — mais, contrairement à [offlineNotPersistedMessage]
-  /// (`widgets/character_write_feedback.dart`), promet une synchronisation
+  /// serveur — mais, contrairement à `AppLocalizations
+  /// .characterOfflineNotPersistedMessage`, promet une synchronisation
   /// future réelle : l'état optimiste local déjà posé par l'appelant n'est
   /// jamais annulé dans ce cas (voir chaque appelant).
-  static const _offlineQueuedMessage =
-      'Hors ligne : sera synchronisé dès que la connexion revient.';
+  ///
+  /// Prend [l10n] déjà résolu (plutôt qu'un `BuildContext`, chantier
+  /// "traduction de l'app" Phase B, lot "Characters — fiche
+  /// (identité/statistiques)") : chaque appelant le capture lui-même en tout
+  /// début de méthode, *avant* son premier `await` — jamais après, sous
+  /// peine du lint `use_build_context_synchronously` (`AppLocalizations
+  /// .of(context)` lit `context` tout comme l'ancienne constante
+  /// `offlineNotPersistedMessage` ne le faisait pas).
+  String _offlineQueuedMessage(AppLocalizations l10n) =>
+      l10n.characterDetailOfflineQueuedMessage;
 
   void _showSnackBar(String message) {
     if (!mounted) return;
@@ -2153,12 +2235,13 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
     // uniquement quand une fiche est effectivement chargée (jamais pendant
     // le chargement/une erreur).
     final currentDetail = detailAsync.value;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: Column(
         children: [
           WoodBackHeader(
-            title: _tab.headerTitle,
+            title: _tab.headerTitle(l10n),
             onBack: _goBack,
             trailing: currentDetail == null
                 ? null
@@ -2176,7 +2259,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                           width: 44,
                           height: 44,
                           child: IconButton(
-                            tooltip: 'Aide',
+                            tooltip: l10n.characterDetailHelpTooltip,
                             onPressed: () => showStepHelpSheet(
                               context,
                               CharacterSheetHelp.personnage,
@@ -2191,7 +2274,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                           width: 44,
                           height: 44,
                           child: IconButton(
-                            tooltip: 'Partager',
+                            tooltip: l10n.characterCardActionSheetShare,
                             onPressed: () => context.push(
                               '/characters/${widget.characterId}/share',
                             ),
@@ -2205,7 +2288,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                           width: 44,
                           height: 44,
                           child: PopupMenuButton<_CharacterHeaderMenuAction>(
-                            tooltip: 'Plus d\'options',
+                            tooltip: l10n.characterDetailMoreOptionsTooltip,
                             icon: const Icon(
                               Icons.more_vert,
                               color: AppColors.textOnWood,
@@ -2227,36 +2310,36 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                                 _deleteCharacter(currentDetail),
                             },
                             itemBuilder: (context) => [
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: _CharacterHeaderMenuAction.edit,
-                                child: Text('Modifier'),
+                                child: Text(l10n.characterCardActionSheetEdit),
                               ),
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: _CharacterHeaderMenuAction.exportXml,
-                                child: Text('Exporter en XML'),
+                                child: Text(l10n.characterDetailMenuExportXml),
                               ),
                               PopupMenuItem(
                                 value:
                                     _CharacterHeaderMenuAction.toggleArchived,
                                 child: Text(
                                   currentDetail.isArchived
-                                      ? 'Désarchiver'
-                                      : 'Archiver ce personnage',
+                                      ? l10n.characterCardActionSheetUnarchive
+                                      : l10n.characterCardActionSheetArchive,
                                 ),
                               ),
                               PopupMenuItem(
                                 value: _CharacterHeaderMenuAction.toggleDead,
                                 child: Text(
                                   currentDetail.isDead
-                                      ? 'Ressusciter'
-                                      : 'Marquer comme mort',
+                                      ? l10n.characterCardActionSheetRevive
+                                      : l10n.characterCardActionSheetMarkDead,
                                 ),
                               ),
                               const PopupMenuDivider(),
                               PopupMenuItem(
                                 value: _CharacterHeaderMenuAction.delete,
                                 child: Text(
-                                  'Supprimer le personnage',
+                                  l10n.characterCardActionSheetDelete,
                                   style: AppTypography.body(
                                     color: AppColors.accentBrick,
                                   ),
@@ -2271,7 +2354,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                       width: 44,
                       height: 44,
                       child: IconButton(
-                        tooltip: 'Rechercher',
+                        tooltip: l10n.characterDetailSearchTooltip,
                         onPressed: () => _skillsSearchFocusNode.requestFocus(),
                         icon: const Icon(
                           Icons.search,
@@ -2283,7 +2366,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                       width: 44,
                       height: 44,
                       child: IconButton(
-                        tooltip: 'Rechercher',
+                        tooltip: l10n.characterDetailSearchTooltip,
                         onPressed: () => _spellsSearchFocusNode.requestFocus(),
                         icon: const Icon(
                           Icons.search,
@@ -2295,7 +2378,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
                       width: 44,
                       height: 44,
                       child: IconButton(
-                        tooltip: 'Filtrer',
+                        tooltip: l10n.characterDetailFilterTooltip,
                         onPressed: () {
                           final anchorContext =
                               _inventoryFilterKey.currentContext;
@@ -2328,7 +2411,7 @@ class _CharacterDetailScreenState extends ConsumerState<CharacterDetailScreen> {
               error: (error, stackTrace) => _ErrorState(
                 message: error is CharacterFailure
                     ? error.message
-                    : 'Impossible de charger ce personnage. Réessayez.',
+                    : l10n.characterDetailLoadErrorMessage,
                 onRetry: () =>
                     ref.invalidate(characterDetailProvider(widget.characterId)),
               ),
@@ -2529,7 +2612,7 @@ class _CharacterTabBody extends StatelessWidget {
           onTapInspiration: onTapToggleInspiration,
           onTapInitiative: () => showDiceRollSheet(
             context,
-            label: 'Initiative',
+            label: AppLocalizations.of(context)!.characterDetailInitiativeLabel,
             modifier: detail.initiative,
           ),
           onTapArmorClass: onTapAdjustArmorClass,
@@ -2606,7 +2689,11 @@ class _ErrorState extends StatelessWidget {
               style: AppTypography.body(color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.md),
-            SecondaryButton(label: 'Réessayer', onPressed: onRetry),
+            SecondaryButton(
+              label: AppLocalizations.of(context)!
+                  .connectionErrorStateRetryButton,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),

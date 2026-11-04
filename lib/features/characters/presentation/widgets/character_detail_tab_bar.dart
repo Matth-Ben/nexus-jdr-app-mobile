@@ -2,41 +2,49 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Les 5 onglets de la fiche personnage — voir
 /// `docs/cahier-des-charges/05-ux-navigation.md`. Les 5 ont désormais un
 /// contenu réel ([character]/[skills]/[spells]/[inventory]/[story]).
+///
+/// [label]/[headerTitle] sont des méthodes (pas des champs `const`, chantier
+/// "traduction de l'app" Phase B, lot "Characters — fiche
+/// (identité/statistiques)") — un enum `const` ne peut pas porter de texte
+/// résolu via `AppLocalizations.of(context)`, qui a besoin d'un
+/// `BuildContext` au moment de l'appel : voir le "pattern liste localisée en
+/// fonction `(l10n) => [...]`" déjà utilisé ailleurs dans ce dépôt pour le
+/// même problème sur des listes de catalogue.
 enum CharacterDetailTab {
-  character(icon: Icons.person, label: 'PERSO', headerTitle: 'FICHE'),
-  skills(icon: Icons.star_outline, label: 'APT.', headerTitle: 'APTITUDES'),
-  spells(
-    icon: Icons.auto_fix_high_outlined,
-    label: 'SORTS',
-    headerTitle: 'SORTS',
-  ),
-  inventory(
-    icon: Icons.backpack_outlined,
-    label: 'SAC',
-    headerTitle: 'INVENTAIRE',
-  ),
-  story(
-    icon: Icons.description_outlined,
-    label: 'HIST.',
-    headerTitle: 'HISTOIRE',
-  );
+  character(Icons.person),
+  skills(Icons.star_outline),
+  spells(Icons.auto_fix_high_outlined),
+  inventory(Icons.backpack_outlined),
+  story(Icons.description_outlined);
 
-  const CharacterDetailTab({
-    required this.icon,
-    required this.label,
-    required this.headerTitle,
-  });
+  const CharacterDetailTab(this.icon);
 
   final IconData icon;
-  final String label;
+
+  /// Libellé affiché dans le pied de fiche (`CharacterDetailTabBar`), déjà en
+  /// majuscules.
+  String label(AppLocalizations l10n) => switch (this) {
+    CharacterDetailTab.character => l10n.characterDetailTabCharacterLabel,
+    CharacterDetailTab.skills => l10n.characterDetailTabSkillsLabel,
+    CharacterDetailTab.spells => l10n.characterDetailTabSpellsLabel,
+    CharacterDetailTab.inventory => l10n.characterDetailTabInventoryLabel,
+    CharacterDetailTab.story => l10n.characterDetailTabStoryLabel,
+  };
 
   /// Titre affiché dans `WoodBackHeader` en tête de la fiche personnage
   /// quand cet onglet est actif — voir `09-maquettes-captures.md`.
-  final String headerTitle;
+  String headerTitle(AppLocalizations l10n) => switch (this) {
+    CharacterDetailTab.character => l10n.characterDetailTabCharacterTitle,
+    CharacterDetailTab.skills => l10n.characterDetailTabSkillsTitle,
+    CharacterDetailTab.spells => l10n.characterDetailTabSpellsTitle,
+    CharacterDetailTab.inventory => l10n.characterDetailTabInventoryTitle,
+    CharacterDetailTab.story => l10n.characterDetailTabStoryTitle,
+  };
 }
 
 /// Barre de navigation à 5 onglets, en pied de la fiche personnage —
@@ -97,6 +105,7 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final iconColor = selected ? AppColors.woodDark : AppColors.textOnWoodMuted;
     final labelColor = selected
         ? AppColors.textOnWood
@@ -126,7 +135,7 @@ class _TabButton extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              tab.label,
+              tab.label(l10n),
               style: AppTypography.display(fontSize: 11, color: labelColor),
             ),
           ],

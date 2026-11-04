@@ -5,6 +5,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 
 /// Carte combinant les bandeaux PV et XP de l'onglet "Personnage" — voir la
@@ -121,7 +122,7 @@ class _RestButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SecondaryButton(
-      label: 'Repos',
+      label: AppLocalizations.of(context)!.characterVitalsCardRestButton,
       surface: SecondaryButtonSurface.parchment,
       onPressed: onTap,
     );
@@ -148,6 +149,7 @@ class _HpSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -159,7 +161,7 @@ class _HpSection extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'POINTS DE VIE',
+                  l10n.characterVitalsCardHpLabel,
                   style: AppTypography.display(
                     fontSize: 11,
                     color: AppColors.textSecondary,
@@ -258,7 +260,8 @@ class _TemporaryHpChip extends StatelessWidget {
         border: Border.all(color: AppColors.accentTeal, width: 1),
       ),
       child: Text(
-        '+$amount PV temp.',
+        AppLocalizations.of(context)!
+            .characterVitalsCardTemporaryHpChip(amount),
         style: AppTypography.body(
           fontSize: 11,
           fontWeight: FontWeight.w700,
@@ -282,6 +285,7 @@ class _XpSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Au niveau maximum (`nextLevelXpThreshold` nul), il n'y a plus de
     // "prochain seuil" vers lequel afficher une progression : le seuil
     // affiché retombe alors sur l'XP actuelle elle-même (jauge pleine,
@@ -301,7 +305,7 @@ class _XpSection extends StatelessWidget {
         Row(
           children: [
             Text(
-              'EXPÉRIENCE',
+              l10n.characterVitalsCardXpLabel,
               style: AppTypography.display(
                 fontSize: 11,
                 color: AppColors.textSecondary,
@@ -342,7 +346,10 @@ class _XpSection extends StatelessWidget {
         // `PrimaryButton` pleine largeur "+ XP" — remplace l'`IconButton`
         // "+" de l'en-tête ci-dessus (recettage direction-artistique du
         // 13/09), même callback [onTapAddXp] (ouvre `AddXpSheet`).
-        PrimaryButton(label: '+ XP', onPressed: onTapAddXp),
+        PrimaryButton(
+          label: l10n.characterVitalsCardAddXpButton,
+          onPressed: onTapAddXp,
+        ),
         // Lien discret "Monter de niveau manuellement" retiré d'ici (demande
         // utilisateur du 15/09) : relogé dans `AddXpSheet` (bouton "+ XP"
         // ci-dessus), voir sa documentation de classe. Le bandeau "NIVEAU
@@ -402,7 +409,8 @@ class _LevelUpAvailableBanner extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.xs),
               Text(
-                'NIVEAU $targetLevel DISPONIBLE',
+                AppLocalizations.of(context)!
+                    .characterVitalsCardLevelUpBanner(targetLevel),
                 style: AppTypography.display(
                   fontSize: 11,
                   color: AppColors.textPrimary,

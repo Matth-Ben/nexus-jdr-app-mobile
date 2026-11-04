@@ -9,15 +9,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_stat_pills_row.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 Future<void> _pump(
   WidgetTester tester, {
   required int armorClass,
   required int armorClassBonus,
   VoidCallback? onTapArmorClass,
+  Locale locale = const Locale('fr'),
 }) {
   return tester.pumpWidget(
     MaterialApp(
+      // `CharacterStatPillsRow` lit `AppLocalizations.of(context)!` (chantier
+      // "traduction de l'app" Phase B, lot "Characters — fiche
+      // (identité/statistiques)") : sans ces delegates, l'appel renverrait
+      // `null` et le `!` planterait. `fr` par défaut, `en` passé
+      // explicitement par le groupe "locale anglaise" plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       home: Scaffold(
         body: CharacterStatPillsRow(
           speed: 9,
@@ -104,4 +114,30 @@ void main() {
       await tester.pumpAndSettle();
     },
   );
+
+  group('locale anglaise', () {
+    // Même rationale que `character_card_test.dart` (chantier "traduction
+    // de l'app" Phase B) : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets(
+      'libellés des 4 tuiles ("SPD."/"AC"/"INIT."/"INSP.") en anglais',
+      (tester) async {
+        await _pump(
+          tester,
+          armorClass: 15,
+          armorClassBonus: 0,
+          locale: const Locale('en'),
+        );
+
+        expect(find.text('SPD.'), findsOneWidget);
+        expect(find.text('AC'), findsOneWidget);
+        expect(find.text('INIT.'), findsOneWidget);
+        expect(find.text('INSP.'), findsOneWidget);
+        // Vitesse en mètres volontairement identique dans les deux langues
+        // (voir `@characterStatPillsSpeedValue` dans `app_fr.arb`) : les
+        // données de ce dépôt sont stockées en mètres, jamais converties en
+        // pieds.
+        expect(find.text('9 m'), findsOneWidget);
+      },
+    );
+  });
 }

@@ -1305,6 +1305,192 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get characterDetailTabCharacterLabel => 'PERSO';
+
+  @override
+  String get characterDetailTabCharacterTitle => 'FICHE';
+
+  @override
+  String get characterDetailTabSkillsLabel => 'APT.';
+
+  @override
+  String get characterDetailTabSkillsTitle => 'APTITUDES';
+
+  @override
+  String get characterDetailTabSpellsLabel => 'SORTS';
+
+  @override
+  String get characterDetailTabSpellsTitle => 'SORTS';
+
+  @override
+  String get characterDetailTabInventoryLabel => 'SAC';
+
+  @override
+  String get characterDetailTabInventoryTitle => 'INVENTAIRE';
+
+  @override
+  String get characterDetailTabStoryLabel => 'HIST.';
+
+  @override
+  String get characterDetailTabStoryTitle => 'HISTOIRE';
+
+  @override
+  String get characterDetailHelpTooltip => 'Aide';
+
+  @override
+  String get characterDetailMoreOptionsTooltip => 'Plus d\'options';
+
+  @override
+  String get characterDetailSearchTooltip => 'Rechercher';
+
+  @override
+  String get characterDetailFilterTooltip => 'Filtrer';
+
+  @override
+  String get characterDetailMenuExportXml => 'Exporter en XML';
+
+  @override
+  String get characterDetailLoadErrorMessage =>
+      'Impossible de charger ce personnage. Réessayez.';
+
+  @override
+  String get characterDetailInitiativeLabel => 'Initiative';
+
+  @override
+  String get characterDetailHpUpdateErrorMessage =>
+      'Impossible de mettre à jour les PV. Réessayez.';
+
+  @override
+  String get characterDetailHpSyncErrorMessage =>
+      'Impossible de synchroniser les PV. Réessayez.';
+
+  @override
+  String characterDetailFeatureUseSuccessMessage(String featureName) {
+    return '$featureName utilisée.';
+  }
+
+  @override
+  String get characterDetailFeatureUseErrorMessage =>
+      'Impossible d\'utiliser cette aptitude. Réessayez.';
+
+  @override
+  String get characterDetailFeatureSyncErrorMessage =>
+      'Impossible de synchroniser les aptitudes de classe. Réessayez.';
+
+  @override
+  String get characterDetailXpAddErrorMessage =>
+      'Impossible d\'ajouter l\'XP. Réessayez.';
+
+  @override
+  String get characterDetailOfflineQueuedMessage =>
+      'Hors ligne : sera synchronisé dès que la connexion revient.';
+
+  @override
+  String get characterDetailArmorClassAdjustErrorMessage =>
+      'Impossible d\'ajuster la Classe d\'Armure. Réessayez.';
+
+  @override
+  String get characterVitalsCardRestButton => 'Repos';
+
+  @override
+  String get characterVitalsCardHpLabel => 'POINTS DE VIE';
+
+  @override
+  String characterVitalsCardTemporaryHpChip(int amount) {
+    return '+$amount PV temp.';
+  }
+
+  @override
+  String get characterVitalsCardXpLabel => 'EXPÉRIENCE';
+
+  @override
+  String get characterVitalsCardAddXpButton => '+ XP';
+
+  @override
+  String characterVitalsCardLevelUpBanner(int targetLevel) {
+    return 'NIVEAU $targetLevel DISPONIBLE';
+  }
+
+  @override
+  String get characterStatPillsSpeedLabel => 'VIT.';
+
+  @override
+  String get characterStatPillsArmorClassLabel => 'CA';
+
+  @override
+  String get characterStatPillsInitiativeLabel => 'INIT.';
+
+  @override
+  String get characterStatPillsInspirationLabel => 'INSP.';
+
+  @override
+  String characterStatPillsSpeedValue(int speed) {
+    return '$speed m';
+  }
+
+  @override
+  String get characterAbilityAbbreviationStr => 'For';
+
+  @override
+  String get characterAbilityAbbreviationDex => 'Dex';
+
+  @override
+  String get characterAbilityAbbreviationCon => 'Con';
+
+  @override
+  String get characterAbilityAbbreviationInt => 'Int';
+
+  @override
+  String get characterAbilityAbbreviationWis => 'Sag';
+
+  @override
+  String get characterAbilityAbbreviationCha => 'Cha';
+
+  @override
+  String get characterSavingThrowsCardTitle => 'JETS DE SAUVEGARDE';
+
+  @override
+  String get characterSkillsCardTitle => 'LES 18 COMPÉTENCES';
+
+  @override
+  String get characterSkillsCardMasteredLegend => 'maîtrisée';
+
+  @override
+  String get characterSkillsCardD20Chip => 'D20';
+
+  @override
+  String get characterAppearanceCardTitle => 'APPARENCE PHYSIQUE';
+
+  @override
+  String get characterAppearanceCardSexeLabel => 'Sexe';
+
+  @override
+  String get characterAppearanceCardAgeLabel => 'Âge';
+
+  @override
+  String get characterAppearanceCardHeightLabel => 'Taille';
+
+  @override
+  String get characterAppearanceCardWeightLabel => 'Poids';
+
+  @override
+  String get characterAppearanceCardEyesLabel => 'Yeux';
+
+  @override
+  String get characterAppearanceCardSkinLabel => 'Peau';
+
+  @override
+  String get characterAppearanceCardHairLabel => 'Cheveux';
+
+  @override
+  String get characterSkillsTabBodySearchHint => 'Rechercher une compétence';
+
+  @override
+  String characterSkillsTabBodyNoMatchMessage(String query) {
+    return 'Aucune compétence pour « $query ».';
+  }
+
+  @override
   String get connectionErrorStateBannerTitle => 'CONNEXION';
 
   @override

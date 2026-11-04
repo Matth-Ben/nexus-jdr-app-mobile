@@ -1958,7 +1958,7 @@ abstract class AppLocalizations {
   /// **'Niv. {level}'**
   String characterLevelAbbreviation(int level);
 
-  /// Voir `presentation/widgets/character_write_feedback.dart::offlineNotPersistedMessage` — texte à garder identique à cette constante, encore utilisée telle quelle par `character_detail_screen.dart` (hors périmètre de ce lot, D141 du registre de dette technique).
+  /// Anciennement `presentation/widgets/character_write_feedback.dart::offlineNotPersistedMessage` (dette technique D88) — ce fichier et sa constante ont été retirés au lot "Characters — fiche (identité/statistiques)" une fois `character_detail_screen.dart` (son dernier appelant restant, D141) migré vers cette clé, comme `character_list_screen.dart`/`character_card_action_sheet.dart` avant lui.
   ///
   /// In fr, this message translates to:
   /// **'Hors ligne : cette action n\'a pas pu être enregistrée. Réessayez une fois reconnecté.'**
@@ -2275,6 +2275,342 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{name}, voir le détail'**
   String characterNameTagChipSemanticLabel(String name);
+
+  /// Libellé (pied de fiche, `CharacterDetailTabBar`) de l'onglet "Personnage" — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'PERSO'**
+  String get characterDetailTabCharacterLabel;
+
+  /// Titre affiché dans `WoodBackHeader` (bandeau bois) quand l'onglet "Personnage" est actif — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'FICHE'**
+  String get characterDetailTabCharacterTitle;
+
+  /// Libellé (pied de fiche) de l'onglet "Aptitudes" — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'APT.'**
+  String get characterDetailTabSkillsLabel;
+
+  /// Titre affiché dans `WoodBackHeader` quand l'onglet "Aptitudes" est actif — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'APTITUDES'**
+  String get characterDetailTabSkillsTitle;
+
+  /// Libellé (pied de fiche) de l'onglet "Sorts" — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS'**
+  String get characterDetailTabSpellsLabel;
+
+  /// Titre affiché dans `WoodBackHeader` quand l'onglet "Sorts" est actif — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'SORTS'**
+  String get characterDetailTabSpellsTitle;
+
+  /// Libellé (pied de fiche) de l'onglet "Inventaire" — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'SAC'**
+  String get characterDetailTabInventoryLabel;
+
+  /// Titre affiché dans `WoodBackHeader` quand l'onglet "Inventaire" est actif — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'INVENTAIRE'**
+  String get characterDetailTabInventoryTitle;
+
+  /// Libellé (pied de fiche) de l'onglet "Histoire" — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'HIST.'**
+  String get characterDetailTabStoryLabel;
+
+  /// Titre affiché dans `WoodBackHeader` quand l'onglet "Histoire" est actif — déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'HISTOIRE'**
+  String get characterDetailTabStoryTitle;
+
+  /// `tooltip` de l'icône "?" du bandeau bois, onglet "Personnage" uniquement — ouvre `showStepHelpSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aide'**
+  String get characterDetailHelpTooltip;
+
+  /// `tooltip` de l'icône "⋮" du bandeau bois (menu "Modifier"/"Exporter en XML"/"Archiver"/"Marquer comme mort"/"Supprimer"), onglet "Personnage" uniquement.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus d\'options'**
+  String get characterDetailMoreOptionsTooltip;
+
+  /// `tooltip` de l'icône loupe du bandeau bois, partagée par les onglets "Aptitudes" et "Sorts" (focus le champ de recherche de l'onglet actif).
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher'**
+  String get characterDetailSearchTooltip;
+
+  /// `tooltip` de l'icône entonnoir du bandeau bois, onglet "Inventaire" uniquement (fait défiler jusqu'à la bascule de filtre par catégorie).
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtrer'**
+  String get characterDetailFilterTooltip;
+
+  /// Item "Exporter en XML" du menu "⋮" du bandeau bois.
+  ///
+  /// In fr, this message translates to:
+  /// **'Exporter en XML'**
+  String get characterDetailMenuExportXml;
+
+  /// Message de repli de `_ErrorState` quand `characterDetailProvider` échoue avec une erreur qui n'est pas une `CharacterFailure` (sinon `CharacterFailure.message` est affiché tel quel).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger ce personnage. Réessayez.'**
+  String get characterDetailLoadErrorMessage;
+
+  /// `label` passé à `showDiceRollSheet` au tap sur la tuile "INIT." de `CharacterStatPillsRow` (titre de la feuille de lancer de dé).
+  ///
+  /// In fr, this message translates to:
+  /// **'Initiative'**
+  String get characterDetailInitiativeLabel;
+
+  /// SnackBar d'échec générique de `_applyHpState` (ajustement PV depuis la feuille détaillée).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de mettre à jour les PV. Réessayez.'**
+  String get characterDetailHpUpdateErrorMessage;
+
+  /// SnackBar d'échec de `_reassertCurrentHpState` (réaffirmation PV après un repos, voir sa documentation).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de synchroniser les PV. Réessayez.'**
+  String get characterDetailHpSyncErrorMessage;
+
+  /// SnackBar de succès de `_useClassFeature` (onglet "Aptitudes", utilisation d'une aptitude de classe à usage limité).
+  ///
+  /// In fr, this message translates to:
+  /// **'{featureName} utilisée.'**
+  String characterDetailFeatureUseSuccessMessage(String featureName);
+
+  /// SnackBar d'échec de `_useClassFeature`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'utiliser cette aptitude. Réessayez.'**
+  String get characterDetailFeatureUseErrorMessage;
+
+  /// SnackBar d'échec de `_reassertFeatureUsesState` (réaffirmation après un repos).
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de synchroniser les aptitudes de classe. Réessayez.'**
+  String get characterDetailFeatureSyncErrorMessage;
+
+  /// SnackBar d'échec de `_addXp`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ajouter l\'XP. Réessayez.'**
+  String get characterDetailXpAddErrorMessage;
+
+  /// Voir `_CharacterDetailScreenState._offlineQueuedMessage` — écriture réellement mise en file (`PendingCharacterWriteQueue`) : promet une synchronisation future réelle, contrairement à `characterOfflineNotPersistedMessage`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne : sera synchronisé dès que la connexion revient.'**
+  String get characterDetailOfflineQueuedMessage;
+
+  /// SnackBar d'échec de `_adjustArmorClassBonus` (sheet "Ajustement de CA").
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'ajuster la Classe d\'Armure. Réessayez.'**
+  String get characterDetailArmorClassAdjustErrorMessage;
+
+  /// Libellé du bouton unique "Repos" de `CharacterVitalsCard` (ouvre `RestSheet`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Repos'**
+  String get characterVitalsCardRestButton;
+
+  /// Libellé du bandeau PV, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'POINTS DE VIE'**
+  String get characterVitalsCardHpLabel;
+
+  /// Puce affichée sous la jauge PV quand `temporaryHp > 0`.
+  ///
+  /// In fr, this message translates to:
+  /// **'+{amount} PV temp.'**
+  String characterVitalsCardTemporaryHpChip(int amount);
+
+  /// Libellé du bandeau XP, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'EXPÉRIENCE'**
+  String get characterVitalsCardXpLabel;
+
+  /// Libellé du `PrimaryButton` pleine largeur sous la jauge XP (ouvre `AddXpSheet`).
+  ///
+  /// In fr, this message translates to:
+  /// **'+ XP'**
+  String get characterVitalsCardAddXpButton;
+
+  /// Bandeau affiché sous la jauge XP une fois le seuil du niveau suivant franchi, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'NIVEAU {targetLevel} DISPONIBLE'**
+  String characterVitalsCardLevelUpBanner(int targetLevel);
+
+  /// Libellé de la tuile "Vitesse" de `CharacterStatPillsRow`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'VIT.'**
+  String get characterStatPillsSpeedLabel;
+
+  /// Libellé de la tuile "Classe d'Armure" de `CharacterStatPillsRow`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'CA'**
+  String get characterStatPillsArmorClassLabel;
+
+  /// Libellé de la tuile "Initiative" de `CharacterStatPillsRow`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'INIT.'**
+  String get characterStatPillsInitiativeLabel;
+
+  /// Libellé de la tuile "Inspiration" de `CharacterStatPillsRow`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'INSP.'**
+  String get characterStatPillsInspirationLabel;
+
+  /// Valeur de la tuile "Vitesse" quand `speed` est résolu — unité métrique (mètres) volontairement gardée telle quelle en anglais aussi (voir la description de la clé anglaise) : les données de vitesse de ce dépôt sont stockées en mètres, jamais converties en pieds.
+  ///
+  /// In fr, this message translates to:
+  /// **'{speed} m'**
+  String characterStatPillsSpeedValue(int speed);
+
+  /// Abréviation de la caractéristique Force, partagée par `character_saving_throws_card.dart` et `character_skills_card.dart` (chacun garde sa propre table de correspondance `Dart`, intentionnellement dupliquée — voir leur doc de classe respective — mais réutilise ces mêmes clés `.arb`, même principe que `characterLevelAbbreviation`).
+  ///
+  /// In fr, this message translates to:
+  /// **'For'**
+  String get characterAbilityAbbreviationStr;
+
+  /// Abréviation de la caractéristique Dextérité — voir `characterAbilityAbbreviationStr`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dex'**
+  String get characterAbilityAbbreviationDex;
+
+  /// Abréviation de la caractéristique Constitution — voir `characterAbilityAbbreviationStr`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Con'**
+  String get characterAbilityAbbreviationCon;
+
+  /// Abréviation de la caractéristique Intelligence — voir `characterAbilityAbbreviationStr`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Int'**
+  String get characterAbilityAbbreviationInt;
+
+  /// Abréviation de la caractéristique Sagesse — voir `characterAbilityAbbreviationStr`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sag'**
+  String get characterAbilityAbbreviationWis;
+
+  /// Abréviation de la caractéristique Charisme — voir `characterAbilityAbbreviationStr`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cha'**
+  String get characterAbilityAbbreviationCha;
+
+  /// Titre de `CharacterSavingThrowsCard`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'JETS DE SAUVEGARDE'**
+  String get characterSavingThrowsCardTitle;
+
+  /// Titre de `CharacterSkillsCard`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'LES 18 COMPÉTENCES'**
+  String get characterSkillsCardTitle;
+
+  /// Légende "● maîtrisée" en tête de `CharacterSkillsCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'maîtrisée'**
+  String get characterSkillsCardMasteredLegend;
+
+  /// Texte de la puce "D20" en bout de ligne de compétence — notation de dé, identique dans les deux langues.
+  ///
+  /// In fr, this message translates to:
+  /// **'D20'**
+  String get characterSkillsCardD20Chip;
+
+  /// Titre de `CharacterAppearanceCard`, déjà en majuscules.
+  ///
+  /// In fr, this message translates to:
+  /// **'APPARENCE PHYSIQUE'**
+  String get characterAppearanceCardTitle;
+
+  /// Libellé du champ "Sexe" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sexe'**
+  String get characterAppearanceCardSexeLabel;
+
+  /// Libellé du champ "Âge" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Âge'**
+  String get characterAppearanceCardAgeLabel;
+
+  /// Libellé du champ "Taille" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Taille'**
+  String get characterAppearanceCardHeightLabel;
+
+  /// Libellé du champ "Poids" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Poids'**
+  String get characterAppearanceCardWeightLabel;
+
+  /// Libellé du champ "Yeux" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Yeux'**
+  String get characterAppearanceCardEyesLabel;
+
+  /// Libellé du champ "Peau" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Peau'**
+  String get characterAppearanceCardSkinLabel;
+
+  /// Libellé du champ "Cheveux" de `CharacterAppearanceCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cheveux'**
+  String get characterAppearanceCardHairLabel;
+
+  /// `hintText` du champ de recherche "LES 18 COMPÉTENCES" de l'onglet "Aptitudes" (`_SkillSearchField`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher une compétence'**
+  String get characterSkillsTabBodySearchHint;
+
+  /// Message de `_NoSkillMatchState` quand la recherche ne donne aucun résultat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune compétence pour « {query} ».'**
+  String characterSkillsTabBodyNoMatchMessage(String query);
 
   /// Titre du bandeau bois de `ConnectionErrorState._Banner`, déjà en majuscules.
   ///

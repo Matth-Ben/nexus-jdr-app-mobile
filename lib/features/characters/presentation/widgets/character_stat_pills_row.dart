@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/signed_modifier_formatter.dart';
 
 /// Rangée "VIT. / CA / INIT. / INSP." en tête de l'onglet
@@ -68,18 +69,21 @@ class CharacterStatPillsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         Expanded(
           child: _StatPill(
-            label: 'VIT.',
-            value: speed != null ? '$speed m' : '—',
+            label: l10n.characterStatPillsSpeedLabel,
+            value: speed != null
+                ? l10n.characterStatPillsSpeedValue(speed!)
+                : '—',
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _StatPill(
-            label: 'CA',
+            label: l10n.characterStatPillsArmorClassLabel,
             value: '${armorClass + armorClassBonus}',
             valueSuffix: armorClassBonus != 0
                 ? SignedModifierFormatter.format(armorClassBonus)
@@ -90,7 +94,7 @@ class CharacterStatPillsRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _StatPill(
-            label: 'INIT.',
+            label: l10n.characterStatPillsInitiativeLabel,
             value: SignedModifierFormatter.format(initiative),
             onTap: onTapInitiative,
           ),
@@ -98,7 +102,7 @@ class CharacterStatPillsRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _StatPill(
-            label: 'INSP.',
+            label: l10n.characterStatPillsInspirationLabel,
             value: inspiration ? '✓' : '—',
             emphasized: inspiration,
             onTap: onTapInspiration,
