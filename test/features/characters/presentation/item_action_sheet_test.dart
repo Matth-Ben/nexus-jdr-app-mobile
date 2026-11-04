@@ -13,6 +13,7 @@ import 'package:personnages/features/characters/domain/character_inventory_item.
 import 'package:personnages/features/characters/domain/weapon_slot.dart';
 import 'package:personnages/features/characters/presentation/widgets/item_action_sheet.dart';
 import 'package:personnages/features/characters/presentation/widgets/item_info_panel.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 const _customItem = CharacterInventoryItem(
   id: 'inv-custom',
@@ -108,6 +109,15 @@ void main() {
     equipWeaponCalls = [];
     await tester.pumpWidget(
       MaterialApp(
+        // `weapon_slot_picker_sheet.dart` (sheet "Choisir un set", ouverte
+        // par "Équiper"/"Changer de set" depuis `item_action_sheet.dart`) lit
+        // `AppLocalizations.of(context)!` (chantier "traduction de l'app"
+        // Phase B, lot "Characters — classe/race/maîtrises") : sans ces
+        // delegates, l'appel renverrait `null` et le `!` planterait —
+        // ricochet trouvé en lançant la suite complète.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(

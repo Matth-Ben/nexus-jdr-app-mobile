@@ -29,6 +29,7 @@ import 'package:personnages/features/characters/presentation/providers/spell_pre
 import 'package:personnages/features/characters/presentation/widgets/character_spells_tab_body.dart';
 import 'package:personnages/features/characters/presentation/widgets/class_feature_action_sheet.dart';
 import 'package:personnages/features/characters/presentation/widgets/spell_action_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Classe de départ par défaut : lanceuse de sorts (Magicien), pour que les
@@ -80,6 +81,15 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       child: MaterialApp(
+        // `CharacterClassFeaturesCard`/`class_feature_action_sheet.dart`/
+        // `class_feature_info_panel.dart` lisent `AppLocalizations.of
+        // (context)!` (chantier "traduction de l'app" Phase B, lot
+        // "Characters — classe/race/maîtrises") : sans ces delegates,
+        // l'appel renverrait `null` et le `!` planterait — ricochet trouvé
+        // en lançant la suite complète.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('fr'),
         home: Scaffold(
           body: CharacterSpellsTabBody(
             detail: detail,

@@ -3888,6 +3888,351 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Réessayer'**
   String get levelUpScreenRetryButton;
+
+  /// Titre de `CharacterClassChoicesCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'CHOIX DE CLASSE'**
+  String get characterClassChoicesCardTitle;
+
+  /// Libellé d'une entrée "Sous-classe" quand une seule classe du personnage a une sous-classe choisie (cas le plus courant).
+  ///
+  /// In fr, this message translates to:
+  /// **'Sous-classe'**
+  String get characterClassChoicesCardSubclassLabel;
+
+  /// Libellé d'une entrée "Sous-classe" désambiguïsé par nom de classe, quand plus d'une classe du personnage a une sous-classe choisie (multiclassage).
+  ///
+  /// In fr, this message translates to:
+  /// **'Sous-classe ({className})'**
+  String characterClassChoicesCardSubclassLabelWithClass(String className);
+
+  /// Titre par défaut de `CharacterClassFeaturesCard` (surchargeable via son paramètre `title`, voir `character_spells_tab_body.dart`).
+  ///
+  /// In fr, this message translates to:
+  /// **'APTITUDES DE CLASSE'**
+  String get characterClassFeaturesCardTitle;
+
+  /// Libellé affiché à droite d'une aptitude de classe passive (sans compteur d'usage), carte `CharacterClassFeaturesCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passive'**
+  String get characterClassFeaturesCardPassiveLabel;
+
+  /// Titre de `CharacterFeatsCard`, onglet "Aptitudes".
+  ///
+  /// In fr, this message translates to:
+  /// **'DONS'**
+  String get characterFeatsCardTitle;
+
+  /// Titre de `CharacterRacialTraitsCard`, onglet "Aptitudes".
+  ///
+  /// In fr, this message translates to:
+  /// **'TRAITS RACIAUX'**
+  String get characterRacialTraitsCardTitle;
+
+  /// Libellé affiché à droite de chaque trait racial, toujours "Passive" (décision tranchée, voir la doc de classe de `CharacterRacialTraitsCard`).
+  ///
+  /// In fr, this message translates to:
+  /// **'Passive'**
+  String get characterRacialTraitsCardPassiveLabel;
+
+  /// Titre de `CharacterRaceChoicesCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'CHOIX DE RACE'**
+  String get characterRaceChoicesCardTitle;
+
+  /// Libellé d'une entrée de compétence de race à choix, carte `CharacterRaceChoicesCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compétence'**
+  String get characterRaceChoicesCardSkillLabel;
+
+  /// Libellé d'une entrée d'outil de race à choix, carte `CharacterRaceChoicesCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Outil'**
+  String get characterRaceChoicesCardToolLabel;
+
+  /// Titre de `CharacterArmorProficienciesCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'MAÎTRISES D\'ARMURES'**
+  String get characterArmorProficienciesCardTitle;
+
+  /// Titre de `CharacterWeaponProficienciesCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'MAÎTRISES D\'ARMES'**
+  String get characterWeaponProficienciesCardTitle;
+
+  /// Titre de `CharacterToolProficienciesCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'MAÎTRISES D\'OUTILS'**
+  String get characterToolProficienciesCardTitle;
+
+  /// Titre de `CharacterLanguagesCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'LANGUES CONNUES'**
+  String get characterLanguagesCardTitle;
+
+  /// Titre de `CharacterInvocationsCard`, onglet "Compétences".
+  ///
+  /// In fr, this message translates to:
+  /// **'INVOCATIONS CONNUES'**
+  String get characterInvocationsCardTitle;
+
+  /// Titre de `CharacterPactWeaponCard`, onglet "Personnage" (Occultiste, Pacte de la lame).
+  ///
+  /// In fr, this message translates to:
+  /// **'ARME DE PACTE'**
+  String get characterPactWeaponCardTitle;
+
+  /// Ligne d'information affichée quand la sous-classe du personnage est Lame maudite, carte `CharacterPactWeaponCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lame maudite : vous pouvez utiliser le Charisme à la place de la Force ou de la Dextérité pour l\'attaque et les dégâts.'**
+  String get characterPactWeaponCardCursedBladeText;
+
+  /// Rappel de règle toujours affiché en pied de `CharacterPactWeaponCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Invoquée par une action. Disparaît si elle reste à plus de 1,50 m de vous pendant 1 minute, ou si vous l\'invoquez à nouveau.'**
+  String get characterPactWeaponCardReminderText;
+
+  /// Chip "Arme magique" de `CharacterPactWeaponCard` quand une forme est choisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme magique'**
+  String get characterPactWeaponCardMagicWeaponChip;
+
+  /// Chip "Maîtrisée" de `CharacterPactWeaponCard` quand une forme est choisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Maîtrisée'**
+  String get characterPactWeaponCardProficientChip;
+
+  /// Titre de l'état vide de `CharacterPactWeaponCard` (aucune forme choisie encore).
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune forme choisie'**
+  String get characterPactWeaponCardEmptyTitle;
+
+  /// Description de l'état vide de `CharacterPactWeaponCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez la forme que prend votre arme lorsque vous l\'invoquez.'**
+  String get characterPactWeaponCardEmptyDescription;
+
+  /// Libellé du bouton de `CharacterPactWeaponCard` quand aucune forme n'est encore choisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisir une forme'**
+  String get characterPactWeaponCardChooseFormButton;
+
+  /// Libellé du bouton de `CharacterPactWeaponCard` quand une forme est déjà choisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer de forme'**
+  String get characterPactWeaponCardChangeFormButton;
+
+  /// Libellé d'accessibilité (`Semantics.label`) de la forme choisie quand aucun dé de dégâts n'est connu, `CharacterPactWeaponCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme de pacte : {name}'**
+  String characterPactWeaponCardSemanticLabel(String name);
+
+  /// Libellé d'accessibilité (`Semantics.label`) de la forme choisie quand un dé de dégâts est connu, `CharacterPactWeaponCard`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arme de pacte : {name}, {damage}'**
+  String characterPactWeaponCardSemanticLabelWithDamage(
+    String name,
+    String damage,
+  );
+
+  /// Libellé de l'action "Infos" de `showClassFeatureActionSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Infos'**
+  String get classFeatureActionSheetInfoLabel;
+
+  /// Libellé de l'action "Utiliser" de `showClassFeatureActionSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser'**
+  String get classFeatureActionSheetUseLabel;
+
+  /// Texte de fin de ligne de l'action "Utiliser" quand l'aptitude n'a plus d'utilisation restante, `showClassFeatureActionSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Épuisée'**
+  String get classFeatureActionSheetExhaustedLabel;
+
+  /// Ligne "niveau d'obtention" du panneau "Infos" d'une aptitude de classe, `showClassFeatureInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Obtenue au niveau {level}.'**
+  String classFeatureInfoPanelObtainedAtLevel(int level);
+
+  /// Libellé de la ligne "Utilisations" du panneau "Infos" d'une aptitude de classe, `showClassFeatureInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utilisations'**
+  String get classFeatureInfoPanelUsesLabel;
+
+  /// Valeur de la ligne "Utilisations" quand l'aptitude est passive, `showClassFeatureInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passive'**
+  String get classFeatureInfoPanelPassiveLabel;
+
+  /// Titre de section "DESCRIPTION" du panneau "Infos" d'une aptitude de classe, `showClassFeatureInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'DESCRIPTION'**
+  String get classFeatureInfoPanelDescriptionLabel;
+
+  /// Repli affiché quand la description de l'aptitude est vide, `showClassFeatureInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Description indisponible.'**
+  String get classFeatureInfoPanelDescriptionUnavailable;
+
+  /// Bouton primaire de pied du panneau "Infos" d'une aptitude de classe à usage limité, `showClassFeatureInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utiliser'**
+  String get classFeatureInfoPanelUseButton;
+
+  /// Ligne "Prérequis" du panneau "Infos" d'un don, `showFeatInfoPanel`, quand renseigné.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prérequis : {prerequisite}'**
+  String featInfoPanelPrerequisiteLabel(String prerequisite);
+
+  /// Titre de section "DESCRIPTION" du panneau "Infos" d'un don, `showFeatInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'DESCRIPTION'**
+  String get featInfoPanelDescriptionLabel;
+
+  /// Titre de section "DESCRIPTION" du panneau "Infos" d'un trait racial, `showRacialTraitInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'DESCRIPTION'**
+  String get racialTraitInfoPanelDescriptionLabel;
+
+  /// Repli affiché quand la description du trait racial est vide, `showRacialTraitInfoPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Description indisponible.'**
+  String get racialTraitInfoPanelDescriptionUnavailable;
+
+  /// Message d'erreur de chargement du catalogue, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger le catalogue. Réessayez.'**
+  String get proficiencyDetailPanelLoadErrorMessage;
+
+  /// Message d'état vide dédié au token 'boucliers (non métalliques)', toujours vide dans ce catalogue — voir `DruidNonMetallicEquipment`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun bouclier non métallique disponible dans le catalogue actuel.'**
+  String get proficiencyDetailPanelNoNonMetallicShieldMessage;
+
+  /// Message d'état vide générique de repli (cas défensif, non couvert par la spec direction-artistique), `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun objet correspondant disponible dans le catalogue actuel.'**
+  String get proficiencyDetailPanelNoMatchingItemMessage;
+
+  /// Préfixe de la ligne "Propriétés" d'une arme, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Propriétés : '**
+  String get proficiencyDetailPanelPropertiesLabel;
+
+  /// Libellé de la ligne "CA" du gabarit réduit d'un bouclier, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'CA'**
+  String get proficiencyDetailPanelAcLabel;
+
+  /// Libellé de la ligne "CA de base" du gabarit complet d'une armure, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'CA de base'**
+  String get proficiencyDetailPanelAcBaseLabel;
+
+  /// Libellé de la ligne "Bonus Dex" du gabarit complet d'une armure, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bonus Dex'**
+  String get proficiencyDetailPanelDexBonusLabel;
+
+  /// Libellé de la ligne "Force requise" du gabarit complet d'une armure, quand renseignée, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Force requise'**
+  String get proficiencyDetailPanelStrengthRequirementLabel;
+
+  /// Libellé de la ligne "Désavantage discrétion" du gabarit complet d'une armure, quand vrai, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désavantage discrétion'**
+  String get proficiencyDetailPanelStealthDisadvantageLabel;
+
+  /// Valeur de la ligne "Désavantage discrétion" quand vrai, `showProficiencyDetailPanel`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Oui'**
+  String get proficiencyDetailPanelYesLabel;
+
+  /// Titre de la feuille `showPactWeaponPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'FORME DE L\'ARME'**
+  String get pactWeaponPickerSheetTitle;
+
+  /// Texte d'indice du champ de recherche de `showPactWeaponPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher une arme...'**
+  String get pactWeaponPickerSheetSearchHint;
+
+  /// Message d'erreur de chargement des armes éligibles, `showPactWeaponPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible de charger les armes. Réessayez.'**
+  String get pactWeaponPickerSheetLoadErrorMessage;
+
+  /// Message d'état vide (catalogue sans arme éligible), `showPactWeaponPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune arme disponible.'**
+  String get pactWeaponPickerSheetEmptyMessage;
+
+  /// Message affiché quand la recherche ne trouve aucune arme, `showPactWeaponPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune arme trouvée.'**
+  String get pactWeaponPickerSheetNoResultsMessage;
+
+  /// Titre de la feuille `showWeaponSlotPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'CHOISIR UN SET'**
+  String get weaponSlotPickerSheetTitle;
+
+  /// Texte affiché en fin de ligne pour un set sans arme équipée, `showWeaponSlotPickerSheet`.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vide'**
+  String get weaponSlotPickerSheetEmptyLabel;
 }
 
 class _AppLocalizationsDelegate

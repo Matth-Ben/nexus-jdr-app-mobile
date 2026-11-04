@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/character_detail.dart';
 
 /// Carte compacte "CHOIX DE RACE" de l'onglet "Compétences" — même gabarit
@@ -30,16 +31,20 @@ class CharacterRaceChoicesCard extends StatelessWidget {
       detail.raceSkillChoiceNames.isNotEmpty ||
       detail.raceToolChoiceNames.isNotEmpty;
 
-  static List<_RaceChoiceItem> _itemsOf(CharacterDetail detail) => [
+  static List<_RaceChoiceItem> _itemsOf(
+    CharacterDetail detail,
+    AppLocalizations l10n,
+  ) => [
     for (final name in detail.raceSkillChoiceNames)
-      _RaceChoiceItem('Compétence', name),
+      _RaceChoiceItem(l10n.characterRaceChoicesCardSkillLabel, name),
     for (final name in detail.raceToolChoiceNames)
-      _RaceChoiceItem('Outil', name),
+      _RaceChoiceItem(l10n.characterRaceChoicesCardToolLabel, name),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final items = _itemsOf(detail);
+    final l10n = AppLocalizations.of(context)!;
+    final items = _itemsOf(detail, l10n);
     if (items.isEmpty) {
       // Ne devrait pas arriver en pratique : l'appelant est censé avoir déjà
       // vérifié [hasContent] avant d'insérer cette carte — même filet de
@@ -58,7 +63,7 @@ class CharacterRaceChoicesCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'CHOIX DE RACE',
+            l10n.characterRaceChoicesCardTitle,
             style: AppTypography.display(
               fontSize: 11,
               color: AppColors.textSecondary,

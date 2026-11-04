@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/error_retry_state.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/pact_weapon_option.dart';
 import '../../domain/pact_weapon_rules.dart';
 import '../providers/pact_weapon_providers.dart';
@@ -63,6 +64,7 @@ class _PactWeaponPickerContentState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final optionsAsync = ref.watch(pactWeaponOptionsProvider);
 
     return SafeArea(
@@ -73,7 +75,7 @@ class _PactWeaponPickerContentState
           decoration: const BoxDecoration(color: AppColors.parchmentBg),
           child: Column(
             children: [
-              const SheetHeaderBar(title: "FORME DE L'ARME"),
+              SheetHeaderBar(title: l10n.pactWeaponPickerSheetTitle),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.lg,
@@ -83,22 +85,25 @@ class _PactWeaponPickerContentState
                 ),
                 child: TextFormField(
                   controller: _searchController,
-                  decoration: const InputDecoration(
-                    hintText: 'Rechercher une arme...',
-                    prefixIcon: Icon(Icons.search, color: AppColors.textMuted),
+                  decoration: InputDecoration(
+                    hintText: l10n.pactWeaponPickerSheetSearchHint,
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ),
               ),
               Expanded(
                 child: optionsAsync.when(
-                  data: _buildList,
+                  data: (options) => _buildList(options, l10n),
                   loading: () => const Center(
                     child: CircularProgressIndicator(
                       color: AppColors.woodMedium,
                     ),
                   ),
                   error: (error, stackTrace) => ErrorRetryState(
-                    message: 'Impossible de charger les armes. Réessayez.',
+                    message: l10n.pactWeaponPickerSheetLoadErrorMessage,
                     onRetry: () => ref.invalidate(pactWeaponOptionsProvider),
                   ),
                 ),
@@ -110,15 +115,15 @@ class _PactWeaponPickerContentState
     );
   }
 
-  Widget _buildList(List<PactWeaponOption> options) {
+  Widget _buildList(List<PactWeaponOption> options, AppLocalizations l10n) {
     if (options.isEmpty) {
-      return const _CenteredMessage('Aucune arme disponible.');
+      return _CenteredMessage(l10n.pactWeaponPickerSheetEmptyMessage);
     }
     final filtered = PactWeaponRules.sortByName(
       PactWeaponRules.search(options, _searchController.text),
     );
     if (filtered.isEmpty) {
-      return const _CenteredMessage('Aucune arme trouvée.');
+      return _CenteredMessage(l10n.pactWeaponPickerSheetNoResultsMessage);
     }
     return ListView(
       padding: const EdgeInsets.fromLTRB(

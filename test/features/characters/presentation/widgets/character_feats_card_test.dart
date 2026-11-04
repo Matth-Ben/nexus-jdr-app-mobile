@@ -6,23 +6,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:personnages/features/characters/domain/character_feat_summary.dart';
 import 'package:personnages/features/characters/presentation/widgets/character_feats_card.dart';
+import 'package:personnages/l10n/app_localizations.dart';
+
+Future<void> _pump(
+  WidgetTester tester,
+  Widget child, {
+  Locale locale = const Locale('fr'),
+}) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      // `CharacterFeatsCard` lit `AppLocalizations.of(context)!` (chantier
+      // "traduction de l'app" Phase B, lot "Characters — classe/race/
+      // maîtrises") : sans ces delegates, l'appel renverrait `null` et le
+      // `!` planterait. `fr` par défaut, `en` passé explicitement par le
+      // groupe "locale anglaise" plus bas.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
+      home: Scaffold(body: child),
+    ),
+  );
+}
 
 void main() {
   testWidgets('affiche une ligne par don, dans l\'ordre reçu — pas de '
       'libellé "Passive" (un don n\'a pas ce statut)', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: CharacterFeatsCard(
-            feats: [
-              CharacterFeatSummary(name: 'Robuste', description: '+2 PV.'),
-              CharacterFeatSummary(
-                name: 'Vigilant',
-                description: 'Toujours sur vos gardes.',
-              ),
-            ],
+    await _pump(
+      tester,
+      const CharacterFeatsCard(
+        feats: [
+          CharacterFeatSummary(name: 'Robuste', description: '+2 PV.'),
+          CharacterFeatSummary(
+            name: 'Vigilant',
+            description: 'Toujours sur vos gardes.',
           ),
-        ),
+        ],
       ),
     );
 
@@ -40,19 +58,16 @@ void main() {
     'taper un don ouvre le panneau "Infos" (même panneau que la montée de '
     'niveau), avec ligne "Prérequis" quand renseigné, sans bouton d\'action',
     (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: CharacterFeatsCard(
-              feats: [
-                CharacterFeatSummary(
-                  name: 'Robuste',
-                  description: 'Vos points de vie maximum augmentent.',
-                  prerequisiteText: 'Aucun.',
-                ),
-              ],
+      await _pump(
+        tester,
+        const CharacterFeatsCard(
+          feats: [
+            CharacterFeatSummary(
+              name: 'Robuste',
+              description: 'Vos points de vie maximum augmentent.',
+              prerequisiteText: 'Aucun.',
             ),
-          ),
+          ],
         ),
       );
 
@@ -72,18 +87,15 @@ void main() {
 
   testWidgets('taper un don sans prérequis renseigné n\'affiche pas la ligne '
       '"Prérequis"', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: CharacterFeatsCard(
-            feats: [
-              CharacterFeatSummary(
-                name: 'Chanceux',
-                description: 'Vous avez des points de chance.',
-              ),
-            ],
+    await _pump(
+      tester,
+      const CharacterFeatsCard(
+        feats: [
+          CharacterFeatSummary(
+            name: 'Chanceux',
+            description: 'Vous avez des points de chance.',
           ),
-        ),
+        ],
       ),
     );
 
@@ -96,13 +108,39 @@ void main() {
   testWidgets('n\'affiche aucune ligne quand feats est vide (appelant '
       'responsable de ne pas monter cette carte, voir '
       'character_skills_tab_body.dart)', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: CharacterFeatsCard(feats: [])),
-      ),
-    );
+    await _pump(tester, const CharacterFeatsCard(feats: []));
 
     expect(find.text('DONS'), findsOneWidget);
     expect(find.byType(InkWell), findsNothing);
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que les autres lots du chantier "traduction de l'app"
+    // Phase B : vérifie qu'un texte anglais s'affiche réellement.
+    testWidgets('titre, panneau "Infos" et "Prérequis" en anglais', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const CharacterFeatsCard(
+          feats: [
+            CharacterFeatSummary(
+              name: 'Robuste',
+              description: 'Vos points de vie maximum augmentent.',
+              prerequisiteText: 'Aucun.',
+            ),
+          ],
+        ),
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('FEATS'), findsOneWidget);
+
+      await tester.tap(find.text('Robuste'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Prerequisite: Aucun.'), findsOneWidget);
+      expect(find.text('DESCRIPTION'), findsOneWidget);
+    });
   });
 }
