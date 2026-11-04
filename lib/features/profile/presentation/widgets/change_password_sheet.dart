@@ -9,6 +9,7 @@ import '../../../../core/widgets/alert_banner.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../auth/domain/auth_failure.dart';
 import '../../../auth/domain/auth_validators.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
@@ -38,19 +39,11 @@ Future<void> showChangePasswordSheet(BuildContext context) async {
     builder: (sheetContext) => const _ChangePasswordSheetContent(),
   );
   if (saved != true || !context.mounted) return;
-  ScaffoldMessenger.of(context)
-      .showSnackBar(const SnackBar(content: Text('Mot de passe mis à jour.')));
+  final l10n = AppLocalizations.of(context)!;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(l10n.profileChangePasswordUpdatedSnackbar)),
+  );
 }
-
-/// Hors-ligne (vérifié *avant* l'appel réseau) — même texte que
-/// `edit_display_name_sheet.dart`/`report_bug_sheet.dart`, pas de file
-/// d'attente hors-ligne pour cette écriture (`AuthRepository.updatePassword`).
-const String _offlineMessage =
-    "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-    'fois reconnecté.';
-
-const String _genericErrorMessage =
-    'Impossible de mettre à jour le mot de passe. Réessayez.';
 
 class _ChangePasswordSheetContent extends ConsumerStatefulWidget {
   const _ChangePasswordSheetContent();
@@ -83,6 +76,7 @@ class _ChangePasswordSheetContentState
     // `login_screen.dart::_submit`.
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) return;
+    final l10n = AppLocalizations.of(context)!;
 
     setState(() {
       _isSaving = true;
@@ -90,12 +84,12 @@ class _ChangePasswordSheetContentState
     });
 
     // Vérifié *avant* toute tentative réseau — voir la documentation de
-    // [_offlineMessage].
+    // `profileChangePasswordOfflineMessage`.
     if (!await ref.read(connectivityCheckerProvider).hasConnection()) {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _offlineMessage;
+        _errorMessage = l10n.profileChangePasswordOfflineMessage;
       });
       return;
     }
@@ -117,13 +111,14 @@ class _ChangePasswordSheetContentState
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.profileChangePasswordGenericError;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Voir `edit_display_name_sheet.dart` pour le rationale complet de ce
     // `PopScope` (seul garde-fou qui couvre le geste retour Android, chemin
     // entièrement distinct du voile/du drag).
@@ -152,7 +147,7 @@ class _ChangePasswordSheetContentState
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SheetHeaderBar(
-                      title: 'MOT DE PASSE',
+                      title: l10n.profileChangePasswordTitle,
                       closeEnabled: !_isSaving,
                     ),
                     Flexible(
@@ -174,7 +169,7 @@ class _ChangePasswordSheetContentState
                                 const SizedBox(height: AppSpacing.md),
                               ],
                               Text(
-                                'NOUVEAU MOT DE PASSE',
+                                l10n.profileChangePasswordNewLabel,
                                 style: AppTypography.body(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800,
@@ -185,14 +180,15 @@ class _ChangePasswordSheetContentState
                               TextFormField(
                                 controller: _passwordController,
                                 obscureText: true,
-                                decoration: const InputDecoration(
-                                  hintText: '••••••••',
+                                decoration: InputDecoration(
+                                  hintText: l10n.profileChangePasswordHint,
                                 ),
-                                validator: AuthValidators.password,
+                                validator: (value) =>
+                                    AuthValidators.password(value, l10n),
                               ),
                               const SizedBox(height: AppSpacing.md),
                               Text(
-                                'CONFIRMER LE MOT DE PASSE',
+                                l10n.profileChangePasswordConfirmLabel,
                                 style: AppTypography.body(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800,
@@ -203,13 +199,14 @@ class _ChangePasswordSheetContentState
                               TextFormField(
                                 controller: _confirmController,
                                 obscureText: true,
-                                decoration: const InputDecoration(
-                                  hintText: '••••••••',
+                                decoration: InputDecoration(
+                                  hintText: l10n.profileChangePasswordHint,
                                 ),
                                 validator: (value) =>
                                     AuthValidators.passwordConfirmation(
                                       value,
                                       _passwordController.text,
+                                      l10n,
                                     ),
                               ),
                             ],
@@ -228,7 +225,7 @@ class _ChangePasswordSheetContentState
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Annuler',
+                              label: l10n.profileChangePasswordCancel,
                               surface: SecondaryButtonSurface.parchment,
                               onPressed: _isSaving
                                   ? null
@@ -238,7 +235,7 @@ class _ChangePasswordSheetContentState
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Enregistrer',
+                              label: l10n.profileChangePasswordSave,
                               isLoading: _isSaving,
                               onPressed: _submit,
                             ),

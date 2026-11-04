@@ -18,6 +18,7 @@ import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/presentation/widgets/avatar_edit_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   final Completer<void> gate = Completer<void>();
@@ -81,12 +82,21 @@ class _FakeAuthRepository implements AuthRepository {
 Future<_FakeAuthRepository> _pumpSheet(
   WidgetTester tester, {
   String? avatarUrl,
+  Locale locale = const Locale('fr'),
 }) async {
   final repository = _FakeAuthRepository();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [authRepositoryProvider.overrideWithValue(repository)],
       child: MaterialApp(
+        // `avatar_edit_sheet.dart` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B) — sans ces delegates,
+        // l'appel renverrait `null` et le `!` planterait. `fr` par défaut,
+        // `en` passé explicitement par les tests du groupe "locale
+        // anglaise".
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Scaffold(
           body: Center(
             child: Consumer(
@@ -228,4 +238,35 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  group('locale anglaise', () {
+    testWidgets('affiche les options en anglais', (tester) async {
+      await _pumpSheet(
+        tester,
+        avatarUrl: 'https://exemple.com/avatar.png',
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('Take a photo'), findsOneWidget);
+      expect(find.text('Choose from gallery'), findsOneWidget);
+      expect(find.text('Remove photo'), findsOneWidget);
+    });
+
+    testWidgets('affiche la confirmation de suppression en anglais', (
+      tester,
+    ) async {
+      await _pumpSheet(
+        tester,
+        avatarUrl: 'https://exemple.com/avatar.png',
+        locale: const Locale('en'),
+      );
+
+      await tester.tap(find.text('Remove photo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Remove the photo?'), findsOneWidget);
+      expect(find.widgetWithText(SecondaryButton, 'CANCEL'), findsOneWidget);
+      expect(find.widgetWithText(DestructiveButton, 'Remove'), findsOneWidget);
+    });
+  });
 }

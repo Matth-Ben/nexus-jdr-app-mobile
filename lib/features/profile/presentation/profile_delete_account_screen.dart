@@ -10,6 +10,7 @@ import '../../../core/widgets/destructive_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 import '../../../core/widgets/settings_list_card.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../auth/data/auth_repository.dart'
     show pendingHpXpWritesBlockedMessage;
 import '../../auth/domain/auth_failure.dart';
@@ -44,57 +45,6 @@ class ProfileDeleteAccountScreen extends ConsumerStatefulWidget {
   ConsumerState<ProfileDeleteAccountScreen> createState() =>
       _ProfileDeleteAccountScreenState();
 }
-
-/// Hors-ligne (vérifiée deux fois — voir [_confirmDelete] : avant
-/// `signInWithPassword` **et** avant `deleteAccount`) — même texte que les
-/// autres sheets/écrans de ce dépôt, migré tel quel depuis
-/// `delete_account_sheet.dart`.
-const String _offlineMessage =
-    "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-    'fois reconnecté.';
-
-/// Erreur générique — toute erreur autre qu'un mot de passe incorrect (spec
-/// de la tâche d'origine), affichée qu'elle vienne de la vérification du mot
-/// de passe (échec réseau/serveur, pas un identifiant invalide, voir
-/// [_confirmDelete]) ou de l'edge function `delete-account` elle-même.
-/// Migré tel quel depuis `delete_account_sheet.dart`.
-const String _genericErrorMessage =
-    'Impossible de supprimer le compte. Réessayez.';
-
-/// Message affiché sous le champ mot de passe (`TextFormField.errorText`)
-/// quand `AuthRepository.signInWithPassword` échoue — toute [AuthFailure] à
-/// cette étape est traitée comme un mot de passe incorrect, jamais son
-/// [AuthFailure.message] réel. Migré tel quel depuis
-/// `delete_account_sheet.dart`.
-const String _wrongPasswordMessage = 'Mot de passe incorrect.';
-
-/// Message d'avertissement du bandeau "ACTION IRRÉVERSIBLE" — texte verbatim
-/// migré depuis `delete_account_sheet.dart::_warningMessage`, qui documentait
-/// déjà "à ne pas modifier sans revalider auprès du chef de projet" : repris
-/// ici sans y toucher (consigne explicite de la tâche de refonte visuelle).
-// Le compte Supabase est unique et partagé avec l'app web "Histoires" :
-// supprimer le compte (`auth.admin.deleteUser`) cascade en base non
-// seulement vers les personnages de cette app, mais aussi vers les
-// histoires que ce compte a créées en tant que MJ côté web
-// (`stories.user_id`) et ses entrées codex (`codex_entries.user_id`),
-// toutes deux référençant `auth.users` en cascade — vérifié par le
-// chantier backend qui a construit l'edge function `delete-account`
-// (dépôt web `markdown-editor`). Le texte ci-dessous doit refléter
-// cette ampleur réelle, pas seulement les données propres à l'app
-// mobile.
-const String _warningMessage =
-    'Cette action est irréversible. Elle supprimera définitivement :\n'
-    '• Tous tes personnages et leurs portraits\n'
-    '• Tes rattachements aux histoires que tu as rejointes\n'
-    '• Toutes les histoires que tu as créées en tant que MJ sur l\'app '
-    'Histoires (et l\'accès de tes joueurs à ces histoires)\n\n'
-    'Cette action ne peut pas être annulée.';
-
-/// Libellé de la case à cocher de confirmation — texte de la maquette
-/// (`09-maquettes-captures.md`).
-const String _confirmationCheckboxLabel =
-    'Je comprends que cette action est définitive et que mes données ne '
-    'pourront pas être récupérées.';
 
 class _ProfileDeleteAccountScreenState
     extends ConsumerState<ProfileDeleteAccountScreen> {
@@ -145,6 +95,10 @@ class _ProfileDeleteAccountScreenState
   /// une sheet modale).
   Future<void> _confirmDelete() async {
     if (!_canSubmit) return;
+    // Capturé avant tout `await` (même précaution que
+    // `avatar_crop_screen.dart`) : les gardes `mounted` ci-dessous couvrent
+    // déjà l'usage de `context`/`l10n` après chaque point d'attente.
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isDeleting = true;
       _errorMessage = null;
@@ -155,7 +109,7 @@ class _ProfileDeleteAccountScreenState
       if (!mounted) return;
       setState(() {
         _isDeleting = false;
-        _errorMessage = _offlineMessage;
+        _errorMessage = l10n.profileDeleteAccountOfflineMessage;
       });
       return;
     }
@@ -168,7 +122,7 @@ class _ProfileDeleteAccountScreenState
       if (!mounted) return;
       setState(() {
         _isDeleting = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.profileDeleteAccountGenericError;
       });
       return;
     }
@@ -178,13 +132,13 @@ class _ProfileDeleteAccountScreenState
           .read(authRepositoryProvider)
           .signInWithPassword(email: email, password: _passwordController.text);
     } on AuthFailure {
-      // Voir la documentation de [_wrongPasswordMessage] : toute
+      // Voir la documentation de `profileDeleteAccountWrongPassword` : toute
       // [AuthFailure] ici est traitée comme un mot de passe incorrect,
       // jamais son message réel. Ne procède **pas** à la suppression.
       if (!mounted) return;
       setState(() {
         _isDeleting = false;
-        _passwordError = _wrongPasswordMessage;
+        _passwordError = l10n.profileDeleteAccountWrongPassword;
       });
       return;
     } catch (error) {
@@ -195,7 +149,7 @@ class _ProfileDeleteAccountScreenState
       if (!mounted) return;
       setState(() {
         _isDeleting = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.profileDeleteAccountGenericError;
       });
       return;
     }
@@ -208,7 +162,7 @@ class _ProfileDeleteAccountScreenState
       if (!mounted) return;
       setState(() {
         _isDeleting = false;
-        _errorMessage = _offlineMessage;
+        _errorMessage = l10n.profileDeleteAccountOfflineMessage;
       });
       return;
     }
@@ -217,10 +171,11 @@ class _ProfileDeleteAccountScreenState
       await ref.read(authRepositoryProvider).deleteAccount();
     } on AuthFailure catch (failure) {
       // D31 du registre de dette technique : seul cas où le message réel
-      // d'une [AuthFailure] est affiché ici plutôt que [_genericErrorMessage]
+      // d'une [AuthFailure] est affiché ici plutôt que le message générique
       // (spec de la tâche d'origine de cet écran, voir sa doc de classe) —
       // `pendingHpXpWritesBlockedMessage` est un texte applicatif de ce
-      // dépôt (pas une erreur serveur brute), le joueur doit savoir que la
+      // dépôt (pas une erreur serveur brute, pas encore migré vers `.arb`,
+      // voir `auth_repository.dart`), le joueur doit savoir que la
       // suppression est bloquée par une synchro PV/XP en attente, pas par un
       // échec générique, pour pouvoir réessayer en connaissance de cause.
       if (!mounted) return;
@@ -228,7 +183,7 @@ class _ProfileDeleteAccountScreenState
         _isDeleting = false;
         _errorMessage = failure.message == pendingHpXpWritesBlockedMessage
             ? failure.message
-            : _genericErrorMessage;
+            : l10n.profileDeleteAccountGenericError;
       });
       return;
     } catch (error) {
@@ -239,7 +194,7 @@ class _ProfileDeleteAccountScreenState
       if (!mounted) return;
       setState(() {
         _isDeleting = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.profileDeleteAccountGenericError;
       });
       return;
     }
@@ -278,6 +233,7 @@ class _ProfileDeleteAccountScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return PopScope(
       // Même garde que `delete_account_sheet.dart::PopScope` : bloque le
       // geste retour Android pendant l'appel réseau, pour ne pas
@@ -287,7 +243,10 @@ class _ProfileDeleteAccountScreenState
         backgroundColor: AppColors.parchmentBg,
         body: Column(
           children: [
-            WoodBackHeader(title: 'SUPPRIMER LE COMPTE', onBack: _goBack),
+            WoodBackHeader(
+              title: l10n.profileDeleteAccountScreenTitle,
+              onBack: _goBack,
+            ),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(AppSpacing.lg),
@@ -298,10 +257,10 @@ class _ProfileDeleteAccountScreenState
                       _ErrorBanner(message: _errorMessage!),
                       const SizedBox(height: AppSpacing.md),
                     ],
-                    const _IrreversibleActionBanner(),
+                    _IrreversibleActionBanner(l10n: l10n),
                     const SizedBox(height: AppSpacing.lg),
                     Text(
-                      'CE QUI SERA SUPPRIMÉ',
+                      l10n.profileDeleteAccountWhatWillBeDeletedTitle,
                       style: AppTypography.body(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -309,15 +268,17 @@ class _ProfileDeleteAccountScreenState
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    const SettingsListCard(
+                    SettingsListCard(
                       children: [
                         _ChecklistRow(
-                          label: 'Tous tes personnages et leurs fiches',
+                          label: l10n.profileDeleteAccountChecklistCharacters,
                         ),
                         _ChecklistRow(
-                          label: 'Ton accès aux histoires partagées',
+                          label: l10n.profileDeleteAccountChecklistStories,
                         ),
-                        _ChecklistRow(label: 'Ton profil et tes préférences'),
+                        _ChecklistRow(
+                          label: l10n.profileDeleteAccountChecklistProfile,
+                        ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -328,7 +289,7 @@ class _ProfileDeleteAccountScreenState
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     Text(
-                      'SAISIS TON MOT DE PASSE POUR CONFIRMER',
+                      l10n.profileDeleteAccountPasswordSectionTitle,
                       style: AppTypography.body(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -341,7 +302,7 @@ class _ProfileDeleteAccountScreenState
                       obscureText: true,
                       enabled: !_isDeleting,
                       decoration: InputDecoration(
-                        hintText: '••••••••',
+                        hintText: l10n.profileDeleteAccountPasswordHint,
                         errorText: _passwordError,
                       ),
                     ),
@@ -362,13 +323,13 @@ class _ProfileDeleteAccountScreenState
                   DestructiveButton(
                     filled: true,
                     label: _isDeleting
-                        ? 'Suppression en cours…'
-                        : 'Supprimer définitivement',
+                        ? l10n.profileDeleteAccountSubmitInProgress
+                        : l10n.profileDeleteAccountSubmitLabel,
                     onPressed: _canSubmit ? _confirmDelete : null,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   SecondaryButton(
-                    label: 'Annuler',
+                    label: l10n.profileDeleteAccountCancel,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: _isDeleting ? null : _goBack,
                   ),
@@ -434,12 +395,28 @@ class _ErrorBanner extends StatelessWidget {
 /// Bandeau "ACTION IRRÉVERSIBLE" en tête d'écran (maquette
 /// `docs/cahier-des-charges/09-maquettes-captures.md`, section "Profil —
 /// Suppression du compte") : icône et titre centrés au-dessus du texte
-/// [_warningMessage] (migré tel quel, voir sa documentation) — agencement
-/// distinct de l'`AlertBanner` partagé (`core/widgets/alert_banner.dart`,
-/// icône + texte alignés en ligne, sans titre), non extrait en composant
-/// partagé car c'est pour l'instant son seul usage dans ce dépôt.
+/// `profileDeleteAccountWarningMessage` (texte à ne pas modifier sans
+/// revalider auprès du chef de projet ; le texte lui-même vit désormais dans
+/// `app_fr.arb`/`app_en.arb`, dont la description documente la justification
+/// ci-dessous) — agencement distinct de l'`AlertBanner` partagé
+/// (`core/widgets/alert_banner.dart`, icône + texte alignés en ligne, sans
+/// titre), non extrait en composant partagé car c'est pour l'instant son
+/// seul usage dans ce dépôt.
+///
+/// Justification de l'ampleur de ce texte : le compte Supabase est unique et
+/// partagé avec l'app web "Histoires", donc supprimer le compte
+/// (`auth.admin.deleteUser`) cascade en base non seulement vers les
+/// personnages de cette app, mais aussi vers les histoires que ce compte a
+/// créées en tant que MJ côté web (`stories.user_id`) et ses entrées codex
+/// (`codex_entries.user_id`), toutes deux référençant `auth.users` en
+/// cascade — vérifié par le chantier backend qui a construit l'edge function
+/// `delete-account` (dépôt web `markdown-editor`). Le texte affiché doit
+/// refléter cette ampleur réelle, pas seulement les données propres à l'app
+/// mobile.
 class _IrreversibleActionBanner extends StatelessWidget {
-  const _IrreversibleActionBanner();
+  const _IrreversibleActionBanner({required this.l10n});
+
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -466,7 +443,7 @@ class _IrreversibleActionBanner extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'ACTION IRRÉVERSIBLE',
+            l10n.profileDeleteAccountWarningTitle,
             textAlign: TextAlign.center,
             style: AppTypography.display(
               fontSize: 11,
@@ -475,7 +452,7 @@ class _IrreversibleActionBanner extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            _warningMessage,
+            l10n.profileDeleteAccountWarningMessage,
             textAlign: TextAlign.center,
             style: AppTypography.body(
               fontSize: 13,
@@ -546,6 +523,7 @@ class _ConfirmationCheckbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -576,7 +554,7 @@ class _ConfirmationCheckbox extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  _confirmationCheckboxLabel,
+                  l10n.profileDeleteAccountConfirmationCheckboxLabel,
                   style: AppTypography.body(
                     fontSize: 13,
                     color: AppColors.textPrimary,

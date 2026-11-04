@@ -10,6 +10,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/destructive_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_action_row.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../auth/domain/auth_failure.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import 'avatar_crop_screen.dart';
@@ -79,23 +80,23 @@ Future<void> _pushCropScreen(BuildContext context, Uint8List bytes) {
 Future<void> _confirmAndRemove(BuildContext context, WidgetRef ref) async {
   final confirmed = await showRemoveAvatarConfirmationDialog(context);
   if (confirmed != true || !context.mounted) return;
+  final l10n = AppLocalizations.of(context)!;
 
   try {
     await ref.read(authRepositoryProvider).removeAvatar();
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Photo retirée.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.profileAvatarEditRemovedSnackbar)),
+    );
   } on AuthFailure catch (failure) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(failure.message)));
   } catch (_) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Impossible de mettre à jour l'avatar. Réessayez."),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.profileAvatarEditGenericError)));
   }
 }
 
@@ -106,26 +107,27 @@ class _AvatarEditSheetContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SheetActionRow(
             icon: Icons.photo_camera_outlined,
-            label: 'Prendre une photo',
+            label: l10n.profileAvatarEditTakePhoto,
             onTap: () => Navigator.of(context).pop(_AvatarEditAction.camera),
           ),
           const SheetActionDivider(),
           SheetActionRow(
             icon: Icons.image_outlined,
-            label: 'Choisir dans la galerie',
+            label: l10n.profileAvatarEditChooseGallery,
             onTap: () => Navigator.of(context).pop(_AvatarEditAction.gallery),
           ),
           if (hasAvatar) ...[
             const SheetActionDivider(),
             SheetActionRow(
               icon: Icons.delete_outline,
-              label: 'Retirer la photo',
+              label: l10n.profileAvatarEditRemovePhoto,
               color: AppColors.accentBrick,
               onTap: () => Navigator.of(context).pop(_AvatarEditAction.remove),
             ),
@@ -141,6 +143,7 @@ class _AvatarEditSheetContent extends StatelessWidget {
 /// `portrait_upload_sheet.dart::showRemovePortraitConfirmationDialog` (même
 /// `Dialog`, mêmes tokens, `DestructiveButton`), texte adapté à l'avatar.
 Future<bool?> showRemoveAvatarConfirmationDialog(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
   return showDialog<bool>(
     context: context,
     builder: (context) => Dialog(
@@ -159,7 +162,7 @@ Future<bool?> showRemoveAvatarConfirmationDialog(BuildContext context) {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Retirer la photo ?',
+              l10n.profileAvatarEditRemoveConfirmTitle,
               style: AppTypography.body(
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
@@ -170,7 +173,7 @@ Future<bool?> showRemoveAvatarConfirmationDialog(BuildContext context) {
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Annuler',
+                    label: l10n.profileAvatarEditRemoveConfirmCancel,
                     surface: SecondaryButtonSurface.parchment,
                     onPressed: () => Navigator.of(context).pop(false),
                   ),
@@ -178,7 +181,7 @@ Future<bool?> showRemoveAvatarConfirmationDialog(BuildContext context) {
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: DestructiveButton(
-                    label: 'Retirer',
+                    label: l10n.profileAvatarEditRemoveConfirmAction,
                     onPressed: () => Navigator.of(context).pop(true),
                   ),
                 ),

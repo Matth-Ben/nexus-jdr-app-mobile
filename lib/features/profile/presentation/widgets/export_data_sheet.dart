@@ -10,6 +10,7 @@ import '../../../../core/widgets/alert_banner.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../providers/data_export_providers.dart';
 
 /// Ouvre la sheet "Export de mes données" (tuile "Export de mes données" de
@@ -43,19 +44,11 @@ Future<void> showExportDataSheet(BuildContext context) async {
 
   await SharePlus.instance.share(ShareParams(files: [XFile(filePath)]));
   if (!context.mounted) return;
-  ScaffoldMessenger.of(context)
-      .showSnackBar(const SnackBar(content: Text('Export généré.')));
+  final l10n = AppLocalizations.of(context)!;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(l10n.profileExportDataGeneratedSnackbar)),
+  );
 }
-
-/// Hors-ligne (vérifié *avant* l'appel réseau) — même texte que
-/// `change_password_sheet.dart`/`report_bug_sheet.dart`, pas de file
-/// d'attente hors-ligne pour cette lecture.
-const String _offlineMessage =
-    "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-    'fois reconnecté.';
-
-const String _genericErrorMessage =
-    "Impossible de générer l'export. Réessayez.";
 
 class _ExportDataSheetContent extends ConsumerStatefulWidget {
   const _ExportDataSheetContent();
@@ -72,20 +65,21 @@ class _ExportDataSheetContentState
 
   Future<void> _generate() async {
     if (_isGenerating) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isGenerating = true;
       _errorMessage = null;
     });
 
     // Vérifié *avant* toute tentative réseau — voir la documentation de
-    // [_offlineMessage]. La génération interroge le réseau en direct (jamais
-    // le cache local, décision chef de projet), voir la doc de classe de
-    // `DataExportRepository.exportMyData`.
+    // `profileExportDataOfflineMessage`. La génération interroge le réseau
+    // en direct (jamais le cache local, décision chef de projet), voir la
+    // doc de classe de `DataExportRepository.exportMyData`.
     if (!await ref.read(connectivityCheckerProvider).hasConnection()) {
       if (!mounted) return;
       setState(() {
         _isGenerating = false;
-        _errorMessage = _offlineMessage;
+        _errorMessage = l10n.profileExportDataOfflineMessage;
       });
       return;
     }
@@ -97,20 +91,21 @@ class _ExportDataSheetContentState
       if (!mounted) return;
       Navigator.of(context).pop(filePath);
     } catch (error) {
-      // Voir la documentation de [_genericErrorMessage] : le détail de
-      // l'échec n'est jamais affiché tel quel, seulement journalisé pour le
-      // diagnostic.
+      // Voir la documentation de `profileExportDataGenericError` : le
+      // détail de l'échec n'est jamais affiché tel quel, seulement
+      // journalisé pour le diagnostic.
       debugPrint('ExportDataSheet._generate: erreur inattendue: $error');
       if (!mounted) return;
       setState(() {
         _isGenerating = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.profileExportDataGenericError;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Voir `change_password_sheet.dart` pour le rationale complet de ce
     // `PopScope` (seul garde-fou qui couvre le geste retour Android, chemin
     // entièrement distinct du voile/du drag bloqués par
@@ -137,7 +132,7 @@ class _ExportDataSheetContentState
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SheetHeaderBar(
-                    title: 'EXPORT DE MES DONNÉES',
+                    title: l10n.profileExportDataTitle,
                     closeEnabled: !_isGenerating,
                   ),
                   Flexible(
@@ -159,12 +154,7 @@ class _ExportDataSheetContentState
                               const SizedBox(height: AppSpacing.md),
                             ],
                             Text(
-                              'Génère un fichier JSON contenant ton profil, '
-                              'tous tes personnages et leurs données '
-                              'associées (inventaire, sorts, historique), '
-                              'ainsi que tes groupes et tes notes de groupe. '
-                              'Le fichier te sera proposé au partage/'
-                              'enregistrement depuis ton appareil.',
+                              l10n.profileExportDataDescription,
                               style: AppTypography.body(
                                 fontSize: 13,
                                 color: AppColors.textSecondary,
@@ -186,7 +176,7 @@ class _ExportDataSheetContentState
                       children: [
                         Expanded(
                           child: SecondaryButton(
-                            label: 'Annuler',
+                            label: l10n.profileExportDataCancel,
                             surface: SecondaryButtonSurface.parchment,
                             onPressed: _isGenerating
                                 ? null
@@ -196,7 +186,7 @@ class _ExportDataSheetContentState
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: PrimaryButton(
-                            label: "Générer l'export",
+                            label: l10n.profileExportDataGenerate,
                             isLoading: _isGenerating,
                             onPressed: _generate,
                           ),

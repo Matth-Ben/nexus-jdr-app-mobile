@@ -91,13 +91,14 @@ class SupabaseNotificationPreferencesRepository
   }
 
   /// Identifiant du joueur connecté, ou lève une [ProfileFailure] "session
-  /// expirée" — même message/rationale que
-  /// `character_repository.dart::_requireOwnerId`.
+  /// expirée" ([ProfileErrorCode.sessionExpired]) — même message/rationale
+  /// que `character_repository.dart::_requireOwnerId`.
   String _requireOwnerId() {
     final ownerId = _client.auth.currentUser?.id;
     if (ownerId == null) {
       throw const ProfileFailure(
         'Session expirée. Reconnectez-vous pour continuer.',
+        code: ProfileErrorCode.sessionExpired,
       );
     }
     return ownerId;

@@ -21,6 +21,7 @@ import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/presentation/widgets/change_password_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   final Completer<void> gate = Completer<void>();
@@ -98,6 +99,7 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
 Future<_FakeAuthRepository> _pumpSheet(
   WidgetTester tester, {
   bool connected = true,
+  Locale locale = const Locale('fr'),
 }) async {
   final repository = _FakeAuthRepository();
   await tester.pumpWidget(
@@ -109,6 +111,14 @@ Future<_FakeAuthRepository> _pumpSheet(
         ),
       ],
       child: MaterialApp(
+        // `change_password_sheet.dart` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B) — sans ces delegates,
+        // l'appel renverrait `null` et le `!` planterait. `fr` par défaut,
+        // `en` passé explicitement par les tests du groupe "locale
+        // anglaise".
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -413,5 +423,46 @@ void main() {
         expect(find.text('Mot de passe mis à jour.'), findsOneWidget);
       },
     );
+  });
+
+  group('locale anglaise', () {
+    testWidgets('affiche le titre et les 2 champs en anglais', (tester) async {
+      await _pumpSheet(tester, locale: const Locale('en'));
+
+      expect(find.text('PASSWORD'), findsOneWidget);
+      expect(find.text('NEW PASSWORD'), findsOneWidget);
+      expect(find.text('CONFIRM PASSWORD'), findsOneWidget);
+    });
+
+    testWidgets('mot de passe trop court : erreur inline en anglais', (
+      tester,
+    ) async {
+      final repository = await _pumpSheet(tester, locale: const Locale('en'));
+
+      await tester.enterText(_passwordField(), '123');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'SAVE'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Password must be at least 6 characters long.'),
+        findsOneWidget,
+      );
+      expect(repository.updatePasswordCallCount, 0);
+    });
+
+    testWidgets('confirmation différente : erreur inline en anglais', (
+      tester,
+    ) async {
+      await _pumpSheet(tester, locale: const Locale('en'));
+
+      await tester.enterText(_passwordField(), 'motdepasse123');
+      await tester.enterText(_confirmField(), 'different123');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'SAVE'));
+      await tester.pumpAndSettle();
+
+      expect(find.text("Passwords don't match."), findsOneWidget);
+    });
   });
 }

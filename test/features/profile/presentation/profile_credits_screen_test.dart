@@ -12,10 +12,23 @@ import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/theme/app_spacing.dart';
 import 'package:personnages/core/widgets/legal_section_block.dart';
 import 'package:personnages/features/profile/presentation/profile_credits_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
-Future<void> _pumpScreen(WidgetTester tester) async {
+Future<void> _pumpScreen(
+  WidgetTester tester, {
+  Locale locale = const Locale('fr'),
+}) async {
   await tester.pumpWidget(
     MaterialApp.router(
+      // `ProfileCreditsScreen` lit `AppLocalizations.of(context)!` (chantier
+      // "traduction de l'app" Phase B) — sans ces delegates, l'appel
+      // renverrait `null` et le `!` planterait. `locale` fixé en dur (jamais
+      // `null`, qui suivrait la langue réelle, non garantie, de
+      // l'environnement `flutter test`) — `fr` par défaut, `en` passé
+      // explicitement par les tests du groupe "locale anglaise" ci-dessous.
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       routerConfig: GoRouter(
         initialLocation: '/',
         routes: [
@@ -147,5 +160,30 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ouvrir'), findsOneWidget);
+  });
+
+  group('locale anglaise', () {
+    // Même rationale que `login_screen_test.dart` (chantier "traduction de
+    // l'app" Phase B) : vérifie qu'un texte anglais s'affiche réellement en
+    // locale `en`, pas seulement que l'écran ne plante pas.
+    testWidgets('affiche le bandeau bois et les titres de section en anglais', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, locale: const Locale('en'));
+
+      expect(find.text('CREDITS & LICENSES'), findsOneWidget);
+      expect(find.text('Game content'), findsOneWidget);
+      expect(find.text('Fonts'), findsOneWidget);
+      expect(find.text('Open source libraries'), findsOneWidget);
+    });
+
+    testWidgets('affiche la date de dernière mise à jour en anglais', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, locale: const Locale('en'));
+
+      await tester.ensureVisible(find.text('Last updated: October 14, 2026'));
+      expect(find.text('Last updated: October 14, 2026'), findsOneWidget);
+    });
   });
 }

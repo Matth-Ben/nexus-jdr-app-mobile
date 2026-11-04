@@ -20,6 +20,7 @@ import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/presentation/widgets/change_email_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeAuthRepository implements AuthRepository {
   final Completer<void> gate = Completer<void>();
@@ -98,6 +99,7 @@ Future<_FakeAuthRepository> _pumpSheet(
   WidgetTester tester, {
   bool connected = true,
   String currentEmail = 'ancien@exemple.com',
+  Locale locale = const Locale('fr'),
 }) async {
   final repository = _FakeAuthRepository();
   await tester.pumpWidget(
@@ -109,6 +111,14 @@ Future<_FakeAuthRepository> _pumpSheet(
         ),
       ],
       child: MaterialApp(
+        // `change_email_sheet.dart` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B) — sans ces delegates,
+        // l'appel renverrait `null` et le `!` planterait. `fr` par défaut,
+        // `en` passé explicitement par les tests du groupe "locale
+        // anglaise".
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -420,5 +430,32 @@ void main() {
         );
       },
     );
+  });
+
+  group('locale anglaise', () {
+    testWidgets('affiche le titre, le champ et le rappel en anglais', (
+      tester,
+    ) async {
+      await _pumpSheet(
+        tester,
+        currentEmail: 'old@example.com',
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('EMAIL ADDRESS'), findsOneWidget);
+      expect(find.text('NEW EMAIL ADDRESS'), findsOneWidget);
+      expect(find.text('Current address: old@example.com'), findsOneWidget);
+    });
+
+    testWidgets('adresse invalide : erreur inline en anglais', (tester) async {
+      await _pumpSheet(tester, locale: const Locale('en'));
+
+      await tester.enterText(find.byType(TextFormField), 'not-an-address');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(PrimaryButton, 'SAVE'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Invalid email address.'), findsOneWidget);
+    });
   });
 }

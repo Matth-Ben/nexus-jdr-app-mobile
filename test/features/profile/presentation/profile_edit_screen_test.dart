@@ -32,6 +32,7 @@ import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/presentation/profile_edit_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakeAuthRepository implements AuthRepository {
@@ -126,6 +127,7 @@ Future<_FakeAuthRepository> _pumpScreen(
   WidgetTester tester, {
   required User? user,
   bool connected = true,
+  Locale locale = const Locale('fr'),
 }) async {
   final repository = _FakeAuthRepository();
   await tester.pumpWidget(
@@ -138,6 +140,13 @@ Future<_FakeAuthRepository> _pumpScreen(
         ),
       ],
       child: MaterialApp.router(
+        // `ProfileEditScreen` lit `AppLocalizations.of(context)!` (chantier
+        // "traduction de l'app" Phase B) — sans ces delegates, l'appel
+        // renverrait `null` et le `!` planterait. `fr` par défaut, `en`
+        // passé explicitement par les tests du groupe "locale anglaise".
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         routerConfig: GoRouter(
           initialLocation: '/',
           routes: [
@@ -486,5 +495,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ouvrir'), findsOneWidget);
+  });
+
+  group('locale anglaise', () {
+    testWidgets('affiche le bandeau bois et les libellés de champ en '
+        'anglais', (tester) async {
+      await _pumpScreen(tester, user: _fakeUser(), locale: const Locale('en'));
+
+      expect(find.text('EDIT PROFILE'), findsOneWidget);
+      expect(find.text('Nickname'), findsOneWidget);
+      expect(find.text('Email'), findsOneWidget);
+      expect(find.text('Change password'), findsOneWidget);
+      expect(find.text('Take a photo'), findsOneWidget);
+      expect(find.text('Choose from gallery'), findsOneWidget);
+      expect(find.widgetWithText(PrimaryButton, 'SAVE'), findsOneWidget);
+    });
   });
 }

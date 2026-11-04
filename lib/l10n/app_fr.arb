@@ -241,5 +241,1051 @@
   "authValidationPasswordConfirmationMismatch": "Les mots de passe ne correspondent pas.",
   "@authValidationPasswordConfirmationMismatch": {
     "description": "Erreur de validation locale, confirmation différente du mot de passe (`AuthValidators.passwordConfirmation`)."
+  },
+
+  "profileMenuTitle": "PROFIL",
+  "@profileMenuTitle": {
+    "description": "Titre du bandeau bois (`WoodBackHeader`) de `profile_screen.dart`."
+  },
+  "profileMenuEditProfile": "Modifier le profil",
+  "@profileMenuEditProfile": {
+    "description": "Libellé de la tuile de menu \"Modifier le profil\" de `profile_screen.dart`, pousse vers `/profile/edit`."
+  },
+  "profileMenuNotifications": "Notifications",
+  "@profileMenuNotifications": {
+    "description": "Libellé de la tuile de menu \"Notifications\" de `profile_screen.dart`, pousse vers `/profile/notifications`."
+  },
+  "profileMenuPrivacy": "Confidentialité et données",
+  "@profileMenuPrivacy": {
+    "description": "Libellé de la tuile de menu \"Confidentialité et données\" de `profile_screen.dart`, pousse vers `/profile/privacy`."
+  },
+  "profileMenuHelp": "Aide et support",
+  "@profileMenuHelp": {
+    "description": "Libellé de la tuile de menu \"Aide et support\" de `profile_screen.dart`, pousse vers `/profile/help`."
+  },
+  "profileMenuSignOut": "Se déconnecter",
+  "@profileMenuSignOut": {
+    "description": "Libellé du `DestructiveButton` \"Se déconnecter\" de `profile_screen.dart`."
+  },
+
+  "profileCreditsScreenTitle": "CRÉDITS & LICENCES",
+  "@profileCreditsScreenTitle": {
+    "description": "Titre du bandeau bois de `profile_credits_screen.dart`."
+  },
+  "profileCreditsGameContentTitle": "Contenu de jeu",
+  "@profileCreditsGameContentTitle": {
+    "description": "Titre de la section \"Contenu de jeu\" de `profile_credits_screen.dart`."
+  },
+  "profileCreditsGameContentPara1": "Le contenu de règles Donjons & Dragons 5e (races, classes, historiques, sorts, objets, monstres...) provient d'Open5e et du System Reference Document (SRD 5.1/5.2) de Wizards of the Coast, sous licence Creative Commons Attribution 4.0 International (CC-BY 4.0).",
+  "@profileCreditsGameContentPara1": {
+    "description": "1er paragraphe de la section \"Contenu de jeu\" de `profile_credits_screen.dart`."
+  },
+  "profileCreditsGameContentPara2": "Donjons & Dragons, D&D et leurs logos sont des marques de Wizards of the Coast LLC. Wizards of the Coast n'a ni produit, ni approuvé, ni autorisé cette application.",
+  "@profileCreditsGameContentPara2": {
+    "description": "2e paragraphe de la section \"Contenu de jeu\" de `profile_credits_screen.dart`."
+  },
+  "profileCreditsLicenseNotice": "Ce produit inclut des éléments du System Reference Document 5.1 et 5.2, disponibles sur dndbeyond.com/srd et open5e.com, sous licence Creative Commons Attribution 4.0 International (creativecommons.org/licenses/by/4.0/legalcode).",
+  "@profileCreditsLicenseNotice": {
+    "description": "Texte du bloc encadré `_LicenseNoticeBox` de `profile_credits_screen.dart`."
+  },
+  "profileCreditsFontsTitle": "Polices",
+  "@profileCreditsFontsTitle": {
+    "description": "Titre de la section \"Polices\" de `profile_credits_screen.dart`."
+  },
+  "profileCreditsFontsPara1": "Press Start 2P (The Press Start 2P Project Authors) et Work Sans (The Work Sans Project Authors) sont distribuées sous licence SIL Open Font License, version 1.1 (scripts.sil.org/OFL), et embarquées telles quelles dans l'application depuis le dépôt officiel Google Fonts (github.com/google/fonts).",
+  "@profileCreditsFontsPara1": {
+    "description": "Paragraphe de la section \"Polices\" de `profile_credits_screen.dart`."
+  },
+  "profileCreditsOpenSourceTitle": "Bibliothèques open source",
+  "@profileCreditsOpenSourceTitle": {
+    "description": "Titre de la section \"Bibliothèques open source\" de `profile_credits_screen.dart`."
+  },
+  "profileCreditsOpenSourcePara1": "Flutter · Riverpod · Supabase Flutter · Drift · Freezed · go_router · image_picker · file_picker · connectivity_plus · package_info_plus · share_plus · app_settings · url_launcher · Firebase (Core, Messaging) · shared_preferences",
+  "@profileCreditsOpenSourcePara1": {
+    "description": "1er paragraphe (liste énumérée) de la section \"Bibliothèques open source\" — noms de bibliothèques, jamais traduits."
+  },
+  "profileCreditsOpenSourcePara2": "Ainsi que les autres bibliothèques listées dans le fichier pubspec.yaml du projet, chacune sous sa licence open source d'origine.",
+  "@profileCreditsOpenSourcePara2": {
+    "description": "2e paragraphe (clôture) de la section \"Bibliothèques open source\"."
+  },
+  "profileCreditsLastUpdated": "Dernière mise à jour : 14 octobre 2026",
+  "@profileCreditsLastUpdated": {
+    "description": "Date de dernière mise à jour en pied de `profile_credits_screen.dart`."
+  },
+
+  "profileDeleteAccountScreenTitle": "SUPPRIMER LE COMPTE",
+  "@profileDeleteAccountScreenTitle": {
+    "description": "Titre du bandeau bois de `profile_delete_account_screen.dart`."
+  },
+  "profileDeleteAccountOfflineMessage": "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une fois reconnecté.",
+  "@profileDeleteAccountOfflineMessage": {
+    "description": "Bandeau d'erreur hors-ligne de `profile_delete_account_screen.dart`, vérifié avant chaque appel réseau."
+  },
+  "profileDeleteAccountGenericError": "Impossible de supprimer le compte. Réessayez.",
+  "@profileDeleteAccountGenericError": {
+    "description": "Erreur générique de `profile_delete_account_screen.dart` (toute erreur autre qu'un mot de passe incorrect)."
+  },
+  "profileDeleteAccountWrongPassword": "Mot de passe incorrect.",
+  "@profileDeleteAccountWrongPassword": {
+    "description": "Erreur affichée sous le champ mot de passe de `profile_delete_account_screen.dart` quand `signInWithPassword` échoue."
+  },
+  "profileDeleteAccountWarningTitle": "ACTION IRRÉVERSIBLE",
+  "@profileDeleteAccountWarningTitle": {
+    "description": "Titre du bandeau d'avertissement de `profile_delete_account_screen.dart`."
+  },
+  "profileDeleteAccountWarningMessage": "Cette action est irréversible. Elle supprimera définitivement :\n• Tous tes personnages et leurs portraits\n• Tes rattachements aux histoires que tu as rejointes\n• Toutes les histoires que tu as créées en tant que MJ sur l'app Histoires (et l'accès de tes joueurs à ces histoires)\n\nCette action ne peut pas être annulée.",
+  "@profileDeleteAccountWarningMessage": {
+    "description": "Corps du bandeau d'avertissement \"ACTION IRRÉVERSIBLE\" de `profile_delete_account_screen.dart` — texte à ne pas modifier sans revalider auprès du chef de projet. Justification de son ampleur : le compte Supabase est unique et partagé avec l'app web \"Histoires\" ; supprimer le compte (`auth.admin.deleteUser`) cascade en base non seulement vers les personnages de cette app, mais aussi vers les histoires que ce compte a créées en tant que MJ côté web (`stories.user_id`) et ses entrées codex (`codex_entries.user_id`), toutes deux référençant `auth.users` en cascade — vérifié par le chantier backend qui a construit l'edge function `delete-account` (dépôt web `markdown-editor`). Ce texte doit refléter cette ampleur réelle, pas seulement les données propres à l'app mobile."
+  },
+  "profileDeleteAccountConfirmationCheckboxLabel": "Je comprends que cette action est définitive et que mes données ne pourront pas être récupérées.",
+  "@profileDeleteAccountConfirmationCheckboxLabel": {
+    "description": "Libellé de la case à cocher de confirmation de `profile_delete_account_screen.dart`."
+  },
+  "profileDeleteAccountWhatWillBeDeletedTitle": "CE QUI SERA SUPPRIMÉ",
+  "@profileDeleteAccountWhatWillBeDeletedTitle": {
+    "description": "Titre de la carte \"CE QUI SERA SUPPRIMÉ\" de `profile_delete_account_screen.dart`."
+  },
+  "profileDeleteAccountChecklistCharacters": "Tous tes personnages et leurs fiches",
+  "@profileDeleteAccountChecklistCharacters": {
+    "description": "1ère ligne de la carte \"CE QUI SERA SUPPRIMÉ\"."
+  },
+  "profileDeleteAccountChecklistStories": "Ton accès aux histoires partagées",
+  "@profileDeleteAccountChecklistStories": {
+    "description": "2e ligne de la carte \"CE QUI SERA SUPPRIMÉ\"."
+  },
+  "profileDeleteAccountChecklistProfile": "Ton profil et tes préférences",
+  "@profileDeleteAccountChecklistProfile": {
+    "description": "3e ligne de la carte \"CE QUI SERA SUPPRIMÉ\"."
+  },
+  "profileDeleteAccountPasswordSectionTitle": "SAISIS TON MOT DE PASSE POUR CONFIRMER",
+  "@profileDeleteAccountPasswordSectionTitle": {
+    "description": "Titre de section au-dessus du champ mot de passe de `profile_delete_account_screen.dart`."
+  },
+  "profileDeleteAccountPasswordHint": "••••••••",
+  "@profileDeleteAccountPasswordHint": {
+    "description": "Placeholder (points masqués) du champ mot de passe de `profile_delete_account_screen.dart`."
+  },
+  "profileDeleteAccountSubmitInProgress": "Suppression en cours…",
+  "@profileDeleteAccountSubmitInProgress": {
+    "description": "Libellé du bouton de suppression de `profile_delete_account_screen.dart` pendant l'appel réseau."
+  },
+  "profileDeleteAccountSubmitLabel": "Supprimer définitivement",
+  "@profileDeleteAccountSubmitLabel": {
+    "description": "Libellé du bouton de suppression de `profile_delete_account_screen.dart` au repos."
+  },
+  "profileDeleteAccountCancel": "Annuler",
+  "@profileDeleteAccountCancel": {
+    "description": "Libellé du bouton d'annulation de `profile_delete_account_screen.dart`."
+  },
+
+  "profileEditScreenTitle": "MODIFIER LE PROFIL",
+  "@profileEditScreenTitle": {
+    "description": "Titre du bandeau bois de `profile_edit_screen.dart`."
+  },
+  "profileEditPseudoLabel": "Pseudo",
+  "@profileEditPseudoLabel": {
+    "description": "Libellé du champ pseudo de `profile_edit_screen.dart`."
+  },
+  "profileEditPseudoHint": "Comment veux-tu qu'on t'appelle ?",
+  "@profileEditPseudoHint": {
+    "description": "Placeholder du champ pseudo de `profile_edit_screen.dart`."
+  },
+  "profileEditEmailLabel": "E-mail",
+  "@profileEditEmailLabel": {
+    "description": "Libellé du champ e-mail (désactivé) de `profile_edit_screen.dart`."
+  },
+  "profileEditEmailChangeNotice": "Modifier l'e-mail envoie un lien de confirmation à la nouvelle adresse.",
+  "@profileEditEmailChangeNotice": {
+    "description": "Texte d'aide sous le champ e-mail de `profile_edit_screen.dart`."
+  },
+  "profileEditChangePassword": "Changer le mot de passe",
+  "@profileEditChangePassword": {
+    "description": "Libellé de la tuile \"Changer le mot de passe\" de `profile_edit_screen.dart`."
+  },
+  "profileEditSaveButton": "Enregistrer",
+  "@profileEditSaveButton": {
+    "description": "Libellé du bouton de soumission de `profile_edit_screen.dart`."
+  },
+  "profileEditSavedSnackbar": "Pseudo mis à jour.",
+  "@profileEditSavedSnackbar": {
+    "description": "SnackBar de confirmation après sauvegarde du pseudo sur `profile_edit_screen.dart`."
+  },
+  "profileEditOfflineMessage": "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une fois reconnecté.",
+  "@profileEditOfflineMessage": {
+    "description": "Bandeau d'erreur hors-ligne de `profile_edit_screen.dart`, vérifié avant l'appel réseau."
+  },
+  "profileEditGenericError": "Impossible d'enregistrer les modifications. Réessayez.",
+  "@profileEditGenericError": {
+    "description": "Erreur générique de `profile_edit_screen.dart` pour toute exception qui n'est pas une `AuthFailure`."
+  },
+  "profileEditTakePhoto": "Prendre une photo",
+  "@profileEditTakePhoto": {
+    "description": "Lien sous l'avatar de `profile_edit_screen.dart`, ouvre `showAvatarEditSheet`."
+  },
+  "profileEditChoosePhoto": "Choisir dans la galerie",
+  "@profileEditChoosePhoto": {
+    "description": "Lien sous l'avatar de `profile_edit_screen.dart`, ouvre `showAvatarEditSheet`."
+  },
+
+  "profileFaqScreenTitle": "QUESTIONS FRÉQUENTES",
+  "@profileFaqScreenTitle": {
+    "description": "Titre du bandeau bois de `profile_faq_screen.dart`."
+  },
+  "profileFaqQuestion1": "Comment importer un personnage depuis aidedd.org ?",
+  "@profileFaqQuestion1": {
+    "description": "Question 1 de `profile_faq_screen.dart` (`_faqItems`, id 1)."
+  },
+  "profileFaqAnswer1": "Sur aidedd.org, ouvre la fiche de ton personnage puis utilise son export XML (bouton d'export du site). Dans Nexus JDR, va dans Personnages > « + » > Importer un fichier XML, puis sélectionne ce fichier. L'app pré-remplit automatiquement la fiche (caractéristiques, classe, race, sorts, inventaire...) et te montre un écran de vérification avant de l'enregistrer, avec les champs qu'elle n'a pas reconnus signalés d'une pastille pour que tu les complètes toi-même.",
+  "@profileFaqAnswer1": {
+    "description": "Réponse 1 de `profile_faq_screen.dart`."
+  },
+  "profileFaqQuestion2": "Comment rejoindre l'histoire de mon MJ ?",
+  "@profileFaqQuestion2": {
+    "description": "Question 2 de `profile_faq_screen.dart` (`_faqItems`, id 2)."
+  },
+  "profileFaqAnswer2": "Ton MJ te partage un code d'invitation ou un lien depuis l'app « Histoires ». Dans Nexus JDR, ouvre ce lien ou saisis le code dans l'écran « Rejoindre une histoire », puis choisis le personnage à rattacher (un existant ou un nouveau). Le personnage reste ensuite synchronisé avec cette histoire tant que le MJ ne retire pas l'accès.",
+  "@profileFaqAnswer2": {
+    "description": "Réponse 2 de `profile_faq_screen.dart`."
+  },
+  "profileFaqQuestion3": "Mes personnages sont-ils sauvegardés hors ligne ?",
+  "@profileFaqQuestion3": {
+    "description": "Question 3 de `profile_faq_screen.dart` (`_faqItems`, id 3)."
+  },
+  "profileFaqAnswer3": "Oui. Tous tes personnages restent consultables et modifiables sans connexion : les changements (points de vie, XP, inventaire...) sont mis en file d'attente sur ton appareil puis synchronisés automatiquement avec le serveur dès que la connexion revient. Aucune donnée n'est perdue en cas de coupure réseau.",
+  "@profileFaqAnswer3": {
+    "description": "Réponse 3 de `profile_faq_screen.dart`."
+  },
+  "profileFaqQuestion4": "Comment fonctionne la montée de niveau ?",
+  "@profileFaqQuestion4": {
+    "description": "Question 4 de `profile_faq_screen.dart` (`_faqItems`, id 4)."
+  },
+  "profileFaqAnswer4": "Depuis la fiche de personnage, l'écran « Monter de niveau » te guide pas à pas : nouveaux points de vie, capacités de classe débloquées, nouveaux emplacements de sorts si ta classe en lance, et augmentation de caractéristique si le niveau l'autorise. Rien n'est appliqué avant que tu valides l'écran récapitulatif.",
+  "@profileFaqAnswer4": {
+    "description": "Réponse 4 de `profile_faq_screen.dart`."
+  },
+  "profileFaqQuestion5": "Comment changer le portrait de mon personnage ?",
+  "@profileFaqQuestion5": {
+    "description": "Question 5 de `profile_faq_screen.dart` (`_faqItems`, id 5)."
+  },
+  "profileFaqAnswer5": "Ouvre la fiche du personnage, appuie sur son portrait puis choisis « Prendre une photo » ou « Choisir dans la galerie ». Tu peux ensuite recadrer l'image avant de l'enregistrer — elle est stockée de façon sécurisée et associée uniquement à ce personnage.",
+  "@profileFaqAnswer5": {
+    "description": "Réponse 5 de `profile_faq_screen.dart`."
+  },
+  "profileFaqQuestion6": "Comment supprimer mon compte ?",
+  "@profileFaqQuestion6": {
+    "description": "Question 6 de `profile_faq_screen.dart` (`_faqItems`, id 6)."
+  },
+  "profileFaqAnswer6": "Depuis Profil > Confidentialité et données > Supprimer mon compte, en bas de l'écran (zone dangereuse). Cette action est irréversible : elle supprime définitivement tes personnages, leurs portraits et tous les rattachements à des histoires. Tu peux exporter tes données avant de confirmer.",
+  "@profileFaqAnswer6": {
+    "description": "Réponse 6 de `profile_faq_screen.dart`."
+  },
+
+  "profileHelpScreenTitle": "AIDE ET SUPPORT",
+  "@profileHelpScreenTitle": {
+    "description": "Titre du bandeau bois de `profile_help_screen.dart`."
+  },
+  "profileHelpSectionFaq": "QUESTIONS FRÉQUENTES",
+  "@profileHelpSectionFaq": {
+    "description": "Titre de la 1ère section de `profile_help_screen.dart`."
+  },
+  "profileHelpFaqQuestion1": "Comment importer un personnage aidedd.org ?",
+  "@profileHelpFaqQuestion1": {
+    "description": "Libellé de la 1ère tuile FAQ de `profile_help_screen.dart` (pousse `?question=1`) — texte distinct de `profileFaqQuestion1`, propre à cette tuile raccourcie."
+  },
+  "profileHelpFaqQuestion2": "Comment rejoindre l'histoire de mon MJ ?",
+  "@profileHelpFaqQuestion2": {
+    "description": "Libellé de la 2e tuile FAQ de `profile_help_screen.dart` (pousse `?question=2`)."
+  },
+  "profileHelpFaqQuestion3": "Mes personnages sont-ils sauvegardés hors ligne ?",
+  "@profileHelpFaqQuestion3": {
+    "description": "Libellé de la 3e tuile FAQ de `profile_help_screen.dart` (pousse `?question=3`)."
+  },
+  "profileHelpFaqSeeAll": "Voir toutes les questions",
+  "@profileHelpFaqSeeAll": {
+    "description": "Libellé de la 4e tuile FAQ de `profile_help_screen.dart` (pousse `/profile/help/faq` sans pré-ouverture)."
+  },
+  "profileHelpSectionContact": "NOUS CONTACTER",
+  "@profileHelpSectionContact": {
+    "description": "Titre de la 2e section de `profile_help_screen.dart`."
+  },
+  "profileHelpContactSupport": "Contacter le support",
+  "@profileHelpContactSupport": {
+    "description": "Libellé de la tuile \"Contacter le support\" de `profile_help_screen.dart`."
+  },
+  "profileHelpReportBug": "Signaler un bug",
+  "@profileHelpReportBug": {
+    "description": "Libellé de la tuile \"Signaler un bug\" de `profile_help_screen.dart`, ouvre `showReportBugSheet`."
+  },
+  "profileHelpContactFooterNote": "Réponse sous 48h en semaine. Un aperçu des infos techniques de l'appareil est joint automatiquement.",
+  "@profileHelpContactFooterNote": {
+    "description": "Note sous la section \"NOUS CONTACTER\" de `profile_help_screen.dart`."
+  },
+  "profileHelpSectionAbout": "À PROPOS",
+  "@profileHelpSectionAbout": {
+    "description": "Titre de la 3e section de `profile_help_screen.dart`."
+  },
+  "profileHelpReplayOnboarding": "Revoir la présentation de l'app",
+  "@profileHelpReplayOnboarding": {
+    "description": "Libellé de la tuile \"Revoir la présentation de l'app\" de `profile_help_screen.dart`, pousse `/onboarding`."
+  },
+  "profileHelpLegalMentions": "Mentions légales / CGU",
+  "@profileHelpLegalMentions": {
+    "description": "Libellé de la tuile \"Mentions légales / CGU\" de `profile_help_screen.dart`, pousse `/profile/help/legal`."
+  },
+  "profileHelpCredits": "Crédits & licences",
+  "@profileHelpCredits": {
+    "description": "Libellé de la tuile \"Crédits & licences\" de `profile_help_screen.dart`, pousse `/profile/help/credits`."
+  },
+  "profileHelpAboutFooterNote": "Contenu D&D 5e sous licence Open5e / SRD. Voir les crédits complets pour le détail des sources.",
+  "@profileHelpAboutFooterNote": {
+    "description": "Note sous la section \"À PROPOS\" de `profile_help_screen.dart`."
+  },
+  "profileHelpFooterVersionWithNumber": "Nexus JDR — Personnages · v{version}",
+  "@profileHelpFooterVersionWithNumber": {
+    "description": "Pied de page de `profile_help_screen.dart` une fois `packageInfoProvider` résolu.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.0"
+      }
+    }
+  },
+  "profileHelpFooterVersionWithoutNumber": "Nexus JDR — Personnages",
+  "@profileHelpFooterVersionWithoutNumber": {
+    "description": "Pied de page de `profile_help_screen.dart` pendant que `packageInfoProvider` résout (ou en cas d'échec)."
+  },
+  "profileHelpNoMailApp": "Aucune application e-mail n'est configurée sur cet appareil.",
+  "@profileHelpNoMailApp": {
+    "description": "SnackBar affiché par `profile_help_screen.dart` quand `canLaunchUrl` échoue pour \"Contacter le support\"."
+  },
+  "profileHelpGenericMailError": "Impossible d'ouvrir l'application e-mail. Réessayez.",
+  "@profileHelpGenericMailError": {
+    "description": "SnackBar générique affiché par `profile_help_screen.dart` pour toute exception plateforme pendant l'ouverture du client e-mail."
+  },
+
+  "profileLegalScreenTitle": "MENTIONS LÉGALES / CGU",
+  "@profileLegalScreenTitle": {
+    "description": "Titre du bandeau bois de `profile_legal_screen.dart`."
+  },
+  "profileLegalEditorTitle": "Éditeur",
+  "@profileLegalEditorTitle": {
+    "description": "Titre de la section \"Éditeur\" de `profile_legal_screen.dart`."
+  },
+  "profileLegalEditorPara1": "Matthias Benoit",
+  "@profileLegalEditorPara1": {
+    "description": "1er paragraphe de la section \"Éditeur\"."
+  },
+  "profileLegalEditorPara2": "Contact : support@nexus-jdr.app",
+  "@profileLegalEditorPara2": {
+    "description": "2e paragraphe de la section \"Éditeur\"."
+  },
+  "profileLegalHostingTitle": "Hébergement",
+  "@profileLegalHostingTitle": {
+    "description": "Titre de la section \"Hébergement\" de `profile_legal_screen.dart`."
+  },
+  "profileLegalHostingPara1": "L'application et ses données sont hébergées par Supabase (base de données, authentification, stockage des fichiers).",
+  "@profileLegalHostingPara1": {
+    "description": "Paragraphe de la section \"Hébergement\"."
+  },
+  "profileLegalPurposeTitle": "Objet de l'application",
+  "@profileLegalPurposeTitle": {
+    "description": "Titre de la section \"Objet de l'application\" de `profile_legal_screen.dart`."
+  },
+  "profileLegalPurposePara1": "Nexus JDR — Personnages permet de créer, importer et gérer des personnages de Donjons & Dragons 5e, seul ou synchronisé avec l'app « Histoires » utilisée par ton Maître du Jeu.",
+  "@profileLegalPurposePara1": {
+    "description": "Paragraphe de la section \"Objet de l'application\"."
+  },
+  "profileLegalTermsTitle": "Conditions d'utilisation",
+  "@profileLegalTermsTitle": {
+    "description": "Titre de la section \"Conditions d'utilisation\" de `profile_legal_screen.dart`."
+  },
+  "profileLegalTermsPara1": "L'usage de l'application nécessite un compte. Tu es responsable de l'exactitude des informations que tu y renseignes et de la confidentialité de tes identifiants. L'éditeur se réserve le droit de suspendre un compte en cas d'usage abusif.",
+  "@profileLegalTermsPara1": {
+    "description": "Paragraphe de la section \"Conditions d'utilisation\"."
+  },
+  "profileLegalIntellectualPropertyTitle": "Propriété intellectuelle",
+  "@profileLegalIntellectualPropertyTitle": {
+    "description": "Titre de la section \"Propriété intellectuelle\" de `profile_legal_screen.dart`."
+  },
+  "profileLegalIntellectualPropertyPara1": "Le contenu de règles Donjons & Dragons 5e (races, classes, sorts, objets...) provient d'Open5e et du System Reference Document (SRD), sous licence Creative Commons Attribution 4.0 (CC-BY 4.0) — voir « Crédits & licences » pour le détail. Le reste de l'application (code, design, marque « Nexus JDR ») appartient à son éditeur.",
+  "@profileLegalIntellectualPropertyPara1": {
+    "description": "Paragraphe de la section \"Propriété intellectuelle\"."
+  },
+  "profileLegalTerminationTitle": "Résiliation",
+  "@profileLegalTerminationTitle": {
+    "description": "Titre de la section \"Résiliation\" de `profile_legal_screen.dart`."
+  },
+  "profileLegalTerminationPara1": "Tu peux supprimer ton compte à tout moment depuis Profil > Confidentialité et données > Supprimer mon compte.",
+  "@profileLegalTerminationPara1": {
+    "description": "Paragraphe de la section \"Résiliation\"."
+  },
+  "profileLegalGoverningLawTitle": "Droit applicable",
+  "@profileLegalGoverningLawTitle": {
+    "description": "Titre de la section \"Droit applicable\" de `profile_legal_screen.dart`."
+  },
+  "profileLegalGoverningLawPara1": "Ces mentions sont soumises au droit français.",
+  "@profileLegalGoverningLawPara1": {
+    "description": "Paragraphe de la section \"Droit applicable\"."
+  },
+  "profileLegalLastUpdated": "Dernière mise à jour : 25 septembre 2026",
+  "@profileLegalLastUpdated": {
+    "description": "Date de dernière mise à jour en pied de `profile_legal_screen.dart`."
+  },
+
+  "profileNotificationsScreenTitle": "NOTIFICATIONS",
+  "@profileNotificationsScreenTitle": {
+    "description": "Titre du bandeau bois de `profile_notifications_screen.dart`."
+  },
+  "profileNotificationsOsPermissionDenied": "Les notifications sont désactivées au niveau du téléphone. Active-les dans les réglages de l'appareil pour les recevoir.",
+  "@profileNotificationsOsPermissionDenied": {
+    "description": "`AlertBanner` affiché quand la permission OS de notification est refusée."
+  },
+  "profileNotificationsPushToggle": "Notifications push",
+  "@profileNotificationsPushToggle": {
+    "description": "Titre de la rangée bascule principale de `profile_notifications_screen.dart`."
+  },
+  "profileNotificationsSectionTriggers": "DÉCLENCHEURS",
+  "@profileNotificationsSectionTriggers": {
+    "description": "Titre de section \"DÉCLENCHEURS\" de `profile_notifications_screen.dart`."
+  },
+  "profileNotificationsRestReminder": "Repos long non pris depuis longtemps",
+  "@profileNotificationsRestReminder": {
+    "description": "Titre de la 1ère rangée \"DÉCLENCHEURS\"."
+  },
+  "profileNotificationsAccessRevoked": "Accès retiré ou modifié par le MJ",
+  "@profileNotificationsAccessRevoked": {
+    "description": "Titre de la 2e rangée \"DÉCLENCHEURS\"."
+  },
+  "profileNotificationsNewVersion": "Nouvelle mise à jour disponible",
+  "@profileNotificationsNewVersion": {
+    "description": "Titre de la 3e rangée \"DÉCLENCHEURS\"."
+  },
+  "profileNotificationsSectionEmail": "E-MAIL",
+  "@profileNotificationsSectionEmail": {
+    "description": "Titre de section \"E-MAIL\" de `profile_notifications_screen.dart`."
+  },
+  "profileNotificationsEmailDigest": "Recevoir un résumé par e-mail",
+  "@profileNotificationsEmailDigest": {
+    "description": "Titre de la rangée \"E-MAIL\" de `profile_notifications_screen.dart`."
+  },
+  "profileNotificationsEmailDigestSubtitle": "Résumé hebdomadaire des personnages qui ont progressé.",
+  "@profileNotificationsEmailDigestSubtitle": {
+    "description": "Sous-titre de la rangée \"E-MAIL\" de `profile_notifications_screen.dart`."
+  },
+  "profileNotificationsSystemNote": "Les autorisations système (notifications) se gèrent aussi depuis les réglages du téléphone.",
+  "@profileNotificationsSystemNote": {
+    "description": "Note en pied de `profile_notifications_screen.dart`."
+  },
+  "profileNotificationsGenericError": "Impossible d'enregistrer ce réglage. Réessaie.",
+  "@profileNotificationsGenericError": {
+    "description": "SnackBar générique d'échec d'écriture de `profile_notifications_screen.dart`."
+  },
+  "profileNotificationsLoadError": "Impossible de charger tes préférences de notifications. Réessaie.",
+  "@profileNotificationsLoadError": {
+    "description": "Message de l'état d'erreur de chargement de `profile_notifications_screen.dart`."
+  },
+  "profileNotificationsRetry": "Réessayer",
+  "@profileNotificationsRetry": {
+    "description": "Libellé du bouton \"Réessayer\" de l'état d'erreur de `profile_notifications_screen.dart`."
+  },
+
+  "profilePrivacyPolicyScreenTitle": "POLITIQUE DE CONFIDENTIALITÉ",
+  "@profilePrivacyPolicyScreenTitle": {
+    "description": "Titre du bandeau bois de `profile_privacy_policy_screen.dart`."
+  },
+  "profilePrivacyPolicyIntroductionTitle": "Introduction",
+  "@profilePrivacyPolicyIntroductionTitle": {
+    "description": "Titre de la section \"Introduction\" de `profile_privacy_policy_screen.dart`."
+  },
+  "profilePrivacyPolicyIntroductionPara1": "Cette politique explique quelles données Nexus JDR collecte, pourquoi, avec qui elles sont partagées, et comment tu peux y accéder, les exporter ou les supprimer.",
+  "@profilePrivacyPolicyIntroductionPara1": {
+    "description": "Paragraphe de la section \"Introduction\"."
+  },
+  "profilePrivacyPolicySection1Title": "1. Qui est responsable de tes données",
+  "@profilePrivacyPolicySection1Title": {
+    "description": "Titre de la section 1 de `profile_privacy_policy_screen.dart`."
+  },
+  "profilePrivacyPolicySection1Para1": "Cette politique s'applique à l'application mobile Nexus JDR — Personnages (Android) et à l'application web Nexus JDR « Histoires » (nexus-jdr.app), qui partagent le même compte.",
+  "@profilePrivacyPolicySection1Para1": {
+    "description": "1er paragraphe de la section 1."
+  },
+  "profilePrivacyPolicySection1Para2": "Responsable du traitement : Matthias Benoit, éditeur de Nexus JDR. Contact : support@nexus-jdr.app.",
+  "@profilePrivacyPolicySection1Para2": {
+    "description": "2e paragraphe de la section 1."
+  },
+  "profilePrivacyPolicySection2Title": "2. Données collectées",
+  "@profilePrivacyPolicySection2Title": {
+    "description": "Titre de la section 2 de `profile_privacy_policy_screen.dart`."
+  },
+  "profilePrivacyPolicySection2Para1": "• Compte : adresse e-mail et mot de passe (le mot de passe est stocké chiffré par notre service d'authentification, nous ne le voyons jamais), pseudo affiché et avatar facultatif.",
+  "@profilePrivacyPolicySection2Para1": {
+    "description": "1er paragraphe (liste à puces) de la section 2."
+  },
+  "profilePrivacyPolicySection2Para2": "• Contenu de jeu : tout ce que tu crées — personnages (caractéristiques, compétences, sorts, inventaire, apparence, histoire), journal, notes de groupe, groupes et histoires rejoints, fichiers de personnage que tu importes.",
+  "@profilePrivacyPolicySection2Para2": {
+    "description": "2e paragraphe (liste à puces) de la section 2."
+  },
+  "profilePrivacyPolicySection2Para3": "• Photos : portrait de personnage, galerie et avatar, uniquement les images que tu choisis de prendre avec l'appareil photo, d'importer depuis ta galerie ou depuis une adresse web.",
+  "@profilePrivacyPolicySection2Para3": {
+    "description": "3e paragraphe (liste à puces) de la section 2."
+  },
+  "profilePrivacyPolicySection2Para4": "• Dictée vocale (notes de groupe, facultative) : le micro n'est utilisé que pendant que tu dictes. La reconnaissance vocale est assurée par le service de ton téléphone (par exemple Google sur Android) ; nous ne recevons que le texte obtenu, jamais l'enregistrement audio.",
+  "@profilePrivacyPolicySection2Para4": {
+    "description": "4e paragraphe (liste à puces) de la section 2."
+  },
+  "profilePrivacyPolicySection2Para5": "• Notifications : un identifiant technique de ton appareil (jeton de notification) et tes préférences de notification, pour t'envoyer les rappels et nouvelles de tes groupes.",
+  "@profilePrivacyPolicySection2Para5": {
+    "description": "5e paragraphe (liste à puces) de la section 2."
+  },
+  "profilePrivacyPolicySection2Para6": "• Statistiques d'utilisation : écrans consultés et actions réalisées dans l'app, accompagnés d'informations techniques (modèle d'appareil, système, version de l'app) et d'un identifiant pseudonyme généré par l'outil de mesure. Ces statistiques ne sont pas rattachées à ton compte ni à ton adresse e-mail.",
+  "@profilePrivacyPolicySection2Para6": {
+    "description": "6e paragraphe (liste à puces) de la section 2."
+  },
+  "profilePrivacyPolicySection2Para7": "• Signalements de bug : titre, description et gravité que tu saisis, version de l'app, plateforme et, si tu le choisis, le personnage concerné.",
+  "@profilePrivacyPolicySection2Para7": {
+    "description": "7e paragraphe (liste à puces) de la section 2."
+  },
+  "profilePrivacyPolicySection3Title": "3. Ce que nous ne collectons pas",
+  "@profilePrivacyPolicySection3Title": {
+    "description": "Titre de la section 3 de `profile_privacy_policy_screen.dart`."
+  },
+  "profilePrivacyPolicySection3Para1": "Aucune donnée de localisation, aucun contact, aucune donnée de paiement. Aucune publicité n'est affichée et aucune donnée n'est vendue.",
+  "@profilePrivacyPolicySection3Para1": {
+    "description": "Paragraphe de la section 3."
+  },
+  "profilePrivacyPolicySection4Title": "4. Pourquoi nous utilisons ces données",
+  "@profilePrivacyPolicySection4Title": {
+    "description": "Titre de la section 4 de `profile_privacy_policy_screen.dart`."
+  },
+  "profilePrivacyPolicySection4Para1": "• Fournir le service (compte, fiches, groupes, synchronisation avec ton MJ, photos, notifications que tu actives) : c’est nécessaire à l'exécution du service que tu utilises.",
+  "@profilePrivacyPolicySection4Para1": {
+    "description": "1er paragraphe (liste à puces) de la section 4."
+  },
+  "profilePrivacyPolicySection4Para2": "• Améliorer l'app (statistiques d'utilisation) : intérêt légitime à comprendre quelles fonctionnalités sont utilisées. Tu peux t'y opposer à tout moment dans Profil > Confidentialité et données > Partager mes données d'usage.",
+  "@profilePrivacyPolicySection4Para2": {
+    "description": "2e paragraphe (liste à puces) de la section 4."
+  },
+  "profilePrivacyPolicySection4Para3": "• Corriger les bugs que tu nous signales.",
+  "@profilePrivacyPolicySection4Para3": {
+    "description": "3e paragraphe (liste à puces) de la section 4."
+  },
+  "profilePrivacyPolicySection5Title": "5. Avec qui tes données sont partagées",
+  "@profilePrivacyPolicySection5Title": {
+    "description": "Titre de la section 5 de `profile_privacy_policy_screen.dart`."
+  },
+  "profilePrivacyPolicySection5Para1": "Avec d'autres utilisateurs, uniquement à ton initiative : le MJ et les membres des histoires ou groupes que tu rejoins voient les personnages que tu y rattaches ; si tu crées un lien de partage de fiche, toute personne disposant de ce lien peut consulter la fiche en lecture seule, jusqu'à ce que tu le désactives.",
+  "@profilePrivacyPolicySection5Para1": {
+    "description": "1er paragraphe de la section 5."
+  },
+  "profilePrivacyPolicySection5Para2": "Avec nos prestataires techniques, qui traitent les données pour notre compte :",
+  "@profilePrivacyPolicySection5Para2": {
+    "description": "2e paragraphe de la section 5."
+  },
+  "profilePrivacyPolicySection5Para3": "• Supabase — hébergement de la base de données, de l'authentification et des photos.",
+  "@profilePrivacyPolicySection5Para3": {
+    "description": "3e paragraphe (liste à puces) de la section 5."
+  },
+  "profilePrivacyPolicySection5Para4": "• Google Firebase — envoi des notifications (Firebase Cloud Messaging) et statistiques d'utilisation (Firebase Analytics).",
+  "@profilePrivacyPolicySection5Para4": {
+    "description": "4e paragraphe (liste à puces) de la section 5."
+  },
+  "profilePrivacyPolicySection5Para5": "• Google Firebase Crashlytics — rapports de plantage (traces techniques de l'erreur et informations sur ton appareil), collectés systématiquement pour maintenir la stabilité de l'app. Contrairement aux statistiques d'utilisation (Firebase Analytics/PostHog, voir ci-dessus), ce recueil ne peut pas être désactivé depuis l'app : notre intérêt légitime à diagnostiquer et corriger les plantages de l'app prévaut ici.",
+  "@profilePrivacyPolicySection5Para5": {
+    "description": "5e paragraphe (liste à puces) de la section 5."
+  },
+  "profilePrivacyPolicySection5Para6": "• PostHog (hébergement dans l'Union européenne) — statistiques d'utilisation.",
+  "@profilePrivacyPolicySection5Para6": {
+    "description": "6e paragraphe (liste à puces) de la section 5."
+  },
+  "profilePrivacyPolicySection5Para7": "• GitHub — suivi des bugs signalés : le contenu d'un signalement (titre, description, gravité, version, plateforme) est publié comme ticket dans un dépôt public, sans ton adresse e-mail ni ton nom. N'y indique donc aucune information personnelle.",
+  "@profilePrivacyPolicySection5Para7": {
+    "description": "7e paragraphe (liste à puces) de la section 5."
+  },
+  "profilePrivacyPolicySection5Para8": "• Resend — envoi des e-mails transactionnels (confirmation de compte, réinitialisation de mot de passe).",
+  "@profilePrivacyPolicySection5Para8": {
+    "description": "8e paragraphe (liste à puces) de la section 5."
+  },
+  "profilePrivacyPolicySection5Para9": "• Vercel — hébergement du site nexus-jdr.app.",
+  "@profilePrivacyPolicySection5Para9": {
+    "description": "9e paragraphe (liste à puces) de la section 5."
+  },
+  "profilePrivacyPolicySection5Para10": "Certains de ces prestataires peuvent traiter des données hors de l'Union européenne ; ces transferts sont encadrés par les garanties prévues par le RGPD (clauses contractuelles types de la Commission européenne ou cadre de protection des données UE–États-Unis).",
+  "@profilePrivacyPolicySection5Para10": {
+    "description": "10e paragraphe (clôture) de la section 5."
+  },
+  "profilePrivacyPolicySection6Title": "6. Durée de conservation",
+  "@profilePrivacyPolicySection6Title": {
+    "description": "Titre de la section 6 de `profile_privacy_policy_screen.dart`."
+  },
+  "profilePrivacyPolicySection6Para1": "• Compte, contenu de jeu et photos : tant que ton compte existe. Ils sont supprimés définitivement dès que tu supprimes ton compte.",
+  "@profilePrivacyPolicySection6Para1": {
+    "description": "1er paragraphe (liste à puces) de la section 6."
+  },
+  "profilePrivacyPolicySection6Para2": "• Statistiques d'utilisation : conservées sous forme pseudonyme, sans lien avec ton compte, pendant la durée de conservation paramétrée dans les outils de mesure.",
+  "@profilePrivacyPolicySection6Para2": {
+    "description": "2e paragraphe (liste à puces) de la section 6."
+  },
+  "profilePrivacyPolicySection6Para3": "• Signalements de bug : le temps nécessaire à leur traitement.",
+  "@profilePrivacyPolicySection6Para3": {
+    "description": "3e paragraphe (liste à puces) de la section 6."
+  },
+  "profilePrivacyPolicySection7Title": "7. Tes droits",
+  "@profilePrivacyPolicySection7Title": {
+    "description": "Titre de la section 7 de `profile_privacy_policy_screen.dart`."
+  },
+  "profilePrivacyPolicySection7Para1": "Conformément au RGPD, tu disposes d'un droit d'accès, de rectification, d'effacement, de portabilité, d'opposition et de limitation du traitement. Directement depuis l'app :",
+  "@profilePrivacyPolicySection7Para1": {
+    "description": "1er paragraphe de la section 7."
+  },
+  "profilePrivacyPolicySection7Para2": "• Exporter tes données : Profil > Confidentialité et données > Exporter mes données.",
+  "@profilePrivacyPolicySection7Para2": {
+    "description": "2e paragraphe (liste à puces) de la section 7."
+  },
+  "profilePrivacyPolicySection7Para3": "• Supprimer ton compte et toutes tes données : Profil > Confidentialité et données > Supprimer mon compte.",
+  "@profilePrivacyPolicySection7Para3": {
+    "description": "3e paragraphe (liste à puces) de la section 7."
+  },
+  "profilePrivacyPolicySection7Para4": "• Désactiver les statistiques d'utilisation : Profil > Confidentialité et données.",
+  "@profilePrivacyPolicySection7Para4": {
+    "description": "4e paragraphe (liste à puces) de la section 7."
+  },
+  "profilePrivacyPolicySection7Para5": "• Désactiver les notifications : dans les réglages de notification de l'app ou de ton téléphone.",
+  "@profilePrivacyPolicySection7Para5": {
+    "description": "5e paragraphe (liste à puces) de la section 7."
+  },
+  "profilePrivacyPolicySection7Para6": "Pour toute autre demande, écris à support@nexus-jdr.app. Tu peux aussi introduire une réclamation auprès de la CNIL (www.cnil.fr).",
+  "@profilePrivacyPolicySection7Para6": {
+    "description": "6e paragraphe (clôture) de la section 7."
+  },
+  "profilePrivacyPolicySection8Title": "8. Sécurité",
+  "@profilePrivacyPolicySection8Title": {
+    "description": "Titre de la section 8 de `profile_privacy_policy_screen.dart`."
+  },
+  "profilePrivacyPolicySection8Para1": "Les échanges avec nos serveurs sont chiffrés (HTTPS). L’accès à tes données est protégé par l'authentification de ton compte et par des règles d'accès qui empêchent tout autre utilisateur de lire ou modifier ce que tu ne partages pas.",
+  "@profilePrivacyPolicySection8Para1": {
+    "description": "Paragraphe de la section 8."
+  },
+  "profilePrivacyPolicySection9Title": "9. Modifications de cette politique",
+  "@profilePrivacyPolicySection9Title": {
+    "description": "Titre de la section 9 de `profile_privacy_policy_screen.dart`."
+  },
+  "profilePrivacyPolicySection9Para1": "Cette politique peut évoluer avec l'application. La date de dernière mise à jour figure en bas de cet écran ; en cas de changement important, tu en seras informé dans l'app.",
+  "@profilePrivacyPolicySection9Para1": {
+    "description": "Paragraphe de la section 9."
+  },
+  "profilePrivacyPolicyLastUpdated": "Dernière mise à jour : 1er novembre 2026",
+  "@profilePrivacyPolicyLastUpdated": {
+    "description": "Date de dernière mise à jour en pied de `profile_privacy_policy_screen.dart`."
+  },
+
+  "profilePrivacyScreenTitle": "CONFIDENTIALITÉ",
+  "@profilePrivacyScreenTitle": {
+    "description": "Titre du bandeau bois de `profile_privacy_screen.dart`."
+  },
+  "profilePrivacyDataSectionTitle": "MES DONNÉES",
+  "@profilePrivacyDataSectionTitle": {
+    "description": "Titre de section \"MES DONNÉES\" de `profile_privacy_screen.dart`."
+  },
+  "profilePrivacyExportData": "Exporter mes données",
+  "@profilePrivacyExportData": {
+    "description": "Libellé de la tuile \"Exporter mes données\" de `profile_privacy_screen.dart`, ouvre `showExportDataSheet`."
+  },
+  "profilePrivacyPolicyLink": "Politique de confidentialité",
+  "@profilePrivacyPolicyLink": {
+    "description": "Libellé de la tuile \"Politique de confidentialité\" de `profile_privacy_screen.dart`, pousse `/profile/privacy/policy`."
+  },
+  "profilePrivacyDevicePermissions": "Autorisations de l'appareil",
+  "@profilePrivacyDevicePermissions": {
+    "description": "Libellé de la tuile \"Autorisations de l'appareil\" de `profile_privacy_screen.dart`, ouvre `showDevicePermissionsSheet`."
+  },
+  "profilePrivacyExportNote": "L'export contient ton profil, tes personnages (leur inventaire, leurs sorts et leur historique), tes groupes et tes notes de groupe (JSON, proposé au partage depuis ton appareil).",
+  "@profilePrivacyExportNote": {
+    "description": "Note sous la carte \"MES DONNÉES\" de `profile_privacy_screen.dart`."
+  },
+  "profilePrivacyShareUsageData": "Partager mes données d'usage",
+  "@profilePrivacyShareUsageData": {
+    "description": "Titre de la rangée bascule \"Partager mes données d'usage\" de `profile_privacy_screen.dart`."
+  },
+  "profilePrivacyShareUsageDataSubtitle": "Statistiques d'utilisation anonymes (Firebase Analytics, PostHog), pour améliorer l'app. Désactivable à tout moment — les rapports de plantage restent toujours actifs pour la stabilité de l'app (voir Politique de confidentialité).",
+  "@profilePrivacyShareUsageDataSubtitle": {
+    "description": "Sous-titre de la rangée bascule \"Partager mes données d'usage\"."
+  },
+  "profilePrivacyDangerZoneTitle": "ZONE DANGEREUSE",
+  "@profilePrivacyDangerZoneTitle": {
+    "description": "Titre de section \"ZONE DANGEREUSE\" de `profile_privacy_screen.dart`."
+  },
+  "profilePrivacyDeleteAccount": "Supprimer mon compte",
+  "@profilePrivacyDeleteAccount": {
+    "description": "Libellé de la tuile destructrice \"Supprimer mon compte\" de `profile_privacy_screen.dart`, pousse `/profile/privacy/delete-account`."
+  },
+
+  "profileAvatarCropScreenTitle": "RECADRAGE",
+  "@profileAvatarCropScreenTitle": {
+    "description": "Titre du bandeau bois de `widgets/avatar_crop_screen.dart`."
+  },
+  "profileAvatarCropInstructions": "Pincez pour zoomer, glissez pour cadrer.",
+  "@profileAvatarCropInstructions": {
+    "description": "Texte d'aide sous le cadre de recadrage de `widgets/avatar_crop_screen.dart`."
+  },
+  "profileAvatarCropCancel": "Annuler",
+  "@profileAvatarCropCancel": {
+    "description": "Libellé du bouton d'annulation de `widgets/avatar_crop_screen.dart`."
+  },
+  "profileAvatarCropConfirm": "Valider",
+  "@profileAvatarCropConfirm": {
+    "description": "Libellé du bouton de validation de `widgets/avatar_crop_screen.dart`."
+  },
+  "profileAvatarCropOfflineMessage": "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une fois reconnecté.",
+  "@profileAvatarCropOfflineMessage": {
+    "description": "Bandeau d'erreur hors-ligne de `widgets/avatar_crop_screen.dart`, vérifié avant l'appel réseau."
+  },
+  "profileAvatarCropGenericError": "Impossible de mettre à jour l'avatar. Réessayez.",
+  "@profileAvatarCropGenericError": {
+    "description": "Erreur générique de `widgets/avatar_crop_screen.dart`."
+  },
+  "profileAvatarCropPrepareImageError": "Impossible de préparer l'image. Réessayez.",
+  "@profileAvatarCropPrepareImageError": {
+    "description": "Message de l'`AuthFailure` levée quand `RenderRepaintBoundary.toImage().toByteData()` renvoie `null` dans `widgets/avatar_crop_screen.dart`."
+  },
+
+  "profileAvatarEditTakePhoto": "Prendre une photo",
+  "@profileAvatarEditTakePhoto": {
+    "description": "Libellé de la ligne \"Prendre une photo\" de la sheet `widgets/avatar_edit_sheet.dart`."
+  },
+  "profileAvatarEditChooseGallery": "Choisir dans la galerie",
+  "@profileAvatarEditChooseGallery": {
+    "description": "Libellé de la ligne \"Choisir dans la galerie\" de la sheet `widgets/avatar_edit_sheet.dart`."
+  },
+  "profileAvatarEditRemovePhoto": "Retirer la photo",
+  "@profileAvatarEditRemovePhoto": {
+    "description": "Libellé de la ligne \"Retirer la photo\" de la sheet `widgets/avatar_edit_sheet.dart` (affichée seulement si un avatar existe déjà)."
+  },
+  "profileAvatarEditRemovedSnackbar": "Photo retirée.",
+  "@profileAvatarEditRemovedSnackbar": {
+    "description": "SnackBar de confirmation après suppression de l'avatar dans `widgets/avatar_edit_sheet.dart`."
+  },
+  "profileAvatarEditGenericError": "Impossible de mettre à jour l'avatar. Réessayez.",
+  "@profileAvatarEditGenericError": {
+    "description": "SnackBar d'erreur générique de `widgets/avatar_edit_sheet.dart` pour toute exception qui n'est pas une `AuthFailure`."
+  },
+  "profileAvatarEditRemoveConfirmTitle": "Retirer la photo ?",
+  "@profileAvatarEditRemoveConfirmTitle": {
+    "description": "Titre du dialogue de confirmation `showRemoveAvatarConfirmationDialog` de `widgets/avatar_edit_sheet.dart`."
+  },
+  "profileAvatarEditRemoveConfirmCancel": "Annuler",
+  "@profileAvatarEditRemoveConfirmCancel": {
+    "description": "Bouton d'annulation du dialogue de confirmation `showRemoveAvatarConfirmationDialog`."
+  },
+  "profileAvatarEditRemoveConfirmAction": "Retirer",
+  "@profileAvatarEditRemoveConfirmAction": {
+    "description": "Bouton de confirmation du dialogue `showRemoveAvatarConfirmationDialog`."
+  },
+
+  "profileChangeEmailTitle": "ADRESSE EMAIL",
+  "@profileChangeEmailTitle": {
+    "description": "Titre de la sheet `widgets/change_email_sheet.dart`."
+  },
+  "profileChangeEmailInfoBanner": "Un email de confirmation sera envoyé à cette adresse. Le changement ne sera effectif qu'après confirmation.",
+  "@profileChangeEmailInfoBanner": {
+    "description": "`InfoBanner` permanent de la sheet `widgets/change_email_sheet.dart`."
+  },
+  "profileChangeEmailFieldLabel": "NOUVELLE ADRESSE EMAIL",
+  "@profileChangeEmailFieldLabel": {
+    "description": "Libellé du champ de la sheet `widgets/change_email_sheet.dart`."
+  },
+  "profileChangeEmailHint": "nom@exemple.com",
+  "@profileChangeEmailHint": {
+    "description": "Placeholder du champ e-mail de la sheet `widgets/change_email_sheet.dart`."
+  },
+  "profileChangeEmailCurrentAddress": "Adresse actuelle : {email}",
+  "@profileChangeEmailCurrentAddress": {
+    "description": "Rappel de l'adresse e-mail actuelle sous le champ de la sheet `widgets/change_email_sheet.dart`.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "nom@exemple.com"
+      }
+    }
+  },
+  "profileChangeEmailCancel": "Annuler",
+  "@profileChangeEmailCancel": {
+    "description": "Bouton d'annulation de la sheet `widgets/change_email_sheet.dart`."
+  },
+  "profileChangeEmailSave": "Enregistrer",
+  "@profileChangeEmailSave": {
+    "description": "Bouton de soumission de la sheet `widgets/change_email_sheet.dart`."
+  },
+  "profileChangeEmailConfirmationSnackbar": "Email de confirmation envoyé. Vérifie ta boîte de réception pour finaliser le changement.",
+  "@profileChangeEmailConfirmationSnackbar": {
+    "description": "SnackBar affiché une fois la sheet `widgets/change_email_sheet.dart` refermée avec succès."
+  },
+  "profileChangeEmailOfflineMessage": "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une fois reconnecté.",
+  "@profileChangeEmailOfflineMessage": {
+    "description": "Bandeau d'erreur hors-ligne de la sheet `widgets/change_email_sheet.dart`, vérifié avant l'appel réseau."
+  },
+  "profileChangeEmailGenericError": "Impossible d'envoyer le nouvel email. Réessayez.",
+  "@profileChangeEmailGenericError": {
+    "description": "Erreur générique de la sheet `widgets/change_email_sheet.dart`."
+  },
+
+  "profileChangePasswordTitle": "MOT DE PASSE",
+  "@profileChangePasswordTitle": {
+    "description": "Titre de la sheet `widgets/change_password_sheet.dart`."
+  },
+  "profileChangePasswordNewLabel": "NOUVEAU MOT DE PASSE",
+  "@profileChangePasswordNewLabel": {
+    "description": "Libellé du champ \"nouveau mot de passe\" de `widgets/change_password_sheet.dart`."
+  },
+  "profileChangePasswordHint": "••••••••",
+  "@profileChangePasswordHint": {
+    "description": "Placeholder (points masqués) des champs mot de passe de `widgets/change_password_sheet.dart`."
+  },
+  "profileChangePasswordConfirmLabel": "CONFIRMER LE MOT DE PASSE",
+  "@profileChangePasswordConfirmLabel": {
+    "description": "Libellé du champ de confirmation de `widgets/change_password_sheet.dart`."
+  },
+  "profileChangePasswordCancel": "Annuler",
+  "@profileChangePasswordCancel": {
+    "description": "Bouton d'annulation de la sheet `widgets/change_password_sheet.dart`."
+  },
+  "profileChangePasswordSave": "Enregistrer",
+  "@profileChangePasswordSave": {
+    "description": "Bouton de soumission de la sheet `widgets/change_password_sheet.dart`."
+  },
+  "profileChangePasswordUpdatedSnackbar": "Mot de passe mis à jour.",
+  "@profileChangePasswordUpdatedSnackbar": {
+    "description": "SnackBar affiché une fois la sheet `widgets/change_password_sheet.dart` refermée avec succès."
+  },
+  "profileChangePasswordOfflineMessage": "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une fois reconnecté.",
+  "@profileChangePasswordOfflineMessage": {
+    "description": "Bandeau d'erreur hors-ligne de la sheet `widgets/change_password_sheet.dart`, vérifié avant l'appel réseau."
+  },
+  "profileChangePasswordGenericError": "Impossible de mettre à jour le mot de passe. Réessayez.",
+  "@profileChangePasswordGenericError": {
+    "description": "Erreur générique de la sheet `widgets/change_password_sheet.dart`."
+  },
+
+  "profileDevicePermissionsTitle": "GESTION DES AUTORISATIONS APPAREIL",
+  "@profileDevicePermissionsTitle": {
+    "description": "Titre de la sheet `widgets/device_permissions_sheet.dart`."
+  },
+  "profileDevicePermissionsBody": "Nexus JDR utilise l'appareil photo et la galerie uniquement pour définir le portrait de ton personnage ou ton avatar. Pour modifier ces autorisations, ouvre les réglages de ton téléphone.",
+  "@profileDevicePermissionsBody": {
+    "description": "Corps de texte statique de la sheet `widgets/device_permissions_sheet.dart`."
+  },
+  "profileDevicePermissionsOpenSettings": "Ouvrir les réglages",
+  "@profileDevicePermissionsOpenSettings": {
+    "description": "Libellé du bouton de la sheet `widgets/device_permissions_sheet.dart` (`AppSettings.openAppSettings`)."
+  },
+
+  "profileEditDisplayNameTitle": "PSEUDO",
+  "@profileEditDisplayNameTitle": {
+    "description": "Titre de la sheet `widgets/edit_display_name_sheet.dart`."
+  },
+  "profileEditDisplayNameFieldLabel": "NOM D'AFFICHAGE",
+  "@profileEditDisplayNameFieldLabel": {
+    "description": "Libellé du champ de la sheet `widgets/edit_display_name_sheet.dart`."
+  },
+  "profileEditDisplayNameHint": "Comment veux-tu qu'on t'appelle ?",
+  "@profileEditDisplayNameHint": {
+    "description": "Placeholder du champ de la sheet `widgets/edit_display_name_sheet.dart`."
+  },
+  "profileEditDisplayNameCancel": "Annuler",
+  "@profileEditDisplayNameCancel": {
+    "description": "Bouton d'annulation de la sheet `widgets/edit_display_name_sheet.dart`."
+  },
+  "profileEditDisplayNameSave": "Enregistrer",
+  "@profileEditDisplayNameSave": {
+    "description": "Bouton de soumission de la sheet `widgets/edit_display_name_sheet.dart`."
+  },
+  "profileEditDisplayNameUpdatedSnackbar": "Pseudo mis à jour.",
+  "@profileEditDisplayNameUpdatedSnackbar": {
+    "description": "SnackBar affiché une fois la sheet `widgets/edit_display_name_sheet.dart` refermée avec succès."
+  },
+  "profileEditDisplayNameOfflineMessage": "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une fois reconnecté.",
+  "@profileEditDisplayNameOfflineMessage": {
+    "description": "Bandeau d'erreur hors-ligne de la sheet `widgets/edit_display_name_sheet.dart`, vérifié avant l'appel réseau."
+  },
+  "profileEditDisplayNameGenericError": "Impossible d'enregistrer les modifications. Réessayez.",
+  "@profileEditDisplayNameGenericError": {
+    "description": "Erreur générique de la sheet `widgets/edit_display_name_sheet.dart`."
+  },
+
+  "profileExportDataTitle": "EXPORT DE MES DONNÉES",
+  "@profileExportDataTitle": {
+    "description": "Titre de la sheet `widgets/export_data_sheet.dart`."
+  },
+  "profileExportDataDescription": "Génère un fichier JSON contenant ton profil, tous tes personnages et leurs données associées (inventaire, sorts, historique), ainsi que tes groupes et tes notes de groupe. Le fichier te sera proposé au partage/enregistrement depuis ton appareil.",
+  "@profileExportDataDescription": {
+    "description": "Texte d'explication de la sheet `widgets/export_data_sheet.dart`."
+  },
+  "profileExportDataCancel": "Annuler",
+  "@profileExportDataCancel": {
+    "description": "Bouton d'annulation de la sheet `widgets/export_data_sheet.dart`."
+  },
+  "profileExportDataGenerate": "Générer l'export",
+  "@profileExportDataGenerate": {
+    "description": "Bouton de génération de la sheet `widgets/export_data_sheet.dart`."
+  },
+  "profileExportDataGeneratedSnackbar": "Export généré.",
+  "@profileExportDataGeneratedSnackbar": {
+    "description": "SnackBar affiché une fois l'export partagé depuis `widgets/export_data_sheet.dart`."
+  },
+  "profileExportDataOfflineMessage": "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une fois reconnecté.",
+  "@profileExportDataOfflineMessage": {
+    "description": "Bandeau d'erreur hors-ligne de la sheet `widgets/export_data_sheet.dart`, vérifié avant la génération."
+  },
+  "profileExportDataGenericError": "Impossible de générer l'export. Réessayez.",
+  "@profileExportDataGenericError": {
+    "description": "Erreur générique de la sheet `widgets/export_data_sheet.dart`."
+  },
+
+  "profileReportBugSentSnackbar": "Merci, ton signalement a bien été envoyé !",
+  "@profileReportBugSentSnackbar": {
+    "description": "SnackBar affiché une fois la sheet `widgets/report_bug_sheet.dart` refermée avec succès."
+  },
+  "profileReportBugSeverityMinorTitle": "Gênant",
+  "@profileReportBugSeverityMinorTitle": {
+    "description": "Titre de la 1ère option de sévérité de `widgets/report_bug_sheet.dart` (valeur technique `mineur`)."
+  },
+  "profileReportBugSeverityMinorSubtitle": "Un désagrément, mais tu peux continuer à jouer",
+  "@profileReportBugSeverityMinorSubtitle": {
+    "description": "Sous-titre de la 1ère option de sévérité de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugSeverityMajorTitle": "Problématique",
+  "@profileReportBugSeverityMajorTitle": {
+    "description": "Titre de la 2e option de sévérité de `widgets/report_bug_sheet.dart` (valeur technique `majeur`)."
+  },
+  "profileReportBugSeverityMajorSubtitle": "Ça complique les choses, mais il y a moyen de contourner",
+  "@profileReportBugSeverityMajorSubtitle": {
+    "description": "Sous-titre de la 2e option de sévérité de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugSeverityBlockingTitle": "Ça bloque tout",
+  "@profileReportBugSeverityBlockingTitle": {
+    "description": "Titre de la 3e option de sévérité de `widgets/report_bug_sheet.dart` (valeur technique `bloquant`)."
+  },
+  "profileReportBugSeverityBlockingSubtitle": "Impossible de continuer sans ça",
+  "@profileReportBugSeverityBlockingSubtitle": {
+    "description": "Sous-titre de la 3e option de sévérité de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugSeverityContentTitle": "Contenu à corriger",
+  "@profileReportBugSeverityContentTitle": {
+    "description": "Titre de la 4e option de sévérité de `widgets/report_bug_sheet.dart` (valeur technique `contenu`)."
+  },
+  "profileReportBugSeverityContentSubtitle": "Erreur ou oubli dans un sort, un objet, une règle ou une traduction",
+  "@profileReportBugSeverityContentSubtitle": {
+    "description": "Sous-titre de la 4e option de sévérité de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugOfflineMessage": "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une fois reconnecté.",
+  "@profileReportBugOfflineMessage": {
+    "description": "Bandeau d'erreur hors-ligne de `widgets/report_bug_sheet.dart`, vérifié avant l'appel réseau."
+  },
+  "profileReportBugGenericError": "Impossible d'envoyer le signalement. Réessayez.",
+  "@profileReportBugGenericError": {
+    "description": "Erreur générique de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugScreenshotUploadError": "Impossible d'envoyer la capture. Réessayez, ou retirez-la pour envoyer le signalement sans.",
+  "@profileReportBugScreenshotUploadError": {
+    "description": "Erreur affichée quand `BugReportFailureKind.screenshotUpload` est levée par `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugCaptureTooLarge": "Cette image est trop lourde (plus de 5 Mo), même compressée. Choisissez-en une autre.",
+  "@profileReportBugCaptureTooLarge": {
+    "description": "Erreur de choix d'image, `BugReportScreenshotFailureKind.tooLarge`."
+  },
+  "profileReportBugCaptureUnsupportedFormat": "Ce format d'image n'est pas pris en charge. Choisissez une autre image.",
+  "@profileReportBugCaptureUnsupportedFormat": {
+    "description": "Erreur de choix d'image, `BugReportScreenshotFailureKind.unsupportedFormat` (et repli sur exception inattendue)."
+  },
+  "profileReportBugCaptureAccessDenied": "L'accès à vos photos ou à l'appareil photo est refusé. Autorisez-le dans les réglages du téléphone.",
+  "@profileReportBugCaptureAccessDenied": {
+    "description": "Erreur de choix d'image, `BugReportScreenshotFailureKind.accessDenied`."
+  },
+  "profileReportBugCapturePrivacyNotice": "Facultatif, une seule image. Elle reste privée : seule l'équipe de développement la voit, elle n'est jamais publiée avec ton signalement et elle est supprimée avec ton compte. Évite quand même d'y laisser des infos personnelles.",
+  "@profileReportBugCapturePrivacyNotice": {
+    "description": "Mention de confidentialité du bloc \"CAPTURE D'ÉCRAN\" de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugAddCaptureSemanticLabel": "Ajouter une capture d'écran (facultatif)",
+  "@profileReportBugAddCaptureSemanticLabel": {
+    "description": "Libellé d'accessibilité (`Semantics.label`) de la tuile vide d'ajout de capture."
+  },
+  "profileReportBugAddCapture": "Ajouter une capture",
+  "@profileReportBugAddCapture": {
+    "description": "Libellé visible du `DashedAddTile` d'ajout de capture de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugCaptureSectionTitle": "CAPTURE D'ÉCRAN",
+  "@profileReportBugCaptureSectionTitle": {
+    "description": "Titre du bloc \"CAPTURE D'ÉCRAN\" de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugTitle": "SIGNALER UN BUG",
+  "@profileReportBugTitle": {
+    "description": "Titre de la sheet `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugFieldTitleLabel": "TITRE",
+  "@profileReportBugFieldTitleLabel": {
+    "description": "Libellé du champ \"titre\" de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugFieldTitleHint": "Résumé en une phrase (ex. « Le bouton PV ne répond pas »)",
+  "@profileReportBugFieldTitleHint": {
+    "description": "Placeholder du champ \"titre\" de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugFieldDescriptionLabel": "DESCRIPTION",
+  "@profileReportBugFieldDescriptionLabel": {
+    "description": "Libellé du champ \"description\" de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugFieldDescriptionHint": "Que s'est-il passé ? Que faisais-tu au moment du bug ?",
+  "@profileReportBugFieldDescriptionHint": {
+    "description": "Placeholder du champ \"description\" de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugSeveritySectionTitle": "QUEL GENRE DE SOUCI ?",
+  "@profileReportBugSeveritySectionTitle": {
+    "description": "Titre du sélecteur de sévérité de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugCancel": "Annuler",
+  "@profileReportBugCancel": {
+    "description": "Bouton d'annulation de la sheet `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugSend": "Envoyer",
+  "@profileReportBugSend": {
+    "description": "Bouton de soumission de la sheet `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugChooseGallery": "Choisir dans la galerie",
+  "@profileReportBugChooseGallery": {
+    "description": "Libellé de la ligne \"Choisir dans la galerie\" de la sheet de source de capture de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugTakePhoto": "Prendre une photo",
+  "@profileReportBugTakePhoto": {
+    "description": "Libellé de la ligne \"Prendre une photo\" de la sheet de source de capture de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugPreparingImage": "Préparation de l'image…",
+  "@profileReportBugPreparingImage": {
+    "description": "Texte visible du cadre \"Préparation de l'image…\" de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugPreparingImageSemanticLabel": "Préparation de l'image en cours",
+  "@profileReportBugPreparingImageSemanticLabel": {
+    "description": "Libellé d'accessibilité (`Semantics.label`) du cadre \"Préparation de l'image…\"."
+  },
+  "profileReportBugAttachedLabel": "Capture jointe",
+  "@profileReportBugAttachedLabel": {
+    "description": "Libellé de la carte de capture jointe de `widgets/report_bug_sheet.dart`."
+  },
+  "profileReportBugReplace": "Remplacer",
+  "@profileReportBugReplace": {
+    "description": "Libellé visible du bouton \"Remplacer\" de la carte de capture jointe."
+  },
+  "profileReportBugRemove": "Retirer",
+  "@profileReportBugRemove": {
+    "description": "Libellé visible du bouton \"Retirer\" de la carte de capture jointe."
+  },
+  "profileReportBugReplaceSemanticLabel": "Remplacer la capture d'écran",
+  "@profileReportBugReplaceSemanticLabel": {
+    "description": "Libellé d'accessibilité (`Semantics.label`) du bouton \"Remplacer\"."
+  },
+  "profileReportBugRemoveSemanticLabel": "Retirer la capture d'écran",
+  "@profileReportBugRemoveSemanticLabel": {
+    "description": "Libellé d'accessibilité (`Semantics.label`) du bouton \"Retirer\"."
+  },
+  "profileReportBugAttachedImageSemanticLabel": "Capture d'écran jointe",
+  "@profileReportBugAttachedImageSemanticLabel": {
+    "description": "Libellé d'accessibilité (`Semantics.label`) de la vignette de capture jointe."
   }
 }

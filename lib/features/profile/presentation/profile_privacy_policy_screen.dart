@@ -6,6 +6,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/legal_section_block.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Écran "Politique de confidentialité", route `/profile/privacy/policy` —
 /// poussé depuis la tuile éponyme de `ProfilePrivacyScreen` (qui affichait
@@ -42,173 +43,100 @@ class ProfilePrivacyPolicyScreen extends StatelessWidget {
   /// Contenu de l'écran, dans l'ordre d'affichage — voir la doc de classe
   /// pour le rationale du texte verbatim (validé par le chef de projet, non
   /// reformulable sans nouvelle validation).
-  static const List<LegalSectionBlock> _sections = [
+  ///
+  /// Fonction plutôt qu'une constante (depuis la migration `.arb`, chantier
+  /// "traduction de l'app" Phase B) : le texte dépend désormais de
+  /// [AppLocalizations], qui n'est disponible qu'avec un `BuildContext`.
+  static List<LegalSectionBlock> _sections(AppLocalizations l10n) => [
     LegalSectionBlock(
-      title: 'Introduction',
+      title: l10n.profilePrivacyPolicyIntroductionTitle,
+      paragraphs: [l10n.profilePrivacyPolicyIntroductionPara1],
+    ),
+    LegalSectionBlock(
+      title: l10n.profilePrivacyPolicySection1Title,
       paragraphs: [
-        'Cette politique explique quelles données Nexus JDR collecte, '
-            'pourquoi, avec qui elles sont partagées, et comment tu peux y '
-            'accéder, les exporter ou les supprimer.',
+        l10n.profilePrivacyPolicySection1Para1,
+        l10n.profilePrivacyPolicySection1Para2,
       ],
     ),
     LegalSectionBlock(
-      title: '1. Qui est responsable de tes données',
+      title: l10n.profilePrivacyPolicySection2Title,
       paragraphs: [
-        "Cette politique s'applique à l'application mobile Nexus JDR — "
-            "Personnages (Android) et à l'application web Nexus JDR "
-            '« Histoires » (nexus-jdr.app), qui partagent le même compte.',
-        'Responsable du traitement : Matthias Benoit, éditeur de Nexus JDR. '
-            'Contact : support@nexus-jdr.app.',
+        l10n.profilePrivacyPolicySection2Para1,
+        l10n.profilePrivacyPolicySection2Para2,
+        l10n.profilePrivacyPolicySection2Para3,
+        l10n.profilePrivacyPolicySection2Para4,
+        l10n.profilePrivacyPolicySection2Para5,
+        l10n.profilePrivacyPolicySection2Para6,
+        l10n.profilePrivacyPolicySection2Para7,
       ],
     ),
     LegalSectionBlock(
-      title: '2. Données collectées',
+      title: l10n.profilePrivacyPolicySection3Title,
+      paragraphs: [l10n.profilePrivacyPolicySection3Para1],
+    ),
+    LegalSectionBlock(
+      title: l10n.profilePrivacyPolicySection4Title,
       paragraphs: [
-        '• Compte : adresse e-mail et mot de passe (le mot de passe est '
-            "stocké chiffré par notre service d'authentification, nous ne le "
-            'voyons jamais), pseudo affiché et avatar facultatif.',
-        '• Contenu de jeu : tout ce que tu crées — personnages '
-            '(caractéristiques, compétences, sorts, inventaire, apparence, '
-            'histoire), journal, notes de groupe, groupes et histoires '
-            'rejoints, fichiers de personnage que tu importes.',
-        '• Photos : portrait de personnage, galerie et avatar, uniquement '
-            "les images que tu choisis de prendre avec l'appareil photo, "
-            "d'importer depuis ta galerie ou depuis une adresse web.",
-        "• Dictée vocale (notes de groupe, facultative) : le micro n'est "
-            'utilisé que pendant que tu dictes. La reconnaissance vocale est '
-            'assurée par le service de ton téléphone (par exemple Google sur '
-            'Android) ; nous ne recevons que le texte obtenu, jamais '
-            "l'enregistrement audio.",
-        '• Notifications : un identifiant technique de ton appareil (jeton '
-            'de notification) et tes préférences de notification, pour '
-            "t'envoyer les rappels et nouvelles de tes groupes.",
-        "• Statistiques d'utilisation : écrans consultés et actions "
-            "réalisées dans l'app, accompagnés d'informations techniques "
-            "(modèle d'appareil, système, version de l'app) et d'un "
-            "identifiant pseudonyme généré par l'outil de mesure. Ces "
-            'statistiques ne sont pas rattachées à ton compte ni à ton '
-            'adresse e-mail.',
-        '• Signalements de bug : titre, description et gravité que tu '
-            "saisis, version de l'app, plateforme et, si tu le choisis, le "
-            'personnage concerné.',
+        l10n.profilePrivacyPolicySection4Para1,
+        l10n.profilePrivacyPolicySection4Para2,
+        l10n.profilePrivacyPolicySection4Para3,
       ],
     ),
     LegalSectionBlock(
-      title: '3. Ce que nous ne collectons pas',
+      title: l10n.profilePrivacyPolicySection5Title,
       paragraphs: [
-        'Aucune donnée de localisation, aucun contact, aucune donnée de '
-            "paiement. Aucune publicité n'est affichée et aucune donnée "
-            "n'est vendue.",
+        l10n.profilePrivacyPolicySection5Para1,
+        l10n.profilePrivacyPolicySection5Para2,
+        l10n.profilePrivacyPolicySection5Para3,
+        l10n.profilePrivacyPolicySection5Para4,
+        l10n.profilePrivacyPolicySection5Para5,
+        l10n.profilePrivacyPolicySection5Para6,
+        l10n.profilePrivacyPolicySection5Para7,
+        l10n.profilePrivacyPolicySection5Para8,
+        l10n.profilePrivacyPolicySection5Para9,
+        l10n.profilePrivacyPolicySection5Para10,
       ],
     ),
     LegalSectionBlock(
-      title: '4. Pourquoi nous utilisons ces données',
+      title: l10n.profilePrivacyPolicySection6Title,
       paragraphs: [
-        '• Fournir le service (compte, fiches, groupes, synchronisation avec '
-            'ton MJ, photos, notifications que tu actives) : c’est '
-            "nécessaire à l'exécution du service que tu utilises.",
-        "• Améliorer l'app (statistiques d'utilisation) : intérêt légitime "
-            'à comprendre quelles fonctionnalités sont utilisées. Tu peux '
-            "t'y opposer à tout moment dans Profil > Confidentialité et "
-            "données > Partager mes données d'usage.",
-        '• Corriger les bugs que tu nous signales.',
+        l10n.profilePrivacyPolicySection6Para1,
+        l10n.profilePrivacyPolicySection6Para2,
+        l10n.profilePrivacyPolicySection6Para3,
       ],
     ),
     LegalSectionBlock(
-      title: '5. Avec qui tes données sont partagées',
+      title: l10n.profilePrivacyPolicySection7Title,
       paragraphs: [
-        "Avec d'autres utilisateurs, uniquement à ton initiative : le MJ et "
-            'les membres des histoires ou groupes que tu rejoins voient les '
-            'personnages que tu y rattaches ; si tu crées un lien de partage '
-            'de fiche, toute personne disposant de ce lien peut consulter la '
-            "fiche en lecture seule, jusqu'à ce que tu le désactives.",
-        'Avec nos prestataires techniques, qui traitent les données pour '
-            'notre compte :',
-        '• Supabase — hébergement de la base de données, de '
-            "l'authentification et des photos.",
-        '• Google Firebase — envoi des notifications (Firebase Cloud '
-            "Messaging) et statistiques d'utilisation (Firebase Analytics).",
-        '• Google Firebase Crashlytics — rapports de plantage (traces '
-            "techniques de l'erreur et informations sur ton appareil), "
-            "collectés systématiquement pour maintenir la stabilité de "
-            "l'app. Contrairement aux statistiques d'utilisation "
-            '(Firebase Analytics/PostHog, voir ci-dessus), ce recueil ne '
-            "peut pas être désactivé depuis l'app : notre intérêt légitime "
-            "à diagnostiquer et corriger les plantages de l'app prévaut ici.",
-        "• PostHog (hébergement dans l'Union européenne) — statistiques "
-            "d'utilisation.",
-        "• GitHub — suivi des bugs signalés : le contenu d'un signalement "
-            '(titre, description, gravité, version, plateforme) est publié '
-            'comme ticket dans un dépôt public, sans ton adresse e-mail ni '
-            "ton nom. N'y indique donc aucune information personnelle.",
-        '• Resend — envoi des e-mails transactionnels (confirmation de '
-            'compte, réinitialisation de mot de passe).',
-        '• Vercel — hébergement du site nexus-jdr.app.',
-        'Certains de ces prestataires peuvent traiter des données hors de '
-            "l'Union européenne ; ces transferts sont encadrés par les "
-            'garanties prévues par le RGPD (clauses contractuelles types de '
-            'la Commission européenne ou cadre de protection des données '
-            'UE–États-Unis).',
+        l10n.profilePrivacyPolicySection7Para1,
+        l10n.profilePrivacyPolicySection7Para2,
+        l10n.profilePrivacyPolicySection7Para3,
+        l10n.profilePrivacyPolicySection7Para4,
+        l10n.profilePrivacyPolicySection7Para5,
+        l10n.profilePrivacyPolicySection7Para6,
       ],
     ),
     LegalSectionBlock(
-      title: '6. Durée de conservation',
-      paragraphs: [
-        '• Compte, contenu de jeu et photos : tant que ton compte existe. '
-            'Ils sont supprimés définitivement dès que tu supprimes ton '
-            'compte.',
-        "• Statistiques d'utilisation : conservées sous forme pseudonyme, "
-            'sans lien avec ton compte, pendant la durée de conservation '
-            'paramétrée dans les outils de mesure.',
-        '• Signalements de bug : le temps nécessaire à leur traitement.',
-      ],
+      title: l10n.profilePrivacyPolicySection8Title,
+      paragraphs: [l10n.profilePrivacyPolicySection8Para1],
     ),
     LegalSectionBlock(
-      title: '7. Tes droits',
-      paragraphs: [
-        "Conformément au RGPD, tu disposes d'un droit d'accès, de "
-            "rectification, d'effacement, de portabilité, d'opposition et de "
-            "limitation du traitement. Directement depuis l'app :",
-        '• Exporter tes données : Profil > Confidentialité et données > '
-            'Exporter mes données.',
-        '• Supprimer ton compte et toutes tes données : Profil > '
-            'Confidentialité et données > Supprimer mon compte.',
-        "• Désactiver les statistiques d'utilisation : Profil > "
-            'Confidentialité et données.',
-        '• Désactiver les notifications : dans les réglages de notification '
-            "de l'app ou de ton téléphone.",
-        'Pour toute autre demande, écris à support@nexus-jdr.app. Tu peux '
-            'aussi introduire une réclamation auprès de la CNIL '
-            '(www.cnil.fr).',
-      ],
-    ),
-    LegalSectionBlock(
-      title: '8. Sécurité',
-      paragraphs: [
-        'Les échanges avec nos serveurs sont chiffrés (HTTPS). L’accès '
-            "à tes données est protégé par l'authentification de ton compte "
-            "et par des règles d'accès qui empêchent tout autre utilisateur "
-            'de lire ou modifier ce que tu ne partages pas.',
-      ],
-    ),
-    LegalSectionBlock(
-      title: '9. Modifications de cette politique',
-      paragraphs: [
-        "Cette politique peut évoluer avec l'application. La date de "
-            'dernière mise à jour figure en bas de cet écran ; en cas de '
-            "changement important, tu en seras informé dans l'app.",
-      ],
+      title: l10n.profilePrivacyPolicySection9Title,
+      paragraphs: [l10n.profilePrivacyPolicySection9Para1],
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final sections = _sections(l10n);
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,
       body: Column(
         children: [
           WoodBackHeader(
-            title: 'POLITIQUE DE CONFIDENTIALITÉ',
+            title: l10n.profilePrivacyPolicyScreenTitle,
             onBack: () => _goBack(context),
           ),
           Expanded(
@@ -217,13 +145,13 @@ class ProfilePrivacyPolicyScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (var i = 0; i < _sections.length; i++) ...[
-                    _sections[i],
-                    if (i < _sections.length - 1) const _SectionDivider(),
+                  for (var i = 0; i < sections.length; i++) ...[
+                    sections[i],
+                    if (i < sections.length - 1) const _SectionDivider(),
                   ],
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'Dernière mise à jour : 1er novembre 2026',
+                    l10n.profilePrivacyPolicyLastUpdated,
                     style: AppTypography.body(
                       fontSize: 11,
                       color: AppColors.textMuted,

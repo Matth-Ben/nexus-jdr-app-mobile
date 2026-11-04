@@ -13,6 +13,7 @@ import '../../../../core/widgets/alert_banner.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/wood_back_header.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../auth/domain/auth_failure.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 
@@ -52,6 +53,7 @@ class _AvatarCropScreenState extends ConsumerState<AvatarCropScreen> {
     // évite d'utiliser `context`/`MediaQuery.of(context)` après un gap
     // asynchrone (`use_build_context_synchronously`).
     final pixelRatio = MediaQuery.of(context).devicePixelRatio;
+    final l10n = AppLocalizations.of(context)!;
 
     setState(() {
       _isUploading = true;
@@ -65,7 +67,7 @@ class _AvatarCropScreenState extends ConsumerState<AvatarCropScreen> {
       if (!mounted) return;
       setState(() {
         _isUploading = false;
-        _errorMessage = _offlineMessage;
+        _errorMessage = l10n.profileAvatarCropOfflineMessage;
       });
       return;
     }
@@ -78,7 +80,7 @@ class _AvatarCropScreenState extends ConsumerState<AvatarCropScreen> {
       final image = await boundary.toImage(pixelRatio: pixelRatio);
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) {
-        throw const AuthFailure("Impossible de préparer l'image. Réessayez.");
+        throw AuthFailure(l10n.profileAvatarCropPrepareImageError);
       }
 
       await ref
@@ -97,7 +99,7 @@ class _AvatarCropScreenState extends ConsumerState<AvatarCropScreen> {
       if (!mounted) return;
       setState(() {
         _isUploading = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.profileAvatarCropGenericError;
       });
     }
   }
@@ -114,12 +116,16 @@ class _AvatarCropScreenState extends ConsumerState<AvatarCropScreen> {
     // `edit_display_name_sheet.dart`) : seul garde-fou qui couvre le geste
     // retour Android, chemin entièrement distinct du bouton retour visible
     // (`WoodBackHeader`/`_cancel`, déjà gardé par `_isUploading`).
+    final l10n = AppLocalizations.of(context)!;
     return PopScope(
       canPop: !_isUploading,
       child: Scaffold(
         body: Column(
           children: [
-            WoodBackHeader(title: 'RECADRAGE', onBack: _cancel),
+            WoodBackHeader(
+              title: l10n.profileAvatarCropScreenTitle,
+              onBack: _cancel,
+            ),
             Expanded(
               child: ColoredBox(
                 color: AppColors.woodDark.withValues(alpha: 0.55),
@@ -161,7 +167,7 @@ class _AvatarCropScreenState extends ConsumerState<AvatarCropScreen> {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        'Pincez pour zoomer, glissez pour cadrer.',
+                        l10n.profileAvatarCropInstructions,
                         style: AppTypography.body(
                           fontSize: 12,
                           color: AppColors.textOnWoodMuted,
@@ -184,7 +190,7 @@ class _AvatarCropScreenState extends ConsumerState<AvatarCropScreen> {
                     children: [
                       Expanded(
                         child: SecondaryButton(
-                          label: 'Annuler',
+                          label: l10n.profileAvatarCropCancel,
                           surface: SecondaryButtonSurface.parchment,
                           onPressed: _isUploading ? null : _cancel,
                         ),
@@ -192,7 +198,7 @@ class _AvatarCropScreenState extends ConsumerState<AvatarCropScreen> {
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: PrimaryButton(
-                          label: 'Valider',
+                          label: l10n.profileAvatarCropConfirm,
                           isLoading: _isUploading,
                           onPressed: _submit,
                         ),
@@ -208,12 +214,3 @@ class _AvatarCropScreenState extends ConsumerState<AvatarCropScreen> {
     );
   }
 }
-
-/// Voir [_offlineMessage] : même texte que
-/// `edit_display_name_sheet.dart`/`report_bug_sheet.dart`.
-const String _offlineMessage =
-    "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-    'fois reconnecté.';
-
-const String _genericErrorMessage =
-    "Impossible de mettre à jour l'avatar. Réessayez.";

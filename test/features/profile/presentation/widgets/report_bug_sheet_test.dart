@@ -30,6 +30,7 @@ import 'package:personnages/features/bug_report/domain/bug_report_failure.dart';
 import 'package:personnages/features/bug_report/domain/bug_report_screenshot.dart';
 import 'package:personnages/features/bug_report/presentation/providers/bug_report_providers.dart';
 import 'package:personnages/features/profile/presentation/widgets/report_bug_sheet.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 class _FakeBugReportRepository implements BugReportRepository {
   final Completer<void> gate = Completer<void>();
@@ -115,6 +116,7 @@ Future<_FakeBugReportRepository> _pumpSheet(
   String? characterId,
   _FakeScreenshotPicker? picker,
   _FakeConnectivityChecker? connectivity,
+  Locale locale = const Locale('fr'),
 }) async {
   final repository = _FakeBugReportRepository();
   await tester.pumpWidget(
@@ -129,6 +131,14 @@ Future<_FakeBugReportRepository> _pumpSheet(
         ),
       ],
       child: MaterialApp(
+        // `report_bug_sheet.dart` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B) — sans ces delegates,
+        // l'appel renverrait `null` et le `!` planterait. `fr` par défaut,
+        // `en` passé explicitement par les tests du groupe "locale
+        // anglaise".
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -1002,6 +1012,32 @@ void main() {
 
   group('bandeau d\'erreur d\'envoi', _scrollBackToBannerTests);
   group('QA : cas limites de la capture', _captureEdgeCaseTests);
+
+  group('locale anglaise', () {
+    testWidgets(
+      'affiche le titre, les champs et les 4 tuiles de sévérité en anglais',
+      (tester) async {
+        await _pumpSheet(tester, locale: const Locale('en'));
+
+        expect(find.text('REPORT A BUG'), findsOneWidget);
+        expect(find.text('TITLE'), findsOneWidget);
+        expect(find.text('DESCRIPTION'), findsOneWidget);
+        expect(find.text('WHAT KIND OF ISSUE?'), findsOneWidget);
+        expect(find.text('Annoying'), findsOneWidget);
+        expect(find.text('Problematic'), findsOneWidget);
+        expect(find.text('It blocks everything'), findsOneWidget);
+        expect(find.text('Content to fix'), findsOneWidget);
+      },
+    );
+
+    testWidgets('envoi réussi affiche le SnackBar en anglais', (tester) async {
+      await _pumpSheet(tester, locale: const Locale('en'));
+      await _fillFields(tester);
+      await _tapSend(tester);
+
+      expect(find.text('Thanks, your report has been sent!'), findsOneWidget);
+    });
+  });
 }
 
 void _captureEdgeCaseTests() {

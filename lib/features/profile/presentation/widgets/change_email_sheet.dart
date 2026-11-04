@@ -10,6 +10,7 @@ import '../../../../core/widgets/info_banner.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../auth/domain/auth_failure.dart';
 import '../../../auth/domain/auth_validators.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
@@ -43,25 +44,11 @@ Future<void> showChangeEmailSheet(
         _ChangeEmailSheetContent(currentEmail: currentEmail),
   );
   if (sent != true || !context.mounted) return;
+  final l10n = AppLocalizations.of(context)!;
   ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text(
-        'Email de confirmation envoyé. Vérifie ta boîte de réception pour '
-        'finaliser le changement.',
-      ),
-    ),
+    SnackBar(content: Text(l10n.profileChangeEmailConfirmationSnackbar)),
   );
 }
-
-/// Hors-ligne (vérifié *avant* l'appel réseau) — même texte que
-/// `change_password_sheet.dart`, pas de file d'attente hors-ligne pour cette
-/// écriture (`AuthRepository.updateEmail`).
-const String _offlineMessage =
-    "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-    'fois reconnecté.';
-
-const String _genericErrorMessage =
-    "Impossible d'envoyer le nouvel email. Réessayez.";
 
 class _ChangeEmailSheetContent extends ConsumerStatefulWidget {
   const _ChangeEmailSheetContent({required this.currentEmail});
@@ -93,6 +80,7 @@ class _ChangeEmailSheetContentState
     // `change_password_sheet.dart::_submit`.
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) return;
+    final l10n = AppLocalizations.of(context)!;
 
     setState(() {
       _isSaving = true;
@@ -100,12 +88,12 @@ class _ChangeEmailSheetContentState
     });
 
     // Vérifié *avant* toute tentative réseau — voir la documentation de
-    // [_offlineMessage].
+    // `profileChangeEmailOfflineMessage`.
     if (!await ref.read(connectivityCheckerProvider).hasConnection()) {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _offlineMessage;
+        _errorMessage = l10n.profileChangeEmailOfflineMessage;
       });
       return;
     }
@@ -127,13 +115,14 @@ class _ChangeEmailSheetContentState
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.profileChangeEmailGenericError;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Voir `change_password_sheet.dart` pour le rationale complet de ce
     // `PopScope`.
     return PopScope(
@@ -161,7 +150,7 @@ class _ChangeEmailSheetContentState
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SheetHeaderBar(
-                      title: 'ADRESSE EMAIL',
+                      title: l10n.profileChangeEmailTitle,
                       closeEnabled: !_isSaving,
                     ),
                     Flexible(
@@ -178,12 +167,9 @@ class _ChangeEmailSheetContentState
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const InfoBanner(
+                              InfoBanner(
                                 icon: Icons.mark_email_unread_outlined,
-                                message:
-                                    'Un email de confirmation sera envoyé à '
-                                    'cette adresse. Le changement ne sera '
-                                    "effectif qu'après confirmation.",
+                                message: l10n.profileChangeEmailInfoBanner,
                               ),
                               const SizedBox(height: AppSpacing.md),
                               if (_errorMessage != null) ...[
@@ -191,7 +177,7 @@ class _ChangeEmailSheetContentState
                                 const SizedBox(height: AppSpacing.md),
                               ],
                               Text(
-                                'NOUVELLE ADRESSE EMAIL',
+                                l10n.profileChangeEmailFieldLabel,
                                 style: AppTypography.body(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800,
@@ -203,14 +189,17 @@ class _ChangeEmailSheetContentState
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 autocorrect: false,
-                                decoration: const InputDecoration(
-                                  hintText: 'nom@exemple.com',
+                                decoration: InputDecoration(
+                                  hintText: l10n.profileChangeEmailHint,
                                 ),
-                                validator: AuthValidators.email,
+                                validator: (value) =>
+                                    AuthValidators.email(value, l10n),
                               ),
                               const SizedBox(height: AppSpacing.xs),
                               Text(
-                                'Adresse actuelle : ${widget.currentEmail}',
+                                l10n.profileChangeEmailCurrentAddress(
+                                  widget.currentEmail,
+                                ),
                                 style: AppTypography.body(
                                   fontSize: 12,
                                   color: AppColors.textMuted,
@@ -232,7 +221,7 @@ class _ChangeEmailSheetContentState
                         children: [
                           Expanded(
                             child: SecondaryButton(
-                              label: 'Annuler',
+                              label: l10n.profileChangeEmailCancel,
                               surface: SecondaryButtonSurface.parchment,
                               onPressed: _isSaving
                                   ? null
@@ -242,7 +231,7 @@ class _ChangeEmailSheetContentState
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: PrimaryButton(
-                              label: 'Enregistrer',
+                              label: l10n.profileChangeEmailSave,
                               isLoading: _isSaving,
                               onPressed: _submit,
                             ),

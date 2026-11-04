@@ -12,6 +12,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/profile_avatar.dart';
 import '../../../core/widgets/sheet_action_row.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../auth/domain/auth_failure.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import 'widgets/avatar_edit_sheet.dart';
@@ -112,6 +113,10 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
   Future<void> _submit() async {
     if (!_canSave) return;
     final trimmed = _pseudoController.text.trim();
+    // Capturé avant tout `await` (même précaution que
+    // `avatar_crop_screen.dart`) : les gardes `mounted` ci-dessous couvrent
+    // déjà l'usage de `context`/`l10n` après chaque point d'attente.
+    final l10n = AppLocalizations.of(context)!;
 
     setState(() {
       _isSaving = true;
@@ -122,7 +127,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _offlineMessage;
+        _errorMessage = l10n.profileEditOfflineMessage;
       });
       return;
     }
@@ -137,7 +142,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
         _initialPseudo = trimmed;
       });
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Pseudo mis à jour.')));
+          .showSnackBar(SnackBar(content: Text(l10n.profileEditSavedSnackbar)));
     } on AuthFailure catch (failure) {
       if (!mounted) return;
       setState(() {
@@ -149,7 +154,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.profileEditGenericError;
       });
     }
   }
@@ -165,6 +170,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(currentUserProvider);
     final avatarUrl = user?.userMetadata?['avatar_url'] as String?;
     final email = user?.email ?? '';
@@ -173,7 +179,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
       backgroundColor: AppColors.parchmentBg,
       body: Column(
         children: [
-          WoodBackHeader(title: 'MODIFIER LE PROFIL', onBack: _goBack),
+          WoodBackHeader(title: l10n.profileEditScreenTitle, onBack: _goBack),
           Expanded(
             child: SafeArea(
               top: false,
@@ -186,7 +192,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                         children: [
                           _AvatarSection(avatarUrl: avatarUrl),
                           const SizedBox(height: AppSpacing.lg),
-                          _FieldLabel('Pseudo'),
+                          _FieldLabel(l10n.profileEditPseudoLabel),
                           const SizedBox(height: AppSpacing.xs),
                           TextFormField(
                             controller: _pseudoController,
@@ -194,12 +200,12 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                             minLines: 1,
                             maxLines: 1,
                             textInputAction: TextInputAction.done,
-                            decoration: const InputDecoration(
-                              hintText: "Comment veux-tu qu'on t'appelle ?",
+                            decoration: InputDecoration(
+                              hintText: l10n.profileEditPseudoHint,
                             ),
                           ),
                           const SizedBox(height: AppSpacing.md),
-                          _FieldLabel('E-mail'),
+                          _FieldLabel(l10n.profileEditEmailLabel),
                           const SizedBox(height: AppSpacing.xs),
                           _DisabledEmailField(
                             email: email,
@@ -210,8 +216,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                           ),
                           const SizedBox(height: AppSpacing.xs),
                           Text(
-                            "Modifier l'e-mail envoie un lien de "
-                            'confirmation à la nouvelle adresse.',
+                            l10n.profileEditEmailChangeNotice,
                             style: AppTypography.body(
                               fontSize: 12,
                               color: AppColors.textMuted,
@@ -220,7 +225,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                           const SizedBox(height: AppSpacing.md),
                           MenuTile(
                             icon: Icons.lock_outline,
-                            label: 'Changer le mot de passe',
+                            label: l10n.profileEditChangePassword,
                             onTap: () => showChangePasswordSheet(context),
                           ),
                         ],
@@ -243,7 +248,7 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
                         const SheetActionDivider(),
                         const SizedBox(height: AppSpacing.sm),
                         PrimaryButton(
-                          label: 'Enregistrer',
+                          label: l10n.profileEditSaveButton,
                           isLoading: _isSaving,
                           onPressed: _canSave ? _submit : null,
                         ),
@@ -259,16 +264,6 @@ class _ProfileEditScreenState extends ConsumerState<ProfileEditScreen> {
     );
   }
 }
-
-/// Hors-ligne (vérifié *avant* l'appel réseau) — même texte que
-/// `edit_display_name_sheet.dart`, pas de file d'attente hors-ligne pour
-/// cette écriture (`AuthRepository.updateDisplayName`).
-const String _offlineMessage =
-    "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-    'fois reconnecté.';
-
-const String _genericErrorMessage =
-    "Impossible d'enregistrer les modifications. Réessayez.";
 
 /// Libellé de champ ("Pseudo"/"E-mail") — copie de
 /// `login_screen.dart::_FieldLabel` (même style, privé à son propre
@@ -309,6 +304,7 @@ class _AvatarSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     void openAvatarSheet() =>
         showAvatarEditSheet(context, ref: ref, avatarUrl: avatarUrl);
 
@@ -353,7 +349,10 @@ class _AvatarSection extends ConsumerWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _AvatarLink(label: 'Prendre une photo', onTap: openAvatarSheet),
+            _AvatarLink(
+              label: l10n.profileEditTakePhoto,
+              onTap: openAvatarSheet,
+            ),
             Text(
               ' · ',
               style: AppTypography.body(
@@ -362,7 +361,7 @@ class _AvatarSection extends ConsumerWidget {
               ),
             ),
             _AvatarLink(
-              label: 'Choisir dans la galerie',
+              label: l10n.profileEditChoosePhoto,
               onTap: openAvatarSheet,
             ),
           ],

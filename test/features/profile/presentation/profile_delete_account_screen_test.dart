@@ -27,6 +27,7 @@ import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/presentation/profile_delete_account_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakeAuthRepository implements AuthRepository {
@@ -130,6 +131,7 @@ Future<_FakeAuthRepository> _pumpScreen(
   WidgetTester tester, {
   bool connected = true,
   String email = 'joueur@exemple.com',
+  Locale locale = const Locale('fr'),
 }) async {
   final repository = _FakeAuthRepository();
   await tester.pumpWidget(
@@ -142,6 +144,14 @@ Future<_FakeAuthRepository> _pumpScreen(
         ),
       ],
       child: MaterialApp.router(
+        // `ProfileDeleteAccountScreen` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B) — sans ces delegates,
+        // l'appel renverrait `null` et le `!` planterait. `fr` par défaut,
+        // `en` passé explicitement par les tests du groupe "locale
+        // anglaise".
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         routerConfig: GoRouter(
           initialLocation: '/',
           routes: [
@@ -447,5 +457,22 @@ void main() {
 
     expect(find.text('SUPPRIMER LE COMPTE'), findsNothing);
     expect(find.text('Ouvrir'), findsOneWidget);
+  });
+
+  group('locale anglaise', () {
+    testWidgets('affiche le bandeau bois et les textes clés en anglais', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, locale: const Locale('en'));
+
+      expect(find.text('DELETE ACCOUNT'), findsOneWidget);
+      expect(find.text('IRREVERSIBLE ACTION'), findsOneWidget);
+      expect(find.text('WHAT WILL BE DELETED'), findsOneWidget);
+      expect(
+        find.widgetWithText(DestructiveButton, 'DELETE PERMANENTLY'),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(SecondaryButton, 'CANCEL'), findsOneWidget);
+    });
   });
 }

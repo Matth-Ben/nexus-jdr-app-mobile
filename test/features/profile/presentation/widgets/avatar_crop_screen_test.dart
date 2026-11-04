@@ -36,6 +36,7 @@ import 'package:personnages/features/auth/data/auth_repository.dart';
 import 'package:personnages/features/auth/domain/auth_failure.dart';
 import 'package:personnages/features/auth/presentation/providers/auth_providers.dart';
 import 'package:personnages/features/profile/presentation/widgets/avatar_crop_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 final Uint8List _fakePngBytes = base64Decode(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGNgAAAAAgABSK+kc'
@@ -125,6 +126,7 @@ class _FakeConnectivityChecker implements ConnectivityChecker {
 Future<_FakeAuthRepository> _pumpScreen(
   WidgetTester tester, {
   bool connected = true,
+  Locale locale = const Locale('fr'),
 }) async {
   final repository = _FakeAuthRepository();
   await tester.pumpWidget(
@@ -136,6 +138,13 @@ Future<_FakeAuthRepository> _pumpScreen(
         ),
       ],
       child: MaterialApp(
+        // `AvatarCropScreen` lit `AppLocalizations.of(context)!` (chantier
+        // "traduction de l'app" Phase B) — sans ces delegates, l'appel
+        // renverrait `null` et le `!` planterait. `fr` par défaut, `en`
+        // passé explicitement par les tests du groupe "locale anglaise".
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
@@ -368,4 +377,14 @@ void main() {
       expect(find.text('RECADRAGE'), findsNothing);
     },
   );
+
+  group('locale anglaise', () {
+    testWidgets('affiche le titre et les boutons en anglais', (tester) async {
+      await _pumpScreen(tester, locale: const Locale('en'));
+
+      expect(find.text('CROP'), findsOneWidget);
+      expect(find.widgetWithText(SecondaryButton, 'CANCEL'), findsOneWidget);
+      expect(find.widgetWithText(PrimaryButton, 'CONFIRM'), findsOneWidget);
+    });
+  });
 }

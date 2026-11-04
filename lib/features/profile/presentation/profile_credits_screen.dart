@@ -6,6 +6,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/legal_section_block.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Écran "Crédits & licences", route `/profile/help/credits` — poussé
 /// depuis la tuile éponyme de `ProfileHelpScreen` (qui affichait auparavant
@@ -42,53 +43,34 @@ import '../../../core/widgets/wood_back_header.dart';
 class ProfileCreditsScreen extends StatelessWidget {
   const ProfileCreditsScreen({super.key});
 
-  static const LegalSectionBlock _gameContentSection = LegalSectionBlock(
-    title: 'Contenu de jeu',
-    paragraphs: [
-      'Le contenu de règles Donjons & Dragons 5e (races, classes, '
-          'historiques, sorts, objets, monstres...) provient d\'Open5e et '
-          'du System Reference Document (SRD 5.1/5.2) de Wizards of the '
-          'Coast, sous licence Creative Commons Attribution 4.0 '
-          'International (CC-BY 4.0).',
-      'Donjons & Dragons, D&D et leurs logos sont des marques de Wizards '
-          "of the Coast LLC. Wizards of the Coast n'a ni produit, ni "
-          'approuvé, ni autorisé cette application.',
-    ],
-  );
-
-  static const LegalSectionBlock _openSourceSection = LegalSectionBlock(
-    title: 'Bibliothèques open source',
-    paragraphs: [
-      'Flutter · Riverpod · Supabase Flutter · Drift · Freezed · '
-          'go_router · image_picker · file_picker · connectivity_plus · '
-          'package_info_plus · share_plus · app_settings · url_launcher · '
-          'Firebase (Core, Messaging) · shared_preferences',
-      'Ainsi que les autres bibliothèques listées dans le fichier '
-          'pubspec.yaml du projet, chacune sous sa licence open source '
-          "d'origine.",
-    ],
-  );
-
-  static const LegalSectionBlock _fontsSection = LegalSectionBlock(
-    title: 'Polices',
-    paragraphs: [
-      'Press Start 2P (The Press Start 2P Project Authors) et Work Sans '
-          '(The Work Sans Project Authors) sont distribuées sous licence '
-          'SIL Open Font License, version 1.1 '
-          '(scripts.sil.org/OFL), et embarquées telles quelles dans '
-          "l'application depuis le dépôt officiel Google Fonts "
-          '(github.com/google/fonts).',
-    ],
-  );
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final gameContentSection = LegalSectionBlock(
+      title: l10n.profileCreditsGameContentTitle,
+      paragraphs: [
+        l10n.profileCreditsGameContentPara1,
+        l10n.profileCreditsGameContentPara2,
+      ],
+    );
+    final openSourceSection = LegalSectionBlock(
+      title: l10n.profileCreditsOpenSourceTitle,
+      paragraphs: [
+        l10n.profileCreditsOpenSourcePara1,
+        l10n.profileCreditsOpenSourcePara2,
+      ],
+    );
+    final fontsSection = LegalSectionBlock(
+      title: l10n.profileCreditsFontsTitle,
+      paragraphs: [l10n.profileCreditsFontsPara1],
+    );
+
     return Scaffold(
       backgroundColor: AppColors.parchmentBg,
       body: Column(
         children: [
           WoodBackHeader(
-            title: 'CRÉDITS & LICENCES',
+            title: l10n.profileCreditsScreenTitle,
             onBack: () => _goBack(context),
           ),
           Expanded(
@@ -97,16 +79,16 @@ class ProfileCreditsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _gameContentSection,
+                  gameContentSection,
                   const SizedBox(height: AppSpacing.lg),
                   const _LicenseNoticeBox(),
                   const _SectionDivider(),
-                  _fontsSection,
+                  fontsSection,
                   const _SectionDivider(),
-                  _openSourceSection,
+                  openSourceSection,
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'Dernière mise à jour : 14 octobre 2026',
+                    l10n.profileCreditsLastUpdated,
                     style: AppTypography.body(
                       fontSize: 11,
                       color: AppColors.textMuted,
@@ -167,6 +149,7 @@ class _LicenseNoticeBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.parchmentCardAlt,
@@ -179,10 +162,7 @@ class _LicenseNoticeBox extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Text(
-          'Ce produit inclut des éléments du System Reference Document '
-          '5.1 et 5.2, disponibles sur dndbeyond.com/srd et open5e.com, '
-          'sous licence Creative Commons Attribution 4.0 International '
-          '(creativecommons.org/licenses/by/4.0/legalcode).',
+          l10n.profileCreditsLicenseNotice,
           style: AppTypography.body(
             fontSize: 12,
             color: AppColors.textSecondary,

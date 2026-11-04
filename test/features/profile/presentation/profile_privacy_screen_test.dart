@@ -39,6 +39,7 @@ import 'package:personnages/features/profile/presentation/profile_delete_account
 import 'package:personnages/features/profile/presentation/profile_privacy_policy_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_privacy_screen.dart';
 import 'package:personnages/features/profile/presentation/providers/data_export_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -141,6 +142,7 @@ User _fakeUser() {
 Future<void> _pumpScreen(
   WidgetTester tester, {
   AnalyticsService? analyticsService,
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -158,6 +160,14 @@ Future<void> _pumpScreen(
         ),
       ],
       child: MaterialApp.router(
+        // `ProfilePrivacyScreen` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B) — sans ces delegates,
+        // l'appel renverrait `null` et le `!` planterait. `fr` par défaut,
+        // `en` passé explicitement par les tests du groupe "locale
+        // anglaise".
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         routerConfig: GoRouter(
           initialLocation: '/',
           routes: [
@@ -376,5 +386,24 @@ void main() {
         expect(switchWidget.value, isFalse);
       },
     );
+  });
+
+  group('locale anglaise', () {
+    testWidgets('affiche le bandeau bois et les tuiles en anglais', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, locale: const Locale('en'));
+
+      expect(find.text('PRIVACY'), findsOneWidget);
+      expect(find.text('MY DATA'), findsOneWidget);
+      expect(find.text('Export my data'), findsOneWidget);
+      expect(find.text('Privacy policy'), findsOneWidget);
+      expect(find.text('Device permissions'), findsOneWidget);
+      expect(find.text('DANGER ZONE'), findsOneWidget);
+      expect(
+        find.widgetWithText(DestructiveMenuTile, 'Delete my account'),
+        findsOneWidget,
+      );
+    });
   });
 }

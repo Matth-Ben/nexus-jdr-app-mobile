@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /// Ouvre la sheet "Gestion des autorisations appareil" (tuile éponyme de
 /// `presentation/profile_privacy_screen.dart`) — sheet compacte (wrap-content,
@@ -35,6 +36,7 @@ class _DevicePermissionsSheetContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: DecoratedBox(
@@ -42,7 +44,7 @@ class _DevicePermissionsSheetContent extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SheetHeaderBar(title: 'GESTION DES AUTORISATIONS APPAREIL'),
+            SheetHeaderBar(title: l10n.profileDevicePermissionsTitle),
             // `Flexible` + défilement : la barre de tête grandit avec un texte
             // agrandi dans les réglages du téléphone, le corps ne doit alors
             // jamais déborder du panneau sur petit écran (même principe que
@@ -55,10 +57,7 @@ class _DevicePermissionsSheetContent extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       child: Text(
-                        'Nexus JDR utilise l\'appareil photo et la galerie '
-                        'uniquement pour définir le portrait de ton personnage ou '
-                        'ton avatar. Pour modifier ces autorisations, ouvre les '
-                        'réglages de ton téléphone.',
+                        l10n.profileDevicePermissionsBody,
                         style: AppTypography.body(
                           fontSize: 13,
                           color: AppColors.textSecondary,
@@ -73,7 +72,7 @@ class _DevicePermissionsSheetContent extends StatelessWidget {
                         AppSpacing.lg,
                       ),
                       child: PrimaryButton(
-                        label: 'Ouvrir les réglages',
+                        label: l10n.profileDevicePermissionsOpenSettings,
                         onPressed: () => AppSettings.openAppSettings(),
                       ),
                     ),

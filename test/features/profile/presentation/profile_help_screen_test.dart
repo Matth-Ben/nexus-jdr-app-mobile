@@ -44,15 +44,24 @@ import 'package:personnages/features/profile/presentation/profile_credits_screen
 import 'package:personnages/features/profile/presentation/profile_faq_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_help_screen.dart';
 import 'package:personnages/features/profile/presentation/profile_legal_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 Future<void> _pumpScreen(
   WidgetTester tester, {
   List<Override> overrides = const [],
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: overrides,
       child: MaterialApp.router(
+        // `ProfileHelpScreen` lit `AppLocalizations.of(context)!` (chantier
+        // "traduction de l'app" Phase B) — sans ces delegates, l'appel
+        // renverrait `null` et le `!` planterait. `fr` par défaut, `en`
+        // passé explicitement par les tests du groupe "locale anglaise".
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         routerConfig: GoRouter(
           initialLocation: '/',
           routes: [
@@ -440,6 +449,26 @@ void main() {
       expect(body, contains('\n'));
       expect(body, contains('é'));
       expect(body, contains('è'));
+    });
+  });
+
+  group('locale anglaise', () {
+    testWidgets('affiche le bandeau bois et les 3 en-têtes de section en '
+        'anglais', (tester) async {
+      await _pumpScreen(tester, locale: const Locale('en'));
+
+      expect(find.text('HELP & SUPPORT'), findsOneWidget);
+      expect(find.text('FREQUENTLY ASKED QUESTIONS'), findsOneWidget);
+      expect(find.text('CONTACT US'), findsOneWidget);
+      expect(find.text('ABOUT'), findsOneWidget);
+    });
+
+    testWidgets('affiche les libellés de tuile en anglais', (tester) async {
+      await _pumpScreen(tester, locale: const Locale('en'));
+
+      expect(find.text('Contact support'), findsOneWidget);
+      expect(find.text('Report a bug'), findsOneWidget);
+      expect(find.text('Replay the app introduction'), findsOneWidget);
     });
   });
 }

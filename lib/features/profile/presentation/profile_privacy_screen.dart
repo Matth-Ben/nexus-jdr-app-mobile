@@ -10,6 +10,7 @@ import '../../../core/widgets/destructive_menu_tile.dart';
 import '../../../core/widgets/menu_tile.dart';
 import '../../../core/widgets/settings_list_card.dart';
 import '../../../core/widgets/wood_back_header.dart';
+import '../../../l10n/app_localizations.dart';
 import 'widgets/device_permissions_sheet.dart';
 import 'widgets/export_data_sheet.dart';
 
@@ -70,6 +71,7 @@ class ProfilePrivacyScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final analyticsEnabled = ref.watch(analyticsPreferencesControllerProvider);
 
     return Scaffold(
@@ -77,7 +79,7 @@ class ProfilePrivacyScreen extends ConsumerWidget {
       body: Column(
         children: [
           WoodBackHeader(
-            title: 'CONFIDENTIALITÉ',
+            title: l10n.profilePrivacyScreenTitle,
             onBack: () => _goBack(context),
           ),
           Expanded(
@@ -87,7 +89,7 @@ class ProfilePrivacyScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'MES DONNÉES',
+                    l10n.profilePrivacyDataSectionTitle,
                     style: AppTypography.body(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
@@ -100,19 +102,19 @@ class ProfilePrivacyScreen extends ConsumerWidget {
                       MenuTile(
                         standalone: false,
                         icon: Icons.download_outlined,
-                        label: 'Exporter mes données',
+                        label: l10n.profilePrivacyExportData,
                         onTap: () => showExportDataSheet(context),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.description_outlined,
-                        label: 'Politique de confidentialité',
+                        label: l10n.profilePrivacyPolicyLink,
                         onTap: () => context.push('/profile/privacy/policy'),
                       ),
                       MenuTile(
                         standalone: false,
                         icon: Icons.admin_panel_settings_outlined,
-                        label: "Autorisations de l'appareil",
+                        label: l10n.profilePrivacyDevicePermissions,
                         trailingIcon: Icons.north_east,
                         onTap: () => showDevicePermissionsSheet(context),
                       ),
@@ -120,10 +122,7 @@ class ProfilePrivacyScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    "L'export contient ton profil, tes personnages (leur "
-                    'inventaire, leurs sorts et leur historique), tes '
-                    'groupes et tes notes de groupe (JSON, proposé au '
-                    'partage depuis ton appareil).',
+                    l10n.profilePrivacyExportNote,
                     style: AppTypography.body(
                       fontSize: 12,
                       color: AppColors.textMuted,
@@ -131,13 +130,8 @@ class ProfilePrivacyScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _ToggleRow(
-                    title: 'Partager mes données d\'usage',
-                    subtitle:
-                        "Statistiques d'utilisation anonymes (Firebase "
-                        'Analytics, PostHog), pour améliorer l\'app. '
-                        'Désactivable à tout moment — les rapports de '
-                        'plantage restent toujours actifs pour la stabilité '
-                        "de l'app (voir Politique de confidentialité).",
+                    title: l10n.profilePrivacyShareUsageData,
+                    subtitle: l10n.profilePrivacyShareUsageDataSubtitle,
                     value: analyticsEnabled,
                     onChanged: (value) => ref
                         .read(analyticsPreferencesControllerProvider.notifier)
@@ -151,7 +145,7 @@ class ProfilePrivacyScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'ZONE DANGEREUSE',
+                    l10n.profilePrivacyDangerZoneTitle,
                     style: AppTypography.body(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
@@ -160,7 +154,7 @@ class ProfilePrivacyScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   DestructiveMenuTile(
-                    label: 'Supprimer mon compte',
+                    label: l10n.profilePrivacyDeleteAccount,
                     onTap: () =>
                         context.push('/profile/privacy/delete-account'),
                   ),

@@ -9,6 +9,7 @@ import '../../../../core/widgets/alert_banner.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../core/widgets/secondary_button.dart';
 import '../../../../core/widgets/sheet_header_bar.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../auth/domain/auth_failure.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 
@@ -43,28 +44,11 @@ Future<void> showEditDisplayNameSheet(BuildContext context) async {
     builder: (sheetContext) => const _EditDisplayNameSheetContent(),
   );
   if (saved != true || !context.mounted) return;
-  ScaffoldMessenger.of(context)
-      .showSnackBar(const SnackBar(content: Text('Pseudo mis à jour.')));
+  final l10n = AppLocalizations.of(context)!;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(l10n.profileEditDisplayNameUpdatedSnackbar)),
+  );
 }
-
-/// Message hors-ligne — texte identique à
-/// `character_story_edit_sheet.dart::_offlineMessage` (même bandeau inline,
-/// jamais un `SnackBar` pendant que la sheet reste ouverte).
-///
-/// Contrairement à `CharacterRepository.updateHp`/`updateStoryFields`...,
-/// `AuthRepository.updateDisplayName` n'a pas de file d'attente hors-ligne
-/// (`Supabase Auth` n'en a pas dans ce dépôt, voir sa documentation) : cette
-/// sheet vérifie donc elle-même la connectivité *avant* de tenter l'appel
-/// réseau (voir [_EditDisplayNameSheetContentState._submit]), pour ne
-/// jamais laisser un vrai appel réseau échouer silencieusement en "hors
-/// ligne" — même geste que `SupabaseCharacterRepository.updateHp`, reproduit
-/// ici côté sheet faute d'équivalent côté dépôt pour cette écriture précise.
-const String _offlineMessage =
-    "Hors ligne : cette action n'a pas pu être enregistrée. Réessayez une "
-    'fois reconnecté.';
-
-const String _genericErrorMessage =
-    "Impossible d'enregistrer les modifications. Réessayez.";
 
 class _EditDisplayNameSheetContent extends ConsumerStatefulWidget {
   const _EditDisplayNameSheetContent();
@@ -109,19 +93,21 @@ class _EditDisplayNameSheetContentState
 
   Future<void> _submit() async {
     if (_isSaving) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isSaving = true;
       _errorMessage = null;
     });
 
     // Vérifié *avant* toute tentative réseau — voir la documentation de
-    // [_offlineMessage] : `AuthRepository.updateDisplayName` n'a aucune file
-    // d'attente hors-ligne vers laquelle se replier.
+    // `profileEditDisplayNameOfflineMessage` : `AuthRepository
+    // .updateDisplayName` n'a aucune file d'attente hors-ligne vers
+    // laquelle se replier.
     if (!await ref.read(connectivityCheckerProvider).hasConnection()) {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _offlineMessage;
+        _errorMessage = l10n.profileEditDisplayNameOfflineMessage;
       });
       return;
     }
@@ -143,13 +129,14 @@ class _EditDisplayNameSheetContentState
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _errorMessage = _genericErrorMessage;
+        _errorMessage = l10n.profileEditDisplayNameGenericError;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Voir `character_story_edit_sheet.dart` pour le rationale complet de ce
     // `PopScope` (seul garde-fou qui couvre le geste retour Android, chemin
     // entièrement distinct du voile/du drag).
@@ -166,7 +153,10 @@ class _EditDisplayNameSheetContentState
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SheetHeaderBar(title: 'PSEUDO', closeEnabled: !_isSaving),
+                SheetHeaderBar(
+                  title: l10n.profileEditDisplayNameTitle,
+                  closeEnabled: !_isSaving,
+                ),
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   child: Column(
@@ -178,7 +168,7 @@ class _EditDisplayNameSheetContentState
                         const SizedBox(height: AppSpacing.md),
                       ],
                       Text(
-                        "NOM D'AFFICHAGE",
+                        l10n.profileEditDisplayNameFieldLabel,
                         style: AppTypography.body(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -190,8 +180,8 @@ class _EditDisplayNameSheetContentState
                         controller: _controller,
                         minLines: 1,
                         maxLines: 1,
-                        decoration: const InputDecoration(
-                          hintText: "Comment veux-tu qu'on t'appelle ?",
+                        decoration: InputDecoration(
+                          hintText: l10n.profileEditDisplayNameHint,
                         ),
                       ),
                     ],
@@ -208,7 +198,7 @@ class _EditDisplayNameSheetContentState
                     children: [
                       Expanded(
                         child: SecondaryButton(
-                          label: 'Annuler',
+                          label: l10n.profileEditDisplayNameCancel,
                           surface: SecondaryButtonSurface.parchment,
                           onPressed: _isSaving
                               ? null
@@ -218,7 +208,7 @@ class _EditDisplayNameSheetContentState
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: PrimaryButton(
-                          label: 'Enregistrer',
+                          label: l10n.profileEditDisplayNameSave,
                           isLoading: _isSaving,
                           onPressed: _submit,
                         ),

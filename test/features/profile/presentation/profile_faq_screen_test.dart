@@ -13,6 +13,7 @@ import 'package:personnages/core/theme/app_colors.dart';
 import 'package:personnages/core/theme/app_spacing.dart';
 import 'package:personnages/core/widgets/settings_list_card.dart';
 import 'package:personnages/features/profile/presentation/profile_faq_screen.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 
 const List<String> _questions = [
   'Comment importer un personnage depuis aidedd.org ?',
@@ -23,8 +24,19 @@ const List<String> _questions = [
   'Comment supprimer mon compte ?',
 ];
 
-Widget _wrap(Widget child) {
-  return MaterialApp(home: Scaffold(body: child));
+/// `ProfileFaqScreen` lit `AppLocalizations.of(context)!` (chantier
+/// "traduction de l'app" Phase B) — sans ces delegates, l'appel renverrait
+/// `null` et le `!` planterait. `locale` fixé en dur (jamais `null`, qui
+/// suivrait la langue réelle, non garantie, de l'environnement
+/// `flutter test`) — `fr` par défaut, `en` passé explicitement par les
+/// tests du groupe "locale anglaise" ci-dessous.
+Widget _wrap(Widget child, {Locale locale = const Locale('fr')}) {
+  return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: locale,
+    home: Scaffold(body: child),
+  );
 }
 
 void main() {
@@ -184,5 +196,22 @@ void main() {
     await tester.pumpWidget(_wrap(const ProfileFaqScreen()));
 
     expect(find.byIcon(Icons.arrow_back_ios_new), findsOneWidget);
+  });
+
+  group('locale anglaise', () {
+    testWidgets('affiche le bandeau bois et les questions en anglais', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(const ProfileFaqScreen(), locale: const Locale('en')),
+      );
+
+      expect(find.text('FREQUENTLY ASKED QUESTIONS'), findsOneWidget);
+      expect(
+        find.text('How do I import a character from aidedd.org?'),
+        findsOneWidget,
+      );
+      expect(find.text('How do I delete my account?'), findsOneWidget);
+    });
   });
 }

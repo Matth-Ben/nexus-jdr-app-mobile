@@ -41,6 +41,7 @@ import 'package:personnages/features/profile/data/notification_preferences_repos
 import 'package:personnages/features/profile/domain/notification_preferences.dart';
 import 'package:personnages/features/profile/presentation/profile_notifications_screen.dart';
 import 'package:personnages/features/profile/presentation/providers/notification_preferences_providers.dart';
+import 'package:personnages/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakeNotificationPreferencesRepository
@@ -204,6 +205,7 @@ Future<void> _pumpScreen(
   // anime indéfiniment tant que `fetchCompleter` n'est pas résolu, ce qui
   // ferait tourner `pumpAndSettle` à l'infini (jamais "settled").
   bool settle = true,
+  Locale locale = const Locale('fr'),
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -216,6 +218,14 @@ Future<void> _pumpScreen(
         authStateStreamProvider.overrideWithValue(_FakeAuthStateStream()),
       ],
       child: MaterialApp.router(
+        // `ProfileNotificationsScreen` lit `AppLocalizations.of(context)!`
+        // (chantier "traduction de l'app" Phase B) — sans ces delegates,
+        // l'appel renverrait `null` et le `!` planterait. `fr` par défaut,
+        // `en` passé explicitement par les tests du groupe "locale
+        // anglaise".
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: locale,
         routerConfig: GoRouter(
           initialLocation: '/',
           routes: [
@@ -588,5 +598,25 @@ void main() {
 
     expect(gateway.requestPermissionCallCount, 0);
     expect(repository.updateCalls.single.pushEnabled, isFalse);
+  });
+
+  group('locale anglaise', () {
+    testWidgets('affiche le bandeau bois et les groupes en anglais', (
+      tester,
+    ) async {
+      await _pumpScreen(
+        tester,
+        repository: repository,
+        gateway: gateway,
+        locale: const Locale('en'),
+      );
+
+      expect(find.text('NOTIFICATIONS'), findsOneWidget);
+      expect(find.text('TRIGGERS'), findsOneWidget);
+      expect(find.text('EMAIL'), findsOneWidget);
+      expect(find.text('Push notifications'), findsOneWidget);
+      expect(find.text('Long rest not taken in a while'), findsOneWidget);
+      expect(find.text('Receive an email summary'), findsOneWidget);
+    });
   });
 }
